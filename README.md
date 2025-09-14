@@ -6,7 +6,7 @@ Mistral AI integration and comprehensive documentation.
 
 ## 🚀 What is mindX?
 
-mindX represents the world's first autonomous digital civilization - a fully self-improving, economically viable, and cryptographically secure multi-agent system. We are building agents and creating a **sovereign digital polity** where intelligence operates independently, evolves continuously, and participates in economic systems.
+mindX represents an implemenation of a godel machine- a fully self-improving, economically viable, and cryptographically secure multi-agent system. We are building agents and creating a **sovereign digital polity** where intelligence operates independently, evolves continuously, and participates in economic systems.
 
 ### **Revolutionary Capabilities**
 - **Complete Autonomy**: 1-hour improvement cycles without human intervention
