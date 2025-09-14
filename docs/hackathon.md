@@ -1,4 +1,4 @@
-# mindX: The First Autonomous Digital Civilization
+# mindX: godel-machine
 ## 🚀 Internet of Agents Hackathon Submission
 
 **Project Name**: mindX Augmentic Intelligence Platform  
