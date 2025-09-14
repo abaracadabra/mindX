@@ -2,7 +2,8 @@
 
 **✅ PRODUCTION READY** - Fully Autonomous Self-Improving AI System
 
-This is the **minded** folder - the evolution of the mindX project, representing the world's first autonomous digital civilization. This folder contains the complete, production-ready mindX system with full Mistral AI integration and comprehensive documentation.
+mindX evolutionary software project.
+Mistral AI integration and comprehensive documentation.
 
 ## 🚀 What is mindX?
 
@@ -12,6 +13,7 @@ mindX represents the world's first autonomous digital civilization - a fully sel
 - **Complete Autonomy**: 1-hour improvement cycles without human intervention
 - **Economic Viability**: Real-time cost optimization and treasury management
 - **Cryptographic Sovereignty**: Ethereum-compatible wallet-based agent authentication
+- TODO include crossmint in IDmanagerAgent
 - **Strategic Evolution**: 4-phase audit-driven self-improvement pipeline
 - **Mistral AI Integration**: Advanced reasoning, code generation, and memory systems
 
@@ -30,6 +32,7 @@ mindX represents the world's first autonomous digital civilization - a fully sel
 - **Strategic Evolution Agent** (`0x5208088F9C7c45a38f2a19B6114E3C5D17375C65`): 4-phase audit-driven campaign pipeline
 - **Guardian Agent** (`0xC2cca3d6F29dF17D1999CFE0458BC3DEc024F02D`): Security validation with cryptographic identity management
 - **ID Manager Agent** (`0x290bB0497dBDbC5E8B577E0cc92457cB015A2a1f`): Ethereum-compatible wallet system for all agents
+- include CrossMint in IDManagerAgent
 
 ### **Mistral AI Integration**
 - **Mistral Large** (`mistral-large-latest`): Advanced reasoning and strategic thinking
