@@ -57,7 +57,8 @@ function show_help { # pragma: no cover
     echo "Usage: $0 [options] <target_install_directory>"
     echo ""
     echo "Arguments:"
-    echo "  <target_install_directory>   The root directory where the '${DEFAULT_PROJECT_ROOT_NAME}' project will be located or created."
+    echo "  [target_install_directory]   Optional. The root directory where the '${DEFAULT_PROJECT_ROOT_NAME}' project will be located or created."
+    echo "                               If not specified, uses the current directory and enables interactive API key setup."
     echo "                               If it exists and contains MindX, it will be configured. If not, MindX structure will be created."
     echo ""
     echo "Options:"
@@ -105,6 +106,9 @@ if [[ -z "$TARGET_INSTALL_DIR_ARG" ]]; then
     # Use current directory as default target when no parameters provided
     TARGET_INSTALL_DIR_ARG="$(pwd)"
     log_setup_info "No target directory specified. Using current directory: $TARGET_INSTALL_DIR_ARG"
+    # Enable interactive setup by default for default installation
+    INTERACTIVE_SETUP_FLAG=true
+    log_setup_info "Default installation mode: Interactive setup enabled for API key configuration."
 fi
 
 # Resolve and create project root
@@ -247,7 +251,7 @@ function ensure_mindx_structure {
 
     # Only copy source code if --replicate flag is used
     if [[ "$REPLICATE_SOURCE_FLAG" == true ]]; then
-        copy_mindx_source_code
+    copy_mindx_source_code
     else
         log_setup_info "Skipping source code replication (use --replicate to copy source files)."
     fi
@@ -280,15 +284,15 @@ function prompt_for_api_keys {
         # Prompt for Gemini API key
         echo ""
         echo "=== API Key Configuration ==="
-        echo "Enter your API keys (press Enter to skip and use defaults):"
+        echo "Enter your API keys (press Enter to skip and leave empty):"
         echo ""
         
         read -p "Gemini API Key (from https://aistudio.google.com/app/apikey): " gemini_key
         if [[ -n "$gemini_key" ]]; then
             log_setup_info "Gemini API key provided."
         else
-            log_setup_info "No Gemini API key provided, using default placeholder."
-            gemini_key="YOUR_GEMINI_API_KEY_HERE"
+            log_setup_info "No Gemini API key provided, leaving empty."
+            gemini_key=""
         fi
         
         echo ""
@@ -296,8 +300,8 @@ function prompt_for_api_keys {
         if [[ -n "$mistral_key" ]]; then
             log_setup_info "Mistral AI API key provided."
         else
-            log_setup_info "No Mistral AI API key provided, using default placeholder."
-            mistral_key="YOUR_MISTRAL_API_KEY_HERE"
+            log_setup_info "No Mistral AI API key provided, leaving empty."
+            mistral_key=""
         fi
         
         echo ""
@@ -319,6 +323,13 @@ function setup_dotenv_file {
         log_setup_info ".env file already exists at $target_dotenv_path. Skipping creation unless --dotenv-file is used to overwrite."
         return 0
     fi
+    
+    # Check if .env file exists and prompt for API keys if not
+    if [ ! -f "$target_dotenv_path" ]; then
+        log_setup_info "No .env file found. Will prompt for API keys during setup."
+        # Force interactive mode for missing .env file
+        INTERACTIVE_SETUP_FLAG=true
+    fi
 
     local env_content_source_path=""
     if [ -n "$DOTENV_FILE_ARG" ]; then
@@ -339,77 +350,66 @@ function setup_dotenv_file {
         # Collect API keys interactively if needed
         prompt_for_api_keys
         
-        local gemini_api_key_val="${GEMINI_API_KEY_VAL:-YOUR_GEMINI_API_KEY_HERE}"
-        local mistral_api_key_val="${MISTRAL_API_KEY_VAL:-YOUR_MISTRAL_API_KEY_HERE}"
+        local gemini_api_key_val="${GEMINI_API_KEY_VAL:-}"
+        local mistral_api_key_val="${MISTRAL_API_KEY_VAL:-}"
 
+        # Generate .env content with proper handling of empty API keys
+        local default_env_content=""
+        default_env_content+="# MindX System Environment Configuration (.env)\n"
+        default_env_content+="# This file is loaded by mindx.utils.Config\n\n"
+        default_env_content+="# --- General Logging Level ---\n"
+        default_env_content+="MINDX_LOG_LEVEL=\"${MINDX_APP_LOG_LEVEL}\"\n\n"
+        default_env_content+="# --- LLM Provider Selection ---\n"
+        default_env_content+="# Options: 'gemini', 'mistral', 'ollama', 'openai'\n"
+        default_env_content+="MINDX_LLM__DEFAULT_PROVIDER=\"gemini\"\n\n"
+        default_env_content+="# --- Ollama Configuration (if using Ollama) ---\n"
+        default_env_content+="# MINDX_LLM__OLLAMA__BASE_URL=\"http://localhost:11434\" # Default, uncomment to override\n\n"
+        default_env_content+="# --- Gemini Specific Configuration ---\n"
+        default_env_content+="# IMPORTANT: Get your API key from Google AI Studio (https://aistudio.google.com/app/apikey)\n"
+        default_env_content+="# This key will be used if MINDX_LLM__GEMINI__API_KEY is not set directly below.\n"
+        
+        if [[ -n "$gemini_api_key_val" ]]; then
+            default_env_content+="GEMINI_API_KEY=\"${gemini_api_key_val}\"\n"
+            default_env_content+="MINDX_LLM__GEMINI__API_KEY=\"${gemini_api_key_val}\"\n"
+        else
+            default_env_content+="# GEMINI_API_KEY=\"\"\n"
+            default_env_content+="# MINDX_LLM__GEMINI__API_KEY=\"\"\n"
+        fi
+        
+        default_env_content+="MINDX_LLM__GEMINI__DEFAULT_MODEL=\"gemini-1.5-flash-latest\"\n"
+        default_env_content+="MINDX_LLM__GEMINI__DEFAULT_MODEL_FOR_CODING=\"gemini-1.5-pro-latest\" # Or flash for cost/speed\n"
+        default_env_content+="MINDX_LLM__GEMINI__DEFAULT_MODEL_FOR_REASONING=\"gemini-1.5-pro-latest\"\n\n"
+        default_env_content+="# --- Mistral AI Specific Configuration ---\n"
+        default_env_content+="# IMPORTANT: Get your API key from Mistral AI Console (https://console.mistral.ai/)\n"
+        default_env_content+="# This key will be used if MISTRAL_API_KEY is not set directly below.\n"
+        
+        if [[ -n "$mistral_api_key_val" ]]; then
+            default_env_content+="MISTRAL_API_KEY=\"${mistral_api_key_val}\"\n"
+            default_env_content+="MINDX_LLM__MISTRAL__API_KEY=\"${mistral_api_key_val}\"\n"
+        else
+            default_env_content+="# MISTRAL_API_KEY=\"\"\n"
+            default_env_content+="# MINDX_LLM__MISTRAL__API_KEY=\"\"\n"
+        fi
+        
+        default_env_content+="MINDX_LLM__MISTRAL__DEFAULT_MODEL=\"mistral-large-latest\"\n"
+        default_env_content+="MINDX_LLM__MISTRAL__DEFAULT_MODEL_FOR_CODING=\"codestral-latest\"\n"
+        default_env_content+="MINDX_LLM__MISTRAL__DEFAULT_MODEL_FOR_REASONING=\"mistral-large-latest\"\n\n"
+        default_env_content+="# --- OpenAI Configuration (if using OpenAI) ---\n"
+        default_env_content+="# OPENAI_API_KEY=\"your-openai-api-key-here\"\n"
+        default_env_content+="# MINDX_LLM__OPENAI__API_KEY=\"your-openai-api-key-here\"\n"
+        default_env_content+="# MINDX_LLM__OPENAI__DEFAULT_MODEL=\"gpt-4o\"\n\n"
+        default_env_content+="# --- Web Search Configuration ---\n"
+        default_env_content+="# GOOGLE_SEARCH_API_KEY=\"your-google-search-api-key\"\n"
+        default_env_content+="# GOOGLE_SEARCH_ENGINE_ID=\"your-search-engine-id\"\n\n"
+        default_env_content+="# --- Database Configuration ---\n"
+        default_env_content+="MINDX_DB__URL=\"sqlite:///data/mindx.db\"\n\n"
+        default_env_content+="# --- Performance Configuration ---\n"
+        default_env_content+="MINDX_MAX_CONCURRENT_TASKS=\"3\"\n"
+        default_env_content+="MINDX_TASK_TIMEOUT_SECONDS=\"300\"\n"
 
-        # Default .env content
-        read -r -d '' default_env_content <<EOF_DEFAULT_DOTENV
-# MindX System Environment Configuration (.env)
-# This file is loaded by mindx.utils.Config
-
-# --- General Logging Level ---
-# Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
-MINDX_LOG_LEVEL="${MINDX_APP_LOG_LEVEL}"
-
-# --- Default LLM Provider for the whole system ---
-# Can be overridden by specific agent configurations.
-# Options: "ollama", "gemini", "mistral" (add more in mindx/llm/llm_factory.py)
-MINDX_LLM__DEFAULT_PROVIDER="ollama"
-
-# --- Ollama Specific Configuration ---
-MINDX_LLM__OLLAMA__DEFAULT_MODEL="nous-hermes2:latest"
-MINDX_LLM__OLLAMA__DEFAULT_MODEL_FOR_CODING="deepseek-coder:6.7b-instruct"
-MINDX_LLM__OLLAMA__DEFAULT_MODEL_FOR_REASONING="nous-hermes2:latest"
-# MINDX_LLM__OLLAMA__BASE_URL="http://localhost:11434" # Default, uncomment to override
-
-# --- Gemini Specific Configuration ---
-# IMPORTANT: Get your API key from Google AI Studio (https://aistudio.google.com/app/apikey)
-# This key will be used if MINDX_LLM__GEMINI__API_KEY is not set directly below.
-GEMINI_API_KEY="${gemini_api_key_val}"
-MINDX_LLM__GEMINI__API_KEY="${gemini_api_key_val}"
-MINDX_LLM__GEMINI__DEFAULT_MODEL="gemini-1.5-flash-latest"
-MINDX_LLM__GEMINI__DEFAULT_MODEL_FOR_CODING="gemini-1.5-pro-latest" # Or flash for cost/speed
-MINDX_LLM__GEMINI__DEFAULT_MODEL_FOR_REASONING="gemini-1.5-pro-latest"
-
-# --- Mistral AI Specific Configuration ---
-# IMPORTANT: Get your API key from Mistral AI Console (https://console.mistral.ai/)
-# This key will be used if MISTRAL_API_KEY is not set directly below.
-MISTRAL_API_KEY="${mistral_api_key_val}"
-MINDX_LLM__MISTRAL__API_KEY="${mistral_api_key_val}"
-MINDX_LLM__MISTRAL__DEFAULT_MODEL="mistral-large-latest"
-MINDX_LLM__MISTRAL__DEFAULT_MODEL_FOR_CODING="codestral-latest"
-MINDX_LLM__MISTRAL__DEFAULT_MODEL_FOR_REASONING="mistral-large-latest"
-
-
-# --- SelfImprovementAgent (SIA) Specific LLM Configuration ---
-MINDX_SELF_IMPROVEMENT_AGENT__LLM__PROVIDER="ollama"
-MINDX_SELF_IMPROVEMENT_AGENT__LLM__MODEL="deepseek-coder:6.7b-instruct" # Needs to be good at Python
-
-# --- CoordinatorAgent Specific LLM Configuration ---
-MINDX_COORDINATOR__LLM__PROVIDER="ollama"
-MINDX_COORDINATOR__LLM__MODEL="nous-hermes2:latest" # For system analysis, etc.
-
-# --- Coordinator's Autonomous Improvement Loop ---
-MINDX_COORDINATOR__AUTONOMOUS_IMPROVEMENT__ENABLED="false" # Recommended: false for initial setup
-MINDX_COORDINATOR__AUTONOMOUS_IMPROVEMENT__INTERVAL_SECONDS="3600" # 1 hour
-MINDX_COORDINATOR__AUTONOMOUS_IMPROVEMENT__REQUIRE_HUMAN_APPROVAL_FOR_CRITICAL="true"
-# Critical components list is managed in mindx_config.json or code defaults
-
-# --- Monitoring ---
-MINDX_MONITORING__RESOURCE__ENABLED="true"
-MINDX_MONITORING__RESOURCE__INTERVAL="15.0" # Check resources every 15 seconds
-MINDX_MONITORING__PERFORMANCE__ENABLE_PERIODIC_SAVE="true"
-MINDX_MONITORING__PERFORMANCE__PERIODIC_SAVE_INTERVAL_SECONDS="300" # Save perf metrics every 5 mins
-
-# --- Backend Service (FastAPI) ---
-# MINDX_BACKEND_SERVICE__ALLOW_ALL_ORIGINS="false" # Set to "true" for dev if needed for CORS, careful in prod.
-
-# --- Ports (used by this script if not overridden by CLI args or shell env) ---
-# FRONTEND_PORT="${FRONTEND_PORT_EFFECTIVE}" # Set by script variables
-# BACKEND_PORT="${BACKEND_PORT_EFFECTIVE}"  # Set by script variables
-EOF_DEFAULT_DOTENV
-        create_or_overwrite_file_secure "$target_dotenv_path" "$default_env_content" "600" # Restrictive perms
+        # Write the dynamically generated .env content
+        printf '%b' "$default_env_content" > "$target_dotenv_path" || { log_setup_error "Failed to write .env file."; exit 1; }
+        chmod 600 "$target_dotenv_path" # Secure permissions for .env
     fi
     log_setup_info ".env file configured at $target_dotenv_path"
 }
