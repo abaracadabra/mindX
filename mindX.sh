@@ -49,6 +49,8 @@ MINDX_CONFIG_FILE_ARG="" # Optional path to a pre-existing mindx_config.json
 DOTENV_FILE_ARG=""      # Optional path to a pre-existing .env file
 RUN_SERVICES_FLAG=false
 INTERACTIVE_SETUP_FLAG=false
+REPLICATE_SOURCE_FLAG=false
+FRONTEND_FLAG=false
 
 function show_help { # pragma: no cover
     echo "MindX Deployment Script v${SCRIPT_VERSION}"
@@ -62,7 +64,9 @@ function show_help { # pragma: no cover
     echo "  --config-file <path>         Path to an existing mindx_config.json to use."
     echo "  --dotenv-file <path>         Path to an existing .env file to copy into the project."
     echo "  --run                        Start MindX backend and frontend services after setup."
+    echo "  --frontend                   Start MindX web interface (backend + frontend with web UI)."
     echo "  --interactive                Prompt for API keys (Gemini, Mistral AI) during setup."
+    echo "  --replicate                  Copy source code to target directory (default: use existing code)."
     echo "  --venv-name <name>           Override default virtual environment name (Default: ${DEFAULT_VENV_NAME})."
     echo "  --frontend-port <port>       Override default frontend port (Default: ${DEFAULT_FRONTEND_PORT})."
     echo "  --backend-port <port>        Override default backend port (Default: ${DEFAULT_BACKEND_PORT})."
@@ -78,6 +82,8 @@ while [[ $# -gt 0 ]]; do
         --dotenv-file) DOTENV_FILE_ARG="$2"; shift 2;;
         --run) RUN_SERVICES_FLAG=true; shift 1;;
         --interactive) INTERACTIVE_SETUP_FLAG=true; shift 1;;
+        --replicate) REPLICATE_SOURCE_FLAG=true; shift 1;;
+        --frontend) FRONTEND_FLAG=true; shift 1;;
         --venv-name) MINDX_VENV_NAME_OVERRIDE="$2"; shift 2;;
         --frontend-port) FRONTEND_PORT_OVERRIDE="$2"; shift 2;;
         --backend-port) BACKEND_PORT_OVERRIDE="$2"; shift 2;;
@@ -96,8 +102,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$TARGET_INSTALL_DIR_ARG" ]]; then
-    log_setup_error "Target installation directory not specified."
-    show_help # Will exit
+    # Use current directory as default target when no parameters provided
+    TARGET_INSTALL_DIR_ARG="$(pwd)"
+    log_setup_info "No target directory specified. Using current directory: $TARGET_INSTALL_DIR_ARG"
 fi
 
 # Resolve and create project root
@@ -238,7 +245,12 @@ function ensure_mindx_structure {
     find "$PROJECT_ROOT/mindx" -type d -exec touch {}/__init__.py \;
     touch "$PROJECT_ROOT/scripts/__init__.py" # If scripts are also to be importable
 
-    copy_mindx_source_code
+    # Only copy source code if --replicate flag is used
+    if [[ "$REPLICATE_SOURCE_FLAG" == true ]]; then
+        copy_mindx_source_code
+    else
+        log_setup_info "Skipping source code replication (use --replicate to copy source files)."
+    fi
 
     # Check if core MindX source files (e.g. coordinator, sia) exist.
     # If not, this script cannot proceed with actually *running* MindX.
@@ -989,6 +1001,129 @@ EOF_SERVER_JS
   return 0
 }
 
+# --- Web Frontend Functions ---
+function check_port {
+    local port=$1
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+function kill_port {
+    local port=$1
+    local pid=$(lsof -ti:$port)
+    if [ ! -z "$pid" ]; then
+        log_setup_warn "Killing existing process on port $port (PID: $pid)"
+        kill -9 $pid 2>/dev/null
+        sleep 2
+    fi
+}
+
+function start_web_frontend {
+    log_setup_info "🧠 Starting MindX Web Interface..."
+    log_setup_info "=================================="
+    
+    # Check if required directories exist
+    if [ ! -d "$MINDX_BACKEND_SERVICE_DIR_ABS" ]; then
+        log_setup_error "Backend directory not found: $MINDX_BACKEND_SERVICE_DIR_ABS"
+        return 1
+    fi
+
+    if [ ! -d "$MINDX_FRONTEND_UI_DIR_ABS" ]; then
+        log_setup_error "Frontend directory not found: $MINDX_FRONTEND_UI_DIR_ABS"
+        return 1
+    fi
+
+    # Check if required files exist
+    if [ ! -f "$MINDX_BACKEND_SERVICE_DIR_ABS/main_service.py" ]; then
+        log_setup_error "Backend service file not found: $MINDX_BACKEND_SERVICE_DIR_ABS/main_service.py"
+        return 1
+    fi
+
+    if [ ! -f "$MINDX_FRONTEND_UI_DIR_ABS/server.js" ]; then
+        log_setup_error "Frontend server file not found: $MINDX_FRONTEND_UI_DIR_ABS/server.js"
+        return 1
+    fi
+
+    # Kill any existing processes on our ports
+    log_setup_info "Checking for existing processes..."
+    kill_port $BACKEND_PORT_EFFECTIVE
+    kill_port $FRONTEND_PORT_EFFECTIVE
+
+    # Start backend
+    log_setup_info "Starting MindX Backend API on port $BACKEND_PORT_EFFECTIVE..."
+    cd "$MINDX_BACKEND_SERVICE_DIR_ABS"
+    VENV_PYTHON="$MINDX_VENV_PATH_ABS/bin/python"
+    $VENV_PYTHON main_service.py &
+    BACKEND_PID=$!
+
+    # Wait for backend to start
+    log_setup_info "Waiting for backend to initialize..."
+    sleep 5
+
+    # Check if backend is running
+    if ! check_port $BACKEND_PORT_EFFECTIVE; then
+        log_setup_error "Backend failed to start on port $BACKEND_PORT_EFFECTIVE"
+        kill $BACKEND_PID 2>/dev/null
+        return 1
+    fi
+
+    log_setup_info "Backend started successfully (PID: $BACKEND_PID)"
+
+    # Start frontend
+    log_setup_info "Starting MindX Frontend on port $FRONTEND_PORT_EFFECTIVE..."
+    cd "$MINDX_FRONTEND_UI_DIR_ABS"
+
+    # Install dependencies if needed
+    if [ ! -d "node_modules" ]; then
+        log_setup_info "Installing frontend dependencies..."
+        npm install --silent
+    fi
+
+    # Start frontend server
+    node server.js &
+    FRONTEND_PID=$!
+
+    # Wait for frontend to start
+    log_setup_info "Waiting for frontend to initialize..."
+    sleep 3
+
+    # Check if frontend is running
+    if ! check_port $FRONTEND_PORT_EFFECTIVE; then
+        log_setup_error "Frontend failed to start on port $FRONTEND_PORT_EFFECTIVE"
+        kill $BACKEND_PID $FRONTEND_PID 2>/dev/null
+        return 1
+    fi
+
+    log_setup_info "Frontend started successfully (PID: $FRONTEND_PID)"
+
+    # Display access information
+    echo ""
+    echo "🎉 MindX Web Interface is now running!"
+    echo "======================================"
+    echo "Frontend: http://localhost:$FRONTEND_PORT_EFFECTIVE"
+    echo "Backend API: http://localhost:$BACKEND_PORT_EFFECTIVE"
+    echo ""
+    echo "Press Ctrl+C to stop both services"
+    echo ""
+
+    # Function to cleanup on exit
+    cleanup_web_frontend() {
+        log_setup_info "Shutting down MindX Web Interface..."
+        kill $BACKEND_PID $FRONTEND_PID 2>/dev/null
+        log_setup_info "Shutdown complete"
+        exit 0
+    }
+
+    # Set up signal handlers
+    trap cleanup_web_frontend SIGINT SIGTERM
+
+    # Wait for user to stop
+    wait
+}
+
 # --- Service Start/Stop Functions (Conceptual for systemd/supervisor) ---
 # These functions would generate service unit files or supervisor config files.
 # For direct backgrounding, we use simpler start/stop.
@@ -1158,7 +1293,10 @@ setup_frontend_ui || { log_setup_error "Frontend UI file setup failed. Exiting."
 
 deactivate_venv_if_active
 
-if [[ "$RUN_SERVICES_FLAG" == true ]]; then
+if [[ "$FRONTEND_FLAG" == true ]]; then
+    log_setup_info "--- Starting MindX Web Interface ---"
+    start_web_frontend || { log_setup_error "MindX Web Interface failed to start. Exiting."; exit 1; }
+elif [[ "$RUN_SERVICES_FLAG" == true ]]; then
     log_setup_info "--- Starting MindX Services (Backend & Frontend) ---"
     
     # Backend command construction
@@ -1187,11 +1325,13 @@ if [[ "$RUN_SERVICES_FLAG" == true ]]; then
     wait # Wait for background jobs started by this script's shell
     log_setup_info "Deployment script 'wait' command finished or interrupted."
 else
-    log_setup_info "MindX setup complete. Services not started due to --run flag not being set."
-    log_setup_info "To start services manually (example):"
-    log_setup_info "  Backend: cd $MINDX_BACKEND_SERVICE_DIR_ABS && $MINDX_VENV_PATH_ABS/bin/python main_service.py"
-    log_setup_info "  Frontend: cd $MINDX_FRONTEND_UI_DIR_ABS && node server_static.js"
+    log_setup_info "MindX setup complete. Services not started."
+    log_setup_info "To start services manually:"
+    log_setup_info "  Web Interface: ./mindX.sh --frontend"
+    log_setup_info "  Services Only: ./mindX.sh --run"
+    log_setup_info "  Backend Only: cd $MINDX_BACKEND_SERVICE_DIR_ABS && $MINDX_VENV_PATH_ABS/bin/python main_service.py"
+    log_setup_info "  Frontend Only: cd $MINDX_FRONTEND_UI_DIR_ABS && node server.js"
 fi
 
 # Cleanup will be called by the EXIT trap automatically.
-# No explicit call to cleanup_on_exit_final needed here.
+# No explicit call to cleanup_on_exit_final neededs r here.
