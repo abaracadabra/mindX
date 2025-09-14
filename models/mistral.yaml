@@ -1,0 +1,503 @@
+mistral/mistral-large-latest:
+  task_scores:
+    reasoning: 0.92
+    code_generation: 0.88
+    writing: 0.94
+    simple_chat: 0.96
+    data_analysis: 0.89
+    speed_sensitive: 0.75
+  cost_per_kilo_input_tokens: 0.002
+  cost_per_kilo_output_tokens: 0.006
+  max_context_length: 128000
+  supports_streaming: true
+  supports_function_calling: true
+  supports_fim: false
+  supports_vision: false
+  supports_classification: false
+  supports_fine_tuning: false
+  api_name: mistral-large-latest
+  model_type: base
+  owned_by: mistralai
+  assessed_capabilities:
+  - text
+  - reasoning
+  - code_generation
+  - multilingual
+  - chat_completion
+  - function_calling
+  - streaming
+
+mistral/mistral-small-latest:
+  task_scores:
+    reasoning: 0.85
+    code_generation: 0.82
+    writing: 0.90
+    simple_chat: 0.94
+    data_analysis: 0.83
+    speed_sensitive: 0.90
+  cost_per_kilo_input_tokens: 0.001
+  cost_per_kilo_output_tokens: 0.003
+  max_context_length: 128000
+  supports_streaming: true
+  supports_function_calling: true
+  supports_fim: false
+  supports_vision: false
+  supports_classification: false
+  supports_fine_tuning: false
+  api_name: mistral-small-latest
+  model_type: base
+  owned_by: mistralai
+  assessed_capabilities:
+  - text
+  - reasoning
+  - code_generation
+  - multilingual
+  - chat_completion
+  - function_calling
+  - streaming
+
+mistral/mistral-nemo-latest:
+  task_scores:
+    reasoning: 0.80
+    code_generation: 0.75
+    writing: 0.88
+    simple_chat: 0.92
+    data_analysis: 0.78
+    speed_sensitive: 0.95
+  cost_per_kilo_input_tokens: 0.0002
+  cost_per_kilo_output_tokens: 0.0006
+  max_context_length: 128000
+  supports_streaming: true
+  supports_function_calling: false
+  api_name: mistral-nemo-latest
+  assessed_capabilities:
+  - text
+  - multilingual
+
+mistral/codestral-latest:
+  task_scores:
+    reasoning: 0.85
+    code_generation: 0.95
+    writing: 0.80
+    simple_chat: 0.85
+    data_analysis: 0.88
+    speed_sensitive: 0.80
+  cost_per_kilo_input_tokens: 0.001
+  cost_per_kilo_output_tokens: 0.003
+  max_context_length: 128000
+  supports_streaming: true
+  supports_function_calling: true
+  supports_fim: true
+  supports_vision: false
+  supports_classification: false
+  supports_fine_tuning: false
+  api_name: codestral-latest
+  model_type: base
+  owned_by: mistralai
+  assessed_capabilities:
+  - text
+  - code_generation
+  - multilingual
+  - fill_in_middle
+  - fim_completion
+  - chat_completion
+  - function_calling
+  - streaming
+
+mistral/codestral-22b-latest:
+  task_scores:
+    reasoning: 0.88
+    code_generation: 0.96
+    writing: 0.82
+    simple_chat: 0.87
+    data_analysis: 0.90
+    speed_sensitive: 0.75
+  cost_per_kilo_input_tokens: 0.002
+  cost_per_kilo_output_tokens: 0.006
+  max_context_length: 128000
+  supports_streaming: true
+  supports_function_calling: true
+  supports_fim: true
+  supports_vision: false
+  supports_classification: false
+  supports_fine_tuning: false
+  api_name: codestral-22b-latest
+  model_type: base
+  owned_by: mistralai
+  assessed_capabilities:
+  - text
+  - code_generation
+  - multilingual
+  - fill_in_middle
+  - fim_completion
+  - chat_completion
+  - function_calling
+  - streaming
+
+mistral/pixtral-12b-latest:
+  task_scores:
+    reasoning: 0.90
+    code_generation: 0.85
+    writing: 0.92
+    simple_chat: 0.94
+    data_analysis: 0.87
+    speed_sensitive: 0.70
+  cost_per_kilo_input_tokens: 0.003
+  cost_per_kilo_output_tokens: 0.009
+  max_context_length: 128000
+  supports_streaming: true
+  supports_function_calling: true
+  supports_fim: false
+  supports_vision: true
+  supports_classification: false
+  supports_fine_tuning: false
+  api_name: pixtral-12b-latest
+  model_type: base
+  owned_by: mistralai
+  assessed_capabilities:
+  - text
+  - vision
+  - reasoning
+  - code_generation
+  - multilingual
+  - chat_completion
+  - function_calling
+  - streaming
+  - image_analysis
+  - ocr
+
+mistral/mistral-7b-instruct:
+  task_scores:
+    reasoning: 0.78
+    code_generation: 0.75
+    writing: 0.85
+    simple_chat: 0.90
+    data_analysis: 0.80
+    speed_sensitive: 0.92
+  cost_per_kilo_input_tokens: 0.00025
+  cost_per_kilo_output_tokens: 0.00025
+  max_context_length: 32000
+  supports_streaming: true
+  supports_function_calling: false
+  api_name: mistral-7b-instruct
+  assessed_capabilities:
+  - text
+  - multilingual
+
+mistral/mistral-8x7b-instruct:
+  task_scores:
+    reasoning: 0.82
+    code_generation: 0.80
+    writing: 0.88
+    simple_chat: 0.92
+    data_analysis: 0.85
+    speed_sensitive: 0.85
+  cost_per_kilo_input_tokens: 0.0005
+  cost_per_kilo_output_tokens: 0.0005
+  max_context_length: 32000
+  supports_streaming: true
+  supports_function_calling: false
+  api_name: mistral-8x7b-instruct
+  assessed_capabilities:
+  - text
+  - multilingual
+
+mistral/mistral-8x22b-instruct:
+  task_scores:
+    reasoning: 0.90
+    code_generation: 0.88
+    writing: 0.93
+    simple_chat: 0.95
+    data_analysis: 0.91
+    speed_sensitive: 0.70
+  cost_per_kilo_input_tokens: 0.001
+  cost_per_kilo_output_tokens: 0.001
+  max_context_length: 64000
+  supports_streaming: true
+  supports_function_calling: false
+  api_name: mistral-8x22b-instruct
+  assessed_capabilities:
+  - text
+  - multilingual
+
+mistral/mistral-embed:
+  task_scores:
+    reasoning: 0.0
+    code_generation: 0.0
+    writing: 0.0
+    simple_chat: 0.0
+    data_analysis: 0.0
+    speed_sensitive: 0.95
+  cost_per_kilo_input_tokens: 0.0001
+  cost_per_kilo_output_tokens: 0.0
+  max_context_length: 8192
+  supports_streaming: false
+  supports_function_calling: false
+  supports_fim: false
+  supports_vision: false
+  supports_classification: false
+  supports_fine_tuning: false
+  api_name: mistral-embed
+  model_type: base
+  owned_by: mistralai
+  assessed_capabilities:
+  - embedding
+  - text_embedding
+  - vector_search
+
+mistral/mistral-embed-v2:
+  task_scores:
+    reasoning: 0.0
+    code_generation: 0.0
+    writing: 0.0
+    simple_chat: 0.0
+    data_analysis: 0.0
+    speed_sensitive: 0.95
+  cost_per_kilo_input_tokens: 0.0001
+  cost_per_kilo_output_tokens: 0.0
+  max_context_length: 8192
+  supports_streaming: false
+  supports_function_calling: false
+  supports_fim: false
+  supports_vision: false
+  supports_classification: false
+  supports_fine_tuning: false
+  api_name: mistral-embed-v2
+  model_type: base
+  owned_by: mistralai
+  assessed_capabilities:
+  - embedding
+  - text_embedding
+  - vector_search
+
+mistral/ministral-3b-latest:
+  task_scores:
+    reasoning: 0.70
+    code_generation: 0.65
+    writing: 0.75
+    simple_chat: 0.80
+    data_analysis: 0.70
+    speed_sensitive: 0.95
+  cost_per_kilo_input_tokens: 0.0005
+  cost_per_kilo_output_tokens: 0.0015
+  max_context_length: 128000
+  supports_streaming: true
+  supports_function_calling: true
+  supports_fim: false
+  supports_vision: false
+  supports_classification: false
+  supports_fine_tuning: true
+  api_name: ministral-3b-latest
+  model_type: base
+  owned_by: mistralai
+  assessed_capabilities:
+  - text
+  - reasoning
+  - code_generation
+  - multilingual
+  - chat_completion
+  - function_calling
+  - streaming
+  - fine_tuning
+
+mistral/ministral-8b-latest:
+  task_scores:
+    reasoning: 0.80
+    code_generation: 0.75
+    writing: 0.85
+    simple_chat: 0.88
+    data_analysis: 0.78
+    speed_sensitive: 0.90
+  cost_per_kilo_input_tokens: 0.0007
+  cost_per_kilo_output_tokens: 0.0021
+  max_context_length: 128000
+  supports_streaming: true
+  supports_function_calling: true
+  supports_fim: false
+  supports_vision: false
+  supports_classification: false
+  supports_fine_tuning: true
+  api_name: ministral-8b-latest
+  model_type: base
+  owned_by: mistralai
+  assessed_capabilities:
+  - text
+  - reasoning
+  - code_generation
+  - multilingual
+  - chat_completion
+  - function_calling
+  - streaming
+  - fine_tuning
+
+mistral/open-mistral-7b:
+  task_scores:
+    reasoning: 0.75
+    code_generation: 0.70
+    writing: 0.80
+    simple_chat: 0.85
+    data_analysis: 0.75
+    speed_sensitive: 0.92
+  cost_per_kilo_input_tokens: 0.0003
+  cost_per_kilo_output_tokens: 0.0003
+  max_context_length: 32000
+  supports_streaming: true
+  supports_function_calling: false
+  supports_fim: false
+  supports_vision: false
+  supports_classification: false
+  supports_fine_tuning: true
+  api_name: open-mistral-7b
+  model_type: base
+  owned_by: mistralai
+  assessed_capabilities:
+  - text
+  - reasoning
+  - code_generation
+  - multilingual
+  - chat_completion
+  - streaming
+  - fine_tuning
+
+mistral/open-mistral-nemo:
+  task_scores:
+    reasoning: 0.78
+    code_generation: 0.72
+    writing: 0.82
+    simple_chat: 0.87
+    data_analysis: 0.77
+    speed_sensitive: 0.90
+  cost_per_kilo_input_tokens: 0.0003
+  cost_per_kilo_output_tokens: 0.0003
+  max_context_length: 32000
+  supports_streaming: true
+  supports_function_calling: false
+  supports_fim: false
+  supports_vision: false
+  supports_classification: false
+  supports_fine_tuning: true
+  api_name: open-mistral-nemo
+  model_type: base
+  owned_by: mistralai
+  assessed_capabilities:
+  - text
+  - reasoning
+  - code_generation
+  - multilingual
+  - chat_completion
+  - streaming
+  - fine_tuning
+
+mistral/mistral-large-2402:
+  task_scores:
+    reasoning: 0.91
+    code_generation: 0.87
+    writing: 0.93
+    simple_chat: 0.95
+    data_analysis: 0.88
+    speed_sensitive: 0.76
+  cost_per_kilo_input_tokens: 0.002
+  cost_per_kilo_output_tokens: 0.006
+  max_context_length: 128000
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: mistral-large-2402
+  assessed_capabilities:
+  - text
+  - reasoning
+  - code_generation
+  - multilingual
+
+mistral/mistral-small-2402:
+  task_scores:
+    reasoning: 0.84
+    code_generation: 0.81
+    writing: 0.89
+    simple_chat: 0.93
+    data_analysis: 0.82
+    speed_sensitive: 0.91
+  cost_per_kilo_input_tokens: 0.001
+  cost_per_kilo_output_tokens: 0.003
+  max_context_length: 128000
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: mistral-small-2402
+  assessed_capabilities:
+  - text
+  - reasoning
+  - code_generation
+  - multilingual
+
+mistral/codestral-2405:
+  task_scores:
+    reasoning: 0.86
+    code_generation: 0.94
+    writing: 0.81
+    simple_chat: 0.86
+    data_analysis: 0.89
+    speed_sensitive: 0.81
+  cost_per_kilo_input_tokens: 0.001
+  cost_per_kilo_output_tokens: 0.003
+  max_context_length: 128000
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: codestral-2405
+  assessed_capabilities:
+  - text
+  - code_generation
+  - multilingual
+  - fill_in_middle
+
+mistral/mistral-nemo-12b-latest:
+  task_scores:
+    reasoning: 0.82
+    code_generation: 0.78
+    writing: 0.90
+    simple_chat: 0.94
+    data_analysis: 0.85
+    speed_sensitive: 0.88
+  cost_per_kilo_input_tokens: 0.0003
+  cost_per_kilo_output_tokens: 0.0009
+  max_context_length: 128000
+  supports_streaming: true
+  supports_function_calling: false
+  api_name: mistral-nemo-12b-latest
+  assessed_capabilities:
+  - text
+  - multilingual
+
+mistral/mistral-7b-instruct-v0.3:
+  task_scores:
+    reasoning: 0.77
+    code_generation: 0.74
+    writing: 0.84
+    simple_chat: 0.89
+    data_analysis: 0.79
+    speed_sensitive: 0.93
+  cost_per_kilo_input_tokens: 0.00025
+  cost_per_kilo_output_tokens: 0.00025
+  max_context_length: 32000
+  supports_streaming: true
+  supports_function_calling: false
+  api_name: mistral-7b-instruct-v0.3
+  assessed_capabilities:
+  - text
+  - multilingual
+
+mistral/mistral-8x7b-instruct-v0.1:
+  task_scores:
+    reasoning: 0.81
+    code_generation: 0.79
+    writing: 0.87
+    simple_chat: 0.91
+    data_analysis: 0.84
+    speed_sensitive: 0.86
+  cost_per_kilo_input_tokens: 0.0005
+  cost_per_kilo_output_tokens: 0.0005
+  max_context_length: 32000
+  supports_streaming: true
+  supports_function_calling: false
+  api_name: mistral-8x7b-instruct-v0.1
+  assessed_capabilities:
+  - text
+  - multilingual

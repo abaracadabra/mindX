@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mindX v1.3.4</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>mindX v1.3.4</h1>
+
+        <!-- mindX Interaction Section -->
+        <div class="mindx-interaction-area section-box">
+            <h2>Interact with mindX (via Mastermind)</h2>
+            <div class="input-group">
+                <label for="commandSelect">Command:</label>
+                <select id="commandSelect">
+                    <option value="evolve">evolve</option>
+                    <option value="deploy">deploy</option>
+                    <option value="introspect">introspect</option>
+                    <option value="mastermind_status">mastermind_status</option>
+                    <option value="show_agent_registry">show_agent_registry</option>
+                    <option value="show_tool_registry">show_tool_registry</option>
+                    <option value="analyze_codebase">analyze_codebase</option>
+                    <option value="basegen">basegen</option>
+                    <option value="id_list">id_list</option>
+                    <option value="id_create">id_create</option>
+                    <option value="id_deprecate">id_deprecate</option>
+                    <option value="audit_gemini">audit_gemini</option>
+                    <option value="coord_query">coord_query</option>
+                    <option value="coord_analyze">coord_analyze</option>
+                    <option value="coord_improve">coord_improve</option>
+                    <option value="coord_backlog">coord_backlog</option>
+                    <option value="coord_process_backlog">coord_process_backlog</option>
+                    <option value="coord_approve">coord_approve</option>
+                    <option value="coord_reject">coord_reject</option>
+                    <option value="agent_create">agent_create</option>
+                    <option value="agent_delete">agent_delete</option>
+                    <option value="agent_list">agent_list</option>
+                    <option value="agent_evolve">agent_evolve</option>
+                    <option value="agent_sign">agent_sign</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="mindXDirectiveInput">Directive for mindX:</label>
+                <textarea id="mindXDirectiveInput" rows="3" placeholder="Enter a high-level directive for mindX evolution..."></textarea>
+            </div>
+            <button id="runCommandButton">Run Command</button>
+            <p id="mindXStatus" class="status-message"></p>
+            <div class="output-area">
+                <h3>mindX Response:</h3>
+                <pre id="mindXResponseOutput" class="output-content">Awaiting directive...</pre>
+            </div>
+        </div>
+
+        <!-- Terminal Log Viewer -->
+        <div class="terminal-log-viewer section-box">
+            <h2>mindX Terminal Logs</h2>
+            <div class="output-area">
+                <pre id="terminalLogOutput" class="output-content">Loading logs...</pre>
+            </div>
+        </div>
+
+    </div>
+    <!-- Link JS at the end of body -->
+    <script src="app.js"></script>
+</body>
+</html>

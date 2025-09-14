@@ -1,0 +1,175 @@
+{
+  "registered_tools": {
+    "audit_and_improve_tool": {
+      "enabled": true,
+      "class_name": "AuditAndImproveTool",
+      "module_path": "tools.audit_and_improve_tool",
+      "description": "Audits and improves code using BaseGenAgent summary as context",
+      "priority": 9,
+      "category": "augmentic_development"
+    },
+    "augmentic_intelligence_tool": {
+      "enabled": true,
+      "class_name": "AugmenticIntelligenceTool",
+      "module_path": "tools.augmentic_intelligence_tool",
+      "description": "Comprehensive tool providing access to all MindX capabilities for self-improvement",
+      "priority": 10,
+      "category": "augmentic_development"
+    },
+    "system_analyzer_tool": {
+      "enabled": true,
+      "class_name": "SystemAnalyzerTool",
+      "module_path": "tools.system_analyzer_tool",
+      "description": "Analyzes system components and generates improvement suggestions",
+      "priority": 8,
+      "category": "augmentic_development"
+    },
+    "base_gen_agent": {
+      "enabled": true,
+      "class_name": "BaseGenAgent",
+      "module_path": "tools.base_gen_agent",
+      "description": "Generates comprehensive codebase summaries and documentation",
+      "priority": 7,
+      "category": "augmentic_development"
+    },
+    "strategic_analysis_tool": {
+      "enabled": true,
+      "class_name": "StrategicAnalysisTool",
+      "module_path": "tools.strategic_analysis_tool",
+      "description": "Performs strategic analysis and planning for system improvements",
+      "priority": 8,
+      "category": "augmentic_development"
+    },
+    "registry_manager_tool": {
+      "enabled": true,
+      "class_name": "RegistryManagerTool",
+      "module_path": "tools.registry_manager_tool",
+      "description": "Manages tool and agent registries for dynamic system updates",
+      "priority": 6,
+      "category": "augmentic_development"
+    },
+    "agent_factory_tool": {
+      "enabled": true,
+      "class_name": "AgentFactoryTool",
+      "module_path": "tools.agent_factory_tool",
+      "description": "Creates and manages new agents dynamically",
+      "priority": 7,
+      "category": "augmentic_development"
+    },
+    "tool_factory_tool": {
+      "enabled": true,
+      "class_name": "ToolFactoryTool",
+      "module_path": "tools.tool_factory_tool",
+      "description": "Creates and manages new tools dynamically",
+      "priority": 7,
+      "category": "augmentic_development"
+    },
+    "memory_analysis_tool": {
+      "enabled": true,
+      "class_name": "MemoryAnalysisTool",
+      "module_path": "tools.memory_analysis_tool",
+      "description": "Analyzes memory usage and learning patterns",
+      "priority": 5,
+      "category": "augmentic_development"
+    },
+    "system_health_tool": {
+      "enabled": true,
+      "class_name": "SystemHealthTool",
+      "module_path": "tools.system_health_tool",
+      "description": "Monitors system health and performance metrics",
+      "priority": 6,
+      "category": "augmentic_development"
+    },
+    "shell_command_tool": {
+      "enabled": true,
+      "class_name": "ShellCommandTool",
+      "module_path": "tools.shell_command_tool",
+      "description": "Executes shell commands for system operations",
+      "priority": 4,
+      "category": "augmentic_development"
+    },
+    "web_search_tool": {
+      "enabled": true,
+      "class_name": "WebSearchTool",
+      "module_path": "tools.web_search_tool",
+      "description": "Searches the web for information and resources",
+      "priority": 3,
+      "category": "augmentic_development"
+    },
+    "note_taking_tool": {
+      "enabled": true,
+      "class_name": "NoteTakingTool",
+      "module_path": "tools.note_taking_tool",
+      "description": "Takes and manages notes for augmentic development",
+      "priority": 4,
+      "category": "augmentic_development"
+    },
+    "summarization_tool": {
+      "enabled": true,
+      "class_name": "SummarizationTool",
+      "module_path": "tools.summarization_tool",
+      "description": "Summarizes content and generates reports",
+      "priority": 5,
+      "category": "augmentic_development"
+    },
+    "business_intelligence_tool": {
+      "enabled": true,
+      "class_name": "BusinessIntelligenceTool",
+      "module_path": "tools.business_intelligence_tool",
+      "description": "Provides business intelligence and analytics",
+      "priority": 4,
+      "category": "augmentic_development"
+    },
+    "tree_agent": {
+      "enabled": true,
+      "class_name": "TreeAgent",
+      "module_path": "tools.tree_agent",
+      "description": "Navigates and analyzes directory structures",
+      "priority": 3,
+      "category": "augmentic_development"
+    }
+  },
+  "tool_categories": {
+    "augmentic_development": {
+      "description": "Tools specifically designed for autonomous agentic development",
+      "priority": 10
+    },
+    "system_analysis": {
+      "description": "Tools for analyzing and understanding system state",
+      "priority": 8
+    },
+    "code_improvement": {
+      "description": "Tools for improving and refactoring code",
+      "priority": 9
+    },
+    "agent_management": {
+      "description": "Tools for creating and managing agents",
+      "priority": 7
+    },
+    "tool_management": {
+      "description": "Tools for creating and managing other tools",
+      "priority": 7
+    }
+  },
+  "augmentic_workflow": {
+    "analysis_phase": [
+      "system_analyzer_tool",
+      "memory_analysis_tool",
+      "system_health_tool"
+    ],
+    "planning_phase": [
+      "strategic_analysis_tool",
+      "base_gen_agent"
+    ],
+    "implementation_phase": [
+      "audit_and_improve_tool",
+      "augmentic_intelligence_tool",
+      "agent_factory_tool",
+      "tool_factory_tool"
+    ],
+    "validation_phase": [
+      "system_health_tool",
+      "memory_analysis_tool"
+    ]
+  }
+}

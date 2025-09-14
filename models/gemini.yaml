@@ -1,0 +1,474 @@
+gemini/gemini-1.5-flash-latest:
+  task_scores:
+    reasoning: 0.85
+    code_generation: 0.88
+    writing: 0.9
+    simple_chat: 0.95
+    data_analysis: 0.8
+    speed_sensitive: 0.75
+  cost_per_kilo_input_tokens: 0.00035
+  cost_per_kilo_output_tokens: 0.0007
+  max_context_length: 1000000
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: gemini-1.5-flash-latest
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-1.5-flash:
+  task_scores:
+    reasoning: 0.85
+    code_generation: 0.88
+    writing: 0.9
+    simple_chat: 0.95
+    data_analysis: 0.8
+    speed_sensitive: 0.92
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  max_context_length: 1000000
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: gemini-1.5-flash
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-1.5-flash-002:
+  task_scores:
+    reasoning: 0.85
+    code_generation: 0.88
+    writing: 0.9
+    simple_chat: 0.95
+    data_analysis: 0.8
+    speed_sensitive: 0.75
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  max_context_length: 1000000
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: gemini-1.5-flash-002
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-1.5-flash-8b:
+  task_scores:
+    reasoning: 0.8
+    code_generation: 0.7
+    writing: 0.9
+    simple_chat: 0.95
+    data_analysis: 0.6
+    speed_sensitive: 0.9
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  max_context_length: 1000000
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: gemini-1.5-flash-8b
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-1.5-flash-8b-001:
+  task_scores:
+    reasoning: 0.8
+    code_generation: 0.7
+    writing: 0.9
+    simple_chat: 0.95
+    data_analysis: 0.6
+    speed_sensitive: 0.9
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  max_context_length: 1000000
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: gemini-1.5-flash-8b-001
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-1.5-flash-8b-latest:
+  task_scores:
+    reasoning: 0.8
+    code_generation: 0.7
+    writing: 0.9
+    simple_chat: 0.95
+    data_analysis: 0.6
+    speed_sensitive: 0.9
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  max_context_length: 1000000
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: gemini-1.5-flash-8b-latest
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-2.5-flash-preview-04-17:
+  task_scores:
+    reasoning: 0.9
+    code_generation: 0.85
+    writing: 0.95
+    simple_chat: 0.98
+    data_analysis: 0.7
+    speed_sensitive: 0.4
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  max_context_length: 1048576
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: gemini-2.5-flash-preview-04-17
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-2.5-flash-preview-05-20:
+  task_scores:
+    reasoning: 0.8
+    code_generation: 0.9
+    writing: 0.95
+    simple_chat: 0.98
+    data_analysis: 0.7
+    speed_sensitive: 0.5
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  max_context_length: 1048576
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: gemini-2.5-flash-preview-05-20
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-2.5-flash:
+  task_scores:
+    reasoning: 0.7
+    code_generation: 0.7
+    writing: 0.7
+    simple_chat: 0.7
+    data_analysis: 0.7
+    speed_sensitive: 0.7
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  api_name: gemini-2.5-flash
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-2.5-flash-preview-04-17-thinking:
+  task_scores:
+    reasoning: 0.7
+    code_generation: 0.7
+    writing: 0.7
+    simple_chat: 0.7
+    data_analysis: 0.7
+    speed_sensitive: 0.7
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  api_name: gemini-2.5-flash-preview-04-17-thinking
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-2.5-flash-lite-preview-06-17:
+  task_scores:
+    reasoning: 0.7
+    code_generation: 0.7
+    writing: 0.7
+    simple_chat: 0.7
+    data_analysis: 0.7
+    speed_sensitive: 0.7
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  api_name: gemini-2.5-flash-lite-preview-06-17
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-2.0-flash-exp:
+  task_scores:
+    reasoning: 0.7
+    code_generation: 0.7
+    writing: 0.7
+    simple_chat: 0.7
+    data_analysis: 0.7
+    speed_sensitive: 0.7
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  api_name: gemini-2.0-flash-exp
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-2.0-flash:
+  task_scores:
+    reasoning: 0.85
+    code_generation: 0.9
+    writing: 0.95
+    simple_chat: 0.98
+    data_analysis: 0.8
+    speed_sensitive: 0.92
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  max_context_length: 1048576
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: gemini-2.0-flash
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-2.0-flash-001:
+  task_scores:
+    reasoning: 0.85
+    code_generation: 0.9
+    writing: 0.95
+    simple_chat: 0.98
+    data_analysis: 0.8
+    speed_sensitive: 0.75
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  max_context_length: 1048576
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: gemini-2.0-flash-001
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-2.0-flash-exp-image-generation:
+  task_scores:
+    reasoning: 0.7
+    code_generation: 0.7
+    writing: 0.7
+    simple_chat: 0.7
+    data_analysis: 0.7
+    speed_sensitive: 0.7
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  api_name: gemini-2.0-flash-exp-image-generation
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-2.0-flash-lite-001:
+  task_scores:
+    reasoning: 0.85
+    code_generation: 0.9
+    writing: 0.95
+    simple_chat: 0.98
+    data_analysis: 0.8
+    speed_sensitive: 0.75
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  max_context_length: 1048576
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: gemini-2.0-flash-lite-001
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-2.0-flash-lite:
+  task_scores:
+    reasoning: 0.85
+    code_generation: 0.9
+    writing: 0.95
+    simple_chat: 0.98
+    data_analysis: 0.8
+    speed_sensitive: 0.75
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  max_context_length: 1048576
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: gemini-2.0-flash-lite
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-2.0-flash-lite-preview-02-05:
+  task_scores:
+    reasoning: 0.85
+    code_generation: 0.9
+    writing: 0.95
+    simple_chat: 0.98
+    data_analysis: 0.8
+    speed_sensitive: 0.75
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  max_context_length: 1048576
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: gemini-2.0-flash-lite-preview-02-05
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-2.0-flash-lite-preview:
+  task_scores:
+    reasoning: 0.85
+    code_generation: 0.9
+    writing: 0.95
+    simple_chat: 0.98
+    data_analysis: 0.8
+    speed_sensitive: 0.75
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  max_context_length: 1048576
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: gemini-2.0-flash-lite-preview
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-2.0-flash-thinking-exp-01-21:
+  task_scores:
+    reasoning: 0.7
+    code_generation: 0.7
+    writing: 0.7
+    simple_chat: 0.7
+    data_analysis: 0.7
+    speed_sensitive: 0.7
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  api_name: gemini-2.0-flash-thinking-exp-01-21
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-2.0-flash-thinking-exp:
+  task_scores:
+    reasoning: 0.7
+    code_generation: 0.7
+    writing: 0.7
+    simple_chat: 0.7
+    data_analysis: 0.7
+    speed_sensitive: 0.7
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  api_name: gemini-2.0-flash-thinking-exp
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemini-2.0-flash-thinking-exp-1219:
+  task_scores:
+    reasoning: 0.7
+    code_generation: 0.7
+    writing: 0.7
+    simple_chat: 0.7
+    data_analysis: 0.7
+    speed_sensitive: 0.7
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  api_name: gemini-2.0-flash-thinking-exp-1219
+  assessed_capabilities:
+  - text
+  - vision
+gemini/learnlm-2.0-flash-experimental:
+  task_scores:
+    reasoning: 0.85
+    code_generation: 0.9
+    writing: 0.95
+    simple_chat: 0.98
+    data_analysis: 0.8
+    speed_sensitive: 0.92
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  max_context_length: 1048576
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: learnlm-2.0-flash-experimental
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemma-3-4b-it:
+  task_scores:
+    reasoning: 0.7
+    code_generation: 0.7
+    writing: 0.7
+    simple_chat: 0.7
+    data_analysis: 0.7
+    speed_sensitive: 0.7
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  api_name: gemma-3-4b-it
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemma-3-12b-it:
+  task_scores:
+    reasoning: 0.7
+    code_generation: 0.7
+    writing: 0.7
+    simple_chat: 0.7
+    data_analysis: 0.7
+    speed_sensitive: 0.7
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  api_name: gemma-3-12b-it
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemma-3-27b-it:
+  task_scores:
+    reasoning: 0.7
+    code_generation: 0.7
+    writing: 0.7
+    simple_chat: 0.7
+    data_analysis: 0.7
+    speed_sensitive: 0.7
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  api_name: gemma-3-27b-it
+  assessed_capabilities:
+  - text
+  - vision
+gemini/gemma-3-1b-it:
+  task_scores:
+    reasoning: 0.7
+    code_generation: 0.7
+    writing: 0.7
+    simple_chat: 0.7
+    data_analysis: 0.7
+    speed_sensitive: 0.7
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  api_name: gemma-3-1b-it
+  assessed_capabilities:
+  - text
+gemini/gemma-3n-e4b-it:
+  task_scores:
+    reasoning: 0.7
+    code_generation: 0.7
+    writing: 0.7
+    simple_chat: 0.7
+    data_analysis: 0.7
+    speed_sensitive: 0.7
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  api_name: gemma-3n-e4b-it
+  assessed_capabilities:
+  - text
+gemini/embedding-001:
+  task_scores:
+    reasoning: 0.7
+    code_generation: 0.7
+    writing: 0.7
+    simple_chat: 0.7
+    data_analysis: 0.7
+    speed_sensitive: 0.7
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  api_name: embedding-001
+  assessed_capabilities:
+  - embedding
+gemini/text-embedding-004:
+  task_scores:
+    reasoning: 0.7
+    code_generation: 0.7
+    writing: 0.7
+    simple_chat: 0.7
+    data_analysis: 0.7
+    speed_sensitive: 0.7
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  api_name: text-embedding-004
+  assessed_capabilities:
+  - embedding
+gemini/gemini-embedding-exp-03-07:
+  task_scores:
+    reasoning: 0.7
+    code_generation: 0.7
+    writing: 0.7
+    simple_chat: 0.7
+    data_analysis: 0.7
+    speed_sensitive: 0.7
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  api_name: gemini-embedding-exp-03-07
+  assessed_capabilities:
+  - embedding

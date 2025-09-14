@@ -1,0 +1,61 @@
+{
+  "timestamp": 1751324264.0691514,
+  "success": true,
+  "results": [
+    {
+      "test": "CEO Agent Initialization",
+      "passed": true,
+      "details": {
+        "objectives": 3,
+        "strategies": 4
+      }
+    },
+    {
+      "test": "Security Validation",
+      "passed": true,
+      "details": {
+        "valid_tests": 3,
+        "blocked_tests": 5
+      }
+    },
+    {
+      "test": "Rate Limiting",
+      "passed": true,
+      "details": {
+        "rate_limiter_direct": "working"
+      }
+    },
+    {
+      "test": "Health Monitoring",
+      "passed": true,
+      "details": {
+        "overall_status": "HEALTHY",
+        "components_count": 1
+      }
+    },
+    {
+      "test": "State Persistence",
+      "passed": true,
+      "details": {
+        "files_created": 3,
+        "backups_created": 1
+      }
+    },
+    {
+      "test": "Strategic Operations",
+      "passed": true,
+      "details": {
+        "active_objectives": 2,
+        "total_strategies": 4
+      }
+    },
+    {
+      "test": "Error Handling",
+      "passed": true,
+      "details": {
+        "security_blocks": true,
+        "fallback_working": true
+      }
+    }
+  ]
+}

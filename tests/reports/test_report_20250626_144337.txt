@@ -1,0 +1,666 @@
+================================================================================
+COMPREHENSIVE AGENT_CREATE WORKFLOW TEST RESULTS
+================================================================================
+Test Run Timestamp: 20250626_144337
+Total Duration: 22.97 seconds
+
+TEST SUITES RESULTS:
+----------------------------------------
+
+CLI_PARSING_TESTS:
+  File: tests/test_cli_agent_create_parsing.py
+  Success: ✅ YES
+  Exit Code: 0
+  Errors: ..........
+----------------------------------------------------------------------
+Ran 10 tests in 0.001s
+
+OK
+
+
+
+SIMPLE_WORKFLOW_TESTS:
+  File: tests/test_agent_create_simple.py
+  Success: ✅ YES
+  Exit Code: 0
+  Errors: [2025-06-26 14:43:37] root - INFO - logging_config.setup_logging:88 - Logging configured. Root level: INFO. Console: True. File: True.
+[2025-06-26 14:43:37] utils.config - INFO - config._load_environment_variables:50 - Loaded environment variables from /home/luvai/MINDXbuilds/production/mindX/.env
+[2025-06-26 14:43:37] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from agint_config.json
+[2025-06-26 14:43:37] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from basegen_config.json
+[2025-06-26 14:43:37] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from llm_factory_config.json
+[2025-06-26 14:43:37] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from official_agents_registry.json
+[2025-06-26 14:43:37] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from official_tools_registry.json
+[2025-06-26 14:43:37] utils.yaml_config_loader - INFO - yaml_config_loader.load_yaml_file:29 - Successfully loaded YAML configuration from gemini.yaml
+[2025-06-26 14:43:37] utils.config - INFO - config.__init__:43 - Configuration loaded successfully.
+[2025-06-26 14:43:37] __main__ - INFO - test_agent_create_simple.setUpClass:39 - Simple agent_create test environment initialized
+[2025-06-26 14:43:37] __main__ - INFO - test_agent_create_simple.test_performance_parsing:319 - Parsing performance: 0.00ms per command
+[2025-06-26 14:43:37] utils.config - INFO - config._load_environment_variables:50 - Loaded environment variables from /home/luvai/MINDXbuilds/production/mindX/.env
+[2025-06-26 14:43:37] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from agint_config.json
+[2025-06-26 14:43:37] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from basegen_config.json
+[2025-06-26 14:43:37] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from llm_factory_config.json
+[2025-06-26 14:43:37] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from official_agents_registry.json
+[2025-06-26 14:43:37] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from official_tools_registry.json
+[2025-06-26 14:43:38] utils.yaml_config_loader - INFO - yaml_config_loader.load_yaml_file:29 - Successfully loaded YAML configuration from gemini.yaml
+[2025-06-26 14:43:38] utils.config - INFO - config.__init__:43 - Configuration loaded successfully.
+[2025-06-26 14:43:38] utils.config - INFO - config._load_environment_variables:50 - Loaded environment variables from /home/luvai/MINDXbuilds/production/mindX/.env
+[2025-06-26 14:43:38] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from agint_config.json
+[2025-06-26 14:43:38] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from basegen_config.json
+[2025-06-26 14:43:38] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from llm_factory_config.json
+[2025-06-26 14:43:38] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from official_agents_registry.json
+[2025-06-26 14:43:38] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from official_tools_registry.json
+[2025-06-26 14:43:38] utils.yaml_config_loader - INFO - yaml_config_loader.load_yaml_file:29 - Successfully loaded YAML configuration from gemini.yaml
+[2025-06-26 14:43:38] utils.config - INFO - config.__init__:43 - Configuration loaded successfully.
+
+
+
+INTEGRATION_TESTS:
+  File: tests/test_agent_create_integration.py
+  Success: ✅ YES
+  Exit Code: 0
+  Errors: [2025-06-26 14:43:38] root - INFO - logging_config.setup_logging:88 - Logging configured. Root level: INFO. Console: True. File: True.
+[2025-06-26 14:43:38] utils.config - INFO - config._load_environment_variables:50 - Loaded environment variables from /home/luvai/MINDXbuilds/production/mindX/.env
+[2025-06-26 14:43:38] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from agint_config.json
+[2025-06-26 14:43:38] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from basegen_config.json
+[2025-06-26 14:43:38] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from llm_factory_config.json
+[2025-06-26 14:43:38] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from official_agents_registry.json
+[2025-06-26 14:43:38] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from official_tools_registry.json
+[2025-06-26 14:43:38] utils.yaml_config_loader - INFO - yaml_config_loader.load_yaml_file:29 - Successfully loaded YAML configuration from gemini.yaml
+[2025-06-26 14:43:38] utils.config - INFO - config.__init__:43 - Configuration loaded successfully.
+
+
+LIVE AGENT CREATION TESTS:
+----------------------------------------
+
+Test 1: test_reporter -> reporter
+  Success: ✅ YES
+  Agent Created: ✅ YES
+  Code Generated: ✅ YES
+  Identity Created: ✅ YES
+  Registered: ❌ NO
+  Exit Code: 0
+  Errors: [2025-06-26 14:43:39] root - INFO - logging_config.setup_logging:88 - Logging configured. Root level: INFO. Console: True. File: True.
+[2025-06-26 14:43:43] orchestration.mastermind_agent - INFO - mastermind_agent.<module>:31 - MastermindAgent: CodeBaseGenerator successfully imported.
+[2025-06-26 14:43:43] utils.config - INFO - config._load_environment_variables:50 - Loaded environment variables from /home/luvai/MINDXbuilds/production/mindX/.env
+[2025-06-26 14:43:43] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from agint_config.json
+[2025-06-26 14:43:43] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from basegen_config.json
+[2025-06-26 14:43:43] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from llm_factory_config.json
+[2025-06-26 14:43:43] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from official_agents_registry.json
+[2025-06-26 14:43:43] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from official_tools_registry.json
+[2025-06-26 14:43:43] utils.yaml_config_loader - INFO - yaml_config_loader.load_yaml_file:29 - Successfully loaded YAML configuration from gemini.yaml
+[2025-06-26 14:43:43] utils.config - INFO - config.__init__:43 - Configuration loaded successfully.
+[2025-06-26 14:43:43] agents.memory_agent - INFO - memory_agent._initialize_storage:115 - MemoryAgent Initialized: All memory and log directories verified/created under '/home/luvai/MINDXbuilds/production/mindX/data'.
+[2025-06-26 14:43:43] agents.memory_agent - INFO - memory_agent.__init__:95 - ujson library detected, will be used for faster JSON operations.
+[2025-06-26 14:43:43] agents.memory_agent - INFO - memory_agent.__init__:96 - Enhanced MemoryAgent initialized with timestamped memory capabilities.
+[2025-06-26 14:43:43] __main__ - INFO - run_mindx.main_entry:480 - mindX CLI (Mastermind Edition - Augmentic Intelligence). Project Root (calculated): /home/luvai/MINDXbuilds/production/mindX
+[2025-06-26 14:43:43] __main__ - INFO - run_mindx.main_entry:481 - mindX CLI trying to use Project Root (from config defined in utils.config): /home/luvai/MINDXbuilds/production/mindX
+[2025-06-26 14:43:43] agents.memory_agent - INFO - memory_agent._initialize_storage:115 - MemoryAgent Initialized: All memory and log directories verified/created under '/home/luvai/MINDXbuilds/production/mindX/data'.
+[2025-06-26 14:43:43] agents.memory_agent - INFO - memory_agent.__init__:95 - ujson library detected, will be used for faster JSON operations.
+[2025-06-26 14:43:43] agents.memory_agent - INFO - memory_agent.__init__:96 - Enhanced MemoryAgent initialized with timestamped memory capabilities.
+[2025-06-26 14:43:43] core.id_manager_agent - INFO - id_manager_agent.__init__:68 - IDManagerAgent (default_identity_manager): Initialized. Secure central key store: /home/luvai/MINDXbuilds/production/mindX/data/identity/.wallet_keys.env
+[2025-06-26 14:43:43] agents.automindx_agent - INFO - automindx_agent.__init__:69 - AutoMINDX: Initialized with iNFT capabilities, avatar support, and A2A protocol compliance. Personas loaded from /home/luvai/MINDXbuilds/production/mindX/data/memory/agent_workspaces/automindx_agent_main/personas.json.
+[2025-06-26 14:43:43] llm.llm_factory - INFO - llm_factory._load_llm_factory_config_json:66 - LLMFactory (mindX): Attempting to load specific configuration from /home/luvai/MINDXbuilds/production/mindX/data/config/llm_factory_config.json
+[2025-06-26 14:43:43] llm.llm_factory - INFO - llm_factory._load_llm_factory_config_json:71 - LLMFactory (mindX): Loaded specific configuration from /home/luvai/MINDXbuilds/production/mindX/data/config/llm_factory_config.json
+[2025-06-26 14:43:43] llm.rate_limiter - INFO - rate_limiter.__init__:67 - RateLimiter initialized. Rate: 2/min, Max Retries: 5.
+[2025-06-26 14:43:43] llm.gemini_handler - INFO - gemini_handler._load_config_from_yaml:59 - Dynamically loading Gemini configuration from: /home/luvai/MINDXbuilds/production/mindX/models/gemini.yaml
+[2025-06-26 14:43:43] llm.llm_factory - INFO - llm_factory.create_llm_handler:191 - LLMFactory (mindX): Created LLMHandler for gemini with model 'gemini-1.5-flash-latest'
+[2025-06-26 14:43:43] agents.automindx_agent - INFO - automindx_agent._async_init:192 - AutoMINDX: LLM handler initialized: gemini/gemini-1.5-flash-latest
+[2025-06-26 14:43:43] agents.memory_agent - INFO - memory_agent._initialize_storage:115 - MemoryAgent Initialized: All memory and log directories verified/created under '/home/luvai/MINDXbuilds/production/mindX/data'.
+[2025-06-26 14:43:43] agents.memory_agent - INFO - memory_agent.__init__:95 - ujson library detected, will be used for faster JSON operations.
+[2025-06-26 14:43:43] agents.memory_agent - INFO - memory_agent.__init__:96 - Enhanced MemoryAgent initialized with timestamped memory capabilities.
+[2025-06-26 14:43:44] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'guardian_agent_main'. Creation skipped.
+[2025-06-26 14:43:44] agents.guardian_agent - INFO - guardian_agent._async_init:77 - GuardianAgent: Async initialization complete.
+[2025-06-26 14:43:44] llm.model_selector - INFO - model_selector.__init__:68 - ModelSelector initialized with weights: {'capability_match': 3.0, 'success_rate': 2.0, 'latency_factor': 0.5, 'cost_factor': 1.5, 'provider_preference': 0.2}
+[2025-06-26 14:43:44] llm.model_registry - INFO - model_registry.__init__:35 - ModelRegistry: Instance created. Awaiting async initialization.
+[2025-06-26 14:43:44] llm.model_registry - INFO - model_registry._async_init:42 - ModelRegistry: Starting asynchronous initialization...
+[2025-06-26 14:43:44] llm.model_registry - INFO - model_registry._async_init:52 - ModelRegistry: Found model definitions for provider 'gemini'. Initializing handler.
+[2025-06-26 14:43:44] llm.model_registry - INFO - model_registry._async_init:62 - ModelRegistry: Initialization complete. Available providers: ['gemini']
+[2025-06-26 14:43:44] coordinator_agent - INFO - coordinator_agent.__init__:137 - Heavy task concurrency limit set to: 2
+[2025-06-26 14:43:44] coordinator_agent - INFO - coordinator_agent.__init__:147 - CoordinatorAgent initialized. Awaiting async setup.
+[2025-06-26 14:43:44] coordinator_agent - INFO - coordinator_agent.async_init:157 - Coordinator LLM handler initialized: gemini/gemini-1.5-flash-latest
+[2025-06-26 14:43:44] core.id_manager_agent - INFO - id_manager_agent.__init__:68 - IDManagerAgent (id_manager_for_coordinator_agent_main): Initialized. Secure central key store: /home/luvai/MINDXbuilds/production/mindX/data/identity/.wallet_keys.env
+[2025-06-26 14:43:44] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (id_manager_for_coordinator_agent_main): Wallet already exists for entity 'coordinator_agent_main'. Creation skipped.
+[2025-06-26 14:43:44] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'coordinator_agent' (Type: kernel). Total agents: 1
+[2025-06-26 14:43:44] coordinator_agent - INFO - coordinator_agent._initialize_tools:194 - Coordinator internal tool initialization complete (no tools to load).
+[2025-06-26 14:43:44] monitoring.performance_monitor - INFO - performance_monitor._load_metrics_sync:88 - Performance metrics loaded from /home/luvai/MINDXbuilds/production/mindX/data/performance_metrics.json
+[2025-06-26 14:43:44] monitoring.performance_monitor - INFO - performance_monitor.__init__:60 - PerformanceMonitor initialized. Metrics File: /home/luvai/MINDXbuilds/production/mindX/data/performance_metrics.json. Save every: 20 reqs (if periodic save off). Periodic Save: True, interval 300.0s.
+[2025-06-26 14:43:44] monitoring.resource_monitor - INFO - resource_monitor.__init__:62 - ResourceMonitor initialized. CPU Limit: 90.0%, Memory Limit: 90.0%, Disk Thresholds: {'/': 90.0}, Re-alert Interval: 300.0s
+[2025-06-26 14:43:44] monitoring.resource_monitor - INFO - resource_monitor.start_monitoring:130 - Started resource monitoring. Interval: 15.0s
+[2025-06-26 14:43:44] coordinator_agent - INFO - coordinator_agent.async_init:178 - CoordinatorAgent fully initialized.
+[2025-06-26 14:43:44] tools.base_gen_agent - INFO - base_gen_agent.__init__:110 - [base_gen_for_mastermind_prime] Using resolved config file path: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:44] tools.base_gen_agent - INFO - base_gen_agent._load_and_merge_config_from_file:126 - [base_gen_for_mastermind_prime] Loaded and merged agent config from '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:44] tools.base_gen_agent - INFO - base_gen_agent.__init__:114 - [base_gen_for_mastermind_prime] Initialized. Config source: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'. Max file size: 1024KB.
+[2025-06-26 14:43:44] orchestration.mastermind_agent - INFO - mastermind_agent.__init__:109 - Mastermind (mastermind_prime of mindX): CodeBaseGenerator initialized.
+[2025-06-26 14:43:44] orchestration.mastermind_agent - INFO - mastermind_agent._async_init_components:126 - Mastermind (mastermind_prime of mindX): Internal LLM set to: gemini/gemini-1.5-flash-latest
+[2025-06-26 14:43:44] agents.automindx_agent - INFO - automindx_agent.get_persona:203 - AutoMINDX: Providing persona for 'MASTERMIND'.
+[2025-06-26 14:43:44] agents.memory_agent - INFO - memory_agent._initialize_storage:115 - MemoryAgent Initialized: All memory and log directories verified/created under '/home/luvai/MINDXbuilds/production/mindX/data'.
+[2025-06-26 14:43:44] agents.memory_agent - INFO - memory_agent.__init__:95 - ujson library detected, will be used for faster JSON operations.
+[2025-06-26 14:43:44] agents.memory_agent - INFO - memory_agent.__init__:96 - Enhanced MemoryAgent initialized with timestamped memory capabilities.
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.__init__:232 - Synchronous __init__ complete. LLM and Tools require async_init_components.
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.async_init_components:236 - Starting asynchronous component initialization...
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.async_init_components:243 - Internal LLM initialized: gemini/gemini-1.5-flash-latest
+[2025-06-26 14:43:44] agents.memory_agent - INFO - memory_agent._initialize_storage:115 - MemoryAgent Initialized: All memory and log directories verified/created under '/home/luvai/MINDXbuilds/production/mindX/data'.
+[2025-06-26 14:43:44] agents.memory_agent - INFO - memory_agent.__init__:95 - ujson library detected, will be used for faster JSON operations.
+[2025-06-26 14:43:44] agents.memory_agent - INFO - memory_agent.__init__:96 - Enhanced MemoryAgent initialized with timestamped memory capabilities.
+[2025-06-26 14:43:44] core.id_manager_agent - INFO - id_manager_agent.__init__:68 - IDManagerAgent (id_manager_for_bdi_agent_mastermind_strategy_mastermind_prime): Initialized. Secure central key store: /home/luvai/MINDXbuilds/production/mindX/data/identity/.wallet_keys.env
+[2025-06-26 14:43:44] monitoring.performance_monitor - INFO - performance_monitor._periodic_save_worker:223 - Periodic performance metrics saver started. Interval: 300.0s
+[2025-06-26 14:43:44] monitoring.resource_monitor - INFO - resource_monitor._monitor_resources_loop:144 - Resource monitoring loop started.
+[2025-06-26 14:43:44] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (id_manager_for_bdi_agent_mastermind_strategy_mastermind_prime): Wallet already exists for entity 'bdi_agent_mastermind_strategy_mastermind_prime'. Creation skipped.
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:263 - Initializing tools based on the provided tool registry...
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'cli_command_tool' from tools.cli_command_tool.CLICommandTool
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - ERROR - bdi_agent._initialize_tools_async:316 - Failed to initialize tool 'cli_command_tool': CLICommandTool.__init__() missing 2 required positional arguments: 'mastermind' and 'coordinator'
+Traceback (most recent call last):
+  File "/home/luvai/MINDXbuilds/production/mindX/core/bdi_agent.py", line 313, in _initialize_tools_async
+    self.available_tools[tool_id] = ToolClass(**valid_kwargs)
+TypeError: CLICommandTool.__init__() missing 2 required positional arguments: 'mastermind' and 'coordinator'
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'audit_and_improve' from tools.audit_and_improve_tool.AuditAndImproveTool
+[2025-06-26 14:43:44] tools.base_gen_agent - INFO - base_gen_agent.__init__:110 - [base_gen_agent_v1.1] Using resolved config file path: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:44] tools.base_gen_agent - INFO - base_gen_agent._load_and_merge_config_from_file:126 - [base_gen_agent_v1.1] Loaded and merged agent config from '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:44] tools.base_gen_agent - INFO - base_gen_agent.__init__:114 - [base_gen_agent_v1.1] Initialized. Config source: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'. Max file size: 1024KB.
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: AuditAndImproveTool
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'base_gen_agent' from tools.base_gen_agent.BaseGenAgent
+[2025-06-26 14:43:44] tools.base_gen_agent - INFO - base_gen_agent.__init__:110 - [base_gen_agent_v1.1] Using resolved config file path: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:44] tools.base_gen_agent - INFO - base_gen_agent._load_and_merge_config_from_file:126 - [base_gen_agent_v1.1] Loaded and merged agent config from '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:44] tools.base_gen_agent - INFO - base_gen_agent.__init__:114 - [base_gen_agent_v1.1] Initialized. Config source: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'. Max file size: 1024KB.
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: BaseGenAgent
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'note_taking' from tools.note_taking_tool.NoteTakingTool
+[2025-06-26 14:43:44] tools.note_taking_tool - INFO - note_taking_tool.__init__:50 - NoteTakingTool initialized. Notes directory: /home/luvai/MINDXbuilds/production/mindX/data/memory/agent_workspaces/general_note_taking_tool/notes
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: NoteTakingTool
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'simple_coder_agent' from agents.simple_coder_agent.SimpleCoder
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - ERROR - bdi_agent._initialize_tools_async:316 - Failed to initialize tool 'simple_coder_agent': module 'agents.simple_coder_agent' has no attribute 'SimpleCoder'
+Traceback (most recent call last):
+  File "/home/luvai/MINDXbuilds/production/mindX/core/bdi_agent.py", line 272, in _initialize_tools_async
+    ToolClass = getattr(module, class_name)
+AttributeError: module 'agents.simple_coder_agent' has no attribute 'SimpleCoder'. Did you mean: 'SimpleCoderAgent'?
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'summarization' from tools.summarization_tool.SummarizationTool
+[2025-06-26 14:43:44] tools.summarization_tool - INFO - summarization_tool.__init__:44 - SummarizationTool initialized. Using LLM: gemini/gemini-1.5-flash-latest
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: SummarizationTool
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'system_analyzer' from tools.system_analyzer_tool.SystemAnalyzerTool
+[2025-06-26 14:43:44] tools.system_analyzer_tool - INFO - system_analyzer_tool.__init__:53 - SystemAnalyzerTool: Initialized with integrated monitoring capabilities via Coordinator.
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: SystemAnalyzerTool
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'shell_command' from tools.shell_command_tool.ShellCommandTool
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: ShellCommandTool
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'registry_manager' from tools.registry_manager_tool.RegistryManagerTool
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: RegistryManagerTool
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'registry_sync' from tools.registry_sync_tool.RegistrySyncTool
+[2025-06-26 14:43:44] tools.registry_sync_tool - INFO - registry_sync_tool.__init__:43 - RegistrySyncTool: Initialized with registry paths.
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: RegistrySyncTool
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'agent_factory' from tools.agent_factory_tool.AgentFactoryTool
+[2025-06-26 14:43:44] tools.agent_factory_tool - INFO - agent_factory_tool.__init__:41 - AgentFactoryTool: Initialized with agent creation capabilities.
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: AgentFactoryTool
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'tool_factory' from tools.tool_factory_tool.ToolFactoryTool
+[2025-06-26 14:43:44] tools.tool_factory_tool - INFO - tool_factory_tool.__init__:28 - ToolFactoryTool: Initialized with tool creation capabilities.
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: ToolFactoryTool
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'augmentic_intelligence' from tools.augmentic_intelligence_tool.AugmenticIntelligenceTool
+[2025-06-26 14:43:44] tools.agent_factory_tool - INFO - agent_factory_tool.__init__:41 - AgentFactoryTool: Initialized with agent creation capabilities.
+[2025-06-26 14:43:44] tools.tool_factory_tool - INFO - tool_factory_tool.__init__:28 - ToolFactoryTool: Initialized with tool creation capabilities.
+[2025-06-26 14:43:44] tools.augmentic_intelligence_tool - INFO - augmentic_intelligence_tool._init_sub_tools:74 - AugmenticIntelligenceTool: Sub-tools initialized successfully.
+[2025-06-26 14:43:44] tools.augmentic_intelligence_tool - INFO - augmentic_intelligence_tool.__init__:53 - AugmenticIntelligenceTool: Initialized with full system access.
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: AugmenticIntelligenceTool
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'enhanced_simple_coder' from agents.enhanced_simple_coder.EnhancedSimpleCoder
+[2025-06-26 14:43:44] agents.enhanced_simple_coder - INFO - enhanced_simple_coder.__init__:40 - EnhancedSimpleCoder: Enhanced coding agent initialized
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: EnhancedSimpleCoder
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'memory_analysis' from tools.memory_analysis_tool.MemoryAnalysisTool
+[2025-06-26 14:43:44] tools.memory_analysis_tool - INFO - memory_analysis_tool.__init__:43 - MemoryAnalysisTool: Memory analysis tool initialized
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: MemoryAnalysisTool
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'identity_sync' from tools.identity_sync_tool.IdentitySyncTool
+[2025-06-26 14:43:44] tools.identity_sync_tool - INFO - identity_sync_tool.__init__:41 - IdentitySyncTool: Initialized with registry paths.
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: IdentitySyncTool
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:317 - Tools initialization phase complete. Loaded tools: ['audit_and_improve', 'base_gen_agent', 'note_taking', 'summarization', 'system_analyzer', 'shell_command', 'registry_manager', 'registry_sync', 'agent_factory', 'tool_factory', 'augmentic_intelligence', 'enhanced_simple_coder', 'memory_analysis', 'identity_sync']
+[2025-06-26 14:43:44] agents.enhanced_simple_coder - INFO - enhanced_simple_coder.__init__:40 - EnhancedSimpleCoder: Enhanced coding agent initialized
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_enhanced_simple_coder:996 - Enhanced Simple Coder initialized as BDI agent's right-hand assistant
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.async_init_components:260 - Fully initialized. LLM Ready: True. Tools: ['audit_and_improve', 'base_gen_agent', 'note_taking', 'summarization', 'system_analyzer', 'shell_command', 'registry_manager', 'registry_sync', 'agent_factory', 'tool_factory', 'augmentic_intelligence', 'enhanced_simple_coder', 'memory_analysis', 'identity_sync']. Enhanced Simple Coder: True
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.register_action:829 - Successfully registered custom action: 'ASSESS_TOOL_SUITE_EFFECTIVENESS'
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.register_action:829 - Successfully registered custom action: 'CONCEPTUALIZE_NEW_TOOL'
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.register_action:829 - Successfully registered custom action: 'PROPOSE_TOOL_STRATEGY'
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.register_action:829 - Successfully registered custom action: 'CREATE_AGENT'
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.register_action:829 - Successfully registered custom action: 'DELETE_AGENT'
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.register_action:829 - Successfully registered custom action: 'EVOLVE_AGENT'
+[2025-06-26 14:43:44] orchestration.mastermind_agent - INFO - mastermind_agent._register_mastermind_bdi_actions:210 - Mastermind (mastermind_prime of mindX): Registered BDI action handlers, including tool and agent lifecycle management.
+[2025-06-26 14:43:44] core.id_manager_agent - INFO - id_manager_agent.__init__:68 - IDManagerAgent (id_manager_for_mastermind_prime): Initialized. Secure central key store: /home/luvai/MINDXbuilds/production/mindX/data/identity/.wallet_keys.env
+[2025-06-26 14:43:44] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (id_manager_for_mastermind_prime): Wallet already exists for entity 'mastermind_prime'. Creation skipped.
+[2025-06-26 14:43:44] llm.model_selector - INFO - model_selector.__init__:68 - ModelSelector initialized with weights: {'capability_match': 3.0, 'success_rate': 2.0, 'latency_factor': 0.5, 'cost_factor': 1.5, 'provider_preference': 0.2}
+[2025-06-26 14:43:44] learning.strategic_evolution_agent - INFO - strategic_evolution_agent.__init__:109 - StrategicEvolutionAgent 'sea_for_mastermind' synchronous __init__ complete.
+[2025-06-26 14:43:44] llm.model_registry - INFO - model_registry.get_handler_for_purpose:98 - ModelRegistry: Selected provider 'gemini' (model: gemini-1.5-flash-latest) for purpose 'TaskType.REASONING'.
+[2025-06-26 14:43:44] tools.system_analyzer_tool - INFO - system_analyzer_tool.__init__:53 - SystemAnalyzerTool: Initialized with integrated monitoring capabilities via Coordinator.
+[2025-06-26 14:43:44] tools.base_gen_agent - INFO - base_gen_agent.__init__:110 - [base_gen_agent_v1.1] Using resolved config file path: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:44] tools.base_gen_agent - INFO - base_gen_agent._load_and_merge_config_from_file:126 - [base_gen_agent_v1.1] Loaded and merged agent config from '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:44] tools.base_gen_agent - INFO - base_gen_agent.__init__:114 - [base_gen_agent_v1.1] Initialized. Config source: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'. Max file size: 1024KB.
+[2025-06-26 14:43:44] llm.model_registry - INFO - model_registry.get_handler_for_purpose:98 - ModelRegistry: Selected provider 'gemini' (model: gemini/gemini-1.5-flash-latest) for purpose 'reasoning'.
+[2025-06-26 14:43:44] evolution.blueprint_agent - INFO - blueprint_agent.__init__:62 - BlueprintAgent 'blueprint_agent_mindx_v2' initialized. Using LLM: gemini/gemini-1.5-flash-latest
+[2025-06-26 14:43:44] learning.plan_management - INFO - plan_management.__init__:141 - PlanManager (sea_for_mastermind): Initialized. Parallel exec: False, Max parallel: 3
+[2025-06-26 14:43:44] learning.strategic_evolution_agent - INFO - strategic_evolution_agent._async_init:146 - StrategicEvolutionAgent 'sea_for_mastermind' fully initialized. Using gemini for core reasoning.
+[2025-06-26 14:43:44] orchestration.mastermind_agent - INFO - mastermind_agent._async_init_components:175 - Mastermind (mastermind_prime of mindX): Asynchronously initialized.
+[2025-06-26 14:43:44] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'mastermind_prime' (Type: orchestrator). Total agents: 2
+[2025-06-26 14:43:44] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'mastermind_prime'. Creation skipped.
+[2025-06-26 14:43:44] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'coordinator_agent_main'. Creation skipped.
+[2025-06-26 14:43:44] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'guardian_agent_main' (Type: core_service). Total agents: 3
+[2025-06-26 14:43:44] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'guardian_agent_main'. Creation skipped.
+[2025-06-26 14:43:44] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'automindx_agent_main' (Type: core_service). Total agents: 4
+[2025-06-26 14:43:44] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'automindx_agent_main'. Creation skipped.
+[2025-06-26 14:43:44] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'sea_for_mastermind' (Type: core_service). Total agents: 5
+[2025-06-26 14:43:44] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'sea_for_mastermind'. Creation skipped.
+[2025-06-26 14:43:44] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'blueprint_agent_mindx_v2' (Type: core_service). Total agents: 6
+[2025-06-26 14:43:44] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'blueprint_agent_mindx_v2'. Creation skipped.
+[2025-06-26 14:43:44] __main__ - INFO - run_mindx.main_cli_loop:33 - mindX Mastermind Agent (Augmentic Intelligence) ready for CLI interaction.
+[2025-06-26 14:43:44] tools.agent_factory_tool - INFO - agent_factory_tool._create_agent:64 - AgentFactoryTool: Creating new agent: reporter of type test_reporter
+[2025-06-26 14:43:44] core.id_manager_agent - INFO - id_manager_agent.create_new_wallet:171 - IDManagerAgent (default_identity_manager): Creating new wallet for entity 'reporter'.
+[2025-06-26 14:43:44] core.id_manager_agent - INFO - id_manager_agent.create_new_wallet:179 - IDManagerAgent (default_identity_manager): Stored new private key for 'reporter' in /home/luvai/MINDXbuilds/production/mindX/data/identity/.wallet_keys.env.
+[2025-06-26 14:43:44] tools.agent_factory_tool - INFO - agent_factory_tool._generate_agent_code:243 - AgentFactoryTool: Generated agent code at /home/luvai/MINDXbuilds/production/mindX/agents/reporter.py
+[2025-06-26 14:43:44] core.id_manager_agent - INFO - id_manager_agent.__init__:68 - IDManagerAgent (id_manager_for_reporter): Initialized. Secure central key store: /home/luvai/MINDXbuilds/production/mindX/data/identity/.wallet_keys.env
+[2025-06-26 14:43:44] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (id_manager_for_reporter): Wallet already exists for entity 'reporter'. Creation skipped.
+[2025-06-26 14:43:44] agents.guardian_agent - INFO - guardian_agent.validate_new_agent:83 - GuardianAgent: Validating new agent: reporter
+[2025-06-26 14:43:44] agents.guardian_agent - WARNING - guardian_agent._validate_registry_status:362 - GuardianAgent: Agent reporter not found in registry
+[2025-06-26 14:43:44] agents.guardian_agent - INFO - guardian_agent.validate_new_agent:152 - GuardianAgent: Agent reporter validation successful
+[2025-06-26 14:43:44] coordinator_agent - INFO - coordinator_agent._instantiate_agent:703 - Creating dynamic agent of type 'test_reporter' for agent 'reporter'
+[2025-06-26 14:43:44] coordinator_agent - INFO - coordinator_agent._instantiate_agent:725 - Successfully created dynamic agent 'reporter' of type 'test_reporter'
+[2025-06-26 14:43:44] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'reporter' (Type: test_reporter). Total agents: 7
+[2025-06-26 14:43:44] tools.agent_factory_tool - INFO - agent_factory_tool._create_agent:111 - AgentFactoryTool: Successfully created agent reporter
+[2025-06-26 14:43:44] tools.augmentic_intelligence_tool - ERROR - augmentic_intelligence_tool._add_skill_to_bdi:315 - AugmenticIntelligenceTool: Failed to add skill: MemoryAgent.save_timestampmemory() got an unexpected keyword argument 'importance'
+[2025-06-26 14:43:44] __main__ - INFO - run_mindx.main_cli_loop:46 - EOF or KeyboardInterrupt received. Exiting mindX CLI gracefully.
+[2025-06-26 14:43:44] __main__ - INFO - run_mindx.main_entry:562 - Shutting down mindX Mastermind Agent from CLI...
+[2025-06-26 14:43:44] orchestration.mastermind_agent - INFO - mastermind_agent.shutdown:613 - MastermindAgent 'mastermind_prime' shutting down...
+[2025-06-26 14:43:44] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.shutdown:807 - Shutting down.
+[2025-06-26 14:43:44] orchestration.mastermind_agent - INFO - mastermind_agent.shutdown:615 - MastermindAgent 'mastermind_prime' shutdown complete.
+[2025-06-26 14:43:44] __main__ - INFO - run_mindx.main_entry:564 - mindX Mastermind Agent shutdown complete.
+[2025-06-26 14:43:44] monitoring.performance_monitor - INFO - performance_monitor._periodic_save_worker:231 - Periodic metrics saver task cancelled.
+[2025-06-26 14:43:44] monitoring.performance_monitor - INFO - performance_monitor._periodic_save_worker:237 - Periodic metrics saver task stopped.
+[2025-06-26 14:43:44] monitoring.resource_monitor - INFO - resource_monitor._monitor_resources_loop:170 - Resource monitoring loop gracefully cancelled.
+[2025-06-26 14:43:44] monitoring.resource_monitor - INFO - resource_monitor._monitor_resources_loop:175 - Resource monitoring loop finished.
+
+
+
+Test 2: benchmark_tool -> benchmark
+  Success: ✅ YES
+  Agent Created: ✅ YES
+  Code Generated: ✅ YES
+  Identity Created: ✅ YES
+  Registered: ❌ NO
+  Exit Code: 0
+  Errors: [2025-06-26 14:43:46] root - INFO - logging_config.setup_logging:88 - Logging configured. Root level: INFO. Console: True. File: True.
+[2025-06-26 14:43:51] orchestration.mastermind_agent - INFO - mastermind_agent.<module>:31 - MastermindAgent: CodeBaseGenerator successfully imported.
+[2025-06-26 14:43:51] utils.config - INFO - config._load_environment_variables:50 - Loaded environment variables from /home/luvai/MINDXbuilds/production/mindX/.env
+[2025-06-26 14:43:51] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from agint_config.json
+[2025-06-26 14:43:51] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from basegen_config.json
+[2025-06-26 14:43:51] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from llm_factory_config.json
+[2025-06-26 14:43:51] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from official_agents_registry.json
+[2025-06-26 14:43:51] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from official_tools_registry.json
+[2025-06-26 14:43:51] utils.yaml_config_loader - INFO - yaml_config_loader.load_yaml_file:29 - Successfully loaded YAML configuration from gemini.yaml
+[2025-06-26 14:43:51] utils.config - INFO - config.__init__:43 - Configuration loaded successfully.
+[2025-06-26 14:43:51] agents.memory_agent - INFO - memory_agent._initialize_storage:115 - MemoryAgent Initialized: All memory and log directories verified/created under '/home/luvai/MINDXbuilds/production/mindX/data'.
+[2025-06-26 14:43:51] agents.memory_agent - INFO - memory_agent.__init__:95 - ujson library detected, will be used for faster JSON operations.
+[2025-06-26 14:43:51] agents.memory_agent - INFO - memory_agent.__init__:96 - Enhanced MemoryAgent initialized with timestamped memory capabilities.
+[2025-06-26 14:43:51] __main__ - INFO - run_mindx.main_entry:480 - mindX CLI (Mastermind Edition - Augmentic Intelligence). Project Root (calculated): /home/luvai/MINDXbuilds/production/mindX
+[2025-06-26 14:43:51] __main__ - INFO - run_mindx.main_entry:481 - mindX CLI trying to use Project Root (from config defined in utils.config): /home/luvai/MINDXbuilds/production/mindX
+[2025-06-26 14:43:51] agents.memory_agent - INFO - memory_agent._initialize_storage:115 - MemoryAgent Initialized: All memory and log directories verified/created under '/home/luvai/MINDXbuilds/production/mindX/data'.
+[2025-06-26 14:43:51] agents.memory_agent - INFO - memory_agent.__init__:95 - ujson library detected, will be used for faster JSON operations.
+[2025-06-26 14:43:51] agents.memory_agent - INFO - memory_agent.__init__:96 - Enhanced MemoryAgent initialized with timestamped memory capabilities.
+[2025-06-26 14:43:51] core.id_manager_agent - INFO - id_manager_agent.__init__:68 - IDManagerAgent (default_identity_manager): Initialized. Secure central key store: /home/luvai/MINDXbuilds/production/mindX/data/identity/.wallet_keys.env
+[2025-06-26 14:43:51] agents.automindx_agent - INFO - automindx_agent.__init__:69 - AutoMINDX: Initialized with iNFT capabilities, avatar support, and A2A protocol compliance. Personas loaded from /home/luvai/MINDXbuilds/production/mindX/data/memory/agent_workspaces/automindx_agent_main/personas.json.
+[2025-06-26 14:43:51] llm.llm_factory - INFO - llm_factory._load_llm_factory_config_json:66 - LLMFactory (mindX): Attempting to load specific configuration from /home/luvai/MINDXbuilds/production/mindX/data/config/llm_factory_config.json
+[2025-06-26 14:43:51] llm.llm_factory - INFO - llm_factory._load_llm_factory_config_json:71 - LLMFactory (mindX): Loaded specific configuration from /home/luvai/MINDXbuilds/production/mindX/data/config/llm_factory_config.json
+[2025-06-26 14:43:51] llm.rate_limiter - INFO - rate_limiter.__init__:67 - RateLimiter initialized. Rate: 2/min, Max Retries: 5.
+[2025-06-26 14:43:51] llm.gemini_handler - INFO - gemini_handler._load_config_from_yaml:59 - Dynamically loading Gemini configuration from: /home/luvai/MINDXbuilds/production/mindX/models/gemini.yaml
+[2025-06-26 14:43:51] llm.llm_factory - INFO - llm_factory.create_llm_handler:191 - LLMFactory (mindX): Created LLMHandler for gemini with model 'gemini-1.5-flash-latest'
+[2025-06-26 14:43:51] agents.automindx_agent - INFO - automindx_agent._async_init:192 - AutoMINDX: LLM handler initialized: gemini/gemini-1.5-flash-latest
+[2025-06-26 14:43:51] agents.memory_agent - INFO - memory_agent._initialize_storage:115 - MemoryAgent Initialized: All memory and log directories verified/created under '/home/luvai/MINDXbuilds/production/mindX/data'.
+[2025-06-26 14:43:51] agents.memory_agent - INFO - memory_agent.__init__:95 - ujson library detected, will be used for faster JSON operations.
+[2025-06-26 14:43:51] agents.memory_agent - INFO - memory_agent.__init__:96 - Enhanced MemoryAgent initialized with timestamped memory capabilities.
+[2025-06-26 14:43:51] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'guardian_agent_main'. Creation skipped.
+[2025-06-26 14:43:51] agents.guardian_agent - INFO - guardian_agent._async_init:77 - GuardianAgent: Async initialization complete.
+[2025-06-26 14:43:51] llm.model_selector - INFO - model_selector.__init__:68 - ModelSelector initialized with weights: {'capability_match': 3.0, 'success_rate': 2.0, 'latency_factor': 0.5, 'cost_factor': 1.5, 'provider_preference': 0.2}
+[2025-06-26 14:43:51] llm.model_registry - INFO - model_registry.__init__:35 - ModelRegistry: Instance created. Awaiting async initialization.
+[2025-06-26 14:43:51] llm.model_registry - INFO - model_registry._async_init:42 - ModelRegistry: Starting asynchronous initialization...
+[2025-06-26 14:43:51] llm.model_registry - INFO - model_registry._async_init:52 - ModelRegistry: Found model definitions for provider 'gemini'. Initializing handler.
+[2025-06-26 14:43:51] llm.model_registry - INFO - model_registry._async_init:62 - ModelRegistry: Initialization complete. Available providers: ['gemini']
+[2025-06-26 14:43:51] coordinator_agent - INFO - coordinator_agent.__init__:137 - Heavy task concurrency limit set to: 2
+[2025-06-26 14:43:51] coordinator_agent - INFO - coordinator_agent.__init__:147 - CoordinatorAgent initialized. Awaiting async setup.
+[2025-06-26 14:43:51] coordinator_agent - INFO - coordinator_agent.async_init:157 - Coordinator LLM handler initialized: gemini/gemini-1.5-flash-latest
+[2025-06-26 14:43:51] core.id_manager_agent - INFO - id_manager_agent.__init__:68 - IDManagerAgent (id_manager_for_coordinator_agent_main): Initialized. Secure central key store: /home/luvai/MINDXbuilds/production/mindX/data/identity/.wallet_keys.env
+[2025-06-26 14:43:51] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (id_manager_for_coordinator_agent_main): Wallet already exists for entity 'coordinator_agent_main'. Creation skipped.
+[2025-06-26 14:43:51] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'coordinator_agent' (Type: kernel). Total agents: 1
+[2025-06-26 14:43:51] coordinator_agent - INFO - coordinator_agent._initialize_tools:194 - Coordinator internal tool initialization complete (no tools to load).
+[2025-06-26 14:43:51] monitoring.performance_monitor - INFO - performance_monitor._load_metrics_sync:88 - Performance metrics loaded from /home/luvai/MINDXbuilds/production/mindX/data/performance_metrics.json
+[2025-06-26 14:43:51] monitoring.performance_monitor - INFO - performance_monitor.__init__:60 - PerformanceMonitor initialized. Metrics File: /home/luvai/MINDXbuilds/production/mindX/data/performance_metrics.json. Save every: 20 reqs (if periodic save off). Periodic Save: True, interval 300.0s.
+[2025-06-26 14:43:51] monitoring.resource_monitor - INFO - resource_monitor.__init__:62 - ResourceMonitor initialized. CPU Limit: 90.0%, Memory Limit: 90.0%, Disk Thresholds: {'/': 90.0}, Re-alert Interval: 300.0s
+[2025-06-26 14:43:51] monitoring.resource_monitor - INFO - resource_monitor.start_monitoring:130 - Started resource monitoring. Interval: 15.0s
+[2025-06-26 14:43:51] coordinator_agent - INFO - coordinator_agent.async_init:178 - CoordinatorAgent fully initialized.
+[2025-06-26 14:43:51] tools.base_gen_agent - INFO - base_gen_agent.__init__:110 - [base_gen_for_mastermind_prime] Using resolved config file path: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:51] tools.base_gen_agent - INFO - base_gen_agent._load_and_merge_config_from_file:126 - [base_gen_for_mastermind_prime] Loaded and merged agent config from '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:51] tools.base_gen_agent - INFO - base_gen_agent.__init__:114 - [base_gen_for_mastermind_prime] Initialized. Config source: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'. Max file size: 1024KB.
+[2025-06-26 14:43:51] orchestration.mastermind_agent - INFO - mastermind_agent.__init__:109 - Mastermind (mastermind_prime of mindX): CodeBaseGenerator initialized.
+[2025-06-26 14:43:51] orchestration.mastermind_agent - INFO - mastermind_agent._async_init_components:126 - Mastermind (mastermind_prime of mindX): Internal LLM set to: gemini/gemini-1.5-flash-latest
+[2025-06-26 14:43:51] agents.automindx_agent - INFO - automindx_agent.get_persona:203 - AutoMINDX: Providing persona for 'MASTERMIND'.
+[2025-06-26 14:43:51] agents.memory_agent - INFO - memory_agent._initialize_storage:115 - MemoryAgent Initialized: All memory and log directories verified/created under '/home/luvai/MINDXbuilds/production/mindX/data'.
+[2025-06-26 14:43:51] agents.memory_agent - INFO - memory_agent.__init__:95 - ujson library detected, will be used for faster JSON operations.
+[2025-06-26 14:43:51] agents.memory_agent - INFO - memory_agent.__init__:96 - Enhanced MemoryAgent initialized with timestamped memory capabilities.
+[2025-06-26 14:43:51] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.__init__:232 - Synchronous __init__ complete. LLM and Tools require async_init_components.
+[2025-06-26 14:43:51] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.async_init_components:236 - Starting asynchronous component initialization...
+[2025-06-26 14:43:51] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.async_init_components:243 - Internal LLM initialized: gemini/gemini-1.5-flash-latest
+[2025-06-26 14:43:51] agents.memory_agent - INFO - memory_agent._initialize_storage:115 - MemoryAgent Initialized: All memory and log directories verified/created under '/home/luvai/MINDXbuilds/production/mindX/data'.
+[2025-06-26 14:43:51] agents.memory_agent - INFO - memory_agent.__init__:95 - ujson library detected, will be used for faster JSON operations.
+[2025-06-26 14:43:51] agents.memory_agent - INFO - memory_agent.__init__:96 - Enhanced MemoryAgent initialized with timestamped memory capabilities.
+[2025-06-26 14:43:51] core.id_manager_agent - INFO - id_manager_agent.__init__:68 - IDManagerAgent (id_manager_for_bdi_agent_mastermind_strategy_mastermind_prime): Initialized. Secure central key store: /home/luvai/MINDXbuilds/production/mindX/data/identity/.wallet_keys.env
+[2025-06-26 14:43:51] monitoring.performance_monitor - INFO - performance_monitor._periodic_save_worker:223 - Periodic performance metrics saver started. Interval: 300.0s
+[2025-06-26 14:43:51] monitoring.resource_monitor - INFO - resource_monitor._monitor_resources_loop:144 - Resource monitoring loop started.
+[2025-06-26 14:43:51] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (id_manager_for_bdi_agent_mastermind_strategy_mastermind_prime): Wallet already exists for entity 'bdi_agent_mastermind_strategy_mastermind_prime'. Creation skipped.
+[2025-06-26 14:43:51] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:263 - Initializing tools based on the provided tool registry...
+[2025-06-26 14:43:51] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'cli_command_tool' from tools.cli_command_tool.CLICommandTool
+[2025-06-26 14:43:51] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - ERROR - bdi_agent._initialize_tools_async:316 - Failed to initialize tool 'cli_command_tool': CLICommandTool.__init__() missing 2 required positional arguments: 'mastermind' and 'coordinator'
+Traceback (most recent call last):
+  File "/home/luvai/MINDXbuilds/production/mindX/core/bdi_agent.py", line 313, in _initialize_tools_async
+    self.available_tools[tool_id] = ToolClass(**valid_kwargs)
+TypeError: CLICommandTool.__init__() missing 2 required positional arguments: 'mastermind' and 'coordinator'
+[2025-06-26 14:43:51] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'audit_and_improve' from tools.audit_and_improve_tool.AuditAndImproveTool
+[2025-06-26 14:43:51] tools.base_gen_agent - INFO - base_gen_agent.__init__:110 - [base_gen_agent_v1.1] Using resolved config file path: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:51] tools.base_gen_agent - INFO - base_gen_agent._load_and_merge_config_from_file:126 - [base_gen_agent_v1.1] Loaded and merged agent config from '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:51] tools.base_gen_agent - INFO - base_gen_agent.__init__:114 - [base_gen_agent_v1.1] Initialized. Config source: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'. Max file size: 1024KB.
+[2025-06-26 14:43:51] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: AuditAndImproveTool
+[2025-06-26 14:43:51] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'base_gen_agent' from tools.base_gen_agent.BaseGenAgent
+[2025-06-26 14:43:51] tools.base_gen_agent - INFO - base_gen_agent.__init__:110 - [base_gen_agent_v1.1] Using resolved config file path: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:51] tools.base_gen_agent - INFO - base_gen_agent._load_and_merge_config_from_file:126 - [base_gen_agent_v1.1] Loaded and merged agent config from '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:51] tools.base_gen_agent - INFO - base_gen_agent.__init__:114 - [base_gen_agent_v1.1] Initialized. Config source: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'. Max file size: 1024KB.
+[2025-06-26 14:43:51] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: BaseGenAgent
+[2025-06-26 14:43:51] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'note_taking' from tools.note_taking_tool.NoteTakingTool
+[2025-06-26 14:43:51] tools.note_taking_tool - INFO - note_taking_tool.__init__:50 - NoteTakingTool initialized. Notes directory: /home/luvai/MINDXbuilds/production/mindX/data/memory/agent_workspaces/general_note_taking_tool/notes
+[2025-06-26 14:43:51] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: NoteTakingTool
+[2025-06-26 14:43:51] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'simple_coder_agent' from agents.simple_coder_agent.SimpleCoder
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - ERROR - bdi_agent._initialize_tools_async:316 - Failed to initialize tool 'simple_coder_agent': module 'agents.simple_coder_agent' has no attribute 'SimpleCoder'
+Traceback (most recent call last):
+  File "/home/luvai/MINDXbuilds/production/mindX/core/bdi_agent.py", line 272, in _initialize_tools_async
+    ToolClass = getattr(module, class_name)
+AttributeError: module 'agents.simple_coder_agent' has no attribute 'SimpleCoder'. Did you mean: 'SimpleCoderAgent'?
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'summarization' from tools.summarization_tool.SummarizationTool
+[2025-06-26 14:43:52] tools.summarization_tool - INFO - summarization_tool.__init__:44 - SummarizationTool initialized. Using LLM: gemini/gemini-1.5-flash-latest
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: SummarizationTool
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'system_analyzer' from tools.system_analyzer_tool.SystemAnalyzerTool
+[2025-06-26 14:43:52] tools.system_analyzer_tool - INFO - system_analyzer_tool.__init__:53 - SystemAnalyzerTool: Initialized with integrated monitoring capabilities via Coordinator.
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: SystemAnalyzerTool
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'shell_command' from tools.shell_command_tool.ShellCommandTool
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: ShellCommandTool
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'registry_manager' from tools.registry_manager_tool.RegistryManagerTool
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: RegistryManagerTool
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'registry_sync' from tools.registry_sync_tool.RegistrySyncTool
+[2025-06-26 14:43:52] tools.registry_sync_tool - INFO - registry_sync_tool.__init__:43 - RegistrySyncTool: Initialized with registry paths.
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: RegistrySyncTool
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'agent_factory' from tools.agent_factory_tool.AgentFactoryTool
+[2025-06-26 14:43:52] tools.agent_factory_tool - INFO - agent_factory_tool.__init__:41 - AgentFactoryTool: Initialized with agent creation capabilities.
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: AgentFactoryTool
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'tool_factory' from tools.tool_factory_tool.ToolFactoryTool
+[2025-06-26 14:43:52] tools.tool_factory_tool - INFO - tool_factory_tool.__init__:28 - ToolFactoryTool: Initialized with tool creation capabilities.
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: ToolFactoryTool
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'augmentic_intelligence' from tools.augmentic_intelligence_tool.AugmenticIntelligenceTool
+[2025-06-26 14:43:52] tools.agent_factory_tool - INFO - agent_factory_tool.__init__:41 - AgentFactoryTool: Initialized with agent creation capabilities.
+[2025-06-26 14:43:52] tools.tool_factory_tool - INFO - tool_factory_tool.__init__:28 - ToolFactoryTool: Initialized with tool creation capabilities.
+[2025-06-26 14:43:52] tools.augmentic_intelligence_tool - INFO - augmentic_intelligence_tool._init_sub_tools:74 - AugmenticIntelligenceTool: Sub-tools initialized successfully.
+[2025-06-26 14:43:52] tools.augmentic_intelligence_tool - INFO - augmentic_intelligence_tool.__init__:53 - AugmenticIntelligenceTool: Initialized with full system access.
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: AugmenticIntelligenceTool
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'enhanced_simple_coder' from agents.enhanced_simple_coder.EnhancedSimpleCoder
+[2025-06-26 14:43:52] agents.enhanced_simple_coder - INFO - enhanced_simple_coder.__init__:40 - EnhancedSimpleCoder: Enhanced coding agent initialized
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: EnhancedSimpleCoder
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'memory_analysis' from tools.memory_analysis_tool.MemoryAnalysisTool
+[2025-06-26 14:43:52] tools.memory_analysis_tool - INFO - memory_analysis_tool.__init__:43 - MemoryAnalysisTool: Memory analysis tool initialized
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: MemoryAnalysisTool
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'identity_sync' from tools.identity_sync_tool.IdentitySyncTool
+[2025-06-26 14:43:52] tools.identity_sync_tool - INFO - identity_sync_tool.__init__:41 - IdentitySyncTool: Initialized with registry paths.
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: IdentitySyncTool
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:317 - Tools initialization phase complete. Loaded tools: ['audit_and_improve', 'base_gen_agent', 'note_taking', 'summarization', 'system_analyzer', 'shell_command', 'registry_manager', 'registry_sync', 'agent_factory', 'tool_factory', 'augmentic_intelligence', 'enhanced_simple_coder', 'memory_analysis', 'identity_sync']
+[2025-06-26 14:43:52] agents.enhanced_simple_coder - INFO - enhanced_simple_coder.__init__:40 - EnhancedSimpleCoder: Enhanced coding agent initialized
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_enhanced_simple_coder:996 - Enhanced Simple Coder initialized as BDI agent's right-hand assistant
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.async_init_components:260 - Fully initialized. LLM Ready: True. Tools: ['audit_and_improve', 'base_gen_agent', 'note_taking', 'summarization', 'system_analyzer', 'shell_command', 'registry_manager', 'registry_sync', 'agent_factory', 'tool_factory', 'augmentic_intelligence', 'enhanced_simple_coder', 'memory_analysis', 'identity_sync']. Enhanced Simple Coder: True
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.register_action:829 - Successfully registered custom action: 'ASSESS_TOOL_SUITE_EFFECTIVENESS'
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.register_action:829 - Successfully registered custom action: 'CONCEPTUALIZE_NEW_TOOL'
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.register_action:829 - Successfully registered custom action: 'PROPOSE_TOOL_STRATEGY'
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.register_action:829 - Successfully registered custom action: 'CREATE_AGENT'
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.register_action:829 - Successfully registered custom action: 'DELETE_AGENT'
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.register_action:829 - Successfully registered custom action: 'EVOLVE_AGENT'
+[2025-06-26 14:43:52] orchestration.mastermind_agent - INFO - mastermind_agent._register_mastermind_bdi_actions:210 - Mastermind (mastermind_prime of mindX): Registered BDI action handlers, including tool and agent lifecycle management.
+[2025-06-26 14:43:52] core.id_manager_agent - INFO - id_manager_agent.__init__:68 - IDManagerAgent (id_manager_for_mastermind_prime): Initialized. Secure central key store: /home/luvai/MINDXbuilds/production/mindX/data/identity/.wallet_keys.env
+[2025-06-26 14:43:52] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (id_manager_for_mastermind_prime): Wallet already exists for entity 'mastermind_prime'. Creation skipped.
+[2025-06-26 14:43:52] llm.model_selector - INFO - model_selector.__init__:68 - ModelSelector initialized with weights: {'capability_match': 3.0, 'success_rate': 2.0, 'latency_factor': 0.5, 'cost_factor': 1.5, 'provider_preference': 0.2}
+[2025-06-26 14:43:52] learning.strategic_evolution_agent - INFO - strategic_evolution_agent.__init__:109 - StrategicEvolutionAgent 'sea_for_mastermind' synchronous __init__ complete.
+[2025-06-26 14:43:52] llm.model_registry - INFO - model_registry.get_handler_for_purpose:98 - ModelRegistry: Selected provider 'gemini' (model: gemini-1.5-flash-latest) for purpose 'TaskType.REASONING'.
+[2025-06-26 14:43:52] tools.system_analyzer_tool - INFO - system_analyzer_tool.__init__:53 - SystemAnalyzerTool: Initialized with integrated monitoring capabilities via Coordinator.
+[2025-06-26 14:43:52] tools.base_gen_agent - INFO - base_gen_agent.__init__:110 - [base_gen_agent_v1.1] Using resolved config file path: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:52] tools.base_gen_agent - INFO - base_gen_agent._load_and_merge_config_from_file:126 - [base_gen_agent_v1.1] Loaded and merged agent config from '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:52] tools.base_gen_agent - INFO - base_gen_agent.__init__:114 - [base_gen_agent_v1.1] Initialized. Config source: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'. Max file size: 1024KB.
+[2025-06-26 14:43:52] llm.model_registry - INFO - model_registry.get_handler_for_purpose:98 - ModelRegistry: Selected provider 'gemini' (model: gemini/gemini-1.5-flash-latest) for purpose 'reasoning'.
+[2025-06-26 14:43:52] evolution.blueprint_agent - INFO - blueprint_agent.__init__:62 - BlueprintAgent 'blueprint_agent_mindx_v2' initialized. Using LLM: gemini/gemini-1.5-flash-latest
+[2025-06-26 14:43:52] learning.plan_management - INFO - plan_management.__init__:141 - PlanManager (sea_for_mastermind): Initialized. Parallel exec: False, Max parallel: 3
+[2025-06-26 14:43:52] learning.strategic_evolution_agent - INFO - strategic_evolution_agent._async_init:146 - StrategicEvolutionAgent 'sea_for_mastermind' fully initialized. Using gemini for core reasoning.
+[2025-06-26 14:43:52] orchestration.mastermind_agent - INFO - mastermind_agent._async_init_components:175 - Mastermind (mastermind_prime of mindX): Asynchronously initialized.
+[2025-06-26 14:43:52] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'mastermind_prime' (Type: orchestrator). Total agents: 2
+[2025-06-26 14:43:52] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'mastermind_prime'. Creation skipped.
+[2025-06-26 14:43:52] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'coordinator_agent_main'. Creation skipped.
+[2025-06-26 14:43:52] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'guardian_agent_main' (Type: core_service). Total agents: 3
+[2025-06-26 14:43:52] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'guardian_agent_main'. Creation skipped.
+[2025-06-26 14:43:52] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'automindx_agent_main' (Type: core_service). Total agents: 4
+[2025-06-26 14:43:52] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'automindx_agent_main'. Creation skipped.
+[2025-06-26 14:43:52] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'sea_for_mastermind' (Type: core_service). Total agents: 5
+[2025-06-26 14:43:52] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'sea_for_mastermind'. Creation skipped.
+[2025-06-26 14:43:52] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'blueprint_agent_mindx_v2' (Type: core_service). Total agents: 6
+[2025-06-26 14:43:52] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'blueprint_agent_mindx_v2'. Creation skipped.
+[2025-06-26 14:43:52] __main__ - INFO - run_mindx.main_cli_loop:33 - mindX Mastermind Agent (Augmentic Intelligence) ready for CLI interaction.
+[2025-06-26 14:43:52] tools.agent_factory_tool - INFO - agent_factory_tool._create_agent:64 - AgentFactoryTool: Creating new agent: benchmark of type benchmark_tool
+[2025-06-26 14:43:52] core.id_manager_agent - INFO - id_manager_agent.create_new_wallet:171 - IDManagerAgent (default_identity_manager): Creating new wallet for entity 'benchmark'.
+[2025-06-26 14:43:52] core.id_manager_agent - INFO - id_manager_agent.create_new_wallet:179 - IDManagerAgent (default_identity_manager): Stored new private key for 'benchmark' in /home/luvai/MINDXbuilds/production/mindX/data/identity/.wallet_keys.env.
+[2025-06-26 14:43:52] tools.agent_factory_tool - INFO - agent_factory_tool._generate_agent_code:243 - AgentFactoryTool: Generated agent code at /home/luvai/MINDXbuilds/production/mindX/agents/benchmark.py
+[2025-06-26 14:43:52] core.id_manager_agent - INFO - id_manager_agent.__init__:68 - IDManagerAgent (id_manager_for_benchmark): Initialized. Secure central key store: /home/luvai/MINDXbuilds/production/mindX/data/identity/.wallet_keys.env
+[2025-06-26 14:43:52] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (id_manager_for_benchmark): Wallet already exists for entity 'benchmark'. Creation skipped.
+[2025-06-26 14:43:52] agents.guardian_agent - INFO - guardian_agent.validate_new_agent:83 - GuardianAgent: Validating new agent: benchmark
+[2025-06-26 14:43:52] agents.guardian_agent - WARNING - guardian_agent._validate_registry_status:362 - GuardianAgent: Agent benchmark not found in registry
+[2025-06-26 14:43:52] agents.guardian_agent - INFO - guardian_agent.validate_new_agent:152 - GuardianAgent: Agent benchmark validation successful
+[2025-06-26 14:43:52] coordinator_agent - INFO - coordinator_agent._instantiate_agent:703 - Creating dynamic agent of type 'benchmark_tool' for agent 'benchmark'
+[2025-06-26 14:43:52] coordinator_agent - INFO - coordinator_agent._instantiate_agent:725 - Successfully created dynamic agent 'benchmark' of type 'benchmark_tool'
+[2025-06-26 14:43:52] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'benchmark' (Type: benchmark_tool). Total agents: 7
+[2025-06-26 14:43:52] tools.agent_factory_tool - INFO - agent_factory_tool._create_agent:111 - AgentFactoryTool: Successfully created agent benchmark
+[2025-06-26 14:43:52] tools.augmentic_intelligence_tool - ERROR - augmentic_intelligence_tool._add_skill_to_bdi:315 - AugmenticIntelligenceTool: Failed to add skill: MemoryAgent.save_timestampmemory() got an unexpected keyword argument 'importance'
+[2025-06-26 14:43:52] __main__ - INFO - run_mindx.main_cli_loop:46 - EOF or KeyboardInterrupt received. Exiting mindX CLI gracefully.
+[2025-06-26 14:43:52] __main__ - INFO - run_mindx.main_entry:562 - Shutting down mindX Mastermind Agent from CLI...
+[2025-06-26 14:43:52] orchestration.mastermind_agent - INFO - mastermind_agent.shutdown:613 - MastermindAgent 'mastermind_prime' shutting down...
+[2025-06-26 14:43:52] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.shutdown:807 - Shutting down.
+[2025-06-26 14:43:52] orchestration.mastermind_agent - INFO - mastermind_agent.shutdown:615 - MastermindAgent 'mastermind_prime' shutdown complete.
+[2025-06-26 14:43:52] __main__ - INFO - run_mindx.main_entry:564 - mindX Mastermind Agent shutdown complete.
+[2025-06-26 14:43:52] monitoring.performance_monitor - INFO - performance_monitor._periodic_save_worker:231 - Periodic metrics saver task cancelled.
+[2025-06-26 14:43:52] monitoring.performance_monitor - INFO - performance_monitor._periodic_save_worker:237 - Periodic metrics saver task stopped.
+[2025-06-26 14:43:52] monitoring.resource_monitor - INFO - resource_monitor._monitor_resources_loop:170 - Resource monitoring loop gracefully cancelled.
+[2025-06-26 14:43:52] monitoring.resource_monitor - INFO - resource_monitor._monitor_resources_loop:175 - Resource monitoring loop finished.
+
+
+
+Test 3: quality_checker -> checker
+  Success: ✅ YES
+  Agent Created: ✅ YES
+  Code Generated: ✅ YES
+  Identity Created: ✅ YES
+  Registered: ❌ NO
+  Exit Code: 0
+  Errors: [2025-06-26 14:43:53] root - INFO - logging_config.setup_logging:88 - Logging configured. Root level: INFO. Console: True. File: True.
+[2025-06-26 14:43:58] orchestration.mastermind_agent - INFO - mastermind_agent.<module>:31 - MastermindAgent: CodeBaseGenerator successfully imported.
+[2025-06-26 14:43:58] utils.config - INFO - config._load_environment_variables:50 - Loaded environment variables from /home/luvai/MINDXbuilds/production/mindX/.env
+[2025-06-26 14:43:58] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from agint_config.json
+[2025-06-26 14:43:58] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from basegen_config.json
+[2025-06-26 14:43:58] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from llm_factory_config.json
+[2025-06-26 14:43:58] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from official_agents_registry.json
+[2025-06-26 14:43:58] utils.config - INFO - config._load_config_files:65 - Loaded and merged config from official_tools_registry.json
+[2025-06-26 14:43:58] utils.yaml_config_loader - INFO - yaml_config_loader.load_yaml_file:29 - Successfully loaded YAML configuration from gemini.yaml
+[2025-06-26 14:43:58] utils.config - INFO - config.__init__:43 - Configuration loaded successfully.
+[2025-06-26 14:43:58] agents.memory_agent - INFO - memory_agent._initialize_storage:115 - MemoryAgent Initialized: All memory and log directories verified/created under '/home/luvai/MINDXbuilds/production/mindX/data'.
+[2025-06-26 14:43:58] agents.memory_agent - INFO - memory_agent.__init__:95 - ujson library detected, will be used for faster JSON operations.
+[2025-06-26 14:43:58] agents.memory_agent - INFO - memory_agent.__init__:96 - Enhanced MemoryAgent initialized with timestamped memory capabilities.
+[2025-06-26 14:43:58] __main__ - INFO - run_mindx.main_entry:480 - mindX CLI (Mastermind Edition - Augmentic Intelligence). Project Root (calculated): /home/luvai/MINDXbuilds/production/mindX
+[2025-06-26 14:43:58] __main__ - INFO - run_mindx.main_entry:481 - mindX CLI trying to use Project Root (from config defined in utils.config): /home/luvai/MINDXbuilds/production/mindX
+[2025-06-26 14:43:58] agents.memory_agent - INFO - memory_agent._initialize_storage:115 - MemoryAgent Initialized: All memory and log directories verified/created under '/home/luvai/MINDXbuilds/production/mindX/data'.
+[2025-06-26 14:43:58] agents.memory_agent - INFO - memory_agent.__init__:95 - ujson library detected, will be used for faster JSON operations.
+[2025-06-26 14:43:58] agents.memory_agent - INFO - memory_agent.__init__:96 - Enhanced MemoryAgent initialized with timestamped memory capabilities.
+[2025-06-26 14:43:58] core.id_manager_agent - INFO - id_manager_agent.__init__:68 - IDManagerAgent (default_identity_manager): Initialized. Secure central key store: /home/luvai/MINDXbuilds/production/mindX/data/identity/.wallet_keys.env
+[2025-06-26 14:43:58] agents.automindx_agent - INFO - automindx_agent.__init__:69 - AutoMINDX: Initialized with iNFT capabilities, avatar support, and A2A protocol compliance. Personas loaded from /home/luvai/MINDXbuilds/production/mindX/data/memory/agent_workspaces/automindx_agent_main/personas.json.
+[2025-06-26 14:43:58] llm.llm_factory - INFO - llm_factory._load_llm_factory_config_json:66 - LLMFactory (mindX): Attempting to load specific configuration from /home/luvai/MINDXbuilds/production/mindX/data/config/llm_factory_config.json
+[2025-06-26 14:43:58] llm.llm_factory - INFO - llm_factory._load_llm_factory_config_json:71 - LLMFactory (mindX): Loaded specific configuration from /home/luvai/MINDXbuilds/production/mindX/data/config/llm_factory_config.json
+[2025-06-26 14:43:58] llm.rate_limiter - INFO - rate_limiter.__init__:67 - RateLimiter initialized. Rate: 2/min, Max Retries: 5.
+[2025-06-26 14:43:58] llm.gemini_handler - INFO - gemini_handler._load_config_from_yaml:59 - Dynamically loading Gemini configuration from: /home/luvai/MINDXbuilds/production/mindX/models/gemini.yaml
+[2025-06-26 14:43:58] llm.llm_factory - INFO - llm_factory.create_llm_handler:191 - LLMFactory (mindX): Created LLMHandler for gemini with model 'gemini-1.5-flash-latest'
+[2025-06-26 14:43:58] agents.automindx_agent - INFO - automindx_agent._async_init:192 - AutoMINDX: LLM handler initialized: gemini/gemini-1.5-flash-latest
+[2025-06-26 14:43:58] agents.memory_agent - INFO - memory_agent._initialize_storage:115 - MemoryAgent Initialized: All memory and log directories verified/created under '/home/luvai/MINDXbuilds/production/mindX/data'.
+[2025-06-26 14:43:58] agents.memory_agent - INFO - memory_agent.__init__:95 - ujson library detected, will be used for faster JSON operations.
+[2025-06-26 14:43:58] agents.memory_agent - INFO - memory_agent.__init__:96 - Enhanced MemoryAgent initialized with timestamped memory capabilities.
+[2025-06-26 14:43:58] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'guardian_agent_main'. Creation skipped.
+[2025-06-26 14:43:58] agents.guardian_agent - INFO - guardian_agent._async_init:77 - GuardianAgent: Async initialization complete.
+[2025-06-26 14:43:58] llm.model_selector - INFO - model_selector.__init__:68 - ModelSelector initialized with weights: {'capability_match': 3.0, 'success_rate': 2.0, 'latency_factor': 0.5, 'cost_factor': 1.5, 'provider_preference': 0.2}
+[2025-06-26 14:43:58] llm.model_registry - INFO - model_registry.__init__:35 - ModelRegistry: Instance created. Awaiting async initialization.
+[2025-06-26 14:43:58] llm.model_registry - INFO - model_registry._async_init:42 - ModelRegistry: Starting asynchronous initialization...
+[2025-06-26 14:43:58] llm.model_registry - INFO - model_registry._async_init:52 - ModelRegistry: Found model definitions for provider 'gemini'. Initializing handler.
+[2025-06-26 14:43:58] llm.model_registry - INFO - model_registry._async_init:62 - ModelRegistry: Initialization complete. Available providers: ['gemini']
+[2025-06-26 14:43:58] coordinator_agent - INFO - coordinator_agent.__init__:137 - Heavy task concurrency limit set to: 2
+[2025-06-26 14:43:58] coordinator_agent - INFO - coordinator_agent.__init__:147 - CoordinatorAgent initialized. Awaiting async setup.
+[2025-06-26 14:43:58] coordinator_agent - INFO - coordinator_agent.async_init:157 - Coordinator LLM handler initialized: gemini/gemini-1.5-flash-latest
+[2025-06-26 14:43:58] core.id_manager_agent - INFO - id_manager_agent.__init__:68 - IDManagerAgent (id_manager_for_coordinator_agent_main): Initialized. Secure central key store: /home/luvai/MINDXbuilds/production/mindX/data/identity/.wallet_keys.env
+[2025-06-26 14:43:58] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (id_manager_for_coordinator_agent_main): Wallet already exists for entity 'coordinator_agent_main'. Creation skipped.
+[2025-06-26 14:43:58] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'coordinator_agent' (Type: kernel). Total agents: 1
+[2025-06-26 14:43:58] coordinator_agent - INFO - coordinator_agent._initialize_tools:194 - Coordinator internal tool initialization complete (no tools to load).
+[2025-06-26 14:43:58] monitoring.performance_monitor - INFO - performance_monitor._load_metrics_sync:88 - Performance metrics loaded from /home/luvai/MINDXbuilds/production/mindX/data/performance_metrics.json
+[2025-06-26 14:43:58] monitoring.performance_monitor - INFO - performance_monitor.__init__:60 - PerformanceMonitor initialized. Metrics File: /home/luvai/MINDXbuilds/production/mindX/data/performance_metrics.json. Save every: 20 reqs (if periodic save off). Periodic Save: True, interval 300.0s.
+[2025-06-26 14:43:58] monitoring.resource_monitor - INFO - resource_monitor.__init__:62 - ResourceMonitor initialized. CPU Limit: 90.0%, Memory Limit: 90.0%, Disk Thresholds: {'/': 90.0}, Re-alert Interval: 300.0s
+[2025-06-26 14:43:58] monitoring.resource_monitor - INFO - resource_monitor.start_monitoring:130 - Started resource monitoring. Interval: 15.0s
+[2025-06-26 14:43:58] coordinator_agent - INFO - coordinator_agent.async_init:178 - CoordinatorAgent fully initialized.
+[2025-06-26 14:43:58] tools.base_gen_agent - INFO - base_gen_agent.__init__:110 - [base_gen_for_mastermind_prime] Using resolved config file path: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:58] tools.base_gen_agent - INFO - base_gen_agent._load_and_merge_config_from_file:126 - [base_gen_for_mastermind_prime] Loaded and merged agent config from '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:58] tools.base_gen_agent - INFO - base_gen_agent.__init__:114 - [base_gen_for_mastermind_prime] Initialized. Config source: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'. Max file size: 1024KB.
+[2025-06-26 14:43:58] orchestration.mastermind_agent - INFO - mastermind_agent.__init__:109 - Mastermind (mastermind_prime of mindX): CodeBaseGenerator initialized.
+[2025-06-26 14:43:58] orchestration.mastermind_agent - INFO - mastermind_agent._async_init_components:126 - Mastermind (mastermind_prime of mindX): Internal LLM set to: gemini/gemini-1.5-flash-latest
+[2025-06-26 14:43:58] agents.automindx_agent - INFO - automindx_agent.get_persona:203 - AutoMINDX: Providing persona for 'MASTERMIND'.
+[2025-06-26 14:43:58] agents.memory_agent - INFO - memory_agent._initialize_storage:115 - MemoryAgent Initialized: All memory and log directories verified/created under '/home/luvai/MINDXbuilds/production/mindX/data'.
+[2025-06-26 14:43:58] agents.memory_agent - INFO - memory_agent.__init__:95 - ujson library detected, will be used for faster JSON operations.
+[2025-06-26 14:43:58] agents.memory_agent - INFO - memory_agent.__init__:96 - Enhanced MemoryAgent initialized with timestamped memory capabilities.
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.__init__:232 - Synchronous __init__ complete. LLM and Tools require async_init_components.
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.async_init_components:236 - Starting asynchronous component initialization...
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.async_init_components:243 - Internal LLM initialized: gemini/gemini-1.5-flash-latest
+[2025-06-26 14:43:58] agents.memory_agent - INFO - memory_agent._initialize_storage:115 - MemoryAgent Initialized: All memory and log directories verified/created under '/home/luvai/MINDXbuilds/production/mindX/data'.
+[2025-06-26 14:43:58] agents.memory_agent - INFO - memory_agent.__init__:95 - ujson library detected, will be used for faster JSON operations.
+[2025-06-26 14:43:58] agents.memory_agent - INFO - memory_agent.__init__:96 - Enhanced MemoryAgent initialized with timestamped memory capabilities.
+[2025-06-26 14:43:58] core.id_manager_agent - INFO - id_manager_agent.__init__:68 - IDManagerAgent (id_manager_for_bdi_agent_mastermind_strategy_mastermind_prime): Initialized. Secure central key store: /home/luvai/MINDXbuilds/production/mindX/data/identity/.wallet_keys.env
+[2025-06-26 14:43:58] monitoring.performance_monitor - INFO - performance_monitor._periodic_save_worker:223 - Periodic performance metrics saver started. Interval: 300.0s
+[2025-06-26 14:43:58] monitoring.resource_monitor - INFO - resource_monitor._monitor_resources_loop:144 - Resource monitoring loop started.
+[2025-06-26 14:43:58] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (id_manager_for_bdi_agent_mastermind_strategy_mastermind_prime): Wallet already exists for entity 'bdi_agent_mastermind_strategy_mastermind_prime'. Creation skipped.
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:263 - Initializing tools based on the provided tool registry...
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'cli_command_tool' from tools.cli_command_tool.CLICommandTool
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - ERROR - bdi_agent._initialize_tools_async:316 - Failed to initialize tool 'cli_command_tool': CLICommandTool.__init__() missing 2 required positional arguments: 'mastermind' and 'coordinator'
+Traceback (most recent call last):
+  File "/home/luvai/MINDXbuilds/production/mindX/core/bdi_agent.py", line 313, in _initialize_tools_async
+    self.available_tools[tool_id] = ToolClass(**valid_kwargs)
+TypeError: CLICommandTool.__init__() missing 2 required positional arguments: 'mastermind' and 'coordinator'
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'audit_and_improve' from tools.audit_and_improve_tool.AuditAndImproveTool
+[2025-06-26 14:43:58] tools.base_gen_agent - INFO - base_gen_agent.__init__:110 - [base_gen_agent_v1.1] Using resolved config file path: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:58] tools.base_gen_agent - INFO - base_gen_agent._load_and_merge_config_from_file:126 - [base_gen_agent_v1.1] Loaded and merged agent config from '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:58] tools.base_gen_agent - INFO - base_gen_agent.__init__:114 - [base_gen_agent_v1.1] Initialized. Config source: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'. Max file size: 1024KB.
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: AuditAndImproveTool
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'base_gen_agent' from tools.base_gen_agent.BaseGenAgent
+[2025-06-26 14:43:58] tools.base_gen_agent - INFO - base_gen_agent.__init__:110 - [base_gen_agent_v1.1] Using resolved config file path: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:58] tools.base_gen_agent - INFO - base_gen_agent._load_and_merge_config_from_file:126 - [base_gen_agent_v1.1] Loaded and merged agent config from '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:58] tools.base_gen_agent - INFO - base_gen_agent.__init__:114 - [base_gen_agent_v1.1] Initialized. Config source: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'. Max file size: 1024KB.
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: BaseGenAgent
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'note_taking' from tools.note_taking_tool.NoteTakingTool
+[2025-06-26 14:43:58] tools.note_taking_tool - INFO - note_taking_tool.__init__:50 - NoteTakingTool initialized. Notes directory: /home/luvai/MINDXbuilds/production/mindX/data/memory/agent_workspaces/general_note_taking_tool/notes
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: NoteTakingTool
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'simple_coder_agent' from agents.simple_coder_agent.SimpleCoder
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - ERROR - bdi_agent._initialize_tools_async:316 - Failed to initialize tool 'simple_coder_agent': module 'agents.simple_coder_agent' has no attribute 'SimpleCoder'
+Traceback (most recent call last):
+  File "/home/luvai/MINDXbuilds/production/mindX/core/bdi_agent.py", line 272, in _initialize_tools_async
+    ToolClass = getattr(module, class_name)
+AttributeError: module 'agents.simple_coder_agent' has no attribute 'SimpleCoder'. Did you mean: 'SimpleCoderAgent'?
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'summarization' from tools.summarization_tool.SummarizationTool
+[2025-06-26 14:43:58] tools.summarization_tool - INFO - summarization_tool.__init__:44 - SummarizationTool initialized. Using LLM: gemini/gemini-1.5-flash-latest
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: SummarizationTool
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'system_analyzer' from tools.system_analyzer_tool.SystemAnalyzerTool
+[2025-06-26 14:43:58] tools.system_analyzer_tool - INFO - system_analyzer_tool.__init__:53 - SystemAnalyzerTool: Initialized with integrated monitoring capabilities via Coordinator.
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: SystemAnalyzerTool
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'shell_command' from tools.shell_command_tool.ShellCommandTool
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: ShellCommandTool
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'registry_manager' from tools.registry_manager_tool.RegistryManagerTool
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: RegistryManagerTool
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'registry_sync' from tools.registry_sync_tool.RegistrySyncTool
+[2025-06-26 14:43:58] tools.registry_sync_tool - INFO - registry_sync_tool.__init__:43 - RegistrySyncTool: Initialized with registry paths.
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: RegistrySyncTool
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'agent_factory' from tools.agent_factory_tool.AgentFactoryTool
+[2025-06-26 14:43:58] tools.agent_factory_tool - INFO - agent_factory_tool.__init__:41 - AgentFactoryTool: Initialized with agent creation capabilities.
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: AgentFactoryTool
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'tool_factory' from tools.tool_factory_tool.ToolFactoryTool
+[2025-06-26 14:43:58] tools.tool_factory_tool - INFO - tool_factory_tool.__init__:28 - ToolFactoryTool: Initialized with tool creation capabilities.
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: ToolFactoryTool
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'augmentic_intelligence' from tools.augmentic_intelligence_tool.AugmenticIntelligenceTool
+[2025-06-26 14:43:58] tools.agent_factory_tool - INFO - agent_factory_tool.__init__:41 - AgentFactoryTool: Initialized with agent creation capabilities.
+[2025-06-26 14:43:58] tools.tool_factory_tool - INFO - tool_factory_tool.__init__:28 - ToolFactoryTool: Initialized with tool creation capabilities.
+[2025-06-26 14:43:58] tools.augmentic_intelligence_tool - INFO - augmentic_intelligence_tool._init_sub_tools:74 - AugmenticIntelligenceTool: Sub-tools initialized successfully.
+[2025-06-26 14:43:58] tools.augmentic_intelligence_tool - INFO - augmentic_intelligence_tool.__init__:53 - AugmenticIntelligenceTool: Initialized with full system access.
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: AugmenticIntelligenceTool
+[2025-06-26 14:43:58] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'enhanced_simple_coder' from agents.enhanced_simple_coder.EnhancedSimpleCoder
+[2025-06-26 14:43:59] agents.enhanced_simple_coder - INFO - enhanced_simple_coder.__init__:40 - EnhancedSimpleCoder: Enhanced coding agent initialized
+[2025-06-26 14:43:59] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: EnhancedSimpleCoder
+[2025-06-26 14:43:59] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'memory_analysis' from tools.memory_analysis_tool.MemoryAnalysisTool
+[2025-06-26 14:43:59] tools.memory_analysis_tool - INFO - memory_analysis_tool.__init__:43 - MemoryAnalysisTool: Memory analysis tool initialized
+[2025-06-26 14:43:59] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: MemoryAnalysisTool
+[2025-06-26 14:43:59] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:270 - Attempting to load tool 'identity_sync' from tools.identity_sync_tool.IdentitySyncTool
+[2025-06-26 14:43:59] tools.identity_sync_tool - INFO - identity_sync_tool.__init__:41 - IdentitySyncTool: Initialized with registry paths.
+[2025-06-26 14:43:59] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:314 - Successfully initialized tool: IdentitySyncTool
+[2025-06-26 14:43:59] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_tools_async:317 - Tools initialization phase complete. Loaded tools: ['audit_and_improve', 'base_gen_agent', 'note_taking', 'summarization', 'system_analyzer', 'shell_command', 'registry_manager', 'registry_sync', 'agent_factory', 'tool_factory', 'augmentic_intelligence', 'enhanced_simple_coder', 'memory_analysis', 'identity_sync']
+[2025-06-26 14:43:59] agents.enhanced_simple_coder - INFO - enhanced_simple_coder.__init__:40 - EnhancedSimpleCoder: Enhanced coding agent initialized
+[2025-06-26 14:43:59] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent._initialize_enhanced_simple_coder:996 - Enhanced Simple Coder initialized as BDI agent's right-hand assistant
+[2025-06-26 14:43:59] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.async_init_components:260 - Fully initialized. LLM Ready: True. Tools: ['audit_and_improve', 'base_gen_agent', 'note_taking', 'summarization', 'system_analyzer', 'shell_command', 'registry_manager', 'registry_sync', 'agent_factory', 'tool_factory', 'augmentic_intelligence', 'enhanced_simple_coder', 'memory_analysis', 'identity_sync']. Enhanced Simple Coder: True
+[2025-06-26 14:43:59] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.register_action:829 - Successfully registered custom action: 'ASSESS_TOOL_SUITE_EFFECTIVENESS'
+[2025-06-26 14:43:59] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.register_action:829 - Successfully registered custom action: 'CONCEPTUALIZE_NEW_TOOL'
+[2025-06-26 14:43:59] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.register_action:829 - Successfully registered custom action: 'PROPOSE_TOOL_STRATEGY'
+[2025-06-26 14:43:59] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.register_action:829 - Successfully registered custom action: 'CREATE_AGENT'
+[2025-06-26 14:43:59] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.register_action:829 - Successfully registered custom action: 'DELETE_AGENT'
+[2025-06-26 14:43:59] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.register_action:829 - Successfully registered custom action: 'EVOLVE_AGENT'
+[2025-06-26 14:43:59] orchestration.mastermind_agent - INFO - mastermind_agent._register_mastermind_bdi_actions:210 - Mastermind (mastermind_prime of mindX): Registered BDI action handlers, including tool and agent lifecycle management.
+[2025-06-26 14:43:59] core.id_manager_agent - INFO - id_manager_agent.__init__:68 - IDManagerAgent (id_manager_for_mastermind_prime): Initialized. Secure central key store: /home/luvai/MINDXbuilds/production/mindX/data/identity/.wallet_keys.env
+[2025-06-26 14:43:59] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (id_manager_for_mastermind_prime): Wallet already exists for entity 'mastermind_prime'. Creation skipped.
+[2025-06-26 14:43:59] llm.model_selector - INFO - model_selector.__init__:68 - ModelSelector initialized with weights: {'capability_match': 3.0, 'success_rate': 2.0, 'latency_factor': 0.5, 'cost_factor': 1.5, 'provider_preference': 0.2}
+[2025-06-26 14:43:59] learning.strategic_evolution_agent - INFO - strategic_evolution_agent.__init__:109 - StrategicEvolutionAgent 'sea_for_mastermind' synchronous __init__ complete.
+[2025-06-26 14:43:59] llm.model_registry - INFO - model_registry.get_handler_for_purpose:98 - ModelRegistry: Selected provider 'gemini' (model: gemini-1.5-flash-latest) for purpose 'TaskType.REASONING'.
+[2025-06-26 14:43:59] tools.system_analyzer_tool - INFO - system_analyzer_tool.__init__:53 - SystemAnalyzerTool: Initialized with integrated monitoring capabilities via Coordinator.
+[2025-06-26 14:43:59] tools.base_gen_agent - INFO - base_gen_agent.__init__:110 - [base_gen_agent_v1.1] Using resolved config file path: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:59] tools.base_gen_agent - INFO - base_gen_agent._load_and_merge_config_from_file:126 - [base_gen_agent_v1.1] Loaded and merged agent config from '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'
+[2025-06-26 14:43:59] tools.base_gen_agent - INFO - base_gen_agent.__init__:114 - [base_gen_agent_v1.1] Initialized. Config source: '/home/luvai/MINDXbuilds/production/mindX/data/config/basegen_config.json'. Max file size: 1024KB.
+[2025-06-26 14:43:59] llm.model_registry - INFO - model_registry.get_handler_for_purpose:98 - ModelRegistry: Selected provider 'gemini' (model: gemini/gemini-1.5-flash-latest) for purpose 'reasoning'.
+[2025-06-26 14:43:59] evolution.blueprint_agent - INFO - blueprint_agent.__init__:62 - BlueprintAgent 'blueprint_agent_mindx_v2' initialized. Using LLM: gemini/gemini-1.5-flash-latest
+[2025-06-26 14:43:59] learning.plan_management - INFO - plan_management.__init__:141 - PlanManager (sea_for_mastermind): Initialized. Parallel exec: False, Max parallel: 3
+[2025-06-26 14:43:59] learning.strategic_evolution_agent - INFO - strategic_evolution_agent._async_init:146 - StrategicEvolutionAgent 'sea_for_mastermind' fully initialized. Using gemini for core reasoning.
+[2025-06-26 14:43:59] orchestration.mastermind_agent - INFO - mastermind_agent._async_init_components:175 - Mastermind (mastermind_prime of mindX): Asynchronously initialized.
+[2025-06-26 14:43:59] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'mastermind_prime' (Type: orchestrator). Total agents: 2
+[2025-06-26 14:43:59] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'mastermind_prime'. Creation skipped.
+[2025-06-26 14:43:59] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'coordinator_agent_main'. Creation skipped.
+[2025-06-26 14:43:59] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'guardian_agent_main' (Type: core_service). Total agents: 3
+[2025-06-26 14:43:59] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'guardian_agent_main'. Creation skipped.
+[2025-06-26 14:43:59] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'automindx_agent_main' (Type: core_service). Total agents: 4
+[2025-06-26 14:43:59] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'automindx_agent_main'. Creation skipped.
+[2025-06-26 14:43:59] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'sea_for_mastermind' (Type: core_service). Total agents: 5
+[2025-06-26 14:43:59] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'sea_for_mastermind'. Creation skipped.
+[2025-06-26 14:43:59] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'blueprint_agent_mindx_v2' (Type: core_service). Total agents: 6
+[2025-06-26 14:43:59] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (default_identity_manager): Wallet already exists for entity 'blueprint_agent_mindx_v2'. Creation skipped.
+[2025-06-26 14:43:59] __main__ - INFO - run_mindx.main_cli_loop:33 - mindX Mastermind Agent (Augmentic Intelligence) ready for CLI interaction.
+[2025-06-26 14:43:59] tools.agent_factory_tool - INFO - agent_factory_tool._create_agent:64 - AgentFactoryTool: Creating new agent: checker of type quality_checker
+[2025-06-26 14:43:59] core.id_manager_agent - INFO - id_manager_agent.create_new_wallet:171 - IDManagerAgent (default_identity_manager): Creating new wallet for entity 'checker'.
+[2025-06-26 14:43:59] core.id_manager_agent - INFO - id_manager_agent.create_new_wallet:179 - IDManagerAgent (default_identity_manager): Stored new private key for 'checker' in /home/luvai/MINDXbuilds/production/mindX/data/identity/.wallet_keys.env.
+[2025-06-26 14:43:59] tools.agent_factory_tool - INFO - agent_factory_tool._generate_agent_code:243 - AgentFactoryTool: Generated agent code at /home/luvai/MINDXbuilds/production/mindX/agents/checker.py
+[2025-06-26 14:43:59] core.id_manager_agent - INFO - id_manager_agent.__init__:68 - IDManagerAgent (id_manager_for_checker): Initialized. Secure central key store: /home/luvai/MINDXbuilds/production/mindX/data/identity/.wallet_keys.env
+[2025-06-26 14:43:59] core.id_manager_agent - WARNING - id_manager_agent.create_new_wallet:160 - IDManagerAgent (id_manager_for_checker): Wallet already exists for entity 'checker'. Creation skipped.
+[2025-06-26 14:43:59] agents.guardian_agent - INFO - guardian_agent.validate_new_agent:83 - GuardianAgent: Validating new agent: checker
+[2025-06-26 14:43:59] agents.guardian_agent - WARNING - guardian_agent._validate_registry_status:362 - GuardianAgent: Agent checker not found in registry
+[2025-06-26 14:43:59] agents.guardian_agent - INFO - guardian_agent.validate_new_agent:152 - GuardianAgent: Agent checker validation successful
+[2025-06-26 14:43:59] coordinator_agent - INFO - coordinator_agent._instantiate_agent:703 - Creating dynamic agent of type 'quality_checker' for agent 'checker'
+[2025-06-26 14:43:59] coordinator_agent - INFO - coordinator_agent._instantiate_agent:725 - Successfully created dynamic agent 'checker' of type 'quality_checker'
+[2025-06-26 14:43:59] coordinator_agent - INFO - coordinator_agent.register_agent:221 - Registered agent 'checker' (Type: quality_checker). Total agents: 7
+[2025-06-26 14:43:59] tools.agent_factory_tool - INFO - agent_factory_tool._create_agent:111 - AgentFactoryTool: Successfully created agent checker
+[2025-06-26 14:43:59] tools.augmentic_intelligence_tool - ERROR - augmentic_intelligence_tool._add_skill_to_bdi:315 - AugmenticIntelligenceTool: Failed to add skill: MemoryAgent.save_timestampmemory() got an unexpected keyword argument 'importance'
+[2025-06-26 14:43:59] __main__ - INFO - run_mindx.main_cli_loop:46 - EOF or KeyboardInterrupt received. Exiting mindX CLI gracefully.
+[2025-06-26 14:43:59] __main__ - INFO - run_mindx.main_entry:562 - Shutting down mindX Mastermind Agent from CLI...
+[2025-06-26 14:43:59] orchestration.mastermind_agent - INFO - mastermind_agent.shutdown:613 - MastermindAgent 'mastermind_prime' shutting down...
+[2025-06-26 14:43:59] bdi_agent.bdi_agent_mastermind_strategy_mastermind_prime - INFO - bdi_agent.shutdown:807 - Shutting down.
+[2025-06-26 14:43:59] orchestration.mastermind_agent - INFO - mastermind_agent.shutdown:615 - MastermindAgent 'mastermind_prime' shutdown complete.
+[2025-06-26 14:43:59] __main__ - INFO - run_mindx.main_entry:564 - mindX Mastermind Agent shutdown complete.
+[2025-06-26 14:43:59] monitoring.performance_monitor - INFO - performance_monitor._periodic_save_worker:231 - Periodic metrics saver task cancelled.
+[2025-06-26 14:43:59] monitoring.performance_monitor - INFO - performance_monitor._periodic_save_worker:237 - Periodic metrics saver task stopped.
+[2025-06-26 14:43:59] monitoring.resource_monitor - INFO - resource_monitor._monitor_resources_loop:170 - Resource monitoring loop gracefully cancelled.
+[2025-06-26 14:43:59] monitoring.resource_monitor - INFO - resource_monitor._monitor_resources_loop:175 - Resource monitoring loop finished.
+
+

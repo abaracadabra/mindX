@@ -1,0 +1,1 @@
+This file will contain a detailed plan to improve mindX.  Further actions will populate this file.
