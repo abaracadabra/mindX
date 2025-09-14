@@ -165,25 +165,25 @@ minded/
 ## 📚 Documentation
 
 ### **Core Architecture**
-- **[Agent Architecture](docs/agents_architectural_reference.md)** - Complete agent registry and capabilities
-- **[Autonomous Civilization](docs/autonomous_civilization.md)** - Philosophical and technical foundation
-- **[BDI Agent](docs/bdi_agent.md)** - Belief-Desire-Intention architecture
-- **[Mastermind Agent](docs/mastermind_agent.md)** - Strategic orchestration system
+- **[Agent Architecture](https://github.com/abaracadabra/mindX/blob/main/docs/agents_architectural_reference.md)** - Complete agent registry and capabilities
+- **[Autonomous Civilization](https://github.com/abaracadabra/mindX/blob/main/docs/autonomous_civilization.md)** - Philosophical and technical foundation
+- **[BDI Agent](https://github.com/abaracadabra/mindX/blob/main/docs/bdi_agent.md)** - Belief-Desire-Intention architecture
+- **[Mastermind Agent](https://github.com/abaracadabra/mindX/blob/main/docs/mastermind_agent.md)** - Strategic orchestration system
 
 ### **Mistral AI Integration**
-- **[Mistral API Documentation](docs/mistral_api.md)** - Complete API integration guide
-- **[Mistral API Compliance](docs/mistral_chat_completion_api_compliance.md)** - Official API 1.0.0 compliance
-- **[Mistral Models Configuration](docs/mistral_models.md)** - Model selection and optimization
+- **[Mistral API Documentation](https://github.com/abaracadabra/mindX/blob/main/docs/mistral_api.md)** - Complete API integration guide
+- **[Mistral API Compliance](https://github.com/abaracadabra/mindX/blob/main/docs/mistral_chat_completion_api_compliance.md)** - Official API 1.0.0 compliance
+- **[Mistral Models Configuration](https://github.com/abaracadabra/mindX/blob/main/docs/mistral_models.md)** - Model selection and optimization
 
 ### **Advanced Features**
-- **[Strategic Evolution](docs/strategic_evolution_agent.md)** - Autonomous improvement system
-- **[Memory Architecture](docs/memory.md)** - Scalable memory management
-- **[Blueprint Agent](docs/blueprint_agent.md)** - System design automation
-- **[Guardian Agent](docs/guardian_agent.md)** - Security and validation
+- **[Strategic Evolution](https://github.com/abaracadabra/mindX/blob/main/docs/strategic_evolution_agent.md)** - Autonomous improvement system
+- **[Memory Architecture](https://github.com/abaracadabra/mindX/blob/main/docs/memory.md)** - Scalable memory management
+- **[Blueprint Agent](https://github.com/abaracadabra/mindX/blob/main/docs/blueprint_agent.md)** - System design automation
+- **[Guardian Agent](https://github.com/abaracadabra/mindX/blob/main/docs/guardian_agent.md)** - Security and validation
 
 ### **Hackathon & Competition**
-- **[Hackathon Submission](docs/hackathon.md)** - Internet of Agents competition entry
-- **[Technical Architecture](docs/TECHNICAL.md)** - Complete system design
+- **[Hackathon Submission](https://github.com/abaracadabra/mindX/blob/main/docs/hackathon.md)** - Internet of Agents competition entry
+- **[Technical Architecture](https://github.com/abaracadabra/mindX/blob/main/docs/TECHNICAL.md)** - Complete system design
 
 ## 🧪 Testing
 
@@ -244,8 +244,8 @@ MIT License - See [LICENSE](LICENSE) for details.
 ## 🔗 Links
 
 - **Repository**: [GitHub - abaracadabra/mindX](https://github.com/abaracadabra/mindX)
-- **Documentation**: [Complete Documentation](docs/)
-- **Hackathon Entry**: [Internet of Agents Submission](docs/hackathon.md)
+- **Documentation**: [Complete Documentation](https://github.com/abaracadabra/mindX/tree/main/docs)
+- **Hackathon Entry**: [Internet of Agents Submission](https://github.com/abaracadabra/mindX/blob/main/docs/hackathon.md)
 
 ---
 
