@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-09-15T00:21:00.357918",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "resource_monitor",
+  "content": {
+    "process_name": "resource_alert",
+    "data": {
+      "type": "memory",
+      "status": "RESOLVED",
+      "message": "Memory usage resolved: 66.3% <= limit (85.0%)",
+      "value": 66.3,
+      "limit": 85.0
+    }
+  },
+  "context": {
+    "agent_id": "resource_monitor"
+  },
+  "tags": [
+    "resource_alert",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "8f38589ab35ad7e2"
+}

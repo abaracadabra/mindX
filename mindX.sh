@@ -803,7 +803,7 @@ function setup_frontend_ui { # pragma: no cover
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>mindX Control Panel</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles3.css">
 </head>
 <body>
     <div class="container">
@@ -820,10 +820,29 @@ function setup_frontend_ui { # pragma: no cover
                 </div>
             </div>
             <div class="header-right">
+                <div class="autonomous-control">
+                    <label class="autonomous-toggle">
+                        <input type="checkbox" id="autonomous-mode">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">AUTONOMOUS</span>
+                    </label>
+                </div>
             <div id="status-light" class="status-light-red" title="Disconnected"></div>
             </div>
         </header>
-        <main>
+
+        <!-- Tab Navigation -->
+        <nav class="tab-navigation">
+            <button class="tab-btn active" data-tab="control">Control</button>
+            <button class="tab-btn" data-tab="agents">Agents</button>
+            <button class="tab-btn" data-tab="system">System</button>
+            <button class="tab-btn" data-tab="logs">Logs</button>
+            <button class="tab-btn" data-tab="terminal">Terminal</button>
+            <button class="tab-btn" data-tab="admin">Admin</button>
+        </nav>
+
+        <!-- Control Tab -->
+        <div id="control-tab" class="tab-content active">
             <div class="control-section">
                 <h2>Evolve Codebase</h2>
                 <textarea id="evolve-directive" placeholder="Enter a high-level directive for evolution..."></textarea>
@@ -836,16 +855,119 @@ function setup_frontend_ui { # pragma: no cover
             </div>
             <div class="control-section">
                 <h2>System Commands</h2>
-                <button id="status-btn">Check System Status</button>
-                <button id="agents-btn">List Agents</button>
-                <button id="tools-btn">List Tools</button>
+                <div class="button-grid">
+                    <button id="status-btn">Check System Status</button>
+                    <button id="agents-btn">List Agents</button>
+                    <button id="tools-btn">List Tools</button>
+                    <button id="analyze-btn">Analyze Codebase</button>
+                    <button id="replicate-btn">Trigger Replication</button>
+                    <button id="improve-btn">Request Improvement</button>
+                </div>
             </div>
             <div class="response-section">
-                <h2>Response</h2>
+                <h2>API Response</h2>
                 <pre id="response-output">Awaiting command...</pre>
             </div>
-        </main>
     </div>
+
+        <!-- Agents Tab -->
+        <div id="agents-tab" class="tab-content">
+            <div class="control-section">
+                <h2>Agent Management</h2>
+                <div class="agent-controls">
+                    <button id="refresh-agents-btn">Refresh Agents</button>
+                    <button id="create-agent-btn">Create Agent</button>
+                    <button id="delete-agent-btn">Delete Agent</button>
+                </div>
+                <div id="agents-list" class="agents-list"></div>
+            </div>
+            <div class="control-section">
+                <h2>Agent Details</h2>
+                <div id="agent-details" class="system-status">
+                    <p>Select an agent from the list to view details.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Tab -->
+        <div id="system-tab" class="tab-content">
+            <div class="control-section">
+                <h2>System Status</h2>
+                <div id="system-status" class="system-status"></div>
+            </div>
+            <div class="control-section">
+                <h2>Performance Metrics</h2>
+                <div id="performance-metrics" class="performance-metrics"></div>
+            </div>
+            <div class="control-section">
+                <h2>Resource Usage</h2>
+                <div id="resource-usage" class="resource-usage"></div>
+            </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div id="logs-tab" class="tab-content">
+            <div class="control-section">
+                <div class="logs-header">
+                    <h2>System Logs</h2>
+                    <button id="copy-logs-btn" class="copy-btn" title="Copy logs to clipboard">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6z"/>
+                            <path d="M2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1H2z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="log-controls">
+                    <button id="refresh-logs-btn">Refresh Logs</button>
+                    <button id="clear-logs-btn">Clear Logs</button>
+                    <select id="log-level-filter">
+                        <option value="all">All Levels</option>
+                        <option value="DEBUG">DEBUG</option>
+                        <option value="INFO">INFO</option>
+                        <option value="WARNING">WARNING</option>
+                        <option value="ERROR">ERROR</option>
+                        <option value="CRITICAL">CRITICAL</option>
+                    </select>
+                </div>
+                <div id="logs-output" class="logs-output"></div>
+            </div>
+        </div>
+
+        <!-- Terminal Tab -->
+        <div id="terminal-tab" class="tab-content">
+            <div class="control-section">
+                <h2>Terminal Output</h2>
+                <div class="terminal-controls">
+                    <button id="refresh-terminal-btn">Refresh Terminal</button>
+                    <button id="clear-terminal-btn">Clear Terminal</button>
+                    <button id="execute-command-btn">Execute Command</button>
+                </div>
+                <div id="terminal-output" class="logs-output"></div>
+                <div class="terminal-input">
+                    <input type="text" id="terminal-command" placeholder="Enter command...">
+                    <button id="send-command-btn">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Tab -->
+        <div id="admin-tab" class="tab-content">
+            <div class="control-section">
+                <h2>Admin Controls</h2>
+                <div class="admin-controls">
+                    <button id="restart-system-btn">Restart System</button>
+                    <button id="backup-system-btn">Backup System</button>
+                    <button id="update-config-btn">Update Config</button>
+                    <button id="export-logs-btn">Export Logs</button>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>System Configuration</h2>
+                <div id="config-display" class="config-display"></div>
+            </div>
+        </div>
+    </div>
+
     <script>
         window.MINDX_BACKEND_PORT = "${BACKEND_PORT_EFFECTIVE}";
     </script>
@@ -855,7 +977,12 @@ function setup_frontend_ui { # pragma: no cover
 EOF_INDEX_HTML
   create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/index.html" "$index_html_content"
 
-  # --- styles.css ---
+  # Copy existing frontend files instead of embedding
+  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" ]; then
+    cp "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" "$MINDX_FRONTEND_UI_DIR_ABS/"
+    log_setup_info "Copied existing styles3.css"
+  else
+    # Fallback to basic styles if styles3.css doesn't exist
   read -r -d '' styles_css_content <<'EOF_STYLES_CSS'
 /* mindX Frontend UI - Corporate Cyberpunk 2049 Theme */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
@@ -1223,7 +1350,12 @@ pre::before {
 EOF_STYLES_CSS
   create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/styles.css" "$styles_css_content"
 
-  # --- app.js ---
+  # Copy existing app.js instead of embedding
+  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/app.js" ]; then
+    cp "$PROJECT_ROOT/mindx_frontend_ui/app.js" "$MINDX_FRONTEND_UI_DIR_ABS/"
+    log_setup_info "Copied existing app.js"
+  else
+    # Fallback to basic app.js if it doesn't exist
   read -r -d '' app_js_content <<'EOF_APP_JS'
 document.addEventListener('DOMContentLoaded', () => {
     const backendPort = window.MINDX_BACKEND_PORT || '8000';
@@ -1268,7 +1400,7 @@ document.addEventListener('DOMContentLoaded', () => {
     evolveBtn.addEventListener('click', () => {
         const directive = evolveDirectiveInput.value.trim();
         if (directive) {
-            sendRequest('/commands/evolve', 'POST', { directive });
+            sendRequest('/system/evolve', 'POST', { directive });
         } else {
             responseOutput.textContent = 'Please enter a directive.';
         }
@@ -1283,11 +1415,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // System command buttons
+    document.getElementById('status-btn').addEventListener('click', () => {
+        sendRequest('/status/mastermind', 'GET');
+    });
+
+    document.getElementById('agents-btn').addEventListener('click', () => {
+        sendRequest('/registry/agents', 'GET');
+    });
+
+    document.getElementById('tools-btn').addEventListener('click', () => {
+        sendRequest('/registry/tools', 'GET');
+    });
+
     checkBackendStatus();
     setInterval(checkBackendStatus, 10000); // Check status every 10 seconds
 });
 EOF_APP_JS
   create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/app.js" "$app_js_content"
+  fi
 
   # --- package.json ---
   read -r -d '' package_json_content <<'EOF_PACKAGE_JSON'
@@ -1392,7 +1538,7 @@ function start_web_frontend {
     log_setup_info "Starting MindX Backend API on port $BACKEND_PORT_EFFECTIVE..."
     cd "$PROJECT_ROOT"
     VENV_PYTHON="$MINDX_VENV_PATH_ABS/bin/python"
-    $VENV_PYTHON -m uvicorn api.api_server:app --host 0.0.0.0 --port $BACKEND_PORT_EFFECTIVE &
+    $VENV_PYTHON -m uvicorn mindx_backend_service.main_service:app --host 0.0.0.0 --port $BACKEND_PORT_EFFECTIVE &
     BACKEND_PID=$!
 
     # Wait for backend to start
@@ -1639,7 +1785,7 @@ elif [[ "$RUN_SERVICES_FLAG" == true ]]; then
     # The backend's main_service.py now calls uvicorn.run itself.
     # We need to ensure it uses the venv's python.
     VENV_PYTHON="$MINDX_VENV_PATH_ABS/bin/python"
-    BACKEND_EXEC_COMMAND="$VENV_PYTHON -m uvicorn api.api_server:app --host 0.0.0.0 --port $BACKEND_PORT_EFFECTIVE"
+    BACKEND_EXEC_COMMAND="$VENV_PYTHON -m uvicorn mindx_backend_service.main_service:app --host 0.0.0.0 --port $BACKEND_PORT_EFFECTIVE"
 
     start_mindx_service "MindX Backend Service" "$BACKEND_EXEC_COMMAND" "$BACKEND_PID_FILE" "$MINDX_BACKEND_APP_LOG_FILE" "$PROJECT_ROOT" || \
         { log_setup_error "MindX Backend Service failed to start. Check logs. Exiting."; exit 1; }

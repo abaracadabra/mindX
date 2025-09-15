@@ -1142,3 +1142,145 @@ body.autonomous-mode .tab-btn.active {
     background: linear-gradient(45deg, var(--corp-cyan), var(--corp-purple));
     box-shadow: 0 0 12px rgba(0, 168, 255, 0.3);
 }
+
+/* Health Status Styling */
+.health-status {
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border: 2px solid;
+}
+
+.status-healthy {
+    background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(0, 255, 136, 0.05));
+    border-color: var(--corp-green);
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+}
+
+.status-degraded {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05));
+    border-color: var(--corp-gold);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+}
+
+.status-unhealthy {
+    background: linear-gradient(135deg, rgba(255, 71, 87, 0.1), rgba(255, 71, 87, 0.05));
+    border-color: var(--corp-red);
+    box-shadow: 0 0 20px rgba(255, 71, 87, 0.2);
+}
+
+.health-components {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.health-component {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    border: 1px solid var(--corp-blue);
+}
+
+.component-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.component-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-weight: 600;
+}
+
+.status-good {
+    background: var(--corp-green);
+    color: var(--dark-bg);
+}
+
+.status-bad {
+    background: var(--corp-red);
+    color: var(--text-primary);
+}
+
+.health-warnings {
+    margin-top: 15px;
+    padding: 10px;
+    background: rgba(255, 215, 0, 0.1);
+    border: 1px solid var(--corp-gold);
+    border-radius: 8px;
+    color: var(--corp-gold);
+}
+
+/* Metrics Grid Styling */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.metric-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: linear-gradient(135deg, rgba(0, 168, 255, 0.1), rgba(0, 168, 255, 0.05));
+    border: 1px solid var(--corp-blue);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.metric-item:hover {
+    background: linear-gradient(135deg, rgba(0, 168, 255, 0.2), rgba(0, 168, 255, 0.1));
+    box-shadow: 0 0 15px rgba(0, 168, 255, 0.3);
+}
+
+.metric-label {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.metric-value {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--corp-cyan);
+    font-weight: 700;
+    font-size: 1.1em;
+}
+
+/* Details/Summary Styling */
+details {
+    margin-top: 15px;
+}
+
+summary {
+    cursor: pointer;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--corp-blue);
+    border-radius: 8px;
+    color: var(--corp-cyan);
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+summary:hover {
+    background: rgba(0, 168, 255, 0.1);
+    box-shadow: 0 0 10px rgba(0, 168, 255, 0.2);
+}
+
+details[open] summary {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+details pre {
+    margin-top: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}

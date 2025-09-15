@@ -1,0 +1,26 @@
+{
+  "timestamp": "2025-09-15T00:00:36.688146",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "resource_monitor",
+  "content": {
+    "process_name": "resource_alert",
+    "data": {
+      "type": "disk",
+      "path": "/",
+      "status": "ALERT",
+      "message": "High Disk usage for '/' detected: 97.2% > limit (90.0%)",
+      "value": 97.2,
+      "limit": 90.0
+    }
+  },
+  "context": {
+    "agent_id": "resource_monitor"
+  },
+  "tags": [
+    "resource_alert",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "89462e0928bf5b48"
+}

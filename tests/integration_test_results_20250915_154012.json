@@ -1,0 +1,62 @@
+{
+  "timestamp": 1757976007.312601,
+  "tests_run": 9,
+  "tests_passed": 8,
+  "tests_failed": 1,
+  "details": [
+    {
+      "test": "Backend Health Check",
+      "status": "\u2705 PASS",
+      "details": "Status: healthy",
+      "timestamp": 1757976007.3618329
+    },
+    {
+      "test": "Frontend Accessibility",
+      "status": "\u2705 PASS",
+      "details": "Frontend accessible and contains expected content",
+      "timestamp": 1757976007.4556074
+    },
+    {
+      "test": "CORS Configuration",
+      "status": "\u2705 PASS",
+      "details": "CORS properly configured",
+      "timestamp": 1757976007.4655344
+    },
+    {
+      "test": "Mistral API Connectivity",
+      "status": "\u274c FAIL",
+      "details": "No Mistral API integration found",
+      "timestamp": 1757976007.5061908
+    },
+    {
+      "test": "Mistral API Key Configuration",
+      "status": "\u2705 PASS",
+      "details": "API key configured",
+      "timestamp": 1757976007.5072386
+    },
+    {
+      "test": "Mistral Handler Initialization",
+      "status": "\u2705 PASS",
+      "details": "Mistral handler can be instantiated",
+      "timestamp": 1757976009.3844075
+    },
+    {
+      "test": "Agents Registry",
+      "status": "\u2705 PASS",
+      "details": "Found 1 agents",
+      "timestamp": 1757976009.4916227
+    },
+    {
+      "test": "System Metrics",
+      "status": "\u2705 PASS",
+      "details": "CPU: 81.3%, Memory: 76.5%",
+      "timestamp": 1757976010.598035
+    },
+    {
+      "test": "Frontend-Backend Integration",
+      "status": "\u2705 PASS",
+      "details": "100.0% of endpoints accessible",
+      "timestamp": 1757976012.1410532
+    }
+  ]
+}

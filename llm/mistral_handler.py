@@ -20,11 +20,20 @@ import logging
 from typing import Optional, Any, Dict, List, Union
 import aiohttp
 from pathlib import Path
+from decimal import Decimal
 
 from .llm_interface import LLMHandlerInterface
 from .rate_limiter import RateLimiter
 from utils.config import Config
 from utils.logging_config import get_logger
+
+# Optional dependency for accurate token counting
+try:
+    import tiktoken
+    TIKTOKEN_AVAILABLE = True
+except ImportError:
+    TIKTOKEN_AVAILABLE = False
+    tiktoken = None
 
 logger = get_logger(__name__)
 
@@ -81,6 +90,42 @@ class MistralHandler(LLMHandlerInterface):
         self.timeout = self.config.get("llm.mistral.timeout", 30)
         self.max_retries = self.config.get("llm.mistral.max_retries", 3)
         
+        # Initialize token counting
+        self._tokenizers = {}
+        self._initialize_tokenizers()
+        
+        # Mistral pricing (as of 2025) - per 1M tokens
+        self.pricing = {
+            "mistral-small-latest": {
+                "input": Decimal("0.25"),   # $0.25 per 1M input tokens
+                "output": Decimal("0.25")   # $0.25 per 1M output tokens
+            },
+            "mistral-medium-latest": {
+                "input": Decimal("2.50"),   # $2.50 per 1M input tokens
+                "output": Decimal("7.50")   # $7.50 per 1M output tokens
+            },
+            "mistral-large-latest": {
+                "input": Decimal("8.00"),   # $8.00 per 1M input tokens
+                "output": Decimal("24.00")  # $24.00 per 1M output tokens
+            },
+            "codestral-2405": {
+                "input": Decimal("0.25"),   # $0.25 per 1M input tokens
+                "output": Decimal("0.25")   # $0.25 per 1M output tokens
+            },
+            "codestral-latest": {
+                "input": Decimal("0.25"),   # $0.25 per 1M input tokens
+                "output": Decimal("0.25")   # $0.25 per 1M output tokens
+            },
+            "mistral-embed": {
+                "input": Decimal("0.13"),   # $0.13 per 1M input tokens
+                "output": Decimal("0.00")   # No output tokens for embeddings
+            },
+            "pixtral-12b-latest": {
+                "input": Decimal("2.50"),   # $2.50 per 1M input tokens
+                "output": Decimal("7.50")   # $7.50 per 1M output tokens
+            }
+        }
+        
         if not self.api_key:
             logger.warning("Mistral API key not found. Handler will operate in degraded mode.")
             self.api_key = None  # Ensure it's None for proper handling
@@ -104,6 +149,107 @@ class MistralHandler(LLMHandlerInterface):
             logger.critical("The 'PyYAML' library is required to load model configs. Please run `pip install pyyaml`.")
         except Exception as e:
             logger.error(f"Error parsing mistral.yaml: {e}", exc_info=True)
+    
+    def _initialize_tokenizers(self):
+        """Initialize tokenizers for accurate token counting"""
+        if TIKTOKEN_AVAILABLE:
+            try:
+                # Use GPT-4 tokenizer as a reasonable approximation for Mistral models
+                self._tokenizers['gpt'] = tiktoken.get_encoding("cl100k_base")
+                logger.info("MistralHandler: tiktoken tokenizers initialized for accurate token counting")
+            except Exception as e:
+                logger.warning(f"MistralHandler: Failed to initialize tiktoken: {e}")
+        else:
+            logger.info("MistralHandler: tiktoken not available, using heuristic token counting")
+    
+    def count_tokens(self, text: str, model: str = None) -> int:
+        """
+        Count tokens in text using tiktoken when available, fallback to heuristic
+        
+        Args:
+            text: Text to count tokens for
+            model: Model name for context (optional)
+            
+        Returns:
+            Estimated token count
+        """
+        if not isinstance(text, str) or not text.strip():
+            return 0
+        
+        # Use tiktoken if available
+        if TIKTOKEN_AVAILABLE and self._tokenizers:
+            try:
+                tokenizer = self._tokenizers.get('gpt')
+                if tokenizer:
+                    return len(tokenizer.encode(text))
+            except Exception as e:
+                logger.warning(f"MistralHandler: tiktoken failed, using heuristic: {e}")
+        
+        # Heuristic fallback
+        return self._estimate_tokens_heuristic(text, model)
+    
+    def _estimate_tokens_heuristic(self, text: str, model: str = None) -> int:
+        """Heuristic token estimation for Mistral models"""
+        if not text:
+            return 0
+        
+        words = len(text.split())
+        chars = len(text)
+        
+        # Base ratio for Mistral models (tends to be more efficient than GPT)
+        if self._is_code_like(text):
+            base_ratio = 0.30  # Code has more tokens per character
+        elif self._has_technical_content(text):
+            base_ratio = 0.27  # Technical content
+        else:
+            base_ratio = 0.24  # Regular text
+        
+        # Model-specific adjustments
+        if model:
+            model_lower = model.lower()
+            if 'small' in model_lower:
+                base_ratio *= 0.95  # Small models are more efficient
+            elif 'large' in model_lower:
+                base_ratio *= 1.05  # Large models use slightly more tokens
+            elif 'codestral' in model_lower:
+                base_ratio *= 0.92  # Code models are very efficient
+        
+        estimated_tokens = int(chars * base_ratio)
+        
+        # Bounds checking
+        min_estimate = max(1, words // 4)
+        max_estimate = min(words * 3, chars // 2)
+        
+        return max(min_estimate, min(estimated_tokens, max_estimate))
+    
+    def _is_code_like(self, text: str) -> bool:
+        """Check if text appears to be code"""
+        code_indicators = ['def ', 'class ', 'import ', 'from ', 'if __name__', 'function', 'var ', 'const ', 'let ']
+        return any(indicator in text for indicator in code_indicators)
+    
+    def _has_technical_content(self, text: str) -> bool:
+        """Check if text has technical content"""
+        tech_indicators = ['API', 'function', 'method', 'algorithm', 'database', 'server', 'client']
+        return any(indicator.lower() in text.lower() for indicator in tech_indicators)
+    
+    def calculate_cost(self, input_tokens: int, output_tokens: int, model: str) -> Decimal:
+        """
+        Calculate cost for token usage
+        
+        Args:
+            input_tokens: Number of input tokens
+            output_tokens: Number of output tokens
+            model: Model name
+            
+        Returns:
+            Total cost in USD
+        """
+        model_pricing = self.pricing.get(model, self.pricing.get("mistral-small-latest"))
+        
+        input_cost = (Decimal(input_tokens) / Decimal(1_000_000)) * model_pricing["input"]
+        output_cost = (Decimal(output_tokens) / Decimal(1_000_000)) * model_pricing["output"]
+        
+        return input_cost + output_cost
     
     def get_model_info(self, model_name: str) -> Optional[Dict[str, Any]]:
         """Get model information from the catalog"""
@@ -256,11 +402,23 @@ class MistralHandler(LLMHandlerInterface):
             # Apply rate limiting
             await self._rate_limiter.wait()
             
+            # Count input tokens for cost calculation
+            input_tokens = self.count_tokens(prompt, model)
+            
             # Make API request
             async with self.session.post(f"{self.base_url}/chat/completions", json=payload) as response:
                 if response.status == 200:
                     data = await response.json()
-                    return data["choices"][0]["message"]["content"]
+                    response_text = data["choices"][0]["message"]["content"]
+                    
+                    # Count output tokens and calculate cost
+                    output_tokens = self.count_tokens(response_text, model)
+                    cost = self.calculate_cost(input_tokens, output_tokens, model)
+                    
+                    # Log usage information
+                    logger.info(f"Mistral API call - Model: {model}, Input tokens: {input_tokens}, Output tokens: {output_tokens}, Cost: ${cost:.6f}")
+                    
+                    return response_text
                 else:
                     error_text = await response.text()
                     logger.error(f"Mistral API error {response.status}: {error_text}")
@@ -307,7 +465,7 @@ class MistralHandler(LLMHandlerInterface):
         payload.update(kwargs)
         
         try:
-            await self._rate_limiter.acquire()
+            await self._rate_limiter.wait()
             
             async with self.session.post(f"{self.base_url}/fim/completions", json=payload) as response:
                 if response.status == 200:
@@ -357,7 +515,7 @@ class MistralHandler(LLMHandlerInterface):
         payload.update(kwargs)
         
         try:
-            await self._rate_limiter.acquire()
+            await self._rate_limiter.wait()
             
             async with self.session.post(f"{self.base_url}/embeddings", json=payload) as response:
                 if response.status == 200:
@@ -406,7 +564,7 @@ class MistralHandler(LLMHandlerInterface):
         payload.update(kwargs)
         
         try:
-            await self._rate_limiter.acquire()
+            await self._rate_limiter.wait()
             
             async with self.session.post(f"{self.base_url}/classifications", json=payload) as response:
                 if response.status == 200:
@@ -454,7 +612,7 @@ class MistralHandler(LLMHandlerInterface):
         payload.update(kwargs)
         
         try:
-            await self._rate_limiter.acquire()
+            await self._rate_limiter.wait()
             
             async with self.session.post(f"{self.base_url}/moderations", json=payload) as response:
                 if response.status == 200:
@@ -487,7 +645,7 @@ class MistralHandler(LLMHandlerInterface):
             await self.__aenter__()
         
         try:
-            await self._rate_limiter.acquire()
+            await self._rate_limiter.wait()
             
             async with self.session.get(f"{self.base_url}/models") as response:
                 if response.status == 200:
@@ -611,3 +769,141 @@ class MistralHandler(LLMHandlerInterface):
             "supports_tools": False,
             "supports_reasoning": False
         })
+    
+    def get_optimized_model_for_task(self, task_type: str, estimated_tokens: int = 1000, budget_limit: Decimal = None) -> Dict[str, Any]:
+        """
+        Get the most optimized Mistral model for a specific task
+        
+        Args:
+            task_type: Type of task (reasoning, code_generation, writing, simple_chat, data_analysis, speed_sensitive)
+            estimated_tokens: Estimated number of tokens for the task
+            budget_limit: Maximum cost budget (optional)
+            
+        Returns:
+            Dictionary with recommended model and reasoning
+        """
+        # Define task requirements
+        task_requirements = {
+            "reasoning": {
+                "min_capability": 0.8,
+                "preferred_models": ["mistral-large-latest"],
+                "fallback_models": ["mistral-medium-latest"]
+            },
+            "code_generation": {
+                "min_capability": 0.7,
+                "preferred_models": ["codestral-latest", "codestral-2405"],
+                "fallback_models": ["mistral-large-latest", "mistral-medium-latest"]
+            },
+            "writing": {
+                "min_capability": 0.6,
+                "preferred_models": ["mistral-medium-latest", "mistral-small-latest"],
+                "fallback_models": ["mistral-large-latest"]
+            },
+            "simple_chat": {
+                "min_capability": 0.5,
+                "preferred_models": ["mistral-small-latest"],
+                "fallback_models": ["mistral-medium-latest"]
+            },
+            "data_analysis": {
+                "min_capability": 0.7,
+                "preferred_models": ["mistral-large-latest", "mistral-medium-latest"],
+                "fallback_models": ["mistral-small-latest"]
+            },
+            "speed_sensitive": {
+                "min_capability": 0.5,
+                "preferred_models": ["mistral-small-latest", "codestral-latest"],
+                "fallback_models": ["mistral-medium-latest"]
+            }
+        }
+        
+        requirements = task_requirements.get(task_type, task_requirements["simple_chat"])
+        
+        # Calculate cost for each model
+        model_costs = {}
+        for model in self.pricing.keys():
+            if self.is_model_suitable_for_task(model, task_type):
+                # Estimate cost based on estimated tokens
+                estimated_cost = self.calculate_cost(estimated_tokens, estimated_tokens // 2, model)
+                model_costs[model] = {
+                    "cost": estimated_cost,
+                    "capabilities": self.get_model_capabilities(model),
+                    "pricing": self.pricing[model]
+                }
+        
+        # Filter by budget if specified
+        if budget_limit:
+            model_costs = {k: v for k, v in model_costs.items() if v["cost"] <= budget_limit}
+        
+        if not model_costs:
+            return {
+                "recommended_model": "mistral-small-latest",
+                "reasoning": "No models within budget, using cheapest option",
+                "cost": self.calculate_cost(estimated_tokens, estimated_tokens // 2, "mistral-small-latest"),
+                "capabilities": self.get_model_capabilities("mistral-small-latest")
+            }
+        
+        # Sort by cost and capability
+        sorted_models = sorted(
+            model_costs.items(),
+            key=lambda x: (x[1]["cost"], -x[1]["capabilities"].get("max_tokens", 0))
+        )
+        
+        # Find best model from preferred list
+        for preferred_model in requirements["preferred_models"]:
+            if preferred_model in model_costs:
+                return {
+                    "recommended_model": preferred_model,
+                    "reasoning": f"Preferred model for {task_type} task",
+                    "cost": model_costs[preferred_model]["cost"],
+                    "capabilities": model_costs[preferred_model]["capabilities"],
+                    "pricing": model_costs[preferred_model]["pricing"]
+                }
+        
+        # Fallback to cheapest suitable model
+        best_model, best_info = sorted_models[0]
+        return {
+            "recommended_model": best_model,
+            "reasoning": f"Most cost-effective model for {task_type} task",
+            "cost": best_info["cost"],
+            "capabilities": best_info["capabilities"],
+            "pricing": best_info["pricing"]
+        }
+    
+    def get_model_comparison(self, task_type: str = "simple_chat", estimated_tokens: int = 1000) -> List[Dict[str, Any]]:
+        """
+        Get a comparison of all available models for a specific task
+        
+        Args:
+            task_type: Type of task to compare models for
+            estimated_tokens: Estimated number of tokens
+            
+        Returns:
+            List of model comparisons sorted by cost-effectiveness
+        """
+        comparisons = []
+        
+        for model in self.pricing.keys():
+            if self.is_model_suitable_for_task(model, task_type):
+                estimated_cost = self.calculate_cost(estimated_tokens, estimated_tokens // 2, model)
+                capabilities = self.get_model_capabilities(model)
+                
+                comparisons.append({
+                    "model": model,
+                    "cost": estimated_cost,
+                    "cost_per_1k_tokens": estimated_cost / (estimated_tokens / 1000),
+                    "capabilities": capabilities,
+                    "pricing": self.pricing[model],
+                    "suitable": True
+                })
+            else:
+                comparisons.append({
+                    "model": model,
+                    "cost": Decimal("0"),
+                    "cost_per_1k_tokens": Decimal("0"),
+                    "capabilities": self.get_model_capabilities(model),
+                    "pricing": self.pricing[model],
+                    "suitable": False
+                })
+        
+        # Sort by cost-effectiveness (suitable models first, then by cost)
+        return sorted(comparisons, key=lambda x: (not x["suitable"], x["cost"]))
