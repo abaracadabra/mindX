@@ -352,7 +352,7 @@ class TokenCalculatorTool(BaseTool):
                         tokens = len(tokenizer.encode(text))
                         logger.debug(f"{self.log_prefix} Tiktoken counted {tokens} tokens for model {model}")
                         return max(1, tokens)
-            except Exception as e:
+                    except Exception as e:
                         logger.warning(f"{self.log_prefix} Tiktoken failed for model {model}: {e}")
             
             # Secondary: Enhanced heuristic estimation
@@ -435,11 +435,11 @@ class TokenCalculatorTool(BaseTool):
                     return False, "Action parameter must be a non-empty string"
             
             action = action.strip().lower()
-                
-                # Rate limiting with detailed logging
-                if not self._check_rate_limit_production():
-                    self._update_metrics("rate_limit_exceeded", error=True)
-                    return False, "Rate limit exceeded. Production service temporarily throttled."
+            
+            # Rate limiting with detailed logging
+            if not self._check_rate_limit_production():
+                self._update_metrics("rate_limit_exceeded", error=True)
+                return False, "Rate limit exceeded. Production service temporarily throttled."
                 
                 logger.info(f"{self.log_prefix} [OP:{operation_id}] Executing '{action}' with {len(kwargs)} parameters")
                 
@@ -459,34 +459,34 @@ class TokenCalculatorTool(BaseTool):
                 
             try:
                 if action == "estimate_cost":
-                        result = await asyncio.wait_for(self._estimate_cost_production(**kwargs), timeout=timeout)
+                    result = await asyncio.wait_for(self._estimate_cost_production(**kwargs), timeout=timeout)
                 elif action == "track_usage":
-                        result = await asyncio.wait_for(self._track_usage_production(**kwargs), timeout=timeout)
+                    result = await asyncio.wait_for(self._track_usage_production(**kwargs), timeout=timeout)
                 elif action == "get_usage_report":
-                        result = await asyncio.wait_for(self._get_usage_report_production(**kwargs), timeout=timeout)
+                    result = await asyncio.wait_for(self._get_usage_report_production(**kwargs), timeout=timeout)
                 elif action == "optimize_prompt":
-                        result = await asyncio.wait_for(self._optimize_prompt_production(**kwargs), timeout=timeout)
+                    result = await asyncio.wait_for(self._optimize_prompt_production(**kwargs), timeout=timeout)
                 elif action == "check_budget":
-                        result = await asyncio.wait_for(self._check_budget_production(**kwargs), timeout=timeout)
+                    result = await asyncio.wait_for(self._check_budget_production(**kwargs), timeout=timeout)
                 elif action == "get_cost_breakdown":
-                        result = await asyncio.wait_for(self._get_cost_breakdown_production(**kwargs), timeout=timeout)
+                    result = await asyncio.wait_for(self._get_cost_breakdown_production(**kwargs), timeout=timeout)
                 elif action == "update_pricing":
-                        result = await asyncio.wait_for(self._update_pricing_production(**kwargs), timeout=timeout)
-                    elif action == "get_metrics":
-                        result = await asyncio.wait_for(self._get_metrics(**kwargs), timeout=timeout)
+                    result = await asyncio.wait_for(self._update_pricing_production(**kwargs), timeout=timeout)
+                elif action == "get_metrics":
+                    result = await asyncio.wait_for(self._get_metrics(**kwargs), timeout=timeout)
                 else:
-                        available_actions = list(method_timeouts.keys())
-                        self._update_metrics("invalid_action", error=True)
-                        return False, f"Unknown action '{action}'. Available: {', '.join(available_actions)}"
-                    
-                    # Log successful operation with metrics
+                    available_actions = list(method_timeouts.keys())
+                    self._update_metrics("invalid_action", error=True)
+                    return False, f"Unknown action '{action}'. Available: {', '.join(available_actions)}"
+                
+                # Log successful operation with metrics
                 operation_time = time.time() - operation_start_time
-                    logger.info(f"{self.log_prefix} [OP:{operation_id}] '{action}' completed in {operation_time:.3f}s")
-                    
-                    # Update success metrics
-                    cost = 0
-                    if result[0] and isinstance(result[1], dict):
-                        cost = result[1].get("total_cost_usd", 0)
+                logger.info(f"{self.log_prefix} [OP:{operation_id}] '{action}' completed in {operation_time:.3f}s")
+                
+                # Update success metrics
+                cost = 0
+                if result[0] and isinstance(result[1], dict):
+                    cost = result[1].get("total_cost_usd", 0)
                     
                     self._update_metrics(action, cost=cost)
                     
@@ -499,9 +499,9 @@ class TokenCalculatorTool(BaseTool):
                     return False, f"Operation '{action}' timed out ({timeout}s). System may be under heavy load."
                 
             except ValueError as e:
-            operation_time = time.time() - operation_start_time
-            logger.warning(f"{self.log_prefix} [OP:{operation_id}] Validation error in '{action}' after {operation_time:.3f}s: {e}")
-            self._update_metrics(action, error=True)
+                operation_time = time.time() - operation_start_time
+                logger.warning(f"{self.log_prefix} [OP:{operation_id}] Validation error in '{action}' after {operation_time:.3f}s: {e}")
+                self._update_metrics(action, error=True)
                 return False, f"Input validation error: {str(e)}"
                 
         except Exception as e:

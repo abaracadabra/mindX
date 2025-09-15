@@ -44,13 +44,10 @@
     "summarization": {
         "enabled": true,
         "max_input_chars": 30000
-        # LLM for summarization tool can be configured here too, e.g.
-        # "llm": {"provider": "ollama", "model": "mistral"}
     },
     "web_search": {
-        "enabled": true, # Requires GOOGLE_SEARCH_API_KEY and GOOGLE_SEARCH_ENGINE_ID in .env
+        "enabled": true,
         "timeout_seconds": 20.0
-        # API keys should be in .env, not here
     }
   }
 }

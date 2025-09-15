@@ -445,7 +445,7 @@ class EnhancedSimpleCoder(BaseTool):
                             write_result = await self._write_file(output_file, code_content)
                             if write_result["status"] == "SUCCESS":
                                 generated_data["output_file"] = output_file
-                except json.JSONDecodeError:
+                    except json.JSONDecodeError:
                         pass
                 
                 # Log for learning
@@ -548,10 +548,10 @@ class EnhancedSimpleCoder(BaseTool):
             await self._update_coding_patterns(learning_data)
             
             # Log learning data
-        await self.memory_agent.log_process(
+            await self.memory_agent.log_process(
                 process_name="coding_learning",
                 data=learning_data,
-            metadata={"agent_id": self.agent_id}
+                metadata={"agent_id": self.agent_id}
         )
 
             return {"status": "SUCCESS", "message": "Learning data recorded"}

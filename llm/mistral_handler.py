@@ -254,7 +254,7 @@ class MistralHandler(LLMHandlerInterface):
         
         try:
             # Apply rate limiting
-            await self._rate_limiter.acquire()
+            await self._rate_limiter.wait()
             
             # Make API request
             async with self.session.post(f"{self.base_url}/chat/completions", json=payload) as response:

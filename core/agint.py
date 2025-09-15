@@ -1,4 +1,4 @@
-# mindx/core/agint.py (Build 1.2.2 - Final with Corrected Perception Loop)
+# mindx/core/agint.py (Build 1.2.2 - Corrected Perception Loop)
 from __future__ import annotations
 import asyncio
 import json

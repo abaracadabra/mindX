@@ -96,7 +96,24 @@ class SystemAnalyzerTool:
                 json_mode=True
             )
             if not response_str:
-                 raise ValueError(f"Analysis LLM returned empty response")
+                logger.warning(f"{self.log_prefix} LLM returned None (likely Ollama not available). Falling back to basic analysis.")
+                # Fallback: return basic analysis without LLM
+                return {
+                    "improvement_suggestions": [
+                        {
+                            "target_component_path": "llm.ollama_handler",
+                            "suggestion": "Install Ollama and pull required models for local AI inference",
+                            "justification": "Ollama provides failsafe AI inference when API keys are exhausted or unavailable",
+                            "priority": 8
+                        },
+                        {
+                            "target_component_path": "llm.model_registry",
+                            "suggestion": "Implement fallback provider selection when primary LLM fails",
+                            "justification": "System should gracefully degrade when primary LLM provider is unavailable",
+                            "priority": 7
+                        }
+                    ]
+                }
 
             analysis_result = json.loads(response_str)
             

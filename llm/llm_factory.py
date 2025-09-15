@@ -178,7 +178,7 @@ async def create_llm_handler(
 
         # ADDED: Pass the rate_limiter to each handler's constructor
         if eff_provider_name == "ollama":
-            if OllamaHandler: handler_instance = OllamaHandler(model_name_for_api=model_arg_for_handler, base_url=eff_base_url, rate_limiter=rate_limiter, config=global_config)
+            if OllamaHandler: handler_instance = OllamaHandler(model_name_for_api=model_arg_for_handler, base_url=eff_base_url)
             else: logger.error("LLMFactory (mindX): OllamaHandler not imported."); handler_instance = MockLLMHandler(model_name=model_arg_for_handler)
         elif eff_provider_name == "gemini":
             if GeminiHandler:

@@ -106,7 +106,11 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
             async with session.post(generate_endpoint, json=payload) as response:
                 if response.status != 200: # pragma: no cover
                     error_text = await response.text()
-                    logger.error(f"Ollama API error ({response.status}) for model '{model}': {error_text[:500]}")
+                    logger.warning(f"Ollama API error ({response.status}) for model '{model}': {error_text[:500]}")
+                    # Graceful failure - return None instead of error string to indicate fallback needed
+                    if response.status == 404 and "not found" in error_text.lower():
+                        logger.info(f"Ollama model '{model}' not found. This is expected if Ollama is not installed or model not pulled.")
+                        return None
                     return f"Error: Ollama API request failed with status {response.status} - {error_text[:200]}"
 
                 # Ollama's non-streaming /api/generate returns a single JSON object
@@ -137,11 +141,13 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
             return response_content_full
 
         except aiohttp.ClientConnectorError as e_conn: # pragma: no cover
-            logger.error(f"OllamaHandler: Connection error for model '{model}' at {self.api_base_url}: {e_conn}", exc_info=True)
-            return f"Error: Ollama connection error - {e_conn}"
+            logger.warning(f"OllamaHandler: Connection error for model '{model}' at {self.api_base_url}: {e_conn}")
+            logger.info("Ollama connection failed. This is expected if Ollama is not installed or not running.")
+            return None  # Graceful failure - return None to indicate fallback needed
         except Exception as e: # pragma: no cover
-            logger.error(f"OllamaHandler: Exception during API call for model '{model}': {e}", exc_info=True)
-            return f"Error: Ollama API call exception for '{model}' - {type(e).__name__}: {e}"
+            logger.warning(f"OllamaHandler: Exception during API call for model '{model}': {e}")
+            logger.info("Ollama API call failed. This is expected if Ollama is not properly configured.")
+            return None  # Graceful failure - return None to indicate fallback needed
 
     # --- Utility methods (not part of LLMHandlerInterface, but useful for an Ollama tool/agent) ---
     def check_ollama_installation_sync(self) -> bool: # pragma: no cover
