@@ -8,7 +8,7 @@ Mistral AI integration and comprehensive documentation.
 
 mindX represents an implemenation of a godel machine- a fully self-improving, economically viable, and cryptographically secure multi-agent system. We are building agents and creating a **sovereign digital polity** where intelligence operates independently, evolves continuously, and participates in economic systems.
 
-### **Revolutionary Capabilities**
+### **evolutionary Capabilities**
 - **Complete Autonomy**: 1-hour improvement cycles without human intervention
 - **Economic Viability**: Real-time cost optimization and treasury management
 - **Cryptographic Sovereignty**: Ethereum-compatible wallet-based agent authentication
