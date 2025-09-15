@@ -1,0 +1,30 @@
+{
+  "timestamp": "2025-09-14T15:35:20.478211",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "coordinator_agent_main",
+  "content": {
+    "process_name": "coordinator_interaction",
+    "data": {
+      "interaction_id": "inter_query_c13d7ae6",
+      "interaction_type": "query",
+      "content": "Query for mindX Coordinator (Augmentic Intelligence): expkain augmentic development",
+      "metadata": {},
+      "status": "failed",
+      "response": null,
+      "error": "Coordinator's LLM handler is not available.",
+      "created_at": 1757889320.330632,
+      "completed_at": 1757889320.3778644
+    }
+  },
+  "context": {
+    "agent_id": "coordinator_agent_main",
+    "interaction_id": "inter_query_c13d7ae6"
+  },
+  "tags": [
+    "coordinator_interaction",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "5073aaeb9f73bfa0"
+}

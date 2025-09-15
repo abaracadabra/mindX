@@ -1054,9 +1054,9 @@ function start_web_frontend {
 
     # Start backend
     log_setup_info "Starting MindX Backend API on port $BACKEND_PORT_EFFECTIVE..."
-    cd "$MINDX_BACKEND_SERVICE_DIR_ABS"
+    cd "$PROJECT_ROOT"
     VENV_PYTHON="$MINDX_VENV_PATH_ABS/bin/python"
-    $VENV_PYTHON main_service.py &
+    $VENV_PYTHON -m uvicorn api.api_server:app --host 0.0.0.0 --port $BACKEND_PORT_EFFECTIVE &
     BACKEND_PID=$!
 
     # Wait for backend to start
@@ -1083,7 +1083,7 @@ function start_web_frontend {
     fi
 
     # Start frontend server
-    node server.js &
+    FRONTEND_PORT=$FRONTEND_PORT_EFFECTIVE BACKEND_PORT=$BACKEND_PORT_EFFECTIVE node server.js &
     FRONTEND_PID=$!
 
     # Wait for frontend to start
