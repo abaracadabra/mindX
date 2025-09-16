@@ -795,8 +795,13 @@ function setup_frontend_ui { # pragma: no cover
   log_setup_info "Setting up MindX Frontend UI files in '$MINDX_FRONTEND_UI_DIR_ABS'..."
   mkdir -p "$MINDX_FRONTEND_UI_DIR_ABS"
 
-  # --- index.html ---
-  read -r -d '' index_html_content <<EOF_INDEX_HTML
+  # Copy existing enhanced frontend files instead of generating basic ones
+  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/index.html" ]; then
+    cp "$PROJECT_ROOT/mindx_frontend_ui/index.html" "$MINDX_FRONTEND_UI_DIR_ABS/"
+    log_setup_info "Copied existing enhanced index.html"
+  else
+    # Fallback to basic index.html if enhanced version doesn't exist
+    read -r -d '' index_html_content <<EOF_INDEX_HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -835,9 +840,16 @@ function setup_frontend_ui { # pragma: no cover
 </body>
 </html>
 EOF_INDEX_HTML
-  create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/index.html" "$index_html_content"
+    create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/index.html" "$index_html_content"
+  fi
 
-  # --- styles.css ---
+  # Copy existing enhanced styles3.css if available
+  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" ]; then
+    cp "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" "$MINDX_FRONTEND_UI_DIR_ABS/"
+    log_setup_info "Copied existing enhanced styles3.css"
+  else
+    # Fallback to basic styles.css if enhanced version doesn't exist
+    # --- styles.css ---
   read -r -d '' styles_css_content <<'EOF_STYLES_CSS'
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -885,9 +897,16 @@ pre {
 .status-light-red { width: 20px; height: 20px; background-color: #dc3545; border-radius: 50%; }
 .status-light-green { width: 20px; height: 20px; background-color: #28a745; border-radius: 50%; }
 EOF_STYLES_CSS
-  create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/styles.css" "$styles_css_content"
+    create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/styles.css" "$styles_css_content"
+  fi
 
-  # --- app.js ---
+  # Copy existing enhanced app.js if available
+  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/app.js" ]; then
+    cp "$PROJECT_ROOT/mindx_frontend_ui/app.js" "$MINDX_FRONTEND_UI_DIR_ABS/"
+    log_setup_info "Copied existing enhanced app.js with full frontend-backend integration"
+  else
+    # Fallback to basic app.js if enhanced version doesn't exist
+    # --- app.js ---
   read -r -d '' app_js_content <<'EOF_APP_JS'
 document.addEventListener('DOMContentLoaded', () => {
     const backendPort = window.MINDX_BACKEND_PORT || '8000';
@@ -951,7 +970,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(checkBackendStatus, 10000); // Check status every 10 seconds
 });
 EOF_APP_JS
-  create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/app.js" "$app_js_content"
+    create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/app.js" "$app_js_content"
+  fi
 
   # --- package.json ---
   read -r -d '' package_json_content <<'EOF_PACKAGE_JSON'
