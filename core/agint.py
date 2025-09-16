@@ -53,8 +53,8 @@ class AGInt:
         from core.id_manager_agent import IDManagerAgent
         from core.belief_system import BeliefSystem
         belief_system = BeliefSystem()
-        id_manager = IDManagerAgent(agent_id=f"id_manager_for_{self.agent_id}", belief_system=belief_system, config_override=config)
-        id_manager.create_new_wallet(entity_id=self.agent_id)
+        self.id_manager = IDManagerAgent(agent_id=f"id_manager_for_{self.agent_id}", belief_system=belief_system, config_override=config)
+        # Note: create_new_wallet will be called in start() method
 
         self.bdi_agent = bdi_agent
         self.model_registry = model_registry
@@ -73,6 +73,11 @@ class AGInt:
         if self.status == AgentStatus.RUNNING: return
         self.status = AgentStatus.RUNNING
         self.primary_directive = directive
+        
+        # Create wallet for ID manager if needed
+        if hasattr(self, 'id_manager') and self.id_manager:
+            asyncio.create_task(self.id_manager.create_new_wallet(entity_id=self.agent_id))
+        
         self.main_loop_task = asyncio.create_task(self._cognitive_loop())
 
     async def stop(self):
@@ -94,7 +99,13 @@ class AGInt:
 
                 # DECISION: Based on the fresh perception.
                 decision = await self._orient_and_decide(perception)
-                if self.memory_agent: await self.memory_agent.log_process('agint_decision', decision, {'agent_id': self.agent_id})
+                if self.memory_agent: 
+                    # Convert decision to JSON-serializable format
+                    serializable_decision = {
+                        'type': decision.get('type').value if decision.get('type') else None,
+                        'details': decision.get('details', {})
+                    }
+                    await self.memory_agent.log_process('agint_decision', serializable_decision, {'agent_id': self.agent_id})
                 
                 # ACTION: The outcome of this action will be perceived in the *next* cycle.
                 success, result_data = await self._act(decision)
