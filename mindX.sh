@@ -65,7 +65,7 @@ function show_help { # pragma: no cover
     echo "  --config-file <path>         Path to an existing mindx_config.json to use."
     echo "  --dotenv-file <path>         Path to an existing .env file to copy into the project."
     echo "  --run                        Start MindX backend and frontend services after setup."
-    echo "  --frontend                   Start MindX web interface (backend + frontend with web UI)."
+    echo "  --frontend                   Start MindX enhanced web interface (backend + frontend with full UI integration)."
     echo "  --interactive                Prompt for API keys (Gemini, Mistral AI) during setup."
     echo "  --replicate                  Copy source code to target directory (default: use existing code)."
     echo "  --venv-name <name>           Override default virtual environment name (Default: ${DEFAULT_VENV_NAME})."
@@ -977,10 +977,10 @@ function setup_frontend_ui { # pragma: no cover
 EOF_INDEX_HTML
   create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/index.html" "$index_html_content"
 
-  # Copy existing frontend files instead of embedding
+  # Copy existing enhanced frontend files instead of embedding
   if [ -f "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" "$MINDX_FRONTEND_UI_DIR_ABS/"
-    log_setup_info "Copied existing styles3.css"
+    log_setup_info "Copied existing enhanced styles3.css"
   else
     # Fallback to basic styles if styles3.css doesn't exist
   read -r -d '' styles_css_content <<'EOF_STYLES_CSS'
@@ -1350,10 +1350,10 @@ pre::before {
 EOF_STYLES_CSS
   create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/styles.css" "$styles_css_content"
 
-  # Copy existing app.js instead of embedding
+  # Copy existing enhanced app.js instead of embedding
   if [ -f "$PROJECT_ROOT/mindx_frontend_ui/app.js" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui/app.js" "$MINDX_FRONTEND_UI_DIR_ABS/"
-    log_setup_info "Copied existing app.js"
+    log_setup_info "Copied existing enhanced app.js with full frontend-backend integration"
   else
     # Fallback to basic app.js if it doesn't exist
   read -r -d '' app_js_content <<'EOF_APP_JS'
@@ -1504,8 +1504,8 @@ function kill_port {
 }
 
 function start_web_frontend {
-    log_setup_info "🧠 Starting MindX Web Interface..."
-    log_setup_info "=================================="
+    log_setup_info "🧠 Starting MindX Enhanced Web Interface..."
+    log_setup_info "=========================================="
     
     # Check if required directories exist
     if [ ! -d "$MINDX_BACKEND_SERVICE_DIR_ABS" ]; then
@@ -1583,11 +1583,12 @@ function start_web_frontend {
 
     # Display access information
     echo ""
-    echo "🎉 MindX Web Interface is now running!"
-    echo "======================================"
+    echo "🎉 MindX Enhanced Web Interface is now running!"
+    echo "==============================================="
     echo "Frontend: http://localhost:$FRONTEND_PORT_EFFECTIVE"
     echo "Backend API: http://localhost:$BACKEND_PORT_EFFECTIVE"
     echo ""
+    echo "Features: Real-time monitoring, health status, agent management, system metrics"
     echo "Press Ctrl+C to stop both services"
     echo ""
 
@@ -1809,7 +1810,7 @@ elif [[ "$RUN_SERVICES_FLAG" == true ]]; then
 else
     log_setup_info "MindX setup complete. Services not started."
     log_setup_info "To start services manually:"
-    log_setup_info "  Web Interface: ./mindX.sh --frontend"
+    log_setup_info "  Enhanced Web Interface: ./mindX.sh --frontend"
     log_setup_info "  Services Only: ./mindX.sh --run"
     log_setup_info "  Backend Only: cd $MINDX_BACKEND_SERVICE_DIR_ABS && $MINDX_VENV_PATH_ABS/bin/python main_service.py"
     log_setup_info "  Frontend Only: cd $MINDX_FRONTEND_UI_DIR_ABS && node server.js"
