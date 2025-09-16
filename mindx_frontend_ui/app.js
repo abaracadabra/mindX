@@ -379,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Show loading state
             evolveBtn.disabled = true;
-            evolveBtn.textContent = 'AGInt Processing...';
+            evolveBtn.textContent = 'Evolving...';
             
             // Show AGInt response window
             showAGIntResponseWindow();
@@ -417,8 +417,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 
                                 if (data.type === 'status') {
                                     addAgentActivity('AGInt', data.message, 'info');
+                                } else if (data.type === 'phase') {
+                                    addAgentActivity('AGInt', `${data.phase}: ${data.message}`, 'info');
                                 } else if (data.type === 'cycle') {
                                     addAgentActivity('AGInt', `Cycle ${data.cycle}: ${data.awareness}`, 'info');
+                                    if (data.last_action) {
+                                        addAgentActivity('AGInt', `Last Action: ${JSON.stringify(data.last_action)}`, 'info');
+                                    }
                                 } else if (data.type === 'complete') {
                                     addLog(`AGInt completed: ${JSON.stringify(data)}`, 'SUCCESS');
                                     addAgentActivity('AGInt', 'Cognitive loop completed successfully', 'success');
@@ -1385,9 +1390,16 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('close-agint-window').addEventListener('click', hideAGIntResponseWindow);
         }
         
-        // Clear previous content
-        const content = document.getElementById('agint-response-content');
-        content.innerHTML = '<div style="color: #00ff88; text-align: center; padding: 20px;">AGInt Cognitive Loop Starting...</div>';
+            // Clear previous content
+            const content = document.getElementById('agint-response-content');
+            content.innerHTML = `
+                <div style="color: #00ff88; text-align: center; padding: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: #00ff88;">AGInt Cognitive Loop Starting...</h4>
+                    <div style="font-size: 12px; color: #888;">
+                        P-O-D-A Cycle: Perception → Orientation → Decision → Action
+                    </div>
+                </div>
+            `;
         
         // Show the window
         agintResponseWindow.style.display = 'flex';
@@ -1404,8 +1416,17 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'status':
                 message = `[${timestamp}] STATUS: ${data.message}`;
                 break;
+            case 'phase':
+                message = `[${timestamp}] ${data.phase}: ${data.message}`;
+                break;
             case 'cycle':
                 message = `[${timestamp}] CYCLE ${data.cycle}: ${data.awareness}`;
+                if (data.llm_operational !== undefined) {
+                    message += ` | LLM: ${data.llm_operational ? 'Operational' : 'Offline'}`;
+                }
+                if (data.last_action) {
+                    message += ` | Action: ${JSON.stringify(data.last_action)}`;
+                }
                 break;
             case 'complete':
                 message = `[${timestamp}] COMPLETE: ${data.status}`;
@@ -1418,11 +1439,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         const messageDiv = document.createElement('div');
+        
+        // Color coding for different message types
+        let borderColor = '#00ff88';
+        let bgColor = 'rgba(0, 255, 136, 0.05)';
+        
+        if (data.type === 'error') {
+            borderColor = '#ff4444';
+            bgColor = 'rgba(255, 68, 68, 0.1)';
+        } else if (data.type === 'phase') {
+            borderColor = '#ffaa00';
+            bgColor = 'rgba(255, 170, 0, 0.1)';
+        } else if (data.type === 'cycle') {
+            borderColor = '#00aaff';
+            bgColor = 'rgba(0, 170, 255, 0.1)';
+        } else if (data.type === 'complete') {
+            borderColor = '#00ff00';
+            bgColor = 'rgba(0, 255, 0, 0.1)';
+        }
+        
         messageDiv.style.cssText = `
             margin: 5px 0;
-            padding: 5px;
-            border-left: 3px solid ${data.type === 'error' ? '#ff4444' : '#00ff88'};
-            background: rgba(0, 255, 136, 0.05);
+            padding: 8px;
+            border-left: 3px solid ${borderColor};
+            background: ${bgColor};
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
         `;
         messageDiv.textContent = message;
         

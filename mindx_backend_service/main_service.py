@@ -258,13 +258,41 @@ async def agint_stream(payload: AGIntPayload):
             
             # Monitor AGInt for a few cycles
             for cycle in range(payload.max_cycles or 10):
-                await asyncio.sleep(1)
+                await asyncio.sleep(2)  # Give AGInt time to process
                 
-                # Send current status
-                yield f"data: {json.dumps({'type': 'cycle', 'cycle': cycle, 'status': agint.status.value, 'awareness': agint.state_summary.get('awareness', 'Processing...')})}\n\n"
+                # Get detailed AGInt state
+                current_status = agint.status.value
+                state_summary = agint.state_summary
+                last_action = agint.last_action_context
+                
+                # Send detailed cycle information
+                cycle_data = {
+                    'type': 'cycle',
+                    'cycle': cycle,
+                    'status': current_status,
+                    'awareness': state_summary.get('awareness', 'Processing...'),
+                    'llm_operational': state_summary.get('llm_operational', False),
+                    'last_action': last_action,
+                    'directive': payload.directive,
+                    'timestamp': time.time()
+                }
+                
+                yield f"data: {json.dumps(cycle_data)}\n\n"
+                
+                # Send specific P-O-D-A phase updates
+                if cycle == 0:
+                    yield f"data: {json.dumps({'type': 'phase', 'phase': 'PERCEPTION', 'message': 'Analyzing system state and directive...'})}\n\n"
+                elif cycle == 1:
+                    yield f"data: {json.dumps({'type': 'phase', 'phase': 'ORIENTATION', 'message': 'Evaluating options and constraints...'})}\n\n"
+                elif cycle == 2:
+                    yield f"data: {json.dumps({'type': 'phase', 'phase': 'DECISION', 'message': 'Selecting optimal action strategy...'})}\n\n"
+                elif cycle == 3:
+                    yield f"data: {json.dumps({'type': 'phase', 'phase': 'ACTION', 'message': 'Executing cognitive task...'})}\n\n"
+                else:
+                    yield f"data: {json.dumps({'type': 'phase', 'phase': 'ITERATION', 'message': f'Refining approach (cycle {cycle})...'})}\n\n"
                 
                 # Check if AGInt is still running
-                if agint.status.value != "RUNNING":
+                if current_status != "RUNNING":
                     break
             
             # Stop AGInt
