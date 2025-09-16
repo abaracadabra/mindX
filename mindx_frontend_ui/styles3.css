@@ -589,10 +589,64 @@ pre::before {
 /* Tab Navigation */
 .tab-navigation {
     display: flex;
-    gap: 5px;
+    flex-direction: column;
+    gap: 10px;
     margin-bottom: 20px;
     border-bottom: 2px solid var(--border-glow);
     padding-bottom: 10px;
+}
+
+.tab-row {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.core-tabs {
+    background: rgba(0, 168, 255, 0.1);
+    border: 1px solid var(--corp-blue);
+    border-radius: 8px;
+    padding: 10px;
+    position: relative;
+}
+
+.core-tabs-label {
+    position: absolute;
+    top: -8px;
+    left: 15px;
+    background: var(--dark-bg);
+    color: var(--corp-blue);
+    padding: 0 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.core-tab {
+    background: linear-gradient(135deg, var(--corp-purple), var(--corp-blue));
+    border: 1px solid var(--border-glow);
+    color: var(--text-primary);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Orbitron', monospace;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 12px;
+}
+
+.core-tab:hover {
+    background: linear-gradient(135deg, var(--corp-blue), var(--corp-cyan));
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 168, 255, 0.3);
+}
+
+.core-tab.active {
+    background: linear-gradient(135deg, var(--corp-cyan), var(--corp-blue));
+    box-shadow: 0 0 20px rgba(0, 168, 255, 0.5);
 }
 
 .tab-btn {
@@ -1283,4 +1337,367 @@ details pre {
     margin-top: 0;
     border-top-left-radius: 0;
     border-top-right-radius: 0;
+}
+
+/* Agent Activity Monitor */
+.agent-activity-monitor {
+    background: var(--glass-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 8px;
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.activity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-glow);
+}
+
+.activity-label {
+    font-weight: 700;
+    color: var(--corp-blue);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.activity-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.control-btn {
+    background: linear-gradient(135deg, var(--corp-purple), var(--corp-blue));
+    border: 1px solid var(--border-glow);
+    color: var(--text-primary);
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.control-btn:hover {
+    background: linear-gradient(135deg, var(--corp-blue), var(--corp-cyan));
+    transform: translateY(-1px);
+}
+
+.activity-log {
+    background: var(--darker-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 4px;
+    padding: 10px;
+    height: 200px;
+    overflow-y: auto;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.activity-entry {
+    margin-bottom: 8px;
+    padding: 6px;
+    border-left: 3px solid var(--corp-blue);
+    background: rgba(0, 168, 255, 0.05);
+    border-radius: 0 4px 4px 0;
+    animation: slideIn 0.3s ease;
+}
+
+.activity-entry.error {
+    border-left-color: var(--corp-red);
+    background: rgba(255, 71, 87, 0.05);
+}
+
+.activity-entry.success {
+    border-left-color: var(--corp-green);
+    background: rgba(0, 255, 136, 0.05);
+}
+
+.activity-entry.warning {
+    border-left-color: var(--corp-orange);
+    background: rgba(255, 107, 53, 0.05);
+}
+
+.activity-timestamp {
+    color: var(--text-secondary);
+    font-size: 10px;
+    margin-right: 8px;
+}
+
+.activity-agent {
+    color: var(--corp-cyan);
+    font-weight: 600;
+    margin-right: 8px;
+}
+
+.activity-message {
+    color: var(--text-primary);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Enhanced Status Displays */
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 8px;
+    animation: pulse 2s infinite;
+}
+
+.status-indicator.active {
+    background: var(--corp-green);
+    box-shadow: 0 0 10px var(--corp-green);
+}
+
+.status-indicator.inactive {
+    background: var(--corp-red);
+    box-shadow: 0 0 10px var(--corp-red);
+}
+
+.status-indicator.loading {
+    background: var(--corp-orange);
+    box-shadow: 0 0 10px var(--corp-orange);
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.goals-section, .plans-section {
+    margin-top: 20px;
+    padding: 15px;
+    background: var(--glass-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 8px;
+}
+
+.goals-section h3, .plans-section h3 {
+    color: var(--corp-blue);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 14px;
+}
+
+.goal-item, .plan-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.goal-priority, .plan-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.goal-priority.priority-high {
+    background: var(--corp-red);
+    color: white;
+}
+
+.goal-priority.priority-medium {
+    background: var(--corp-orange);
+    color: white;
+}
+
+.goal-priority.priority-low {
+    background: var(--corp-green);
+    color: white;
+}
+
+.plan-status {
+    background: var(--corp-blue);
+    color: white;
+}
+
+.goal-description, .plan-description {
+    flex: 1;
+    color: var(--text-primary);
+}
+
+/* MindX Control Panel Specific Styles */
+.goal-item, .plan-item, .belief-item, .identity-item, .conversion-item, .interaction-item, .decision-item {
+    background: var(--glass-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 8px;
+    padding: 10px;
+    margin: 5px 0;
+    transition: all 0.3s ease;
+}
+
+.goal-item:hover, .plan-item:hover, .belief-item:hover, .identity-item:hover, .conversion-item:hover, .interaction-item:hover, .decision-item:hover {
+    background: rgba(0, 168, 255, 0.1);
+    border-color: var(--corp-blue);
+    transform: translateY(-2px);
+}
+
+.goal-item.completed {
+    background: rgba(0, 255, 136, 0.1);
+    border-color: var(--corp-green);
+}
+
+.progress-bar {
+    background: var(--glass-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 10px;
+    height: 20px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.progress-bar-fill {
+    background: linear-gradient(90deg, var(--corp-blue), var(--corp-cyan));
+    height: 100%;
+    transition: width 0.3s ease;
+    border-radius: 10px;
+}
+
+.execution-status {
+    background: var(--glass-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 8px;
+    padding: 10px;
+    margin: 5px 0;
+    font-family: 'Share Tech Mono', monospace;
+}
+
+.campaign-info {
+    background: var(--glass-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 8px;
+    padding: 15px;
+    margin: 10px 0;
+    font-family: 'Share Tech Mono', monospace;
+}
+
+.blueprint-content {
+    background: var(--glass-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 8px;
+    padding: 15px;
+    margin: 10px 0;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.9rem;
+}
+
+.evolution-controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 15px 0;
+}
+
+.evolution-controls button {
+    background: linear-gradient(135deg, var(--corp-purple), var(--corp-blue));
+    border: 1px solid var(--border-glow);
+    color: var(--text-primary);
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Orbitron', monospace;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.evolution-controls button:hover {
+    background: linear-gradient(135deg, var(--corp-blue), var(--corp-cyan));
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 168, 255, 0.3);
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(0, 168, 255, 0.1);
+}
+
+.status-item:last-child {
+    border-bottom: none;
+}
+
+.status-label {
+    font-weight: 700;
+    color: var(--text-accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.status-value {
+    color: var(--text-primary);
+    font-family: 'Share Tech Mono', monospace;
+}
+
+.goals-list, .plans-list, .beliefs-list, .identities-list, .conversions-list, .interactions-list, .decisions-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin: 10px 0;
+}
+
+/* Enhanced tab styling for new tabs */
+.tab-btn[data-tab="core"] {
+    background: linear-gradient(135deg, var(--corp-purple), var(--corp-blue));
+}
+
+.tab-btn[data-tab="evolution"] {
+    background: linear-gradient(135deg, var(--corp-orange), var(--corp-red));
+}
+
+.tab-btn[data-tab="learning"] {
+    background: linear-gradient(135deg, var(--corp-green), var(--corp-cyan));
+}
+
+.tab-btn[data-tab="orchestration"] {
+    background: linear-gradient(135deg, var(--corp-gold), var(--corp-orange));
+}
+
+/* Responsive Design for MindX Control Panel */
+@media (max-width: 768px) {
+    .evolution-controls {
+        flex-direction: column;
+    }
+    
+    .status-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+    
+    .goals-list, .plans-list, .beliefs-list, .identities-list, .conversions-list, .interactions-list, .decisions-list {
+        max-height: 150px;
+    }
 }

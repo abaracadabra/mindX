@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Global state
     let isAutonomousMode = false;
+    let activityPaused = false;
+    let activityLog = [];
     let autonomousInterval = null;
     let logs = [];
     let terminalHistory = [];
@@ -65,6 +67,48 @@ document.addEventListener('DOMContentLoaded', () => {
     const exportLogsBtn = document.getElementById('export-logs-btn');
     const configDisplay = document.getElementById('config-display');
 
+    // Core Systems tab elements
+    const bdiAgentStatus = document.getElementById('bdi-agent-status');
+    const bdiGoals = document.getElementById('bdi-goals');
+    const bdiPlans = document.getElementById('bdi-plans');
+    const bdiLastAction = document.getElementById('bdi-last-action');
+    const bdiGoalCount = document.getElementById('bdi-goal-count');
+    const bdiStatusIndicator = document.getElementById('bdi-status-indicator');
+    const beliefCount = document.getElementById('belief-count');
+    const recentBeliefs = document.getElementById('recent-beliefs');
+    const idManagerStatus = document.getElementById('id-manager-status');
+    const activeIdentities = document.getElementById('active-identities');
+    
+    // Agent Activity Monitor elements
+    const agentActivityLog = document.getElementById('agent-activity-log');
+    const pauseActivityBtn = document.getElementById('pause-activity');
+    const clearActivityBtn = document.getElementById('clear-activity');
+
+    // Evolution tab elements
+    const blueprintStatus = document.getElementById('blueprint-status');
+    const currentBlueprint = document.getElementById('current-blueprint');
+    const converterStatus = document.getElementById('converter-status');
+    const recentConversions = document.getElementById('recent-conversions');
+    const generateBlueprintBtn = document.getElementById('generate-blueprint-btn');
+    const executeEvolutionBtn = document.getElementById('execute-evolution-btn');
+    const analyzeSystemBtn = document.getElementById('analyze-system-btn');
+
+    // Learning tab elements
+    const seaStatus = document.getElementById('sea-status');
+    const learningProgress = document.getElementById('learning-progress');
+    const activeGoals = document.getElementById('active-goals');
+    const completedGoals = document.getElementById('completed-goals');
+    const currentPlans = document.getElementById('current-plans');
+    const planExecution = document.getElementById('plan-execution');
+
+    // Orchestration tab elements
+    const mastermindStatus = document.getElementById('mastermind-status');
+    const currentCampaign = document.getElementById('current-campaign');
+    const coordinatorStatus = document.getElementById('coordinator-status');
+    const activeInteractions = document.getElementById('active-interactions');
+    const ceoStatus = document.getElementById('ceo-status');
+    const strategicDecisions = document.getElementById('strategic-decisions');
+
     // Utility Functions
     function addLog(message, level = 'INFO') {
         const timestamp = new Date().toISOString();
@@ -92,6 +136,55 @@ document.addEventListener('DOMContentLoaded', () => {
             const levelClass = `log-${log.level.toLowerCase()}`;
             return `<div class="${levelClass}">[${log.timestamp}] ${log.level}: ${log.message}</div>`;
         }).join('');
+    }
+
+    // Agent Activity Monitoring
+    function addAgentActivity(agent, message, type = 'info') {
+        if (activityPaused) return;
+        
+        const timestamp = new Date().toLocaleTimeString();
+        const activityEntry = {
+            timestamp,
+            agent,
+            message,
+            type
+        };
+        
+        activityLog.unshift(activityEntry);
+        if (activityLog.length > 50) activityLog.pop();
+        
+        updateActivityDisplay();
+    }
+
+    function updateActivityDisplay() {
+        if (!agentActivityLog) return;
+        
+        agentActivityLog.innerHTML = activityLog.map(entry => {
+            const typeClass = entry.type === 'error' ? 'error' : 
+                             entry.type === 'success' ? 'success' : 
+                             entry.type === 'warning' ? 'warning' : '';
+            
+            return `
+                <div class="activity-entry ${typeClass}">
+                    <span class="activity-timestamp">${entry.timestamp}</span>
+                    <span class="activity-agent">[${entry.agent}]</span>
+                    <span class="activity-message">${entry.message}</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function pauseActivity() {
+        activityPaused = !activityPaused;
+        pauseActivityBtn.textContent = activityPaused ? 'Resume' : 'Pause';
+        pauseActivityBtn.style.background = activityPaused ? 
+            'linear-gradient(135deg, var(--corp-orange), var(--corp-red))' : 
+            'linear-gradient(135deg, var(--corp-purple), var(--corp-blue))';
+    }
+
+    function clearActivity() {
+        activityLog = [];
+        updateActivityDisplay();
     }
 
     function addTerminalOutput(message) {
@@ -182,6 +275,18 @@ document.addEventListener('DOMContentLoaded', () => {
         switch(tabId) {
             case 'control':
                 // Control tab is already loaded
+                break;
+            case 'core':
+                loadCoreSystems();
+                break;
+            case 'evolution':
+                loadEvolution();
+                break;
+            case 'learning':
+                loadLearning();
+                break;
+            case 'orchestration':
+                loadOrchestration();
                 break;
             case 'agents':
                 loadAgents();
@@ -299,6 +404,185 @@ document.addEventListener('DOMContentLoaded', () => {
             addLog(`Failed to load agents: ${error.message}`, 'ERROR');
             agents = [];
             displayAgents();
+        }
+    }
+
+    // Core Systems functions
+    async function loadCoreSystems() {
+        try {
+            addAgentActivity('Core Systems', 'Loading BDI Agent status...', 'info');
+            // Load BDI Agent status
+            const bdiResponse = await sendRequest('/core/bdi-status');
+            if (bdiResponse) {
+                bdiAgentStatus.textContent = bdiResponse.status || 'Unknown';
+                
+                // Update status indicator
+                if (bdiStatusIndicator) {
+                    bdiStatusIndicator.className = 'status-indicator ' + 
+                        (bdiResponse.status === 'active' ? 'active' : 'inactive');
+                }
+                
+                // Update goal count
+                if (bdiGoalCount && bdiResponse.goals) {
+                    bdiGoalCount.textContent = bdiResponse.goals.length;
+                }
+                
+                // Update last action
+                if (bdiLastAction) {
+                    bdiLastAction.textContent = bdiResponse.lastAction || 'None';
+                }
+                
+                if (bdiResponse.goals) {
+                    bdiGoals.innerHTML = bdiResponse.goals.map(goal => 
+                        `<div class="goal-item">
+                            <div class="goal-priority priority-${goal.priority || 'medium'}">${goal.priority || 'medium'}</div>
+                            <div class="goal-description">${goal.description || goal}</div>
+                        </div>`
+                    ).join('');
+                }
+                if (bdiResponse.plans) {
+                    bdiPlans.innerHTML = bdiResponse.plans.map(plan => 
+                        `<div class="plan-item">
+                            <div class="plan-status">${plan.status || 'active'}</div>
+                            <div class="plan-description">${plan.description || plan}</div>
+                        </div>`
+                    ).join('');
+                }
+                addAgentActivity('BDI Agent', `Status: ${bdiResponse.status}`, 'success');
+            }
+
+            // Load Belief System
+            const beliefResponse = await sendRequest('/core/beliefs');
+            if (beliefResponse) {
+                beliefCount.textContent = beliefResponse.count || '0';
+                if (beliefResponse.recent) {
+                    recentBeliefs.innerHTML = beliefResponse.recent.map(belief => 
+                        `<div class="belief-item">${belief.content || belief}</div>`
+                    ).join('');
+                }
+            }
+
+            // Load ID Manager
+            const idResponse = await sendRequest('/core/id-manager');
+            if (idResponse) {
+                idManagerStatus.textContent = idResponse.status || 'Unknown';
+                if (idResponse.identities) {
+                    activeIdentities.innerHTML = idResponse.identities.map(identity => 
+                        `<div class="identity-item">${identity.name || identity}</div>`
+                    ).join('');
+                }
+            }
+        } catch (error) {
+            addLog(`Failed to load core systems: ${error.message}`, 'ERROR');
+        }
+    }
+
+    // Evolution functions
+    async function loadEvolution() {
+        try {
+            // Load Blueprint Agent
+            const blueprintResponse = await sendRequest('/evolution/blueprint');
+            if (blueprintResponse) {
+                blueprintStatus.textContent = blueprintResponse.status || 'Unknown';
+                if (blueprintResponse.current) {
+                    currentBlueprint.innerHTML = `<pre>${JSON.stringify(blueprintResponse.current, null, 2)}</pre>`;
+                }
+            }
+
+            // Load Action Converter
+            const converterResponse = await sendRequest('/evolution/converter');
+            if (converterResponse) {
+                converterStatus.textContent = converterResponse.status || 'Unknown';
+                if (converterResponse.recent) {
+                    recentConversions.innerHTML = converterResponse.recent.map(conversion => 
+                        `<div class="conversion-item">${conversion.description || conversion}</div>`
+                    ).join('');
+                }
+            }
+        } catch (error) {
+            addLog(`Failed to load evolution data: ${error.message}`, 'ERROR');
+        }
+    }
+
+    // Learning functions
+    async function loadLearning() {
+        try {
+            // Load Strategic Evolution Agent
+            const seaResponse = await sendRequest('/learning/sea');
+            if (seaResponse) {
+                seaStatus.textContent = seaResponse.status || 'Unknown';
+                if (seaResponse.progress) {
+                    learningProgress.innerHTML = `<div class="progress-bar-fill" style="width: ${seaResponse.progress}%"></div>`;
+                }
+            }
+
+            // Load Goals
+            const goalsResponse = await sendRequest('/learning/goals');
+            if (goalsResponse) {
+                if (goalsResponse.active) {
+                    activeGoals.innerHTML = goalsResponse.active.map(goal => 
+                        `<div class="goal-item">${goal.description || goal}</div>`
+                    ).join('');
+                }
+                if (goalsResponse.completed) {
+                    completedGoals.innerHTML = goalsResponse.completed.map(goal => 
+                        `<div class="goal-item completed">${goal.description || goal}</div>`
+                    ).join('');
+                }
+            }
+
+            // Load Plans
+            const plansResponse = await sendRequest('/learning/plans');
+            if (plansResponse) {
+                if (plansResponse.current) {
+                    currentPlans.innerHTML = plansResponse.current.map(plan => 
+                        `<div class="plan-item">${plan.description || plan}</div>`
+                    ).join('');
+                }
+                if (plansResponse.execution) {
+                    planExecution.innerHTML = `<div class="execution-status">${plansResponse.execution.status || 'Unknown'}</div>`;
+                }
+            }
+        } catch (error) {
+            addLog(`Failed to load learning data: ${error.message}`, 'ERROR');
+        }
+    }
+
+    // Orchestration functions
+    async function loadOrchestration() {
+        try {
+            // Load Mastermind Agent
+            const mastermindResponse = await sendRequest('/orchestration/mastermind');
+            if (mastermindResponse) {
+                mastermindStatus.textContent = mastermindResponse.status || 'Unknown';
+                if (mastermindResponse.campaign) {
+                    currentCampaign.innerHTML = `<div class="campaign-info">${mastermindResponse.campaign.description || mastermindResponse.campaign}</div>`;
+                }
+            }
+
+            // Load Coordinator Agent
+            const coordinatorResponse = await sendRequest('/orchestration/coordinator');
+            if (coordinatorResponse) {
+                coordinatorStatus.textContent = coordinatorResponse.status || 'Unknown';
+                if (coordinatorResponse.interactions) {
+                    activeInteractions.innerHTML = coordinatorResponse.interactions.map(interaction => 
+                        `<div class="interaction-item">${interaction.description || interaction}</div>`
+                    ).join('');
+                }
+            }
+
+            // Load CEO Agent
+            const ceoResponse = await sendRequest('/orchestration/ceo');
+            if (ceoResponse) {
+                ceoStatus.textContent = ceoResponse.status || 'Unknown';
+                if (ceoResponse.decisions) {
+                    strategicDecisions.innerHTML = ceoResponse.decisions.map(decision => 
+                        `<div class="decision-item">${decision.description || decision}</div>`
+                    ).join('');
+                }
+            }
+        } catch (error) {
+            addLog(`Failed to load orchestration data: ${error.message}`, 'ERROR');
         }
     }
 
@@ -704,21 +988,103 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Initialize everything
+    // Evolution Tab Functions
+    function initializeEvolutionTab() {
+        generateBlueprintBtn.addEventListener('click', async () => {
+            try {
+                addLog('Generating new blueprint...', 'INFO');
+                const response = await sendRequest('/evolution/generate-blueprint', 'POST');
+                showResponse(JSON.stringify(response, null, 2));
+                loadEvolution(); // Refresh the evolution data
+            } catch (error) {
+                addLog(`Failed to generate blueprint: ${error.message}`, 'ERROR');
+                showResponse(`Error: ${error.message}`);
+            }
+        });
+
+        executeEvolutionBtn.addEventListener('click', async () => {
+            try {
+                addLog('Executing evolution...', 'INFO');
+                const response = await sendRequest('/evolution/execute', 'POST');
+                showResponse(JSON.stringify(response, null, 2));
+                loadEvolution(); // Refresh the evolution data
+            } catch (error) {
+                addLog(`Failed to execute evolution: ${error.message}`, 'ERROR');
+                showResponse(`Error: ${error.message}`);
+            }
+        });
+
+        analyzeSystemBtn.addEventListener('click', async () => {
+            try {
+                addLog('Analyzing system...', 'INFO');
+                const response = await sendRequest('/evolution/analyze', 'POST');
+                showResponse(JSON.stringify(response, null, 2));
+                loadEvolution(); // Refresh the evolution data
+            } catch (error) {
+                addLog(`Failed to analyze system: ${error.message}`, 'ERROR');
+                showResponse(`Error: ${error.message}`);
+            }
+        });
+    }
+
     function initialize() {
         initializeTabs();
         initializeControlTab();
+        initializeEvolutionTab();
         initializeAgentsTab();
         initializeSystemTab();
         initializeLogsTab();
         initializeTerminalTab();
         initializeAdminTab();
         initializeAutonomousMode();
+        initializeAgentActivityMonitor();
         
         // Check backend status periodically
-    checkBackendStatus();
+        checkBackendStatus();
         setInterval(checkBackendStatus, 10000); // Check every 10 seconds
         
+        // Start agent activity simulation
+        startAgentActivitySimulation();
+        
         addLog('MindX Control Panel initialized', 'INFO');
+        addAgentActivity('System', 'MindX Control Panel initialized', 'success');
+    }
+
+    function initializeAgentActivityMonitor() {
+        if (pauseActivityBtn) {
+            pauseActivityBtn.addEventListener('click', pauseActivity);
+        }
+        if (clearActivityBtn) {
+            clearActivityBtn.addEventListener('click', clearActivity);
+        }
+    }
+
+    function startAgentActivitySimulation() {
+        // Simulate agent activity for demonstration
+        const agents = ['BDI Agent', 'Blueprint Agent', 'Strategic Evolution Agent', 'Mastermind Agent', 'Coordinator Agent', 'CEO Agent'];
+        const activities = [
+            'Processing new goal',
+            'Updating belief system',
+            'Executing plan',
+            'Analyzing system state',
+            'Coordinating with other agents',
+            'Making strategic decision',
+            'Learning from experience',
+            'Generating blueprint',
+            'Converting action',
+            'Monitoring performance'
+        ];
+        
+        setInterval(() => {
+            if (!activityPaused) {
+                const agent = agents[Math.floor(Math.random() * agents.length)];
+                const activity = activities[Math.floor(Math.random() * activities.length)];
+                const types = ['info', 'success', 'warning'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                
+                addAgentActivity(agent, activity, type);
+            }
+        }, 3000 + Math.random() * 2000); // Random interval between 3-5 seconds
     }
 
     // Start the application

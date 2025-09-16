@@ -32,15 +32,24 @@
             </div>
         </header>
 
-        <!-- Tab Navigation -->
-        <nav class="tab-navigation">
-            <button class="tab-btn active" data-tab="control">Control</button>
-            <button class="tab-btn" data-tab="agents">Agents</button>
-            <button class="tab-btn" data-tab="system">System</button>
-            <button class="tab-btn" data-tab="logs">Logs</button>
-            <button class="tab-btn" data-tab="terminal">Terminal</button>
-            <button class="tab-btn" data-tab="admin">Admin</button>
-        </nav>
+            <!-- Tab Navigation -->
+            <nav class="tab-navigation">
+                <div class="tab-row">
+                    <button class="tab-btn active" data-tab="control">Control</button>
+                    <button class="tab-btn" data-tab="agents">Agents</button>
+                    <button class="tab-btn" data-tab="system">System</button>
+                    <button class="tab-btn" data-tab="logs">Logs</button>
+                    <button class="tab-btn" data-tab="terminal">Terminal</button>
+                    <button class="tab-btn" data-tab="admin">Admin</button>
+                </div>
+                <div class="tab-row core-tabs">
+                    <div class="core-tabs-label">Core Components</div>
+                    <button class="tab-btn core-tab" data-tab="core">Core Systems</button>
+                    <button class="tab-btn core-tab" data-tab="evolution">Evolution</button>
+                    <button class="tab-btn core-tab" data-tab="learning">Learning</button>
+                    <button class="tab-btn core-tab" data-tab="orchestration">Orchestration</button>
+                </div>
+            </nav>
 
         <!-- Control Tab -->
         <div id="control-tab" class="tab-content active">
@@ -65,9 +74,206 @@
                     <button id="improve-btn">Request Improvement</button>
                 </div>
             </div>
+            
+            <div class="control-section">
+                <h2>Real-time Agent Activity</h2>
+                <div class="agent-activity-monitor">
+                    <div class="activity-header">
+                        <span class="activity-label">Live Agent Actions</span>
+                        <div class="activity-controls">
+                            <button id="pause-activity" class="control-btn">Pause</button>
+                            <button id="clear-activity" class="control-btn">Clear</button>
+                        </div>
+                    </div>
+                    <div id="agent-activity-log" class="activity-log"></div>
+                </div>
+            </div>
+            
             <div class="response-section">
                 <h2>API Response</h2>
                 <pre id="response-output">Awaiting command...</pre>
+            </div>
+        </div>
+
+        <!-- Core Systems Tab -->
+        <div id="core-tab" class="tab-content">
+            <div class="control-section">
+                <h2>BDI Agent Status</h2>
+                <div id="bdi-status" class="system-status">
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <span class="status-label">BDI Agent:</span>
+                            <span id="bdi-agent-status" class="status-value">Loading...</span>
+                            <div id="bdi-status-indicator" class="status-indicator"></div>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Last Action:</span>
+                            <span id="bdi-last-action" class="status-value">None</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Active Goals:</span>
+                            <span id="bdi-goal-count" class="status-value">0</span>
+                        </div>
+                    </div>
+                    <div class="goals-section">
+                        <h3>Current Goals</h3>
+                        <div id="bdi-goals" class="goals-list"></div>
+                    </div>
+                    <div class="plans-section">
+                        <h3>Active Plans</h3>
+                        <div id="bdi-plans" class="plans-list"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Belief System</h2>
+                <div id="belief-system" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Belief Count:</span>
+                        <span id="belief-count" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Recent Beliefs:</span>
+                        <div id="recent-beliefs" class="beliefs-list"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>ID Manager</h2>
+                <div id="id-manager" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">ID Manager Status:</span>
+                        <span id="id-manager-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Active Identities:</span>
+                        <div id="active-identities" class="identities-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evolution Tab -->
+        <div id="evolution-tab" class="tab-content">
+            <div class="control-section">
+                <h2>Blueprint Agent</h2>
+                <div id="blueprint-agent" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Blueprint Agent Status:</span>
+                        <span id="blueprint-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Current Blueprint:</span>
+                        <div id="current-blueprint" class="blueprint-content"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Action Converter</h2>
+                <div id="action-converter" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Converter Status:</span>
+                        <span id="converter-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Recent Conversions:</span>
+                        <div id="recent-conversions" class="conversions-list"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Evolution Controls</h2>
+                <div class="evolution-controls">
+                    <button id="generate-blueprint-btn">Generate New Blueprint</button>
+                    <button id="execute-evolution-btn">Execute Evolution</button>
+                    <button id="analyze-system-btn">Analyze System</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Learning Tab -->
+        <div id="learning-tab" class="tab-content">
+            <div class="control-section">
+                <h2>Strategic Evolution Agent</h2>
+                <div id="strategic-evolution" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">SEA Status:</span>
+                        <span id="sea-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Learning Progress:</span>
+                        <div id="learning-progress" class="progress-bar"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Goal Management</h2>
+                <div id="goal-management" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Active Goals:</span>
+                        <div id="active-goals" class="goals-list"></div>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Completed Goals:</span>
+                        <div id="completed-goals" class="goals-list"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Plan Management</h2>
+                <div id="plan-management" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Current Plans:</span>
+                        <div id="current-plans" class="plans-list"></div>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Plan Execution Status:</span>
+                        <div id="plan-execution" class="execution-status"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orchestration Tab -->
+        <div id="orchestration-tab" class="tab-content">
+            <div class="control-section">
+                <h2>Mastermind Agent</h2>
+                <div id="mastermind-agent" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Mastermind Status:</span>
+                        <span id="mastermind-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Current Campaign:</span>
+                        <div id="current-campaign" class="campaign-info"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Coordinator Agent</h2>
+                <div id="coordinator-agent" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Coordinator Status:</span>
+                        <span id="coordinator-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Active Interactions:</span>
+                        <div id="active-interactions" class="interactions-list"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>CEO Agent</h2>
+                <div id="ceo-agent" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">CEO Status:</span>
+                        <span id="ceo-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Strategic Decisions:</span>
+                        <div id="strategic-decisions" class="decisions-list"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
