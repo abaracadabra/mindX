@@ -64,17 +64,76 @@ echo "ANTHROPIC_API_KEY=your-anthropic-key" >> .env
 ```
 
 ### Launch Autonomous System
+
+#### 🚀 **Recommended: Enhanced Web Interface**
 ```bash
-# Method 1: Direct execution
+# Start MindX with enhanced web interface (backend + frontend)
+./mindX.sh --frontend
+
+# Features: Real-time monitoring, health status, agent management, system metrics
+# Access: http://localhost:3000 (Frontend) + http://localhost:8000 (Backend API)
+```
+
+#### 🔧 **Advanced Deployment Options**
+```bash
+# Basic deployment (backend + frontend services)
+./mindX.sh --run
+
+# Interactive setup with API key configuration
+./mindX.sh --interactive
+
+# Deploy to specific directory
+./mindX.sh /path/to/deployment/directory
+
+# Custom ports
+./mindX.sh --frontend --frontend-port 3001 --backend-port 8001
+
+# Use existing configuration files
+./mindX.sh --config-file /path/to/mindx_config.json --dotenv-file /path/to/.env
+```
+
+#### 📋 **mindX.sh Script Options**
+```bash
+# Show help and all available options
+./mindX.sh --help
+
+# Available options:
+--frontend                   # Start enhanced web interface (recommended)
+--run                        # Start backend and frontend services
+--interactive                # Prompt for API keys during setup
+--replicate                  # Copy source code to target directory
+--config-file <path>         # Use existing mindx_config.json
+--dotenv-file <path>         # Use existing .env file
+--venv-name <name>           # Override virtual environment name
+--frontend-port <port>       # Override frontend port (default: 3000)
+--backend-port <port>        # Override backend port (default: 8000)
+--log-level <level>          # Set log level (DEBUG, INFO, etc.)
+```
+
+#### 🎯 **Quick Start Examples**
+```bash
+# 1. First-time setup with interactive API key configuration
+./mindX.sh --frontend --interactive
+
+# 2. Production deployment with custom configuration
+./mindX.sh --frontend --config-file production_config.json
+
+# 3. Development setup with custom ports
+./mindX.sh --frontend --frontend-port 3001 --backend-port 8001
+
+# 4. Full system deployment without web interface
+./mindX.sh --run
+```
+
+#### 🔄 **Alternative Launch Methods**
+```bash
+# Direct execution (legacy)
 python3 augmentic.py
 
-# Method 2: Deployment script
-./mindX.sh
-
-# Method 3: Web interface
+# Web interface launcher (legacy)
 ./run_mindx_web.sh
 
-# Method 4: Simple version
+# Simple version (minimal features)
 python3 augmentic_simple.py
 ```
 
@@ -136,8 +195,15 @@ mindX/
 ├── augmentic.py             # Main entry point
 ├── augmentic_simple.py      # Simplified version
 ├── start_autonomous_evolution.py
-├── mindX.sh                 # Deployment script
-├── run_mindx_web.sh         # Web interface launcher
+├── mindX.sh                 # Enhanced deployment script with web interface
+├── run_mindx_web.sh         # Legacy web interface launcher (deprecated)
+├── mindx_frontend_ui/       # Enhanced frontend UI files
+│   ├── index.html           # Main HTML interface
+│   ├── app.js               # Frontend JavaScript with full integration
+│   ├── styles3.css          # Cyberpunk 2049 theme CSS
+│   └── server.js            # Frontend server
+├── mindx_backend_service/   # Backend API service
+│   └── main_service.py      # FastAPI backend with all endpoints
 ├── pyproject.toml           # Project configuration
 ├── requirements.txt         # Dependencies
 ├── .env.sample              # Environment template
@@ -208,14 +274,68 @@ python -m pytest tests/ --cov=.
 - **System Integration**: End-to-end autonomous operation tests
 - **Performance**: Load testing and optimization validation
 
+## 🌐 Enhanced Web Interface
+
+### **Real-Time Monitoring Dashboard**
+The enhanced web interface provides a comprehensive control panel with:
+
+- **🔴🟢 Health Status**: Live system health indicators with component-level monitoring
+- **📊 Performance Metrics**: Real-time CPU, memory, and disk usage tracking
+- **🤖 Agent Management**: Complete agent registry with real-time status updates
+- **📝 System Logs**: Live log streaming with filtering and search capabilities
+- **💻 Terminal Access**: Built-in terminal for system commands and monitoring
+- **⚙️ Admin Controls**: System restart, backup, configuration management
+
+### **Access the Web Interface**
+```bash
+# Start enhanced web interface
+./mindX.sh --frontend
+
+# Access URLs:
+# Frontend: http://localhost:3000
+# Backend API: http://localhost:8000
+# API Documentation: http://localhost:8000/docs
+```
+
+### **Web Interface Features**
+- **Cyberpunk 2049 Theme**: Professional UI with advanced animations
+- **Real-Time Updates**: Live data refresh without page reload
+- **Responsive Design**: Works on desktop, tablet, and mobile devices
+- **Error Handling**: Graceful degradation and user-friendly error messages
+- **API Integration**: Complete backend-frontend integration with all endpoints
+
 ## 🚀 Deployment
 
 ### **Production Deployment**
 ```bash
-# Full system deployment
-./mindX.sh
+# Enhanced web interface (recommended)
+./mindX.sh --frontend
 
-# Web interface deployment
+# Basic services deployment
+./mindX.sh --run
+
+# Custom deployment directory
+./mindX.sh /opt/mindx --frontend
+
+# Production with custom configuration
+./mindX.sh --frontend --config-file production_config.json --dotenv-file .env.prod
+```
+
+### **Development & Testing**
+```bash
+# Development with custom ports
+./mindX.sh --frontend --frontend-port 3001 --backend-port 8001
+
+# Interactive setup for first-time users
+./mindX.sh --frontend --interactive
+
+# Replicate source code to target directory
+./mindX.sh --replicate /path/to/deployment
+```
+
+### **Legacy Deployment Methods**
+```bash
+# Legacy web interface (deprecated)
 ./run_mindx_web.sh
 
 # Docker deployment (if available)
@@ -228,6 +348,83 @@ docker run -p 8000:8000 mindx
 - **Memory**: 8GB+ RAM recommended
 - **Storage**: 10GB+ free space
 - **Network**: Internet access for Mistral AI API
+
+## 🔧 Troubleshooting
+
+### **Common Issues & Solutions**
+
+#### **Port Already in Use**
+```bash
+# Check what's using the ports
+lsof -i :3000  # Frontend port
+lsof -i :8000  # Backend port
+
+# Kill processes if needed
+sudo kill -9 $(lsof -ti:3000)
+sudo kill -9 $(lsof -ti:8000)
+
+# Use different ports
+./mindX.sh --frontend --frontend-port 3001 --backend-port 8001
+```
+
+#### **Permission Denied**
+```bash
+# Make script executable
+chmod +x mindX.sh
+
+# Run with proper permissions
+sudo ./mindX.sh --frontend
+```
+
+#### **Python Environment Issues**
+```bash
+# Ensure Python 3.11+ is installed
+python3 --version
+
+# Create virtual environment manually
+python3 -m venv .mindx_env
+source .mindx_env/bin/activate
+pip install -r requirements.txt
+```
+
+#### **API Key Configuration**
+```bash
+# Interactive setup for API keys
+./mindX.sh --frontend --interactive
+
+# Manual .env configuration
+cp .env.sample .env
+nano .env  # Add your API keys
+```
+
+#### **Frontend Not Loading**
+```bash
+# Check if backend is running
+curl http://localhost:8000/health
+
+# Check frontend logs
+tail -f data/logs/mindx_frontend_service.log
+
+# Restart with verbose logging
+./mindX.sh --frontend --log-level DEBUG
+```
+
+#### **Backend API Errors**
+```bash
+# Check backend logs
+tail -f data/logs/mindx_coordinator_service.log
+
+# Test API endpoints
+curl http://localhost:8000/
+curl http://localhost:8000/status/mastermind
+curl http://localhost:8000/health
+```
+
+### **Getting Help**
+- Check the logs in `data/logs/` directory
+- Run `./mindX.sh --help` for all available options
+- Review the API documentation at `http://localhost:8000/docs`
+- Check the [Issues](https://github.com/abaracadabra/mindX/issues) page
 
 ## 🤝 Contributing
 
