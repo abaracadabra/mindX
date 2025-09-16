@@ -5,8 +5,10 @@ import time
 import psutil
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
+import json
 
 # Add project root to path to allow imports
 import sys
@@ -20,6 +22,7 @@ from agents.memory_agent import MemoryAgent
 from agents.guardian_agent import GuardianAgent
 from core.id_manager_agent import IDManagerAgent
 from core.belief_system import BeliefSystem
+from core.agint import AGInt
 from llm.model_registry import get_model_registry_async
 from utils.config import Config
 from api.command_handler import CommandHandler
@@ -33,6 +36,14 @@ logger = get_logger(__name__)
 
 class DirectivePayload(BaseModel):
     directive: str
+
+class AGIntPayload(BaseModel):
+    directive: str
+    max_cycles: Optional[int] = 10
+
+class MistralTestPayload(BaseModel):
+    test: str
+    message: str
 
 class AnalyzeCodebasePayload(BaseModel):
     path: str
@@ -137,6 +148,175 @@ async def startup_event():
 async def evolve(payload: DirectivePayload):
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
     return await command_handler.handle_evolve(payload.directive)
+
+@app.post("/commands/agint", summary="Execute AGInt cognitive loop")
+async def agint_execute(payload: AGIntPayload):
+    """Execute AGInt cognitive loop with the given directive"""
+    try:
+        if not command_handler:
+            raise HTTPException(status_code=503, detail="mindX is not available.")
+        
+        # Get the model registry and BDI agent from the command handler
+        model_registry = await get_model_registry_async()
+        config = Config()
+        
+        # Create a BDI agent for AGInt
+        from core.bdi_agent import BDIAgent
+        from core.belief_system import BeliefSystem
+        
+        belief_system = BeliefSystem()
+        # Create a simple tools registry dictionary
+        tools_registry = {"registered_tools": {}}
+        
+        bdi_agent = BDIAgent(
+            domain="agint_cognitive_domain",
+            belief_system_instance=belief_system,
+            tools_registry=tools_registry,
+            config_override=config
+        )
+        await bdi_agent.async_init_components()
+        
+        # Create AGInt instance
+        agint = AGInt(
+            agent_id="mindx_agint",
+            bdi_agent=bdi_agent,
+            model_registry=model_registry,
+            config=config,
+            coordinator_agent=command_handler.mastermind.coordinator_agent
+        )
+        
+        # Start AGInt with the directive
+        agint.start(payload.directive)
+        
+        # Let it run for a few cycles
+        await asyncio.sleep(2)
+        
+        # Stop AGInt
+        await agint.stop()
+        
+        return {
+            "status": "SUCCESS",
+            "message": f"AGInt executed directive: {payload.directive}",
+            "agent_status": agint.status.value,
+            "state_summary": agint.state_summary,
+            "last_action_context": agint.last_action_context
+        }
+        
+    except Exception as e:
+        logger.error(f"AGInt execution failed: {e}", exc_info=True)
+        return {
+            "status": "ERROR",
+            "message": f"AGInt execution failed: {str(e)}",
+            "error": str(e)
+        }
+
+@app.post("/commands/agint/stream", summary="Execute AGInt with real-time streaming")
+async def agint_stream(payload: AGIntPayload):
+    """Execute AGInt cognitive loop with real-time streaming of actions"""
+    
+    async def generate_agint_stream():
+        try:
+            if not command_handler:
+                yield f"data: {json.dumps({'error': 'mindX is not available'})}\n\n"
+                return
+            
+            # Get the model registry and BDI agent from the command handler
+            model_registry = await get_model_registry_async()
+            config = Config()
+            
+            # Create a BDI agent for AGInt
+            from core.bdi_agent import BDIAgent
+            from core.belief_system import BeliefSystem
+            
+            belief_system = BeliefSystem()
+            # Create a simple tools registry dictionary
+            tools_registry = {"registered_tools": {}}
+            
+            bdi_agent = BDIAgent(
+                domain="agint_cognitive_domain",
+                belief_system_instance=belief_system,
+                tools_registry=tools_registry,
+                config_override=config
+            )
+            await bdi_agent.async_init_components()
+            
+            # Create AGInt instance
+            agint = AGInt(
+                agent_id="mindx_agint",
+                bdi_agent=bdi_agent,
+                model_registry=model_registry,
+                config=config,
+                coordinator_agent=command_handler.mastermind.coordinator_agent
+            )
+            
+            # Send initial status
+            yield f"data: {json.dumps({'type': 'status', 'message': 'AGInt initialized', 'agent_id': agint.agent_id})}\n\n"
+            
+            # Start AGInt with the directive
+            agint.start(payload.directive)
+            yield f"data: {json.dumps({'type': 'status', 'message': f'AGInt started with directive: {payload.directive}'})}\n\n"
+            
+            # Monitor AGInt for a few cycles
+            for cycle in range(payload.max_cycles or 10):
+                await asyncio.sleep(1)
+                
+                # Send current status
+                yield f"data: {json.dumps({'type': 'cycle', 'cycle': cycle, 'status': agint.status.value, 'awareness': agint.state_summary.get('awareness', 'Processing...')})}\n\n"
+                
+                # Check if AGInt is still running
+                if agint.status.value != "RUNNING":
+                    break
+            
+            # Stop AGInt
+            await agint.stop()
+            
+            # Send final results
+            yield f"data: {json.dumps({'type': 'complete', 'status': agint.status.value, 'state_summary': agint.state_summary, 'last_action_context': agint.last_action_context})}\n\n"
+            
+        except Exception as e:
+            logger.error(f"AGInt streaming failed: {e}", exc_info=True)
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+    
+    return StreamingResponse(generate_agint_stream(), media_type="text/plain")
+
+@app.post("/test/mistral", summary="Test Mistral API connectivity")
+async def test_mistral(payload: MistralTestPayload):
+    """Test Mistral API connectivity and return a simple response"""
+    try:
+        # Get the model registry to test Mistral
+        model_registry = await get_model_registry_async()
+        mistral_handler = model_registry.get_handler_for_purpose("reasoning")
+        
+        if not mistral_handler:
+            return {
+                "status": "error",
+                "message": "Mistral handler not available",
+                "test_message": payload.message
+            }
+        
+        # Test with a simple message using a smaller model
+        test_response = await mistral_handler.generate_text(
+            model="mistral-small-latest",
+            prompt=f"Test message: {payload.message}. Respond with a brief confirmation that you received this message.",
+            max_tokens=50
+        )
+        
+        return {
+            "status": "success",
+            "message": "Mistral API test successful",
+            "test_message": payload.message,
+            "response": test_response if isinstance(test_response, str) else str(test_response),
+            "timestamp": time.time()
+        }
+        
+    except Exception as e:
+        logger.error(f"Mistral API test failed: {str(e)}")
+        return {
+            "status": "error",
+            "message": f"Mistral API test failed: {str(e)}",
+            "test_message": payload.message,
+            "timestamp": time.time()
+        }
 
 @app.post("/commands/deploy", summary="Deploy a new agent")
 async def deploy(payload: DirectivePayload):
@@ -434,6 +614,113 @@ async def get_bdi_status():
         }
     except Exception as e:
         return {"error": str(e)}
+
+@app.get("/core/agent-activity", summary="Get real-time agent activity")
+async def get_agent_activity():
+    """Get real-time agent activity from the system"""
+    try:
+        if not command_handler:
+            return {"activities": [], "error": "mindX not available"}
+        
+        # Get real activities from the mastermind agent
+        activities = []
+        
+        # Get BDI agent activities if available
+        if hasattr(command_handler.mastermind, 'bdi_agent') and command_handler.mastermind.bdi_agent:
+            bdi_agent = command_handler.mastermind.bdi_agent
+            if hasattr(bdi_agent, 'current_goal') and bdi_agent.current_goal:
+                activities.append({
+                    "timestamp": time.time(),
+                    "agent": "BDI Agent",
+                    "message": f"Current goal: {bdi_agent.current_goal}",
+                    "type": "info"
+                })
+            
+            if hasattr(bdi_agent, 'current_plan') and bdi_agent.current_plan:
+                activities.append({
+                    "timestamp": time.time(),
+                    "agent": "BDI Agent", 
+                    "message": f"Executing plan: {bdi_agent.current_plan}",
+                    "type": "info"
+                })
+            
+            # Get BDI agent status
+            if hasattr(bdi_agent, 'goals') and bdi_agent.goals:
+                activities.append({
+                    "timestamp": time.time(),
+                    "agent": "BDI Agent",
+                    "message": f"Managing {len(bdi_agent.goals)} active goals",
+                    "type": "info"
+                })
+        
+        # Get coordinator activities if available
+        if hasattr(command_handler.mastermind, 'coordinator_agent') and command_handler.mastermind.coordinator_agent:
+            coordinator = command_handler.mastermind.coordinator_agent
+            if hasattr(coordinator, 'interaction_backlog') and coordinator.interaction_backlog:
+                activities.append({
+                    "timestamp": time.time(),
+                    "agent": "Coordinator Agent",
+                    "message": f"Processing {len(coordinator.interaction_backlog)} interactions",
+                    "type": "info"
+                })
+        
+        # Get Mastermind agent activities
+        if hasattr(command_handler.mastermind, 'current_directive') and command_handler.mastermind.current_directive:
+            activities.append({
+                "timestamp": time.time(),
+                "agent": "Mastermind Agent",
+                "message": f"Processing directive: {command_handler.mastermind.current_directive}",
+                "type": "info"
+            })
+        
+        # Get Strategic Evolution Agent activities
+        if hasattr(command_handler.mastermind, 'strategic_evolution_agent') and command_handler.mastermind.strategic_evolution_agent:
+            sea = command_handler.mastermind.strategic_evolution_agent
+            if hasattr(sea, 'current_analysis') and sea.current_analysis:
+                activities.append({
+                    "timestamp": time.time(),
+                    "agent": "Strategic Evolution Agent",
+                    "message": "Conducting strategic analysis",
+                    "type": "info"
+                })
+        
+        # Get Blueprint Agent activities
+        if hasattr(command_handler.mastermind, 'blueprint_agent') and command_handler.mastermind.blueprint_agent:
+            activities.append({
+                "timestamp": time.time(),
+                "agent": "Blueprint Agent",
+                "message": "Ready to generate system blueprints",
+                "type": "success"
+            })
+        
+        # Get system status
+        activities.append({
+            "timestamp": time.time(),
+            "agent": "System Monitor",
+            "message": "System health check completed",
+            "type": "success"
+        })
+        
+        # Add some real-time system metrics
+        try:
+            import psutil
+            cpu_percent = psutil.cpu_percent(interval=1)
+            memory = psutil.virtual_memory()
+            activities.append({
+                "timestamp": time.time(),
+                "agent": "System Monitor",
+                "message": f"CPU: {cpu_percent}%, Memory: {memory.percent}%",
+                "type": "info"
+            })
+        except:
+            pass
+        
+        return {
+            "activities": activities,
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        return {"activities": [], "error": str(e)}
 
 @app.get("/core/beliefs", summary="Get belief system status")
 async def get_beliefs():

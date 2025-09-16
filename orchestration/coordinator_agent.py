@@ -294,12 +294,15 @@ class CoordinatorAgent:
             return
 
         try:
-            # FIX: Pass the configured model name to the handler.
+            # FIX: Pass the full model ID to the handler.
             model_to_use = self.llm_handler.model_name_for_api or self.config.get("coordinator.llm.model")
             if not model_to_use:
                 raise ValueError("No model configured for the Coordinator's LLM handler.")
             
-            response = await self.llm_handler.generate_text(interaction.content, model=model_to_use)
+            # Construct the full model ID for the handler
+            full_model_id = f"{self.llm_handler.provider_name}/{model_to_use}"
+            
+            response = await self.llm_handler.generate_text(interaction.content, model=full_model_id)
             interaction.response = {"status": "SUCCESS", "response_text": response}
             interaction.status = InteractionStatus.COMPLETED
         except Exception as e:

@@ -56,6 +56,35 @@ mistral/mistral-small-latest:
   - function_calling
   - streaming
 
+mistral/default_model_for_mistral:
+  task_scores:
+    reasoning: 0.85
+    code_generation: 0.82
+    writing: 0.90
+    simple_chat: 0.94
+    data_analysis: 0.83
+    speed_sensitive: 0.90
+  cost_per_kilo_input_tokens: 0.001
+  cost_per_kilo_output_tokens: 0.003
+  max_context_length: 128000
+  supports_streaming: true
+  supports_function_calling: true
+  supports_fim: false
+  supports_vision: false
+  supports_classification: false
+  supports_fine_tuning: false
+  api_name: mistral-small-latest
+  model_type: base
+  owned_by: mistralai
+  assessed_capabilities:
+  - text
+  - reasoning
+  - code_generation
+  - multilingual
+  - chat_completion
+  - function_calling
+  - streaming
+
 mistral/mistral-nemo-latest:
   task_scores:
     reasoning: 0.80

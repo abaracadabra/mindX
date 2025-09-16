@@ -6,11 +6,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let isAutonomousMode = false;
     let activityPaused = false;
     let activityLog = [];
+    let seenActivities = new Set(); // Track activities we've already seen
     let autonomousInterval = null;
     let logs = [];
     let terminalHistory = [];
     let agents = [];
     let selectedAgent = null;
+    let agintResponseWindow = null;
     
     // DOM elements
     const statusLight = document.getElementById('status-light');
@@ -30,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const analyzeBtn = document.getElementById('analyze-btn');
     const replicateBtn = document.getElementById('replicate-btn');
     const improveBtn = document.getElementById('improve-btn');
+    const testMistralBtn = document.getElementById('test-mistral-btn');
     const evolveDirectiveInput = document.getElementById('evolve-directive');
     const queryInput = document.getElementById('query-input');
 
@@ -154,6 +157,62 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activityLog.length > 50) activityLog.pop();
         
         updateActivityDisplay();
+    }
+
+    // Test Mistral API connectivity
+    async function testMistralAPI() {
+        addLog('Testing Mistral API connectivity...', 'INFO');
+        addAgentActivity('Mistral API', 'Testing API connectivity', 'info');
+        
+        // Show loading state
+        const testBtn = document.getElementById('test-mistral-btn');
+        if (testBtn) {
+            testBtn.disabled = true;
+            testBtn.textContent = 'Testing...';
+        }
+        
+        try {
+            const response = await sendRequest('/test/mistral', 'POST', { 
+                test: 'connectivity',
+                message: 'Hello from MindX Control Panel'
+            });
+            
+            if (response) {
+                addLog(`Mistral API test successful: ${JSON.stringify(response)}`, 'SUCCESS');
+                addAgentActivity('Mistral API', 'API connectivity test successful', 'success');
+                
+                // Parse and display the response in a more readable format
+                let displayText = '';
+                if (response.status) {
+                    displayText += `Status: ${response.status}\n`;
+                }
+                if (response.message) {
+                    displayText += `Message: ${response.message}\n`;
+                }
+                if (response.test_message) {
+                    displayText += `Test Message: ${response.test_message}\n`;
+                }
+                if (response.response) {
+                    displayText += `API Response: ${response.response}\n`;
+                }
+                if (response.timestamp) {
+                    displayText += `Timestamp: ${new Date(response.timestamp * 1000).toLocaleString()}\n`;
+                }
+                
+                displayText += '\nFull Response:\n' + JSON.stringify(response, null, 2);
+                showResponse(displayText);
+            }
+        } catch (error) {
+            addLog(`Mistral API test failed: ${error.message}`, 'ERROR');
+            addAgentActivity('Mistral API', `API test failed: ${error.message}`, 'error');
+            showResponse(`Mistral API test failed: ${error.message}`);
+        } finally {
+            // Reset button state
+            if (testBtn) {
+                testBtn.disabled = false;
+                testBtn.textContent = 'Test Mistral API';
+            }
+        }
     }
 
     function updateActivityDisplay() {
@@ -309,15 +368,97 @@ document.addEventListener('DOMContentLoaded', () => {
     // Control Tab Functions
     function initializeControlTab() {
         evolveBtn.addEventListener('click', async () => {
-            const directive = evolveDirectiveInput.value.trim();
+        const directive = evolveDirectiveInput.value.trim();
             if (!directive) {
                 showResponse('Please enter a directive');
                 return;
             }
+            
+            addLog(`Starting AGInt cognitive loop with directive: ${directive}`, 'INFO');
+            addAgentActivity('AGInt', `Starting cognitive loop: ${directive}`, 'info');
+            
+            // Show loading state
+            evolveBtn.disabled = true;
+            evolveBtn.textContent = 'AGInt Processing...';
+            
+            // Show AGInt response window
+            showAGIntResponseWindow();
+            
             try {
-                await sendRequest('/commands/evolve', 'POST', { directive });
+                // Use AGInt streaming endpoint for real-time feedback
+                const response = await fetch(`${apiUrl}/commands/agint/stream`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ directive, max_cycles: 10 })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let agintOutput = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                updateAGIntResponse(data, agintOutput);
+                                
+                                if (data.type === 'status') {
+                                    addAgentActivity('AGInt', data.message, 'info');
+                                } else if (data.type === 'cycle') {
+                                    addAgentActivity('AGInt', `Cycle ${data.cycle}: ${data.awareness}`, 'info');
+                                } else if (data.type === 'complete') {
+                                    addLog(`AGInt completed: ${JSON.stringify(data)}`, 'SUCCESS');
+                                    addAgentActivity('AGInt', 'Cognitive loop completed successfully', 'success');
+                                    
+                                    // Display final results
+                                    let displayText = `AGInt Cognitive Loop Results:\n\n`;
+                                    displayText += `Status: ${data.status}\n`;
+                                    if (data.state_summary) {
+                                        displayText += `Awareness: ${data.state_summary.awareness || 'N/A'}\n`;
+                                        displayText += `LLM Operational: ${data.state_summary.llm_operational ? 'Yes' : 'No'}\n`;
+                                    }
+                                    if (data.last_action_context) {
+                                        displayText += `Last Action: ${JSON.stringify(data.last_action_context, null, 2)}\n`;
+                                    }
+                                    
+                                    showResponse(displayText);
+                                    
+                                    // Update core systems after AGInt execution
+                                    await loadCoreSystems();
+                                } else if (data.type === 'error') {
+                                    addLog(`AGInt failed: ${data.message}`, 'ERROR');
+                                    addAgentActivity('AGInt', `Cognitive loop failed: ${data.message}`, 'error');
+                                    showResponse(`AGInt failed: ${data.message}`);
+                                }
+                            } catch (e) {
+                                console.error('Error parsing AGInt stream data:', e);
+                            }
+                        }
+                    }
+                }
+                
             } catch (error) {
-                addLog(`Evolve failed: ${error.message}`, 'ERROR');
+                addLog(`AGInt failed: ${error.message}`, 'ERROR');
+                addAgentActivity('AGInt', `Cognitive loop failed: ${error.message}`, 'error');
+                showResponse(`AGInt failed: ${error.message}`);
+            } finally {
+                // Reset button state
+                evolveBtn.disabled = false;
+                evolveBtn.textContent = 'Evolve';
+                hideAGIntResponseWindow();
             }
         });
 
@@ -327,34 +468,100 @@ document.addEventListener('DOMContentLoaded', () => {
                 showResponse('Please enter a query');
                 return;
             }
+            
+            addLog(`Processing query: ${query}`, 'INFO');
+            addAgentActivity('Coordinator Agent', `Processing query: ${query}`, 'info');
+            
+            // Show loading state
+            queryBtn.disabled = true;
+            queryBtn.textContent = 'Processing...';
+            
             try {
-                await sendRequest('/coordinator/query', 'POST', { query });
+                const response = await sendRequest('/coordinator/query', 'POST', { query });
+                if (response) {
+                    addLog(`Query processed: ${JSON.stringify(response)}`, 'SUCCESS');
+                    addAgentActivity('Coordinator Agent', 'Query processed successfully', 'success');
+                    
+                    // Parse and display the response in a more readable format
+                    let displayText = '';
+                    if (response.status) {
+                        displayText += `Status: ${response.status}\n`;
+                    }
+                    if (response.message) {
+                        displayText += `Message: ${response.message}\n`;
+                    }
+                    if (response.content) {
+                        displayText += `Content: ${response.content}\n`;
+                    }
+                    if (response.interaction_id) {
+                        displayText += `Interaction ID: ${response.interaction_id}\n`;
+                    }
+                    
+                    displayText += '\nFull Response:\n' + JSON.stringify(response, null, 2);
+                    showResponse(displayText);
+                }
             } catch (error) {
                 addLog(`Query failed: ${error.message}`, 'ERROR');
+                addAgentActivity('Coordinator Agent', `Query failed: ${error.message}`, 'error');
+                showResponse(`Query failed: ${error.message}`);
+            } finally {
+                // Reset button state
+                queryBtn.disabled = false;
+                queryBtn.textContent = 'Query';
             }
         });
 
         statusBtn.addEventListener('click', async () => {
+            addLog('Checking Mastermind status...', 'INFO');
+            addAgentActivity('Mastermind Agent', 'Checking status', 'info');
+            
             try {
-                await sendRequest('/status/mastermind');
+                const response = await sendRequest('/status/mastermind');
+                if (response) {
+                    addLog(`Mastermind status: ${JSON.stringify(response)}`, 'SUCCESS');
+                    addAgentActivity('Mastermind Agent', 'Status retrieved successfully', 'success');
+                    showResponse(JSON.stringify(response, null, 2));
+                }
             } catch (error) {
                 addLog(`Status check failed: ${error.message}`, 'ERROR');
+                addAgentActivity('Mastermind Agent', `Status check failed: ${error.message}`, 'error');
+                showResponse(`Status check failed: ${error.message}`);
             }
         });
 
         agentsBtn.addEventListener('click', async () => {
+            addLog('Fetching agents registry...', 'INFO');
+            addAgentActivity('Agent Registry', 'Fetching agents list', 'info');
+            
             try {
-                await sendRequest('/registry/agents');
+                const response = await sendRequest('/registry/agents');
+                if (response) {
+                    addLog(`Agents retrieved: ${JSON.stringify(response)}`, 'SUCCESS');
+                    addAgentActivity('Agent Registry', 'Agents list retrieved successfully', 'success');
+                    showResponse(JSON.stringify(response, null, 2));
+                }
             } catch (error) {
                 addLog(`Agents list failed: ${error.message}`, 'ERROR');
+                addAgentActivity('Agent Registry', `Agents list failed: ${error.message}`, 'error');
+                showResponse(`Agents list failed: ${error.message}`);
             }
         });
 
         toolsBtn.addEventListener('click', async () => {
+            addLog('Fetching tools registry...', 'INFO');
+            addAgentActivity('Tool Registry', 'Fetching tools list', 'info');
+            
             try {
-                await sendRequest('/registry/tools');
+                const response = await sendRequest('/registry/tools');
+                if (response) {
+                    addLog(`Tools retrieved: ${JSON.stringify(response)}`, 'SUCCESS');
+                    addAgentActivity('Tool Registry', 'Tools list retrieved successfully', 'success');
+                    showResponse(JSON.stringify(response, null, 2));
+                }
             } catch (error) {
                 addLog(`Tools list failed: ${error.message}`, 'ERROR');
+                addAgentActivity('Tool Registry', `Tools list failed: ${error.message}`, 'error');
+                showResponse(`Tools list failed: ${error.message}`);
             }
         });
 
@@ -378,12 +585,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         improveBtn.addEventListener('click', async () => {
+            addLog('Requesting system improvement...', 'INFO');
+            addAgentActivity('Improvement System', 'Requesting system improvement', 'info');
+            
             try {
-                await sendRequest('/coordinator/improve', 'POST', { component_id: 'system', context: 'general improvement' });
+                const response = await sendRequest('/coordinator/improve', 'POST', { component_id: 'system', context: 'general improvement' });
+                if (response) {
+                    addLog(`Improvement completed: ${JSON.stringify(response)}`, 'SUCCESS');
+                    addAgentActivity('Improvement System', 'System improvement completed', 'success');
+                    showResponse(JSON.stringify(response, null, 2));
+                }
             } catch (error) {
                 addLog(`Improvement request failed: ${error.message}`, 'ERROR');
+                addAgentActivity('Improvement System', `Improvement failed: ${error.message}`, 'error');
+                showResponse(`Improvement request failed: ${error.message}`);
             }
         });
+
+        // Add Mistral API test button event listener
+        const testMistralBtn = document.getElementById('test-mistral-btn');
+        if (testMistralBtn) {
+            testMistralBtn.addEventListener('click', testMistralAPI);
+        }
     }
 
     // Agents Tab Functions
@@ -1040,7 +1263,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeAgentActivityMonitor();
         
         // Check backend status periodically
-        checkBackendStatus();
+    checkBackendStatus();
         setInterval(checkBackendStatus, 10000); // Check every 10 seconds
         
         // Start agent activity simulation
@@ -1060,31 +1283,157 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startAgentActivitySimulation() {
-        // Simulate agent activity for demonstration
-        const agents = ['BDI Agent', 'Blueprint Agent', 'Strategic Evolution Agent', 'Mastermind Agent', 'Coordinator Agent', 'CEO Agent'];
-        const activities = [
-            'Processing new goal',
-            'Updating belief system',
-            'Executing plan',
-            'Analyzing system state',
-            'Coordinating with other agents',
-            'Making strategic decision',
-            'Learning from experience',
-            'Generating blueprint',
-            'Converting action',
-            'Monitoring performance'
-        ];
-        
-        setInterval(() => {
+        // Fetch real agent activity from the backend
+        setInterval(async () => {
             if (!activityPaused) {
-                const agent = agents[Math.floor(Math.random() * agents.length)];
-                const activity = activities[Math.floor(Math.random() * activities.length)];
-                const types = ['info', 'success', 'warning'];
-                const type = types[Math.floor(Math.random() * types.length)];
-                
-                addAgentActivity(agent, activity, type);
+                try {
+                    const response = await sendRequest('/core/agent-activity');
+                    if (response && response.activities) {
+                        // Add new activities that we haven't seen before
+                        response.activities.forEach(activity => {
+                            const activityKey = `${activity.timestamp}-${activity.agent}-${activity.message}`;
+                            if (!seenActivities.has(activityKey)) {
+                                seenActivities.add(activityKey);
+                                addAgentActivity(activity.agent, activity.message, activity.type);
+                            }
+                        });
+                    }
+                } catch (error) {
+                    // Fallback to simulated activity if real data fails
+                    const agents = ['BDI Agent', 'Blueprint Agent', 'Strategic Evolution Agent', 'Mastermind Agent', 'Coordinator Agent', 'CEO Agent'];
+                    const activities = [
+                        'Processing new goal',
+                        'Updating belief system',
+                        'Executing plan',
+                        'Analyzing system state',
+                        'Coordinating with other agents',
+                        'Making strategic decision',
+                        'Learning from experience',
+                        'Generating blueprint',
+                        'Converting action',
+                        'Monitoring performance'
+                    ];
+                    
+                    const agent = agents[Math.floor(Math.random() * agents.length)];
+                    const activity = activities[Math.floor(Math.random() * activities.length)];
+                    const types = ['info', 'success', 'warning'];
+                    const type = types[Math.floor(Math.random() * types.length)];
+                    
+                    addAgentActivity(agent, activity, type);
+                }
             }
-        }, 3000 + Math.random() * 2000); // Random interval between 3-5 seconds
+        }, 2000); // Check every 2 seconds
+    }
+
+    // AGInt Response Window Functions
+    function showAGIntResponseWindow() {
+        // Create AGInt response window if it doesn't exist
+        if (!agintResponseWindow) {
+            agintResponseWindow = document.createElement('div');
+            agintResponseWindow.id = 'agint-response-window';
+            agintResponseWindow.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 80%;
+                max-width: 800px;
+                height: 60%;
+                background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+                border: 2px solid #00ff88;
+                border-radius: 10px;
+                box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+                z-index: 10000;
+                display: flex;
+                flex-direction: column;
+                font-family: 'Courier New', monospace;
+                color: #00ff88;
+            `;
+            
+            // Header
+            const header = document.createElement('div');
+            header.style.cssText = `
+                padding: 15px;
+                border-bottom: 1px solid #00ff88;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                background: rgba(0, 255, 136, 0.1);
+            `;
+            header.innerHTML = `
+                <h3 style="margin: 0; color: #00ff88; text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);">AGInt Cognitive Loop</h3>
+                <button id="close-agint-window" style="background: none; border: 1px solid #00ff88; color: #00ff88; padding: 5px 10px; cursor: pointer; border-radius: 3px;">Close</button>
+            `;
+            
+            // Content area
+            const content = document.createElement('div');
+            content.id = 'agint-response-content';
+            content.style.cssText = `
+                flex: 1;
+                padding: 15px;
+                overflow-y: auto;
+                background: rgba(0, 0, 0, 0.3);
+                font-size: 14px;
+                line-height: 1.4;
+            `;
+            
+            agintResponseWindow.appendChild(header);
+            agintResponseWindow.appendChild(content);
+            document.body.appendChild(agintResponseWindow);
+            
+            // Close button event
+            document.getElementById('close-agint-window').addEventListener('click', hideAGIntResponseWindow);
+        }
+        
+        // Clear previous content
+        const content = document.getElementById('agint-response-content');
+        content.innerHTML = '<div style="color: #00ff88; text-align: center; padding: 20px;">AGInt Cognitive Loop Starting...</div>';
+        
+        // Show the window
+        agintResponseWindow.style.display = 'flex';
+    }
+    
+    function updateAGIntResponse(data, output) {
+        const content = document.getElementById('agint-response-content');
+        if (!content) return;
+        
+        const timestamp = new Date().toLocaleTimeString();
+        let message = '';
+        
+        switch (data.type) {
+            case 'status':
+                message = `[${timestamp}] STATUS: ${data.message}`;
+                break;
+            case 'cycle':
+                message = `[${timestamp}] CYCLE ${data.cycle}: ${data.awareness}`;
+                break;
+            case 'complete':
+                message = `[${timestamp}] COMPLETE: ${data.status}`;
+                break;
+            case 'error':
+                message = `[${timestamp}] ERROR: ${data.message}`;
+                break;
+            default:
+                message = `[${timestamp}] ${JSON.stringify(data)}`;
+        }
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.style.cssText = `
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid ${data.type === 'error' ? '#ff4444' : '#00ff88'};
+            background: rgba(0, 255, 136, 0.05);
+        `;
+        messageDiv.textContent = message;
+        
+        content.appendChild(messageDiv);
+        content.scrollTop = content.scrollHeight;
+    }
+    
+    function hideAGIntResponseWindow() {
+        if (agintResponseWindow) {
+            agintResponseWindow.style.display = 'none';
+        }
     }
 
     // Start the application

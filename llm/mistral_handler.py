@@ -328,6 +328,36 @@ class MistralHandler(LLMHandlerInterface):
         
         return best_model
     
+    def _extract_api_model_name(self, model_id: str) -> str:
+        """
+        Extract the actual API model name from a model ID.
+        
+        Args:
+            model_id: Model ID like "mistral/default_model_for_mistral" or just "mistral-small-latest"
+            
+        Returns:
+            The actual API model name to use with Mistral API
+        """
+        # If it's already a simple model name, return it
+        if "/" not in model_id:
+            return model_id
+        
+        # Extract the model key from the full ID
+        model_key = model_id.split("/", 1)[1] if "/" in model_id else model_id
+        
+        # Look up the model in the catalog to get the API name
+        if model_key in self.model_catalog:
+            model_info = self.model_catalog[model_key]
+            if "api_name" in model_info:
+                return model_info["api_name"]
+        
+        # Fallback: if it's "default_model_for_mistral", use mistral-small-latest
+        if model_key == "default_model_for_mistral":
+            return "mistral-small-latest"
+        
+        # If we can't find it, return the model_key as-is
+        return model_key
+    
     async def __aenter__(self):
         """Async context manager entry"""
         self.session = aiohttp.ClientSession(
@@ -356,7 +386,7 @@ class MistralHandler(LLMHandlerInterface):
         
         Args:
             prompt: Input prompt
-            model: Model to use
+            model: Model to use (can be full model ID like "mistral/default_model_for_mistral" or just API name)
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature (0.0 to 1.5, recommended 0.0-0.7)
             json_mode: Whether to request JSON output
@@ -373,12 +403,15 @@ class MistralHandler(LLMHandlerInterface):
         if not self.session:
             await self.__aenter__()
         
+        # Extract the actual API model name from the model ID
+        api_model_name = self._extract_api_model_name(model)
+        
         # Prepare messages
         messages = [{"role": "user", "content": prompt}]
         
         # Prepare request payload according to official API spec
         payload = {
-            "model": model,
+            "model": api_model_name,
             "messages": messages,
             "stream": False
         }

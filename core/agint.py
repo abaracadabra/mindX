@@ -51,7 +51,9 @@ class AGInt:
         logger.info(f"{self.log_prefix} Initializing...")
 
         from core.id_manager_agent import IDManagerAgent
-        id_manager = IDManagerAgent(agent_id=f"id_manager_for_{self.agent_id}", config_override=config)
+        from core.belief_system import BeliefSystem
+        belief_system = BeliefSystem()
+        id_manager = IDManagerAgent(agent_id=f"id_manager_for_{self.agent_id}", belief_system=belief_system, config_override=config)
         id_manager.create_new_wallet(entity_id=self.agent_id)
 
         self.bdi_agent = bdi_agent
