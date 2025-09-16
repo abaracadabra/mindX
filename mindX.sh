@@ -65,7 +65,7 @@ function show_help { # pragma: no cover
     echo "  --config-file <path>         Path to an existing mindx_config.json to use."
     echo "  --dotenv-file <path>         Path to an existing .env file to copy into the project."
     echo "  --run                        Start MindX backend and frontend services after setup."
-    echo "  --frontend                   Start MindX enhanced web interface (backend + frontend with full UI integration)."
+    echo "  --frontend                   Start MindX web interface (backend + frontend with web UI)."
     echo "  --interactive                Prompt for API keys (Gemini, Mistral AI) during setup."
     echo "  --replicate                  Copy source code to target directory (default: use existing code)."
     echo "  --venv-name <name>           Override default virtual environment name (Default: ${DEFAULT_VENV_NAME})."
@@ -802,47 +802,16 @@ function setup_frontend_ui { # pragma: no cover
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mindX Control Panel</title>
-    <link rel="stylesheet" href="styles3.css">
+    <title>MindX Control Panel</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <div class="header-left">
-                <h1>mindX Control Panel</h1>
-                <div class="github-link">
-                    <a href="https://github.com/abaracadabra/mindX" target="_blank" rel="noopener noreferrer">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
-                        </svg>
-                        <span>GitHub</span>
-                    </a>
-                </div>
-            </div>
-            <div class="header-right">
-                <div class="autonomous-control">
-                    <label class="autonomous-toggle">
-                        <input type="checkbox" id="autonomous-mode">
-                        <span class="toggle-slider"></span>
-                        <span class="toggle-label">AUTONOMOUS</span>
-                    </label>
-                </div>
+            <h1>MindX Control Panel</h1>
             <div id="status-light" class="status-light-red" title="Disconnected"></div>
-            </div>
         </header>
-
-        <!-- Tab Navigation -->
-        <nav class="tab-navigation">
-            <button class="tab-btn active" data-tab="control">Control</button>
-            <button class="tab-btn" data-tab="agents">Agents</button>
-            <button class="tab-btn" data-tab="system">System</button>
-            <button class="tab-btn" data-tab="logs">Logs</button>
-            <button class="tab-btn" data-tab="terminal">Terminal</button>
-            <button class="tab-btn" data-tab="admin">Admin</button>
-        </nav>
-
-        <!-- Control Tab -->
-        <div id="control-tab" class="tab-content active">
+        <main>
             <div class="control-section">
                 <h2>Evolve Codebase</h2>
                 <textarea id="evolve-directive" placeholder="Enter a high-level directive for evolution..."></textarea>
@@ -850,124 +819,15 @@ function setup_frontend_ui { # pragma: no cover
             </div>
             <div class="control-section">
                 <h2>Query Coordinator</h2>
-                <input type="text" id="query-input" placeholder="explain augmentic development">
+                <input type="text" id="query-input" placeholder="Enter your query...">
                 <button id="query-btn">Send Query</button>
             </div>
-            <div class="control-section">
-                <h2>System Commands</h2>
-                <div class="button-grid">
-                    <button id="status-btn">Check System Status</button>
-                    <button id="agents-btn">List Agents</button>
-                    <button id="tools-btn">List Tools</button>
-                    <button id="analyze-btn">Analyze Codebase</button>
-                    <button id="replicate-btn">Trigger Replication</button>
-                    <button id="improve-btn">Request Improvement</button>
-                </div>
-            </div>
             <div class="response-section">
-                <h2>API Response</h2>
+                <h2>Response</h2>
                 <pre id="response-output">Awaiting command...</pre>
             </div>
+        </main>
     </div>
-
-        <!-- Agents Tab -->
-        <div id="agents-tab" class="tab-content">
-            <div class="control-section">
-                <h2>Agent Management</h2>
-                <div class="agent-controls">
-                    <button id="refresh-agents-btn">Refresh Agents</button>
-                    <button id="create-agent-btn">Create Agent</button>
-                    <button id="delete-agent-btn">Delete Agent</button>
-                </div>
-                <div id="agents-list" class="agents-list"></div>
-            </div>
-            <div class="control-section">
-                <h2>Agent Details</h2>
-                <div id="agent-details" class="system-status">
-                    <p>Select an agent from the list to view details.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- System Tab -->
-        <div id="system-tab" class="tab-content">
-            <div class="control-section">
-                <h2>System Status</h2>
-                <div id="system-status" class="system-status"></div>
-            </div>
-            <div class="control-section">
-                <h2>Performance Metrics</h2>
-                <div id="performance-metrics" class="performance-metrics"></div>
-            </div>
-            <div class="control-section">
-                <h2>Resource Usage</h2>
-                <div id="resource-usage" class="resource-usage"></div>
-            </div>
-        </div>
-
-        <!-- Logs Tab -->
-        <div id="logs-tab" class="tab-content">
-            <div class="control-section">
-                <div class="logs-header">
-                    <h2>System Logs</h2>
-                    <button id="copy-logs-btn" class="copy-btn" title="Copy logs to clipboard">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6z"/>
-                            <path d="M2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1H2z"/>
-                        </svg>
-                    </button>
-                </div>
-                <div class="log-controls">
-                    <button id="refresh-logs-btn">Refresh Logs</button>
-                    <button id="clear-logs-btn">Clear Logs</button>
-                    <select id="log-level-filter">
-                        <option value="all">All Levels</option>
-                        <option value="DEBUG">DEBUG</option>
-                        <option value="INFO">INFO</option>
-                        <option value="WARNING">WARNING</option>
-                        <option value="ERROR">ERROR</option>
-                        <option value="CRITICAL">CRITICAL</option>
-                    </select>
-                </div>
-                <div id="logs-output" class="logs-output"></div>
-            </div>
-        </div>
-
-        <!-- Terminal Tab -->
-        <div id="terminal-tab" class="tab-content">
-            <div class="control-section">
-                <h2>Terminal Output</h2>
-                <div class="terminal-controls">
-                    <button id="refresh-terminal-btn">Refresh Terminal</button>
-                    <button id="clear-terminal-btn">Clear Terminal</button>
-                    <button id="execute-command-btn">Execute Command</button>
-                </div>
-                <div id="terminal-output" class="logs-output"></div>
-                <div class="terminal-input">
-                    <input type="text" id="terminal-command" placeholder="Enter command...">
-                    <button id="send-command-btn">Send</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Admin Tab -->
-        <div id="admin-tab" class="tab-content">
-            <div class="control-section">
-                <h2>Admin Controls</h2>
-                <div class="admin-controls">
-                    <button id="restart-system-btn">Restart System</button>
-                    <button id="backup-system-btn">Backup System</button>
-                    <button id="update-config-btn">Update Config</button>
-                    <button id="export-logs-btn">Export Logs</button>
-                </div>
-            </div>
-            <div class="control-section">
-                <h2>System Configuration</h2>
-                <div id="config-display" class="config-display"></div>
-            </div>
-        </div>
-    </div>
-
     <script>
         window.MINDX_BACKEND_PORT = "${BACKEND_PORT_EFFECTIVE}";
     </script>
@@ -977,385 +837,57 @@ function setup_frontend_ui { # pragma: no cover
 EOF_INDEX_HTML
   create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/index.html" "$index_html_content"
 
-  # Copy existing enhanced frontend files instead of embedding
-  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" ]; then
-    cp "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" "$MINDX_FRONTEND_UI_DIR_ABS/"
-    log_setup_info "Copied existing enhanced styles3.css"
-  else
-    # Fallback to basic styles if styles3.css doesn't exist
+  # --- styles.css ---
   read -r -d '' styles_css_content <<'EOF_STYLES_CSS'
-/* mindX Frontend UI - Corporate Cyberpunk 2049 Theme */
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
-
-:root {
-    --corp-blue: #00a8ff;
-    --corp-cyan: #00d4ff;
-    --corp-green: #00ff88;
-    --corp-gold: #ffd700;
-    --dark-bg: #0a0a0a;
-    --darker-bg: #050505;
-    --text-primary: #ffffff;
-    --text-secondary: #b0b0b0;
-    --grid-color: rgba(0, 168, 255, 0.08);
-    --accent-glow: rgba(0, 168, 255, 0.3);
-    --success-glow: rgba(0, 255, 136, 0.3);
-    --warning-glow: rgba(255, 215, 0, 0.3);
-}
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
 body {
-    font-family: 'Share Tech Mono', 'Courier New', monospace;
-    background: var(--dark-bg);
-    color: var(--text-primary);
-    min-height: 100vh;
-    overflow-x: hidden;
-    position: relative;
-}
-
-/* Corporate 2049 Background */
-body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: 
-        linear-gradient(var(--grid-color) 1px, transparent 1px),
-        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-    background-size: 50px 50px;
-    animation: corporate-grid-drift 20s linear infinite;
-    z-index: -1;
-    pointer-events: none;
-}
-
-@keyframes corporate-grid-drift {
-    0% { transform: translate(0, 0); }
-    100% { transform: translate(50px, 50px); }
-}
-
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f0f2f5;
+    color: #333;
+    margin: 0;
     padding: 20px;
-    position: relative;
-    z-index: 1;
 }
-
-/* Header Styling */
-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 0;
-    margin-bottom: 30px;
-    border-bottom: 2px solid var(--corp-blue);
-    position: relative;
-}
-
-.header-left {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-}
-
-.header-right {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-h1 {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 3.2em;
-    font-weight: 900;
-    color: var(--text-primary);
-    text-shadow: 
-        0 0 15px var(--corp-blue),
-        0 0 30px var(--corp-blue),
-        0 0 45px var(--corp-blue),
-        2px 2px 4px rgba(0, 0, 0, 0.8);
-    animation: corporate-title-glow 3s ease-in-out infinite alternate;
-    letter-spacing: 2px;
-}
-
-@keyframes corporate-title-glow {
-    0% { 
-        text-shadow: 
-            0 0 15px var(--corp-blue),
-            0 0 30px var(--corp-blue),
-            0 0 45px var(--corp-blue),
-            2px 2px 4px rgba(0, 0, 0, 0.8);
-    }
-    100% { 
-        text-shadow: 
-            0 0 20px var(--corp-cyan),
-            0 0 40px var(--corp-cyan),
-            0 0 60px var(--corp-cyan),
-            2px 2px 4px rgba(0, 0, 0, 0.8);
-    }
-}
-
-h2 {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 1.4em;
-    color: var(--corp-cyan);
-    margin: 25px 0 15px 0;
-    text-shadow: 0 0 10px var(--accent-glow);
-    border-bottom: 1px solid var(--corp-blue);
-    padding-bottom: 8px;
-}
-
-/* GitHub Link */
-.github-link a {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--corp-blue);
-    text-decoration: none;
-    padding: 8px 16px;
-    border: 2px solid var(--corp-blue);
-    border-radius: 6px;
-    background: linear-gradient(135deg, rgba(0, 168, 255, 0.1), rgba(0, 212, 255, 0.05));
-    transition: all 0.3s ease;
-    font-size: 0.9em;
-    font-weight: 500;
-}
-
-.github-link a:hover {
-    background: linear-gradient(135deg, rgba(0, 168, 255, 0.2), rgba(0, 212, 255, 0.1));
-    box-shadow: 0 0 15px var(--accent-glow);
-    transform: translateY(-2px);
-}
-
-.github-link svg {
-    width: 16px;
-    height: 16px;
-}
-
-/* Status Light */
-.status-light-red, .status-light-green {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: 2px solid var(--text-primary);
-    box-shadow: 0 0 10px currentColor;
-    animation: status-pulse 2s ease-in-out infinite;
-}
-
-.status-light-red {
-    background-color: #ff4444;
-    box-shadow: 0 0 15px rgba(255, 68, 68, 0.5);
-}
-
-.status-light-green {
-    background-color: var(--corp-green);
-    box-shadow: 0 0 15px var(--success-glow);
-}
-
-@keyframes status-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
-}
-
-/* Control Sections */
-.control-section, .response-section {
-    background: linear-gradient(135deg, rgba(0, 168, 255, 0.05), rgba(0, 212, 255, 0.02));
-    border: 1px solid var(--corp-blue);
-    border-radius: 12px;
-    padding: 25px;
-    margin-bottom: 25px;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 8px 32px rgba(0, 168, 255, 0.1);
-    position: relative;
-    overflow: hidden;
-}
-
-.control-section::before, .response-section::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--corp-cyan), transparent);
-    animation: scan-line 3s ease-in-out infinite;
-}
-
-@keyframes scan-line {
-    0% { left: -100%; }
-    100% { left: 100%; }
-}
-
-/* Form Elements */
+.container { max-width: 800px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 20px; }
+h1, h2 { color: #1c1e21; }
+h1 { font-size: 1.8em; }
+h2 { font-size: 1.2em; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 20px;}
+.control-section, .response-section { margin-bottom: 20px; }
 textarea, input[type="text"] {
     width: 100%;
-    padding: 15px;
-    background: rgba(0, 0, 0, 0.3);
-    border: 2px solid var(--corp-blue);
-    border-radius: 8px;
-    color: var(--text-primary);
-    font-family: 'Share Tech Mono', monospace;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
     font-size: 1em;
-    margin-bottom: 15px;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(5px);
+    margin-bottom: 10px;
+    box-sizing: border-box;
 }
-
-textarea:focus, input[type="text"]:focus {
-    outline: none;
-    border-color: var(--corp-cyan);
-    box-shadow: 0 0 20px var(--accent-glow);
-    background: rgba(0, 0, 0, 0.5);
-}
-
-textarea {
-    min-height: 100px;
-    resize: vertical;
-}
-
-textarea::placeholder, input::placeholder {
-    color: var(--text-secondary);
-    opacity: 0.7;
-}
-
-/* Buttons */
+textarea { min-height: 80px; resize: vertical; }
 button {
-    background: linear-gradient(135deg, var(--corp-blue), var(--corp-cyan));
-    color: var(--text-primary);
-    border: 2px solid var(--corp-blue);
-    padding: 12px 24px;
-    border-radius: 8px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
     cursor: pointer;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 0.9em;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-    margin: 5px;
-    box-shadow: 0 4px 15px rgba(0, 168, 255, 0.3);
+    font-size: 1em;
+    transition: background-color 0.2s;
 }
-
-button::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.5s ease;
-}
-
-button:hover {
-    background: linear-gradient(135deg, var(--corp-cyan), var(--corp-blue));
-    box-shadow: 0 6px 25px var(--accent-glow);
-    transform: translateY(-2px);
-}
-
-button:hover::before {
-    left: 100%;
-}
-
-button:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 10px var(--accent-glow);
-}
-
-/* Response Output */
+button:hover { background-color: #0056b3; }
 pre {
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(0, 20, 40, 0.9));
-    color: var(--corp-green);
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid var(--corp-green);
+    background-color: #282c34;
+    color: #abb2bf;
+    padding: 15px;
+    border-radius: 4px;
     white-space: pre-wrap;
     word-wrap: break-word;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.9em;
-    line-height: 1.6;
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
-    position: relative;
-    overflow-x: auto;
+    font-family: 'Courier New', Courier, monospace;
 }
-
-pre::before {
-    content: 'OUTPUT';
-    position: absolute;
-    top: -10px;
-    left: 10px;
-    background: var(--corp-green);
-    color: var(--dark-bg);
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.7em;
-    font-weight: bold;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .container {
-        padding: 15px;
-    }
-    
-    h1 {
-        font-size: 2.2em;
-    }
-    
-    header {
-        flex-direction: column;
-        gap: 15px;
-        text-align: center;
-    }
-    
-    .header-left, .header-right {
-        justify-content: center;
-    }
-    
-    .control-section, .response-section {
-        padding: 20px;
-    }
-    
-    button {
-        width: 100%;
-        margin: 5px 0;
-    }
-}
-
-/* Loading Animation */
-@keyframes corporate-loading {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.loading::after {
-    content: '';
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 2px solid var(--corp-blue);
-    border-top: 2px solid transparent;
-    border-radius: 50%;
-    animation: corporate-loading 1s linear infinite;
-    margin-left: 10px;
-}
+.status-light-red { width: 20px; height: 20px; background-color: #dc3545; border-radius: 50%; }
+.status-light-green { width: 20px; height: 20px; background-color: #28a745; border-radius: 50%; }
 EOF_STYLES_CSS
   create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/styles.css" "$styles_css_content"
 
-  # Copy existing enhanced app.js instead of embedding
-  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/app.js" ]; then
-    cp "$PROJECT_ROOT/mindx_frontend_ui/app.js" "$MINDX_FRONTEND_UI_DIR_ABS/"
-    log_setup_info "Copied existing enhanced app.js with full frontend-backend integration"
-  else
-    # Fallback to basic app.js if it doesn't exist
+  # --- app.js ---
   read -r -d '' app_js_content <<'EOF_APP_JS'
 document.addEventListener('DOMContentLoaded', () => {
     const backendPort = window.MINDX_BACKEND_PORT || '8000';
@@ -1400,7 +932,7 @@ document.addEventListener('DOMContentLoaded', () => {
     evolveBtn.addEventListener('click', () => {
         const directive = evolveDirectiveInput.value.trim();
         if (directive) {
-            sendRequest('/system/evolve', 'POST', { directive });
+            sendRequest('/commands/evolve', 'POST', { directive });
         } else {
             responseOutput.textContent = 'Please enter a directive.';
         }
@@ -1415,25 +947,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // System command buttons
-    document.getElementById('status-btn').addEventListener('click', () => {
-        sendRequest('/status/mastermind', 'GET');
-    });
-
-    document.getElementById('agents-btn').addEventListener('click', () => {
-        sendRequest('/registry/agents', 'GET');
-    });
-
-    document.getElementById('tools-btn').addEventListener('click', () => {
-        sendRequest('/registry/tools', 'GET');
-    });
-
     checkBackendStatus();
     setInterval(checkBackendStatus, 10000); // Check status every 10 seconds
 });
 EOF_APP_JS
   create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/app.js" "$app_js_content"
-  fi
 
   # --- package.json ---
   read -r -d '' package_json_content <<'EOF_PACKAGE_JSON'
@@ -1504,8 +1022,8 @@ function kill_port {
 }
 
 function start_web_frontend {
-    log_setup_info "🧠 Starting MindX Enhanced Web Interface..."
-    log_setup_info "=========================================="
+    log_setup_info "🧠 Starting MindX Web Interface..."
+    log_setup_info "=================================="
     
     # Check if required directories exist
     if [ ! -d "$MINDX_BACKEND_SERVICE_DIR_ABS" ]; then
@@ -1538,7 +1056,7 @@ function start_web_frontend {
     log_setup_info "Starting MindX Backend API on port $BACKEND_PORT_EFFECTIVE..."
     cd "$PROJECT_ROOT"
     VENV_PYTHON="$MINDX_VENV_PATH_ABS/bin/python"
-    $VENV_PYTHON -m uvicorn mindx_backend_service.main_service:app --host 0.0.0.0 --port $BACKEND_PORT_EFFECTIVE &
+    $VENV_PYTHON -m uvicorn api.api_server:app --host 0.0.0.0 --port $BACKEND_PORT_EFFECTIVE &
     BACKEND_PID=$!
 
     # Wait for backend to start
@@ -1583,12 +1101,11 @@ function start_web_frontend {
 
     # Display access information
     echo ""
-    echo "🎉 MindX Enhanced Web Interface is now running!"
-    echo "==============================================="
+    echo "🎉 MindX Web Interface is now running!"
+    echo "======================================"
     echo "Frontend: http://localhost:$FRONTEND_PORT_EFFECTIVE"
     echo "Backend API: http://localhost:$BACKEND_PORT_EFFECTIVE"
     echo ""
-    echo "Features: Real-time monitoring, health status, agent management, system metrics"
     echo "Press Ctrl+C to stop both services"
     echo ""
 
@@ -1786,7 +1303,7 @@ elif [[ "$RUN_SERVICES_FLAG" == true ]]; then
     # The backend's main_service.py now calls uvicorn.run itself.
     # We need to ensure it uses the venv's python.
     VENV_PYTHON="$MINDX_VENV_PATH_ABS/bin/python"
-    BACKEND_EXEC_COMMAND="$VENV_PYTHON -m uvicorn mindx_backend_service.main_service:app --host 0.0.0.0 --port $BACKEND_PORT_EFFECTIVE"
+    BACKEND_EXEC_COMMAND="$VENV_PYTHON -m uvicorn api.api_server:app --host 0.0.0.0 --port $BACKEND_PORT_EFFECTIVE"
 
     start_mindx_service "MindX Backend Service" "$BACKEND_EXEC_COMMAND" "$BACKEND_PID_FILE" "$MINDX_BACKEND_APP_LOG_FILE" "$PROJECT_ROOT" || \
         { log_setup_error "MindX Backend Service failed to start. Check logs. Exiting."; exit 1; }
@@ -1810,7 +1327,7 @@ elif [[ "$RUN_SERVICES_FLAG" == true ]]; then
 else
     log_setup_info "MindX setup complete. Services not started."
     log_setup_info "To start services manually:"
-    log_setup_info "  Enhanced Web Interface: ./mindX.sh --frontend"
+    log_setup_info "  Web Interface: ./mindX.sh --frontend"
     log_setup_info "  Services Only: ./mindX.sh --run"
     log_setup_info "  Backend Only: cd $MINDX_BACKEND_SERVICE_DIR_ABS && $MINDX_VENV_PATH_ABS/bin/python main_service.py"
     log_setup_info "  Frontend Only: cd $MINDX_FRONTEND_UI_DIR_ABS && node server.js"
