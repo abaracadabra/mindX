@@ -82,28 +82,28 @@
 - **Capability**: Autonomous strategic planning, evolution campaigns, and system orchestration
 - **Mistral AI**: `mistral-large-latest` for advanced reasoning and strategic analysis
 - **Identity**: `0xb9B46126551652eb58598F1285aC5E86E5CcfB43`
-- **Documentation**: [Mastermind Agent Guide](docs/mastermind_agent.md)
+- **Documentation**: [Mastermind Agent Guide](mastermind_agent.md)
 
 #### **Agent 2: BDI Agent (Code Evolution)**
 - **Status**: ✅ **ACTIVE** - Enhanced with 9 new action handlers
 - **Capability**: Autonomous code improvement, refactoring, and tactical execution
 - **Mistral AI**: `codestral-latest` for specialized code generation and analysis
 - **Identity**: `0xf8f2da254D4a3F461e0472c65221B26fB4e91fB7`
-- **Documentation**: [BDI Agent Documentation](docs/bdi_agent.md)
+- **Documentation**: [BDI Agent Documentation](bdi_agent.md)
 
 #### **Agent 3: Strategic Evolution Agent (Learning & Memory)**
 - **Status**: ✅ **ACTIVE** - 4-phase audit-driven campaign pipeline
 - **Capability**: Cross-project knowledge transfer, pattern recognition, and system evolution
 - **Mistral AI**: `mistral-embed-v2` for semantic memory and knowledge retrieval
 - **Identity**: `0x5208088F9C7c45a38f2a19B6114E3C5D17375C65`
-- **Documentation**: [Strategic Evolution Agent](docs/strategic_evolution_agent.md)
+- **Documentation**: [Strategic Evolution Agent](strategic_evolution_agent.md)
 
 #### **Agent 4: Guardian Agent (Security & Validation)**
 - **Status**: ✅ **ACTIVE** - Cryptographic validation and security enforcement
 - **Capability**: Identity verification, security validation, and audit logging
 - **Mistral AI**: `mistral-nemo-latest` for high-speed security analysis
 - **Identity**: `0xC2cca3d6F29dF17D1999CFE0458BC3DEc024F02D`
-- **Documentation**: [Guardian Agent](docs/guardian_agent.md)
+- **Documentation**: [Guardian Agent](guardian_agent.md)
 
 ### 2. App Builder Track: ✅ **COMPLETED** - mindX Augmentic Intelligence Platform
 
@@ -129,8 +129,8 @@
 - **Model Support**: ✅ All Mistral models integrated and operational
 - **Token Counting**: ✅ Real-time token counting with tiktoken integration
 - **Cost Optimization**: ✅ Dynamic model selection based on task requirements
-- **Documentation**: [Complete Mistral API Documentation](docs/mistral_api.md)
-- **Testing**: [Comprehensive Test Suite](tests/test_mistral_api_connectivity.py) - 100% success rate
+- **Documentation**: [Complete Mistral API Documentation](mistral_api.md)
+- **Testing**: [Comprehensive Test Suite](../tests/test_mistral_api_connectivity.py) - 100% success rate
 
 #### **Mistral AI Models in Production**
 ```python
@@ -304,7 +304,7 @@ class AugmenticIntelligence:
 - **Token Calculator**: ✅ Real-time cost tracking and optimization
 - **Pricing Engine**: ✅ Dynamic pricing based on task complexity
 - **Treasury Management**: ✅ Automated budget allocation and monitoring
-- **Documentation**: [Token Calculator Integration Guide](docs/TokenCalculatorTool_Integration_Guide.md)
+- **Documentation**: [Token Calculator Integration Guide](TokenCalculatorTool_Integration_Guide.md)
 
 #### **Economic System Architecture**
 ```python
@@ -358,7 +358,7 @@ class TokenCalculatorTool:
 - **Phase 2**: Blueprint Generation with Codestral code generation
 - **Phase 3**: Implementation with autonomous code execution
 - **Phase 4**: Validation and integration testing
-- **Documentation**: [Strategic Evolution Agent](docs/strategic_evolution_agent.md)
+- **Documentation**: [Strategic Evolution Agent](strategic_evolution_agent.md)
 
 #### **Autonomous Evolution System**
 ```python
@@ -405,14 +405,14 @@ class StrategicEvolutionAgent:
 ### ✅ **Phase 5: Complete Documentation & Testing - COMPLETED**
 
 #### **Comprehensive Documentation System**
-- **API Documentation**: [Complete Mistral API Guide](docs/mistral_api.md)
-- **Agent Architecture**: [Agent Registry Reference](docs/agents_architectural_reference.md)
-- **Deployment Guide**: [Production Deployment](docs/mindXsh.md)
-- **Technical Architecture**: [System Design](docs/TECHNICAL.md)
-- **Usage Instructions**: [Getting Started](docs/USAGE.md)
+- **API Documentation**: [Complete Mistral API Guide](mistral_api.md)
+- **Agent Architecture**: [Agent Registry Reference](agents_architectural_reference.md)
+- **Deployment Guide**: [Production Deployment](mindXsh.md)
+- **Technical Architecture**: [System Design](TECHNICAL.md)
+- **Usage Instructions**: [Getting Started](USAGE.md)
 
 #### **Testing & Validation**
-- **Mistral API Tests**: [Comprehensive Test Suite](tests/test_mistral_api_connectivity.py) - 100% success rate
+- **Mistral API Tests**: [Comprehensive Test Suite](../tests/test_mistral_api_connectivity.py) - 100% success rate
 - **Integration Tests**: Full system integration testing with frontend-backend connectivity
 - **Performance Tests**: Load testing and optimization
 - **Security Tests**: Cryptographic validation and security audits
@@ -800,9 +800,9 @@ python3 augmentic.py --enable-knowledge-sharing
 ## 📞 Contact & Support
 
 - **Project Repository**: [GitHub - abaracadabra/mindX](https://github.com/abaracadabra/mindX)
-- **Documentation**: [Complete Documentation](docs/)
-- **API Reference**: [Mistral AI Integration](docs/mistral_api.md)
-- **Agent Registry**: [Agent Architecture](docs/agents_architectural_reference.md)
+- **Documentation**: [Complete Documentation](../docs/)
+- **API Reference**: [Mistral AI Integration](mistral_api.md)
+- **Agent Registry**: [Agent Architecture](agents_architectural_reference.md)
 
 ---
 
