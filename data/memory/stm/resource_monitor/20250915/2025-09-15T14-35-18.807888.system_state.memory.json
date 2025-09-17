@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-09-15T14:35:18.807888",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "resource_monitor",
+  "content": {
+    "process_name": "resource_alert",
+    "data": {
+      "type": "cpu",
+      "status": "RESOLVED",
+      "message": "CPU usage resolved: 83.6% <= limit (85.0%)",
+      "value": 83.6,
+      "limit": 85.0
+    }
+  },
+  "context": {
+    "agent_id": "resource_monitor"
+  },
+  "tags": [
+    "resource_alert",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "af19e0953864bdbd"
+}

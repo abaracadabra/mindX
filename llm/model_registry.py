@@ -46,15 +46,19 @@ class ModelRegistry:
             return
 
         init_tasks = []
-        # UPDATED LOGIC: Dynamically find providers by looking for a "models" key.
+        # UPDATED LOGIC: Initialize providers that are enabled, regardless of models key
         for provider_name, provider_config in llm_config.items():
-            if isinstance(provider_config, dict) and "models" in provider_config:
+            if isinstance(provider_config, dict) and provider_config.get("enabled", False):
+                logger.info(f"{self.log_prefix} Found enabled provider '{provider_name}'. Initializing handler.")
+                task = self._initialize_provider(provider_name, provider_config)
+                init_tasks.append(task)
+            elif isinstance(provider_config, dict) and "models" in provider_config:
                 logger.info(f"{self.log_prefix} Found model definitions for provider '{provider_name}'. Initializing handler.")
                 task = self._initialize_provider(provider_name, provider_config)
                 init_tasks.append(task)
         
         if not init_tasks:
-            logger.warning(f"{self.log_prefix} No providers with model definitions found in config.")
+            logger.warning(f"{self.log_prefix} No enabled providers found in config.")
 
         await asyncio.gather(*init_tasks)
         
@@ -67,9 +71,21 @@ class ModelRegistry:
             handler = await create_llm_handler(provider_name=provider_name)
             if handler:
                 self.handlers[provider_name] = handler
+                
+                # Load models from config if available
                 models_data = provider_config.get("models", {})
-                for model_id, model_data in models_data.items():
-                    self.capabilities[model_id] = ModelCapability(model_id, provider_name, model_data)
+                if models_data:
+                    for model_id, model_data in models_data.items():
+                        self.capabilities[model_id] = ModelCapability(model_id, provider_name, model_data)
+                else:
+                    # For providers that load models from YAML files (like Mistral)
+                    # The handler should have loaded its own model catalog
+                    if hasattr(handler, 'model_catalog') and handler.model_catalog:
+                        for model_id, model_data in handler.model_catalog.items():
+                            self.capabilities[model_id] = ModelCapability(model_id, provider_name, model_data)
+                        logger.info(f"{self.log_prefix} Loaded {len(handler.model_catalog)} models from {provider_name} handler's catalog")
+                    else:
+                        logger.warning(f"{self.log_prefix} No models found for provider '{provider_name}'")
         except Exception as e:
             logger.error(f"{self.log_prefix} Failed to initialize provider '{provider_name}': {e}", exc_info=True)
 

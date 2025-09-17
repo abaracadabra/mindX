@@ -51,8 +51,10 @@ class AGInt:
         logger.info(f"{self.log_prefix} Initializing...")
 
         from core.id_manager_agent import IDManagerAgent
-        id_manager = IDManagerAgent(agent_id=f"id_manager_for_{self.agent_id}", config_override=config)
-        id_manager.create_new_wallet(entity_id=self.agent_id)
+        from core.belief_system import BeliefSystem
+        belief_system = BeliefSystem()
+        self.id_manager = IDManagerAgent(agent_id=f"id_manager_for_{self.agent_id}", belief_system=belief_system, config_override=config)
+        # Note: create_new_wallet will be called in start() method
 
         self.bdi_agent = bdi_agent
         self.model_registry = model_registry
@@ -66,11 +68,17 @@ class AGInt:
         self.main_loop_task: Optional[asyncio.Task] = None
         self.state_summary: Dict[str, Any] = { "llm_operational": True, "awareness": "System starting up." }
         self.last_action_context: Optional[Dict[str, Any]] = None
+        self.q_values: Dict[Tuple[str, DecisionType], float] = {}  # Q-table for RL learning
 
     def start(self, directive: str):
         if self.status == AgentStatus.RUNNING: return
         self.status = AgentStatus.RUNNING
         self.primary_directive = directive
+        
+        # Create wallet for ID manager if needed
+        if hasattr(self, 'id_manager') and self.id_manager:
+            asyncio.create_task(self.id_manager.create_new_wallet(entity_id=self.agent_id))
+        
         self.main_loop_task = asyncio.create_task(self._cognitive_loop())
 
     async def stop(self):
@@ -81,24 +89,55 @@ class AGInt:
             try: await self.main_loop_task
             except asyncio.CancelledError: pass
         logger.info(f"{self.log_prefix} Cognitive loop stopped.")
+    
+    def set_autonomous_mode(self, enabled: bool):
+        """Toggle autonomous mode for continuous operation"""
+        self.config.set("agint.autonomous_mode", enabled)
+        logger.info(f"{self.log_prefix} Autonomous mode {'enabled' if enabled else 'disabled'}")
+    
+    def set_max_cycles(self, cycles: int):
+        """Set the maximum number of cycles for non-autonomous mode"""
+        self.config.set("agint.max_cycles", cycles)
+        logger.info(f"{self.log_prefix} Max cycles set to {cycles}")
 
     async def _cognitive_loop(self):
         """The main P-O-D-A cycle with a corrected perception-action sequence."""
-        while self.status == AgentStatus.RUNNING:
+        cycle_count = 0
+        max_cycles = self.config.get("agint.max_cycles", 8)
+        autonomous_mode = self.config.get("agint.autonomous_mode", False)
+        
+        # In autonomous mode, run continuously until stopped
+        if autonomous_mode:
+            max_cycles = float('inf')
+            logger.info(f"{self.log_prefix} Autonomous mode enabled - running continuously")
+        
+        while self.status == AgentStatus.RUNNING and cycle_count < max_cycles:
             try:
+                cycle_count += 1
+                logger.info(f"{self.log_prefix} === COGNITIVE CYCLE {cycle_count} ===")
+                
                 # PERCEPTION: Occurs first, aware of the *previous* cycle's outcome.
+                logger.info(f"{self.log_prefix} 🔍 PERCEPTION: Analyzing system state...")
                 perception = await self._perceive()
+                logger.info(f"{self.log_prefix} Perception data: {perception}")
                 if self.memory_agent: await self.memory_agent.log_process('agint_perception', perception, {'agent_id': self.agent_id})
 
                 # DECISION: Based on the fresh perception.
+                logger.info(f"{self.log_prefix} 🧠 ORIENTATION & DECISION: Processing perception and selecting action...")
                 decision = await self._orient_and_decide(perception)
-                if self.memory_agent: await self.memory_agent.log_process('agint_decision', decision, {'agent_id': self.agent_id})
+                logger.info(f"{self.log_prefix} Decision made: {decision}")
+                if self.memory_agent and decision: 
+                    # Decision is already in JSON-serializable format
+                    await self.memory_agent.log_process('agint_decision', decision, {'agent_id': self.agent_id})
                 
                 # ACTION: The outcome of this action will be perceived in the *next* cycle.
+                logger.info(f"{self.log_prefix} 🚀 ACTION: Executing decision...")
                 success, result_data = await self._act(decision)
-                self.last_action_context = {'success': success, 'result': result_data} # Update internal state for next perception
+                logger.info(f"{self.log_prefix} Action completed - Success: {success}, Result: {result_data}")
+                self.last_action_context = {'success': success, 'result': result_data, 'type': decision.get('type') if decision else None} # Update internal state for next perception
                 if self.memory_agent: await self.memory_agent.log_process('agint_action', self.last_action_context, {'agent_id': self.agent_id})
 
+                logger.info(f"{self.log_prefix} === CYCLE {cycle_count} COMPLETE ===")
                 await asyncio.sleep(self.config.get("agint.cycle_delay_seconds", 5.0))
             except asyncio.CancelledError:
                 logger.info(f"{self.log_prefix} Cognitive loop cancelled.")
@@ -111,32 +150,65 @@ class AGInt:
     async def _perceive(self) -> Dict[str, Any]:
         """Gathers information, now correctly using its internal state for failure context."""
         perception_data = {"timestamp": time.time()}
-        if self.last_action_context and not self.last_action_context.get('success'):
-            perception_data['last_action_failure_context'] = self.last_action_context.get('result')
+        if self.last_action_context and not self.last_action_context.get('success', True):
+            perception_data['last_action_failure_context'] = self.last_action_context.get('result', 'Unknown error')
             logger.warning(f"{self.log_prefix} Perceiving with failure context: {perception_data['last_action_failure_context']}")
         return perception_data
 
     async def _execute_cognitive_task(self, prompt: str, task_type: TaskType, **kwargs) -> Optional[str]:
         # Corrected logic from previous audit to align with ModelRegistry's actual API
+        if not self.model_registry:
+            self.state_summary["llm_operational"] = False
+            return None
+            
+        if not hasattr(self.model_registry, 'capabilities') or not self.model_registry.capabilities:
+            self.state_summary["llm_operational"] = False
+            return None
+            
         all_capabilities = list(self.model_registry.capabilities.values())
+        if not hasattr(self.model_registry, 'model_selector') or not self.model_registry.model_selector:
+            self.state_summary["llm_operational"] = False
+            return None
+            
         ranked_models = self.model_registry.model_selector.select_model(all_capabilities, task_type)
         sanitized_ranked_models = [f"gemini/{m}" if not m.startswith("gemini/") else m for m in ranked_models]
         valid_models = [m for m in list(dict.fromkeys(sanitized_ranked_models)) if m in self.model_registry.capabilities]
 
         if not valid_models:
+            # TODO: Add Ollama installer for scenarios where Mistral/Gemini are not available
+            # This would gracefully handle the case where Ollama is not installed
+            # and provide an option to install it as a fallback LLM provider
+            logger.warning(f"{self.log_prefix} No valid models available. LLM operations will gracefully fail.")
             self.state_summary["llm_operational"] = False
             return None
         for model_id in valid_models:
             try:
-                handler = self.model_registry.get_handler(self.model_registry.capabilities[model_id].provider)
-                if not handler: continue
+                if model_id not in self.model_registry.capabilities:
+                    continue
+                capability = self.model_registry.capabilities[model_id]
+                if not capability or not hasattr(capability, 'provider'):
+                    continue
+                handler = self.model_registry.get_handler(capability.provider)
+                if not handler: 
+                    logger.warning(f"{self.log_prefix} No handler available for provider: {capability.provider}")
+                    continue
                 response_str = await handler.generate_text(prompt, model=model_id, **kwargs)
-                if response_str is None: raise ValueError("Handler returned None response.")
-                if kwargs.get("json_mode"): json.loads(response_str)
+                if response_str is None: 
+                    logger.warning(f"{self.log_prefix} Handler returned None response for model: {model_id}")
+                    continue
+                if kwargs.get("json_mode"): 
+                    try:
+                        json.loads(response_str)
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"{self.log_prefix} Invalid JSON response from model {model_id}: {e}")
+                        continue
+                logger.info(f"{self.log_prefix} Successfully generated response using model: {model_id}")
                 return response_str
             except Exception as e:
-                logger.error(f"Cognitive attempt with model '{model_id}' failed: {e}. Trying next.", exc_info=False)
+                logger.error(f"{self.log_prefix} Cognitive attempt with model '{model_id}' failed: {e}. Trying next.", exc_info=False)
                 continue
+        
+        logger.error(f"{self.log_prefix} All model attempts failed. LLM operations unavailable.")
         self.state_summary["llm_operational"] = False
         return None
 
@@ -176,30 +248,34 @@ class AGInt:
         if self.memory_agent:
             await self.memory_agent.log_process('agint_orient_response', {'response': response_str}, {'agent_id': self.agent_id})
 
-        if response_str is None: return {"type": DecisionType.COOLDOWN, "details": {"reason": "Orient/Decide LLM call failed."}}
+        if response_str is None: return {"type": "COOLDOWN", "details": {"reason": "Orient/Decide LLM call failed."}}
         try:
             data = json.loads(response_str)
             if "situational_awareness" not in data or "decision_details" not in data: raise KeyError("Required keys missing.")
             self.state_summary["awareness"] = data["situational_awareness"]
-            return {"type": decision_type, "details": data["decision_details"]}
+            return {"type": decision_type.value, "details": data["decision_details"]}
         except (json.JSONDecodeError, KeyError) as e:
-            return {"type": DecisionType.COOLDOWN, "details": {"reason": f"LLM response validation failed: {e}"}}
+            return {"type": "COOLDOWN", "details": {"reason": f"LLM response validation failed: {e}"}}
 
     async def _act(self, decision: Dict[str, Any]) -> Tuple[bool, Any]:
         """Routes the decision to the appropriate execution function."""
+        if not decision:
+            logger.error(f"{self.log_prefix} Decision is None or empty")
+            return False, {"error": "No decision provided"}
+            
         decision_type = decision.get("type")
         details = decision.get("details", {})
-        logger.info(f"--- AGInt: ACTION (Decision: {decision_type.name if decision_type else 'NONE'}) ---")
+        logger.info(f"--- AGInt: ACTION (Decision: {decision_type if decision_type else 'NONE'}) ---")
         
         action_map = {
-            DecisionType.BDI_DELEGATION: lambda: self._delegate_task_to_bdi(details.get("task_description")),
-            DecisionType.RESEARCH: lambda: self._execute_research(details.get("search_query")),
-            DecisionType.SELF_REPAIR: self._execute_self_repair,
-            DecisionType.COOLDOWN: self._execute_cooldown,
+            DecisionType.BDI_DELEGATION.value: lambda: self._delegate_task_to_bdi(details.get("task_description")),
+            DecisionType.RESEARCH.value: lambda: self._execute_research(details.get("search_query")),
+            DecisionType.SELF_REPAIR.value: self._execute_self_repair,
+            DecisionType.COOLDOWN.value: self._execute_cooldown,
         }
         action_func = action_map.get(decision_type)
         if action_func: return await action_func()
-        return True, {"message": f"Action {decision_type.name} completed as no-op."}
+        return True, {"message": f"Action {decision_type} completed as no-op."}
 
     async def _delegate_task_to_bdi(self, task_description: Optional[str]) -> Tuple[bool, Any]:
         """Delegates a task to the subordinate BDI agent and awaits its result."""
@@ -211,9 +287,14 @@ class AGInt:
             await self.memory_agent.log_process('agint_bdi_delegation_start', log_data, {'agent_id': self.agent_id})
 
         try:
+            # Ensure BDI agent is initialized
+            if not hasattr(self.bdi_agent, '_initialized') or not self.bdi_agent._initialized:
+                await self.bdi_agent.async_init_components()
+            
             self.bdi_agent.set_goal(task_description, priority=1, is_primary=True)
             result_message = await self.bdi_agent.run(max_cycles=100)
-            final_bdi_status = self.bdi_agent.get_status().get("status", "UNKNOWN")
+            bdi_status = self.bdi_agent.get_status()
+            final_bdi_status = bdi_status.get("status", "UNKNOWN") if bdi_status else "UNKNOWN"
             success = final_bdi_status == "COMPLETED_GOAL_ACHIEVED"
             if success: return True, {"task_outcome_message": result_message}
             else: return False, {"error": "BDI_TASK_FAILED", "details": result_message, "final_status": final_bdi_status}
@@ -238,26 +319,81 @@ class AGInt:
         return True, {"message": f"Successfully waited for {cooldown_period}s."}
 
     async def _execute_self_repair(self) -> Tuple[bool, Any]:
-        """Executes the self-repair sequence with mandatory verification."""
+        """Executes the self-repair sequence with mandatory verification and AGInt cognitive loop interaction."""
         logger.info(f"{self.log_prefix} Initiating self-repair sequence...")
-        if not self.coordinator_agent: return False, {"error": "CoordinatorAgent not available."}
+        
+        # First, try to use the coordinator agent if available
+        if self.coordinator_agent:
+            try:
+                interaction = await self.coordinator_agent.create_interaction(InteractionType.SYSTEM_ANALYSIS, "Automated self-repair triggered.")
+                result = await self.coordinator_agent.process_interaction(interaction)
+                if result.status != InteractionStatus.COMPLETED: 
+                    raise RuntimeError(f"Coordinator failed repair task with status {result.status.name}")
+                
+                logger.info(f"Coordinator repair task completed. Verifying LLM connectivity...")
+                await self.model_registry.force_reload()
+                verification_result = await self._execute_cognitive_task("Status check. Respond ONLY with 'OK'.", TaskType.HEALTH_CHECK)
+                
+                if verification_result and "OK" in verification_result:
+                    self.state_summary["llm_operational"] = True
+                    return True, {"message": "Self-repair verification successful via coordinator."}
+                else:
+                    self.state_summary["llm_operational"] = False
+                    return False, {"error": "Self-repair verification failed via coordinator."}
+            except Exception as e:
+                logger.warning(f"Coordinator-based self-repair failed: {e}. Falling back to AGInt cognitive loop self-repair.")
+        
+        # Fallback: Use AGInt's own cognitive loop for self-repair
         try:
-            interaction = await self.coordinator_agent.create_interaction(InteractionType.SYSTEM_ANALYSIS, "Automated self-repair triggered.")
-            result = await self.coordinator_agent.process_interaction(interaction)
-            if result.status != InteractionStatus.COMPLETED: raise RuntimeError(f"Coordinator failed repair task with status {result.status.name}")
+            logger.info(f"{self.log_prefix} Using AGInt cognitive loop for self-repair...")
             
-            logger.info(f"Repair task completed. Verifying LLM connectivity...")
+            # Create a self-repair directive for the cognitive loop
+            self_repair_directive = "Analyze and repair the current system state. Check LLM connectivity, model availability, and system health. Provide a detailed analysis and repair recommendations."
+            
+            # Temporarily store the original directive
+            original_directive = self.primary_directive
+            
+            # Set the self-repair directive
+            self.primary_directive = self_repair_directive
+            
+            # Execute a few cognitive cycles for self-repair
+            repair_cycles = 0
+            max_repair_cycles = 3
+            
+            while repair_cycles < max_repair_cycles and self.status == AgentStatus.RUNNING:
+                repair_cycles += 1
+                logger.info(f"{self.log_prefix} Self-repair cycle {repair_cycles}/{max_repair_cycles}")
+                
+                # Execute one cognitive cycle
+                perception = await self._perceive()
+                decision = await self._orient_and_decide(perception)
+                success, result_data = await self._act(decision)
+                
+                # Check if repair was successful
+                if success and "repair" in str(result_data).lower():
+                    logger.info(f"{self.log_prefix} Self-repair cycle {repair_cycles} completed successfully")
+                    break
+                
+                await asyncio.sleep(1)  # Brief pause between repair cycles
+            
+            # Restore original directive
+            self.primary_directive = original_directive
+            
+            # Verify LLM connectivity
+            logger.info(f"Self-repair completed. Verifying LLM connectivity...")
             await self.model_registry.force_reload()
             verification_result = await self._execute_cognitive_task("Status check. Respond ONLY with 'OK'.", TaskType.HEALTH_CHECK)
             
             if verification_result and "OK" in verification_result:
                 self.state_summary["llm_operational"] = True
-                return True, {"message": "Self-repair verification successful."}
+                return True, {"message": "Self-repair verification successful via AGInt cognitive loop."}
             else:
                 self.state_summary["llm_operational"] = False
-                return False, {"error": "Self-repair verification failed."}
+                return False, {"error": "Self-repair verification failed via AGInt cognitive loop."}
+                
         except Exception as e:
-            return False, {"error": str(e)}
+            logger.error(f"AGInt cognitive loop self-repair failed: {e}")
+            return False, {"error": f"AGInt self-repair failed: {str(e)}"}
 
     def _create_state_representation(self, perception: Dict[str, Any]) -> str:
         """Enhanced RL state representation for future use."""
@@ -280,4 +416,4 @@ class AGInt:
         new_value = old_value + self.config.get("agint.learning.alpha", 0.1) * (reward + self.config.get("agint.learning.gamma", 0.9) * next_max_q - old_value)
         
         self.q_values[(state, decision_type)] = new_value
-        logger.info(f"RL: Updated Q-value for ({state}, {decision_type.name}) to {new_value:.3f}")
+        logger.info(f"RL: Updated Q-value for ({state}, {decision_type}) to {new_value:.3f}")
