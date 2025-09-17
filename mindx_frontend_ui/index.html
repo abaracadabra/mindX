@@ -69,7 +69,7 @@
                         </label>
                     </div>
                 </div>
-                <button id="evolve-btn">Send Directive</button>
+                <button id="evolve-btn">Evolve Codebase</button>
             </div>
             <div class="control-section">
                 <h2>Query Coordinator</h2>
@@ -314,15 +314,117 @@
         <div id="system-tab" class="tab-content">
             <div class="control-section">
                 <h2>System Status</h2>
-                <div id="system-status" class="system-status"></div>
+                <div id="system-status" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">System Health:</span>
+                        <span id="system-health" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Uptime:</span>
+                        <span id="system-uptime" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Active Agents:</span>
+                        <span id="active-agents-count" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">LLM Provider:</span>
+                        <span id="llm-provider-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Mistral API:</span>
+                        <span id="mistral-api-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">AGInt Status:</span>
+                        <span id="agint-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Coordinator:</span>
+                        <span id="coordinator-status" class="status-value">Loading...</span>
+                    </div>
+                </div>
             </div>
             <div class="control-section">
                 <h2>Performance Metrics</h2>
-                <div id="performance-metrics" class="performance-metrics"></div>
+                <div id="performance-metrics" class="performance-metrics">
+                    <div class="metric-grid">
+                        <div class="metric-item">
+                            <span class="metric-label">CPU Usage:</span>
+                            <div class="metric-bar">
+                                <div id="cpu-usage-bar" class="metric-fill"></div>
+                                <span id="cpu-usage-text" class="metric-text">0%</span>
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Memory Usage:</span>
+                            <div class="metric-bar">
+                                <div id="memory-usage-bar" class="metric-fill"></div>
+                                <span id="memory-usage-text" class="metric-text">0%</span>
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Disk Usage:</span>
+                            <div class="metric-bar">
+                                <div id="disk-usage-bar" class="metric-fill"></div>
+                                <span id="disk-usage-text" class="metric-text">0%</span>
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Network I/O:</span>
+                            <div class="metric-bar">
+                                <div id="network-usage-bar" class="metric-fill"></div>
+                                <span id="network-usage-text" class="metric-text">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="control-section">
                 <h2>Resource Usage</h2>
-                <div id="resource-usage" class="resource-usage"></div>
+                <div id="resource-usage" class="resource-usage">
+                    <div class="resource-grid">
+                        <div class="resource-item">
+                            <span class="resource-label">Total Memory:</span>
+                            <span id="total-memory" class="resource-value">Loading...</span>
+                        </div>
+                        <div class="resource-item">
+                            <span class="resource-label">Used Memory:</span>
+                            <span id="used-memory" class="resource-value">Loading...</span>
+                        </div>
+                        <div class="resource-item">
+                            <span class="resource-label">Available Memory:</span>
+                            <span id="available-memory" class="resource-value">Loading...</span>
+                        </div>
+                        <div class="resource-item">
+                            <span class="resource-label">Disk Space:</span>
+                            <span id="disk-space" class="resource-value">Loading...</span>
+                        </div>
+                        <div class="resource-item">
+                            <span class="resource-label">Process Count:</span>
+                            <span id="process-count" class="resource-value">Loading...</span>
+                        </div>
+                        <div class="resource-item">
+                            <span class="resource-label">Load Average:</span>
+                            <span id="load-average" class="resource-value">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Live System Monitoring</h2>
+                <div class="monitoring-controls">
+                    <button id="start-monitoring-btn" class="btn btn-primary">Start Monitoring</button>
+                    <button id="stop-monitoring-btn" class="btn btn-secondary">Stop Monitoring</button>
+                    <button id="refresh-metrics-btn" class="btn btn-info">Refresh Metrics</button>
+                </div>
+                <div id="live-monitoring" class="live-monitoring">
+                    <div class="monitoring-status">
+                        <span class="status-label">Monitoring Status:</span>
+                        <span id="monitoring-status" class="status-value">Stopped</span>
+                    </div>
+                    <div id="monitoring-output" class="monitoring-output"></div>
+                </div>
             </div>
         </div>
 

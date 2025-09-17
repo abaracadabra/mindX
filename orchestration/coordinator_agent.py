@@ -303,7 +303,20 @@ class CoordinatorAgent:
             full_model_id = f"{self.llm_handler.provider_name}/{model_to_use}"
             
             response = await self.llm_handler.generate_text(interaction.content, model=full_model_id)
-            interaction.response = {"status": "SUCCESS", "response_text": response}
+            
+            # Extract API details if available
+            api_details = {}
+            if hasattr(self.llm_handler, 'last_api_call_details'):
+                api_details = self.llm_handler.last_api_call_details
+            
+            interaction.response = {
+                "status": "SUCCESS", 
+                "response_text": response,
+                "model_used": full_model_id,
+                "tokens_used": api_details.get('tokens_used', 'N/A'),
+                "cost": api_details.get('cost', 'N/A'),
+                "provider": self.llm_handler.provider_name
+            }
             interaction.status = InteractionStatus.COMPLETED
         except Exception as e:
             interaction.status = InteractionStatus.FAILED

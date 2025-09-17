@@ -1,0 +1,47 @@
+{
+  "timestamp": "2025-09-16T09:31:59.467379",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "content": {
+    "process_name": "bdi_deliberation",
+    "data": {
+      "selected_goal": {
+        "id": "8cebcfa5",
+        "goal": "Implement the following evolution: improve the frontend UI responsiveness",
+        "priority": 1,
+        "status": "pending",
+        "added_at": 1758040174.2399173,
+        "is_primary": true
+      },
+      "full_desire_queue": [
+        {
+          "id": "8cebcfa5",
+          "goal": "Implement the following evolution: improve the frontend UI responsiveness",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1758040174.2399173,
+          "is_primary": true
+        },
+        {
+          "id": "d541505f",
+          "goal": "Implement the following evolution: evolve augmentic.py",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1758040319.4661767,
+          "is_primary": true
+        }
+      ]
+    }
+  },
+  "context": {
+    "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+    "run_id": "84a920db"
+  },
+  "tags": [
+    "bdi_deliberation",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "b7841bef9a741ace"
+}

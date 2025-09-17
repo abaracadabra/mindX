@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-09-16T16:05:32.316526",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_agint",
+  "content": {
+    "process_name": "agint_rule_decision",
+    "data": {
+      "decision": "SELF_REPAIR",
+      "reason": "System health check failed. Choosing SELF_REPAIR.",
+      "perception_summary": {
+        "timestamp": 1758063932.3134344
+      }
+    }
+  },
+  "context": {
+    "agent_id": "mindx_agint"
+  },
+  "tags": [
+    "agint_rule_decision",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "d0cbe2970a96fdf8"
+}

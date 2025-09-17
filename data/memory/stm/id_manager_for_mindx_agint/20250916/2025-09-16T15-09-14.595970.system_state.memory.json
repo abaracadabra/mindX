@@ -1,0 +1,23 @@
+{
+  "timestamp": "2025-09-16T15:09:14.595970",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "id_manager_for_mindx_agint",
+  "content": {
+    "process_name": "id_manager_address_lookup",
+    "data": {
+      "entity_id": "mindx_agint",
+      "address": "0x1E80B876dd6C46207d4F0940EE9b3CF85Ef0A6Be",
+      "source": "belief_system"
+    }
+  },
+  "context": {
+    "agent_id": "id_manager_for_mindx_agint"
+  },
+  "tags": [
+    "id_manager_address_lookup",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "cb3fdec41c0af176"
+}

@@ -1,0 +1,39 @@
+{
+  "timestamp": "2025-09-16T08:49:17.215880",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "content": {
+    "process_name": "bdi_deliberation",
+    "data": {
+      "selected_goal": {
+        "id": "8e2045f1",
+        "goal": "Implement the following evolution: improve the frontend UI responsiveness",
+        "priority": 1,
+        "status": "pending",
+        "added_at": 1758037757.1970901,
+        "is_primary": true
+      },
+      "full_desire_queue": [
+        {
+          "id": "8e2045f1",
+          "goal": "Implement the following evolution: improve the frontend UI responsiveness",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1758037757.1970901,
+          "is_primary": true
+        }
+      ]
+    }
+  },
+  "context": {
+    "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+    "run_id": "467a769f"
+  },
+  "tags": [
+    "bdi_deliberation",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "f6ea3bce8f4b961b"
+}

@@ -1,0 +1,24 @@
+{
+  "timestamp": "2025-09-16T15:29:16.653787",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_agint",
+  "content": {
+    "process_name": "agint_decision",
+    "data": {
+      "type": "COOLDOWN",
+      "details": {
+        "reason": "Orient/Decide LLM call failed."
+      }
+    }
+  },
+  "context": {
+    "agent_id": "mindx_agint"
+  },
+  "tags": [
+    "agint_decision",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "a8075e9c777c57d9"
+}

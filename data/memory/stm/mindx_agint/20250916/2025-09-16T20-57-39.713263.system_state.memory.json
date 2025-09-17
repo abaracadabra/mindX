@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-09-16T20:57:39.713263",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_agint",
+  "content": {
+    "process_name": "agint_rule_decision",
+    "data": {
+      "decision": "BDI_DELEGATION",
+      "reason": "System healthy. Choosing BDI_DELEGATION to pursue directive.",
+      "perception_summary": {
+        "timestamp": 1758081458.571151,
+        "llm_status": "Checking...",
+        "llm_operational": true,
+        "llm_suggestion": "No API key configured"
+      }
+    }
+  },
+  "context": {
+    "agent_id": "mindx_agint"
+  },
+  "tags": [
+    "agint_rule_decision",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "08f901a52ff64eda"
+}

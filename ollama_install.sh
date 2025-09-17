@@ -1,74 +1,84 @@
 #!/bin/bash
 
-# ollama_install.sh
-# Placeholder script for installing Ollama on VPS systems
-# This script will be implemented later for VPS deployment
+# Ollama Installation Script for MindX
+# This script installs Ollama as a local LLM fallback when Mistral API is not available
 
-set -e
-
-echo "=========================================="
-echo "Ollama Installation Script for VPS"
-echo "=========================================="
-echo ""
-echo "This script will install Ollama and pull the required models"
-echo "for MindX's failsafe AI inference capabilities."
-echo ""
-echo "NOTE: This is a placeholder script. Implementation coming soon."
-echo ""
-
-# Check if running as root
-if [[ $EUID -eq 0 ]]; then
-   echo "This script should not be run as root for security reasons."
-   echo "Please run as a regular user with sudo privileges."
-   exit 1
-fi
+echo "🚀 Installing Ollama for MindX LLM fallback..."
 
 # Check if Ollama is already installed
 if command -v ollama &> /dev/null; then
-    echo "Ollama is already installed. Version: $(ollama --version)"
-    echo ""
-    echo "Checking for required models..."
-    
-    # List of required models for MindX
-    REQUIRED_MODELS=(
-        "codegemma:7b-it"
-        "codegemma:2b"
-        "phi3:mini"
-        "llama3:8b"
-        "mistral:7b"
-        "gemma:2b"
-    )
-    
-    echo "Required models for MindX:"
-    for model in "${REQUIRED_MODELS[@]}"; do
-        echo "  - $model"
-    done
-    echo ""
-    
-    echo "To pull a model, run: ollama pull <model_name>"
-    echo "Example: ollama pull codegemma:7b-it"
-    echo ""
-    echo "To list available models: ollama list"
-    echo "To start Ollama service: ollama serve"
-    
+    echo "✅ Ollama is already installed"
+    ollama --version
 else
-    echo "Ollama is not installed."
-    echo ""
-    echo "Installation steps (to be implemented):"
-    echo "1. Download and install Ollama binary"
-    echo "2. Set up systemd service for auto-start"
-    echo "3. Pull required models for MindX"
-    echo "4. Configure firewall rules if needed"
-    echo "5. Test installation"
-    echo ""
-    echo "For now, please install Ollama manually:"
-    echo "  curl -fsSL https://ollama.ai/install.sh | sh"
-    echo ""
-    echo "Then run this script again to pull the required models."
+    echo "📥 Installing Ollama..."
+    curl -fsSL https://ollama.ai/install.sh | sh
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ Ollama installed successfully"
+    else
+        echo "❌ Failed to install Ollama"
+        exit 1
+    fi
 fi
 
-echo ""
-echo "=========================================="
-echo "Ollama Installation Script Complete"
-echo "=========================================="
+echo "📦 Pulling Mistral models for MindX..."
 
+# Pull essential Mistral models
+echo "Pulling mistral:7b-instruct (fast, general purpose)..."
+ollama pull mistral:7b-instruct
+
+echo "Pulling mistral:8x7b-instruct (better performance)..."
+ollama pull mistral:8x7b-instruct
+
+echo "Pulling codestral:latest (code generation)..."
+ollama pull codestral:latest
+
+echo "Pulling mistral:large (best performance)..."
+ollama pull mistral:large
+
+echo "🔧 Configuring MindX to use Ollama..."
+
+# Create a simple config update script
+cat > /tmp/ollama_config_update.py << 'EOF'
+import json
+import os
+
+# Update the MindX config to enable Ollama
+config_path = "data/config/mindx_config.json"
+
+if os.path.exists(config_path):
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    
+    # Enable Ollama provider
+    if 'llm' not in config:
+        config['llm'] = {}
+    if 'providers' not in config['llm']:
+        config['llm']['providers'] = {}
+    
+    config['llm']['providers']['ollama'] = {"enabled": True}
+    
+    with open(config_path, 'w') as f:
+        json.dump(config, f, indent=2)
+    
+    print("✅ Updated MindX config to enable Ollama")
+else:
+    print("⚠️  MindX config not found, please enable Ollama manually")
+EOF
+
+python3 /tmp/ollama_config_update.py
+rm /tmp/ollama_config_update.py
+
+    echo ""
+echo "🎉 Ollama setup complete!"
+    echo ""
+echo "📋 Next steps:"
+echo "1. Start Ollama service: ollama serve"
+echo "2. Restart MindX backend service"
+echo "3. AGInt will now use Ollama as a fallback when Mistral API is not available"
+    echo ""
+echo "🔍 To test Ollama:"
+echo "   ollama run mistral:7b-instruct"
+echo ""
+echo "💡 To see available models:"
+echo "   ollama list"
