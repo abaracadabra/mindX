@@ -1811,12 +1811,16 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('start-monitoring-btn').disabled = true;
         document.getElementById('stop-monitoring-btn').disabled = false;
         
+        // Initial status check
+        updateSystemStatus();
+        
         monitoringInterval = setInterval(async () => {
             try {
-                // Fetch system metrics
-                const [metricsResponse, resourcesResponse] = await Promise.all([
+                // Fetch system metrics and status
+                const [metricsResponse, resourcesResponse, statusResponse] = await Promise.all([
                     fetch(`${apiUrl}/system/metrics`),
-                    fetch(`${apiUrl}/system/resources`)
+                    fetch(`${apiUrl}/system/resources`),
+                    fetch(`${apiUrl}/system/status`)
                 ]);
                 
                 if (metricsResponse.ok) {
@@ -1827,6 +1831,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (resourcesResponse.ok) {
                     const resources = await resourcesResponse.json();
                     updateResourceUsage(resources);
+                }
+                
+                if (statusResponse.ok) {
+                    const status = await statusResponse.json();
+                    updateSystemStatus(status);
                 }
                 
                 // Update monitoring output
@@ -1914,6 +1923,127 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (resources.load_average) {
             document.getElementById('load-average').textContent = resources.load_average;
+        }
+    }
+    
+    function updateSystemStatus(status) {
+        // Update system health
+        if (status.status) {
+            const healthElement = document.getElementById('system-health');
+            healthElement.textContent = status.status;
+            healthElement.className = `status-value ${status.status === 'operational' ? 'success' : 'error'}`;
+        }
+        
+        // Update uptime
+        if (status.uptime) {
+            document.getElementById('system-uptime').textContent = formatUptime(status.uptime);
+        }
+        
+        // Update active agents count
+        if (status.components && status.components.active_agents) {
+            document.getElementById('active-agents-count').textContent = status.components.active_agents;
+        }
+        
+        // Update LLM provider status
+        if (status.components && status.components.llm_provider) {
+            const llmElement = document.getElementById('llm-provider-status');
+            llmElement.textContent = status.components.llm_provider;
+            llmElement.className = `status-value ${status.components.llm_provider === 'online' ? 'success' : 'error'}`;
+        }
+        
+        // Update Mistral API status
+        updateMistralStatus();
+        
+        // Update AGInt status
+        updateAGIntStatus();
+        
+        // Update Coordinator status
+        updateCoordinatorStatus();
+    }
+    
+    async function updateMistralStatus() {
+        try {
+            const response = await fetch(`${apiUrl}/test/mistral`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ test: 'connectivity', message: 'Status check' })
+            });
+            
+            const mistralElement = document.getElementById('mistral-api-status');
+            if (response.ok) {
+                mistralElement.textContent = 'Online';
+                mistralElement.className = 'status-value success';
+            } else {
+                mistralElement.textContent = 'Offline';
+                mistralElement.className = 'status-value error';
+            }
+        } catch (error) {
+            const mistralElement = document.getElementById('mistral-api-status');
+            mistralElement.textContent = 'Error';
+            mistralElement.className = 'status-value error';
+        }
+    }
+    
+    async function updateAGIntStatus() {
+        try {
+            const response = await fetch(`${apiUrl}/commands/agint`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ directive: 'status check' })
+            });
+            
+            const agintElement = document.getElementById('agint-status');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.state_summary && data.state_summary.llm_operational) {
+                    agintElement.textContent = `Online - ${data.state_summary.llm_status}`;
+                    agintElement.className = 'status-value success';
+                } else {
+                    agintElement.textContent = 'Offline';
+                    agintElement.className = 'status-value error';
+                }
+            } else {
+                agintElement.textContent = 'Error';
+                agintElement.className = 'status-value error';
+            }
+        } catch (error) {
+            const agintElement = document.getElementById('agint-status');
+            agintElement.textContent = 'Error';
+            agintElement.className = 'status-value error';
+        }
+    }
+    
+    async function updateCoordinatorStatus() {
+        try {
+            const response = await fetch(`${apiUrl}/orchestration/coordinator`);
+            
+            const coordinatorElement = document.getElementById('coordinator-status');
+            if (response.ok) {
+                const data = await response.json();
+                coordinatorElement.textContent = 'Online';
+                coordinatorElement.className = 'status-value success';
+            } else {
+                coordinatorElement.textContent = 'Offline';
+                coordinatorElement.className = 'status-value error';
+            }
+        } catch (error) {
+            const coordinatorElement = document.getElementById('coordinator-status');
+            coordinatorElement.textContent = 'Error';
+            coordinatorElement.className = 'status-value error';
+        }
+    }
+    
+    function formatUptime(seconds) {
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        
+        if (days > 0) {
+            return `${days}d ${hours}h ${minutes}m`;
+        } else if (hours > 0) {
+            return `${hours}h ${minutes}m`;
+        } else {
+            return `${minutes}m`;
         }
     }
     

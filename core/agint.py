@@ -68,10 +68,10 @@ class AGInt:
         self.primary_directive: Optional[str] = None
         self.main_loop_task: Optional[asyncio.Task] = None
         self.state_summary: Dict[str, Any] = { 
-            "llm_operational": True, 
+            "llm_operational": False, 
             "awareness": "System starting up.",
-            "llm_status": "Checking...",
-            "llm_suggestion": "No API key configured"
+            "llm_status": "Initializing...",
+            "llm_suggestion": "Checking LLM availability"
         }
         self.last_action_context: Optional[Dict[str, Any]] = None
         self.q_values: Dict[Tuple[str, DecisionType], float] = {}  # Q-table for RL learning
@@ -85,7 +85,35 @@ class AGInt:
         if hasattr(self, 'id_manager') and self.id_manager:
             asyncio.create_task(self.id_manager.create_new_wallet(entity_id=self.agent_id))
         
+        # Initialize LLM status
+        asyncio.create_task(self._initialize_llm_status())
+        
         self.main_loop_task = asyncio.create_task(self._cognitive_loop())
+
+    async def _initialize_llm_status(self):
+        """Initialize LLM status by testing connectivity"""
+        try:
+            logger.info(f"{self.log_prefix} Initializing LLM status...")
+            
+            # Test LLM connectivity with a simple prompt
+            test_result = await self._execute_cognitive_task("Status check. Respond ONLY with 'OK'.", TaskType.HEALTH_CHECK)
+            
+            if test_result and "OK" in test_result:
+                self.state_summary["llm_operational"] = True
+                self.state_summary["llm_status"] = "Online - Mistral API"
+                self.state_summary["llm_suggestion"] = "LLM operational"
+                logger.info(f"{self.log_prefix} LLM status initialized: Online")
+            else:
+                self.state_summary["llm_operational"] = False
+                self.state_summary["llm_status"] = "Offline - No response"
+                self.state_summary["llm_suggestion"] = "Check API configuration"
+                logger.warning(f"{self.log_prefix} LLM status initialized: Offline")
+                
+        except Exception as e:
+            self.state_summary["llm_operational"] = False
+            self.state_summary["llm_status"] = f"Offline - Error: {str(e)[:50]}"
+            self.state_summary["llm_suggestion"] = "Check API keys and network"
+            logger.error(f"{self.log_prefix} LLM status initialization failed: {e}")
 
     async def stop(self):
         if self.status != AgentStatus.RUNNING: return
@@ -125,7 +153,14 @@ class AGInt:
                 # PERCEPTION: Occurs first, aware of the *previous* cycle's outcome.
                 logger.info(f"{self.log_prefix} 🔍 PERCEPTION: Analyzing system state...")
                 perception = await self._perceive()
+                
+                # Add LLM status to perception
+                perception['llm_status'] = self.state_summary.get('llm_status', 'Unknown')
+                perception['llm_operational'] = self.state_summary.get('llm_operational', False)
+                perception['llm_suggestion'] = self.state_summary.get('llm_suggestion', 'No suggestion')
+                
                 logger.info(f"{self.log_prefix} Perception data: {perception}")
+                logger.info(f"{self.log_prefix} LLM Status: {perception['llm_status']} | Operational: {perception['llm_operational']}")
                 if self.memory_agent: await self.memory_agent.log_process('agint_perception', perception, {'agent_id': self.agent_id})
 
                 # DECISION: Based on the fresh perception.
@@ -139,11 +174,23 @@ class AGInt:
                 # ACTION: The outcome of this action will be perceived in the *next* cycle.
                 logger.info(f"{self.log_prefix} 🚀 ACTION: Executing decision...")
                 success, result_data = await self._act(decision)
-                logger.info(f"{self.log_prefix} Action completed - Success: {success}, Result: {result_data}")
-                self.last_action_context = {'success': success, 'result': result_data, 'type': decision.get('type') if decision else None} # Update internal state for next perception
+                
+                # Log detailed action results
+                action_type = decision.get('type') if decision else 'Unknown'
+                logger.info(f"{self.log_prefix} Action completed - Type: {action_type}, Success: {success}")
+                if success:
+                    logger.info(f"{self.log_prefix} ✅ Action result: {result_data}")
+                else:
+                    logger.warning(f"{self.log_prefix} ❌ Action failed: {result_data}")
+                
+                # Show current LLM status after action
+                logger.info(f"{self.log_prefix} Current LLM Status: {self.state_summary.get('llm_status', 'Unknown')} | Operational: {self.state_summary.get('llm_operational', False)}")
+                
+                self.last_action_context = {'success': success, 'result': result_data, 'type': action_type} # Update internal state for next perception
                 if self.memory_agent: await self.memory_agent.log_process('agint_action', self.last_action_context, {'agent_id': self.agent_id})
 
                 logger.info(f"{self.log_prefix} === CYCLE {cycle_count} COMPLETE ===")
+                logger.info(f"{self.log_prefix} Status: {self.status.name} | Awareness: {self.state_summary.get('awareness', 'Unknown')} | LLM: {self.state_summary.get('llm_status', 'Unknown')}")
                 await asyncio.sleep(self.config.get("agint.cycle_delay_seconds", 5.0))
             except asyncio.CancelledError:
                 logger.info(f"{self.log_prefix} Cognitive loop cancelled.")
@@ -162,23 +209,45 @@ class AGInt:
         return perception_data
 
     async def _execute_cognitive_task(self, prompt: str, task_type: TaskType, **kwargs) -> Optional[str]:
-        # Corrected logic from previous audit to align with ModelRegistry's actual API
+        # Enhanced logic to properly detect and use Mistral API
         if not self.model_registry:
+            logger.warning(f"{self.log_prefix} No model registry available")
             self.state_summary["llm_operational"] = False
+            self.state_summary["llm_status"] = "Offline - No model registry"
+            self.state_summary["llm_suggestion"] = "Model registry not initialized"
             return None
             
         if not hasattr(self.model_registry, 'capabilities') or not self.model_registry.capabilities:
+            logger.warning(f"{self.log_prefix} No capabilities available in model registry")
             self.state_summary["llm_operational"] = False
+            self.state_summary["llm_status"] = "Offline - No capabilities"
+            self.state_summary["llm_suggestion"] = "Model registry capabilities not loaded"
             return None
+            
+        # Log available capabilities for debugging
+        logger.info(f"{self.log_prefix} Available capabilities: {list(self.model_registry.capabilities.keys())}")
             
         all_capabilities = list(self.model_registry.capabilities.values())
         if not hasattr(self.model_registry, 'model_selector') or not self.model_registry.model_selector:
+            logger.warning(f"{self.log_prefix} No model selector available")
             self.state_summary["llm_operational"] = False
+            self.state_summary["llm_status"] = "Offline - No model selector"
+            self.state_summary["llm_suggestion"] = "Model selector not initialized"
             return None
             
-        ranked_models = self.model_registry.model_selector.select_model(all_capabilities, task_type)
-        sanitized_ranked_models = [f"gemini/{m}" if not m.startswith("gemini/") else m for m in ranked_models]
-        valid_models = [m for m in list(dict.fromkeys(sanitized_ranked_models)) if m in self.model_registry.capabilities]
+        try:
+            ranked_models = self.model_registry.model_selector.select_model(all_capabilities, task_type)
+            logger.info(f"{self.log_prefix} Ranked models: {ranked_models}")
+        except Exception as e:
+            logger.error(f"{self.log_prefix} Model selection failed: {e}")
+            self.state_summary["llm_operational"] = False
+            self.state_summary["llm_status"] = "Offline - Model selection failed"
+            self.state_summary["llm_suggestion"] = "Check model configuration"
+            return None
+            
+        # Don't sanitize gemini models - let the registry handle this
+        valid_models = [m for m in ranked_models if m in self.model_registry.capabilities]
+        logger.info(f"{self.log_prefix} Valid models after filtering: {valid_models}")
 
         if not valid_models:
             logger.warning(f"{self.log_prefix} No valid models available. LLM operations will gracefully fail.")
@@ -187,7 +256,7 @@ class AGInt:
             logger.info(f"{self.log_prefix}   2. Install Ollama as a local fallback: curl -fsSL https://ollama.ai/install.sh | sh")
             logger.info(f"{self.log_prefix}   3. Run: ollama pull mistral:7b-instruct")
             self.state_summary["llm_operational"] = False
-            self.state_summary["llm_status"] = "Offline - No API key"
+            self.state_summary["llm_status"] = "Offline - No valid models"
             self.state_summary["llm_suggestion"] = "Set MISTRAL_API_KEY or install Ollama"
             return None
         for model_id in valid_models:

@@ -1,0 +1,24 @@
+{
+  "timestamp": "2025-09-16T20:54:51.838901",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_agint",
+  "content": {
+    "process_name": "agint_perception",
+    "data": {
+      "timestamp": 1758081291.8198814,
+      "llm_status": "Checking...",
+      "llm_operational": true,
+      "llm_suggestion": "No API key configured"
+    }
+  },
+  "context": {
+    "agent_id": "mindx_agint"
+  },
+  "tags": [
+    "agint_perception",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "8afa98ff5fddc933"
+}

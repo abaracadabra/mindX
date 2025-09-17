@@ -1919,3 +1919,59 @@ details pre {
         flex-direction: column;
     }
 }
+
+/* Status Indicators */
+.status-value.success {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.status-value.error {
+    color: #F44336;
+    font-weight: bold;
+}
+
+.status-value.warning {
+    color: #FF9800;
+    font-weight: bold;
+}
+
+.status-value {
+    transition: color 0.3s ease;
+}
+
+/* System Status Grid */
+.system-status {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.status-item {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-glow);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.status-label {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.status-value {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .system-status {
+        grid-template-columns: 1fr;
+    }
+}
