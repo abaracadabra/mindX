@@ -1,0 +1,21 @@
+{
+  "timestamp": "2025-09-16T15:33:11.913435",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_agint",
+  "content": {
+    "process_name": "agint_perception",
+    "data": {
+      "timestamp": 1758061991.9120746
+    }
+  },
+  "context": {
+    "agent_id": "mindx_agint"
+  },
+  "tags": [
+    "agint_perception",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "c63291e776de4975"
+}

@@ -1,0 +1,23 @@
+{
+  "timestamp": "2025-09-16T08:49:17.376564",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "content": {
+    "process_name": "bdi_planning_start",
+    "data": {
+      "goal_id": "8e2045f1",
+      "goal_description": "Implement the following evolution: improve the frontend UI responsiveness"
+    }
+  },
+  "context": {
+    "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+    "run_id": "467a769f"
+  },
+  "tags": [
+    "bdi_planning_start",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "f100e1190b072045"
+}

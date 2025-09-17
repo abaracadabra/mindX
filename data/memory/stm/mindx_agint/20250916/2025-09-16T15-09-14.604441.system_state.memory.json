@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-09-16T15:09:14.604441",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_agint",
+  "content": {
+    "process_name": "agint_rule_decision",
+    "data": {
+      "decision": "BDI_DELEGATION",
+      "reason": "System healthy. Choosing BDI_DELEGATION to pursue directive.",
+      "perception_summary": {
+        "timestamp": 1758060554.5976079
+      }
+    }
+  },
+  "context": {
+    "agent_id": "mindx_agint"
+  },
+  "tags": [
+    "agint_rule_decision",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "501555e5d09460fa"
+}

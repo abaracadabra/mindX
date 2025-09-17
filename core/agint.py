@@ -1,4 +1,5 @@
 # mindx/core/agint.py (Build 1.2.2 - Corrected Perception Loop)
+
 from __future__ import annotations
 import asyncio
 import json
@@ -66,7 +67,12 @@ class AGInt:
         self.status = AgentStatus.INACTIVE
         self.primary_directive: Optional[str] = None
         self.main_loop_task: Optional[asyncio.Task] = None
-        self.state_summary: Dict[str, Any] = { "llm_operational": True, "awareness": "System starting up." }
+        self.state_summary: Dict[str, Any] = { 
+            "llm_operational": True, 
+            "awareness": "System starting up.",
+            "llm_status": "Checking...",
+            "llm_suggestion": "No API key configured"
+        }
         self.last_action_context: Optional[Dict[str, Any]] = None
         self.q_values: Dict[Tuple[str, DecisionType], float] = {}  # Q-table for RL learning
 
@@ -92,19 +98,19 @@ class AGInt:
     
     def set_autonomous_mode(self, enabled: bool):
         """Toggle autonomous mode for continuous operation"""
-        self.config.set("agint.autonomous_mode", enabled)
+        self.autonomous_mode = enabled
         logger.info(f"{self.log_prefix} Autonomous mode {'enabled' if enabled else 'disabled'}")
     
     def set_max_cycles(self, cycles: int):
         """Set the maximum number of cycles for non-autonomous mode"""
-        self.config.set("agint.max_cycles", cycles)
+        self.max_cycles = cycles
         logger.info(f"{self.log_prefix} Max cycles set to {cycles}")
 
     async def _cognitive_loop(self):
         """The main P-O-D-A cycle with a corrected perception-action sequence."""
         cycle_count = 0
-        max_cycles = self.config.get("agint.max_cycles", 8)
-        autonomous_mode = self.config.get("agint.autonomous_mode", False)
+        max_cycles = getattr(self, 'max_cycles', self.config.get("agint.max_cycles", 8))
+        autonomous_mode = getattr(self, 'autonomous_mode', self.config.get("agint.autonomous_mode", False))
         
         # In autonomous mode, run continuously until stopped
         if autonomous_mode:
@@ -175,11 +181,14 @@ class AGInt:
         valid_models = [m for m in list(dict.fromkeys(sanitized_ranked_models)) if m in self.model_registry.capabilities]
 
         if not valid_models:
-            # TODO: Add Ollama installer for scenarios where Mistral/Gemini are not available
-            # This would gracefully handle the case where Ollama is not installed
-            # and provide an option to install it as a fallback LLM provider
             logger.warning(f"{self.log_prefix} No valid models available. LLM operations will gracefully fail.")
+            logger.info(f"{self.log_prefix} 💡 SUGGESTION: To enable LLM functionality, you can:")
+            logger.info(f"{self.log_prefix}   1. Set MISTRAL_API_KEY environment variable")
+            logger.info(f"{self.log_prefix}   2. Install Ollama as a local fallback: curl -fsSL https://ollama.ai/install.sh | sh")
+            logger.info(f"{self.log_prefix}   3. Run: ollama pull mistral:7b-instruct")
             self.state_summary["llm_operational"] = False
+            self.state_summary["llm_status"] = "Offline - No API key"
+            self.state_summary["llm_suggestion"] = "Set MISTRAL_API_KEY or install Ollama"
             return None
         for model_id in valid_models:
             try:
@@ -203,6 +212,9 @@ class AGInt:
                         logger.warning(f"{self.log_prefix} Invalid JSON response from model {model_id}: {e}")
                         continue
                 logger.info(f"{self.log_prefix} Successfully generated response using model: {model_id}")
+                self.state_summary["llm_operational"] = True
+                self.state_summary["llm_status"] = f"Online - {model_id}"
+                self.state_summary["llm_suggestion"] = "LLM operational"
                 return response_str
             except Exception as e:
                 logger.error(f"{self.log_prefix} Cognitive attempt with model '{model_id}' failed: {e}. Trying next.", exc_info=False)
@@ -210,6 +222,8 @@ class AGInt:
         
         logger.error(f"{self.log_prefix} All model attempts failed. LLM operations unavailable.")
         self.state_summary["llm_operational"] = False
+        self.state_summary["llm_status"] = "Offline - All models failed"
+        self.state_summary["llm_suggestion"] = "Check API keys and network connectivity"
         return None
 
     async def _decide_rule_based(self, perception: Dict[str, Any]) -> DecisionType:

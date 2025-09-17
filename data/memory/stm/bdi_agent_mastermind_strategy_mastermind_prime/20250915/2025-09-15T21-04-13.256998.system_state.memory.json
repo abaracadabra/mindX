@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-09-15T21:04:13.256998",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "content": {
+    "process_name": "bdi_goal_set",
+    "data": {
+      "goal": {
+        "id": "b25c208f",
+        "goal": "Implement the following evolution: evolve augmentic.py",
+        "priority": 1,
+        "status": "pending",
+        "added_at": 1757995453.2167742,
+        "is_primary": true
+      }
+    }
+  },
+  "context": {
+    "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime"
+  },
+  "tags": [
+    "bdi_goal_set",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "cab420e5c9501421"
+}

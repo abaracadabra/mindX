@@ -129,6 +129,166 @@ document.addEventListener('DOMContentLoaded', () => {
         responseOutput.textContent = message;
     }
 
+    function showQueryResult(response) {
+        // Create query response window similar to AGInt response window
+        const queryWindow = document.createElement('div');
+        queryWindow.id = 'query-response-window';
+        queryWindow.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 900px;
+            height: 70%;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            border: 2px solid #00a8ff;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 168, 255, 0.3);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            font-family: 'Courier New', monospace;
+            color: #00a8ff;
+        `;
+        
+        // Header
+        const header = document.createElement('div');
+        header.style.cssText = `
+            padding: 15px;
+            border-bottom: 1px solid #00a8ff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 168, 255, 0.1);
+        `;
+        header.innerHTML = `
+            <h3 style="margin: 0; color: #00a8ff; text-shadow: 0 0 10px rgba(0, 168, 255, 0.5);">🤖 Query Coordinator Response</h3>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 12px; color: #888;">Mistral API</span>
+                <button id="copy-query-output" style="background: linear-gradient(135deg, #00aa88, #008866); border: 1px solid #00aa88; color: white; padding: 8px 15px; cursor: pointer; border-radius: 5px; font-weight: bold; box-shadow: 0 2px 5px rgba(0, 170, 136, 0.3);">Copy Response</button>
+                <button id="close-query-window" style="background: linear-gradient(135deg, #ff4444, #cc0000); border: 1px solid #ff4444; color: white; padding: 8px 15px; cursor: pointer; border-radius: 5px; font-weight: bold; box-shadow: 0 2px 5px rgba(255, 68, 68, 0.3);">Close</button>
+            </div>
+        `;
+        
+        // Content area
+        const content = document.createElement('div');
+        content.id = 'query-response-content';
+        content.style.cssText = `
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.3);
+            font-size: 14px;
+            line-height: 1.4;
+        `;
+        
+        // Format the response content
+        const responseText = formatQueryResponse(response);
+        const apiDetails = getApiDetails(response);
+        
+        content.innerHTML = `
+            <div style="margin-bottom: 20px;">
+                <h4 style="color: #00ff88; margin-bottom: 10px; text-shadow: 0 0 5px rgba(0, 255, 136, 0.3);">📝 Query Response:</h4>
+                <div style="background: rgba(0, 0, 0, 0.5); padding: 15px; border-radius: 5px; border-left: 3px solid #00ff88; white-space: pre-wrap; font-family: 'Courier New', monospace;">${responseText}</div>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <h4 style="color: #00a8ff; margin-bottom: 10px; text-shadow: 0 0 5px rgba(0, 168, 255, 0.3);">🔧 API Details:</h4>
+                <div style="background: rgba(0, 0, 0, 0.5); padding: 15px; border-radius: 5px; border-left: 3px solid #00a8ff;">
+                    ${apiDetails}
+                </div>
+            </div>
+            
+            <div>
+                <h4 style="color: #ff6b35; margin-bottom: 10px; text-shadow: 0 0 5px rgba(255, 107, 53, 0.3);">📊 Raw Response:</h4>
+                <pre style="background: rgba(0, 0, 0, 0.5); padding: 15px; border-radius: 5px; border-left: 3px solid #ff6b35; overflow-x: auto; font-size: 12px;">${JSON.stringify(response, null, 2)}</pre>
+            </div>
+        `;
+        
+        queryWindow.appendChild(header);
+        queryWindow.appendChild(content);
+        document.body.appendChild(queryWindow);
+        
+        // Close button event
+        const closeBtn = document.getElementById('close-query-window');
+        closeBtn.addEventListener('click', function() {
+            queryWindow.remove();
+        });
+        
+        // Copy button event
+        const copyBtn = document.getElementById('copy-query-output');
+        copyBtn.addEventListener('click', function() {
+            const text = responseText;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = 'Copied!';
+                copyBtn.style.background = 'linear-gradient(135deg, #00ff00, #00cc00)';
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.style.background = 'linear-gradient(135deg, #00aa88, #008866)';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = 'Copied!';
+                copyBtn.style.background = 'linear-gradient(135deg, #00ff00, #00cc00)';
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.style.background = 'linear-gradient(135deg, #00aa88, #008866)';
+                }, 2000);
+            });
+        });
+    }
+
+    function formatQueryResponse(response) {
+        // Extract the actual response text from the coordinator response
+        if (response.response && response.response.response_text) {
+            return response.response.response_text;
+        } else if (response.message) {
+            return response.message;
+        } else if (response.content) {
+            return response.content;
+        } else {
+            return 'No response text available';
+        }
+    }
+
+    function getApiDetails(response) {
+        // Extract API details from the response
+        let details = '';
+        
+        if (response.status) {
+            details += `<div style="margin-bottom: 8px;"><strong>Status:</strong> ${response.status}</div>`;
+        }
+        if (response.interaction_id) {
+            details += `<div style="margin-bottom: 8px;"><strong>Interaction ID:</strong> ${response.interaction_id}</div>`;
+        }
+        if (response.response && response.response.model_used) {
+            details += `<div style="margin-bottom: 8px;"><strong>Model Used:</strong> ${response.response.model_used}</div>`;
+        }
+        if (response.response && response.response.tokens_used) {
+            details += `<div style="margin-bottom: 8px;"><strong>Tokens Used:</strong> ${response.response.tokens_used}</div>`;
+        }
+        if (response.response && response.response.cost) {
+            details += `<div style="margin-bottom: 8px;"><strong>Cost:</strong> ${response.response.cost}</div>`;
+        }
+        if (response.completed_at) {
+            const date = new Date(response.completed_at * 1000);
+            details += `<div style="margin-bottom: 8px;"><strong>Completed At:</strong> ${date.toLocaleString()}</div>`;
+        }
+        
+        return details || '<div style="color: #888;">No API details available</div>';
+    }
+
     function updateLogsDisplay() {
         const filterLevel = logLevelFilter.value.toUpperCase();
         const filteredLogs = logs.filter(log => 
@@ -140,6 +300,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return `<div class="${levelClass}">[${log.timestamp}] ${log.level}: ${log.message}</div>`;
         }).join('');
     }
+
+    // System Monitoring
+    let monitoringInterval = null;
+    let isMonitoring = false;
 
     // Agent Activity Monitoring
     function addAgentActivity(agent, message, type = 'info') {
@@ -487,7 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } finally {
                 // Reset button state
                 evolveBtn.disabled = false;
-                evolveBtn.textContent = 'Evolve';
+                evolveBtn.textContent = 'Evolve Codebase';
                 // Don't auto-close the window - let user close manually
             }
         });
@@ -512,23 +676,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     addLog(`Query processed: ${JSON.stringify(response)}`, 'SUCCESS');
                     addAgentActivity('Coordinator Agent', 'Query processed successfully', 'success');
                     
-                    // Parse and display the response in a more readable format
-                    let displayText = '';
-                    if (response.status) {
-                        displayText += `Status: ${response.status}\n`;
-                    }
-                    if (response.message) {
-                        displayText += `Message: ${response.message}\n`;
-                    }
-                    if (response.content) {
-                        displayText += `Content: ${response.content}\n`;
-                    }
-                    if (response.interaction_id) {
-                        displayText += `Interaction ID: ${response.interaction_id}\n`;
-                    }
-                    
-                    displayText += '\nFull Response:\n' + JSON.stringify(response, null, 2);
-                    showResponse(displayText);
+                    // Show query result in a popup window similar to evolve popup
+                    showQueryResult(response);
                 }
             } catch (error) {
                 addLog(`Query failed: ${error.message}`, 'ERROR');
@@ -1299,6 +1448,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Start agent activity simulation
         startAgentActivitySimulation();
         
+        // Load initial real agent activity
+        loadInitialAgentActivity();
+        
         addLog('MindX Control Panel initialized', 'INFO');
         addAgentActivity('System', 'MindX Control Panel initialized', 'success');
     }
@@ -1312,25 +1464,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function loadInitialAgentActivity() {
+        try {
+            const response = await fetch(`${apiUrl}/core/agent-activity`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.activities) {
+                    // Add initial activities
+                    data.activities.slice(0, 5).forEach(activity => {
+                        const activityKey = `${activity.timestamp}-${activity.agent}-${activity.message}`;
+                        if (!seenActivities.has(activityKey)) {
+                            seenActivities.add(activityKey);
+                            addAgentActivity(activity.agent, activity.message, activity.type || 'info');
+                        }
+                    });
+                }
+            }
+        } catch (error) {
+            console.log('Initial agent activity load failed:', error.message);
+        }
+    }
+
     function startAgentActivitySimulation() {
         // Fetch real agent activity from the backend
         setInterval(async () => {
             if (!activityPaused) {
                 try {
-                    const response = await sendRequest('/core/agent-activity');
-                    if (response && response.activities) {
+                    const response = await fetch(`${apiUrl}/core/agent-activity`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && data.activities) {
                         // Add new activities that we haven't seen before
-                        response.activities.forEach(activity => {
+                            data.activities.forEach(activity => {
                             const activityKey = `${activity.timestamp}-${activity.agent}-${activity.message}`;
                             if (!seenActivities.has(activityKey)) {
                                 seenActivities.add(activityKey);
-                                addAgentActivity(activity.agent, activity.message, activity.type);
+                                    addAgentActivity(activity.agent, activity.message, activity.type || 'info');
                             }
                         });
+                        }
+                    } else {
+                        throw new Error(`HTTP ${response.status}`);
                     }
                 } catch (error) {
+                    console.log('Real agent activity fetch failed, using fallback:', error.message);
                     // Fallback to simulated activity if real data fails
-                    const agents = ['BDI Agent', 'Blueprint Agent', 'Strategic Evolution Agent', 'Mastermind Agent', 'Coordinator Agent', 'CEO Agent'];
+                    const agents = ['BDI Agent', 'Blueprint Agent', 'Strategic Evolution Agent', 'Mastermind Agent', 'Coordinator Agent', 'CEO Agent', 'System Monitor'];
                     const activities = [
                         'Processing new goal',
                         'Updating belief system',
@@ -1341,7 +1520,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         'Learning from experience',
                         'Generating blueprint',
                         'Converting action',
-                        'Monitoring performance'
+                        'Monitoring performance',
+                        'System health check completed',
+                        'Resource monitoring active',
+                        'Memory optimization in progress',
+                        'LLM model selection updated'
                     ];
                     
                     const agent = agents[Math.floor(Math.random() * agents.length)];
@@ -1352,7 +1535,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     addAgentActivity(agent, activity, type);
                 }
             }
-        }, 2000); // Check every 2 seconds
+        }, 3000); // Check every 3 seconds to reduce load
     }
 
     // AGInt Response Window Functions
@@ -1618,6 +1801,165 @@ document.addEventListener('DOMContentLoaded', () => {
             agintResponseWindow.style.display = 'none';
         }
     }
+
+    // System Monitoring Functions
+    function startSystemMonitoring() {
+        if (isMonitoring) return;
+        
+        isMonitoring = true;
+        document.getElementById('monitoring-status').textContent = 'Running';
+        document.getElementById('start-monitoring-btn').disabled = true;
+        document.getElementById('stop-monitoring-btn').disabled = false;
+        
+        monitoringInterval = setInterval(async () => {
+            try {
+                // Fetch system metrics
+                const [metricsResponse, resourcesResponse] = await Promise.all([
+                    fetch(`${apiUrl}/system/metrics`),
+                    fetch(`${apiUrl}/system/resources`)
+                ]);
+                
+                if (metricsResponse.ok) {
+                    const metrics = await metricsResponse.json();
+                    updateSystemMetrics(metrics);
+                }
+                
+                if (resourcesResponse.ok) {
+                    const resources = await resourcesResponse.json();
+                    updateResourceUsage(resources);
+                }
+                
+                // Update monitoring output
+                const timestamp = new Date().toLocaleTimeString();
+                const output = document.getElementById('monitoring-output');
+                output.innerHTML = `<div class="monitoring-entry">[${timestamp}] System metrics updated</div>` + output.innerHTML;
+                
+                // Keep only last 10 entries
+                const entries = output.querySelectorAll('.monitoring-entry');
+                if (entries.length > 10) {
+                    entries[entries.length - 1].remove();
+                }
+                
+            } catch (error) {
+                console.error('System monitoring error:', error);
+                const output = document.getElementById('monitoring-output');
+                const timestamp = new Date().toLocaleTimeString();
+                output.innerHTML = `<div class="monitoring-entry error">[${timestamp}] Monitoring error: ${error.message}</div>` + output.innerHTML;
+            }
+        }, 5000); // Update every 5 seconds
+    }
+    
+    function stopSystemMonitoring() {
+        if (!isMonitoring) return;
+        
+        isMonitoring = false;
+        if (monitoringInterval) {
+            clearInterval(monitoringInterval);
+            monitoringInterval = null;
+        }
+        
+        document.getElementById('monitoring-status').textContent = 'Stopped';
+        document.getElementById('start-monitoring-btn').disabled = false;
+        document.getElementById('stop-monitoring-btn').disabled = true;
+    }
+    
+    function updateSystemMetrics(metrics) {
+        // Update CPU usage
+        const cpuUsage = metrics.cpu_usage || 0;
+        const cpuBar = document.getElementById('cpu-usage-bar');
+        const cpuText = document.getElementById('cpu-usage-text');
+        cpuBar.style.width = `${cpuUsage}%`;
+        cpuText.textContent = `${cpuUsage.toFixed(1)}%`;
+        
+        // Update Memory usage
+        const memoryUsage = metrics.memory_usage || 0;
+        const memoryBar = document.getElementById('memory-usage-bar');
+        const memoryText = document.getElementById('memory-usage-text');
+        memoryBar.style.width = `${memoryUsage}%`;
+        memoryText.textContent = `${memoryUsage.toFixed(1)}%`;
+        
+        // Update Disk usage
+        const diskUsage = metrics.disk_usage || 0;
+        const diskBar = document.getElementById('disk-usage-bar');
+        const diskText = document.getElementById('disk-usage-text');
+        diskBar.style.width = `${diskUsage}%`;
+        diskText.textContent = `${diskUsage.toFixed(1)}%`;
+        
+        // Update Network usage
+        const networkUsage = metrics.network_usage || 0;
+        const networkBar = document.getElementById('network-usage-bar');
+        const networkText = document.getElementById('network-usage-text');
+        networkBar.style.width = `${networkUsage}%`;
+        networkText.textContent = `${networkUsage.toFixed(1)}%`;
+    }
+    
+    function updateResourceUsage(resources) {
+        // Update memory details
+        if (resources.total_memory) {
+            document.getElementById('total-memory').textContent = formatBytes(resources.total_memory);
+        }
+        if (resources.used_memory) {
+            document.getElementById('used-memory').textContent = formatBytes(resources.used_memory);
+        }
+        if (resources.available_memory) {
+            document.getElementById('available-memory').textContent = formatBytes(resources.available_memory);
+        }
+        
+        // Update other resource details
+        if (resources.disk_space) {
+            document.getElementById('disk-space').textContent = resources.disk_space;
+        }
+        if (resources.process_count) {
+            document.getElementById('process-count').textContent = resources.process_count;
+        }
+        if (resources.load_average) {
+            document.getElementById('load-average').textContent = resources.load_average;
+        }
+    }
+    
+    function formatBytes(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Add event listeners for system monitoring buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        const startBtn = document.getElementById('start-monitoring-btn');
+        const stopBtn = document.getElementById('stop-monitoring-btn');
+        const refreshBtn = document.getElementById('refresh-metrics-btn');
+        
+        if (startBtn) {
+            startBtn.addEventListener('click', startSystemMonitoring);
+        }
+        if (stopBtn) {
+            stopBtn.addEventListener('click', stopSystemMonitoring);
+        }
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', async () => {
+                try {
+                    const [metricsResponse, resourcesResponse] = await Promise.all([
+                        fetch(`${apiUrl}/system/metrics`),
+                        fetch(`${apiUrl}/system/resources`)
+                    ]);
+                    
+                    if (metricsResponse.ok) {
+                        const metrics = await metricsResponse.json();
+                        updateSystemMetrics(metrics);
+                    }
+                    
+                    if (resourcesResponse.ok) {
+                        const resources = await resourcesResponse.json();
+                        updateResourceUsage(resources);
+                    }
+                } catch (error) {
+                    console.error('Failed to refresh metrics:', error);
+                }
+            });
+        }
+    });
 
     // Start the application
     initialize();

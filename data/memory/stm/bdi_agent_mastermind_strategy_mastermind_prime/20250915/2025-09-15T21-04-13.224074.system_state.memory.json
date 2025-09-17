@@ -1,0 +1,39 @@
+{
+  "timestamp": "2025-09-15T21:04:13.224074",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "content": {
+    "process_name": "bdi_deliberation",
+    "data": {
+      "selected_goal": {
+        "id": "b25c208f",
+        "goal": "Implement the following evolution: evolve augmentic.py",
+        "priority": 1,
+        "status": "pending",
+        "added_at": 1757995453.2167742,
+        "is_primary": true
+      },
+      "full_desire_queue": [
+        {
+          "id": "b25c208f",
+          "goal": "Implement the following evolution: evolve augmentic.py",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1757995453.2167742,
+          "is_primary": true
+        }
+      ]
+    }
+  },
+  "context": {
+    "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+    "run_id": "92d25720"
+  },
+  "tags": [
+    "bdi_deliberation",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "1e8d2753ab01edce"
+}

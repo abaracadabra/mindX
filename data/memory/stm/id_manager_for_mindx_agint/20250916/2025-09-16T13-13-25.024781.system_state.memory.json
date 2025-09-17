@@ -1,0 +1,21 @@
+{
+  "timestamp": "2025-09-16T13:13:25.024781",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "id_manager_for_mindx_agint",
+  "content": {
+    "process_name": "id_manager_address_not_found",
+    "data": {
+      "entity_id": "mindx_agint"
+    }
+  },
+  "context": {
+    "agent_id": "id_manager_for_mindx_agint"
+  },
+  "tags": [
+    "id_manager_address_not_found",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "897d8220250a9c7b"
+}

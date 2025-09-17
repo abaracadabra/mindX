@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-09-16T12:11:07.111800",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "resource_monitor",
+  "content": {
+    "process_name": "resource_alert",
+    "data": {
+      "type": "cpu",
+      "status": "ALERT",
+      "message": "High CPU usage detected: 85.1% > limit (85.0%)",
+      "value": 85.1,
+      "limit": 85.0
+    }
+  },
+  "context": {
+    "agent_id": "resource_monitor"
+  },
+  "tags": [
+    "resource_alert",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "ac81277efd66ced7"
+}

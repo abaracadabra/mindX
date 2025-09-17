@@ -1,0 +1,21 @@
+{
+  "timestamp": "2025-09-16T16:12:14.246439",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_agint",
+  "content": {
+    "process_name": "agint_orient_prompt",
+    "data": {
+      "prompt": "As an AI core, your directive is 'test'. Your chosen action is 'SELF_REPAIR'. Synthesize 'situational_awareness' from perception, especially 'last_action_failure_context'. Then formulate 'decision_details' for your action. Perception: {\"timestamp\": 1758064334.2421443}. Respond ONLY with JSON: {\"situational_awareness\": \"...\", \"decision_details\": {...}}"
+    }
+  },
+  "context": {
+    "agent_id": "mindx_agint"
+  },
+  "tags": [
+    "agint_orient_prompt",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "c36f1bb4198f84b0"
+}

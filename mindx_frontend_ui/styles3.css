@@ -1727,6 +1727,170 @@ details pre {
     background: linear-gradient(135deg, var(--corp-gold), var(--corp-orange));
 }
 
+/* System Monitoring Styles */
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.metric-item {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-glow);
+}
+
+.metric-label {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 12px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.metric-bar {
+    position: relative;
+    background: rgba(0, 0, 0, 0.5);
+    height: 20px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border-glow);
+}
+
+.metric-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--corp-green), var(--corp-cyan));
+    border-radius: 10px;
+    transition: width 0.3s ease;
+    position: relative;
+}
+
+.metric-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.metric-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--text-primary);
+    font-size: 11px;
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+}
+
+.resource-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.resource-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+    border: 1px solid var(--border-glow);
+}
+
+.resource-label {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.resource-value {
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.monitoring-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.monitoring-controls .btn {
+    padding: 8px 16px;
+    font-size: 12px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--corp-blue), var(--corp-cyan));
+    color: white;
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, var(--corp-red), #cc0000);
+    color: white;
+}
+
+.btn-info {
+    background: linear-gradient(135deg, var(--corp-green), #00cc66);
+    color: white;
+}
+
+.monitoring-controls .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.monitoring-status {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+    border: 1px solid var(--border-glow);
+}
+
+.monitoring-output {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border-glow);
+    border-radius: 5px;
+    padding: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+}
+
+.monitoring-entry {
+    margin-bottom: 5px;
+    padding: 2px 0;
+    color: var(--text-primary);
+}
+
+.monitoring-entry.error {
+    color: var(--corp-red);
+}
+
+.monitoring-entry:last-child {
+    margin-bottom: 0;
+}
+
 /* Responsive Design for MindX Control Panel */
 @media (max-width: 768px) {
     .evolution-controls {
@@ -1741,5 +1905,17 @@ details pre {
     
     .goals-list, .plans-list, .beliefs-list, .identities-list, .conversions-list, .interactions-list, .decisions-list {
         max-height: 150px;
+    }
+    
+    .metric-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .resource-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .monitoring-controls {
+        flex-direction: column;
     }
 }

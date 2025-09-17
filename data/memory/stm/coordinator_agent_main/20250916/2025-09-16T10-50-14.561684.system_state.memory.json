@@ -1,0 +1,33 @@
+{
+  "timestamp": "2025-09-16T10:50:14.561684",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "coordinator_agent_main",
+  "content": {
+    "process_name": "coordinator_interaction",
+    "data": {
+      "interaction_id": "inter_query_53742944",
+      "interaction_type": "query",
+      "content": "Query for mindX Coordinator (Augmentic Intelligence): What is the current status of the MindX system?",
+      "metadata": {},
+      "status": "completed",
+      "response": {
+        "status": "SUCCESS",
+        "response_text": "Error: Mistral API returned 400: {\"object\":\"error\",\"message\":\"Invalid model: default_model_for_mistral\",\"type\":\"invalid_model\",\"param\":null,\"code\":\"1500\"}"
+      },
+      "error": null,
+      "created_at": 1758045014.131902,
+      "completed_at": 1758045014.5522263
+    }
+  },
+  "context": {
+    "agent_id": "coordinator_agent_main",
+    "interaction_id": "inter_query_53742944"
+  },
+  "tags": [
+    "coordinator_interaction",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "c73544f1a3a4c3f5"
+}
