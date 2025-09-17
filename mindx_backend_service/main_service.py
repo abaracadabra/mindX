@@ -9,6 +9,10 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 import json
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Add project root to path to allow imports
 import sys
@@ -40,6 +44,7 @@ class DirectivePayload(BaseModel):
 class AGIntPayload(BaseModel):
     directive: str
     max_cycles: Optional[int] = 10
+    autonomous_mode: Optional[bool] = False
 
 class MistralTestPayload(BaseModel):
     test: str
@@ -210,6 +215,25 @@ async def agint_execute(payload: AGIntPayload):
             "error": str(e)
         }
 
+@app.post("/commands/agint/settings", summary="Configure AGInt settings")
+async def agint_settings(payload: AGIntPayload):
+    """Configure AGInt settings like max cycles and autonomous mode"""
+    try:
+        # This would typically store settings in a global state or database
+        # For now, we'll just return the settings that would be applied
+        return {
+            "message": "AGInt settings configured",
+            "max_cycles": payload.max_cycles,
+            "autonomous_mode": payload.autonomous_mode,
+            "success": True
+        }
+    except Exception as e:
+        logger.error(f"AGInt settings configuration failed: {e}", exc_info=True)
+        return {
+            "message": f"AGInt settings configuration failed: {str(e)}",
+            "success": False
+        }
+
 @app.post("/commands/agint/stream", summary="Execute AGInt with real-time streaming")
 async def agint_stream(payload: AGIntPayload):
     """Execute AGInt cognitive loop with real-time streaming of actions"""
@@ -249,6 +273,12 @@ async def agint_stream(payload: AGIntPayload):
                 coordinator_agent=command_handler.mastermind.coordinator_agent
             )
             
+            # Configure AGInt settings
+            if payload.max_cycles:
+                agint.set_max_cycles(payload.max_cycles)
+            if payload.autonomous_mode is not None:
+                agint.set_autonomous_mode(payload.autonomous_mode)
+            
             # Send initial status
             yield f"data: {json.dumps({'type': 'status', 'message': 'AGInt initialized', 'agent_id': agint.agent_id})}\n\n"
             
@@ -256,40 +286,114 @@ async def agint_stream(payload: AGIntPayload):
             agint.start(payload.directive)
             yield f"data: {json.dumps({'type': 'status', 'message': f'AGInt started with directive: {payload.directive}'})}\n\n"
             
-            # Monitor AGInt for a few cycles
+            # Monitor AGInt for a few cycles with verbose feedback
             for cycle in range(payload.max_cycles or 10):
-                await asyncio.sleep(2)  # Give AGInt time to process
+                try:
+                    await asyncio.sleep(2)  # Give AGInt time to process
+                except Exception as e:
+                    logger.error(f"Error in sleep: {e}")
+                    yield f"data: {json.dumps({'type': 'error', 'message': f'Sleep error: {str(e)}'})}\n\n"
+                    break
                 
                 # Get detailed AGInt state
-                current_status = agint.status.value
-                state_summary = agint.state_summary
-                last_action = agint.last_action_context
+                try:
+                    current_status = agint.status.value if agint.status else "UNKNOWN"
+                    state_summary = agint.state_summary if hasattr(agint, 'state_summary') and agint.state_summary else {}
+                    last_action = agint.last_action_context if hasattr(agint, 'last_action_context') else None
+                    logger.debug(f"Cycle {cycle}: current_status={current_status}, state_summary={state_summary}, last_action={last_action}")
+                except Exception as e:
+                    logger.error(f"Error getting AGInt state: {e}")
+                    yield f"data: {json.dumps({'type': 'error', 'message': f'State retrieval error: {str(e)}'})}\n\n"
+                    break
                 
                 # Send detailed cycle information
-                cycle_data = {
-                    'type': 'cycle',
-                    'cycle': cycle,
-                    'status': current_status,
-                    'awareness': state_summary.get('awareness', 'Processing...'),
-                    'llm_operational': state_summary.get('llm_operational', False),
-                    'last_action': last_action,
-                    'directive': payload.directive,
-                    'timestamp': time.time()
-                }
+                try:
+                    cycle_data = {
+                        'type': 'cycle',
+                        'cycle': cycle,
+                        'status': current_status,
+                        'awareness': state_summary.get('awareness', 'Processing...') if state_summary else 'Processing...',
+                        'llm_operational': state_summary.get('llm_operational', False) if state_summary else False,
+                        'last_action': last_action,
+                        'directive': payload.directive,
+                        'timestamp': time.time()
+                    }
+                except Exception as e:
+                    logger.error(f"Error creating cycle_data: {e}, state_summary={state_summary}, type={type(state_summary)}")
+                    yield f"data: {json.dumps({'type': 'error', 'message': f'Cycle data creation error: {str(e)}'})}\n\n"
+                    break
                 
-                yield f"data: {json.dumps(cycle_data)}\n\n"
+                try:
+                    yield f"data: {json.dumps(cycle_data)}\n\n"
+                except Exception as e:
+                    logger.error(f"Error serializing cycle_data: {e}, cycle_data: {cycle_data}")
+                    yield f"data: {json.dumps({'type': 'error', 'message': f'JSON serialization error: {str(e)}'})}\n\n"
                 
-                # Send specific P-O-D-A phase updates
+                # Send verbose P-O-D-A phase updates with actual actions
+                logger.debug(f"Processing cycle {cycle}, last_action: {last_action}, state_summary: {state_summary}")
                 if cycle == 0:
-                    yield f"data: {json.dumps({'type': 'phase', 'phase': 'PERCEPTION', 'message': 'Analyzing system state and directive...'})}\n\n"
+                    try:
+                        llm_status = "Operational" if state_summary and state_summary.get("llm_operational") else "Offline"
+                        details = f'Directive: "{payload.directive}" | System Status: {current_status} | LLM: {llm_status}'
+                        yield f'data: {json.dumps({"type": "verbose", "phase": "PERCEPTION", "message": "🔍 PERCEPTION: Analyzing system state and directive...", "details": details})}\n\n'
+                    except Exception as e:
+                        logger.error(f"Error in cycle 0 processing: {e}, state_summary: {state_summary}, type: {type(state_summary)}")
+                        yield f"data: {json.dumps({'type': 'error', 'message': f'Cycle 0 error: {str(e)}'})}\n\n"
                 elif cycle == 1:
-                    yield f"data: {json.dumps({'type': 'phase', 'phase': 'ORIENTATION', 'message': 'Evaluating options and constraints...'})}\n\n"
+                    try:
+                        awareness = state_summary.get("awareness", "Processing...") if state_summary else "Processing..."
+                        details = f'Awareness: {awareness} | Available Actions: BDI_DELEGATION, RESEARCH, SELF_REPAIR, COOLDOWN'
+                        yield f"data: {json.dumps({'type': 'verbose', 'phase': 'ORIENTATION', 'message': '🧠 ORIENTATION: Evaluating options and constraints...', 'details': details})}\n\n"
+                    except Exception as e:
+                        logger.error(f"Error in cycle 1 processing: {e}, state_summary: {state_summary}, type: {type(state_summary)}")
+                        yield f"data: {json.dumps({'type': 'error', 'message': f'Cycle 1 error: {str(e)}'})}\n\n"
                 elif cycle == 2:
-                    yield f"data: {json.dumps({'type': 'phase', 'phase': 'DECISION', 'message': 'Selecting optimal action strategy...'})}\n\n"
+                    try:
+                        decision_type = last_action.get("type", "Processing") if last_action and isinstance(last_action, dict) else "Processing"
+                        details_dict = last_action.get("details", {}) if last_action and isinstance(last_action, dict) else {}
+                        reasoning = details_dict.get("reason", "Evaluating options") if isinstance(details_dict, dict) else "Evaluating options"
+                        details = f'Decision: {decision_type} | Reasoning: {reasoning}'
+                        yield f"data: {json.dumps({'type': 'verbose', 'phase': 'DECISION', 'message': '⚡ DECISION: Selecting optimal action strategy...', 'details': details})}\n\n"
+                    except Exception as e:
+                        logger.error(f"Error in cycle 2 processing: {e}, last_action: {last_action}, type: {type(last_action)}")
+                        yield f"data: {json.dumps({'type': 'error', 'message': f'Cycle 2 error: {str(e)}'})}\n\n"
                 elif cycle == 3:
-                    yield f"data: {json.dumps({'type': 'phase', 'phase': 'ACTION', 'message': 'Executing cognitive task...'})}\n\n"
+                    action_type = last_action.get("type", "Processing") if last_action and isinstance(last_action, dict) else "Processing"
+                    success = last_action.get("success", "Unknown") if last_action and isinstance(last_action, dict) else "Unknown"
+                    result = str(last_action.get("result", "Processing"))[:200] if last_action and isinstance(last_action, dict) else "Processing"
+                    details = f'Action: {action_type} | Success: {success} | Result: {result}...'
+                    yield f"data: {json.dumps({'type': 'verbose', 'phase': 'ACTION', 'message': '🚀 ACTION: Executing cognitive task...', 'details': details})}\n\n"
                 else:
-                    yield f"data: {json.dumps({'type': 'phase', 'phase': 'ITERATION', 'message': f'Refining approach (cycle {cycle})...'})}\n\n"
+                    try:
+                        last_action_type = last_action.get("type", "None") if last_action and isinstance(last_action, dict) else "None"
+                        awareness = state_summary.get("awareness", "Processing...") if state_summary else "Processing..."
+                        details = f'Status: {current_status} | Last Action: {last_action_type} | Awareness: {awareness}'
+                        iteration_message = f'🔄 ITERATION: Refining approach (cycle {cycle})...'
+                        yield f"data: {json.dumps({'type': 'verbose', 'phase': 'ITERATION', 'message': iteration_message, 'details': details})}\n\n"
+                    except Exception as e:
+                        logger.error(f"Error in iteration processing: {e}, state_summary: {state_summary}, type: {type(state_summary)}")
+                        yield f"data: {json.dumps({'type': 'error', 'message': f'Iteration error: {str(e)}'})}\n\n"
+                
+                # Send verbose action details if available
+                try:
+                    if last_action and isinstance(last_action, dict) and last_action.get('type'):
+                        action_type = last_action.get('type')
+                        action_details = last_action.get('details', {})
+                        action_result = last_action.get('result', {})
+                        
+                        verbose_action = {
+                            'type': 'action_detail',
+                            'action_type': action_type,
+                            'details': action_details,
+                            'result': action_result,
+                            'success': last_action.get('success', False),
+                            'timestamp': time.time()
+                        }
+                        
+                        yield f"data: {json.dumps(verbose_action)}\n\n"
+                except Exception as e:
+                    logger.error(f"Error in action details processing: {e}, last_action: {last_action}")
+                    yield f"data: {json.dumps({'type': 'error', 'message': f'Action details error: {str(e)}'})}\n\n"
                 
                 # Check if AGInt is still running
                 if current_status != "RUNNING":
@@ -299,7 +403,14 @@ async def agint_stream(payload: AGIntPayload):
             await agint.stop()
             
             # Send final results
-            yield f"data: {json.dumps({'type': 'complete', 'status': agint.status.value, 'state_summary': agint.state_summary, 'last_action_context': agint.last_action_context})}\n\n"
+            try:
+                final_status = agint.status.value if agint.status else "UNKNOWN"
+                final_state_summary = agint.state_summary if hasattr(agint, 'state_summary') else {}
+                final_last_action = agint.last_action_context if hasattr(agint, 'last_action_context') else None
+                yield f"data: {json.dumps({'type': 'complete', 'status': final_status, 'state_summary': final_state_summary, 'last_action_context': final_last_action})}\n\n"
+            except Exception as e:
+                logger.error(f"Error in completion message: {e}")
+                yield f"data: {json.dumps({'type': 'error', 'message': f'Completion error: {str(e)}'})}\n\n"
             
         except Exception as e:
             logger.error(f"AGInt streaming failed: {e}", exc_info=True)

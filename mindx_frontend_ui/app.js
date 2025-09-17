@@ -374,6 +374,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
+            // Get cycle count and autonomous mode from controls
+            const cycleCount = parseInt(document.getElementById('cycle-count').value) || 8;
+            const autonomousMode = document.getElementById('evolve-autonomous-mode').checked;
+            
             addLog(`Starting AGInt cognitive loop with directive: ${directive}`, 'INFO');
             addAgentActivity('AGInt', `Starting cognitive loop: ${directive}`, 'info');
             
@@ -391,7 +395,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ directive, max_cycles: 10 })
+                    body: JSON.stringify({ 
+                        directive, 
+                        max_cycles: cycleCount,
+                        autonomous_mode: autonomousMode
+                    })
                 });
                 
                 if (!response.ok) {
@@ -417,6 +425,20 @@ document.addEventListener('DOMContentLoaded', () => {
                                 
                                 if (data.type === 'status') {
                                     addAgentActivity('AGInt', data.message, 'info');
+                                } else if (data.type === 'verbose') {
+                                    addAgentActivity('AGInt', `${data.message}`, 'info');
+                                    if (data.details) {
+                                        addAgentActivity('AGInt', `  └─ ${data.details}`, 'info');
+                                    }
+                                } else if (data.type === 'action_detail') {
+                                    addAgentActivity('AGInt', `🎯 ACTION DETAIL: ${data.action_type}`, 'info');
+                                    if (data.details && Object.keys(data.details).length > 0) {
+                                        addAgentActivity('AGInt', `  └─ Details: ${JSON.stringify(data.details)}`, 'info');
+                                    }
+                                    if (data.result && Object.keys(data.result).length > 0) {
+                                        addAgentActivity('AGInt', `  └─ Result: ${JSON.stringify(data.result)}`, 'info');
+                                    }
+                                    addAgentActivity('AGInt', `  └─ Success: ${data.success ? '✅' : '❌'}`, data.success ? 'success' : 'error');
                                 } else if (data.type === 'phase') {
                                     addAgentActivity('AGInt', `${data.phase}: ${data.message}`, 'info');
                                 } else if (data.type === 'cycle') {
@@ -427,6 +449,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 } else if (data.type === 'complete') {
                                     addLog(`AGInt completed: ${JSON.stringify(data)}`, 'SUCCESS');
                                     addAgentActivity('AGInt', 'Cognitive loop completed successfully', 'success');
+                                    
+                                    // Update AGInt response window with completion status
+                                    updateAGIntResponse(data, null);
                                     
                                     // Display final results
                                     let displayText = `AGInt Cognitive Loop Results:\n\n`;
@@ -463,7 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Reset button state
                 evolveBtn.disabled = false;
                 evolveBtn.textContent = 'Evolve';
-                hideAGIntResponseWindow();
+                // Don't auto-close the window - let user close manually
             }
         });
 
@@ -1366,8 +1391,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 background: rgba(0, 255, 136, 0.1);
             `;
             header.innerHTML = `
-                <h3 style="margin: 0; color: #00ff88; text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);">AGInt Cognitive Loop</h3>
-                <button id="close-agint-window" style="background: none; border: 1px solid #00ff88; color: #00ff88; padding: 5px 10px; cursor: pointer; border-radius: 3px;">Close</button>
+                <h3 style="margin: 0; color: #00ff88; text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);">AGInt Cognitive Loop</h3>                                                      
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span id="agint-status-indicator" style="font-size: 12px; color: #888;">Running...</span>
+                    <button id="copy-agint-output" style="background: linear-gradient(135deg, #00aa88, #008866); border: 1px solid #00aa88; color: white; padding: 8px 15px; cursor: pointer; border-radius: 5px; font-weight: bold; box-shadow: 0 2px 5px rgba(0, 170, 136, 0.3);">Copy Output</button>
+                    <button id="close-agint-window" style="background: linear-gradient(135deg, #ff4444, #cc0000); border: 1px solid #ff4444; color: white; padding: 8px 15px; cursor: pointer; border-radius: 5px; font-weight: bold; box-shadow: 0 2px 5px rgba(255, 68, 68, 0.3);">Close</button>                                                                     
+                </div>
             `;
             
             // Content area
@@ -1387,7 +1416,64 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.appendChild(agintResponseWindow);
             
             // Close button event
-            document.getElementById('close-agint-window').addEventListener('click', hideAGIntResponseWindow);
+            const closeBtn = document.getElementById('close-agint-window');
+            closeBtn.addEventListener('click', hideAGIntResponseWindow);
+            
+            // Copy button event
+            const copyBtn = document.getElementById('copy-agint-output');
+            copyBtn.addEventListener('click', function() {
+                const content = document.getElementById('agint-response-content');
+                if (content) {
+                    const text = content.innerText || content.textContent;
+                    navigator.clipboard.writeText(text).then(() => {
+                        // Show feedback
+                        const originalText = copyBtn.textContent;
+                        copyBtn.textContent = 'Copied!';
+                        copyBtn.style.background = 'linear-gradient(135deg, #00ff00, #00cc00)';
+                        setTimeout(() => {
+                            copyBtn.textContent = originalText;
+                            copyBtn.style.background = 'linear-gradient(135deg, #00aa88, #008866)';
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy text: ', err);
+                        // Fallback for older browsers
+                        const textArea = document.createElement('textarea');
+                        textArea.value = text;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                        
+                        const originalText = copyBtn.textContent;
+                        copyBtn.textContent = 'Copied!';
+                        copyBtn.style.background = 'linear-gradient(135deg, #00ff00, #00cc00)';
+                        setTimeout(() => {
+                            copyBtn.textContent = originalText;
+                            copyBtn.style.background = 'linear-gradient(135deg, #00aa88, #008866)';
+                        }, 2000);
+                    });
+                }
+            });
+            
+            // Add hover effects for close button
+            closeBtn.addEventListener('mouseenter', function() {
+                this.style.background = 'linear-gradient(135deg, #ff6666, #ff0000)';
+                this.style.transform = 'scale(1.05)';
+            });
+            closeBtn.addEventListener('mouseleave', function() {
+                this.style.background = 'linear-gradient(135deg, #ff4444, #cc0000)';
+                this.style.transform = 'scale(1)';
+            });
+            
+            // Add hover effects for copy button
+            copyBtn.addEventListener('mouseenter', function() {
+                this.style.background = 'linear-gradient(135deg, #00ccaa, #00aa88)';
+                this.style.transform = 'scale(1.05)';
+            });
+            copyBtn.addEventListener('mouseleave', function() {
+                this.style.background = 'linear-gradient(135deg, #00aa88, #008866)';
+                this.style.transform = 'scale(1)';
+            });
         }
         
             // Clear previous content
@@ -1395,8 +1481,16 @@ document.addEventListener('DOMContentLoaded', () => {
             content.innerHTML = `
                 <div style="color: #00ff88; text-align: center; padding: 20px;">
                     <h4 style="margin: 0 0 10px 0; color: #00ff88;">AGInt Cognitive Loop Starting...</h4>
-                    <div style="font-size: 12px; color: #888;">
+                    <div style="font-size: 12px; color: #888; margin-bottom: 15px;">
                         P-O-D-A Cycle: Perception → Orientation → Decision → Action
+                    </div>
+                    <div style="font-size: 11px; color: #666; background: rgba(0, 255, 136, 0.1); padding: 10px; border-radius: 5px; text-align: left;">
+                        <strong>Verbose Mode Active:</strong><br>
+                        🔍 PERCEPTION: System state analysis<br>
+                        🧠 ORIENTATION: Options evaluation<br>
+                        ⚡ DECISION: Strategy selection<br>
+                        🚀 ACTION: Task execution<br>
+                        🎯 DETAILS: Real-time action feedback
                     </div>
                 </div>
             `;
@@ -1409,12 +1503,43 @@ document.addEventListener('DOMContentLoaded', () => {
         const content = document.getElementById('agint-response-content');
         if (!content) return;
         
+        // Update status indicator
+        const statusIndicator = document.getElementById('agint-status-indicator');
+        if (statusIndicator) {
+            if (data.type === 'complete') {
+                statusIndicator.textContent = '✅ Completed';
+                statusIndicator.style.color = '#00ff88';
+            } else if (data.type === 'error') {
+                statusIndicator.textContent = '❌ Error';
+                statusIndicator.style.color = '#ff4444';
+            } else {
+                statusIndicator.textContent = '🔄 Running...';
+                statusIndicator.style.color = '#ffaa00';
+            }
+        }
+        
         const timestamp = new Date().toLocaleTimeString();
         let message = '';
         
         switch (data.type) {
             case 'status':
                 message = `[${timestamp}] STATUS: ${data.message}`;
+                break;
+            case 'verbose':
+                message = `[${timestamp}] ${data.message}`;
+                if (data.details) {
+                    message += `\n    └─ ${data.details}`;
+                }
+                break;
+            case 'action_detail':
+                message = `[${timestamp}] 🎯 ACTION: ${data.action_type}`;
+                if (data.details && Object.keys(data.details).length > 0) {
+                    message += `\n    └─ Details: ${JSON.stringify(data.details, null, 2)}`;
+                }
+                if (data.result && Object.keys(data.result).length > 0) {
+                    message += `\n    └─ Result: ${JSON.stringify(data.result, null, 2)}`;
+                }
+                message += `\n    └─ Success: ${data.success ? '✅' : '❌'}`;
                 break;
             case 'phase':
                 message = `[${timestamp}] ${data.phase}: ${data.message}`;
@@ -1429,7 +1554,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
             case 'complete':
-                message = `[${timestamp}] COMPLETE: ${data.status}`;
+                message = `[${timestamp}] ✅ COMPLETE: ${data.status}`;
+                if (data.state_summary) {
+                    message += `\n    └─ Awareness: ${data.state_summary.awareness || 'N/A'}`;
+                    message += `\n    └─ LLM Operational: ${data.state_summary.llm_operational ? 'Yes' : 'No'}`;
+                }
+                if (data.last_action_context) {
+                    message += `\n    └─ Final Action: ${JSON.stringify(data.last_action_context, null, 2)}`;
+                }
+                message += `\n\n🎉 AGInt Cognitive Loop Completed Successfully! 🎉`;
+                message += `\n\nClick the "Close" button above to close this window.`;
                 break;
             case 'error':
                 message = `[${timestamp}] ERROR: ${data.message}`;
@@ -1447,6 +1581,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.type === 'error') {
             borderColor = '#ff4444';
             bgColor = 'rgba(255, 68, 68, 0.1)';
+        } else if (data.type === 'verbose') {
+            borderColor = '#ffaa00';
+            bgColor = 'rgba(255, 170, 0, 0.15)';
+        } else if (data.type === 'action_detail') {
+            borderColor = '#ff6600';
+            bgColor = 'rgba(255, 102, 0, 0.15)';
         } else if (data.type === 'phase') {
             borderColor = '#ffaa00';
             bgColor = 'rgba(255, 170, 0, 0.1)';

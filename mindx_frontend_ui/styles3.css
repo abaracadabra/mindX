@@ -359,6 +359,48 @@ h2 {
     z-index: 2;
 }
 
+/* Evolve Controls */
+.evolve-controls {
+    display: flex;
+    gap: 20px;
+    margin: 15px 0;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.cycle-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cycle-control label {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.cycle-control input[type="number"] {
+    background: var(--darker-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 4px;
+    color: var(--text-primary);
+    padding: 8px 12px;
+    width: 80px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+}
+
+.cycle-control input[type="number"]:focus {
+    outline: none;
+    border-color: var(--corp-cyan);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+.evolve-controls .autonomous-control {
+    margin-left: auto;
+}
+
 textarea, input[type="text"] {
     width: 100%;
     padding: 15px;
