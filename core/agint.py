@@ -417,4 +417,3 @@ class AGInt:
         
         self.q_values[(state, decision_type)] = new_value
         logger.info(f"RL: Updated Q-value for ({state}, {decision_type}) to {new_value:.3f}")
-e
