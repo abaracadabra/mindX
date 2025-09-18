@@ -1,0 +1,24 @@
+{
+  "timestamp": "2025-09-17T00:26:06.307167",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_agint",
+  "content": {
+    "process_name": "agint_perception",
+    "data": {
+      "timestamp": 1758093966.2996728,
+      "llm_status": "Offline - Error: HEALTH_CHECK",
+      "llm_operational": false,
+      "llm_suggestion": "Check API keys and network"
+    }
+  },
+  "context": {
+    "agent_id": "mindx_agint"
+  },
+  "tags": [
+    "agint_perception",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "fd936a7a9996ad32"
+}

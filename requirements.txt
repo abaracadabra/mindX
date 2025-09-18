@@ -30,3 +30,5 @@ colorama>=0.4.0
 
 # Testing
 pytest>=7.0.0
+psutil>=5.9.0
+eth-account>=0.8.0

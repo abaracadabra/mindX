@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mindX Control Panel</title>
+    <link rel="stylesheet" href="styles3.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <h1>mindX Control Panel</h1>
+                <div class="github-link">
+                    <a href="https://github.com/abaracadabra/mindX" target="_blank" rel="noopener noreferrer">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                        </svg>
+                        <span>GitHub</span>
+                    </a>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="autonomous-control">
+                    <label class="autonomous-toggle">
+                        <input type="checkbox" id="autonomous-mode">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">AUTONOMOUS</span>
+                    </label>
+                </div>
+            <div id="status-light" class="status-light-red" title="Disconnected"></div>
+            </div>
+        </header>
+
+            <!-- Tab Navigation -->
+            <nav class="tab-navigation">
+                <div class="tab-row">
+                    <button class="tab-btn active" data-tab="control">Control</button>
+                    <button class="tab-btn" data-tab="agents">Agents</button>
+                    <button class="tab-btn" data-tab="system">System</button>
+                    <button class="tab-btn" data-tab="logs">Logs</button>
+                    <button class="tab-btn" data-tab="terminal">Terminal</button>
+                    <button class="tab-btn" data-tab="admin">Admin</button>
+                </div>
+                <div class="tab-row core-tabs">
+                    <div class="core-tabs-label">Core Components</div>
+                    <button class="tab-btn core-tab" data-tab="core">Core Systems</button>
+                    <button class="tab-btn core-tab" data-tab="evolution">Evolution</button>
+                    <button class="tab-btn core-tab" data-tab="learning">Learning</button>
+                    <button class="tab-btn core-tab" data-tab="orchestration">Orchestration</button>
+                </div>
+            </nav>
+
+        <!-- Control Tab -->
+        <div id="control-tab" class="tab-content active">
+            <div class="control-section">
+                <h2>Evolve Codebase</h2>
+                <textarea id="evolve-directive" placeholder="Enter a high-level directive for evolution..."></textarea>
+                <div class="evolve-controls">
+                    <div class="cycle-control">
+                        <label for="cycle-count">Max Cycles:</label>
+                        <input type="number" id="cycle-count" value="8" min="1" max="100">
+                    </div>
+                    <div class="autonomous-control">
+                        <label class="autonomous-toggle">
+                            <input type="checkbox" id="evolve-autonomous-mode">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Autonomous Mode</span>
+                        </label>
+                    </div>
+                </div>
+                <button id="evolve-btn">Evolve Codebase</button>
+            </div>
+            <div class="control-section">
+                <h2>Query Coordinator</h2>
+                <input type="text" id="query-input" placeholder="explain augmentic development">
+                <button id="query-btn">Send Query</button>
+            </div>
+            <div class="control-section">
+                <h2>System Commands</h2>
+                <div class="button-grid">
+                    <button id="status-btn">Check System Status</button>
+                    <button id="agents-btn">List Agents</button>
+                    <button id="tools-btn">List Tools</button>
+                    <button id="test-mistral-btn">Test Mistral API</button>
+                    <button id="analyze-btn">Analyze Codebase</button>
+                    <button id="replicate-btn">Trigger Replication</button>
+                    <button id="improve-btn">Request Improvement</button>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h2>Real-time Agent Activity</h2>
+                <div class="agent-activity-monitor">
+                    <div class="activity-header">
+                        <span class="activity-label">Live Agent Actions</span>
+                        <div class="activity-controls">
+                            <button id="pause-activity" class="control-btn">Pause</button>
+                            <button id="clear-activity" class="control-btn">Clear</button>
+                        </div>
+                    </div>
+                    <div id="agent-activity-log" class="activity-log"></div>
+                </div>
+            </div>
+            
+            <div class="response-section">
+                <h2>API Response</h2>
+                <pre id="response-output">Awaiting command...</pre>
+            </div>
+        </div>
+
+        <!-- Core Systems Tab -->
+        <div id="core-tab" class="tab-content">
+            <div class="control-section">
+                <h2>BDI Agent Status</h2>
+                <div id="bdi-status" class="system-status">
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <span class="status-label">BDI Agent:</span>
+                            <span id="bdi-agent-status" class="status-value">Loading...</span>
+                            <div id="bdi-status-indicator" class="status-indicator"></div>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Last Action:</span>
+                            <span id="bdi-last-action" class="status-value">None</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Active Goals:</span>
+                            <span id="bdi-goal-count" class="status-value">0</span>
+                        </div>
+                    </div>
+                    <div class="goals-section">
+                        <h3>Current Goals</h3>
+                        <div id="bdi-goals" class="goals-list"></div>
+                    </div>
+                    <div class="plans-section">
+                        <h3>Active Plans</h3>
+                        <div id="bdi-plans" class="plans-list"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Belief System</h2>
+                <div id="belief-system" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Belief Count:</span>
+                        <span id="belief-count" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Recent Beliefs:</span>
+                        <div id="recent-beliefs" class="beliefs-list"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>ID Manager</h2>
+                <div id="id-manager" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">ID Manager Status:</span>
+                        <span id="id-manager-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Active Identities:</span>
+                        <div id="active-identities" class="identities-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evolution Tab -->
+        <div id="evolution-tab" class="tab-content">
+            <div class="control-section">
+                <h2>Blueprint Agent</h2>
+                <div id="blueprint-agent" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Blueprint Agent Status:</span>
+                        <span id="blueprint-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Current Blueprint:</span>
+                        <div id="current-blueprint" class="blueprint-content"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Action Converter</h2>
+                <div id="action-converter" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Converter Status:</span>
+                        <span id="converter-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Recent Conversions:</span>
+                        <div id="recent-conversions" class="conversions-list"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Evolution Controls</h2>
+                <div class="evolution-controls">
+                    <button id="generate-blueprint-btn">Generate New Blueprint</button>
+                    <button id="execute-evolution-btn">Execute Evolution</button>
+                    <button id="analyze-system-btn">Analyze System</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Learning Tab -->
+        <div id="learning-tab" class="tab-content">
+            <div class="control-section">
+                <h2>Strategic Evolution Agent</h2>
+                <div id="strategic-evolution" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">SEA Status:</span>
+                        <span id="sea-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Learning Progress:</span>
+                        <div id="learning-progress" class="progress-bar"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Goal Management</h2>
+                <div id="goal-management" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Active Goals:</span>
+                        <div id="active-goals" class="goals-list"></div>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Completed Goals:</span>
+                        <div id="completed-goals" class="goals-list"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Plan Management</h2>
+                <div id="plan-management" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Current Plans:</span>
+                        <div id="current-plans" class="plans-list"></div>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Plan Execution Status:</span>
+                        <div id="plan-execution" class="execution-status"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orchestration Tab -->
+        <div id="orchestration-tab" class="tab-content">
+            <div class="control-section">
+                <h2>Mastermind Agent</h2>
+                <div id="mastermind-agent" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Mastermind Status:</span>
+                        <span id="mastermind-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Current Campaign:</span>
+                        <div id="current-campaign" class="campaign-info"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Coordinator Agent</h2>
+                <div id="coordinator-agent" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Coordinator Status:</span>
+                        <span id="coordinator-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Active Interactions:</span>
+                        <div id="active-interactions" class="interactions-list"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>CEO Agent</h2>
+                <div id="ceo-agent" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">CEO Status:</span>
+                        <span id="ceo-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Strategic Decisions:</span>
+                        <div id="strategic-decisions" class="decisions-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agents Tab -->
+        <div id="agents-tab" class="tab-content">
+            <div class="control-section">
+                <h2>Agent Management</h2>
+                <div class="agent-controls">
+                    <button id="refresh-agents-btn">Refresh Agents</button>
+                    <button id="create-agent-btn">Create Agent</button>
+                    <button id="delete-agent-btn">Delete Agent</button>
+                </div>
+                <div id="agents-list" class="agents-list"></div>
+            </div>
+            <div class="control-section">
+                <h2>Agent Details</h2>
+                <div id="agent-details" class="system-status">
+                    <p>Select an agent from the list to view details.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Tab -->
+        <div id="system-tab" class="tab-content">
+            <div class="control-section">
+                <h2>System Status</h2>
+                <div id="system-status" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">System Health:</span>
+                        <span id="system-health" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Uptime:</span>
+                        <span id="system-uptime" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Active Agents:</span>
+                        <span id="active-agents-count" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">LLM Provider:</span>
+                        <span id="llm-provider-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Mistral API:</span>
+                        <span id="mistral-api-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">AGInt Status:</span>
+                        <span id="agint-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Coordinator:</span>
+                        <span id="coordinator-status" class="status-value">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Performance Metrics</h2>
+                <div id="performance-metrics" class="performance-metrics">
+                    <div class="metric-grid">
+                        <div class="metric-item">
+                            <span class="metric-label">CPU Usage:</span>
+                            <div class="metric-bar">
+                                <div id="cpu-usage-bar" class="metric-fill"></div>
+                                <span id="cpu-usage-text" class="metric-text">0%</span>
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Memory Usage:</span>
+                            <div class="metric-bar">
+                                <div id="memory-usage-bar" class="metric-fill"></div>
+                                <span id="memory-usage-text" class="metric-text">0%</span>
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Disk Usage:</span>
+                            <div class="metric-bar">
+                                <div id="disk-usage-bar" class="metric-fill"></div>
+                                <span id="disk-usage-text" class="metric-text">0%</span>
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Network I/O:</span>
+                            <div class="metric-bar">
+                                <div id="network-usage-bar" class="metric-fill"></div>
+                                <span id="network-usage-text" class="metric-text">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Resource Usage</h2>
+                <div id="resource-usage" class="resource-usage">
+                    <div class="resource-grid">
+                        <div class="resource-item">
+                            <span class="resource-label">Total Memory:</span>
+                            <span id="total-memory" class="resource-value">Loading...</span>
+                        </div>
+                        <div class="resource-item">
+                            <span class="resource-label">Used Memory:</span>
+                            <span id="used-memory" class="resource-value">Loading...</span>
+                        </div>
+                        <div class="resource-item">
+                            <span class="resource-label">Available Memory:</span>
+                            <span id="available-memory" class="resource-value">Loading...</span>
+                        </div>
+                        <div class="resource-item">
+                            <span class="resource-label">Disk Space:</span>
+                            <span id="disk-space" class="resource-value">Loading...</span>
+                        </div>
+                        <div class="resource-item">
+                            <span class="resource-label">Process Count:</span>
+                            <span id="process-count" class="resource-value">Loading...</span>
+                        </div>
+                        <div class="resource-item">
+                            <span class="resource-label">Load Average:</span>
+                            <span id="load-average" class="resource-value">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Live System Monitoring</h2>
+                <div class="monitoring-controls">
+                    <button id="start-monitoring-btn" class="btn btn-primary">Start Monitoring</button>
+                    <button id="stop-monitoring-btn" class="btn btn-secondary">Stop Monitoring</button>
+                    <button id="refresh-metrics-btn" class="btn btn-info">Refresh Metrics</button>
+                </div>
+                <div id="live-monitoring" class="live-monitoring">
+                    <div class="monitoring-status">
+                        <span class="status-label">Monitoring Status:</span>
+                        <span id="monitoring-status" class="status-value">Stopped</span>
+                    </div>
+                    <div id="monitoring-output" class="monitoring-output"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div id="logs-tab" class="tab-content">
+            <div class="control-section">
+                <div class="logs-header">
+                    <h2>System Logs</h2>
+                    <button id="copy-logs-btn" class="copy-btn" title="Copy logs to clipboard">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6z"/>
+                            <path d="M2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1H2z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="log-controls">
+                    <button id="refresh-logs-btn">Refresh Logs</button>
+                    <button id="clear-logs-btn">Clear Logs</button>
+                    <select id="log-level-filter">
+                        <option value="all">All Levels</option>
+                        <option value="DEBUG">DEBUG</option>
+                        <option value="INFO">INFO</option>
+                        <option value="WARNING">WARNING</option>
+                        <option value="ERROR">ERROR</option>
+                        <option value="CRITICAL">CRITICAL</option>
+                    </select>
+                </div>
+                <div id="logs-output" class="logs-output"></div>
+            </div>
+        </div>
+
+        <!-- Terminal Tab -->
+        <div id="terminal-tab" class="tab-content">
+            <div class="control-section">
+                <h2>Terminal Output</h2>
+                <div class="terminal-controls">
+                    <button id="refresh-terminal-btn">Refresh Terminal</button>
+                    <button id="clear-terminal-btn">Clear Terminal</button>
+                    <button id="execute-command-btn">Execute Command</button>
+                </div>
+                <div id="terminal-output" class="logs-output"></div>
+                <div class="terminal-input">
+                    <input type="text" id="terminal-command" placeholder="Enter command...">
+                    <button id="send-command-btn">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Tab -->
+        <div id="admin-tab" class="tab-content">
+            <div class="control-section">
+                <h2>Admin Controls</h2>
+                <div class="admin-controls">
+                    <button id="restart-system-btn">Restart System</button>
+                    <button id="backup-system-btn">Backup System</button>
+                    <button id="update-config-btn">Update Config</button>
+                    <button id="export-logs-btn">Export Logs</button>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>System Configuration</h2>
+                <div id="config-display" class="config-display"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.MINDX_BACKEND_PORT = "8000";
+    </script>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+# Core MindX Project Focus - Ignore everything except essential components
+
+# Standard build/cache directories
+node_modules/
+build/
+dist/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.coverage
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Logs and temporary files
+*.log
+*.log.*
+temp/
+tmp/
+.tmp/
+logs/
+*.tmp
+*.temp
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.backup
+*.bak
+*_backup/
+*_backup.*
+backup/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Documentation that's not core
+docs/
+*.md
+!README.md
+
+# Ignore everything in these directories (except core components)
+agents/
+core/
+data/
+evolution/
+learning/
+llm/
+models/
+monitoring/
+orchestration/
+tools/
+utils/
+tests/
+scripts/
+
+# Ignore specific files
+augmentic*.py
+example_*.py
+test_*.py
+ollama_install.sh
+run_*.py
+start_*.py
+pyproject.toml
+requirements.txt
+
+# Ignore large data directories
+data/memory/
+data/logs/
+data/agent_workspaces/
+data/process_traces/
+
+# Ignore all data subdirectories
+data/*/
+
+# Ignore all Python cache
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# Ignore all test files
+**/test_*.py
+**/tests/
+**/*_test.py
+
+# Ignore API files except main server
+api/command_handler.py
+api/minimal_api_server.py
+api/mistral_api_server.py
+api/mistral_api.py
+api/optimized_api_server.py
+
+# Ignore frontend backup
+mindx_frontend_ui_backup/
+
+# Keep only these core directories and files:
+# - mindx_backend_service/
+# - mindx_frontend_ui/
+# - mindX.sh
+# - api/api_server.py (main API server only)
+# - README.md

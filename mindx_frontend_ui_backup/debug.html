@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindX Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #0a0a0a; color: #fff; }
+        .debug-section { margin: 20px 0; padding: 20px; border: 1px solid #00a8ff; background: rgba(15, 15, 25, 0.95); }
+        button { padding: 10px 20px; margin: 5px; background: #00a8ff; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #00d4ff; }
+        .result { margin-top: 10px; padding: 10px; background: rgba(0, 0, 0, 0.5); border: 1px solid #00a8ff; }
+        .tab-btn { background: #00a8ff; color: #fff; border: none; padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .tab-btn.active { background: #8b5cf6; }
+        .tab-content { display: none; padding: 20px; border: 1px solid #00a8ff; margin-top: 10px; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body>
+    <h1>MindX Frontend Debug</h1>
+    
+    <div class="debug-section">
+        <h2>JavaScript Test</h2>
+        <button id="js-test-btn">Test JavaScript</button>
+        <div id="js-result" class="result">Click to test JavaScript</div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>Tab Test</h2>
+        <button class="tab-btn active" data-tab="tab1">Tab 1</button>
+        <button class="tab-btn" data-tab="tab2">Tab 2</button>
+        <button class="tab-btn" data-tab="tab3">Tab 3</button>
+        <div id="tab1-tab" class="tab-content active">Tab 1 Content - This should show when Tab 1 is clicked</div>
+        <div id="tab2-tab" class="tab-content">Tab 2 Content - This should show when Tab 2 is clicked</div>
+        <div id="tab3-tab" class="tab-content">Tab 3 Content - This should show when Tab 3 is clicked</div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>API Test</h2>
+        <button id="api-test-btn">Test API Connection</button>
+        <div id="api-result" class="result">Click to test API</div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>Console Log</h2>
+        <div id="console-log" class="result">Check browser console for logs</div>
+    </div>
+
+    <script>
+        console.log('Debug page loaded');
+        
+        // JavaScript test
+        document.getElementById('js-test-btn').addEventListener('click', () => {
+            console.log('JavaScript test button clicked');
+            document.getElementById('js-result').textContent = 'JavaScript is working! Event listeners are functional.';
+        });
+        
+        // Tab switching test
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        console.log('Found tab buttons:', tabBtns.length);
+        console.log('Found tab contents:', tabContents.length);
+        
+        tabBtns.forEach((btn, index) => {
+            console.log(`Setting up tab button ${index}:`, btn.dataset.tab);
+            btn.addEventListener('click', () => {
+                console.log('Tab clicked:', btn.dataset.tab);
+                const tabName = btn.dataset.tab;
+                
+                // Remove active class from all tabs and contents
+                tabBtns.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                
+                // Add active class to clicked tab and corresponding content
+                btn.classList.add('active');
+                const targetContent = document.getElementById(`${tabName}-tab`);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                    console.log('Switched to tab:', tabName);
+                } else {
+                    console.error('Target content not found:', `${tabName}-tab`);
+                }
+            });
+        });
+        
+        // API test
+        document.getElementById('api-test-btn').addEventListener('click', async () => {
+            console.log('API test clicked');
+            try {
+                const response = await fetch('http://localhost:8000/system/status');
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('api-result').textContent = 'API Response: ' + JSON.stringify(data, null, 2);
+                } else {
+                    document.getElementById('api-result').textContent = 'API Error: ' + response.status + ' ' + response.statusText;
+                }
+            } catch (error) {
+                console.error('API Error:', error);
+                document.getElementById('api-result').textContent = 'API Error: ' + error.message;
+            }
+        });
+        
+        // Log to console
+        document.getElementById('console-log').textContent = 'Check browser console (F12) for detailed logs';
+        
+        console.log('All event listeners set up successfully');
+    </script>
+</body>
+</html>
+
+
+
+
