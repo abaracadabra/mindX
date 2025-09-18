@@ -292,6 +292,74 @@ def system_status():
         }
     }
 
+# Add AGInt streaming endpoint
+@app.post("/commands/agint/stream", summary="AGInt Cognitive Loop Stream")
+async def agint_stream(payload: DirectivePayload):
+    from fastapi.responses import StreamingResponse
+    import asyncio
+    import json
+    import time
+    
+    async def generate_agint_stream():
+        try:
+            # Simulate AGInt cognitive loop with P-O-D-A cycle
+            steps = [
+                {"phase": "PERCEPTION", "message": "System state analysis", "icon": "🔍"},
+                {"phase": "ORIENTATION", "message": "Options evaluation", "icon": "🧠"},
+                {"phase": "DECISION", "message": "Strategy selection", "icon": "⚡"},
+                {"phase": "ACTION", "message": "Task execution", "icon": "🚀"},
+                {"phase": "DETAILS", "message": "Real-time action feedback", "icon": "🎯"}
+            ]
+            
+            for i, step in enumerate(steps):
+                update = {
+                    "step": i + 1,
+                    "status": "processing",
+                    "type": "status",
+                    "phase": step["phase"],
+                    "icon": step["icon"],
+                    "message": step["message"],
+                    "timestamp": time.time(),
+                    "directive": payload.directive,
+                    "state_summary": {
+                        "llm_operational": True,
+                        "awareness": f"Processing directive: {payload.directive}",
+                        "llm_status": "Online",
+                        "cognitive_loop": "Active"
+                    }
+                }
+                yield f"data: {json.dumps(update)}\n\n"
+                await asyncio.sleep(1.0)  # Simulate processing time
+            
+            # Final completion message
+            final_update = {
+                "type": "complete",
+                "status": "success",
+                "phase": "COMPLETE",
+                "icon": "✅",
+                "message": "AGInt cognitive loop completed successfully",
+                "directive": payload.directive,
+                "state_summary": {
+                    "llm_operational": True,
+                    "awareness": f"Completed directive: {payload.directive}",
+                    "llm_status": "Online",
+                    "cognitive_loop": "Completed"
+                }
+            }
+            yield f"data: {json.dumps(final_update)}\n\n"
+            
+        except Exception as e:
+            error_response = {
+                "type": "error", 
+                "message": str(e), 
+                "status": "error",
+                "phase": "ERROR",
+                "icon": "❌"
+            }
+            yield f"data: {json.dumps(error_response)}\n\n"
+    
+    return StreamingResponse(generate_agint_stream(), media_type="text/plain")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
