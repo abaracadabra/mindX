@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindX Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        button { padding: 10px 20px; margin: 5px; }
+        .result { margin-top: 10px; padding: 10px; background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>MindX Frontend Test</h1>
+    
+    <div class="test-section">
+        <h2>Tab Test</h2>
+        <button class="tab-btn" data-tab="test1">Test Tab 1</button>
+        <button class="tab-btn" data-tab="test2">Test Tab 2</button>
+        <div id="test1-tab" class="tab-content active">Tab 1 Content</div>
+        <div id="test2-tab" class="tab-content">Tab 2 Content</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Button Test</h2>
+        <button id="test-btn">Test Button</button>
+        <div id="test-result" class="result">Click the button to test</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>API Test</h2>
+        <button id="api-btn">Test API</button>
+        <div id="api-result" class="result">Click to test API</div>
+    </div>
+
+    <script>
+        console.log('Test page loaded');
+        
+        // Tab switching test
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                console.log('Tab clicked:', btn.dataset.tab);
+                const tabName = btn.dataset.tab;
+                
+                // Remove active class from all tabs and contents
+                tabBtns.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                
+                // Add active class to clicked tab and corresponding content
+                btn.classList.add('active');
+                document.getElementById(`${tabName}-tab`).classList.add('active');
+                
+                document.getElementById('test-result').textContent = `Switched to ${tabName}`;
+            });
+        });
+        
+        // Button test
+        document.getElementById('test-btn').addEventListener('click', () => {
+            console.log('Test button clicked');
+            document.getElementById('test-result').textContent = 'Button clicked successfully!';
+        });
+        
+        // API test
+        document.getElementById('api-btn').addEventListener('click', async () => {
+            console.log('API test clicked');
+            try {
+                const response = await fetch('http://localhost:8000/system/status');
+                const data = await response.json();
+                document.getElementById('api-result').textContent = 'API Response: ' + JSON.stringify(data);
+            } catch (error) {
+                document.getElementById('api-result').textContent = 'API Error: ' + error.message;
+            }
+        });
+        
+        console.log('Event listeners set up');
+    </script>
+</body>
+</html>
+
+
+
+

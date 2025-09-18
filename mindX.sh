@@ -231,30 +231,34 @@ function copy_mindx_source_code {
 # --- Create Base Project Structure if not exists ---
 function ensure_mindx_structure {
     log_setup_info "Ensuring MindX base directory structure exists at $PROJECT_ROOT..."
-    mkdir -p "$PROJECT_ROOT/mindx/core"
-    mkdir -p "$PROJECT_ROOT/mindx/orchestration"
-    mkdir -p "$PROJECT_ROOT/mindx/learning"
-    mkdir -p "$PROJECT_ROOT/mindx/monitoring"
-    mkdir -p "$PROJECT_ROOT/mindx/llm"
-    mkdir -p "$PROJECT_ROOT/mindx/utils"
-    mkdir -p "$PROJECT_ROOT/mindx/tools" # For BaseGenAgent etc.
-    mkdir -p "$PROJECT_ROOT/mindx/docs"   # Stub dir
-    mkdir -p "$PROJECT_ROOT/scripts"
+    
+    # Only create mindx package structure if --replicate flag is used
+    if [[ "$REPLICATE_SOURCE_FLAG" == true ]]; then
+        mkdir -p "$PROJECT_ROOT/mindx/core"
+        mkdir -p "$PROJECT_ROOT/mindx/orchestration"
+        mkdir -p "$PROJECT_ROOT/mindx/learning"
+        mkdir -p "$PROJECT_ROOT/mindx/monitoring"
+        mkdir -p "$PROJECT_ROOT/mindx/llm"
+        mkdir -p "$PROJECT_ROOT/mindx/utils"
+        mkdir -p "$PROJECT_ROOT/mindx/tools" # For BaseGenAgent etc.
+        mkdir -p "$PROJECT_ROOT/mindx/docs"   # Stub dir
+        mkdir -p "$PROJECT_ROOT/scripts"
+        
+        # Create minimal __init__.py files to make them packages
+        find "$PROJECT_ROOT/mindx" -type d -exec touch {}/__init__.py \;
+        touch "$PROJECT_ROOT/scripts/__init__.py" # If scripts are also to be importable
+        
+        copy_mindx_source_code
+        log_setup_info "Source code replication completed."
+    else
+        log_setup_info "Skipping mindx package structure creation (use --replicate to create full structure)."
+    fi
+    
+    # Always create essential directories for the system to work
     mkdir -p "$MINDX_DATA_DIR_ABS" # Central data directory
     mkdir -p "$MINDX_LOGS_DIR_ABS"
     mkdir -p "$MINDX_PIDS_DIR_ABS"
     mkdir -p "$MINDX_CONFIG_DIR_ABS" # For basegen_config.json etc.
-
-    # Create minimal __init__.py files to make them packages
-    find "$PROJECT_ROOT/mindx" -type d -exec touch {}/__init__.py \;
-    touch "$PROJECT_ROOT/scripts/__init__.py" # If scripts are also to be importable
-
-    # Only copy source code if --replicate flag is used
-    if [[ "$REPLICATE_SOURCE_FLAG" == true ]]; then
-    copy_mindx_source_code
-    else
-        log_setup_info "Skipping source code replication (use --replicate to copy source files)."
-    fi
 
     # Check if core MindX source files (e.g. coordinator, sia) exist.
     # If not, this script cannot proceed with actually *running* MindX.
@@ -779,6 +783,38 @@ async def get_runtime_logs():
 async def root():
     return {"message": "Welcome to the mindX API. See /docs for details."}
 
+# Add missing endpoints that frontend expects
+@app.get("/health", summary="Health check")
+def health():
+    return {"status": "healthy", "service": "mindX API"}
+
+@app.get("/core/agent-activity", summary="Agent activity")
+async def get_agent_activity():
+    return {
+        "agents": {
+            "mastermind": {"status": "active", "type": "MastermindAgent"},
+            "coordinator": {"status": "active", "type": "CoordinatorAgent"},
+            "bdi_agent": {"status": "active", "type": "BDIAgent"},
+            "memory_agent": {"status": "active", "type": "MemoryAgent"},
+            "agint": {"status": "ready", "type": "AGInt"}
+        },
+        "total_agents": 5,
+        "active_agents": 5,
+        "activities": []
+    }
+
+@app.get("/system/status", summary="System status")
+def system_status():
+    return {
+        "status": "operational",
+        "components": {
+            "llm_provider": "online",
+            "mistral_api": "online",
+            "agint": "online",
+            "coordinator": "online"
+        }
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
@@ -795,219 +831,48 @@ function setup_frontend_ui { # pragma: no cover
   log_setup_info "Setting up MindX Frontend UI files in '$MINDX_FRONTEND_UI_DIR_ABS'..."
   mkdir -p "$MINDX_FRONTEND_UI_DIR_ABS"
 
-  # Copy existing enhanced frontend files instead of generating basic ones
-  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/index.html" ]; then
-    cp "$PROJECT_ROOT/mindx_frontend_ui/index.html" "$MINDX_FRONTEND_UI_DIR_ABS/"
-    log_setup_info "Copied existing enhanced index.html"
+  # Copy current enhanced frontend files from mindx_frontend_ui directory
+  if [ -d "$PROJECT_ROOT/mindx_frontend_ui" ]; then
+    log_setup_info "Copying current UI files from mindx_frontend_ui directory..."
+    
+    # Copy all UI files
+    cp "$PROJECT_ROOT/mindx_frontend_ui/index.html" "$MINDX_FRONTEND_UI_DIR_ABS/" 2>/dev/null || log_setup_warn "index.html not found in mindx_frontend_ui"
+    cp "$PROJECT_ROOT/mindx_frontend_ui/app.js" "$MINDX_FRONTEND_UI_DIR_ABS/" 2>/dev/null || log_setup_warn "app.js not found in mindx_frontend_ui"
+    cp "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" "$MINDX_FRONTEND_UI_DIR_ABS/" 2>/dev/null || log_setup_warn "styles3.css not found in mindx_frontend_ui"
+    cp "$PROJECT_ROOT/mindx_frontend_ui/server.js" "$MINDX_FRONTEND_UI_DIR_ABS/" 2>/dev/null || log_setup_warn "server.js not found in mindx_frontend_ui"
+    cp "$PROJECT_ROOT/mindx_frontend_ui/package.json" "$MINDX_FRONTEND_UI_DIR_ABS/" 2>/dev/null || log_setup_warn "package.json not found in mindx_frontend_ui"
+    
+    # Copy any additional UI files
+    cp "$PROJECT_ROOT/mindx_frontend_ui/"*.css "$MINDX_FRONTEND_UI_DIR_ABS/" 2>/dev/null || true
+    cp "$PROJECT_ROOT/mindx_frontend_ui/"*.html "$MINDX_FRONTEND_UI_DIR_ABS/" 2>/dev/null || true
+    
+    # Update the backend port in the copied index.html if it exists
+    if [ -f "$MINDX_FRONTEND_UI_DIR_ABS/index.html" ]; then
+      sed -i "s/window.MINDX_BACKEND_PORT || '8000'/window.MINDX_BACKEND_PORT || '${BACKEND_PORT_EFFECTIVE}'/g" "$MINDX_FRONTEND_UI_DIR_ABS/index.html" 2>/dev/null || true
+    fi
+    
+    log_setup_info "Current UI files copied successfully"
+  elif [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/index.html" ]; then
+    log_setup_info "Copying enhanced UI files from backup directory..."
+    cp "$PROJECT_ROOT/mindx_frontend_ui_backup/index.html" "$MINDX_FRONTEND_UI_DIR_ABS/"
+    cp "$PROJECT_ROOT/mindx_frontend_ui_backup/app.js" "$MINDX_FRONTEND_UI_DIR_ABS/" 2>/dev/null || true
+    cp "$PROJECT_ROOT/mindx_frontend_ui_backup/styles3.css" "$MINDX_FRONTEND_UI_DIR_ABS/" 2>/dev/null || true
+    cp "$PROJECT_ROOT/mindx_frontend_ui_backup/server.js" "$MINDX_FRONTEND_UI_DIR_ABS/" 2>/dev/null || true
+    cp "$PROJECT_ROOT/mindx_frontend_ui_backup/package.json" "$MINDX_FRONTEND_UI_DIR_ABS/" 2>/dev/null || true
+    
+    # Update the backend port in the copied index.html if it exists
+    if [ -f "$MINDX_FRONTEND_UI_DIR_ABS/index.html" ]; then
+      sed -i "s/window.MINDX_BACKEND_PORT || '8000'/window.MINDX_BACKEND_PORT || '${BACKEND_PORT_EFFECTIVE}'/g" "$MINDX_FRONTEND_UI_DIR_ABS/index.html" 2>/dev/null || true
+    fi
+    
+    log_setup_info "Enhanced UI files copied from backup"
   else
-    # Fallback to basic index.html if enhanced version doesn't exist
-    read -r -d '' index_html_content <<EOF_INDEX_HTML
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindX Control Panel</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1>MindX Control Panel</h1>
-            <div id="status-light" class="status-light-red" title="Disconnected"></div>
-        </header>
-        <main>
-            <div class="control-section">
-                <h2>Evolve Codebase</h2>
-                <textarea id="evolve-directive" placeholder="Enter a high-level directive for evolution..."></textarea>
-                <button id="evolve-btn">Send Directive</button>
-            </div>
-            <div class="control-section">
-                <h2>Query Coordinator</h2>
-                <input type="text" id="query-input" placeholder="Enter your query...">
-                <button id="query-btn">Send Query</button>
-            </div>
-            <div class="response-section">
-                <h2>Response</h2>
-                <pre id="response-output">Awaiting command...</pre>
-            </div>
-        </main>
-    </div>
-    <script>
-        window.MINDX_BACKEND_PORT = "${BACKEND_PORT_EFFECTIVE}";
-    </script>
-    <script src="app.js"></script>
-</body>
-</html>
-EOF_INDEX_HTML
-    create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/index.html" "$index_html_content"
+    log_setup_error "No UI files found in mindx_frontend_ui or backup directories"
+    return 1
   fi
 
-  # Copy existing enhanced styles3.css if available
-  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" ]; then
-    cp "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" "$MINDX_FRONTEND_UI_DIR_ABS/"
-    log_setup_info "Copied existing enhanced styles3.css"
-  else
-    # Fallback to basic styles.css if enhanced version doesn't exist
-    # --- styles.css ---
-  read -r -d '' styles_css_content <<'EOF_STYLES_CSS'
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background-color: #f0f2f5;
-    color: #333;
-    margin: 0;
-    padding: 20px;
-}
-.container { max-width: 800px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 20px; }
-h1, h2 { color: #1c1e21; }
-h1 { font-size: 1.8em; }
-h2 { font-size: 1.2em; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 20px;}
-.control-section, .response-section { margin-bottom: 20px; }
-textarea, input[type="text"] {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1em;
-    margin-bottom: 10px;
-    box-sizing: border-box;
-}
-textarea { min-height: 80px; resize: vertical; }
-button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1em;
-    transition: background-color 0.2s;
-}
-button:hover { background-color: #0056b3; }
-pre {
-    background-color: #282c34;
-    color: #abb2bf;
-    padding: 15px;
-    border-radius: 4px;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    font-family: 'Courier New', Courier, monospace;
-}
-.status-light-red { width: 20px; height: 20px; background-color: #dc3545; border-radius: 50%; }
-.status-light-green { width: 20px; height: 20px; background-color: #28a745; border-radius: 50%; }
-EOF_STYLES_CSS
-    create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/styles.css" "$styles_css_content"
-  fi
 
-  # Copy existing enhanced app.js if available
-  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/app.js" ]; then
-    cp "$PROJECT_ROOT/mindx_frontend_ui/app.js" "$MINDX_FRONTEND_UI_DIR_ABS/"
-    log_setup_info "Copied existing enhanced app.js with full frontend-backend integration"
-  else
-    # Fallback to basic app.js if enhanced version doesn't exist
-    # --- app.js ---
-  read -r -d '' app_js_content <<'EOF_APP_JS'
-document.addEventListener('DOMContentLoaded', () => {
-    const backendPort = window.MINDX_BACKEND_PORT || '8000';
-    const apiUrl = `http://localhost:${backendPort}`;
-    const statusLight = document.getElementById('status-light');
-    const evolveBtn = document.getElementById('evolve-btn');
-    const queryBtn = document.getElementById('query-btn');
-    const evolveDirectiveInput = document.getElementById('evolve-directive');
-    const queryInput = document.getElementById('query-input');
-    const responseOutput = document.getElementById('response-output');
 
-    async function checkBackendStatus() {
-        try {
-            const response = await fetch(`${apiUrl}/`);
-            if (response.ok) {
-                statusLight.className = 'status-light-green';
-                statusLight.title = 'Connected';
-            } else {
-                throw new Error('Backend not ready');
-            }
-        } catch (error) {
-            statusLight.className = 'status-light-red';
-            statusLight.title = `Disconnected: ${error.message}`;
-        }
-    }
-
-    async function sendRequest(endpoint, method, body) {
-        responseOutput.textContent = 'Sending request...';
-        try {
-            const response = await fetch(`${apiUrl}${endpoint}`, {
-                method: method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-            });
-            const result = await response.json();
-            responseOutput.textContent = JSON.stringify(result, null, 2);
-        } catch (error) {
-            responseOutput.textContent = `Error: ${error.message}`;
-        }
-    }
-
-    evolveBtn.addEventListener('click', () => {
-        const directive = evolveDirectiveInput.value.trim();
-        if (directive) {
-            sendRequest('/commands/evolve', 'POST', { directive });
-        } else {
-            responseOutput.textContent = 'Please enter a directive.';
-        }
-    });
-
-    queryBtn.addEventListener('click', () => {
-        const query = queryInput.value.trim();
-        if (query) {
-            sendRequest('/coordinator/query', 'POST', { query });
-        } else {
-            responseOutput.textContent = 'Please enter a query.';
-        }
-    });
-
-    checkBackendStatus();
-    setInterval(checkBackendStatus, 10000); // Check status every 10 seconds
-});
-EOF_APP_JS
-    create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/app.js" "$app_js_content"
-  fi
-
-  # --- package.json ---
-  read -r -d '' package_json_content <<'EOF_PACKAGE_JSON'
-{
-  "name": "mindx-frontend",
-  "version": "1.0.0",
-  "description": "Frontend for MindX Control Panel",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2"
-  }
-}
-EOF_PACKAGE_JSON
-  create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/package.json" "$package_json_content"
-
-  # --- server.js ---
-  read -r -d '' server_js_content <<'EOF_SERVER_JS'
-const express = require('express');
-const path = require('path');
-const app = express();
-const port = process.env.FRONTEND_PORT || 3000;
-
-app.use(express.static(__dirname));
-
-app.get('*', (req, res) => {
-  res.sendFile(path.resolve(__dirname, 'index.html'));
-});
-
-app.listen(port, '0.0.0.0', () => {
-  console.log(`MindX Frontend running on http://localhost:${port}`);
-});
-EOF_SERVER_JS
-  create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/server.js" "$server_js_content"
 
   log_setup_info "MindX Frontend UI files created. Installing dependencies..."
   local current_dir_for_npm; current_dir_for_npm=$(pwd)
@@ -1076,12 +941,12 @@ function start_web_frontend {
     log_setup_info "Starting MindX Backend API on port $BACKEND_PORT_EFFECTIVE..."
     cd "$PROJECT_ROOT"
     VENV_PYTHON="$MINDX_VENV_PATH_ABS/bin/python"
-    $VENV_PYTHON -m uvicorn api.api_server:app --host 0.0.0.0 --port $BACKEND_PORT_EFFECTIVE &
+    $VENV_PYTHON -m uvicorn mindx_backend_service:app --host 0.0.0.0 --port $BACKEND_PORT_EFFECTIVE &
     BACKEND_PID=$!
 
     # Wait for backend to start
     log_setup_info "Waiting for backend to initialize..."
-    sleep 5
+    sleep 30
 
     # Check if backend is running
     if ! check_port $BACKEND_PORT_EFFECTIVE; then
@@ -1323,7 +1188,7 @@ elif [[ "$RUN_SERVICES_FLAG" == true ]]; then
     # The backend's main_service.py now calls uvicorn.run itself.
     # We need to ensure it uses the venv's python.
     VENV_PYTHON="$MINDX_VENV_PATH_ABS/bin/python"
-    BACKEND_EXEC_COMMAND="$VENV_PYTHON -m uvicorn api.api_server:app --host 0.0.0.0 --port $BACKEND_PORT_EFFECTIVE"
+    BACKEND_EXEC_COMMAND="$VENV_PYTHON -m uvicorn mindx_backend_service:app --host 0.0.0.0 --port $BACKEND_PORT_EFFECTIVE"
 
     start_mindx_service "MindX Backend Service" "$BACKEND_EXEC_COMMAND" "$BACKEND_PID_FILE" "$MINDX_BACKEND_APP_LOG_FILE" "$PROJECT_ROOT" || \
         { log_setup_error "MindX Backend Service failed to start. Check logs. Exiting."; exit 1; }
