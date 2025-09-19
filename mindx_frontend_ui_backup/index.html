@@ -298,7 +298,12 @@
                 <div class="agent-controls">
                     <button id="refresh-agents-btn">Refresh Agents</button>
                     <button id="create-agent-btn">Create Agent</button>
-                    <button id="delete-agent-btn">Delete Agent</button>
+                    <button id="delete-agent-btn" class="delete-btn" disabled>Delete Agent</button>
+                </div>
+                <div class="agent-tabs">
+                    <button class="agent-tab-btn active" data-agent-tab="system">System Agents</button>
+                    <button class="agent-tab-btn" data-agent-tab="user">User Agents</button>
+                    <button class="agent-tab-btn" data-agent-tab="all">All Agents</button>
                 </div>
                 <div id="agents-list" class="agents-list"></div>
             </div>
