@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # AGENTIC_MINDX_DEPLOY_V2.0.0
 # Production-focused setup and (conceptual) service preparation for MindX.
 # This script aims to be robust and configurable for deploying the MindX system.
@@ -900,12 +899,13 @@ function setup_frontend_ui { # pragma: no cover
   mkdir -p "$MINDX_FRONTEND_UI_DIR_ABS"
 
   # Copy existing enhanced frontend files instead of generating basic ones
-  if [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/index.html" ]; then
+  # Priority: Current UI first, then backup, then fallback
+  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/index.html" ]; then
+    cp "$PROJECT_ROOT/mindx_frontend_ui/index.html" "$MINDX_FRONTEND_UI_DIR_ABS/"
+    log_setup_info "Copied current enhanced index.html from mindx_frontend_ui"
+  elif [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/index.html" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui_backup/index.html" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied enhanced index.html from backup"
-  elif [ -f "$PROJECT_ROOT/mindx_frontend_ui/index.html" ]; then
-    cp "$PROJECT_ROOT/mindx_frontend_ui/index.html" "$MINDX_FRONTEND_UI_DIR_ABS/"
-    log_setup_info "Copied existing enhanced index.html"
   else
     # Fallback to basic index.html if enhanced version doesn't exist
     read -r -d '' index_html_content <<EOF_INDEX_HTML
@@ -951,12 +951,13 @@ EOF_INDEX_HTML
   fi
 
   # Copy existing enhanced styles3.css if available
-  if [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/styles3.css" ]; then
+  # Priority: Current UI first, then backup, then fallback
+  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" ]; then
+    cp "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" "$MINDX_FRONTEND_UI_DIR_ABS/"
+    log_setup_info "Copied current enhanced styles3.css from mindx_frontend_ui"
+  elif [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/styles3.css" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui_backup/styles3.css" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied enhanced styles3.css from backup"
-  elif [ -f "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" ]; then
-    cp "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" "$MINDX_FRONTEND_UI_DIR_ABS/"
-    log_setup_info "Copied existing enhanced styles3.css"
   else
     # Fallback to basic styles.css if enhanced version doesn't exist
     # --- styles.css ---
@@ -1011,12 +1012,13 @@ EOF_STYLES_CSS
   fi
 
   # Copy existing enhanced app.js if available
-  if [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/app.js" ]; then
+  # Priority: Current UI first, then backup, then fallback
+  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/app.js" ]; then
+    cp "$PROJECT_ROOT/mindx_frontend_ui/app.js" "$MINDX_FRONTEND_UI_DIR_ABS/"
+    log_setup_info "Copied current enhanced app.js from mindx_frontend_ui with full frontend-backend integration"
+  elif [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/app.js" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui_backup/app.js" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied enhanced app.js from backup"
-  elif [ -f "$PROJECT_ROOT/mindx_frontend_ui/app.js" ]; then
-    cp "$PROJECT_ROOT/mindx_frontend_ui/app.js" "$MINDX_FRONTEND_UI_DIR_ABS/"
-    log_setup_info "Copied existing enhanced app.js with full frontend-backend integration"
   else
     # Fallback to basic app.js if enhanced version doesn't exist
     # --- app.js ---
@@ -1086,6 +1088,15 @@ EOF_APP_JS
     create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/app.js" "$app_js_content"
   fi
 
+  # Copy existing package.json if available
+  # Priority: Current UI first, then backup, then fallback
+  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/package.json" ]; then
+    cp "$PROJECT_ROOT/mindx_frontend_ui/package.json" "$MINDX_FRONTEND_UI_DIR_ABS/"
+    log_setup_info "Copied current package.json from mindx_frontend_ui"
+  elif [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/package.json" ]; then
+    cp "$PROJECT_ROOT/mindx_frontend_ui_backup/package.json" "$MINDX_FRONTEND_UI_DIR_ABS/"
+    log_setup_info "Copied package.json from backup"
+  else
   # --- package.json ---
   read -r -d '' package_json_content <<'EOF_PACKAGE_JSON'
 {
@@ -1101,10 +1112,20 @@ EOF_APP_JS
   }
 }
 EOF_PACKAGE_JSON
-  create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/package.json" "$package_json_content"
+    create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/package.json" "$package_json_content"
+  fi
 
-  # --- server.js ---
-  read -r -d '' server_js_content <<'EOF_SERVER_JS'
+  # Copy existing server.js if available
+  # Priority: Current UI first, then backup, then fallback
+  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/server.js" ]; then
+    cp "$PROJECT_ROOT/mindx_frontend_ui/server.js" "$MINDX_FRONTEND_UI_DIR_ABS/"
+    log_setup_info "Copied current server.js from mindx_frontend_ui"
+  elif [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/server.js" ]; then
+    cp "$PROJECT_ROOT/mindx_frontend_ui_backup/server.js" "$MINDX_FRONTEND_UI_DIR_ABS/"
+    log_setup_info "Copied server.js from backup"
+  else
+    # --- server.js ---
+    read -r -d '' server_js_content <<'EOF_SERVER_JS'
 const express = require('express');
 const path = require('path');
 const app = express();
@@ -1120,16 +1141,17 @@ app.listen(port, '0.0.0.0', () => {
   console.log(`MindX Frontend running on http://localhost:${port}`);
 });
 EOF_SERVER_JS
-  create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/server.js" "$server_js_content"
+    create_or_overwrite_file "$MINDX_FRONTEND_UI_DIR_ABS/server.js" "$server_js_content"
+  fi
 
   log_setup_info "MindX Frontend UI files created. Checking dependencies..."
   local current_dir_for_npm; current_dir_for_npm=$(pwd)
   cd "$MINDX_FRONTEND_UI_DIR_ABS" || { log_setup_error "Failed to cd to frontend dir for npm install."; return 1; }
   if [ -f "package.json" ]; then
     if [ ! -d "node_modules" ]; then
-      log_setup_info "Running 'npm install' for frontend..."
-      npm install --silent >> "$MINDX_FRONTEND_APP_LOG_FILE" 2>&1 || { log_setup_error "npm install failed for frontend. Check $MINDX_FRONTEND_APP_LOG_FILE."; cd "$current_dir_for_npm" || exit 1; return 1; }
-      log_setup_info "Frontend dependencies installed."
+    log_setup_info "Running 'npm install' for frontend..."
+    npm install --silent >> "$MINDX_FRONTEND_APP_LOG_FILE" 2>&1 || { log_setup_error "npm install failed for frontend. Check $MINDX_FRONTEND_APP_LOG_FILE."; cd "$current_dir_for_npm" || exit 1; return 1; }
+    log_setup_info "Frontend dependencies installed."
     else
       log_setup_info "Frontend dependencies already installed, skipping npm install."
     fi

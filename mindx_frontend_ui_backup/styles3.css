@@ -1970,8 +1970,231 @@ details pre {
     font-weight: 600;
 }
 
+/* Agent Management Styles */
+.agent-tabs {
+    display: flex;
+    gap: 8px;
+    margin: 15px 0;
+    border-bottom: 1px solid rgba(0, 168, 255, 0.2);
+    padding-bottom: 10px;
+}
+
+.agent-tab-btn {
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(0, 168, 255, 0.3);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.agent-tab-btn:hover {
+    background: rgba(0, 168, 255, 0.1);
+    border-color: var(--corp-blue);
+    color: var(--text-primary);
+}
+
+.agent-tab-btn.active {
+    background: rgba(0, 168, 255, 0.2);
+    border-color: var(--corp-blue);
+    color: var(--corp-cyan);
+    box-shadow: 0 0 10px rgba(0, 168, 255, 0.3);
+}
+
+.agents-list {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid rgba(0, 168, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.agent-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(0, 168, 255, 0.1);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.agent-item:hover {
+    background: rgba(0, 168, 255, 0.1);
+}
+
+.agent-item.selected {
+    background: rgba(0, 168, 255, 0.2);
+    border-left: 3px solid var(--corp-blue);
+}
+
+.agent-item:last-child {
+    border-bottom: none;
+}
+
+.agent-info {
+    flex: 1;
+}
+
+.agent-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.agent-type {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+}
+
+.agent-status {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 500;
+}
+
+.agent-status.active {
+    background: rgba(0, 255, 136, 0.2);
+    color: var(--corp-green);
+}
+
+.agent-status.inactive {
+    background: rgba(255, 71, 87, 0.2);
+    color: var(--corp-red);
+}
+
+.agent-status.system {
+    background: rgba(139, 92, 246, 0.2);
+    color: var(--corp-purple);
+}
+
+.agent-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.agent-action-btn {
+    padding: 4px 8px;
+    background: rgba(0, 168, 255, 0.2);
+    border: 1px solid var(--corp-blue);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.agent-action-btn:hover {
+    background: rgba(0, 168, 255, 0.3);
+}
+
+.agent-action-btn.delete-btn {
+    background: rgba(255, 71, 87, 0.2);
+    border-color: var(--corp-red);
+    color: var(--corp-red);
+}
+
+.agent-action-btn.delete-btn:hover {
+    background: rgba(255, 71, 87, 0.3);
+}
+
+.agent-action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.agent-details {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid rgba(0, 168, 255, 0.2);
+}
+
+.agent-detail-section {
+    margin-bottom: 20px;
+}
+
+.agent-detail-section h3 {
+    color: var(--corp-cyan);
+    font-size: 16px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(0, 168, 255, 0.2);
+    padding-bottom: 5px;
+}
+
+.agent-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.agent-detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.agent-detail-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.agent-detail-value {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.agent-capabilities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.capability-tag {
+    padding: 3px 8px;
+    background: rgba(0, 168, 255, 0.1);
+    border: 1px solid rgba(0, 168, 255, 0.3);
+    border-radius: 12px;
+    font-size: 10px;
+    color: var(--corp-blue);
+}
+
+.system-agent-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    background: rgba(139, 92, 246, 0.2);
+    border: 1px solid var(--corp-purple);
+    border-radius: 3px;
+    font-size: 9px;
+    color: var(--corp-purple);
+    font-weight: 600;
+    margin-left: 8px;
+}
+
 @media (max-width: 768px) {
     .system-status {
         grid-template-columns: 1fr;
+    }
+    
+    .agent-tabs {
+        flex-direction: column;
+    }
+    
+    .agent-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .agent-actions {
+        align-self: flex-end;
     }
 }

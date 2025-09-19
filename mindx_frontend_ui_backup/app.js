@@ -11,7 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let logs = [];
     let terminalHistory = [];
     let agents = [];
+    let systemAgents = [];
+    let userAgents = [];
     let selectedAgent = null;
+    let currentAgentTab = 'system';
     let agintResponseWindow = null;
     
     // DOM elements
@@ -42,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteAgentBtn = document.getElementById('delete-agent-btn');
     const agentsList = document.getElementById('agents-list');
     const agentDetails = document.getElementById('agent-details');
+    const agentTabBtns = document.querySelectorAll('.agent-tab-btn');
     
     // System tab elements
     const systemStatus = document.getElementById('system-status');
@@ -791,10 +795,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // Agents Tab Functions
     function initializeAgentsTab() {
         refreshAgentsBtn.addEventListener('click', loadAgents);
-        
         createAgentBtn.addEventListener('click', createAgent);
-        
         deleteAgentBtn.addEventListener('click', deleteAgent);
+        
+        // Initialize agent tab switching
+        agentTabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabType = btn.getAttribute('data-agent-tab');
+                switchAgentTab(tabType);
+            });
+        });
+        
+        // Initial display
+        displayAgents();
+    }
+    
+    function switchAgentTab(tabType) {
+        currentAgentTab = tabType;
+        
+        // Update tab button states
+        agentTabBtns.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.getAttribute('data-agent-tab') === tabType) {
+                btn.classList.add('active');
+            }
+        });
+        
+        // Update agents list based on tab
+        displayAgents();
     }
 
     async function loadAgents() {
@@ -989,21 +1017,49 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayAgents() {
-        if (agents.length === 0) {
-            agentsList.innerHTML = '<p>No agents available</p>';
+        let agentsToShow = [];
+        
+        // Filter agents based on current tab
+        switch (currentAgentTab) {
+            case 'system':
+                agentsToShow = systemAgents;
+                break;
+            case 'user':
+                agentsToShow = userAgents;
+                break;
+            case 'all':
+                agentsToShow = [...systemAgents, ...userAgents];
+                break;
+            default:
+                agentsToShow = agents;
+        }
+        
+        if (agentsToShow.length === 0) {
+            agentsList.innerHTML = `<p>No ${currentAgentTab} agents available</p>`;
             return;
         }
 
-        agentsList.innerHTML = agents.map((agent, index) => {
+        agentsList.innerHTML = agentsToShow.map((agent, index) => {
             const agentId = agent.id || agent.name || `Agent ${index}`;
             const agentType = agent.type || 'Unknown';
             const isSelected = selectedAgent === agentId ? 'selected' : '';
+            const statusClass = agent.status === 'active' ? 'active' : 'inactive';
+            const systemBadge = agent.isSystem ? '<span class="system-agent-badge">SYSTEM</span>' : '';
+            const canDelete = !agent.isSystem && agent.createdBy !== 'system';
             
             return `
                 <div class="agent-item ${isSelected}" data-agent-id="${agentId}">
                     <div class="agent-info">
-                        <h4>${agentId}</h4>
-                        <p>Type: ${agentType}</p>
+                        <div class="agent-name">
+                            ${agent.name || agentId}
+                            ${systemBadge}
+                        </div>
+                        <div class="agent-type">${agentType}</div>
+                        <div class="agent-status ${statusClass}">${agent.status || 'Unknown'}</div>
+                    </div>
+                    <div class="agent-actions">
+                        <button class="agent-action-btn" onclick="selectAgent('${agentId}')">View</button>
+                        ${canDelete ? `<button class="agent-action-btn delete-btn" onclick="deleteAgent('${agentId}')">Delete</button>` : ''}
                     </div>
                 </div>
             `;
@@ -1011,7 +1067,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Add click listeners to agent items
         agentsList.querySelectorAll('.agent-item').forEach(item => {
-            item.addEventListener('click', () => {
+            item.addEventListener('click', (e) => {
+                // Don't trigger if clicking on action buttons
+                if (e.target.classList.contains('agent-action-btn')) {
+                    return;
+                }
                 const agentId = item.getAttribute('data-agent-id');
                 selectAgent(agentId);
             });
@@ -1025,22 +1085,70 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayAgentDetails(agentId) {
-        const agent = agents.find(a => (a.id || a.name) === agentId);
+        const agent = [...systemAgents, ...userAgents].find(a => (a.id || a.name) === agentId);
         if (!agent) {
             agentDetails.innerHTML = '<p>Agent not found</p>';
             return;
         }
 
+        const capabilities = agent.capabilities ? agent.capabilities.map(cap => 
+            `<span class="capability-tag">${cap}</span>`
+        ).join('') : '';
+
         agentDetails.innerHTML = `
-            <h3>${agentId}</h3>
-            <div class="agent-detail">
-                <strong>Type:</strong> ${agent.type || 'Unknown'}
-            </div>
-            <div class="agent-detail">
-                <strong>Status:</strong> ${agent.status || 'Unknown'}
-            </div>
-            <div class="agent-detail">
-                <strong>Details:</strong> ${JSON.stringify(agent, null, 2)}
+            <div class="agent-details">
+                <div class="agent-detail-section">
+                    <h3>Agent Information</h3>
+                    <div class="agent-detail-grid">
+                        <div class="agent-detail-item">
+                            <span class="agent-detail-label">Name</span>
+                            <span class="agent-detail-value">${agent.name || agentId}</span>
+                        </div>
+                        <div class="agent-detail-item">
+                            <span class="agent-detail-label">Type</span>
+                            <span class="agent-detail-value">${agent.type || 'Unknown'}</span>
+                        </div>
+                        <div class="agent-detail-item">
+                            <span class="agent-detail-label">Status</span>
+                            <span class="agent-detail-value">${agent.status || 'Unknown'}</span>
+                        </div>
+                        <div class="agent-detail-item">
+                            <span class="agent-detail-label">Created By</span>
+                            <span class="agent-detail-value">${agent.createdBy || 'Unknown'}</span>
+                        </div>
+                        <div class="agent-detail-item">
+                            <span class="agent-detail-label">Last Activity</span>
+                            <span class="agent-detail-value">${agent.lastActivity || 'Unknown'}</span>
+                        </div>
+                        <div class="agent-detail-item">
+                            <span class="agent-detail-label">System Agent</span>
+                            <span class="agent-detail-value">${agent.isSystem ? 'Yes' : 'No'}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="agent-detail-section">
+                    <h3>Description</h3>
+                    <p>${agent.description || 'No description available'}</p>
+                </div>
+                
+                <div class="agent-detail-section">
+                    <h3>Capabilities</h3>
+                    <div class="agent-capabilities">
+                        ${capabilities || '<span class="capability-tag">No capabilities listed</span>'}
+                    </div>
+                </div>
+                
+                <div class="agent-detail-section">
+                    <h3>Actions</h3>
+                    <div class="agent-actions">
+                        <button class="agent-action-btn" onclick="refreshAgentStatus('${agentId}')">Refresh Status</button>
+                        ${!agent.isSystem && agent.createdBy !== 'system' ? 
+                            `<button class="agent-action-btn delete-btn" onclick="deleteAgent('${agentId}')">Delete Agent</button>` : 
+                            '<span class="agent-detail-value" style="color: var(--corp-purple); font-size: 12px;">System agents cannot be deleted</span>'
+                        }
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -1048,36 +1156,92 @@ document.addEventListener('DOMContentLoaded', () => {
     async function createAgent() {
         const agentType = prompt('Enter agent type:', 'simple_coder');
         const agentId = prompt('Enter agent ID:', `agent_${Date.now()}`);
+        const agentName = prompt('Enter agent name:', `User Agent ${Date.now()}`);
         
-        if (agentType && agentId) {
+        if (agentType && agentId && agentName) {
             try {
+                const newAgent = {
+                    id: agentId,
+                    name: agentName,
+                    type: agentType,
+                    status: 'active',
+                    isSystem: false,
+                    capabilities: ['User Created'],
+                    description: `User-created agent of type ${agentType}`,
+                    createdBy: 'user',
+                    lastActivity: 'Just created'
+                };
+                
                 await sendRequest('/agents', 'POST', {
                     agent_type: agentType,
                     agent_id: agentId,
                     config: {}
                 });
-                addLog(`Agent ${agentId} created successfully`, 'INFO');
-                loadAgents();
+                addLog(`Agent ${agentName} created successfully`, 'INFO');
+                
+                // Add to user agents
+                userAgents.push(newAgent);
+                agents = [...systemAgents, ...userAgents];
+                
+                displayAgents();
+                showResponse(`Agent ${agentName} created successfully`);
             } catch (error) {
                 addLog(`Failed to create agent: ${error.message}`, 'ERROR');
+                showResponse(`Failed to create agent: ${error.message}`);
             }
         }
     }
+    
+    function refreshAgentStatus(agentId) {
+        const agent = [...systemAgents, ...userAgents].find(a => (a.id || a.name) === agentId);
+        if (agent) {
+            // Simulate status refresh
+            agent.lastActivity = new Date().toLocaleTimeString();
+            displayAgentDetails(agentId);
+            addLog(`Refreshed status for agent ${agent.name || agentId}`, 'INFO');
+        }
+    }
 
-    async function deleteAgent() {
-        if (!selectedAgent) {
+    async function deleteAgent(agentId = null) {
+        const targetAgentId = agentId || selectedAgent;
+        if (!targetAgentId) {
             showResponse('Please select an agent to delete');
             return;
         }
+
+        // Find the agent to check if it can be deleted
+        const agent = [...systemAgents, ...userAgents].find(a => (a.id || a.name) === targetAgentId);
+        if (!agent) {
+            addLog('Agent not found', 'ERROR');
+            return;
+        }
+
+        // Check if it's a system agent
+        if (agent.isSystem || agent.createdBy === 'system') {
+            addLog('System agents cannot be deleted', 'WARNING');
+            showResponse('System agents cannot be deleted. Only user-created agents can be removed.');
+            return;
+        }
         
-        if (confirm(`Are you sure you want to delete agent ${selectedAgent}?`)) {
+        if (confirm(`Are you sure you want to delete agent ${agent.name || targetAgentId}?`)) {
             try {
-                await sendRequest(`/agents/${selectedAgent}`, 'DELETE');
-                addLog(`Agent ${selectedAgent} deleted successfully`, 'INFO');
-                selectedAgent = null;
-                loadAgents();
+                await sendRequest(`/agents/${targetAgentId}`, 'DELETE');
+                addLog(`Agent ${agent.name || targetAgentId} deleted successfully`, 'INFO');
+                
+                // Remove from user agents
+                userAgents = userAgents.filter(a => (a.id || a.name) !== targetAgentId);
+                agents = [...systemAgents, ...userAgents];
+                
+                if (selectedAgent === targetAgentId) {
+                    selectedAgent = null;
+                }
+                
+                displayAgents();
+                agentDetails.innerHTML = '<p>Select an agent from the list to view details.</p>';
+                showResponse(`Agent ${agent.name || targetAgentId} deleted successfully`);
             } catch (error) {
                 addLog(`Failed to delete agent: ${error.message}`, 'ERROR');
+                showResponse(`Failed to delete agent: ${error.message}`);
             }
         }
     }
@@ -1429,7 +1593,238 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Initialize system agents data
+    function initializeSystemAgents() {
+        systemAgents = [
+            {
+                id: 'memory_agent',
+                name: 'Memory Agent',
+                type: 'Core System',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['Memory Management', 'Timestamped Storage', 'JSON Operations'],
+                description: 'Enhanced MemoryAgent with timestamped memory capabilities and ujson library for faster JSON operations',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'id_manager_agent',
+                name: 'ID Manager Agent',
+                type: 'Core System',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['Identity Management', 'Wallet Creation', 'Secure Key Storage'],
+                description: 'Manages cryptographic identities and Ethereum-compatible wallets with secure central key store',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'guardian_agent',
+                name: 'Guardian Agent',
+                type: 'Security',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['Security Monitoring', 'Access Control', 'Threat Detection'],
+                description: 'Security guardian providing system protection and access control',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'model_selector',
+                name: 'Model Selector',
+                type: 'LLM Management',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['Model Selection', 'Capability Matching', 'Performance Optimization'],
+                description: 'Intelligent model selection based on capability matching, success rate, latency, and cost factors',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'model_registry',
+                name: 'Model Registry',
+                type: 'LLM Management',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['Model Registration', 'Provider Management', 'Handler Creation'],
+                description: 'Registry managing LLM providers (Gemini, Mistral) and their handlers',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'coordinator_agent',
+                name: 'Coordinator Agent',
+                type: 'Orchestration',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['Task Coordination', 'Heavy Task Management', 'Agent Registration'],
+                description: 'Central coordinator managing task distribution and agent interactions with concurrency limits',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'performance_monitor',
+                name: 'Performance Monitor',
+                type: 'Monitoring',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['Performance Metrics', 'Periodic Saving', 'System Analysis'],
+                description: 'Monitors system performance with periodic metrics saving and analysis',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'resource_monitor',
+                name: 'Resource Monitor',
+                type: 'Monitoring',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['Resource Monitoring', 'CPU/Memory Tracking', 'Alert Management'],
+                description: 'Real-time resource monitoring with CPU, memory, and disk threshold management',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'mastermind_agent',
+                name: 'Mastermind Agent',
+                type: 'Orchestration',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['Code Generation', 'BDI Management', 'Strategic Planning'],
+                description: 'Mastermind agent with CodeBaseGenerator and BDI action handlers for system orchestration',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'automindx_agent',
+                name: 'AutoMINDX Agent',
+                type: 'AI Assistant',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['iNFT Capabilities', 'Avatar Support', 'A2A Protocol'],
+                description: 'Advanced AI assistant with iNFT capabilities, avatar support, and A2A protocol compliance',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'bdi_agent',
+                name: 'BDI Agent',
+                type: 'Core System',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['Belief Management', 'Desire Processing', 'Intention Execution'],
+                description: 'Belief-Desire-Intention agent with enhanced simple coder and comprehensive system access',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'enhanced_simple_coder',
+                name: 'Enhanced Simple Coder',
+                type: 'Development',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['Code Generation', 'Sandbox Management', 'Comprehensive Coding'],
+                description: 'Enhanced coding agent with comprehensive capabilities and sandbox environment',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'comprehensive_system_access_tool',
+                name: 'Comprehensive System Access Tool',
+                type: 'System Tool',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['Full System Access', 'File Operations', 'Process Management'],
+                description: 'Tool providing comprehensive system access for BDI agent operations',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'strategic_evolution_agent',
+                name: 'Strategic Evolution Agent',
+                type: 'Learning',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['Strategic Planning', 'System Evolution', 'Reasoning'],
+                description: 'Strategic Evolution Agent for mastermind with Mistral-based core reasoning',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'system_analyzer_tool',
+                name: 'System Analyzer Tool',
+                type: 'Analysis',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['System Analysis', 'Monitoring Integration', 'Coordinator Integration'],
+                description: 'System analysis tool with integrated monitoring capabilities via Coordinator',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'base_gen_agent',
+                name: 'Base Generation Agent',
+                type: 'Code Generation',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['Code Generation', 'File Management', 'Configuration Handling'],
+                description: 'Base generation agent for code creation with configurable file size limits',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'blueprint_agent',
+                name: 'Blueprint Agent',
+                type: 'Evolution',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['Blueprint Generation', 'System Design', 'Architecture Planning'],
+                description: 'Blueprint agent for system architecture and design planning',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'blueprint_to_action_converter',
+                name: 'Blueprint to Action Converter',
+                type: 'Evolution',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['Blueprint Conversion', 'Action Generation', 'Implementation Planning'],
+                description: 'Converts blueprints into actionable implementation plans',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'plan_management',
+                name: 'Plan Management',
+                type: 'Learning',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['Plan Management', 'Execution Control', 'Parallel Processing'],
+                description: 'Plan manager for Strategic Evolution Agent with execution control',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            },
+            {
+                id: 'optimized_audit_gen_agent',
+                name: 'Optimized Audit Generation Agent',
+                type: 'Audit',
+                status: 'active',
+                isSystem: true,
+                capabilities: ['Audit Generation', 'System Analysis', 'Performance Optimization'],
+                description: 'Optimized audit generation agent with file size and chunk management',
+                createdBy: 'system',
+                lastActivity: 'Active'
+            }
+        ];
+        
+        // Initialize with system agents
+        agents = [...systemAgents];
+        userAgents = [];
+    }
+
     function initialize() {
+        initializeSystemAgents();
         initializeTabs();
         initializeControlTab();
         initializeEvolutionTab();
