@@ -161,6 +161,23 @@ function create_or_overwrite_file { # pragma: no cover
     local file_path_abs="$1"; local content="$2"; local perms="${3:-644}" # Default to 644 for non-sensitive files
     local dir_path_abs; dir_path_abs=$(dirname "$file_path_abs")
     if ! mkdir -p "$dir_path_abs"; then log_setup_error "Failed to create directory: $dir_path_abs"; exit 1; fi
+    
+    # Check if file exists and has been customized
+    if [ -f "$file_path_abs" ]; then
+        # Check for signs of customization (AGInt enhancements, cycle count support, etc.)
+        if grep -q "max_cycles.*Optional\[int\]" "$file_path_abs" 2>/dev/null || \
+           grep -q "cycle_start" "$file_path_abs" 2>/dev/null || \
+           grep -q "code_changes" "$file_path_abs" 2>/dev/null || \
+           grep -q "updateAGIntResponse" "$file_path_abs" 2>/dev/null; then
+            log_setup_info "File $file_path_abs appears to be customized. Preserving existing file."
+            return 0
+        else
+            log_setup_info "File $file_path_abs exists but appears to be default. Will update."
+        fi
+    else
+        log_setup_info "File $file_path_abs does not exist. Creating new file."
+    fi
+    
     log_setup_info "Creating/Overwriting file: $file_path_abs with permissions $perms"
     # Write content first
     if [ -n "$content" ]; then
@@ -176,6 +193,23 @@ function create_or_overwrite_file_secure { # pragma: no cover
     local file_path_abs="$1"; local content="$2"; local perms="${3:-600}" # Default to 600 for sensitive files
     local dir_path_abs; dir_path_abs=$(dirname "$file_path_abs")
     if ! mkdir -p "$dir_path_abs"; then log_setup_error "Failed to create directory: $dir_path_abs"; exit 1; fi
+    
+    # Check if file exists and has been customized
+    if [ -f "$file_path_abs" ]; then
+        # Check for signs of customization (AGInt enhancements, cycle count support, etc.)
+        if grep -q "max_cycles.*Optional\[int\]" "$file_path_abs" 2>/dev/null || \
+           grep -q "cycle_start" "$file_path_abs" 2>/dev/null || \
+           grep -q "code_changes" "$file_path_abs" 2>/dev/null || \
+           grep -q "updateAGIntResponse" "$file_path_abs" 2>/dev/null; then
+            log_setup_info "File $file_path_abs appears to be customized. Preserving existing file."
+            return 0
+        else
+            log_setup_info "File $file_path_abs exists but appears to be default. Will update."
+        fi
+    else
+        log_setup_info "File $file_path_abs does not exist. Creating new file."
+    fi
+    
     log_setup_info "Creating/Overwriting file: $file_path_abs with permissions $perms"
     # Write content first
     if [ -n "$content" ]; then

@@ -31,6 +31,8 @@ logger = get_logger(__name__)
 
 class DirectivePayload(BaseModel):
     directive: str
+    max_cycles: Optional[int] = 8
+    autonomous_mode: Optional[bool] = False
 
 class AnalyzeCodebasePayload(BaseModel):
     path: str
@@ -302,8 +304,12 @@ async def agint_stream(payload: DirectivePayload):
     
     async def generate_agint_stream():
         try:
+            # Get cycle count from payload, default to 8
+            max_cycles = getattr(payload, 'max_cycles', 8)
+            autonomous_mode = getattr(payload, 'autonomous_mode', False)
+            
             # Simulate AGInt cognitive loop with P-O-D-A cycle
-            steps = [
+            base_steps = [
                 {"phase": "PERCEPTION", "message": "System state analysis", "icon": "🔍"},
                 {"phase": "ORIENTATION", "message": "Options evaluation", "icon": "🧠"},
                 {"phase": "DECISION", "message": "Strategy selection", "icon": "⚡"},
@@ -311,39 +317,139 @@ async def agint_stream(payload: DirectivePayload):
                 {"phase": "DETAILS", "message": "Real-time action feedback", "icon": "🎯"}
             ]
             
-            for i, step in enumerate(steps):
-                update = {
-                    "step": i + 1,
+            # Generate code changes simulation
+            code_changes = [
+                {
+                    "file": "augmentic.py",
+                    "type": "modification",
+                    "changes": [
+                        {"line": 45, "old": "def old_function():", "new": "def enhanced_function():"},
+                        {"line": 67, "old": "    return basic_result", "new": "    return optimized_result"},
+                        {"line": 89, "old": "# TODO: Add error handling", "new": "try:\n        # Enhanced error handling\n        pass\nexcept Exception as e:\n        logger.error(f'Error: {e}')"}
+                    ]
+                },
+                {
+                    "file": "core/agent.py",
+                    "type": "addition",
+                    "changes": [
+                        {"line": 123, "old": "", "new": "def new_agent_method(self):\n    \"\"\"New method for enhanced agent functionality\"\"\"\n    return self.process_enhanced_logic()"}
+                    ]
+                },
+                {
+                    "file": "utils/helpers.py",
+                    "type": "deletion",
+                    "changes": [
+                        {"line": 34, "old": "def deprecated_function():", "new": ""},
+                        {"line": 35, "old": "    # This function is no longer needed", "new": ""}
+                    ]
+                }
+            ]
+            
+            step_count = 0
+            
+            for cycle in range(max_cycles):
+                cycle_start_time = time.time()
+                
+                # Send cycle start notification
+                cycle_update = {
+                    "step": step_count + 1,
                     "status": "processing",
-                    "type": "status",
-                    "phase": step["phase"],
-                    "icon": step["icon"],
-                    "message": step["message"],
+                    "type": "cycle_start",
+                    "phase": f"CYCLE_{cycle + 1}",
+                    "icon": "🔄",
+                    "message": f"Starting cognitive cycle {cycle + 1}/{max_cycles}",
                     "timestamp": time.time(),
                     "directive": payload.directive,
+                    "cycle": cycle + 1,
+                    "max_cycles": max_cycles,
+                    "autonomous_mode": autonomous_mode,
                     "state_summary": {
                         "llm_operational": True,
                         "awareness": f"Processing directive: {payload.directive}",
                         "llm_status": "Online",
-                        "cognitive_loop": "Active"
+                        "cognitive_loop": "Active",
+                        "current_cycle": cycle + 1
                     }
                 }
-                yield f"data: {json.dumps(update)}\n\n"
-                await asyncio.sleep(1.0)  # Simulate processing time
+                yield f"data: {json.dumps(cycle_update)}\n\n"
+                step_count += 1
+                await asyncio.sleep(0.5)
+                
+                # Process each step in the cycle
+                for step_idx, step in enumerate(base_steps):
+                    # Simulate code changes for ACTION phase
+                    code_changes_for_step = []
+                    if step["phase"] == "ACTION" and cycle < len(code_changes):
+                        code_changes_for_step = code_changes[cycle % len(code_changes)]
+                    
+                    update = {
+                        "step": step_count + 1,
+                        "status": "processing",
+                        "type": "status",
+                        "phase": step["phase"],
+                        "icon": step["icon"],
+                        "message": step["message"],
+                        "timestamp": time.time(),
+                        "directive": payload.directive,
+                        "cycle": cycle + 1,
+                        "max_cycles": max_cycles,
+                        "autonomous_mode": autonomous_mode,
+                        "code_changes": code_changes_for_step,
+                        "state_summary": {
+                            "llm_operational": True,
+                            "awareness": f"Processing directive: {payload.directive}",
+                            "llm_status": "Online",
+                            "cognitive_loop": "Active",
+                            "current_cycle": cycle + 1,
+                            "current_step": step["phase"]
+                        }
+                    }
+                    yield f"data: {json.dumps(update)}\n\n"
+                    step_count += 1
+                    await asyncio.sleep(1.0)  # Simulate processing time
+                
+                # Send cycle completion notification
+                cycle_complete_update = {
+                    "step": step_count + 1,
+                    "status": "processing",
+                    "type": "cycle_complete",
+                    "phase": f"CYCLE_{cycle + 1}_COMPLETE",
+                    "icon": "✅",
+                    "message": f"Completed cognitive cycle {cycle + 1}/{max_cycles}",
+                    "timestamp": time.time(),
+                    "directive": payload.directive,
+                    "cycle": cycle + 1,
+                    "max_cycles": max_cycles,
+                    "cycle_duration": time.time() - cycle_start_time,
+                    "state_summary": {
+                        "llm_operational": True,
+                        "awareness": f"Completed cycle {cycle + 1} for directive: {payload.directive}",
+                        "llm_status": "Online",
+                        "cognitive_loop": "Active",
+                        "completed_cycles": cycle + 1
+                    }
+                }
+                yield f"data: {json.dumps(cycle_complete_update)}\n\n"
+                step_count += 1
+                await asyncio.sleep(0.3)
             
             # Final completion message
             final_update = {
                 "type": "complete",
                 "status": "success",
                 "phase": "COMPLETE",
-                "icon": "✅",
-                "message": "AGInt cognitive loop completed successfully",
+                "icon": "🎉",
+                "message": f"AGInt cognitive loop completed successfully after {max_cycles} cycles",
                 "directive": payload.directive,
+                "total_cycles": max_cycles,
+                "autonomous_mode": autonomous_mode,
+                "total_steps": step_count,
                 "state_summary": {
                     "llm_operational": True,
                     "awareness": f"Completed directive: {payload.directive}",
                     "llm_status": "Online",
-                    "cognitive_loop": "Completed"
+                    "cognitive_loop": "Completed",
+                    "cycles_completed": max_cycles
                 }
             }
             yield f"data: {json.dumps(final_update)}\n\n"
