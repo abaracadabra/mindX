@@ -625,9 +625,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                     addLog(`AGInt completed: ${JSON.stringify(data)}`, 'SUCCESS');
                                     addAgentActivity('AGInt', 'Cognitive loop completed successfully', 'success');
                                     
-                                    // Update AGInt response window with completion status
-                                    updateAGIntResponse(data, null);
-                                    
                                     // Update core systems after AGInt execution
                                     await loadCoreSystems();
                                 } else if (data.type === 'error') {
@@ -856,20 +853,99 @@ document.addEventListener('DOMContentLoaded', () => {
                     bdiLastAction.textContent = bdiResponse.lastAction || 'None';
                 }
                 
+                // Update chosen agent
+                const bdiChosenAgent = document.getElementById('bdi-chosen-agent');
+                if (bdiChosenAgent) {
+                    bdiChosenAgent.textContent = bdiResponse.chosen_agent || 'None';
+                }
+                
+                       // Update last directive
+                       const bdiLastDirective = document.getElementById('bdi-last-directive');
+                       if (bdiLastDirective) {
+                           bdiLastDirective.textContent = bdiResponse.last_directive || 'None';
+                       }
+                       
+                       // Update last updated
+                       const bdiLastUpdated = document.getElementById('bdi-last-updated');
+                       if (bdiLastUpdated) {
+                           bdiLastUpdated.textContent = bdiResponse.last_updated || 'Never';
+                       }
+                       
+                       // Update total decisions
+                       const bdiTotalDecisions = document.getElementById('bdi-total-decisions');
+                       if (bdiTotalDecisions) {
+                           bdiTotalDecisions.textContent = bdiResponse.performance_metrics?.total_decisions || '0';
+                       }
+                       
+                       // Update performance metrics
+                       const bdiSuccessRate = document.getElementById('bdi-success-rate');
+                       if (bdiSuccessRate && bdiResponse.performance_metrics) {
+                           bdiSuccessRate.textContent = `${bdiResponse.performance_metrics.success_rate || 0}%`;
+                       }
+                       
+                       const bdiAvgTime = document.getElementById('bdi-avg-time');
+                       if (bdiAvgTime && bdiResponse.performance_metrics) {
+                           bdiAvgTime.textContent = bdiResponse.performance_metrics.avg_decision_time || '0s';
+                       }
+                       
+                       const bdiPreferredAgent = document.getElementById('bdi-preferred-agent');
+                       if (bdiPreferredAgent && bdiResponse.performance_metrics) {
+                           bdiPreferredAgent.textContent = bdiResponse.performance_metrics.preferred_agent || 'None';
+                       }
+                       
+                       // Update system health
+                       const bdiAgentHealth = document.getElementById('bdi-agent-health');
+                       if (bdiAgentHealth && bdiResponse.system_health) {
+                           bdiAgentHealth.textContent = bdiResponse.system_health.bdi_agent || 'Unknown';
+                           bdiAgentHealth.className = `health-value ${bdiResponse.system_health.bdi_agent || 'unknown'}`;
+                       }
+                       
+                       const bdiReasoningHealth = document.getElementById('bdi-reasoning-health');
+                       if (bdiReasoningHealth && bdiResponse.system_health) {
+                           bdiReasoningHealth.textContent = bdiResponse.system_health.reasoning_engine || 'Unknown';
+                           bdiReasoningHealth.className = `health-value ${bdiResponse.system_health.reasoning_engine || 'unknown'}`;
+                       }
+                
+                       // Update BDI beliefs
+                       const bdiBeliefs = document.getElementById('bdi-beliefs');
+                       if (bdiBeliefs && bdiResponse.beliefs) {
+                           bdiBeliefs.innerHTML = bdiResponse.beliefs.map(belief => 
+                               `<div class="reasoning-item">${belief}</div>`
+                           ).join('');
+                       }
+                       
+                       // Update BDI desires
+                       const bdiDesires = document.getElementById('bdi-desires');
+                       if (bdiDesires && bdiResponse.desires) {
+                           bdiDesires.innerHTML = bdiResponse.desires.map(desire => 
+                               `<div class="reasoning-item">${desire}</div>`
+                           ).join('');
+                       }
+                       
+                       // Update BDI intentions
+                       const bdiIntentions = document.getElementById('bdi-intentions');
+                       if (bdiIntentions && bdiResponse.intentions) {
+                           bdiIntentions.innerHTML = bdiResponse.intentions.map(intention => 
+                               `<div class="reasoning-item">${intention}</div>`
+                           ).join('');
+                       }
+                       
+                       // Update reasoning history
+                       const bdiReasoningHistory = document.getElementById('bdi-reasoning-history');
+                       if (bdiReasoningHistory && bdiResponse.reasoning_history) {
+                           bdiReasoningHistory.innerHTML = bdiResponse.reasoning_history.map(reasoning => 
+                               `<div class="history-item">${reasoning}</div>`
+                           ).join('');
+                       }
+                
                 if (bdiResponse.goals) {
                     bdiGoals.innerHTML = bdiResponse.goals.map(goal => 
-                        `<div class="goal-item">
-                            <div class="goal-priority priority-${goal.priority || 'medium'}">${goal.priority || 'medium'}</div>
-                            <div class="goal-description">${goal.description || goal}</div>
-                        </div>`
+                        `<div class="objective-item">${goal.description || goal}</div>`
                     ).join('');
                 }
                 if (bdiResponse.plans) {
                     bdiPlans.innerHTML = bdiResponse.plans.map(plan => 
-                        `<div class="plan-item">
-                            <div class="plan-status">${plan.status || 'active'}</div>
-                            <div class="plan-description">${plan.description || plan}</div>
-                        </div>`
+                        `<div class="objective-item">${plan.description || plan}</div>`
                     ).join('');
                 }
                 addAgentActivity('BDI Agent', `Status: ${bdiResponse.status}`, 'success');
@@ -896,8 +972,158 @@ document.addEventListener('DOMContentLoaded', () => {
                     ).join('');
                 }
             }
+            
+            // Start real-time BDI monitoring
+            startBDIMonitoring();
         } catch (error) {
             addLog(`Failed to load core systems: ${error.message}`, 'ERROR');
+        }
+    }
+
+    // Real-time BDI monitoring
+    let bdiMonitoringInterval = null;
+    
+    function startBDIMonitoring() {
+        if (bdiMonitoringInterval) return;
+        
+        console.log('Starting real-time BDI monitoring...');
+        addAgentActivity('BDI Agent', 'Starting real-time monitoring...', 'info');
+        
+        // Initial load
+        updateBDIRealtime();
+        
+        // Poll every 2 seconds for real-time updates
+        bdiMonitoringInterval = setInterval(async () => {
+            try {
+                await updateBDIRealtime();
+            } catch (error) {
+                console.error('Error in BDI monitoring:', error);
+            }
+        }, 2000);
+    }
+    
+    function stopBDIMonitoring() {
+        if (bdiMonitoringInterval) {
+            clearInterval(bdiMonitoringInterval);
+            bdiMonitoringInterval = null;
+            console.log('Stopped BDI monitoring');
+            addAgentActivity('BDI Agent', 'Stopped real-time monitoring', 'info');
+        }
+    }
+    
+    async function updateBDIRealtime() {
+        try {
+            const response = await sendRequest('/core/bdi-realtime');
+            if (response) {
+                updateBDIRealtimeDisplay(response);
+            }
+        } catch (error) {
+            console.error('Error fetching real-time BDI data:', error);
+        }
+    }
+    
+    function updateBDIRealtimeDisplay(data) {
+        // Update status indicators
+        const statusElement = document.getElementById('bdi-agent-status');
+        const statusIndicator = document.getElementById('bdi-status-indicator');
+        
+        if (statusElement) {
+            statusElement.textContent = data.status || 'Unknown';
+            statusElement.className = `status-text ${data.status || 'unknown'}`;
+        }
+        
+        if (statusIndicator) {
+            statusIndicator.className = `status-indicator ${data.status || 'unknown'}`;
+        }
+        
+        // Update current directive
+        const directiveElement = document.getElementById('bdi-last-directive');
+        if (directiveElement) {
+            directiveElement.textContent = data.current_directive || 'None';
+        }
+        
+        // Update chosen agent
+        const agentElement = document.getElementById('bdi-chosen-agent');
+        if (agentElement) {
+            agentElement.textContent = data.chosen_agent || 'None';
+        }
+        
+        // Update last updated time
+        const lastUpdatedElement = document.getElementById('bdi-last-updated');
+        if (lastUpdatedElement) {
+            lastUpdatedElement.textContent = data.last_updated || 'Never';
+        }
+        
+        // Update performance metrics
+        if (data.performance_metrics) {
+            const totalDecisionsElement = document.getElementById('bdi-total-decisions');
+            if (totalDecisionsElement) {
+                totalDecisionsElement.textContent = data.performance_metrics.total_decisions || '0';
+            }
+            
+            const successRateElement = document.getElementById('bdi-success-rate');
+            if (successRateElement) {
+                successRateElement.textContent = `${data.performance_metrics.success_rate || 0}%`;
+            }
+            
+            const avgTimeElement = document.getElementById('bdi-avg-time');
+            if (avgTimeElement) {
+                avgTimeElement.textContent = data.performance_metrics.avg_decision_time || '0s';
+            }
+            
+            const preferredAgentElement = document.getElementById('bdi-preferred-agent');
+            if (preferredAgentElement) {
+                preferredAgentElement.textContent = data.performance_metrics.preferred_agent || 'None';
+            }
+        }
+        
+        // Update system health
+        if (data.system_health) {
+            const agentHealthElement = document.getElementById('bdi-agent-health');
+            if (agentHealthElement) {
+                agentHealthElement.textContent = data.system_health.bdi_agent || 'Unknown';
+                agentHealthElement.className = `health-value ${data.system_health.bdi_agent || 'unknown'}`;
+            }
+            
+            const reasoningHealthElement = document.getElementById('bdi-reasoning-health');
+            if (reasoningHealthElement) {
+                reasoningHealthElement.textContent = data.system_health.reasoning_engine || 'Unknown';
+                reasoningHealthElement.className = `health-value ${data.system_health.reasoning_engine || 'unknown'}`;
+            }
+            
+            const logHealthElement = document.getElementById('bdi-log-health');
+            if (logHealthElement) {
+                logHealthElement.textContent = data.system_health.log_system || 'Unknown';
+                logHealthElement.className = `health-value ${data.system_health.log_system || 'unknown'}`;
+            }
+            
+            const registryHealthElement = document.getElementById('bdi-registry-health');
+            if (registryHealthElement) {
+                registryHealthElement.textContent = data.system_health.agent_registry || 'Unknown';
+                registryHealthElement.className = `health-value ${data.system_health.agent_registry || 'unknown'}`;
+            }
+        }
+        
+        // Update latest reasoning if available
+        if (data.latest_reasoning) {
+            const historyElement = document.getElementById('bdi-reasoning-history');
+            if (historyElement) {
+                const reasoningItem = document.createElement('div');
+                reasoningItem.className = 'history-item';
+                reasoningItem.innerHTML = `
+                    <div class="reasoning-timestamp">${data.latest_reasoning.timestamp}</div>
+                    <div class="reasoning-content">${data.latest_reasoning.reasoning}</div>
+                `;
+                
+                // Add to top of history
+                historyElement.insertBefore(reasoningItem, historyElement.firstChild);
+                
+                // Keep only last 5 items
+                const items = historyElement.querySelectorAll('.history-item');
+                if (items.length > 5) {
+                    items[items.length - 1].remove();
+                }
+            }
         }
     }
 
@@ -1723,13 +1949,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 lastActivity: 'Active'
             },
             {
-                id: 'enhanced_simple_coder',
-                name: 'Enhanced Simple Coder',
+                id: 'simple_coder',
+                name: 'Simple Coder',
                 type: 'Development',
                 status: 'active',
                 isSystem: true,
-                capabilities: ['Code Generation', 'Sandbox Management', 'Comprehensive Coding'],
-                description: 'Enhanced coding agent with comprehensive capabilities and sandbox environment',
+                capabilities: ['Code Generation', 'Sandbox Management', 'Security Validation', 'Pattern Learning'],
+                description: 'Streamlined and audited coding agent with enhanced security and performance optimizations',
                 createdBy: 'system',
                 lastActivity: 'Active'
             },
@@ -2234,12 +2460,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (data.cycle) {
                         message = `[${timestamp}] ${data.icon} CYCLE ${data.cycle}/${data.max_cycles} - ${data.phase}: ${data.message}`;
                     }
+                    // Add detailed verbose information
+                    if (data.state_summary) {
+                        message += `\n    └─ LLM Status: ${data.state_summary.llm_status || 'Unknown'}`;
+                        message += `\n    └─ Cognitive Loop: ${data.state_summary.cognitive_loop || 'Unknown'}`;
+                        if (data.state_summary.awareness) {
+                            message += `\n    └─ Awareness: ${data.state_summary.awareness}`;
+                        }
+                    }
                 } else {
-                    // Simplified output for non-verbose mode
+                    // Simplified output for non-verbose mode - just show phase and cycle
                     if (data.cycle) {
-                        message = `[${timestamp}] CYCLE ${data.cycle}/${data.max_cycles} - ${data.phase}`;
+                        message = `[${timestamp}] 🔄 CYCLE ${data.cycle}/${data.max_cycles} - ${data.phase}`;
                     } else {
-                        message = `[${timestamp}] ${data.phase}`;
+                        message = `[${timestamp}] ${data.icon} ${data.phase}`;
                     }
                 }
                 break;
