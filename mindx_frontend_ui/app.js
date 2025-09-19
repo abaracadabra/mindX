@@ -1824,6 +1824,135 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Initialize update requests functionality
+    function initializeUpdateRequests() {
+        const refreshBtn = document.getElementById('refresh-updates-btn');
+        const approveAllBtn = document.getElementById('approve-all-btn');
+        
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', loadUpdateRequests);
+        }
+        
+        if (approveAllBtn) {
+            approveAllBtn.addEventListener('click', approveAllUpdates);
+        }
+        
+        // Load update requests on page load
+        loadUpdateRequests();
+    }
+    
+    async function loadUpdateRequests() {
+        try {
+            const response = await fetch(`${apiUrl}/simple-coder/update-requests`);
+            const data = await response.json();
+            
+            const container = document.getElementById('update-requests-container');
+            const approveAllBtn = document.getElementById('approve-all-btn');
+            
+            if (data && data.length > 0) {
+                container.innerHTML = '';
+                data.forEach(request => {
+                    const requestDiv = createUpdateRequestElement(request);
+                    container.appendChild(requestDiv);
+                });
+                
+                if (approveAllBtn) {
+                    approveAllBtn.disabled = false;
+                }
+            } else {
+                container.innerHTML = '<p>No pending update requests</p>';
+                if (approveAllBtn) {
+                    approveAllBtn.disabled = true;
+                }
+            }
+        } catch (error) {
+            console.error('Error loading update requests:', error);
+            const container = document.getElementById('update-requests-container');
+            container.innerHTML = '<p>Error loading update requests</p>';
+        }
+    }
+    
+    function createUpdateRequestElement(request) {
+        const div = document.createElement('div');
+        div.className = 'update-request';
+        div.innerHTML = `
+            <div class="update-request-header">
+                <h4>Update Request: ${request.request_id}</h4>
+                <span class="request-status ${request.status}">${request.status}</span>
+            </div>
+            <div class="update-request-details">
+                <p><strong>Original File:</strong> ${request.original_file}</p>
+                <p><strong>Sandbox File:</strong> ${request.sandbox_file}</p>
+                <p><strong>Cycle:</strong> ${request.cycle}</p>
+                <p><strong>Changes:</strong> ${request.changes.length} modifications</p>
+                <p><strong>Timestamp:</strong> ${new Date(request.timestamp).toLocaleString()}</p>
+            </div>
+            <div class="update-request-actions">
+                <button onclick="approveUpdate('${request.request_id}')" class="approve-btn">Approve</button>
+                <button onclick="rejectUpdate('${request.request_id}')" class="reject-btn">Reject</button>
+            </div>
+        `;
+        return div;
+    }
+    
+    async function approveUpdate(requestId) {
+        try {
+            const response = await fetch(`${apiUrl}/simple-coder/approve-update/${requestId}`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+            
+            if (data.status === 'approved') {
+                addLog(`Update request ${requestId} approved`, 'SUCCESS');
+                loadUpdateRequests(); // Refresh the list
+            } else {
+                addLog(`Failed to approve update request ${requestId}: ${data.error}`, 'ERROR');
+            }
+        } catch (error) {
+            console.error('Error approving update:', error);
+            addLog(`Error approving update request ${requestId}: ${error.message}`, 'ERROR');
+        }
+    }
+    
+    async function rejectUpdate(requestId) {
+        try {
+            const response = await fetch(`${apiUrl}/simple-coder/reject-update/${requestId}`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+            
+            if (data.status === 'rejected') {
+                addLog(`Update request ${requestId} rejected`, 'INFO');
+                loadUpdateRequests(); // Refresh the list
+            } else {
+                addLog(`Failed to reject update request ${requestId}: ${data.error}`, 'ERROR');
+            }
+        } catch (error) {
+            console.error('Error rejecting update:', error);
+            addLog(`Error rejecting update request ${requestId}: ${error.message}`, 'ERROR');
+        }
+    }
+    
+    async function approveAllUpdates() {
+        try {
+            const response = await fetch(`${apiUrl}/simple-coder/update-requests`);
+            const data = await response.json();
+            
+            if (data && data.length > 0) {
+                const pendingRequests = data.filter(r => r.status === 'pending');
+                
+                for (const request of pendingRequests) {
+                    await approveUpdate(request.request_id);
+                }
+                
+                addLog(`Approved ${pendingRequests.length} update requests`, 'SUCCESS');
+            }
+        } catch (error) {
+            console.error('Error approving all updates:', error);
+            addLog(`Error approving all updates: ${error.message}`, 'ERROR');
+        }
+    }
+
     // Initialize system agents data
     function initializeSystemAgents() {
         systemAgents = [
@@ -2165,6 +2294,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeAdminTab();
         initializeAutonomousMode();
         initializeAgentActivityMonitor();
+        initializeUpdateRequests();
         
         // Check backend status periodically
     checkBackendStatus();

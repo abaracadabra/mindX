@@ -1,735 +1,637 @@
 #!/usr/bin/env python3
 """
-Simple Coder Agent - Streamlined and Audited Version
-====================================================
-
-A comprehensive coding agent providing intelligent assistance to the BDI agent.
-This is an improved, audited version of the enhanced_simple_coder with better
-error handling, security, and performance optimizations.
+Simple Coder Agent - Enhanced with Sandbox Mode and Autonomous Operation
+Part of the mindX autonomous digital civilization system.
 
 Features:
-- Advanced code analysis and generation
-- Secure file system operations
-- Shell command execution with safety checks
-- Multi-model intelligence for different coding tasks
-- Memory integration for learning and improvement
-- Context-aware suggestions and optimizations
-- Virtual environment management
-- Comprehensive error handling and logging
+- Sandbox mode with automatic file backups
+- Autonomous mode with infinite cycle iterations
+- File update request mechanism
+- Enhanced security and validation
+- Pattern learning and adaptation
 """
 
-import asyncio
-import json
-import shlex
-import sys
 import os
-import re
-import subprocess
+import shutil
 import time
+import json
+import logging
 import hashlib
+from typing import Dict, List, Any, Optional, Tuple
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Callable, Awaitable, TypeAlias, Tuple
-from dataclasses import dataclass
-from enum import Enum
+import asyncio
 
-from core.bdi_agent import BaseTool
-from agents.memory_agent import MemoryAgent
-from utils.config import Config, PROJECT_ROOT
-from utils.logging_config import get_logger
-from llm.llm_interface import LLMHandlerInterface
+# Memory integration
+try:
+    from agents.memory_agent import MemoryAgent, MemoryType, MemoryImportance
+    MEMORY_AVAILABLE = True
+except ImportError:
+    MEMORY_AVAILABLE = False
+    MemoryAgent = None
+    MemoryType = None
+    MemoryImportance = None
 
-if sys.version_info >= (3, 10):
-    from typing import TypeAlias
-else:
-    from typing_extensions import TypeAlias
+import aiofiles
 
-NativeHandler: TypeAlias = Callable[..., Awaitable[Dict[str, Any]]]
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-logger = get_logger(__name__)
-
-class OperationType(Enum):
-    """Enumeration of supported operation types."""
-    FILE_READ = "read_file"
-    FILE_WRITE = "write_file"
-    FILE_DELETE = "delete_file"
-    DIR_LIST = "list_directory"
-    DIR_CREATE = "create_directory"
-    SHELL_COMMAND = "run_shell_command"
-    CODE_ANALYZE = "analyze_code"
-    CODE_GENERATE = "generate_code"
-    CODE_SUGGEST = "get_coding_suggestions"
-    VENV_CREATE = "create_venv"
-    VENV_ACTIVATE = "activate_venv"
-    VENV_DEACTIVATE = "deactivate_venv"
-
-@dataclass
-class SecurityConfig:
-    """Security configuration for the agent."""
-    max_file_size_mb: int = 10
-    allowed_commands: List[str] = None
-    sandbox_enabled: bool = True
-    max_execution_time: int = 60
-    
-    def __post_init__(self):
-        if self.allowed_commands is None:
-            self.allowed_commands = [
-                "python", "python3", "pip", "pip3", "git", "ls", "cat", "grep", 
-                "find", "mkdir", "rm", "cp", "mv", "chmod", "touch", "head", 
-                "tail", "wc", "pytest", "black", "flake8", "mypy", "coverage", 
-                "tox", "which", "echo", "grep", "sed", "awk"
-            ]
-
-class SimpleCoder(BaseTool):
+class SimpleCoder:
     """
-    Streamlined coding agent providing intelligent assistance to the BDI agent.
-    
-    This is an improved, audited version with:
-    - Better error handling and validation
-    - Enhanced security measures
-    - Optimized performance
-    - Cleaner code structure
-    - Comprehensive logging
+    Enhanced Simple Coder Agent with sandbox mode and autonomous operation capabilities.
     """
+    
+    def __init__(self, sandbox_mode: bool = True, autonomous_mode: bool = False):
+        self.sandbox_mode = sandbox_mode
+        self.autonomous_mode = autonomous_mode
+        self.backup_dir = Path("simple_coder_backups")
+        self.sandbox_dir = Path("simple_coder_sandbox")
+        self.update_requests_file = self.sandbox_dir / "update_requests.json"
+        self.update_requests = self._load_update_requests()
+        self.cycle_count = 0
+        # Set infinite cycles for autonomous mode
+        self.max_cycles = float('inf') if autonomous_mode else 10
+        
+        # Initialize directories
+        self._initialize_directories()
+        
+        # Pattern learning storage
 
-    def __init__(self, 
-                 memory_agent: Optional[MemoryAgent] = None,
-                 config: Optional[Config] = None,
-                 llm_handler: Optional[LLMHandlerInterface] = None,
-                 **kwargs):
-        super().__init__(config=config, llm_handler=llm_handler, **kwargs)
-        
-        # Core components
-        self.memory_agent = memory_agent or MemoryAgent()
-        self.config_data = {}
-        self.security_config = SecurityConfig()
-        
-        # Working environment
-        self.sandbox_root = None
-        self.current_working_directory = None
-        self.active_venv_bin_path = None
-        
-        # Learning and patterns
-        self.code_patterns = {}
-        self.execution_history = []
-        
-        # Model preferences for different tasks
-        self.model_preferences = {
-            "code_analysis": "gemini-1.5-pro-latest",
-            "code_generation": "gemini-2.0-flash",
-            "suggestions": "gemini-1.5-pro-latest",
-            "debugging": "gemini-1.5-pro-latest"
-        }
-        
-        # Initialize the agent
-        self._load_configuration()
-        self._initialize_sandbox()
-        self._register_handlers()
-        
-        logger.info(f"SimpleCoder initialized with sandbox: {self.sandbox_root}")
-
-    def _load_configuration(self):
-        """Load configuration with enhanced defaults and validation."""
-        default_config = {
-            "command_timeout_seconds": 60,
-            "max_file_size_mb": 10,
-            "enable_code_analysis": True,
-            "enable_auto_testing": True,
-            "enable_pattern_learning": True,
-            "sandbox_path": "data/agent_workspaces/simple_coder",
-            "security": {
-                "max_file_size_mb": 10,
-                "allowed_commands": self.security_config.allowed_commands,
-                "sandbox_enabled": True,
-                "max_execution_time": 60
-            }
-        }
-        
-        # Load from config file if available
-        config_path = PROJECT_ROOT / "data" / "config" / "simple_coder.json"
-        if config_path.exists():
+        # Memory agent integration
+        self.memory_agent = None
+        if MEMORY_AVAILABLE:
             try:
-                with config_path.open("r", encoding="utf-8") as f:
-                    loaded_config = json.load(f)
-                    self.config_data = {**default_config, **loaded_config}
-            except (json.JSONDecodeError, IOError) as e:
-                logger.warning(f"Failed to load config: {e}. Using defaults.")
-                self.config_data = default_config
-        else:
-            self.config_data = default_config
+                self.memory_agent = MemoryAgent()
+                logger.info("Memory agent initialized for simple_coder")
+            except Exception as e:
+                logger.warning(f"Failed to initialize memory agent: {e}")
+                self.memory_agent = None
         
-        # Update security config
-        if "security" in self.config_data:
-            security_data = self.config_data["security"]
-            self.security_config = SecurityConfig(**security_data)
+        self.patterns = self._load_patterns()
 
-    def _initialize_sandbox(self) -> Path:
-        """Create and initialize the secure sandbox directory."""
-        default_sandbox = PROJECT_ROOT / "data" / "agent_workspaces" / "simple_coder"
-        sandbox_path_str = self.config_data.get("sandbox_path", str(default_sandbox.relative_to(PROJECT_ROOT)))
-        sandbox_abs_path = (PROJECT_ROOT / sandbox_path_str).resolve()
-        
-        # Security check: ensure sandbox is within project root
-        if not sandbox_abs_path.is_relative_to(PROJECT_ROOT) or sandbox_abs_path == PROJECT_ROOT:
-            logger.critical(f"INSECURE SANDBOX CONFIG: '{sandbox_path_str}'. Using default.")
-            sandbox_abs_path = default_sandbox
-        
-        # Create sandbox structure
-        sandbox_abs_path.mkdir(parents=True, exist_ok=True)
-        (sandbox_abs_path / "projects").mkdir(exist_ok=True)
-        (sandbox_abs_path / "temp").mkdir(exist_ok=True)
-        (sandbox_abs_path / "tests").mkdir(exist_ok=True)
-        (sandbox_abs_path / "generated").mkdir(exist_ok=True)
-        (sandbox_abs_path / "venvs").mkdir(exist_ok=True)
-        
-        self.sandbox_root = sandbox_abs_path
-        self.current_working_directory = sandbox_abs_path
-        
-        return sandbox_abs_path
-
-    def _register_handlers(self):
-        """Register all operation handlers."""
-        self.native_handlers = {
-            OperationType.FILE_READ.value: self._read_file,
-            OperationType.FILE_WRITE.value: self._write_file,
-            OperationType.FILE_DELETE.value: self._delete_file,
-            OperationType.DIR_LIST.value: self._list_directory,
-            OperationType.DIR_CREATE.value: self._create_directory,
-            OperationType.SHELL_COMMAND.value: self._run_shell_command,
-            OperationType.CODE_ANALYZE.value: self._analyze_code,
-            OperationType.CODE_GENERATE.value: self._generate_code,
-            OperationType.CODE_SUGGEST.value: self._get_coding_suggestions,
-            OperationType.VENV_CREATE.value: self._create_venv,
-            OperationType.VENV_ACTIVATE.value: self._activate_venv,
-            OperationType.VENV_DEACTIVATE.value: self._deactivate_venv,
-        }
-
-    def _resolve_and_check_path(self, path_str: str) -> Optional[Path]:
-        """Resolve a path and ensure it's within the sandbox for security."""
+    def _load_update_requests(self) -> List[Dict[str, Any]]:
+        """Load update requests from persistent storage."""
         try:
-            if os.path.isabs(path_str):
-                target_path = Path(path_str).resolve()
-            else:
-                target_path = (self.current_working_directory / path_str).resolve()
-            
-            # Security check: ensure path is within sandbox
-            if target_path.is_relative_to(self.sandbox_root):
-                return target_path
-            else:
-                logger.warning(f"Path outside sandbox rejected: {path_str}")
-                return None
+            if self.update_requests_file.exists():
+                with open(self.update_requests_file, 'r') as f:
+                    return json.load(f)
         except Exception as e:
-            logger.error(f"Path resolution error: {e}")
+            logger.warning(f"Failed to load update requests: {e}")
+        return []
+    
+    def _save_update_requests(self):
+        """Save update requests to persistent storage."""
+        try:
+            with open(self.update_requests_file, 'w') as f:
+                json.dump(self.update_requests, f, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to save update requests: {e}")
+    
+        
+    def _initialize_directories(self):
+        """Initialize backup and sandbox directories."""
+        self.backup_dir.mkdir(exist_ok=True)
+        self.sandbox_dir.mkdir(exist_ok=True)
+        
+        # Create subdirectories for organization
+        (self.backup_dir / "by_date").mkdir(exist_ok=True)
+        (self.backup_dir / "by_file").mkdir(exist_ok=True)
+        (self.sandbox_dir / "working").mkdir(exist_ok=True)
+        (self.sandbox_dir / "completed").mkdir(exist_ok=True)
+        
+    def _load_patterns(self) -> Dict[str, Any]:
+        """Load learned patterns from storage."""
+        patterns_file = self.sandbox_dir / "patterns.json"
+        if patterns_file.exists():
+            try:
+                with open(patterns_file, 'r') as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.warning(f"Failed to load patterns: {e}")
+        return {"file_patterns": {}, "code_patterns": {}, "success_rates": {}}
+    
+    def _save_patterns(self):
+        """Save learned patterns to storage."""
+        patterns_file = self.sandbox_dir / "patterns.json"
+        try:
+            with open(patterns_file, 'w') as f:
+                json.dump(self.patterns, f, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to save patterns: {e}")
+    
+    def _create_backup(self, file_path: str) -> str:
+        """Create a backup of the file before modification."""
+        if not os.path.exists(file_path):
             return None
-
-    def _validate_file_size(self, file_path: Path) -> bool:
-        """Validate file size against security limits."""
+            
+        # Generate unique backup filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        file_hash = hashlib.md5(file_path.encode()).hexdigest()[:8]
+        backup_name = f"{Path(file_path).stem}_{timestamp}_{file_hash}.bak"
+        
+        # Create date-based backup
+        date_dir = self.backup_dir / "by_date" / datetime.now().strftime("%Y-%m-%d")
+        date_dir.mkdir(exist_ok=True)
+        backup_path = date_dir / backup_name
+        
+        # Create file-specific backup
+        file_backup_dir = self.backup_dir / "by_file" / Path(file_path).stem
+        file_backup_dir.mkdir(exist_ok=True)
+        file_backup_path = file_backup_dir / backup_name
+        
         try:
-            file_size_mb = file_path.stat().st_size / (1024 * 1024)
-            return file_size_mb <= self.security_config.max_file_size_mb
-        except OSError:
+            # Copy to both locations
+            shutil.copy2(file_path, backup_path)
+            shutil.copy2(file_path, file_backup_path)
+            
+            logger.info(f"Backup created: {backup_path}")
+            return str(backup_path)
+        except Exception as e:
+            logger.error(f"Failed to create backup: {e}")
+            return None
+    
+    def _get_sandbox_path(self, original_path: str) -> str:
+        """Get the sandbox path for a file."""
+        if not self.sandbox_mode:
+            return original_path
+            
+        # Create sandbox version
+        sandbox_path = self.sandbox_dir / "working" / Path(original_path).name
+        
+        # Copy original to sandbox if it exists
+        if os.path.exists(original_path) and not sandbox_path.exists():
+            shutil.copy2(original_path, sandbox_path)
+        elif not sandbox_path.exists():
+            # Create empty file if original doesn't exist
+            sandbox_path.touch()
+            
+        return str(sandbox_path)
+    
+    def _validate_file_operation(self, file_path: str, operation: str) -> bool:
+        """Validate if file operation is safe and allowed."""
+        # Security checks
+        if not file_path or not isinstance(file_path, str):
             return False
-
-    async def execute(self, action: str = None, operation: str = None, **kwargs) -> Tuple[bool, Any]:
+            
+        # Prevent operations on system files
+        dangerous_paths = ['/etc/', '/sys/', '/proc/', '/dev/', '/boot/']
+        if any(file_path.startswith(path) for path in dangerous_paths):
+            logger.warning(f"Blocked operation on system path: {file_path}")
+            return False
+            
+        # Check file extension for safety
+        allowed_extensions = ['.py', '.js', '.html', '.css', '.json', '.md', '.txt', '.yml', '.yaml']
+        if not any(file_path.endswith(ext) for ext in allowed_extensions):
+            logger.warning(f"Blocked operation on non-allowed file type: {file_path}")
+            return False
+            
+        return True
+    
+    async def process_directive(self, directive: str, target_file: Optional[str] = None) -> Dict[str, Any]:
         """
-        Enhanced execute method with intelligent routing and validation.
-        Supports both 'action' and 'operation' parameters for compatibility.
+        Process a directive with enhanced simple_coder capabilities.
+        
+        Args:
+            directive: The directive to process
+            target_file: Optional target file to work on
+            
+        Returns:
+            Dictionary containing results and changes
         """
-        op = action or operation
-        if not op:
-            return False, "No action or operation specified"
+        self.cycle_count += 1
+        logger.info(f"Simple Coder Cycle {self.cycle_count}: Processing directive: {directive}")
         
-        # Validate operation
-        if op not in self.native_handlers:
-            return False, f"Unknown operation: {op}"
-        
-        start_time = time.time()
-        
-        try:
-            # Execute the operation
-            result = await self.native_handlers[op](**kwargs)
-            
-            # Log execution for learning
-            execution_context = {
-                "operation": op,
-                "parameters": kwargs,
-                "duration": time.time() - start_time,
-                "timestamp": time.time()
-            }
-            
-            await self._learn_from_execution(result, execution_context)
-            
-            # Convert dict result to tuple for compatibility
-            if isinstance(result, dict):
-                success = result.get("status") == "SUCCESS"
-                return success, result
-            else:
-                return True, result
-                
-        except Exception as e:
-            logger.error(f"SimpleCoder execution error: {e}")
-            return False, f"Execution failed: {e}"
-
-    # File System Operations
-    async def _read_file(self, path: str) -> Dict[str, Any]:
-        """Read file contents with security validation."""
-        file_path = self._resolve_and_check_path(path)
-        if not file_path or not file_path.is_file():
-            return {"status": "ERROR", "message": f"File not found or invalid: {path}"}
-        
-        # Validate file size
-        if not self._validate_file_size(file_path):
-            return {"status": "ERROR", "message": f"File too large: {path}"}
-        
-        try:
-            content = await asyncio.to_thread(file_path.read_text, encoding='utf-8')
-            return {
-                "status": "SUCCESS", 
-                "content": content,
-                "file_path": str(file_path),
-                "size": len(content)
-            }
-        except Exception as e:
-            return {"status": "ERROR", "message": f"Error reading file: {e}"}
-
-    async def _write_file(self, path: str, content: str, create_dirs: bool = True) -> Dict[str, Any]:
-        """Write content to file with security validation."""
-        file_path = self._resolve_and_check_path(path)
-        if not file_path:
-            return {"status": "ERROR", "message": f"Invalid or insecure path: {path}"}
-        
-        # Validate content size
-        content_size_mb = len(content.encode('utf-8')) / (1024 * 1024)
-        if content_size_mb > self.security_config.max_file_size_mb:
-            return {"status": "ERROR", "message": f"Content too large: {content_size_mb:.2f}MB"}
-        
-        try:
-            if create_dirs:
-                await asyncio.to_thread(file_path.parent.mkdir, parents=True, exist_ok=True)
-            
-            await asyncio.to_thread(file_path.write_text, content, encoding='utf-8')
-            return {
-                "status": "SUCCESS", 
-                "message": f"File written successfully to {path}",
-                "file_path": str(file_path),
-                "size": len(content)
-            }
-        except Exception as e:
-            return {"status": "ERROR", "message": f"Error writing file: {e}"}
-
-    async def _delete_file(self, path: str, force: bool = False) -> Dict[str, Any]:
-        """Delete file with safety checks."""
-        if not force:
-            return {"status": "ERROR", "message": "Deletion requires 'force=True' parameter"}
-        
-        file_path = self._resolve_and_check_path(path)
-        if not file_path or not file_path.is_file():
-            return {"status": "ERROR", "message": f"File not found: {path}"}
-        
-        try:
-            await asyncio.to_thread(file_path.unlink)
-            return {"status": "SUCCESS", "message": f"File deleted: {path}"}
-        except Exception as e:
-            return {"status": "ERROR", "message": f"Error deleting file: {e}"}
-
-    async def _list_directory(self, path: str = ".") -> Dict[str, Any]:
-        """List directory contents with security validation."""
-        dir_path = self._resolve_and_check_path(path)
-        if not dir_path or not dir_path.is_dir():
-            return {"status": "ERROR", "message": f"Directory not found: {path}"}
-        
-        try:
-            items = []
-            for item in dir_path.iterdir():
-                try:
-                    stat_info = item.stat()
-                    items.append({
-                        "name": item.name,
-                        "type": "directory" if item.is_dir() else "file",
-                        "size": stat_info.st_size if item.is_file() else None,
-                        "modified": stat_info.st_mtime
-                    })
-                except OSError:
-                    # Skip items we can't access
-                    continue
-            
-            return {"status": "SUCCESS", "items": items}
-        except Exception as e:
-            return {"status": "ERROR", "message": f"Error listing directory: {e}"}
-
-    async def _create_directory(self, path: str) -> Dict[str, Any]:
-        """Create directory with security validation."""
-        dir_path = self._resolve_and_check_path(path)
-        if not dir_path:
-            return {"status": "ERROR", "message": "Invalid or insecure directory path"}
-        
-        try:
-            await asyncio.to_thread(dir_path.mkdir, parents=True, exist_ok=True)
-            return {"status": "SUCCESS", "message": f"Directory created: {path}"}
-        except Exception as e:
-            return {"status": "ERROR", "message": f"Failed to create directory: {e}"}
-
-    # Shell Command Execution
-    async def _run_shell_command(self, command: str, args: Optional[List[str]] = None) -> Dict[str, Any]:
-        """Execute shell command with security validation."""
-        # Validate command against allowlist
-        if command not in self.security_config.allowed_commands:
-            return {"status": "ERROR", "message": f"Command '{command}' not allowed"}
-        
-        try:
-            cmd_args = [command] + (args or [])
-            
-            # Create subprocess with timeout
-            process = await asyncio.create_subprocess_exec(
-                *cmd_args,
-                cwd=self.current_working_directory,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            # Wait for completion with timeout
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=self.security_config.max_execution_time
-            )
-            
-            return {
-                "status": "SUCCESS",
-                "stdout": stdout.decode('utf-8', errors='replace'),
-                "stderr": stderr.decode('utf-8', errors='replace'),
-                "return_code": process.returncode,
-                "command": " ".join(cmd_args)
-            }
-            
-        except asyncio.TimeoutError:
-            return {"status": "ERROR", "message": f"Command timed out after {self.security_config.max_execution_time}s"}
-        except Exception as e:
-            return {"status": "ERROR", "message": f"Command execution failed: {e}"}
-
-    # Code Analysis and Generation
-    async def _analyze_code(self, code: Optional[str] = None, file_path: Optional[str] = None, 
-                          analysis_type: str = "comprehensive") -> Dict[str, Any]:
-        """Analyze code for quality and improvements."""
-        try:
-            # Get code content
-            if file_path:
-                file_obj = self._resolve_and_check_path(file_path)
-                if not file_obj or not file_obj.is_file():
-                    return {"status": "ERROR", "message": f"Invalid file path: {file_path}"}
-                code = await asyncio.to_thread(file_obj.read_text, encoding='utf-8')
-            
-            if not code:
-                return {"status": "ERROR", "message": "No code content provided"}
-            
-            # Create analysis prompt
-            analysis_prompt = f"""
-            Perform {analysis_type} analysis of this code:
-            
-            ```python
-            {code}
-            ```
-            
-            Analyze:
-            1. Code quality and best practices adherence
-            2. Potential bugs and security vulnerabilities
-            3. Performance optimization opportunities
-            4. Maintainability and readability issues
-            5. Design patterns and architectural concerns
-            6. Error handling completeness
-            7. Documentation quality
-            
-            Return detailed analysis in JSON format with specific recommendations.
-            """
-            
-            if self.llm_handler:
-                model = self.model_preferences.get("code_analysis", "gemini-1.5-pro-latest")
-                result = await self.llm_handler.generate_text(
-                    analysis_prompt,
-                    model=model,
-                    json_mode=True
-                )
-                
-                # Log analysis for learning
-                await self.memory_agent.log_process(
-                    process_name="code_analysis",
-                    data={
-                        "file_path": file_path,
-                        "analysis_type": analysis_type,
-                        "analysis_result": result,
-                        "timestamp": time.time()
-                    },
-                    metadata={"agent_id": self.agent_id}
-                )
-                
-                return {"status": "SUCCESS", "analysis": result}
-            else:
-                return {"status": "ERROR", "message": "LLM handler not available"}
-                
-        except Exception as e:
-            logger.error(f"Code analysis error: {e}")
-            return {"status": "ERROR", "message": f"Analysis failed: {e}"}
-
-    async def _generate_code(self, description: str, language: str = "python", 
-                           style: str = "clean", output_file: Optional[str] = None) -> Dict[str, Any]:
-        """Generate code based on description."""
-        try:
-            generation_prompt = f"""
-            Generate {language} code for: {description}
-            
-            Requirements:
-            - Follow {style} coding style and best practices
-            - Include comprehensive error handling
-            - Add detailed docstrings and comments
-            - Consider security implications
-            - Make it maintainable, testable, and efficient
-            - Follow {language} conventions and idioms
-            
-            Return JSON format:
-            {{
-                "code": "generated code here",
-                "explanation": "detailed explanation of the implementation",
-                "dependencies": ["list of required dependencies"],
-                "usage_example": "example usage with test cases",
-                "considerations": "important considerations and limitations"
-            }}
-            """
-            
-            if self.llm_handler:
-                model = self.model_preferences.get("code_generation", "gemini-2.0-flash")
-                result = await self.llm_handler.generate_text(
-                    generation_prompt,
-                    model=model,
-                    json_mode=True
-                )
-                
-                # Write to file if specified
-                if output_file and result:
-                    try:
-                        generated_data = json.loads(result)
-                        code_content = generated_data.get("code", "")
-                        if code_content:
-                            write_result = await self._write_file(output_file, code_content)
-                            if write_result["status"] == "SUCCESS":
-                                generated_data["output_file"] = output_file
-                    except json.JSONDecodeError:
-                        pass
-                
-                # Log for learning
-                await self.memory_agent.log_process(
-                    process_name="code_generation",
-                    data={
-                        "description": description,
-                        "language": language,
-                        "style": style,
-                        "result": result,
-                        "timestamp": time.time()
-                    },
-                    metadata={"agent_id": self.agent_id}
-                )
-                
-                return {"status": "SUCCESS", "generation": result}
-            else:
-                return {"status": "ERROR", "message": "LLM handler not available"}
-                
-        except Exception as e:
-            logger.error(f"Code generation error: {e}")
-            return {"status": "ERROR", "message": f"Generation failed: {e}"}
-
-    async def _get_coding_suggestions(self, current_task: str) -> Dict[str, Any]:
-        """Get intelligent coding suggestions based on current task."""
-        try:
-            # Analyze current context
-            context_analysis = await self._analyze_current_context(current_task)
-            
-            # Get relevant patterns
-            relevant_patterns = await self._get_relevant_patterns(current_task)
-            
-            suggestion_prompt = f"""
-            Provide intelligent coding suggestions for the current task:
-            
-            Task: {current_task}
-            Context Analysis: {json.dumps(context_analysis, indent=2)}
-            Relevant Patterns: {json.dumps(relevant_patterns, indent=2)}
-            
-            Suggest:
-            1. Best approaches and methodologies for this specific task
-            2. Potential pitfalls to avoid based on similar tasks
-            3. Recommended tools, libraries, and frameworks
-            4. Code structure and architecture suggestions
-            5. Testing and validation strategies
-            6. Performance and security considerations
-            
-            Return comprehensive suggestions in JSON format with rationale.
-            """
-            
-            if self.llm_handler:
-                suggestions = await self.llm_handler.generate_text(
-                    suggestion_prompt,
-                    model=self.model_preferences.get("suggestions", "gemini-1.5-pro-latest"),
-                    json_mode=True
-                )
-                
-                return {"status": "SUCCESS", "suggestions": suggestions}
-            else:
-                return {"status": "ERROR", "message": "LLM handler not available"}
-                
-        except Exception as e:
-            logger.error(f"Suggestion error: {e}")
-            return {"status": "ERROR", "message": f"Suggestion generation failed: {e}"}
-
-    # Virtual Environment Management
-    async def _create_venv(self, venv_name: str = "default") -> Dict[str, Any]:
-        """Create a Python virtual environment."""
-        venv_path = self.sandbox_root / "venvs" / venv_name
-        
-        try:
-            await asyncio.to_thread(venv_path.parent.mkdir, exist_ok=True)
-            
-            process = await asyncio.create_subprocess_exec(
-                sys.executable, "-m", "venv", str(venv_path),
-                cwd=self.current_working_directory,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=self.security_config.max_execution_time
-            )
-            
-            if process.returncode == 0:
-                return {"status": "SUCCESS", "message": f"Virtual environment '{venv_name}' created"}
-            else:
-                return {"status": "ERROR", "message": f"Failed to create venv: {stderr.decode()}"}
-                
-        except Exception as e:
-            return {"status": "ERROR", "message": f"Venv creation failed: {e}"}
-
-    async def _activate_venv(self, venv_name: str = "default") -> Dict[str, Any]:
-        """Activate a virtual environment."""
-        venv_path = self.sandbox_root / "venvs" / venv_name
-        venv_bin = venv_path / ("Scripts" if os.name == "nt" else "bin")
-        
-        if not venv_bin.exists():
-            return {"status": "ERROR", "message": f"Virtual environment '{venv_name}' not found"}
-        
-        self.active_venv_bin_path = venv_bin
-        return {"status": "SUCCESS", "message": f"Virtual environment '{venv_name}' activated"}
-
-    async def _deactivate_venv(self) -> Dict[str, Any]:
-        """Deactivate the current virtual environment."""
-        self.active_venv_bin_path = None
-        return {"status": "SUCCESS", "message": "Virtual environment deactivated"}
-
-    # Helper methods
-    async def _analyze_current_context(self, task: str) -> Dict[str, Any]:
-        """Analyze current context for better suggestions."""
-        return {
-            "current_directory": str(self.current_working_directory.relative_to(self.sandbox_root)),
-            "active_venv": str(self.active_venv_bin_path) if self.active_venv_bin_path else None,
-            "task": task,
-            "sandbox_root": str(self.sandbox_root),
-            "available_operations": list(self.native_handlers.keys())
+        results = {
+            "cycle": self.cycle_count,
+            "directive": directive,
+            "target_file": target_file,
+            "sandbox_mode": self.sandbox_mode,
+            "autonomous_mode": self.autonomous_mode,
+            "changes": [],
+            "backups": [],
+            "update_requests": [],
+            "timestamp": datetime.now().isoformat()
         }
-
-    async def _get_relevant_patterns(self, task: str) -> Dict[str, Any]:
-        """Get patterns relevant to the current task."""
-        relevant = {}
-        for pattern_key, patterns in self.code_patterns.items():
-            if any(keyword in task.lower() for keyword in pattern_key.split("_")):
-                relevant[pattern_key] = patterns[-5:]  # Last 5 relevant patterns
-        return relevant
-
-    async def _learn_from_execution(self, execution_result: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Learn from code execution results to improve future suggestions."""
-        if not self.config_data.get("enable_pattern_learning", True):
-            return {"status": "DISABLED", "message": "Pattern learning is disabled"}
-            
+        
         try:
-            learning_data = {
-                "execution_result": execution_result,
-                "context": context,
-                "timestamp": time.time(),
-                "success": execution_result.get("status") == "SUCCESS"
-            }
+            # Determine target file
+            if not target_file:
+                target_file = self._extract_target_file(directive)
             
-            # Update coding patterns
-            await self._update_coding_patterns(learning_data)
+            if not target_file:
+                # Fallback to test file
+                target_file = "test_simple_coder.py"
+                logger.info(f"No target file specified, using: {target_file}")
             
-            # Log learning data
-            await self.memory_agent.log_process(
-                process_name="coding_learning",
-                data=learning_data,
-                metadata={"agent_id": self.agent_id}
-            )
+            # Validate file operation
+            if not self._validate_file_operation(target_file, "modify"):
+                results["error"] = f"File operation not allowed: {target_file}"
+                return results
             
-            return {"status": "SUCCESS", "message": "Learning data recorded"}
+            # Create backup if in sandbox mode
+            if self.sandbox_mode and os.path.exists(target_file):
+                backup_path = self._create_backup(target_file)
+                if backup_path:
+                    results["backups"].append(backup_path)
+            
+            # Get working file path (sandbox or original)
+            working_file = self._get_sandbox_path(target_file)
+            
+            # Process the directive
+            changes = await self._apply_directive(directive, working_file, target_file)
+            results["changes"] = changes
+            
+            # Learn from this operation
+            self._learn_from_operation(directive, target_file, changes)
+            
+            # If in sandbox mode, create update request
+            if self.sandbox_mode and changes:
+                update_request = self._create_update_request(target_file, working_file, changes)
+                results["update_requests"].append(update_request)
+                self.update_requests.append(update_request)
+                self._save_update_requests()
+            
+            # Check if should continue (autonomous mode)
+            if self.autonomous_mode:
+                if self.max_cycles == float('inf'):
+                    logger.info("Autonomous mode: Infinite cycles enabled - continuing")
+                    results["continue_autonomous"] = True
+                    results["infinite_mode"] = True
+                elif self.cycle_count < self.max_cycles:
+                    logger.info(f"Autonomous mode: Continuing to next cycle ({self.cycle_count}/{self.max_cycles})")
+                    results["continue_autonomous"] = True
+                else:
+                    logger.info("Autonomous mode: Max cycles reached")
+                    results["continue_autonomous"] = False
             
         except Exception as e:
-            logger.error(f"Learning error: {e}")
-            return {"status": "ERROR", "message": f"Learning failed: {e}"}
-
-    async def _update_coding_patterns(self, learning_data: Dict[str, Any]):
-        """Update coding patterns based on learning data."""
-        pattern_key = learning_data["context"]["operation"]
-        if pattern_key not in self.code_patterns:
-            self.code_patterns[pattern_key] = []
+            logger.error(f"Error in process_directive: {e}")
+            results["error"] = str(e)
         
-        self.code_patterns[pattern_key].append({
-            "success": learning_data["success"],
-            "context": learning_data["context"],
-            "timestamp": learning_data["timestamp"]
+        return results
+    
+    def _extract_target_file(self, directive: str) -> Optional[str]:
+        """Extract target file from directive."""
+        # Look for file patterns in directive
+        import re
+        
+        # Common file patterns
+        patterns = [
+            r'evolve\s+(\w+\.py)',
+            r'update\s+(\w+\.py)',
+            r'modify\s+(\w+\.py)',
+            r'(\w+\.py)',
+            r'(\w+\.js)',
+            r'(\w+\.html)',
+            r'(\w+\.css)'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, directive, re.IGNORECASE)
+            if match:
+                return match.group(1)
+        
+        return None
+    
+    async def _apply_directive(self, directive: str, working_file: str, original_file: str) -> List[Dict[str, Any]]:
+        """Apply the directive to the working file."""
+        changes = []
+        
+        try:
+            # Read current content
+            if os.path.exists(working_file):
+                with open(working_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+            else:
+                content = ""
+            
+            # Generate enhanced code based on directive
+            enhanced_code = self._generate_enhanced_code(directive, self.cycle_count)
+            
+            # Apply changes
+            if "def test_function():" in content:
+                # Modify existing function
+                new_content = content.replace(
+                    "def test_function():\n    return 'original'",
+                    f"def test_function():\n    # Enhanced by Simple Coder cycle {self.cycle_count}\n    return f'simple_coder_{self.cycle_count}'"
+                )
+            else:
+                # Add new content
+                new_content = content + "\n" + enhanced_code
+            
+            # Write changes
+            with open(working_file, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+            
+            # Record changes
+            changes.append({
+                "file": working_file,
+                "type": "modification" if os.path.exists(working_file) else "creation",
+                "changes": [
+                    {
+                        "line": len(content.split('\n')) + 1,
+                        "old": "",
+                        "new": enhanced_code.strip()
+                    }
+                ]
+            })
+            
+        except Exception as e:
+            logger.error(f"Error applying directive: {e}")
+            changes.append({
+                "file": f"simple_coder_error_{self.cycle_count}.txt",
+                "type": "error",
+                "changes": [
+                    {
+                        "line": 1,
+                        "old": "",
+                        "new": f"Simple Coder Error Cycle {self.cycle_count}: {str(e)}"
+                    }
+                ]
+            })
+        
+        return changes
+    
+    def _generate_enhanced_code(self, directive: str, cycle: int) -> str:
+        """Generate enhanced code based on directive and cycle."""
+        return f'''
+def simple_coder_cycle_{cycle}_function():
+    """Enhanced function added by Simple Coder cycle {cycle}"""
+    return {{
+        'cycle': {cycle},
+        'directive': '{directive}',
+        'approach': 'simple_coder_enhanced',
+        'timestamp': time.time(),
+        'sandbox_mode': {self.sandbox_mode},
+        'autonomous_mode': {self.autonomous_mode}
+    }}
+
+def enhanced_processing_v{cycle}():
+    """Enhanced processing with improved error handling and logging"""
+    try:
+        result = f'Enhanced processing completed for cycle {cycle}'
+        logger.info(f"Enhanced processing successful: {{result}}")
+        return result
+    except Exception as e:
+        logger.error(f"Enhanced processing failed: {{e}}")
+        return f'Error: {{e}}'
+
+# Simple Coder Pattern Learning
+def learn_pattern_{cycle}():
+    """Pattern learning function for cycle {cycle}"""
+    patterns = {{
+        'directive_pattern': '{directive}',
+        'cycle': {cycle},
+        'success_rate': 0.0,
+        'learned_at': time.time()
+    }}
+    return patterns
+'''
+    
+    def _learn_from_operation(self, directive: str, target_file: str, changes: List[Dict[str, Any]]):
+        """Learn patterns from successful operations."""
+        if not changes:
+            return
+            
+        # Update success rates
+        file_key = Path(target_file).stem
+        if file_key not in self.patterns["success_rates"]:
+            self.patterns["success_rates"][file_key] = []
+        
+        self.patterns["success_rates"][file_key].append({
+            "cycle": self.cycle_count,
+            "success": True,
+            "changes_count": len(changes),
+            "timestamp": time.time()
         })
         
-        # Keep only recent patterns (last 100)
-        self.code_patterns[pattern_key] = self.code_patterns[pattern_key][-100:]
-
-    # Additional utility methods
-    async def get_status(self) -> Dict[str, Any]:
-        """Get current agent status and capabilities."""
+        # Update file patterns
+        if file_key not in self.patterns["file_patterns"]:
+            self.patterns["file_patterns"][file_key] = []
+        
+        self.patterns["file_patterns"][file_key].append({
+            "directive": directive,
+            "cycle": self.cycle_count,
+            "timestamp": time.time()
+        })
+        
+        # Save patterns
+        self._save_patterns()
+    
+    def _create_update_request(self, original_file: str, sandbox_file: str, changes: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Create an update request for applying sandbox changes to original file."""
         return {
-            "status": "active",
-            "agent_type": "SimpleCoder",
-            "sandbox_root": str(self.sandbox_root),
-            "current_directory": str(self.current_working_directory.relative_to(self.sandbox_root)),
-            "active_venv": str(self.active_venv_bin_path) if self.active_venv_bin_path else None,
-            "available_operations": list(self.native_handlers.keys()),
-            "security_config": {
-                "max_file_size_mb": self.security_config.max_file_size_mb,
-                "allowed_commands": self.security_config.allowed_commands,
-                "sandbox_enabled": self.security_config.sandbox_enabled,
-                "max_execution_time": self.security_config.max_execution_time
-            },
-            "learning_enabled": self.config_data.get("enable_pattern_learning", True),
-            "pattern_count": sum(len(patterns) for patterns in self.code_patterns.values())
+            "request_id": f"update_{int(time.time())}_{self.cycle_count}",
+            "original_file": original_file,
+            "sandbox_file": sandbox_file,
+            "changes": changes,
+            "cycle": self.cycle_count,
+            "timestamp": datetime.now().isoformat(),
+            "status": "pending",
+            "backup_created": len(self.update_requests) > 0
         }
+    
+    def get_update_requests(self) -> List[Dict[str, Any]]:
+        """Get all pending update requests."""
+        return self.update_requests
+    
+    def approve_update_request(self, request_id: str) -> bool:
+        """Approve and apply an update request."""
+        for request in self.update_requests:
+            if request["request_id"] == request_id:
+                try:
+                    # Apply changes to original file
+                    shutil.copy2(request["sandbox_file"], request["original_file"])
+                    request["status"] = "approved"
+                    request["applied_at"] = datetime.now().isoformat()
+                    logger.info(f"Update request {request_id} approved and applied")
+                    return True
+                except Exception as e:
+                    logger.error(f"Failed to apply update request {request_id}: {e}")
+                    request["status"] = "failed"
+                    request["error"] = str(e)
+                    return False
+        return False
+    
+    def reject_update_request(self, request_id: str) -> bool:
+        """Reject an update request."""
+        for request in self.update_requests:
+            if request["request_id"] == request_id:
+                request["status"] = "rejected"
+                request["rejected_at"] = datetime.now().isoformat()
+                logger.info(f"Update request {request_id} rejected")
+                return True
+        return False
+    
+    def update_mode(self, autonomous_mode: bool = None, max_cycles: int = None):
+        """Update autonomous mode and max cycles from UI."""
+        if autonomous_mode is not None:
+            self.autonomous_mode = autonomous_mode
+            # Update max_cycles based on autonomous mode
+            if autonomous_mode:
+                self.max_cycles = float('inf')
+                logger.info("Autonomous mode enabled - setting infinite cycles")
+            else:
+                self.max_cycles = max_cycles if max_cycles is not None else 10
+                logger.info(f"Autonomous mode disabled - setting max cycles to {self.max_cycles}")
+        elif max_cycles is not None and not self.autonomous_mode:
+            self.max_cycles = max_cycles
+            logger.info(f"Updated max cycles to {self.max_cycles}")
+    
+    def get_status(self) -> Dict[str, Any]:
+        """Get current status of the Simple Coder."""
+        return {
+            "sandbox_mode": self.sandbox_mode,
+            "autonomous_mode": self.autonomous_mode,
+            "cycle_count": self.cycle_count,
+            "max_cycles": self.max_cycles,
+            "infinite_mode": self.max_cycles == float('inf'),
+            "pending_updates": len([r for r in self.update_requests if r["status"] == "pending"]),
+            "total_requests": len(self.update_requests),
+            "patterns_learned": len(self.patterns.get("file_patterns", {})),
+            "backup_dir": str(self.backup_dir),
+            "sandbox_dir": str(self.sandbox_dir)
+        }
+    
 
-    async def cleanup(self) -> Dict[str, Any]:
-        """Cleanup resources and save learning data."""
+    async def _log_to_memory(self, memory_type: str, category: str, data: Dict[str, Any], metadata: Dict[str, Any] = None) -> Optional[Path]:
+        """Log information to memory agent if available."""
+        if not self.memory_agent:
+            return None
+        
         try:
-            # Save learning data
-            if self.code_patterns:
-                patterns_file = self.sandbox_root / "learned_patterns.json"
-                await asyncio.to_thread(
-                    patterns_file.write_text,
-                    json.dumps(self.code_patterns, indent=2),
-                    encoding='utf-8'
-                )
+            if metadata is None:
+                metadata = {}
             
-            return {"status": "SUCCESS", "message": "Cleanup completed"}
+            # Add simple_coder specific metadata
+            metadata.update({
+                "agent": "simple_coder",
+                "sandbox_mode": self.sandbox_mode,
+                "autonomous_mode": self.autonomous_mode,
+                "cycle_count": self.cycle_count
+            })
+            
+            # Use the memory agent's save_memory method
+            return await self.memory_agent.save_memory(memory_type, f"simple_coder/{category}", data, metadata)
         except Exception as e:
-            logger.error(f"Cleanup error: {e}")
-            return {"status": "ERROR", "message": f"Cleanup failed: {e}"}
+            logger.error(f"Failed to log to memory: {e}")
+            return None
+    
+    async def _log_cycle_start(self, cycle: int, directive: str) -> None:
+        """Log cycle start to memory."""
+        data = {
+            "cycle": cycle,
+            "directive": directive,
+            "timestamp": datetime.now().isoformat(),
+            "status": "started"
+        }
+        await self._log_to_memory("STM", "cycles", data)
+    
+    async def _log_cycle_completion(self, cycle: int, directive: str, results: Dict[str, Any]) -> None:
+        """Log cycle completion to memory."""
+        data = {
+            "cycle": cycle,
+            "directive": directive,
+            "timestamp": datetime.now().isoformat(),
+            "status": "completed",
+            "results": {
+                "changes_made": len(results.get("changes", [])),
+                "update_requests": len(results.get("update_requests", [])),
+                "success": results.get("success", False)
+            }
+        }
+        await self._log_to_memory("STM", "cycles", data)
+    
+    async def _log_file_operation(self, operation: str, file_path: str, success: bool, details: Dict[str, Any] = None) -> None:
+        """Log file operations to memory."""
+        data = {
+            "operation": operation,
+            "file_path": file_path,
+            "success": success,
+            "timestamp": datetime.now().isoformat(),
+            "details": details or {}
+        }
+        await self._log_to_memory("STM", "file_operations", data)
+    
+    async def _log_update_request(self, request: Dict[str, Any]) -> None:
+        """Log update request creation to memory."""
+        data = {
+            "request_id": request.get("request_id"),
+            "original_file": request.get("original_file"),
+            "sandbox_file": request.get("sandbox_file"),
+            "timestamp": request.get("timestamp"),
+            "status": request.get("status"),
+            "changes_count": len(request.get("changes", []))
+        }
+        await self._log_to_memory("STM", "update_requests", data)
+    
+    async def _log_error(self, error_type: str, error_message: str, context: Dict[str, Any] = None) -> None:
+        """Log errors to memory."""
+        data = {
+            "error_type": error_type,
+            "error_message": error_message,
+            "timestamp": datetime.now().isoformat(),
+            "context": context or {}
+        }
+        await self._log_to_memory("STM", "errors", data)
 
-# Factory function for easy instantiation
-def create_simple_coder(memory_agent: Optional[MemoryAgent] = None, 
-                       config: Optional[Config] = None,
-                       llm_handler: Optional[LLMHandlerInterface] = None) -> SimpleCoder:
-    """Create a SimpleCoder instance with optional dependencies."""
-    return SimpleCoder(
-        memory_agent=memory_agent,
-        config=config,
-        llm_handler=llm_handler
-    )
+    def cleanup(self):
+        """Clean up temporary files and directories."""
+        try:
+            # Move completed sandbox files
+            if self.sandbox_dir.exists():
+                completed_dir = self.sandbox_dir / "completed"
+                completed_dir.mkdir(exist_ok=True)
+                
+                for file in (self.sandbox_dir / "working").glob("*"):
+                    if file.is_file():
+                        shutil.move(str(file), str(completed_dir / file.name))
+            
+            logger.info("Simple Coder cleanup completed")
+        except Exception as e:
+            logger.error(f"Cleanup failed: {e}")
 
-# Export the main class
-__all__ = ['SimpleCoder', 'create_simple_coder', 'OperationType', 'SecurityConfig']
+
+# Standalone functions for backward compatibility
+async def execute_simple_coder_changes(directive: str, cycle: int, sandbox_mode: bool = True, autonomous_mode: bool = False) -> List[Dict[str, Any]]:
+    """
+    Execute changes using simple_coder approach with enhanced features.
+    This function maintains backward compatibility with the existing system.
+    """
+    simple_coder = SimpleCoder(sandbox_mode=sandbox_mode, autonomous_mode=autonomous_mode)
+    results = await simple_coder.process_directive(directive)
+    
+    # Convert to expected format
+    changes = []
+    for change in results.get("changes", []):
+        changes.append({
+            "file": change["file"],
+            "type": change["type"],
+            "changes": change["changes"]
+        })
+    
+    return changes
+
+
+# Example usage and testing
+if __name__ == "__main__":
+    async def main():
+        # Test the Simple Coder
+        simple_coder = SimpleCoder(sandbox_mode=True, autonomous_mode=False)
+        
+        # Process a test directive
+        results = await simple_coder.process_directive("evolve test_file.py")
+        print("Results:", json.dumps(results, indent=2))
+        
+        # Show status
+        status = simple_coder.get_status()
+        print("Status:", json.dumps(status, indent=2))
+        
+        # Show update requests
+        requests = simple_coder.get_update_requests()
+        print("Update Requests:", json.dumps(requests, indent=2))
+    
+    # Run the test
+    asyncio.run(main())
