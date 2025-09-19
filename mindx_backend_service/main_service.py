@@ -265,78 +265,7 @@ async def get_runtime_logs():
 async def root():
     return {"message": "Welcome to the mindX API. See /docs for details."}
 
-# Add missing endpoints that frontend expects
-@app.get("/health", summary="Health check")
-def health():
-    return {"status": "healthy", "service": "mindX API"}
-
-@app.get("/core/agent-activity", summary="Agent activity")
-async def get_agent_activity():
-    return {
-        "agents": {
-            "mastermind": {"status": "active", "type": "MastermindAgent"},
-            "coordinator": {"status": "active", "type": "CoordinatorAgent"},
-            "bdi_agent": {"status": "active", "type": "BDIAgent"},
-            "memory_agent": {"status": "active", "type": "MemoryAgent"},
-            "agint": {"status": "ready", "type": "AGInt"}
-        },
-        "total_agents": 5,
-        "active_agents": 5,
-        "activities": []
-    }
-
-@app.get("/core/beliefs", summary="Belief System status")
-async def get_beliefs():
-    """Get Belief System status and recent beliefs"""
-    try:
-        # Read recent beliefs from the log file
-        agint_log_file = "data/logs/agint/agint_cognitive_cycles.log"
-        recent_beliefs = []
-        
-        if os.path.exists(agint_log_file):
-            with open(agint_log_file, 'r') as f:
-                lines = f.readlines()
-                # Get the last few belief-related entries
-                for line in lines[-20:]:  # Last 20 lines
-                    if "BDI Reasoning:" in line or "Belief:" in line:
-                        recent_beliefs.append(line.strip())
-        
-        return {
-            "count": len(recent_beliefs),
-            "recent": recent_beliefs[-5:] if recent_beliefs else [],
-            "status": "active",
-            "last_updated": time.strftime('%Y-%m-%d %H:%M:%S')
-        }
-    except Exception as e:
-        logger.error(f"Failed to get beliefs: {e}")
-        return {
-            "count": 0,
-            "recent": [],
-            "status": "error",
-            "error": str(e)
-        }
-
-@app.get("/core/bdi-realtime", summary="Real-time BDI updates")
-async def get_bdi_realtime():
-    """Get real-time BDI agent updates for live monitoring"""
-    try:
-        return {
-            "status": "active" if bdi_state["chosen_agent"] != "None" else "idle",
-            "current_directive": bdi_state["current_directive"],
-            "chosen_agent": bdi_state["chosen_agent"],
-            "last_updated": bdi_state["last_updated"],
-            "reasoning_count": len(bdi_state["reasoning_history"]),
-            "latest_reasoning": bdi_state["reasoning_history"][-1] if bdi_state["reasoning_history"] else None,
-            "performance_metrics": bdi_state["performance_metrics"],
-            "system_health": bdi_state["system_health"]
-        }
-    except Exception as e:
-        logger.error(f"Failed to get real-time BDI updates: {e}")
-        return {
-            "status": "error",
-            "error": str(e)
-        }
-
+# Simple Coder endpoints (moved to later in file to avoid duplicates)
 # Global BDI state for real-time updates
 bdi_state = {
     "current_directive": "None",
@@ -518,7 +447,7 @@ def initialize_agint_logging():
             f.write(f"# Started: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write("# Format: [TIMESTAMP] CYCLE X - MESSAGE\n\n")
 
-async def make_actual_code_changes_with_bdi_reasoning(directive: str, cycle: int) -> List[Dict[str, Any]]:
+async def make_actual_code_changes_with_bdi_reasoning(directive: str, cycle: int, autonomous_mode: bool = False) -> List[Dict[str, Any]]:
     """Make actual code changes using simplified BDI reasoning to choose the best agent/tool."""
     changes = []
     
@@ -585,7 +514,7 @@ async def make_actual_code_changes_with_bdi_reasoning(directive: str, cycle: int
         # Execute based on BDI decision
         try:
             if chosen_agent == "simple_coder":
-                changes = await execute_simple_coder_changes(directive, cycle)
+                changes = await execute_simple_coder_changes(directive, cycle, autonomous_mode)
             elif chosen_agent == "base_gen_agent":
                 changes = await execute_base_gen_changes(directive, cycle)
             elif chosen_agent == "system_analyzer":
@@ -625,8 +554,32 @@ async def make_actual_code_changes_with_bdi_reasoning(directive: str, cycle: int
     
     return changes
 
-async def execute_simple_coder_changes(directive: str, cycle: int) -> List[Dict[str, Any]]:
-    """Execute changes using simple_coder approach."""
+async def execute_simple_coder_changes(directive: str, cycle: int, autonomous_mode: bool = False) -> List[Dict[str, Any]]:
+    """Execute changes using enhanced simple_coder approach with sandbox mode."""
+    try:
+        # Import the enhanced simple_coder module
+        import sys
+        import os
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from agents.simple_coder import execute_simple_coder_changes as enhanced_simple_coder
+        
+        # Log the parameters being passed
+        logger.info(f"Simple Coder: directive='{directive}', cycle={cycle}, autonomous_mode={autonomous_mode}")
+        
+        # Use the enhanced simple_coder with sandbox mode enabled
+        return await enhanced_simple_coder(directive, cycle, sandbox_mode=True, autonomous_mode=autonomous_mode)
+        
+    except ImportError as e:
+        logger.error(f"Failed to import enhanced simple_coder: {e}")
+        # Fallback to original implementation
+        return await execute_simple_coder_changes_fallback(directive, cycle)
+    except Exception as e:
+        logger.error(f"Error in enhanced simple_coder: {e}")
+        # Fallback to original implementation
+        return await execute_simple_coder_changes_fallback(directive, cycle)
+
+async def execute_simple_coder_changes_fallback(directive: str, cycle: int) -> List[Dict[str, Any]]:
+    """Fallback implementation if enhanced simple_coder is not available."""
     changes = []
     
     # Create a test file if it doesn't exist
@@ -896,9 +849,86 @@ def enhanced_processing():
     
     return changes
 
-async def make_actual_code_changes(directive: str, cycle: int) -> List[Dict[str, Any]]:
+async def make_actual_code_changes(directive: str, cycle: int, autonomous_mode: bool = False) -> List[Dict[str, Any]]:
     """Make actual code changes based on the directive and cycle number using BDI reasoning."""
-    return await make_actual_code_changes_with_bdi_reasoning(directive, cycle)
+    return await make_actual_code_changes_with_bdi_reasoning(directive, cycle, autonomous_mode)
+
+# Simple Coder endpoints
+@app.get("/simple-coder/status", summary="Get Simple Coder Status")
+async def get_simple_coder_status():
+    """Get the current status of the Simple Coder agent."""
+    try:
+        import sys
+        import os
+        # Change to the correct working directory
+        os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from agents.simple_coder import SimpleCoder
+        
+        # Create a temporary instance to get status
+        simple_coder = SimpleCoder()
+        return simple_coder.get_status()
+    except Exception as e:
+        logger.error(f"Failed to get simple_coder status: {e}")
+        return {"error": str(e)}
+
+@app.get("/simple-coder/update-requests", summary="Get Update Requests")
+async def get_update_requests():
+    """Get all pending update requests from Simple Coder."""
+    try:
+        import sys
+        import os
+        # Change to the correct working directory
+        old_cwd = os.getcwd()
+        new_cwd = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        os.chdir(new_cwd)
+        sys.path.append(new_cwd)
+        from agents.simple_coder import SimpleCoder
+        
+        # Create a temporary instance to get update requests
+        simple_coder = SimpleCoder()
+        return simple_coder.get_update_requests()
+    except Exception as e:
+        logger.error(f"Failed to get update requests: {e}")
+        return {"error": str(e)}
+
+@app.post("/simple-coder/approve-update/{request_id}", summary="Approve Update Request")
+async def approve_update_request(request_id: str):
+    """Approve and apply an update request."""
+    try:
+        import sys
+        import os
+        # Change to the correct working directory
+        os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from agents.simple_coder import SimpleCoder
+        
+        # Create a temporary instance to approve request
+        simple_coder = SimpleCoder()
+        success = simple_coder.approve_update_request(request_id)
+        return {"success": success, "request_id": request_id}
+    except Exception as e:
+        logger.error(f"Failed to approve update request: {e}")
+        return {"error": str(e), "success": False}
+
+@app.post("/simple-coder/reject-update/{request_id}", summary="Reject Update Request")
+async def reject_update_request(request_id: str):
+    """Reject an update request."""
+    try:
+        import sys
+        import os
+        # Change to the correct working directory
+        os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from agents.simple_coder import SimpleCoder
+        
+        # Create a temporary instance to reject request
+        simple_coder = SimpleCoder()
+        success = simple_coder.reject_update_request(request_id)
+        return {"success": success, "request_id": request_id}
+    except Exception as e:
+        logger.error(f"Failed to reject update request: {e}")
+        return {"error": str(e), "success": False}
 
 # Add AGInt streaming endpoint
 @app.post("/commands/agint/stream", summary="AGInt Cognitive Loop Stream")
@@ -917,6 +947,11 @@ async def agint_stream(payload: DirectivePayload):
             max_cycles = getattr(payload, 'max_cycles', 8)
             autonomous_mode = getattr(payload, 'autonomous_mode', False)
             
+            # Set infinite cycles for autonomous mode
+            if autonomous_mode:
+                max_cycles = float('inf')
+                logger.info("Autonomous mode enabled - setting infinite cycles")
+            
             # Simulate AGInt cognitive loop with P-O-D-A cycle
             base_steps = [
                 {"phase": "PERCEPTION", "message": "System state analysis", "icon": "🔍"},
@@ -931,7 +966,8 @@ async def agint_stream(payload: DirectivePayload):
             
             step_count = 0
             
-            for cycle in range(max_cycles):
+            cycle = 0
+            while cycle < max_cycles:
                 cycle_start_time = time.time()
                 
                 # Send cycle start notification
@@ -964,7 +1000,7 @@ async def agint_stream(payload: DirectivePayload):
                     # Make actual code changes for ACTION phase using BDI reasoning
                     code_changes_for_step = []
                     if step["phase"] == "ACTION":
-                        code_changes_for_step = await make_actual_code_changes(payload.directive, cycle + 1)
+                        code_changes_for_step = await make_actual_code_changes(payload.directive, cycle + 1, autonomous_mode)
                     
                     update = {
                         "step": step_count + 1,
@@ -1016,24 +1052,34 @@ async def agint_stream(payload: DirectivePayload):
                 yield f"data: {json.dumps(cycle_complete_update)}\n\n"
                 step_count += 1
                 await asyncio.sleep(0.3)
+                
+                # Increment cycle counter
+                cycle += 1
+                
+                # For autonomous mode, add a small delay between cycles
+                if autonomous_mode:
+                    await asyncio.sleep(2.0)  # Longer delay for autonomous mode
             
             # Final completion message
+            cycles_completed = cycle if not autonomous_mode else "∞"
+            completion_message = f"AGInt cognitive loop completed successfully after {cycles_completed} cycles" if not autonomous_mode else "AGInt cognitive loop running in autonomous mode"
+            
             final_update = {
                 "type": "complete",
                 "status": "success",
                 "phase": "COMPLETE",
-                "icon": "🎉",
-                "message": f"AGInt cognitive loop completed successfully after {max_cycles} cycles",
+                "icon": "🎉" if not autonomous_mode else "🤖",
+                "message": completion_message,
                 "directive": payload.directive,
-                "total_cycles": max_cycles,
+                "total_cycles": cycles_completed,
                 "autonomous_mode": autonomous_mode,
                 "total_steps": step_count,
                 "state_summary": {
                     "llm_operational": True,
                     "awareness": f"Completed directive: {payload.directive}",
                     "llm_status": "Online",
-                    "cognitive_loop": "Completed",
-                    "cycles_completed": max_cycles
+                    "cognitive_loop": "Completed" if not autonomous_mode else "Autonomous",
+                    "cycles_completed": cycles_completed
                 }
             }
             yield f"data: {json.dumps(final_update)}\n\n"
