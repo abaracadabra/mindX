@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # AGENTIC_MINDX_DEPLOY_V2.0.0
 # Production-focused setup and (conceptual) service preparation for MindX.
 # This script aims to be robust and configurable for deploying the MindX system.
