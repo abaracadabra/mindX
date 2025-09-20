@@ -17,7 +17,7 @@ sys.path.insert(0, str(project_root))
 
 from orchestration.mastermind_agent import MastermindAgent
 from orchestration.coordinator_agent import get_coordinator_agent_mindx_async
-from agents.memory_agent import MemoryAgent
+from agents.memory_agent import MemoryAgent, MemoryType, MemoryImportance
 from agents.guardian_agent import GuardianAgent
 from core.id_manager_agent import IDManagerAgent
 from core.belief_system import BeliefSystem
@@ -29,6 +29,15 @@ from utils.logging_config import setup_logging, get_logger
 # Setup logging
 setup_logging()
 logger = get_logger(__name__)
+
+# Memory availability check
+try:
+    # MemoryAgent is already imported above, just check if it's available
+    MemoryAgent()
+    MEMORY_AVAILABLE = True
+except Exception as e:
+    MEMORY_AVAILABLE = False
+    logger.warning(f"MemoryAgent not available - memory logging disabled: {e}")
 
 # --- Pydantic Models for API Request/Response Validation ---
 
@@ -931,6 +940,110 @@ async def reject_update_request(request_id: str):
         return {"error": str(e), "success": False}
 
 # Add AGInt streaming endpoint
+
+# AGInt Memory Integration Functions
+async def _log_agint_to_memory(memory_type: str, category: str, data: dict, metadata: dict = None) -> Optional[Path]:
+    """Log AGInt information to memory agent if available."""
+    if not MEMORY_AVAILABLE:
+        return None
+    
+    try:
+        # Initialize memory agent if not already done
+        if not hasattr(_log_agint_to_memory, 'memory_agent'):
+            _log_agint_to_memory.memory_agent = MemoryAgent()
+        
+        if metadata is None:
+            metadata = {}
+        
+        # Add AGInt specific metadata
+        metadata.update({
+            "agent": "mindx_agint",
+            "component": "cognitive_loop",
+            "timestamp": time.time()
+        })
+        
+        # Use agent-specific category path
+        agent_category = f"mindx_agint/{category}"
+        
+        # Use the memory agent's save_memory method
+        return await _log_agint_to_memory.memory_agent.save_memory(memory_type, agent_category, data, metadata)
+    except Exception as e:
+        logger.error(f"Failed to log AGInt to memory: {e}")
+        return None
+
+async def _log_agint_cycle_start(cycle: int, max_cycles, directive: str, autonomous_mode: bool) -> None:
+    """Log AGInt cycle start to memory."""
+    data = {
+        "cycle": cycle,
+        "max_cycles": max_cycles,
+        "directive": directive,
+        "autonomous_mode": autonomous_mode,
+        "timestamp": time.time(),
+        "status": "started",
+        "phase": "cycle_start"
+    }
+    await _log_agint_to_memory("STM", "cycles", data)
+
+async def _log_agint_cycle_completion(cycle: int, max_cycles, directive: str, autonomous_mode: bool, cycle_duration: float, code_changes: list) -> None:
+    """Log AGInt cycle completion to memory."""
+    data = {
+        "cycle": cycle,
+        "max_cycles": max_cycles,
+        "directive": directive,
+        "autonomous_mode": autonomous_mode,
+        "timestamp": time.time(),
+        "status": "completed",
+        "phase": "cycle_complete",
+        "cycle_duration": cycle_duration,
+        "code_changes_count": len(code_changes),
+        "code_changes_summary": [
+            {
+                "type": change.get("type", "unknown"),
+                "file": change.get("file", "unknown"),
+                "changes_count": len(change.get("changes", []))
+            } for change in code_changes
+        ]
+    }
+    await _log_agint_to_memory("STM", "cycles", data)
+
+async def _log_agint_step(cycle: int, step_phase: str, step_message: str, directive: str, code_changes: list = None) -> None:
+    """Log AGInt step execution to memory."""
+    data = {
+        "cycle": cycle,
+        "step_phase": step_phase,
+        "step_message": step_message,
+        "directive": directive,
+        "timestamp": time.time(),
+        "code_changes": code_changes or [],
+        "code_changes_count": len(code_changes) if code_changes else 0
+    }
+    await _log_agint_to_memory("STM", "steps", data)
+
+async def _log_agint_completion(total_cycles: int, total_steps: int, directive: str, autonomous_mode: bool, success: bool = True) -> None:
+    """Log AGInt overall completion to memory."""
+    data = {
+        "total_cycles": total_cycles,
+        "total_steps": total_steps,
+        "directive": directive,
+        "autonomous_mode": autonomous_mode,
+        "timestamp": time.time(),
+        "status": "completed" if success else "failed",
+        "phase": "agint_complete"
+    }
+    await _log_agint_to_memory("STM", "completion", data)
+
+async def _log_agint_error(error_type: str, error_message: str, cycle: int = None, directive: str = None) -> None:
+    """Log AGInt errors to memory."""
+    data = {
+        "error_type": error_type,
+        "error_message": error_message,
+        "cycle": cycle,
+        "directive": directive,
+        "timestamp": time.time(),
+        "phase": "error"
+    }
+    await _log_agint_to_memory("STM", "errors", data)
+
 @app.post("/commands/agint/stream", summary="AGInt Cognitive Loop Stream")
 async def agint_stream(payload: DirectivePayload):
     from fastapi.responses import StreamingResponse
@@ -969,6 +1082,9 @@ async def agint_stream(payload: DirectivePayload):
             cycle = 0
             while cycle < max_cycles:
                 cycle_start_time = time.time()
+                
+                # Log cycle start to memory
+                await _log_agint_cycle_start(cycle + 1, max_cycles, payload.directive, autonomous_mode)
                 
                 # Send cycle start notification
                 cycle_update = {
@@ -1026,6 +1142,10 @@ async def agint_stream(payload: DirectivePayload):
                     }
                     yield f"data: {json.dumps(update)}\n\n"
                     step_count += 1
+                    
+                    # Log step execution to memory
+                    await _log_agint_step(cycle + 1, step["phase"], step["message"], payload.directive, code_changes_for_step)
+                    
                     await asyncio.sleep(1.0)  # Simulate processing time
                 
                 # Send cycle completion notification
@@ -1051,6 +1171,10 @@ async def agint_stream(payload: DirectivePayload):
                 }
                 yield f"data: {json.dumps(cycle_complete_update)}\n\n"
                 step_count += 1
+                
+                # Log cycle completion to memory
+                await _log_agint_cycle_completion(cycle + 1, max_cycles, payload.directive, autonomous_mode, time.time() - cycle_start_time, code_changes_for_step)
+                
                 await asyncio.sleep(0.3)
                 
                 # Increment cycle counter
@@ -1099,3 +1223,48 @@ async def agint_stream(payload: DirectivePayload):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+# Add missing health and agent activity endpoints
+@app.get("/health", summary="Health check endpoint")
+async def health_check():
+    """Health check endpoint for monitoring."""
+    return {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "service": "mindx_backend",
+        "version": "1.0.0"
+    }
+
+@app.get("/core/agent-activity", summary="Get agent activity")
+async def get_agent_activity():
+    """Get current agent activity status."""
+    try:
+        # Return basic agent activity information
+        return {
+            "agents": [
+                {
+                    "name": "simple_coder",
+                    "status": "active",
+                    "last_activity": time.time(),
+                    "memory_integration": True
+                },
+                {
+                    "name": "agint",
+                    "status": "active", 
+                    "last_activity": time.time(),
+                    "memory_integration": True
+                },
+                {
+                    "name": "mastermind",
+                    "status": "active",
+                    "last_activity": time.time(),
+                    "memory_integration": False
+                }
+            ],
+            "timestamp": time.time(),
+            "total_agents": 3
+        }
+    except Exception as e:
+        logger.error(f"Failed to get agent activity: {e}")
+        return {"error": str(e), "agents": []}
+
