@@ -75,6 +75,16 @@
                 <button id="evolve-btn">Evolve Codebase</button>
             </div>
             <div class="control-section">
+                <h2>Simple Coder Update Requests</h2>
+                <div id="update-requests-container">
+                    <p>No pending update requests</p>
+                </div>
+                <div class="update-request-controls">
+                    <button id="refresh-updates-btn">Refresh Updates</button>
+                    <button id="approve-all-btn" disabled>Approve All</button>
+                </div>
+            </div>
+            <div class="control-section">
                 <h2>Query Coordinator</h2>
                 <input type="text" id="query-input" placeholder="explain augmentic development">
                 <button id="query-btn">Send Query</button>
@@ -131,6 +141,10 @@
                             <span class="status-label">Active Goals:</span>
                             <span id="bdi-goal-count" class="status-value">0</span>
                         </div>
+                        <div class="status-item">
+                            <span class="status-label">Belief Count:</span>
+                            <span id="belief-count" class="status-value">Loading...</span>
+                        </div>
                     </div>
                     <div class="goals-section">
                         <h3>Current Goals</h3>
@@ -145,10 +159,6 @@
             <div class="control-section">
                 <h2>Belief System</h2>
                 <div id="belief-system" class="system-status">
-                    <div class="status-item">
-                        <span class="status-label">Belief Count:</span>
-                        <span id="belief-count" class="status-value">Loading...</span>
-                    </div>
                     <div class="status-item">
                         <span class="status-label">Recent Beliefs:</span>
                         <div id="recent-beliefs" class="beliefs-list"></div>

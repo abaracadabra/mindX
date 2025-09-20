@@ -209,6 +209,28 @@ class CoordinatorAgent:
         except IOError as e:
             self.logger.error(f"Failed to save improvement backlog: {e}")
 
+    async def _log_to_memory(self, memory_type: str, category: str, data: Dict[str, Any], metadata: Dict[str, Any] = None) -> Optional[Path]:
+        """Log information to memory agent if available."""
+        if not self.memory_agent:
+            return None
+        
+        try:
+            if metadata is None:
+                metadata = {}
+            
+            # Add coordinator specific metadata
+            metadata.update({
+                "agent": "coordinator_agent_main",
+                "agent_id": self.agent_id,
+                "timestamp": time.time()
+            })
+            
+            # Use the memory agent's save_memory method
+            return await self.memory_agent.save_memory(memory_type, f"coordinator_agent_main/{category}", data, metadata)
+        except Exception as e:
+            self.logger.error(f"Failed to log to memory: {e}")
+            return None
+
     # --- Public API for Agent Society ---
 
     def register_agent(self, agent_id: str, agent_type: str, description: str, instance: Any):
@@ -281,6 +303,14 @@ class CoordinatorAgent:
             metadata={"agent_id": self.agent_id, "interaction_id": interaction.interaction_id}
         ))
         
+        # Also save to memory using save_memory method
+        asyncio.create_task(self._log_to_memory(
+            memory_type="STM",
+            category="interactions",
+            data=interaction.to_dict(),
+            metadata={"interaction_id": interaction.interaction_id}
+        ))
+        
         return interaction
 
     # --- Interaction Handler Implementations ---
@@ -333,6 +363,14 @@ class CoordinatorAgent:
             "event_bus_topics": list(self.event_listeners.keys()),
         }
         interaction.response = {"status": "SUCCESS", "telemetry": telemetry_data}
+        
+        # Log system analysis to memory
+        await self._log_to_memory(
+            memory_type="STM",
+            category="system_analysis",
+            data=telemetry_data,
+            metadata={"interaction_id": interaction.interaction_id, "analysis_type": "system_telemetry"}
+        )
         interaction.status = InteractionStatus.COMPLETED
 
     async def _handle_component_improvement(self, interaction: Interaction):
@@ -375,6 +413,18 @@ class CoordinatorAgent:
             self.improvement_backlog.append(suggestion)
         self._save_backlog()
         self.logger.info(f"Saved {len(suggestions)} new improvement suggestions to the backlog.")
+        
+        # Log component improvement to memory
+        await self._log_to_memory(
+            memory_type="STM",
+            category="component_improvements",
+            data={
+                "suggestions": suggestions,
+                "suggestions_count": len(suggestions),
+                "interaction_id": interaction.interaction_id
+            },
+            metadata={"improvement_type": "component_analysis", "auto_execute": True}
+        )
 
         # --- AUTO-EXECUTE EVOLUTION ---
         # Take the highest priority suggestion and immediately try to implement it.
@@ -437,6 +487,19 @@ class CoordinatorAgent:
                 "current_agent_count": len(self.agent_registry)
             },
             metadata={"agent_id": self.agent_id}
+        )
+        
+        # Also save to memory using save_memory method
+        await self._log_to_memory(
+            memory_type="STM",
+            category="agent_creation_requests",
+            data={
+                "agent_type": agent_type,
+                "agent_id": agent_id,
+                "config": config,
+                "current_agent_count": len(self.agent_registry)
+            },
+            metadata={"request_type": "creation"}
         )
         
         if agent_id in self.agent_registry:
