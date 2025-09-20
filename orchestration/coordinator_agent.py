@@ -209,6 +209,121 @@ class CoordinatorAgent:
         except IOError as e:
             self.logger.error(f"Failed to save improvement backlog: {e}")
 
+    async def _log_to_memory(self, memory_type: str, category: str, data: Dict[str, Any], metadata: Dict[str, Any] = None) -> Optional[Path]:
+        """Log information to memory agent if available."""
+        if not self.memory_agent:
+            return None
+        
+        try:
+            if metadata is None:
+                metadata = {}
+            
+            # Add coordinator specific metadata
+            metadata.update({
+                "agent": "coordinator_agent_main",
+                "agent_id": self.agent_id,
+                "timestamp": time.time()
+            })
+            
+            # Use the memory agent's save_memory method
+            return await self.memory_agent.save_memory(memory_type, f"coordinator_agent_main/{category}", data, metadata)
+        except Exception as e:
+            self.logger.error(f"Failed to log to memory: {e}")
+            return None
+
+    async def _log_complete_output(self, interaction: Interaction) -> Optional[Path]:
+        """Log complete coordinator agent output including system state, registry, and full context."""
+        if not self.memory_agent:
+            return None
+        
+        try:
+            # Gather comprehensive system state (only serializable data)
+            complete_data = {
+                "interaction": interaction.to_dict(),
+                "system_state": {
+                    "agent_registry": {k: {key: val for key, val in v.items() if key != "instance"} for k, v in self.agent_registry.items()},
+                    "tool_registry": dict(self.tool_registry),
+                    "active_interactions": len([i for i in self.interactions.values() if i.status.name == "IN_PROGRESS"]),
+                    "total_interactions": len(self.interactions),
+                    "improvement_backlog_count": len(self.improvement_backlog),
+                    "event_listeners": list(self.event_listeners.keys())
+                },
+                "coordinator_state": {
+                    "agent_id": self.agent_id,
+                    "initialized": getattr(self, "_initialized", False),
+                    "llm_handler_available": self.llm_handler is not None,
+                    "performance_monitor_available": self.performance_monitor is not None,
+                    "resource_monitor_available": self.resource_monitor is not None
+                },
+                "timestamp": time.time(),
+                "memory_type": "complete_output"
+            }
+            
+            # Add interaction-specific metadata
+            metadata = {
+                "agent": "coordinator_agent_main",
+                "agent_id": self.agent_id,
+                "interaction_id": interaction.interaction_id,
+                "interaction_type": interaction.interaction_type.value,
+                "timestamp": time.time(),
+                "output_type": "complete_coordinator_output"
+            }
+            
+            # Save complete output to memory
+            return await self.memory_agent.save_memory(
+                "STM",
+                "complete_output",
+                complete_data,
+                metadata
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to log complete output: {e}")
+            return None
+        
+        try:
+            # Gather comprehensive system state
+            complete_data = {
+                "interaction": interaction.to_dict(),
+                "system_state": {
+                    "agent_registry": dict(self.agent_registry),
+                    "tool_registry": dict(self.tool_registry),
+                    "active_interactions": len([i for i in self.interactions.values() if i.status.name == "IN_PROGRESS"]),
+                    "total_interactions": len(self.interactions),
+                    "improvement_backlog_count": len(self.improvement_backlog),
+                    "event_listeners": list(self.event_listeners.keys())
+                },
+                "coordinator_state": {
+                    "agent_id": self.agent_id,
+                    "initialized": getattr(self, "_initialized", False),
+                    "llm_handler_available": self.llm_handler is not None,
+                    "performance_monitor_available": self.performance_monitor is not None,
+                    "resource_monitor_available": self.resource_monitor is not None
+                },
+                "timestamp": time.time(),
+                "memory_type": "complete_output"
+            }
+            
+            # Add interaction-specific metadata
+            metadata = {
+                "agent": "coordinator_agent_main",
+                "agent_id": self.agent_id,
+                "interaction_id": interaction.interaction_id,
+                "interaction_type": interaction.interaction_type.value,
+                "timestamp": time.time(),
+                "output_type": "complete_coordinator_output"
+            }
+            
+            # Save complete output to memory
+            return await self.memory_agent.save_memory(
+                "STM",
+                "complete_output",
+                complete_data,
+                metadata
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to log complete output: {e}")
+            return None
+
     # --- Public API for Agent Society ---
 
     def register_agent(self, agent_id: str, agent_type: str, description: str, instance: Any):
@@ -280,6 +395,17 @@ class CoordinatorAgent:
             data=interaction.to_dict(),
             metadata={"agent_id": self.agent_id, "interaction_id": interaction.interaction_id}
         ))
+        
+        # Also save to memory using save_memory method
+        asyncio.create_task(self._log_to_memory(
+            memory_type="STM",
+            category="interactions",
+            data=interaction.to_dict(),
+            metadata={"interaction_id": interaction.interaction_id}
+        ))
+        
+        # Save complete coordinator output
+        await self._log_complete_output(interaction)
         
         return interaction
 
