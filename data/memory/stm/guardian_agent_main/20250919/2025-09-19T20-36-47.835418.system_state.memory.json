@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-09-19T20:36:47.835418",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "guardian_agent_main",
+  "content": {
+    "process_name": "guardian_initialization",
+    "data": {
+      "agent_id": "guardian_agent_main",
+      "status": "initialized"
+    }
+  },
+  "context": {
+    "agent_id": "guardian_agent_main"
+  },
+  "tags": [
+    "guardian_initialization",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "6eeaa39390283a7b"
+}

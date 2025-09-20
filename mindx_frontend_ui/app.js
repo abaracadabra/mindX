@@ -5,6 +5,38 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize system start time for uptime calculation
     window.systemStartTime = new Date();
     
+    // Initialize agent modal event listeners immediately
+    const closeAgentModalBtn = document.getElementById('close-agent-modal');
+    if (closeAgentModalBtn) {
+        closeAgentModalBtn.addEventListener('click', closeAgentDetailsModal);
+        console.log('Agent modal close button event listener added');
+    } else {
+        console.log('Agent modal close button not found');
+    }
+    
+    // Close modal when clicking outside
+    const agentModal = document.getElementById('agent-details-modal');
+    if (agentModal) {
+        agentModal.addEventListener('click', (e) => {
+            if (e.target === agentModal) {
+                closeAgentDetailsModal();
+            }
+        });
+        console.log('Agent modal click outside event listener added');
+    } else {
+        console.log('Agent modal not found');
+    }
+    
+    // Close modal when pressing Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('agent-details-modal');
+            if (modal && modal.style.display === 'flex') {
+                closeAgentDetailsModal();
+            }
+        }
+    });
+    
     // Load initial system data
     setTimeout(() => {
         updateAllSystemFields();
@@ -952,10 +984,50 @@ document.addEventListener('DOMContentLoaded', () => {
             
             try {
                 const response = await sendRequest('/agents/');
-                if (response) {
-                    addLog(`Agents retrieved: ${JSON.stringify(response)}`, 'SUCCESS');
-                    addAgentActivity('Agent Registry', 'Agents list retrieved successfully', 'success');
-                    showResponse(JSON.stringify(response, null, 2));
+                if (response && response.agents) {
+                    addLog(`Agents retrieved: ${response.total_agents} total agents`, 'SUCCESS');
+                    addAgentActivity('Agent Registry', `Retrieved ${response.total_agents} agents (${response.file_agents} file agents, ${response.system_agents} system agents)`, 'success');
+                    
+                    // Format the response nicely
+                    let formattedResponse = `AGENTS LIST\n`;
+                    formattedResponse += `===========\n\n`;
+                    formattedResponse += `Total Agents: ${response.total_agents}\n`;
+                    formattedResponse += `File Agents: ${response.file_agents}\n`;
+                    formattedResponse += `System Agents: ${response.system_agents}\n\n`;
+                    
+                    // Group agents by type
+                    const fileAgents = response.agents.filter(a => a.type === 'file_agent');
+                    const systemAgents = response.agents.filter(a => a.type === 'system_agent');
+                    
+                    if (fileAgents.length > 0) {
+                        formattedResponse += `FILE-BASED AGENTS:\n`;
+                        formattedResponse += `------------------\n`;
+                        fileAgents.forEach(agent => {
+                            formattedResponse += `• ${agent.name}`;
+                            if (agent.class_name) {
+                                formattedResponse += ` (${agent.class_name})`;
+                            }
+                            formattedResponse += `\n  File: ${agent.file}\n`;
+                            formattedResponse += `  Description: ${agent.description}\n`;
+                            formattedResponse += `  Status: ${agent.status}\n\n`;
+                        });
+                    }
+                    
+                    if (systemAgents.length > 0) {
+                        formattedResponse += `SYSTEM AGENTS:\n`;
+                        formattedResponse += `--------------\n`;
+                        systemAgents.forEach(agent => {
+                            formattedResponse += `• ${agent.name}\n`;
+                            formattedResponse += `  Description: ${agent.description}\n`;
+                            formattedResponse += `  Status: ${agent.status}\n\n`;
+                        });
+                    }
+                    
+                    showResponse(formattedResponse);
+                } else {
+                    addLog('No agents found', 'WARNING');
+                    addAgentActivity('Agent Registry', 'No agents found', 'warning');
+                    showResponse('No agents found');
                 }
             } catch (error) {
                 addLog(`Agents list failed: ${error.message}`, 'ERROR');
@@ -1124,6 +1196,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 switchAgentTab(tabType);
             });
         });
+        
+        // Initialize agent details modal
+        const closeAgentModalBtn = document.getElementById('close-agent-modal');
+        if (closeAgentModalBtn) {
+            closeAgentModalBtn.addEventListener('click', closeAgentDetailsModal);
+        }
+        
+        // Close modal when clicking outside
+        const agentModal = document.getElementById('agent-details-modal');
+        if (agentModal) {
+            agentModal.addEventListener('click', (e) => {
+                if (e.target === agentModal) {
+                    closeAgentDetailsModal();
+                }
+            });
+        }
         
         // Initial display
         displayAgents();
@@ -1617,7 +1705,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="agent-status ${statusClass}">${agent.status || 'Unknown'}</div>
                     </div>
                     <div class="agent-actions">
-                        <button class="agent-action-btn" onclick="selectAgent('${agentId}')">View</button>
                         ${canDelete ? `<button class="agent-action-btn delete-btn" onclick="deleteAgent('${agentId}')">Delete</button>` : ''}
                     </div>
                 </div>
@@ -1632,7 +1719,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 const agentId = item.getAttribute('data-agent-id');
-                selectAgent(agentId);
+                openAgentDetailsModal(agentId);
             });
         });
     }
@@ -1641,6 +1728,108 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedAgent = agentId;
         displayAgents(); // Refresh to show selection
         displayAgentDetails(agentId);
+    }
+
+    function openAgentDetailsModal(agentId) {
+        console.log('openAgentDetailsModal called with agentId:', agentId);
+        const modal = document.getElementById('agent-details-modal');
+        const modalAgentName = document.getElementById('modal-agent-name');
+        const agentDetailsContent = document.getElementById('agent-details-content');
+        
+        if (!modal) {
+            console.log('Modal element not found');
+            return;
+        }
+        
+        // Find the agent data
+        const allAgents = [...systemAgents, ...userAgents, ...agents];
+        const agent = allAgents.find(a => (a.id || a.name) === agentId);
+        
+        if (agent) {
+            modalAgentName.textContent = agent.name || agentId;
+            displayAgentDetailsInModal(agent);
+            modal.style.display = 'flex';
+            console.log('Modal opened successfully');
+        } else {
+            console.log('Agent not found:', agentId);
+        }
+    }
+
+    function closeAgentDetailsModal() {
+        console.log('closeAgentDetailsModal called');
+        const modal = document.getElementById('agent-details-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            console.log('Modal closed successfully');
+        } else {
+            console.log('Modal element not found');
+        }
+    }
+    
+    // Make closeAgentDetailsModal globally available
+    window.closeAgentDetailsModal = closeAgentDetailsModal;
+
+    function displayAgentDetailsInModal(agent) {
+        const agentDetailsContent = document.getElementById('agent-details-content');
+        
+        const agentId = agent.id || agent.name || 'Unknown';
+        const agentType = agent.type || 'Unknown';
+        const agentStatus = agent.status || 'Unknown';
+        const agentDescription = agent.description || 'No description available';
+        const isSystem = agent.isSystem || agent.createdBy === 'system';
+        
+        agentDetailsContent.innerHTML = `
+            <h3>Basic Information</h3>
+            <div class="detail-row">
+                <span class="detail-label">Name:</span>
+                <span class="detail-value">${agent.name || agentId}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Type:</span>
+                <span class="detail-value">${agentType}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Status:</span>
+                <span class="detail-value">${agentStatus}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">System Agent:</span>
+                <span class="detail-value">${isSystem ? 'Yes' : 'No'}</span>
+            </div>
+            
+            <h3>Description</h3>
+            <p>${agentDescription}</p>
+            
+            ${agent.file ? `
+                <h3>File Information</h3>
+                <div class="detail-row">
+                    <span class="detail-label">File:</span>
+                    <span class="detail-value">${agent.file}</span>
+                </div>
+                ${agent.path ? `
+                    <div class="detail-row">
+                        <span class="detail-label">Path:</span>
+                        <span class="detail-value">${agent.path}</span>
+                    </div>
+                ` : ''}
+            ` : ''}
+            
+            ${agent.class_name ? `
+                <h3>Technical Details</h3>
+                <div class="detail-row">
+                    <span class="detail-label">Class:</span>
+                    <span class="detail-value">${agent.class_name}</span>
+                </div>
+            ` : ''}
+            
+            ${agent.lastActivity ? `
+                <h3>Activity</h3>
+                <div class="detail-row">
+                    <span class="detail-label">Last Activity:</span>
+                    <span class="detail-value">${agent.lastActivity}</span>
+                </div>
+            ` : ''}
+        `;
     }
 
     function displayAgentDetails(agentId) {
@@ -2628,7 +2817,7 @@ document.addEventListener('DOMContentLoaded', () => {
     checkBackendStatus();
         setInterval(checkBackendStatus, 10000); // Check every 10 seconds
         
-        // Start agent activity simulation
+        // Start real agent activity monitoring
         startAgentActivitySimulation();
         
         // Load initial real agent activity
@@ -2669,56 +2858,57 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startAgentActivitySimulation() {
-        // Fetch real agent activity from the backend
+        // Fetch REAL agent activity from mindX system
         setInterval(async () => {
             if (!activityPaused) {
                 try {
-                    const response = await fetch(`${apiUrl}/core/agent-activity`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data && data.activities) {
-                        // Add new activities that we haven't seen before
-                            data.activities.forEach(activity => {
-                            const activityKey = `${activity.timestamp}-${activity.agent}-${activity.message}`;
-                            if (!seenActivities.has(activityKey)) {
-                                seenActivities.add(activityKey);
-                                    addAgentActivity(activity.agent, activity.message, activity.type || 'info');
-                            }
-                        });
-                        }
-                    } else {
-                        throw new Error(`HTTP ${response.status}`);
-                    }
-                } catch (error) {
-                    console.log('Real agent activity fetch failed, using fallback:', error.message);
-                    // Fallback to simulated activity if real data fails
-                    const agents = ['BDI Agent', 'Blueprint Agent', 'Strategic Evolution Agent', 'Mastermind Agent', 'Coordinator Agent', 'CEO Agent', 'System Monitor'];
-                    const activities = [
-                        'Processing new goal',
-                        'Updating belief system',
-                        'Executing plan',
-                        'Analyzing system state',
-                        'Coordinating with other agents',
-                        'Making strategic decision',
-                        'Learning from experience',
-                        'Generating blueprint',
-                        'Converting action',
-                        'Monitoring performance',
-                        'System health check completed',
-                        'Resource monitoring active',
-                        'Memory optimization in progress',
-                        'LLM model selection updated'
+                    // Try multiple endpoints to get real agent activity
+                    const endpoints = [
+                        '/core/agent-activity',
+                        '/orchestration/coordinator/activity',
+                        '/agents/activity',
+                        '/system/agent-activity'
                     ];
                     
-                    const agent = agents[Math.floor(Math.random() * agents.length)];
-                    const activity = activities[Math.floor(Math.random() * activities.length)];
-                    const types = ['info', 'success', 'warning'];
-                    const type = types[Math.floor(Math.random() * types.length)];
+                    let activityFound = false;
+                    for (const endpoint of endpoints) {
+                        try {
+                            const response = await fetch(`${apiUrl}${endpoint}`);
+                            if (response.ok) {
+                                const data = await response.json();
+                                if (data && (data.activities || data.activity || data.logs)) {
+                                    const activities = data.activities || data.activity || data.logs || [];
+                                    activities.forEach(activity => {
+                                        const activityKey = `${activity.timestamp || Date.now()}-${activity.agent || activity.source || 'Unknown'}-${activity.message || activity.text || activity.content}`;
+                                        if (!seenActivities.has(activityKey)) {
+                                            seenActivities.add(activityKey);
+                                            addAgentActivity(
+                                                activity.agent || activity.source || 'System', 
+                                                activity.message || activity.text || activity.content, 
+                                                activity.type || activity.level || 'info'
+                                            );
+                                        }
+                                    });
+                                    activityFound = true;
+                                    break;
+                                }
+                            }
+                        } catch (e) {
+                            // Continue to next endpoint
+                            continue;
+                        }
+                    }
                     
-                    addAgentActivity(agent, activity, type);
+                    if (!activityFound) {
+                        // If no real activity found, show system status
+                        addAgentActivity('System', 'No active agent interactions detected', 'info');
+                    }
+                } catch (error) {
+                    console.log('Failed to fetch real agent activity:', error.message);
+                    addAgentActivity('System', `Activity monitoring error: ${error.message}`, 'error');
                 }
             }
-        }, 3000); // Check every 3 seconds to reduce load
+        }, 5000); // Check every 5 seconds for real activity
     }
 
     // AGInt Response Window Functions

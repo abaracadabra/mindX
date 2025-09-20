@@ -1,0 +1,23 @@
+{
+  "timestamp": "2025-09-20T12:48:45.281183",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "id_manager_for_mastermind_prime",
+  "content": {
+    "process_name": "id_manager_address_derived",
+    "data": {
+      "entity_id": "mastermind_prime",
+      "address": "0xd554f13DbA86C13Ee752588a957eB642E8Ef58f4",
+      "source": "private_key"
+    }
+  },
+  "context": {
+    "agent_id": "id_manager_for_mastermind_prime"
+  },
+  "tags": [
+    "id_manager_address_derived",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "7963e1c80f1a1ade"
+}

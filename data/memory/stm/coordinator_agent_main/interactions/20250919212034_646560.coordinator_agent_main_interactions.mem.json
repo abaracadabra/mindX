@@ -1,0 +1,29 @@
+{
+  "timestamp_utc": "2025-09-20T04:20:34.646625",
+  "memory_type": "STM",
+  "category": "coordinator_agent_main\/interactions",
+  "metadata": {
+    "interaction_id": "test_002",
+    "agent": "coordinator_agent_main",
+    "agent_id": "coordinator_agent_main",
+    "timestamp": 1758342034.6464527
+  },
+  "data": {
+    "interaction_id": "test_002",
+    "interaction_type": "query",
+    "content": "test query for complete output with await",
+    "metadata": {},
+    "status": "completed",
+    "response": {
+      "status": "SUCCESS",
+      "response_text": "# Testing a Query with Complete Output Using Await\n\nHere's how to test a database query that returns complete output using `await` in JavaScript\/TypeScript with async\/await syntax:\n\n## Example with MongoDB (using Mongoose)\n\n```javascript\nconst mongoose = require('mongoose');\n\n\/\/ Define a simple model\nconst User = mongoose.model('User', new mongoose.Schema({\n  name: String,\n  email: String,\n  age: Number\n}));\n\n\/\/ Test query function\nasync function testQuery() {\n  try {\n    \/\/ Connect to MongoDB\n    await mongoose.connect('mongodb:\/\/localhost:27017\/testdb', {\n      useNewUrlParser: true,\n      useUnifiedTopology: true\n    });\n\n    console.log('Connected to MongoDB');\n\n    \/\/ Example query with await\n    const users = await User.find({}).exec();\n\n    \/\/ Complete output with all fields\n    console.log('Complete query results:');\n    console.log(JSON.stringify(users, null, 2));\n\n    \/\/ Close connection\n    await mongoose.disconnect();\n    console.log('Disconnected from MongoDB');\n  } catch (error) {\n    console.error('Error in test query:', error);\n  }\n}\n\n\/\/ Execute the test\ntestQuery();\n```\n\n## Example with PostgreSQL (using pg)\n\n```javascript\nconst { Pool } = require('pg');\n\nasync function testPostgresQuery() {\n  const pool = new Pool({\n    user: 'your_username',\n    host: 'localhost',\n    database: 'your_database',\n    password: 'your_password',\n    port: 5432,\n  });\n\n  try {\n    \/\/ Connect to PostgreSQL\n    await pool.query('SELECT NOW()');\n\n    \/\/ Example query with await\n    const res = await pool.query('SELECT * FROM users');\n\n    \/\/ Complete output with all fields\n    console.log('Complete query results:');\n    console.log(res.rows);\n\n    \/\/ Close connection\n    await pool.end();\n  } catch (error) {\n    console.error('Error in test query:', error);\n  }\n}\n\ntestPostgresQuery();\n```\n\n## Example with SQL Server (using mssql)\n\n```javascript\nconst sql = require('mssql');\n\nasync function testSqlServerQuery() {\n  try {\n    \/\/ Configure connection\n    const config = {\n      user: 'your_username',\n      password: 'your_password',\n      server: 'localhost',\n      database: 'your_database',\n      options: {\n        encrypt: true, \/\/ for Azure\n        trustServerCertificate: true \/\/ change to true for local dev\n      }\n    };\n\n    \/\/ Connect and query\n    let pool = await sql.connect(config);\n    const result = await pool.request()\n      .query('SELECT * FROM users');\n\n    \/\/ Complete output with all fields\n    console.log('Complete query results:');\n    console.log(result.recordset);\n\n    \/\/ Close connection\n    await pool.close();\n  } catch (error) {\n    console.error('Error in test query:', error);\n  }\n}\n\ntestSqlServerQuery();\n```\n\n## Key Points:\n1. The `await` keyword ensures the query completes before proceeding\n2. The complete output is available after the awaited promise resolves\n3. Always handle errors with try\/catch\n4. Remember to properly close database connections\n5. The output will include all fields from the query results\n\nWould you like me to provide an example for a specific database system or ORM?",
+      "model_used": "mistral\/default_model_for_mistral",
+      "tokens_used": "N\/A",
+      "cost": "N\/A",
+      "provider": "mistral"
+    },
+    "error": null,
+    "created_at": 1758342025.2237456,
+    "completed_at": 1758342034.6453292
+  }
+}
