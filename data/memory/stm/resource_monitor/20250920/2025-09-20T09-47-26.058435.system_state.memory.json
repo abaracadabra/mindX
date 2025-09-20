@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-09-20T09:47:26.058435",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "resource_monitor",
+  "content": {
+    "process_name": "resource_alert",
+    "data": {
+      "type": "memory",
+      "status": "ALERT",
+      "message": "High Memory usage detected: 85.9% > limit (85.0%)",
+      "value": 85.9,
+      "limit": 85.0
+    }
+  },
+  "context": {
+    "agent_id": "resource_monitor"
+  },
+  "tags": [
+    "resource_alert",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "6f26df61a9f9deb0"
+}

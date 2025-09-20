@@ -1,0 +1,29 @@
+{
+  "timestamp_utc": "2025-09-20T04:22:02.991435",
+  "memory_type": "STM",
+  "category": "coordinator_agent_main\/interactions",
+  "metadata": {
+    "interaction_id": "test_003",
+    "agent": "coordinator_agent_main",
+    "agent_id": "coordinator_agent_main",
+    "timestamp": 1758342122.991338
+  },
+  "data": {
+    "interaction_id": "test_003",
+    "interaction_type": "query",
+    "content": "test query for complete output with fixed serialization",
+    "metadata": {},
+    "status": "completed",
+    "response": {
+      "status": "SUCCESS",
+      "response_text": "# Test Query for Complete Output with Fixed Serialization\n\nHere's a comprehensive test query that ensures complete output with fixed serialization:\n\n```sql\n-- Test query with fixed serialization\nSELECT\n    -- Basic scalar values\n    42 AS integer_value,\n    3.14159 AS float_value,\n    'Hello, World!' AS string_value,\n    TRUE AS boolean_value,\n    NULL AS null_value,\n\n    -- Date\/time values\n    CURRENT_DATE AS current_date,\n    CURRENT_TIMESTAMP AS current_timestamp,\n    INTERVAL '1 day' AS interval_value,\n\n    -- JSON\/BSON serialization test\n    TO_JSON('{\"name\": \"Test\", \"value\": 42}') AS json_serialized,\n    TO_BSON('{\"name\": \"Test\", \"value\": 42}') AS bson_serialized,\n\n    -- Array\/collection test\n    ARRAY[1, 2, 3] AS integer_array,\n    ARRAY['a', 'b', 'c'] AS string_array,\n\n    -- Struct\/object test\n    ROW(1, 'test', TRUE) AS simple_row,\n    ROW('name'::text, 'age'::int, 'active'::boolean) AS named_row,\n\n    -- Complex nested structure\n    ROW(\n        ROW(1, 'parent') AS parent,\n        ARRAY[ROW(10, 'child1'), ROW(20, 'child2')] AS children\n    ) AS nested_structure,\n\n    -- Binary data test\n    E'\\\\x48656C6C6F'::bytea AS binary_data,\n\n    -- Special characters test\n    'Special chars: \\' \\\", \\n, \\t, \\r, \\0' AS special_chars,\n\n    -- Large text test\n    REPEAT('a', 1000) AS large_text,\n\n    -- UUID test\n    gen_random_uuid() AS uuid_value,\n\n    -- Geometry test (if supported)\n    ST_GeomFromText('POINT(1 1)') AS geometry_value\n\n    -- Add any other data types specific to your database system\n    -- For example, in PostgreSQL you might add:\n    -- pg_sleep(0.001) AS sleep_test,\n    -- pg_typeof(42) AS type_info\n;\n```\n\n## Key Features of This Test Query:\n\n1. **Comprehensive Type Coverage**: Tests all major data types including integers, floats, strings, booleans, dates, JSON, arrays, and more.\n\n2. **Serialization Testing**:\n   - Explicit JSON serialization with `TO_JSON`\n   - Binary serialization with `TO_BSON`\n   - Binary data with `bytea`\n\n3. **Complex Structures**:\n   - Nested rows\/structures\n   - Arrays of complex types\n   - Mixed-type structures\n\n4. **Edge Cases**:\n   - NULL values\n   - Special characters\n   - Large text\n   - Binary data\n\n5. **Database-Specific Features**:\n   - UUID generation\n   - Geometry types (if supported)\n   - System-specific functions\n\nTo use this with your specific database system, you may need to adjust some syntax or add system-specific types\/functions.",
+      "model_used": "mistral\/default_model_for_mistral",
+      "tokens_used": "N\/A",
+      "cost": "N\/A",
+      "provider": "mistral"
+    },
+    "error": null,
+    "created_at": 1758342117.4398055,
+    "completed_at": 1758342122.9903295
+  }
+}

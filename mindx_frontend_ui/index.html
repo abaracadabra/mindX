@@ -99,37 +99,7 @@
                     <button id="approve-all-btn" disabled>Approve All</button>
                 </div>
             </div>
-            <div class="control-section">
-                <h2>System Commands</h2>
-                <div class="button-grid">
-                    <button id="status-btn">Check System Status</button>
-                    <button id="agents-btn">List Agents</button>
-                    <button id="tools-btn">List Tools</button>
-                    <button id="test-mistral-btn">Test Mistral API</button>
-                    <button id="analyze-btn">Analyze Codebase</button>
-                    <button id="replicate-btn">Trigger Replication</button>
-                    <button id="improve-btn">Request Improvement</button>
-                </div>
-            </div>
             
-            <div class="control-section">
-                <h2>Real-time Agent Activity</h2>
-                <div class="agent-activity-monitor">
-                    <div class="activity-header">
-                        <span class="activity-label">Live Agent Actions</span>
-                        <div class="activity-controls">
-                            <button id="pause-activity" class="control-btn">Pause</button>
-                            <button id="clear-activity" class="control-btn">Clear</button>
-                        </div>
-                    </div>
-                    <div id="agent-activity-log" class="activity-log"></div>
-                </div>
-            </div>
-            
-            <div class="response-section">
-                <h2>API Response</h2>
-                <pre id="response-output">Awaiting command...</pre>
-            </div>
         </div>
 
         <!-- Core Systems Tab -->
@@ -330,129 +300,118 @@
                 </div>
                 <div id="agents-list" class="agents-list"></div>
             </div>
+            
+            <!-- AGENTIVITY -->
             <div class="control-section">
-                <h2>Agent Details</h2>
-                <div id="agent-details" class="system-status">
-                    <p>Select an agent from the list to view details.</p>
+                <div class="section-header">
+                    <h2>AGENTIVITY</h2>
+                    <div class="activity-controls">
+                        <button id="pause-activity" class="control-btn">Pause</button>
+                        <button id="clear-activity" class="control-btn">Clear</button>
+                    </div>
                 </div>
+                <div id="agent-activity-log" class="activity-log"></div>
             </div>
         </div>
 
         <!-- System Tab -->
         <div id="system-tab" class="tab-content">
             <div class="control-section">
-                <h2>System Status</h2>
-                <div id="system-status" class="system-status">
-                    <div class="status-item">
-                        <span class="status-label">System Health:</span>
-                        <span id="system-health" class="status-value">Loading...</span>
+                <div class="monitoring-header">
+                    <h2>System Monitoring</h2>
+                </div>
+
+                <!-- Performance Monitoring -->
+                <div class="monitoring-section">
+                    <div class="section-header">
+                        <h3>Performance Monitor</h3>
+                        <div class="agent-status" id="performance-agent-status">
+                            <span class="status-dot" id="perf-status-indicator"></span>
+                            <span id="perf-agent-status">Loading...</span>
+                        </div>
                     </div>
-                    <div class="status-item">
-                        <span class="status-label">Uptime:</span>
-                        <span id="system-uptime" class="status-value">Loading...</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">Active Agents:</span>
-                        <span id="active-agents-count" class="status-value">Loading...</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">LLM Provider:</span>
-                        <span id="llm-provider-status" class="status-value">Loading...</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">Mistral API:</span>
-                        <span id="mistral-api-status" class="status-value">Loading...</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">AGInt Status:</span>
-                        <span id="agint-status" class="status-value">Loading...</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">Coordinator:</span>
-                        <span id="coordinator-status" class="status-value">Loading...</span>
+                    
+                    <div class="metrics-row">
+                        <div class="metric-item">
+                            <div class="metric-label">API Calls</div>
+                            <div class="metric-value" id="perf-total-calls">0</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Success Rate</div>
+                            <div class="metric-value" id="perf-success-rate">0%</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Avg Latency</div>
+                            <div class="metric-value" id="perf-avg-latency">0ms</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Total Cost</div>
+                            <div class="metric-value" id="perf-total-cost">$0.00</div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="control-section">
-                <h2>Performance Metrics</h2>
-                <div id="performance-metrics" class="performance-metrics">
-                    <div class="metric-grid">
+
+                <!-- Resource Monitoring -->
+                <div class="monitoring-section">
+                    <div class="section-header">
+                        <h3>Resource Monitor</h3>
+                        <div class="agent-status" id="resource-agent-status">
+                            <span class="status-dot" id="res-status-indicator"></span>
+                            <span id="res-agent-status">Loading...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metrics-row">
                         <div class="metric-item">
-                            <span class="metric-label">CPU Usage:</span>
-                            <div class="metric-bar">
-                                <div id="cpu-usage-bar" class="metric-fill"></div>
-                                <span id="cpu-usage-text" class="metric-text">0%</span>
+                            <div class="metric-label">CPU Usage</div>
+                            <div class="metric-value" id="res-cpu-usage">0%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="res-cpu-progress"></div>
                             </div>
                         </div>
                         <div class="metric-item">
-                            <span class="metric-label">Memory Usage:</span>
-                            <div class="metric-bar">
-                                <div id="memory-usage-bar" class="metric-fill"></div>
-                                <span id="memory-usage-text" class="metric-text">0%</span>
+                            <div class="metric-label">Memory Usage</div>
+                            <div class="metric-value" id="res-memory-usage">0%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="res-memory-progress"></div>
                             </div>
                         </div>
                         <div class="metric-item">
-                            <span class="metric-label">Disk Usage:</span>
-                            <div class="metric-bar">
-                                <div id="disk-usage-bar" class="metric-fill"></div>
-                                <span id="disk-usage-text" class="metric-text">0%</span>
+                            <div class="metric-label">Disk Usage</div>
+                            <div class="metric-value" id="res-disk-usage">0%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="res-disk-progress"></div>
                             </div>
                         </div>
                         <div class="metric-item">
-                            <span class="metric-label">Network I/O:</span>
-                            <div class="metric-bar">
-                                <div id="network-usage-bar" class="metric-fill"></div>
-                                <span id="network-usage-text" class="metric-text">0%</span>
-                            </div>
+                            <div class="metric-label">Alerts</div>
+                            <div class="metric-value" id="res-alerts">0</div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="control-section">
-                <h2>Resource Usage</h2>
-                <div id="resource-usage" class="resource-usage">
-                    <div class="resource-grid">
-                        <div class="resource-item">
-                            <span class="resource-label">Total Memory:</span>
-                            <span id="total-memory" class="resource-value">Loading...</span>
-                        </div>
-                        <div class="resource-item">
-                            <span class="resource-label">Used Memory:</span>
-                            <span id="used-memory" class="resource-value">Loading...</span>
-                        </div>
-                        <div class="resource-item">
-                            <span class="resource-label">Available Memory:</span>
-                            <span id="available-memory" class="resource-value">Loading...</span>
-                        </div>
-                        <div class="resource-item">
-                            <span class="resource-label">Disk Space:</span>
-                            <span id="disk-space" class="resource-value">Loading...</span>
-                        </div>
-                        <div class="resource-item">
-                            <span class="resource-label">Process Count:</span>
-                            <span id="process-count" class="resource-value">Loading...</span>
-                        </div>
-                        <div class="resource-item">
-                            <span class="resource-label">Load Average:</span>
-                            <span id="load-average" class="resource-value">Loading...</span>
-                        </div>
+
+
+                <!-- System Commands -->
+                <div class="monitoring-section">
+                    <div class="section-header">
+                        <h3>System Commands</h3>
+                    </div>
+                    <div class="button-grid">
+                        <button id="status-btn">SYSTEM STATUS</button>
+                        <button id="agents-btn">List Agents</button>
+                        <button id="tools-btn">List Tools</button>
+                        <button id="replicate-btn">Trigger Replication</button>
                     </div>
                 </div>
-            </div>
-            <div class="control-section">
-                <h2>Live System Monitoring</h2>
-                <div class="monitoring-controls">
-                    <button id="start-monitoring-btn" class="btn btn-primary">Start Monitoring</button>
-                    <button id="stop-monitoring-btn" class="btn btn-secondary">Stop Monitoring</button>
-                    <button id="refresh-metrics-btn" class="btn btn-info">Refresh Metrics</button>
-                </div>
-                <div id="live-monitoring" class="live-monitoring">
-                    <div class="monitoring-status">
-                        <span class="status-label">Monitoring Status:</span>
-                        <span id="monitoring-status" class="status-value">Stopped</span>
+
+                <!-- API Response -->
+                <div class="monitoring-section">
+                    <div class="section-header">
+                        <h3>API Response</h3>
                     </div>
-                    <div id="monitoring-output" class="monitoring-output"></div>
+                    <pre id="response-output">Loading system health check...</pre>
                 </div>
+
             </div>
         </div>
 
@@ -515,6 +474,21 @@
             <div class="control-section">
                 <h2>System Configuration</h2>
                 <div id="config-display" class="config-display"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent Details Popup Modal -->
+    <div id="agent-details-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-agent-name">Agent Details</h2>
+                <button id="close-agent-modal" class="close-btn" onclick="closeAgentDetailsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="agent-details-content" class="agent-details-content">
+                    <p>Loading agent details...</p>
+                </div>
             </div>
         </div>
     </div>

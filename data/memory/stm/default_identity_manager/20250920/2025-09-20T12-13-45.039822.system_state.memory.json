@@ -1,0 +1,23 @@
+{
+  "timestamp": "2025-09-20T12:13:45.039822",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "default_identity_manager",
+  "content": {
+    "process_name": "id_manager_address_derived",
+    "data": {
+      "entity_id": "guardian_agent_main",
+      "address": "0x2C0fFCf9677EE77a8C7f84D3d7dB67b47A5D4D25",
+      "source": "private_key"
+    }
+  },
+  "context": {
+    "agent_id": "default_identity_manager"
+  },
+  "tags": [
+    "id_manager_address_derived",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "2c1e3380dfc450e0"
+}

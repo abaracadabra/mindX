@@ -1,0 +1,279 @@
+{
+  "file_patterns": {
+    "test_simple_coder": [
+      {
+        "directive": "evolve augmentic,py",
+        "cycle": 1,
+        "timestamp": 1758386133.9339502
+      },
+      {
+        "directive": "evolve augmentic,py",
+        "cycle": 1,
+        "timestamp": 1758386139.7694108
+      },
+      {
+        "directive": "evolve augmentic,py",
+        "cycle": 1,
+        "timestamp": 1758386145.5954437
+      },
+      {
+        "directive": "evolve augmentic,py",
+        "cycle": 1,
+        "timestamp": 1758386151.4209938
+      },
+      {
+        "directive": "evolve augmentic,py",
+        "cycle": 1,
+        "timestamp": 1758386157.2461088
+      },
+      {
+        "directive": "evolve augmentic,py",
+        "cycle": 1,
+        "timestamp": 1758386163.0745423
+      },
+      {
+        "directive": "evolve augmentic,py",
+        "cycle": 1,
+        "timestamp": 1758386168.9011958
+      },
+      {
+        "directive": "evolve augmentic,py",
+        "cycle": 1,
+        "timestamp": 1758386174.7308483
+      }
+    ],
+    "augmentic": [
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758388966.2442029
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758388972.0745866
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758388977.898818
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758388983.7236917
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758388989.551495
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758388995.379479
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758389001.243549
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758389007.071423
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758390404.846248
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758390410.674616
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758390416.505086
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758390422.3717847
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758390428.1994362
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758390434.063217
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758390439.8936028
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758390445.7244117
+      }
+    ]
+  },
+  "code_patterns": {},
+  "success_rates": {
+    "test_simple_coder": [
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758386133.9339457
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758386139.7694046
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758386145.5954382
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758386151.4209886
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758386157.2461038
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758386163.0745378
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758386168.9011908
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758386174.7308428
+      }
+    ],
+    "augmentic": [
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758388966.244201
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758388972.0745852
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758388977.8988166
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758388983.7236896
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758388989.5514917
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758388995.3794756
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758389001.2435467
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758389007.071421
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758390404.8462455
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758390410.6746142
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758390416.5050845
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758390422.3717825
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758390428.1994343
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758390434.0632133
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758390439.893601
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758390445.72441
+      }
+    ]
+  }
+}

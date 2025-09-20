@@ -1,0 +1,23 @@
+{
+  "timestamp": "2025-09-19T20:50:54.581510",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "id_manager_for_coordinator_agent_main",
+  "content": {
+    "process_name": "id_manager_wallet_exists",
+    "data": {
+      "entity_id": "coordinator_agent_main",
+      "address": "0xcB706B1C69aF79B08a89116E9d4fB6Df2755e630",
+      "env_var": "MINDX_WALLET_PK_COORDINATOR_AGENT_MAIN"
+    }
+  },
+  "context": {
+    "agent_id": "id_manager_for_coordinator_agent_main"
+  },
+  "tags": [
+    "id_manager_wallet_exists",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "f9afb73373813d3e"
+}

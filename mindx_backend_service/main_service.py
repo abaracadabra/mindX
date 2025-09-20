@@ -256,6 +256,130 @@ async def agent_list():
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
     return await command_handler.handle_agent_list()
 
+@app.get("/agents/", summary="List all agents including file-based and system agents")
+async def list_all_agents():
+    """
+    List all agents including those in the agents folder and system agents.
+    """
+    try:
+        import os
+        import importlib.util
+        
+        agents_list = []
+        
+        # Get agents from the agents folder
+        agents_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'agents')
+        if os.path.exists(agents_folder):
+            for filename in os.listdir(agents_folder):
+                if filename.endswith('.py') and not filename.startswith('__'):
+                    agent_name = filename[:-3]  # Remove .py extension
+                    
+                    # Try to get agent class name and description
+                    agent_info = {
+                        "name": agent_name,
+                        "type": "file_agent",
+                        "file": filename,
+                        "path": os.path.join(agents_folder, filename),
+                        "status": "available"
+                    }
+                    
+                    # Try to extract class name from the file
+                    try:
+                        with open(os.path.join(agents_folder, filename), 'r') as f:
+                            content = f.read()
+                            # Look for class definitions
+                            import re
+                            class_matches = re.findall(r'class\s+(\w+).*?Agent', content)
+                            if class_matches:
+                                agent_info["class_name"] = class_matches[0]
+                            
+                            # Look for docstrings or descriptions
+                            docstring_match = re.search(r'"""(.*?)"""', content, re.DOTALL)
+                            if docstring_match:
+                                agent_info["description"] = docstring_match.group(1).strip()[:100] + "..."
+                            else:
+                                agent_info["description"] = f"Agent from {filename}"
+                    except Exception as e:
+                        agent_info["description"] = f"Agent from {filename}"
+                        agent_info["error"] = str(e)
+                    
+                    agents_list.append(agent_info)
+        
+        # Add system agents
+        system_agents = [
+            {
+                "name": "BDI Agent",
+                "type": "system_agent",
+                "status": "active",
+                "description": "Belief-Desire-Intention agent for goal management and planning"
+            },
+            {
+                "name": "Memory Agent",
+                "type": "system_agent", 
+                "status": "active",
+                "description": "Manages short-term and long-term memory systems"
+            },
+            {
+                "name": "Guardian Agent",
+                "type": "system_agent",
+                "status": "active", 
+                "description": "Security and safety monitoring agent"
+            },
+            {
+                "name": "ID Manager Agent",
+                "type": "system_agent",
+                "status": "active",
+                "description": "Manages entity identities and addresses"
+            },
+            {
+                "name": "Mastermind Agent",
+                "type": "system_agent",
+                "status": "active",
+                "description": "High-level strategic planning and coordination"
+            },
+            {
+                "name": "Coordinator Agent",
+                "type": "system_agent",
+                "status": "active",
+                "description": "Coordinates between different agents and systems"
+            },
+            {
+                "name": "CEO Agent",
+                "type": "system_agent",
+                "status": "active",
+                "description": "Executive decision making and strategic oversight"
+            },
+            {
+                "name": "Resource Monitor",
+                "type": "system_agent",
+                "status": "active",
+                "description": "Monitors system resources and performance"
+            },
+            {
+                "name": "Performance Monitor",
+                "type": "system_agent",
+                "status": "active",
+                "description": "Tracks system performance metrics and alerts"
+            }
+        ]
+        
+        agents_list.extend(system_agents)
+        
+        return {
+            "total_agents": len(agents_list),
+            "file_agents": len([a for a in agents_list if a["type"] == "file_agent"]),
+            "system_agents": len([a for a in agents_list if a["type"] == "system_agent"]),
+            "agents": agents_list
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to list agents: {e}")
+        return {
+            "error": str(e),
+            "total_agents": 0,
+            "agents": []
+        }
+
 @app.post("/agents/{agent_id}/evolve", summary="Evolve a specific agent")
 async def agent_evolve(agent_id: str, payload: DirectivePayload):
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
@@ -509,6 +633,89 @@ def get_resource_usage():
         logger.error(f"Failed to get resource usage: {e}")
         return {
             "error": str(e),
+            "timestamp": time.time()
+        }
+
+@app.get("/system/agent-activity", summary="Get real agent activity")
+def get_agent_activity():
+    """
+    Get real agent activity from mindX system.
+    """
+    try:
+        import os
+        import json
+        from datetime import datetime
+        
+        activities = []
+        
+        # Check for agent activity logs in various locations
+        log_paths = [
+            '/home/hacker/mindX/data/logs/agent_activity.log',
+            '/home/hacker/mindX/data/logs/system.log',
+            '/home/hacker/mindX/data/memory/stm/',
+            '/home/hacker/mindX/logs/'
+        ]
+        
+        # Try to read from log files
+        for log_path in log_paths:
+            if os.path.exists(log_path):
+                try:
+                    if os.path.isfile(log_path):
+                        with open(log_path, 'r') as f:
+                            lines = f.readlines()[-10:]  # Get last 10 lines
+                            for line in lines:
+                                if any(agent in line for agent in ['BDI', 'Memory', 'Guardian', 'Coordinator', 'Mastermind', 'CEO']):
+                                    activities.append({
+                                        "timestamp": datetime.now().isoformat(),
+                                        "agent": "System",
+                                        "message": line.strip(),
+                                        "type": "info"
+                                    })
+                    elif os.path.isdir(log_path):
+                        # Check memory files for agent activity
+                        for root, dirs, files in os.walk(log_path):
+                            for file in files:
+                                if file.endswith('.json') and any(agent in file for agent in ['agent', 'coordinator', 'mastermind']):
+                                    try:
+                                        with open(os.path.join(root, file), 'r') as f:
+                                            data = json.load(f)
+                                            if isinstance(data, dict) and 'timestamp' in data:
+                                                activities.append({
+                                                    "timestamp": data.get('timestamp', datetime.now().isoformat()),
+                                                    "agent": data.get('agent', 'Unknown'),
+                                                    "message": f"Memory update: {data.get('type', 'activity')}",
+                                                    "type": "info"
+                                                })
+                                    except:
+                                        continue
+                except Exception as e:
+                    continue
+        
+        # If no real activity found, check system status
+        if not activities:
+            activities.append({
+                "timestamp": datetime.now().isoformat(),
+                "agent": "System",
+                "message": "Monitoring system for agent activity...",
+                "type": "info"
+            })
+        
+        return {
+            "activities": activities[-20:],  # Return last 20 activities
+            "total": len(activities),
+            "timestamp": time.time()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get agent activity: {e}")
+        return {
+            "activities": [{
+                "timestamp": datetime.now().isoformat(),
+                "agent": "System",
+                "message": f"Activity monitoring error: {str(e)}",
+                "type": "error"
+            }],
+            "total": 1,
             "timestamp": time.time()
         }
 
