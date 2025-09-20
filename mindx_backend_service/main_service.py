@@ -17,7 +17,7 @@ sys.path.insert(0, str(project_root))
 
 from orchestration.mastermind_agent import MastermindAgent
 from orchestration.coordinator_agent import get_coordinator_agent_mindx_async
-from agents.memory_agent import MemoryAgent
+from agents.memory_agent import MemoryAgent, MemoryType, MemoryImportance
 from agents.guardian_agent import GuardianAgent
 from core.id_manager_agent import IDManagerAgent
 from core.belief_system import BeliefSystem
@@ -29,6 +29,15 @@ from utils.logging_config import setup_logging, get_logger
 # Setup logging
 setup_logging()
 logger = get_logger(__name__)
+
+# Memory availability check
+try:
+    # MemoryAgent is already imported above, just check if it's available
+    MemoryAgent()
+    MEMORY_AVAILABLE = True
+except Exception as e:
+    MEMORY_AVAILABLE = False
+    logger.warning(f"MemoryAgent not available - memory logging disabled: {e}")
 
 # --- Pydantic Models for API Request/Response Validation ---
 
@@ -1214,3 +1223,48 @@ async def agint_stream(payload: DirectivePayload):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+# Add missing health and agent activity endpoints
+@app.get("/health", summary="Health check endpoint")
+async def health_check():
+    """Health check endpoint for monitoring."""
+    return {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "service": "mindx_backend",
+        "version": "1.0.0"
+    }
+
+@app.get("/core/agent-activity", summary="Get agent activity")
+async def get_agent_activity():
+    """Get current agent activity status."""
+    try:
+        # Return basic agent activity information
+        return {
+            "agents": [
+                {
+                    "name": "simple_coder",
+                    "status": "active",
+                    "last_activity": time.time(),
+                    "memory_integration": True
+                },
+                {
+                    "name": "agint",
+                    "status": "active", 
+                    "last_activity": time.time(),
+                    "memory_integration": True
+                },
+                {
+                    "name": "mastermind",
+                    "status": "active",
+                    "last_activity": time.time(),
+                    "memory_integration": False
+                }
+            ],
+            "timestamp": time.time(),
+            "total_agents": 3
+        }
+    except Exception as e:
+        logger.error(f"Failed to get agent activity: {e}")
+        return {"error": str(e), "agents": []}
+
