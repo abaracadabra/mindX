@@ -1,365 +1,476 @@
 # monitoring/resource_monitor.py
+"""
+Enhanced Resource Monitor with Real System Data
+
+This module provides comprehensive resource monitoring with actual system metrics:
+- Real-time CPU, memory, and disk usage
+- Process monitoring and system load
+- Network I/O monitoring
+- Alert system for resource thresholds
+- Historical data tracking
+- Integration with the frontend monitoring dashboard
+"""
 import os
 import time
-# import logging # Use get_logger
+import psutil
 import asyncio
-import psutil # Requires pip install psutil
-from typing import Dict, Any, Optional, List, Callable, Union, Coroutine, Tuple # Added Tuple
+import json
+from typing import Dict, Any, Optional, List, Union, Tuple
 from pathlib import Path
+from datetime import datetime, timedelta
+from dataclasses import dataclass, asdict
 from enum import Enum
-import stat # For file permissions
+from collections import deque
 
 # Import from sibling top-level package
-from utils.config import Config, PROJECT_ROOT
-from utils.logging_config import get_logger
-from agents.memory_agent import MemoryAgent
+try:
+    from utils.config import Config, PROJECT_ROOT
+    from utils.logging_config import get_logger
+    from agents.memory_agent import MemoryAgent
+except ImportError:
+    # Fallback for when imports fail
+    class Config:
+        def get(self, key, default=None):
+            return default
+    
+    PROJECT_ROOT = Path(__file__).parent.parent
+    
+    def get_logger(name):
+        import logging
+        return logging.getLogger(name)
+    
+    class MemoryAgent:
+        pass
 
 logger = get_logger(__name__)
 
-class ResourceType(Enum): # pragma: no cover
+class ResourceType(Enum):
     CPU = "cpu"
     MEMORY = "memory"
     DISK = "disk"
+    NETWORK = "network"
+    PROCESS = "process"
+
+@dataclass
+class ResourceMetrics:
+    """Comprehensive resource metrics data structure."""
+    timestamp: float
+    cpu_percent: float
+    cpu_per_core: List[float]
+    cpu_count_logical: int
+    cpu_count_physical: int
+    cpu_freq_current: float
+    memory_percent: float
+    memory_used: int
+    memory_available: int
+    memory_total: int
+    memory_cached: int
+    memory_buffers: int
+    disk_usage: Dict[str, float]
+    disk_io_read: int
+    disk_io_write: int
+    network_bytes_sent: int
+    network_bytes_recv: int
+    network_packets_sent: int
+    network_packets_recv: int
+    process_count: int
+    load_average: Tuple[float, float, float]
+    boot_time: float
+    uptime: float
 
 class ResourceMonitor:
+    """Enhanced resource monitor with real system data collection."""
+    
     _instance = None
     _lock = asyncio.Lock()
 
-    def __new__(cls, *args, **kwargs): # pragma: no cover
+    def __new__(cls, *args, **kwargs):
         if not cls._instance:
             cls._instance = super(ResourceMonitor, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self, memory_agent: MemoryAgent, config_override: Optional[Config] = None, test_mode: bool = False): # pragma: no cover
+    def __init__(self, memory_agent: Optional[MemoryAgent] = None, 
+                 config_override: Optional[Config] = None, 
+                 test_mode: bool = False):
         if hasattr(self, '_initialized') and self._initialized and not test_mode:
             return
 
         self.config = config_override or Config()
         self.memory_agent = memory_agent
-
-        self.max_cpu_percent: float = float(self.config.get("monitoring.resource.max_cpu_percent", 85.0))
-        self.max_memory_percent: float = float(self.config.get("monitoring.resource.max_memory_percent", 85.0))
-
-        self.disk_threshold_map: Dict[str, float] = {}
-        self._configure_disk_thresholds()
-
-        self.cpu_usage: float = 0.0
-        self.memory_usage: float = 0.0
-        self.disk_usage_map: Dict[str, float] = {path: 0.0 for path in self.disk_threshold_map.keys()}
-
-        # Use forward reference 'ResourceMonitor' for type hints within the class
-        self.alert_callbacks: List[Callable[['ResourceMonitor', ResourceType, float, Optional[str]], Coroutine[Any, Any, None]]] = []
-        self.resolve_callbacks: List[Callable[['ResourceMonitor', ResourceType, float, Optional[str]], Coroutine[Any, Any, None]]] = []
-
-        self.monitoring: bool = False
-        self.monitoring_task: Optional[asyncio.Task] = None
-        self.monitoring_interval: float = float(self.config.get("monitoring.resource.interval", 10.0))
-
-        self._alert_active_flags: Dict[Union[ResourceType, Tuple[ResourceType, str]], bool] = {}
-        self._last_alert_timestamp: Dict[Union[ResourceType, Tuple[ResourceType, str]], float] = {}
-        self.re_alert_interval_seconds: float = float(self.config.get("monitoring.resource.re_alert_interval_seconds", 300.0))
-
-        logger.info(
-            f"ResourceMonitor initialized. CPU Limit: {self.max_cpu_percent}%, Memory Limit: {self.max_memory_percent}%, "
-            f"Disk Thresholds: {self.disk_threshold_map}, Re-alert Interval: {self.re_alert_interval_seconds}s"
-        )
+        self.test_mode = test_mode
+        
+        # Resource thresholds
+        self.max_cpu_percent = float(self.config.get("monitoring.resource.max_cpu_percent", 85.0))
+        self.max_memory_percent = float(self.config.get("monitoring.resource.max_memory_percent", 85.0))
+        self.max_disk_percent = float(self.config.get("monitoring.resource.max_disk_percent", 90.0))
+        
+        # Disk monitoring paths
+        self.disk_paths = [
+            "/",  # Root filesystem
+            "/home",  # Home directory
+            "/tmp",   # Temporary directory
+            str(PROJECT_ROOT)  # Project directory
+        ]
+        
+        # Historical data storage
+        self.metrics_history = deque(maxlen=1000)  # Keep last 1000 measurements
+        self.alerts_history = deque(maxlen=500)    # Keep last 500 alerts
+        
+        # Current metrics
+        self.current_metrics: Optional[ResourceMetrics] = None
+        self.active_alerts: Dict[str, Dict[str, Any]] = {}
+        
+        # Network baseline for I/O calculations
+        self._network_baseline = None
+        self._last_network_time = None
+        
         self._initialized = True
+        logger.info("Enhanced ResourceMonitor initialized")
 
-    def _configure_disk_thresholds(self): # pragma: no cover
-        disk_configs_raw = self.config.get("monitoring.resource.disk_paths", [{"path": "/", "threshold": 90.0}])
-        default_disk_threshold = self.config.get("monitoring.resource.max_disk_percent", 90.0)
-
-        disk_configs_list: List[Any]
-        if isinstance(disk_configs_raw, list):
-            disk_configs_list = disk_configs_raw
-        elif isinstance(disk_configs_raw, str):
-            disk_configs_list = [{"path": disk_configs_raw, "threshold": default_disk_threshold}] # Ensure dict format
-        else:
-            logger.warning(f"Invalid 'monitoring.resource.disk_paths' config format: {type(disk_configs_raw)}. Defaulting to root path '/' only.")
-            disk_configs_list = [{"path": "/"}]
-
-        for item in disk_configs_list:
-            path_str: Optional[str] = None
-            threshold: Optional[float] = None
-            if isinstance(item, str): # Handle simple string list if accidentally configured that way
-                path_str = item
-                threshold = default_disk_threshold
-            elif isinstance(item, dict) and "path" in item:
-                path_str = item["path"]
-                try:
-                    threshold = float(item.get("threshold", default_disk_threshold))
-                    if not (0.0 < threshold <= 100.0): # pragma: no cover
-                        logger.warning(f"Disk threshold for '{path_str}' ({threshold}%) out of (0, 100] range. Using default {default_disk_threshold}%.")
-                        threshold = default_disk_threshold
-                except ValueError: # pragma: no cover
-                    logger.warning(f"Invalid threshold value for disk path '{path_str}': {item.get('threshold')}. Using default.")
-                    threshold = default_disk_threshold
-            
-            if path_str and threshold is not None:
-                try:
-                    resolved_path = Path(path_str).resolve(strict=False)
-                    norm_path_str = str(resolved_path)
-                    if not resolved_path.exists() and os.path.ismount(path_str): # pragma: no cover
-                         logger.info(f"Configured disk path '{path_str}' (mount point) does not strictly exist yet, but will be monitored.")
-                    elif not resolved_path.exists() and not os.path.ismount(path_str): # Also check if it's not a mount
-                         logger.warning(f"Configured disk path '{path_str}' resolved to '{norm_path_str}' which does not exist and is not a mount point. Monitoring may fail for this path.")
-                    
-                    self.disk_threshold_map[norm_path_str] = threshold
-                except Exception as e: # pragma: no cover
-                    logger.error(f"Invalid or inaccessible disk path configured '{path_str}': {e}. Skipping.")
-            elif item:
-                logger.warning(f"Malformed disk config item: {item}. Skipping.")
-        
-        if not self.disk_threshold_map:
-             self.disk_threshold_map[str(Path("/").resolve())] = default_disk_threshold
-             logger.warning("No valid disk paths configured or all failed. Defaulting to monitor root path '/' only.")
-
-
-    def start_monitoring(self, interval: Optional[float] = None): # pragma: no cover
-        if self.monitoring:
-            logger.warning("Resource monitoring is already running.")
-            return
-        
-        eff_interval = interval if interval is not None else self.monitoring_interval
-        if eff_interval <= 0: # pragma: no cover
-            logger.error(f"Invalid monitoring interval: {eff_interval}. Must be positive. Not starting.")
-            return
-
-        self.monitoring = True
-        self.monitoring_task = asyncio.create_task(self._monitor_resources_loop(eff_interval))
-        logger.info(f"Started resource monitoring. Interval: {eff_interval}s")
-    
-    def stop_monitoring(self): # pragma: no cover
-        if not self.monitoring:
-            logger.info("Resource monitoring is not running or already stopped.")
-            return
-        
-        self.monitoring = False
-        if self.monitoring_task and not self.monitoring_task.done():
-            self.monitoring_task.cancel()
-            logger.info("Resource monitoring cancellation requested.")
-        self.monitoring_task = None
-    
-    async def _monitor_resources_loop(self, interval: float): # pragma: no cover
-        logger.info("Resource monitoring loop started.")
+    async def collect_metrics(self) -> ResourceMetrics:
+        """Collect comprehensive real-time resource metrics."""
         try:
-            psutil.cpu_percent(interval=0.1)
-        except Exception as e: # pragma: no cover
-            logger.error(f"Failed initial psutil.cpu_percent call during monitor startup: {e}")
-
-        while self.monitoring:
-            start_check_time = time.monotonic()
+            now = time.time()
+            
+            # CPU metrics
+            cpu_percent = psutil.cpu_percent(interval=0.1)
+            cpu_per_core = psutil.cpu_percent(percpu=True, interval=0.1)
+            cpu_count_logical = psutil.cpu_count(logical=True) or 0
+            cpu_count_physical = psutil.cpu_count(logical=False) or 0
+            
+            # CPU frequency
             try:
-                await self.update_current_usage()
-                
-                disk_usage_str_parts = []
-                for p, u in self.disk_usage_map.items():
-                    try: p_display = Path(p).name # Fails if p is not a valid path string, e.g. empty
-                    except: p_display = p[:15] # Fallback for display
-                    disk_usage_str_parts.append(f"{p_display}:{u if u >= 0 else 'ERR'}%")
-                disk_usage_str = ", ".join(disk_usage_str_parts)
-                logger.debug(f"Res Usage: CPU {self.cpu_usage:.1f}%, Mem {self.memory_usage:.1f}%, Disks [{disk_usage_str}]")
-                
-                await self._check_and_trigger_alerts()
-                
-                elapsed_check_time = time.monotonic() - start_check_time
-                sleep_duration = max(0.1, interval - elapsed_check_time)
-                await asyncio.sleep(sleep_duration)
-
-            except asyncio.CancelledError: # pragma: no cover
-                logger.info("Resource monitoring loop gracefully cancelled.")
-                break
-            except Exception as e: # pragma: no cover
-                logger.error(f"Error in resource_monitor loop: {e}", exc_info=True)
-                await asyncio.sleep(interval * 2)
-        logger.info("Resource monitoring loop finished.")
-
-    async def update_current_usage(self): # pragma: no cover
-        try:
-            loop = asyncio.get_running_loop()
+                cpu_freq = psutil.cpu_freq()
+                cpu_freq_current = cpu_freq.current if cpu_freq else 0.0
+            except (AttributeError, OSError):
+                cpu_freq_current = 0.0
             
-            self.cpu_usage = await loop.run_in_executor(None, psutil.cpu_percent, None)
+            # Memory metrics
+            memory = psutil.virtual_memory()
+            memory_percent = memory.percent
+            memory_used = memory.used
+            memory_available = memory.available
+            memory_total = memory.total
+            memory_cached = getattr(memory, 'cached', 0)
+            memory_buffers = getattr(memory, 'buffers', 0)
             
-            mem_info = await loop.run_in_executor(None, psutil.virtual_memory)
-            self.memory_usage = mem_info.percent
-            
-            disk_paths_to_check = list(self.disk_threshold_map.keys())
-            for path_str in disk_paths_to_check:
+            # Disk metrics
+            disk_usage = {}
+            for path in self.disk_paths:
                 try:
-                    disk_info = await loop.run_in_executor(None, psutil.disk_usage, path_str)
-                    self.disk_usage_map[path_str] = disk_info.percent
-                except FileNotFoundError: # pragma: no cover
-                    logger.warning(f"Disk path '{path_str}' no longer found. Monitoring for it disabled.")
-                    self.disk_usage_map.pop(path_str, None)
-                    self.disk_threshold_map.pop(path_str, None)
-                    self._alert_active_flags.pop((ResourceType.DISK, path_str), None)
-                except Exception as e_disk: # pragma: no cover
-                    logger.error(f"Error getting disk usage for '{path_str}': {e_disk}")
-                    self.disk_usage_map[path_str] = -1.0
-        except Exception as e_update: # pragma: no cover
-             logger.error(f"Failed to update one or more resource usage metrics: {e_update}", exc_info=True)
-
-
-    async def _check_and_trigger_alerts(self): # pragma: no cover
-        now = time.time()
-        
-        cpu_key = ResourceType.CPU
-        if self.cpu_usage > self.max_cpu_percent:
-            if not self._alert_active_flags.get(cpu_key) or \
-               (now - self._last_alert_timestamp.get(cpu_key, 0) > self.re_alert_interval_seconds):
-                message = f"High CPU usage detected: {self.cpu_usage:.1f}% > limit ({self.max_cpu_percent}%)"
-                await self.memory_agent.log_process("resource_alert", {"type": "cpu", "status": "ALERT", "message": message, "value": self.cpu_usage, "limit": self.max_cpu_percent}, {"agent_id": "resource_monitor"})
-                await self._execute_callbacks(self.alert_callbacks, self, cpu_key, self.cpu_usage, None)
-                self._alert_active_flags[cpu_key] = True
-                self._last_alert_timestamp[cpu_key] = now
-        elif self._alert_active_flags.get(cpu_key):
-             message = f"CPU usage resolved: {self.cpu_usage:.1f}% <= limit ({self.max_cpu_percent}%)"
-             await self.memory_agent.log_process("resource_alert", {"type": "cpu", "status": "RESOLVED", "message": message, "value": self.cpu_usage, "limit": self.max_cpu_percent}, {"agent_id": "resource_monitor"})
-             await self._execute_callbacks(self.resolve_callbacks, self, cpu_key, self.cpu_usage, None)
-             self._alert_active_flags[cpu_key] = False
-
-        mem_key = ResourceType.MEMORY
-        if self.memory_usage > self.max_memory_percent:
-            if not self._alert_active_flags.get(mem_key) or \
-               (now - self._last_alert_timestamp.get(mem_key, 0) > self.re_alert_interval_seconds):
-                message = f"High Memory usage detected: {self.memory_usage:.1f}% > limit ({self.max_memory_percent}%)"
-                await self.memory_agent.log_process("resource_alert", {"type": "memory", "status": "ALERT", "message": message, "value": self.memory_usage, "limit": self.max_memory_percent}, {"agent_id": "resource_monitor"})
-                await self._execute_callbacks(self.alert_callbacks, self, mem_key, self.memory_usage, None)
-                self._alert_active_flags[mem_key] = True
-                self._last_alert_timestamp[mem_key] = now
-        elif self._alert_active_flags.get(mem_key):
-             message = f"Memory usage resolved: {self.memory_usage:.1f}% <= limit ({self.max_memory_percent}%)"
-             await self.memory_agent.log_process("resource_alert", {"type": "memory", "status": "RESOLVED", "message": message, "value": self.memory_usage, "limit": self.max_memory_percent}, {"agent_id": "resource_monitor"})
-             await self._execute_callbacks(self.resolve_callbacks, self, mem_key, self.memory_usage, None)
-             self._alert_active_flags[mem_key] = False
-
-        for path_str, usage in self.disk_usage_map.items():
-            if usage < 0: continue
-            threshold = self.disk_threshold_map.get(path_str)
-            if threshold is None: continue
-
-            disk_key_tuple = (ResourceType.DISK, path_str)
-            if usage > threshold:
-                if not self._alert_active_flags.get(disk_key_tuple) or \
-                   (now - self._last_alert_timestamp.get(disk_key_tuple, 0) > self.re_alert_interval_seconds):
-                    message = f"High Disk usage for '{path_str}' detected: {usage:.1f}% > limit ({threshold}%)"
-                    await self.memory_agent.log_process("resource_alert", {"type": "disk", "path": path_str, "status": "ALERT", "message": message, "value": usage, "limit": threshold}, {"agent_id": "resource_monitor"})
-                    await self._execute_callbacks(self.alert_callbacks, self, ResourceType.DISK, usage, path_str)
-                    self._alert_active_flags[disk_key_tuple] = True
-                    self._last_alert_timestamp[disk_key_tuple] = now
-            elif self._alert_active_flags.get(disk_key_tuple):
-                 message = f"Disk usage for '{path_str}' resolved: {usage:.1f}% <= limit ({threshold}%)"
-                 await self.memory_agent.log_process("resource_alert", {"type": "disk", "path": path_str, "status": "RESOLVED", "message": message, "value": usage, "limit": threshold}, {"agent_id": "resource_monitor"})
-                 await self._execute_callbacks(self.resolve_callbacks, self, ResourceType.DISK, usage, path_str)
-                 self._alert_active_flags[disk_key_tuple] = False
-
-    async def _execute_callbacks(self,
-                                 callbacks: List[Callable[['ResourceMonitor', ResourceType, float, Optional[str]], Coroutine[Any, Any, None]]],
-                                 monitor_instance: 'ResourceMonitor', # Use string forward reference
-                                 rtype: ResourceType,
-                                 value: float,
-                                 path: Optional[str] = None): # pragma: no cover
-        for callback in callbacks:
+                    if os.path.exists(path):
+                        usage = psutil.disk_usage(path)
+                        disk_usage[path] = (usage.used / usage.total) * 100
+                except (OSError, PermissionError):
+                    disk_usage[path] = 0.0
+            
+            # Disk I/O
             try:
-                if asyncio.iscoroutinefunction(callback):
-                    await callback(monitor_instance, rtype, value, path)
-                else: # pragma: no cover
-                    logger.warning(f"Callback {getattr(callback, '__name__', 'unknown')} is not an async function, but was registered. Calling it synchronously.")
-                    callback(monitor_instance, rtype, value, path)
-            except Exception as e_cb:
-                logger.error(f"Error in resource monitor callback '{getattr(callback, '__name__', 'unknown_callback')}': {e_cb}", exc_info=True)
+                disk_io = psutil.disk_io_counters()
+                disk_io_read = disk_io.read_bytes if disk_io else 0
+                disk_io_write = disk_io.write_bytes if disk_io else 0
+            except (AttributeError, OSError):
+                disk_io_read = disk_io_write = 0
+            
+            # Network metrics
+            try:
+                network_io = psutil.net_io_counters()
+                network_bytes_sent = network_io.bytes_sent if network_io else 0
+                network_bytes_recv = network_io.bytes_recv if network_io else 0
+                network_packets_sent = network_io.packets_sent if network_io else 0
+                network_packets_recv = network_io.packets_recv if network_io else 0
+            except (AttributeError, OSError):
+                network_bytes_sent = network_bytes_recv = 0
+                network_packets_sent = network_packets_recv = 0
+            
+            # Process count
+            try:
+                process_count = len(psutil.pids())
+            except (OSError, psutil.NoSuchProcess):
+                process_count = 0
+            
+            # Load average (Unix-like systems)
+            try:
+                load_average = os.getloadavg()
+            except (OSError, AttributeError):
+                load_average = (0.0, 0.0, 0.0)
+            
+            # Boot time and uptime
+            try:
+                boot_time = psutil.boot_time()
+                uptime = now - boot_time
+            except (OSError, AttributeError):
+                boot_time = now
+                uptime = 0.0
+            
+            # Create metrics object
+            metrics = ResourceMetrics(
+                timestamp=now,
+                cpu_percent=cpu_percent,
+                cpu_per_core=cpu_per_core,
+                cpu_count_logical=cpu_count_logical,
+                cpu_count_physical=cpu_count_physical,
+                cpu_freq_current=cpu_freq_current,
+                memory_percent=memory_percent,
+                memory_used=memory_used,
+                memory_available=memory_available,
+                memory_total=memory_total,
+                memory_cached=memory_cached,
+                memory_buffers=memory_buffers,
+                disk_usage=disk_usage,
+                disk_io_read=disk_io_read,
+                disk_io_write=disk_io_write,
+                network_bytes_sent=network_bytes_sent,
+                network_bytes_recv=network_bytes_recv,
+                network_packets_sent=network_packets_sent,
+                network_packets_recv=network_packets_recv,
+                process_count=process_count,
+                load_average=load_average,
+                boot_time=boot_time,
+                uptime=uptime
+            )
+            
+            # Store current metrics
+            self.current_metrics = metrics
+            self.metrics_history.append(metrics)
+            
+            # Check for alerts
+            await self._check_alerts(metrics)
+            
+            return metrics
+            
+        except Exception as e:
+            logger.error(f"Error collecting resource metrics: {e}")
+            # Return empty metrics on error
+            return ResourceMetrics(
+                timestamp=time.time(),
+                cpu_percent=0.0, cpu_per_core=[], cpu_count_logical=0, cpu_count_physical=0,
+                cpu_freq_current=0.0, memory_percent=0.0, memory_used=0, memory_available=0,
+                memory_total=0, memory_cached=0, memory_buffers=0, disk_usage={},
+                disk_io_read=0, disk_io_write=0, network_bytes_sent=0, network_bytes_recv=0,
+                network_packets_sent=0, network_packets_recv=0, process_count=0,
+                load_average=(0.0, 0.0, 0.0), boot_time=0.0, uptime=0.0
+            )
 
-    def register_alert_callback(self, callback: Callable[['ResourceMonitor', ResourceType, float, Optional[str]], Coroutine[Any, Any, None]]): # pragma: no cover
-        if callback not in self.alert_callbacks: self.alert_callbacks.append(callback)
-
-    def register_resolve_callback(self, callback: Callable[['ResourceMonitor', ResourceType, float, Optional[str]], Coroutine[Any, Any, None]]): # pragma: no cover
-        if callback not in self.resolve_callbacks: self.resolve_callbacks.append(callback)
-
-    def get_resource_usage(self) -> Dict[str, Union[float, Dict[str, float]]]: # pragma: no cover
-        return {
-            "cpu_percent": self.cpu_usage,
-            "memory_percent": self.memory_usage,
-            "disk_usage_map": self.disk_usage_map.copy()
+    async def _check_alerts(self, metrics: ResourceMetrics):
+        """Check for resource threshold alerts."""
+        alerts = []
+        
+        # CPU alert
+        if metrics.cpu_percent > self.max_cpu_percent:
+            alerts.append({
+                "type": "cpu_high",
+                "severity": "warning" if metrics.cpu_percent < 95 else "critical",
+                "message": f"CPU usage is {metrics.cpu_percent:.1f}% (threshold: {self.max_cpu_percent}%)",
+                "value": metrics.cpu_percent,
+                "threshold": self.max_cpu_percent
+            })
+        
+        # Memory alert
+        if metrics.memory_percent > self.max_memory_percent:
+            alerts.append({
+                "type": "memory_high",
+                "severity": "warning" if metrics.memory_percent < 95 else "critical",
+                "message": f"Memory usage is {metrics.memory_percent:.1f}% (threshold: {self.max_memory_percent}%)",
+                "value": metrics.memory_percent,
+                "threshold": self.max_memory_percent
+            })
+        
+        # Disk alerts
+        for path, usage in metrics.disk_usage.items():
+            if usage > self.max_disk_percent:
+                alerts.append({
+                    "type": "disk_high",
+                    "severity": "warning" if usage < 95 else "critical",
+                    "message": f"Disk usage on {path} is {usage:.1f}% (threshold: {self.max_disk_percent}%)",
+                    "value": usage,
+                    "threshold": self.max_disk_percent,
+                    "path": path
+                })
+        
+        # Store alerts
+        for alert in alerts:
+            alert_id = f"{alert['type']}_{int(metrics.timestamp)}"
+            alert["timestamp"] = metrics.timestamp
+            self.active_alerts[alert_id] = alert
+            self.alerts_history.append(alert)
+        
+        # Clean up old alerts (older than 1 hour)
+        cutoff_time = time.time() - 3600
+        self.active_alerts = {
+            k: v for k, v in self.active_alerts.items() 
+            if v.get("timestamp", 0) > cutoff_time
         }
 
-    def get_resource_limits(self) -> Dict[str, Union[float, Dict[str, float]]]: # pragma: no cover
+    def get_resource_usage(self) -> Dict[str, Any]:
+        """Get current resource usage in a format compatible with the API."""
+        if not self.current_metrics:
+            return {
+                "cpu": 0.0,
+                "memory": 0.0,
+                "disk": 0.0,
+                "alerts": 0,
+                "cpu_cores": 0,
+                "cpu_load": "0.0, 0.0, 0.0",
+                "memory_used": "0 B",
+                "memory_free": "0 B",
+                "memory_total": "0 B",
+                "disk_used": "0 B",
+                "disk_free": "0 B",
+                "process_count": 0,
+                "uptime": "0:00:00"
+            }
+        
+        metrics = self.current_metrics
+        
+        # Format memory values
+        def format_bytes(bytes_val):
+            for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+                if bytes_val < 1024.0:
+                    return f"{bytes_val:.1f} {unit}"
+                bytes_val /= 1024.0
+            return f"{bytes_val:.1f} PB"
+        
+        # Get root disk usage (primary disk)
+        root_disk_usage = metrics.disk_usage.get("/", 0.0)
+        
+        # Calculate disk space info
+        try:
+            disk_usage = psutil.disk_usage("/")
+            disk_used = format_bytes(disk_usage.used)
+            disk_free = format_bytes(disk_usage.free)
+            disk_total = format_bytes(disk_usage.total)
+        except (OSError, AttributeError):
+            disk_used = disk_free = disk_total = "Unknown"
+        
+        return {
+            "cpu": round(metrics.cpu_percent, 1),
+            "memory": round(metrics.memory_percent, 1),
+            "disk": round(root_disk_usage, 1),
+            "alerts": len(self.active_alerts),
+            "cpu_cores": metrics.cpu_count_logical,
+            "cpu_load": f"{metrics.load_average[0]:.2f}, {metrics.load_average[1]:.2f}, {metrics.load_average[2]:.2f}",
+            "memory_used": format_bytes(metrics.memory_used),
+            "memory_free": format_bytes(metrics.memory_available),
+            "memory_total": format_bytes(metrics.memory_total),
+            "disk_used": disk_used,
+            "disk_free": disk_free,
+            "process_count": metrics.process_count,
+            "uptime": str(timedelta(seconds=int(metrics.uptime)))
+        }
+
+    def get_resource_limits(self) -> Dict[str, Any]:
+        """Get current resource limits and thresholds."""
         return {
             "max_cpu_percent": self.max_cpu_percent,
             "max_memory_percent": self.max_memory_percent,
-            "disk_threshold_map": self.disk_threshold_map.copy()
+            "max_disk_percent": self.max_disk_percent,
+            "disk_paths": self.disk_paths
         }
 
-    def set_resource_limits(self, max_cpu_percent: Optional[float] = None,
-                           max_memory_percent: Optional[float] = None,
-                           disk_threshold_map_update: Optional[Dict[str, float]] = None): # pragma: no cover
-        if max_cpu_percent is not None:
-            if 0 < max_cpu_percent <= 100: self.max_cpu_percent = max_cpu_percent
-            else: logger.warning(f"Invalid max_cpu_percent: {max_cpu_percent}. Must be (0, 100].")
-        if max_memory_percent is not None:
-            if 0 < max_memory_percent <= 100: self.max_memory_percent = max_memory_percent
-            else: logger.warning(f"Invalid max_memory_percent: {max_memory_percent}. Must be (0, 100].")
+    def get_detailed_metrics(self) -> Dict[str, Any]:
+        """Get detailed metrics for advanced monitoring."""
+        if not self.current_metrics:
+            return {}
+        
+        metrics = self.current_metrics
+        return {
+            "timestamp": metrics.timestamp,
+            "cpu": {
+                "percent": metrics.cpu_percent,
+                "per_core": metrics.cpu_per_core,
+                "count_logical": metrics.cpu_count_logical,
+                "count_physical": metrics.cpu_count_physical,
+                "frequency": metrics.cpu_freq_current
+            },
+            "memory": {
+                "percent": metrics.memory_percent,
+                "used": metrics.memory_used,
+                "available": metrics.memory_available,
+                "total": metrics.memory_total,
+                "cached": metrics.memory_cached,
+                "buffers": metrics.memory_buffers
+            },
+            "disk": {
+                "usage": metrics.disk_usage,
+                "io_read": metrics.disk_io_read,
+                "io_write": metrics.disk_io_write
+            },
+            "network": {
+                "bytes_sent": metrics.network_bytes_sent,
+                "bytes_recv": metrics.network_bytes_recv,
+                "packets_sent": metrics.network_packets_sent,
+                "packets_recv": metrics.network_packets_recv
+            },
+            "system": {
+                "process_count": metrics.process_count,
+                "load_average": list(metrics.load_average),
+                "uptime": metrics.uptime,
+                "boot_time": metrics.boot_time
+            },
+            "alerts": list(self.active_alerts.values())
+        }
 
-        if disk_threshold_map_update:
-            for path_str, threshold in disk_threshold_map_update.items():
-                if not (0 < threshold <= 100): # pragma: no cover
-                     logger.warning(f"Invalid disk threshold for '{path_str}': {threshold}. Must be (0, 100]. Skipping update for this path.")
-                     continue
-                try:
-                    norm_path = str(Path(path_str).resolve(strict=False))
-                    self.disk_threshold_map[norm_path] = threshold
-                    if norm_path not in self.disk_usage_map: self.disk_usage_map[norm_path] = 0.0
-                    disk_key_tuple = (ResourceType.DISK, norm_path)
-                    self._alert_active_flags.pop(disk_key_tuple, None)
-                    self._last_alert_timestamp.pop(disk_key_tuple, None)
-                except Exception as e: # pragma: no cover
-                    logger.error(f"Error processing disk threshold update for '{path_str}': {e}")
+    def get_historical_data(self, hours: int = 1) -> List[Dict[str, Any]]:
+        """Get historical resource data for the specified time period."""
+        cutoff_time = time.time() - (hours * 3600)
+        return [
+            asdict(metrics) for metrics in self.metrics_history
+            if metrics.timestamp > cutoff_time
+        ]
 
-        logger.info(f"Resource limits updated. CPU: {self.max_cpu_percent}%, Mem: {self.max_memory_percent}%, Disk: {self.disk_threshold_map}")
+    def get_alerts_summary(self) -> Dict[str, Any]:
+        """Get summary of current alerts."""
+        alert_counts = {}
+        for alert in self.active_alerts.values():
+            alert_type = alert.get("type", "unknown")
+            severity = alert.get("severity", "info")
+            key = f"{alert_type}_{severity}"
+            alert_counts[key] = alert_counts.get(key, 0) + 1
+        
+        return {
+            "total_alerts": len(self.active_alerts),
+            "alert_counts": alert_counts,
+            "recent_alerts": list(self.active_alerts.values())[-10:]  # Last 10 alerts
+        }
 
-    async def _shutdown_monitoring_task(self): # pragma: no cover
-        if self.monitoring_task and not self.monitoring_task.done():
-            self.monitoring = False
-            self.monitoring_task.cancel()
+    async def start_monitoring(self, interval: float = 5.0):
+        """Start continuous resource monitoring."""
+        logger.info(f"Starting resource monitoring with {interval}s interval")
+        
+        while True:
             try:
-                await asyncio.wait_for(self.monitoring_task, timeout=2.0)
-            except asyncio.CancelledError:
-                logger.info("Resource monitoring task was cancelled as expected during shutdown.")
-            except asyncio.TimeoutError: # pragma: no cover
-                logger.warning("Timeout waiting for resource monitoring task to fully cancel during shutdown.")
-            except Exception as e: # pragma: no cover
-                logger.error(f"Error during monitoring task shutdown: {e}", exc_info=True)
-        self.monitoring_task = None
+                await self.collect_metrics()
+                await asyncio.sleep(interval)
+            except Exception as e:
+                logger.error(f"Error in monitoring loop: {e}")
+                await asyncio.sleep(interval)
 
+# Global instance management
+_resource_monitor_instance = None
 
-    @classmethod
-    async def reset_instance_async(cls): # pragma: no cover
-        async with cls._lock:
-            if cls._instance:
-                await cls._instance._shutdown_monitoring_task()
-                cls._instance._initialized = False
-                cls._instance = None
-        logger.debug("ResourceMonitor instance reset asynchronously.")
+def get_resource_monitor() -> ResourceMonitor:
+    """Get the global resource monitor instance."""
+    global _resource_monitor_instance
+    if _resource_monitor_instance is None:
+        _resource_monitor_instance = ResourceMonitor()
+    return _resource_monitor_instance
 
-async def get_resource_monitor_async(memory_agent: MemoryAgent, config_override: Optional[Config] = None, test_mode: bool = False) -> ResourceMonitor: # pragma: no cover
-    if not ResourceMonitor._instance or test_mode:
-        async with ResourceMonitor._lock:
-            if ResourceMonitor._instance is None or test_mode:
-                if test_mode and ResourceMonitor._instance is not None:
-                    await ResourceMonitor._instance._shutdown_monitoring_task()
-                    ResourceMonitor._instance = None
-                ResourceMonitor._instance = ResourceMonitor(memory_agent=memory_agent, config_override=config_override, test_mode=test_mode)
-    return ResourceMonitor._instance
+async def start_resource_monitoring(interval: float = 5.0):
+    """Start the global resource monitoring."""
+    monitor = get_resource_monitor()
+    await monitor.start_monitoring(interval)
 
-def get_resource_monitor(config_override: Optional[Config] = None, test_mode: bool = False) -> ResourceMonitor: # pragma: no cover
-    if ResourceMonitor._instance is None or test_mode:
-        # This sync getter can't fully handle async shutdown of a previous test instance gracefully
-        # Best to use async_get_resource_monitor in test setups if possible
-        if test_mode and ResourceMonitor._instance is not None:
-             logger.warning("Test mode reset for ResourceMonitor in sync getter: async shutdown of previous task not guaranteed.")
-             # Try a best effort sync shutdown if no loop is running
-             if ResourceMonitor._instance.monitoring_task and not ResourceMonitor._instance.monitoring_task.done():
-                 ResourceMonitor._instance.monitoring_task.cancel() # No await here
-             ResourceMonitor._instance = None
+# For backward compatibility
+def get_resource_usage() -> Dict[str, Any]:
+    """Get current resource usage (backward compatibility)."""
+    monitor = get_resource_monitor()
+    return monitor.get_resource_usage()
 
-        ResourceMonitor._instance = ResourceMonitor(config_override=config_override, test_mode=test_mode)
-    return ResourceMonitor._instance
+def get_resource_limits() -> Dict[str, Any]:
+    """Get resource limits (backward compatibility)."""
+    monitor = get_resource_monitor()
+    return monitor.get_resource_limits()
+async def get_resource_monitor_async(memory_agent=None, config_override=None, test_mode=False):
+    """Async wrapper for get_resource_monitor."""
+    return get_resource_monitor()
