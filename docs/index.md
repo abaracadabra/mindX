@@ -1,8 +1,8 @@
-# MindX Documentation Index
+# mindX Documentation Index
 
 This document provides a comprehensive, categorized index of all documentation files in the `docs/` directory. Each entry includes a link to the document and a detailed summary of its contents, based on a complete review of the system's architecture and capabilities.
 
-**MindX** is an experimental **self-improving AI system** developed under the "Augmentic Project" that autonomously analyzes its own Python codebase, identifies improvements, and applies them safely using Large Language Models (LLMs). The system emphasizes **resilience**, **safety**, and **empirical validation** through a sophisticated hierarchical agent architecture.
+**mindX** is an experimental **self-improving AI system** developed under the "Augmentic Project" that autonomously analyzes its own Python codebase, identifies improvements, and applies them safely using Large Language Models (LLMs). The system emphasizes **resilience**, **safety**, and **empirical validation** through a sophisticated hierarchical agent architecture.
 
 ---
 
