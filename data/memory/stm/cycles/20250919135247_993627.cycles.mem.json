@@ -1,0 +1,17 @@
+{
+  "timestamp_utc": "2025-09-19T20:52:47.993670",
+  "memory_type": "STM",
+  "category": "cycles",
+  "metadata": {
+    "agent": "simple_coder",
+    "sandbox_mode": true,
+    "autonomous_mode": true,
+    "cycle_count": 0
+  },
+  "data": {
+    "cycle": 1,
+    "directive": "test_directive",
+    "timestamp": "2025-09-19T13:52:47.993265",
+    "status": "started"
+  }
+}

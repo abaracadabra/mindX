@@ -1,0 +1,22 @@
+{
+  "timestamp_utc": "2025-09-20T02:01:41.675545",
+  "memory_type": "STM",
+  "category": "mindx_agint/cycles",
+  "metadata": {
+    "agent": "mindx_agint",
+    "component": "cognitive_loop",
+    "timestamp": 1758333701.675353
+  },
+  "data": {
+    "cycle": 1,
+    "max_cycles": 8,
+    "directive": "test memory integration",
+    "autonomous_mode": false,
+    "timestamp": 1758333701.6753461,
+    "status": "completed",
+    "phase": "cycle_complete",
+    "cycle_duration": 5.557889938354492,
+    "code_changes_count": 0,
+    "code_changes_summary": []
+  }
+}

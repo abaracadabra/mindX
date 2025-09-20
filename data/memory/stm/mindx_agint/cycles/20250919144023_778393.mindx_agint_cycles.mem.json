@@ -1,0 +1,15 @@
+{
+  "timestamp_utc": "2025-09-19T21:40:23.778442",
+  "memory_type": "STM",
+  "category": "mindx_agint/cycles",
+  "metadata": {
+    "agent": "mindx_agint",
+    "component": "cognitive_loop"
+  },
+  "data": {
+    "test": "agint_memory_integration",
+    "timestamp": "2025-09-19T14:40:00",
+    "cycle": 1,
+    "directive": "test_directive"
+  }
+}

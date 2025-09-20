@@ -1,0 +1,19 @@
+{
+  "timestamp_utc": "2025-09-20T02:01:36.624561",
+  "memory_type": "STM",
+  "category": "mindx_agint/steps",
+  "metadata": {
+    "agent": "mindx_agint",
+    "component": "cognitive_loop",
+    "timestamp": 1758333696.6234348
+  },
+  "data": {
+    "cycle": 1,
+    "step_phase": "PERCEPTION",
+    "step_message": "System state analysis",
+    "directive": "test memory integration",
+    "timestamp": 1758333696.6234298,
+    "code_changes": [],
+    "code_changes_count": 0
+  }
+}

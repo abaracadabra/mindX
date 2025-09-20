@@ -1,0 +1,308 @@
+{
+  "file_patterns": {
+    "test_sandbox_demo": [
+      {
+        "directive": "enhance test_sandbox_demo.py",
+        "cycle": 1,
+        "timestamp": 1758305322.981262
+      }
+    ],
+    "autonomous_test": [
+      {
+        "directive": "evolve autonomous_test.py",
+        "cycle": 1,
+        "timestamp": 1758305874.2759
+      },
+      {
+        "directive": "evolve autonomous_test.py",
+        "cycle": 1,
+        "timestamp": 1758312852.6682165
+      }
+    ],
+    "test_comprehensive": [
+      {
+        "directive": "enhance test_comprehensive.py",
+        "cycle": 1,
+        "timestamp": 1758312852.6663563
+      }
+    ],
+    "augmentic": [
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758313582.7498305
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758333786.538751
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758333792.4134912
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758333798.2864623
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758333804.2294526
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758333810.2370248
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758333816.0953953
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758333822.0368512
+      },
+      {
+        "directive": "evolve augmentic.py",
+        "cycle": 1,
+        "timestamp": 1758333828.0614054
+      }
+    ],
+    "test_fixed": [
+      {
+        "directive": "evolve test_fixed.py",
+        "cycle": 1,
+        "timestamp": 1758314211.8585112
+      }
+    ],
+    "test_api_debug": [
+      {
+        "directive": "evolve test_api_debug.py",
+        "cycle": 1,
+        "timestamp": 1758314347.5619686
+      }
+    ],
+    "test_complete_system": [
+      {
+        "directive": "evolve test_complete_system.py",
+        "cycle": 1,
+        "timestamp": 1758314446.653428
+      }
+    ],
+    "test_full_memory": [
+      {
+        "directive": "evolve test_full_memory.py",
+        "cycle": 1,
+        "timestamp": 1758315188.9276476
+      }
+    ],
+    "test_full_agent_memory": [
+      {
+        "directive": "evolve test_full_agent_memory.py",
+        "cycle": 1,
+        "timestamp": 1758317209.5905485
+      }
+    ],
+    "test_agint_memory": [
+      {
+        "directive": "evolve test_agint_memory.py",
+        "cycle": 1,
+        "timestamp": 1758317952.111375
+      },
+      {
+        "directive": "evolve test_agint_memory.py",
+        "cycle": 1,
+        "timestamp": 1758317957.950529
+      }
+    ],
+    "test_agint_memory_logging": [
+      {
+        "directive": "evolve test_agint_memory_logging.py",
+        "cycle": 1,
+        "timestamp": 1758318058.53876
+      }
+    ],
+    "test_simple_coder": [
+      {
+        "directive": "test memory integration",
+        "cycle": 1,
+        "timestamp": 1758333699.6567926
+      },
+      {
+        "directive": "test memory integration",
+        "cycle": 1,
+        "timestamp": 1758333705.529878
+      }
+    ]
+  },
+  "code_patterns": {},
+  "success_rates": {
+    "test_sandbox_demo": [
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758305322.9812608
+      }
+    ],
+    "autonomous_test": [
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758305874.275897
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758312852.668215
+      }
+    ],
+    "test_comprehensive": [
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758312852.6663542
+      }
+    ],
+    "augmentic": [
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758313582.7498288
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758333786.5387483
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758333792.4134884
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758333798.2864594
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758333804.2294497
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758333810.2370212
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758333816.095393
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758333822.0368469
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758333828.0614023
+      }
+    ],
+    "test_fixed": [
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758314211.8585093
+      }
+    ],
+    "test_api_debug": [
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758314347.5619662
+      }
+    ],
+    "test_complete_system": [
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758314446.653425
+      }
+    ],
+    "test_full_memory": [
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758315188.9276452
+      }
+    ],
+    "test_full_agent_memory": [
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758317209.5905461
+      }
+    ],
+    "test_agint_memory": [
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758317952.1113722
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758317957.9505265
+      }
+    ],
+    "test_agint_memory_logging": [
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758318058.5387573
+      }
+    ],
+    "test_simple_coder": [
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758333699.6567895
+      },
+      {
+        "cycle": 1,
+        "success": true,
+        "changes_count": 1,
+        "timestamp": 1758333705.5298758
+      }
+    ]
+  }
+}
