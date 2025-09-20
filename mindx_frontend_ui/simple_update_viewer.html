@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimpleCoder Update Requests Viewer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 100%);
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #00ffff;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 1px solid #00ffff;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            min-width: 150px;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #00ffff;
+        }
+        
+        .stat-label {
+            color: #888;
+            margin-top: 5px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #00ffff, #0080ff);
+            color: #000;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(45deg, #0080ff, #0066cc);
+            box-shadow: 0 4px 8px rgba(0, 255, 255, 0.3);
+        }
+        
+        .btn-success {
+            background: linear-gradient(45deg, #00ff00, #00cc00);
+            color: #000;
+        }
+        
+        .btn-success:hover {
+            background: linear-gradient(45deg, #00cc00, #009900);
+            box-shadow: 0 4px 8px rgba(0, 255, 0, 0.3);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(45deg, #ff0000, #cc0000);
+            color: #fff;
+        }
+        
+        .btn-danger:hover {
+            background: linear-gradient(45deg, #cc0000, #990000);
+            box-shadow: 0 4px 8px rgba(255, 0, 0, 0.3);
+        }
+        
+        .update-request {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 1px solid #00ffff;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 4px 8px rgba(0, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .update-request:hover {
+            box-shadow: 0 6px 12px rgba(0, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .update-request-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+        }
+        
+        .update-request-header h3 {
+            color: #00ffff;
+            margin: 0;
+            font-size: 1.3em;
+        }
+        
+        .request-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .request-status.pending {
+            background: rgba(255, 165, 0, 0.2);
+            color: #ffa500;
+            border: 1px solid #ffa500;
+        }
+        
+        .request-status.approved {
+            background: rgba(0, 255, 0, 0.2);
+            color: #00ff00;
+            border: 1px solid #00ff00;
+        }
+        
+        .request-status.rejected {
+            background: rgba(255, 0, 0, 0.2);
+            color: #ff0000;
+            border: 1px solid #ff0000;
+        }
+        
+        .update-request-details {
+            margin-bottom: 20px;
+        }
+        
+        .update-request-details p {
+            margin: 8px 0;
+            color: #e0e0e0;
+        }
+        
+        .update-request-details strong {
+            color: #00ffff;
+        }
+        
+        .update-request-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #00ffff;
+            font-size: 1.2em;
+            margin: 50px 0;
+        }
+        
+        .error {
+            text-align: center;
+            color: #ff0000;
+            font-size: 1.2em;
+            margin: 50px 0;
+        }
+        
+        .no-requests {
+            text-align: center;
+            color: #888;
+            font-size: 1.2em;
+            margin: 50px 0;
+        }
+        
+        .code-preview {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #e0e0e0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .code-preview pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SimpleCoder Update Requests</h1>
+            <p>Manage and approve pending code changes</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="total-requests">-</div>
+                <div class="stat-label">Total Requests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="pending-requests">-</div>
+                <div class="stat-label">Pending</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="approved-requests">-</div>
+                <div class="stat-label">Approved</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-primary" onclick="loadUpdateRequests()">Refresh</button>
+            <button class="btn btn-success" onclick="approveAll()">Approve All</button>
+            <button class="btn btn-danger" onclick="rejectAll()">Reject All</button>
+        </div>
+        
+        <div id="content">
+            <div class="loading">Loading update requests...</div>
+        </div>
+    </div>
+
+    <script>
+        let updateRequests = [];
+        
+        async function loadUpdateRequests() {
+            try {
+                document.getElementById('content').innerHTML = '<div class="loading">Loading update requests...</div>';
+                
+                // Try to load from the JSON file directly
+                const response = await fetch('./simple_coder_sandbox/update_requests.json');
+                if (!response.ok) {
+                    throw new Error('Failed to load update requests');
+                }
+                
+                updateRequests = await response.json();
+                displayUpdateRequests();
+                updateStats();
+            } catch (error) {
+                console.error('Error loading update requests:', error);
+                document.getElementById('content').innerHTML = '<div class="error">Error loading update requests: ' + error.message + '</div>';
+            }
+        }
+        
+        function displayUpdateRequests() {
+            const content = document.getElementById('content');
+            
+            if (updateRequests.length === 0) {
+                content.innerHTML = '<div class="no-requests">No update requests found</div>';
+                return;
+            }
+            
+            let html = '';
+            updateRequests.forEach(request => {
+                html += createUpdateRequestHTML(request);
+            });
+            
+            content.innerHTML = html;
+        }
+        
+        function createUpdateRequestHTML(request) {
+            const changes = request.changes[0];
+            const codeChange = changes.changes[0];
+            
+            return `
+                <div class="update-request">
+                    <div class="update-request-header">
+                        <h3>${request.request_id}</h3>
+                        <span class="request-status ${request.status}">${request.status}</span>
+                    </div>
+                    <div class="update-request-details">
+                        <p><strong>Original File:</strong> ${request.original_file}</p>
+                        <p><strong>Sandbox File:</strong> ${request.sandbox_file}</p>
+                        <p><strong>Cycle:</strong> ${request.cycle}</p>
+                        <p><strong>Timestamp:</strong> ${new Date(request.timestamp).toLocaleString()}</p>
+                        <p><strong>Backup Created:</strong> ${request.backup_created ? 'Yes' : 'No'}</p>
+                    </div>
+                    <div class="code-preview">
+                        <pre>${codeChange.new}</pre>
+                    </div>
+                    <div class="update-request-actions">
+                        <button class="btn btn-success" onclick="approveRequest('${request.request_id}')">Approve</button>
+                        <button class="btn btn-danger" onclick="rejectRequest('${request.request_id}')">Reject</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function updateStats() {
+            const total = updateRequests.length;
+            const pending = updateRequests.filter(r => r.status === 'pending').length;
+            const approved = updateRequests.filter(r => r.status === 'approved').length;
+            
+            document.getElementById('total-requests').textContent = total;
+            document.getElementById('pending-requests').textContent = pending;
+            document.getElementById('approved-requests').textContent = approved;
+        }
+        
+        function approveRequest(requestId) {
+            const request = updateRequests.find(r => r.request_id === requestId);
+            if (request) {
+                request.status = 'approved';
+                displayUpdateRequests();
+                updateStats();
+                console.log(`Approved request: ${requestId}`);
+            }
+        }
+        
+        function rejectRequest(requestId) {
+            const request = updateRequests.find(r => r.request_id === requestId);
+            if (request) {
+                request.status = 'rejected';
+                displayUpdateRequests();
+                updateStats();
+                console.log(`Rejected request: ${requestId}`);
+            }
+        }
+        
+        function approveAll() {
+            updateRequests.forEach(request => {
+                if (request.status === 'pending') {
+                    request.status = 'approved';
+                }
+            });
+            displayUpdateRequests();
+            updateStats();
+            console.log('Approved all pending requests');
+        }
+        
+        function rejectAll() {
+            updateRequests.forEach(request => {
+                if (request.status === 'pending') {
+                    request.status = 'rejected';
+                }
+            });
+            displayUpdateRequests();
+            updateStats();
+            console.log('Rejected all pending requests');
+        }
+        
+        // Load requests on page load
+        loadUpdateRequests();
+    </script>
+</body>
+</html>

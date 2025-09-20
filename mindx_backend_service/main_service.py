@@ -107,6 +107,15 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
+# Add static file serving for frontend
+from fastapi.staticfiles import StaticFiles
+import os
+
+# Mount static files
+frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "mindx_frontend_ui")
+if os.path.exists(frontend_path):
+    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
+
 command_handler: Optional[CommandHandler] = None
 
 @app.on_event("startup")

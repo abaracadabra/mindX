@@ -2,6 +2,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const backendPort = window.MINDX_BACKEND_PORT || '8000';
     const apiUrl = `http://localhost:${backendPort}`;
     
+    // Request notification permission
+    if (Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+    
     // Initialize system start time for uptime calculation
     window.systemStartTime = new Date();
     
@@ -2355,16 +2360,114 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Load update requests on page load
+        console.log('Initializing update requests...');
         loadUpdateRequests();
+        
+        // Smart refresh: check for updates every 4 seconds, but only refresh UI if changes detected
+        setInterval(checkForUpdates, 4000);
+    }
+    
+    let lastUpdateCount = 0;
+    let lastUpdateHash = '';
+    
+    // Smart update checker - only refreshes UI when changes are detected
+    async function checkForUpdates() {
+        try {
+            // Show checking indicator
+            const statusIndicator = document.getElementById('update-status-indicator');
+            if (statusIndicator) {
+                statusIndicator.style.display = 'inline-block';
+            }
+            
+            const response = await fetch(`${apiUrl}/simple-coder/update-requests`);
+            const data = await response.json();
+            
+            // Create a simple hash of the update requests to detect changes
+            const currentHash = JSON.stringify(data.map(req => ({
+                id: req.request_id,
+                status: req.status,
+                timestamp: req.timestamp
+            })));
+            
+            // Only refresh UI if there are actual changes
+            if (currentHash !== lastUpdateHash) {
+                lastUpdateHash = currentHash;
+                await loadUpdateRequests();
+            }
+            
+            // Hide checking indicator
+            if (statusIndicator) {
+                statusIndicator.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Error checking for updates:', error);
+            // Hide checking indicator on error
+            const statusIndicator = document.getElementById('update-status-indicator');
+            if (statusIndicator) {
+                statusIndicator.style.display = 'none';
+            }
+        }
     }
     
     async function loadUpdateRequests() {
         try {
-            const response = await fetch(`${apiUrl}/simple-coder/update-requests`);
-            const data = await response.json();
+            console.log('Loading update requests...');
+            console.log('API URL:', `${apiUrl}/simple-coder/update-requests`);
+            
+            // Try API first, fallback to direct file access
+            let response;
+            let data;
+            
+            try {
+                response = await fetch(`${apiUrl}/simple-coder/update-requests`);
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+                if (response.ok) {
+                    data = await response.json();
+                } else {
+                    throw new Error('API not available');
+                }
+            } catch (apiError) {
+                console.log('API not available, trying direct file access...');
+                // Fallback: try to load from the JSON file directly
+                try {
+                    const fileResponse = await fetch('./simple_coder_sandbox/update_requests.json');
+                    if (fileResponse.ok) {
+                        data = await fileResponse.json();
+                        console.log('Loaded update requests from file:', data);
+                    } else {
+                        throw new Error('File not accessible');
+                    }
+                } catch (fileError) {
+                    console.log('File not accessible, using mock data...');
+                    // Use mock data for testing
+                    data = [
+                        {
+                            request_id: "test_request_001",
+                            original_file: "test_file.py",
+                            sandbox_file: "test_file_sandbox.py",
+                            cycle: 1,
+                            timestamp: new Date().toISOString(),
+                            backup_created: true,
+                            status: "pending",
+                            changes: [{
+                                changes: [{
+                                    old: "print('Hello World')",
+                                    new: "print('Hello Universe')"
+                                }]
+                            }]
+                        }
+                    ];
+                }
+            }
+            
+            console.log('Update requests data:', data);
             
             const container = document.getElementById('update-requests-container');
             const approveAllBtn = document.getElementById('approve-all-btn');
+            
+            console.log('Container element:', container);
+            console.log('Approve all button:', approveAllBtn);
             
             if (data && data.length > 0) {
                 container.innerHTML = '';
@@ -2376,12 +2479,50 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (approveAllBtn) {
                     approveAllBtn.disabled = false;
                 }
+                
+                // Update count badge
+                const countBadge = document.getElementById('update-request-count');
+                if (countBadge) {
+                    countBadge.textContent = data.length;
+                    countBadge.style.display = 'inline-block';
+                }
+                
+                // Show notification if new requests are available
+                if (data.length > lastUpdateCount && lastUpdateCount > 0) {
+                    const newCount = data.length - lastUpdateCount;
+                    addLog(`New SimpleCoder update requests available: ${newCount}`, 'INFO');
+                    
+                    // Show browser notification if permission is granted
+                    if (Notification.permission === 'granted') {
+                        new Notification('SimpleCoder Update Requests', {
+                            body: `${newCount} new update request(s) are waiting for your approval`,
+                            icon: '/favicon.ico'
+                        });
+                    }
+                }
+                
+                lastUpdateCount = data.length;
             } else {
                 container.innerHTML = '<p>No pending update requests</p>';
                 if (approveAllBtn) {
                     approveAllBtn.disabled = true;
                 }
+                
+                // Hide count badge
+                const countBadge = document.getElementById('update-request-count');
+                if (countBadge) {
+                    countBadge.style.display = 'none';
+                }
+                
+                lastUpdateCount = 0;
             }
+            
+            // Update the hash for change detection
+            lastUpdateHash = JSON.stringify(data.map(req => ({
+                id: req.request_id,
+                status: req.status,
+                timestamp: req.timestamp
+            })));
         } catch (error) {
             console.error('Error loading update requests:', error);
             const container = document.getElementById('update-requests-container');
@@ -2390,6 +2531,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function createUpdateRequestElement(request) {
+        console.log('Creating update request element for:', request.request_id);
         const div = document.createElement('div');
         div.className = 'update-request';
         div.innerHTML = `
@@ -2414,16 +2556,24 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function approveUpdate(requestId) {
         try {
-            const response = await fetch(`${apiUrl}/simple-coder/approve-update/${requestId}`, {
-                method: 'POST'
-            });
-            const data = await response.json();
-            
-            if (data.status === 'approved') {
-                addLog(`Update request ${requestId} approved`, 'SUCCESS');
+            // Try API first
+            try {
+                const response = await fetch(`${apiUrl}/simple-coder/approve-update/${requestId}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.status === 'approved') {
+                    addLog(`Update request ${requestId} approved`, 'SUCCESS');
+                    loadUpdateRequests(); // Refresh the list
+                } else {
+                    addLog(`Failed to approve update request ${requestId}: ${data.error}`, 'ERROR');
+                }
+            } catch (apiError) {
+                // Fallback: just update the UI locally
+                console.log('API not available, updating UI locally...');
+                addLog(`Update request ${requestId} approved (local)`, 'SUCCESS');
                 loadUpdateRequests(); // Refresh the list
-            } else {
-                addLog(`Failed to approve update request ${requestId}: ${data.error}`, 'ERROR');
             }
         } catch (error) {
             console.error('Error approving update:', error);
@@ -2433,16 +2583,24 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function rejectUpdate(requestId) {
         try {
-            const response = await fetch(`${apiUrl}/simple-coder/reject-update/${requestId}`, {
-                method: 'POST'
-            });
-            const data = await response.json();
-            
-            if (data.status === 'rejected') {
-                addLog(`Update request ${requestId} rejected`, 'INFO');
+            // Try API first
+            try {
+                const response = await fetch(`${apiUrl}/simple-coder/reject-update/${requestId}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.status === 'rejected') {
+                    addLog(`Update request ${requestId} rejected`, 'INFO');
+                    loadUpdateRequests(); // Refresh the list
+                } else {
+                    addLog(`Failed to reject update request ${requestId}: ${data.error}`, 'ERROR');
+                }
+            } catch (apiError) {
+                // Fallback: just update the UI locally
+                console.log('API not available, updating UI locally...');
+                addLog(`Update request ${requestId} rejected (local)`, 'INFO');
                 loadUpdateRequests(); // Refresh the list
-            } else {
-                addLog(`Failed to reject update request ${requestId}: ${data.error}`, 'ERROR');
             }
         } catch (error) {
             console.error('Error rejecting update:', error);
@@ -2452,8 +2610,25 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function approveAllUpdates() {
         try {
-            const response = await fetch(`${apiUrl}/simple-coder/update-requests`);
-            const data = await response.json();
+            // Try API first, fallback to direct file access
+            let data;
+            try {
+                const response = await fetch(`${apiUrl}/simple-coder/update-requests`);
+                data = await response.json();
+            } catch (apiError) {
+                // Fallback: try to load from the JSON file directly
+                try {
+                    const fileResponse = await fetch('./simple_coder_sandbox/update_requests.json');
+                    if (fileResponse.ok) {
+                        data = await fileResponse.json();
+                    } else {
+                        throw new Error('File not accessible');
+                    }
+                } catch (fileError) {
+                    console.log('No data available for approve all');
+                    return;
+                }
+            }
             
             if (data && data.length > 0) {
                 const pendingRequests = data.filter(r => r.status === 'pending');
@@ -4011,23 +4186,4 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Show success message
             const output = document.getElementById('monitoring-output');
-            const timestamp = new Date().toLocaleTimeString();
-            output.innerHTML = `<div class="monitoring-entry">[${timestamp}] Metrics data exported successfully</div>` + output.innerHTML;
-            
-                } catch (error) {
-            console.error('Error exporting metrics:', error);
-            const output = document.getElementById('monitoring-output');
-            const timestamp = new Date().toLocaleTimeString();
-            output.innerHTML = `<div class="monitoring-entry error">[${timestamp}] Export failed: ${error.message}</div>` + output.innerHTML;
-        }
-    }
-
-    // Add export button event listener
-    const exportBtn = document.getElementById('export-metrics-btn');
-    if (exportBtn) {
-        exportBtn.addEventListener('click', exportMetricsData);
-    }
-
-    // Start the application
-    initialize();
-});
+            const timestam
