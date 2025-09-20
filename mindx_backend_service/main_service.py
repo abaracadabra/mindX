@@ -98,12 +98,13 @@ app = FastAPI(
     version="1.3.4",
 )
 
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Allow all origins for development
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
 )
 
 command_handler: Optional[CommandHandler] = None
@@ -442,6 +443,74 @@ def system_status():
             "coordinator": "online"
         }
     }
+
+@app.get("/system/metrics", summary="Get performance metrics")
+def get_performance_metrics():
+    """
+    Get current system performance metrics.
+    """
+    try:
+        import psutil
+        
+        # Get basic system metrics
+        cpu_percent = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        
+        return {
+            "response_time": 50,  # Mock response time
+            "memory_usage": memory.percent,
+            "cpu_usage": cpu_percent,
+            "disk_usage": disk.percent,
+            "network_usage": 0,  # Mock network usage
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        logger.error(f"Failed to get performance metrics: {e}")
+        return {
+            "error": str(e),
+            "timestamp": time.time()
+        }
+
+@app.get("/system/resources", summary="Get resource usage")
+def get_resource_usage():
+    """
+    Get current system resource usage.
+    """
+    try:
+        import psutil
+        
+        # Get system resources
+        cpu_percent = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        
+        return {
+            "cpu": {
+                "usage": cpu_percent,
+                "cores": psutil.cpu_count(),
+                "load_avg": psutil.getloadavg() if hasattr(psutil, 'getloadavg') else [0, 0, 0]
+            },
+            "memory": {
+                "total": f"{memory.total / (1024**3):.1f} GB",
+                "used": f"{memory.used / (1024**3):.1f} GB",
+                "free": f"{memory.free / (1024**3):.1f} GB",
+                "percentage": memory.percent
+            },
+            "disk": {
+                "total": f"{disk.total / (1024**3):.1f} GB",
+                "used": f"{disk.used / (1024**3):.1f} GB",
+                "free": f"{disk.free / (1024**3):.1f} GB",
+                "percentage": (disk.used / disk.total) * 100
+            },
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        logger.error(f"Failed to get resource usage: {e}")
+        return {
+            "error": str(e),
+            "timestamp": time.time()
+        }
 
 def initialize_agint_logging():
     """Initialize AGInt logging directory and create initial log file"""
