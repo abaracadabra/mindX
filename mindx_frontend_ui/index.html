@@ -57,22 +57,37 @@
         <!-- Control Tab -->
         <div id="control-tab" class="tab-content active">
             <div class="control-section">
-                <h2>Evolve Codebase</h2>
-                <textarea id="evolve-directive" placeholder="Enter a high-level directive for evolution..."></textarea>
-                <div class="evolve-controls">
-                    <div class="cycle-control">
-                        <label for="cycle-count">Max Cycles:</label>
-                        <input type="number" id="cycle-count" value="8" min="1" max="100">
-                    </div>
-                    <div class="autonomous-control">
-                        <label class="autonomous-toggle">
-                            <input type="checkbox" id="evolve-autonomous-mode">
-                            <span class="toggle-slider"></span>
-                            <span class="toggle-label">Autonomous Mode</span>
-                        </label>
+                <div class="section-header">
+                    <div class="section-tabs">
+                        <button class="section-tab active" data-section="evolve">Evolve Codebase</button>
+                        <button class="section-tab" data-section="query">Query Coordinator</button>
                     </div>
                 </div>
-                <button id="evolve-btn">Evolve Codebase</button>
+                
+                <!-- Evolve Codebase Section -->
+                <div id="evolve-section" class="section-content active">
+                    <textarea id="evolve-directive" placeholder="Enter a high-level directive for evolution..."></textarea>
+                    <div class="evolve-controls">
+                        <button id="evolve-btn" class="evolve-action-btn">mindX</button>
+                        <div class="cycle-control">
+                            <label for="cycle-count">Max Cycles:</label>
+                            <input type="number" id="cycle-count" value="8" min="1" max="100">
+                        </div>
+                        <div class="autonomous-control">
+                            <label class="autonomous-toggle">
+                                <input type="checkbox" id="evolve-autonomous-mode">
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label">Autonomous Mode</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Query Coordinator Section -->
+                <div id="query-section" class="section-content">
+                    <input type="text" id="query-input" placeholder="explain augmentic development">
+                    <button id="query-btn">Send Query</button>
+                </div>
             </div>
             <div class="control-section">
                 <h2>Simple Coder Update Requests</h2>
@@ -83,11 +98,6 @@
                     <button id="refresh-updates-btn">Refresh Updates</button>
                     <button id="approve-all-btn" disabled>Approve All</button>
                 </div>
-            </div>
-            <div class="control-section">
-                <h2>Query Coordinator</h2>
-                <input type="text" id="query-input" placeholder="explain augmentic development">
-                <button id="query-btn">Send Query</button>
             </div>
             <div class="control-section">
                 <h2>System Commands</h2>

@@ -651,6 +651,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // Add Enter key functionality to evolve directive textarea
+        evolveDirectiveInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault(); // Prevent new line in textarea
+                evolveBtn.click(); // Trigger the evolve button click
+            }
+        });
+
         queryBtn.addEventListener('click', async () => {
             const query = queryInput.value.trim();
             if (!query) {
@@ -683,6 +691,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 queryBtn.disabled = false;
                 queryBtn.textContent = 'Query';
             }
+        });
+
+        // Add Enter key functionality to query input field
+        queryInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // Prevent form submission
+                queryBtn.click(); // Trigger the query button click
+            }
+        });
+
+        // Section tab switching functionality
+        const sectionTabs = document.querySelectorAll('.section-tab');
+        const sectionContents = document.querySelectorAll('.section-content');
+        
+        sectionTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetSection = tab.getAttribute('data-section');
+                
+                // Remove active class from all tabs and contents
+                sectionTabs.forEach(t => t.classList.remove('active'));
+                sectionContents.forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked tab and corresponding content
+                tab.classList.add('active');
+                const targetContent = document.getElementById(`${targetSection}-section`);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                }
+            });
         });
 
         statusBtn.addEventListener('click', async () => {
