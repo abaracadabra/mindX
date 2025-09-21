@@ -53,7 +53,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let seenActivities = new Set(); // Track activities we've already seen
     let autonomousInterval = null;
     let logs = [];
-    let terminalHistory = [];
     let agents = [];
     let systemAgents = [];
     let userAgents = [];
@@ -100,12 +99,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const copyLogsBtn = document.getElementById('copy-logs-btn');
     const logsOutput = document.getElementById('logs-output');
     
-    // Terminal tab elements
-    const refreshTerminalBtn = document.getElementById('refresh-terminal-btn');
-    const clearTerminalBtn = document.getElementById('clear-terminal-btn');
-    const executeCommandBtn = document.getElementById('execute-command-btn');
-    const terminalOutput = document.getElementById('terminal-output');
-    const terminalCommand = document.getElementById('terminal-command');
     const sendCommandBtn = document.getElementById('send-command-btn');
 
     // Admin tab elements
@@ -174,6 +167,29 @@ document.addEventListener('DOMContentLoaded', () => {
         responseOutput.textContent = message;
         // Track command activity to prevent health check refresh during active use
         window.lastCommandTime = Date.now();
+    }
+
+    function displayToolsList(data) {
+        let html = `<h3>Tools in ${data.tools_directory} (${data.tools_count} total)</h3>`;
+        html += '<div class="tools-grid">';
+        
+        data.tools.forEach(tool => {
+            const sizeKB = (tool.size / 1024).toFixed(1);
+            html += `
+                <div class="tool-card">
+                    <div class="tool-header">
+                        <h4>${tool.name}</h4>
+                        <span class="tool-size">${sizeKB} KB</span>
+                    </div>
+                    <div class="tool-filename">${tool.filename}</div>
+                    <div class="tool-description">${tool.description}</div>
+                    <div class="tool-path">${tool.path}</div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        showResponse(html);
     }
 
     function showQueryResult(response) {
@@ -337,15 +353,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateLogsDisplay() {
+        console.log('updateLogsDisplay called, logs count:', logs.length); // Debug log
         const filterLevel = logLevelFilter.value.toUpperCase();
         const filteredLogs = logs.filter(log => 
             filterLevel === 'ALL' || log.level.toUpperCase() === filterLevel
         );
         
-        logsOutput.innerHTML = filteredLogs.map(log => {
-            const levelClass = `log-${log.level.toLowerCase()}`;
-            return `<div class="${levelClass}">[${log.timestamp}] ${log.level}: ${log.message}</div>`;
-        }).join('');
+        console.log('Filtered logs count:', filteredLogs.length); // Debug log
+        
+        if (logsOutput) {
+            logsOutput.innerHTML = filteredLogs.map(log => {
+                const levelClass = `log-${log.level.toLowerCase()}`;
+                return `<div class="${levelClass}">[${log.timestamp}] ${log.level}: ${log.message}</div>`;
+            }).join('');
+            console.log('Logs display updated'); // Debug log
+        } else {
+            console.log('logsOutput element not found!'); // Debug log
+        }
     }
 
     // System Monitoring
@@ -353,7 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isMonitoring = false;
 
     // Agent Activity Monitoring
-    function addAgentActivity(agent, message, type = 'info') {
+    function addAgentActivity(agent, message, type = 'info', details = null) {
         if (activityPaused) return;
         
         const timestamp = new Date().toLocaleTimeString();
@@ -361,13 +385,279 @@ document.addEventListener('DOMContentLoaded', () => {
             timestamp,
             agent,
             message,
-            type
+            type,
+            details,
+            id: Date.now() + Math.random() // Unique ID for animations
         };
         
         activityLog.unshift(activityEntry);
         if (activityLog.length > 50) activityLog.pop();
         
         updateActivityDisplay();
+        updateExecutiveMetrics();
+        updateAgentStatus(agent, message, type);
+        
+        // Only highlight workflow if this is REAL agent activity (not system messages)
+        if (agent !== 'System' && agent !== 'Workflow Monitor') {
+            updateWorkflowNode(agent, message, type);
+        }
+        
+        // Add pulse animation to new entries
+        setTimeout(() => {
+            const entries = document.querySelectorAll('.activity-entry');
+            if (entries.length > 0) {
+                entries[0].classList.add('new-activity');
+                setTimeout(() => {
+                    entries[0].classList.remove('new-activity');
+                }, 2000);
+            }
+        }, 100);
+    }
+
+    // Executive Dashboard Functions
+    function updateExecutiveMetrics() {
+        // Update active agents count
+        const activeAgents = document.getElementById('active-agents');
+        if (activeAgents) {
+            const uniqueAgents = new Set(activityLog.map(entry => entry.agent));
+            activeAgents.textContent = uniqueAgents.size;
+        }
+
+        // Update tasks completed
+        const tasksCompleted = document.getElementById('tasks-completed');
+        if (tasksCompleted) {
+            const completedTasks = activityLog.filter(entry => 
+                entry.type === 'success' && 
+                (entry.message.includes('completed') || entry.message.includes('success'))
+            ).length;
+            tasksCompleted.textContent = completedTasks;
+        }
+    }
+
+    function updateAgentStatus(agent, message, type) {
+        const agentId = agent.toLowerCase().replace(/\s+/g, '-');
+        let statusCard = document.getElementById(`${agentId}-status`);
+        
+        // Create new agent card if it doesn't exist
+        if (!statusCard) {
+            statusCard = createAgentStatusCard(agent, agentId);
+        }
+        
+        const activityElement = document.getElementById(`${agentId}-activity`);
+        const indicatorElement = document.getElementById(`${agentId}-indicator`);
+
+        if (statusCard && activityElement && indicatorElement) {
+            // Update activity message
+            activityElement.textContent = message.length > 50 ? message.substring(0, 50) + '...' : message;
+            
+            // Update status indicator
+            indicatorElement.className = 'agent-status-indicator';
+            if (type === 'success') {
+                indicatorElement.classList.add('active');
+            } else if (type === 'error') {
+                indicatorElement.classList.add('error');
+            }
+
+            // Update specific metrics based on agent
+            updateAgentMetrics(agent, message, type);
+        }
+    }
+
+    function updateWorkflowNode(agent, message, type) {
+        // Map agent names to workflow node IDs
+        const agentNodeMap = {
+            'Coordinator Agent': 'coordinator-workflow-status', 
+            'AGInt Core': 'agint-workflow-status',
+            'BDI Agent': 'bdi-workflow-status',
+            'Simple Coder': 'simple-coder-workflow-status'
+        };
+        
+        const nodeId = agentNodeMap[agent];
+        if (!nodeId) return;
+        
+        const statusElement = document.getElementById(nodeId);
+        if (!statusElement) return;
+        
+        // Update status text based on message content
+        let statusText = 'Active';
+        let statusClass = 'active';
+        
+        // Check for working state indicators - only highlight for actual work activities
+        if (message.includes('Generated') || message.includes('generated') || 
+            message.includes('Processing') || message.includes('processing') ||
+            message.includes('Selected') || message.includes('selected') ||
+            message.includes('Executing') || message.includes('executing') ||
+            message.includes('Analyzing') || message.includes('analyzing') ||
+            message.includes('Creating') || message.includes('creating') ||
+            message.includes('Building') || message.includes('building') ||
+            message.includes('Computing') || message.includes('computing') ||
+            message.includes('Reasoning') || message.includes('reasoning') ||
+            message.includes('Deciding') || message.includes('deciding') ||
+            message.includes('Generating') || message.includes('generating') ||
+            message.includes('Status:') || message.includes('status:') ||
+            message.includes('Directive:') || message.includes('directive:') ||
+            message.includes('Cycle') || message.includes('cycle') ||
+            message.includes('BDI') || message.includes('bdi') ||
+            message.includes('Simple Coder') || message.includes('simple coder') ||
+            message.includes('Mastermind') || message.includes('mastermind') ||
+            message.includes('Coordinator') || message.includes('coordinator') ||
+            message.includes('AGInt') || message.includes('agint')) {
+            statusText = 'Working';
+            statusClass = 'working';
+        } else if (message.includes('pending') || message.includes('waiting') || message.includes('queued')) {
+            statusText = 'Waiting';
+            statusClass = 'waiting';
+        } else if (message.includes('completed') || message.includes('success') || message.includes('finished')) {
+            statusText = 'Active';
+            statusClass = 'active';
+        } else if (message.includes('error') || message.includes('failed') || message.includes('stopped')) {
+            statusText = 'Error';
+            statusClass = 'waiting';
+        } else if (message.includes('idle') || message.includes('standby') || message.includes('ready')) {
+            statusText = 'Ready';
+            statusClass = 'active';
+        }
+        
+        statusElement.textContent = statusText;
+        
+        // Update parent node class
+        const workflowNode = statusElement.closest('.workflow-node');
+        if (workflowNode) {
+            workflowNode.className = `workflow-node ${statusClass}`;
+            
+            // Add working highlight effect
+            if (statusClass === 'working') {
+                // Remove working class from other nodes
+                document.querySelectorAll('.workflow-node.working').forEach(node => {
+                    if (node !== workflowNode) {
+                        node.classList.remove('working');
+                        node.classList.add('active');
+                    }
+                });
+                
+                // Set a timeout to remove working state after 3 seconds
+                setTimeout(() => {
+                    if (workflowNode.classList.contains('working')) {
+                        workflowNode.classList.remove('working');
+                        workflowNode.classList.add('active');
+                        statusElement.textContent = 'Active';
+                    }
+                }, 3000);
+            }
+        }
+    }
+
+    function createAgentStatusCard(agentName, agentId) {
+        const agentStatusGrid = document.querySelector('.agent-status-grid');
+        if (!agentStatusGrid) return null;
+
+        const agentCard = document.createElement('div');
+        agentCard.className = 'agent-status-card';
+        agentCard.id = `${agentId}-status`;
+        
+        agentCard.innerHTML = `
+            <div class="agent-header">
+                <div class="agent-name">${agentName}</div>
+                <div class="agent-status-indicator" id="${agentId}-indicator"></div>
+            </div>
+            <div class="agent-activity" id="${agentId}-activity">Initializing...</div>
+            <div class="agent-metrics" id="${agentId}-metrics">
+                <span class="metric">Status: <span id="${agentId}-status-text">Unknown</span></span>
+                <span class="metric">Last Activity: <span id="${agentId}-last-activity">Just started</span></span>
+            </div>
+        `;
+        
+        agentStatusGrid.appendChild(agentCard);
+        return agentCard;
+    }
+
+    function updateAgentMetrics(agent, message, type) {
+        if (agent === 'BDI Agent') {
+            const decisionsElement = document.getElementById('bdi-decisions');
+            const successElement = document.getElementById('bdi-success');
+            
+            if (decisionsElement) {
+                const currentDecisions = parseInt(decisionsElement.textContent) || 0;
+                if (message.includes('Selected') || message.includes('Decision')) {
+                    decisionsElement.textContent = currentDecisions + 1;
+                }
+            }
+            
+            if (successElement && type === 'success') {
+                const currentSuccess = parseInt(successElement.textContent) || 0;
+                successElement.textContent = Math.min(100, currentSuccess + 5) + '%';
+            }
+        } else if (agent === 'AGInt Core') {
+            const cyclesElement = document.getElementById('agint-cycles');
+            const progressElement = document.getElementById('agint-progress');
+            
+            if (cyclesElement && message.includes('Cycle')) {
+                const currentCycles = parseInt(cyclesElement.textContent) || 0;
+                cyclesElement.textContent = currentCycles + 1;
+            }
+            
+            if (progressElement && message.includes('Progress')) {
+                const progressMatch = message.match(/(\d+)%/);
+                if (progressMatch) {
+                    progressElement.textContent = progressMatch[1] + '%';
+                }
+            }
+        } else if (agent === 'Simple Coder') {
+            const requestsElement = document.getElementById('simple-coder-requests');
+            const approvedElement = document.getElementById('simple-coder-approved');
+            
+            // Update pending requests count
+            if (requestsElement) {
+                if (message.includes('Generated') && message.includes('pending')) {
+                    const match = message.match(/(\d+)\s+pending/);
+                    if (match) {
+                        requestsElement.textContent = match[1];
+                    } else {
+                        const currentRequests = parseInt(requestsElement.textContent) || 0;
+                        requestsElement.textContent = currentRequests + 1;
+                    }
+                } else if (message.includes('pending update requests')) {
+                    const match = message.match(/(\d+)\s+pending/);
+                    if (match) {
+                        requestsElement.textContent = match[1];
+                    }
+                }
+            }
+            
+            // Update approved count
+            if (approvedElement && (message.includes('Approved') || message.includes('approved'))) {
+                const currentApproved = parseInt(approvedElement.textContent) || 0;
+                approvedElement.textContent = currentApproved + 1;
+            }
+            
+            // Update Simple Coder status text
+            const statusTextElement = document.getElementById('simple-coder-status-text');
+            if (statusTextElement) {
+                if (message.includes('pending')) {
+                    statusTextElement.textContent = 'Processing Requests';
+                } else if (message.includes('Generated')) {
+                    statusTextElement.textContent = 'Code Generation Active';
+                } else if (message.includes('Status:')) {
+                    const statusMatch = message.match(/Status:\s*(\w+)/);
+                    if (statusMatch) {
+                        statusTextElement.textContent = statusMatch[1];
+                    }
+                }
+            }
+        } else if (agent === 'Coordinator') {
+            const delegationsElement = document.getElementById('coordinator-delegations');
+            const activeElement = document.getElementById('coordinator-active');
+            
+            if (delegationsElement && message.includes('Delegated')) {
+                const currentDelegations = parseInt(delegationsElement.textContent) || 0;
+                delegationsElement.textContent = currentDelegations + 1;
+            }
+            
+            if (activeElement && message.includes('Active')) {
+                const currentActive = parseInt(activeElement.textContent) || 0;
+                activeElement.textContent = currentActive + 1;
+            }
+        }
     }
 
     // Test Mistral API connectivity
@@ -432,16 +722,286 @@ document.addEventListener('DOMContentLoaded', () => {
         agentActivityLog.innerHTML = activityLog.map(entry => {
             const typeClass = entry.type === 'error' ? 'error' : 
                              entry.type === 'success' ? 'success' : 
-                             entry.type === 'warning' ? 'warning' : '';
+                             entry.type === 'warning' ? 'warning' : 'info';
+            
+            // Enhanced professional formatting
+            const formattedTime = new Date(entry.timestamp).toLocaleTimeString('en-US', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            const statusIcon = entry.type === 'error' ? '❌' : 
+                              entry.type === 'success' ? '✅' : 
+                              entry.type === 'warning' ? '⚠️' : 'ℹ️';
+            
+            const agentBadge = `<span class="agent-badge" data-agent="${entry.agent}">${entry.agent}</span>`;
+            const timeBadge = `<span class="time-badge">${formattedTime}</span>`;
+            const statusBadge = `<span class="status-badge ${typeClass}">${statusIcon}</span>`;
+            
+            // Workflow context display (hidden by default, shown on click)
+            let workflowHtml = '';
+            if (entry.workflow_context) {
+                const workflow = entry.workflow_context;
+                workflowHtml = '<div class="workflow-context" style="display: none;">';
+                workflowHtml += `<div class="workflow-step">${workflow.workflow_step || 'Unknown Step'}</div>`;
+                if (workflow.triggered_by) {
+                    workflowHtml += `<div class="workflow-trigger">Triggered by: ${workflow.triggered_by}</div>`;
+                }
+                if (workflow.triggers && workflow.triggers.length > 0) {
+                    workflowHtml += `<div class="workflow-triggers">Triggers: ${workflow.triggers.join(', ')}</div>`;
+                }
+                if (workflow.workflow_type) {
+                    workflowHtml += `<div class="workflow-type">Type: ${workflow.workflow_type}</div>`;
+                }
+                if (workflow.cycle_phase) {
+                    workflowHtml += `<div class="workflow-phase">Phase: ${workflow.cycle_phase}</div>`;
+                }
+                workflowHtml += '</div>';
+            }
+            
+            // Enhanced details display (hidden by default, shown on click)
+            let detailsHtml = '';
+            if (entry.details) {
+                const details = entry.details;
+                detailsHtml = '<div class="activity-details" style="display: none;">';
+                
+                if (details.reasoning) {
+                    detailsHtml += `<div class="detail-item"><strong>Reasoning:</strong> ${details.reasoning}</div>`;
+                }
+                if (details.available_agents) {
+                    detailsHtml += `<div class="detail-item"><strong>Available Agents:</strong> ${details.available_agents.join(', ')}</div>`;
+                }
+                if (details.decision_factors) {
+                    detailsHtml += `<div class="detail-item"><strong>Decision Factors:</strong> ${details.decision_factors.join(', ')}</div>`;
+                }
+                if (details.target_agent) {
+                    detailsHtml += `<div class="detail-item"><strong>Target Agent:</strong> ${details.target_agent}</div>`;
+                }
+                if (details.task_type) {
+                    detailsHtml += `<div class="detail-item"><strong>Task Type:</strong> ${details.task_type}</div>`;
+                }
+                if (details.requested_tool) {
+                    detailsHtml += `<div class="detail-item"><strong>Requested Tool:</strong> ${details.requested_tool}</div>`;
+                }
+                if (details.evaluation_criteria) {
+                    detailsHtml += `<div class="detail-item"><strong>Evaluation Criteria:</strong> ${details.evaluation_criteria.join(', ')}</div>`;
+                }
+                if (details.agents_considered) {
+                    detailsHtml += `<div class="detail-item"><strong>Agents Considered:</strong> ${details.agents_considered.join(', ')}</div>`;
+                }
+                if (details.confidence) {
+                    detailsHtml += `<div class="detail-item"><strong>Confidence:</strong> <span class="confidence-${details.confidence}">${details.confidence}</span></div>`;
+                }
+                if (details.ethereum_address) {
+                    detailsHtml += `<div class="detail-item"><strong>Ethereum Address:</strong> <code>${details.ethereum_address}</code></div>`;
+                }
+                if (details.capabilities) {
+                    detailsHtml += `<div class="detail-item"><strong>Capabilities:</strong> ${details.capabilities.join(', ')}</div>`;
+                }
+                
+                detailsHtml += '</div>';
+            }
             
             return `
-                <div class="activity-entry ${typeClass}">
-                    <span class="activity-timestamp">${entry.timestamp}</span>
-                    <span class="activity-agent">[${entry.agent}]</span>
-                    <span class="activity-message">${entry.message}</span>
+                <div class="activity-entry ${typeClass}" data-activity-id="${entry.id || Date.now()}" style="cursor: pointer;">
+                    <div class="activity-header">
+                        ${statusBadge}
+                        ${agentBadge}
+                        ${timeBadge}
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-message">${entry.message}</div>
+                        ${workflowHtml}
+                        ${detailsHtml}
+                    </div>
                 </div>
             `;
         }).join('');
+    }
+
+    function toggleActivityDetails(activityEntry) {
+        const workflowContext = activityEntry.querySelector('.workflow-context');
+        const activityDetails = activityEntry.querySelector('.activity-details');
+        
+        // Toggle workflow context
+        if (workflowContext) {
+            if (workflowContext.style.display === 'none') {
+                workflowContext.style.display = 'block';
+            } else {
+                workflowContext.style.display = 'none';
+            }
+        }
+        
+        // Toggle activity details
+        if (activityDetails) {
+            if (activityDetails.style.display === 'none') {
+                activityDetails.style.display = 'block';
+            } else {
+                activityDetails.style.display = 'none';
+            }
+        }
+        
+        // Add visual feedback for clicked entry
+        activityEntry.classList.toggle('clicked');
+    }
+
+    // Agent Detail Popup Functions (Global scope)
+    window.showAgentDetailPopup = function(agentId, agentName) {
+        console.log('showAgentDetailPopup called with:', agentId, agentName); // Debug log
+        const popup = document.getElementById('agent-detail-popup');
+        if (!popup) {
+            console.log('Popup element not found'); // Debug log
+            return;
+        }
+        
+        // Get agent data
+        const agentData = getAgentData(agentId, agentName);
+        console.log('Agent data:', agentData); // Debug log
+        
+        // Populate popup content
+        populateAgentPopup(agentData);
+        
+        // Show popup
+        popup.classList.add('show');
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        console.log('Popup should now be visible'); // Debug log
+    };
+
+    window.hideAgentDetailPopup = function() {
+        const popup = document.getElementById('agent-detail-popup');
+        if (popup) {
+            popup.classList.remove('show');
+            document.body.style.overflow = ''; // Restore scrolling
+        }
+    };
+
+    function getAgentData(agentId, agentName) {
+        // Get current agent status from the UI
+        const activityElement = document.getElementById(`${agentId}-activity`);
+        const indicatorElement = document.getElementById(`${agentId}-indicator`);
+        
+        // Get agent-specific data
+        const agentData = {
+            id: agentId,
+            name: agentName,
+            icon: getAgentIcon(agentName),
+            status: getAgentStatus(indicatorElement),
+            activity: activityElement ? activityElement.textContent : 'No activity',
+            metrics: getAgentMetrics(agentId),
+            capabilities: getAgentCapabilities(agentName),
+            recentActivity: getAgentRecentActivity(agentName)
+        };
+        
+        return agentData;
+    }
+
+    function getAgentIcon(agentName) {
+        const iconMap = {
+            'BDI Agent': '⚡',
+            'AGInt Core': '🔄',
+            'Simple Coder': '💻',
+            'Coordinator': '🎯',
+            'MastermindAgent': '🧠',
+            'Resource Monitor': '📊'
+        };
+        return iconMap[agentName] || '🤖';
+    }
+
+    function getAgentStatus(indicatorElement) {
+        if (!indicatorElement) return 'Unknown';
+        
+        if (indicatorElement.classList.contains('active')) return 'Active';
+        if (indicatorElement.classList.contains('warning')) return 'Warning';
+        if (indicatorElement.classList.contains('error')) return 'Error';
+        return 'Unknown';
+    }
+
+    function getAgentMetrics(agentId) {
+        const metrics = [];
+        
+        // Get metrics from the agent card
+        const metricsContainer = document.querySelector(`#${agentId}-status .agent-metrics`);
+        if (metricsContainer) {
+            const metricElements = metricsContainer.querySelectorAll('.metric');
+            metricElements.forEach(metric => {
+                const text = metric.textContent;
+                const parts = text.split(': ');
+                if (parts.length === 2) {
+                    metrics.push({
+                        label: parts[0].trim(),
+                        value: parts[1].trim()
+                    });
+                }
+            });
+        }
+        
+        return metrics;
+    }
+
+    function getAgentCapabilities(agentName) {
+        const capabilities = {
+            'BDI Agent': ['Decision Making', 'Agent Selection', 'Reasoning', 'Belief Management'],
+            'AGInt Core': ['Cognitive Processing', 'PODA Cycles', 'Perception', 'Orientation', 'Decision', 'Action'],
+            'Simple Coder': ['Code Generation', 'Update Requests', 'Code Evolution', 'Sandbox Testing'],
+            'Coordinator': ['Infrastructure Management', 'Autonomous Improvement', 'Component Evolution'],
+            'MastermindAgent': ['Strategic Orchestration', 'Mistral AI Reasoning', 'Agent Coordination'],
+            'Resource Monitor': ['CPU Monitoring', 'Memory Tracking', 'System Health', 'Performance Analysis']
+        };
+        return capabilities[agentName] || ['General Operations'];
+    }
+
+    function getAgentRecentActivity(agentName) {
+        // Get recent activities for this specific agent
+        return activityLog
+            .filter(entry => entry.agent === agentName)
+            .slice(0, 5) // Last 5 activities
+            .map(entry => ({
+                time: entry.timestamp,
+                message: entry.message,
+                type: entry.type
+            }));
+    }
+
+    function populateAgentPopup(agentData) {
+        // Update popup header
+        document.getElementById('popup-agent-name').textContent = `${agentData.name} Details`;
+        document.getElementById('popup-agent-icon').textContent = agentData.icon;
+        document.getElementById('popup-agent-title').textContent = agentData.name;
+        document.getElementById('popup-agent-status').textContent = agentData.status;
+        
+        // Update current activity
+        document.getElementById('popup-current-activity').textContent = agentData.activity;
+        
+        // Update metrics
+        const metricsContainer = document.getElementById('popup-metrics');
+        metricsContainer.innerHTML = agentData.metrics.map(metric => `
+            <div class="metric-item">
+                <span class="metric-label">${metric.label}</span>
+                <span class="metric-value">${metric.value}</span>
+            </div>
+        `).join('');
+        
+        // Update recent activity
+        const activityContainer = document.getElementById('popup-activity-history');
+        if (agentData.recentActivity.length > 0) {
+            activityContainer.innerHTML = agentData.recentActivity.map(activity => `
+                <div class="activity-item">
+                    <span class="activity-time">${activity.time}</span>
+                    <span class="activity-message">${activity.message}</span>
+                    <span class="activity-type ${activity.type}">${activity.type}</span>
+                </div>
+            `).join('');
+        } else {
+            activityContainer.innerHTML = '<div class="activity-item">No recent activity</div>';
+        }
+        
+        // Update capabilities
+        const capabilitiesContainer = document.getElementById('popup-capabilities');
+        capabilitiesContainer.innerHTML = agentData.capabilities.map(capability => `
+            <span class="capability-tag">${capability}</span>
+        `).join('');
     }
 
     function pauseActivity() {
@@ -654,21 +1214,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 30000);
     }
 
-    function addTerminalOutput(message) {
-        const timestamp = new Date().toLocaleTimeString();
-        terminalHistory.unshift(`[${timestamp}] ${message}`);
-        
-        // Keep only last 500 terminal entries
-        if (terminalHistory.length > 500) {
-            terminalHistory = terminalHistory.slice(0, 500);
-        }
-        
-        updateTerminalDisplay();
-    }
-
-    function updateTerminalDisplay() {
-        terminalOutput.textContent = terminalHistory.join('\n');
-    }
 
     // API Functions
     async function sendRequest(endpoint, method = 'GET', body = null) {
@@ -787,9 +1332,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'logs':
                 loadLogs();
-                break;
-            case 'terminal':
-                loadTerminal();
                 break;
             case 'admin':
                 loadAdminData();
@@ -1065,56 +1607,24 @@ document.addEventListener('DOMContentLoaded', () => {
             addAgentActivity('System Tools', 'Fetching tools list', 'info');
             
             try {
-                // Since there's no tools endpoint, we'll show available system commands
-                const toolsResponse = {
-                    "available_tools": [
-                        {
-                            "name": "System Status Check",
-                            "endpoint": "/system/status",
-                            "description": "Check overall system status and health"
-                        },
-                        {
-                            "name": "System Metrics",
-                            "endpoint": "/system/metrics", 
-                            "description": "Get performance metrics and statistics"
-                        },
-                        {
-                            "name": "Resource Usage",
-                            "endpoint": "/system/resources",
-                            "description": "Monitor CPU, memory, and disk usage"
-                        },
-                        {
-                            "name": "System Logs",
-                            "endpoint": "/system/logs",
-                            "description": "Access system logs and debugging information"
-                        },
-                        {
-                            "name": "Execute Commands",
-                            "endpoint": "/system/execute-command",
-                            "description": "Execute system commands like mindX.sh scripts"
-                        },
-                        {
-                            "name": "Performance Agent",
-                            "endpoint": "/system/performance-agent",
-                            "description": "Get performance monitoring agent data"
-                        },
-                        {
-                            "name": "Resource Agent", 
-                            "endpoint": "/system/resource-agent",
-                            "description": "Get resource monitoring agent data"
-                        }
-                    ],
-                    "total_tools": 7,
-                    "status": "active"
-                };
-                
-                addLog(`Tools retrieved: ${JSON.stringify(toolsResponse)}`, 'SUCCESS');
-                addAgentActivity('System Tools', 'Tools list retrieved successfully', 'success');
-                showResponse(JSON.stringify(toolsResponse, null, 2));
+                const response = await fetch(`${apiUrl}/tools`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        displayToolsList(data);
+                        addLog(`Found ${data.tools_count} tools in ${data.tools_directory}`, 'SUCCESS');
+                        addAgentActivity('System Tools', `Listed ${data.tools_count} tools from tools folder`, 'success');
+                    } else {
+                        addLog(`Error: ${data.error}`, 'ERROR');
+                        addAgentActivity('System Tools', `Error: ${data.error}`, 'error');
+                    }
+                } else {
+                    addLog('Failed to fetch tools list', 'ERROR');
+                    addAgentActivity('System Tools', 'Failed to fetch tools list', 'error');
+                }
             } catch (error) {
-                addLog(`Tools list failed: ${error.message}`, 'ERROR');
-                addAgentActivity('System Tools', `Tools list failed: ${error.message}`, 'error');
-                showResponse(`Tools list failed: ${error.message}`);
+                addLog(`Error fetching tools: ${error.message}`, 'ERROR');
+                addAgentActivity('System Tools', `Error: ${error.message}`, 'error');
             }
         });
 
@@ -2117,10 +2627,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Logs Tab Functions
     function initializeLogsTab() {
-        refreshLogsBtn.addEventListener('click', loadLogs);
-        clearLogsBtn.addEventListener('click', clearLogs);
-        copyLogsBtn.addEventListener('click', copyLogsToClipboard);
-        logLevelFilter.addEventListener('change', updateLogsDisplay);
+        console.log('Initializing logs tab...'); // Debug log
+        if (refreshLogsBtn) {
+            refreshLogsBtn.addEventListener('click', loadLogs);
+            console.log('Refresh logs button listener added'); // Debug log
+        }
+        if (clearLogsBtn) {
+            clearLogsBtn.addEventListener('click', (e) => {
+                console.log('Clear logs button clicked!'); // Debug log
+                e.preventDefault();
+                clearLogs();
+            });
+            console.log('Clear logs button listener added'); // Debug log
+        } else {
+            console.log('Clear logs button not found!'); // Debug log
+        }
+        if (copyLogsBtn) {
+            copyLogsBtn.addEventListener('click', copyLogsToClipboard);
+        }
+        if (logLevelFilter) {
+            logLevelFilter.addEventListener('change', updateLogsDisplay);
+        }
     }
 
     async function loadLogs() {
@@ -2136,9 +2663,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function clearLogs() {
+        console.log('clearLogs function called'); // Debug log
         logs = [];
         updateLogsDisplay();
         addLog('Logs cleared', 'INFO');
+        console.log('Logs cleared, count:', logs.length); // Debug log
     }
 
     function copyLogsToClipboard() {
@@ -2150,60 +2679,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Terminal Tab Functions
-    function initializeTerminalTab() {
-        refreshTerminalBtn.addEventListener('click', loadTerminal);
-        clearTerminalBtn.addEventListener('click', clearTerminal);
-        executeCommandBtn.addEventListener('click', executeCommand);
-        sendCommandBtn.addEventListener('click', sendCommand);
-        
-        terminalCommand.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendCommand();
-            }
-        });
-    }
-
-    async function loadTerminal() {
-        try {
-            const result = await sendRequest('/system/terminal');
-            if (result.output) {
-                terminalHistory = result.output.split('\n');
-                updateTerminalDisplay();
-            }
-        } catch (error) {
-            addLog(`Failed to load terminal: ${error.message}`, 'ERROR');
-        }
-    }
-
-    function clearTerminal() {
-        terminalHistory = [];
-        updateTerminalDisplay();
-        addLog('Terminal cleared', 'INFO');
-    }
-
-    async function executeCommand() {
-        const command = prompt('Enter command to execute:', 'ls -la');
-        if (command) {
-            try {
-                const result = await sendRequest('/system/execute', 'POST', { command });
-                addTerminalOutput(`$ ${command}`);
-                addTerminalOutput(result.output || result.message || 'Command executed');
-            } catch (error) {
-                addLog(`Command execution failed: ${error.message}`, 'ERROR');
-            }
-        }
-    }
-
-    function sendCommand() {
-        const command = terminalCommand.value.trim();
-        if (command) {
-            addTerminalOutput(`$ ${command}`);
-            terminalCommand.value = '';
-            // In a real implementation, this would send the command to the backend
-            addTerminalOutput('Command sent to backend (mock response)');
-        }
-    }
 
     // Admin Tab Functions
     function initializeAdminTab() {
@@ -3329,7 +3804,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeAgentsTab();
         initializeSystemTab();
         initializeLogsTab();
-        initializeTerminalTab();
         initializeAdminTab();
         initializeAutonomousMode();
         initializeAgentActivityMonitor();
@@ -3352,7 +3826,10 @@ document.addEventListener('DOMContentLoaded', () => {
         setInterval(checkBackendStatus, 10000); // Check every 10 seconds
         
         // Start real agent activity monitoring
-        startAgentActivitySimulation();
+        startAgentActivityMonitoring();
+        
+        // Start workflow monitoring
+        startWorkflowMonitoring();
         
         // Load initial real agent activity
         loadInitialAgentActivity();
@@ -3368,6 +3845,108 @@ document.addEventListener('DOMContentLoaded', () => {
         if (clearActivityBtn) {
             clearActivityBtn.addEventListener('click', clearActivity);
         }
+        
+        // Add refresh metrics button
+        const refreshMetricsBtn = document.getElementById('refresh-metrics');
+        if (refreshMetricsBtn) {
+            refreshMetricsBtn.addEventListener('click', () => {
+                updateExecutiveMetrics();
+                addAgentActivity('System', 'Metrics refreshed', 'info');
+            });
+        }
+        
+        // Add refresh workflow button
+        const refreshWorkflowBtn = document.getElementById('refresh-workflow');
+        if (refreshWorkflowBtn) {
+            refreshWorkflowBtn.addEventListener('click', () => {
+                updateWorkflowStatus();
+                addAgentActivity('System', 'Workflow refreshed', 'info');
+            });
+        }
+        
+        // Add click functionality to activity entries for details
+        const activityLog = document.getElementById('agent-activity-log');
+        if (activityLog) {
+            activityLog.addEventListener('click', (e) => {
+                const activityEntry = e.target.closest('.activity-entry');
+                if (activityEntry) {
+                    toggleActivityDetails(activityEntry);
+                }
+            });
+        }
+        
+        // Add click functionality to agent status cards for popup using event delegation
+        document.addEventListener('click', (e) => {
+            const agentCard = e.target.closest('.agent-status-card');
+            if (agentCard) {
+                const agentId = agentCard.id.replace('-status', '');
+                const agentName = agentCard.querySelector('.agent-name').textContent;
+                console.log('Agent card clicked:', agentId, agentName); // Debug log
+                window.showAgentDetailPopup(agentId, agentName);
+            }
+        });
+        
+        // Add fallback event delegation for clear logs button
+        document.addEventListener('click', (e) => {
+            if (e.target && e.target.id === 'clear-logs-btn') {
+                console.log('Clear logs button clicked via delegation!'); // Debug log
+                e.preventDefault();
+                clearLogs();
+            }
+        });
+        
+        // Initialize popup close functionality
+        const popupClose = document.getElementById('popup-close');
+        const popupBackdrop = document.getElementById('popup-backdrop');
+        const popup = document.getElementById('agent-detail-popup');
+        
+        if (popupClose) {
+            popupClose.addEventListener('click', window.hideAgentDetailPopup);
+        }
+        
+        if (popupBackdrop) {
+            popupBackdrop.addEventListener('click', window.hideAgentDetailPopup);
+        }
+        
+        // Close popup with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && popup && popup.classList.contains('show')) {
+                window.hideAgentDetailPopup();
+            }
+        });
+    }
+
+    function updateWorkflowStatus() {
+        // Update all workflow nodes based on current activity
+        const workflowNodes = {
+            'Coordinator Agent': 'coordinator-workflow-status',
+            'AGInt Core': 'agint-workflow-status', 
+            'BDI Agent': 'bdi-workflow-status',
+            'Simple Coder': 'simple-coder-workflow-status'
+        };
+        
+        Object.entries(workflowNodes).forEach(([agent, nodeId]) => {
+            const statusElement = document.getElementById(nodeId);
+            if (statusElement) {
+                // Check recent activity for this agent
+                const recentActivity = activityLog.find(entry => entry.agent === agent);
+                if (recentActivity) {
+                    updateWorkflowNode(agent, recentActivity.message, recentActivity.type);
+                } else {
+                    statusElement.textContent = 'Standby';
+                    const workflowNode = statusElement.closest('.workflow-node');
+                    if (workflowNode) {
+                        workflowNode.className = 'workflow-node waiting';
+                    }
+                }
+            }
+        });
+    }
+
+    // Real workflow monitoring - only highlights when actual agents are working
+    function startWorkflowMonitoring() {
+        // Real agent activity monitoring - no simulation
+        // Workflow highlights are triggered by actual agent activities
     }
 
     async function loadInitialAgentActivity() {
@@ -3391,17 +3970,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function startAgentActivitySimulation() {
+    function startAgentActivityMonitoring() {
         // Fetch REAL agent activity from mindX system
         setInterval(async () => {
             if (!activityPaused) {
                 try {
                     // Try multiple endpoints to get real agent activity
                     const endpoints = [
+                        '/agents/real-time-activity',
                         '/core/agent-activity',
                         '/orchestration/coordinator/activity',
                         '/agents/activity',
-                        '/system/agent-activity'
+                        '/system/agent-activity',
+                        '/bdi/status',
+                        '/simple-coder/status'
                     ];
                     
                     let activityFound = false;
@@ -3410,8 +3992,38 @@ document.addEventListener('DOMContentLoaded', () => {
                             const response = await fetch(`${apiUrl}${endpoint}`);
                             if (response.ok) {
                                 const data = await response.json();
-                                if (data && (data.activities || data.activity || data.logs)) {
-                                    const activities = data.activities || data.activity || data.logs || [];
+                                
+                                // Handle different response formats
+                                if (data && data.activities) {
+                                    // Standard activities format
+                                    data.activities.forEach(activity => {
+                                        const activityKey = `${activity.timestamp || Date.now()}-${activity.agent || activity.source || 'Unknown'}-${activity.message || activity.text || activity.content}`;
+                                        if (!seenActivities.has(activityKey)) {
+                                            seenActivities.add(activityKey);
+                                            addAgentActivity(
+                                                activity.agent || activity.source || 'System', 
+                                                activity.message || activity.text || activity.content, 
+                                                activity.type || activity.level || 'info',
+                                                activity.details
+                                            );
+                                        }
+                                    });
+                                    activityFound = true;
+                                } else if (data && data.status) {
+                                    // Status endpoint - convert to activity
+                                    const agentName = endpoint.includes('bdi') ? 'BDI Agent' : 
+                                                    endpoint.includes('simple-coder') ? 'Simple Coder' : 
+                                                    endpoint.includes('coordinator') ? 'Coordinator' : 'System';
+                                    
+                                    const activityKey = `${Date.now()}-${agentName}-${data.status}`;
+                                    if (!seenActivities.has(activityKey)) {
+                                        seenActivities.add(activityKey);
+                                        addAgentActivity(agentName, `Status: ${data.status}`, 'info', data);
+                                    }
+                                    activityFound = true;
+                                } else if (data && (data.activity || data.logs)) {
+                                    // Alternative activity format
+                                    const activities = data.activity || data.logs || [];
                                     activities.forEach(activity => {
                                         const activityKey = `${activity.timestamp || Date.now()}-${activity.agent || activity.source || 'Unknown'}-${activity.message || activity.text || activity.content}`;
                                         if (!seenActivities.has(activityKey)) {
@@ -3419,13 +4031,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                             addAgentActivity(
                                                 activity.agent || activity.source || 'System', 
                                                 activity.message || activity.text || activity.content, 
-                                                activity.type || activity.level || 'info'
+                                                activity.type || activity.level || 'info',
+                                                activity.details
                                             );
                                         }
                                     });
                                     activityFound = true;
-                                    break;
                                 }
+                                
+                                if (activityFound) break;
                             }
                         } catch (e) {
                             // Continue to next endpoint
@@ -3434,8 +4048,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     
                     if (!activityFound) {
-                        // If no real activity found, show system status
-                        addAgentActivity('System', 'No active agent interactions detected', 'info');
+                        // Only show system status if no real activity found
+                        addAgentActivity('System', 'Monitoring agent activities...', 'info');
                     }
                 } catch (error) {
                     console.log('Failed to fetch real agent activity:', error.message);
@@ -3443,6 +4057,105 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }, 5000); // Check every 5 seconds for real activity
+        
+        // Additional Simple Coder pending requests check
+        setInterval(async () => {
+            if (!activityPaused) {
+                try {
+                    const response = await fetch(`${apiUrl}/simple-coder/update-requests`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && data.length > 0) {
+                            const requestsElement = document.getElementById('simple-coder-requests');
+                            if (requestsElement) {
+                                requestsElement.textContent = data.length;
+                            }
+                            
+                            // Update Simple Coder activity
+                            const activityElement = document.getElementById('simple-coder-activity');
+                            if (activityElement) {
+                                activityElement.textContent = `${data.length} pending requests awaiting approval`;
+                            }
+                            
+                            // Add activity to log
+                            addAgentActivity('Simple Coder', `Generated ${data.length} pending update requests`, 'info', {
+                                pending_requests: data.length,
+                                requests: data.slice(0, 3)
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.log('Failed to fetch Simple Coder pending requests:', error.message);
+                }
+            }
+        }, 3000); // Check every 3 seconds for Simple Coder requests
+        
+        // BDI Agent specific monitoring
+        setInterval(async () => {
+            if (!activityPaused) {
+                try {
+                    const response = await fetch(`${apiUrl}/bdi/status`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && data.current_directive && data.current_directive !== 'None') {
+                            addAgentActivity('BDI Agent', `Processing directive: ${data.current_directive}`, 'info', {
+                                chosen_agent: data.chosen_agent,
+                                reasoning: data.reasoning_history[data.reasoning_history.length - 1]?.reasoning || 'No reasoning available',
+                                beliefs: data.beliefs
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.log('Failed to fetch BDI status:', error.message);
+                }
+            }
+        }, 5000); // Check every 5 seconds for BDI activity
+        
+        // Resource Monitor specific monitoring
+        setInterval(async () => {
+            if (!activityPaused) {
+                try {
+                    const response = await fetch(`${apiUrl}/system/resources`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data) {
+                            // Update Resource Monitor status
+                            const cpuElement = document.getElementById('resource-monitor-cpu');
+                            const memoryElement = document.getElementById('resource-monitor-memory');
+                            const activityElement = document.getElementById('resource-monitor-activity');
+                            const indicatorElement = document.getElementById('resource-monitor-indicator');
+                            
+                            if (cpuElement) cpuElement.textContent = `${data.cpu_usage || 0}%`;
+                            if (memoryElement) memoryElement.textContent = `${data.memory_usage || 0}%`;
+                            if (activityElement) activityElement.textContent = `CPU: ${data.cpu_usage || 0}% | Memory: ${data.memory_usage || 0}%`;
+                            if (indicatorElement) {
+                                const cpuUsage = data.cpu_usage || 0;
+                                const memoryUsage = data.memory_usage || 0;
+                                if (cpuUsage > 80 || memoryUsage > 80) {
+                                    indicatorElement.className = 'agent-status-indicator error';
+                                } else if (cpuUsage > 60 || memoryUsage > 60) {
+                                    indicatorElement.className = 'agent-status-indicator warning';
+                                } else {
+                                    indicatorElement.className = 'agent-status-indicator active';
+                                }
+                            }
+                            
+                            // Add activity to log if there are significant changes
+                            if (data.cpu_usage > 70 || data.memory_usage > 70) {
+                                addAgentActivity('Resource Monitor', `High resource usage: CPU ${data.cpu_usage}%, Memory ${data.memory_usage}%`, 'warning', {
+                                    cpu_usage: data.cpu_usage,
+                                    memory_usage: data.memory_usage,
+                                    disk_usage: data.disk_usage,
+                                    network_usage: data.network_usage
+                                });
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.log('Failed to fetch resource monitor data:', error.message);
+                }
+            }
+        }, 10000); // Check every 10 seconds for resource monitoring
     }
 
     // AGInt Response Window Functions
@@ -4125,42 +4838,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (statusText) statusText.textContent = 'Active (System Data)';
                 
             } else {
-                // Use mock data if API fails
-                updateResourceMonitorWithMockData();
+                // Log error but don't show mock data in production
+                console.log('Resource monitor API failed:', error.message);
             }
         } catch (error) {
             console.error('Error fetching system resources:', error);
-            // Use mock data as fallback
-            updateResourceMonitorWithMockData();
+            // Log error but don't show mock data in production
+            console.log('Resource monitor fallback failed:', error.message);
         }
     }
 
-    // Mock data for resource monitor when APIs fail
-    function updateResourceMonitorWithMockData() {
-        const cpuUsage = Math.random() * 30 + 10; // 10-40%
-        const memoryUsage = Math.random() * 40 + 20; // 20-60%
-        const diskUsage = Math.random() * 20 + 30; // 30-50%
-        
-        document.getElementById('res-cpu-usage').textContent = `${cpuUsage.toFixed(1)}%`;
-        document.getElementById('res-memory-usage').textContent = `${memoryUsage.toFixed(1)}%`;
-        document.getElementById('res-disk-usage').textContent = `${diskUsage.toFixed(1)}%`;
-        document.getElementById('res-alerts').textContent = '0';
-        
-        // Update progress bars
-        const cpuProgress = document.getElementById('res-cpu-progress');
-        const memoryProgress = document.getElementById('res-memory-progress');
-        const diskProgress = document.getElementById('res-disk-progress');
-        
-        if (cpuProgress) cpuProgress.style.width = `${cpuUsage}%`;
-        if (memoryProgress) memoryProgress.style.width = `${memoryUsage}%`;
-        if (diskProgress) diskProgress.style.width = `${diskUsage}%`;
-        
-        // Update status indicators
-        const statusIndicator = document.getElementById('res-status-indicator');
-        const statusText = document.getElementById('res-agent-status');
-        if (statusIndicator) statusIndicator.className = 'status-dot active';
-        if (statusText) statusText.textContent = 'Active (Mock Data)';
-    }
+    // Production mode - no mock data
 
     // Update system health indicator
     function updateSystemHealthIndicator(cpuUsage, memoryUsage, diskUsage, alerts) {
@@ -4221,16 +4909,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const metrics = await metricsResponse.json();
                 updateSystemMetrics(metrics);
             } else {
-                // Fallback to mock data if API not available
-                updateSystemMetricsWithMockData();
+                // Log error but don't show mock data in production
+                console.log('System metrics API failed:', error.message);
             }
             
             if (resourcesResponse.ok) {
                 const resources = await resourcesResponse.json();
                 updateResourceUsage(resources);
             } else {
-                // Fallback to mock data if API not available
-                updateResourceUsageWithMockData();
+                // Log error but don't show mock data in production
+                console.log('Resource usage API failed:', error.message);
             }
             
             // Update system health based on current metrics
@@ -4238,43 +4926,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
         } catch (error) {
             console.error('Error updating all system fields:', error);
-            // Use mock data as fallback
-            updateSystemMetricsWithMockData();
-            updateResourceUsageWithMockData();
+            // Log error but don't show mock data in production
+            console.log('System update failed:', error.message);
         }
     }
 
-    // Mock data fallback for system metrics
-    function updateSystemMetricsWithMockData() {
-        const mockMetrics = {
-            cpu_usage: Math.random() * 30 + 10, // 10-40%
-            memory_usage: Math.random() * 40 + 20, // 20-60%
-            disk_usage: Math.random() * 20 + 30, // 30-50%
-            network_usage: Math.random() * 15 + 5 // 5-20%
-        };
-        updateSystemMetrics(mockMetrics);
-    }
-
-    // Mock data fallback for resource usage
-    function updateResourceUsageWithMockData() {
-        const mockResources = {
-            memory: {
-                total: '16.0 GB',
-                used: '8.2 GB',
-                free: '7.8 GB'
-            },
-            disk: {
-                used: '245.6 GB',
-                total: '500.0 GB'
-            },
-            cpu: {
-                cores: 8,
-                load_avg: ['0.45', '0.52', '0.48']
-            },
-            process_count: Math.floor(Math.random() * 200) + 150 // 150-350 processes
-        };
-        updateResourceUsage(mockResources);
-    }
+    // Production mode - no mock data functions
 
     // Update system health based on current displayed data
     function updateSystemHealthFromCurrentData() {

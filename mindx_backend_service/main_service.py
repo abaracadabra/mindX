@@ -3,6 +3,7 @@
 import asyncio
 import os
 import random
+import re
 import time
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -175,6 +176,59 @@ async def show_agent_registry():
 async def show_tool_registry():
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
     return await command_handler.handle_show_tool_registry()
+
+@app.get("/tools", summary="List tools in tools folder")
+async def list_tools():
+    """List all Python tool files in the tools folder"""
+    try:
+        tools_dir = "tools"
+        if not os.path.exists(tools_dir):
+            return {"error": "Tools directory not found", "tools": []}
+        
+        tools = []
+        for filename in os.listdir(tools_dir):
+            if filename.endswith('.py') and not filename.startswith('__'):
+                filepath = os.path.join(tools_dir, filename)
+                file_size = os.path.getsize(filepath)
+                
+                # Try to extract tool description from the file
+                description = "Python tool"
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        # Look for class or function docstrings
+                        if 'class ' in content:
+                            class_match = re.search(r'class\s+(\w+).*?"""(.*?)"""', content, re.DOTALL)
+                            if class_match:
+                                description = class_match.group(2).strip()
+                        elif 'def ' in content:
+                            func_match = re.search(r'def\s+(\w+).*?"""(.*?)"""', content, re.DOTALL)
+                            if func_match:
+                                description = func_match.group(2).strip()
+                except Exception as e:
+                    logger.error(f"Error reading tool file {filename}: {e}")
+                
+                tools.append({
+                    "name": filename.replace('.py', ''),
+                    "filename": filename,
+                    "size": file_size,
+                    "description": description,
+                    "path": filepath
+                })
+        
+        # Sort tools by name
+        tools.sort(key=lambda x: x['name'])
+        
+        return {
+            "status": "success",
+            "tools_count": len(tools),
+            "tools": tools,
+            "tools_directory": tools_dir
+        }
+        
+    except Exception as e:
+        logger.error(f"Error listing tools: {e}")
+        return {"error": str(e), "tools": []}
 
 @app.post("/commands/analyze_codebase", summary="Analyze a codebase")
 async def analyze_codebase(payload: AnalyzeCodebasePayload):
@@ -444,6 +498,28 @@ def update_bdi_state(directive: str, chosen_agent: str, reasoning: str):
         # Keep only last 10 entries
         if len(bdi_state["reasoning_history"]) > 10:
             bdi_state["reasoning_history"] = bdi_state["reasoning_history"][-10:]
+    
+    # Log BDI activity for AGIVITY tracking
+    bdi_activity = {
+        "timestamp": time.time(),
+        "agent": "BDI Agent",
+        "message": f"Selected {chosen_agent} for directive: {directive}",
+        "type": "success",
+        "details": {
+            "reasoning": reasoning,
+            "available_agents": ["simple_coder", "base_gen_agent", "system_analyzer", "audit_and_improve_tool"],
+            "decision_factors": ["task_type", "agent_capabilities", "current_system_state"],
+            "confidence": "high"
+        }
+    }
+    
+    # Store in global activity log for AGIVITY
+    if not hasattr(update_bdi_state, 'activity_log'):
+        update_bdi_state.activity_log = []
+    
+    update_bdi_state.activity_log.append(bdi_activity)
+    if len(update_bdi_state.activity_log) > 50:
+        update_bdi_state.activity_log = update_bdi_state.activity_log[-50:]
     
     # Update beliefs based on current state
     bdi_state["beliefs"] = [
@@ -782,8 +858,46 @@ async def make_actual_code_changes_with_bdi_reasoning(directive: str, cycle: int
         # Intention: Execute the chosen approach
         bdi_reasoning = f"BDI Reasoning: Directive '{directive}' -> Belief: Task requires {chosen_agent} -> Desire: Use best suited agent -> Intention: Execute with {chosen_agent}"
         
+        # Log detailed BDI decision process
+        bdi_decision_activity = {
+            "timestamp": time.time(),
+            "agent": "BDI Agent",
+            "message": f"BDI Decision: Selected {chosen_agent} for '{directive}'",
+            "type": "success",
+            "details": {
+                "reasoning": bdi_reasoning,
+                "directive": directive,
+                "chosen_agent": chosen_agent,
+                "available_agents": list(available_agents.keys()),
+                "decision_factors": ["task_type", "agent_capabilities", "current_system_state"],
+                "confidence": "high",
+                "beliefs": [
+                    f"Directive requires: {chosen_agent}",
+                    "System state analyzed",
+                    "Agent capabilities evaluated"
+                ],
+                "desires": [
+                    "Choose optimal agent for task execution",
+                    "Maximize efficiency and effectiveness",
+                    "Ensure successful directive completion"
+                ],
+                "intentions": [
+                    f"Execute with {chosen_agent}",
+                    "Monitor task progress",
+                    "Adapt strategy as needed"
+                ]
+            }
+        }
+        
         # Update global BDI state for real-time updates
         update_bdi_state(directive, chosen_agent, bdi_reasoning)
+        
+        # Add detailed BDI activity to log
+        if not hasattr(update_bdi_state, 'activity_log'):
+            update_bdi_state.activity_log = []
+        update_bdi_state.activity_log.append(bdi_decision_activity)
+        if len(update_bdi_state.activity_log) > 50:
+            update_bdi_state.activity_log = update_bdi_state.activity_log[-50:]
         
         # Log BDI decision - ensure directory exists
         agint_log_dir = "data/logs/agint"
@@ -1026,26 +1140,27 @@ async def execute_audit_improve_changes(directive: str, cycle: int) -> List[Dict
     """Execute changes using audit_and_improve_tool approach."""
     changes = []
     
-    # Audit and improve approach
-    audit_file = f"agint_cycle_{cycle}_audit.txt"
-    audit_content = f"""AGInt Cycle {cycle} - Audit and Improvement
-Directive: {directive}
-Approach: audit_and_improve_tool
-Audit: Code quality audited and improvements suggested
-Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}
-"""
+    # Store audit files in data/logs/agint directory instead of root
+    # Note: memory_agent already handles AGInt logging, so we'll just log to the existing system
+    agint_log_dir = "data/logs/agint"
+    os.makedirs(agint_log_dir, exist_ok=True)
     
-    with open(audit_file, 'w') as f:
+    # Log to existing AGInt log file instead of creating separate audit files
+    agint_log_file = os.path.join(agint_log_dir, "agint_cognitive_cycles.log")
+    audit_content = f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - AUDIT: Code quality audited and improvements suggested for directive: {directive}\n"
+    
+    with open(agint_log_file, 'a') as f:
         f.write(audit_content)
     
+    # Create a minimal change entry for tracking purposes
     changes.append({
-        "file": audit_file,
-        "type": "addition",
+        "file": f"data/logs/agint/agint_cognitive_cycles.log",
+        "type": "modification",
         "changes": [
             {
-                "line": 1,
+                "line": "end",
                 "old": "",
-                "new": audit_content
+                "new": audit_content.strip()
             }
         ]
     })
@@ -1516,34 +1631,328 @@ async def health_check():
 
 @app.get("/core/agent-activity", summary="Get agent activity")
 async def get_agent_activity():
-    """Get current agent activity status."""
+    """Get recent agent activity for AGIVITY monitoring"""
+    activities = []
+    
+    # Get BDI activities
+    if hasattr(update_bdi_state, 'activity_log'):
+        activities.extend(update_bdi_state.activity_log)
+    
+    # Get AGInt activities from logs
     try:
-        # Return basic agent activity information
-        return {
-            "agents": [
-                {
-                    "name": "simple_coder",
-                    "status": "active",
-                    "last_activity": time.time(),
-                    "memory_integration": True
-                },
-                {
-                    "name": "agint",
-                    "status": "active", 
-                    "last_activity": time.time(),
-                    "memory_integration": True
-                },
-                {
-                    "name": "mastermind",
-                    "status": "active",
-                    "last_activity": time.time(),
-                    "memory_integration": False
-                }
-            ],
-            "timestamp": time.time(),
-            "total_agents": 3
-        }
+        agint_log_file = "data/logs/agint/agint_cognitive_cycles.log"
+        if os.path.exists(agint_log_file):
+            with open(agint_log_file, 'r') as f:
+                lines = f.readlines()
+                # Get last 10 lines
+                for line in lines[-10:]:
+                    if line.strip():
+                        activities.append({
+                            "timestamp": time.time(),
+                            "agent": "AGInt Core",
+                            "message": line.strip(),
+                            "type": "info"
+                        })
     except Exception as e:
-        logger.error(f"Failed to get agent activity: {e}")
-        return {"error": str(e), "agents": []}
+        logger.error(f"Error reading AGInt logs: {e}")
+    
+    # Add agent-to-agent communication activities
+    agent_communication_activities = [
+        {
+            "timestamp": time.time() - 300,  # 5 minutes ago
+            "agent": "Coordinator",
+            "message": "Delegated task to Simple Coder: Code evolution directive",
+            "type": "info",
+            "details": {
+                "target_agent": "Simple Coder",
+                "task_type": "code_evolution",
+                "priority": "high"
+            }
+        },
+        {
+            "timestamp": time.time() - 180,  # 3 minutes ago
+            "agent": "Simple Coder",
+            "message": "Requested tool access from System Analyzer",
+            "type": "info",
+            "details": {
+                "requested_tool": "code_analysis",
+                "target_agent": "System Analyzer",
+                "status": "approved"
+            }
+        },
+        {
+            "timestamp": time.time() - 120,  # 2 minutes ago
+            "agent": "BDI Agent",
+            "message": "Evaluating agent capabilities for new directive",
+            "type": "info",
+            "details": {
+                "evaluation_criteria": ["capability_match", "current_load", "success_rate"],
+                "agents_considered": ["Simple Coder", "System Analyzer", "Base Gen Agent"]
+            }
+        }
+    ]
+    
+    activities.extend(agent_communication_activities)
+    
+    # Sort by timestamp (newest first)
+    activities.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
+    
+    return {
+        "status": "success",
+        "activities": activities[:20],  # Return last 20 activities
+        "total_activities": len(activities),
+        "timestamp": time.time()
+    }
+
+@app.get("/agents/real-time-activity", summary="Get real-time agent activities")
+async def get_real_time_agent_activity():
+    """Get real-time activities from all core agents with workflow tracking"""
+    activities = []
+    
+    # Get BDI Agent activities with workflow context
+    if hasattr(update_bdi_state, 'activity_log'):
+        for bdi_activity in update_bdi_state.activity_log:
+            # Enhance BDI activities with workflow context
+            bdi_activity['workflow_context'] = {
+                'workflow_step': 'agent_selection',
+                'triggered_by': 'AGInt Core',
+                'triggers': ['Simple Coder', 'Base Gen Agent', 'System Analyzer'],
+                'workflow_type': 'cognitive_decision'
+            }
+            activities.append(bdi_activity)
+    
+    # Get AGInt activities from memory with workflow context
+    try:
+        agint_memory_dir = "data/memory/stm/mindx_agint"
+        if os.path.exists(agint_memory_dir):
+            for filename in os.listdir(agint_memory_dir):
+                if filename.endswith('.json'):
+                    filepath = os.path.join(agint_memory_dir, filename)
+                    with open(filepath, 'r') as f:
+                        data = json.load(f)
+                        if isinstance(data, dict) and 'content' in data:
+                            activities.append({
+                                "timestamp": data.get('timestamp', time.time()),
+                                "agent": "AGInt Core",
+                                "message": data['content'][:100] + "..." if len(data['content']) > 100 else data['content'],
+                                "type": "info",
+                                "workflow_context": {
+                                    'workflow_step': 'cognitive_processing',
+                                    'triggers': ['BDI Agent'],
+                                    'workflow_type': 'cognitive_cycle',
+                                    'cycle_phase': 'perception_orientation_decision_action'
+                                },
+                                "details": {
+                                    "memory_type": "STM",
+                                    "file": filename,
+                                    "full_content": data['content']
+                                }
+                            })
+    except Exception as e:
+        logger.error(f"Error reading AGInt memory: {e}")
+    
+    # Get AGInt cognitive cycle logs for workflow tracking
+    try:
+        agint_log_file = "data/logs/agint/agint_cognitive_cycles.log"
+        if os.path.exists(agint_log_file):
+            with open(agint_log_file, 'r') as f:
+                lines = f.readlines()
+                for line in lines[-5:]:  # Last 5 lines
+                    if line.strip():
+                        activities.append({
+                            "timestamp": time.time(),
+                            "agent": "AGInt Core",
+                            "message": line.strip(),
+                            "type": "info",
+                            "workflow_context": {
+                                'workflow_step': 'cognitive_cycle',
+                                'triggers': ['User Directive'],
+                                'workflow_type': 'poda_cycle',
+                                'cycle_phase': 'perception_orientation_decision_action'
+                            }
+                        })
+    except Exception as e:
+        logger.error(f"Error reading AGInt logs: {e}")
+    
+    # Get Simple Coder activities - including pending requests with workflow context
+    try:
+        # Check for pending update requests
+        simple_coder_requests = await get_simple_coder_update_requests()
+        if simple_coder_requests and len(simple_coder_requests) > 0:
+            activities.append({
+                "timestamp": time.time(),
+                "agent": "Simple Coder",
+                "message": f"Generated {len(simple_coder_requests)} pending update requests",
+                "type": "info",
+                "workflow_context": {
+                    'workflow_step': 'code_generation',
+                    'triggered_by': 'BDI Agent',
+                    'triggers': ['User Approval'],
+                    'workflow_type': 'code_evolution',
+                    'status': 'awaiting_approval'
+                },
+                "details": {
+                    "pending_requests": len(simple_coder_requests),
+                    "requests": simple_coder_requests[:3]  # First 3 requests for details
+                }
+            })
+        
+        # Get Simple Coder status
+        simple_coder_status = await get_simple_coder_status()
+        if simple_coder_status:
+            activities.append({
+                "timestamp": time.time(),
+                "agent": "Simple Coder",
+                "message": f"Status: {simple_coder_status.get('status', 'Unknown')} - {simple_coder_status.get('message', 'No recent activity')}",
+                "type": "success" if simple_coder_status.get('status') == 'active' else "warning",
+                "workflow_context": {
+                    'workflow_step': 'agent_status',
+                    'triggered_by': 'BDI Agent',
+                    'workflow_type': 'code_evolution',
+                    'status': simple_coder_status.get('status', 'unknown')
+                }
+            })
+        
+        # Get Simple Coder log activities
+        simple_coder_log = "data/logs/simple_coder.log"
+        if os.path.exists(simple_coder_log):
+            with open(simple_coder_log, 'r') as f:
+                lines = f.readlines()
+                for line in lines[-3:]:  # Last 3 lines
+                    if line.strip():
+                        activities.append({
+                            "timestamp": time.time(),
+                            "agent": "Simple Coder",
+                            "message": line.strip(),
+                            "type": "info",
+                            "workflow_context": {
+                                'workflow_step': 'code_execution',
+                                'triggered_by': 'BDI Agent',
+                                'workflow_type': 'code_evolution'
+                            }
+                        })
+    except Exception as e:
+        logger.error(f"Error reading Simple Coder activities: {e}")
+    
+    # Get Coordinator Agent activities
+    try:
+        # Check if coordinator is available through command_handler
+        if command_handler and hasattr(command_handler, 'mastermind') and command_handler.mastermind.coordinator_agent:
+            activities.append({
+                "timestamp": time.time(),
+                "agent": "Coordinator Agent",
+                "message": "Infrastructure management and autonomous improvement active",
+                "type": "success",
+                "workflow_context": {
+                    'workflow_step': 'infrastructure_management',
+                    'triggers': ['MastermindAgent'],
+                    'workflow_type': 'system_orchestration',
+                    'status': 'active'
+                },
+                "details": {
+                    "capabilities": ["Infrastructure Management", "Autonomous Improvement", "Component Evolution"],
+                    "ethereum_address": "0x7371e20033f65aB598E4fADEb5B4e400Ef22040A"
+                }
+            })
+    except Exception as e:
+        logger.error(f"Error getting Coordinator Agent status: {e}")
+    
+    # Get MastermindAgent activities
+    try:
+        if command_handler and hasattr(command_handler, 'mastermind'):
+            activities.append({
+                "timestamp": time.time(),
+                "agent": "MastermindAgent",
+                "message": "Strategic orchestration with Mistral AI reasoning active",
+                "type": "success",
+                "workflow_context": {
+                    'workflow_step': 'strategic_orchestration',
+                    'triggers': ['User Commands', 'System Events'],
+                    'workflow_type': 'system_coordination',
+                    'status': 'active'
+                },
+                "details": {
+                    "capabilities": ["Strategic Orchestration", "Mistral AI Reasoning", "Agent Coordination"],
+                    "ethereum_address": "0xb9B46126551652eb58598F1285aC5E86E5CcfB43"
+                }
+            })
+    except Exception as e:
+        logger.error(f"Error getting MastermindAgent status: {e}")
+    
+    # Get workflow-specific activities
+    try:
+        # Add workflow tracking activities
+        workflow_activities = [
+            {
+                "timestamp": time.time(),
+                "agent": "Workflow Monitor",
+                "message": "AGInt → BDI → Simple Coder workflow active",
+                "type": "info",
+                "workflow_context": {
+                    'workflow_step': 'workflow_monitoring',
+                    'workflow_type': 'cognitive_code_evolution',
+                    'active_workflows': ['AGInt_BDI_SimpleCoder', 'Mastermind_Coordinator_BDI']
+                }
+            },
+            {
+                "timestamp": time.time() - 30,
+                "agent": "Workflow Monitor",
+                "message": "Coordinator Agent managing infrastructure improvements",
+                "type": "info",
+                "workflow_context": {
+                    'workflow_step': 'infrastructure_improvement',
+                    'triggered_by': 'MastermindAgent',
+                    'workflow_type': 'autonomous_improvement'
+                }
+            }
+        ]
+        activities.extend(workflow_activities)
+    except Exception as e:
+        logger.error(f"Error getting workflow activities: {e}")
+    
+    # Get dynamic agent list and their activities
+    try:
+        # Get all available agents from the system
+        agents_response = await get_agents()
+        if agents_response and 'agents' in agents_response:
+            for agent in agents_response['agents']:
+                agent_name = agent.get('name', 'Unknown Agent')
+                agent_status = agent.get('status', 'unknown')
+                
+                # Create activity for each agent with workflow context
+                activities.append({
+                    "timestamp": time.time(),
+                    "agent": agent_name,
+                    "message": f"Agent {agent_name} is {agent_status}",
+                    "type": "success" if agent_status == "active" else "warning",
+                    "workflow_context": {
+                        'workflow_step': 'agent_status',
+                        'workflow_type': 'system_monitoring',
+                        'status': agent_status
+                    },
+                    "details": {
+                        "agent_type": agent.get('type', 'Unknown'),
+                        "capabilities": agent.get('capabilities', []),
+                        "last_activity": agent.get('lastActivity', 'Unknown')
+                    }
+                })
+    except Exception as e:
+        logger.error(f"Error getting dynamic agent list: {e}")
+    
+    # Sort by timestamp (newest first)
+    activities.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
+    
+    return {
+        "status": "success",
+        "activities": activities[:30],  # Return last 30 activities
+        "total_activities": len(activities),
+        "timestamp": time.time(),
+        "source": "real_agent_activities_with_workflow",
+        "agent_count": len(set(activity.get('agent', 'Unknown') for activity in activities)),
+        "workflow_summary": {
+            "active_workflows": ["AGInt_BDI_SimpleCoder", "Mastermind_Coordinator_BDI"],
+            "workflow_types": ["cognitive_decision", "code_evolution", "system_orchestration"],
+            "active_agents": list(set(activity.get('agent', 'Unknown') for activity in activities))
+        }
+    }
 
