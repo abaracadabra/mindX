@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UI Test - Update Requests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .control-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #2a2a2a;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #0080ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0066cc;
+        }
+        .update-request {
+            margin: 10px 0;
+            padding: 15px;
+            border: 1px solid #555;
+            border-radius: 8px;
+            background: #1a1a1a;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #ffaa00;
+        }
+        .error {
+            color: #ff6666;
+            background: #4a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            color: #66ff66;
+            background: #1a4a1a;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>UI Test - Update Requests</h1>
+        
+        <div class="control-section">
+            <h2>Simple Coder Update Requests</h2>
+            <button id="test-api-btn">Test API</button>
+            <button id="load-updates-btn">Load Updates</button>
+            <button id="refresh-btn">Refresh Updates</button>
+            <div id="status"></div>
+            <div id="update-requests-container">
+                <p>Click "Load Updates" to test</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiUrl = 'http://localhost:8000';
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, setting up event listeners...');
+            
+            document.getElementById('test-api-btn').addEventListener('click', testAPI);
+            document.getElementById('load-updates-btn').addEventListener('click', loadUpdates);
+            document.getElementById('refresh-btn').addEventListener('click', refreshUpdates);
+            
+            // Auto-load on page load
+            setTimeout(() => {
+                console.log('Auto-loading updates...');
+                loadUpdates();
+            }, 1000);
+        });
+        
+        async function testAPI() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = '<div class="loading">Testing API...</div>';
+            
+            try {
+                console.log('Testing API...');
+                const response = await fetch(`${apiUrl}/simple-coder/update-requests`);
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Data received:', data);
+                console.log('Data length:', data.length);
+                
+                statusDiv.innerHTML = `
+                    <div class="success">
+                        <strong>✅ API Test Successful!</strong><br>
+                        Status: ${response.status}<br>
+                        Data length: ${data.length}<br>
+                        Pending: ${data.filter(r => r.status === 'pending').length}<br>
+                        Sample ID: ${data[0] ? data[0].request_id : 'None'}
+                    </div>
+                `;
+                
+                return data;
+            } catch (error) {
+                console.error('API test failed:', error);
+                statusDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ API Test Failed!</strong><br>
+                        Error: ${error.message}
+                    </div>
+                `;
+                return null;
+            }
+        }
+        
+        async function loadUpdates() {
+            const container = document.getElementById('update-requests-container');
+            const statusDiv = document.getElementById('status');
+            
+            try {
+                console.log('Loading update requests...');
+                container.innerHTML = '<div class="loading">Loading update requests...</div>';
+                
+                const response = await fetch(`${apiUrl}/simple-coder/update-requests`);
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Data received:', data);
+                console.log('Data length:', data.length);
+                
+                if (data && Array.isArray(data) && data.length > 0) {
+                    console.log(`Creating ${data.length} update request elements`);
+                    container.innerHTML = '';
+                    
+                    data.forEach((request, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'update-request';
+                        div.innerHTML = `
+                            <h4>Update Request ${index + 1}: ${request.request_id}</h4>
+                            <p><strong>Original File:</strong> ${request.original_file}</p>
+                            <p><strong>Sandbox File:</strong> ${request.sandbox_file}</p>
+                            <p><strong>Status:</strong> ${request.status}</p>
+                            <p><strong>Cycle:</strong> ${request.cycle}</p>
+                            <p><strong>Changes:</strong> ${request.changes.length} modifications</p>
+                            <p><strong>Timestamp:</strong> ${new Date(request.timestamp).toLocaleString()}</p>
+                        `;
+                        container.appendChild(div);
+                    });
+                    
+                    statusDiv.innerHTML = `
+                        <div class="success">
+                            <strong>✅ Successfully loaded ${data.length} update requests!</strong>
+                        </div>
+                    `;
+                    
+                    console.log(`Successfully displayed ${data.length} update requests`);
+                } else {
+                    container.innerHTML = '<p>No update requests found</p>';
+                    statusDiv.innerHTML = '<div class="error">No update requests found</div>';
+                    console.log('No update requests to display');
+                }
+            } catch (error) {
+                console.error('Error loading update requests:', error);
+                container.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                statusDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+        
+        function refreshUpdates() {
+            console.log('Refreshing updates...');
+            loadUpdates();
+        }
+        
+        // Global functions for testing
+        window.testAPI = testAPI;
+        window.loadUpdates = loadUpdates;
+        window.refreshUpdates = refreshUpdates;
+    </script>
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Update Requests Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .control-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #2a2a2a;
+        }
+        .update-request-controls {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        #refresh-updates-btn {
+            background: linear-gradient(45deg, #00ffff, #0080ff);
+            color: #000;
+        }
+        #refresh-updates-btn:hover:not(:disabled) {
+            background: linear-gradient(45deg, #0080ff, #0066cc);
+        }
+        #refresh-updates-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .update-request {
+            margin: 10px 0;
+            padding: 15px;
+            border: 1px solid #555;
+            border-radius: 8px;
+            background: #1a1a1a;
+        }
+        .update-request-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .request-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .request-status.pending {
+            background: #ffaa00;
+            color: #000;
+        }
+        .update-request-details {
+            margin: 10px 0;
+        }
+        .update-request-details p {
+            margin: 5px 0;
+        }
+        .update-request-details strong {
+            color: #00ffff;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #ffaa00;
+        }
+        .error {
+            color: #ff6666;
+            background: #4a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Simple Update Requests Test</h1>
+        
+        <div class="control-section">
+            <h2>Simple Coder Update Requests</h2>
+            <div class="update-request-controls">
+                <button id="refresh-updates-btn">Refresh Updates</button>
+            </div>
+            <div id="update-requests-container">
+                <p>Click "Refresh Updates" to load pending requests</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiUrl = 'http://localhost:8000';
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, initializing...');
+            initializeUpdateRequests();
+        });
+        
+        function initializeUpdateRequests() {
+            console.log('Initializing update requests...');
+            const refreshBtn = document.getElementById('refresh-updates-btn');
+            
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', function() {
+                    console.log('Refresh button clicked!');
+                    loadUpdateRequests();
+                });
+                console.log('Refresh button event listener added');
+            } else {
+                console.error('Refresh button not found!');
+            }
+        }
+        
+        async function loadUpdateRequests() {
+            const container = document.getElementById('update-requests-container');
+            const refreshBtn = document.getElementById('refresh-updates-btn');
+            
+            try {
+                console.log('Loading update requests...');
+                console.log('API URL:', `${apiUrl}/simple-coder/update-requests`);
+                
+                // Show loading state
+                container.innerHTML = '<div class="loading">Loading update requests...</div>';
+                refreshBtn.disabled = true;
+                refreshBtn.textContent = 'Loading...';
+                
+                const response = await fetch(`${apiUrl}/simple-coder/update-requests`);
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Data received:', data);
+                console.log('Data length:', data.length);
+                
+                if (data && Array.isArray(data) && data.length > 0) {
+                    console.log(`Creating ${data.length} update request elements`);
+                    container.innerHTML = '';
+                    
+                    data.forEach((request, index) => {
+                        const requestDiv = createUpdateRequestElement(request, index + 1);
+                        container.appendChild(requestDiv);
+                    });
+                    
+                    console.log(`Successfully displayed ${data.length} update requests`);
+                } else {
+                    container.innerHTML = '<p>No pending update requests found</p>';
+                    console.log('No update requests to display');
+                }
+                
+            } catch (error) {
+                console.error('Error loading update requests:', error);
+                container.innerHTML = `<div class="error">Error loading update requests: ${error.message}</div>`;
+            } finally {
+                // Restore button state
+                refreshBtn.disabled = false;
+                refreshBtn.textContent = 'Refresh Updates';
+            }
+        }
+        
+        function createUpdateRequestElement(request, index) {
+            const div = document.createElement('div');
+            div.className = 'update-request';
+            
+            div.innerHTML = `
+                <div class="update-request-header">
+                    <h4>Update Request ${index}: ${request.request_id}</h4>
+                    <span class="request-status ${request.status}">${request.status}</span>
+                </div>
+                <div class="update-request-details">
+                    <p><strong>Original File:</strong> ${request.original_file}</p>
+                    <p><strong>Sandbox File:</strong> ${request.sandbox_file}</p>
+                    <p><strong>Cycle:</strong> ${request.cycle}</p>
+                    <p><strong>Changes:</strong> ${request.changes.length} modifications</p>
+                    <p><strong>Timestamp:</strong> ${new Date(request.timestamp).toLocaleString()}</p>
+                </div>
+            `;
+            
+            return div;
+        }
+        
+        // Global functions for testing
+        window.testLoad = function() {
+            console.log('Manual test triggered');
+            loadUpdateRequests();
+        };
+        
+        window.checkState = function() {
+            const container = document.getElementById('update-requests-container');
+            const refreshBtn = document.getElementById('refresh-updates-btn');
+            
+            console.log('Current state:');
+            console.log('Container:', container);
+            console.log('Container HTML:', container ? container.innerHTML : 'No container');
+            console.log('Refresh button:', refreshBtn);
+            console.log('Refresh button disabled:', refreshBtn ? refreshBtn.disabled : 'No button');
+            
+            return { container, refreshBtn };
+        };
+    </script>
+</body>
+</html>
