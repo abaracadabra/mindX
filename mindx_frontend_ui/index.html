@@ -42,7 +42,6 @@
                     <button class="tab-btn" data-tab="agents">Agents</button>
                     <button class="tab-btn" data-tab="system">System</button>
                     <button class="tab-btn" data-tab="logs">Logs</button>
-                    <button class="tab-btn" data-tab="terminal">Terminal</button>
                     <button class="tab-btn" data-tab="admin">Admin</button>
                 </div>
                 <div class="tab-row core-tabs">
@@ -129,7 +128,7 @@
                             console.log('SelectedRequests cleared, new count:', selectedRequests.size);
                             
                             // Always clear the container first
-                            container.innerHTML = '';
+                                container.innerHTML = '';
                             
                             if (data && data.length > 0) {
                                 data.forEach((request, index) => {
@@ -374,7 +373,7 @@
                             selectAllBtn.disabled = true;
                         } else {
                             selectAllBtn.disabled = false;
-                            selectAllBtn.textContent = selectedRequests.size === allUpdateRequests.length ? 'Deselect All' : 'Select All';
+                        selectAllBtn.textContent = selectedRequests.size === allUpdateRequests.length ? 'Deselect All' : 'Select All';
                         }
                     }
                     
@@ -847,16 +846,218 @@
                 <div id="agents-list" class="agents-list"></div>
             </div>
             
-            <!-- AGENTIVITY -->
+            <!-- AGIVITY - Executive Dashboard -->
             <div class="control-section">
                 <div class="section-header">
-                    <h2>AGENTIVITY</h2>
+                    <h2>AGIVITY</h2>
                     <div class="activity-controls">
                         <button id="pause-activity" class="control-btn">Pause</button>
                         <button id="clear-activity" class="control-btn">Clear</button>
+                        <button id="refresh-metrics" class="control-btn">Refresh</button>
+                        <button id="test-popup" class="control-btn" onclick="showAgentDetailPopup('bdi', 'BDI Agent')">Test Popup</button>
                     </div>
                 </div>
-                <div id="agent-activity-log" class="activity-log"></div>
+                
+                <!-- Executive Metrics Overview -->
+                <div class="metrics-overview">
+                    <div class="metric-card">
+                        <div class="metric-icon">🧠</div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="active-agents">0</div>
+                            <div class="metric-label">Active Agents</div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">⚡</div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="tasks-completed">0</div>
+                            <div class="metric-label">Tasks Completed</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agent Status Grid -->
+                <div class="agent-status-grid">
+                    <div class="agent-status-card" id="bdi-status">
+                        <div class="agent-header">
+                            <div class="agent-name">BDI Agent</div>
+                            <div class="agent-status-indicator" id="bdi-indicator"></div>
+                        </div>
+                        <div class="agent-activity" id="bdi-activity">Standby</div>
+                        <div class="agent-metrics">
+                            <span class="metric">Decisions: <span id="bdi-decisions">0</span></span>
+                            <span class="metric">Success: <span id="bdi-success">0%</span></span>
+                        </div>
+                    </div>
+                    
+                    <div class="agent-status-card" id="agint-status">
+                        <div class="agent-header">
+                            <div class="agent-name">AGInt Core</div>
+                            <div class="agent-status-indicator" id="agint-indicator"></div>
+                        </div>
+                        <div class="agent-activity" id="agint-activity">Idle</div>
+                        <div class="agent-metrics">
+                            <span class="metric">Cycles: <span id="agint-cycles">0</span></span>
+                            <span class="metric">Progress: <span id="agint-progress">0%</span></span>
+                        </div>
+                    </div>
+                    
+                    <div class="agent-status-card" id="simple-coder-status">
+                        <div class="agent-header">
+                            <div class="agent-name">Simple Coder</div>
+                            <div class="agent-status-indicator" id="simple-coder-indicator"></div>
+                        </div>
+                        <div class="agent-activity" id="simple-coder-activity">Ready</div>
+                        <div class="agent-metrics">
+                            <span class="metric">Requests: <span id="simple-coder-requests">0</span></span>
+                            <span class="metric">Approved: <span id="simple-coder-approved">0</span></span>
+                        </div>
+                    </div>
+                    
+                    <div class="agent-status-card" id="coordinator-status">
+                        <div class="agent-header">
+                            <div class="agent-name">Coordinator</div>
+                            <div class="agent-status-indicator" id="coordinator-indicator"></div>
+                        </div>
+                        <div class="agent-activity" id="coordinator-activity">Monitoring</div>
+                        <div class="agent-metrics">
+                            <span class="metric">Delegations: <span id="coordinator-delegations">0</span></span>
+                            <span class="metric">Active: <span id="coordinator-active">0</span></span>
+                        </div>
+                    </div>
+                    
+                    <div class="agent-status-card" id="mastermind-status">
+                        <div class="agent-header">
+                            <div class="agent-name">MastermindAgent</div>
+                            <div class="agent-status-indicator" id="mastermind-indicator"></div>
+                        </div>
+                        <div class="agent-activity" id="mastermind-activity">Orchestrating</div>
+                        <div class="agent-metrics">
+                            <span class="metric">Strategies: <span id="mastermind-strategies">0</span></span>
+                            <span class="metric">Active: <span id="mastermind-active">0</span></span>
+                        </div>
+                    </div>
+                    
+                    <div class="agent-status-card" id="resource-monitor-status">
+                        <div class="agent-header">
+                            <div class="agent-name">Resource Monitor</div>
+                            <div class="agent-status-indicator" id="resource-monitor-indicator"></div>
+                        </div>
+                        <div class="agent-activity" id="resource-monitor-activity">Monitoring</div>
+                        <div class="agent-metrics">
+                            <span class="metric">CPU: <span id="resource-monitor-cpu">0%</span></span>
+                            <span class="metric">Memory: <span id="resource-monitor-memory">0%</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Workflow Visualization -->
+                <div class="workflow-visualization">
+                    <div class="workflow-header">
+                        <h3>Agent Workflow</h3>
+                        <div class="workflow-controls">
+                            <button id="refresh-workflow" class="workflow-btn">Refresh</button>
+                        </div>
+                    </div>
+                    <div class="workflow-diagram">
+                        <div class="workflow-node mastermind">
+                            <div class="node-icon">🧠</div>
+                            <div class="node-name">MastermindAgent</div>
+                            <div class="node-status" id="mastermind-workflow-status">Active</div>
+                        </div>
+                        <div class="workflow-arrow">→</div>
+                        <div class="workflow-node coordinator">
+                            <div class="node-icon">🎯</div>
+                            <div class="node-name">Coordinator</div>
+                            <div class="node-status" id="coordinator-workflow-status">Active</div>
+                        </div>
+                        <div class="workflow-arrow">→</div>
+                        <div class="workflow-node agint">
+                            <div class="node-icon">🔄</div>
+                            <div class="node-name">AGInt Core</div>
+                            <div class="node-status" id="agint-workflow-status">Processing</div>
+                        </div>
+                        <div class="workflow-arrow">→</div>
+                        <div class="workflow-node bdi">
+                            <div class="node-icon">⚡</div>
+                            <div class="node-name">BDI Agent</div>
+                            <div class="node-status" id="bdi-workflow-status">Deciding</div>
+                        </div>
+                        <div class="workflow-arrow">→</div>
+                        <div class="workflow-node simple-coder">
+                            <div class="node-icon">💻</div>
+                            <div class="node-name">Simple Coder</div>
+                            <div class="node-status" id="simple-coder-workflow-status">Generating</div>
+                        </div>
+                    </div>
+                    <div class="workflow-legend">
+                        <div class="legend-item">
+                            <span class="legend-color active"></span>
+                            <span>Active</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color processing"></span>
+                            <span>Processing</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color waiting"></span>
+                            <span>Waiting</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Display -->
+                <div class="activity-summary">
+                    <div id="agent-activity-log" class="activity-log-compact"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agent Detail Popup -->
+        <div id="agent-detail-popup" class="agent-detail-popup">
+            <div class="popup-backdrop" id="popup-backdrop"></div>
+            <div class="popup-content">
+                <div class="popup-header">
+                    <h3 id="popup-agent-name">Agent Details</h3>
+                    <button class="popup-close" id="popup-close">&times;</button>
+                </div>
+                <div class="popup-body">
+                    <div class="agent-detail-section">
+                        <div class="detail-header">
+                            <div class="agent-icon" id="popup-agent-icon">🧠</div>
+                            <div class="agent-info">
+                                <div class="agent-name" id="popup-agent-title">Agent Name</div>
+                                <div class="agent-status" id="popup-agent-status">Status</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="agent-detail-section">
+                        <h4>Current Activity</h4>
+                        <div class="activity-detail" id="popup-current-activity">No current activity</div>
+                    </div>
+                    
+                    <div class="agent-detail-section">
+                        <h4>Metrics</h4>
+                        <div class="metrics-grid" id="popup-metrics">
+                            <!-- Dynamic metrics will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <div class="agent-detail-section">
+                        <h4>Recent Activity</h4>
+                        <div class="activity-history" id="popup-activity-history">
+                            <!-- Recent activities will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <div class="agent-detail-section">
+                        <h4>Capabilities</h4>
+                        <div class="capabilities-list" id="popup-capabilities">
+                            <!-- Agent capabilities will be populated here -->
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -989,22 +1190,6 @@
             </div>
         </div>
 
-        <!-- Terminal Tab -->
-        <div id="terminal-tab" class="tab-content">
-            <div class="control-section">
-                <h2>Terminal Output</h2>
-                <div class="terminal-controls">
-                    <button id="refresh-terminal-btn">Refresh Terminal</button>
-                    <button id="clear-terminal-btn">Clear Terminal</button>
-                    <button id="execute-command-btn">Execute Command</button>
-                </div>
-                <div id="terminal-output" class="logs-output"></div>
-                <div class="terminal-input">
-                    <input type="text" id="terminal-command" placeholder="Enter command...">
-                    <button id="send-command-btn">Send</button>
-                </div>
-            </div>
-        </div>
 
         <!-- Admin Tab -->
         <div id="admin-tab" class="tab-content">
