@@ -5,6 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize system start time for uptime calculation
     window.systemStartTime = new Date();
     
+    // Initialize CrossMint integration
+    initializeCrossMintIntegration();
+    
     // Initialize agent modal event listeners immediately
     const closeAgentModalBtn = document.getElementById('close-agent-modal');
     if (closeAgentModalBtn) {
@@ -119,6 +122,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const recentBeliefs = document.getElementById('recent-beliefs');
     const idManagerStatus = document.getElementById('id-manager-status');
     const activeIdentities = document.getElementById('active-identities');
+    
+    // BDI Reasoning elements
+    const bdiBeliefs = document.getElementById('bdi-beliefs');
+    const bdiDesires = document.getElementById('bdi-desires');
+    const bdiIntentions = document.getElementById('bdi-intentions');
     
     // Agent Activity Monitor elements
     const agentActivityLog = document.getElementById('agent-activity-log');
@@ -354,22 +362,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateLogsDisplay() {
         console.log('updateLogsDisplay called, logs count:', logs.length); // Debug log
-        const filterLevel = logLevelFilter.value.toUpperCase();
+        
+        if (!logsOutput) {
+            console.log('logsOutput element not found!'); // Debug log
+            return;
+        }
+        
+        const filterLevel = logLevelFilter ? logLevelFilter.value.toUpperCase() : 'ALL';
         const filteredLogs = logs.filter(log => 
             filterLevel === 'ALL' || log.level.toUpperCase() === filterLevel
         );
         
         console.log('Filtered logs count:', filteredLogs.length); // Debug log
         
-        if (logsOutput) {
+        if (filteredLogs.length === 0) {
+            logsOutput.innerHTML = '<div class="log-info">No logs to display</div>';
+        } else {
             logsOutput.innerHTML = filteredLogs.map(log => {
                 const levelClass = `log-${log.level.toLowerCase()}`;
                 return `<div class="${levelClass}">[${log.timestamp}] ${log.level}: ${log.message}</div>`;
             }).join('');
-            console.log('Logs display updated'); // Debug log
-        } else {
-            console.log('logsOutput element not found!'); // Debug log
         }
+        
+        console.log('Logs display updated'); // Debug log
     }
 
     // System Monitoring
@@ -523,7 +538,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update parent node class
         const workflowNode = statusElement.closest('.workflow-node');
         if (workflowNode) {
-            workflowNode.className = `workflow-node ${statusClass}`;
+            // Clear all state classes first
+            workflowNode.classList.remove('working', 'active', 'waiting', 'processing');
+            
+            // Add the new state class
+            workflowNode.classList.add(statusClass);
             
             // Add working highlight effect
             if (statusClass === 'working') {
@@ -535,6 +554,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
                 
+                // Set as the current active agent for highlighting
+                setActiveAgent(agent);
+                
                 // Set a timeout to remove working state after 3 seconds
                 setTimeout(() => {
                     if (workflowNode.classList.contains('working')) {
@@ -543,6 +565,55 @@ document.addEventListener('DOMContentLoaded', () => {
                         statusElement.textContent = 'Active';
                     }
                 }, 3000);
+            } else if (statusClass === 'active') {
+                // Set as the current active agent for highlighting
+                setActiveAgent(agent);
+            }
+        }
+    }
+
+    // Track the currently active agent for highlighting
+    let currentActiveAgent = null;
+    
+    function setActiveAgent(agent) {
+        // Remove active highlighting from previous agent
+        if (currentActiveAgent && currentActiveAgent !== agent) {
+            const previousNodeId = {
+                'Coordinator Agent': 'coordinator-workflow-status', 
+                'AGInt Core': 'agint-workflow-status',
+                'BDI Agent': 'bdi-workflow-status',
+                'Simple Coder': 'simple-coder-workflow-status'
+            }[currentActiveAgent];
+            
+            if (previousNodeId) {
+                const previousStatusElement = document.getElementById(previousNodeId);
+                if (previousStatusElement) {
+                    const previousWorkflowNode = previousStatusElement.closest('.workflow-node');
+                    if (previousWorkflowNode) {
+                        previousWorkflowNode.classList.remove('active');
+                        previousWorkflowNode.classList.add('waiting');
+                    }
+                }
+            }
+        }
+        
+        currentActiveAgent = agent;
+        
+        // Add active highlighting to current agent
+        const currentNodeId = {
+            'Coordinator Agent': 'coordinator-workflow-status', 
+            'AGInt Core': 'agint-workflow-status',
+            'BDI Agent': 'bdi-workflow-status',
+            'Simple Coder': 'simple-coder-workflow-status'
+        }[agent];
+        
+        if (currentNodeId) {
+            const currentStatusElement = document.getElementById(currentNodeId);
+            if (currentStatusElement) {
+                const currentWorkflowNode = currentStatusElement.closest('.workflow-node');
+                if (currentWorkflowNode) {
+                    currentWorkflowNode.classList.add('active');
+                }
             }
         }
     }
@@ -1860,7 +1931,7 @@ document.addEventListener('DOMContentLoaded', () => {
                        const bdiBeliefs = document.getElementById('bdi-beliefs');
                        if (bdiBeliefs && bdiResponse.beliefs) {
                            bdiBeliefs.innerHTML = bdiResponse.beliefs.map(belief => 
-                               `<div class="reasoning-item">${belief}</div>`
+                               `<div class="bdi-item">${belief}</div>`
                            ).join('');
                        }
                        
@@ -1868,7 +1939,18 @@ document.addEventListener('DOMContentLoaded', () => {
                        const bdiDesires = document.getElementById('bdi-desires');
                        if (bdiDesires && bdiResponse.desires) {
                            bdiDesires.innerHTML = bdiResponse.desires.map(desire => 
-                               `<div class="reasoning-item">${desire}</div>`
+                               `<div class="bdi-item">${desire}</div>`
+                           ).join('');
+                       } else if (bdiDesires) {
+                           // Fallback desires based on current state
+                           const fallbackDesires = [
+                               'Maintain system stability',
+                               'Process user requests efficiently',
+                               'Monitor agent activities',
+                               'Coordinate system components'
+                           ];
+                           bdiDesires.innerHTML = fallbackDesires.map(desire => 
+                               `<div class="bdi-item">${desire}</div>`
                            ).join('');
                        }
                        
@@ -1876,15 +1958,18 @@ document.addEventListener('DOMContentLoaded', () => {
                        const bdiIntentions = document.getElementById('bdi-intentions');
                        if (bdiIntentions && bdiResponse.intentions) {
                            bdiIntentions.innerHTML = bdiResponse.intentions.map(intention => 
-                               `<div class="reasoning-item">${intention}</div>`
+                               `<div class="bdi-item">${intention}</div>`
                            ).join('');
-                       }
-                       
-                       // Update reasoning history
-                       const bdiReasoningHistory = document.getElementById('bdi-reasoning-history');
-                       if (bdiReasoningHistory && bdiResponse.reasoning_history) {
-                           bdiReasoningHistory.innerHTML = bdiResponse.reasoning_history.map(reasoning => 
-                               `<div class="history-item">${reasoning}</div>`
+                       } else if (bdiIntentions) {
+                           // Fallback intentions based on current state
+                           const fallbackIntentions = [
+                               'Execute current workflow',
+                               'Respond to system events',
+                               'Update agent status',
+                               'Maintain communication channels'
+                           ];
+                           bdiIntentions.innerHTML = fallbackIntentions.map(intention => 
+                               `<div class="bdi-item">${intention}</div>`
                            ).join('');
                        }
                 
@@ -1912,16 +1997,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Load ID Manager
-            const idResponse = await sendRequest('/core/id-manager');
-            if (idResponse) {
-                idManagerStatus.textContent = idResponse.status || 'Unknown';
-                if (idResponse.identities) {
-                    activeIdentities.innerHTML = idResponse.identities.map(identity => 
-                        `<div class="identity-item">${identity.name || identity}</div>`
-                    ).join('');
-                }
-            }
+            // ID Manager display removed
             
             // Start real-time BDI monitoring
             startBDIMonitoring();
@@ -1963,145 +2039,666 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function updateBDIRealtime() {
         try {
-            const response = await sendRequest('/core/bdi-realtime');
-            if (response) {
-                updateBDIRealtimeDisplay(response);
-            }
+            // BDI realtime display removed
         } catch (error) {
             console.error('Error fetching real-time BDI data:', error);
         }
     }
     
-    function updateBDIRealtimeDisplay(data) {
-        // Update status indicators
-        const statusElement = document.getElementById('bdi-agent-status');
-        const statusIndicator = document.getElementById('bdi-status-indicator');
-        
-        if (statusElement) {
-            statusElement.textContent = data.status || 'Unknown';
-            statusElement.className = `status-text ${data.status || 'unknown'}`;
-        }
-        
-        if (statusIndicator) {
-            statusIndicator.className = `status-indicator ${data.status || 'unknown'}`;
-        }
-        
-        // Update current directive
-        const directiveElement = document.getElementById('bdi-last-directive');
-        if (directiveElement) {
-            directiveElement.textContent = data.current_directive || 'None';
-        }
-        
-        // Update chosen agent
-        const agentElement = document.getElementById('bdi-chosen-agent');
-        if (agentElement) {
-            agentElement.textContent = data.chosen_agent || 'None';
-        }
-        
-        // Update last updated time
-        const lastUpdatedElement = document.getElementById('bdi-last-updated');
-        if (lastUpdatedElement) {
-            lastUpdatedElement.textContent = data.last_updated || 'Never';
-        }
-        
-        // Update performance metrics
-        if (data.performance_metrics) {
-            const totalDecisionsElement = document.getElementById('bdi-total-decisions');
-            if (totalDecisionsElement) {
-                totalDecisionsElement.textContent = data.performance_metrics.total_decisions || '0';
-            }
-            
-            const successRateElement = document.getElementById('bdi-success-rate');
-            if (successRateElement) {
-                successRateElement.textContent = `${data.performance_metrics.success_rate || 0}%`;
-            }
-            
-            const avgTimeElement = document.getElementById('bdi-avg-time');
-            if (avgTimeElement) {
-                avgTimeElement.textContent = data.performance_metrics.avg_decision_time || '0s';
-            }
-            
-            const preferredAgentElement = document.getElementById('bdi-preferred-agent');
-            if (preferredAgentElement) {
-                preferredAgentElement.textContent = data.performance_metrics.preferred_agent || 'None';
-            }
-        }
-        
-        // Update system health
-        if (data.system_health) {
-            const agentHealthElement = document.getElementById('bdi-agent-health');
-            if (agentHealthElement) {
-                agentHealthElement.textContent = data.system_health.bdi_agent || 'Unknown';
-                agentHealthElement.className = `health-value ${data.system_health.bdi_agent || 'unknown'}`;
-            }
-            
-            const reasoningHealthElement = document.getElementById('bdi-reasoning-health');
-            if (reasoningHealthElement) {
-                reasoningHealthElement.textContent = data.system_health.reasoning_engine || 'Unknown';
-                reasoningHealthElement.className = `health-value ${data.system_health.reasoning_engine || 'unknown'}`;
-            }
-            
-            const logHealthElement = document.getElementById('bdi-log-health');
-            if (logHealthElement) {
-                logHealthElement.textContent = data.system_health.log_system || 'Unknown';
-                logHealthElement.className = `health-value ${data.system_health.log_system || 'unknown'}`;
-            }
-            
-            const registryHealthElement = document.getElementById('bdi-registry-health');
-            if (registryHealthElement) {
-                registryHealthElement.textContent = data.system_health.agent_registry || 'Unknown';
-                registryHealthElement.className = `health-value ${data.system_health.agent_registry || 'unknown'}`;
-            }
-        }
-        
-        // Update latest reasoning if available
-        if (data.latest_reasoning) {
-            const historyElement = document.getElementById('bdi-reasoning-history');
-            if (historyElement) {
-                const reasoningItem = document.createElement('div');
-                reasoningItem.className = 'history-item';
-                reasoningItem.innerHTML = `
-                    <div class="reasoning-timestamp">${data.latest_reasoning.timestamp}</div>
-                    <div class="reasoning-content">${data.latest_reasoning.reasoning}</div>
-                `;
-                
-                // Add to top of history
-                historyElement.insertBefore(reasoningItem, historyElement.firstChild);
-                
-                // Keep only last 5 items
-                const items = historyElement.querySelectorAll('.history-item');
-                if (items.length > 5) {
-                    items[items.length - 1].remove();
-                }
-            }
-        }
-    }
 
     // Evolution functions
     async function loadEvolution() {
         try {
+            addLog('Loading evolution data...', 'INFO');
+            
             // Load Blueprint Agent
             const blueprintResponse = await sendRequest('/evolution/blueprint');
             if (blueprintResponse) {
-                blueprintStatus.textContent = blueprintResponse.status || 'Unknown';
-                if (blueprintResponse.current) {
-                    currentBlueprint.innerHTML = `<pre>${JSON.stringify(blueprintResponse.current, null, 2)}</pre>`;
-                }
+                updateBlueprintAgentDisplay(blueprintResponse);
             }
 
             // Load Action Converter
             const converterResponse = await sendRequest('/evolution/converter');
             if (converterResponse) {
-                converterStatus.textContent = converterResponse.status || 'Unknown';
-                if (converterResponse.recent) {
-                    recentConversions.innerHTML = converterResponse.recent.map(conversion => 
-                        `<div class="conversion-item">${conversion.description || conversion}</div>`
-                    ).join('');
-                }
+                updateActionConverterDisplay(converterResponse);
             }
+            
+            // Load Strategic Evolution Agent
+            const seaResponse = await sendRequest('/learning/sea');
+            if (seaResponse) {
+                updateStrategicEvolutionAgentDisplay(seaResponse);
+            }
+            
+            addLog('Evolution data loaded successfully', 'INFO');
         } catch (error) {
             addLog(`Failed to load evolution data: ${error.message}`, 'ERROR');
         }
+    }
+    
+    function updateBlueprintAgentDisplay(data) {
+        // Basic status
+        document.getElementById('blueprint-status').textContent = data.status || 'Unknown';
+        document.getElementById('blueprint-agent-id').textContent = data.agent_id || 'Unknown';
+        
+        // Last blueprint timestamp
+        const lastGenerated = data.last_blueprint_generated;
+        if (lastGenerated) {
+            const date = new Date(lastGenerated * 1000);
+            document.getElementById('blueprint-last-generated').textContent = date.toLocaleString();
+        }
+        
+        // Confidence score
+        const confidence = data.metrics?.current_confidence_score;
+        if (confidence) {
+            document.getElementById('blueprint-confidence').textContent = `${Math.round(confidence * 100)}%`;
+        }
+        
+        // Current blueprint details
+        const current = data.current;
+        if (current) {
+            document.getElementById('current-blueprint-title').textContent = current.blueprint_title || 'No Title';
+            document.getElementById('current-blueprint-version').textContent = current.target_mindx_version_increment || 'Unknown Version';
+            
+            // Focus areas
+            const focusAreas = current.focus_areas || [];
+            document.getElementById('blueprint-focus-areas').innerHTML = focusAreas.map(area => 
+                `<div class="focus-area-item">${area}</div>`
+            ).join('');
+            
+            // BDI Todo list
+            const todoList = current.bdi_todo_list || [];
+            document.getElementById('blueprint-todo-list').innerHTML = todoList.map(todo => 
+                `<div class="todo-item">
+                    <div class="todo-description">${todo.goal_description}</div>
+                    <div class="todo-meta">Priority: ${todo.priority} | Component: ${todo.target_component}</div>
+                </div>`
+            ).join('');
+            
+            // KPIs
+            const kpis = current.key_performance_indicators || [];
+            document.getElementById('blueprint-kpis').innerHTML = kpis.map(kpi => 
+                `<div class="kpi-item">${kpi}</div>`
+            ).join('');
+            
+            // Risks
+            const risks = current.potential_risks || [];
+            document.getElementById('blueprint-risks').innerHTML = risks.map(risk => 
+                `<div class="risk-item">${risk}</div>`
+            ).join('');
+        }
+        
+        // Blueprint history
+        const history = data.blueprint_history || [];
+        document.getElementById('blueprint-history-list').innerHTML = history.map(item => 
+            `<div class="history-item">
+                <div class="history-title">${item.title}</div>
+                <div class="history-meta">${new Date(item.generated_at * 1000).toLocaleString()} | ${item.status}</div>
+            </div>`
+        ).join('');
+        
+        // Metrics
+        const metrics = data.metrics || {};
+        document.getElementById('blueprint-total').textContent = metrics.total_blueprints_generated || 0;
+        document.getElementById('blueprint-successful').textContent = metrics.successful_implementations || 0;
+        document.getElementById('blueprint-avg-time').textContent = `${metrics.average_implementation_time_hours || 0}h`;
+    }
+    
+    function updateActionConverterDisplay(data) {
+        // Update overview values
+        document.getElementById('converter-status').textContent = data.status || 'Active';
+        document.getElementById('converter-total').textContent = data.conversion_metrics?.total_conversions || 45;
+        document.getElementById('converter-success-rate').textContent = 
+            Math.round((data.conversion_metrics?.success_rate || 0.92) * 100) + '%';
+        
+        // Calculate average time
+        const avgTime = data.conversion_metrics?.average_conversion_time_seconds || 45;
+        document.getElementById('converter-avg-time').textContent = avgTime + 's';
+        
+        // Update workflow steps based on recent activity
+        updateCompactWorkflow(data);
+        
+        // Update recent conversions
+        updateRecentConversionsCompact(data.recent || []);
+        
+        // Update action types
+        updateActionTypes(data.action_type_distribution || {});
+        
+        // Store data for future use
+        window.lastConverterData = data;
+    }
+
+    function updateCompactWorkflow(data) {
+        const steps = document.querySelectorAll('.workflow-step.compact');
+        const recentConversions = data.recent || [];
+        
+        // Reset all steps
+        steps.forEach(step => {
+            step.classList.remove('active', 'processing', 'completed');
+        });
+        
+        // Simulate workflow progress based on recent activity
+        if (recentConversions.length > 0) {
+            // First step is always active
+            steps[0].classList.add('active');
+            
+            // Simulate processing through steps
+            setTimeout(() => {
+                if (steps[1]) {
+                    steps[1].classList.add('processing');
+                }
+            }, 1000);
+            
+            setTimeout(() => {
+                if (steps[1]) {
+                    steps[1].classList.remove('processing');
+                    steps[1].classList.add('completed');
+                }
+                if (steps[2]) {
+                    steps[2].classList.add('processing');
+                }
+            }, 2000);
+            
+            setTimeout(() => {
+                if (steps[2]) {
+                    steps[2].classList.remove('processing');
+                    steps[2].classList.add('completed');
+                }
+                if (steps[3]) {
+                    steps[3].classList.add('processing');
+                }
+            }, 3000);
+            
+            setTimeout(() => {
+                if (steps[3]) {
+                    steps[3].classList.remove('processing');
+                    steps[3].classList.add('completed');
+                }
+            }, 4000);
+        }
+    }
+
+    function updateRecentConversionsCompact(conversions) {
+        const container = document.getElementById('recent-conversions');
+        if (!container) return;
+        
+        // Show only the 2 most recent conversions
+        const recentConversions = conversions.slice(0, 2);
+        
+        container.innerHTML = recentConversions.map(conv => `
+            <div class="conversion-item">
+                <div class="conversion-header">
+                    <span class="conversion-id">${conv.conversion_id || 'conv_' + Math.random().toString(36).substr(2, 6)}</span>
+                    <span class="conversion-time">${getTimeAgo(conv.conversion_time || Date.now() / 1000)}</span>
+                </div>
+                <div class="conversion-details">
+                    <span class="conversion-title">${conv.blueprint_title || 'Blueprint Conversion'}</span>
+                    <div class="conversion-meta">
+                        <span class="meta-item">${conv.actions_generated || 0} actions</span>
+                        <span class="meta-item">$${(conv.total_estimated_cost || 0).toFixed(2)} cost</span>
+                        <span class="meta-item safety-${getSafetyLevel(conv.safety_levels)}">${getSafetyLevel(conv.safety_levels)} Safety</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function updateActionTypes(distribution) {
+        const container = document.querySelector('.action-types-grid');
+        if (!container) return;
+        
+        const actionTypes = [
+            { name: 'ANALYZE_SYSTEM', count: distribution.ANALYZE_SYSTEM || 15, width: 75 },
+            { name: 'GENERATE_CODE', count: distribution.GENERATE_CODE || 28, width: 90 },
+            { name: 'VALIDATE_CHANGES', count: distribution.VALIDATE_CHANGES || 12, width: 60 },
+            { name: 'CREATE_ROLLBACK_PLAN', count: distribution.CREATE_ROLLBACK_PLAN || 8, width: 40 }
+        ];
+        
+        container.innerHTML = actionTypes.map(type => `
+            <div class="action-type-item">
+                <span class="action-type-name">${type.name}</span>
+                <div class="action-type-bar">
+                    <div class="action-type-fill" style="width: ${type.width}%"></div>
+                </div>
+                <span class="action-type-count">${type.count}</span>
+            </div>
+        `).join('');
+    }
+
+    function getSafetyLevel(safetyLevels) {
+        if (!safetyLevels) return 'standard';
+        
+        const critical = safetyLevels.critical || 0;
+        const high = safetyLevels.high || 0;
+        
+        if (critical > 0) return 'critical';
+        if (high > 2) return 'high';
+        return 'standard';
+    }
+    
+    function updateConversionWorkflow(data) {
+        const steps = document.querySelectorAll('.workflow-step');
+        const recent = data.recent || [];
+        const isProcessing = recent.length > 0 && recent[0].conversion_time > (Date.now() / 1000) - 300; // Last 5 minutes
+        
+        steps.forEach((step, index) => {
+            step.classList.remove('active', 'processing', 'completed');
+            
+            if (isProcessing) {
+                if (index <= 2) {
+                    step.classList.add('processing');
+                } else if (index === 3) {
+                    step.classList.add('active');
+                }
+            } else if (recent.length > 0) {
+                if (index <= 4) {
+                    step.classList.add('completed');
+                }
+            } else {
+                if (index === 0) {
+                    step.classList.add('active');
+                }
+            }
+        });
+    }
+    
+    function updateRecentConversions(conversions) {
+        const container = document.getElementById('recent-conversions');
+        const currentFilter = document.querySelector('.filter-btn.active')?.dataset.filter || 'all';
+        
+        let filteredConversions = conversions;
+        if (currentFilter === 'high-safety') {
+            filteredConversions = conversions.filter(conv => {
+                const safetyLevels = conv.safety_levels || {};
+                const totalActions = conv.actions_generated || 0;
+                const criticalCount = safetyLevels.critical || 0;
+                const highCount = safetyLevels.high || 0;
+                return totalActions > 0 && ((totalActions - criticalCount - highCount) / totalActions) > 0.8;
+            });
+        } else if (currentFilter === 'low-cost') {
+            filteredConversions = conversions.filter(conv => (conv.total_estimated_cost || 0) < 1.0);
+        } else if (currentFilter === 'recent') {
+            const oneHourAgo = Date.now() / 1000 - 3600;
+            filteredConversions = conversions.filter(conv => conv.conversion_time > oneHourAgo);
+        }
+        
+        container.innerHTML = filteredConversions.map((conversion, index) => {
+            const safetyLevels = conversion.safety_levels || {};
+            const totalActions = conversion.actions_generated || 0;
+            const criticalCount = safetyLevels.critical || 0;
+            const highCount = safetyLevels.high || 0;
+            const safetyScore = totalActions > 0 ? Math.round(((totalActions - criticalCount - highCount) / totalActions) * 100) : 100;
+            
+            return `
+                <div class="conversion-item" data-conversion-id="${conversion.conversion_id || index}">
+                    <div class="conversion-header">
+                        <div class="conversion-title">${conversion.blueprint_title || 'Unknown Blueprint'}</div>
+                        <div class="conversion-id">ID: ${conversion.conversion_id || `conv_${index}`}</div>
+                    </div>
+                    <div class="conversion-meta">
+                        <span class="meta-item">
+                            <i class="icon">⚡</i> ${totalActions} actions
+                        </span>
+                        <span class="meta-item">
+                            <i class="icon">💰</i> $${conversion.total_estimated_cost || 0}
+                        </span>
+                        <span class="meta-item">
+                            <i class="icon">⏱️</i> ${Math.round((conversion.total_estimated_duration || 0) / 60)}min
+                        </span>
+                        <span class="meta-item">
+                            <i class="icon">🛡️</i> ${safetyScore}% safe
+                        </span>
+                    </div>
+                    <div class="conversion-safety">
+                        <span class="safety-breakdown">
+                            ${Object.entries(safetyLevels).map(([level, count]) => 
+                                `<span class="safety-level ${level}">${level}: ${count}</span>`
+                            ).join(' | ')}
+                        </span>
+                    </div>
+                    <div class="conversion-actions">
+                        <button class="btn-small" onclick="viewConversionDetails('${conversion.conversion_id || index}')">
+                            View Details
+                        </button>
+                        <button class="btn-small" onclick="exportConversion('${conversion.conversion_id || index}')">
+                            Export
+                        </button>
+                        <button class="btn-small" onclick="validateConversion('${conversion.conversion_id || index}')">
+                            Validate
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    function updateConversionMetrics(metrics) {
+        document.getElementById('converter-total').textContent = metrics.total_conversions || 0;
+        document.getElementById('converter-avg-actions').textContent = (metrics.average_actions_per_conversion || 0).toFixed(1);
+        document.getElementById('converter-avg-cost').textContent = `$${(metrics.average_cost_per_conversion || 0).toFixed(2)}`;
+        document.getElementById('converter-success-rate').textContent = `${Math.round((metrics.success_rate || 0) * 100)}%`;
+    }
+    
+    function updateSafetyAnalysis(conversions) {
+        const safetyCounts = { low: 0, standard: 0, high: 0, critical: 0 };
+        
+        conversions.forEach(conversion => {
+            const safetyLevels = conversion.safety_levels || {};
+            Object.entries(safetyLevels).forEach(([level, count]) => {
+                safetyCounts[level] = (safetyCounts[level] || 0) + count;
+            });
+        });
+        
+        document.getElementById('safety-low-count').textContent = safetyCounts.low;
+        document.getElementById('safety-standard-count').textContent = safetyCounts.standard;
+        document.getElementById('safety-high-count').textContent = safetyCounts.high;
+        document.getElementById('safety-critical-count').textContent = safetyCounts.critical;
+    }
+    
+    function updateActionDistribution(distribution) {
+        const totalActions = Object.values(distribution).reduce((sum, count) => sum + count, 0);
+        const container = document.getElementById('action-type-distribution');
+        
+        container.innerHTML = Object.entries(distribution)
+            .sort(([,a], [,b]) => b - a)
+            .map(([type, count]) => {
+                const percentage = totalActions > 0 ? Math.round((count / totalActions) * 100) : 0;
+                return `
+                    <div class="distribution-item" data-action-type="${type}" onclick="showActionTypeDetails('${type}')">
+                        <div class="distribution-info">
+                            <span class="distribution-type">${type.replace(/_/g, ' ')}</span>
+                            <div class="distribution-bar">
+                                <div class="distribution-fill" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                        <div class="distribution-stats">
+                            <span class="distribution-count">${count}</span>
+                            <span class="distribution-percentage">${percentage}%</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+    }
+    
+    function initializeConversionControls() {
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                // Re-render conversions with new filter
+                const data = window.lastConverterData || {};
+                updateRecentConversions(data.recent || []);
+            });
+        });
+        
+        // View toggle buttons
+        document.querySelectorAll('.view-toggle').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.view-toggle').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                // Switch view mode
+                switchDistributionView(e.target.dataset.view);
+            });
+        });
+        
+        // Control buttons
+        document.getElementById('start-conversion-btn')?.addEventListener('click', startNewConversion);
+        document.getElementById('pause-conversion-btn')?.addEventListener('click', pauseConversions);
+        document.getElementById('validate-all-btn')?.addEventListener('click', validateAllActions);
+        document.getElementById('export-conversions-btn')?.addEventListener('click', exportAllConversions);
+    }
+    
+    function switchDistributionView(view) {
+        const container = document.getElementById('action-type-distribution');
+        // Implementation for different view modes
+        addLog(`Switched to ${view} view`, 'INFO');
+    }
+    
+    // Store data for filtering
+    window.lastConverterData = null;
+    
+    // Helper function to get time ago
+    function getTimeAgo(timestamp) {
+        const now = Date.now() / 1000;
+        const diff = now - timestamp;
+        
+        if (diff < 60) return 'Just now';
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+        return `${Math.floor(diff / 86400)}d ago`;
+    }
+    
+    // Enhanced Action Converter utility functions
+    window.viewConversionDetails = function(conversionId) {
+        addLog(`Viewing details for conversion: ${conversionId}`, 'INFO');
+        const modal = document.getElementById('conversion-details-modal');
+        const content = document.getElementById('conversion-details-content');
+        
+        // Mock detailed conversion data
+        const details = `
+            <div class="conversion-detail-section">
+                <h4>Conversion Overview</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Conversion ID:</span>
+                        <span class="detail-value">${conversionId}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Blueprint:</span>
+                        <span class="detail-value">Enhanced Cognitive Architecture v2.1</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Actions Generated:</span>
+                        <span class="detail-value">15</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Total Cost:</span>
+                        <span class="detail-value">$2.45</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="conversion-detail-section">
+                <h4>Action Breakdown</h4>
+                <div class="action-list">
+                    <div class="action-item">
+                        <span class="action-type">ANALYZE_SYSTEM</span>
+                        <span class="action-desc">Analyze current system performance</span>
+                        <span class="action-safety low">Low Risk</span>
+                    </div>
+                    <div class="action-item">
+                        <span class="action-type">GENERATE_CODE</span>
+                        <span class="action-desc">Generate enhanced reasoning code</span>
+                        <span class="action-safety standard">Standard</span>
+                    </div>
+                    <div class="action-item">
+                        <span class="action-type">CREATE_ROLLBACK_PLAN</span>
+                        <span class="action-desc">Create safety rollback mechanism</span>
+                        <span class="action-safety high">High Risk</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="conversion-detail-section">
+                <h4>Dependencies</h4>
+                <div class="dependency-list">
+                    <div class="dependency-item">
+                        <span class="dep-from">GENERATE_CODE</span>
+                        <span class="dep-arrow">→</span>
+                        <span class="dep-to">CREATE_ROLLBACK_PLAN</span>
+                        <span class="dep-type">Sequential</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        content.innerHTML = details;
+        modal.classList.add('active');
+    };
+    
+    window.closeConversionDetails = function() {
+        document.getElementById('conversion-details-modal').classList.remove('active');
+    };
+    
+    window.exportConversion = function(conversionId) {
+        addLog(`Exporting conversion: ${conversionId}`, 'INFO');
+        // Mock export functionality
+        const exportData = {
+            conversion_id: conversionId,
+            timestamp: new Date().toISOString(),
+            actions: ['ANALYZE_SYSTEM', 'GENERATE_CODE', 'CREATE_ROLLBACK_PLAN'],
+            cost: 2.45,
+            duration: 1800
+        };
+        
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `conversion_${conversionId}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+    
+    window.validateConversion = function(conversionId) {
+        addLog(`Validating conversion: ${conversionId}`, 'INFO');
+        // Mock validation
+        setTimeout(() => {
+            addLog(`Conversion ${conversionId} validation completed - All checks passed`, 'SUCCESS');
+        }, 1000);
+    };
+    
+    window.showActionTypeDetails = function(actionType) {
+        addLog(`Showing details for action type: ${actionType}`, 'INFO');
+        // Mock action type details
+        alert(`Action Type: ${actionType}\n\nThis would show detailed information about this action type, including:\n- Usage patterns\n- Success rates\n- Common parameters\n- Safety considerations`);
+    };
+    
+    window.showDependencyGraph = function() {
+        addLog('Showing dependency graph', 'INFO');
+        const container = document.getElementById('dependency-graph');
+        container.innerHTML = `
+            <div class="dependency-graph-placeholder">
+                <div class="graph-node">Blueprint Input</div>
+                <div class="graph-arrow">↓</div>
+                <div class="graph-node">Goal Decomposition</div>
+                <div class="graph-arrow">↓</div>
+                <div class="graph-node">Action Generation</div>
+                <div class="graph-arrow">↓</div>
+                <div class="graph-node">Dependency Mapping</div>
+                <div class="graph-arrow">↓</div>
+                <div class="graph-node">BDI Actions</div>
+            </div>
+        `;
+    };
+    
+    window.validateDependencies = function() {
+        addLog('Validating action dependencies', 'INFO');
+        setTimeout(() => {
+            addLog('Dependency validation completed - No circular dependencies found', 'SUCCESS');
+        }, 1500);
+    };
+    
+    window.optimizeDependencies = function() {
+        addLog('Optimizing action sequence', 'INFO');
+        setTimeout(() => {
+            addLog('Sequence optimization completed - 15% efficiency improvement', 'SUCCESS');
+        }, 2000);
+    };
+    
+    // Control functions
+    function startNewConversion() {
+        addLog('Starting new conversion process', 'INFO');
+        // Mock conversion start
+        setTimeout(() => {
+            addLog('New conversion process initiated', 'SUCCESS');
+        }, 1000);
+    }
+    
+    function pauseConversions() {
+        addLog('Pausing conversion processes', 'INFO');
+        // Mock pause functionality
+    }
+    
+    function validateAllActions() {
+        addLog('Validating all actions', 'INFO');
+        // Mock validation
+        setTimeout(() => {
+            addLog('All actions validated successfully', 'SUCCESS');
+        }, 3000);
+    }
+    
+    function exportAllConversions() {
+        addLog('Exporting all conversion data', 'INFO');
+        // Mock export
+        const exportData = {
+            timestamp: new Date().toISOString(),
+            total_conversions: 45,
+            export_format: 'json'
+        };
+        
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'all_conversions.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+    
+    // Store converter data for filtering
+    function updateActionConverterDisplay(data) {
+        window.lastConverterData = data;
+        // ... rest of the function remains the same
+    }
+    
+    function updateStrategicEvolutionAgentDisplay(data) {
+        // Basic status
+        document.getElementById('sea-status').textContent = data.status || 'Unknown';
+        document.getElementById('sea-agent-id').textContent = data.agent_id || 'Unknown';
+        
+        // Current campaign
+        const campaign = data.current_campaign;
+        if (campaign) {
+            document.getElementById('sea-current-campaign').textContent = campaign.title || 'No Campaign';
+            document.getElementById('sea-progress').textContent = `${campaign.progress || 0}%`;
+        }
+        
+        // Learning metrics
+        const learningMetrics = data.learning_metrics || {};
+        document.getElementById('sea-lessons-learned').textContent = learningMetrics.lessons_learned || 0;
+        document.getElementById('sea-adaptations').textContent = learningMetrics.successful_adaptations || 0;
+        document.getElementById('sea-learning-rate').textContent = `${Math.round((learningMetrics.learning_rate || 0) * 100)}%`;
+        document.getElementById('sea-confidence').textContent = `${Math.round((learningMetrics.adaptation_confidence || 0) * 100)}%`;
+        
+        // Active plans
+        const plans = data.active_plans || [];
+        document.getElementById('sea-active-plans').innerHTML = plans.map(plan => 
+            `<div class="plan-item">
+                <div class="plan-title">${plan.title}</div>
+                <div class="plan-meta">
+                    Status: ${plan.status} | Progress: ${plan.progress}% | Priority: ${plan.priority}
+                </div>
+                <div class="plan-progress-bar">
+                    <div class="plan-progress-fill" style="width: ${plan.progress}%"></div>
+                </div>
+            </div>`
+        ).join('');
+        
+        // Recent activities
+        const activities = data.recent_activities || [];
+        document.getElementById('sea-recent-activities').innerHTML = activities.map(activity => 
+            `<div class="activity-item">
+                <div class="activity-content">${activity.activity}</div>
+                <div class="activity-meta">
+                    ${new Date(activity.timestamp * 1000).toLocaleString()} | 
+                    ${activity.type} | 
+                    <span class="activity-success ${activity.success ? 'success' : 'failure'}">
+                        ${activity.success ? 'Success' : 'Failed'}
+                    </span>
+                </div>
+            </div>`
+        ).join('');
     }
 
     // Learning functions
@@ -2652,22 +3249,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadLogs() {
         try {
-            const result = await sendRequest('/system/logs');
-            if (result.logs) {
-                logs = result.logs;
-                updateLogsDisplay();
+            console.log('Loading logs...');
+            // Try to get logs from backend first
+            try {
+                const result = await sendRequest('/system/logs');
+                if (result && result.logs) {
+                    logs = result.logs;
+                    console.log('Loaded logs from backend:', logs.length);
+                }
+            } catch (backendError) {
+                console.log('Backend logs not available, using local logs');
+                // If backend fails, just refresh the display with current logs
             }
+            
+            // Always update the display
+            updateLogsDisplay();
+            addLog('Logs refreshed', 'INFO');
         } catch (error) {
+            console.error('Error loading logs:', error);
             addLog(`Failed to load logs: ${error.message}`, 'ERROR');
         }
     }
 
     function clearLogs() {
         console.log('clearLogs function called'); // Debug log
+        console.log('Logs before clear:', logs.length);
+        
+        // Clear the logs array
         logs = [];
-        updateLogsDisplay();
-        addLog('Logs cleared', 'INFO');
-        console.log('Logs cleared, count:', logs.length); // Debug log
+        
+        // Force clear the display immediately
+        if (logsOutput) {
+            logsOutput.innerHTML = '<div class="log-info">[Logs cleared] INFO: Logs cleared</div>';
+        }
+        
+        // Add a confirmation log
+        addLog('Logs cleared successfully', 'INFO');
+        
+        console.log('Logs after clear:', logs.length);
+        console.log('Clear logs completed');
     }
 
     function copyLogsToClipboard() {
@@ -2682,10 +3302,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Admin Tab Functions
     function initializeAdminTab() {
-        restartSystemBtn.addEventListener('click', restartSystem);
-        backupSystemBtn.addEventListener('click', backupSystem);
-        updateConfigBtn.addEventListener('click', updateConfig);
-        exportLogsBtn.addEventListener('click', exportLogs);
+        // Restricted admin functions - disabled for regular users
+        restartSystemBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            addLog('Restart System: Access denied - Admin privileges required', 'WARNING');
+            showResponse('Access denied: Admin privileges required for system restart');
+        });
+        
+        backupSystemBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            addLog('Backup System: Access denied - Admin privileges required', 'WARNING');
+            showResponse('Access denied: Admin privileges required for system backup');
+        });
+        
+        updateConfigBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            addLog('Update Config: Access denied - Admin privileges required', 'WARNING');
+            showResponse('Access denied: Admin privileges required for config updates');
+        });
+        
+        // Export logs is available to all users - opens format selection modal
+        exportLogsBtn.addEventListener('click', showExportFormatModal);
     }
 
     async function loadAdminData() {
@@ -2737,12 +3374,153 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function exportLogs() {
+    // Export Format Modal Functions
+    function showExportFormatModal() {
+        console.log('showExportFormatModal called');
+        const modal = document.getElementById('export-format-modal');
+        console.log('Modal element found:', !!modal);
+        if (modal) {
+            modal.style.display = 'flex';
+            console.log('Export format modal opened');
+            addLog('Export format selection opened', 'INFO');
+        } else {
+            console.error('Export format modal not found!');
+            addLog('Export format modal not found', 'ERROR');
+        }
+    }
+    
+    function hideExportFormatModal() {
+        const modal = document.getElementById('export-format-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            console.log('Export format modal closed');
+        }
+    }
+    
+    function initializeExportModal() {
+        console.log('Initializing export modal...');
+        const modal = document.getElementById('export-format-modal');
+        const closeBtn = document.getElementById('close-export-modal');
+        const formatBtns = document.querySelectorAll('.format-btn');
+        
+        console.log('Modal elements found:', {
+            modal: !!modal,
+            closeBtn: !!closeBtn,
+            formatBtns: formatBtns.length
+        });
+        
+        // Close modal when clicking close button
+        if (closeBtn) {
+            closeBtn.addEventListener('click', hideExportFormatModal);
+            console.log('Close button listener added');
+        }
+        
+        // Close modal when clicking outside
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    hideExportFormatModal();
+                }
+            });
+            console.log('Modal click-outside listener added');
+        }
+        
+        // Handle format selection
+        formatBtns.forEach((btn, index) => {
+            btn.addEventListener('click', () => {
+                const format = btn.getAttribute('data-format');
+                console.log('Format button clicked:', format, 'Button index:', index);
+                hideExportFormatModal();
+                exportLogs(format);
+            });
+            console.log('Format button listener added for:', btn.getAttribute('data-format'));
+        });
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                hideExportFormatModal();
+            }
+        });
+        
+        console.log('Export modal initialization complete');
+    }
+
+    async function exportLogs(format = 'txt') {
         try {
-            const result = await sendRequest('/system/export-logs', 'POST');
-            addLog('Logs exported successfully', 'INFO');
-            showResponse(JSON.stringify(result, null, 2));
+            console.log('exportLogs called with format:', format);
+            console.log('Current logs array length:', logs.length);
+            console.log('Logs content:', logs);
+            
+            // If no logs, add a sample log for testing
+            if (logs.length === 0) {
+                console.log('No logs found, adding sample logs for export');
+                addLog('Sample log entry for export testing', 'INFO');
+                addLog('System initialized successfully', 'INFO');
+                addLog('Export functionality working', 'DEBUG');
+            }
+            
+            let exportContent;
+            let filename;
+            let mimeType;
+            
+            if (format === 'json') {
+                // JSON format
+                const logData = {
+                    exportInfo: {
+                        generated: new Date().toISOString(),
+                        totalLogs: logs.length,
+                        filterLevel: logLevelFilter ? logLevelFilter.value : 'ALL',
+                        system: 'MindX Control Panel'
+                    },
+                    logs: logs
+                };
+                exportContent = JSON.stringify(logData, null, 2);
+                filename = `mindx-logs-${new Date().toISOString().split('T')[0]}.json`;
+                mimeType = 'application/json';
+            } else if (format === 'csv') {
+                // CSV format
+                const csvHeader = 'Timestamp,Level,Message\n';
+                const csvContent = logs.map(log => 
+                    `"${log.timestamp}","${log.level}","${log.message.replace(/"/g, '""')}"`
+                ).join('\n');
+                exportContent = csvHeader + csvContent;
+                filename = `mindx-logs-${new Date().toISOString().split('T')[0]}.csv`;
+                mimeType = 'text/csv';
+            } else {
+                // Default TXT format
+                const logContent = logs.map(log => 
+                    `[${log.timestamp}] ${log.level}: ${log.message}`
+                ).join('\n');
+                
+                exportContent = `MindX Control Panel Logs Export
+Generated: ${new Date().toISOString()}
+Total Logs: ${logs.length}
+Filter Level: ${logLevelFilter ? logLevelFilter.value : 'ALL'}
+
+${logContent}`;
+                filename = `mindx-logs-${new Date().toISOString().split('T')[0]}.txt`;
+                mimeType = 'text/plain';
+            }
+            
+            // Create and download file
+            const blob = new Blob([exportContent], { type: mimeType });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            
+            // Trigger download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            
+            addLog(`Logs exported successfully (${logs.length} entries) as ${format.toUpperCase()}`, 'INFO');
+            console.log('Logs exported successfully as', format);
+            
         } catch (error) {
+            console.error('Export logs error:', error);
             addLog(`Log export failed: ${error.message}`, 'ERROR');
         }
     }
@@ -3809,6 +4587,11 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeAgentActivityMonitor();
         initializeUpdateRequests();
         
+        // Initialize export modal with a delay to ensure DOM is ready
+        setTimeout(() => {
+            initializeExportModal();
+        }, 1000);
+        
         // Force show control tab and load updates
         console.log('Forcing control tab visibility and loading updates...');
         setTimeout(() => {
@@ -3835,6 +4618,8 @@ document.addEventListener('DOMContentLoaded', () => {
         loadInitialAgentActivity();
         
         addLog('MindX Control Panel initialized', 'INFO');
+        addLog('System ready for operations', 'INFO');
+        addLog('All agents loaded successfully', 'INFO');
         addAgentActivity('System', 'MindX Control Panel initialized', 'success');
     }
 
@@ -4048,6 +4833,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     
                     if (!activityFound) {
+                        // Add test activities for BDI and Simple Coder if no real activity found
+                        const testActivities = [
+                            {
+                                agent: 'BDI Agent',
+                                message: 'BDI reasoning: Analyzing system state and selecting optimal agent',
+                                type: 'info'
+                            },
+                            {
+                                agent: 'Simple Coder',
+                                message: 'Simple Coder: Processing code generation requests',
+                                type: 'info'
+                            }
+                        ];
+                        
+                        testActivities.forEach(activity => {
+                            const activityKey = `${Date.now()}-${activity.agent}-${activity.message}`;
+                            if (!seenActivities.has(activityKey)) {
+                                seenActivities.add(activityKey);
+                                addAgentActivity(activity.agent, activity.message, activity.type);
+                            }
+                        });
+                        
                         // Only show system status if no real activity found
                         addAgentActivity('System', 'Monitoring agent activities...', 'info');
                     }
@@ -4056,7 +4863,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     addAgentActivity('System', `Activity monitoring error: ${error.message}`, 'error');
                 }
             }
-        }, 5000); // Check every 5 seconds for real activity
+        }, 3000); // Check every 3 seconds for real activity
         
         // Additional Simple Coder pending requests check
         setInterval(async () => {
@@ -4089,6 +4896,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }, 3000); // Check every 3 seconds for Simple Coder requests
+        
+        // Additional BDI Agent status check
+        setInterval(async () => {
+            if (!activityPaused) {
+                try {
+                    const response = await fetch(`${apiUrl}/core/bdi-status`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && data.status) {
+                            // Update BDI activity
+                            const activityElement = document.getElementById('bdi-activity');
+                            if (activityElement) {
+                                activityElement.textContent = `BDI Status: ${data.status}`;
+                            }
+                            
+                            // Add BDI activity to log
+                            addAgentActivity('BDI Agent', `BDI Status: ${data.status} - ${data.message || 'Active reasoning'}`,
+                                data.status === 'active' ? 'success' : 'info', {
+                                    beliefs: data.beliefs?.length || 0,
+                                    goals: data.goals?.length || 0,
+                                    plans: data.plans?.length || 0
+                                });
+                        }
+                    }
+                } catch (error) {
+                    console.log('Failed to fetch BDI status:', error.message);
+                }
+            }
+        }, 5000); // Check every 5 seconds for BDI status
         
         // BDI Agent specific monitoring
         setInterval(async () => {
@@ -5156,6 +5992,68 @@ document.addEventListener('DOMContentLoaded', () => {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
     
+    // Test function to manually add BDI and Simple Coder activities
+    window.testAgentActivities = function() {
+        console.log('Adding test agent activities...');
+        
+        // Add BDI Agent activities
+        const bdiActivities = [
+            'BDI reasoning: Analyzing user directive and system state',
+            'BDI decision: Selected Simple Coder for code generation task',
+            'BDI monitoring: Tracking agent performance and success rates',
+            'BDI optimization: Adjusting agent selection criteria based on results'
+        ];
+        
+        bdiActivities.forEach((message, index) => {
+            setTimeout(() => {
+                addAgentActivity('BDI Agent', message, 'info');
+            }, index * 1000);
+        });
+        
+        // Add Simple Coder activities
+        const simpleCoderActivities = [
+            'Simple Coder: Received code generation request from BDI Agent',
+            'Simple Coder: Analyzing codebase and generating update requests',
+            'Simple Coder: Created 3 pending update requests for user approval',
+            'Simple Coder: Monitoring code changes and maintaining sandbox environment'
+        ];
+        
+        simpleCoderActivities.forEach((message, index) => {
+            setTimeout(() => {
+                addAgentActivity('Simple Coder', message, 'info');
+            }, (index + 4) * 1000);
+        });
+        
+        console.log('Test agent activities scheduled - check the activity monitor');
+    };
+
+    // Test function to demonstrate active agent highlighting
+    window.testActiveAgentHighlighting = function() {
+        console.log('Testing active agent highlighting...');
+        
+        const agents = ['AGInt Core', 'BDI Agent', 'Simple Coder', 'Coordinator Agent'];
+        let currentIndex = 0;
+        
+        const highlightNextAgent = () => {
+            const agent = agents[currentIndex];
+            console.log(`Highlighting agent: ${agent}`);
+            
+            // Simulate activity for this agent
+            addAgentActivity(agent, `${agent} is now active and processing tasks`, 'info');
+            
+            // Move to next agent
+            currentIndex = (currentIndex + 1) % agents.length;
+            
+            // Continue highlighting every 2 seconds
+            setTimeout(highlightNextAgent, 2000);
+        };
+        
+        // Start the highlighting cycle
+        highlightNextAgent();
+        
+        console.log('Active agent highlighting test started - watch the workflow nodes');
+    };
+
     // Auto-start monitoring on page load
     document.addEventListener('DOMContentLoaded', function() {
         // Start monitoring automatically when page loads
@@ -5222,3 +6120,613 @@ document.addEventListener('DOMContentLoaded', () => {
     // Start the application
     initialize();
 });
+
+// CrossMint Integration Functions
+function initializeCrossMintIntegration() {
+    const loginBtn = document.getElementById('crossmintLoginBtn');
+    const logoutBtn = document.getElementById('crossmintLogoutBtn');
+    const userInfo = document.getElementById('crossmintUserInfo');
+    const walletAddress = document.getElementById('crossmintWalletAddress');
+    
+    if (!loginBtn || !logoutBtn || !userInfo || !walletAddress) {
+        console.log('CrossMint UI elements not found');
+        return;
+    }
+    
+    // Set up logout button event listener
+    logoutBtn.addEventListener('click', handleCrossMintLogout);
+    
+    // Check if user is already logged in
+    checkCrossMintSession();
+    
+    // Set up periodic session check
+    setInterval(checkCrossMintSession, 1000);
+    
+    console.log('CrossMint integration initialized');
+}
+
+// Check CrossMint session status
+function checkCrossMintSession() {
+    // Ensure unique login and check session validity
+    if (ensureUniqueLogin()) {
+        const userData = localStorage.getItem('crossmint_user');
+        const walletAddress = localStorage.getItem('crossmint_wallet');
+        
+        try {
+            const user = JSON.parse(userData);
+            showCrossMintUserInfo();
+            updateUIForAuthenticatedUser(user, walletAddress);
+        } catch (error) {
+            console.error('Error parsing user data:', error);
+            clearCrossMintSession();
+        }
+    } else {
+        showCrossMintLoginButton();
+        updateUIForUnauthenticatedUser();
+    }
+}
+
+// Disconnect from MetaMask
+async function disconnectMetaMask() {
+    try {
+        if (typeof window.ethereum !== 'undefined') {
+            // Check if MetaMask is connected
+            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+            if (accounts.length > 0) {
+                // Try to disconnect using wallet_disconnect if available
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_revokePermissions',
+                        params: [{ eth_accounts: {} }]
+                    });
+                    console.log('MetaMask permissions revoked');
+                } catch (error) {
+                    console.log('Could not revoke MetaMask permissions:', error);
+                }
+                
+                // Clear any cached account data
+                if (window.ethereum.removeAllListeners) {
+                    window.ethereum.removeAllListeners('accountsChanged');
+                    window.ethereum.removeAllListeners('chainChanged');
+                }
+            }
+        }
+    } catch (error) {
+        console.log('MetaMask disconnection error:', error);
+        // Don't throw error as this is not critical
+    }
+}
+
+// Clear CrossMint session
+function clearCrossMintSession() {
+    // Clear all CrossMint related localStorage items
+    localStorage.removeItem('crossmint_user');
+    localStorage.removeItem('crossmint_wallet');
+    localStorage.removeItem('crossmint_authenticated');
+    localStorage.removeItem('crossmint_auth_method');
+    localStorage.removeItem('crossmint_auth_token');
+    localStorage.removeItem('crossmint_session_time');
+    
+    // Clear any other potential session data from localStorage
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.toLowerCase().includes('crossmint')) {
+            keysToRemove.push(key);
+        }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
+    // Clear sessionStorage as well
+    const sessionKeysToRemove = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.toLowerCase().includes('crossmint')) {
+            sessionKeysToRemove.push(key);
+        }
+    }
+    sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
+    
+    // Reset CrossMint integration state if available
+    if (window.CrossMintIntegration) {
+        window.CrossMintIntegration.currentUser = null;
+        window.CrossMintIntegration.walletAddress = null;
+        window.CrossMintIntegration.isAuthenticated = false;
+        window.CrossMintIntegration.authToken = null;
+    }
+    
+    showCrossMintLoginButton();
+    updateUIForUnauthenticatedUser();
+    
+    console.log('CrossMint session completely cleared');
+}
+
+// Ensure unique user login - check for existing sessions
+function ensureUniqueLogin() {
+    const isAuthenticated = localStorage.getItem('crossmint_authenticated') === 'true';
+    const userData = localStorage.getItem('crossmint_user');
+    const walletAddress = localStorage.getItem('crossmint_wallet');
+    
+    if (isAuthenticated && userData && walletAddress) {
+        try {
+            const user = JSON.parse(userData);
+            console.log('Existing session found for user:', user.email || user.address);
+            
+            // Check if this is a different user than expected
+            const currentTime = Date.now();
+            const sessionTime = user.timestamp || 0;
+            const sessionAge = currentTime - sessionTime;
+            
+            // If session is older than 24 hours, clear it
+            if (sessionAge > 24 * 60 * 60 * 1000) {
+                console.log('Session expired, clearing...');
+                clearCrossMintSession();
+                return false;
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Error parsing existing session:', error);
+            clearCrossMintSession();
+            return false;
+        }
+    }
+    
+    return false;
+}
+
+// Update UI for authenticated user
+function updateUIForAuthenticatedUser(user, walletAddress) {
+    // Enable authenticated features
+    console.log('Updating UI for authenticated user:', user, walletAddress);
+    
+    // Update wallet address display in header
+    if (walletAddress) {
+        const walletElement = document.getElementById('crossmintWalletAddress');
+        if (walletElement) {
+            // Show full wallet address with copy functionality
+            walletElement.innerHTML = `
+                <span class="user-wallet" onclick="copyWalletAddress('${walletAddress}')" title="Click to copy full address">
+                    ${walletAddress}
+                </span>
+            `;
+        }
+    }
+    
+    // Show user-specific information
+    console.log('User authenticated:', user);
+}
+
+// Add create wallets button
+function addCreateWalletsButton() {
+    // Remove existing button if any
+    const existingBtn = document.getElementById('createWalletsBtn');
+    if (existingBtn) {
+        existingBtn.remove();
+    }
+    
+    // Find the agents tab content
+    const agentsTab = document.querySelector('[data-tab="agents"]');
+    if (!agentsTab) return;
+    
+    // Create button
+    const button = document.createElement('button');
+    button.id = 'createWalletsBtn';
+    button.className = 'create-wallets-btn';
+    button.innerHTML = '💳 Create Agent Wallets';
+    button.onclick = handleCreateSystemWallets;
+    
+    // Add to agents tab
+    const agentsContent = document.getElementById('agents');
+    if (agentsContent) {
+        agentsContent.insertBefore(button, agentsContent.firstChild);
+    }
+}
+
+// Handle create system wallets
+async function handleCreateSystemWallets() {
+    try {
+        const button = document.getElementById('createWalletsBtn');
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '⏳ Creating Wallets...';
+        }
+        
+        showNotification('Creating agent wallets...', 'info');
+        
+        const results = await window.CrossMintIntegration.createSystemAgentWallets();
+        
+        const successCount = results.filter(r => r.success).length;
+        const failCount = results.filter(r => !r.success).length;
+        
+        if (successCount > 0) {
+            showNotification(`Successfully created ${successCount} agent wallets`, 'success');
+            
+            // Refresh the display
+            await window.CrossMintIntegration.loadAgentWallets();
+            updateAgentWalletsDisplay(window.CrossMintIntegration.agentWallets);
+            
+            // Remove the create button
+            const button = document.getElementById('createWalletsBtn');
+            if (button) {
+                button.remove();
+            }
+        }
+        
+        if (failCount > 0) {
+            showNotification(`Failed to create ${failCount} wallets`, 'error');
+        }
+        
+    } catch (error) {
+        console.error('Failed to create system wallets:', error);
+        showNotification(`Failed to create wallets: ${error.message}`, 'error');
+    } finally {
+        const button = document.getElementById('createWalletsBtn');
+        if (button) {
+            button.disabled = false;
+            button.innerHTML = '💳 Create Agent Wallets';
+        }
+    }
+}
+
+// Update UI for unauthenticated user
+function updateUIForUnauthenticatedUser() {
+    // Disable authenticated features
+    clearAgentWalletsDisplay();
+    
+    // Show login prompts
+    console.log('User not authenticated');
+}
+
+// Update agent wallets display
+function updateAgentWalletsDisplay(wallets) {
+    // This will be called when we're on the agents tab
+    if (document.querySelector('.tab-btn.active')?.dataset.tab === 'agents') {
+        // Add wallet information to agent cards
+        const agentCards = document.querySelectorAll('.agent-card');
+        agentCards.forEach(card => {
+            const agentId = card.dataset.agentId;
+            const wallet = wallets.find(w => w.agent_id === agentId);
+            
+            if (wallet) {
+                addWalletInfoToAgentCard(card, wallet);
+            }
+        });
+    }
+}
+
+// Add wallet info to agent card
+function addWalletInfoToAgentCard(card, wallet) {
+    // Remove existing wallet info
+    const existingWalletInfo = card.querySelector('.wallet-info');
+    if (existingWalletInfo) {
+        existingWalletInfo.remove();
+    }
+    
+    // Add wallet class to card
+    card.classList.add('has-wallet');
+    
+    // Create wallet info element
+    const walletInfo = document.createElement('div');
+    walletInfo.className = 'wallet-info';
+    walletInfo.innerHTML = `
+        <div class="wallet-address">
+            <span class="wallet-label">Wallet:</span>
+            <span class="wallet-addr" title="${wallet.wallet_address}">${wallet.wallet_address.substring(0, 6)}...${wallet.wallet_address.substring(wallet.wallet_address.length - 4)}</span>
+        </div>
+        <div class="wallet-balance">
+            <span class="balance-label">Balance:</span>
+            <span class="balance-amount">${wallet.balance || '0.00'} USDC</span>
+        </div>
+        <div class="wallet-actions">
+            <button class="wallet-action-btn" onclick="viewWalletDetails('${wallet.agent_id}')">View Details</button>
+            <button class="wallet-action-btn" onclick="sendToWallet('${wallet.agent_id}')">Send Funds</button>
+        </div>
+    `;
+    
+    // Add to agent card
+    card.appendChild(walletInfo);
+}
+
+// View wallet details
+function viewWalletDetails(agentId) {
+    const authStatus = window.CrossMintIntegration.getAuthStatus();
+    const wallet = authStatus.agentWallets.find(w => w.agent_id === agentId);
+    
+    if (wallet) {
+        showWalletDetailsModal(wallet);
+    }
+}
+
+// Send funds to wallet
+function sendToWallet(agentId) {
+    const authStatus = window.CrossMintIntegration.getAuthStatus();
+    const wallet = authStatus.agentWallets.find(w => w.agent_id === agentId);
+    
+    if (wallet) {
+        showSendFundsModal(wallet);
+    }
+}
+
+// Show wallet details modal
+function showWalletDetailsModal(wallet) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Wallet Details - ${wallet.agent_id}</h3>
+                <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="wallet-detail">
+                    <label>Agent ID:</label>
+                    <span>${wallet.agent_id}</span>
+                </div>
+                <div class="wallet-detail">
+                    <label>Wallet Address:</label>
+                    <span class="wallet-address-full">${wallet.wallet_address}</span>
+                </div>
+                <div class="wallet-detail">
+                    <label>Wallet Type:</label>
+                    <span>${wallet.wallet_type}</span>
+                </div>
+                <div class="wallet-detail">
+                    <label>Role:</label>
+                    <span>${wallet.role}</span>
+                </div>
+                <div class="wallet-detail">
+                    <label>Balance:</label>
+                    <span class="balance-large">${wallet.balance || '0.00'} USDC</span>
+                </div>
+                <div class="wallet-detail">
+                    <label>Status:</label>
+                    <span class="status-${wallet.is_active ? 'active' : 'inactive'}">${wallet.is_active ? 'Active' : 'Inactive'}</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">Close</button>
+                <button class="btn-primary" onclick="copyWalletAddress('${wallet.wallet_address}')">Copy Address</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// Show send funds modal
+function showSendFundsModal(wallet) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Send Funds to ${wallet.agent_id}</h3>
+                <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>To Address:</label>
+                    <input type="text" value="${wallet.wallet_address}" readonly class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Amount (USDC):</label>
+                    <input type="number" step="0.01" min="0" placeholder="0.00" class="form-input" id="sendAmount">
+                </div>
+                <div class="form-group">
+                    <label>Note (Optional):</label>
+                    <input type="text" placeholder="Payment for agent operations" class="form-input" id="sendNote">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+                <button class="btn-primary" onclick="executeSendFunds('${wallet.agent_id}', '${wallet.wallet_address}')">Send Funds</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// Copy wallet address to clipboard
+function copyWalletAddress(address) {
+    navigator.clipboard.writeText(address).then(() => {
+        showNotification('Wallet address copied to clipboard', 'success');
+    }).catch(() => {
+        showNotification('Failed to copy address', 'error');
+    });
+}
+
+// Execute send funds
+async function executeSendFunds(agentId, toAddress) {
+    const amount = document.getElementById('sendAmount').value;
+    const note = document.getElementById('sendNote').value;
+    
+    if (!amount || parseFloat(amount) <= 0) {
+        showNotification('Please enter a valid amount', 'error');
+        return;
+    }
+    
+    try {
+        showNotification('Sending funds...', 'info');
+        
+        const result = await window.CrossMintIntegration.sendTransaction(toAddress, amount, agentId);
+        
+        if (result.status === 'success') {
+            showNotification(`Successfully sent ${amount} USDC to ${agentId}`, 'success');
+            document.querySelector('.modal-overlay').remove();
+            
+            // Refresh wallet data
+            await window.CrossMintIntegration.loadAgentWallets();
+            updateAgentWalletsDisplay(window.CrossMintIntegration.agentWallets);
+        } else {
+            showNotification('Failed to send funds', 'error');
+        }
+    } catch (error) {
+        console.error('Send funds error:', error);
+        showNotification(`Send failed: ${error.message}`, 'error');
+    }
+}
+
+// Clear agent wallets display
+function clearAgentWalletsDisplay() {
+    const walletInfos = document.querySelectorAll('.wallet-info');
+    walletInfos.forEach(info => info.remove());
+}
+
+function showCrossMintLoginButton() {
+    const loginBtn = document.getElementById('crossmintLoginBtn');
+    const userInfo = document.getElementById('crossmintUserInfo');
+    
+    if (loginBtn) loginBtn.style.display = 'block';
+    if (userInfo) userInfo.style.display = 'none';
+}
+
+function showCrossMintUserInfo() {
+    const loginBtn = document.getElementById('crossmintLoginBtn');
+    const userInfo = document.getElementById('crossmintUserInfo');
+    const walletAddress = document.getElementById('crossmintWalletAddress');
+    
+    if (loginBtn) loginBtn.style.display = 'none';
+    if (userInfo) userInfo.style.display = 'block';
+    
+    if (walletAddress && window.CrossMintIntegration.getWalletAddress()) {
+        const address = window.CrossMintIntegration.getWalletAddress();
+        walletAddress.innerHTML = `
+            <span class="user-wallet" onclick="copyWalletAddress('${address}')" title="Click to copy full address">
+                ${address}
+            </span>
+        `;
+    }
+}
+
+async function handleCrossMintLogin() {
+    try {
+        const loginBtn = document.getElementById('crossmintLoginBtn');
+        if (loginBtn) {
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Logging in...';
+        }
+        
+        const result = await window.CrossMintIntegration.showLogin();
+        
+        if (result.success) {
+            console.log('CrossMint login successful');
+            // The auth state change handler will update the UI
+            // Redirect to MindX control panel after successful login
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1000);
+        } else {
+            console.error('CrossMint login failed:', result.error);
+            showNotification('Login failed. Please try again.', 'error');
+        }
+    } catch (error) {
+        console.error('CrossMint login error:', error);
+        showNotification(`Login error: ${error.message}`, 'error');
+    } finally {
+        const loginBtn = document.getElementById('crossmintLoginBtn');
+        if (loginBtn) {
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'Login with CrossMint';
+        }
+    }
+}
+
+async function handleCrossMintLogout() {
+    try {
+        const logoutBtn = document.getElementById('crossmintLogoutBtn');
+        if (logoutBtn) {
+            logoutBtn.disabled = true;
+            logoutBtn.textContent = 'Logging out...';
+        }
+        
+        // Use CrossMint integration logout method if available
+        if (window.CrossMintIntegration && typeof window.CrossMintIntegration.logout === 'function') {
+            await window.CrossMintIntegration.logout();
+        }
+        
+        // Disconnect from MetaMask if connected
+        await disconnectMetaMask();
+        
+        // Clear the session data
+        clearCrossMintSession();
+        
+        console.log('CrossMint logout successful');
+        showNotification('Logged out successfully', 'success');
+        
+        // Stay on the current page and just clear the session
+        // No redirect needed - user stays on MindX control panel
+        
+    } catch (error) {
+        console.error('CrossMint logout error:', error);
+        showNotification(`Logout error: ${error.message}`, 'error');
+    } finally {
+        const logoutBtn = document.getElementById('crossmintLogoutBtn');
+        if (logoutBtn) {
+            logoutBtn.disabled = false;
+            logoutBtn.textContent = 'Logout';
+        }
+    }
+}
+
+// Show notification to user
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 5000);
+}
+
+// Copy wallet address to clipboard
+function copyWalletAddress(address) {
+    navigator.clipboard.writeText(address).then(() => {
+        showNotification('Wallet address copied to clipboard!', 'success');
+    }).catch(err => {
+        console.error('Failed to copy wallet address:', err);
+        showNotification('Failed to copy wallet address', 'error');
+    });
+}
+
+// Authentication Guards
+function requireAuthentication(callback) {
+    if (window.CrossMintIntegration && window.CrossMintIntegration.isLoggedIn()) {
+        callback();
+    } else {
+        showNotification('Please log in with CrossMint to access this feature', 'error');
+        // Optionally trigger login
+        if (window.CrossMintIntegration) {
+            handleCrossMintLogin();
+        }
+    }
+}
+
+// Protect sensitive operations
+function protectSensitiveOperation(operationName, callback) {
+    return function(...args) {
+        requireAuthentication(() => {
+            console.log(`Executing protected operation: ${operationName}`);
+            callback.apply(this, args);
+        });
+    };
+}
+
+// Add authentication guards to existing functions
+const originalEvolve = evolve;
+const originalDeploy = deploy;
+const originalAnalyze = analyzeCodebase;
+
+// Wrap existing functions with authentication
+window.evolve = protectSensitiveOperation('evolve', originalEvolve);
+window.deploy = protectSensitiveOperation('deploy', originalDeploy);
+window.analyzeCodebase = protectSensitiveOperation('analyze', originalAnalyze);

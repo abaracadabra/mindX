@@ -8,6 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <title>mindX Control Panel</title>
     <link rel="stylesheet" href="styles3.css">
+    <script src="crossmint-integration.js"></script>
 </head>
 <body>
     <div class="container">
@@ -24,6 +25,31 @@
                 </div>
             </div>
             <div class="header-right">
+                <div class="crossmint-login" id="crossmintLogin">
+                    <a href="crossmint-google-wallet.html" id="crossmintLoginBtn" class="crossmint-btn enhanced-login-btn" style="display: none;">
+                        <div class="login-btn-content">
+                            <div class="login-btn-text">
+                                <span class="login-btn-title">Login</span>
+                                <span class="login-btn-subtitle">Connect Wallet</span>
+                            </div>
+                            <div class="login-btn-arrow">→</div>
+                        </div>
+                        <div class="login-btn-glow"></div>
+                    </a>
+                    <div id="crossmintUserInfo" class="crossmint-user-info enhanced-user-info" style="display: none;">
+                        <div class="user-avatar">
+                            <div class="avatar-icon">👤</div>
+                        </div>
+                        <div class="user-details">
+                            <span class="user-wallet" id="crossmintWalletAddress"></span>
+                            <span class="user-status">Connected</span>
+                        </div>
+                        <button id="crossmintLogoutBtn" class="crossmint-logout-btn enhanced-logout-btn">
+                            <span class="logout-icon">↩</span>
+                            <span class="logout-text">Logout</span>
+                        </button>
+                    </div>
+                </div>
                 <div class="autonomous-control">
                     <label class="autonomous-toggle">
                         <input type="checkbox" id="autonomous-mode">
@@ -91,15 +117,15 @@
             <div class="control-section">
                 <h2>Simple Coder Update Requests</h2>
                 <div class="update-request-controls">
-                <button id="refresh-updates-btn">Refresh Updates</button>
+                    <button id="refresh-updates-btn">Refresh Updates</button>
                 <button id="select-all-btn" disabled style="font-size: 12px; padding: 6px 12px;">Select All</button>
-                <button id="approve-all-btn" disabled>Approve All</button>
+                    <button id="approve-all-btn" disabled>Approve All</button>
                 <button id="delete-all-btn" disabled>Delete All Selected</button>
                 </div>
                 <div id="update-requests-container">
                     <p>No pending update requests</p>
-                </div>
-                
+            </div>
+            
                 <script>
                 // Global variables for selection
                 let allUpdateRequests = [];
@@ -113,8 +139,14 @@
                 const selectAllBtn = document.getElementById('select-all-btn');
                 const approveAllBtn = document.getElementById('approve-all-btn');
                 const deleteAllBtn = document.getElementById('delete-all-btn');
+                
+                // Add timeout to prevent hanging
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
                     
-                    fetch('http://localhost:8000/simple-coder/update-requests')
+                    fetch('http://localhost:8000/simple-coder/update-requests', {
+                        signal: controller.signal
+                    })
                         .then(response => response.json())
                         .then(data => {
                             console.log('Data received:', data);
@@ -184,7 +216,14 @@
                         })
                         .catch(error => {
                             console.error('Error:', error);
-                            container.innerHTML = `<p style="color: #ff6666;">Error: ${error.message}</p>`;
+                            if (error.name === 'AbortError') {
+                                container.innerHTML = `<p style="color: #ffaa00;">Request timed out - please refresh the page</p>`;
+                            } else {
+                                container.innerHTML = `<p style="color: #ff6666;">Error: ${error.message}</p>`;
+                            }
+                        })
+                        .finally(() => {
+                            clearTimeout(timeoutId);
                         });
                 }
                 
@@ -296,15 +335,12 @@
                                     completed++;
                                     console.log(`Completed ${completed}/${requestsToDelete.length} deletions`);
                                     if (completed === requestsToDelete.length) {
-                                        console.log('Bulk delete completed, auto-refreshing...');
+                                        console.log('Bulk delete completed, refreshing...');
                                         selectedRequests.clear();
                                         // Reset button states immediately
                                         updateButtonStates();
-                                        // Auto-refresh after 2 seconds
-                                        setTimeout(() => {
-                                            console.log('Executing bulk delete auto-refresh...');
-                                            autoRefresh();
-                                        }, 2000);
+                                        // Refresh immediately - polling will handle future updates
+                                        loadUpdatesInline();
                                     }
                                 });
                                 });
@@ -315,7 +351,15 @@
                     // Approve All button
                     const approveAllBtn = document.getElementById('approve-all-btn');
                     if (approveAllBtn) {
-                        approveAllBtn.addEventListener('click', function() {
+                        // Remove any existing event listeners
+                        approveAllBtn.replaceWith(approveAllBtn.cloneNode(true));
+                        const newApproveAllBtn = document.getElementById('approve-all-btn');
+                        
+                        newApproveAllBtn.addEventListener('click', function() {
+                            console.log('Approve All button clicked!');
+                            console.log('Selected requests:', Array.from(selectedRequests));
+                            console.log('Selected requests size:', selectedRequests.size);
+                            
                             if (selectedRequests.size === 0) {
                                 alert('No requests selected');
                                 return;
@@ -331,30 +375,36 @@
                                     fetch(`http://localhost:8000/simple-coder/approve-update/${requestId}`, {
                                         method: 'POST',
                                         headers: {
-                                            'Content-Type': 'application/json'
+                                            'Content-Type': 'application/json',
+                                            'Accept': 'application/json'
                                         }
                                     })
                                     .then(response => {
+                                        console.log('Approve response for', requestId, ':', response.status, response.statusText);
                                         if (response.ok) {
-                                            console.log('Approved request:', requestId);
+                                            return response.json();
                                         } else {
-                                            console.error('Failed to approve request:', requestId, response.status);
+                                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                                         }
+                                    })
+                                    .then(data => {
+                                        console.log('Approve success for', requestId, ':', data);
                                     })
                                     .catch(error => {
                                         console.error('Error approving request:', requestId, error);
                                     })
-                                .finally(() => {
-                                    completed++;
-                                    if (completed === requestsToApprove.length) {
-                                        console.log('Bulk approve completed, auto-refreshing...');
-                                        selectedRequests.clear();
-                                        // Reset button states immediately
-                                        updateButtonStates();
-                                        // Auto-refresh after 2 seconds
-                                        setTimeout(autoRefresh, 2000);
-                                    }
-                                });
+                                    .finally(() => {
+                                        completed++;
+                                        console.log(`Completed ${completed}/${requestsToApprove.length} approvals`);
+                                        if (completed === requestsToApprove.length) {
+                                            console.log('Bulk approve completed, refreshing...');
+                                            selectedRequests.clear();
+                                            // Reset button states immediately
+                                            updateButtonStates();
+                                            // Refresh immediately - polling will handle future updates
+                                            loadUpdatesInline();
+                                        }
+                                    });
                                 });
                             }
                         });
@@ -373,7 +423,7 @@
                             selectAllBtn.disabled = true;
                         } else {
                             selectAllBtn.disabled = false;
-                        selectAllBtn.textContent = selectedRequests.size === allUpdateRequests.length ? 'Deselect All' : 'Select All';
+                            selectAllBtn.textContent = selectedRequests.size === allUpdateRequests.length ? 'Deselect All' : 'Select All';
                         }
                     }
                     
@@ -411,8 +461,8 @@
                     selectedRequests.delete(requestId);
                     // Reset button states immediately
                     updateButtonStates();
-                    // Auto-refresh after 2 seconds
-                    setTimeout(autoRefresh, 2000);
+                    // Refresh immediately - polling will handle future updates
+                    loadUpdatesInline();
                 })
                 .catch(error => {
                     console.error('Error approving individual request:', error);
@@ -446,12 +496,9 @@
                     console.log('Selected requests after reject:', Array.from(selectedRequests));
                     // Reset button states immediately
                     updateButtonStates();
-                    // Auto-refresh after 2 seconds
-                    console.log('Scheduling auto-refresh in 2 seconds...');
-                    setTimeout(() => {
-                        console.log('Executing auto-refresh...');
-                        autoRefresh();
-                    }, 2000);
+                    // Refresh immediately - polling will handle future updates
+                    console.log('Refreshing immediately...');
+                    loadUpdatesInline();
                 })
                 .catch(error => {
                     console.error('Error rejecting individual request:', error);
@@ -473,6 +520,54 @@
                 console.log('approveUpdate function:', typeof window.approveUpdate);
                 console.log('rejectUpdate function:', typeof window.rejectUpdate);
                 console.log('autoRefresh function:', typeof autoRefresh);
+            };
+            
+            // Global clear logs function
+            window.clearLogs = function() {
+                console.log('Global clearLogs called');
+                if (typeof clearLogs === 'function') {
+                    clearLogs();
+                } else {
+                    console.error('clearLogs function not found');
+                }
+            };
+            
+            // Test function to add sample logs
+            window.addTestLogs = function() {
+                if (typeof addLog === 'function') {
+                    addLog('Test log message 1', 'INFO');
+                    addLog('Test log message 2', 'WARNING');
+                    addLog('Test log message 3', 'ERROR');
+                    addLog('Test log message 4', 'DEBUG');
+                    console.log('Test logs added');
+                } else {
+                    console.error('addLog function not found');
+                }
+            };
+            
+            // Global export logs function - opens format selection modal
+            window.exportLogs = function() {
+                console.log('Global exportLogs called');
+                if (typeof showExportFormatModal === 'function') {
+                    showExportFormatModal();
+                } else {
+                    console.error('showExportFormatModal function not found');
+                    // Fallback: try to export directly as TXT
+                    if (typeof exportLogs === 'function') {
+                        exportLogs('txt');
+                    }
+                }
+            };
+            
+            // Test function to check modal
+            window.testExportModal = function() {
+                console.log('Testing export modal...');
+                const modal = document.getElementById('export-format-modal');
+                console.log('Modal found:', !!modal);
+                if (modal) {
+                    modal.style.display = 'flex';
+                    console.log('Modal should be visible now');
+                }
             };
             
             
@@ -535,7 +630,7 @@
                     } catch (error) {
                         console.error('Auto-refresh polling error:', error);
                     }
-                }, 3000); // Poll every 3 seconds
+                }, 5000); // Poll every 5 seconds (reduced frequency to prevent conflicts)
                 
                 console.log('Auto-refresh polling started');
             }
@@ -638,6 +733,83 @@
                 
             });
             
+            // Test function to manually trigger approve all
+            window.testApproveAll = function() {
+                console.log('Testing approve all manually...');
+                console.log('Selected requests:', Array.from(selectedRequests));
+                if (selectedRequests.size === 0) {
+                    console.log('No requests selected, selecting all...');
+                    // Select all first
+                    document.querySelectorAll('.update-checkbox').forEach(checkbox => {
+                        checkbox.checked = true;
+                        const requestId = checkbox.getAttribute('data-request-id');
+                        selectedRequests.add(requestId);
+                        checkbox.closest('.update-request').style.border = '2px solid #00ff00';
+                    });
+                    updateButtonStates();
+                    console.log('Now selected requests:', Array.from(selectedRequests));
+                }
+
+                // Now trigger approve all
+                const approveAllBtn = document.getElementById('approve-all-btn');
+                if (approveAllBtn) {
+                    console.log('Clicking approve all button...');
+                    approveAllBtn.click();
+                } else {
+                    console.error('Approve all button not found!');
+                }
+            };
+
+            // Emergency refresh function if tab gets stuck
+            window.forceRefresh = function() {
+                console.log('Force refreshing page...');
+                window.location.reload();
+            };
+
+            // Add keyboard shortcut for emergency refresh (Ctrl+Shift+R)
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+                    e.preventDefault();
+                    console.log('Emergency refresh triggered by keyboard shortcut');
+                    forceRefresh();
+                }
+            });
+
+            // Test function to verify input fields are working
+            window.testInputs = function() {
+                console.log('Testing input fields...');
+                const evolveInput = document.getElementById('evolve-directive');
+                const queryInput = document.getElementById('query-input');
+                const cycleInput = document.getElementById('cycle-count');
+                
+                if (evolveInput) {
+                    console.log('Evolve directive input found:', evolveInput.value);
+                    evolveInput.focus();
+                    setTimeout(() => {
+                        evolveInput.value = 'Test directive';
+                        console.log('Evolve input test completed');
+                    }, 100);
+                }
+                
+                if (queryInput) {
+                    console.log('Query input found:', queryInput.value);
+                    setTimeout(() => {
+                        queryInput.focus();
+                        queryInput.value = 'Test query';
+                        console.log('Query input test completed');
+                    }, 200);
+                }
+                
+                if (cycleInput) {
+                    console.log('Cycle count input found:', cycleInput.value);
+                    setTimeout(() => {
+                        cycleInput.focus();
+                        cycleInput.value = '5';
+                        console.log('Cycle input test completed');
+                    }, 300);
+                }
+            };
+
             // Stop auto-refresh when page is unloaded
             window.addEventListener('beforeunload', function() {
                 stopAutoRefresh();
@@ -684,9 +856,19 @@
             <div class="control-section">
                 <h2>Belief System</h2>
                 <div id="belief-system" class="system-status">
-                    <div class="status-item">
-                        <span class="status-label">Recent Beliefs:</span>
-                        <div id="recent-beliefs" class="beliefs-list"></div>
+                    <div class="bdi-components">
+                        <div class="bdi-component">
+                            <h4>Beliefs</h4>
+                            <div id="bdi-beliefs" class="bdi-list"></div>
+                    </div>
+                        <div class="bdi-component">
+                            <h4>Desires</h4>
+                            <div id="bdi-desires" class="bdi-list"></div>
+                        </div>
+                        <div class="bdi-component">
+                            <h4>Intentions</h4>
+                            <div id="bdi-intentions" class="bdi-list"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -707,32 +889,296 @@
 
         <!-- Evolution Tab -->
         <div id="evolution-tab" class="tab-content">
+            <!-- Blueprint Agent Section -->
             <div class="control-section">
                 <h2>Blueprint Agent</h2>
                 <div id="blueprint-agent" class="system-status">
                     <div class="status-item">
-                        <span class="status-label">Blueprint Agent Status:</span>
+                        <span class="status-label">Status:</span>
                         <span id="blueprint-status" class="status-value">Loading...</span>
                     </div>
                     <div class="status-item">
-                        <span class="status-label">Current Blueprint:</span>
-                        <div id="current-blueprint" class="blueprint-content"></div>
+                        <span class="status-label">Agent ID:</span>
+                        <span id="blueprint-agent-id" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Last Blueprint:</span>
+                        <span id="blueprint-last-generated" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Confidence Score:</span>
+                        <span id="blueprint-confidence" class="status-value">Loading...</span>
+                    </div>
+                </div>
+                
+                <!-- Current Blueprint Details -->
+                <div class="blueprint-details">
+                    <h3>Current Blueprint</h3>
+                    <div id="current-blueprint-title" class="blueprint-title">Loading...</div>
+                    <div id="current-blueprint-version" class="blueprint-version">Loading...</div>
+                    
+                    <div class="blueprint-sections">
+                        <div class="blueprint-section">
+                            <h4>Focus Areas</h4>
+                            <div id="blueprint-focus-areas" class="focus-areas-list"></div>
+                        </div>
+                        
+                        <div class="blueprint-section">
+                            <h4>BDI Todo List</h4>
+                            <div id="blueprint-todo-list" class="todo-list"></div>
+                        </div>
+                        
+                        <div class="blueprint-section">
+                            <h4>Key Performance Indicators</h4>
+                            <div id="blueprint-kpis" class="kpis-list"></div>
+                        </div>
+                        
+                        <div class="blueprint-section">
+                            <h4>Potential Risks</h4>
+                            <div id="blueprint-risks" class="risks-list"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Blueprint History -->
+                <div class="blueprint-history">
+                    <h3>Blueprint History</h3>
+                    <div id="blueprint-history-list" class="history-list"></div>
+                </div>
+                
+                <!-- Blueprint Metrics -->
+                <div class="blueprint-metrics">
+                    <h3>Metrics</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <span class="metric-label">Total Blueprints:</span>
+                            <span id="blueprint-total" class="metric-value">0</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Successful Implementations:</span>
+                            <span id="blueprint-successful" class="metric-value">0</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Avg Implementation Time:</span>
+                            <span id="blueprint-avg-time" class="metric-value">0h</span>
+                        </div>
                     </div>
                 </div>
             </div>
+            
+            <!-- Blueprint to Action Converter Section -->
             <div class="control-section">
-                <h2>Action Converter</h2>
-                <div id="action-converter" class="system-status">
-                    <div class="status-item">
-                        <span class="status-label">Converter Status:</span>
-                        <span id="converter-status" class="status-value">Loading...</span>
+                <h2>Blueprint to Action Converter</h2>
+                
+                <!-- Compact Status Overview -->
+                <div class="converter-overview">
+                    <div class="overview-grid">
+                        <div class="overview-item">
+                            <div class="overview-icon">🔄</div>
+                            <div class="overview-content">
+                                <span class="overview-label">Status</span>
+                                <span id="converter-status" class="overview-value">Active</span>
+                            </div>
+                        </div>
+                        <div class="overview-item">
+                            <div class="overview-icon">📊</div>
+                            <div class="overview-content">
+                                <span class="overview-label">Total Conversions</span>
+                                <span id="converter-total" class="overview-value">45</span>
+                            </div>
+                        </div>
+                        <div class="overview-item">
+                            <div class="overview-icon">⚡</div>
+                            <div class="overview-content">
+                                <span class="overview-label">Success Rate</span>
+                                <span id="converter-success-rate" class="overview-value">92%</span>
+                            </div>
+                        </div>
+                        <div class="overview-item">
+                            <div class="overview-icon">⏱️</div>
+                            <div class="overview-content">
+                                <span class="overview-label">Avg Time</span>
+                                <span id="converter-avg-time" class="overview-value">45s</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="status-item">
-                        <span class="status-label">Recent Conversions:</span>
-                        <div id="recent-conversions" class="conversions-list"></div>
+                </div>
+
+                <!-- Compact Workflow -->
+                <div class="compact-workflow">
+                    <h3>Conversion Process</h3>
+                    <div class="workflow-container">
+                        <div class="workflow-step compact active">
+                            <div class="step-icon">📋</div>
+                            <div class="step-text">Blueprint</div>
+                        </div>
+                        <div class="workflow-connector"></div>
+                        <div class="workflow-step compact">
+                            <div class="step-icon">🔍</div>
+                            <div class="step-text">Decompose</div>
+                        </div>
+                        <div class="workflow-connector"></div>
+                        <div class="workflow-step compact">
+                            <div class="step-icon">✅</div>
+                            <div class="step-text">Validate</div>
+                        </div>
+                        <div class="workflow-connector"></div>
+                        <div class="workflow-step compact">
+                            <div class="step-icon">🎯</div>
+                            <div class="step-text">Actions</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Conversions -->
+                <div class="recent-conversions">
+                    <h3>Recent Conversions</h3>
+                    <div id="recent-conversions" class="conversions-list">
+                        <div class="conversion-item">
+                            <div class="conversion-header">
+                                <span class="conversion-id">conv_001</span>
+                                <span class="conversion-time">2 min ago</span>
+                            </div>
+                            <div class="conversion-details">
+                                <span class="conversion-title">Enhanced Cognitive Architecture v2.1</span>
+                                <div class="conversion-meta">
+                                    <span class="meta-item">15 actions</span>
+                                    <span class="meta-item">$2.45 cost</span>
+                                    <span class="meta-item safety-high">High Safety</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="conversion-item">
+                            <div class="conversion-header">
+                                <span class="conversion-id">conv_002</span>
+                                <span class="conversion-time">5 min ago</span>
+                            </div>
+                            <div class="conversion-details">
+                                <span class="conversion-title">Economic Controls Integration v1.5</span>
+                                <div class="conversion-meta">
+                                    <span class="meta-item">8 actions</span>
+                                    <span class="meta-item">$1.20 cost</span>
+                                    <span class="meta-item safety-standard">Standard</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Types -->
+                <div class="action-types">
+                    <h3>Action Types</h3>
+                    <div class="action-types-grid">
+                        <div class="action-type-item">
+                            <span class="action-type-name">ANALYZE_SYSTEM</span>
+                            <div class="action-type-bar">
+                                <div class="action-type-fill" style="width: 75%"></div>
+                            </div>
+                            <span class="action-type-count">15</span>
+                        </div>
+                        <div class="action-type-item">
+                            <span class="action-type-name">GENERATE_CODE</span>
+                            <div class="action-type-bar">
+                                <div class="action-type-fill" style="width: 90%"></div>
+                            </div>
+                            <span class="action-type-count">28</span>
+                        </div>
+                        <div class="action-type-item">
+                            <span class="action-type-name">VALIDATE_CHANGES</span>
+                            <div class="action-type-bar">
+                                <div class="action-type-fill" style="width: 60%"></div>
+                            </div>
+                            <span class="action-type-count">12</span>
+                        </div>
+                        <div class="action-type-item">
+                            <span class="action-type-name">CREATE_ROLLBACK_PLAN</span>
+                            <div class="action-type-bar">
+                                <div class="action-type-fill" style="width: 40%"></div>
+                            </div>
+                            <span class="action-type-count">8</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="converter-actions">
+                    <h3>Quick Actions</h3>
+                    <div class="action-buttons">
+                        <button class="action-btn primary" onclick="startNewConversion()">
+                            <span class="btn-icon">🚀</span>
+                            <span class="btn-text">Start Conversion</span>
+                        </button>
+                        <button class="action-btn secondary" onclick="validateAllActions()">
+                            <span class="btn-icon">✅</span>
+                            <span class="btn-text">Validate All</span>
+                        </button>
+                        <button class="action-btn secondary" onclick="exportAllConversions()">
+                            <span class="btn-icon">📊</span>
+                            <span class="btn-text">Export Data</span>
+                        </button>
                     </div>
                 </div>
             </div>
+            
+            <!-- Strategic Evolution Agent Section -->
+            <div class="control-section">
+                <h2>Strategic Evolution Agent</h2>
+                <div id="strategic-evolution" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Status:</span>
+                        <span id="sea-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Agent ID:</span>
+                        <span id="sea-agent-id" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Current Campaign:</span>
+                        <span id="sea-current-campaign" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Progress:</span>
+                        <span id="sea-progress" class="status-value">Loading...</span>
+                    </div>
+                </div>
+                
+                <!-- Learning Metrics -->
+                <div class="learning-metrics">
+                    <h3>Learning Metrics</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <span class="metric-label">Lessons Learned:</span>
+                            <span id="sea-lessons-learned" class="metric-value">0</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Successful Adaptations:</span>
+                            <span id="sea-adaptations" class="metric-value">0</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Learning Rate:</span>
+                            <span id="sea-learning-rate" class="metric-value">0%</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Adaptation Confidence:</span>
+                            <span id="sea-confidence" class="metric-value">0%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Active Plans -->
+                <div class="active-plans">
+                    <h3>Active Plans</h3>
+                    <div id="sea-active-plans" class="plans-list"></div>
+                </div>
+                
+                <!-- Recent Activities -->
+                <div class="recent-activities">
+                    <h3>Recent Activities</h3>
+                    <div id="sea-recent-activities" class="activities-list"></div>
+                </div>
+            </div>
+            
+            <!-- Evolution Controls -->
             <div class="control-section">
                 <h2>Evolution Controls</h2>
                 <div class="evolution-controls">
@@ -854,7 +1300,6 @@
                         <button id="pause-activity" class="control-btn">Pause</button>
                         <button id="clear-activity" class="control-btn">Clear</button>
                         <button id="refresh-metrics" class="control-btn">Refresh</button>
-                        <button id="test-popup" class="control-btn" onclick="showAgentDetailPopup('bdi', 'BDI Agent')">Test Popup</button>
                     </div>
                 </div>
                 
@@ -1176,7 +1621,9 @@
                 </div>
                 <div class="log-controls">
                     <button id="refresh-logs-btn">Refresh Logs</button>
-                    <button id="clear-logs-btn">Clear Logs</button>
+                    <button id="clear-logs-btn" onclick="window.clearLogs()">Clear Logs</button>
+                    <button onclick="window.addTestLogs()">Add Test Logs</button>
+                    <button onclick="window.exportLogs()">Export Logs</button>
                     <select id="log-level-filter">
                         <option value="all">All Levels</option>
                         <option value="DEBUG">DEBUG</option>
@@ -1219,6 +1666,36 @@
             <div class="modal-body">
                 <div id="agent-details-content" class="agent-details-content">
                     <p>Loading agent details...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Format Selection Modal -->
+    <div id="export-format-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Export Logs</h3>
+                <button id="close-export-modal" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Choose export format:</p>
+                <div class="format-options">
+                    <button class="format-btn" data-format="txt">
+                        <div class="format-icon">📄</div>
+                        <div class="format-name">Text File</div>
+                        <div class="format-desc">Human-readable format</div>
+                    </button>
+                    <button class="format-btn" data-format="json">
+                        <div class="format-icon">🔧</div>
+                        <div class="format-name">JSON</div>
+                        <div class="format-desc">Structured data format</div>
+                    </button>
+                    <button class="format-btn" data-format="csv">
+                        <div class="format-icon">📊</div>
+                        <div class="format-name">CSV</div>
+                        <div class="format-desc">Spreadsheet format</div>
+                    </button>
                 </div>
             </div>
         </div>
