@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
 """
-Simple Coder Agent - Enhanced with Sandbox Mode and Autonomous Operation
+Enhanced Simple Coder Agent - Integrated with UI Refresh and Update Functionality
 Part of the mindX autonomous digital civilization system.
+
+This enhanced version integrates features from:
+- simple_coder.py (base functionality)
+- simple_coder_agent.py (BDI integration)
+- enhanced_simple_coder.py (advanced capabilities)
 
 Features:
 - Sandbox mode with automatic file backups
 - Autonomous mode with infinite cycle iterations
-- File update request mechanism
+- File update request mechanism with UI integration
 - Enhanced security and validation
 - Pattern learning and adaptation
+- Memory integration
+- UI refresh and approve functionality
 """
 
 import os
@@ -40,7 +47,8 @@ logger = logging.getLogger(__name__)
 
 class SimpleCoder:
     """
-    Enhanced Simple Coder Agent with sandbox mode and autonomous operation capabilities.
+    Enhanced Simple Coder Agent with sandbox mode, autonomous operation capabilities,
+    and full UI integration for refresh and update functionality.
     """
     
     def __init__(self, sandbox_mode: bool = True, autonomous_mode: bool = False):
@@ -58,6 +66,7 @@ class SimpleCoder:
         self._initialize_directories()
         
         # Pattern learning storage
+        self.patterns = self._load_patterns()
 
         # Memory agent integration
         self.memory_agent = None
@@ -68,8 +77,6 @@ class SimpleCoder:
             except Exception as e:
                 logger.warning(f"Failed to initialize memory agent: {e}")
                 self.memory_agent = None
-        
-        self.patterns = self._load_patterns()
 
     def _load_update_requests(self) -> List[Dict[str, Any]]:
         """Load update requests from persistent storage."""
@@ -89,7 +96,6 @@ class SimpleCoder:
         except Exception as e:
             logger.error(f"Failed to save update requests: {e}")
     
-        
     def _initialize_directories(self):
         """Initialize backup and sandbox directories."""
         self.backup_dir.mkdir(exist_ok=True)
@@ -182,14 +188,14 @@ class SimpleCoder:
             return False
             
         # Check file extension for safety
-        allowed_extensions = ['.py', '.js', '.html', '.css', '.json', '.md', '.txt', '.yml', '.yaml']
+        allowed_extensions = ['.py', '.js', '.html', '.css', '.json', '.md', '.txt', '.yml', '.yaml']                                                                                         
         if not any(file_path.endswith(ext) for ext in allowed_extensions):
             logger.warning(f"Blocked operation on non-allowed file type: {file_path}")
             return False
             
         return True
     
-    async def process_directive(self, directive: str, target_file: Optional[str] = None) -> Dict[str, Any]:
+    async def process_directive(self, directive: str, target_file: Optional[str] = None) -> Dict[str, Any]:                                                                                   
         """
         Process a directive with enhanced simple_coder capabilities.
         
@@ -201,7 +207,7 @@ class SimpleCoder:
             Dictionary containing results and changes
         """
         self.cycle_count += 1
-        logger.info(f"Simple Coder Cycle {self.cycle_count}: Processing directive: {directive}")
+        logger.info(f"Simple Coder Cycle {self.cycle_count}: Processing directive: {directive}")                                                                                              
         
         results = {
             "cycle": self.cycle_count,
@@ -248,7 +254,7 @@ class SimpleCoder:
             
             # If in sandbox mode, create update request
             if self.sandbox_mode and changes:
-                update_request = self._create_update_request(target_file, working_file, changes)
+                update_request = self._create_update_request(target_file, working_file, changes)                                                                                              
                 results["update_requests"].append(update_request)
                 self.update_requests.append(update_request)
                 self._save_update_requests()
@@ -260,7 +266,7 @@ class SimpleCoder:
                     results["continue_autonomous"] = True
                     results["infinite_mode"] = True
                 elif self.cycle_count < self.max_cycles:
-                    logger.info(f"Autonomous mode: Continuing to next cycle ({self.cycle_count}/{self.max_cycles})")
+                    logger.info(f"Autonomous mode: Continuing to next cycle ({self.cycle_count}/{self.max_cycles})")                                                                          
                     results["continue_autonomous"] = True
                 else:
                     logger.info("Autonomous mode: Max cycles reached")
@@ -295,7 +301,7 @@ class SimpleCoder:
         
         return None
     
-    async def _apply_directive(self, directive: str, working_file: str, original_file: str) -> List[Dict[str, Any]]:
+    async def _apply_directive(self, directive: str, working_file: str, original_file: str) -> List[Dict[str, Any]]:                                                                          
         """Apply the directive to the working file."""
         changes = []
         
@@ -315,7 +321,7 @@ class SimpleCoder:
                 # Modify existing function
                 new_content = content.replace(
                     "def test_function():\n    return 'original'",
-                    f"def test_function():\n    # Enhanced by Simple Coder cycle {self.cycle_count}\n    return f'simple_coder_{self.cycle_count}'"
+                    f"def test_function():\n    # Enhanced by Simple Coder cycle {self.cycle_count}\n    return f'simple_coder_{self.cycle_count}'"                                           
                 )
             else:
                 # Add new content
@@ -390,7 +396,7 @@ def learn_pattern_{cycle}():
     return patterns
 '''
     
-    def _learn_from_operation(self, directive: str, target_file: str, changes: List[Dict[str, Any]]):
+    def _learn_from_operation(self, directive: str, target_file: str, changes: List[Dict[str, Any]]):                                                                                         
         """Learn patterns from successful operations."""
         if not changes:
             return
@@ -420,7 +426,7 @@ def learn_pattern_{cycle}():
         # Save patterns
         self._save_patterns()
     
-    def _create_update_request(self, original_file: str, sandbox_file: str, changes: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _create_update_request(self, original_file: str, sandbox_file: str, changes: List[Dict[str, Any]]) -> Dict[str, Any]:                                                                 
         """Create an update request for applying sandbox changes to original file."""
         return {
             "request_id": f"update_{int(time.time())}_{self.cycle_count}",
@@ -445,6 +451,7 @@ def learn_pattern_{cycle}():
                     # Apply changes to original file
                     shutil.copy2(request["sandbox_file"], request["original_file"])
                     request["status"] = "approved"
+                    self._save_update_requests()
                     request["applied_at"] = datetime.now().isoformat()
                     logger.info(f"Update request {request_id} approved and applied")
                     return True
@@ -460,6 +467,7 @@ def learn_pattern_{cycle}():
         for request in self.update_requests:
             if request["request_id"] == request_id:
                 request["status"] = "rejected"
+                self._save_update_requests()
                 request["rejected_at"] = datetime.now().isoformat()
                 logger.info(f"Update request {request_id} rejected")
                 return True
@@ -475,28 +483,30 @@ def learn_pattern_{cycle}():
                 logger.info("Autonomous mode enabled - setting infinite cycles")
             else:
                 self.max_cycles = max_cycles if max_cycles is not None else 10
-                logger.info(f"Autonomous mode disabled - setting max cycles to {self.max_cycles}")
+                logger.info(f"Autonomous mode disabled - setting max cycles to {self.max_cycles}")                                                                                            
         elif max_cycles is not None and not self.autonomous_mode:
             self.max_cycles = max_cycles
             logger.info(f"Updated max cycles to {self.max_cycles}")
     
     def get_status(self) -> Dict[str, Any]:
-        """Get current status of the Simple Coder."""
+        """Get current status of the Simple Coder - Enhanced for UI integration."""
         return {
+            "status": "active",
             "sandbox_mode": self.sandbox_mode,
             "autonomous_mode": self.autonomous_mode,
+            "pending_updates": len([r for r in self.update_requests if r["status"] == "pending"]),
+            "total_updates": len(self.update_requests),
+            "working_directory": str(self.sandbox_dir / "working"),
+            "last_activity": time.time(),
             "cycle_count": self.cycle_count,
             "max_cycles": self.max_cycles,
             "infinite_mode": self.max_cycles == float('inf'),
-            "pending_updates": len([r for r in self.update_requests if r["status"] == "pending"]),
-            "total_requests": len(self.update_requests),
             "patterns_learned": len(self.patterns.get("file_patterns", {})),
             "backup_dir": str(self.backup_dir),
             "sandbox_dir": str(self.sandbox_dir)
         }
-    
 
-    async def _log_to_memory(self, memory_type: str, category: str, data: Dict[str, Any], metadata: Dict[str, Any] = None) -> Optional[Path]:
+    async def _log_to_memory(self, memory_type: str, category: str, data: Dict[str, Any], metadata: Dict[str, Any] = None) -> Optional[Path]:                                                 
         """Log information to memory agent if available."""
         if not self.memory_agent:
             return None
@@ -514,7 +524,7 @@ def learn_pattern_{cycle}():
             })
             
             # Use the memory agent's save_memory method
-            return await self.memory_agent.save_memory(memory_type, f"simple_coder/{category}", data, metadata)
+            return await self.memory_agent.save_memory(memory_type, f"simple_coder/{category}", data, metadata)                                                                               
         except Exception as e:
             logger.error(f"Failed to log to memory: {e}")
             return None
@@ -529,7 +539,7 @@ def learn_pattern_{cycle}():
         }
         await self._log_to_memory("STM", "cycles", data)
     
-    async def _log_cycle_completion(self, cycle: int, directive: str, results: Dict[str, Any]) -> None:
+    async def _log_cycle_completion(self, cycle: int, directive: str, results: Dict[str, Any]) -> None:                                                                                       
         """Log cycle completion to memory."""
         data = {
             "cycle": cycle,
@@ -544,7 +554,7 @@ def learn_pattern_{cycle}():
         }
         await self._log_to_memory("STM", "cycles", data)
     
-    async def _log_file_operation(self, operation: str, file_path: str, success: bool, details: Dict[str, Any] = None) -> None:
+    async def _log_file_operation(self, operation: str, file_path: str, success: bool, details: Dict[str, Any] = None) -> None:                                                               
         """Log file operations to memory."""
         data = {
             "operation": operation,
@@ -567,7 +577,7 @@ def learn_pattern_{cycle}():
         }
         await self._log_to_memory("STM", "update_requests", data)
     
-    async def _log_error(self, error_type: str, error_message: str, context: Dict[str, Any] = None) -> None:
+    async def _log_error(self, error_type: str, error_message: str, context: Dict[str, Any] = None) -> None:                                                                                  
         """Log errors to memory."""
         data = {
             "error_type": error_type,
@@ -595,7 +605,7 @@ def learn_pattern_{cycle}():
 
 
 # Standalone functions for backward compatibility
-async def execute_simple_coder_changes(directive: str, cycle: int, sandbox_mode: bool = True, autonomous_mode: bool = False) -> List[Dict[str, Any]]:
+async def execute_simple_coder_changes(directive: str, cycle: int, sandbox_mode: bool = True, autonomous_mode: bool = False) -> List[Dict[str, Any]]:                                         
     """
     Execute changes using simple_coder approach with enhanced features.
     This function maintains backward compatibility with the existing system.

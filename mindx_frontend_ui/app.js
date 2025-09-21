@@ -720,6 +720,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Tab Management
     function initializeTabs() {
+        // Ensure control tab is active by default
+        const controlTab = document.getElementById('control-tab');
+        const controlTabBtn = document.querySelector('[data-tab="control"]');
+        
+        console.log('Tab initialization:', {
+            controlTab: !!controlTab,
+            controlTabBtn: !!controlTabBtn,
+            controlTabClasses: controlTab ? controlTab.className : 'No tab',
+            controlTabBtnClasses: controlTabBtn ? controlTabBtn.className : 'No button'
+        });
+        
+        if (controlTab && controlTabBtn) {
+            controlTab.classList.add('active');
+            controlTabBtn.classList.add('active');
+            console.log('Control tab activated');
+        } else {
+            console.error('Control tab or button not found!');
+        }
+        
         tabBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 const tabId = btn.getAttribute('data-tab');
@@ -742,6 +761,11 @@ document.addEventListener('DOMContentLoaded', () => {
         switch(tabId) {
             case 'control':
                 // Control tab is already loaded
+                console.log('Control tab loaded, refreshing update requests...');
+                // Refresh update requests when control tab is shown
+                setTimeout(() => {
+                    loadUpdateRequests();
+                }, 100);
                 break;
             case 'core':
                 loadCoreSystems();
@@ -2343,60 +2367,161 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize update requests functionality
     function initializeUpdateRequests() {
+        console.log('Initializing update requests functionality...');
         const refreshBtn = document.getElementById('refresh-updates-btn');
+        const selectAllBtn = document.getElementById('select-all-btn');
         const approveAllBtn = document.getElementById('approve-all-btn');
+        const deleteAllBtn = document.getElementById('delete-all-btn');
+        
+        console.log('Buttons found:', { refreshBtn, selectAllBtn, approveAllBtn, deleteAllBtn });
         
         if (refreshBtn) {
-            refreshBtn.addEventListener('click', loadUpdateRequests);
+            refreshBtn.addEventListener('click', function() {
+                console.log('Refresh button clicked!');
+                
+                // Show loading state
+                const originalText = refreshBtn.textContent;
+                refreshBtn.textContent = 'Refreshing...';
+                refreshBtn.disabled = true;
+                
+                // Call loadUpdateRequests
+                loadUpdateRequests().finally(() => {
+                    // Restore button state
+                    refreshBtn.textContent = originalText;
+                    refreshBtn.disabled = false;
+                });
+            });
+            console.log('Refresh button event listener added');
+        } else {
+            console.error('Refresh button not found!');
+        }
+        
+        if (selectAllBtn) {
+            selectAllBtn.addEventListener('click', toggleSelectAll);
+            console.log('Select all button event listener added');
         }
         
         if (approveAllBtn) {
             approveAllBtn.addEventListener('click', approveAllUpdates);
+            console.log('Approve all button event listener added');
+        }
+        
+        if (deleteAllBtn) {
+            deleteAllBtn.addEventListener('click', deleteAllSelected);
+            console.log('Delete all button event listener added');
         }
         
         // Load update requests on page load
-        loadUpdateRequests();
+        console.log('Loading update requests on page load...');
+        
+        // Add a delay to ensure DOM is ready
+        setTimeout(() => {
+            console.log('Delayed load of update requests...');
+            loadUpdateRequests();
+        }, 1000);
     }
     
     async function loadUpdateRequests() {
         try {
+            console.log('Loading update requests...');
+            console.log('API URL:', `${apiUrl}/simple-coder/update-requests`);
+            
             const response = await fetch(`${apiUrl}/simple-coder/update-requests`);
+            console.log('Response status:', response.status);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
+            console.log('Data received:', data);
+            console.log('Data type:', typeof data);
+            console.log('Data length:', data ? data.length : 'No data');
             
             const container = document.getElementById('update-requests-container');
+            const selectAllBtn = document.getElementById('select-all-btn');
             const approveAllBtn = document.getElementById('approve-all-btn');
+            const deleteAllBtn = document.getElementById('delete-all-btn');
             
-            if (data && data.length > 0) {
+            console.log('Container element:', container);
+            console.log('Container parent:', container ? container.parentElement : 'No container');
+            console.log('Buttons found:', { selectAllBtn, approveAllBtn, deleteAllBtn });
+            
+            if (data && Array.isArray(data) && data.length > 0) {
+                console.log(`Creating ${data.length} update request elements`);
                 container.innerHTML = '';
-                data.forEach(request => {
-                    const requestDiv = createUpdateRequestElement(request);
-                    container.appendChild(requestDiv);
+                // Use simple display like test UI
+                data.forEach((request, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'update-request';
+                    div.style.margin = '10px 0';
+                    div.style.padding = '15px';
+                    div.style.border = '1px solid #555';
+                    div.style.borderRadius = '8px';
+                    div.style.background = '#1a1a1a';
+                    
+                    div.innerHTML = `
+                        <h4>Update Request ${index + 1}: ${request.request_id}</h4>
+                        <p><strong>Original File:</strong> ${request.original_file}</p>
+                        <p><strong>Sandbox File:</strong> ${request.sandbox_file}</p>
+                        <p><strong>Status:</strong> ${request.status}</p>
+                        <p><strong>Cycle:</strong> ${request.cycle}</p>
+                        <p><strong>Changes:</strong> ${request.changes.length} modifications</p>
+                        <p><strong>Timestamp:</strong> ${new Date(request.timestamp).toLocaleString()}</p>
+                        <button onclick="approveUpdate('${request.request_id}')" style="margin: 5px; padding: 5px 10px; background: #00aa00; color: white; border: none; border-radius: 3px; cursor: pointer;">Approve</button>
+                        <button onclick="rejectUpdate('${request.request_id}')" style="margin: 5px; padding: 5px 10px; background: #aa0000; color: white; border: none; border-radius: 3px; cursor: pointer;">Reject</button>
+                    `;
+                    
+                    container.appendChild(div);
+                    console.log(`Added element ${index + 1}`);
                 });
                 
-                if (approveAllBtn) {
-                    approveAllBtn.disabled = false;
-                }
+                // Force container to be visible
+                container.style.display = 'block';
+                container.style.visibility = 'visible';
+                console.log('Container forced to be visible');
+                
+                // Enable control buttons
+                if (selectAllBtn) selectAllBtn.disabled = false;
+                if (approveAllBtn) approveAllBtn.disabled = false;
+                if (deleteAllBtn) deleteAllBtn.disabled = false;
+                
+                // Update select all button text
+                updateSelectAllButton();
+                console.log(`Successfully displayed ${data.length} update requests`);
+                
+                // Force a visual update
+                container.style.display = 'block';
+                container.style.visibility = 'visible';
             } else {
+                console.log('No update requests found or invalid data format');
                 container.innerHTML = '<p>No pending update requests</p>';
-                if (approveAllBtn) {
-                    approveAllBtn.disabled = true;
-                }
+                if (selectAllBtn) selectAllBtn.disabled = true;
+                if (approveAllBtn) approveAllBtn.disabled = true;
+                if (deleteAllBtn) deleteAllBtn.disabled = true;
             }
         } catch (error) {
             console.error('Error loading update requests:', error);
+            console.error('Error details:', error.message);
             const container = document.getElementById('update-requests-container');
-            container.innerHTML = '<p>Error loading update requests</p>';
+            container.innerHTML = `<p>Error loading update requests: ${error.message}</p>`;
         }
     }
     
     function createUpdateRequestElement(request) {
         const div = document.createElement('div');
         div.className = 'update-request';
+        div.setAttribute('data-request-id', request.request_id);
+        
+        // Use simple display like the test UI
         div.innerHTML = `
             <div class="update-request-header">
                 <h4>Update Request: ${request.request_id}</h4>
                 <span class="request-status ${request.status}">${request.status}</span>
+                <input type="checkbox" class="update-request-checkbox" data-request-id="${request.request_id}">
             </div>
+            
             <div class="update-request-details">
                 <p><strong>Original File:</strong> ${request.original_file}</p>
                 <p><strong>Sandbox File:</strong> ${request.sandbox_file}</p>
@@ -2404,11 +2529,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p><strong>Changes:</strong> ${request.changes.length} modifications</p>
                 <p><strong>Timestamp:</strong> ${new Date(request.timestamp).toLocaleString()}</p>
             </div>
+            
             <div class="update-request-actions">
                 <button onclick="approveUpdate('${request.request_id}')" class="approve-btn">Approve</button>
                 <button onclick="rejectUpdate('${request.request_id}')" class="reject-btn">Reject</button>
             </div>
         `;
+        
+        // Add checkbox functionality
+        const checkbox = div.querySelector('.update-request-checkbox');
+        if (checkbox) {
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    div.classList.add('selected');
+                } else {
+                    div.classList.remove('selected');
+                }
+                updateSelectAllButton();
+                updateDeleteAllButton();
+            });
+        }
+        
         return div;
     }
     
@@ -2463,12 +2604,393 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 addLog(`Approved ${pendingRequests.length} update requests`, 'SUCCESS');
+                loadUpdateRequests(); // Refresh the list
             }
         } catch (error) {
             console.error('Error approving all updates:', error);
             addLog(`Error approving all updates: ${error.message}`, 'ERROR');
         }
     }
+    
+    function toggleSelectAll() {
+        const checkboxes = document.querySelectorAll('.update-request-checkbox');
+        const selectAllBtn = document.getElementById('select-all-btn');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = !allChecked;
+            const requestDiv = checkbox.closest('.update-request');
+            if (checkbox.checked) {
+                requestDiv.classList.add('selected');
+            } else {
+                requestDiv.classList.remove('selected');
+            }
+        });
+        
+        updateSelectAllButton();
+        updateDeleteAllButton();
+    }
+    
+    function updateSelectAllButton() {
+        const checkboxes = document.querySelectorAll('.update-request-checkbox');
+        const selectAllBtn = document.getElementById('select-all-btn');
+        
+        if (checkboxes.length === 0) return;
+        
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        const someChecked = Array.from(checkboxes).some(cb => cb.checked);
+        
+        if (allChecked) {
+            selectAllBtn.textContent = 'Deselect All';
+        } else if (someChecked) {
+            selectAllBtn.textContent = 'Select All';
+        } else {
+            selectAllBtn.textContent = 'Select All';
+        }
+    }
+    
+    function updateDeleteAllButton() {
+        const selectedCheckboxes = document.querySelectorAll('.update-request-checkbox:checked');
+        const deleteAllBtn = document.getElementById('delete-all-btn');
+        
+        if (selectedCheckboxes.length > 0) {
+            deleteAllBtn.textContent = `Delete All Selected (${selectedCheckboxes.length})`;
+            deleteAllBtn.disabled = false;
+        } else {
+            deleteAllBtn.textContent = 'Delete All Selected';
+            deleteAllBtn.disabled = true;
+        }
+    }
+    
+    async function deleteAllSelected() {
+        const selectedCheckboxes = document.querySelectorAll('.update-request-checkbox:checked');
+        
+        if (selectedCheckboxes.length === 0) {
+            addLog('No requests selected for deletion', 'WARNING');
+            return;
+        }
+        
+        if (!confirm(`Are you sure you want to delete ${selectedCheckboxes.length} selected update request(s)?`)) {
+            return;
+        }
+        
+        try {
+            const deletePromises = Array.from(selectedCheckboxes).map(async (checkbox) => {
+                const requestId = checkbox.getAttribute('data-request-id');
+                return await rejectUpdate(requestId);
+            });
+            
+            await Promise.all(deletePromises);
+            addLog(`Successfully deleted ${selectedCheckboxes.length} update request(s)`, 'SUCCESS');
+            loadUpdateRequests(); // Refresh the list
+        } catch (error) {
+            console.error('Error deleting selected updates:', error);
+            addLog(`Error deleting selected updates: ${error.message}`, 'ERROR');
+        }
+    }
+    
+    function viewFile(filePath) {
+        // Open file in a new window or modal
+        window.open(`file://${filePath}`, '_blank');
+    }
+    
+    function viewDiff(requestId) {
+        // Placeholder for diff viewing functionality
+        addLog(`Diff view for request ${requestId} - Feature coming soon`, 'INFO');
+    }
+    
+    // Global function for manual testing
+    window.testUpdateRequests = function() {
+        console.log('Manual test of update requests...');
+        loadUpdateRequests();
+    };
+    
+    // Global function to force refresh
+    window.forceRefreshUpdates = function() {
+        console.log('Force refreshing update requests...');
+        const container = document.getElementById('update-requests-container');
+        if (container) {
+            container.innerHTML = '<p>Loading update requests...</p>';
+        }
+        loadUpdateRequests();
+    };
+    
+    // Global function to show control tab and refresh
+    window.showControlTabAndRefresh = function() {
+        console.log('Showing control tab and refreshing...');
+        
+        // Switch to control tab
+        const controlTab = document.getElementById('control-tab');
+        const controlTabButton = document.querySelector('[data-tab="control"]');
+        
+        if (controlTabButton) {
+            controlTabButton.click();
+            console.log('Switched to control tab');
+        } else {
+            console.error('Control tab button not found!');
+        }
+        
+        // Wait a bit then refresh
+        setTimeout(() => {
+            forceRefreshUpdates();
+        }, 500);
+    };
+    
+    // Global function to force show control tab
+    window.showControlTab = function() {
+        console.log('Forcing control tab to be visible...');
+        
+        // Remove active from all tabs
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+        
+        // Activate control tab
+        const controlTab = document.getElementById('control-tab');
+        const controlTabButton = document.querySelector('[data-tab="control"]');
+        
+        if (controlTab && controlTabButton) {
+            controlTab.classList.add('active');
+            controlTabButton.classList.add('active');
+            console.log('Control tab activated');
+            
+            // Refresh update requests
+            setTimeout(() => {
+                loadUpdateRequests();
+            }, 100);
+        } else {
+            console.error('Control tab elements not found!');
+        }
+    };
+    
+    // Global function to check current state
+    window.checkUpdateRequestsState = function() {
+        const container = document.getElementById('update-requests-container');
+        const buttons = {
+            refresh: document.getElementById('refresh-updates-btn'),
+            selectAll: document.getElementById('select-all-btn'),
+            approveAll: document.getElementById('approve-all-btn'),
+            deleteAll: document.getElementById('delete-all-btn')
+        };
+        
+        console.log('Update requests state:');
+        console.log('Container:', container);
+        console.log('Container HTML:', container ? container.innerHTML : 'No container');
+        console.log('Buttons:', buttons);
+        console.log('Button states:', Object.fromEntries(
+            Object.entries(buttons).map(([name, btn]) => [name, btn ? btn.disabled : 'Not found'])
+        ));
+        
+        return { container, buttons };
+    };
+    
+    // Global function to force refresh and show updates
+    window.forceShowUpdates = function() {
+        console.log('Force showing updates...');
+        showControlTab();
+        setTimeout(() => {
+            loadUpdateRequests();
+        }, 500);
+    };
+    
+    // Global function to debug the current state
+    window.debugUI = function() {
+        console.log('=== UI DEBUG INFO ===');
+        
+        // Check tab visibility
+        const controlTab = document.getElementById('control-tab');
+        const controlTabBtn = document.querySelector('[data-tab="control"]');
+        console.log('Control tab:', {
+            element: !!controlTab,
+            visible: controlTab ? controlTab.offsetParent !== null : false,
+            classes: controlTab ? controlTab.className : 'Not found',
+            display: controlTab ? getComputedStyle(controlTab).display : 'Not found'
+        });
+        console.log('Control tab button:', {
+            element: !!controlTabBtn,
+            classes: controlTabBtn ? controlTabBtn.className : 'Not found'
+        });
+        
+        // Check container
+        const container = document.getElementById('update-requests-container');
+        console.log('Update requests container:', {
+            element: !!container,
+            visible: container ? container.offsetParent !== null : false,
+            classes: container ? container.className : 'Not found',
+            display: container ? getComputedStyle(container).display : 'Not found',
+            innerHTML: container ? container.innerHTML.substring(0, 100) + '...' : 'Not found'
+        });
+        
+        // Check buttons
+        const refreshBtn = document.getElementById('refresh-updates-btn');
+        console.log('Refresh button:', {
+            element: !!refreshBtn,
+            disabled: refreshBtn ? refreshBtn.disabled : 'Not found',
+            text: refreshBtn ? refreshBtn.textContent : 'Not found'
+        });
+        
+        // Test API
+        testAPI().then(data => {
+            console.log('API test result:', data ? `${data.length} requests` : 'Failed');
+        });
+        
+        return { controlTab, container, refreshBtn };
+    };
+    
+    // Global function to test the API directly
+    window.testAPI = async function() {
+        try {
+            console.log('Testing API...');
+            const response = await fetch('http://localhost:8000/simple-coder/update-requests');
+            const data = await response.json();
+            console.log('API Response:', data);
+            console.log('Count:', data.length);
+            return data;
+        } catch (error) {
+            console.error('API Error:', error);
+            return null;
+        }
+    };
+    
+    // Global function to immediately load updates (no async)
+    window.loadUpdatesNow = function() {
+        console.log('=== LOAD UPDATES NOW ===');
+        
+        const container = document.getElementById('update-requests-container');
+        if (!container) {
+            console.error('Container not found!');
+            return;
+        }
+        
+        console.log('Container found, loading data...');
+        
+        // Use fetch with .then() for immediate execution
+        fetch('http://localhost:8000/simple-coder/update-requests')
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Data received:', data);
+                console.log('Data length:', data.length);
+                
+                if (data && Array.isArray(data) && data.length > 0) {
+                    console.log(`Creating ${data.length} update request elements`);
+                    container.innerHTML = '';
+                    
+                    data.forEach((request, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'update-request';
+                        div.style.margin = '10px 0';
+                        div.style.padding = '15px';
+                        div.style.border = '1px solid #555';
+                        div.style.borderRadius = '8px';
+                        div.style.background = '#1a1a1a';
+                        
+                        div.innerHTML = `
+                            <h4>Update Request ${index + 1}: ${request.request_id}</h4>
+                            <p><strong>Original File:</strong> ${request.original_file}</p>
+                            <p><strong>Sandbox File:</strong> ${request.sandbox_file}</p>
+                            <p><strong>Status:</strong> ${request.status}</p>
+                            <p><strong>Cycle:</strong> ${request.cycle}</p>
+                            <p><strong>Changes:</strong> ${request.changes.length} modifications</p>
+                            <p><strong>Timestamp:</strong> ${new Date(request.timestamp).toLocaleString()}</p>
+                            <button onclick="approveUpdate('${request.request_id}')" style="margin: 5px; padding: 5px 10px; background: #00aa00; color: white; border: none; border-radius: 3px; cursor: pointer;">Approve</button>
+                            <button onclick="rejectUpdate('${request.request_id}')" style="margin: 5px; padding: 5px 10px; background: #aa0000; color: white; border: none; border-radius: 3px; cursor: pointer;">Reject</button>
+                        `;
+                        
+                        container.appendChild(div);
+                        console.log(`Added element ${index + 1}`);
+                    });
+                    
+                    console.log(`Successfully displayed ${data.length} update requests`);
+                } else {
+                    container.innerHTML = '<p>No update requests found</p>';
+                    console.log('No update requests to display');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading update requests:', error);
+                container.innerHTML = `<p style="color: #ff6666;">Error: ${error.message}</p>`;
+            });
+    };
+    
+    // Global function to manually load and display updates
+    window.manualLoadUpdates = async function() {
+        console.log('=== MANUAL LOAD UPDATES ===');
+        
+        // Check if elements exist
+        const container = document.getElementById('update-requests-container');
+        const refreshBtn = document.getElementById('refresh-updates-btn');
+        
+        console.log('Elements found:', {
+            container: !!container,
+            refreshBtn: !!refreshBtn,
+            containerParent: container ? container.parentElement : 'No container'
+        });
+        
+        if (!container) {
+            console.error('Update requests container not found!');
+            return;
+        }
+        
+        try {
+            console.log('Fetching data...');
+            const response = await fetch('http://localhost:8000/simple-coder/update-requests');
+            console.log('Response status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log('Data received:', data);
+            console.log('Data length:', data.length);
+            
+            if (data && Array.isArray(data) && data.length > 0) {
+                console.log(`Creating ${data.length} update request elements`);
+                
+                // Clear container
+                container.innerHTML = '';
+                
+                // Create simple elements like test UI
+                data.forEach((request, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'update-request';
+                    div.style.margin = '10px 0';
+                    div.style.padding = '15px';
+                    div.style.border = '1px solid #555';
+                    div.style.borderRadius = '8px';
+                    div.style.background = '#1a1a1a';
+                    
+                    div.innerHTML = `
+                        <h4>Update Request ${index + 1}: ${request.request_id}</h4>
+                        <p><strong>Original File:</strong> ${request.original_file}</p>
+                        <p><strong>Sandbox File:</strong> ${request.sandbox_file}</p>
+                        <p><strong>Status:</strong> ${request.status}</p>
+                        <p><strong>Cycle:</strong> ${request.cycle}</p>
+                        <p><strong>Changes:</strong> ${request.changes.length} modifications</p>
+                        <p><strong>Timestamp:</strong> ${new Date(request.timestamp).toLocaleString()}</p>
+                        <button onclick="approveUpdate('${request.request_id}')" style="margin: 5px; padding: 5px 10px; background: #00aa00; color: white; border: none; border-radius: 3px;">Approve</button>
+                        <button onclick="rejectUpdate('${request.request_id}')" style="margin: 5px; padding: 5px 10px; background: #aa0000; color: white; border: none; border-radius: 3px;">Reject</button>
+                    `;
+                    
+                    container.appendChild(div);
+                    console.log(`Added element ${index + 1}`);
+                });
+                
+                console.log(`Successfully displayed ${data.length} update requests`);
+                return data;
+            } else {
+                container.innerHTML = '<p>No update requests found</p>';
+                console.log('No update requests to display');
+                return [];
+            }
+        } catch (error) {
+            console.error('Error loading update requests:', error);
+            container.innerHTML = `<p style="color: #ff6666;">Error: ${error.message}</p>`;
+            return null;
+        }
+    };
 
     // Initialize system agents data
     function initializeSystemAgents() {
@@ -2812,6 +3334,18 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeAutonomousMode();
         initializeAgentActivityMonitor();
         initializeUpdateRequests();
+        
+        // Force show control tab and load updates
+        console.log('Forcing control tab visibility and loading updates...');
+        setTimeout(() => {
+            showControlTab();
+        }, 1000);
+        
+        // Also try direct loading after a longer delay
+        setTimeout(() => {
+            console.log('Direct loading attempt...');
+            loadUpdateRequests();
+        }, 2000);
         
         // Check backend status periodically
     checkBackendStatus();

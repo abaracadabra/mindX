@@ -1172,7 +1172,10 @@ async def get_update_requests():
         
         # Create a temporary instance to get update requests
         simple_coder = SimpleCoder()
-        return simple_coder.get_update_requests()
+        all_requests = simple_coder.get_update_requests()
+        # Filter to only return pending requests
+        pending_requests = [req for req in all_requests if req.get('status') == 'pending']
+        return pending_requests
     except Exception as e:
         logger.error(f"Failed to get update requests: {e}")
         return {"error": str(e)}

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Update Requests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #333;
+            border-radius: 8px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #0080ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0066cc;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #2a2a2a;
+            border-radius: 4px;
+        }
+        .error {
+            background: #4a1a1a;
+            color: #ff6666;
+        }
+        .success {
+            background: #1a4a1a;
+            color: #66ff66;
+        }
+    </style>
+</head>
+<body>
+    <h1>Update Requests Test Page</h1>
+    
+    <div class="test-section">
+        <h2>Backend Test</h2>
+        <button onclick="testBackend()">Test Backend Endpoint</button>
+        <div id="backend-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>UI Test</h2>
+        <button onclick="testUI()">Test UI Elements</button>
+        <div id="ui-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Update Requests Display</h2>
+        <button onclick="loadUpdateRequests()">Load Update Requests</button>
+        <div id="update-requests-container">
+            <p>No update requests loaded</p>
+        </div>
+    </div>
+
+    <script>
+        const apiUrl = 'http://localhost:8000';
+        
+        async function testBackend() {
+            const resultDiv = document.getElementById('backend-result');
+            try {
+                const response = await fetch(`${apiUrl}/simple-coder/update-requests`);
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <strong>Backend Test Successful!</strong><br>
+                        Status: ${response.status}<br>
+                        Data length: ${data.length}<br>
+                        First request: ${data[0] ? data[0].request_id : 'None'}
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>Backend Test Failed!</strong><br>
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        function testUI() {
+            const resultDiv = document.getElementById('ui-result');
+            const container = document.getElementById('update-requests-container');
+            
+            resultDiv.innerHTML = `
+                <div class="success">
+                    <strong>UI Test Results:</strong><br>
+                    Container found: ${container ? 'Yes' : 'No'}<br>
+                    Container ID: ${container ? container.id : 'N/A'}<br>
+                    Container parent: ${container ? container.parentElement.tagName : 'N/A'}
+                </div>
+            `;
+        }
+        
+        async function loadUpdateRequests() {
+            const container = document.getElementById('update-requests-container');
+            try {
+                const response = await fetch(`${apiUrl}/simple-coder/update-requests`);
+                const data = await response.json();
+                
+                if (data && data.length > 0) {
+                    container.innerHTML = '';
+                    data.forEach((request, index) => {
+                        const div = document.createElement('div');
+                        div.style.margin = '10px 0';
+                        div.style.padding = '10px';
+                        div.style.border = '1px solid #555';
+                        div.style.borderRadius = '4px';
+                        div.innerHTML = `
+                            <strong>Request ${index + 1}:</strong> ${request.request_id}<br>
+                            <strong>File:</strong> ${request.original_file}<br>
+                            <strong>Status:</strong> ${request.status}<br>
+                            <strong>Changes:</strong> ${request.changes.length}
+                        `;
+                        container.appendChild(div);
+                    });
+                } else {
+                    container.innerHTML = '<p>No update requests found</p>';
+                }
+            } catch (error) {
+                container.innerHTML = `<p class="error">Error loading update requests: ${error.message}</p>`;
+            }
+        }
+        
+        // Auto-load on page load
+        window.addEventListener('load', () => {
+            testBackend();
+            testUI();
+            loadUpdateRequests();
+        });
+    </script>
+</body>
+</html>

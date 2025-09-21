@@ -91,13 +91,559 @@
             </div>
             <div class="control-section">
                 <h2>Simple Coder Update Requests</h2>
+                <div class="update-request-controls">
+                <button id="refresh-updates-btn">Refresh Updates</button>
+                <button id="select-all-btn" disabled style="font-size: 12px; padding: 6px 12px;">Select All</button>
+                <button id="approve-all-btn" disabled>Approve All</button>
+                <button id="delete-all-btn" disabled>Delete All Selected</button>
+                </div>
                 <div id="update-requests-container">
                     <p>No pending update requests</p>
                 </div>
-                <div class="update-request-controls">
-                    <button id="refresh-updates-btn">Refresh Updates</button>
-                    <button id="approve-all-btn" disabled>Approve All</button>
-                </div>
+                
+                <script>
+                // Global variables for selection
+                let allUpdateRequests = [];
+                let selectedRequests = new Set();
+                
+            // Simple inline script to load updates immediately
+            function loadUpdatesInline() {
+                console.log('Loading updates inline...');
+                console.log('Current selected requests before load:', Array.from(selectedRequests));
+                const container = document.getElementById('update-requests-container');
+                const selectAllBtn = document.getElementById('select-all-btn');
+                const approveAllBtn = document.getElementById('approve-all-btn');
+                const deleteAllBtn = document.getElementById('delete-all-btn');
+                    
+                    fetch('http://localhost:8000/simple-coder/update-requests')
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Data received:', data);
+                            console.log('Previous allUpdateRequests count:', allUpdateRequests.length);
+                            console.log('Data type:', typeof data, 'Is array:', Array.isArray(data));
+                            console.log('Data length:', data ? data.length : 'null/undefined');
+                            allUpdateRequests = data;
+                            console.log('New allUpdateRequests count:', allUpdateRequests.length);
+                            console.log('Clearing selectedRequests, previous count:', selectedRequests.size);
+                            selectedRequests.clear();
+                            console.log('SelectedRequests cleared, new count:', selectedRequests.size);
+                            
+                            // Always clear the container first
+                            container.innerHTML = '';
+                            
+                            if (data && data.length > 0) {
+                                data.forEach((request, index) => {
+                                    const div = document.createElement('div');
+                                    div.className = 'update-request';
+                                    div.style.margin = '10px 0';
+                                    div.style.padding = '15px';
+                                    div.style.border = '1px solid #555';
+                                    div.style.borderRadius = '8px';
+                                    div.style.background = '#1a1a1a';
+                                    div.style.color = '#fff';
+                                    div.setAttribute('data-request-id', request.request_id);
+                                    
+                                    div.innerHTML = `
+                                        <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                                            <input type="checkbox" class="update-checkbox" data-request-id="${request.request_id}" style="margin-right: 10px; transform: scale(1.2);">
+                                            <h4 style="margin: 0; flex: 1;">Update Request ${index + 1}: ${request.request_id}</h4>
+                                            <span style="background: #ffaa00; color: #000; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold;">${request.status}</span>
+                                        </div>
+                                        <p><strong>Original File:</strong> ${request.original_file}</p>
+                                        <p><strong>Sandbox File:</strong> ${request.sandbox_file}</p>
+                                        <p><strong>Cycle:</strong> ${request.cycle}</p>
+                                        <p><strong>Changes:</strong> ${request.changes.length} modifications</p>
+                                        <p><strong>Timestamp:</strong> ${new Date(request.timestamp).toLocaleString()}</p>
+                                        <div style="margin-top: 10px;">
+                                            <button onclick="approveUpdate('${request.request_id}')" style="margin: 5px; padding: 5px 10px; background: #00aa00; color: white; border: none; border-radius: 3px; cursor: pointer;">Approve</button>
+                                            <button onclick="rejectUpdate('${request.request_id}')" style="margin: 5px; padding: 5px 10px; background: #aa0000; color: white; border: none; border-radius: 3px; cursor: pointer;">Reject</button>
+                                        </div>
+                                    `;
+                                    container.appendChild(div);
+                                });
+                                
+                                // Enable control buttons
+                                if (selectAllBtn) selectAllBtn.disabled = false;
+                                if (approveAllBtn) approveAllBtn.disabled = false;
+                                if (deleteAllBtn) deleteAllBtn.disabled = false;
+                                
+                                // Add event listeners
+                                setupSelectionHandlers();
+                                
+                                console.log(`Displayed ${data.length} update requests`);
+                            } else {
+                                // Show message when no requests
+                                container.innerHTML = '<p style="color: #888; text-align: center; padding: 20px;">No pending update requests</p>';
+                                
+                                // Disable control buttons
+                                if (selectAllBtn) selectAllBtn.disabled = true;
+                                if (approveAllBtn) approveAllBtn.disabled = true;
+                                if (deleteAllBtn) deleteAllBtn.disabled = true;
+                                
+                                console.log('No update requests to display');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            container.innerHTML = `<p style="color: #ff6666;">Error: ${error.message}</p>`;
+                        });
+                }
+                
+                // Setup selection handlers
+                function setupSelectionHandlers() {
+                // Checkbox change handlers
+                document.querySelectorAll('.update-checkbox').forEach(checkbox => {
+                    // Remove any existing event listeners
+                    checkbox.replaceWith(checkbox.cloneNode(true));
+                });
+                
+                // Re-add event listeners to all checkboxes
+                document.querySelectorAll('.update-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', function() {
+                        const requestId = this.getAttribute('data-request-id');
+                        console.log('Checkbox changed:', requestId, 'checked:', this.checked);
+                        if (this.checked) {
+                            selectedRequests.add(requestId);
+                            this.closest('.update-request').style.border = '2px solid #00ff00';
+                        } else {
+                            selectedRequests.delete(requestId);
+                            this.closest('.update-request').style.border = '1px solid #555';
+                        }
+                        console.log('Selected requests after change:', selectedRequests.size);
+                        updateButtonStates();
+                    });
+                });
+                    
+                // Select All button
+                const selectAllBtn = document.getElementById('select-all-btn');
+                if (selectAllBtn) {
+                    // Remove any existing event listeners
+                    selectAllBtn.replaceWith(selectAllBtn.cloneNode(true));
+                    const newSelectAllBtn = document.getElementById('select-all-btn');
+                    
+                    newSelectAllBtn.addEventListener('click', function() {
+                        console.log('Select All clicked, current selected:', selectedRequests.size, 'total:', allUpdateRequests.length);
+                        const allChecked = selectedRequests.size === allUpdateRequests.length;
+                        console.log('All checked:', allChecked);
+                        
+                        // Toggle all checkboxes
+                        document.querySelectorAll('.update-checkbox').forEach(checkbox => {
+                            const requestId = checkbox.getAttribute('data-request-id');
+                            
+                            if (allChecked) {
+                                // Deselect all - uncheck all boxes
+                                checkbox.checked = false;
+                                selectedRequests.delete(requestId);
+                                checkbox.closest('.update-request').style.border = '1px solid #555';
+                            } else {
+                                // Select all - check all boxes
+                                checkbox.checked = true;
+                                selectedRequests.add(requestId);
+                                checkbox.closest('.update-request').style.border = '2px solid #00ff00';
+                            }
+                        });
+                        console.log('After select all, selected:', selectedRequests.size);
+                        updateButtonStates();
+                    });
+                }
+                    
+                    // Delete All Selected button
+                    const deleteAllBtn = document.getElementById('delete-all-btn');
+                    if (deleteAllBtn) {
+                        // Remove any existing event listeners
+                        deleteAllBtn.replaceWith(deleteAllBtn.cloneNode(true));
+                        const newDeleteAllBtn = document.getElementById('delete-all-btn');
+                        
+                        newDeleteAllBtn.addEventListener('click', function() {
+                            console.log('Delete All Selected button clicked!');
+                            console.log('Selected requests:', Array.from(selectedRequests));
+                            if (selectedRequests.size === 0) {
+                                alert('No requests selected');
+                                return;
+                            }
+                            
+                        if (confirm(`Delete ${selectedRequests.size} selected requests?`)) {
+                            const requestsToDelete = Array.from(selectedRequests);
+                            let completed = 0;
+                            
+                            console.log('Starting bulk delete of', requestsToDelete.length, 'requests');
+                            console.log('Requests to delete:', requestsToDelete);
+                            
+                            requestsToDelete.forEach(requestId => {
+                                console.log('Deleting request:', requestId);
+                                fetch(`http://localhost:8000/simple-coder/reject-update/${requestId}`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json'
+                                    }
+                                })
+                                .then(response => {
+                                    console.log('Delete response for', requestId, ':', response.status, response.statusText);
+                                    console.log('Response headers for', requestId, ':', Object.fromEntries(response.headers.entries()));
+                                    if (response.ok) {
+                                        return response.json();
+                                    } else {
+                                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                                    }
+                                })
+                                .then(data => {
+                                    console.log('Delete success for', requestId, ':', data);
+                                })
+                                .catch(error => {
+                                    console.error('Error deleting request:', requestId, error);
+                                })
+                                .finally(() => {
+                                    completed++;
+                                    console.log(`Completed ${completed}/${requestsToDelete.length} deletions`);
+                                    if (completed === requestsToDelete.length) {
+                                        console.log('Bulk delete completed, auto-refreshing...');
+                                        selectedRequests.clear();
+                                        // Reset button states immediately
+                                        updateButtonStates();
+                                        // Auto-refresh after 2 seconds
+                                        setTimeout(() => {
+                                            console.log('Executing bulk delete auto-refresh...');
+                                            autoRefresh();
+                                        }, 2000);
+                                    }
+                                });
+                                });
+                            }
+                        });
+                    }
+                    
+                    // Approve All button
+                    const approveAllBtn = document.getElementById('approve-all-btn');
+                    if (approveAllBtn) {
+                        approveAllBtn.addEventListener('click', function() {
+                            if (selectedRequests.size === 0) {
+                                alert('No requests selected');
+                                return;
+                            }
+                            
+                            if (confirm(`Approve ${selectedRequests.size} selected requests?`)) {
+                                const requestsToApprove = Array.from(selectedRequests);
+                                let completed = 0;
+                                
+                                console.log('Starting bulk approve of', requestsToApprove.length, 'requests');
+                                
+                                requestsToApprove.forEach(requestId => {
+                                    fetch(`http://localhost:8000/simple-coder/approve-update/${requestId}`, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        }
+                                    })
+                                    .then(response => {
+                                        if (response.ok) {
+                                            console.log('Approved request:', requestId);
+                                        } else {
+                                            console.error('Failed to approve request:', requestId, response.status);
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('Error approving request:', requestId, error);
+                                    })
+                                .finally(() => {
+                                    completed++;
+                                    if (completed === requestsToApprove.length) {
+                                        console.log('Bulk approve completed, auto-refreshing...');
+                                        selectedRequests.clear();
+                                        // Reset button states immediately
+                                        updateButtonStates();
+                                        // Auto-refresh after 2 seconds
+                                        setTimeout(autoRefresh, 2000);
+                                    }
+                                });
+                                });
+                            }
+                        });
+                    }
+                }
+                
+                // Update button states
+                function updateButtonStates() {
+                    const selectAllBtn = document.getElementById('select-all-btn');
+                    const deleteAllBtn = document.getElementById('delete-all-btn');
+                    const approveAllBtn = document.getElementById('approve-all-btn');
+                    
+                    if (selectAllBtn) {
+                        if (allUpdateRequests.length === 0) {
+                            selectAllBtn.textContent = 'Select All';
+                            selectAllBtn.disabled = true;
+                        } else {
+                            selectAllBtn.disabled = false;
+                            selectAllBtn.textContent = selectedRequests.size === allUpdateRequests.length ? 'Deselect All' : 'Select All';
+                        }
+                    }
+                    
+                    if (deleteAllBtn) {
+                        deleteAllBtn.disabled = selectedRequests.size === 0;
+                        deleteAllBtn.textContent = `Delete All Selected (${selectedRequests.size})`;
+                    }
+                    
+                    if (approveAllBtn) {
+                        approveAllBtn.disabled = selectedRequests.size === 0;
+                        approveAllBtn.textContent = `Approve All Selected (${selectedRequests.size})`;
+                    }
+                }
+                
+            // Make functions globally accessible
+            window.approveUpdate = function(requestId) {
+                console.log('Approving individual request:', requestId);
+                fetch(`http://localhost:8000/simple-coder/approve-update/${requestId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => {
+                    console.log('Individual approve response:', response.status, response.statusText);
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                })
+                .then(data => {
+                    console.log('Individual approve success:', data);
+                    selectedRequests.delete(requestId);
+                    // Reset button states immediately
+                    updateButtonStates();
+                    // Auto-refresh after 2 seconds
+                    setTimeout(autoRefresh, 2000);
+                })
+                .catch(error => {
+                    console.error('Error approving individual request:', error);
+                    alert('Error approving request: ' + error.message);
+                });
+            };
+                
+            window.rejectUpdate = function(requestId) {
+                console.log('Rejecting individual request:', requestId);
+                console.log('Current selected requests before reject:', Array.from(selectedRequests));
+                
+                fetch(`http://localhost:8000/simple-coder/reject-update/${requestId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => {
+                    console.log('Individual reject response:', response.status, response.statusText);
+                    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                })
+                .then(data => {
+                    console.log('Individual reject success:', data);
+                    selectedRequests.delete(requestId);
+                    console.log('Selected requests after reject:', Array.from(selectedRequests));
+                    // Reset button states immediately
+                    updateButtonStates();
+                    // Auto-refresh after 2 seconds
+                    console.log('Scheduling auto-refresh in 2 seconds...');
+                    setTimeout(() => {
+                        console.log('Executing auto-refresh...');
+                        autoRefresh();
+                    }, 2000);
+                })
+                .catch(error => {
+                    console.error('Error rejecting individual request:', error);
+                    alert('Error rejecting request: ' + error.message);
+                });
+            };
+                
+                
+            // Auto-refresh function
+            function autoRefresh() {
+                console.log('Auto-refreshing updates...');
+                console.log('Current selected requests before auto-refresh:', Array.from(selectedRequests));
+                loadUpdatesInline();
+            }
+            
+            // Test function to verify functions are accessible
+            window.testFunctions = function() {
+                console.log('Testing functions...');
+                console.log('approveUpdate function:', typeof window.approveUpdate);
+                console.log('rejectUpdate function:', typeof window.rejectUpdate);
+                console.log('autoRefresh function:', typeof autoRefresh);
+            };
+            
+            
+            
+            // Auto-refresh polling mechanism
+            let refreshInterval = null;
+            let lastRequestCount = 0;
+            let lastCycleCount = 0;
+            let lastTotalUpdates = 0;
+            
+            function startAutoRefresh() {
+                // Clear any existing interval
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                }
+                
+                // Poll every 3 seconds for changes
+                refreshInterval = setInterval(async () => {
+                    try {
+                        // Check both update requests and status
+                        const [requestsResponse, statusResponse] = await Promise.all([
+                            fetch('http://localhost:8000/simple-coder/update-requests'),
+                            fetch('http://localhost:8000/simple-coder/status')
+                        ]);
+                        
+                        const requestsData = await requestsResponse.json();
+                        const statusData = await statusResponse.json();
+                        
+                        // Check if the number of requests has changed
+                        if (requestsData && requestsData.length !== lastRequestCount) {
+                            console.log(`Update request count changed: ${lastRequestCount} -> ${requestsData.length}`);
+                            lastRequestCount = requestsData.length;
+                            
+                            // Show notification for new requests
+                            showBuildNotification(`New update requests detected: ${requestsData.length} pending`);
+                            
+                            // Refresh the UI to show new requests
+                            loadUpdatesInline();
+                        }
+                        
+                        // Check if cycle count or total updates have increased (indicating build completion)
+                        const currentCycleCount = statusData?.cycle_count || 0;
+                        const currentTotalUpdates = statusData?.total_updates || 0;
+                        
+                        if (currentCycleCount > lastCycleCount || currentTotalUpdates > lastTotalUpdates) {
+                            console.log(`Build progress detected - cycles: ${lastCycleCount} -> ${currentCycleCount}, updates: ${lastTotalUpdates} -> ${currentTotalUpdates}`);
+                            
+                            // Update tracking variables
+                            lastCycleCount = currentCycleCount;
+                            lastTotalUpdates = currentTotalUpdates;
+                            
+                            // Show notification for build completion only if there are new updates
+                            if (currentTotalUpdates > lastTotalUpdates) {
+                                showBuildNotification('Build completed - checking for new requests...');
+                            }
+                            
+                            // Refresh the UI to show any new requests from completed builds
+                            loadUpdatesInline();
+                        }
+                    } catch (error) {
+                        console.error('Auto-refresh polling error:', error);
+                    }
+                }, 3000); // Poll every 3 seconds
+                
+                console.log('Auto-refresh polling started');
+            }
+            
+            function stopAutoRefresh() {
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                    refreshInterval = null;
+                    console.log('Auto-refresh polling stopped');
+                }
+            }
+            
+            // Show build notification
+            function showBuildNotification(message) {
+                // Create notification element
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #0066cc;
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 6px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    z-index: 10000;
+                    font-size: 14px;
+                    font-weight: 500;
+                    max-width: 300px;
+                    animation: slideIn 0.3s ease-out;
+                `;
+                notification.textContent = message;
+                
+                // Add animation keyframes
+                if (!document.getElementById('notification-styles')) {
+                    const style = document.createElement('style');
+                    style.id = 'notification-styles';
+                    style.textContent = `
+                        @keyframes slideIn {
+                            from { transform: translateX(100%); opacity: 0; }
+                            to { transform: translateX(0); opacity: 1; }
+                        }
+                        @keyframes slideOut {
+                            from { transform: translateX(0); opacity: 1; }
+                            to { transform: translateX(100%); opacity: 0; }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+                
+                // Add to page
+                document.body.appendChild(notification);
+                
+                // Auto-remove after 4 seconds
+                setTimeout(() => {
+                    notification.style.animation = 'slideOut 0.3s ease-in';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }, 4000);
+            }
+            
+            // Load updates when page loads
+            window.addEventListener('load', function() {
+                console.log('Page loaded, loading updates...');
+                setTimeout(loadUpdatesInline, 1000);
+                
+                // Initialize tracking variables
+                setTimeout(async () => {
+                    try {
+                        const statusResponse = await fetch('http://localhost:8000/simple-coder/status');
+                        const statusData = await statusResponse.json();
+                        lastCycleCount = statusData?.cycle_count || 0;
+                        lastTotalUpdates = statusData?.total_updates || 0;
+                        console.log('Initialized tracking - cycles:', lastCycleCount, 'updates:', lastTotalUpdates);
+                    } catch (error) {
+                        console.error('Failed to initialize tracking variables:', error);
+                    }
+                }, 2000);
+                
+                // Start auto-refresh polling
+                startAutoRefresh();
+                
+                // Set up refresh button
+                const refreshBtn = document.getElementById('refresh-updates-btn');
+                if (refreshBtn) {
+                    refreshBtn.addEventListener('click', function() {
+                        console.log('Refresh button clicked');
+                        this.disabled = true;
+                        this.textContent = 'Refreshing...';
+                        loadUpdatesInline();
+                        setTimeout(() => {
+                            this.disabled = false;
+                            this.textContent = 'Refresh Updates';
+                        }, 2000);
+                    });
+                }
+                
+            });
+            
+            // Stop auto-refresh when page is unloaded
+            window.addEventListener('beforeunload', function() {
+                stopAutoRefresh();
+            });
+                </script>
             </div>
             
         </div>
