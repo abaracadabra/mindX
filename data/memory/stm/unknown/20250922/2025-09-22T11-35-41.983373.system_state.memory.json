@@ -1,0 +1,29 @@
+{
+  "timestamp": "2025-09-22T11:35:41.983373",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "unknown",
+  "content": {
+    "process_name": "agent_created",
+    "data": {
+      "agent_id": "test_agent_002",
+      "agent_type": "analyzer",
+      "owner_wallet": "0x1234567890abcdef1234567890abcdef12345678",
+      "agent_wallet": "0x53E3bB4f644aF4B8Fc1dcB88deEA6a8AF00872d3",
+      "metadata": {
+        "description": "Second test agent",
+        "specialization": "data_analysis"
+      }
+    }
+  },
+  "context": {
+    "user_wallet": "0x1234567890abcdef1234567890abcdef12345678",
+    "created_agent": "test_agent_002"
+  },
+  "tags": [
+    "agent_created",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "4890b126f52a4683"
+}

@@ -21,7 +21,8 @@ from orchestration.coordinator_agent import get_coordinator_agent_mindx_async
 from agents.memory_agent import MemoryAgent, MemoryType, MemoryImportance
 from agents.guardian_agent import GuardianAgent
 from core.id_manager_agent import IDManagerAgent
-from core.belief_system import BeliefSystem
+from core.belief_system import BeliefSystem, BeliefSource
+from tools.user_persistence_manager import get_user_persistence_manager
 from llm.model_registry import get_model_registry_async
 from utils.config import Config
 from api.command_handler import CommandHandler
@@ -79,9 +80,45 @@ class AgentCreatePayload(BaseModel):
     agent_type: str
     agent_id: str
     config: Dict[str, Any]
+    owner_wallet: Optional[str] = None
 
 class AgentDeletePayload(BaseModel):
     agent_id: str
+    owner_wallet: Optional[str] = None
+
+class UserRegisterPayload(BaseModel):
+    wallet_address: str
+    metadata: Optional[Dict[str, Any]] = None
+
+class UserAgentCreatePayload(BaseModel):
+    owner_wallet: str
+    agent_id: str
+    agent_type: str
+    metadata: Optional[Dict[str, Any]] = None
+
+class UserRegisterWithSignaturePayload(BaseModel):
+    wallet_address: str
+    signature: str
+    message: str
+    metadata: Optional[Dict[str, Any]] = None
+
+class UserAgentCreateWithSignaturePayload(BaseModel):
+    owner_wallet: str
+    agent_id: str
+    agent_type: str
+    signature: str
+    message: str
+    metadata: Optional[Dict[str, Any]] = None
+
+class UserAgentDeleteWithSignaturePayload(BaseModel):
+    wallet_address: str
+    agent_id: str
+    signature: str
+    message: str
+
+class ChallengeRequestPayload(BaseModel):
+    wallet_address: str
+    action: str
 
 class AgentEvolvePayload(BaseModel):
     agent_id: str
@@ -144,6 +181,170 @@ async def startup_event():
     except Exception as e:
         logger.critical(f"Failed to initialize mindX components during startup: {e}", exc_info=True)
         command_handler = None
+
+# User-specific agent management handler functions with signature verification
+async def handle_user_register_with_signature(wallet_address: str, signature: str, message: str, metadata: Dict[str, Any] = None) -> Dict[str, Any]:
+    """Handle user registration with wallet signature verification"""
+    try:
+        # Get user persistence manager
+        user_manager = get_user_persistence_manager()
+        
+        # Register user with signature verification
+        success, message_result = user_manager.register_user(wallet_address, signature, message, metadata)
+        
+        if not success:
+            return {"error": message_result}
+        
+        # Log user registration
+        if command_handler and command_handler.mastermind.memory_agent:
+            await command_handler.mastermind.memory_agent.log_process(
+                process_name="user_registered_with_signature",
+                data={
+                    "wallet_address": wallet_address,
+                    "signature_verified": True,
+                    "metadata": metadata or {}
+                },
+                metadata={"user_wallet": wallet_address}
+            )
+        
+        return {
+            "status": "success",
+            "wallet_address": wallet_address,
+            "message": message_result,
+            "signature_verified": True
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to register user {wallet_address}: {e}")
+        return {"error": str(e)}
+
+async def handle_user_agent_create_with_signature(owner_wallet: str, agent_id: str, agent_type: str, 
+                                                 signature: str, message: str, metadata: Dict[str, Any] = None) -> Dict[str, Any]:
+    """Handle user-specific agent creation with signature verification"""
+    try:
+        # Get user persistence manager
+        user_manager = get_user_persistence_manager()
+        
+        # Create agent with signature verification
+        success, message_result, agent_wallet = user_manager.create_user_agent(
+            owner_wallet, agent_id, agent_type, signature, message, metadata
+        )
+        
+        if not success:
+            return {"error": message_result}
+        
+        # Log agent creation
+        if command_handler and command_handler.mastermind.memory_agent:
+            await command_handler.mastermind.memory_agent.log_process(
+                process_name="agent_created_with_signature",
+                data={
+                    "agent_id": agent_id,
+                    "agent_type": agent_type,
+                    "owner_wallet": owner_wallet,
+                    "agent_wallet": agent_wallet,
+                    "signature_verified": True,
+                    "metadata": metadata or {}
+                },
+                metadata={"user_wallet": owner_wallet, "created_agent": agent_id}
+            )
+        
+        return {
+            "status": "success",
+            "agent_id": agent_id,
+            "agent_type": agent_type,
+            "owner_wallet": owner_wallet,
+            "agent_wallet": agent_wallet,
+            "message": message_result,
+            "signature_verified": True
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to create agent {agent_id} for user {owner_wallet}: {e}")
+        return {"error": str(e)}
+
+async def handle_user_agent_delete_with_signature(wallet_address: str, agent_id: str, signature: str, message: str) -> Dict[str, Any]:
+    """Handle user-specific agent deletion with signature verification"""
+    try:
+        # Get user persistence manager
+        user_manager = get_user_persistence_manager()
+        
+        # Delete agent with signature verification
+        success, message_result = user_manager.delete_user_agent(wallet_address, agent_id, signature, message)
+        
+        if not success:
+            return {"error": message_result}
+        
+        # Log agent deletion
+        if command_handler and command_handler.mastermind.memory_agent:
+            await command_handler.mastermind.memory_agent.log_process(
+                process_name="agent_deleted_with_signature",
+                data={
+                    "agent_id": agent_id,
+                    "owner_wallet": wallet_address,
+                    "signature_verified": True
+                },
+                metadata={"user_wallet": wallet_address, "deleted_agent": agent_id}
+            )
+        
+        return {
+            "status": "success",
+            "agent_id": agent_id,
+            "owner_wallet": wallet_address,
+            "message": message_result,
+            "signature_verified": True
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to delete agent {agent_id}: {e}")
+        return {"error": str(e)}
+
+async def handle_get_user_agents(wallet_address: str) -> Dict[str, Any]:
+    """Get all agents owned by a user"""
+    try:
+        # Get user persistence manager
+        user_manager = get_user_persistence_manager()
+        
+        # Get user agents
+        agents = user_manager.get_user_agents(wallet_address)
+        
+        return {
+            "status": "success",
+            "wallet_address": wallet_address,
+            "agents": agents,
+            "total_agents": len(agents)
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get agents for user {wallet_address}: {e}")
+        return {"error": str(e)}
+
+async def handle_get_user_stats(wallet_address: str) -> Dict[str, Any]:
+    """Get user statistics"""
+    try:
+        # Get user persistence manager
+        user_manager = get_user_persistence_manager()
+        
+        # Get user stats
+        stats = user_manager.get_user_stats(wallet_address)
+        
+        if not stats:
+            return {"error": f"User {wallet_address} not found"}
+        
+        return {
+            "status": "success",
+            **stats
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get stats for user {wallet_address}: {e}")
+        return {"error": str(e)}
+
+async def _get_user_agent_count(wallet_address: str) -> int:
+    """Get the current agent count for a user"""
+    if not command_handler or not command_handler.mastermind.id_manager_agent:
+        return 0
+    count_belief = await command_handler.mastermind.belief_system.get_belief(f"user.agent_count.{wallet_address}")
+    return int(count_belief.value) if count_belief else 0
 
 # --- API Endpoints ---
 
@@ -443,6 +644,68 @@ async def agent_evolve(agent_id: str, payload: DirectivePayload):
 async def agent_sign(agent_id: str, payload: AgentSignPayload):
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
     return await command_handler.handle_agent_sign(agent_id, payload.message)
+
+# User-specific agent management endpoints with signature verification
+@app.post("/users/register", summary="Register a new user with wallet address")
+async def register_user(payload: UserRegisterPayload):
+    if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
+    return await handle_user_register(payload.wallet_address, payload.metadata)
+
+@app.post("/users/register-with-signature", summary="Register a new user with wallet signature verification")
+async def register_user_with_signature(payload: UserRegisterWithSignaturePayload):
+    if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
+    return await handle_user_register_with_signature(
+        payload.wallet_address, payload.signature, payload.message, payload.metadata
+    )
+
+@app.post("/users/agents", summary="Create a new agent for a user")
+async def create_user_agent(payload: UserAgentCreatePayload):
+    if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
+    return await handle_user_agent_create(
+        payload.owner_wallet, payload.agent_id, payload.agent_type, payload.metadata
+    )
+
+@app.post("/users/agents-with-signature", summary="Create a new agent for a user with signature verification")
+async def create_user_agent_with_signature(payload: UserAgentCreateWithSignaturePayload):
+    if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
+    return await handle_user_agent_create_with_signature(
+        payload.owner_wallet, payload.agent_id, payload.agent_type, 
+        payload.signature, payload.message, payload.metadata
+    )
+
+@app.delete("/users/{wallet_address}/agents/{agent_id}", summary="Delete a user's agent")
+async def delete_user_agent(wallet_address: str, agent_id: str):
+    if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
+    return await handle_user_agent_delete(agent_id, wallet_address)
+
+@app.post("/users/agents/delete-with-signature", summary="Delete a user's agent with signature verification")
+async def delete_user_agent_with_signature(payload: UserAgentDeleteWithSignaturePayload):
+    if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
+    return await handle_user_agent_delete_with_signature(
+        payload.wallet_address, payload.agent_id, payload.signature, payload.message
+    )
+
+@app.get("/users/{wallet_address}/agents", summary="Get all agents owned by a user")
+async def get_user_agents(wallet_address: str):
+    if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
+    return await handle_get_user_agents(wallet_address)
+
+@app.get("/users/{wallet_address}/stats", summary="Get user statistics")
+async def get_user_stats(wallet_address: str):
+    if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
+    return await handle_get_user_stats(wallet_address)
+
+@app.post("/users/challenge", summary="Generate a challenge message for signature")
+async def generate_challenge(payload: ChallengeRequestPayload):
+    if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
+    user_manager = get_user_persistence_manager()
+    challenge = user_manager.generate_challenge_message(payload.wallet_address, payload.action)
+    return {
+        "status": "success",
+        "wallet_address": payload.wallet_address,
+        "action": payload.action,
+        "challenge_message": challenge
+    }
 
 @app.get("/logs/runtime", summary="Get runtime logs")
 async def get_runtime_logs():

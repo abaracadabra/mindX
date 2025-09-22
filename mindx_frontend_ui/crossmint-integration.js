@@ -84,10 +84,13 @@ class CrossMintIntegration {
 
             console.log('Loading CrossMint SDK...');
             
-            // Try multiple SDK sources
+            // Try multiple SDK sources - Updated to include Credentials SDK with WalletAuthService
             const sdkUrls = [
+                'https://unpkg.com/@crossmint/client-sdk-credentials@latest/dist/index.umd.js',
+                'https://unpkg.com/@crossmint/client-sdk-smart-wallet@latest/dist/index.umd.js',
                 'https://unpkg.com/@crossmint/client-sdk-auth@latest/dist/index.umd.js',
-                'https://unpkg.com/@crossmint/client-sdk-auth@2.4.0/dist/index.umd.js',
+                'https://cdn.jsdelivr.net/npm/@crossmint/client-sdk-credentials@latest/dist/index.umd.js',
+                'https://cdn.jsdelivr.net/npm/@crossmint/client-sdk-smart-wallet@latest/dist/index.umd.js',
                 'https://cdn.jsdelivr.net/npm/@crossmint/client-sdk-auth@latest/dist/index.umd.js'
             ];
 
@@ -106,14 +109,17 @@ class CrossMintIntegration {
                     console.log(`CrossMint Auth SDK loaded successfully from: ${sdkUrls[currentUrlIndex]}`);
                     
                     // Check if the SDK is properly loaded
-                    if (window.CrossmintAuthClient) {
-                        console.log('CrossMintAuthClient is available');
+                    if (window.CrossmintCredentials && window.CrossmintCredentials.WalletAuthService) {
+                        console.log('CrossMint Credentials SDK with WalletAuthService is available');
                         resolve();
                     } else if (window.CrossmintSDK) {
-                        console.log('CrossMintSDK is available');
+                        console.log('CrossMint Smart Wallet SDK is available');
+                        resolve();
+                    } else if (window.CrossmintAuthClient) {
+                        console.log('CrossMintAuthClient is available');
                         resolve();
                     } else {
-                        console.warn('CrossMintAuthClient not found after loading SDK, trying next source...');
+                        console.warn('CrossMint SDK not found after loading, trying next source...');
                         currentUrlIndex++;
                         tryLoadSDK();
                     }
@@ -152,6 +158,205 @@ class CrossMintIntegration {
             console.error('CrossMint login failed:', error);
             throw error;
         }
+    }
+
+    /**
+     * Login with MetaMask using CrossMint WalletAuthService - Proper challenge-response flow
+     */
+    async login() {
+        try {
+            console.log('Starting MetaMask authentication with CrossMint WalletAuthService...');
+            
+            // Check if MetaMask is available
+            if (typeof window.ethereum === 'undefined') {
+                throw new Error('MetaMask is not installed. Please install MetaMask browser extension to continue.');
+            }
+            
+            // Request account access - This should trigger MetaMask popup
+            console.log('Requesting MetaMask account access...');
+            const accounts = await window.ethereum.request({
+                method: 'eth_requestAccounts'
+            });
+            
+            if (accounts.length === 0) {
+                throw new Error('No accounts found. Please unlock MetaMask and try again.');
+            }
+            
+            const walletAddress = accounts[0];
+            console.log('MetaMask connected:', walletAddress);
+            
+            // Get chain ID
+            const chainId = await window.ethereum.request({
+                method: 'eth_chainId'
+            });
+            
+            // Use CrossMint WalletAuthService if available
+            let crossmintAuth = null;
+            if (window.CrossmintCredentials && window.CrossmintCredentials.WalletAuthService) {
+                try {
+                    console.log('Using CrossMint WalletAuthService for authentication...');
+                    crossmintAuth = await this.authenticateWithWalletAuthService(walletAddress);
+                    console.log('✅ CrossMint WalletAuthService authentication successful');
+                } catch (error) {
+                    console.warn('⚠️ CrossMint WalletAuthService failed, using direct MetaMask:', error);
+                    // Continue with direct MetaMask connection
+                }
+            } else {
+                console.log('ℹ️ CrossMint WalletAuthService not available, using direct MetaMask connection');
+            }
+            
+            // Create user data
+            const userData = {
+                id: walletAddress,
+                address: walletAddress,
+                provider: 'metamask',
+                chainId: chainId,
+                authMethod: 'wallet',
+                timestamp: Date.now(),
+                crossmintAuth: crossmintAuth
+            };
+            
+            // Handle login success
+            await this.handleLoginSuccess(userData, walletAddress);
+            
+            return {
+                success: true,
+                user: userData,
+                walletAddress: walletAddress,
+                crossmintAuth: crossmintAuth
+            };
+            
+        } catch (error) {
+            console.error('MetaMask login failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Authenticate using CrossMint WalletAuthService challenge-response flow
+     */
+    async authenticateWithWalletAuthService(walletAddress) {
+        try {
+            if (!window.CrossmintCredentials || !window.CrossmintCredentials.WalletAuthService) {
+                throw new Error('CrossMint WalletAuthService not available');
+            }
+
+            // Initialize WalletAuthService
+            const walletAuthService = new window.CrossmintCredentials.WalletAuthService();
+            
+            // Step 1: Get challenge from CrossMint
+            console.log('Getting challenge from CrossMint...');
+            const challenge = await walletAuthService.getChallenge(walletAddress);
+            console.log('Challenge received:', challenge);
+            
+            // Step 2: Sign the challenge with MetaMask
+            console.log('Requesting signature from MetaMask...');
+            const signature = await window.ethereum.request({
+                method: 'personal_sign',
+                params: [challenge, walletAddress]
+            });
+            console.log('Challenge signed:', signature);
+            
+            // Step 3: Return authentication data
+            return {
+                challenge: challenge,
+                signature: signature,
+                walletAddress: walletAddress,
+                authenticated: true,
+                timestamp: Date.now()
+            };
+
+        } catch (error) {
+            console.error('CrossMint WalletAuthService authentication failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Create CrossMint smart wallet using the SDK
+     */
+    async createCrossMintSmartWallet(metamaskAddress, chainId) {
+        try {
+            if (!window.CrossmintSDK || !this.apiKey) {
+                throw new Error('CrossMint SDK not available');
+            }
+
+            // Initialize CrossMint SDK
+            const sdk = window.CrossmintSDK.init({ 
+                clientApiKey: this.apiKey 
+            });
+
+            // Determine chain name based on chain ID
+            const chainName = this.getChainNameFromId(chainId);
+            
+            // Create or get smart wallet
+            const wallet = await sdk.getOrCreateWallet(
+                { jwt: this.generateUserJWT(metamaskAddress) },
+                chainName,
+                {
+                    signer: {
+                        type: "VIEM_ACCOUNT",
+                        account: { 
+                            address: metamaskAddress, 
+                            source: "metamask" 
+                        },
+                    },
+                }
+            );
+
+            console.log('CrossMint smart wallet created:', wallet.address());
+            return {
+                address: wallet.address(),
+                chain: chainName,
+                signer: metamaskAddress
+            };
+
+        } catch (error) {
+            console.error('Failed to create CrossMint smart wallet:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Generate a simple JWT for user authentication
+     */
+    generateUserJWT(walletAddress) {
+        // This is a simplified JWT generation for demo purposes
+        // In production, this should be generated by your backend
+        const header = {
+            alg: "HS256",
+            typ: "JWT"
+        };
+        
+        const payload = {
+            sub: walletAddress,
+            iat: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
+            wallet: walletAddress
+        };
+        
+        // Simple base64 encoding (not secure for production)
+        const encodedHeader = btoa(JSON.stringify(header));
+        const encodedPayload = btoa(JSON.stringify(payload));
+        const signature = btoa(`${encodedHeader}.${encodedPayload}.${this.apiKey}`);
+        
+        return `${encodedHeader}.${encodedPayload}.${signature}`;
+    }
+
+    /**
+     * Get chain name from chain ID
+     */
+    getChainNameFromId(chainId) {
+        const chainIdMap = {
+            '0x1': 'ethereum',
+            '0x89': 'polygon',
+            '0xaa36a7': 'base-sepolia',
+            '0x2105': 'base',
+            '0xa': 'optimism',
+            '0xa4b1': 'arbitrum'
+        };
+        
+        return chainIdMap[chainId] || 'ethereum';
     }
 
     /**

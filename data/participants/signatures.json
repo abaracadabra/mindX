@@ -1,0 +1,18 @@
+{
+  "0x1234567890abcdef1234567890abcdef12345678": [
+    {
+      "is_valid": false,
+      "message": "mindX Challenge: register for 0x1234567890abcdef1234567890abcdef12345678 at 1758566880 (nonce: 5ba9c54c)",
+      "signature": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "recovered_address": "0xC9EBFA86D906D66a87D0b325CE7Be0be6597e25C",
+      "timestamp": 1758566880.4327812
+    },
+    {
+      "is_valid": false,
+      "message": "mindX Challenge: register for 0x1234567890abcdef1234567890abcdef12345678 at 1758566880 (nonce: 5ba9c54c)",
+      "signature": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "recovered_address": "0xC9EBFA86D906D66a87D0b325CE7Be0be6597e25C",
+      "timestamp": 1758566880.4455166
+    }
+  ]
+}

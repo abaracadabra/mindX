@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-09-22T11:35:26.566881",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "id_manager_for_mastermind_prime",
+  "content": {
+    "process_name": "id_manager_wallet_created",
+    "data": {
+      "entity_id": "user_0x123456",
+      "address": "0xD482409a8699C6B47527e305c8048d58edA78342",
+      "env_var": "MINDX_WALLET_PK_USER_0X123456",
+      "success": true,
+      "key_stored": true
+    }
+  },
+  "context": {
+    "agent_id": "id_manager_for_mastermind_prime"
+  },
+  "tags": [
+    "id_manager_wallet_created",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "473272a5f598304b"
+}

@@ -1,0 +1,26 @@
+{
+  "timestamp": "2025-09-22T11:35:26.575311",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "unknown",
+  "content": {
+    "process_name": "user_registered",
+    "data": {
+      "user_id": "user_0x123456",
+      "wallet_address": "0x1234567890abcdef1234567890abcdef12345678",
+      "metadata": {
+        "test_user": true,
+        "created_at": "2024-01-01T00:00:00Z"
+      }
+    }
+  },
+  "context": {
+    "user_wallet": "0x1234567890abcdef1234567890abcdef12345678"
+  },
+  "tags": [
+    "user_registered",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "f3fc932bb11c1a9f"
+}

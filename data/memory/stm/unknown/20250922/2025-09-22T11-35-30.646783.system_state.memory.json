@@ -1,0 +1,32 @@
+{
+  "timestamp": "2025-09-22T11:35:30.646783",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "unknown",
+  "content": {
+    "process_name": "agent_created",
+    "data": {
+      "agent_id": "test_agent_001",
+      "agent_type": "assistant",
+      "owner_wallet": "0x1234567890abcdef1234567890abcdef12345678",
+      "agent_wallet": "0x4C03907896ec9ccfd96ACee212617A653a4EeB05",
+      "metadata": {
+        "description": "Test agent for user management",
+        "capabilities": [
+          "chat",
+          "analysis"
+        ]
+      }
+    }
+  },
+  "context": {
+    "user_wallet": "0x1234567890abcdef1234567890abcdef12345678",
+    "created_agent": "test_agent_001"
+  },
+  "tags": [
+    "agent_created",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "306524976f96c3a9"
+}

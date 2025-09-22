@@ -1,0 +1,29 @@
+{
+  "timestamp": "2025-09-22T11:35:59.669759",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "unknown",
+  "content": {
+    "process_name": "agent_created",
+    "data": {
+      "agent_id": "user2_agent_001",
+      "agent_type": "specialist",
+      "owner_wallet": "0x9876543210fedcba9876543210fedcba98765432",
+      "agent_wallet": "0x80c7d22db60772c1b73aCf21Be1b676D50f353C4",
+      "metadata": {
+        "description": "Second user agent",
+        "access_level": "private"
+      }
+    }
+  },
+  "context": {
+    "user_wallet": "0x9876543210fedcba9876543210fedcba98765432",
+    "created_agent": "user2_agent_001"
+  },
+  "tags": [
+    "agent_created",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "e794eb41c51ff0dc"
+}

@@ -1,4 +1,43 @@
+// ===== mindX Application - FRESH LOAD =====
+console.log('🚀 mindX app.js loaded at:', new Date().toISOString());
+console.log('🔧 Version: FRESH CACHE BUSTED LOAD');
+
+// Test functions for debugging
+window.testMetaMaskConnection = async function() {
+    console.log('🧪 Testing MetaMask connection...');
+    try {
+        await connectMetaMask();
+        console.log('✅ MetaMask connection test successful!');
+    } catch (error) {
+        console.error('❌ MetaMask connection test failed:', error);
+    }
+};
+
+window.testButtonClick = function() {
+    console.log('🧪 Testing button click...');
+    const btn = document.getElementById('loginConnectBtn');
+    if (btn) {
+        console.log('✅ Button found, triggering click...');
+        btn.click();
+    } else {
+        console.error('❌ Button not found!');
+    }
+};
+
+// Global authentication state - Initialize first to avoid hoisting issues
+let isAuthenticated = false;
+let currentUser = null;
+let authenticationState = {
+    isLoggedIn: false,
+    walletAddress: null,
+    userData: null,
+    sessionId: null
+};
+
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 DOM Content Loaded - Starting mindX Application...');
+    console.log('🔧 Fresh app.js version loaded successfully!');
+    
     const backendPort = window.MINDX_BACKEND_PORT || '8000';
     const apiUrl = `http://localhost:${backendPort}`;
     
@@ -7,6 +46,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialize CrossMint integration
     initializeCrossMintIntegration();
+    
+    // Initialize authentication system
+    initializeAuthenticationSystem().catch(console.error);
     
     // Initialize agent modal event listeners immediately
     const closeAgentModalBtn = document.getElementById('close-agent-modal');
@@ -40,14 +82,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // Load initial system data
-    setTimeout(() => {
-        updateAllSystemFields();
-        updateMonitoringAgents();
-        updateResourceFromSystemMetrics(); // Ensure resource monitor gets updated
-        performSystemHealthCheck(); // Perform initial system health check
-        startHealthCheckRefresh(); // Start periodic health check refresh
-    }, 1000);
+    // Load initial system data only if authenticated
+    if (isAuthenticated) {
+        setTimeout(() => {
+            updateAllSystemFields();
+            updateMonitoringAgents();
+            updateResourceFromSystemMetrics(); // Ensure resource monitor gets updated
+            performSystemHealthCheck(); // Perform initial system health check
+            startHealthCheckRefresh(); // Start periodic health check refresh
+        }, 1000);
+    }
     
     // Global state
     let isAutonomousMode = false;
@@ -6243,11 +6287,11 @@ function clearCrossMintSession() {
 
 // Ensure unique user login - check for existing sessions
 function ensureUniqueLogin() {
-    const isAuthenticated = localStorage.getItem('crossmint_authenticated') === 'true';
+    const userIsAuthenticated = localStorage.getItem('crossmint_authenticated') === 'true';
     const userData = localStorage.getItem('crossmint_user');
     const walletAddress = localStorage.getItem('crossmint_wallet');
     
-    if (isAuthenticated && userData && walletAddress) {
+    if (userIsAuthenticated && userData && walletAddress) {
         try {
             const user = JSON.parse(userData);
             console.log('Existing session found for user:', user.email || user.address);
@@ -6286,7 +6330,7 @@ function updateUIForAuthenticatedUser(user, walletAddress) {
         if (walletElement) {
             // Show full wallet address with copy functionality
             walletElement.innerHTML = `
-                <span class="user-wallet" onclick="copyWalletAddress('${walletAddress}')" title="Click to copy full address">
+                <span class="user-wallet" onclick="copyWalletAddress('${walletAddress}')" title="Click to copy full address">                                                                 
                     ${walletAddress}
                 </span>
             `;
@@ -6295,6 +6339,14 @@ function updateUIForAuthenticatedUser(user, walletAddress) {
     
     // Show user-specific information
     console.log('User authenticated:', user);
+    
+    // Trigger our authentication system
+    if (typeof handleAuthenticationSuccess === 'function') {
+        handleAuthenticationSuccess({
+            address: walletAddress,
+            user: user
+        });
+    }
 }
 
 // Add create wallets button
@@ -6652,11 +6704,13 @@ async function handleCrossMintLogout() {
         // Clear the session data
         clearCrossMintSession();
         
+        // Trigger our authentication system logout
+        if (typeof handleSecureLogout === 'function') {
+            await handleSecureLogout();
+        }
+        
         console.log('CrossMint logout successful');
         showNotification('Logged out successfully', 'success');
-        
-        // Stay on the current page and just clear the session
-        // No redirect needed - user stays on MindX control panel
         
     } catch (error) {
         console.error('CrossMint logout error:', error);
@@ -6722,11 +6776,854 @@ function protectSensitiveOperation(operationName, callback) {
 }
 
 // Add authentication guards to existing functions
-const originalEvolve = evolve;
-const originalDeploy = deploy;
-const originalAnalyze = analyzeCodebase;
+// TODO: Fix these references - functions need to be defined first
+// const originalEvolve = evolve;
+// const originalDeploy = deploy;
+// const originalAnalyze = analyzeCodebase;
 
 // Wrap existing functions with authentication
-window.evolve = protectSensitiveOperation('evolve', originalEvolve);
-window.deploy = protectSensitiveOperation('deploy', originalDeploy);
-window.analyzeCodebase = protectSensitiveOperation('analyze', originalAnalyze);
+// window.evolve = protectSensitiveOperation('evolve', originalEvolve);
+// window.deploy = protectSensitiveOperation('deploy', originalDeploy);
+// window.analyzeCodebase = protectSensitiveOperation('analyze', originalAnalyze);
+
+// User-specific agent management functions
+let userAgents = [];
+let userStats = null;
+
+// Register user with wallet address
+async function registerUser(walletAddress, metadata = {}) {
+    try {
+        const response = await fetch(`${apiUrl}/users/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                wallet_address: walletAddress,
+                metadata: metadata
+            })
+        });
+        
+        const result = await response.json();
+        if (result.status === 'success') {
+            console.log('User registered successfully:', result);
+            await loadUserAgents(walletAddress);
+            await loadUserStats(walletAddress);
+            return result;
+        } else {
+            console.error('User registration failed:', result.error);
+            return result;
+        }
+    } catch (error) {
+        console.error('Error registering user:', error);
+        return { error: error.message };
+    }
+}
+
+// Create a new agent for the current user
+async function createUserAgent(agentId, agentType, metadata = {}) {
+    const walletAddress = getCurrentWalletAddress();
+    if (!walletAddress) {
+        console.error('No wallet address available');
+        return { error: 'No wallet address available' };
+    }
+    
+    try {
+        const response = await fetch(`${apiUrl}/users/agents`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                owner_wallet: walletAddress,
+                agent_id: agentId,
+                agent_type: agentType,
+                metadata: metadata
+            })
+        });
+        
+        const result = await response.json();
+        if (result.status === 'success') {
+            console.log('Agent created successfully:', result);
+            await loadUserAgents(walletAddress);
+            await loadUserStats(walletAddress);
+            return result;
+        } else {
+            console.error('Agent creation failed:', result.error);
+            return result;
+        }
+    } catch (error) {
+        console.error('Error creating agent:', error);
+        return { error: error.message };
+    }
+}
+
+// Delete a user's agent
+async function deleteUserAgent(agentId) {
+    const walletAddress = getCurrentWalletAddress();
+    if (!walletAddress) {
+        console.error('No wallet address available');
+        return { error: 'No wallet address available' };
+    }
+    
+    try {
+        const response = await fetch(`${apiUrl}/users/${walletAddress}/agents/${agentId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        if (result.status === 'success') {
+            console.log('Agent deleted successfully:', result);
+            await loadUserAgents(walletAddress);
+            await loadUserStats(walletAddress);
+            return result;
+        } else {
+            console.error('Agent deletion failed:', result.error);
+            return result;
+        }
+    } catch (error) {
+        console.error('Error deleting agent:', error);
+        return { error: error.message };
+    }
+}
+
+// Load user's agents
+async function loadUserAgents(walletAddress) {
+    try {
+        const response = await fetch(`${apiUrl}/users/${walletAddress}/agents`);
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            userAgents = result.agents;
+            console.log('User agents loaded:', userAgents);
+            updateUserAgentsDisplay();
+            return result;
+        } else {
+            console.error('Failed to load user agents:', result.error);
+            return result;
+        }
+    } catch (error) {
+        console.error('Error loading user agents:', error);
+        return { error: error.message };
+    }
+}
+
+// Load user statistics
+async function loadUserStats(walletAddress) {
+    try {
+        const response = await fetch(`${apiUrl}/users/${walletAddress}/stats`);
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            userStats = result;
+            console.log('User stats loaded:', userStats);
+            updateUserStatsDisplay();
+            return result;
+        } else {
+            console.error('Failed to load user stats:', result.error);
+            return result;
+        }
+    } catch (error) {
+        console.error('Error loading user stats:', error);
+        return { error: error.message };
+    }
+}
+
+// Get current wallet address from CrossMint integration
+function getCurrentWalletAddress() {
+    const userData = localStorage.getItem('crossmint_user');
+    if (userData) {
+        const user = JSON.parse(userData);
+        return user.address;
+    }
+    return null;
+}
+
+// Update user agents display in the UI
+function updateUserAgentsDisplay() {
+    const agentsList = document.getElementById('agents-list');
+    if (!agentsList) return;
+    
+    // Clear existing user agents
+    const existingUserAgents = agentsList.querySelectorAll('.user-agent-item');
+    existingUserAgents.forEach(item => item.remove());
+    
+    // Add user agents
+    userAgents.forEach(agent => {
+        const agentItem = document.createElement('div');
+        agentItem.className = 'user-agent-item';
+        agentItem.innerHTML = `
+            <div class="agent-card">
+                <div class="agent-header">
+                    <h4>${agent.agent_id}</h4>
+                    <span class="agent-status ${agent.status}">${agent.status}</span>
+                </div>
+                <div class="agent-details">
+                    <p><strong>Type:</strong> ${agent.agent_type}</p>
+                    <p><strong>Wallet:</strong> ${agent.agent_wallet}</p>
+                    <p><strong>Created:</strong> ${new Date(parseFloat(agent.created_at) * 1000).toLocaleString()}</p>
+                </div>
+                <div class="agent-actions">
+                    <button onclick="deleteUserAgent('${agent.agent_id}')" class="delete-btn">Delete</button>
+                </div>
+            </div>
+        `;
+        agentsList.appendChild(agentItem);
+    });
+}
+
+// Update user stats display in the UI
+function updateUserStatsDisplay() {
+    if (!userStats) return;
+    
+    // Update user info in header if available
+    const userWalletElement = document.getElementById('crossmintWalletAddress');
+    if (userWalletElement && userStats.wallet_address) {
+        userWalletElement.textContent = userStats.wallet_address;
+    }
+    
+    // Update agent count in header or stats section
+    const agentCountElements = document.querySelectorAll('.user-agent-count');
+    agentCountElements.forEach(element => {
+        element.textContent = userStats.total_agents;
+    });
+}
+
+// Initialize user-specific functionality when wallet is connected
+function initializeUserSpecificFeatures() {
+    const walletAddress = getCurrentWalletAddress();
+    if (walletAddress) {
+        console.log('Initializing user-specific features for:', walletAddress);
+        registerUser(walletAddress, {
+            connected_at: new Date().toISOString(),
+            user_agent: navigator.userAgent
+        });
+    }
+}
+
+// Enhanced agent creation with user context
+function createAgentWithUserContext() {
+    const walletAddress = getCurrentWalletAddress();
+    if (!walletAddress) {
+        alert('Please connect your wallet first');
+        return;
+    }
+    
+    const agentId = prompt('Enter agent ID:');
+    if (!agentId) return;
+    
+    const agentType = prompt('Enter agent type:');
+    if (!agentType) return;
+    
+    createUserAgent(agentId, agentType, {
+        created_by: 'user_interface',
+        created_at: new Date().toISOString()
+    });
+}
+
+// Refresh user agents
+async function refreshUserAgents() {
+    const walletAddress = getCurrentWalletAddress();
+    if (!walletAddress) {
+        console.error('No wallet address available');
+        return;
+    }
+    
+    await loadUserAgents(walletAddress);
+    await loadUserStats(walletAddress);
+}
+
+// Make functions globally available
+window.registerUser = registerUser;
+window.createUserAgent = createUserAgent;
+window.deleteUserAgent = deleteUserAgent;
+window.loadUserAgents = loadUserAgents;
+window.loadUserStats = loadUserStats;
+window.createAgentWithUserContext = createAgentWithUserContext;
+window.initializeUserSpecificFeatures = initializeUserSpecificFeatures;
+window.refreshUserAgents = refreshUserAgents;
+
+// Authentication System - Variables moved to top of file
+
+// Initialize authentication system
+async function initializeAuthenticationSystem() {
+    console.log('🔐 Initializing authentication system...');
+    
+    // Check for existing authentication state
+    await checkAuthenticationState();
+    
+    // Debug: Check if DOM is ready
+    console.log('DOM ready state:', document.readyState);
+    console.log('Document body:', document.body);
+    console.log('Login button exists:', !!document.getElementById('loginConnectBtn'));
+    
+    // Set up login button event listener
+    const loginConnectBtn = document.getElementById('loginConnectBtn');
+    if (loginConnectBtn) {
+        console.log('✅ Login button found, adding event listener...');
+        console.log('Button element:', loginConnectBtn);
+        console.log('Button disabled:', loginConnectBtn.disabled);
+        console.log('Button innerHTML:', loginConnectBtn.innerHTML);
+        
+        // Remove any existing event listeners first
+        const newBtn = loginConnectBtn.cloneNode(true);
+        loginConnectBtn.parentNode.replaceChild(newBtn, loginConnectBtn);
+        
+        // Add click event listener to the new button
+        newBtn.addEventListener('click', function(event) {
+            console.log('🔘 LOGIN BUTTON CLICKED!', event);
+            console.log('Event target:', event.target);
+            console.log('Event currentTarget:', event.currentTarget);
+            console.log('handleLogin function exists:', typeof handleLogin);
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Call handleLogin directly
+            try {
+                console.log('Calling handleLogin...');
+                handleLogin();
+            } catch (error) {
+                console.error('Error in handleLogin:', error);
+            }
+        });
+        
+        // Also add onclick attribute as backup
+        newBtn.setAttribute('onclick', 'handleLogin()');
+        
+        // Add a simple test click to verify the button works
+        setTimeout(() => {
+            console.log('🧪 Testing button click in 3 seconds...');
+            setTimeout(() => {
+                console.log('🧪 Simulating button click for testing...');
+                try {
+                    newBtn.click();
+                } catch (error) {
+                    console.error('Test click failed:', error);
+                }
+            }, 3000);
+        }, 1000);
+        
+        // Test if button is actually clickable
+        newBtn.style.cursor = 'pointer';
+        newBtn.style.userSelect = 'none';
+        newBtn.style.pointerEvents = 'auto';
+        
+        console.log('✅ Event listener added to button');
+        
+        // Check if MetaMask is available and update button text if needed
+        if (typeof window.ethereum === 'undefined') {
+            newBtn.innerHTML = `
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                    <path d="M2 17l10 5 10-5"/>
+                    <path d="M2 12l10 5 10-5"/>
+                </svg>
+                Install MetaMask First
+            `;
+            loginConnectBtn.title = 'MetaMask browser extension is required';
+        } else {
+            console.log('✅ MetaMask is available');
+        }
+        
+        // Check CrossMint integration status
+        if (window.CrossMintIntegration) {
+            console.log('✅ CrossMint integration is available');
+            if (window.CrossMintIntegration.login) {
+                console.log('✅ CrossMint login method is available');
+            } else {
+                console.warn('⚠️ CrossMint login method is not available');
+            }
+        } else {
+            console.warn('⚠️ CrossMint integration is not available');
+        }
+        
+        // Check for MetaMask availability
+        if (typeof window.ethereum !== 'undefined') {
+            console.log('✅ MetaMask is available');
+        } else {
+            console.log('⚠️ MetaMask is not installed');
+        }
+    }
+    
+    // Set up logout button event listener
+    const logoutBtn = document.getElementById('crossmintLogoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleSecureLogout);
+    }
+    
+    console.log('✅ Authentication system initialized');
+}
+
+// Check authentication state on page load
+async function checkAuthenticationState() {
+    const authData = localStorage.getItem('mindx_auth');
+    const crossmintAuth = localStorage.getItem('crossmint_authenticated');
+    
+    if (authData && crossmintAuth === 'true') {
+        try {
+            const auth = JSON.parse(authData);
+            if (auth.walletAddress && auth.sessionId) {
+                // Verify session is still valid
+                if (isSessionValid(auth)) {
+                    // Check if MetaMask is still connected
+                    if (typeof window.ethereum !== 'undefined') {
+                        try {
+                            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                            if (accounts.length > 0 && accounts[0].toLowerCase() === auth.walletAddress.toLowerCase()) {
+                                authenticationState = auth;
+                                isAuthenticated = true;
+                                showMainApplication();
+                                console.log('✅ User authenticated from stored state');
+                                return;
+                            }
+                        } catch (e) {
+                            console.log('MetaMask connection check failed:', e);
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Error parsing auth data:', e);
+        }
+    }
+    
+    // No valid authentication found
+    showLoginLanding();
+    clearAuthenticationState();
+}
+
+// Check if session is valid
+function isSessionValid(auth) {
+    if (!auth.timestamp) return false;
+    
+    const sessionAge = Date.now() - auth.timestamp;
+    const maxSessionAge = 24 * 60 * 60 * 1000; // 24 hours
+    
+    return sessionAge < maxSessionAge;
+}
+
+// Handle login process - Using working CrossMint MetaMask connection
+async function handleLogin() {
+    console.log('🔑 Starting login process...');
+    
+    try {
+        // Show loading state
+        const loginBtn = document.getElementById('loginConnectBtn');
+        if (loginBtn) {
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = `
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                </svg>
+                Connecting...
+            `;
+        }
+        
+        // Use the working CrossMint MetaMask connection from crossmint-google-wallet.html
+        console.log('🔗 Using working CrossMint MetaMask connection...');
+        await connectMetaMask();
+        
+    } catch (error) {
+        console.error('❌ Login failed:', error);
+        
+        let errorMessage = 'Login failed. Please try again.';
+        if (error.code === 4001) {
+            errorMessage = 'MetaMask connection rejected. Please approve the connection request.';
+        } else if (error.code === -32002) {
+            errorMessage = 'MetaMask connection already pending. Please check MetaMask and try again.';
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        
+        showLoginError(errorMessage);
+        
+        // Reset button
+        const loginBtn = document.getElementById('loginConnectBtn');
+        if (loginBtn) {
+            loginBtn.disabled = false;
+            loginBtn.innerHTML = `
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3 4-3 9-3 9 1.34 9 3z"/>
+                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+                </svg>
+                Connect MetaMask Wallet
+            `;
+        }
+    }
+}
+
+// Make handleLogin globally accessible for testing
+window.handleLogin = handleLogin;
+
+// Test function to verify button click works
+window.testButtonClick = function() {
+    console.log('🧪 Testing button click manually...');
+    const btn = document.getElementById('loginConnectBtn');
+    if (btn) {
+        console.log('Button found, clicking...');
+        btn.click();
+    } else {
+        console.error('Button not found!');
+    }
+};
+
+// Test function to verify MetaMask connection works
+window.testMetaMaskConnection = async function() {
+    console.log('🧪 Testing MetaMask connection manually...');
+    try {
+        if (typeof window.ethereum === 'undefined') {
+            throw new Error('MetaMask not installed');
+        }
+        
+        const accounts = await window.ethereum.request({
+            method: 'eth_requestAccounts'
+        });
+        
+        console.log('✅ MetaMask connection successful:', accounts[0]);
+        return accounts[0];
+    } catch (error) {
+        console.error('❌ MetaMask connection failed:', error);
+        throw error;
+    }
+};
+
+// Connect MetaMask wallet - Working version from crossmint-google-wallet.html
+async function connectMetaMask() {
+    try {
+        console.log('🔗 Connecting to MetaMask...');
+        
+        // Check if MetaMask is available
+        if (typeof window.ethereum === 'undefined') {
+            throw new Error('MetaMask is not installed. Please install MetaMask browser extension to continue.');
+        }
+        
+        console.log('Requesting MetaMask access...');
+        
+        // Request account access - This should trigger MetaMask popup
+        const accounts = await window.ethereum.request({
+            method: 'eth_requestAccounts'
+        });
+
+        if (accounts.length === 0) {
+            throw new Error('No accounts found. Please unlock MetaMask and try again.');
+        }
+
+        const walletAddress = accounts[0];
+        console.log('Getting wallet information...');
+        
+        // Get chain ID
+        const chainId = await window.ethereum.request({
+            method: 'eth_chainId'
+        });
+
+        // Create user object
+        const userData = {
+            id: walletAddress,
+            address: walletAddress,
+            provider: 'metamask',
+            chainId: chainId,
+            authMethod: 'wallet',
+            timestamp: Date.now()
+        };
+
+        // Store in localStorage (compatible with existing CrossMint integration)
+        localStorage.setItem('crossmint_user', JSON.stringify(userData));
+        localStorage.setItem('crossmint_wallet', walletAddress);
+        localStorage.setItem('crossmint_authenticated', 'true');
+        localStorage.setItem('crossmint_auth_method', 'wallet');
+        
+        // Trigger authentication success
+        handleAuthenticationSuccess(userData);
+        
+        console.log('✅ MetaMask wallet connected successfully!');
+        
+    } catch (error) {
+        console.error('❌ MetaMask connection failed:', error);
+        if (error.code === 4001) {
+            throw new Error('MetaMask connection rejected. Please approve the connection request.');
+        } else if (error.code === -32002) {
+            throw new Error('MetaMask connection already pending. Please check MetaMask and try again.');
+        } else {
+            throw new Error('MetaMask connection failed: ' + (error.message || 'Unknown error'));
+        }
+    }
+}
+
+// Connect MetaMask wallet (from working crossmint-google-wallet.html)
+async function connectMetaMaskWallet() {
+    try {
+        console.log('🔗 Connecting to MetaMask...');
+        
+        // Check if MetaMask is available
+        if (typeof window.ethereum === 'undefined') {
+            throw new Error('MetaMask is not installed. Please install MetaMask browser extension to continue.');
+        }
+        
+        // Request account access
+        const accounts = await window.ethereum.request({
+            method: 'eth_requestAccounts'
+        });
+
+        if (accounts.length === 0) {
+            throw new Error('No accounts found. Please unlock MetaMask and try again.');
+        }
+
+        const walletAddress = accounts[0];
+        console.log('✅ MetaMask connected:', walletAddress);
+        
+        // Get chain ID
+        const chainId = await window.ethereum.request({
+            method: 'eth_chainId'
+        });
+
+        // Create user data
+        const userData = {
+            id: walletAddress,
+            address: walletAddress,
+            provider: 'metamask',
+            chainId: chainId,
+            authMethod: 'wallet',
+            timestamp: Date.now()
+        };
+
+        // Store in localStorage (compatible with existing CrossMint integration)
+        localStorage.setItem('crossmint_user', JSON.stringify(userData));
+        localStorage.setItem('crossmint_wallet', walletAddress);
+        localStorage.setItem('crossmint_authenticated', 'true');
+        localStorage.setItem('crossmint_auth_method', 'wallet');
+        
+        // Trigger authentication success
+        handleAuthenticationSuccess(userData);
+        
+        console.log('✅ MetaMask login successful');
+        
+    } catch (error) {
+        console.error('❌ MetaMask connection failed:', error);
+        throw error;
+    }
+}
+
+// Wait for CrossMint integration to be ready (simplified)
+function waitForCrossMintIntegration() {
+    // For now, just resolve immediately since we're using direct MetaMask
+    return Promise.resolve();
+}
+
+// Handle successful authentication
+function handleAuthenticationSuccess(userData) {
+    console.log('✅ Authentication successful:', userData);
+    
+    // Create session
+    const sessionId = generateSessionId();
+    const timestamp = Date.now();
+    
+    authenticationState = {
+        isLoggedIn: true,
+        walletAddress: userData.address,
+        userData: userData,
+        sessionId: sessionId,
+        timestamp: timestamp
+    };
+    
+    // Store authentication state
+    localStorage.setItem('mindx_auth', JSON.stringify(authenticationState));
+    
+    isAuthenticated = true;
+    currentUser = userData;
+    
+    // Show main application
+    showMainApplication();
+    
+    // Initialize user-specific features
+    initializeUserSpecificFeatures();
+    
+    // Log successful authentication
+    logAuthenticationEvent('login_success', {
+        walletAddress: userData.address,
+        sessionId: sessionId,
+        timestamp: timestamp
+    });
+}
+
+// Handle secure logout
+async function handleSecureLogout() {
+    console.log('🚪 Starting secure logout process...');
+    
+    try {
+        // Show confirmation
+        const confirmed = confirm('Are you sure you want to logout? This will clear all session data.');
+        if (!confirmed) return;
+        
+        // Log logout event
+        logAuthenticationEvent('logout_initiated', {
+            walletAddress: authenticationState.walletAddress,
+            sessionId: authenticationState.sessionId
+        });
+        
+        // Clear CrossMint state
+        if (window.CrossMintIntegration && window.CrossMintIntegration.logout) {
+            await window.CrossMintIntegration.logout();
+        }
+        
+        // Clear authentication state
+        clearAuthenticationState();
+        
+        // Clear all user data
+        clearUserData();
+        
+        // Show login landing
+        showLoginLanding();
+        
+        // Force page refresh to ensure complete state reset
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+        
+        console.log('✅ Secure logout completed');
+        
+    } catch (error) {
+        console.error('❌ Logout error:', error);
+        // Force logout even if there's an error
+        clearAuthenticationState();
+        showLoginLanding();
+        window.location.reload();
+    }
+}
+
+// Clear authentication state
+function clearAuthenticationState() {
+    authenticationState = {
+        isLoggedIn: false,
+        walletAddress: null,
+        userData: null,
+        sessionId: null
+    };
+    
+    localStorage.removeItem('mindx_auth');
+    localStorage.removeItem('crossmint_authenticated');
+    localStorage.removeItem('crossmint_user');
+    
+    isAuthenticated = false;
+    currentUser = null;
+}
+
+// Clear all user data
+function clearUserData() {
+    // Clear user agents
+    userAgents = [];
+    userStats = null;
+    
+    // Clear any cached data
+    localStorage.removeItem('user_agents');
+    localStorage.removeItem('user_stats');
+    
+    // Clear any other user-specific data
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('user_')) {
+            keysToRemove.push(key);
+        }
+    }
+    
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+}
+
+// Show login landing page
+function showLoginLanding() {
+    const loginLanding = document.getElementById('login-landing');
+    const mainApplication = document.getElementById('main-application');
+    
+    if (loginLanding) loginLanding.style.display = 'flex';
+    if (mainApplication) mainApplication.style.display = 'none';
+    
+    document.body.classList.remove('authenticated');
+}
+
+// Show main application
+function showMainApplication() {
+    const loginLanding = document.getElementById('login-landing');
+    const mainApplication = document.getElementById('main-application');
+    
+    if (loginLanding) loginLanding.style.display = 'none';
+    if (mainApplication) mainApplication.style.display = 'block';
+    
+    document.body.classList.add('authenticated');
+    
+    // Update wallet display
+    updateWalletDisplay();
+    
+    // Load system data
+    setTimeout(() => {
+        updateAllSystemFields();
+        updateMonitoringAgents();
+        updateResourceFromSystemMetrics();
+        performSystemHealthCheck();
+        startHealthCheckRefresh();
+    }, 1000);
+}
+
+// Update wallet display
+function updateWalletDisplay() {
+    const walletAddressElement = document.getElementById('crossmintWalletAddress');
+    if (walletAddressElement && authenticationState.walletAddress) {
+        walletAddressElement.textContent = authenticationState.walletAddress;
+    }
+}
+
+// Generate session ID
+function generateSessionId() {
+    return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+// Log authentication events
+function logAuthenticationEvent(event, data) {
+    console.log(`🔐 Auth Event: ${event}`, data);
+    
+    // Store in localStorage for debugging
+    const authLogs = JSON.parse(localStorage.getItem('auth_logs') || '[]');
+    authLogs.push({
+        event: event,
+        data: data,
+        timestamp: Date.now()
+    });
+    
+    // Keep only last 50 logs
+    if (authLogs.length > 50) {
+        authLogs.splice(0, authLogs.length - 50);
+    }
+    
+    localStorage.setItem('auth_logs', JSON.stringify(authLogs));
+}
+
+// Show login error
+function showLoginError(message) {
+    // Create error notification
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'login-error';
+    errorDiv.innerHTML = `
+        <div class="error-content">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    // Add to login card
+    const loginCard = document.querySelector('.login-card');
+    if (loginCard) {
+        loginCard.appendChild(errorDiv);
+        
+        // Remove after 5 seconds
+        setTimeout(() => {
+            if (errorDiv.parentNode) {
+                errorDiv.parentNode.removeChild(errorDiv);
+            }
+        }, 5000);
+    }
+}
+
+// CrossMint integration is now properly handled by the CrossMintIntegration class

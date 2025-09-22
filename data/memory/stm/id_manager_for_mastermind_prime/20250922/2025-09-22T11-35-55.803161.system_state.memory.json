@@ -1,0 +1,21 @@
+{
+  "timestamp": "2025-09-22T11:35:55.803161",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "id_manager_for_mastermind_prime",
+  "content": {
+    "process_name": "id_manager_address_not_found",
+    "data": {
+      "entity_id": "user_0x987654"
+    }
+  },
+  "context": {
+    "agent_id": "id_manager_for_mastermind_prime"
+  },
+  "tags": [
+    "id_manager_address_not_found",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "d7bc0ac689e6c545"
+}

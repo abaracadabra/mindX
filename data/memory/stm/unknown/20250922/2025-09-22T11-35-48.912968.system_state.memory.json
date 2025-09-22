@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-09-22T11:35:48.912968",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "unknown",
+  "content": {
+    "process_name": "agent_deleted",
+    "data": {
+      "agent_id": "test_agent_001",
+      "owner_wallet": "0x1234567890abcdef1234567890abcdef12345678",
+      "agent_wallet": "0x4C03907896ec9ccfd96ACee212617A653a4EeB05",
+      "agent_type": "assistant"
+    }
+  },
+  "context": {
+    "user_wallet": "0x1234567890abcdef1234567890abcdef12345678",
+    "deleted_agent": "test_agent_001"
+  },
+  "tags": [
+    "agent_deleted",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "fdfc90638ea38301"
+}
