@@ -10,32 +10,23 @@
       "status": "created"
     },
     {
-      "branch_name": "backup/pre-architectural-up-20260111_154457",
-      "backup_type": "pre_architectural_upgrade",
-      "reason": "Pre-upgrade backup: Test upgrade - GitHub agent tool testing",
-      "source_branch": "main",
-      "source_commit": "ba7503bd891a494d1a8396d2425a017fbfd9bc48",
-      "created_at": "2026-01-11T15:44:59.555261",
-      "status": "created"
-    },
-    {
-      "branch_name": "backup/shutdown-backup-20260111_154510",
+      "branch_name": "backup/shutdown-backup-20260111_154513",
       "backup_type": "shutdown_backup",
       "reason": "System shutdown - automatic backup",
       "source_branch": "main",
-      "source_commit": "5b1e63b382dd6fa25eeaac106692487767688c88",
-      "created_at": "2026-01-11T15:45:13.213117",
+      "source_commit": "8a1e99aa0b5585bd3993b3aa6ce9a3c6ab466140",
+      "created_at": "2026-01-11T15:45:15.663709",
       "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/shutdown-backup-20260111_154510",
+    "branch_name": "backup/shutdown-backup-20260111_154513",
     "backup_type": "shutdown_backup",
     "reason": "System shutdown - automatic backup",
     "source_branch": "main",
-    "source_commit": "5b1e63b382dd6fa25eeaac106692487767688c88",
-    "created_at": "2026-01-11T15:45:13.213117",
+    "source_commit": "8a1e99aa0b5585bd3993b3aa6ce9a3c6ab466140",
+    "created_at": "2026-01-11T15:45:15.663709",
     "status": "created"
   },
-  "last_backup_at": "2026-01-11T15:45:13.213136"
+  "last_backup_at": "2026-01-11T15:45:15.663731"
 }
