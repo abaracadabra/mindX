@@ -1,0 +1,23 @@
+{
+  "enabled": true,
+  "schedules": {
+    "hourly": {
+      "enabled": false,
+      "interval_seconds": 3600
+    },
+    "daily": {
+      "enabled": true,
+      "interval_seconds": 86400,
+      "time": "03:00"
+    },
+    "weekly": {
+      "enabled": false,
+      "interval_seconds": 604800,
+      "day": "sunday",
+      "time": "03:00"
+    }
+  },
+  "shutdown_backup": {
+    "enabled": true
+  }
+}
