@@ -35,6 +35,8 @@ body {
     padding: 20px;
     min-height: 100vh;
     overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-gutter: stable; /* Prevent layout shift when scrollbar appears */
 }
 
 /* Corporate 2049 Background */
@@ -109,6 +111,8 @@ body::after {
     position: relative;
     z-index: 10;
     transform: perspective(1000px) rotateX(0deg);
+    overflow-x: hidden; /* Prevent horizontal scroll */
+    overflow-y: visible; /* Let body handle scrolling */
 }
 
 .container::before {
@@ -150,18 +154,73 @@ body::after {
     }
 }
 
-@keyframes corporate-scan {
-    0% { 
+/* K.I.T.T. Style Back-and-Forth Lights - Knight Rider with Bounce */
+@keyframes kitt-lights {
+    /* Move from left to right */
+    0% {
+        transform: translateX(-120%);
         opacity: 0;
-        transform: translateY(-100%);
     }
-    50% { 
+    5% {
         opacity: 0.3;
-        transform: translateY(0%);
     }
-    100% { 
+    10% {
+        transform: translateX(-100%);
+        opacity: 0.6;
+    }
+    20% {
+        transform: translateX(-50%);
+        opacity: 1;
+    }
+    30% {
+        transform: translateX(0%);
+        opacity: 1;
+    }
+    40% {
+        transform: translateX(50%);
+        opacity: 1;
+    }
+    45% {
+        transform: translateX(100%);
+        opacity: 0.6;
+    }
+    50% {
+        transform: translateX(120%);
         opacity: 0;
-        transform: translateY(100%);
+    }
+    /* Stay invisible at right edge */
+    50.1%, 75% {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+    /* Bounce back from right to left */
+    75.1% {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+    80% {
+        transform: translateX(100%);
+        opacity: 0.6;
+    }
+    85% {
+        transform: translateX(50%);
+        opacity: 1;
+    }
+    90% {
+        transform: translateX(0%);
+        opacity: 1;
+    }
+    95% {
+        transform: translateX(-50%);
+        opacity: 1;
+    }
+    98% {
+        transform: translateX(-100%);
+        opacity: 0.6;
+    }
+    100% {
+        transform: translateX(-120%);
+        opacity: 0;
     }
 }
 
@@ -997,9 +1056,46 @@ pre::before {
 /* Autonomous Mode Controls */
 .autonomous-control {
     display: flex;
+    flex-direction: row;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     margin-right: 15px;
+    position: relative;
+    padding-bottom: 12px;
+}
+
+/* K.I.T.T. Style Thinking Lights under Autonomous Toggle */
+.autonomous-control::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 50px; /* Match the toggle slider width only (narrower) */
+    height: 3px;
+    background: 
+        linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255, 0, 0, 0.3) 20%,
+            rgba(255, 50, 0, 0.6) 40%,
+            rgba(255, 100, 0, 1) 50%,
+            rgba(255, 50, 0, 0.6) 60%,
+            rgba(255, 0, 0, 0.3) 80%,
+            transparent 100%
+        );
+    opacity: 0;
+    box-shadow: 
+        0 0 10px rgba(255, 100, 0, 0.8),
+        0 0 20px rgba(255, 50, 0, 0.6);
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    transform-origin: center;
+}
+
+/* Show K.I.T.T. lights only when mindX is thinking - bouncing back and forth */
+body.mindx-thinking .autonomous-control::after {
+    opacity: 1;
+    animation: kitt-lights 2s ease-in-out infinite;
 }
 
 .autonomous-toggle {
@@ -3131,27 +3227,57 @@ body.autonomous-mode .tab-btn.active {
     text-shadow: 0 0 5px var(--corp-red);
 }
 
-/* Professional scrollbar styling */
+/* Professional scrollbar styling - Fixed position to prevent movement */
+html {
+    scrollbar-gutter: stable; /* Reserve space for scrollbar */
+    overflow-y: scroll; /* Always show scrollbar to prevent layout shifts */
+}
+
+body {
+    scrollbar-gutter: stable;
+}
+
+/* Main scrollbar - always visible and stable */
 ::-webkit-scrollbar {
-    width: 8px;
+    width: 12px; /* Slightly wider for better visibility */
+    position: fixed;
+    right: 0;
 }
 
 ::-webkit-scrollbar-track {
     background: var(--darker-bg);
-    border-radius: 4px;
-    border: 1px solid var(--corp-blue);
+    border-radius: 0;
+    border-left: 1px solid var(--corp-blue);
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: linear-gradient(45deg, var(--corp-blue), var(--corp-cyan));
-    border-radius: 4px;
-    border: 1px solid var(--corp-blue);
-    box-shadow: 0 0 8px rgba(0, 168, 255, 0.2);
+    background: linear-gradient(180deg, var(--corp-blue), var(--corp-cyan));
+    border-radius: 0;
+    border-left: 1px solid var(--corp-blue);
+    box-shadow: 0 0 8px rgba(0, 168, 255, 0.3);
+    min-height: 50px; /* Minimum thumb size */
+    position: relative;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(45deg, var(--corp-cyan), var(--corp-purple));
-    box-shadow: 0 0 12px rgba(0, 168, 255, 0.3);
+    background: linear-gradient(180deg, var(--corp-cyan), var(--corp-purple));
+    box-shadow: 0 0 12px rgba(0, 168, 255, 0.5);
+    border-left: 2px solid var(--corp-cyan);
+}
+
+::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(180deg, var(--corp-purple), var(--corp-blue));
+    box-shadow: 0 0 16px rgba(139, 92, 246, 0.6);
+}
+
+/* Firefox scrollbar styling */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--corp-blue) var(--darker-bg);
 }
 
 /* Health Status Styling */

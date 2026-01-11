@@ -1,0 +1,32 @@
+{
+  "name": "daio-dnft-dapp",
+  "version": "1.0.0",
+  "description": "DAIO Dynamic NFT (dNFT) dApp for managing THINK implementations",
+  "main": "dapp.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "vite"
+  },
+  "keywords": [
+    "dapp",
+    "ethereum",
+    "nft",
+    "erc1155",
+    "daio",
+    "blockchain"
+  ],
+  "author": "DAIO",
+  "license": "MIT",
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "ethers": "^5.7.2",
+    "chart.js": "^4.4.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.0",
+    "vite": "^5.0.0"
+  }
+}

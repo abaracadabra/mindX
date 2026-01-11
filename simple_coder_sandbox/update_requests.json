@@ -1254,7 +1254,7 @@
     ],
     "cycle": 1,
     "timestamp": "2025-09-22T14:06:01.154693",
-    "status": "pending",
+    "status": "approved",
     "backup_created": true
   },
   {
@@ -1276,7 +1276,7 @@
     ],
     "cycle": 1,
     "timestamp": "2025-09-22T14:06:06.998035",
-    "status": "pending",
+    "status": "approved",
     "backup_created": true
   },
   {
@@ -1298,7 +1298,7 @@
     ],
     "cycle": 1,
     "timestamp": "2025-09-22T14:06:12.879355",
-    "status": "pending",
+    "status": "approved",
     "backup_created": true
   },
   {
@@ -1320,7 +1320,7 @@
     ],
     "cycle": 1,
     "timestamp": "2025-09-22T14:06:18.731930",
-    "status": "pending",
+    "status": "approved",
     "backup_created": true
   },
   {
@@ -1342,7 +1342,7 @@
     ],
     "cycle": 1,
     "timestamp": "2025-09-22T14:06:24.582109",
-    "status": "pending",
+    "status": "approved",
     "backup_created": true
   },
   {
@@ -1364,7 +1364,7 @@
     ],
     "cycle": 1,
     "timestamp": "2025-09-22T14:06:30.462913",
-    "status": "pending",
+    "status": "approved",
     "backup_created": true
   },
   {
@@ -1386,7 +1386,7 @@
     ],
     "cycle": 1,
     "timestamp": "2025-09-22T14:06:36.332495",
-    "status": "pending",
+    "status": "approved",
     "backup_created": true
   },
   {
@@ -1408,7 +1408,7 @@
     ],
     "cycle": 1,
     "timestamp": "2025-09-22T14:06:42.173378",
-    "status": "pending",
+    "status": "approved",
     "backup_created": true
   }
 ]

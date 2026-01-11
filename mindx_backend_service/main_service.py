@@ -150,6 +150,14 @@ from mindx_backend_service.mindterm import mindterm_router
 from mindx_backend_service.mindterm.routes import set_coordinator_and_monitors
 app.include_router(mindterm_router)
 
+# Include LLM provider management router
+from api.llm_routes import router as llm_router
+app.include_router(llm_router)
+
+# Include RAGE (Retrieval Augmented Generative Engine) router
+from mindx_backend_service.rage.routes import router as rage_router
+app.include_router(rage_router)
+
 command_handler: Optional[CommandHandler] = None
 
 @app.on_event("startup")

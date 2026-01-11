@@ -154,6 +154,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateConfigBtn = document.getElementById('update-config-btn');
     const exportLogsBtn = document.getElementById('export-logs-btn');
     const configDisplay = document.getElementById('config-display');
+    
+    // Ollama elements
+    const ollamaConfigMethod = document.getElementById('ollama-config-method');
+    const ollamaHostPortConfig = document.getElementById('ollama-host-port-config');
+    const ollamaBaseUrlConfig = document.getElementById('ollama-base-url-config');
+    const ollamaHost = document.getElementById('ollama-host');
+    const ollamaPort = document.getElementById('ollama-port');
+    const ollamaBaseUrl = document.getElementById('ollama-base-url');
+    const testOllamaConnectionBtn = document.getElementById('test-ollama-connection-btn');
+    const listOllamaModelsBtn = document.getElementById('list-ollama-models-btn');
+    const saveOllamaConfigBtn = document.getElementById('save-ollama-config-btn');
+    const ollamaStatus = document.getElementById('ollama-status');
+    const ollamaModelsList = document.getElementById('ollama-models-list');
+    const ollamaTestModel = document.getElementById('ollama-test-model');
+    const ollamaTestPrompt = document.getElementById('ollama-test-prompt');
+    const testOllamaCompletionBtn = document.getElementById('test-ollama-completion-btn');
+    const ollamaCompletionStatus = document.getElementById('ollama-completion-status');
+    const ollamaCompletionResponse = document.getElementById('ollama-completion-response');
+    const ollamaResponseText = document.getElementById('ollama-response-text');
 
     // Core Systems tab elements
     const bdiAgentStatus = document.getElementById('bdi-agent-status');
@@ -1331,9 +1350,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // API Functions
+    // Track thinking state for K.I.T.T. lights
+    let activeRequests = 0;
+    let thinkingTimeout = null;
+    
+    function updateThinkingState(isThinking) {
+        if (isThinking) {
+            activeRequests++;
+            document.body.classList.add('mindx-thinking');
+            if (thinkingTimeout) {
+                clearTimeout(thinkingTimeout);
+            }
+        } else {
+            activeRequests = Math.max(0, activeRequests - 1);
+            if (activeRequests === 0) {
+                // Delay removing thinking state to avoid flicker
+                thinkingTimeout = setTimeout(() => {
+                    document.body.classList.remove('mindx-thinking');
+                }, 300);
+            }
+        }
+    }
+
     async function sendRequest(endpoint, method = 'GET', body = null) {
         showResponse('Sending request...');
         addLog(`API Request: ${method} ${endpoint}`, 'INFO');
+        
+        // Mark as thinking
+        updateThinkingState(true);
         
         try {
             const options = {
@@ -1363,6 +1407,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
             showResponse(JSON.stringify(result, null, 2));
             addLog(`API Response: ${method} ${endpoint} - Success`, 'INFO');
+            
+            // Mark as not thinking
+            updateThinkingState(false);
+            
             return result;
         } catch (error) {
             let errorMsg;
@@ -1374,6 +1422,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 addLog(`API Error: ${method} ${endpoint} - ${error.message}`, 'ERROR');
             }
             showResponse(errorMsg);
+            
+            // Mark as not thinking even on error
+            updateThinkingState(false);
+            
             throw error;
         }
     }
@@ -1473,6 +1525,9 @@ document.addEventListener('DOMContentLoaded', () => {
             addLog(`Starting AGInt cognitive loop with directive: ${directive}`, 'INFO');
             addAgentActivity('AGInt', `Starting cognitive loop: ${directive}`, 'info');
             
+            // Mark as thinking
+            updateThinkingState(true);
+            
             // Show loading state
             evolveBtn.disabled = true;
             evolveBtn.textContent = 'Evolving...';
@@ -1569,6 +1624,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 evolveBtn.disabled = false;
                 evolveBtn.textContent = 'Evolve Codebase';
                 // Don't auto-close the window - let user close manually
+                
+                // Mark as not thinking
+                updateThinkingState(false);
             }
         });
 
@@ -1830,6 +1888,105 @@ document.addEventListener('DOMContentLoaded', () => {
         if (testMistralBtn) {
             testMistralBtn.addEventListener('click', testMistralAPI);
         }
+        
+        // Ollama Management Event Listeners
+        setupOllamaListeners();
+    }
+    
+    // Ollama Management Setup Function
+    function setupOllamaListeners() {
+        const testBtn = document.getElementById('test-ollama-connection-btn');
+        const listBtn = document.getElementById('list-ollama-models-btn');
+        const saveBtn = document.getElementById('save-ollama-config-btn');
+        const completionBtn = document.getElementById('test-ollama-completion-btn');
+        const quickTestBtn = document.getElementById('ollama-quick-test-btn');
+        const configMethod = document.getElementById('ollama-config-method');
+        const hostPortConfig = document.getElementById('ollama-host-port-config');
+        const baseUrlConfig = document.getElementById('ollama-base-url-config');
+        
+        if (testBtn) {
+            console.log('✅ Setting up Ollama event listeners');
+            testBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🔌 Test Connection button clicked');
+                testOllamaConnection();
+            });
+        }
+        
+        if (quickTestBtn) {
+            quickTestBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('⚡ Quick Test button clicked');
+                testOllamaConnection();
+            });
+        }
+        
+        if (listBtn) {
+            listBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('📋 List Models button clicked');
+                listOllamaModels();
+            });
+        }
+        
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('💾 Save Config button clicked');
+                saveOllamaConfig();
+            });
+        }
+        
+        if (completionBtn) {
+            completionBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🧪 Test Completion button clicked');
+                testOllamaCompletion();
+            });
+        }
+        
+        // Toggle between host/port and base URL configuration
+        if (configMethod) {
+            configMethod.addEventListener('change', function() {
+                const method = this.value;
+                console.log('🔄 Config method changed to:', method);
+                if (method === 'host-port') {
+                    if (hostPortConfig) hostPortConfig.style.display = 'grid';
+                    if (baseUrlConfig) baseUrlConfig.style.display = 'none';
+                } else {
+                    if (hostPortConfig) hostPortConfig.style.display = 'none';
+                    if (baseUrlConfig) baseUrlConfig.style.display = 'block';
+                }
+            });
+        }
+        
+        // Ensure status elements are visible
+        const statusEl = document.getElementById('ollama-status');
+        const modelsEl = document.getElementById('ollama-models-list');
+        if (statusEl) {
+            statusEl.style.display = 'block';
+            statusEl.style.minHeight = '60px';
+        }
+        if (modelsEl) {
+            modelsEl.style.display = 'block';
+            modelsEl.style.minHeight = '100px';
+        }
+        
+        // Initialize connection banner
+        updateConnectionBanner('error', 'Not Connected', 'Configure and test connection to get started');
+    }
+    
+    // Setup Ollama listeners when admin tab is shown
+    const adminTabBtn = document.querySelector('[data-tab="admin"]');
+    if (adminTabBtn) {
+        adminTabBtn.addEventListener('click', function() {
+            setTimeout(setupOllamaListeners, 100);
+        });
     }
 
     // Agents Tab Functions
@@ -7627,3 +7784,612 @@ function showLoginError(message) {
 }
 
 // CrossMint integration is now properly handled by the CrossMintIntegration class
+
+// ==================== Ollama Management Functions ====================
+
+function getOllamaConfig() {
+    const method = ollamaConfigMethod ? ollamaConfigMethod.value : 'host-port';
+    
+    if (method === 'base-url') {
+        const baseUrl = ollamaBaseUrl ? ollamaBaseUrl.value.trim() : 'http://localhost:11434';
+        return { base_url: baseUrl };
+    } else {
+        const host = ollamaHost ? ollamaHost.value.trim() : 'localhost';
+        const port = ollamaPort ? parseInt(ollamaPort.value) : 11434;
+        return { host: host, port: port };
+    }
+}
+
+function buildOllamaQueryString(config) {
+    const params = new URLSearchParams();
+    if (config.base_url) {
+        params.append('base_url', config.base_url);
+    } else {
+        if (config.host) params.append('host', config.host);
+        if (config.port) params.append('port', config.port.toString());
+    }
+    return params.toString();
+}
+
+// Rate limiting for connection attempts
+let lastConnectionAttempt = 0;
+const CONNECTION_RATE_LIMIT_MS = 2000; // 2 seconds between attempts
+
+function updateConnectionBanner(status, message, details) {
+    const banner = document.getElementById('ollama-connection-banner');
+    const icon = document.getElementById('ollama-connection-icon');
+    const statusText = document.getElementById('ollama-connection-status-text');
+    const detailsEl = document.getElementById('ollama-connection-details');
+    
+    if (!banner) return;
+    
+    banner.style.display = 'block';
+    
+    if (status === 'connected') {
+        banner.style.background = '#d4edda';
+        banner.style.borderLeftColor = '#28a745';
+        icon.textContent = '🟢';
+        statusText.textContent = 'Connected';
+        statusText.style.color = '#155724';
+        if (details) {
+            detailsEl.innerHTML = `<span style="color: #155724;">${details}</span>`;
+        }
+    } else if (status === 'connecting') {
+        banner.style.background = '#d1ecf1';
+        banner.style.borderLeftColor = '#17a2b8';
+        icon.textContent = '🟡';
+        statusText.textContent = 'Connecting...';
+        statusText.style.color = '#0c5460';
+        if (details) {
+            detailsEl.innerHTML = `<span style="color: #0c5460;">${details}</span>`;
+        }
+    } else {
+        banner.style.background = '#f8d7da';
+        banner.style.borderLeftColor = '#dc3545';
+        icon.textContent = '🔴';
+        statusText.textContent = 'Not Connected';
+        statusText.style.color = '#721c24';
+        if (details) {
+            detailsEl.innerHTML = `<span style="color: #721c24;">${details}</span>`;
+        }
+    }
+}
+
+async function testOllamaConnection() {
+    console.log('🔌 testOllamaConnection called');
+    
+    // Rate limiting
+    const now = Date.now();
+    const timeSinceLastAttempt = now - lastConnectionAttempt;
+    if (timeSinceLastAttempt < CONNECTION_RATE_LIMIT_MS) {
+        const waitTime = Math.ceil((CONNECTION_RATE_LIMIT_MS - timeSinceLastAttempt) / 1000);
+        updateConnectionBanner('error', 'Rate Limited', `Please wait ${waitTime} second(s) before attempting another connection.`);
+        return;
+    }
+    lastConnectionAttempt = now;
+    
+    const statusEl = ollamaStatus || document.getElementById('ollama-status');
+    const testBtn = document.getElementById('test-ollama-connection-btn');
+    const testIcon = document.getElementById('test-connection-icon');
+    
+    if (!statusEl) {
+        console.error('❌ ollama-status element not found');
+        return;
+    }
+    
+    const config = getOllamaConfig();
+    console.log('📋 Ollama config:', config);
+    
+    // Update banner to connecting
+    const serverUrl = config.base_url || `http://${config.host}:${config.port}`;
+    updateConnectionBanner('connecting', 'Connecting...', `Connecting to ${serverUrl}...`);
+    
+    // Disable button and show loading
+    if (testBtn) {
+        testBtn.disabled = true;
+        testBtn.style.opacity = '0.6';
+        if (testIcon) testIcon.textContent = '⏳';
+    }
+    
+    statusEl.style.display = 'block';
+    statusEl.style.visibility = 'visible';
+    statusEl.style.opacity = '1';
+    
+    // Show connection progress with better animation
+    let progressSteps = [
+        { text: 'Resolving host...', progress: 25 },
+        { text: 'Establishing TCP connection...', progress: 50 },
+        { text: 'Sending HTTP request to /api/tags...', progress: 75 },
+        { text: 'Waiting for response...', progress: 90 }
+    ];
+    let stepIndex = 0;
+    
+    const progressInterval = setInterval(() => {
+        if (stepIndex < progressSteps.length) {
+            const step = progressSteps[stepIndex];
+            statusEl.innerHTML = `
+                <div style="padding: 20px; background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); border: 2px solid #17a2b8; border-radius: 8px; color: #0c5460; box-shadow: 0 2px 8px rgba(23,162,184,0.2);">
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                        <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #17a2b8; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite;"></div>
+                        <p style="margin: 0; font-weight: bold; font-size: 16px;">${step.text}</p>
+                    </div>
+                    <div style="width: 100%; background: rgba(255,255,255,0.5); border-radius: 8px; height: 8px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+                        <div style="width: ${step.progress}%; background: linear-gradient(90deg, #17a2b8 0%, #138496 100%); height: 100%; transition: width 0.5s ease; box-shadow: 0 2px 4px rgba(23,162,184,0.3);"></div>
+                    </div>
+                    <p style="margin: 10px 0 0 0; font-size: 12px; opacity: 0.8;">Endpoint: GET ${serverUrl}/api/tags</p>
+                </div>
+            `;
+            stepIndex++;
+        }
+    }, 600);
+    
+    try {
+        const queryString = buildOllamaQueryString(config);
+        console.log('🌐 Requesting:', `/api/llm/ollama/connection?${queryString}`);
+        
+        const response = await sendRequest(`/api/llm/ollama/connection?${queryString}`);
+        console.log('✅ Response received:', response);
+        
+        clearInterval(progressInterval);
+        
+        if (response.success) {
+            updateConnectionBanner('connected', 'Connected', `${response.model_count || 0} models available on ${response.base_url}`);
+            
+            statusEl.innerHTML = `
+                <div style="padding: 20px; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border: 2px solid #28a745; border-radius: 8px; color: #155724; box-shadow: 0 2px 8px rgba(40,167,69,0.2);">
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                        <span style="font-size: 32px;">✅</span>
+                        <div>
+                            <p style="margin: 0; font-weight: bold; font-size: 18px;">Connection Successful!</p>
+                            <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">${response.message || 'Successfully connected to Ollama server'}</p>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid rgba(40,167,69,0.3); display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div style="background: rgba(255,255,255,0.5); padding: 12px; border-radius: 6px;">
+                            <div style="font-size: 12px; opacity: 0.8; margin-bottom: 5px;">Server URL</div>
+                            <div style="font-weight: bold; font-family: monospace; font-size: 14px;">${response.base_url || 'N/A'}</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.5); padding: 12px; border-radius: 6px;">
+                            <div style="font-size: 12px; opacity: 0.8; margin-bottom: 5px;">Models Available</div>
+                            <div style="font-weight: bold; font-size: 20px; color: #28a745;">${response.model_count || 0}</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.5); padding: 12px; border-radius: 6px;">
+                            <div style="font-size: 12px; opacity: 0.8; margin-bottom: 5px;">Status Code</div>
+                            <div style="font-weight: bold; font-size: 14px;">${response.status_code || '200'}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            statusEl.style.display = 'block';
+            addLog(`Ollama connection successful: ${response.message || 'Connected'}`, 'SUCCESS');
+            setTimeout(() => listOllamaModels(), 500);
+        } else {
+            updateConnectionBanner('error', 'Connection Failed', response.error || 'Unknown error');
+            
+            let errorDetails = '';
+            let troubleshooting = '';
+            if (response.timeout) {
+                errorDetails = '⏱️ Connection Timeout';
+                troubleshooting = '<p style="margin: 10px 0 0 0; padding: 10px; background: rgba(255,193,7,0.2); border-left: 3px solid #ffc107; border-radius: 4px; font-size: 13px;"><strong>💡 Troubleshooting:</strong><br>• Check if Ollama is running on the server<br>• Verify the host and port are correct<br>• Check firewall settings<br>• Try: <code>curl ' + serverUrl + '/api/tags</code></p>';
+            } else if (response.connection_error) {
+                errorDetails = '🔌 Connection Error';
+                troubleshooting = '<p style="margin: 10px 0 0 0; padding: 10px; background: rgba(255,193,7,0.2); border-left: 3px solid #ffc107; border-radius: 4px; font-size: 13px;"><strong>💡 Troubleshooting:</strong><br>• Verify the server is accessible from this machine<br>• Check network connectivity<br>• Ensure Ollama is listening on the specified port<br>• Test with: <code>ping ' + (config.host || 'localhost') + '</code></p>';
+            }
+            
+            statusEl.innerHTML = `
+                <div style="padding: 20px; background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); border: 2px solid #dc3545; border-radius: 8px; color: #721c24; box-shadow: 0 2px 8px rgba(220,53,69,0.2);">
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                        <span style="font-size: 32px;">❌</span>
+                        <div>
+                            <p style="margin: 0; font-weight: bold; font-size: 18px;">Connection Failed</p>
+                            <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">${errorDetails || 'Unable to connect to Ollama server'}</p>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.5); border-radius: 6px;">
+                        <p style="margin: 0 0 10px 0; font-weight: bold; font-size: 14px;">Error Details:</p>
+                        <p style="margin: 0; font-family: monospace; font-size: 13px; word-break: break-all;">${response.error || 'Unknown error'}</p>
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid rgba(220,53,69,0.3);">
+                            <p style="margin: 0 0 5px 0; font-size: 14px;"><strong>Server:</strong> <code>${response.base_url || serverUrl}</code></p>
+                            ${troubleshooting}
+                        </div>
+                    </div>
+                </div>
+            `;
+            statusEl.style.display = 'block';
+            addLog(`Ollama connection failed: ${response.error}`, 'ERROR');
+        }
+    } catch (error) {
+        console.error('❌ Error in testOllamaConnection:', error);
+        clearInterval(progressInterval);
+        updateConnectionBanner('error', 'Error', error.message);
+        
+        const statusEl = ollamaStatus || document.getElementById('ollama-status');
+        if (statusEl) {
+            statusEl.innerHTML = `
+                <div style="padding: 20px; background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); border: 2px solid #dc3545; border-radius: 8px; color: #721c24; box-shadow: 0 2px 8px rgba(220,53,69,0.2);">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span style="font-size: 32px;">⚠️</span>
+                        <div>
+                            <p style="margin: 0; font-weight: bold; font-size: 18px;">Connection Error</p>
+                            <p style="margin: 5px 0 0 0; font-size: 14px; font-family: monospace;">${error.message}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            statusEl.style.display = 'block';
+        }
+        addLog(`Ollama connection error: ${error.message}`, 'ERROR');
+    } finally {
+        // Re-enable button
+        if (testBtn) {
+            testBtn.disabled = false;
+            testBtn.style.opacity = '1';
+            if (testIcon) testIcon.textContent = '🔌';
+        }
+    }
+}
+
+async function listOllamaModels() {
+    console.log('📋 listOllamaModels called');
+    
+    const modelsEl = ollamaModelsList || document.getElementById('ollama-models-list');
+    const listBtn = document.getElementById('list-ollama-models-btn');
+    const listIcon = document.getElementById('list-models-icon');
+    
+    if (!modelsEl) {
+        console.error('❌ ollama-models-list element not found');
+        return;
+    }
+    
+    const config = getOllamaConfig();
+    console.log('📋 Ollama config:', config);
+    
+    // Disable button
+    if (listBtn) {
+        listBtn.disabled = true;
+        listBtn.style.opacity = '0.6';
+        if (listIcon) listIcon.textContent = '⏳';
+    }
+    
+    modelsEl.style.display = 'block';
+    modelsEl.style.visibility = 'visible';
+    modelsEl.style.opacity = '1';
+    modelsEl.innerHTML = `
+        <div style="padding: 20px; text-align: center;">
+            <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #17a2b8; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 15px;"></div>
+            <p style="margin: 0; color: #666; font-size: 16px; font-weight: bold;">Loading models from Ollama server...</p>
+            <p style="margin: 10px 0 0 0; color: #999; font-size: 12px;">Endpoint: GET /api/tags</p>
+        </div>
+    `;
+    
+    try {
+        const queryString = buildOllamaQueryString(config);
+        console.log('🌐 Requesting:', `/api/llm/ollama/models?${queryString}`);
+        const response = await sendRequest(`/api/llm/ollama/models?${queryString}`);
+        console.log('✅ Response received:', response);
+        
+        if (response.success && response.models !== undefined) {
+            if (response.models.length === 0) {
+                modelsEl.innerHTML = `
+                    <div style="padding: 25px; background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border: 2px solid #ffc107; border-radius: 8px; color: #856404; box-shadow: 0 2px 8px rgba(255,193,7,0.2); text-align: center;">
+                        <span style="font-size: 48px; display: block; margin-bottom: 15px;">📦</span>
+                        <h4 style="margin: 0 0 15px 0; font-size: 20px;">No Models Found</h4>
+                        <p style="margin: 0 0 10px 0; font-size: 14px;">Server: <strong><code>${response.base_url || 'N/A'}</code></strong></p>
+                        <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.5); border-radius: 6px;">
+                            <p style="margin: 0 0 10px 0; font-weight: bold;">To add models, run on the server:</p>
+                            <code style="display: block; padding: 10px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; font-size: 13px; font-family: monospace;">ollama pull llama3:8b</code>
+                            <p style="margin: 10px 0 0 0; font-size: 12px; opacity: 0.8;">Or any other model from <a href="https://ollama.com/library" target="_blank" style="color: #856404;">ollama.com/library</a></p>
+                        </div>
+                    </div>
+                `;
+                addLog(`No models found on Ollama server: ${response.base_url}`, 'INFO');
+                if (ollamaTestModel) {
+                    ollamaTestModel.innerHTML = '<option value="">No models available</option>';
+                }
+            } else {
+                let html = `
+                    <div style="padding: 20px; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border: 2px solid #28a745; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(40,167,69,0.2);">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <h4 style="margin: 0 0 5px 0; color: #155724; font-size: 20px;">
+                                    <span style="font-size: 24px; margin-right: 10px;">✅</span>
+                                    Available Models (${response.count || response.models.length})
+                                </h4>
+                                <p style="margin: 0; font-size: 14px; color: #155724; opacity: 0.9;">
+                                    <strong>Server:</strong> <code style="background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 3px;">${response.base_url || 'N/A'}</code>
+                                </p>
+                            </div>
+                            <div style="font-size: 32px; color: #28a745;">📋</div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+                `;
+                response.models.forEach((model, index) => {
+                    const sizeGB = model.size ? (model.size / (1024**3)).toFixed(2) : 'Unknown';
+                    const modifiedDate = model.modified_at ? new Date(model.modified_at).toLocaleDateString() : null;
+                    html += `
+                        <div style="padding: 20px; background: white; border: 2px solid #dee2e6; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s;" 
+                             onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)';" 
+                             onmouseout="this.style.transform=''; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)';">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                                <span style="font-size: 24px;">🤖</span>
+                                <h5 style="margin: 0; color: #333; font-size: 16px; font-weight: bold; word-break: break-word;">${model.name || 'Unknown'}</h5>
+                            </div>
+                            <div style="font-size: 14px; color: #666; display: grid; gap: 8px;">
+                                <div style="display: flex; justify-content: space-between; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+                                    <span>Size:</span>
+                                    <strong style="color: #495057;">${sizeGB} GB</strong>
+                                </div>
+                                ${modifiedDate ? `
+                                <div style="display: flex; justify-content: space-between; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+                                    <span>Modified:</span>
+                                    <strong style="color: #495057;">${modifiedDate}</strong>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                modelsEl.innerHTML = html;
+                modelsEl.style.display = 'block';
+                addLog(`Loaded ${response.count || response.models.length} Ollama models from ${response.base_url}`, 'SUCCESS');
+                
+                // Populate model dropdown
+                if (ollamaTestModel) {
+                    ollamaTestModel.innerHTML = '<option value="">Select a model</option>';
+                    response.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.name || '';
+                        option.textContent = model.name || 'Unknown';
+                        ollamaTestModel.appendChild(option);
+                    });
+                }
+            }
+        } else {
+            modelsEl.innerHTML = `
+                <div style="padding: 20px; background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); border: 2px solid #dc3545; border-radius: 8px; color: #721c24; box-shadow: 0 2px 8px rgba(220,53,69,0.2);">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span style="font-size: 32px;">❌</span>
+                        <div>
+                            <p style="margin: 0; font-weight: bold; font-size: 18px;">Failed to load models</p>
+                            <p style="margin: 5px 0 0 0; font-size: 14px; font-family: monospace;">${response.error || 'Unknown error'}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            modelsEl.style.display = 'block';
+            addLog(`Failed to load Ollama models: ${response.error || 'Unknown error'}`, 'ERROR');
+        }
+    } catch (error) {
+        console.error('❌ Error in listOllamaModels:', error);
+        const modelsEl = ollamaModelsList || document.getElementById('ollama-models-list');
+        if (modelsEl) {
+            modelsEl.innerHTML = `
+                <div style="padding: 20px; background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); border: 2px solid #dc3545; border-radius: 8px; color: #721c24; box-shadow: 0 2px 8px rgba(220,53,69,0.2);">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span style="font-size: 32px;">⚠️</span>
+                        <div>
+                            <p style="margin: 0; font-weight: bold; font-size: 18px;">Error Loading Models</p>
+                            <p style="margin: 5px 0 0 0; font-size: 14px; font-family: monospace;">${error.message}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            modelsEl.style.display = 'block';
+        }
+        addLog(`Failed to list Ollama models: ${error.message}`, 'ERROR');
+    } finally {
+        // Re-enable button
+        if (listBtn) {
+            listBtn.disabled = false;
+            listBtn.style.opacity = '1';
+            if (listIcon) listIcon.textContent = '📋';
+        }
+    }
+}
+
+async function saveOllamaConfig() {
+    console.log('💾 saveOllamaConfig called');
+    const config = getOllamaConfig();
+    console.log('📋 Config to save:', config);
+    
+    const statusEl = ollamaStatus || document.getElementById('ollama-status');
+    if (!statusEl) {
+        console.error('❌ ollama-status element not found');
+        alert('Error: Cannot find status element');
+        return;
+    }
+    
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '<p style="color: #666;">Saving configuration...</p>';
+    
+    try {
+        const response = await sendRequest('/api/llm/ollama/config', 'POST', config);
+        console.log('✅ Save response:', response);
+        
+        if (response.success) {
+            addLog(`Ollama configuration saved: ${response.base_url}`, 'SUCCESS');
+            statusEl.innerHTML = `
+                <div style="padding: 15px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">
+                    <p style="margin: 0; font-weight: bold;">✓ Configuration saved</p>
+                    <p style="margin: 5px 0 0 0; font-size: 14px;">Server: <strong>${response.base_url}</strong></p>
+                </div>
+            `;
+            statusEl.style.display = 'block';
+        } else {
+            addLog(`Failed to save Ollama configuration: ${response.error}`, 'ERROR');
+            statusEl.innerHTML = `
+                <div style="padding: 15px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
+                    <p style="margin: 0; font-weight: bold;">✗ ${response.error || 'Failed to save'}</p>
+                </div>
+            `;
+            statusEl.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('❌ Error saving config:', error);
+        addLog(`Error saving Ollama configuration: ${error.message}`, 'ERROR');
+        statusEl.innerHTML = `
+            <div style="padding: 15px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
+                <p style="margin: 0; font-weight: bold;">✗ Error: ${error.message}</p>
+            </div>
+        `;
+        statusEl.style.display = 'block';
+    }
+}
+
+async function testOllamaCompletion() {
+    console.log('🧪 testOllamaCompletion called');
+    
+    const statusEl = ollamaCompletionStatus || document.getElementById('ollama-completion-status');
+    const responseEl = ollamaCompletionResponse || document.getElementById('ollama-completion-response');
+    const responseTextEl = ollamaResponseText || document.getElementById('ollama-response-text');
+    const completionBtn = document.getElementById('test-ollama-completion-btn');
+    const completionIcon = document.getElementById('test-completion-icon');
+    const loadingDiv = document.getElementById('completion-loading');
+    
+    if (!statusEl) {
+        console.error('❌ ollama-completion-status element not found');
+        return;
+    }
+    
+    const model = ollamaTestModel ? ollamaTestModel.value : '';
+    const prompt = ollamaTestPrompt ? ollamaTestPrompt.value.trim() : '';
+    
+    if (!model) {
+        statusEl.innerHTML = `
+            <div style="padding: 15px; background: #fff3cd; border: 2px solid #ffc107; border-radius: 4px; color: #856404;">
+                <p style="margin: 0; font-weight: bold;">⚠️ Please select a model first</p>
+            </div>
+        `;
+        statusEl.style.display = 'block';
+        return;
+    }
+    
+    if (!prompt) {
+        statusEl.innerHTML = `
+            <div style="padding: 15px; background: #fff3cd; border: 2px solid #ffc107; border-radius: 4px; color: #856404;">
+                <p style="margin: 0; font-weight: bold;">⚠️ Please enter a test prompt</p>
+            </div>
+        `;
+        statusEl.style.display = 'block';
+        return;
+    }
+    
+    // Disable button and show loading
+    if (completionBtn) {
+        completionBtn.disabled = true;
+        completionBtn.style.opacity = '0.6';
+        if (completionIcon) completionIcon.textContent = '⏳';
+    }
+    if (loadingDiv) loadingDiv.style.display = 'flex';
+    
+    const config = getOllamaConfig();
+    const serverUrl = config.base_url || `http://${config.host}:${config.port}`;
+    
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = `
+        <div style="padding: 20px; background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); border: 2px solid #17a2b8; border-radius: 8px; color: #0c5460; box-shadow: 0 2px 8px rgba(23,162,184,0.2);">
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #17a2b8; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite;"></div>
+                <div>
+                    <p style="margin: 0; font-weight: bold; font-size: 16px;">🔄 Generating completion...</p>
+                    <p style="margin: 5px 0 0 0; font-size: 14px;">Model: <strong>${model}</strong></p>
+                </div>
+            </div>
+            <div style="width: 100%; background: rgba(255,255,255,0.5); border-radius: 8px; height: 8px; overflow: hidden;">
+                <div class="progress-bar" style="width: 0%; background: linear-gradient(90deg, #17a2b8 0%, #138496 100%); height: 100%; animation: progress 2s ease-in-out infinite;"></div>
+            </div>
+            <p style="margin: 10px 0 0 0; font-size: 12px; opacity: 0.8;">Endpoint: POST ${serverUrl}/api/generate</p>
+        </div>
+    `;
+    
+    if (responseEl) {
+        responseEl.style.display = 'none';
+    }
+    
+    try {
+        const queryString = buildOllamaQueryString(config);
+        const requestBody = {
+            model: model,
+            prompt: prompt,
+            max_tokens: 500,
+            temperature: 0.7
+        };
+        
+        console.log('🌐 Testing completion:', requestBody);
+        
+        const response = await sendRequest(`/api/llm/ollama/generate?${queryString}`, 'POST', requestBody);
+        console.log('✅ Completion response:', response);
+        
+        if (response && response.success !== false && (response.text || response.response)) {
+            statusEl.innerHTML = `
+                <div style="padding: 20px; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border: 2px solid #28a745; border-radius: 8px; color: #155724; box-shadow: 0 2px 8px rgba(40,167,69,0.2);">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span style="font-size: 32px;">✅</span>
+                        <div>
+                            <p style="margin: 0; font-weight: bold; font-size: 18px;">Completion Successful!</p>
+                            <p style="margin: 5px 0 0 0; font-size: 14px;">Model: <strong>${model}</strong></p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            if (responseEl && responseTextEl) {
+                const responseText = response.text || response.response || JSON.stringify(response, null, 2);
+                responseTextEl.textContent = responseText;
+                responseEl.style.display = 'block';
+                
+                // Add copy button functionality
+                const copyBtn = document.getElementById('copy-response-btn');
+                if (copyBtn) {
+                    copyBtn.onclick = function() {
+                        navigator.clipboard.writeText(responseText).then(() => {
+                            copyBtn.textContent = 'Copied!';
+                            setTimeout(() => {
+                                copyBtn.textContent = 'Copy';
+                            }, 2000);
+                        });
+                    };
+                }
+            }
+            
+            addLog(`Ollama completion successful for model ${model}`, 'SUCCESS');
+        } else {
+            statusEl.innerHTML = `
+                <div style="padding: 20px; background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); border: 2px solid #dc3545; border-radius: 8px; color: #721c24; box-shadow: 0 2px 8px rgba(220,53,69,0.2);">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span style="font-size: 32px;">❌</span>
+                        <div>
+                            <p style="margin: 0; font-weight: bold; font-size: 18px;">Completion Failed</p>
+                            <p style="margin: 5px 0 0 0; font-size: 14px; font-family: monospace;">${response.error || response.message || 'Unknown error'}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            addLog(`Ollama completion failed: ${response.error || 'Unknown error'}`, 'ERROR');
+        }
+    } catch (error) {
+        console.error('❌ Error in testOllamaCompletion:', error);
+        statusEl.innerHTML = `
+            <div style="padding: 20px; background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%); border: 2px solid #dc3545; border-radius: 8px; color: #721c24; box-shadow: 0 2px 8px rgba(220,53,69,0.2);">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span style="font-size: 32px;">⚠️</span>
+                    <div>
+                        <p style="margin: 0; font-weight: bold; font-size: 18px;">Error</p>
+                        <p style="margin: 5px 0 0 0; font-size: 14px; font-family: monospace;">${error.message}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        addLog(`Ollama completion error: ${error.message}`, 'ERROR');
+    } finally {
+        // Re-enable button
+        if (completionBtn) {
+            completionBtn.disabled = false;
+            completionBtn.style.opacity = '1';
+            if (completionIcon) completionIcon.textContent = '🚀';
+        }
+        if (loadingDiv) loadingDiv.style.display = 'none';
+    }
+}

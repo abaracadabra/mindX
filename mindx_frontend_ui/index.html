@@ -1744,6 +1744,183 @@
                     <button id="export-logs-btn">Export Logs</button>
                 </div>
             </div>
+            
+            <!-- LLM Provider Management Section -->
+            <div class="control-section">
+                <h2>LLM Provider Management</h2>
+                <div class="admin-subsection">
+                    <h3>API Keys</h3>
+                    <div id="api-keys-container" class="api-keys-container">
+                        <button id="refresh-api-keys-btn" class="refresh-btn">Refresh Providers</button>
+                        <div id="api-keys-list" class="api-keys-list"></div>
+                    </div>
+                    
+                    <div class="api-key-form">
+                        <h4>Add/Update API Key</h4>
+                        <select id="provider-select">
+                            <option value="gemini">Gemini</option>
+                            <option value="mistral">Mistral</option>
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic</option>
+                            <option value="groq">Groq</option>
+                            <option value="ollama">Ollama (Base URL)</option>
+                        </select>
+                        <input type="text" id="api-key-input" placeholder="Enter API key or base URL for Ollama">
+                        <button id="set-api-key-btn">Set API Key</button>
+                        <button id="test-api-key-btn">Test Connection</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Ollama Models Section -->
+            <div class="control-section">
+                <h2>Ollama Integration</h2>
+                <div class="admin-subsection">
+                    <!-- Connection Status Banner -->
+                    <div id="ollama-connection-banner" style="margin-bottom: 20px; padding: 12px 15px; background: #e9ecef; border-left: 4px solid #6c757d; border-radius: 4px; display: none;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span id="ollama-connection-icon" style="font-size: 20px;">⚪</span>
+                                <div>
+                                    <strong id="ollama-connection-status-text">Not Connected</strong>
+                                    <div id="ollama-connection-details" style="font-size: 12px; color: #666; margin-top: 2px;"></div>
+                                </div>
+                            </div>
+                            <button id="ollama-quick-test-btn" style="padding: 6px 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Quick Test</button>
+                        </div>
+                    </div>
+                    
+                    <div class="ollama-controls" style="display: grid; gap: 15px;">
+                        <div class="ollama-url-config" style="display: flex; align-items: center; gap: 10px;">
+                            <label style="font-weight: bold; min-width: 150px;">Configuration Method:</label>
+                            <select id="ollama-config-method" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                                <option value="host-port">Host & Port</option>
+                                <option value="base-url">Base URL</option>
+                            </select>
+                        </div>
+                        <div id="ollama-host-port-config" class="ollama-config-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div>
+                                <label for="ollama-host" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px;">Host:</label>
+                                <input type="text" id="ollama-host" placeholder="e.g., 10.0.0.155" value="localhost" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                            </div>
+                            <div>
+                                <label for="ollama-port" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px;">Port:</label>
+                                <input type="number" id="ollama-port" placeholder="e.g., 108080" value="11434" min="1" max="65535" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                            </div>
+                        </div>
+                        <div id="ollama-base-url-config" class="ollama-config-group" style="display: none;">
+                            <label for="ollama-base-url" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px;">Base URL:</label>
+                            <input type="text" id="ollama-base-url" placeholder="e.g., http://10.0.0.155:108080" value="http://localhost:11434" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        </div>
+                        <div class="ollama-actions" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button id="test-ollama-connection-btn" style="flex: 1; min-width: 150px; padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">
+                                <span id="test-connection-icon">🔌</span> Test Connection
+                            </button>
+                            <button id="list-ollama-models-btn" style="flex: 1; min-width: 150px; padding: 10px 20px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">
+                                <span id="list-models-icon">📋</span> List Models
+                            </button>
+                            <button id="save-ollama-config-btn" style="flex: 1; min-width: 150px; padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">
+                                <span id="save-config-icon">💾</span> Save Config
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Enhanced Status Display -->
+                    <div id="ollama-status" class="status-message" style="margin-top: 20px; min-height: 60px; display: none;"></div>
+                    
+                    <!-- Models List with Better Styling -->
+                    <div id="ollama-models-list" class="ollama-models-list" style="margin-top: 20px; min-height: 100px; display: none;"></div>
+                    
+                    <!-- Test Completion Section -->
+                    <div class="ollama-test-prompt" style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 2px solid #dee2e6; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <h3 style="margin: 0 0 20px 0; color: #333; border-bottom: 2px solid #dee2e6; padding-bottom: 10px;">
+                            <span style="font-size: 24px; margin-right: 10px;">🧪</span>Test Completion
+                        </h3>
+                        <div style="display: grid; gap: 15px;">
+                            <div>
+                                <label for="ollama-test-model" style="display: block; margin-bottom: 8px; font-weight: bold; color: #495057;">Model:</label>
+                                <select id="ollama-test-model" style="width: 100%; padding: 10px; border: 2px solid #ced4da; border-radius: 4px; font-size: 14px; background: white;">
+                                    <option value="">Select a model (list models first)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="ollama-test-prompt" style="display: block; margin-bottom: 8px; font-weight: bold; color: #495057;">Prompt:</label>
+                                <textarea id="ollama-test-prompt" placeholder="Enter a test prompt to generate completion..." style="width: 100%; min-height: 120px; padding: 10px; border: 2px solid #ced4da; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px; resize: vertical; background: white;"></textarea>
+                            </div>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <button id="test-ollama-completion-btn" style="padding: 12px 24px; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 2px 4px rgba(0,123,255,0.3); transition: transform 0.1s;">
+                                    <span id="test-completion-icon">🚀</span> Generate Completion
+                                </button>
+                                <div id="completion-loading" style="display: none; align-items: center; gap: 10px; color: #007bff;">
+                                    <div class="spinner" style="border: 3px solid #f3f3f3; border-top: 3px solid #007bff; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite;"></div>
+                                    <span>Generating...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="ollama-completion-status" style="margin-top: 20px; min-height: 60px;"></div>
+                        <div id="ollama-completion-response" style="margin-top: 15px; padding: 20px; background: white; border: 2px solid #dee2e6; border-radius: 4px; min-height: 150px; max-height: 500px; overflow-y: auto; display: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #dee2e6;">
+                                <h4 style="margin: 0; color: #333;">Response:</h4>
+                                <button id="copy-response-btn" style="padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Copy</button>
+                            </div>
+                            <pre id="ollama-response-text" style="margin: 0; white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6; color: #212529;"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Model Selection Section -->
+            <div class="control-section">
+                <h2>Model Selection System</h2>
+                <div class="admin-subsection">
+                    <button id="refresh-model-selection-btn" class="refresh-btn">Refresh Model Info</button>
+                    <div id="model-selection-info" class="model-selection-info"></div>
+                    
+                    <div class="model-selector-test">
+                        <h4>Test Model Selection</h4>
+                        <select id="task-type-select">
+                            <option value="reasoning">Reasoning</option>
+                            <option value="code_generation">Code Generation</option>
+                            <option value="simple_chat">Simple Chat</option>
+                            <option value="data_analysis">Data Analysis</option>
+                            <option value="writing">Writing</option>
+                            <option value="speed_sensitive">Speed Sensitive</option>
+                        </select>
+                        <button id="get-best-model-btn">Get Best Model</button>
+                        <div id="best-model-result" class="best-model-result"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Performance Metrics Section -->
+            <div class="control-section">
+                <h2>LLM Performance Metrics</h2>
+                <div class="admin-subsection">
+                    <div class="metrics-controls">
+                        <select id="metrics-model-filter">
+                            <option value="">All Models</option>
+                        </select>
+                        <select id="metrics-task-filter">
+                            <option value="">All Task Types</option>
+                            <option value="reasoning">Reasoning</option>
+                            <option value="code_generation">Code Generation</option>
+                            <option value="simple_chat">Simple Chat</option>
+                            <option value="data_analysis">Data Analysis</option>
+                            <option value="writing">Writing</option>
+                            <option value="speed_sensitive">Speed Sensitive</option>
+                        </select>
+                        <select id="metrics-time-range">
+                            <option value="24h">Last 24 Hours</option>
+                            <option value="7d">Last 7 Days</option>
+                            <option value="30d">Last 30 Days</option>
+                            <option value="all">All Time</option>
+                        </select>
+                        <button id="refresh-metrics-btn" class="refresh-btn">Refresh Metrics</button>
+                    </div>
+                    <div id="performance-metrics-display" class="performance-metrics-display"></div>
+                </div>
+            </div>
+            
             <div class="control-section">
                 <h2>System Configuration</h2>
                 <div id="config-display" class="config-display"></div>
