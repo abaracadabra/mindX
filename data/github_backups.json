@@ -1,32 +1,23 @@
 {
   "backups": [
     {
-      "branch_name": "backup/milestone-backup-20260111_154453",
-      "backup_type": "milestone_backup",
-      "reason": "Milestone update detected: /home/hacker/mindX/docs/roadmap.md, /home/hacker/mindX/docs/MINDX.md",
-      "source_branch": "main",
-      "source_commit": "00d678a626e89a8c4b5a7cd96637b3785f073a76",
-      "created_at": "2026-01-11T15:44:56.817466",
-      "status": "created"
-    },
-    {
-      "branch_name": "backup/shutdown-backup-20260111_154518",
+      "branch_name": "backup/shutdown-backup-20260111_154520",
       "backup_type": "shutdown_backup",
       "reason": "System shutdown - automatic backup",
       "source_branch": "main",
-      "source_commit": "efbcec78d501a95eed56a8aefc7eff37000ba0c4",
-      "created_at": "2026-01-11T15:45:20.556950",
+      "source_commit": "04b0dc695d1c5d5e29894d991c09dd9a205e2e74",
+      "created_at": "2026-01-11T15:45:23.023158",
       "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/shutdown-backup-20260111_154518",
+    "branch_name": "backup/shutdown-backup-20260111_154520",
     "backup_type": "shutdown_backup",
     "reason": "System shutdown - automatic backup",
     "source_branch": "main",
-    "source_commit": "efbcec78d501a95eed56a8aefc7eff37000ba0c4",
-    "created_at": "2026-01-11T15:45:20.556950",
+    "source_commit": "04b0dc695d1c5d5e29894d991c09dd9a205e2e74",
+    "created_at": "2026-01-11T15:45:23.023158",
     "status": "created"
   },
-  "last_backup_at": "2026-01-11T15:45:20.556971"
+  "last_backup_at": "2026-01-11T15:45:23.023181"
 }
