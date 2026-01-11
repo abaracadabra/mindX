@@ -17,16 +17,25 @@
       "source_commit": "a992d58f905c2a96bbb513f76efa58355daed7cc",
       "created_at": "2026-01-11T15:52:08.091815",
       "status": "created"
+    },
+    {
+      "branch_name": "backup/shutdown-backup-20260111_155211",
+      "backup_type": "shutdown_backup",
+      "reason": "System shutdown - automatic backup",
+      "source_branch": "main",
+      "source_commit": "e9aefd4550f80613342fa14cf45f86cb035d029e",
+      "created_at": "2026-01-11T15:52:14.202080",
+      "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/manual-20260111_155205",
-    "backup_type": "manual",
-    "reason": "Pre-push backup: GitHub agent tool implementation and UI integration",
+    "branch_name": "backup/shutdown-backup-20260111_155211",
+    "backup_type": "shutdown_backup",
+    "reason": "System shutdown - automatic backup",
     "source_branch": "main",
-    "source_commit": "a992d58f905c2a96bbb513f76efa58355daed7cc",
-    "created_at": "2026-01-11T15:52:08.091815",
+    "source_commit": "e9aefd4550f80613342fa14cf45f86cb035d029e",
+    "created_at": "2026-01-11T15:52:14.202080",
     "status": "created"
   },
-  "last_backup_at": "2026-01-11T15:52:08.091849"
+  "last_backup_at": "2026-01-11T15:52:14.202099"
 }
