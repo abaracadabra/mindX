@@ -8660,3 +8660,214 @@ details pre {
     }
 }
 
+/* GitHub Agent UI Styles */
+.github-agent-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.github-status-panel,
+.github-backup-panel,
+.github-schedule-panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 8px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.github-status-panel h3,
+.github-backup-panel h3,
+.github-schedule-panel h3 {
+    margin-top: 0;
+    color: var(--text-accent);
+    font-size: 1.2rem;
+    border-bottom: 1px solid var(--border-glow);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.status-display {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.status-item {
+    margin-bottom: 10px;
+    padding: 8px;
+    background: rgba(0, 168, 255, 0.05);
+    border-radius: 4px;
+    border-left: 3px solid var(--corp-cyan);
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.status-badge.success {
+    background: rgba(0, 255, 136, 0.2);
+    color: var(--corp-green);
+    border: 1px solid var(--corp-green);
+}
+
+.status-badge.warning {
+    background: rgba(255, 107, 53, 0.2);
+    color: var(--corp-orange);
+    border: 1px solid var(--corp-orange);
+}
+
+.backup-controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+.action-btn {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, var(--corp-blue) 0%, var(--corp-cyan) 100%);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Orbitron', monospace;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 168, 255, 0.4);
+}
+
+.action-btn.primary {
+    background: linear-gradient(135deg, var(--corp-green) 0%, #00cc77 100%);
+}
+
+.action-btn.small {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+}
+
+.backup-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.backup-form label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.backup-form input,
+.backup-form select {
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-glow);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-family: 'Orbitron', monospace;
+}
+
+.backups-list {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.backups-list h4 {
+    margin-top: 0;
+    color: var(--text-accent);
+}
+
+.backups-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.backup-item {
+    background: rgba(0, 168, 255, 0.1);
+    border: 1px solid var(--border-glow);
+    border-radius: 6px;
+    padding: 15px;
+    transition: all 0.3s ease;
+}
+
+.backup-item:hover {
+    background: rgba(0, 168, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 168, 255, 0.2);
+}
+
+.backup-item strong {
+    color: var(--corp-cyan);
+    display: block;
+    margin-bottom: 8px;
+}
+
+.backup-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.backup-reason {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    font-style: italic;
+}
+
+.schedule-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.schedule-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    border-left: 3px solid var(--corp-purple);
+}
+
+.schedule-item label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-primary);
+    cursor: pointer;
+    flex: 1;
+}
+
+.schedule-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.schedule-item input[type="time"],
+.schedule-item select {
+    padding: 6px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-glow);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-family: 'Orbitron', monospace;
+}
+

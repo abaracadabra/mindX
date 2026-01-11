@@ -1697,8 +1697,282 @@ document.addEventListener('DOMContentLoaded', () => {
                 const targetContent = document.getElementById(`${targetSection}-section`);
                 if (targetContent) {
                     targetContent.classList.add('active');
+                    // Load GitHub status when GitHub section is opened
+                    if (targetSection === 'github') {
+                        loadGitHubStatus();
+                        loadGitHubSchedule();
+                    }
                 }
             });
+        });
+        
+        // GitHub Agent Functions
+        async function loadGitHubStatus() {
+            try {
+                const response = await fetch(`${apiUrl}/github/status`);
+                if (response.ok) {
+                    const data = await response.json();
+                    displayGitHubStatus(data);
+                    addLog('GitHub agent status loaded', 'SUCCESS');
+                } else {
+                    addLog('Failed to load GitHub status', 'ERROR');
+                }
+            } catch (error) {
+                addLog(`Error loading GitHub status: ${error.message}`, 'ERROR');
+            }
+        }
+        
+        function displayGitHubStatus(data) {
+            const statusDisplay = document.getElementById('github-status-display');
+            if (!statusDisplay) return;
+            
+            const backupStatus = data.backup_status || {};
+            const schedule = data.schedule || {};
+            const backups = data.backups || {};
+            
+            statusDisplay.innerHTML = `
+                <div class="status-item">
+                    <strong>Current Branch:</strong> ${backupStatus.current_branch || 'unknown'}
+                </div>
+                <div class="status-item">
+                    <strong>Total Backups:</strong> ${backupStatus.total_backups || 0}
+                </div>
+                <div class="status-item">
+                    <strong>System Status:</strong> <span class="status-badge ${backupStatus.system_status === 'operational' ? 'success' : 'warning'}">${backupStatus.system_status || 'unknown'}</span>
+                </div>
+                ${backupStatus.last_backup ? `
+                <div class="status-item">
+                    <strong>Last Backup:</strong> ${backupStatus.last_backup.branch_name || 'unknown'}
+                    <br><small>${backupStatus.last_backup.created_at || ''}</small>
+                </div>
+                ` : ''}
+                <div class="status-item">
+                    <strong>Scheduled Backups:</strong> ${schedule.active_tasks || 0} active
+                </div>
+            `;
+        }
+        
+        async function loadGitHubSchedule() {
+            try {
+                const response = await fetch(`${apiUrl}/github/schedule`);
+                if (response.ok) {
+                    const data = await response.json();
+                    displayGitHubSchedule(data.schedule || {});
+                }
+            } catch (error) {
+                addLog(`Error loading schedule: ${error.message}`, 'ERROR');
+            }
+        }
+        
+        function displayGitHubSchedule(schedule) {
+            const schedules = schedule.schedules || {};
+            const shutdown = schedule.shutdown_backup || {};
+            
+            // Daily backup
+            if (schedules.daily) {
+                document.getElementById('daily-backup-enabled').checked = schedules.daily.enabled || false;
+                if (schedules.daily.time) {
+                    document.getElementById('daily-backup-time').value = schedules.daily.time;
+                }
+            }
+            
+            // Hourly backup
+            if (schedules.hourly) {
+                document.getElementById('hourly-backup-enabled').checked = schedules.hourly.enabled || false;
+            }
+            
+            // Weekly backup
+            if (schedules.weekly) {
+                document.getElementById('weekly-backup-enabled').checked = schedules.weekly.enabled || false;
+                if (schedules.weekly.day) {
+                    document.getElementById('weekly-backup-day').value = schedules.weekly.day;
+                }
+                if (schedules.weekly.time) {
+                    document.getElementById('weekly-backup-time').value = schedules.weekly.time;
+                }
+            }
+            
+            // Shutdown backup
+            document.getElementById('shutdown-backup-enabled').checked = shutdown.enabled !== false;
+        }
+        
+        async function createBackup() {
+            const reason = document.getElementById('backup-reason-input').value || 'Manual backup from UI';
+            const backupType = document.getElementById('backup-type-select').value;
+            
+            try {
+                addLog('Creating backup...', 'INFO');
+                const response = await fetch(`${apiUrl}/github/execute`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        operation: 'create_backup',
+                        backup_type: backupType,
+                        reason: reason
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        addLog(`Backup created: ${data.result.backup_branch}`, 'SUCCESS');
+                        loadGitHubStatus();
+                        listBackups();
+                    } else {
+                        addLog(`Backup failed: ${data.result}`, 'ERROR');
+                    }
+                } else {
+                    addLog('Failed to create backup', 'ERROR');
+                }
+            } catch (error) {
+                addLog(`Error creating backup: ${error.message}`, 'ERROR');
+            }
+        }
+        
+        async function listBackups() {
+            try {
+                const response = await fetch(`${apiUrl}/github/execute`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ operation: 'list_backups' })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        displayBackupsList(data.result);
+                    }
+                }
+            } catch (error) {
+                addLog(`Error listing backups: ${error.message}`, 'ERROR');
+            }
+        }
+        
+        function displayBackupsList(data) {
+            const backupsList = document.getElementById('backups-list');
+            if (!backupsList) return;
+            
+            const backups = data.backup_metadata || [];
+            if (backups.length === 0) {
+                backupsList.innerHTML = '<p>No backups found</p>';
+                return;
+            }
+            
+            backupsList.innerHTML = `
+                <h4>Recent Backups (${data.total_backups || 0} total)</h4>
+                <div class="backups-grid">
+                    ${backups.map(backup => `
+                        <div class="backup-item">
+                            <strong>${backup.branch_name || 'unknown'}</strong>
+                            <div class="backup-meta">
+                                <span>Type: ${backup.backup_type || 'unknown'}</span>
+                                <span>Created: ${new Date(backup.created_at).toLocaleString()}</span>
+                            </div>
+                            <div class="backup-reason">${backup.reason || ''}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        
+        async function syncWithGitHub() {
+            try {
+                addLog('Syncing with GitHub...', 'INFO');
+                const response = await fetch(`${apiUrl}/github/execute`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ operation: 'sync_with_github' })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        addLog('GitHub sync completed', 'SUCCESS');
+                        loadGitHubStatus();
+                    } else {
+                        addLog(`Sync failed: ${data.result}`, 'ERROR');
+                    }
+                }
+            } catch (error) {
+                addLog(`Error syncing: ${error.message}`, 'ERROR');
+            }
+        }
+        
+        async function saveSchedule(interval, enabled, time, day) {
+            try {
+                const payload = {
+                    operation: 'set_backup_schedule',
+                    interval: interval,
+                    enabled: enabled
+                };
+                if (time) payload.time = time;
+                if (day) payload.day = day;
+                
+                const response = await fetch(`${apiUrl}/github/schedule`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        addLog(`${interval} backup schedule updated`, 'SUCCESS');
+                        loadGitHubSchedule();
+                    }
+                }
+            } catch (error) {
+                addLog(`Error saving schedule: ${error.message}`, 'ERROR');
+            }
+        }
+        
+        // GitHub Agent Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            const refreshStatusBtn = document.getElementById('refresh-github-status-btn');
+            const createBackupBtn = document.getElementById('create-backup-btn');
+            const listBackupsBtn = document.getElementById('list-backups-btn');
+            const syncGithubBtn = document.getElementById('sync-github-btn');
+            const refreshScheduleBtn = document.getElementById('refresh-schedule-btn');
+            const saveDailyBtn = document.getElementById('save-daily-schedule-btn');
+            const saveHourlyBtn = document.getElementById('save-hourly-schedule-btn');
+            const saveWeeklyBtn = document.getElementById('save-weekly-schedule-btn');
+            
+            if (refreshStatusBtn) {
+                refreshStatusBtn.addEventListener('click', loadGitHubStatus);
+            }
+            if (createBackupBtn) {
+                createBackupBtn.addEventListener('click', createBackup);
+            }
+            if (listBackupsBtn) {
+                listBackupsBtn.addEventListener('click', listBackups);
+            }
+            if (syncGithubBtn) {
+                syncGithubBtn.addEventListener('click', syncWithGitHub);
+            }
+            if (refreshScheduleBtn) {
+                refreshScheduleBtn.addEventListener('click', loadGitHubSchedule);
+            }
+            if (saveDailyBtn) {
+                saveDailyBtn.addEventListener('click', () => {
+                    const enabled = document.getElementById('daily-backup-enabled').checked;
+                    const time = document.getElementById('daily-backup-time').value;
+                    saveSchedule('daily', enabled, time);
+                });
+            }
+            if (saveHourlyBtn) {
+                saveHourlyBtn.addEventListener('click', () => {
+                    const enabled = document.getElementById('hourly-backup-enabled').checked;
+                    saveSchedule('hourly', enabled);
+                });
+            }
+            if (saveWeeklyBtn) {
+                saveWeeklyBtn.addEventListener('click', () => {
+                    const enabled = document.getElementById('weekly-backup-enabled').checked;
+                    const day = document.getElementById('weekly-backup-day').value;
+                    const time = document.getElementById('weekly-backup-time').value;
+                    saveSchedule('weekly', enabled, time, day);
+                });
+            }
         });
 
         statusBtn.addEventListener('click', async () => {

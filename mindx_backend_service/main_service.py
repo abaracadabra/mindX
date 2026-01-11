@@ -533,6 +533,149 @@ async def coord_reject(payload: CoordBacklogIdPayload):
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
     return await command_handler.handle_coord_reject(payload.backlog_item_id)
 
+# GitHub Agent Tool Endpoints
+@app.post("/github/execute", summary="Execute GitHub agent operation")
+async def github_execute(payload: GitHubAgentOperationPayload):
+    """Execute a GitHub agent tool operation."""
+    try:
+        from tools.github_agent_tool import GitHubAgentTool
+        from agents.memory_agent import MemoryAgent
+        from utils.config import Config
+        
+        config = Config()
+        memory_agent = MemoryAgent(config=config)
+        github_agent = GitHubAgentTool(memory_agent=memory_agent, config=config)
+        
+        kwargs = {}
+        if payload.backup_type:
+            kwargs["backup_type"] = payload.backup_type
+        if payload.reason:
+            kwargs["reason"] = payload.reason
+        if payload.branch_name:
+            kwargs["branch_name"] = payload.branch_name
+        if payload.target_branch:
+            kwargs["target_branch"] = payload.target_branch
+        if payload.upgrade_description:
+            kwargs["upgrade_description"] = payload.upgrade_description
+        if payload.interval:
+            kwargs["interval"] = payload.interval
+        if payload.enabled is not None:
+            kwargs["enabled"] = payload.enabled
+        if payload.time:
+            kwargs["time"] = payload.time
+        if payload.day:
+            kwargs["day"] = payload.day
+        
+        success, result = await github_agent.execute(payload.operation, **kwargs)
+        
+        return {
+            "status": "success" if success else "error",
+            "success": success,
+            "result": result
+        }
+    except Exception as e:
+        logger.error(f"GitHub agent operation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/github/status", summary="Get GitHub agent status")
+async def github_status():
+    """Get GitHub agent status and backup information."""
+    try:
+        from tools.github_agent_tool import GitHubAgentTool
+        from agents.memory_agent import MemoryAgent
+        from utils.config import Config
+        
+        config = Config()
+        memory_agent = MemoryAgent(config=config)
+        github_agent = GitHubAgentTool(memory_agent=memory_agent, config=config)
+        
+        # Get backup status
+        success, status = await github_agent.execute("get_backup_status")
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to get backup status")
+        
+        # Get schedule
+        success, schedule = await github_agent.execute("get_backup_schedule")
+        if not success:
+            schedule = {}
+        
+        # List backups
+        success, backups = await github_agent.execute("list_backups")
+        if not success:
+            backups = {}
+        
+        return {
+            "status": "success",
+            "backup_status": status,
+            "schedule": schedule,
+            "backups": backups
+        }
+    except Exception as e:
+        logger.error(f"Failed to get GitHub agent status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/github/schedule", summary="Get backup schedule configuration")
+async def github_get_schedule():
+    """Get current backup schedule configuration."""
+    try:
+        from tools.github_agent_tool import GitHubAgentTool
+        from agents.memory_agent import MemoryAgent
+        from utils.config import Config
+        
+        config = Config()
+        memory_agent = MemoryAgent(config=config)
+        github_agent = GitHubAgentTool(memory_agent=memory_agent, config=config)
+        
+        success, schedule = await github_agent.execute("get_backup_schedule")
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to get schedule")
+        
+        return {
+            "status": "success",
+            "schedule": schedule
+        }
+    except Exception as e:
+        logger.error(f"Failed to get schedule: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/github/schedule", summary="Set backup schedule configuration")
+async def github_set_schedule(payload: GitHubAgentOperationPayload):
+    """Set backup schedule configuration."""
+    try:
+        from tools.github_agent_tool import GitHubAgentTool
+        from agents.memory_agent import MemoryAgent
+        from utils.config import Config
+        
+        if not payload.interval:
+            raise HTTPException(status_code=400, detail="interval is required")
+        
+        config = Config()
+        memory_agent = MemoryAgent(config=config)
+        github_agent = GitHubAgentTool(memory_agent=memory_agent, config=config)
+        
+        kwargs = {
+            "interval": payload.interval,
+            "enabled": payload.enabled if payload.enabled is not None else True
+        }
+        if payload.time:
+            kwargs["time"] = payload.time
+        if payload.day:
+            kwargs["day"] = payload.day
+        
+        success, result = await github_agent.execute("set_backup_schedule", **kwargs)
+        if not success:
+            raise HTTPException(status_code=500, detail=result)
+        
+        return {
+            "status": "success",
+            "result": result
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to set schedule: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/agents", summary="Create a new agent")
 async def agent_create(payload: AgentCreatePayload):
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")

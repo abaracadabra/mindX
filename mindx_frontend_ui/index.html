@@ -161,6 +161,7 @@
                     <div class="section-tabs">
                         <button class="section-tab active" data-section="evolve">Evolve Codebase</button>
                         <button class="section-tab" data-section="query">Query Coordinator</button>
+                        <button class="section-tab" data-section="github">GitHub Agent</button>
                     </div>
                 </div>
                 
@@ -187,6 +188,85 @@
                 <div id="query-section" class="section-content">
                     <input type="text" id="query-input" placeholder="explain augmentic development">
                     <button id="query-btn">Send Query</button>
+                </div>
+                
+                <!-- GitHub Agent Section -->
+                <div id="github-section" class="section-content">
+                    <div class="github-agent-container">
+                        <div class="github-status-panel">
+                            <h3>GitHub Agent Status</h3>
+                            <div id="github-status-display" class="status-display">
+                                <p>Loading status...</p>
+                            </div>
+                            <button id="refresh-github-status-btn" class="action-btn">Refresh Status</button>
+                        </div>
+                        
+                        <div class="github-backup-panel">
+                            <h3>Backup Operations</h3>
+                            <div class="backup-controls">
+                                <button id="create-backup-btn" class="action-btn primary">Create Backup</button>
+                                <button id="list-backups-btn" class="action-btn">List Backups</button>
+                                <button id="sync-github-btn" class="action-btn">Sync with GitHub</button>
+                            </div>
+                            <div class="backup-form" style="margin-top: 15px;">
+                                <label>Backup Reason:</label>
+                                <input type="text" id="backup-reason-input" placeholder="Enter reason for backup">
+                                <label>Backup Type:</label>
+                                <select id="backup-type-select">
+                                    <option value="manual">Manual</option>
+                                    <option value="pre_architectural_upgrade">Pre-Upgrade</option>
+                                    <option value="milestone_backup">Milestone</option>
+                                    <option value="scheduled_backup">Scheduled</option>
+                                </select>
+                            </div>
+                            <div id="backups-list" class="backups-list" style="margin-top: 15px; max-height: 300px; overflow-y: auto;"></div>
+                        </div>
+                        
+                        <div class="github-schedule-panel">
+                            <h3>Backup Schedule Settings</h3>
+                            <div class="schedule-controls">
+                                <div class="schedule-item">
+                                    <label>
+                                        <input type="checkbox" id="daily-backup-enabled">
+                                        Daily Backup
+                                    </label>
+                                    <input type="time" id="daily-backup-time" value="02:00" style="margin-left: 10px;">
+                                    <button id="save-daily-schedule-btn" class="action-btn small">Save</button>
+                                </div>
+                                <div class="schedule-item">
+                                    <label>
+                                        <input type="checkbox" id="hourly-backup-enabled">
+                                        Hourly Backup
+                                    </label>
+                                    <button id="save-hourly-schedule-btn" class="action-btn small">Save</button>
+                                </div>
+                                <div class="schedule-item">
+                                    <label>
+                                        <input type="checkbox" id="weekly-backup-enabled">
+                                        Weekly Backup
+                                    </label>
+                                    <select id="weekly-backup-day" style="margin-left: 10px;">
+                                        <option value="sunday">Sunday</option>
+                                        <option value="monday">Monday</option>
+                                        <option value="tuesday">Tuesday</option>
+                                        <option value="wednesday">Wednesday</option>
+                                        <option value="thursday">Thursday</option>
+                                        <option value="friday">Friday</option>
+                                        <option value="saturday">Saturday</option>
+                                    </select>
+                                    <input type="time" id="weekly-backup-time" value="03:00" style="margin-left: 10px;">
+                                    <button id="save-weekly-schedule-btn" class="action-btn small">Save</button>
+                                </div>
+                                <div class="schedule-item">
+                                    <label>
+                                        <input type="checkbox" id="shutdown-backup-enabled" checked>
+                                        Backup on Shutdown
+                                    </label>
+                                </div>
+                            </div>
+                            <button id="refresh-schedule-btn" class="action-btn" style="margin-top: 10px;">Refresh Schedule</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="control-section">
