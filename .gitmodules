@@ -1,0 +1,3 @@
+[submodule "DAIO/CONTRACTS/lib/forge-std"]
+	path = DAIO/CONTRACTS/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std

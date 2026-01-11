@@ -145,6 +145,11 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
+# Include mindterm router
+from mindx_backend_service.mindterm import mindterm_router
+from mindx_backend_service.mindterm.routes import set_coordinator_and_monitors
+app.include_router(mindterm_router)
+
 command_handler: Optional[CommandHandler] = None
 
 @app.on_event("startup")
@@ -177,6 +182,18 @@ async def startup_event():
         )
         
         command_handler = CommandHandler(mastermind_instance)
+        
+        # Initialize mindterm with coordinator and monitors
+        try:
+            set_coordinator_and_monitors(
+                coordinator=coordinator_instance,
+                resource_monitor=coordinator_instance.resource_monitor if hasattr(coordinator_instance, 'resource_monitor') else None,
+                performance_monitor=coordinator_instance.performance_monitor if hasattr(coordinator_instance, 'performance_monitor') else None
+            )
+            logger.info("mindterm integrated with coordinator and monitoring systems")
+        except Exception as e:
+            logger.warning(f"Failed to integrate mindterm with coordinator: {e}", exc_info=True)
+        
         logger.info("mindX components initialized successfully. API is ready.")
     except Exception as e:
         logger.critical(f"Failed to initialize mindX components during startup: {e}", exc_info=True)
@@ -938,7 +955,7 @@ def get_performance_metrics():
 @app.get("/system/resources", summary="Get resource usage")
 def get_resource_usage():
     """
-    Get current system resource usage.
+    Get current system resource usage including mindterm metrics.
     """
     try:
         import psutil
@@ -948,7 +965,7 @@ def get_resource_usage():
         memory = psutil.virtual_memory()
         disk = psutil.disk_usage('/')
         
-        return {
+        result = {
             "cpu": {
                 "usage": cpu_percent,
                 "cores": psutil.cpu_count(),
@@ -968,6 +985,18 @@ def get_resource_usage():
             },
             "timestamp": time.time()
         }
+        
+        # Add mindterm metrics if available
+        try:
+            from mindx_backend_service.mindterm.routes import get_service
+            svc = get_service()
+            mindterm_usage = svc.get_resource_usage()
+            if mindterm_usage:
+                result["mindterm"] = mindterm_usage
+        except Exception as e:
+            logger.debug(f"Could not get mindterm metrics: {e}")
+        
+        return result
     except Exception as e:
         logger.error(f"Failed to get resource usage: {e}")
         return {
