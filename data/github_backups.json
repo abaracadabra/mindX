@@ -35,16 +35,25 @@
       "source_commit": "9d5d4fb6586e8b43baf74d60c23753efda53cba6",
       "created_at": "2026-01-11T15:52:59.386635",
       "status": "created"
+    },
+    {
+      "branch_name": "backup/manual-20260111_155438",
+      "backup_type": "manual",
+      "reason": "Pre-push backup: Pushing minded branch to GitHub",
+      "source_branch": "main",
+      "source_commit": "9d5d4fb6586e8b43baf74d60c23753efda53cba6",
+      "created_at": "2026-01-11T15:54:41.585279",
+      "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/shutdown-backup-20260111_155256",
-    "backup_type": "shutdown_backup",
-    "reason": "System shutdown - automatic backup",
+    "branch_name": "backup/manual-20260111_155438",
+    "backup_type": "manual",
+    "reason": "Pre-push backup: Pushing minded branch to GitHub",
     "source_branch": "main",
     "source_commit": "9d5d4fb6586e8b43baf74d60c23753efda53cba6",
-    "created_at": "2026-01-11T15:52:59.386635",
+    "created_at": "2026-01-11T15:54:41.585279",
     "status": "created"
   },
-  "last_backup_at": "2026-01-11T15:52:59.386680"
+  "last_backup_at": "2026-01-11T15:54:41.585302"
 }
