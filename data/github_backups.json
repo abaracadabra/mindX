@@ -10,23 +10,23 @@
       "status": "created"
     },
     {
-      "branch_name": "backup/shutdown-backup-20260111_154513",
+      "branch_name": "backup/shutdown-backup-20260111_154515",
       "backup_type": "shutdown_backup",
       "reason": "System shutdown - automatic backup",
       "source_branch": "main",
-      "source_commit": "8a1e99aa0b5585bd3993b3aa6ce9a3c6ab466140",
-      "created_at": "2026-01-11T15:45:15.663709",
+      "source_commit": "fa1a8b3861a67d6c933043347469ab97d376f40c",
+      "created_at": "2026-01-11T15:45:18.126068",
       "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/shutdown-backup-20260111_154513",
+    "branch_name": "backup/shutdown-backup-20260111_154515",
     "backup_type": "shutdown_backup",
     "reason": "System shutdown - automatic backup",
     "source_branch": "main",
-    "source_commit": "8a1e99aa0b5585bd3993b3aa6ce9a3c6ab466140",
-    "created_at": "2026-01-11T15:45:15.663709",
+    "source_commit": "fa1a8b3861a67d6c933043347469ab97d376f40c",
+    "created_at": "2026-01-11T15:45:18.126068",
     "status": "created"
   },
-  "last_backup_at": "2026-01-11T15:45:15.663731"
+  "last_backup_at": "2026-01-11T15:45:18.126090"
 }
