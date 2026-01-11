@@ -139,6 +139,9 @@ class CoordinatorAgent:
         # --- IMPROVEMENT: Event-Driven Pub/Sub Bus ---
         self.event_listeners: Dict[str, List[Callable]] = defaultdict(list)
         
+        # GitHub agent for backup coordination (lazy initialization)
+        self.github_agent: Optional[Any] = None
+        
         self.llm_handler: Optional[LLMHandlerInterface] = None
         self.performance_monitor: Optional[Any] = None
         self.resource_monitor: Optional[Any] = None
@@ -174,6 +177,28 @@ class CoordinatorAgent:
         self.resource_monitor = await get_resource_monitor_async(memory_agent=self.memory_agent, config_override=self.config)
         if self.config.get("monitoring.resource.enabled", True):
             self.resource_monitor.start_monitoring()
+
+        # Initialize GitHub agent for event-driven backups
+        try:
+            from tools.github_agent_tool import GitHubAgentTool
+            self.github_agent = GitHubAgentTool(
+                memory_agent=self.memory_agent,
+                config=self.config
+            )
+            # Subscribe to architectural change events
+            self.subscribe("architectural.change.detected", self._handle_architectural_change_event)
+            self.subscribe("component.improvement.success", self._handle_component_improvement_success)
+            
+            # Start scheduled backups
+            try:
+                await self.github_agent.execute("start_scheduled_backups")
+            except Exception as e:
+                self.logger.warning(f"Failed to start scheduled backups: {e}")
+            
+            self.logger.info("GitHub agent initialized and subscribed to architectural change events")
+        except Exception as e:
+            self.logger.warning(f"Failed to initialize GitHub agent: {e}")
+            self.github_agent = None
 
         self.logger.info("CoordinatorAgent fully initialized.")
 
@@ -527,6 +552,10 @@ class CoordinatorAgent:
             "component.improvement.success",
             {"interaction_id": interaction.interaction_id, "metadata": interaction.metadata, "suggestions_generated": len(suggestions)}
         )
+        
+        # Check for architectural changes and trigger backup if needed
+        if target_component and any(indicator in target_component for indicator in ["orchestration", "core", "agents", "tools", "learning", "evolution"]):
+            await self._check_and_backup_architectural_changes(target_component)
 
     async def _handle_publish_event(self, interaction: Interaction):
         """Handles a request from an agent to publish an event to the bus."""
@@ -937,6 +966,54 @@ class CoordinatorAgent:
                     }
                 )
     
+    async def _handle_architectural_change_event(self, data: Dict[str, Any]):
+        """Event handler for architectural change detection - triggers backup."""
+        if not self.github_agent:
+            return
+        
+        try:
+            component = data.get("component", "unknown")
+            self.logger.info(f"Architectural change event received for: {component}")
+            backup_success, backup_result = await self.github_agent.execute(
+                operation="pre_upgrade_backup",
+                upgrade_description=f"Architectural change detected: {component}"
+            )
+            if backup_success:
+                self.logger.info(f"Backup created for architectural change: {backup_result.get('backup_branch', 'unknown')}")
+            else:
+                self.logger.warning(f"Backup failed for architectural change: {backup_result}")
+        except Exception as e:
+            self.logger.error(f"Error handling architectural change event: {e}", exc_info=True)
+    
+    async def _handle_component_improvement_success(self, data: Dict[str, Any]):
+        """Event handler for successful component improvements - may trigger backup check."""
+        # This is a lighter check - only backup if it's a major architectural component
+        metadata = data.get("metadata", {})
+        target_component = metadata.get("target_component", "")
+        
+        if target_component and any(indicator in target_component for indicator in ["orchestration", "core", "agents", "tools"]):
+            await self._check_and_backup_architectural_changes(target_component)
+    
+    async def _check_and_backup_architectural_changes(self, component: str):
+        """Check for architectural changes and create backup if needed."""
+        if not self.github_agent:
+            return
+        
+        try:
+            # Detect architectural changes
+            success, result = await self.github_agent.execute(
+                operation="detect_architectural_changes"
+            )
+            if success and result.get("status") == "architectural_changes_detected":
+                self.logger.warning(f"Architectural changes detected for {component}, backup should have been created")
+                # Publish event for other listeners
+                await self.publish_event(
+                    "architectural.change.detected",
+                    {"component": component, "backup_info": result.get("backup_info")}
+                )
+        except Exception as e:
+            self.logger.error(f"Error checking architectural changes: {e}", exc_info=True)
+    
     async def _update_model_registry_for_agent(self, agent_id: str, agent_type: str, config: Dict[str, Any]):
         """Update the model registry if the agent provides models."""
         provided_models = config.get("provided_models", [])
@@ -953,8 +1030,16 @@ class CoordinatorAgent:
                 self.logger.info(f"Model {model_id} from agent {agent_id} would be registered here")
 
     async def shutdown(self):
-        """Gracefully shuts down the Coordinator."""
+        """Gracefully shuts down the Coordinator and triggers GitHub backup if enabled."""
         self.logger.info(f"CoordinatorAgent shutting down...")
+        
+        # Trigger GitHub agent shutdown backup before coordinator shutdown
+        if self.github_agent:
+            try:
+                await self.github_agent.shutdown()
+            except Exception as e:
+                self.logger.warning(f"Error during GitHub agent shutdown: {e}")
+        
         # Add shutdown logic for any running tasks or persistent connections here
         self.logger.info(f"CoordinatorAgent shutdown complete.")
 

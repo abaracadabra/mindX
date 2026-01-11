@@ -127,6 +127,63 @@
       "description": "Navigates and analyzes directory structures",
       "priority": 3,
       "category": "augmentic_development"
+    },
+    "github_agent_tool": {
+      "enabled": true,
+      "class_name": "GitHubAgentTool",
+      "module_path": "tools.github_agent_tool",
+      "description": "GitHub-focused agent for coordinating mindX branch backups, restores, milestone monitoring, and pre-upgrade backups. Ensures mindX always has a working fallback state in GitHub.",
+      "priority": 10,
+      "category": "version_control",
+      "access_control": {
+        "allowed_agents": ["mastermind_prime", "coordinator_agent", "strategic_evolution_agent"]
+      },
+      "commands": [
+        {
+          "name": "create_backup",
+          "description": "Create a backup branch before major changes",
+          "parameters": [
+            {"name": "backup_type", "type": "str", "required": false},
+            {"name": "reason", "type": "str", "required": true},
+            {"name": "branch_name", "type": "str", "required": false}
+          ]
+        },
+        {
+          "name": "restore_from_backup",
+          "description": "Restore mindX from a backup branch",
+          "parameters": [
+            {"name": "branch_name", "type": "str", "required": true},
+            {"name": "target_branch", "type": "str", "required": false}
+          ]
+        },
+        {
+          "name": "check_milestones",
+          "description": "Check for milestone updates and apply policy",
+          "parameters": []
+        },
+        {
+          "name": "detect_architectural_changes",
+          "description": "Detect architectural changes and ensure backup exists",
+          "parameters": []
+        },
+        {
+          "name": "pre_upgrade_backup",
+          "description": "Create backup before major architectural upgrade",
+          "parameters": [
+            {"name": "upgrade_description", "type": "str", "required": true}
+          ]
+        },
+        {
+          "name": "list_backups",
+          "description": "List all available backup branches",
+          "parameters": []
+        },
+        {
+          "name": "get_backup_status",
+          "description": "Get current status of backup system",
+          "parameters": []
+        }
+      ]
     }
   },
   "tool_categories": {
@@ -149,6 +206,10 @@
     "tool_management": {
       "description": "Tools for creating and managing other tools",
       "priority": 7
+    },
+    "version_control": {
+      "description": "Tools for GitHub operations, backups, and version control",
+      "priority": 10
     }
   },
   "augmentic_workflow": {

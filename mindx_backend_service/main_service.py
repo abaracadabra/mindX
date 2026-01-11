@@ -76,6 +76,18 @@ class CoordImprovePayload(BaseModel):
 class CoordBacklogIdPayload(BaseModel):
     backlog_item_id: str
 
+class GitHubAgentOperationPayload(BaseModel):
+    operation: str
+    backup_type: Optional[str] = None
+    reason: Optional[str] = None
+    branch_name: Optional[str] = None
+    target_branch: Optional[str] = None
+    upgrade_description: Optional[str] = None
+    interval: Optional[str] = None
+    enabled: Optional[bool] = None
+    time: Optional[str] = None
+    day: Optional[str] = None
+
 class AgentCreatePayload(BaseModel):
     agent_type: str
     agent_id: str

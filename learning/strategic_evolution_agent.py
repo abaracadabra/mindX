@@ -32,6 +32,7 @@ from tools.registry_manager_tool import RegistryManagerTool
 from tools.audit_and_improve_tool import AuditAndImproveTool
 from tools.optimized_audit_gen_agent import OptimizedAuditGenAgent
 from agents.automindx_agent import AutoMINDXAgent
+from tools.github_agent_tool import GitHubAgentTool
 
 logger = get_logger(__name__)
 
@@ -112,6 +113,9 @@ class StrategicEvolutionAgent:
         self.optimized_audit_agent: Optional[OptimizedAuditGenAgent] = None
         self.automindx_agent: Optional[AutoMINDXAgent] = None
         
+        # GitHub agent for backups and version control
+        self.github_agent: Optional[GitHubAgentTool] = None
+        
         self.campaign_history: List[Dict[str, Any]] = self._load_campaign_history()
         self._current_campaign_run_id: Optional[str] = None
         self._initialized = False
@@ -190,6 +194,17 @@ class StrategicEvolutionAgent:
             self.audit_improve_tool = None
             self.optimized_audit_agent = None
 
+        # Initialize GitHub agent for backups and version control
+        try:
+            self.github_agent = GitHubAgentTool(
+                memory_agent=self.memory_agent,
+                config=self.config
+            )
+            logger.info(f"{self.log_prefix} GitHub agent initialized for backup coordination")
+        except Exception as e:
+            logger.warning(f"{self.log_prefix} Failed to initialize GitHub agent: {e}")
+            self.github_agent = None
+
         self._initialized = True
         logger.info(f"StrategicEvolutionAgent '{self.agent_id}' fully initialized. Using {self.llm_handler.provider_name} for core reasoning.")
     
@@ -201,6 +216,20 @@ class StrategicEvolutionAgent:
 
         self._current_campaign_run_id = f"sea_run_{str(uuid.uuid4())[:8]}"
         logger.info(f"{self.log_prefix} Starting new campaign (ID: {self._current_campaign_run_id}). Goal: '{campaign_goal_description}'")
+        
+        # CRITICAL: Create GitHub backup before major architectural changes
+        if self.github_agent:
+            try:
+                backup_success, backup_result = await self.github_agent.execute(
+                    operation="pre_upgrade_backup",
+                    upgrade_description=f"SEA Campaign: {campaign_goal_description[:100]}"
+                )
+                if backup_success:
+                    logger.info(f"{self.log_prefix} Pre-campaign backup created: {backup_result.get('backup_branch', 'unknown')}")
+                else:
+                    logger.warning(f"{self.log_prefix} Pre-campaign backup failed: {backup_result}")
+            except Exception as e:
+                logger.error(f"{self.log_prefix} Error creating pre-campaign backup: {e}", exc_info=True)
         
         # Generate the master blueprint first
         blueprint = await self.blueprint_agent.generate_next_evolution_blueprint()
@@ -463,6 +492,20 @@ class StrategicEvolutionAgent:
         self._current_campaign_run_id = f"sea_enhanced_run_{str(uuid.uuid4())[:8]}"
         logger.info(f"{self.log_prefix} Starting ENHANCED blueprint campaign (ID: {self._current_campaign_run_id}). Goal: '{campaign_goal_description}'")
         
+        # CRITICAL: Create GitHub backup before major architectural changes
+        if self.github_agent:
+            try:
+                backup_success, backup_result = await self.github_agent.execute(
+                    operation="pre_upgrade_backup",
+                    upgrade_description=f"SEA Enhanced Campaign: {campaign_goal_description[:100]}"
+                )
+                if backup_success:
+                    logger.info(f"{self.log_prefix} Pre-enhanced-campaign backup created: {backup_result.get('backup_branch', 'unknown')}")
+                else:
+                    logger.warning(f"{self.log_prefix} Pre-enhanced-campaign backup failed: {backup_result}")
+            except Exception as e:
+                logger.error(f"{self.log_prefix} Error creating pre-enhanced-campaign backup: {e}", exc_info=True)
+        
         # Step 1: Generate strategic blueprint
         blueprint = await self.blueprint_agent.generate_next_evolution_blueprint()
         if "error" in blueprint:
@@ -530,6 +573,9 @@ class StrategicEvolutionAgent:
         Args:
             audit_scope: Scope of audit ("system", "security", "performance", "code_quality")
             target_components: Specific components to focus on (optional)
+        
+        CRITICAL: This method creates a GitHub backup before executing the audit-driven campaign
+        to ensure mindX can always fallback to a working state.
             
         Returns:
             Complete campaign results with audit findings, improvements, and validation
@@ -543,6 +589,20 @@ class StrategicEvolutionAgent:
 
         self._current_campaign_run_id = f"sea_audit_driven_{str(uuid.uuid4())[:8]}"
         logger.info(f"{self.log_prefix} Starting AUDIT-DRIVEN campaign (ID: {self._current_campaign_run_id}). Scope: '{audit_scope}'")
+        
+        # CRITICAL: Create GitHub backup before audit-driven campaign
+        if self.github_agent:
+            try:
+                backup_success, backup_result = await self.github_agent.execute(
+                    operation="pre_upgrade_backup",
+                    upgrade_description=f"SEA Audit-Driven Campaign: {audit_scope}"
+                )
+                if backup_success:
+                    logger.info(f"{self.log_prefix} Pre-audit-campaign backup created: {backup_result.get('backup_branch', 'unknown')}")
+                else:
+                    logger.warning(f"{self.log_prefix} Pre-audit-campaign backup failed: {backup_result}")
+            except Exception as e:
+                logger.error(f"{self.log_prefix} Error creating pre-audit-campaign backup: {e}", exc_info=True)
         
         campaign_start_time = time.time()
         
