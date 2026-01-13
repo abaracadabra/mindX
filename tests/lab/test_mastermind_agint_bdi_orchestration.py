@@ -28,11 +28,11 @@ sys.path.insert(0, str(project_root))
 from pytest_asyncio import fixture as pytest_asyncio_fixture
 
 # Import core components
-from orchestration.mastermind_agent import MastermindAgent
-from core.agint import AGInt, DecisionType
-from core.bdi_agent import BDIAgent
+from agents.orchestration.mastermind_agent import MastermindAgent
+from agents.core.agint import AGInt, DecisionType
+from agents.core.bdi_agent import BDIAgent
 from agents.memory_agent import MemoryAgent, MemoryType, MemoryImportance
-from orchestration.coordinator_agent import CoordinatorAgent
+from agents.orchestration.coordinator_agent import CoordinatorAgent
 from llm.llm_interface import LLMHandlerInterface
 from utils.logging_config import setup_logging
 

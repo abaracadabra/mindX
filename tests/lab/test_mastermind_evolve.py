@@ -14,10 +14,10 @@ sys.path.insert(0, str(project_root))
 from pytest_asyncio import fixture as pytest_asyncio_fixture
 
 # Import the core components to be tested and mocked
-from orchestration.mastermind_agent import MastermindAgent
+from agents.orchestration.mastermind_agent import MastermindAgent
 from llm.llm_interface import LLMHandlerInterface
-from core.bdi_agent import BDIAgent
-from orchestration.coordinator_agent import CoordinatorAgent
+from agents.core.bdi_agent import BDIAgent
+from agents.orchestration.coordinator_agent import CoordinatorAgent
 
 # Use pytest-asyncio to handle async test functions
 pytestmark = pytest.mark.asyncio

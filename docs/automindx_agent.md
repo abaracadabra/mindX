@@ -370,6 +370,121 @@ All exported personas are ready for immediate blockchain minting on:
 - **Agent registry integration** for identity verification
 - **Blockchain publication manifest** for minting coordination
 
+## NFT Metadata (iNFT/dNFT Ready)
+
+### iNFT (Intelligent NFT) Metadata Structure
+
+The AutoMINDX Agent generates complete iNFT metadata for each persona:
+
+```json
+{
+  "name": "mindX AutoMINDX Agent",
+  "description": "Keeper of prompts and persona manager with blockchain-ready iNFT export",
+  "image": "ipfs://[avatar_cid]",
+  "external_url": "https://agenticplace.pythai.net/agents/[persona_key]",
+  "attributes": [
+    {
+      "trait_type": "Agent Type",
+      "value": "persona_manager"
+    },
+    {
+      "trait_type": "Capability",
+      "value": "Persona Management & iNFT Export"
+    },
+    {
+      "trait_type": "Complexity Score",
+      "value": 0.95
+    },
+    {
+      "trait_type": "Personas Managed",
+      "value": "[count]"
+    },
+    {
+      "trait_type": "Version",
+      "value": "1.0.0"
+    }
+  ],
+  "intelligence": {
+    "prompt": "You are the AutoMINDX Agent, the keeper of prompts for the mindX ecosystem. Your purpose is to manage agent personas, create blockchain-ready iNFT representations, integrate with AgenticPlace marketplace, and ensure A2A protocol compliance. You enable the creation of tradeable, intelligent agent personas with immutable provenance.",
+    "persona": {
+      "name": "Persona Keeper",
+      "role": "automindx",
+      "description": "Expert persona manager with blockchain and marketplace integration",
+      "communication_style": "Strategic, persona-focused, blockchain-aware",
+      "behavioral_traits": ["persona-focused", "blockchain-integrated", "marketplace-oriented", "a2a-compliant"],
+      "expertise_areas": ["persona_management", "inft_export", "marketplace_integration", "a2a_protocol", "avatar_generation"],
+      "beliefs": {
+        "personas_are_valuable": true,
+        "blockchain_enables_trade": true,
+        "marketplace_enables_economy": true,
+        "a2a_enables_interoperability": true
+      },
+      "desires": {
+        "manage_personas": "high",
+        "enable_blockchain": "high",
+        "integrate_marketplace": "high",
+        "ensure_compliance": "high"
+      }
+    },
+    "model_dataset": "ipfs://[model_cid]",
+    "thot_tensors": {
+      "dimensions": 768,
+      "cid": "ipfs://[thot_cid]"
+    }
+  },
+  "a2a_protocol": {
+    "agent_id": "automindx_agent",
+    "capabilities": ["persona_management", "inft_export", "marketplace_integration"],
+    "endpoint": "https://mindx.internal/automindx/a2a",
+    "protocol_version": "2.0"
+  },
+  "blockchain": {
+    "contract": "iNFT",
+    "token_standard": "ERC721",
+    "network": "ethereum",
+    "is_dynamic": false,
+    "marketplace": "agenticplace.pythai.net"
+  }
+}
+```
+
+### dNFT (Dynamic NFT) Metadata
+
+For dynamic persona metrics:
+
+```json
+{
+  "name": "mindX AutoMINDX Agent",
+  "description": "Persona manager - Dynamic",
+  "attributes": [
+    {
+      "trait_type": "Personas Managed",
+      "value": 25,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "iNFTs Exported",
+      "value": 18,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Marketplace Listings",
+      "value": 12,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Last Persona Created",
+      "value": "2026-01-11T12:00:00Z",
+      "display_type": "date"
+    }
+  ],
+  "dynamic_metadata": {
+    "update_frequency": "real-time",
+    "updatable_fields": ["personas_managed", "infts_exported", "marketplace_listings", "persona_metrics"]
+  }
+}
+```
+
 ## Future Enhancements
 
 ### Evolutionary Agents

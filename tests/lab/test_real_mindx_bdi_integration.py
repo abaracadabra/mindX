@@ -19,7 +19,7 @@ from typing import List, Dict, Any
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from orchestration.mastermind_agent import MastermindAgent
+from agents.orchestration.mastermind_agent import MastermindAgent
 from agents.memory_agent import MemoryAgent
 from utils.config import Config
 from utils.logging_config import get_logger

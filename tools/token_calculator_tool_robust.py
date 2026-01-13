@@ -24,7 +24,7 @@ import asyncio
 import hashlib
 import re
 
-from core.bdi_agent import BaseTool
+from agents.core.bdi_agent import BaseTool
 from agents.memory_agent import MemoryAgent
 from utils.config import Config, PROJECT_ROOT
 from utils.logging_config import get_logger

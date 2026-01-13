@@ -19,9 +19,9 @@ sys.path.insert(0, str(project_root))
 from pytest_asyncio import fixture as pytest_asyncio_fixture
 
 # Import the components to be tested and mocked
-from core.agint import AGInt, DecisionType
-from core.bdi_agent import BDIAgent
-from core.belief_system import BeliefSystem
+from agents.core.agint import AGInt, DecisionType
+from agents.core.bdi_agent import BDIAgent
+from agents.core.belief_system import BeliefSystem
 from llm.model_registry import ModelRegistry
 from utils.config import Config
 

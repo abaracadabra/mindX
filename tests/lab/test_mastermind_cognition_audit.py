@@ -26,11 +26,11 @@ from datetime import datetime
 # Core mindX imports
 from utils.config import Config
 from utils.logging_config import get_logger
-from orchestration.mastermind_agent import MastermindAgent
-from core.agint import AGInt
-from core.bdi_agent import BDIAgent
+from agents.orchestration.mastermind_agent import MastermindAgent
+from agents.core.agint import AGInt
+from agents.core.bdi_agent import BDIAgent
 from agents.memory_agent import MemoryAgent
-from orchestration.coordinator_agent import CoordinatorAgent
+from agents.orchestration.coordinator_agent import CoordinatorAgent
 
 logger = get_logger(__name__)
 

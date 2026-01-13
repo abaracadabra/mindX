@@ -11,13 +11,13 @@ import time
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
-from orchestration.mastermind_agent import MastermindAgent
-from orchestration.coordinator_agent import get_coordinator_agent_mindx_async, InteractionType, InteractionStatus
+from agents.orchestration.mastermind_agent import MastermindAgent
+from agents.orchestration.coordinator_agent import get_coordinator_agent_mindx_async, InteractionType, InteractionStatus
 from agents.memory_agent import MemoryAgent
 from agents.guardian_agent import GuardianAgent
 from agents.automindx_agent import AutoMINDXAgent
-from core.id_manager_agent import IDManagerAgent
-from core.belief_system import BeliefSystem
+from agents.core.id_manager_agent import IDManagerAgent
+from agents.core.belief_system import BeliefSystem
 from llm.model_registry import get_model_registry_async
 from utils.logging_config import get_logger, setup_logging
 from utils.config import Config, PROJECT_ROOT as CONFIG_PROJECT_ROOT

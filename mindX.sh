@@ -247,7 +247,7 @@ function copy_mindx_source_code {
     log_setup_info "Copying MindX source code to deployment directory..."
     
     # List of source directories to copy
-    local source_dirs=("agents" "api" "core" "evolution" "learning" "llm" "monitoring" "orchestration" "scripts" "tools" "utils" "requirements.txt")
+    local source_dirs=("agents" "api" "llm" "scripts" "tools" "utils" "requirements.txt")
     
     for item in "${source_dirs[@]}"; do
         if [ -e "$item" ]; then
@@ -297,8 +297,8 @@ function ensure_mindx_structure {
     # If not, this script cannot proceed with actually *running* MindX.
     # For a true "installer", it would fetch/copy these files.
     # For this script, we assume they are already part of the $PROJECT_ROOT (e.g. git cloned).
-    if [ ! -f "$PROJECT_ROOT/orchestration/coordinator_agent.py" ]; then
-        log_setup_warn "Core MindX agent source files (coordinator_agent.py) not found in $PROJECT_ROOT/orchestration/..."
+    if [ ! -f "$PROJECT_ROOT/agents/orchestration/coordinator_agent.py" ]; then
+        log_setup_warn "Core MindX agent source files (coordinator_agent.py) not found in $PROJECT_ROOT/agents/orchestration/..."
         log_setup_warn "This script primarily sets up the environment and services for an EXISTING MindX codebase."
         log_setup_warn "If you intended to deploy MindX code, ensure it's present in $PROJECT_ROOT first."
         # Optionally, exit here if code is mandatory:
@@ -568,12 +568,12 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
-from orchestration.mastermind_agent import MastermindAgent
-from orchestration.coordinator_agent import get_coordinator_agent_mindx_async
+from agents.orchestration.mastermind_agent import MastermindAgent
+from agents.orchestration.coordinator_agent import get_coordinator_agent_mindx_async
 from agents.memory_agent import MemoryAgent
 from agents.guardian_agent import GuardianAgent
-from core.id_manager_agent import IDManagerAgent
-from core.belief_system import BeliefSystem
+from agents.core.id_manager_agent import IDManagerAgent
+from agents.core.belief_system import BeliefSystem
 from llm.model_registry import get_model_registry_async
 from utils.config import Config
 from api.command_handler import CommandHandler

@@ -5,7 +5,10 @@ import os
 import random
 import re
 import time
-from fastapi import FastAPI, HTTPException
+import json
+import uuid
+from datetime import datetime, timedelta
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
@@ -16,15 +19,15 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
-from orchestration.mastermind_agent import MastermindAgent
-from orchestration.coordinator_agent import get_coordinator_agent_mindx_async
+from agents.orchestration.mastermind_agent import MastermindAgent
+from agents.orchestration.coordinator_agent import get_coordinator_agent_mindx_async
 from agents.memory_agent import MemoryAgent, MemoryType, MemoryImportance
 from agents.guardian_agent import GuardianAgent
-from core.id_manager_agent import IDManagerAgent
-from core.belief_system import BeliefSystem, BeliefSource
+from agents.core.id_manager_agent import IDManagerAgent
+from agents.core.belief_system import BeliefSystem, BeliefSource
 from tools.user_persistence_manager import get_user_persistence_manager
 from llm.model_registry import get_model_registry_async
-from utils.config import Config
+from utils.config import Config, PROJECT_ROOT
 from api.command_handler import CommandHandler
 from utils.logging_config import setup_logging, get_logger
 
@@ -740,61 +743,121 @@ async def list_all_agents():
                     
                     agents_list.append(agent_info)
         
-        # Add system agents
+        # Add system agents with capabilities
         system_agents = [
             {
                 "name": "BDI Agent",
                 "type": "system_agent",
                 "status": "active",
-                "description": "Belief-Desire-Intention agent for goal management and planning"
+                "description": "Belief-Desire-Intention agent for goal management and planning",
+                "capabilities": [
+                    {"name": "Decision Making", "category": "cognitive", "icon": "brain"},
+                    {"name": "Agent Selection", "category": "orchestration", "icon": "network"},
+                    {"name": "Reasoning", "category": "cognitive", "icon": "lightbulb"},
+                    {"name": "Belief Management", "category": "memory", "icon": "database"},
+                    {"name": "Goal Tracking", "category": "planning", "icon": "target"}
+                ],
+                "ethereum_address": "0xf8f2da254D4a3F461e0472c65221B26fB4e91fB7"
             },
             {
                 "name": "Memory Agent",
-                "type": "system_agent", 
+                "type": "system_agent",
                 "status": "active",
-                "description": "Manages short-term and long-term memory systems"
+                "description": "Manages short-term and long-term memory systems",
+                "capabilities": [
+                    {"name": "STM Management", "category": "memory", "icon": "clock"},
+                    {"name": "LTM Storage", "category": "memory", "icon": "archive"},
+                    {"name": "Memory Search", "category": "retrieval", "icon": "search"},
+                    {"name": "Memory Consolidation", "category": "processing", "icon": "compress"}
+                ]
             },
             {
                 "name": "Guardian Agent",
                 "type": "system_agent",
-                "status": "active", 
-                "description": "Security and safety monitoring agent"
+                "status": "active",
+                "description": "Security and safety monitoring agent",
+                "capabilities": [
+                    {"name": "Security Validation", "category": "security", "icon": "shield"},
+                    {"name": "Access Control", "category": "security", "icon": "lock"},
+                    {"name": "Threat Detection", "category": "monitoring", "icon": "alert"},
+                    {"name": "Compliance Check", "category": "governance", "icon": "check"}
+                ],
+                "ethereum_address": "0xC2cca3d6F29dF17D1999CFE0458BC3DEc024F02D"
             },
             {
                 "name": "ID Manager Agent",
                 "type": "system_agent",
                 "status": "active",
-                "description": "Manages entity identities and addresses"
+                "description": "Manages entity identities and wallet addresses",
+                "capabilities": [
+                    {"name": "Wallet Creation", "category": "identity", "icon": "wallet"},
+                    {"name": "Identity Binding", "category": "identity", "icon": "link"},
+                    {"name": "Signature Verification", "category": "security", "icon": "key"},
+                    {"name": "Agent Registration", "category": "management", "icon": "user-plus"}
+                ],
+                "ethereum_address": "0x290bB0497dBDbC5E8B577E0cc92457cB015A2a1f"
             },
             {
                 "name": "Mastermind Agent",
                 "type": "system_agent",
                 "status": "active",
-                "description": "High-level strategic planning and coordination"
+                "description": "High-level strategic planning and Mistral AI reasoning",
+                "capabilities": [
+                    {"name": "Strategic Orchestration", "category": "orchestration", "icon": "compass"},
+                    {"name": "Mistral AI Reasoning", "category": "ai", "icon": "sparkles"},
+                    {"name": "Agent Coordination", "category": "orchestration", "icon": "network"},
+                    {"name": "Resource Allocation", "category": "management", "icon": "sliders"}
+                ],
+                "ethereum_address": "0xb9B46126551652eb58598F1285aC5E86E5CcfB43"
             },
             {
                 "name": "Coordinator Agent",
                 "type": "system_agent",
                 "status": "active",
-                "description": "Coordinates between different agents and systems"
+                "description": "Infrastructure management and autonomous improvement",
+                "capabilities": [
+                    {"name": "Infrastructure Management", "category": "system", "icon": "server"},
+                    {"name": "Autonomous Improvement", "category": "evolution", "icon": "trending-up"},
+                    {"name": "Component Evolution", "category": "evolution", "icon": "git-branch"},
+                    {"name": "Task Delegation", "category": "orchestration", "icon": "share"}
+                ],
+                "ethereum_address": "0x7371e20033f65aB598E4fADEb5B4e400Ef22040A"
             },
             {
                 "name": "CEO Agent",
                 "type": "system_agent",
                 "status": "active",
-                "description": "Executive decision making and strategic oversight"
+                "description": "Executive decision making and strategic oversight",
+                "capabilities": [
+                    {"name": "Executive Decisions", "category": "governance", "icon": "crown"},
+                    {"name": "Strategic Oversight", "category": "planning", "icon": "eye"},
+                    {"name": "Priority Management", "category": "management", "icon": "list"},
+                    {"name": "Resource Approval", "category": "governance", "icon": "check-circle"}
+                ]
             },
             {
                 "name": "Resource Monitor",
                 "type": "system_agent",
                 "status": "active",
-                "description": "Monitors system resources and performance"
+                "description": "Monitors system resources and performance",
+                "capabilities": [
+                    {"name": "CPU Monitoring", "category": "monitoring", "icon": "cpu"},
+                    {"name": "Memory Tracking", "category": "monitoring", "icon": "hard-drive"},
+                    {"name": "System Health", "category": "monitoring", "icon": "activity"},
+                    {"name": "Alert Generation", "category": "notifications", "icon": "bell"}
+                ]
             },
             {
                 "name": "Performance Monitor",
                 "type": "system_agent",
                 "status": "active",
-                "description": "Tracks system performance metrics and alerts"
+                "description": "Tracks system performance metrics and alerts",
+                "capabilities": [
+                    {"name": "Latency Tracking", "category": "monitoring", "icon": "clock"},
+                    {"name": "Throughput Analysis", "category": "analytics", "icon": "bar-chart"},
+                    {"name": "Bottleneck Detection", "category": "diagnostics", "icon": "zap"},
+                    {"name": "Performance Reports", "category": "reporting", "icon": "file-text"}
+                ]
             }
         ]
         
@@ -1249,6 +1312,312 @@ def get_agent_activity():
             "total": 1,
             "timestamp": time.time()
         }
+
+# ==================== Token Usage & Cost Tracking ====================
+
+@app.get("/usage/metrics", summary="Get token usage metrics")
+def get_token_usage_metrics():
+    """
+    Get comprehensive token usage metrics including costs, operations, and budget status.
+    """
+    try:
+        usage_log_path = Path(PROJECT_ROOT) / "data" / "monitoring" / "token_usage.json"
+        metrics_path = Path(PROJECT_ROOT) / "data" / "monitoring" / "token_metrics.json"
+
+        # Load usage log
+        usage_log = []
+        if usage_log_path.exists():
+            try:
+                with usage_log_path.open("r", encoding="utf-8") as f:
+                    usage_log = json.load(f)
+            except json.JSONDecodeError:
+                usage_log = []
+
+        # Calculate metrics
+        now = datetime.now()
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        week_start = today_start - timedelta(days=now.weekday())
+        month_start = today_start.replace(day=1)
+
+        daily_cost = 0.0
+        weekly_cost = 0.0
+        monthly_cost = 0.0
+        total_tokens = 0
+        daily_tokens = 0
+        provider_breakdown = {}
+        model_breakdown = {}
+        hourly_usage = [0] * 24
+
+        for record in usage_log:
+            try:
+                record_time = datetime.fromisoformat(record.get("timestamp", "").replace("Z", "+00:00").split("+")[0])
+                cost = float(record.get("cost", 0))
+                tokens = int(record.get("total_tokens", record.get("input_tokens", 0) + record.get("output_tokens", 0)))
+                provider = record.get("provider", "unknown")
+                model = record.get("model", "unknown")
+
+                total_tokens += tokens
+                monthly_cost += cost
+
+                if record_time >= today_start:
+                    daily_cost += cost
+                    daily_tokens += tokens
+                    hourly_usage[record_time.hour] += tokens
+
+                if record_time >= week_start:
+                    weekly_cost += cost
+
+                # Provider breakdown
+                if provider not in provider_breakdown:
+                    provider_breakdown[provider] = {"cost": 0.0, "tokens": 0, "calls": 0}
+                provider_breakdown[provider]["cost"] += cost
+                provider_breakdown[provider]["tokens"] += tokens
+                provider_breakdown[provider]["calls"] += 1
+
+                # Model breakdown
+                if model not in model_breakdown:
+                    model_breakdown[model] = {"cost": 0.0, "tokens": 0, "calls": 0}
+                model_breakdown[model]["cost"] += cost
+                model_breakdown[model]["tokens"] += tokens
+                model_breakdown[model]["calls"] += 1
+
+            except Exception:
+                continue
+
+        # Budget configuration
+        daily_budget = 100.0  # Default
+        try:
+            config = Config()
+            daily_budget = float(config.get("token_calculator.daily_budget", 100.0))
+        except:
+            pass
+
+        return {
+            "success": True,
+            "timestamp": now.isoformat(),
+            "summary": {
+                "daily_cost": round(daily_cost, 4),
+                "weekly_cost": round(weekly_cost, 4),
+                "monthly_cost": round(monthly_cost, 4),
+                "daily_tokens": daily_tokens,
+                "total_tokens": total_tokens,
+                "total_operations": len(usage_log),
+                "daily_budget": daily_budget,
+                "budget_utilization": round((daily_cost / daily_budget) * 100, 2) if daily_budget > 0 else 0
+            },
+            "provider_breakdown": provider_breakdown,
+            "model_breakdown": model_breakdown,
+            "hourly_usage": hourly_usage,
+            "recent_operations": usage_log[-50:][::-1] if usage_log else []
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get token usage metrics: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "summary": {
+                "daily_cost": 0, "weekly_cost": 0, "monthly_cost": 0,
+                "daily_tokens": 0, "total_tokens": 0, "total_operations": 0,
+                "daily_budget": 100.0, "budget_utilization": 0
+            },
+            "provider_breakdown": {},
+            "model_breakdown": {},
+            "hourly_usage": [0] * 24,
+            "recent_operations": []
+        }
+
+
+@app.post("/usage/track", summary="Track API usage")
+async def track_api_usage(request: Request):
+    """
+    Track an API inference call for accurate cost calculation.
+    """
+    try:
+        data = await request.json()
+
+        usage_log_path = Path(PROJECT_ROOT) / "data" / "monitoring" / "token_usage.json"
+        usage_log_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Load existing log
+        usage_log = []
+        if usage_log_path.exists():
+            try:
+                with usage_log_path.open("r", encoding="utf-8") as f:
+                    usage_log = json.load(f)
+            except json.JSONDecodeError:
+                usage_log = []
+
+        # Pricing data (per 1M tokens)
+        pricing = {
+            "gemini": {"input": 0.075, "output": 0.30},
+            "gemini-2.0-flash": {"input": 0.10, "output": 0.40},
+            "gemini-1.5-pro": {"input": 1.25, "output": 5.00},
+            "mistral": {"input": 0.25, "output": 0.25},
+            "mistral-small": {"input": 0.20, "output": 0.60},
+            "mistral-large": {"input": 2.00, "output": 6.00},
+            "gpt-4": {"input": 30.00, "output": 60.00},
+            "gpt-4-turbo": {"input": 10.00, "output": 30.00},
+            "gpt-3.5-turbo": {"input": 0.50, "output": 1.50},
+            "claude-3-opus": {"input": 15.00, "output": 75.00},
+            "claude-3-sonnet": {"input": 3.00, "output": 15.00},
+            "claude-3-haiku": {"input": 0.25, "output": 1.25},
+            "default": {"input": 0.50, "output": 1.50}
+        }
+
+        # Calculate cost
+        model = data.get("model", "default").lower()
+        provider = data.get("provider", "unknown")
+        input_tokens = int(data.get("input_tokens", 0))
+        output_tokens = int(data.get("output_tokens", 0))
+
+        # Find matching pricing
+        price_key = "default"
+        for key in pricing:
+            if key in model:
+                price_key = key
+                break
+
+        rates = pricing[price_key]
+        input_cost = (input_tokens / 1_000_000) * rates["input"]
+        output_cost = (output_tokens / 1_000_000) * rates["output"]
+        total_cost = input_cost + output_cost
+
+        # Create usage record
+        usage_record = {
+            "timestamp": datetime.now().isoformat(),
+            "provider": provider,
+            "model": model,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "total_tokens": input_tokens + output_tokens,
+            "input_cost": round(input_cost, 6),
+            "output_cost": round(output_cost, 6),
+            "cost": round(total_cost, 6),
+            "operation_type": data.get("operation_type", "inference"),
+            "agent": data.get("agent", "unknown"),
+            "request_id": data.get("request_id", str(uuid.uuid4())[:8])
+        }
+
+        usage_log.append(usage_record)
+
+        # Keep log size manageable (last 10000 entries)
+        if len(usage_log) > 10000:
+            usage_log = usage_log[-8000:]
+
+        # Save log
+        with usage_log_path.open("w", encoding="utf-8") as f:
+            json.dump(usage_log, f, indent=2)
+
+        return {
+            "success": True,
+            "tracked": usage_record,
+            "message": f"Tracked {input_tokens + output_tokens} tokens, cost: ${total_cost:.6f}"
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to track usage: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/usage/history", summary="Get usage history")
+def get_usage_history(
+    days: int = 7,
+    provider: Optional[str] = None,
+    model: Optional[str] = None
+):
+    """
+    Get historical usage data with optional filtering.
+    """
+    try:
+        usage_log_path = Path(PROJECT_ROOT) / "data" / "monitoring" / "token_usage.json"
+
+        if not usage_log_path.exists():
+            return {"success": True, "history": [], "total": 0}
+
+        with usage_log_path.open("r", encoding="utf-8") as f:
+            usage_log = json.load(f)
+
+        cutoff = datetime.now() - timedelta(days=days)
+        filtered = []
+
+        for record in usage_log:
+            try:
+                record_time = datetime.fromisoformat(record.get("timestamp", "").replace("Z", "+00:00").split("+")[0])
+                if record_time < cutoff:
+                    continue
+                if provider and record.get("provider", "").lower() != provider.lower():
+                    continue
+                if model and model.lower() not in record.get("model", "").lower():
+                    continue
+                filtered.append(record)
+            except:
+                continue
+
+        # Aggregate by day
+        daily_stats = {}
+        for record in filtered:
+            try:
+                day = record["timestamp"][:10]
+                if day not in daily_stats:
+                    daily_stats[day] = {"cost": 0, "tokens": 0, "calls": 0}
+                daily_stats[day]["cost"] += float(record.get("cost", 0))
+                daily_stats[day]["tokens"] += int(record.get("total_tokens", 0))
+                daily_stats[day]["calls"] += 1
+            except:
+                continue
+
+        return {
+            "success": True,
+            "history": filtered[::-1],
+            "daily_stats": daily_stats,
+            "total": len(filtered),
+            "total_cost": sum(float(r.get("cost", 0)) for r in filtered),
+            "total_tokens": sum(int(r.get("total_tokens", 0)) for r in filtered)
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get usage history: {e}")
+        return {"success": False, "error": str(e), "history": [], "total": 0}
+
+
+@app.delete("/usage/clear", summary="Clear usage history")
+def clear_usage_history(keep_days: int = 0):
+    """
+    Clear usage history, optionally keeping recent entries.
+    """
+    try:
+        usage_log_path = Path(PROJECT_ROOT) / "data" / "monitoring" / "token_usage.json"
+
+        if not usage_log_path.exists():
+            return {"success": True, "message": "No usage history to clear"}
+
+        if keep_days > 0:
+            with usage_log_path.open("r", encoding="utf-8") as f:
+                usage_log = json.load(f)
+
+            cutoff = datetime.now() - timedelta(days=keep_days)
+            filtered = [
+                r for r in usage_log
+                if datetime.fromisoformat(r.get("timestamp", "2000-01-01").replace("Z", "+00:00").split("+")[0]) >= cutoff
+            ]
+
+            with usage_log_path.open("w", encoding="utf-8") as f:
+                json.dump(filtered, f, indent=2)
+
+            return {
+                "success": True,
+                "message": f"Cleared entries older than {keep_days} days",
+                "remaining": len(filtered)
+            }
+        else:
+            usage_log_path.unlink()
+            return {"success": True, "message": "Usage history cleared completely"}
+
+    except Exception as e:
+        logger.error(f"Failed to clear usage history: {e}")
+        return {"success": False, "error": str(e)}
+
 
 def initialize_agint_logging():
     """Initialize AGInt logging directory and create initial log file"""
@@ -2410,4 +2779,42 @@ async def get_real_time_agent_activity():
             "active_agents": list(set(activity.get('agent', 'Unknown') for activity in activities))
         }
     }
+
+
+@app.get("/agents/activity", summary="Get consolidated agent activity (canonical endpoint)")
+async def get_agents_activity():
+    """
+    Canonical endpoint for agent activity monitoring.
+
+    This is the standardized endpoint that consolidates all agent activity sources.
+    Frontend should use this single endpoint instead of multiple fallback endpoints.
+
+    Returns activities from:
+    - BDI Agent reasoning
+    - AGInt cognitive cycles
+    - Simple Coder operations
+    - Coordinator Agent infrastructure management
+    - MastermindAgent orchestration
+    - All registered agents
+
+    Response format:
+    {
+        "status": "success",
+        "activities": [...],  # List of activity objects
+        "total_activities": int,
+        "timestamp": float,
+        "agent_count": int,
+        "workflow_summary": {...}
+    }
+
+    Each activity object contains:
+    - timestamp: Unix timestamp
+    - agent: Agent name
+    - message: Activity description
+    - type: "info" | "success" | "warning" | "error"
+    - workflow_context: Optional workflow metadata
+    - details: Optional additional details
+    """
+    # Delegate to the comprehensive real-time activity endpoint
+    return await get_real_time_agent_activity()
 

@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
- * @title ERC-7777: Universal Identity for Human-Robot Societies
- * @dev Implementation of governance standards for human-robot interactions in DAIO
- * @notice Defines interfaces for managing identities of humans and robots, and establishing rule sets
+ * @title Universal Identity and Compliance System for Human-Robot Societies
+ * @dev Custom identity and compliance management system for human-robot interactions in daio
+ * @notice Defines interfaces for managing identities of humans and robots, hardware verification, and establishing rule sets with compliance checking
  */
 interface IUniversalIdentity {
     struct HardwareIdentity {

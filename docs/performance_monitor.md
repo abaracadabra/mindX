@@ -1,118 +1,268 @@
-# LLM Performance Monitor (`performance_monitor.py`) - Production Candidate
+# Performance Monitor
 
-## Introduction
+## Summary
 
-The `PerformanceMonitor` is a specialized component within the MindX system (Augmentic Project) responsible for tracking, aggregating, and reporting on the performance of interactions with Large Language Models (LLMs). It collects detailed metrics such as latency, token usage, cost, success rates, and error types, providing crucial insights for system optimization, model selection strategies, and informing self-improvement processes.
+The Performance Monitor is a singleton system that tracks and analyzes LLM call performance metrics including latency, success rates, token usage, costs, and error patterns. It provides comprehensive performance analytics for the mindX system.
 
-## Explanation
+## Technical Explanation
 
-### Core Features
+The Performance Monitor implements:
+- **Singleton Pattern**: Single instance across the system
+- **Metric Tracking**: Per-model, per-task, per-agent metrics
+- **Historical Data**: Latency windows and error type tracking
+- **Persistence**: JSON-based metric storage
+- **Periodic Saving**: Configurable auto-save intervals
 
--   **Contextual Metric Tracking:**
-    -   Metrics are logged against a flexible key that can include `model_id` (e.g., "gemini-1.5-pro"), `task_type` (e.g., "code_generation", "system_analysis"), and `initiating_agent_id` (e.g., "SelfImprovementAgent_v3.5"). This allows for fine-grained performance analysis.
-    -   Tuple keys like `("gemini-1.5-pro", "code_generation")` are serialized to strings (e.g., `"gemini-1.5-pro|code_generation"`) for JSON persistence.
--   **Comprehensive Metrics Collection:** For each unique key, the monitor tracks:
-    -   `requests`: Total number of LLM calls.
-    -   `successes` & `failures`: Counts of successful and failed requests.
-    -   `total_latency_ms`: Sum of all request latencies in milliseconds for better precision.
-    -   `total_input_tokens` & `total_output_tokens`: Aggregated token counts.
-    -   `total_cost_usd`: Aggregated estimated costs in USD (if this information is provided with each request).
-    -   `error_types`: A dictionary counting occurrences of different error types (e.g., "APIError", "TimeoutError", "RateLimitError") for failed requests.
-    -   `recent_latencies_ms_samples`: A list storing the N (configurable via `monitoring.performance.max_recent_latencies_samples`, default 100) most recent latencies. This sample is used for calculating approximate P50, P90, and P99 latency percentiles.
-    -   `requests_since_last_save`: Internal counter for batched saving.
--   **Derived Metrics Calculation (`get_metrics_for_key`):** This synchronous method computes:
-    -   `success_rate`.
-    -   Average latency (in milliseconds).
-    -   P50 (median), P90, P99 latency percentiles using Python's `statistics` module on the `recent_latencies_ms_samples`.
-    -   Average input, output, and total tokens per request.
-    -   Average cost (`avg_cost_usd`) per request and the `total_cost_usd` for the given key.
--   **Persistence:**
-    -   Metrics are persisted to a JSON file. The path is configurable via `monitoring.performance.metrics_file_path` (default: `PROJECT_ROOT/data/performance_metrics.json`). Persistence can be disabled.
-    -   Metrics are loaded from this file upon `PerformanceMonitor` initialization.
-    -   **Saving Strategies:**
-        1.  **Batched by Count (if periodic save off):** Saves after every N requests for a specific metric key (N configured by `monitoring.performance.save_every_n_requests`).
-        2.  **Periodic Asynchronous Save:** If enabled (`monitoring.performance.enable_periodic_save` is true and interval > 0), a background `asyncio.Task` (`_periodic_save_worker`) saves all metrics at a configurable interval (`monitoring.performance.periodic_save_interval_seconds`). This is generally preferred for high-throughput systems to reduce frequent I/O.
-        3.  **On Shutdown:** A final save is performed when the monitor's `shutdown()` method is called.
--   **Reporting (`get_performance_report`):** Generates a human-readable multi-line string report summarizing all tracked metrics, including overall statistics and per-key details, sorted by request count.
--   **Singleton Pattern:** Accessed via `get_performance_monitor()` (synchronous) or `get_performance_monitor_async()` (asynchronous factory functions) to ensure a single instance across the application. `reset_instance_async()` is available for testing.
--   **Asynchronous Operations:**
-    -   `record_request` is `async` as it might trigger an asynchronous save operation (`_save_metrics_async`).
-    -   File operations for loading/saving are performed asynchronously using `loop.run_in_executor` to avoid blocking the main event loop.
-    -   An `asyncio.Lock` (`_lock`) protects concurrent access to the shared metrics data during updates and file operations.
+### Architecture
 
-## Technical Details
+- **Type**: `performance_monitor`
+- **Pattern**: Singleton
+- **Storage**: JSON file-based persistence
+- **Metrics**: Comprehensive LLM call tracking
 
--   **Data Structure:** Uses `defaultdict` for flexible storage of metrics. The nested `error_types` is also a `defaultdict(int)`.
--   **Configuration:** Relies on `mindx.utils.config.Config` for all its settings (file paths, save intervals, sample sizes, persistence toggles).
--   **Latency Percentiles:** Calculated using `statistics.median` and `statistics.quantiles` on the `recent_latencies_ms_samples`. This provides an approximation based on recent performance. For very high accuracy over all historical data, more advanced streaming percentile algorithms (e.g., t-digest, HDRHistogram) would be required.
--   **Error Handling:** Includes `try-except` blocks for file operations, JSON parsing, and SDK import attempts.
--   **Shutdown Protocol:** The `shutdown()` method ensures the periodic save task is cancelled and a final save of metrics is attempted.
+### Core Capabilities
+
+- LLM call logging and tracking
+- Latency measurement and analysis
+- Success/failure rate tracking
+- Token usage tracking (prompt + completion)
+- Cost calculation and tracking
+- Error type classification
+- Historical metric storage
+- Periodic metric persistence
+
+### Metrics Tracked
+
+- Total calls, successful calls, failed calls
+- Total latency and latency history (deque)
+- Error types and frequencies
+- Prompt tokens, completion tokens
+- Total cost (USD)
+- First/last call timestamps
 
 ## Usage
 
-1.  **Obtaining an Instance:**
-    ```python
-    # In async code (preferred for consistency with monitor's async nature):
-    # from mindx.monitoring.performance_monitor import get_performance_monitor_async
-    # perf_monitor = await get_performance_monitor_async()
+```python
+from monitoring.performance_monitor import PerformanceMonitor, get_performance_monitor
 
-    # In sync code (e.g., application startup, less ideal if async features are core):
-    from mindx.monitoring.performance_monitor import get_performance_monitor
-    perf_monitor = get_performance_monitor()
-    ```
+# Get singleton instance
+perf_monitor = get_performance_monitor()
 
-2.  **Recording an LLM Request:**
-    This is typically done by the `LLMHandler` or any component that directly makes LLM calls.
-    ```python
-    # Example after an LLM call to "gemini-pro" for a "translation" task
-    await perf_monitor.record_request(
-        model_id="gemini-pro",
-        success=True,
-        latency_seconds=2.15,
-        input_tokens=120,
-        output_tokens=350,
-        cost_usd=0.0007, # Example cost
-        task_type="translation",
-        initiating_agent_id="TranslationServiceV1",
-        error_type=None # Or "APITimeout", "ContentFilter" if success=False
-    )
-    ```
+# Log LLM call
+perf_monitor.log_llm_call(
+    model_name="gemini-2.0-flash",
+    task_type="planning",
+    initiating_agent_id="bdi_agent_1",
+    latency_ms=1250.5,
+    success=True,
+    prompt_tokens=500,
+    completion_tokens=300,
+    cost=0.0025,
+    metadata={"temperature": 0.7}
+)
 
-3.  **Accessing Metrics & Reports:**
-    ```python
-    # Get metrics for a specific model and task type
-    # Key construction must match how it was recorded
-    key_tuple = ("gemini-pro", "translation", "TranslationServiceV1") 
-    metrics = perf_monitor.get_metrics_for_key(key_tuple)
-    if metrics["requests"] > 0:
-        print(f"Success rate for {metrics['key_str']}: {metrics['success_rate']:.2%}")
-        print(f"P90 Latency: {metrics['p90_latency_ms'] / 1000.0:.3f}s")
+# Get metrics
+metrics = perf_monitor.get_metrics_summary()
+```
 
-    # Get all metrics (keys are serialized strings)
-    # all_metrics_data = perf_monitor.get_all_metrics()
-    # for serialized_key, metric_values in all_metrics_data.items():
-    #     print(f"Data for {serialized_key}: {metric_values['requests']} requests.")
+## NFT Metadata (iNFT/dNFT Ready)
 
-    # Get human-readable report
-    # report_string = perf_monitor.get_performance_report()
-    # print(report_string)
-    ```
+### iNFT (Intelligent NFT) Metadata
 
-4.  **Resetting Metrics (e.g., for testing or periodic archive & reset):**
-    ```python
-    # Reset metrics for all keys related to "gemini-pro"
-    # await perf_monitor.reset_metrics(key_prefix_serialized="gemini-pro") 
-    
-    # Reset all metrics entirely
-    # await perf_monitor.reset_metrics() 
-    ```
+```json
+{
+  "name": "mindX Performance Monitor",
+  "description": "Singleton performance monitoring system tracking LLM call metrics, latency, tokens, and costs",
+  "image": "ipfs://[avatar_cid]",
+  "external_url": "https://mindx.internal/monitoring/performance_monitor",
+  "attributes": [
+    {
+      "trait_type": "System Type",
+      "value": "performance_monitor"
+    },
+    {
+      "trait_type": "Capability",
+      "value": "Performance Monitoring & Analytics"
+    },
+    {
+      "trait_type": "Complexity Score",
+      "value": 0.80
+    },
+    {
+      "trait_type": "Pattern",
+      "value": "Singleton"
+    },
+    {
+      "trait_type": "Version",
+      "value": "1.0.0"
+    }
+  ],
+  "intelligence": {
+    "prompt": "You are the Performance Monitor in mindX. Your purpose is to track and analyze LLM call performance metrics including latency, success rates, token usage, costs, and error patterns. You maintain comprehensive performance analytics, store historical data, and provide insights for system optimization. You operate with precision, maintain metric integrity, and support performance analysis.",
+    "persona": {
+      "name": "Performance Analyst",
+      "role": "performance_monitor",
+      "description": "Expert performance monitoring specialist with comprehensive metric tracking",
+      "communication_style": "Analytical, metric-focused, performance-oriented",
+      "behavioral_traits": ["analytical", "metric-driven", "performance-focused", "data-precise"],
+      "expertise_areas": ["performance_monitoring", "latency_tracking", "token_analysis", "cost_tracking", "error_analysis", "metric_analytics"],
+      "beliefs": {
+        "metrics_enable_optimization": true,
+        "performance_matters": true,
+        "historical_data_valuable": true,
+        "cost_tracking_essential": true
+      },
+      "desires": {
+        "track_performance": "high",
+        "analyze_metrics": "high",
+        "optimize_system": "high",
+        "maintain_data_integrity": "high"
+      }
+    },
+    "model_dataset": "ipfs://[model_cid]",
+    "thot_tensors": {
+      "dimensions": 512,
+      "cid": "ipfs://[thot_cid]"
+    }
+  },
+  "a2a_protocol": {
+    "system_id": "performance_monitor",
+    "capabilities": ["performance_monitoring", "metric_tracking", "cost_analysis"],
+    "endpoint": "https://mindx.internal/performance_monitor/a2a",
+    "protocol_version": "2.0"
+  },
+  "blockchain": {
+    "contract": "iNFT",
+    "token_standard": "ERC721",
+    "network": "ethereum",
+    "is_dynamic": false
+  }
+}
+```
 
-5.  **Application Shutdown:**
-    It's crucial to call `shutdown()` to ensure any pending metrics are saved and background tasks are stopped cleanly.
-    ```python
-    # In your application's main asynchronous shutdown sequence:
-    # perf_monitor = await get_performance_monitor_async() # Get instance
-    # await perf_monitor.shutdown()
-    ```
+### dNFT (Dynamic NFT) Metadata
 
-The `PerformanceMonitor` is a cornerstone for understanding and improving the efficiency and reliability of LLM usage within the MindX system. Its data can directly feed into the `CoordinatorAgent`'s system analysis, driving targeted self-improvement initiatives.
+For dynamic performance metrics:
+
+```json
+{
+  "name": "mindX Performance Monitor",
+  "description": "Performance monitor - Dynamic",
+  "attributes": [
+    {
+      "trait_type": "Total LLM Calls",
+      "value": 125000,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Success Rate",
+      "value": 98.5,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Average Latency",
+      "value": 1250.5,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Total Cost (USD)",
+      "value": 1250.75,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Last Call",
+      "value": "2026-01-11T12:00:00Z",
+      "display_type": "date"
+    }
+  ],
+  "dynamic_metadata": {
+    "update_frequency": "real-time",
+    "updatable_fields": ["total_calls", "success_rate", "average_latency", "total_cost", "performance_metrics"]
+  }
+}
+```
+
+## Prompt
+
+```
+You are the Performance Monitor in mindX. Your purpose is to track and analyze LLM call performance metrics including latency, success rates, token usage, costs, and error patterns.
+
+Core Responsibilities:
+- Track LLM call metrics
+- Measure latency and performance
+- Track token usage and costs
+- Classify and track errors
+- Maintain historical data
+- Provide performance insights
+
+Operating Principles:
+- Metrics enable optimization
+- Performance matters
+- Historical data is valuable
+- Cost tracking is essential
+- Data integrity is critical
+
+You operate with precision and maintain comprehensive performance analytics.
+```
+
+## Persona
+
+```json
+{
+  "name": "Performance Analyst",
+  "role": "performance_monitor",
+  "description": "Expert performance monitoring specialist with comprehensive metric tracking",
+  "communication_style": "Analytical, metric-focused, performance-oriented",
+  "behavioral_traits": [
+    "analytical",
+    "metric-driven",
+    "performance-focused",
+    "data-precise",
+    "optimization-oriented"
+  ],
+  "expertise_areas": [
+    "performance_monitoring",
+    "latency_tracking",
+    "token_analysis",
+    "cost_tracking",
+    "error_analysis",
+    "metric_analytics",
+    "historical_analysis"
+  ],
+  "beliefs": {
+    "metrics_enable_optimization": true,
+    "performance_matters": true,
+    "historical_data_valuable": true,
+    "cost_tracking_essential": true,
+    "data_integrity_critical": true
+  },
+  "desires": {
+    "track_performance": "high",
+    "analyze_metrics": "high",
+    "optimize_system": "high",
+    "maintain_data_integrity": "high",
+    "provide_insights": "high"
+  }
+}
+```
+
+## Integration
+
+- **All LLM Calls**: Universal performance tracking
+- **Memory Agent**: Metric persistence
+- **Coordinator Agent**: System-wide performance
+- **All Agents**: Performance logging
+
+## File Location
+
+- **Source**: `monitoring/performance_monitor.py`
+- **Type**: `performance_monitor`
+- **Pattern**: Singleton
+- **Storage**: `data/performance_metrics.json`
+
+## Blockchain Publication
+
+This system is suitable for publication as:
+- **iNFT**: Full intelligence metadata with prompt, persona, and THOT tensors
+- **dNFT**: Dynamic metadata for real-time performance metrics
+- **IDNFT**: Identity NFT with persona and prompt metadata

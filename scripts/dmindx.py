@@ -11,8 +11,8 @@ import time
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
-from orchestration.mastermind_agent import MastermindAgent
-from orchestration.coordinator_agent import InteractionType, InteractionStatus
+from agents.orchestration.mastermind_agent import MastermindAgent
+from agents.orchestration.coordinator_agent import InteractionType, InteractionStatus
 from utils.logging_config import get_logger, setup_logging # Added setup_logging
 from utils.config import Config, PROJECT_ROOT as CONFIG_PROJECT_ROOT
 

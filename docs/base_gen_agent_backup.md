@@ -183,7 +183,7 @@ The CLI will print a JSON object summarizing the result.
 The CoordinatorAgent or StrategicEvolutionAgent can instantiate and call BaseGenAgent to get a structured understanding of a component they intend to analyze or modify
 
 ```python
-from tools.base_gen_agent import BaseGenAgent
+from agents.base_gen_agent import BaseGenAgent
 from agents.memory_agent import MemoryAgent
 
 # Initialize with MemoryAgent (required)
@@ -213,7 +213,7 @@ else:
 For comprehensive auditing workflows, use both agents strategically:
 
 ```python
-from tools.base_gen_agent import BaseGenAgent
+from agents.base_gen_agent import BaseGenAgent
 from tools.optimized_audit_gen_agent import OptimizedAuditGenAgent
 from agents.memory_agent import MemoryAgent
 

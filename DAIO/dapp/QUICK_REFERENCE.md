@@ -129,3 +129,10 @@ See remaining characters as you type in text areas.
 
 **For full details, see:** `AUDIT.md`
 
+
+
+<<<<<<< Current (Your changes)
+
+
+=======
+>>>>>>> Incoming (Background Agent changes)

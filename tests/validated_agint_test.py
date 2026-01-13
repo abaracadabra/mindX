@@ -13,7 +13,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.agint import DecisionType, AgentStatus
+from agents.core.agint import DecisionType, AgentStatus
 
 async def test_agint_actual_logic():
     """Test AGInt using the actual decision logic from the codebase."""

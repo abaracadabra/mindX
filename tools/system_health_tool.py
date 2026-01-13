@@ -22,7 +22,7 @@ from email.mime.text import MIMEText
 import asyncio
 from typing import Dict, Any, Optional
 
-from core.bdi_agent import BaseTool
+from agents.core.bdi_agent import BaseTool
 from utils.config import Config
 from utils.logging_config import get_logger
 
@@ -151,6 +151,45 @@ class SystemHealthTool(BaseTool):
             return {"status": "ALERT", "sent_kbs": sent_kbs, "recv_kbs": recv_kbs, "message": message}
 
         return {"status": "OK", "sent_kbs": sent_kbs, "recv_kbs": recv_kbs}
+
+    async def monitor_temperatures(self, **kwargs) -> Dict[str, Any]:
+        """Monitors system temperatures if available."""
+        try:
+            if hasattr(psutil, "sensors_temperatures"):
+                temps = psutil.sensors_temperatures()
+                if temps:
+                    temp_data = {}
+                    for name, entries in temps.items():
+                        if entries:
+                            # Get the highest temperature for each sensor
+                            max_temp = max(entry.current for entry in entries if entry.current is not None)
+                            temp_data[name] = {
+                                "current": max_temp,
+                                "high": entries[0].high if entries[0].high else None,
+                                "critical": entries[0].critical if entries[0].critical else None
+                            }
+                    
+                    # Check for high temperatures
+                    threshold = self.config.get("tools.system_health.temp_alert_threshold", 80.0)
+                    alerts = []
+                    for sensor, data in temp_data.items():
+                        if data["current"] and data["current"] > threshold:
+                            alerts.append(f"High temperature on {sensor}: {data['current']}°C")
+                    
+                    if alerts:
+                        message = ", ".join(alerts)
+                        self.logger.warning(message)
+                        await self._send_email_alert("High Temperature Alert", message)
+                        return {"status": "ALERT", "temperatures": temp_data, "message": message}
+                    
+                    return {"status": "OK", "temperatures": temp_data}
+                else:
+                    return {"status": "OK", "message": "No temperature sensors available", "temperatures": {}}
+            else:
+                return {"status": "OK", "message": "Temperature monitoring not available on this system", "temperatures": {}}
+        except Exception as e:
+            self.logger.error(f"Error monitoring temperatures: {e}", exc_info=True)
+            return {"status": "ERROR", "message": f"Failed to monitor temperatures: {e}"}
         
     async def get_top_cpu_processes(self, **kwargs) -> Dict[str, Any]:
         """Returns the top 10 CPU-consuming processes."""

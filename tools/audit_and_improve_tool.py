@@ -7,12 +7,12 @@ import json
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from core.bdi_agent import BaseTool
+from agents.core.bdi_agent import BaseTool
 from llm.llm_interface import LLMHandlerInterface
 from utils.config import Config
 from agents.memory_agent import MemoryAgent
 from agents.automindx_agent import AutoMINDXAgent
-from .base_gen_agent import BaseGenAgent
+from agents.base_gen_agent import BaseGenAgent
 
 class AuditAndImproveTool(BaseTool):
     """

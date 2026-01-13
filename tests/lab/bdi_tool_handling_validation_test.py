@@ -22,8 +22,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from utils.config import Config
 from utils.logging_config import get_logger
-from core.bdi_agent import BDIAgent
-from core.belief_system import BeliefSystem
+from agents.core.bdi_agent import BDIAgent
+from agents.core.belief_system import BeliefSystem
 from agents.memory_agent import MemoryAgent
 from llm.llm_factory import create_llm_handler
 

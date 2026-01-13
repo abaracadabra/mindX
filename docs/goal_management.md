@@ -1,118 +1,273 @@
-# Goal Management System (`goal_management.py`)
+# Goal Management System
 
-## Introduction
+## Summary
 
-This module provides a robust `GoalManager` class and associated structures for managing an agent's goals within the MindX system (Augmentic Project). It allows for adding goals with priorities, tracking their status, handling dependencies between goals, and retrieving the highest priority actionable goal using a min-heap based priority queue. It also introduces abstract and concrete `GoalPrioritizationStrategy` classes for more complex sorting of goals if needed outside the priority queue's direct use.
+The Goal Management System provides comprehensive goal management for strategic agents in mindX. It implements a priority queue with various prioritization strategies, dependency management, and goal lifecycle tracking.
 
-## Explanation
+## Technical Explanation
 
-### Core Components
+The Goal Management System implements:
+- **Priority Queue**: Heap-based priority queue for goal selection
+- **Dependency Management**: Goal dependencies and dependent tracking
+- **Goal Lifecycle**: Status tracking from PENDING to COMPLETED/FAILED
+- **Prioritization Strategies**: Multiple strategies for goal prioritization
 
-1.  **`GoalSt` Enum (Goal Status):**
-    Defines the possible states a goal can be in:
-    -   `PENDING`: Newly added or dependencies now met, ready for consideration.
-    -   `ACTIVE`: Currently being pursued (e.g., a plan is being executed for it). (Note: This status is more conceptual in current `GoalManager` as `get_highest_priority_pending_goal` focuses on `PENDING`. An agent using it would set its own "active goal" state).
-    -   `COMPLETED_SUCCESS`: Successfully achieved.
-    -   `COMPLETED_NO_ACTION`: Goal was valid but determined to require no action (e.g., already met).
-    -   `FAILED_PLANNING`: The agent failed to generate a viable plan for this goal.
-    -   `FAILED_EXECUTION`: A plan was generated, but its execution failed.
-    -   `PAUSED_DEPENDENCY`: The goal cannot be pursued yet because one or more of its prerequisite goals are not completed.
-    -   `CANCELLED`: The goal was explicitly cancelled.
+### Architecture
 
-2.  **`Goal` Class:**
-    Represents a single goal with the following attributes:
-    -   `id`: Unique identifier (UUID).
-    -   `description`: Textual description of the goal.
-    -   `priority`: Integer (e.g., 1-10, higher number means higher priority). Clamped to a valid range on creation.
-    -   `status`: Current `GoalSt` of the goal.
-    -   `created_at`, `last_updated_at`: Timestamps.
-    -   `metadata`: Optional dictionary for additional information.
-    -   `parent_goal_id`: ID of a higher-level goal if this is a subgoal.
-    -   `subgoal_ids`: List of IDs of subgoals generated from this goal.
-    -   `dependency_ids`: List of IDs of goals that must be completed *before* this goal can start.
-    -   `dependent_ids`: List of IDs of goals that depend on *this* goal's completion.
-    -   `current_plan_id`: ID of the plan currently associated with achieving this goal (if any).
-    -   `attempt_count`: How many times has an attempt been made to achieve this goal.
-    -   `failure_reason`: Textual reason if the goal failed.
-    -   `source`: String indicating the origin of the goal (e.g., "llm_analysis", "user_directive").
-    -   Implements `__lt__` for direct use in `heapq` (prioritizes by `-priority`, then `created_at`).
+- **Type**: `goal_management`
+- **Data Structure**: Priority queue (heap)
+- **Dependency Graph**: Goal dependency tracking
+- **Status Management**: Comprehensive status lifecycle
 
-3.  **`GoalManager` Class:**
-    -   **Initialization (`__init__`):** Takes an `agent_id` for logging and namespacing. Initializes an empty dictionary `self.goals` to store `Goal` objects by their ID, and an empty list `self.priority_queue` which will be managed as a min-heap by the `heapq` module.
-    -   **`add_goal(...)`:**
-        *   Creates a new `Goal` object.
-        *   Performs simple de-duplication based on goal description (updates priority of existing non-terminal goal if new one is higher).
-        *   Adds the goal to `self.goals`.
-        *   If the goal has dependencies, it registers them and sets the goal's status to `PAUSED_DEPENDENCY` if any dependency is not yet `COMPLETED_SUCCESS`.
-        *   If the goal is active (no unmet dependencies and `PENDING`), it's pushed onto the `self.priority_queue` (using negated priority for max-heap behavior with `heapq`).
-    -   **`get_goal(goal_id)`:** Retrieves a `Goal` object by its ID.
-    -   **`get_highest_priority_pending_goal()`:**
-        *   This is the primary method for an agent to fetch its next task.
-        *   It intelligently inspects the `priority_queue` (min-heap).
-        *   It pops items, checks if the corresponding `Goal` object is still `PENDING` and if all its `dependency_ids` are `COMPLETED_SUCCESS`.
-        *   Returns the first such actionable `Goal` found, or `None`. Non-actionable items are temporarily held and then pushed back onto the heap to maintain queue integrity.
-    -   **`update_goal_status(goal_id, status, failure_reason)`:**
-        *   Updates the status of a specified goal.
-        *   If a goal's status changes to `COMPLETED_SUCCESS`, it triggers `_activate_dependent_goals` to potentially unblock goals that depended on it.
-        *   If a goal reaches a terminal status (completed, failed, cancelled), `_rebuild_priority_queue_from_active_goals` is called to ensure the queue only contains actionable items.
-    -   **`_activate_dependent_goals(completed_goal_id)`:** Iterates through goals that depended on the `completed_goal_id`. If all other dependencies for a dependent goal are also met, its status is set to `PENDING` and it's effectively re-added/re-prioritized in the queue (via `update_goal_priority` which rebuilds).
-    -   **`update_goal_priority(goal_id, new_priority)`:** Changes a goal's priority and rebuilds the priority queue.
-    -   **`_rebuild_priority_queue_from_active_goals()`:** Clears and reconstructs the `priority_queue` using only goals that are currently in a non-terminal status (e.g., `PENDING`, `PAUSED_DEPENDENCY`).
-    -   **`add_dependency(goal_id, depends_on_goal_id)`:** Establishes a dependency. Updates the dependent goal's status to `PAUSED_DEPENDENCY` if the prerequisite is not yet complete. Includes a basic circular dependency check.
-    -   **`_would_create_circular_dependency(...)`:** A recursive helper to detect potential cycles before adding a dependency.
-    -   **Query Methods:** `get_all_goals(status_filter)`, `get_goal_status_summary()`, `get_dependencies()`, `get_dependents()`.
+### Goal Statuses
 
-4.  **`GoalPrioritizationStrategy` (Abstract Base Class & Concrete Strategies):**
-    *   Defines an interface for different ways to sort a list of goals. This is separate from the `GoalManager`'s internal priority queue, which always uses priority and timestamp. These strategies could be used by an agent to *select* from a list of available goals *before* adding them to the `GoalManager`, or for presenting goals to a user.
-    *   **`SimplePriorityThenTimeStrategy`:** Sorts by `-priority`, then `created_at`.
-    *   **`UrgencyStrategy`:** Calculates an "urgency score" (`priority + (waiting_time * factor)`) and sorts by that.
-    *   (The `DependencyAwareStrategy` and `CompositeStrategy` from the previous prompt's `prioritization_strategies.py` are good candidates to include here as well, but were omitted in this generation for brevity as `GoalManager` now handles dependencies directly for its queue.)
+- `PENDING`: Goal created but not yet active
+- `ACTIVE`: Goal is currently being worked on
+- `COMPLETED_SUCCESS`: Goal completed successfully
+- `COMPLETED_NO_ACTION`: Goal completed without action needed
+- `FAILED_PLANNING`: Goal failed during planning phase
+- `FAILED_EXECUTION`: Goal failed during execution
+- `PAUSED_DEPENDENCY`: Goal paused due to unmet dependencies
+- `CANCELLED`: Goal was cancelled
 
-## Technical Details
+### Core Capabilities
 
--   **Priority Queue:** Uses Python's `heapq` module for an efficient min-heap. Priorities are negated before pushing so that numerically higher priorities (e.g., 10) result in smaller heap values, effectively creating a max-priority queue. Creation timestamp is used as a tie-breaker.
--   **Goal Representation:** `Goal` objects store comprehensive information about each goal.
--   **Dependencies:** A goal can depend on multiple other goals. A goal only becomes `PENDING` (and thus eligible for the priority queue and selection by `get_highest_priority_pending_goal`) once all its dependencies are `COMPLETED_SUCCESS`.
--   **Status Management:** Careful updates to goal statuses are crucial for the `get_highest_priority_pending_goal` logic and for activating dependent goals.
--   **Logging:** Informative logging helps trace goal lifecycle events.
+- Goal creation and management
+- Priority queue management
+- Dependency tracking
+- Goal status management
+- Prioritization strategies
+- Goal querying and filtering
 
-## Usage (Conceptual within an Agent like `StrategicEvolutionAgent` or `BDIAgent`)
+### Prioritization Strategies
 
-The `GoalManager` would be a component within a more complex agent.
+- `SimplePriorityThenTimeStrategy`: Priority first, then creation time
+- `UrgencyStrategy`: Urgency-based prioritization
+- Custom strategies via ABC interface
+
+## Usage
 
 ```python
-# Conceptual usage inside an agent (e.g., StrategicEvolutionAgent)
-# class StrategicEvolutionAgent:
-#     def __init__(self, agent_id: str, ...):
-#         self.goal_manager = GoalManager(agent_id=agent_id)
-#         self.current_strategic_goal: Optional[Goal] = None
-#         # ...
+from learning.goal_management import GoalManager, GoalSt
 
-#     async def set_new_strategic_objective(self, description: str, priority: int):
-#         new_goal = self.goal_manager.add_goal(description, priority, source="coordinator_directive")
-#         logger.info(f"SEA: New strategic objective added: {new_goal.id} - {new_goal.description}")
+# Create goal manager
+goal_manager = GoalManager(agent_id="my_agent")
 
-#     async def strategic_cycle(self):
-#         if self.current_strategic_goal and self.current_strategic_goal.status not in [GoalSt.COMPLETED_SUCCESS, GoalSt.FAILED_PLANNING, GoalSt.FAILED_EXECUTION]:
-#             logger.info(f"SEA: Continuing with current strategic goal: {self.current_strategic_goal.description}")
-#         else:
-#             self.current_strategic_goal = self.goal_manager.get_highest_priority_pending_goal()
+# Add goal
+goal = goal_manager.add_goal(
+    description="Improve code quality",
+    priority=8,
+    metadata={"category": "code_quality"}
+)
 
-#         if not self.current_strategic_goal:
-#             logger.info("SEA: No current strategic goals to pursue.")
-#             return
+# Add dependent goal
+dependent_goal = goal_manager.add_goal(
+    description="Test improvements",
+    priority=7,
+    dependency_ids=[goal.id]
+)
 
-#         logger.info(f"SEA: Current strategic goal: {self.current_strategic_goal.description} (Status: {self.current_strategic_goal.status.name})")
-#         self.goal_manager.update_goal_status(self.current_strategic_goal.id, GoalSt.ACTIVE)
-        
-#         # ... logic to plan and execute for self.current_strategic_goal ...
-#         # This would involve creating a plan using PlanManager, and then for each
-#         # step in that plan (like "ANALYZE_X", "REQUEST_SIA_MODIFICATION_Y"),
-#         # the SEA would perform actions.
+# Get highest priority goal
+next_goal = goal_manager.get_highest_priority_pending_goal()
 
-#         # Example: After attempting part of the plan for the strategic goal
-#         # plan_step_success = await self._execute_current_plan_step_for_strategic_goal(...) 
-#         # if not plan_step_success:
-#         #     self.goal_manager.update_goal_status(self.current_strategic_goal.id, GoalSt.FAILED_EXECUTION, "A plan step failed.")
-#         # elif self._check_if_strategic_goal_achieved(self.current_strategic_goal):
-#         #     self.goal_manager.update_goal_status(self.current_strategic_goal.id, GoalSt.COMPLETED_SUCCESS)
+# Update goal status
+goal_manager.update_goal_status(goal.id, GoalSt.ACTIVE)
+```
+
+## NFT Metadata (iNFT/dNFT Ready)
+
+### iNFT (Intelligent NFT) Metadata
+
+```json
+{
+  "name": "mindX Goal Management System",
+  "description": "Comprehensive goal management system with priority queue and dependency tracking",
+  "image": "ipfs://[avatar_cid]",
+  "external_url": "https://mindx.internal/learning/goal_management",
+  "attributes": [
+    {
+      "trait_type": "System Type",
+      "value": "goal_management"
+    },
+    {
+      "trait_type": "Capability",
+      "value": "Goal Management & Prioritization"
+    },
+    {
+      "trait_type": "Complexity Score",
+      "value": 0.82
+    },
+    {
+      "trait_type": "Priority Queue",
+      "value": "Yes"
+    },
+    {
+      "trait_type": "Version",
+      "value": "1.0.0"
+    }
+  ],
+  "intelligence": {
+    "prompt": "You are the Goal Management System in mindX. Your purpose is to manage goals for strategic agents using a priority queue and dependency tracking. You support goal creation, prioritization, dependency management, and status tracking. You operate with precision, maintain goal integrity, and support efficient goal selection.",
+    "persona": {
+      "name": "Goal Manager",
+      "role": "goal_management",
+      "description": "Expert goal management specialist with priority queue and dependency tracking",
+      "communication_style": "Precise, goal-focused, priority-oriented",
+      "behavioral_traits": ["goal-focused", "priority-driven", "dependency-aware", "status-precise"],
+      "expertise_areas": ["goal_management", "priority_queue", "dependency_tracking", "status_management", "prioritization_strategies"],
+      "beliefs": {
+        "goals_enable_achievement": true,
+        "prioritization_matters": true,
+        "dependencies_critical": true,
+        "status_tracking_essential": true
+      },
+      "desires": {
+        "manage_goals_effectively": "high",
+        "maintain_priorities": "high",
+        "track_dependencies": "high",
+        "ensure_goal_integrity": "high"
+      }
+    },
+    "model_dataset": "ipfs://[model_cid]",
+    "thot_tensors": {
+      "dimensions": 512,
+      "cid": "ipfs://[thot_cid]"
+    }
+  },
+  "a2a_protocol": {
+    "system_id": "goal_management",
+    "capabilities": ["goal_management", "priority_queue", "dependency_tracking"],
+    "endpoint": "https://mindx.internal/goal_management/a2a",
+    "protocol_version": "2.0"
+  },
+  "blockchain": {
+    "contract": "iNFT",
+    "token_standard": "ERC721",
+    "network": "ethereum",
+    "is_dynamic": false
+  }
+}
+```
+
+### dNFT (Dynamic NFT) Metadata
+
+For dynamic goal metrics:
+
+```json
+{
+  "name": "mindX Goal Management System",
+  "description": "Goal management system - Dynamic",
+  "attributes": [
+    {
+      "trait_type": "Total Goals",
+      "value": 1250,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Active Goals",
+      "value": 45,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Completed Goals",
+      "value": 890,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Success Rate",
+      "value": 94.5,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Last Goal Added",
+      "value": "2026-01-11T12:00:00Z",
+      "display_type": "date"
+    }
+  ],
+  "dynamic_metadata": {
+    "update_frequency": "real-time",
+    "updatable_fields": ["total_goals", "active_goals", "completed_goals", "success_rate", "goal_metrics"]
+  }
+}
+```
+
+## Prompt
+
+```
+You are the Goal Management System in mindX. Your purpose is to manage goals for strategic agents using a priority queue and dependency tracking.
+
+Core Responsibilities:
+- Manage goal creation and lifecycle
+- Maintain priority queue for goal selection
+- Track goal dependencies
+- Manage goal status transitions
+- Support prioritization strategies
+
+Operating Principles:
+- Goals enable achievement
+- Prioritization matters
+- Dependencies are critical
+- Status tracking is essential
+- Goal integrity must be maintained
+
+You operate with precision and maintain the integrity of goal management.
+```
+
+## Persona
+
+```json
+{
+  "name": "Goal Manager",
+  "role": "goal_management",
+  "description": "Expert goal management specialist with priority queue and dependency tracking",
+  "communication_style": "Precise, goal-focused, priority-oriented",
+  "behavioral_traits": [
+    "goal-focused",
+    "priority-driven",
+    "dependency-aware",
+    "status-precise",
+    "efficient"
+  ],
+  "expertise_areas": [
+    "goal_management",
+    "priority_queue",
+    "dependency_tracking",
+    "status_management",
+    "prioritization_strategies",
+    "goal_lifecycle"
+  ],
+  "beliefs": {
+    "goals_enable_achievement": true,
+    "prioritization_matters": true,
+    "dependencies_critical": true,
+    "status_tracking_essential": true,
+    "efficiency_enables_progress": true
+  },
+  "desires": {
+    "manage_goals_effectively": "high",
+    "maintain_priorities": "high",
+    "track_dependencies": "high",
+    "ensure_goal_integrity": "high",
+    "optimize_selection": "high"
+  }
+}
+```
+
+## Integration
+
+- **BDI Agent**: Core goal management
+- **Strategic Evolution Agent**: Campaign goal management
+- **Plan Manager**: Goal-to-plan conversion
+- **All Strategic Agents**: Universal goal access
+
+## File Location
+
+- **Source**: `learning/goal_management.py`
+- **Type**: `goal_management`
+
+## Blockchain Publication
+
+This system is suitable for publication as:
+- **iNFT**: Full intelligence metadata with prompt, persona, and THOT tensors
+- **dNFT**: Dynamic metadata for real-time goal metrics
+- **IDNFT**: Identity NFT with persona and prompt metadata

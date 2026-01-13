@@ -69,7 +69,7 @@ async def test_mistral_integration():
         # Test 3: Blueprint Agent
         print("\n3. Testing Blueprint Agent with Mistral...")
         from evolution.blueprint_agent import BlueprintAgent
-        from tools.base_gen_agent import BaseGenAgent
+        from agents.base_gen_agent import BaseGenAgent
         
         base_gen_agent = BaseGenAgent(
             memory_agent=memory_agent,

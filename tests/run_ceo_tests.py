@@ -17,9 +17,9 @@ from unittest.mock import Mock, AsyncMock
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from orchestration.ceo_agent import CEOAgent, SecurityValidator, RateLimiter
+from agents.orchestration.ceo_agent import CEOAgent, SecurityValidator, RateLimiter
 from utils.config import Config
-from core.belief_system import BeliefSystem
+from agents.core.belief_system import BeliefSystem
 from agents.memory_agent import MemoryAgent
 
 class CEOAgentTestSuite:

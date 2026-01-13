@@ -13,8 +13,8 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from core.bdi_agent import BDIAgent
-from core.belief_system import BeliefSystem
+from agents.core.bdi_agent import BDIAgent
+from agents.core.belief_system import BeliefSystem
 from agents.memory_agent import MemoryAgent
 from utils.config import Config
 from utils.logging_config import get_logger

@@ -8,7 +8,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from monitoring.enhanced_monitoring_system import EnhancedMonitoringSystem
+from agents.monitoring.enhanced_monitoring_system import EnhancedMonitoringSystem
 import time
 
 

@@ -24,7 +24,7 @@ project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from utils.logging_config import get_logger
-from core.agint import DecisionType
+from agents.core.agint import DecisionType
 
 logger = get_logger(__name__)
 

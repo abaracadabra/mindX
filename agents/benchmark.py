@@ -8,7 +8,7 @@ Description: for performance benchmarking and analysis
 import time
 from typing import Dict, Any, Optional
 
-from core.id_manager_agent import IDManagerAgent
+from agents.core.id_manager_agent import IDManagerAgent
 from agents.memory_agent import MemoryAgent
 from utils.config import Config
 from utils.logging_config import get_logger
@@ -35,8 +35,7 @@ class BenchmarkAgent:
     
     def _init_identity(self):
         """Initialize agent identity."""
-        try:
-            from core.id_manager_agent import IDManagerAgent
+        try: from agents.core.id_manager_agent import IDManagerAgent
             id_manager = IDManagerAgent.get_instance()
             id_manager.create_new_wallet(entity_id=self.agent_id)
         except Exception as e:

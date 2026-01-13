@@ -24,11 +24,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # Core mindX imports
 from utils.config import Config, PROJECT_ROOT
 from utils.logging_config import get_logger
-from core.agint import AGInt, AgentStatus, DecisionType
-from core.bdi_agent import BDIAgent
-from core.belief_system import BeliefSystem
+from agents.core.agint import AGInt, AgentStatus, DecisionType
+from agents.core.bdi_agent import BDIAgent
+from agents.core.belief_system import BeliefSystem
 from llm.model_registry import ModelRegistry
-from orchestration.coordinator_agent import CoordinatorAgent
+from agents.orchestration.coordinator_agent import CoordinatorAgent
 from agents.memory_agent import MemoryAgent
 from enhanced_test_agent import EnhancedUltimateCognitionTestAgent
 from report_agent import ReportAgent

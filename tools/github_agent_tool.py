@@ -24,7 +24,7 @@ from typing import Dict, Any, Optional, Tuple, List
 from datetime import datetime, timedelta
 from enum import Enum
 
-from core.bdi_agent import BaseTool
+from agents.core.bdi_agent import BaseTool
 from agents.memory_agent import MemoryAgent
 from utils.config import Config, PROJECT_ROOT
 from utils.logging_config import get_logger

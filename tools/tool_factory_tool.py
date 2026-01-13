@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 from typing import Dict, Any, Tuple, Optional
 
-from core.bdi_agent import BaseTool
+from agents.core.bdi_agent import BaseTool
 from agents.memory_agent import MemoryAgent
 from utils.config import Config, PROJECT_ROOT
 from utils.logging_config import get_logger
@@ -85,7 +85,7 @@ Description: {tool_description}
 import time
 from typing import Dict, Any, Tuple, Optional
 
-from core.bdi_agent import BaseTool
+from agents.core.bdi_agent import BaseTool
 from agents.memory_agent import MemoryAgent
 from utils.config import Config
 from utils.logging_config import get_logger

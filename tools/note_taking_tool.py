@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional
 
 import aiofiles
 
-from core.bdi_agent import BaseTool
+from agents.core.bdi_agent import BaseTool
 from utils.config import Config, PROJECT_ROOT
 from utils.logging_config import get_logger
 from agents.memory_agent import MemoryAgent

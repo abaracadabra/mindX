@@ -34,21 +34,21 @@ from datetime import datetime
 # Add the current directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from orchestration.mastermind_agent import MastermindAgent
-from orchestration.coordinator_agent import get_coordinator_agent_mindx_async
-from orchestration.autonomous_audit_coordinator import AutonomousAuditCoordinator
+from agents.orchestration.mastermind_agent import MastermindAgent
+from agents.orchestration.coordinator_agent import get_coordinator_agent_mindx_async
+from agents.orchestration.autonomous_audit_coordinator import AutonomousAuditCoordinator
 from agents.memory_agent import MemoryAgent
 from agents.guardian_agent import GuardianAgent
 from agents.automindx_agent import AutoMINDXAgent
-from core.id_manager_agent import IDManagerAgent
-from core.belief_system import BeliefSystem
+from agents.core.id_manager_agent import IDManagerAgent
+from agents.core.belief_system import BeliefSystem
 from llm.model_registry import get_model_registry_async
 from utils.logging_config import get_logger, setup_logging
 from utils.config import Config
 
 # Import monitoring and analysis capabilities
-from monitoring.enhanced_monitoring_system import get_enhanced_monitoring_system
-from monitoring.monitoring_integration import get_integrated_monitoring_manager
+from agents.monitoring.enhanced_monitoring_system import get_enhanced_monitoring_system
+from agents.monitoring.monitoring_integration import get_integrated_monitoring_manager
 from tools.token_calculator_tool import TokenCalculatorTool
 
 logger = get_logger(__name__)

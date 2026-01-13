@@ -491,3 +491,348 @@ async def get_provider_metrics(provider_name: str):
         logger.error(f"Failed to get provider metrics: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get provider metrics: {e}")
 
+
+@router.post("/providers/{provider_name}/metadata", summary="Update provider-specific metadata")
+async def update_provider_metadata(
+    provider_name: str,
+    metadata: Dict[str, Any] = Body(...)
+):
+    """Update provider-specific metadata (settings unique to each provider)"""
+    try:
+        registry = await get_provider_registry()
+        
+        if provider_name not in registry.providers:
+            raise HTTPException(status_code=404, detail=f"Provider {provider_name} not found")
+        
+        # Update metadata
+        if registry.providers[provider_name].metadata is None:
+            registry.providers[provider_name].metadata = {}
+        
+        registry.providers[provider_name].metadata.update(metadata)
+        registry._save_registry()
+        
+        return {
+            "success": True,
+            "message": f"Metadata updated for {provider_name}",
+            "metadata": registry.providers[provider_name].metadata
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update provider metadata: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to update metadata: {e}")
+
+
+@router.get("/providers/{provider_name}/metadata", summary="Get provider-specific metadata")
+async def get_provider_metadata(provider_name: str):
+    """Get provider-specific metadata"""
+    try:
+        registry = await get_provider_registry()
+        
+        if provider_name not in registry.providers:
+            raise HTTPException(status_code=404, detail=f"Provider {provider_name} not found")
+        
+        return {
+            "success": True,
+            "provider": provider_name,
+            "metadata": registry.providers[provider_name].metadata or {}
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get provider metadata: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get metadata: {e}")
+
+
+@router.get("/providers/intelligent/list", summary="List all available providers from API folder")
+async def list_available_providers():
+    """
+    List all providers available in the api folder, regardless of detection status.
+    Returns a simple list for dropdown menus.
+    """
+    try:
+        from pathlib import Path
+        from utils.config import PROJECT_ROOT
+        
+        api_folder = PROJECT_ROOT / "api"
+        available_providers = []
+        
+        # Known provider templates with their display names
+        provider_templates = {
+            "gemini": "Google Gemini",
+            "openai": "OpenAI",
+            "anthropic": "Anthropic Claude",
+            "mistral": "Mistral AI",
+            "together": "Together AI",
+            "ollama": "Ollama (Local)"
+        }
+        
+        # Scan API folder for provider files
+        if api_folder.exists():
+            for file_path in api_folder.glob("*_api.py"):
+                provider_name = file_path.stem.replace("_api", "")
+                display_name = provider_templates.get(provider_name, provider_name.replace("_", " ").title())
+                
+                available_providers.append({
+                    "name": provider_name,
+                    "display_name": display_name,
+                    "file_exists": True,
+                    "file_path": str(file_path.relative_to(PROJECT_ROOT))
+                })
+        
+        return {
+            "success": True,
+            "providers": available_providers,
+            "total": len(available_providers),
+            "timestamp": time.time()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to list available providers: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to list providers: {e}")
+
+
+@router.get("/providers/intelligent/detect", summary="Intelligently detect available providers from API folder")
+async def intelligently_detect_providers():
+    """
+    Use mindX's awareness to detect available API providers from the api folder,
+    analyze environment variables, and suggest configuration.
+    """
+    try:
+        import os
+        import importlib.util
+        from pathlib import Path
+        from utils.config import PROJECT_ROOT
+        
+        api_folder = PROJECT_ROOT / "api"
+        detected_providers = []
+        env_vars = dict(os.environ)
+        
+        # Known provider templates
+        provider_templates = {
+            "gemini": {
+                "name": "gemini",
+                "display_name": "Google Gemini",
+                "module_path": "api.gemini_api",
+                "factory_function": "create_gemini_api",
+                "api_key_env_var": "GEMINI_API_KEY",
+                "requires_api_key": True,
+                "requires_base_url": False,
+                "default_rate_limit_rpm": 60,
+                "default_rate_limit_tpm": 1000000,
+                "detected": False
+            },
+            "openai": {
+                "name": "openai",
+                "display_name": "OpenAI",
+                "module_path": "api.openai_api",
+                "factory_function": "create_openai_api",
+                "api_key_env_var": "OPENAI_API_KEY",
+                "requires_api_key": True,
+                "requires_base_url": False,
+                "default_rate_limit_rpm": 3,
+                "default_rate_limit_tpm": 40000,
+                "detected": False
+            },
+            "anthropic": {
+                "name": "anthropic",
+                "display_name": "Anthropic Claude",
+                "module_path": "api.anthropic_api",
+                "factory_function": "create_anthropic_api",
+                "api_key_env_var": "ANTHROPIC_API_KEY",
+                "requires_api_key": True,
+                "requires_base_url": False,
+                "default_rate_limit_rpm": 50,
+                "default_rate_limit_tpm": 40000,
+                "detected": False
+            },
+            "mistral": {
+                "name": "mistral",
+                "display_name": "Mistral AI",
+                "module_path": "api.mistral_api",
+                "factory_function": "MistralAPIClient",
+                "api_key_env_var": "MISTRAL_API_KEY",
+                "requires_api_key": True,
+                "requires_base_url": False,
+                "default_rate_limit_rpm": 10,
+                "default_rate_limit_tpm": 100000,
+                "detected": False
+            },
+            "together": {
+                "name": "together",
+                "display_name": "Together AI",
+                "module_path": "api.together_api",
+                "factory_function": "create_together_api",
+                "api_key_env_var": "TOGETHER_API_KEY",
+                "requires_api_key": True,
+                "requires_base_url": False,
+                "default_rate_limit_rpm": 60,
+                "default_rate_limit_tpm": 1000000,
+                "detected": False
+            },
+            "ollama": {
+                "name": "ollama",
+                "display_name": "Ollama (Local)",
+                "module_path": "api.ollama_url",
+                "factory_function": "create_ollama_api",
+                "api_key_env_var": None,
+                "base_url_env_var": "MINDX_LLM__OLLAMA__BASE_URL",
+                "requires_api_key": False,
+                "requires_base_url": True,
+                "default_rate_limit_rpm": 1000,
+                "default_rate_limit_tpm": 10000000,
+                "detected": False
+            }
+        }
+        
+        # Scan API folder for provider files
+        if api_folder.exists():
+            for file_path in api_folder.glob("*_api.py"):
+                provider_name = file_path.stem.replace("_api", "")
+                
+                # Check if it's a known provider
+                if provider_name in provider_templates:
+                    template = provider_templates[provider_name].copy()
+                    
+                    # Check if module can be imported
+                    try:
+                        spec = importlib.util.spec_from_file_location(
+                            f"api.{file_path.stem}",
+                            file_path
+                        )
+                        if spec and spec.loader:
+                            template["detected"] = True
+                            template["file_exists"] = True
+                            
+                            # Check for API key in environment
+                            if template.get("api_key_env_var"):
+                                if template["api_key_env_var"] in env_vars:
+                                    template["api_key_detected"] = True
+                                    template["api_key_set"] = bool(env_vars[template["api_key_env_var"]])
+                                else:
+                                    template["api_key_detected"] = False
+                            
+                            # Check for base URL in environment (for Ollama)
+                            if template.get("base_url_env_var"):
+                                if template["base_url_env_var"] in env_vars:
+                                    template["base_url_detected"] = True
+                                    template["base_url_value"] = env_vars[template["base_url_env_var"]]
+                                else:
+                                    template["base_url_detected"] = False
+                                    # Try common Ollama defaults
+                                    template["suggested_base_url"] = "http://localhost:11434"
+                            
+                            detected_providers.append(template)
+                    except Exception as e:
+                        logger.warning(f"Could not analyze {file_path}: {e}")
+        
+        # Get current registry to see what's already registered
+        registry = await get_provider_registry()
+        registered_providers = {p.name for p in registry.list_providers()}
+        
+        # Mark which detected providers are already registered
+        for provider in detected_providers:
+            provider["already_registered"] = provider["name"] in registered_providers
+        
+        return {
+            "success": True,
+            "detected_providers": detected_providers,
+            "total_detected": len(detected_providers),
+            "environment_analyzed": True,
+            "timestamp": time.time()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to intelligently detect providers: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to detect providers: {e}")
+
+
+@router.get("/providers/intelligent/suggest/{provider_name}", summary="Get intelligent suggestions for a provider")
+async def get_provider_suggestions(provider_name: str):
+    """
+    Get intelligent configuration suggestions for a specific provider
+    based on mindX's current environment and configuration.
+    """
+    try:
+        import os
+        from utils.config import Config, PROJECT_ROOT
+        
+        config = Config()
+        env_vars = dict(os.environ)
+        
+        # Get provider template
+        registry = await get_provider_registry()
+        provider = registry.providers.get(provider_name)
+        
+        if not provider:
+            # Try to get from default templates
+            suggestions = {
+                "provider_name": provider_name,
+                "suggestions": {},
+                "environment_detected": {}
+            }
+        else:
+            suggestions = {
+                "provider_name": provider_name,
+                "display_name": provider.display_name,
+                "suggestions": {
+                    "module_path": provider.module_path,
+                    "factory_function": provider.factory_function,
+                    "requires_api_key": provider.requires_api_key,
+                    "requires_base_url": provider.requires_base_url,
+                    "default_rate_limit_rpm": provider.default_rate_limit_rpm,
+                    "default_rate_limit_tpm": provider.default_rate_limit_tpm
+                },
+                "environment_detected": {}
+            }
+            
+            # Check environment variables
+            if provider.api_key_env_var:
+                if provider.api_key_env_var in env_vars:
+                    suggestions["environment_detected"]["api_key"] = {
+                        "env_var": provider.api_key_env_var,
+                        "detected": True,
+                        "set": bool(env_vars[provider.api_key_env_var])
+                    }
+                else:
+                    suggestions["environment_detected"]["api_key"] = {
+                        "env_var": provider.api_key_env_var,
+                        "detected": False,
+                        "suggestion": f"Set {provider.api_key_env_var} environment variable"
+                    }
+            
+            if provider.base_url_env_var:
+                if provider.base_url_env_var in env_vars:
+                    suggestions["environment_detected"]["base_url"] = {
+                        "env_var": provider.base_url_env_var,
+                        "detected": True,
+                        "value": env_vars[provider.base_url_env_var]
+                    }
+                else:
+                    suggestions["environment_detected"]["base_url"] = {
+                        "env_var": provider.base_url_env_var,
+                        "detected": False,
+                        "suggestion": "http://localhost:11434" if provider_name == "ollama" else None
+                    }
+        
+        # Check mindX config for provider settings
+        mindx_config_path = PROJECT_ROOT / "data" / "config" / "mindx_config.json"
+        if mindx_config_path.exists():
+            import json
+            with open(mindx_config_path, 'r') as f:
+                mindx_config = json.load(f)
+                if "llm" in mindx_config and "providers" in mindx_config["llm"]:
+                    provider_config = mindx_config["llm"]["providers"].get(provider_name, {})
+                    if provider_config:
+                        suggestions["mindx_config_detected"] = provider_config
+        
+        return {
+            "success": True,
+            "suggestions": suggestions,
+            "timestamp": time.time()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get provider suggestions: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get suggestions: {e}")
+

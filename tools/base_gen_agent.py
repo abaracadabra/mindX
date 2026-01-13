@@ -1,4 +1,4 @@
-# tttools/base_gen_agent.py
+# tools/base_gen_agent.py
 """
 BaseGenAgent (Codebase Documentation Generator): Generates Markdown
 documentation from a codebase directory.
@@ -10,9 +10,13 @@ from pathlib import Path # Explicitly import Path for direct use
 import sys
 import os
 import json
-from typing import List, Optional, Dict, Tuple, Any
+from typing import List, Optional, Dict, Tuple, Any, TYPE_CHECKING
 from datetime import datetime
 import copy
+
+if TYPE_CHECKING:
+    from agents.memory_agent import MemoryAgent
+    from agents.core.belief_system import BeliefSystem
 
 # Requires: pip install pathspec
 try:
@@ -28,7 +32,7 @@ except ImportError: # pragma: no cover
 try:
     from utils.config import Config, PROJECT_ROOT
     from utils.logging_config import get_logger
-    from core.belief_system import BeliefSystem, BeliefSource
+    from agents.core.belief_system import BeliefSystem, BeliefSource
     from agents.memory_agent import MemoryAgent
     logger = get_logger(__name__)
 except ImportError as e: # pragma: no cover
@@ -87,7 +91,7 @@ class BaseGenAgent:
         }
     }
 
-    def __init__(self, memory_agent: MemoryAgent, config_file_path_override_str: Optional[str] = None, agent_id: str = "base_gen_agent_v1.1", belief_system: Optional[BeliefSystem] = None):
+    def __init__(self, memory_agent: "MemoryAgent", config_file_path_override_str: Optional[str] = None, agent_id: str = "base_gen_agent_v1.1", belief_system: Optional["BeliefSystem"] = None):
         self.agent_id = agent_id
         self.belief_system = belief_system
         self.memory_agent = memory_agent

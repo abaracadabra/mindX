@@ -20,9 +20,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # Core mindX imports
 from utils.config import Config
 from utils.logging_config import get_logger
-from core.agint import AGInt, AgentStatus, DecisionType
-from core.bdi_agent import BDIAgent
-from core.belief_system import BeliefSystem
+from agents.core.agint import AGInt, AgentStatus, DecisionType
+from agents.core.bdi_agent import BDIAgent
+from agents.core.belief_system import BeliefSystem
 from llm.model_registry import ModelRegistry, get_model_registry_async
 from agents.memory_agent import MemoryAgent
 from tests.report_agent import ReportAgent, ReportType, ReportFormat
@@ -561,9 +561,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # Core mindX imports
 from utils.config import Config
 from utils.logging_config import get_logger
-from core.agint import AGInt, AgentStatus, DecisionType
-from core.bdi_agent import BDIAgent
-from core.belief_system import BeliefSystem
+from agents.core.agint import AGInt, AgentStatus, DecisionType
+from agents.core.bdi_agent import BDIAgent
+from agents.core.belief_system import BeliefSystem
 from llm.model_registry import ModelRegistry, get_model_registry_async
 from agents.memory_agent import MemoryAgent
 from tests.report_agent import ReportAgent, ReportType, ReportFormat

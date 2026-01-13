@@ -23,8 +23,8 @@ from datetime import datetime
 # Core mindX imports for testing
 from utils.config import Config
 from utils.logging_config import get_logger
-from core.belief_system import BeliefSystem, BeliefSource
-from core.bdi_agent import BDIAgent, BaseTool
+from agents.core.belief_system import BeliefSystem, BeliefSource
+from agents.core.bdi_agent import BDIAgent, BaseTool
 from agents.memory_agent import MemoryAgent
 
 logger = get_logger(__name__)

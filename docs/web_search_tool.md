@@ -1,84 +1,262 @@
-# Web Search Tool (`mindX/tools/web_search_tool.py`)
+# Web Search Tool Documentation
 
-## Introduction
+## Overview
 
-The `WebSearchTool` is a utility component for MindX agents (Augmentic Project) that provides the capability to perform web searches using the Google Custom Search JSON API. This enables agents to gather external information from the internet as part of their reasoning or task execution processes. If API keys are not configured, it falls back to generating plausible mock search results.
+The `WebSearchTool` enables mindX agents to search the web using Google Custom Search JSON API. It provides a robust interface for retrieving real-time information from the internet, with graceful fallback to mock results when API credentials are unavailable.
 
-## Explanation
+**File**: `tools/web_search_tool.py`  
+**Class**: `WebSearchTool`  
+**Version**: 1.0.0  
+**Status**: ✅ Active
 
-### Core Features
+## Architecture
 
-1.  **Initialization (`__init__`):**
-    *   Accepts an optional `Config` instance.
-    *   Retrieves `GOOGLE_SEARCH_API_KEY` and `GOOGLE_SEARCH_ENGINE_ID` from the `Config` object (which can load them from environment variables like `MINDX_TOOLS__WEB_SEARCH__GOOGLE_API_KEY` or directly named environment variables as fallbacks). Direct overrides via constructor arguments are also possible for testing or specific instantiation.
-    *   Initializes an `httpx.AsyncClient` instance for making asynchronous HTTP requests. This client is reused for multiple searches by the same tool instance and configured with a timeout.
+### Design Principles
 
-2.  **Main Execution Method (`async execute`):**
-    *   This is the primary interface for the tool. It takes:
-        -   `query`: The search query string.
-        -   `num_results` (Default: 5): The desired number of search results to return. The Google API limits this to a maximum of 10 per request.
-    *   **API Key Check:** If the API key or search engine ID is not configured, it logs a warning and calls `_generate_mock_results()`.
-    *   **API Request:** If configured, it constructs the URL and parameters for the Google Custom Search API and makes an asynchronous GET request using `self.http_client`.
-    *   **Error Handling:**
-        -   Uses `response.raise_for_status()` to check for HTTP errors (4xx, 5xx).
-        -   Catches `httpx.TimeoutException`, `httpx.HTTPStatusError`, and other general exceptions.
-        -   In case of any error, it logs the issue and typically returns a formatted error message string or could fall back to mock results if desired (current implementation returns error strings).
-    *   **Result Parsing & Formatting:** If the API call is successful, it parses the JSON response and uses `_format_google_search_results()` to create a human-readable string summary of the results.
+1. **API Integration**: Uses Google Custom Search JSON API for web searches
+2. **Graceful Degradation**: Falls back to mock results when API keys are missing
+3. **Async HTTP**: Uses `httpx` for async HTTP requests
+4. **Error Handling**: Comprehensive error handling with informative messages
+5. **Configurable**: Supports configuration via Config object and environment variables
 
-3.  **Result Formatting (`_format_google_search_results`):**
-    *   Takes the raw JSON dictionary from the Google API.
-    *   Extracts the original query, search time, total results estimate, and for each item: `title`, `link`, and `snippet`.
-    *   Formats this information into a structured, multi-line string.
+### Core Components
 
-4.  **Mock Results (`_generate_mock_results`):**
-    *   Provides a fallback when API keys are missing.
-    *   Generates a predefined number of plausible-looking (but entirely fictional) search result entries based on the query. This allows agents using the tool to function even without live web access during development or testing.
+```python
+class WebSearchTool(BaseTool):
+    - api_key: Google Search API key
+    - search_engine_id: Custom Search Engine ID
+    - http_client: httpx.AsyncClient for HTTP requests
+    - config: Configuration object
+```
 
-5.  **Resource Management (`async shutdown`):**
-    *   Provides an `async shutdown()` method to properly close the `httpx.AsyncClient`. This should be called when the tool instance is no longer needed if it's long-lived (e.g., when the owning agent shuts down).
+## Configuration
 
-### Technical Details
+### Required Environment Variables
 
--   **Dependencies:** Uses the `httpx` library (`pip install httpx`) for asynchronous HTTP requests.
--   **API Used:** Google Custom Search JSON API. Requires setting up a Custom Search Engine (CSE) in the Google Cloud Console or Programmable Search Engine control panel to get a "Search engine ID" (cx) and an API key.
--   **Configuration:** API keys and Search Engine ID are expected to be configured via the `Config` object (e.g., from `.env` file: `MINDX_TOOLS__WEB_SEARCH__GOOGLE_API_KEY`, `MINDX_TOOLS__WEB_SEARCH__GOOGLE_SEARCH_ENGINE_ID`, or older `GOOGLE_SEARCH_API_KEY`).
--   **Asynchronous:** The `execute` method is `async` due to the network request.
+- `GOOGLE_SEARCH_API_KEY`: Google Custom Search API key
+- `GOOGLE_SEARCH_ENGINE_ID`: Custom Search Engine ID
+
+### Configuration Options
+
+```python
+# In config file or environment
+tools.web_search.google_api_key: "your_api_key"
+tools.web_search.google_search_engine_id: "your_engine_id"
+tools.web_search.timeout_seconds: 20.0
+```
 
 ## Usage
 
-The `WebSearchTool` would be instantiated and used by an agent that needs to perform web lookups.
+### Basic Search
 
 ```python
-# Conceptual usage within an agent (e.g., BDIAgent)
+from tools.web_search_tool import WebSearchTool
+from utils.config import Config
 
-# from mindx.tools.web_search_tool import WebSearchTool
-# from mindx.utils.config import Config # Assuming global config
+config = Config()
+tool = WebSearchTool(config=config)
 
-# class MyResearchBDIAgent:
-#     def __init__(self, config: Config, ...):
-#         self.config = config
-#         self.web_search_tool = WebSearchTool(config=self.config)
-#         # ...
+# Execute search
+results = await tool.execute(
+    query="latest advancements in AI",
+    num_results=5
+)
+```
 
-#     async def _execute_search_action(self, query: str) -> str:
-#         logger.info(f"Agent: Performing web search for '{query}'...")
-#         search_results_str = await self.web_search_tool.execute(query=query, num_results=3)
-        
-#         if search_results_str.startswith("Error:"):
-#             logger.error(f"Agent: Web search failed: {search_results_str}")
-#             # Update belief about search failure
-#             # await self.belief_system.add_belief(f"search.last_error.{query}", search_results_str, ...)
-#         else:
-#             logger.info(f"Agent: Web search successful for '{query}'.")
-#             # Update belief with search results
-#             # await self.belief_system.add_belief(f"knowledge.search_results.{query}", search_results_str, ...)
-        
-#         return search_results_str
+### Advanced Usage
 
-#     async def on_shutdown(self):
-#         await self.web_search_tool.shutdown()
+```python
+# With custom parameters
+results = await tool.execute(
+    query="Python async programming best practices",
+    num_results=10
+)
+```
 
-# Example call:
-# research_agent = MyResearchBDIAgent(Config())
-# report_section = await research_agent._execute_search_action("current AI safety research")
-# await research_agent.on_shutdown() 
+## Response Format
+
+### Successful Search
+
+```
+Search Results for: "query" (Time: 0.45s, Approx. Total: 1,000,000)
+
+Result 1:
+  Title: Result Title
+  Link: https://example.com/article
+  Snippet: Article snippet text...
+
+Result 2:
+  ...
+```
+
+### Error Response
+
+```
+Error: Web search API request failed with status 403. Detail: API key invalid
+```
+
+### Mock Results (No API Key)
+
+```
+Mock Search Results for: "query" (API Key/ID Not Configured or httpx missing)
+
+Result 1:
+  Title: Mock Result 1 - query
+  Link: https://example.com/mocksearch?q=query&result=1
+  Snippet: This is mock search result...
+```
+
+## Features
+
+### 1. Google Custom Search Integration
+
+- Uses official Google Custom Search JSON API
+- Supports up to 10 results per query (API limit)
+- Returns formatted search results with title, link, and snippet
+
+### 2. Mock Results Fallback
+
+When API keys are not configured:
+- Generates realistic mock results
+- Maintains same format as real results
+- Useful for development and testing
+
+### 3. Error Handling
+
+- **Timeout Errors**: Handles request timeouts gracefully
+- **HTTP Errors**: Provides detailed error messages
+- **API Errors**: Extracts error details from API responses
+- **General Exceptions**: Catches and reports unexpected errors
+
+### 4. Result Formatting
+
+- Formats results in readable text format
+- Includes search metadata (time, total results)
+- Provides structured result information
+
+## API Details
+
+### Google Custom Search API
+
+**Endpoint**: `https://www.googleapis.com/customsearch/v1`
+
+**Parameters**:
+- `key`: API key
+- `cx`: Search Engine ID
+- `q`: Search query
+- `num`: Number of results (1-10)
+
+**Rate Limits**: 
+- Free tier: 100 queries per day
+- Paid tier: Higher limits available
+
+## Security Considerations
+
+1. **API Key Protection**: Store API keys in environment variables or secure config
+2. **Request Validation**: Validates query input before sending
+3. **Timeout Protection**: Prevents hanging requests
+4. **Error Sanitization**: Doesn't expose sensitive information in errors
+
+## Limitations
+
+### Current Limitations
+
+1. **Result Limit**: Maximum 10 results per query (API limitation)
+2. **No Caching**: Every search makes a new API call
+3. **No Pagination**: Cannot retrieve results beyond first page
+4. **No Filtering**: No advanced search filters
+5. **Single Provider**: Only supports Google Custom Search
+
+### Recommended Improvements
+
+1. **Result Caching**: Cache search results to reduce API calls
+2. **Pagination Support**: Support for retrieving multiple pages
+3. **Multiple Providers**: Support for other search engines
+4. **Advanced Filters**: Date, language, region filters
+5. **Result Parsing**: Parse structured data from results
+6. **Rate Limiting**: Built-in rate limiting to respect API limits
+
+## Integration
+
+### With BDI Agents
+
+```python
+# In agent plan
+plan = [
+    {
+        "action": "search_web",
+        "query": "latest Python async features",
+        "num_results": 5
+    }
+]
+```
+
+### With Other Tools
+
+The WebSearchTool can be used by:
+- Research agents for gathering information
+- Documentation agents for finding examples
+- Analysis agents for market research
+
+## Examples
+
+### Simple Search
+
+```python
+results = await tool.execute("mindX autonomous agents")
+print(results)
+```
+
+### Research Query
+
+```python
+results = await tool.execute(
+    query="autonomous AI systems 2024",
+    num_results=10
+)
+```
+
+## Technical Details
+
+### Dependencies
+
+- `httpx`: Async HTTP client library
+- `core.bdi_agent.BaseTool`: Base tool class
+- `utils.config.Config`: Configuration management
+- `utils.logging_config.get_logger`: Logging utility
+
+### Error Handling
+
+```python
+try:
+    response = await self.http_client.get(search_url, params=params)
+    response.raise_for_status()
+    results_json = response.json()
+    return self._format_google_search_results(results_json, query)
+except httpx.TimeoutException as e:
+    return f"Error: Web search request timed out. ({e})"
+except httpx.HTTPStatusError as e:
+    return f"Error: Web search API request failed with status {e.response.status_code}"
+except Exception as e:
+    return f"Error: Unexpected error during web search - {type(e).__name__}: {e}"
+```
+
+### Shutdown
+
+The tool properly closes HTTP client on shutdown:
+
+```python
+async def shutdown(self):
+    if self.http_client and not self.http_client.is_closed:
+        await self.http_client.aclose()
+```
+
+## Future Enhancements
+
+1. **Multi-Provider Support**: Support Bing, DuckDuckGo, etc.
+2. **Result Caching**: Cache results with TTL
+3. **Advanced Queries**: Support for complex search queries
+4. **Result Ranking**: Custom result ranking algorithms
+5. **Image Search**: Support for image search
+6. **News Search**: Specialized news search functionality
+7. **Academic Search**: Integration with academic search engines

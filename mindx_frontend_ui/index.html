@@ -7,16 +7,17 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta http-equiv="Last-Modified" content="0">
-    <title>mindX Control Panel</title>
+    <title>mindX</title>
     <link rel="stylesheet" href="styles3.css">
     <script src="crossmint-integration.js"></script>
+    <script src="window-manager.js"></script>
 </head>
 <body>
     <!-- Login Landing Page -->
     <div id="login-landing" class="login-landing">
         <div class="login-container">
             <div class="login-header">
-                <h1>mindX Control Panel</h1>
+                <h1>mindX</h1>
                 <p>Secure Agent Management Platform</p>
             </div>
             
@@ -89,7 +90,7 @@
     <div id="main-application" class="container" style="display: none;">
         <header>
             <div class="header-left">
-                <h1>mindX Control Panel</h1>
+                <h1>mindX</h1>
                 <div class="github-link">
                     <a href="https://github.com/abaracadabra/mindX" target="_blank" rel="noopener noreferrer">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -112,17 +113,36 @@
                         <div class="login-btn-glow"></div>
                     </a>
                     <div id="crossmintUserInfo" class="crossmint-user-info enhanced-user-info" style="display: none;">
-                        <div class="user-avatar">
-                            <div class="avatar-icon">👤</div>
+                        <div class="wallet-secure-container">
+                            <div class="wallet-address-field">
+                                <div class="address-header">
+                                    <span class="address-label">Receive Address</span>
+                                    <div class="wallet-security-icon">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="address-display">
+                                    <span class="user-wallet" id="crossmintWalletAddress"></span>
+                                    <button class="wallet-copy-btn" onclick="copyWalletAddress(document.getElementById('crossmintWalletAddress').getAttribute('data-full-address'))" title="Copy address">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="user-details">
-                            <span class="user-wallet" id="crossmintWalletAddress"></span>
-                            <span class="user-status">Connected</span>
+                        <div class="logout-container">
+                            <div class="logout-status">
+                                <span class="status-dot"></span>
+                                <span class="status-text">Connected</span>
+                            </div>
+                            <button id="crossmintLogoutBtn" class="crossmint-logout-btn enhanced-logout-btn">
+                                <span class="logout-text">Logout</span>
+                            </button>
                         </div>
-                        <button id="crossmintLogoutBtn" class="crossmint-logout-btn enhanced-logout-btn">
-                            <span class="logout-icon">↩</span>
-                            <span class="logout-text">Logout</span>
-                        </button>
                     </div>
                 </div>
                 <div class="autonomous-control">
@@ -142,7 +162,9 @@
                     <button class="tab-btn active" data-tab="control">Control</button>
                     <button class="tab-btn" data-tab="agents">Agents</button>
                     <button class="tab-btn" data-tab="system">System</button>
+                    <button class="tab-btn" data-tab="usage">Usage</button>
                     <button class="tab-btn" data-tab="logs">Logs</button>
+                    <button class="tab-btn" data-tab="api">API</button>
                     <button class="tab-btn" data-tab="admin">Admin</button>
                 </div>
                 <div class="tab-row core-tabs">
@@ -1433,11 +1455,21 @@
         <!-- Agents Tab -->
         <div id="agents-tab" class="tab-content">
             <div class="control-section">
-                <h2>Agent Management</h2>
-                <div class="agent-controls">
-                    <button id="refresh-agents-btn">Refresh Agents</button>
-                    <button id="create-agent-btn" onclick="createAgentWithUserContext()">Create User Agent</button>
-                    <button id="delete-agent-btn" class="delete-btn" disabled>Delete Agent</button>
+                <div class="section-header">
+                    <h2>Agent Management</h2>
+                    <div class="agent-controls">
+                        <button id="refresh-agents-btn">Refresh Agents</button>
+                        <button id="create-agent-btn" onclick="createAgentWithUserContext()">Create User Agent</button>
+                        <button id="delete-agent-btn" class="delete-btn" disabled>Delete Agent</button>
+                        <button id="new-agent-window-btn" class="new-window-btn" title="Open Agent in New Window">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="9" y1="3" x2="9" y2="21"/>
+                                <line x1="3" y1="9" x2="21" y2="9"/>
+                            </svg>
+                            New Window
+                        </button>
+                    </div>
                 </div>
                 <div class="agent-tabs">
                     <button class="agent-tab-btn active" data-agent-tab="system">System Agents</button>
@@ -1464,7 +1496,8 @@
                     </div>
                 </div>
                 
-                <div id="agents-list" class="agents-list"></div>
+                <!-- Agents List - Now supports drag and drop -->
+                <div id="agents-list" class="agents-list drag-drop-container"></div>
             </div>
             
             <!-- AGIVITY - Executive Dashboard -->
@@ -1782,6 +1815,142 @@
             </div>
         </div>
 
+        <!-- Usage Tab - Token Calculator & Cost Tracking -->
+        <div id="usage-tab" class="tab-content">
+            <div class="control-section">
+                <div class="usage-header">
+                    <h2>API Usage & Cost Tracking</h2>
+                    <div class="usage-controls">
+                        <button id="refresh-usage-btn" class="action-btn">Refresh</button>
+                        <button id="export-usage-btn" class="action-btn">Export CSV</button>
+                        <select id="usage-timeframe">
+                            <option value="1">Last 24 Hours</option>
+                            <option value="7" selected>Last 7 Days</option>
+                            <option value="30">Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Cost Summary Section -->
+                <div class="usage-cost-summary">
+                    <!-- Today's Cost - Primary Display -->
+                    <div class="todays-cost-card">
+                        <div class="cost-icon-large">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="1" x2="12" y2="23"/>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                            </svg>
+                        </div>
+                        <div class="todays-cost-content">
+                            <span class="todays-cost-label">Today's Cost</span>
+                            <span class="todays-cost-value" id="usage-daily-cost">$0.0000</span>
+                            <span class="todays-cost-tokens" id="usage-daily-tokens">0 tokens used today</span>
+                        </div>
+                    </div>
+
+                    <!-- Budget & Period Costs -->
+                    <div class="budget-costs-panel">
+                        <div class="budget-section">
+                            <div class="budget-header">
+                                <span class="budget-label">Daily Budget</span>
+                                <span class="budget-value" id="usage-daily-budget">$100.00</span>
+                            </div>
+                            <div class="budget-progress">
+                                <div class="budget-bar" id="budget-bar" style="width: 0%"></div>
+                            </div>
+                            <span class="budget-utilization" id="budget-utilization">0% used</span>
+                        </div>
+
+                        <div class="period-costs">
+                            <div class="period-cost-item">
+                                <span class="period-label">Daily</span>
+                                <span class="period-value" id="usage-daily-cost-small">$0.0000</span>
+                            </div>
+                            <div class="period-cost-item">
+                                <span class="period-label">Weekly</span>
+                                <span class="period-value" id="usage-weekly-cost">$0.0000</span>
+                            </div>
+                            <div class="period-cost-item">
+                                <span class="period-label">Monthly</span>
+                                <span class="period-value" id="usage-monthly-cost">$0.0000</span>
+                            </div>
+                        </div>
+
+                        <div class="total-stats">
+                            <span id="usage-total-ops">0 operations</span>
+                            <span id="usage-total-tokens">0 total tokens</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Token Usage Summary Table -->
+                <div class="usage-summary-table">
+                    <h3>Token Usage by Provider & Model</h3>
+                    <div class="summary-table-container">
+                        <table class="token-summary-table" id="token-summary-table">
+                            <thead>
+                                <tr>
+                                    <th>Provider</th>
+                                    <th>Model</th>
+                                    <th>Tokens Used</th>
+                                    <th>Price ($/1M tokens)</th>
+                                    <th>Cost ($)</th>
+                                    <th>API Calls</th>
+                                </tr>
+                            </thead>
+                            <tbody id="token-summary-body">
+                                <tr><td colspan="6" class="no-data">No usage data recorded yet</td></tr>
+                            </tbody>
+                            <tfoot id="token-summary-footer">
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Breakdown Grid -->
+                <div class="usage-breakdown-grid">
+                    <div class="breakdown-section hourly-section">
+                        <h3>Today's Usage by Hour</h3>
+                        <div class="hourly-chart" id="hourly-chart">
+                            <div class="chart-bars" id="hourly-bars"></div>
+                            <div class="chart-labels">
+                                <span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>12am</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Operations Log -->
+                <div class="usage-operations">
+                    <div class="operations-header">
+                        <h3>Recent API Calls</h3>
+                        <div class="operations-filter">
+                            <input type="text" id="usage-search" placeholder="Filter by model or agent...">
+                        </div>
+                    </div>
+                    <div class="operations-table-container">
+                        <table class="operations-table" id="operations-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Provider</th>
+                                    <th>Model</th>
+                                    <th>Agent</th>
+                                    <th>Input</th>
+                                    <th>Output</th>
+                                    <th>Cost</th>
+                                </tr>
+                            </thead>
+                            <tbody id="operations-body">
+                                <tr><td colspan="7" class="no-data">No operations recorded yet</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Logs Tab -->
         <div id="logs-tab" class="tab-content">
             <div class="control-section">
@@ -1812,9 +1981,251 @@
             </div>
         </div>
 
+        <!-- API Tab -->
+        <div id="api-tab" class="tab-content">
+            <div class="control-section">
+                <div class="section-header">
+                    <h2>API Provider Management</h2>
+                    <div class="api-controls">
+                        <button id="refresh-api-providers-btn" class="refresh-btn">Refresh Providers</button>
+                        <button id="scan-api-folder-btn" class="scan-btn">Scan API Folder</button>
+                    </div>
+                </div>
+                
+                <!-- Provider Dropdown Selection (Moved to top) -->
+                <div class="control-section">
+                    <h3>Quick Provider Selection</h3>
+                    <div class="provider-dropdown-section">
+                        <div class="form-group">
+                            <label>Select Provider from API Folder:</label>
+                            <select id="provider-dropdown" class="provider-dropdown-select">
+                                <option value="">-- Select a provider --</option>
+                                <option value="gemini">Google Gemini</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="anthropic">Anthropic Claude</option>
+                                <option value="mistral">Mistral AI</option>
+                                <option value="together">Together AI</option>
+                                <option value="ollama">Ollama (Local)</option>
+                            </select>
+                            <button id="load-provider-config-btn" class="load-config-btn">Load Provider Configuration</button>
+                        </div>
+                        <div id="provider-dropdown-status" class="provider-status-message"></div>
+                    </div>
+                </div>
+                
+                <!-- Intelligent Provider Selection -->
+                <div class="control-section">
+                    <h3>Intelligent Provider Setup</h3>
+                    <div class="intelligent-provider-section">
+                        <p class="section-description">mindX will detect available providers from your API folder and auto-fill configuration based on your environment.</p>
+                        <button id="detect-providers-btn" class="detect-btn">🔍 Detect Available Providers</button>
+                        <div id="detected-providers-list" class="detected-providers-list"></div>
+                    </div>
+                </div>
+                
+                <!-- Active API Providers List -->
+                <div class="api-providers-section">
+                    <h3>Active API Providers</h3>
+                    <p class="section-hint">Click on any provider card to view and edit its settings</p>
+                    <div id="api-providers-list" class="api-providers-list"></div>
+                </div>
+                
+                <!-- Provider Details Modal -->
+                <div id="api-provider-details-modal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <span class="close-modal" id="close-api-provider-modal">&times;</span>
+                        <h3 id="api-provider-details-title">Provider Details</h3>
+                        <div id="api-provider-details-content"></div>
+                    </div>
+                </div>
+                
+                <!-- Provider Settings Modal (Editable) -->
+                <div id="api-provider-settings-modal" class="modal" style="display: none;">
+                    <div class="modal-content large-modal">
+                        <span class="close-modal" id="close-api-provider-settings-modal">&times;</span>
+                        <h3 id="api-provider-settings-title">Provider Settings</h3>
+                        <div id="api-provider-settings-content" class="provider-settings-content"></div>
+                    </div>
+                </div>
+                
+                <!-- Ollama Setup (Moved from Admin) -->
+                <div class="control-section">
+                    <h3>Ollama Configuration</h3>
+                    <div class="ollama-setup-section">
+                        <div id="ollama-connection-banner" class="connection-banner" style="display: none;">
+                            <div class="banner-content">
+                                <span id="ollama-connection-icon" class="connection-icon">⚪</span>
+                                <div class="connection-info">
+                                    <strong id="ollama-connection-status-text">Not Connected</strong>
+                                    <div id="ollama-connection-details" class="connection-details"></div>
+                                </div>
+                                <button id="ollama-quick-test-btn" class="quick-test-btn">Quick Test</button>
+                            </div>
+                        </div>
+                        <div class="ollama-controls">
+                            <div class="ollama-url-config">
+                                <label>Configuration Method:</label>
+                                <select id="ollama-config-method">
+                                    <option value="host-port">Host & Port</option>
+                                    <option value="base-url">Base URL</option>
+                                </select>
+                            </div>
+                            <div id="ollama-host-port-config" class="ollama-config-group">
+                                <div class="form-group">
+                                    <label>Host:</label>
+                                    <input type="text" id="ollama-host" placeholder="e.g., localhost or 10.0.0.155" value="localhost" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Port:</label>
+                                    <input type="number" id="ollama-port" placeholder="e.g., 11434" value="11434" min="1" max="65535" />
+                                </div>
+                            </div>
+                            <div id="ollama-base-url-config" class="ollama-config-group" style="display: none;">
+                                <div class="form-group">
+                                    <label>Base URL:</label>
+                                    <input type="text" id="ollama-base-url" placeholder="e.g., http://localhost:11434" value="http://localhost:11434" />
+                                </div>
+                            </div>
+                            <div class="ollama-actions">
+                                <button id="ollama-test-connection-btn" class="action-btn">Test Connection</button>
+                                <button id="ollama-save-config-btn" class="action-btn primary">Save Configuration</button>
+                                <button id="ollama-list-models-btn" class="action-btn">List Models</button>
+                            </div>
+                            <div id="ollama-models-list" class="ollama-models-list"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Add New API Provider (Manual) -->
+                <div class="control-section">
+                    <h3>Add New API Provider (Manual)</h3>
+                    <div class="api-add-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Provider Name:</label>
+                                <input type="text" id="new-provider-name" placeholder="e.g., my_custom_api" />
+                            </div>
+                            <div class="form-group">
+                                <label>Display Name:</label>
+                                <input type="text" id="new-provider-display-name" placeholder="e.g., My Custom API" />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Module Path:</label>
+                                <input type="text" id="new-provider-module-path" placeholder="e.g., api.my_custom_api" />
+                            </div>
+                            <div class="form-group">
+                                <label>Factory Function:</label>
+                                <input type="text" id="new-provider-factory-function" placeholder="e.g., create_my_custom_api" />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>API Key Environment Variable:</label>
+                                <input type="text" id="new-provider-api-key-env" placeholder="e.g., MY_CUSTOM_API_KEY" />
+                            </div>
+                            <div class="form-group">
+                                <label>Base URL Environment Variable (optional):</label>
+                                <input type="text" id="new-provider-base-url-env" placeholder="e.g., MY_CUSTOM_API_BASE_URL" />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="new-provider-requires-api-key" checked />
+                                    Requires API Key
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="new-provider-requires-base-url" />
+                                    Requires Base URL
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Rate Limit (RPM):</label>
+                                <input type="number" id="new-provider-rate-limit-rpm" value="60" />
+                            </div>
+                            <div class="form-group">
+                                <label>Rate Limit (TPM):</label>
+                                <input type="number" id="new-provider-rate-limit-tpm" value="100000" />
+                            </div>
+                        </div>
+                        <button id="add-api-provider-btn" class="add-btn">Add Provider</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Admin Tab -->
         <div id="admin-tab" class="tab-content">
+            <!-- Top Menu Bar for Window Management -->
+            <div id="top-menu-bar" class="top-menu-bar">
+                <div class="menu-section">
+                    <span class="menu-label">Windows:</span>
+                    <button class="menu-btn" id="menu-new-window" title="New Window">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="9" y1="3" x2="9" y2="21"/>
+                            <line x1="3" y1="9" x2="21" y2="9"/>
+                        </svg>
+                        New
+                    </button>
+                    <button class="menu-btn" id="menu-tile-windows" title="Tile Windows">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                        </svg>
+                        Tile
+                    </button>
+                    <button class="menu-btn" id="menu-cascade-windows" title="Cascade Windows">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="2" width="20" height="20" rx="2" ry="2"/>
+                            <rect x="4" y="4" width="20" height="20" rx="2" ry="2"/>
+                        </svg>
+                        Cascade
+                    </button>
+                    <button class="menu-btn" id="menu-close-all" title="Close All Windows">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                        Close All
+                    </button>
+                </div>
+                <div class="menu-section">
+                    <span class="menu-label">Layout:</span>
+                    <button class="menu-btn" id="menu-save-layout" title="Save Layout">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                            <polyline points="17,21 17,13 7,13 7,21"/>
+                            <polyline points="7,3 7,8 15,8"/>
+                        </svg>
+                        Save
+                    </button>
+                    <button class="menu-btn" id="menu-load-layout" title="Load Layout">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7,10 12,15 17,10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Load
+                    </button>
+                </div>
+                <div class="menu-section">
+                    <span class="menu-label">Active Windows:</span>
+                    <span id="active-window-count" class="menu-count">0</span>
+                </div>
+            </div>
+            
+            <!-- Window Container for Window Management -->
+            <div id="window-container" class="window-container"></div>
+            
             <div class="control-section">
                 <h2>Admin Controls</h2>
                 <div class="admin-controls">
@@ -1852,102 +2263,7 @@
                 </div>
             </div>
             
-            <!-- Ollama Models Section -->
-            <div class="control-section">
-                <h2>Ollama Integration</h2>
-                <div class="admin-subsection">
-                    <!-- Connection Status Banner -->
-                    <div id="ollama-connection-banner" style="margin-bottom: 20px; padding: 12px 15px; background: #e9ecef; border-left: 4px solid #6c757d; border-radius: 4px; display: none;">
-                        <div style="display: flex; align-items: center; justify-content: space-between;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <span id="ollama-connection-icon" style="font-size: 20px;">⚪</span>
-                                <div>
-                                    <strong id="ollama-connection-status-text">Not Connected</strong>
-                                    <div id="ollama-connection-details" style="font-size: 12px; color: #666; margin-top: 2px;"></div>
-                                </div>
-                            </div>
-                            <button id="ollama-quick-test-btn" style="padding: 6px 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Quick Test</button>
-                        </div>
-                    </div>
-                    
-                    <div class="ollama-controls" style="display: grid; gap: 15px;">
-                        <div class="ollama-url-config" style="display: flex; align-items: center; gap: 10px;">
-                            <label style="font-weight: bold; min-width: 150px;">Configuration Method:</label>
-                            <select id="ollama-config-method" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                                <option value="host-port">Host & Port</option>
-                                <option value="base-url">Base URL</option>
-                            </select>
-                        </div>
-                        <div id="ollama-host-port-config" class="ollama-config-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div>
-                                <label for="ollama-host" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px;">Host:</label>
-                                <input type="text" id="ollama-host" placeholder="e.g., 10.0.0.155" value="localhost" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                            </div>
-                            <div>
-                                <label for="ollama-port" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px;">Port:</label>
-                                <input type="number" id="ollama-port" placeholder="e.g., 108080" value="11434" min="1" max="65535" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                            </div>
-                        </div>
-                        <div id="ollama-base-url-config" class="ollama-config-group" style="display: none;">
-                            <label for="ollama-base-url" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px;">Base URL:</label>
-                            <input type="text" id="ollama-base-url" placeholder="e.g., http://10.0.0.155:108080" value="http://localhost:11434" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                        </div>
-                        <div class="ollama-actions" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button id="test-ollama-connection-btn" style="flex: 1; min-width: 150px; padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">
-                                <span id="test-connection-icon">🔌</span> Test Connection
-                            </button>
-                            <button id="list-ollama-models-btn" style="flex: 1; min-width: 150px; padding: 10px 20px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">
-                                <span id="list-models-icon">📋</span> List Models
-                            </button>
-                            <button id="save-ollama-config-btn" style="flex: 1; min-width: 150px; padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;">
-                                <span id="save-config-icon">💾</span> Save Config
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Enhanced Status Display -->
-                    <div id="ollama-status" class="status-message" style="margin-top: 20px; min-height: 60px; display: none;"></div>
-                    
-                    <!-- Models List with Better Styling -->
-                    <div id="ollama-models-list" class="ollama-models-list" style="margin-top: 20px; min-height: 100px; display: none;"></div>
-                    
-                    <!-- Test Completion Section -->
-                    <div class="ollama-test-prompt" style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 2px solid #dee2e6; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        <h3 style="margin: 0 0 20px 0; color: #333; border-bottom: 2px solid #dee2e6; padding-bottom: 10px;">
-                            <span style="font-size: 24px; margin-right: 10px;">🧪</span>Test Completion
-                        </h3>
-                        <div style="display: grid; gap: 15px;">
-                            <div>
-                                <label for="ollama-test-model" style="display: block; margin-bottom: 8px; font-weight: bold; color: #495057;">Model:</label>
-                                <select id="ollama-test-model" style="width: 100%; padding: 10px; border: 2px solid #ced4da; border-radius: 4px; font-size: 14px; background: white;">
-                                    <option value="">Select a model (list models first)</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="ollama-test-prompt" style="display: block; margin-bottom: 8px; font-weight: bold; color: #495057;">Prompt:</label>
-                                <textarea id="ollama-test-prompt" placeholder="Enter a test prompt to generate completion..." style="width: 100%; min-height: 120px; padding: 10px; border: 2px solid #ced4da; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px; resize: vertical; background: white;"></textarea>
-                            </div>
-                            <div style="display: flex; gap: 10px; align-items: center;">
-                                <button id="test-ollama-completion-btn" style="padding: 12px 24px; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 2px 4px rgba(0,123,255,0.3); transition: transform 0.1s;">
-                                    <span id="test-completion-icon">🚀</span> Generate Completion
-                                </button>
-                                <div id="completion-loading" style="display: none; align-items: center; gap: 10px; color: #007bff;">
-                                    <div class="spinner" style="border: 3px solid #f3f3f3; border-top: 3px solid #007bff; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite;"></div>
-                                    <span>Generating...</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="ollama-completion-status" style="margin-top: 20px; min-height: 60px;"></div>
-                        <div id="ollama-completion-response" style="margin-top: 15px; padding: 20px; background: white; border: 2px solid #dee2e6; border-radius: 4px; min-height: 150px; max-height: 500px; overflow-y: auto; display: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #dee2e6;">
-                                <h4 style="margin: 0; color: #333;">Response:</h4>
-                                <button id="copy-response-btn" style="padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Copy</button>
-                            </div>
-                            <pre id="ollama-response-text" style="margin: 0; white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6; color: #212529;"></pre>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- Ollama section removed - moved to API tab -->
             
             <!-- Model Selection Section -->
             <div class="control-section">

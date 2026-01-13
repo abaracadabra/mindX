@@ -20,10 +20,10 @@ from tests.enhanced_test_agent import EnhancedUltimateCognitionTestAgent, TestRe
 # Core mindX imports for comprehensive testing
 from utils.config import Config
 from utils.logging_config import get_logger
-from core.agint import AGInt
-from core.bdi_agent import BDIAgent
-from core.belief_system import BeliefSystem, BeliefSource
-from orchestration.mastermind_agent import MastermindAgent
+from agents.core.agint import AGInt
+from agents.core.bdi_agent import BDIAgent
+from agents.core.belief_system import BeliefSystem, BeliefSource
+from agents.orchestration.mastermind_agent import MastermindAgent
 from agents.memory_agent import MemoryAgent
 
 logger = get_logger(__name__)

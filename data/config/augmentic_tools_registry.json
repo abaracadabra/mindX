@@ -184,6 +184,76 @@
           "parameters": []
         }
       ]
+    },
+    "prompt_tool": {
+      "enabled": true,
+      "class_name": "PromptTool",
+      "module_path": "tools.prompt_tool",
+      "description": "Manages, stores, and executes prompts as first-class infrastructure. Prompts are versioned, searchable, and can be ingested from external sources like AgenticPlace.",
+      "priority": 7,
+      "category": "cognition",
+      "commands": [
+        {
+          "name": "create",
+          "description": "Create a new prompt",
+          "parameters": [
+            {"name": "name", "type": "str", "required": true},
+            {"name": "content", "type": "str", "required": true},
+            {"name": "description", "type": "str", "required": false},
+            {"name": "prompt_type", "type": "str", "required": false},
+            {"name": "category", "type": "str", "required": false},
+            {"name": "tags", "type": "list", "required": false}
+          ]
+        },
+        {
+          "name": "get",
+          "description": "Retrieve a prompt by ID",
+          "parameters": [
+            {"name": "prompt_id", "type": "str", "required": true}
+          ]
+        },
+        {
+          "name": "execute",
+          "description": "Execute a prompt with variable substitution",
+          "parameters": [
+            {"name": "prompt_id", "type": "str", "required": true},
+            {"name": "variables", "type": "dict", "required": false}
+          ]
+        },
+        {
+          "name": "search",
+          "description": "Search prompts by content or metadata",
+          "parameters": [
+            {"name": "query", "type": "str", "required": true},
+            {"name": "search_content", "type": "bool", "required": false}
+          ]
+        },
+        {
+          "name": "ingest",
+          "description": "Ingest a prompt from external source (e.g., AgenticPlace)",
+          "parameters": [
+            {"name": "name", "type": "str", "required": true},
+            {"name": "content", "type": "str", "required": true},
+            {"name": "source", "type": "str", "required": false}
+          ]
+        }
+      ]
+    },
+    "a2a_tool": {
+      "enabled": true,
+      "class_name": "A2ATool",
+      "module_path": "tools.a2a_tool",
+      "description": "Enables standardized agent-to-agent communication following the A2A protocol",
+      "priority": 8,
+      "category": "communication"
+    },
+    "mcp_tool": {
+      "enabled": true,
+      "class_name": "MCPTool",
+      "module_path": "tools.mcp_tool",
+      "description": "Provides Model Context Protocol support for structured context provision to agents",
+      "priority": 8,
+      "category": "cognition"
     }
   },
   "tool_categories": {

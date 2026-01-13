@@ -12,10 +12,10 @@ from typing import Dict, Any, Optional
 
 from utils.config import Config
 from utils.logging_config import get_logger
-from core.belief_system import BeliefSystem
+from agents.core.belief_system import BeliefSystem
 from llm.llm_interface import LLMHandlerInterface
 from llm.model_selector import ModelSelector
-from orchestration.coordinator_agent import CoordinatorAgent
+from agents.orchestration.coordinator_agent import CoordinatorAgent
 
 logger = get_logger(__name__)
 

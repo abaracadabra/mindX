@@ -3,8 +3,8 @@
 import json
 from typing import Dict, Any, Optional
 
-from orchestration.mastermind_agent import MastermindAgent
-from orchestration.coordinator_agent import InteractionType
+from agents.orchestration.mastermind_agent import MastermindAgent
+from agents.orchestration.coordinator_agent import InteractionType
 
 class CommandHandler:
     def __init__(self, mastermind: MastermindAgent):

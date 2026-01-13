@@ -25,9 +25,9 @@ from unittest.mock import Mock, patch, AsyncMock
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from orchestration.ceo_agent import CEOAgent, SecurityValidator, RateLimiter, CircuitBreakerState
+from agents.orchestration.ceo_agent import CEOAgent, SecurityValidator, RateLimiter, CircuitBreakerState
 from utils.config import Config
-from core.belief_system import BeliefSystem
+from agents.core.belief_system import BeliefSystem
 from agents.memory_agent import MemoryAgent
 
 class TestCEOAgentBattleHardened:

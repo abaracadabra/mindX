@@ -18,7 +18,7 @@ from typing import Dict, Any
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from monitoring.enhanced_monitoring_system import EnhancedMonitoringSystem
+from agents.monitoring.enhanced_monitoring_system import EnhancedMonitoringSystem
 from llm.rate_limiter import RateLimiter
 from agents.memory_agent import MemoryAgent
 from utils.config import Config

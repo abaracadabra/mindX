@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 from typing import Dict, Optional, Any, Tuple
 
-from core.id_manager_agent import IDManagerAgent
+from agents.core.id_manager_agent import IDManagerAgent
 from agents.memory_agent import MemoryAgent
 from utils.config import Config, PROJECT_ROOT
 from utils.logging_config import get_logger

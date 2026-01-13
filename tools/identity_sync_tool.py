@@ -10,9 +10,9 @@ import asyncio
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
 
-from core.bdi_agent import BaseTool
-from core.id_manager_agent import IDManagerAgent
-from core.belief_system import BeliefSystem
+from agents.core.bdi_agent import BaseTool
+from agents.core.id_manager_agent import IDManagerAgent
+from agents.core.belief_system import BeliefSystem
 from agents.memory_agent import MemoryAgent
 from utils.config import Config, PROJECT_ROOT
 from utils.logging_config import get_logger

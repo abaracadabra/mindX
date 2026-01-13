@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 from typing import Dict, Any, Tuple, Optional
 
-from core.bdi_agent import BaseTool
-from core.id_manager_agent import IDManagerAgent
+from agents.core.bdi_agent import BaseTool
+from agents.core.id_manager_agent import IDManagerAgent
 from agents.memory_agent import MemoryAgent
 from utils.logging_config import get_logger
 

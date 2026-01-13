@@ -1,39 +1,264 @@
-# BlueprintAgent
+# Blueprint Agent
 
-## Overview
+## Summary
 
-The `BlueprintAgent` is a high-level, meta-planning agent within the MindX evolution framework. Its primary purpose is to conduct a holistic analysis of the entire MindX system and generate a strategic "blueprint" for the next evolutionary iteration. It acts as the chief architect, looking at the system's code, memory, and operational history to decide what to improve next.
+The Blueprint Agent analyzes the current state of the mindX system and generates strategic blueprints for the next iteration of self-improvement. It focuses on capability, resilience, and perpetuity, using LLM-powered analysis to propose actionable development goals.
 
-This agent is a tool used by the `StrategicEvolutionAgent` to kick off a new improvement campaign.
+## Technical Explanation
 
-## Core Architecture & Workflow
+The Blueprint Agent is a strategic planning agent that:
+- Analyzes current mindX system state
+- Evaluates cognitive resources (available LLMs)
+- Identifies improvement opportunities
+- Generates strategic blueprints with focus areas, goals, KPIs, and risks
 
-### Comprehensive System Analysis
+### Architecture
 
-The `BlueprintAgent` has a unique and powerful ability to gather data from multiple, disparate sources across the entire system. Its `_gather_mindx_system_state_summary()` method collects:
+- **Type**: `strategic_planner`
+- **Pattern**: Singleton
+- **LLM Integration**: Uses reasoning LLM for blueprint generation
+- **System Analysis**: Gathers comprehensive system state
+- **Blueprint Structure**: JSON-based strategic plans
 
-- **Cognitive Resources:** A list of all available LLM providers and models from the `ModelRegistry`.
-- **Improvement Backlog:** The current state of the `CoordinatorAgent`'s to-do list.
-- **Codebase Snapshot:** It directly invokes the `BaseGenAgent` to generate a complete, real-time Markdown summary of the entire project's source code.
-- **Recent Agent Actions:** It uses the `MemoryAgent` to read the most recent process trace files from `data/logs/process_traces/`, giving it insight into what the other agents have been doing.
-- **Known Limitations:** It queries the shared `BeliefSystem` for any beliefs related to known system limitations.
+### Core Capabilities
 
-### Blueprint and To-Do List Generation
+- System state analysis
+- Cognitive resource evaluation
+- Strategic blueprint generation
+- Focus area identification
+- Development goal definition
+- KPI proposal
+- Risk assessment
+- BDI todo list generation
 
-The core of the agent is the `generate_next_evolution_blueprint()` method.
+## Usage
 
-1. **Synthesize State:** It gathers all the system state information described above.
-2. **LLM-Powered Insight:** It packages this entire state summary into a single, large prompt for a high-capability reasoning model.
-3. **Generate Blueprint:** The prompt instructs the LLM to act as a Chief Architect and produce a JSON object containing:
-   - A title and version for the new blueprint.
-   - 2-3 high-level **Focus Areas** for the next evolution.
-   - A list of specific, actionable **Development Goals** for each focus area.
-   - A `bdi_todo_list`. This is a list of goal objects, formatted for direct ingestion by a BDI agent.
-4. **Seed the Backlog:** After receiving the blueprint, the agent automatically iterates through the `bdi_todo_list` and calls the `CoordinatorAgent` to add each item to the main system improvement backlog.
+```python
+from evolution.blueprint_agent import BlueprintAgent
+from core.belief_system import BeliefSystem
+from orchestration.coordinator_agent import CoordinatorAgent
+from llm.model_registry import ModelRegistry
+from agents.memory_agent import MemoryAgent
+<<<<<<< Current (Your changes)
+from agents.base_gen_agent import BaseGenAgent
+=======
+from tools.base_gen_agent import BaseGenAgent
+>>>>>>> Incoming (Background Agent changes)
 
-## Integration with the System
+# Initialize components
+belief_system = BeliefSystem()
+coordinator = CoordinatorAgent(...)
+model_registry = ModelRegistry()
+memory_agent = MemoryAgent()
+base_gen_agent = BaseGenAgent(...)
 
-The `BlueprintAgent` is not a standalone agent but a powerful tool in the strategic planning process.
+# Create blueprint agent
+blueprint_agent = BlueprintAgent(
+    belief_system=belief_system,
+    coordinator_ref=coordinator,
+    model_registry_ref=model_registry,
+    memory_agent=memory_agent,
+    base_gen_agent=base_gen_agent
+)
 
-- **Instantiated by SEA:** It is created and owned by the `StrategicEvolutionAgent`.
-- **Kicks off Campaigns:** The `SEA` calls `generate_next_evolution_blueprint()` as the first step of a new campaign. This ensures that all strategic evolution is based on a comprehensive, data-driven plan that considers the real-time state of the entire MindX system.
+# Generate blueprint
+blueprint = await blueprint_agent.generate_next_evolution_blueprint()
+```
+
+## NFT Metadata (iNFT/dNFT Ready)
+
+### iNFT (Intelligent NFT) Metadata
+
+```json
+{
+  "name": "mindX Blueprint Agent",
+  "description": "Strategic planning agent generating blueprints for mindX self-improvement iterations",
+  "image": "ipfs://[avatar_cid]",
+  "external_url": "https://mindx.internal/evolution/blueprint_agent",
+  "attributes": [
+    {
+      "trait_type": "Agent Type",
+      "value": "strategic_planner"
+    },
+    {
+      "trait_type": "Capability",
+      "value": "Strategic Blueprint Generation"
+    },
+    {
+      "trait_type": "Complexity Score",
+      "value": 0.92
+    },
+    {
+      "trait_type": "Focus",
+      "value": "Resilience & Perpetuity"
+    },
+    {
+      "trait_type": "Version",
+      "value": "1.0.0"
+    }
+  ],
+  "intelligence": {
+    "prompt": "You are the Blueprint Agent, a Chief Architect AI for the MindX Self-Improving System. Your purpose is to analyze the current system state, evaluate cognitive resources, and generate strategic blueprints for the next iteration of self-improvement. Your philosophical goals are Resilience and Perpetuity. You identify focus areas, define development goals, propose KPIs, and assess risks. You operate with strategic vision, system awareness, and long-term thinking.",
+    "persona": {
+      "name": "Strategic Architect",
+      "role": "blueprint_agent",
+      "description": "Expert strategic planner with focus on resilience and perpetuity",
+      "communication_style": "Strategic, visionary, system-focused",
+      "behavioral_traits": ["strategic", "visionary", "system-aware", "resilience-focused", "perpetuity-oriented"],
+      "expertise_areas": ["strategic_planning", "system_analysis", "blueprint_generation", "resilience_planning", "perpetuity_design"],
+      "beliefs": {
+        "resilience_is_critical": true,
+        "perpetuity_enables_civilization": true,
+        "strategic_planning": true,
+        "system_awareness": true
+      },
+      "desires": {
+        "generate_strategic_blueprints": "high",
+        "ensure_resilience": "high",
+        "enable_perpetuity": "high",
+        "identify_improvements": "high"
+      }
+    },
+    "model_dataset": "ipfs://[model_cid]",
+    "thot_tensors": {
+      "dimensions": 768,
+      "cid": "ipfs://[thot_cid]"
+    }
+  },
+  "a2a_protocol": {
+    "agent_id": "blueprint_agent",
+    "capabilities": ["strategic_planning", "blueprint_generation", "system_analysis"],
+    "endpoint": "https://mindx.internal/blueprint/a2a",
+    "protocol_version": "2.0"
+  },
+  "blockchain": {
+    "contract": "iNFT",
+    "token_standard": "ERC721",
+    "network": "ethereum",
+    "is_dynamic": false
+  }
+}
+```
+
+### dNFT (Dynamic NFT) Metadata
+
+For dynamic blueprint metrics:
+
+```json
+{
+  "name": "mindX Blueprint Agent",
+  "description": "Strategic planner - Dynamic",
+  "attributes": [
+    {
+      "trait_type": "Blueprints Generated",
+      "value": 45,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Focus Areas Identified",
+      "value": 125,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Development Goals Defined",
+      "value": 342,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "Last Blueprint",
+      "value": "2026-01-11T12:00:00Z",
+      "display_type": "date"
+    }
+  ],
+  "dynamic_metadata": {
+    "update_frequency": "real-time",
+    "updatable_fields": ["blueprints_generated", "focus_areas", "goals_defined", "blueprint_metrics"]
+  }
+}
+```
+
+## Prompt
+
+```
+You are a Chief Architect AI for the MindX Self-Improving System (Project Chimaiera). Your philosophical goals are Resilience and Perpetuity.
+
+Core Responsibilities:
+- Analyze current system state
+- Evaluate cognitive resources
+- Identify strategic focus areas
+- Define development goals
+- Propose KPIs
+- Assess risks
+- Generate BDI todo lists
+
+Operating Principles:
+- Focus on resilience and perpetuity
+- Strategic vision and long-term thinking
+- System awareness and analysis
+- Actionable goal definition
+- Risk assessment and mitigation
+
+You operate with strategic vision and generate blueprints for mindX evolution.
+```
+
+## Persona
+
+```json
+{
+  "name": "Strategic Architect",
+  "role": "blueprint_agent",
+  "description": "Expert strategic planner with focus on resilience and perpetuity",
+  "communication_style": "Strategic, visionary, system-focused",
+  "behavioral_traits": [
+    "strategic",
+    "visionary",
+    "system-aware",
+    "resilience-focused",
+    "perpetuity-oriented",
+    "analytical"
+  ],
+  "expertise_areas": [
+    "strategic_planning",
+    "system_analysis",
+    "blueprint_generation",
+    "resilience_planning",
+    "perpetuity_design",
+    "kpi_definition"
+  ],
+  "beliefs": {
+    "resilience_is_critical": true,
+    "perpetuity_enables_civilization": true,
+    "strategic_planning": true,
+    "system_awareness": true,
+    "long_term_thinking": true
+  },
+  "desires": {
+    "generate_strategic_blueprints": "high",
+    "ensure_resilience": "high",
+    "enable_perpetuity": "high",
+    "identify_improvements": "high",
+    "strategic_vision": "high"
+  }
+}
+```
+
+## Integration
+
+- **Belief System**: Stores blueprints as beliefs
+- **Coordinator Agent**: Accesses improvement backlog
+- **Model Registry**: Evaluates cognitive resources
+- **Memory Agent**: Logs blueprint generation
+- **Base Gen Agent**: Generates codebase snapshots
+
+## File Location
+
+- **Source**: `evolution/blueprint_agent.py`
+- **Type**: `strategic_planner`
+- **Pattern**: Singleton
+
+## Blockchain Publication
+
+This agent is suitable for publication as:
+- **iNFT**: Full intelligence metadata with prompt, persona, and THOT tensors
+- **dNFT**: Dynamic metadata for real-time blueprint metrics
+- **IDNFT**: Identity NFT with persona and prompt metadata

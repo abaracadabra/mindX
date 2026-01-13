@@ -19,7 +19,7 @@ except ImportError: # pragma: no cover
 
 from utils.config import Config
 from utils.logging_config import get_logger
-from core.bdi_agent import BaseTool # Import BaseTool from the core package
+from agents.core.bdi_agent import BaseTool # Import BaseTool from the core package
 
 logger = get_logger(__name__)
 

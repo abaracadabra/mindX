@@ -35,11 +35,109 @@ let authenticationState = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 DOM Content Loaded - Starting mindX Application...');
-    console.log('🔧 Fresh app.js version loaded successfully!');
-    
-    const backendPort = window.MINDX_BACKEND_PORT || '8000';
-    const apiUrl = `http://localhost:${backendPort}`;
+    console.log('DOM Content Loaded - Starting mindX Application...');
+
+    // ===== Centralized API Configuration =====
+    const API_CONFIG = {
+        baseUrl: window.MINDX_API_URL || `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`,
+        timeout: 30000,
+        endpoints: {
+            // Agent endpoints
+            agents: '/agents/',
+            agentActivity: '/agents/activity',
+            agentCreate: '/agents',
+            agentDelete: (id) => `/agents/${id}`,
+            agentEvolve: (id) => `/agents/${id}/evolve`,
+            agentSign: (id) => `/agents/${id}/sign`,
+
+            // User endpoints
+            usersRegister: '/users/register',
+            usersAgents: '/users/agents',
+            userAgents: (wallet) => `/users/${wallet}/agents`,
+            userAgentDelete: (wallet, id) => `/users/${wallet}/agents/${id}`,
+            userStats: (wallet) => `/users/${wallet}/stats`,
+            userChallenge: '/users/challenge',
+            userAuthenticate: '/users/authenticate',
+
+            // Core endpoints
+            health: '/health',
+            status: (component) => `/status/${component}`,
+            metrics: '/metrics',
+            performance: '/performance',
+            costs: '/costs',
+
+            // LLM endpoints
+            llmChat: '/llm/chat',
+            llmCompletion: '/llm/completion',
+            llmModels: '/llm/models',
+
+            // Directive endpoints
+            directiveExecute: '/directive/execute',
+            directiveAutonomous: '/directive/autonomous',
+
+            // Simple Coder endpoints
+            simpleCoderStatus: '/simple-coder/status',
+            simpleCoderUpdateRequests: '/simple-coder/update-requests',
+            simpleCoderApprove: (id) => `/simple-coder/approve-update/${id}`,
+            simpleCoderReject: (id) => `/simple-coder/reject-update/${id}`,
+
+            // BDI endpoints
+            bdiStatus: '/bdi/status',
+            coreBdiStatus: '/core/bdi-status',
+
+            // System endpoints
+            systemResources: '/system/resources',
+            systemAgentActivity: '/system/agent-activity',
+
+            // Registry endpoints
+            registryAgents: '/registry/agents',
+            registryTools: '/registry/tools'
+        }
+    };
+
+    /**
+     * Make an API request with standardized error handling.
+     * @param {string} endpoint - API endpoint (from API_CONFIG.endpoints)
+     * @param {Object} options - Fetch options
+     * @returns {Promise<Object>} Response data
+     */
+    async function apiRequest(endpoint, options = {}) {
+        const url = `${API_CONFIG.baseUrl}${endpoint}`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
+
+        try {
+            const response = await fetch(url, {
+                ...options,
+                signal: controller.signal,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                }
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                throw new Error('Request timeout');
+            }
+            throw error;
+        }
+    }
+
+    // Expose API utilities globally
+    window.API_CONFIG = API_CONFIG;
+    window.apiRequest = apiRequest;
+
+    // Legacy apiUrl for backward compatibility
+    const apiUrl = API_CONFIG.baseUrl;
     
     // Initialize system start time for uptime calculation
     window.systemStartTime = new Date();
@@ -106,7 +204,135 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedAgent = null;
     let currentAgentTab = 'system';
     let agintResponseWindow = null;
-    
+
+    // ===== Loading & Toast Utilities =====
+
+    /**
+     * Loading overlay manager for async operations.
+     */
+    const LoadingManager = {
+        overlay: null,
+        messageEl: null,
+        submessageEl: null,
+
+        init() {
+            if (this.overlay) return;
+
+            this.overlay = document.createElement('div');
+            this.overlay.className = 'loading-overlay';
+            this.overlay.innerHTML = `
+                <div class="loading-spinner"></div>
+                <div class="loading-message">Loading...</div>
+                <div class="loading-submessage"></div>
+            `;
+            document.body.appendChild(this.overlay);
+
+            this.messageEl = this.overlay.querySelector('.loading-message');
+            this.submessageEl = this.overlay.querySelector('.loading-submessage');
+        },
+
+        show(message = 'Loading...', submessage = '') {
+            this.init();
+            this.messageEl.textContent = message;
+            this.submessageEl.textContent = submessage;
+            this.overlay.classList.add('visible');
+        },
+
+        update(message, submessage = '') {
+            if (this.messageEl) this.messageEl.textContent = message;
+            if (this.submessageEl) this.submessageEl.textContent = submessage;
+        },
+
+        hide() {
+            if (this.overlay) {
+                this.overlay.classList.remove('visible');
+            }
+        }
+    };
+
+    /**
+     * Toast notification manager.
+     */
+    const ToastManager = {
+        container: null,
+
+        init() {
+            if (this.container) return;
+
+            this.container = document.createElement('div');
+            this.container.className = 'toast-container';
+            document.body.appendChild(this.container);
+        },
+
+        show(message, type = 'info', duration = 4000, title = '') {
+            this.init();
+
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                ${title ? `<div class="toast-title">${title}</div>` : ''}
+                <div class="toast-message">${message}</div>
+            `;
+
+            this.container.appendChild(toast);
+
+            // Trigger animation
+            requestAnimationFrame(() => {
+                toast.classList.add('visible');
+            });
+
+            // Auto remove
+            if (duration > 0) {
+                setTimeout(() => {
+                    toast.classList.remove('visible');
+                    setTimeout(() => toast.remove(), 300);
+                }, duration);
+            }
+
+            return toast;
+        },
+
+        success(message, title = 'Success') {
+            return this.show(message, 'success', 4000, title);
+        },
+
+        error(message, title = 'Error') {
+            return this.show(message, 'error', 6000, title);
+        },
+
+        warning(message, title = 'Warning') {
+            return this.show(message, 'warning', 5000, title);
+        },
+
+        info(message, title = '') {
+            return this.show(message, 'info', 4000, title);
+        }
+    };
+
+    /**
+     * Wrapper for async operations with loading state.
+     * @param {Function} asyncFn - Async function to execute
+     * @param {string} loadingMessage - Message to show during loading
+     * @returns {Promise} Result of async function
+     */
+    async function withLoading(asyncFn, loadingMessage = 'Processing...') {
+        LoadingManager.show(loadingMessage);
+        try {
+            const result = await asyncFn();
+            LoadingManager.hide();
+            return result;
+        } catch (error) {
+            LoadingManager.hide();
+            ToastManager.error(error.message || 'An error occurred');
+            throw error;
+        }
+    }
+
+    // Expose utilities globally for use in HTML onclick handlers
+    window.LoadingManager = LoadingManager;
+    window.ToastManager = ToastManager;
+    window.withLoading = withLoading;
+
     // DOM elements
     const statusLight = document.getElementById('status-light');
     const autonomousToggle = document.getElementById('autonomous-mode');
@@ -1074,16 +1300,99 @@ document.addEventListener('DOMContentLoaded', () => {
         return metrics;
     }
 
-    function getAgentCapabilities(agentName) {
-        const capabilities = {
-            'BDI Agent': ['Decision Making', 'Agent Selection', 'Reasoning', 'Belief Management'],
-            'AGInt Core': ['Cognitive Processing', 'PODA Cycles', 'Perception', 'Orientation', 'Decision', 'Action'],
-            'Simple Coder': ['Code Generation', 'Update Requests', 'Code Evolution', 'Sandbox Testing'],
-            'Coordinator': ['Infrastructure Management', 'Autonomous Improvement', 'Component Evolution'],
-            'MastermindAgent': ['Strategic Orchestration', 'Mistral AI Reasoning', 'Agent Coordination'],
-            'Resource Monitor': ['CPU Monitoring', 'Memory Tracking', 'System Health', 'Performance Analysis']
+    /**
+     * Get capabilities for an agent.
+     * Prefers capabilities from agent data (backend), falls back to defaults.
+     * @param {string} agentName - Name of the agent
+     * @param {Object} agentData - Optional agent data object with capabilities array
+     * @returns {Array} Array of capability objects or strings
+     */
+    function getAgentCapabilities(agentName, agentData = null) {
+        // If agent data has capabilities, use them
+        if (agentData && agentData.capabilities && Array.isArray(agentData.capabilities)) {
+            return agentData.capabilities;
+        }
+
+        // Fallback to default capabilities (legacy support)
+        const defaultCapabilities = {
+            'BDI Agent': [
+                { name: 'Decision Making', category: 'cognitive' },
+                { name: 'Agent Selection', category: 'orchestration' },
+                { name: 'Reasoning', category: 'cognitive' },
+                { name: 'Belief Management', category: 'memory' }
+            ],
+            'AGInt Core': [
+                { name: 'Cognitive Processing', category: 'cognitive' },
+                { name: 'PODA Cycles', category: 'cognitive' },
+                { name: 'Perception', category: 'cognitive' },
+                { name: 'Decision', category: 'cognitive' }
+            ],
+            'Simple Coder': [
+                { name: 'Code Generation', category: 'development' },
+                { name: 'Update Requests', category: 'development' },
+                { name: 'Code Evolution', category: 'evolution' },
+                { name: 'Sandbox Testing', category: 'development' }
+            ],
+            'Coordinator': [
+                { name: 'Infrastructure Management', category: 'system' },
+                { name: 'Autonomous Improvement', category: 'evolution' },
+                { name: 'Component Evolution', category: 'evolution' }
+            ],
+            'MastermindAgent': [
+                { name: 'Strategic Orchestration', category: 'orchestration' },
+                { name: 'Mistral AI Reasoning', category: 'ai' },
+                { name: 'Agent Coordination', category: 'orchestration' }
+            ],
+            'Resource Monitor': [
+                { name: 'CPU Monitoring', category: 'monitoring' },
+                { name: 'Memory Tracking', category: 'monitoring' },
+                { name: 'System Health', category: 'monitoring' }
+            ]
         };
-        return capabilities[agentName] || ['General Operations'];
+        return defaultCapabilities[agentName] || [{ name: 'General Operations', category: 'general' }];
+    }
+
+    /**
+     * Get CSS class for capability category.
+     * Maps capability categories to visual styling.
+     */
+    function getCapabilityCategoryClass(category) {
+        const categoryClasses = {
+            'cognitive': 'capability-cognitive',
+            'orchestration': 'capability-orchestration',
+            'memory': 'capability-memory',
+            'security': 'capability-security',
+            'monitoring': 'capability-monitoring',
+            'evolution': 'capability-evolution',
+            'development': 'capability-development',
+            'ai': 'capability-ai',
+            'governance': 'capability-governance',
+            'system': 'capability-system',
+            'identity': 'capability-identity',
+            'analytics': 'capability-analytics',
+            'general': 'capability-general'
+        };
+        return categoryClasses[category] || 'capability-general';
+    }
+
+    /**
+     * Render capabilities as HTML tags with category-based styling.
+     * @param {Array} capabilities - Array of capability objects or strings
+     * @returns {string} HTML string of capability tags
+     */
+    function renderCapabilities(capabilities) {
+        if (!capabilities || capabilities.length === 0) {
+            return '<span class="capability-tag capability-general">General Operations</span>';
+        }
+
+        return capabilities.map(cap => {
+            // Handle both object format and string format
+            const name = typeof cap === 'string' ? cap : cap.name;
+            const category = typeof cap === 'string' ? 'general' : (cap.category || 'general');
+            const categoryClass = getCapabilityCategoryClass(category);
+
+            return `<span class="capability-tag ${categoryClass}" title="${category}">${name}</span>`;
+        }).join('');
     }
 
     function getAgentRecentActivity(agentName) {
@@ -1470,6 +1779,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadTabData(tabId) {
+        // Initialize window manager when admin tab is activated
+        if (tabId === 'admin' && window.windowManager) {
+            // Window manager is already initialized, just ensure it's ready
+            console.log('Admin tab activated - window manager ready');
+        } else if (tabId === 'admin' && !window.windowManager) {
+            // Wait a bit for window manager to initialize if it hasn't yet
+            setTimeout(() => {
+                if (window.windowManager) {
+                    console.log('Window manager initialized for admin tab');
+                } else {
+                    console.warn('Window manager not available');
+                }
+            }, 100);
+        }
+        
         switch(tabId) {
             case 'control':
                 // Control tab is already loaded
@@ -1499,6 +1823,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'logs':
                 loadLogs();
+                break;
+            case 'api':
+                loadAPIData();
                 break;
             case 'admin':
                 loadAdminData();
@@ -2268,6 +2595,21 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshAgentsBtn.addEventListener('click', loadAgents);
         createAgentBtn.addEventListener('click', createAgent);
         deleteAgentBtn.addEventListener('click', deleteAgent);
+        
+        // Initialize new agent window button
+        const newAgentWindowBtn = document.getElementById('new-agent-window-btn');
+        if (newAgentWindowBtn) {
+            newAgentWindowBtn.addEventListener('click', () => {
+                if (selectedAgent) {
+                    openAgentInWindow(selectedAgent);
+                } else {
+                    // Create empty agent window
+                    if (window.windowManager) {
+                        window.windowManager.createAgentWindow();
+                    }
+                }
+            });
+        }
         
         // Initialize agent tab switching
         agentTabBtns.forEach(btn => {
@@ -3300,8 +3642,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const systemBadge = agent.isSystem ? '<span class="system-agent-badge">SYSTEM</span>' : '';
             const canDelete = !agent.isSystem && agent.createdBy !== 'system';
             
+            // Store agent data as JSON in data attribute for drag and drop
+            const agentDataJson = JSON.stringify(agent).replace(/"/g, '&quot;');
+            
             return `
-                <div class="agent-item ${isSelected}" data-agent-id="${agentId}">
+                <div class="agent-item draggable ${isSelected}" 
+                     data-agent-id="${agentId}" 
+                     data-agent-data='${agentDataJson}'
+                     draggable="true">
                     <div class="agent-info">
                         <div class="agent-name">
                             ${agent.name || agentId}
@@ -3311,23 +3659,75 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="agent-status ${statusClass}">${agent.status || 'Unknown'}</div>
                     </div>
                     <div class="agent-actions">
+                        <button class="agent-action-btn window-btn" onclick="openAgentInWindow('${agentId}', event)" title="Open in Window">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="9" y1="3" x2="9" y2="21"/>
+                                <line x1="3" y1="9" x2="21" y2="9"/>
+                            </svg>
+                        </button>
                         ${canDelete ? `<button class="agent-action-btn delete-btn" onclick="deleteAgent('${agentId}')">Delete</button>` : ''}
                     </div>
                 </div>
             `;
         }).join('');
 
-        // Add click listeners to agent items
+        // Add drag and drop listeners to agent items
         agentsList.querySelectorAll('.agent-item').forEach(item => {
+            // Drag start
+            item.addEventListener('dragstart', (e) => {
+                item.classList.add('dragging');
+                const agentData = item.getAttribute('data-agent-data');
+                e.dataTransfer.setData('application/json', agentData);
+                e.dataTransfer.effectAllowed = 'copy';
+            });
+            
+            // Drag end
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+            });
+            
+            // Click to open details modal
             item.addEventListener('click', (e) => {
                 // Don't trigger if clicking on action buttons
-                if (e.target.classList.contains('agent-action-btn')) {
+                if (e.target.closest('.agent-action-btn')) {
                     return;
                 }
                 const agentId = item.getAttribute('data-agent-id');
                 openAgentDetailsModal(agentId);
             });
+            
+            // Double-click to open in window
+            item.addEventListener('dblclick', (e) => {
+                const agentId = item.getAttribute('data-agent-id');
+                const agentData = JSON.parse(item.getAttribute('data-agent-data'));
+                openAgentInWindow(agentId, e, agentData);
+            });
         });
+        
+        // Make window container a drop zone
+        const windowContainer = document.getElementById('window-container');
+        if (windowContainer) {
+            windowContainer.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+            });
+            
+            windowContainer.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const agentDataJson = e.dataTransfer.getData('application/json');
+                if (agentDataJson) {
+                    try {
+                        const agentData = JSON.parse(agentDataJson);
+                        if (window.windowManager) {
+                            window.windowManager.createAgentWindow(agentData.agent_id || agentData.id, agentData);
+                        }
+                    } catch (error) {
+                        console.error('Failed to parse agent data:', error);
+                    }
+                }
+            });
+        }
     }
 
     function selectAgent(agentId) {
@@ -3336,6 +3736,43 @@ document.addEventListener('DOMContentLoaded', () => {
         displayAgentDetails(agentId);
     }
 
+    // Open agent in a new window
+    function openAgentInWindow(agentId, event, agentData = null) {
+        if (event) {
+            event.stopPropagation();
+        }
+        
+        if (!window.windowManager) {
+            console.error('Window manager not available');
+            return;
+        }
+        
+        // Find agent data if not provided
+        if (!agentData) {
+            const allAgents = [...systemAgents, ...userAgents, ...agents];
+            agentData = allAgents.find(a => (a.id || a.name || a.agent_id) === agentId);
+        }
+        
+        if (!agentData) {
+            console.error('Agent not found:', agentId);
+            return;
+        }
+        
+        // Create window with agent data
+        const windowId = window.windowManager.createAgentWindow(agentId, agentData);
+        
+        // Store mapping for updates
+        if (!window.agentWindows) {
+            window.agentWindows = new Map();
+        }
+        window.agentWindows.set(agentId, windowId);
+        
+        console.log('Opened agent in window:', agentId, windowId);
+    }
+    
+    // Make function globally accessible
+    window.openAgentInWindow = openAgentInWindow;
+    
     function openAgentDetailsModal(agentId) {
         console.log('openAgentDetailsModal called with agentId:', agentId);
         const modal = document.getElementById('agent-details-modal');
@@ -3801,6 +4238,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadAdminData() {
+        // Ensure window manager is initialized when admin tab loads
+        if (!window.windowManager) {
+            console.log('Waiting for window manager to initialize...');
+            // Wait a bit more for window manager
+            setTimeout(() => {
+                if (window.windowManager) {
+                    console.log('Window manager ready for admin tab');
+                }
+            }, 200);
+        } else {
+            console.log('Window manager already initialized');
+        }
         try {
             const config = await sendRequest('/system/config');
             displayConfig(config);
@@ -3808,6 +4257,1248 @@ document.addEventListener('DOMContentLoaded', () => {
             addLog(`Failed to load admin data: ${error.message}`, 'ERROR');
         }
     }
+
+    // API Tab Functions
+    async function loadAPIData() {
+        await loadAPIProviders();
+        await loadProvidersIntoDropdown(); // Load providers into dropdown
+        initializeAPITab();
+    }
+
+    function initializeAPITab() {
+        const refreshBtn = document.getElementById('refresh-api-providers-btn');
+        const scanBtn = document.getElementById('scan-api-folder-btn');
+        const detectBtn = document.getElementById('detect-providers-btn');
+        const addBtn = document.getElementById('add-api-provider-btn');
+        const closeModalBtn = document.getElementById('close-api-provider-modal');
+        
+        // Ollama controls
+        const ollamaConfigMethod = document.getElementById('ollama-config-method');
+        const ollamaTestBtn = document.getElementById('ollama-test-connection-btn');
+        const ollamaSaveBtn = document.getElementById('ollama-save-config-btn');
+        const ollamaListBtn = document.getElementById('ollama-list-models-btn');
+        const ollamaQuickTestBtn = document.getElementById('ollama-quick-test-btn');
+
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', loadAPIProviders);
+        }
+
+        if (scanBtn) {
+            scanBtn.addEventListener('click', scanAPIFolder);
+        }
+
+        if (detectBtn) {
+            detectBtn.addEventListener('click', intelligentlyDetectProviders);
+        }
+        
+        // Provider dropdown
+        const providerDropdown = document.getElementById('provider-dropdown');
+        const loadProviderConfigBtn = document.getElementById('load-provider-config-btn');
+        
+        if (loadProviderConfigBtn) {
+            loadProviderConfigBtn.addEventListener('click', loadProviderFromDropdown);
+        }
+        
+        // Auto-load providers into dropdown on tab load
+        if (providerDropdown) {
+            loadProvidersIntoDropdown();
+        }
+
+        if (addBtn) {
+            addBtn.addEventListener('click', addNewAPIProvider);
+        }
+
+        if (closeModalBtn) {
+            closeModalBtn.addEventListener('click', () => {
+                document.getElementById('api-provider-details-modal').style.display = 'none';
+            });
+        }
+        
+        // Provider settings modal close button
+        const closeSettingsModalBtn = document.getElementById('close-api-provider-settings-modal');
+        if (closeSettingsModalBtn) {
+            closeSettingsModalBtn.addEventListener('click', () => {
+                document.getElementById('api-provider-settings-modal').style.display = 'none';
+            });
+        }
+        
+        // Ollama setup handlers
+        if (ollamaConfigMethod) {
+            ollamaConfigMethod.addEventListener('change', (e) => {
+                const method = e.target.value;
+                const hostPortConfig = document.getElementById('ollama-host-port-config');
+                const baseUrlConfig = document.getElementById('ollama-base-url-config');
+                
+                if (method === 'host-port') {
+                    hostPortConfig.style.display = 'grid';
+                    baseUrlConfig.style.display = 'none';
+                } else {
+                    hostPortConfig.style.display = 'none';
+                    baseUrlConfig.style.display = 'block';
+                }
+            });
+        }
+        
+        if (ollamaTestBtn) {
+            ollamaTestBtn.addEventListener('click', testOllamaConnection);
+        }
+        
+        if (ollamaSaveBtn) {
+            ollamaSaveBtn.addEventListener('click', saveOllamaConfig);
+        }
+        
+        if (ollamaListBtn) {
+            ollamaListBtn.addEventListener('click', listOllamaModels);
+        }
+        
+        if (ollamaQuickTestBtn) {
+            ollamaQuickTestBtn.addEventListener('click', testOllamaConnection);
+        }
+    }
+    
+    async function intelligentlyDetectProviders() {
+        try {
+            addLog('Using mindX intelligence to detect available providers...', 'INFO');
+            const result = await sendRequest('/api/llm/providers/intelligent/detect');
+            
+            if (result.success && result.detected_providers) {
+                displayDetectedProviders(result.detected_providers);
+                addLog(`Detected ${result.total_detected} providers`, 'SUCCESS');
+            }
+        } catch (error) {
+            addLog(`Failed to detect providers: ${error.message}`, 'ERROR');
+        }
+    }
+    
+    function displayDetectedProviders(providers) {
+        const listContainer = document.getElementById('detected-providers-list');
+        if (!listContainer) return;
+        
+        listContainer.innerHTML = '';
+        
+        if (providers.length === 0) {
+            listContainer.innerHTML = '<p>No providers detected. Check your API folder.</p>';
+            return;
+        }
+        
+        providers.forEach(provider => {
+            const providerCard = document.createElement('div');
+            providerCard.className = 'detected-provider-card';
+            
+            const statusBadge = provider.detected ? 
+                `<span class="status-badge detected">✓ Detected</span>` : 
+                `<span class="status-badge not-detected">✗ Not Found</span>`;
+            
+            const apiKeyStatus = provider.api_key_detected ? 
+                `<span class="env-status detected">API Key: ${provider.api_key_set ? 'Set' : 'Empty'}</span>` : 
+                `<span class="env-status not-detected">API Key: Not in environment</span>`;
+            
+            providerCard.innerHTML = `
+                <div class="provider-card-header">
+                    <h4>${provider.display_name}</h4>
+                    ${statusBadge}
+                </div>
+                <div class="provider-card-info">
+                    <p><strong>Name:</strong> ${provider.name}</p>
+                    <p><strong>Module:</strong> ${provider.module_path}</p>
+                    <p><strong>Factory:</strong> ${provider.factory_function}</p>
+                    ${provider.api_key_env_var ? `<p>${apiKeyStatus}</p>` : ''}
+                    ${provider.base_url_env_var ? `<p><strong>Base URL Env:</strong> ${provider.base_url_env_var}</p>` : ''}
+                </div>
+                <div class="provider-card-actions">
+                    ${provider.already_registered ? 
+                        '<span class="already-registered">Already Registered</span>' : 
+                        `<button class="use-provider-btn" onclick="useDetectedProvider('${provider.name}')">Use This Provider</button>`
+                    }
+                </div>
+            `;
+            
+            listContainer.appendChild(providerCard);
+        });
+    }
+    
+    async function useDetectedProvider(providerName) {
+        try {
+            // Get intelligent suggestions for this provider
+            const suggestions = await sendRequest(`/api/llm/providers/intelligent/suggest/${providerName}`);
+            
+            if (suggestions.success && suggestions.suggestions) {
+                const sugg = suggestions.suggestions;
+                
+                // Auto-fill the form
+                document.getElementById('new-provider-name').value = sugg.provider_name || '';
+                document.getElementById('new-provider-display-name').value = sugg.display_name || sugg.provider_name || '';
+                document.getElementById('new-provider-module-path').value = sugg.suggestions?.module_path || '';
+                document.getElementById('new-provider-factory-function').value = sugg.suggestions?.factory_function || '';
+                document.getElementById('new-provider-api-key-env').value = sugg.suggestions?.api_key_env_var || '';
+                document.getElementById('new-provider-base-url-env').value = sugg.suggestions?.base_url_env_var || '';
+                document.getElementById('new-provider-requires-api-key').checked = sugg.suggestions?.requires_api_key || false;
+                document.getElementById('new-provider-requires-base-url').checked = sugg.suggestions?.requires_base_url || false;
+                document.getElementById('new-provider-rate-limit-rpm').value = sugg.suggestions?.default_rate_limit_rpm || 60;
+                document.getElementById('new-provider-rate-limit-tpm').value = sugg.suggestions?.default_rate_limit_tpm || 100000;
+                
+                addLog(`Auto-filled form with ${providerName} configuration`, 'SUCCESS');
+                
+                // Scroll to form
+                document.querySelector('.api-add-form').scrollIntoView({ behavior: 'smooth' });
+            }
+        } catch (error) {
+            addLog(`Failed to get suggestions: ${error.message}`, 'ERROR');
+        }
+    }
+    
+    async function testOllamaConnection() {
+        try {
+            const method = document.getElementById('ollama-config-method').value;
+            let baseUrl = null;
+            
+            if (method === 'base-url') {
+                baseUrl = document.getElementById('ollama-base-url').value;
+            } else {
+                const host = document.getElementById('ollama-host').value;
+                const port = document.getElementById('ollama-port').value;
+                baseUrl = `http://${host}:${port}`;
+            }
+            
+            addLog(`Testing Ollama connection to ${baseUrl}...`, 'INFO');
+            const result = await sendRequest(`/api/llm/ollama/connection?base_url=${encodeURIComponent(baseUrl)}`);
+            
+            if (result.success) {
+                addLog('Ollama connection successful!', 'SUCCESS');
+                updateOllamaConnectionBanner(true, baseUrl, result);
+            } else {
+                addLog('Ollama connection failed', 'ERROR');
+                updateOllamaConnectionBanner(false, baseUrl, result);
+            }
+        } catch (error) {
+            addLog(`Failed to test Ollama: ${error.message}`, 'ERROR');
+            updateOllamaConnectionBanner(false, null, { error: error.message });
+        }
+    }
+    
+    async function saveOllamaConfig() {
+        try {
+            const method = document.getElementById('ollama-config-method').value;
+            let baseUrl = null;
+            
+            if (method === 'base-url') {
+                baseUrl = document.getElementById('ollama-base-url').value;
+            } else {
+                const host = document.getElementById('ollama-host').value;
+                const port = document.getElementById('ollama-port').value;
+                baseUrl = `http://${host}:${port}`;
+            }
+            
+            const result = await sendRequest('/api/llm/ollama/config', 'POST', { base_url: baseUrl });
+            
+            if (result.success) {
+                addLog('Ollama configuration saved!', 'SUCCESS');
+                // Also register Ollama provider if not already registered
+                await registerOllamaProvider(baseUrl);
+            }
+        } catch (error) {
+            addLog(`Failed to save Ollama config: ${error.message}`, 'ERROR');
+        }
+    }
+    
+    async function registerOllamaProvider(baseUrl) {
+        try {
+            // Check if already registered
+            const registry = await sendRequest('/api/llm/providers/registry');
+            const isRegistered = registry.providers.some(p => p.name === 'ollama');
+            
+            if (!isRegistered) {
+                await sendRequest('/api/llm/providers/registry/register', 'POST', {
+                    name: 'ollama',
+                    display_name: 'Ollama (Local)',
+                    module_path: 'api.ollama_url',
+                    factory_function: 'create_ollama_api',
+                    api_key_env_var: null,
+                    base_url_env_var: 'MINDX_LLM__OLLAMA__BASE_URL',
+                    requires_api_key: false,
+                    requires_base_url: true,
+                    default_rate_limit_rpm: 1000,
+                    default_rate_limit_tpm: 10000000
+                });
+                addLog('Ollama provider registered', 'SUCCESS');
+            }
+        } catch (error) {
+            // Provider might already be registered, that's okay
+            console.log('Ollama registration:', error.message);
+        }
+    }
+    
+    async function listOllamaModels() {
+        try {
+            const method = document.getElementById('ollama-config-method').value;
+            let baseUrl = null;
+            
+            if (method === 'base-url') {
+                baseUrl = document.getElementById('ollama-base-url').value;
+            } else {
+                const host = document.getElementById('ollama-host').value;
+                const port = document.getElementById('ollama-port').value;
+                baseUrl = `http://${host}:${port}`;
+            }
+            
+            const result = await sendRequest(`/api/llm/ollama/models?base_url=${encodeURIComponent(baseUrl)}`);
+            
+            if (result.success && result.models) {
+                displayOllamaModels(result.models);
+            }
+        } catch (error) {
+            addLog(`Failed to list Ollama models: ${error.message}`, 'ERROR');
+        }
+    }
+    
+    function displayOllamaModels(models) {
+        const modelsList = document.getElementById('ollama-models-list');
+        if (!modelsList) return;
+        
+        if (models.length === 0) {
+            modelsList.innerHTML = '<p>No models found. Make sure Ollama is running and has models installed.</p>';
+            return;
+        }
+        
+        let html = '<h4>Available Models:</h4><ul class="models-list">';
+        models.forEach(model => {
+            const modelName = model.name || model.id || model;
+            html += `<li class="model-item">${modelName}</li>`;
+        });
+        html += '</ul>';
+        modelsList.innerHTML = html;
+    }
+    
+    function updateOllamaConnectionBanner(connected, baseUrl, result) {
+        const banner = document.getElementById('ollama-connection-banner');
+        const icon = document.getElementById('ollama-connection-icon');
+        const statusText = document.getElementById('ollama-connection-status-text');
+        const details = document.getElementById('ollama-connection-details');
+        
+        if (!banner) return;
+        
+        banner.style.display = 'block';
+        
+        if (connected) {
+            icon.textContent = '🟢';
+            statusText.textContent = 'Connected';
+            details.textContent = `Base URL: ${baseUrl}`;
+            banner.style.background = 'rgba(0, 255, 136, 0.1)';
+            banner.style.borderLeftColor = 'var(--corp-green)';
+        } else {
+            icon.textContent = '🔴';
+            statusText.textContent = 'Not Connected';
+            details.textContent = result.error || 'Connection failed';
+            banner.style.background = 'rgba(255, 71, 87, 0.1)';
+            banner.style.borderLeftColor = 'var(--corp-red)';
+        }
+    }
+    
+    async function loadProvidersIntoDropdown() {
+        try {
+            // Get all available providers from API folder
+            const listResult = await sendRequest('/api/llm/providers/intelligent/list');
+            // Also get detected providers for status indicators
+            const detectResult = await sendRequest('/api/llm/providers/intelligent/detect').catch(() => null);
+            const dropdown = document.getElementById('provider-dropdown');
+            
+            if (!dropdown) return;
+            
+            // Clear existing options except the first one
+            dropdown.innerHTML = '<option value="">-- Select a provider --</option>';
+            
+            if (listResult.success && listResult.providers) {
+                // Create a map of detected providers for quick lookup
+                const detectedMap = new Map();
+                if (detectResult && detectResult.success && detectResult.detected_providers) {
+                    detectResult.detected_providers.forEach(provider => {
+                        detectedMap.set(provider.name, provider);
+                    });
+                }
+                
+                // Get registered providers
+                const registryResult = await sendRequest('/api/llm/providers/registry').catch(() => null);
+                const registeredNames = new Set();
+                if (registryResult && registryResult.providers) {
+                    registryResult.providers.forEach(p => registeredNames.add(p.name));
+                }
+                
+                listResult.providers.forEach(provider => {
+                    const option = document.createElement('option');
+                    option.value = provider.name;
+                    let displayText = provider.display_name;
+                    
+                    const detected = detectedMap.get(provider.name);
+                    
+                    // Add status indicators
+                    if (registeredNames.has(provider.name)) {
+                        displayText += ' [Registered]';
+                    }
+                    
+                    if (detected) {
+                        if (detected.api_key_detected && detected.api_key_set) {
+                            displayText += ' ✓';
+                        } else if (detected.api_key_detected) {
+                            displayText += ' ⚠';
+                        }
+                    }
+                    
+                    option.textContent = displayText;
+                    dropdown.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load providers into dropdown:', error);
+            addLog(`Failed to load providers into dropdown: ${error.message}`, 'ERROR');
+        }
+    }
+    
+    async function loadProviderFromDropdown() {
+        const dropdown = document.getElementById('provider-dropdown');
+        const statusDiv = document.getElementById('provider-dropdown-status');
+        
+        if (!dropdown || !dropdown.value) {
+            if (statusDiv) {
+                statusDiv.innerHTML = '<p class="error-message">Please select a provider from the dropdown</p>';
+            }
+            return;
+        }
+        
+        const providerName = dropdown.value;
+        
+        try {
+            if (statusDiv) {
+                statusDiv.innerHTML = '<p class="info-message">Loading provider configuration...</p>';
+            }
+            
+            // Get intelligent suggestions for the selected provider
+            const suggestions = await sendRequest(`/api/llm/providers/intelligent/suggest/${providerName}`);
+            
+            if (suggestions.success && suggestions.suggestions) {
+                const sugg = suggestions.suggestions;
+                
+                // Auto-fill the form
+                document.getElementById('new-provider-name').value = sugg.provider_name || '';
+                document.getElementById('new-provider-display-name').value = sugg.display_name || sugg.provider_name || '';
+                document.getElementById('new-provider-module-path').value = sugg.suggestions?.module_path || '';
+                document.getElementById('new-provider-factory-function').value = sugg.suggestions?.factory_function || '';
+                document.getElementById('new-provider-api-key-env').value = sugg.suggestions?.api_key_env_var || '';
+                document.getElementById('new-provider-base-url-env').value = sugg.suggestions?.base_url_env_var || '';
+                document.getElementById('new-provider-requires-api-key').checked = sugg.suggestions?.requires_api_key || false;
+                document.getElementById('new-provider-requires-base-url').checked = sugg.suggestions?.requires_base_url || false;
+                document.getElementById('new-provider-rate-limit-rpm').value = sugg.suggestions?.default_rate_limit_rpm || 60;
+                document.getElementById('new-provider-rate-limit-tpm').value = sugg.suggestions?.default_rate_limit_tpm || 100000;
+                
+                // Show environment detection status
+                let statusHtml = '<div class="provider-config-loaded">';
+                statusHtml += `<h4>✓ Configuration loaded for ${sugg.display_name || sugg.provider_name}</h4>`;
+                
+                if (sugg.environment_detected) {
+                    statusHtml += '<div class="env-detection-info">';
+                    
+                    if (sugg.environment_detected.api_key) {
+                        const apiKeyInfo = sugg.environment_detected.api_key;
+                        if (apiKeyInfo.detected && apiKeyInfo.set) {
+                            statusHtml += `<p class="env-status detected">✓ API Key detected: ${apiKeyInfo.env_var}</p>`;
+                        } else if (apiKeyInfo.detected) {
+                            statusHtml += `<p class="env-status warning">⚠ API Key variable found but empty: ${apiKeyInfo.env_var}</p>`;
+                        } else {
+                            statusHtml += `<p class="env-status not-detected">✗ API Key not found: ${apiKeyInfo.env_var || 'N/A'}</p>`;
+                        }
+                    }
+                    
+                    if (sugg.environment_detected.base_url) {
+                        const baseUrlInfo = sugg.environment_detected.base_url;
+                        if (baseUrlInfo.detected) {
+                            statusHtml += `<p class="env-status detected">✓ Base URL detected: ${baseUrlInfo.value}</p>`;
+                        } else {
+                            statusHtml += `<p class="env-status not-detected">✗ Base URL not found: ${baseUrlInfo.env_var || 'N/A'}</p>`;
+                            if (baseUrlInfo.suggestion) {
+                                statusHtml += `<p class="env-suggestion">💡 Suggested: ${baseUrlInfo.suggestion}</p>`;
+                            }
+                        }
+                    }
+                    
+                    statusHtml += '</div>';
+                }
+                
+                statusHtml += '</div>';
+                
+                if (statusDiv) {
+                    statusDiv.innerHTML = statusHtml;
+                }
+                
+                addLog(`Provider configuration loaded for ${providerName}`, 'SUCCESS');
+                
+                // Scroll to form
+                document.querySelector('.api-add-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                if (statusDiv) {
+                    statusDiv.innerHTML = '<p class="error-message">Failed to load provider configuration</p>';
+                }
+            }
+        } catch (error) {
+            addLog(`Failed to load provider configuration: ${error.message}`, 'ERROR');
+            if (statusDiv) {
+                statusDiv.innerHTML = `<p class="error-message">Error: ${error.message}</p>`;
+            }
+        }
+    }
+    
+    async function showProviderSettings(providerName) {
+        try {
+            const providers = await sendRequest('/api/llm/providers');
+            const registry = await sendRequest('/api/llm/providers/registry');
+            const suggestions = await sendRequest(`/api/llm/providers/intelligent/suggest/${providerName}`).catch(() => null);
+            const metrics = await sendRequest(`/api/llm/providers/${providerName}/metrics`).catch(() => null);
+            const metadataResponse = await sendRequest(`/api/llm/providers/${providerName}/metadata`).catch(() => null);
+
+            const provider = providers.providers[providerName];
+            const registryProvider = registry.providers.find(p => p.name === providerName);
+            const metadata = metadataResponse?.metadata || registryProvider?.metadata || {};
+
+            const modal = document.getElementById('api-provider-settings-modal');
+            const title = document.getElementById('api-provider-settings-title');
+            const content = document.getElementById('api-provider-settings-content');
+
+            if (!modal || !title || !content) return;
+
+            title.textContent = `${registryProvider?.display_name || providerName} - Settings`;
+
+            let html = `
+                <div class="provider-settings-form">
+                    <form id="provider-settings-form">
+                        <div class="settings-section">
+                            <h4>Basic Configuration</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Display Name:</label>
+                                    <input type="text" id="settings-display-name" value="${registryProvider?.display_name || providerName}" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Status:</label>
+                                    <select id="settings-status">
+                                        <option value="enabled" ${provider?.enabled ? 'selected' : ''}>Enabled</option>
+                                        <option value="disabled" ${!provider?.enabled ? 'selected' : ''}>Disabled</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <h4>Module Configuration</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Module Path:</label>
+                                    <input type="text" id="settings-module-path" value="${registryProvider?.module_path || ''}" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Factory Function:</label>
+                                    <input type="text" id="settings-factory-function" value="${registryProvider?.factory_function || ''}" />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <h4>Environment Variables</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>API Key Environment Variable:</label>
+                                    <input type="text" id="settings-api-key-env" value="${registryProvider?.api_key_env_var || ''}" />
+                                    ${suggestions && suggestions.suggestions?.environment_detected?.api_key ? `
+                                    <div class="env-status-info">
+                                        ${suggestions.suggestions.environment_detected.api_key.detected ? 
+                                            `<span class="env-status detected">✓ Detected: ${suggestions.suggestions.environment_detected.api_key.set ? 'Set' : 'Empty'}</span>` :
+                                            `<span class="env-status not-detected">✗ Not found</span>`
+                                        }
+                                    </div>
+                                    ` : ''}
+                                </div>
+                                <div class="form-group">
+                                    <label>Base URL Environment Variable:</label>
+                                    <input type="text" id="settings-base-url-env" value="${registryProvider?.base_url_env_var || ''}" />
+                                    ${suggestions && suggestions.suggestions?.environment_detected?.base_url ? `
+                                    <div class="env-status-info">
+                                        ${suggestions.suggestions.environment_detected.base_url.detected ? 
+                                            `<span class="env-status detected">✓ Detected: ${suggestions.suggestions.environment_detected.base_url.value || 'Set'}</span>` :
+                                            `<span class="env-status not-detected">✗ Not found</span>`
+                                        }
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <h4>Rate Limits</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Requests Per Minute (RPM):</label>
+                                    <input type="number" id="settings-rate-limit-rpm" value="${registryProvider?.default_rate_limit_rpm || 60}" min="1" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Tokens Per Minute (TPM):</label>
+                                    <input type="number" id="settings-rate-limit-tpm" value="${registryProvider?.default_rate_limit_tpm || 100000}" min="1" />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${getProviderSpecificSettings(providerName, metadata, suggestions)}
+                        
+                        ${metrics ? `
+                        <div class="settings-section">
+                            <h4>Usage Metrics</h4>
+                            <div class="metrics-display">
+                                <div class="metric-item">
+                                    <span class="metric-label">Total Requests:</span>
+                                    <span class="metric-value">${metrics.total_requests || 0}</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Successful:</span>
+                                    <span class="metric-value success">${metrics.successful_requests || 0}</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Failed:</span>
+                                    <span class="metric-value error">${metrics.failed_requests || 0}</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Total Tokens:</span>
+                                    <span class="metric-value">${metrics.total_tokens || 0}</span>
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        <div class="settings-actions">
+                            <button type="button" class="save-settings-btn" onclick="saveProviderSettings('${providerName}')">Save Settings</button>
+                            <button type="button" class="cancel-settings-btn" onclick="closeProviderSettings()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+
+            content.innerHTML = html;
+            modal.style.display = 'block';
+        } catch (error) {
+            addLog(`Failed to load provider settings: ${error.message}`, 'ERROR');
+        }
+    }
+    
+    function getProviderSpecificSettings(providerName, metadata, suggestions) {
+        const baseUrl = suggestions?.suggestions?.environment_detected?.base_url?.value || metadata.base_url || '';
+        
+        switch(providerName) {
+            case 'ollama':
+                return `
+                    <div class="settings-section provider-specific">
+                        <h4>🔧 Ollama-Specific Settings</h4>
+                        <div class="form-group">
+                            <label>Base URL:</label>
+                            <input type="text" id="settings-ollama-base-url" value="${baseUrl || 'http://localhost:11434'}" placeholder="http://localhost:11434" />
+                            <button type="button" class="test-connection-btn" onclick="testOllamaFromSettings()">Test Connection</button>
+                        </div>
+                        <div class="form-group">
+                            <label>Host (alternative to Base URL):</label>
+                            <input type="text" id="settings-ollama-host" value="${metadata.host || 'localhost'}" placeholder="localhost" />
+                        </div>
+                        <div class="form-group">
+                            <label>Port (alternative to Base URL):</label>
+                            <input type="number" id="settings-ollama-port" value="${metadata.port || 11434}" min="1" max="65535" />
+                        </div>
+                        <div class="form-group">
+                            <label>Timeout (seconds):</label>
+                            <input type="number" id="settings-ollama-timeout" value="${metadata.timeout || 30}" min="1" />
+                        </div>
+                    </div>
+                `;
+                
+            case 'gemini':
+                return `
+                    <div class="settings-section provider-specific">
+                        <h4>🔧 Gemini-Specific Settings</h4>
+                        <div class="form-group">
+                            <label>Default Model:</label>
+                            <input type="text" id="settings-gemini-default-model" value="${metadata.default_model || 'gemini-1.5-flash-latest'}" placeholder="gemini-1.5-flash-latest" />
+                        </div>
+                        <div class="form-group">
+                            <label>Default Temperature:</label>
+                            <input type="number" id="settings-gemini-temperature" value="${metadata.temperature || 0.7}" min="0" max="2" step="0.1" />
+                        </div>
+                        <div class="form-group">
+                            <label>Default Max Tokens:</label>
+                            <input type="number" id="settings-gemini-max-tokens" value="${metadata.max_tokens || 2048}" min="1" />
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="settings-gemini-json-mode" ${metadata.json_mode ? 'checked' : ''} />
+                                Enable JSON Mode by Default
+                            </label>
+                        </div>
+                    </div>
+                `;
+                
+            case 'mistral':
+                return `
+                    <div class="settings-section provider-specific">
+                        <h4>🔧 Mistral-Specific Settings</h4>
+                        <div class="form-group">
+                            <label>Base URL:</label>
+                            <input type="text" id="settings-mistral-base-url" value="${metadata.base_url || 'https://api.mistral.ai/v1'}" placeholder="https://api.mistral.ai/v1" />
+                        </div>
+                        <div class="form-group">
+                            <label>Default Model:</label>
+                            <input type="text" id="settings-mistral-default-model" value="${metadata.default_model || 'mistral-small-latest'}" placeholder="mistral-small-latest" />
+                        </div>
+                        <div class="form-group">
+                            <label>Timeout (seconds):</label>
+                            <input type="number" id="settings-mistral-timeout" value="${metadata.timeout || 30}" min="1" />
+                        </div>
+                        <div class="form-group">
+                            <label>Max Retries:</label>
+                            <input type="number" id="settings-mistral-max-retries" value="${metadata.max_retries || 3}" min="0" />
+                        </div>
+                        <div class="form-group">
+                            <label>Rate Limit Delay (seconds):</label>
+                            <input type="number" id="settings-mistral-rate-limit-delay" value="${metadata.rate_limit_delay || 0.1}" min="0" step="0.1" />
+                        </div>
+                        <div class="form-group">
+                            <label>Default Prompt Mode:</label>
+                            <select id="settings-mistral-prompt-mode">
+                                <option value="standard" ${metadata.prompt_mode === 'standard' ? 'selected' : ''}>Standard</option>
+                                <option value="reasoning" ${metadata.prompt_mode === 'reasoning' ? 'selected' : ''}>Reasoning</option>
+                            </select>
+                        </div>
+                    </div>
+                `;
+                
+            case 'openai':
+                return `
+                    <div class="settings-section provider-specific">
+                        <h4>🔧 OpenAI-Specific Settings</h4>
+                        <div class="form-group">
+                            <label>Base URL:</label>
+                            <input type="text" id="settings-openai-base-url" value="${metadata.base_url || 'https://api.openai.com/v1'}" placeholder="https://api.openai.com/v1" />
+                        </div>
+                        <div class="form-group">
+                            <label>Default Model:</label>
+                            <input type="text" id="settings-openai-default-model" value="${metadata.default_model || 'gpt-3.5-turbo'}" placeholder="gpt-3.5-turbo" />
+                        </div>
+                        <div class="form-group">
+                            <label>Default Temperature:</label>
+                            <input type="number" id="settings-openai-temperature" value="${metadata.temperature || 0.7}" min="0" max="2" step="0.1" />
+                        </div>
+                        <div class="form-group">
+                            <label>Max Retries:</label>
+                            <input type="number" id="settings-openai-max-retries" value="${metadata.max_retries || 5}" min="0" />
+                        </div>
+                    </div>
+                `;
+                
+            case 'anthropic':
+                return `
+                    <div class="settings-section provider-specific">
+                        <h4>🔧 Anthropic-Specific Settings</h4>
+                        <div class="form-group">
+                            <label>Default Model:</label>
+                            <input type="text" id="settings-anthropic-default-model" value="${metadata.default_model || 'claude-3-sonnet-20240229'}" placeholder="claude-3-sonnet-20240229" />
+                        </div>
+                        <div class="form-group">
+                            <label>Default Temperature:</label>
+                            <input type="number" id="settings-anthropic-temperature" value="${metadata.temperature || 0.7}" min="0" max="1" step="0.1" />
+                        </div>
+                        <div class="form-group">
+                            <label>Max Tokens:</label>
+                            <input type="number" id="settings-anthropic-max-tokens" value="${metadata.max_tokens || 4096}" min="1" />
+                        </div>
+                        <div class="form-group">
+                            <label>Max Retries:</label>
+                            <input type="number" id="settings-anthropic-max-retries" value="${metadata.max_retries || 5}" min="0" />
+                        </div>
+                    </div>
+                `;
+                
+            case 'together':
+                return `
+                    <div class="settings-section provider-specific">
+                        <h4>🔧 Together AI-Specific Settings</h4>
+                        <div class="form-group">
+                            <label>Base URL:</label>
+                            <input type="text" id="settings-together-base-url" value="${metadata.base_url || 'https://api.together.xyz/v1'}" placeholder="https://api.together.xyz/v1" />
+                        </div>
+                        <div class="form-group">
+                            <label>Default Model:</label>
+                            <input type="text" id="settings-together-default-model" value="${metadata.default_model || ''}" placeholder="meta-llama/Llama-2-70b-chat-hf" />
+                        </div>
+                    </div>
+                `;
+                
+            default:
+                return `
+                    <div class="settings-section provider-specific">
+                        <h4>🔧 Provider-Specific Settings</h4>
+                        <div class="form-group">
+                            <label>Base URL (if applicable):</label>
+                            <input type="text" id="settings-custom-base-url" value="${metadata.base_url || ''}" placeholder="https://api.example.com/v1" />
+                        </div>
+                        <div class="form-group">
+                            <label>Default Model:</label>
+                            <input type="text" id="settings-custom-default-model" value="${metadata.default_model || ''}" placeholder="model-name" />
+                        </div>
+                        <div class="form-group">
+                            <label>Timeout (seconds):</label>
+                            <input type="number" id="settings-custom-timeout" value="${metadata.timeout || 30}" min="1" />
+                        </div>
+                    </div>
+                `;
+        }
+    }
+    
+    async function saveProviderSettings(providerName) {
+        try {
+            const displayName = document.getElementById('settings-display-name').value;
+            const status = document.getElementById('settings-status').value;
+            const modulePath = document.getElementById('settings-module-path').value;
+            const factoryFunction = document.getElementById('settings-factory-function').value;
+            const apiKeyEnv = document.getElementById('settings-api-key-env').value;
+            const baseUrlEnv = document.getElementById('settings-base-url-env').value;
+            const rateLimitRpm = parseInt(document.getElementById('settings-rate-limit-rpm').value) || 60;
+            const rateLimitTpm = parseInt(document.getElementById('settings-rate-limit-tpm').value) || 100000;
+            
+            // Collect provider-specific metadata
+            const metadata = {};
+            
+            // Provider-specific settings
+            if (providerName === 'ollama') {
+                metadata.base_url = document.getElementById('settings-ollama-base-url')?.value || '';
+                metadata.host = document.getElementById('settings-ollama-host')?.value || '';
+                metadata.port = parseInt(document.getElementById('settings-ollama-port')?.value) || 11434;
+                metadata.timeout = parseInt(document.getElementById('settings-ollama-timeout')?.value) || 30;
+                
+                // Save Ollama config
+                if (metadata.base_url) {
+                    await sendRequest('/api/llm/ollama/config', 'POST', { base_url: metadata.base_url });
+                }
+            } else if (providerName === 'gemini') {
+                metadata.default_model = document.getElementById('settings-gemini-default-model')?.value || 'gemini-1.5-flash-latest';
+                metadata.temperature = parseFloat(document.getElementById('settings-gemini-temperature')?.value) || 0.7;
+                metadata.max_tokens = parseInt(document.getElementById('settings-gemini-max-tokens')?.value) || 2048;
+                metadata.json_mode = document.getElementById('settings-gemini-json-mode')?.checked || false;
+            } else if (providerName === 'mistral') {
+                metadata.base_url = document.getElementById('settings-mistral-base-url')?.value || 'https://api.mistral.ai/v1';
+                metadata.default_model = document.getElementById('settings-mistral-default-model')?.value || 'mistral-small-latest';
+                metadata.timeout = parseInt(document.getElementById('settings-mistral-timeout')?.value) || 30;
+                metadata.max_retries = parseInt(document.getElementById('settings-mistral-max-retries')?.value) || 3;
+                metadata.rate_limit_delay = parseFloat(document.getElementById('settings-mistral-rate-limit-delay')?.value) || 0.1;
+                metadata.prompt_mode = document.getElementById('settings-mistral-prompt-mode')?.value || 'standard';
+            } else if (providerName === 'openai') {
+                metadata.base_url = document.getElementById('settings-openai-base-url')?.value || 'https://api.openai.com/v1';
+                metadata.default_model = document.getElementById('settings-openai-default-model')?.value || 'gpt-3.5-turbo';
+                metadata.temperature = parseFloat(document.getElementById('settings-openai-temperature')?.value) || 0.7;
+                metadata.max_retries = parseInt(document.getElementById('settings-openai-max-retries')?.value) || 5;
+            } else if (providerName === 'anthropic') {
+                metadata.default_model = document.getElementById('settings-anthropic-default-model')?.value || 'claude-3-sonnet-20240229';
+                metadata.temperature = parseFloat(document.getElementById('settings-anthropic-temperature')?.value) || 0.7;
+                metadata.max_tokens = parseInt(document.getElementById('settings-anthropic-max-tokens')?.value) || 4096;
+                metadata.max_retries = parseInt(document.getElementById('settings-anthropic-max-retries')?.value) || 5;
+            } else if (providerName === 'together') {
+                metadata.base_url = document.getElementById('settings-together-base-url')?.value || 'https://api.together.xyz/v1';
+                metadata.default_model = document.getElementById('settings-together-default-model')?.value || '';
+            } else {
+                // Generic provider settings
+                metadata.base_url = document.getElementById('settings-custom-base-url')?.value || '';
+                metadata.default_model = document.getElementById('settings-custom-default-model')?.value || '';
+                metadata.timeout = parseInt(document.getElementById('settings-custom-timeout')?.value) || 30;
+            }
+            
+            // Update provider registry with metadata
+            // Note: We'll need to add an endpoint to update provider metadata
+            // For now, we'll save via the registry update endpoint
+            await sendRequest(`/api/llm/providers/${providerName}/rate-limits`, 'POST', {
+                rpm: rateLimitRpm,
+                tpm: rateLimitTpm
+            });
+            
+            // Enable/disable provider
+            if (status === 'enabled') {
+                await sendRequest(`/api/llm/providers/${providerName}/enable`, 'POST');
+            } else {
+                await sendRequest(`/api/llm/providers/${providerName}/disable`, 'POST');
+            }
+            
+            // Save metadata
+            await sendRequest(`/api/llm/providers/${providerName}/metadata`, 'POST', metadata);
+            
+            addLog(`Provider ${providerName} settings saved successfully`, 'SUCCESS');
+            closeProviderSettings();
+            await loadAPIProviders(); // Refresh the list
+        } catch (error) {
+            addLog(`Failed to save provider settings: ${error.message}`, 'ERROR');
+        }
+    }
+    
+    function closeProviderSettings() {
+        const modal = document.getElementById('api-provider-settings-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+    
+    async function testOllamaFromSettings() {
+        const baseUrl = document.getElementById('settings-ollama-base-url')?.value;
+        if (!baseUrl) {
+            alert('Please enter a base URL');
+            return;
+        }
+        
+        try {
+            const result = await sendRequest(`/api/llm/ollama/connection?base_url=${encodeURIComponent(baseUrl)}`);
+            if (result.success) {
+                alert('Ollama connection successful!');
+            } else {
+                alert('Ollama connection failed');
+            }
+        } catch (error) {
+            alert(`Connection test failed: ${error.message}`);
+        }
+    }
+    
+    // Make functions globally accessible
+    window.useDetectedProvider = useDetectedProvider;
+    window.showProviderSettings = showProviderSettings;
+    window.saveProviderSettings = saveProviderSettings;
+    window.closeProviderSettings = closeProviderSettings;
+    window.testOllamaFromSettings = testOllamaFromSettings;
+
+    async function loadAPIProviders() {
+        try {
+            const providersResponse = await sendRequest('/api/llm/providers');
+            const registryResponse = await sendRequest('/api/llm/providers/registry');
+            
+            displayAPIProviders(providersResponse.providers || {}, registryResponse.providers || []);
+        } catch (error) {
+            addLog(`Failed to load API providers: ${error.message}`, 'ERROR');
+            console.error('Error loading API providers:', error);
+        }
+    }
+
+    function displayAPIProviders(providers, registryProviders) {
+        const providersList = document.getElementById('api-providers-list');
+        if (!providersList) return;
+
+        providersList.innerHTML = '';
+
+        if (Object.keys(providers).length === 0 && registryProviders.length === 0) {
+            providersList.innerHTML = '<p>No API providers found. Scan the API folder or add a new provider.</p>';
+            return;
+        }
+
+        // Display providers from registry
+        registryProviders.forEach(provider => {
+            const providerCard = createProviderCard(provider, providers[provider.name]);
+            providersList.appendChild(providerCard);
+        });
+
+        // Display providers not in registry but in providers list
+        Object.keys(providers).forEach(providerName => {
+            if (!registryProviders.find(p => p.name === providerName)) {
+                const providerCard = createProviderCard({
+                    name: providerName,
+                    display_name: providerName,
+                    status: providers[providerName].status || 'disabled',
+                    enabled: providers[providerName].enabled || false
+                }, providers[providerName]);
+                providersList.appendChild(providerCard);
+            }
+        });
+    }
+
+    function createProviderCard(provider, providerDetails) {
+        const card = document.createElement('div');
+        card.className = 'api-provider-card clickable-card';
+        card.setAttribute('data-provider-name', provider.name);
+        card.style.cursor = 'pointer';
+        
+        card.innerHTML = `
+            <div class="provider-header">
+                <h4>${provider.display_name || provider.name}</h4>
+                <span class="provider-status ${provider.status || 'disabled'}">${provider.status || 'disabled'}</span>
+            </div>
+            <div class="provider-info">
+                <div class="info-item">
+                    <span class="info-label">Name:</span>
+                    <span class="info-value">${provider.name}</span>
+                </div>
+                ${provider.module_path ? `
+                <div class="info-item">
+                    <span class="info-label">Module:</span>
+                    <span class="info-value">${provider.module_path}</span>
+                </div>
+                ` : ''}
+                ${providerDetails ? `
+                <div class="info-item">
+                    <span class="info-label">API Key:</span>
+                    <span class="info-value">${providerDetails.api_key_masked || 'Not set'}</span>
+                </div>
+                ` : ''}
+            </div>
+            <div class="provider-actions">
+                <button class="action-btn" onclick="event.stopPropagation(); showProviderSettings('${provider.name}')">⚙️ Settings</button>
+                <button class="action-btn" onclick="event.stopPropagation(); showProviderDetails('${provider.name}')">Details</button>
+                <button class="action-btn" onclick="event.stopPropagation(); showProviderModels('${provider.name}')">Models</button>
+                <button class="action-btn" onclick="event.stopPropagation(); testProvider('${provider.name}')">Test</button>
+                <button class="action-btn danger" onclick="event.stopPropagation(); removeProvider('${provider.name}')">Remove</button>
+            </div>
+        `;
+        
+        // Add click handler to open settings
+        card.addEventListener('click', (e) => {
+            // Don't trigger if clicking on buttons or their children
+            if (!e.target.closest('.provider-actions') && !e.target.closest('button')) {
+                showProviderSettings(provider.name);
+            }
+        });
+        
+        return card;
+    }
+
+    async function showProviderDetails(providerName) {
+        try {
+            const providers = await sendRequest('/api/llm/providers');
+            const registry = await sendRequest('/api/llm/providers/registry');
+            const metrics = await sendRequest(`/api/llm/providers/${providerName}/metrics`).catch(() => null);
+
+            const provider = providers.providers[providerName];
+            const registryProvider = registry.providers.find(p => p.name === providerName);
+
+            const modal = document.getElementById('api-provider-details-modal');
+            const title = document.getElementById('api-provider-details-title');
+            const content = document.getElementById('api-provider-details-content');
+
+            title.textContent = `${providerName} - Details`;
+
+            let html = `
+                <div class="provider-details">
+                    <h4>Configuration</h4>
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Display Name:</span>
+                            <span class="detail-value">${registryProvider?.display_name || providerName}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Module Path:</span>
+                            <span class="detail-value">${registryProvider?.module_path || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Factory Function:</span>
+                            <span class="detail-value">${registryProvider?.factory_function || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Status:</span>
+                            <span class="detail-value">${provider?.status || 'disabled'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Enabled:</span>
+                            <span class="detail-value">${provider?.enabled ? 'Yes' : 'No'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Requires API Key:</span>
+                            <span class="detail-value">${registryProvider?.requires_api_key ? 'Yes' : 'No'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Requires Base URL:</span>
+                            <span class="detail-value">${registryProvider?.requires_base_url ? 'Yes' : 'No'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Rate Limit (RPM):</span>
+                            <span class="detail-value">${registryProvider?.default_rate_limit_rpm || 60}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Rate Limit (TPM):</span>
+                            <span class="detail-value">${registryProvider?.default_rate_limit_tpm || 100000}</span>
+                        </div>
+                    </div>
+            `;
+
+            if (metrics) {
+                html += `
+                    <h4>Usage Metrics</h4>
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Total Requests:</span>
+                            <span class="detail-value">${metrics.total_requests || 0}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Successful:</span>
+                            <span class="detail-value">${metrics.successful_requests || 0}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Failed:</span>
+                            <span class="detail-value">${metrics.failed_requests || 0}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Total Tokens:</span>
+                            <span class="detail-value">${metrics.total_tokens || 0}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+            content.innerHTML = html;
+            modal.style.display = 'block';
+        } catch (error) {
+            addLog(`Failed to load provider details: ${error.message}`, 'ERROR');
+        }
+    }
+
+    async function showProviderModels(providerName) {
+        try {
+            let models = [];
+            
+            if (providerName === 'ollama') {
+                const response = await sendRequest('/api/llm/ollama/models');
+                models = response.models || [];
+            } else {
+                // For other providers, try to get models from model registry
+                const modelInfo = await sendRequest('/api/llm/model-selection/info').catch(() => null);
+                if (modelInfo && modelInfo.providers) {
+                    const providerInfo = modelInfo.providers.find(p => p.name === providerName);
+                    if (providerInfo && providerInfo.models) {
+                        models = providerInfo.models;
+                    }
+                }
+            }
+
+            const modal = document.getElementById('api-provider-details-modal');
+            const title = document.getElementById('api-provider-details-title');
+            const content = document.getElementById('api-provider-details-content');
+
+            title.textContent = `${providerName} - Available Models`;
+            
+            if (models.length === 0) {
+                content.innerHTML = '<p>No models found for this provider. The provider may need to be configured or the API may not support model listing.</p>';
+            } else {
+                let html = '<div class="models-list"><h4>Available Models</h4><ul>';
+                models.forEach(model => {
+                    const modelId = model.id || model.name || model;
+                    html += `<li class="model-item">
+                        <span class="model-name">${modelId}</span>
+                        ${model.object ? `<span class="model-type">${model.object}</span>` : ''}
+                    </li>`;
+                });
+                html += '</ul></div>';
+                content.innerHTML = html;
+            }
+            
+            modal.style.display = 'block';
+        } catch (error) {
+            addLog(`Failed to load provider models: ${error.message}`, 'ERROR');
+        }
+    }
+
+    async function testProvider(providerName) {
+        try {
+            addLog(`Testing provider: ${providerName}...`, 'INFO');
+            const result = await sendRequest(`/api/llm/providers/${providerName}/test`, 'POST');
+            
+            if (result.success) {
+                addLog(`Provider ${providerName} test successful!`, 'SUCCESS');
+                alert(`Provider test successful!\n\n${JSON.stringify(result, null, 2)}`);
+            } else {
+                addLog(`Provider ${providerName} test failed: ${result.error || 'Unknown error'}`, 'ERROR');
+                alert(`Provider test failed:\n\n${result.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            addLog(`Failed to test provider: ${error.message}`, 'ERROR');
+            alert(`Failed to test provider: ${error.message}`);
+        }
+    }
+
+    async function removeProvider(providerName) {
+        if (!confirm(`Are you sure you want to remove provider "${providerName}"? This will unregister it from the system.`)) {
+            return;
+        }
+
+        try {
+            const result = await sendRequest(`/api/llm/providers/registry/${providerName}`, 'DELETE');
+            
+            if (result.success) {
+                addLog(`Provider ${providerName} removed successfully`, 'SUCCESS');
+                await loadAPIProviders();
+            } else {
+                addLog(`Failed to remove provider: ${result.error || 'Unknown error'}`, 'ERROR');
+            }
+        } catch (error) {
+            addLog(`Failed to remove provider: ${error.message}`, 'ERROR');
+        }
+    }
+
+    async function scanAPIFolder() {
+        try {
+            addLog('Scanning API folder for providers...', 'INFO');
+            // This would require a backend endpoint to scan the api folder
+            // For now, just refresh the providers list
+            await loadAPIProviders();
+            addLog('API folder scan complete', 'SUCCESS');
+        } catch (error) {
+            addLog(`Failed to scan API folder: ${error.message}`, 'ERROR');
+        }
+    }
+
+    async function addNewAPIProvider() {
+        const name = document.getElementById('new-provider-name').value.trim();
+        const displayName = document.getElementById('new-provider-display-name').value.trim();
+        const modulePath = document.getElementById('new-provider-module-path').value.trim();
+        const factoryFunction = document.getElementById('new-provider-factory-function').value.trim();
+        const apiKeyEnv = document.getElementById('new-provider-api-key-env').value.trim();
+        const baseUrlEnv = document.getElementById('new-provider-base-url-env').value.trim();
+        const requiresApiKey = document.getElementById('new-provider-requires-api-key').checked;
+        const requiresBaseUrl = document.getElementById('new-provider-requires-base-url').checked;
+        const rateLimitRpm = parseInt(document.getElementById('new-provider-rate-limit-rpm').value) || 60;
+        const rateLimitTpm = parseInt(document.getElementById('new-provider-rate-limit-tpm').value) || 100000;
+
+        if (!name || !displayName || !modulePath || !factoryFunction) {
+            alert('Please fill in all required fields (Name, Display Name, Module Path, Factory Function)');
+            return;
+        }
+
+        try {
+            const result = await sendRequest('/api/llm/providers/registry/register', 'POST', {
+                name,
+                display_name: displayName,
+                module_path: modulePath,
+                factory_function: factoryFunction,
+                api_key_env_var: apiKeyEnv || null,
+                base_url_env_var: baseUrlEnv || null,
+                requires_api_key: requiresApiKey,
+                requires_base_url: requiresBaseUrl,
+                default_rate_limit_rpm: rateLimitRpm,
+                default_rate_limit_tpm: rateLimitTpm
+            });
+
+            if (result.success) {
+                addLog(`Provider ${name} registered successfully`, 'SUCCESS');
+                // Clear form
+                document.getElementById('new-provider-name').value = '';
+                document.getElementById('new-provider-display-name').value = '';
+                document.getElementById('new-provider-module-path').value = '';
+                document.getElementById('new-provider-factory-function').value = '';
+                document.getElementById('new-provider-api-key-env').value = '';
+                document.getElementById('new-provider-base-url-env').value = '';
+                await loadAPIProviders();
+            } else {
+                addLog(`Failed to register provider: ${result.error || 'Unknown error'}`, 'ERROR');
+            }
+        } catch (error) {
+            addLog(`Failed to register provider: ${error.message}`, 'ERROR');
+        }
+    }
+
+    // Make functions globally accessible
+    window.showProviderDetails = showProviderDetails;
+    window.showProviderModels = showProviderModels;
+    window.testProvider = testProvider;
+    window.removeProvider = removeProvider;
 
     function displayConfig(config) {
         configDisplay.innerHTML = config ? 
@@ -5209,18 +6900,85 @@ ${logContent}`;
         // Workflow highlights are triggered by actual agent activities
     }
 
+    /**
+     * Update specific agent UI elements based on activity data.
+     * Called when new activity is received from the canonical endpoint.
+     */
+    function updateAgentUIElement(agentName, activity) {
+        // Map agent names to their UI element IDs
+        const agentUIMap = {
+            'BDI Agent': { indicator: 'bdi-indicator', activity: 'bdi-activity' },
+            'AGInt Core': { indicator: 'agint-indicator', activity: 'agint-activity' },
+            'Simple Coder': { indicator: 'simple-coder-indicator', activity: 'simple-coder-activity' },
+            'Coordinator Agent': { indicator: 'coordinator-indicator', activity: 'coordinator-activity' },
+            'Coordinator': { indicator: 'coordinator-indicator', activity: 'coordinator-activity' },
+            'MastermindAgent': { indicator: 'mastermind-indicator', activity: 'mastermind-activity' },
+            'Mastermind': { indicator: 'mastermind-indicator', activity: 'mastermind-activity' },
+            'Resource Monitor': { indicator: 'resource-monitor-indicator', activity: 'resource-monitor-activity' }
+        };
+
+        const uiElements = agentUIMap[agentName];
+        if (uiElements) {
+            // Update activity text
+            const activityElement = document.getElementById(uiElements.activity);
+            if (activityElement) {
+                activityElement.textContent = activity.message || 'Active';
+            }
+
+            // Update status indicator based on activity type
+            const indicatorElement = document.getElementById(uiElements.indicator);
+            if (indicatorElement) {
+                const statusClass = activity.type === 'error' ? 'error' :
+                                   activity.type === 'warning' ? 'warning' :
+                                   activity.type === 'success' ? 'active' : 'active';
+                indicatorElement.className = `agent-status-indicator ${statusClass}`;
+            }
+        }
+
+        // Update workflow node if this agent is part of the workflow visualization
+        updateWorkflowNode(agentName, activity.message, activity.type);
+    }
+
+    /**
+     * Update the workflow summary display with data from the canonical endpoint.
+     */
+    function updateWorkflowSummary(summary) {
+        if (!summary) return;
+
+        // Update active agents count if element exists
+        const agentCountElement = document.getElementById('active-agent-count');
+        if (agentCountElement && summary.active_agents) {
+            agentCountElement.textContent = summary.active_agents.length;
+        }
+
+        // Update workflow status indicator if element exists
+        const workflowStatusElement = document.getElementById('workflow-status');
+        if (workflowStatusElement && summary.active_workflows) {
+            workflowStatusElement.textContent = summary.active_workflows.length > 0 ? 'Active' : 'Idle';
+        }
+    }
+
+    /**
+     * Load initial agent activity from the canonical endpoint.
+     * Uses /agents/activity as the single source of truth.
+     */
     async function loadInitialAgentActivity() {
         try {
-            const response = await fetch(`${apiUrl}/core/agent-activity`);
+            const response = await fetch(`${apiUrl}/agents/activity`);
             if (response.ok) {
                 const data = await response.json();
                 if (data && data.activities) {
-                    // Add initial activities
+                    // Add initial activities (most recent 5)
                     data.activities.slice(0, 5).forEach(activity => {
                         const activityKey = `${activity.timestamp}-${activity.agent}-${activity.message}`;
                         if (!seenActivities.has(activityKey)) {
                             seenActivities.add(activityKey);
-                            addAgentActivity(activity.agent, activity.message, activity.type || 'info');
+                            addAgentActivity(
+                                activity.agent || 'System',
+                                activity.message || 'Activity recorded',
+                                activity.type || 'info',
+                                activity.details
+                            );
                         }
                     });
                 }
@@ -5230,117 +6988,52 @@ ${logContent}`;
         }
     }
 
+    /**
+     * Start consolidated agent activity monitoring.
+     * Uses single /agents/activity endpoint instead of multiple fallback endpoints.
+     * Polling interval: 3 seconds for activities, 10 seconds for resources.
+     */
     function startAgentActivityMonitoring() {
-        // Fetch REAL agent activity from mindX system
+        // Main activity monitoring - uses canonical /agents/activity endpoint
         setInterval(async () => {
             if (!activityPaused) {
                 try {
-                    // Try multiple endpoints to get real agent activity
-                    const endpoints = [
-                        '/agents/real-time-activity',
-                        '/core/agent-activity',
-                        '/orchestration/coordinator/activity',
-                        '/agents/activity',
-                        '/system/agent-activity',
-                        '/bdi/status',
-                        '/simple-coder/status'
-                    ];
-                    
-                    let activityFound = false;
-                    for (const endpoint of endpoints) {
-                        try {
-                            const response = await fetch(`${apiUrl}${endpoint}`);
-                            if (response.ok) {
-                                const data = await response.json();
-                                
-                                // Handle different response formats
-                                if (data && data.activities) {
-                                    // Standard activities format
-                                    data.activities.forEach(activity => {
-                                        const activityKey = `${activity.timestamp || Date.now()}-${activity.agent || activity.source || 'Unknown'}-${activity.message || activity.text || activity.content}`;
-                                        if (!seenActivities.has(activityKey)) {
-                                            seenActivities.add(activityKey);
-                                            addAgentActivity(
-                                                activity.agent || activity.source || 'System', 
-                                                activity.message || activity.text || activity.content, 
-                                                activity.type || activity.level || 'info',
-                                                activity.details
-                                            );
-                                        }
-                                    });
-                                    activityFound = true;
-                                } else if (data && data.status) {
-                                    // Status endpoint - convert to activity
-                                    const agentName = endpoint.includes('bdi') ? 'BDI Agent' : 
-                                                    endpoint.includes('simple-coder') ? 'Simple Coder' : 
-                                                    endpoint.includes('coordinator') ? 'Coordinator' : 'System';
-                                    
-                                    const activityKey = `${Date.now()}-${agentName}-${data.status}`;
-                                    if (!seenActivities.has(activityKey)) {
-                                        seenActivities.add(activityKey);
-                                        addAgentActivity(agentName, `Status: ${data.status}`, 'info', data);
-                                    }
-                                    activityFound = true;
-                                } else if (data && (data.activity || data.logs)) {
-                                    // Alternative activity format
-                                    const activities = data.activity || data.logs || [];
-                                    activities.forEach(activity => {
-                                        const activityKey = `${activity.timestamp || Date.now()}-${activity.agent || activity.source || 'Unknown'}-${activity.message || activity.text || activity.content}`;
-                                        if (!seenActivities.has(activityKey)) {
-                                            seenActivities.add(activityKey);
-                                            addAgentActivity(
-                                                activity.agent || activity.source || 'System', 
-                                                activity.message || activity.text || activity.content, 
-                                                activity.type || activity.level || 'info',
-                                                activity.details
-                                            );
-                                        }
-                                    });
-                                    activityFound = true;
+                    const response = await fetch(`${apiUrl}/agents/activity`);
+                    if (response.ok) {
+                        const data = await response.json();
+
+                        if (data && data.activities && data.activities.length > 0) {
+                            // Process activities from canonical endpoint
+                            data.activities.forEach(activity => {
+                                const timestamp = activity.timestamp || Date.now();
+                                const agent = activity.agent || 'System';
+                                const message = activity.message || 'Activity recorded';
+                                const activityKey = `${timestamp}-${agent}-${message}`;
+
+                                if (!seenActivities.has(activityKey)) {
+                                    seenActivities.add(activityKey);
+                                    addAgentActivity(agent, message, activity.type || 'info', activity.details);
+
+                                    // Update specific agent UI elements if available
+                                    updateAgentUIElement(agent, activity);
                                 }
-                                
-                                if (activityFound) break;
+                            });
+
+                            // Update workflow summary if available
+                            if (data.workflow_summary) {
+                                updateWorkflowSummary(data.workflow_summary);
                             }
-                        } catch (e) {
-                            // Continue to next endpoint
-                            continue;
                         }
-                    }
-                    
-                    if (!activityFound) {
-                        // Add test activities for BDI and Simple Coder if no real activity found
-                        const testActivities = [
-                            {
-                                agent: 'BDI Agent',
-                                message: 'BDI reasoning: Analyzing system state and selecting optimal agent',
-                                type: 'info'
-                            },
-                            {
-                                agent: 'Simple Coder',
-                                message: 'Simple Coder: Processing code generation requests',
-                                type: 'info'
-                            }
-                        ];
-                        
-                        testActivities.forEach(activity => {
-                            const activityKey = `${Date.now()}-${activity.agent}-${activity.message}`;
-                            if (!seenActivities.has(activityKey)) {
-                                seenActivities.add(activityKey);
-                                addAgentActivity(activity.agent, activity.message, activity.type);
-                            }
-                        });
-                        
-                        // Only show system status if no real activity found
-                        addAgentActivity('System', 'Monitoring agent activities...', 'info');
+                    } else {
+                        console.log('Agent activity endpoint returned non-OK status:', response.status);
                     }
                 } catch (error) {
-                    console.log('Failed to fetch real agent activity:', error.message);
-                    addAgentActivity('System', `Activity monitoring error: ${error.message}`, 'error');
+                    console.log('Failed to fetch agent activity:', error.message);
                 }
             }
-        }, 3000); // Check every 3 seconds for real activity
-        
-        // Additional Simple Coder pending requests check
+        }, 3000); // Check every 3 seconds
+
+        // Simple Coder pending requests - separate endpoint for specific UI updates
         setInterval(async () => {
             if (!activityPaused) {
                 try {
@@ -5348,31 +7041,25 @@ ${logContent}`;
                     if (response.ok) {
                         const data = await response.json();
                         if (data && data.length > 0) {
+                            // Update Simple Coder UI elements
                             const requestsElement = document.getElementById('simple-coder-requests');
                             if (requestsElement) {
                                 requestsElement.textContent = data.length;
                             }
-                            
-                            // Update Simple Coder activity
+
                             const activityElement = document.getElementById('simple-coder-activity');
                             if (activityElement) {
                                 activityElement.textContent = `${data.length} pending requests awaiting approval`;
                             }
-                            
-                            // Add activity to log
-                            addAgentActivity('Simple Coder', `Generated ${data.length} pending update requests`, 'info', {
-                                pending_requests: data.length,
-                                requests: data.slice(0, 3)
-                            });
                         }
                     }
                 } catch (error) {
-                    console.log('Failed to fetch Simple Coder pending requests:', error.message);
+                    // Silent fail - this is a supplementary check
                 }
             }
-        }, 3000); // Check every 3 seconds for Simple Coder requests
-        
-        // Additional BDI Agent status check
+        }, 5000); // Check every 5 seconds for Simple Coder requests
+
+        // BDI status - for specific UI element updates
         setInterval(async () => {
             if (!activityPaused) {
                 try {
@@ -5380,47 +7067,18 @@ ${logContent}`;
                     if (response.ok) {
                         const data = await response.json();
                         if (data && data.status) {
-                            // Update BDI activity
+                            // Update BDI activity UI element
                             const activityElement = document.getElementById('bdi-activity');
                             if (activityElement) {
                                 activityElement.textContent = `BDI Status: ${data.status}`;
                             }
-                            
-                            // Add BDI activity to log
-                            addAgentActivity('BDI Agent', `BDI Status: ${data.status} - ${data.message || 'Active reasoning'}`,
-                                data.status === 'active' ? 'success' : 'info', {
-                                    beliefs: data.beliefs?.length || 0,
-                                    goals: data.goals?.length || 0,
-                                    plans: data.plans?.length || 0
-                                });
                         }
                     }
                 } catch (error) {
-                    console.log('Failed to fetch BDI status:', error.message);
+                    // Silent fail - this is a supplementary check
                 }
             }
         }, 5000); // Check every 5 seconds for BDI status
-        
-        // BDI Agent specific monitoring
-        setInterval(async () => {
-            if (!activityPaused) {
-                try {
-                    const response = await fetch(`${apiUrl}/bdi/status`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data && data.current_directive && data.current_directive !== 'None') {
-                            addAgentActivity('BDI Agent', `Processing directive: ${data.current_directive}`, 'info', {
-                                chosen_agent: data.chosen_agent,
-                                reasoning: data.reasoning_history[data.reasoning_history.length - 1]?.reasoning || 'No reasoning available',
-                                beliefs: data.beliefs
-                            });
-                        }
-                    }
-                } catch (error) {
-                    console.log('Failed to fetch BDI status:', error.message);
-                }
-            }
-        }, 5000); // Check every 5 seconds for BDI activity
         
         // Resource Monitor specific monitoring
         setInterval(async () => {
@@ -6754,23 +8412,20 @@ function ensureUniqueLogin() {
 function updateUIForAuthenticatedUser(user, walletAddress) {
     // Enable authenticated features
     console.log('Updating UI for authenticated user:', user, walletAddress);
-    
-    // Update wallet address display in header
+
+    // Update wallet address display in header - show full address
     if (walletAddress) {
         const walletElement = document.getElementById('crossmintWalletAddress');
         if (walletElement) {
-            // Show full wallet address with copy functionality
-            walletElement.innerHTML = `
-                <span class="user-wallet" onclick="copyWalletAddress('${walletAddress}')" title="Click to copy full address">                                                                 
-                    ${walletAddress}
-                </span>
-            `;
+            walletElement.textContent = walletAddress;
+            walletElement.setAttribute('data-full-address', walletAddress);
+            walletElement.setAttribute('title', 'Your receive address');
         }
     }
-    
+
     // Show user-specific information
     console.log('User authenticated:', user);
-    
+
     // Trigger our authentication system
     if (typeof handleAuthenticationSuccess === 'function') {
         handleAuthenticationSuccess({
@@ -7068,18 +8723,16 @@ function showCrossMintLoginButton() {
 function showCrossMintUserInfo() {
     const loginBtn = document.getElementById('crossmintLoginBtn');
     const userInfo = document.getElementById('crossmintUserInfo');
-    const walletAddress = document.getElementById('crossmintWalletAddress');
-    
+    const walletElement = document.getElementById('crossmintWalletAddress');
+
     if (loginBtn) loginBtn.style.display = 'none';
-    if (userInfo) userInfo.style.display = 'block';
-    
-    if (walletAddress && window.CrossMintIntegration.getWalletAddress()) {
+    if (userInfo) userInfo.style.display = 'flex';
+
+    if (walletElement && window.CrossMintIntegration.getWalletAddress()) {
         const address = window.CrossMintIntegration.getWalletAddress();
-        walletAddress.innerHTML = `
-            <span class="user-wallet" onclick="copyWalletAddress('${address}')" title="Click to copy full address">
-                ${address}
-            </span>
-        `;
+        walletElement.textContent = address;
+        walletElement.setAttribute('data-full-address', address);
+        walletElement.setAttribute('title', 'Your receive address');
     }
 }
 
@@ -7996,9 +9649,12 @@ function showMainApplication() {
 
 // Update wallet display
 function updateWalletDisplay() {
-    const walletAddressElement = document.getElementById('crossmintWalletAddress');
-    if (walletAddressElement && authenticationState.walletAddress) {
-        walletAddressElement.textContent = authenticationState.walletAddress;
+    const walletElement = document.getElementById('crossmintWalletAddress');
+    if (walletElement && authenticationState.walletAddress) {
+        const address = authenticationState.walletAddress;
+        walletElement.textContent = address;
+        walletElement.setAttribute('data-full-address', address);
+        walletElement.setAttribute('title', 'Your receive address');
     }
 }
 

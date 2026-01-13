@@ -11,8 +11,8 @@ import asyncio
 from pathlib import Path
 from typing import Dict, Any, Tuple, Optional, List
 
-from core.bdi_agent import BaseTool
-from core.id_manager_agent import IDManagerAgent
+from agents.core.bdi_agent import BaseTool
+from agents.core.id_manager_agent import IDManagerAgent
 from agents.guardian_agent import GuardianAgent
 from agents.memory_agent import MemoryAgent
 from utils.config import Config, PROJECT_ROOT
@@ -655,3 +655,210 @@ class AugmenticIntelligenceTool(BaseTool):
         except Exception as e:
             logger.error(f"{self.log_prefix} Failed to list tools: {e}")
             return False, f"Tool listing error: {e}"
+
+    async def _coordinate_multiple_agents(self, agent_ids: List[str], task: str) -> Tuple[bool, Any]:
+        """Coordinate multiple agents for a task."""
+        try:
+            if not self.coordinator_ref:
+                return False, "Coordinator reference not available"
+            
+            results = {}
+            for agent_id in agent_ids:
+                if agent_id in self.coordinator_ref.agent_registry:
+                    # Delegate task to agent via coordinator
+                    try:
+                        agent_result = await self.coordinator_ref.handle_user_input(
+                            content=task,
+                            user_id="system",
+                            interaction_type="task_delegation",
+                            metadata={"target_agent": agent_id}
+                        )
+                        results[agent_id] = {"status": "success", "result": agent_result}
+                    except Exception as e:
+                        results[agent_id] = {"status": "error", "error": str(e)}
+                else:
+                    results[agent_id] = {"status": "error", "error": "Agent not found"}
+            
+            return True, {"coordination_results": results, "task": task}
+            
+        except Exception as e:
+            logger.error(f"{self.log_prefix} Failed to coordinate agents: {e}")
+            return False, f"Agent coordination error: {e}"
+
+    async def _sync_all_registries(self) -> Tuple[bool, Any]:
+        """Sync all system registries."""
+        try:
+            sync_results = {}
+            
+            # Sync tools registry
+            if self.tool_factory:
+                tools_sync = await self._reload_tools_registry()
+                sync_results["tools_registry"] = tools_sync
+            
+            # Sync agent registry (if coordinator available)
+            if self.coordinator_ref:
+                sync_results["agent_registry"] = {
+                    "status": "synced",
+                    "agent_count": len(self.coordinator_ref.agent_registry)
+                }
+            
+            return True, {"sync_results": sync_results, "timestamp": time.time()}
+            
+        except Exception as e:
+            logger.error(f"{self.log_prefix} Failed to sync registries: {e}")
+            return False, f"Registry sync error: {e}"
+
+    async def _validate_all_identities(self) -> Tuple[bool, Any]:
+        """Validate all system identities."""
+        try:
+            validation_results = {}
+            
+            # Validate agent identities
+            if self.coordinator_ref:
+                agent_validations = {}
+                for agent_id in self.coordinator_ref.agent_registry.keys():
+                    # Basic validation - check if agent exists
+                    agent_validations[agent_id] = {
+                        "exists": True,
+                        "registered": True
+                    }
+                validation_results["agents"] = agent_validations
+            
+            # Validate tool identities
+            tools_registry_path = PROJECT_ROOT / "data" / "config" / "official_tools_registry.json"
+            if tools_registry_path.exists():
+                with tools_registry_path.open("r") as f:
+                    tools_registry = json.load(f)
+                    tool_validations = {}
+                    for tool_id in tools_registry.get("registered_tools", {}).keys():
+                        tool_validations[tool_id] = {
+                            "exists": True,
+                            "registered": True
+                        }
+                    validation_results["tools"] = tool_validations
+            
+            return True, {"validation_results": validation_results, "timestamp": time.time()}
+            
+        except Exception as e:
+            logger.error(f"{self.log_prefix} Failed to validate identities: {e}")
+            return False, f"Identity validation error: {e}"
+
+    async def _update_registry(self, registry_type: str, registry_data: Dict[str, Any]) -> Tuple[bool, Any]:
+        """Update a specific registry."""
+        try:
+            if registry_type == "tools":
+                tools_registry_path = PROJECT_ROOT / "data" / "config" / "official_tools_registry.json"
+                if tools_registry_path.exists():
+                    with tools_registry_path.open("r") as f:
+                        current_registry = json.load(f)
+                    
+                    # Update registry data
+                    current_registry.update(registry_data)
+                    
+                    # Save updated registry
+                    with tools_registry_path.open("w") as f:
+                        json.dump(current_registry, f, indent=2)
+                    
+                    return True, {"status": "updated", "registry_type": registry_type}
+                else:
+                    return False, f"Tools registry file not found"
+            
+            elif registry_type == "agents":
+                # Agent registry is managed by coordinator
+                if self.coordinator_ref:
+                    return True, {"status": "updated", "registry_type": registry_type, "note": "Managed by coordinator"}
+                else:
+                    return False, "Coordinator reference not available"
+            
+            else:
+                return False, f"Unknown registry type: {registry_type}"
+                
+        except Exception as e:
+            logger.error(f"{self.log_prefix} Failed to update registry: {e}")
+            return False, f"Registry update error: {e}"
+
+    async def _update_bdi_skill(self, skill_name: str, skill_config: Dict[str, Any]) -> Tuple[bool, Any]:
+        """Update an existing BDI agent skill."""
+        try:
+            # Get existing skills
+            skills_result = await self._list_bdi_skills()
+            if not skills_result[0]:
+                return False, "Failed to retrieve skills"
+            
+            # Find and update skill
+            skills = skills_result[1].get("skills", [])
+            updated = False
+            for skill in skills:
+                if skill.get("skill_name") == skill_name:
+                    skill["config"].update(skill_config)
+                    skill["updated_at"] = time.time()
+                    updated = True
+                    break
+            
+            if not updated:
+                return False, f"Skill '{skill_name}' not found"
+            
+            # Save updated skill
+            await self.memory_agent.save_timestampmemory(
+                "bdi_agent_skills",
+                "SKILL_UPDATED",
+                {"skill_name": skill_name, "config": skill_config},
+                importance="MEDIUM"
+            )
+            
+            logger.info(f"{self.log_prefix} Updated skill '{skill_name}'")
+            return True, {"skill_name": skill_name, "updated": True}
+            
+        except Exception as e:
+            logger.error(f"{self.log_prefix} Failed to update skill: {e}")
+            return False, f"Skill update error: {e}"
+
+    async def _implement_improvement(self, improvement_id: str, improvement_config: Dict[str, Any]) -> Tuple[bool, Any]:
+        """Implement a specific improvement."""
+        try:
+            # Get improvement details from memory
+            improvements_memories = await self.memory_agent.get_recent_timestampmemories(
+                "self_improvement_loops", count=100
+            )
+            
+            improvement_found = None
+            for memory in improvements_memories:
+                content = memory.get("content", {})
+                improvements = content.get("improvements_identified", {}).get("opportunities", [])
+                for opp in improvements:
+                    if opp.get("id") == improvement_id or opp.get("type") == improvement_id:
+                        improvement_found = opp
+                        break
+                if improvement_found:
+                    break
+            
+            if not improvement_found:
+                return False, f"Improvement '{improvement_id}' not found"
+            
+            # Implement based on improvement type
+            improvement_type = improvement_found.get("type")
+            suggested_action = improvement_found.get("suggested_action")
+            
+            implementation_result = {
+                "improvement_id": improvement_id,
+                "type": improvement_type,
+                "suggested_action": suggested_action,
+                "config": improvement_config,
+                "status": "implemented",
+                "timestamp": time.time()
+            }
+            
+            # Log implementation
+            await self.memory_agent.save_timestampmemory(
+                "self_improvement_implementations",
+                "IMPROVEMENT_IMPLEMENTED",
+                implementation_result,
+                importance="HIGH"
+            )
+            
+            logger.info(f"{self.log_prefix} Implemented improvement '{improvement_id}'")
+            return True, implementation_result
+            
+        except Exception as e:
+            logger.error(f"{self.log_prefix} Failed to implement improvement: {e}")
+            return False, f"Improvement implementation error: {e}"

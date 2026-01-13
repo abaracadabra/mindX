@@ -14,7 +14,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from collections import defaultdict, Counter
 import re
 
-from core.bdi_agent import BaseTool
+from agents.core.bdi_agent import BaseTool
 from agents.memory_agent import MemoryAgent
 from utils.config import Config, PROJECT_ROOT
 from utils.logging_config import get_logger

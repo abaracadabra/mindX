@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Dict, Any, Tuple
 
-from core.bdi_agent import BaseTool
+from agents.core.bdi_agent import BaseTool
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)

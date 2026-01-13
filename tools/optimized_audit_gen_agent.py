@@ -21,7 +21,7 @@ except ImportError:
 try:
     from utils.config import Config, PROJECT_ROOT
     from utils.logging_config import get_logger
-    from core.belief_system import BeliefSystem, BeliefSource
+    from agents.core.belief_system import BeliefSystem, BeliefSource
     from agents.memory_agent import MemoryAgent
     logger = get_logger(__name__)
 except ImportError as e:
@@ -33,6 +33,9 @@ except ImportError as e:
     class Config:
         def get(self, key, default=None):
             return default
+    BeliefSystem = None
+    BeliefSource = None
+    MemoryAgent = None
 
 
 class AuditMetrics:

@@ -24,7 +24,7 @@ from utils.config import Config
 from utils.logging_config import get_logger
 from llm.llm_factory import create_llm_handler
 from tools.summarization_tool import SummarizationTool
-from tools.base_gen_agent import BaseGenAgent
+from agents.base_gen_agent import BaseGenAgent
 from agents.memory_agent import MemoryAgent
 
 logger = get_logger(__name__)

@@ -18,7 +18,7 @@ from llm.llm_factory import create_llm_handler
 from llm.model_registry import get_model_registry_async
 from llm.model_selector import TaskType
 from llm.ollama_handler import OllamaHandler
-from monitoring.performance_monitor import PerformanceMonitor
+from agents.monitoring.performance_monitor import PerformanceMonitor
 from api.provider_registry import get_provider_registry, ProviderRegistry
 
 logger = get_logger(__name__)

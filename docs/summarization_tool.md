@@ -1,77 +1,269 @@
-# Summarization Tool (`summarization_tool.py`)
+# Summarization Tool Documentation
 
-## Introduction
+## Overview
 
-The `SummarizationTool` is a component within the MindX toolkit (Augmentic Project) designed to provide text summarization capabilities to other agents. It leverages a configured Large Language Model (LLM) to condense longer pieces of text into shorter summaries, taking into account optional topic context, desired length, and output format.
+The `SummarizationTool` provides intelligent text summarization capabilities using Large Language Models (LLMs). It enables mindX agents to condense large amounts of text into concise summaries while maintaining key information and context.
 
-## Explanation
+**File**: `tools/summarization_tool.py`  
+**Class**: `SummarizationTool`  
+**Version**: 1.0.0  
+**Status**: ✅ Active
 
-### Core Features
+## Architecture
 
-1.  **Initialization (`__init__`):**
-    *   Accepts an optional `Config` instance and an optional `LLMHandler` instance.
-    *   If no `LLMHandler` is provided, it creates its own by calling `create_llm_handler`. The LLM provider and model for this tool can be specifically configured in the global `Config` under `tools.summarization.llm.*`. If not specified, it falls back to the system's default LLM settings. This allows using a potentially different (e.g., more cost-effective or specialized for summarization) LLM for this tool than an agent's primary reasoning LLM.
+### Design Principles
 
-2.  **Main Execution Method (`async execute`):**
-    *   This is the primary interface for the tool. It takes the following arguments:
-        -   `text_to_summarize`: The main string content that needs summarization.
-        -   `topic_context` (Optional): A string providing context about the topic of the text, which can help the LLM generate a more relevant summary.
-        -   `max_summary_words` (Default: 150): An approximate target for the maximum number of words in the output summary.
-        -   `output_format` (Default: "paragraph"): Specifies the desired output format. Currently supports `"paragraph"` or `"bullet_points"`.
-        -   `temperature` (Optional): Allows overriding the default temperature for the LLM generation specifically for this summarization task.
-        -   `custom_instructions` (Optional): Allows passing additional, specific instructions to the LLM for this summarization task.
-    *   **Input Handling:** Checks for empty input text. It also implements a crude truncation for extremely long input texts (based on `tools.summarization.max_input_chars` config) to prevent exceeding LLM context limits, with a warning. (Note: True summarization of very long documents often requires more sophisticated techniques like iterative summarization or map-reduce style processing).
-    *   **Prompt Construction (`_build_summarization_prompt`):** Creates a detailed prompt for the LLM, incorporating the text, topic, length constraints, desired format, and any custom instructions.
-    *   **LLM Interaction:** Calls the `generate_text` method of its `LLMHandler` instance.
-    *   **Output:** Returns the generated summary string or an error message string if the process fails.
+1. **LLM-Powered**: Uses LLM for intelligent summarization
+2. **Configurable**: Supports various summary formats and lengths
+3. **Context-Aware**: Can incorporate topic context for better summaries
+4. **Error Handling**: Graceful handling of LLM failures
+5. **Input Truncation**: Handles very long texts intelligently
 
-3.  **Prompt Building (`_build_summarization_prompt`):**
-    *   This private method assembles the prompt, instructing the LLM on its role as a summarizer and providing all necessary constraints and the text itself.
+### Core Components
 
-4.  **Asynchronous Operation:** The `execute` method is `async` as it involves an `await`ed call to the `LLMHandler`.
-
-### Technical Details
-
--   **LLM Dependency:** Relies on an `LLMHandler` (from `mindx.llm.llm_factory`) for actual LLM communication.
--   **Configuration:** Uses `mindx.utils.config.Config` for settings like:
-    -   `tools.summarization.llm.provider` & `tools.summarization.llm.model`: To specify a particular LLM for summarization tasks.
-    -   `tools.summarization.llm.temperature`: Default temperature for summarization.
-    -   `tools.summarization.max_input_chars`: Limit for input text length before truncation.
--   **Error Handling:** Catches exceptions during LLM calls and returns error messages as strings.
+```python
+class SummarizationTool(BaseTool):
+    - llm_handler: LLMHandlerInterface - LLM for text generation
+    - config: Config - Configuration object
+    - logger: Logger - For operation logging
+```
 
 ## Usage
 
-The `SummarizationTool` would be instantiated and used by an agent that needs to condense text.
+### Basic Summarization
 
 ```python
-# Conceptual usage within an agent (e.g., BDIAgent or a research assistant agent)
-# from mindx.tools.summarization_tool import SummarizationTool
-# from mindx.llm.llm_factory import create_llm_handler # If providing a specific handler
-# from mindx.utils.config import Config
+from tools.summarization_tool import SummarizationTool
+from llm.llm_interface import LLMHandlerInterface
 
-# class MyResearchAgent:
-#     def __init__(self, config: Config, ...):
-#         self.config = config
-#         # Option 1: Tool creates its own handler based on config
-#         self.summarizer = SummarizationTool(config=self.config) 
-#         # Option 2: Provide a specific handler
-#         # specific_llm_for_summaries = create_llm_handler("ollama", "mistral")
-#         # self.summarizer_custom = SummarizationTool(config=self.config, llm_handler=specific_llm_for_summaries)
-#         # ...
+tool = SummarizationTool(
+    config=config,
+    llm_handler=llm_handler
+)
 
-#     async def process_long_document(self, document_text: str, document_topic: str):
-#         logger.info(f"Agent: Summarizing document on '{document_topic}'")
-        
-#         summary = await self.summarizer.execute(
-#             text_to_summarize=document_text,
-#             topic_context=document_topic,
-#             max_summary_words=200,
-#             output_format="bullet_points"
-#         )
-        
-#         if summary.startswith("Error:"):
-#             logger.error(f"Agent: Failed to summarize document: {summary}")
-#         else:
-#             logger.info(f"Agent: Generated Summary for '{document_topic}':\n{summary}")
-#             # Agent can now use this summary for further reasoning or belief updates.
-#             # await self.belief_system.add_belief(f"summary.{document_topic}", summary, ...)
+# Summarize text
+summary = await tool.execute(
+    text_to_summarize="Long text content...",
+    max_summary_words=150
+)
+```
+
+### Advanced Usage
+
+```python
+# With topic context and custom format
+summary = await tool.execute(
+    text_to_summarize="Technical documentation...",
+    topic_context="Python async programming",
+    max_summary_words=200,
+    output_format="bullet_points",
+    temperature=0.3,
+    custom_instructions="Focus on key concepts and examples"
+)
+```
+
+## Parameters
+
+### Required Parameters
+
+- `text_to_summarize` (str): The text content to be summarized
+
+### Optional Parameters
+
+- `topic_context` (str): Context about the topic for better summarization
+- `max_summary_words` (int): Maximum words for summary (default: 150)
+- `output_format` (str): "paragraph" or "bullet_points" (default: "paragraph")
+- `temperature` (float): LLM generation temperature (default: from config)
+- `custom_instructions` (str): Additional instructions for the LLM
+
+## Output Formats
+
+### Paragraph Format
+
+Returns a coherent paragraph summary:
+```
+The text discusses the implementation of async programming in Python,
+focusing on asyncio and coroutines. Key concepts include event loops,
+awaitables, and concurrent execution patterns...
+```
+
+### Bullet Points Format
+
+Returns a bulleted list:
+```
+- Async programming enables concurrent execution in Python
+- asyncio provides the event loop and coroutine framework
+- Key concepts include awaitables and async/await syntax
+- Best practices involve proper error handling and resource management
+```
+
+## Features
+
+### 1. Intelligent Truncation
+
+For very long texts:
+- Truncates to configurable max length
+- Preserves beginning and end of text
+- Adds truncation indicator
+
+```python
+max_input_chars = self.config.get("tools.summarization.max_input_chars", 30000)
+if len(text_to_summarize) > max_input_chars:
+    text_to_summarize = (
+        text_to_summarize[:max_input_chars//2] + 
+        f"\n... (TEXT TRUNCATED DUE TO LENGTH) ...\n" + 
+        text_to_summarize[-(max_input_chars//2):]
+    )
+```
+
+### 2. Context-Aware Summarization
+
+Incorporates topic context for better summaries:
+```python
+if topic:
+    prompt_lines.append(f"The text is about: {topic}.")
+```
+
+### 3. Configurable Output
+
+Supports multiple output formats:
+- Paragraph summaries
+- Bullet point lists
+- Custom formats via instructions
+
+### 4. Token Estimation
+
+Estimates token requirements:
+```python
+max_tokens_for_summary = int(max_summary_words * 2.5)
+```
+
+## Configuration
+
+### Config Options
+
+```python
+tools.summarization.max_input_chars: 30000  # Max input text length
+tools.summarization.llm.temperature: 0.2   # Default temperature
+```
+
+## Limitations
+
+### Current Limitations
+
+1. **Single-Pass**: Doesn't use map-reduce for very long texts
+2. **No Multi-Document**: Cannot summarize multiple documents
+3. **No Extraction**: Doesn't extract key phrases or entities
+4. **No Comparison**: Cannot compare multiple summaries
+5. **Fixed Model**: Uses single LLM model
+
+### Recommended Improvements
+
+1. **Map-Reduce**: Support for very long texts using map-reduce
+2. **Multi-Document**: Summarize multiple related documents
+3. **Key Extraction**: Extract key phrases and entities
+4. **Summary Comparison**: Compare multiple summaries
+5. **Model Selection**: Support for different LLM models
+6. **Summary Caching**: Cache summaries for repeated queries
+7. **Quality Metrics**: Measure summary quality and completeness
+
+## Integration
+
+### With BDI Agents
+
+```python
+# In agent plan
+plan = [
+    {
+        "action": "summarize_text",
+        "text_to_summarize": long_text,
+        "max_summary_words": 200,
+        "output_format": "bullet_points"
+    }
+]
+```
+
+### With Other Tools
+
+The SummarizationTool can be used with:
+- **NoteTakingTool**: Summarize notes
+- **WebSearchTool**: Summarize search results
+- **BaseGenAgent**: Summarize codebase documentation
+
+## Examples
+
+### Summarize Documentation
+
+```python
+summary = await tool.execute(
+    text_to_summarize=documentation_text,
+    topic_context="API documentation",
+    max_summary_words=100
+)
+```
+
+### Create Bullet Summary
+
+```python
+summary = await tool.execute(
+    text_to_summarize=article_text,
+    output_format="bullet_points",
+    max_summary_words=50
+)
+```
+
+### Technical Summary
+
+```python
+summary = await tool.execute(
+    text_to_summarize=technical_doc,
+    topic_context="system architecture",
+    custom_instructions="Focus on technical details and implementation",
+    temperature=0.1  # Lower temperature for more factual summaries
+)
+```
+
+## Technical Details
+
+### Dependencies
+
+- `llm.llm_interface.LLMHandlerInterface`: LLM handler
+- `core.bdi_agent.BaseTool`: Base tool class
+- `utils.config.Config`: Configuration management
+
+### Prompt Construction
+
+```python
+prompt_lines = [
+    "You are an expert summarization AI...",
+    f"The text is about: {topic}.",
+    f"The summary should be approximately {max_words} words or less.",
+    "Focus on extracting the most critical information...",
+    "\nText to Summarize:\n---BEGIN TEXT---",
+    text,
+    "---END TEXT---\n\nConcise Summary:"
+]
+```
+
+### Error Handling
+
+```python
+try:
+    summary_result = await self.llm_handler.generate_text(...)
+    if summary_result and not summary_result.lower().startswith("error:"):
+        return summary_result.strip()
+    else:
+        return f"Error: LLM failed to generate summary - {summary_result}"
+except Exception as e:
+    return f"Error: Exception during summarization - {type(e).__name__}: {e}"
+```
+
+## Future Enhancements
+
+1. **Multi-Document Summarization**: Summarize multiple related documents
+2. **Abstractive vs Extractive**: Support both summarization approaches
+3. **Summary Quality Metrics**: Measure summary quality
+4. **Custom Templates**: Support for custom summary templates
+5. **Language Support**: Multi-language summarization
+6. **Domain-Specific**: Specialized summaries for different domains
+7. **Interactive Summarization**: Refine summaries based on feedback

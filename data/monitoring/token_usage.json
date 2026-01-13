@@ -1,0 +1,58 @@
+[
+  {
+    "timestamp": "2026-01-12T00:26:17.441516",
+    "provider": "gemini",
+    "model": "gemini-2.0-flash",
+    "input_tokens": 1500,
+    "output_tokens": 500,
+    "total_tokens": 2000,
+    "input_cost": 0.000112,
+    "output_cost": 0.00015,
+    "cost": 0.000262,
+    "operation_type": "chat",
+    "agent": "test_agent",
+    "request_id": "7fc98f12"
+  },
+  {
+    "timestamp": "2026-01-12T00:40:36.328463",
+    "provider": "mistral",
+    "model": "mistral-large",
+    "input_tokens": 3200,
+    "output_tokens": 1800,
+    "total_tokens": 5000,
+    "input_cost": 0.0008,
+    "output_cost": 0.00045,
+    "cost": 0.00125,
+    "operation_type": "reasoning",
+    "agent": "coordinator",
+    "request_id": "0989dbce"
+  },
+  {
+    "timestamp": "2026-01-12T00:40:36.357846",
+    "provider": "openai",
+    "model": "gpt-4-turbo",
+    "input_tokens": 2500,
+    "output_tokens": 900,
+    "total_tokens": 3400,
+    "input_cost": 0.075,
+    "output_cost": 0.054,
+    "cost": 0.129,
+    "operation_type": "planning",
+    "agent": "mastermind",
+    "request_id": "12501b06"
+  },
+  {
+    "timestamp": "2026-01-12T00:40:36.384345",
+    "provider": "gemini",
+    "model": "gemini-1.5-pro",
+    "input_tokens": 4000,
+    "output_tokens": 2000,
+    "total_tokens": 6000,
+    "input_cost": 0.0003,
+    "output_cost": 0.0006,
+    "cost": 0.0009,
+    "operation_type": "analysis",
+    "agent": "evolution_agent",
+    "request_id": "d7ccdf86"
+  }
+]

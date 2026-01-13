@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional, TYPE_CHECKING
 from utils.config import Config
 from utils.logging_config import get_logger
 from llm.llm_interface import LLMHandlerInterface
-from core.bdi_agent import BaseTool
+from agents.core.bdi_agent import BaseTool
 
 # Use TYPE_CHECKING to avoid circular import at runtime
 if TYPE_CHECKING:

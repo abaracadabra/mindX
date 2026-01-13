@@ -21,8 +21,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from utils.config import Config
 from utils.logging_config import get_logger
 from agents.memory_agent import MemoryAgent
-from monitoring.enhanced_monitoring_system import EnhancedMonitoringSystem, get_enhanced_monitoring_system
-from monitoring.monitoring_integration import IntegratedMonitoringManager, get_integrated_monitoring_manager
+from agents.monitoring.enhanced_monitoring_system import EnhancedMonitoringSystem, get_enhanced_monitoring_system
+from agents.monitoring.monitoring_integration import IntegratedMonitoringManager, get_integrated_monitoring_manager
 
 logger = get_logger(__name__)
 

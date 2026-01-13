@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-mindX is an autonomous multi-agent orchestration system implementing a Belief-Desire-Intention (BDI) cognitive architecture. It's a "Godel-machine" - a self-improving AI system with Ethereum-compatible wallet authentication and LLM integration (Mistral, Gemini, Groq, Ollama).
+mindX is an autonomous multi-agent orchestration system implementing a Belief-Desire-Intention (BDI) cognitive architecture. It's a "Godel-machine" - a self-improving AI system with Ethereum-compatible wallet authentication and LLM integration (Mistral, Gemini, Groq, Ollama, OpenAI, Anthropic, Together AI).
 
 ## Development Commands
 
@@ -64,12 +64,13 @@ Specialized Agents (BDI-based cognitive agents)
 ### Key Directories
 - `orchestration/` - MastermindAgent, CoordinatorAgent, CEOAgent
 - `core/` - BDI reasoning engine (`bdi_agent.py`), AGInt cognitive engine (`agint.py`), identity management (`id_manager_agent.py`)
-- `agents/` - Specialized agents (guardian, memory, automindx, simple_coder)
+- `agents/` - Specialized agents (guardian, memory, automindx, simple_coder, persona, avatar)
+- `api/` - Multi-provider LLM API layer (`llm_routes.py`, provider-specific APIs)
 - `learning/` - Self-improvement (`strategic_evolution_agent.py`, `self_improve_agent.py`)
 - `llm/` - LLM factory pattern with provider-specific handlers
-- `tools/` - 27+ tools extending `BaseTool`
+- `tools/` - 29+ tools extending `BaseTool` (see `docs/TOOLS_INDEX.md` for full list)
 - `mindx_backend_service/` - FastAPI backend (`main_service.py` is ~95KB)
-- `mindx_frontend_ui/` - Express.js frontend with xterm.js terminal
+- `mindx_frontend_ui/` - Express.js frontend with xterm.js terminal and window manager
 - `DAIO/contracts/` - Solidity smart contracts (Foundry-based)
 
 ### Core Patterns
@@ -91,6 +92,7 @@ async def get_instance(cls, config_override=None, **kwargs):
 ### LLM Integration
 - Factory pattern in `llm/llm_factory.py`
 - Provider handlers: `mistral_handler.py`, `gemini_handler.py`, `groq_handler.py`, `ollama_handler.py`
+- Provider registry: `data/config/provider_registry.json` (Gemini, OpenAI, Anthropic, Mistral, Together, Ollama)
 - Model configs in `models/*.yaml`
 - Rate limiting via `rate_limiter.py`
 
@@ -119,6 +121,7 @@ Priority: Environment variables (`MINDX_` prefix) > JSON configs (`data/config/`
 
 Key environment variables:
 - `MISTRAL_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY` - LLM providers
+- `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `TOGETHER_API_KEY` - Additional LLM providers
 - `MINDX_LOGGING_LEVEL` - DEBUG/INFO/WARNING/ERROR
 - `MINDX_COORDINATOR_AUTONOMOUS_IMPROVEMENT_ENABLED` - Enable autonomous loops
 
@@ -130,3 +133,34 @@ Located in `data/memory/`:
 - `workspaces/` - Agent working areas
 
 Managed by `agents/memory_agent.py` with belief system integration.
+
+## Interoperability Protocols
+
+### A2A (Agent-to-Agent)
+- `tools/a2a_tool.py` - Standardized agent-to-agent communication
+- Agent discovery via agent cards (model cards)
+- Cryptographic message signing and verification
+- Protocol versions: 1.0, 2.0
+
+### MCP (Model Context Protocol)
+- `tools/mcp_tool.py` - Structured context provision for agent actions
+- Context types: tool definitions, action context, environment state, capability descriptions
+- Enables rich, structured context for better agent decision-making
+
+## Cognitive Extensions
+
+### PersonaAgent (`agents/persona_agent.py`)
+- Enables agents to adopt different personas with distinct cognitive patterns
+- Personas include: beliefs, desires, communication styles, behavioral traits
+- Roles: expert, worker, meta, community, marketing, development, governance
+
+### AvatarAgent (`agents/avatar_agent.py`)
+- Generates visual avatars for agents/participants
+- Integrates with PromptTool for avatar generation prompts
+- Supports multiple providers: DALL-E, Stability AI, Replicate
+- Styles: realistic, cartoon, anime, cyberpunk, etc.
+
+### PromptTool (`tools/prompt_tool.py`)
+- Manages prompts as first-class infrastructure
+- Prompts are versioned, stored in memory, and executable
+- Types: system, agent, user, template, inception, instruction
