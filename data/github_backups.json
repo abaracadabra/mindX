@@ -55,23 +55,23 @@
       "status": "created"
     },
     {
-      "branch_name": "backup/daily-backup-20260113_030000",
+      "branch_name": "backup/daily-backup-20260113_030004",
       "backup_type": "daily_backup",
       "reason": "Scheduled daily backup",
       "source_branch": "main",
-      "source_commit": "3bc86218eeea4808cd186bc3b33261bce8af675d",
-      "created_at": "2026-01-13T03:00:04.482744",
+      "source_commit": "c6e18f1374bbcf5e3fc59f7be69e1e8ddf0c67ca",
+      "created_at": "2026-01-13T03:00:07.063524",
       "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/daily-backup-20260113_030000",
+    "branch_name": "backup/daily-backup-20260113_030004",
     "backup_type": "daily_backup",
     "reason": "Scheduled daily backup",
     "source_branch": "main",
-    "source_commit": "3bc86218eeea4808cd186bc3b33261bce8af675d",
-    "created_at": "2026-01-13T03:00:04.482744",
+    "source_commit": "c6e18f1374bbcf5e3fc59f7be69e1e8ddf0c67ca",
+    "created_at": "2026-01-13T03:00:07.063524",
     "status": "created"
   },
-  "last_backup_at": "2026-01-13T03:00:04.483843"
+  "last_backup_at": "2026-01-13T03:00:07.063554"
 }
