@@ -1,0 +1,31 @@
+{
+  "providers": {
+    "openai": {
+      "name": "OpenAI",
+      "display_name": "OpenAI",
+      "login_url": "https://platform.openai.com/api-keys",
+      "signup_url": "https://platform.openai.com/signup",
+      "docs_url": "https://platform.openai.com/docs",
+      "api_base_url": "https://api.openai.com/v1",
+      "requires_api_key": true,
+      "requires_base_url": false,
+      "api_key_env_var": "OPENAI_API_KEY",
+      "models": {
+        "gpt-4o": {
+          "name": "GPT-4o",
+          "input_cost_per_1k": 0.0025,
+          "output_cost_per_1k": 0.010,
+          "context_window": 128000,
+          "capabilities": ["chat", "vision", "tools", "function_calling"],
+          "description": "Most capable model, optimized for speed and cost"
+        }
+      },
+      "last_updated": "2025-01-15"
+    }
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "last_updated": "2025-01-15",
+    "update_frequency": "weekly"
+  }
+}
