@@ -80,16 +80,25 @@
       "source_commit": "9c81aaf8482f282b7fda8b4e857c12eabb589361",
       "created_at": "2026-01-16T03:00:09.910939",
       "status": "created"
+    },
+    {
+      "branch_name": "backup/shutdown-backup-20260117_042639",
+      "backup_type": "shutdown_backup",
+      "reason": "System shutdown - automatic backup",
+      "source_branch": "pgvectorscale-integration",
+      "source_commit": "a94396ae0a39981e2028eb2466a7cf850a7a5711",
+      "created_at": "2026-01-17T04:26:43.275400",
+      "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/daily-backup-20260116_030007",
-    "backup_type": "daily_backup",
-    "reason": "Scheduled daily backup",
+    "branch_name": "backup/shutdown-backup-20260117_042639",
+    "backup_type": "shutdown_backup",
+    "reason": "System shutdown - automatic backup",
     "source_branch": "pgvectorscale-integration",
-    "source_commit": "9c81aaf8482f282b7fda8b4e857c12eabb589361",
-    "created_at": "2026-01-16T03:00:09.910939",
+    "source_commit": "a94396ae0a39981e2028eb2466a7cf850a7a5711",
+    "created_at": "2026-01-17T04:26:43.275400",
     "status": "created"
   },
-  "last_backup_at": "2026-01-16T03:00:09.910962"
+  "last_backup_at": "2026-01-17T04:26:43.275440"
 }
