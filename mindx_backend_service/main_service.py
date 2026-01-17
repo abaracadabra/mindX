@@ -3186,13 +3186,24 @@ async def start_mindxagent_autonomous(payload: MindXAgentAutonomousPayload = Min
         from agents.memory_agent import MemoryAgent
         from utils.config import Config
         
-        # Get or create mindXagent instance
+        # Get or create mindXagent instance (force new instance if needed)
         memory_agent = MemoryAgent(config=Config())
         mindxagent = await MindXAgent.get_instance(
             agent_id="mindx_meta_agent",
             memory_agent=memory_agent,
-            config=Config()
+            config=Config(),
+            test_mode=False  # Use existing instance if available
         )
+        
+        # Check if method exists, if not, the instance needs to be recreated
+        if not hasattr(mindxagent, 'start_autonomous_mode'):
+            # Force new instance by clearing singleton
+            MindXAgent._instance = None
+            mindxagent = await MindXAgent.get_instance(
+                agent_id="mindx_meta_agent",
+                memory_agent=memory_agent,
+                config=Config()
+            )
         
         # Start autonomous mode
         result = await mindxagent.start_autonomous_mode(

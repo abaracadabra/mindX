@@ -192,32 +192,59 @@ async def set_ollama_config(
     port: Optional[int] = Body(None)
 ):
     """
-    Set Ollama server configuration.
+    Set Ollama server configuration and persist it to .env file.
     Can use base_url or host/port combination.
     """
     try:
         from api.ollama_url import create_ollama_api
+        from api.llm_provider_api import LLMProviderManager
         
+        # Determine the base_url to use
+        final_base_url = None
         if base_url:
-            ollama_api = create_ollama_api(base_url=base_url)
+            final_base_url = base_url
         elif host and port:
-            ollama_api = create_ollama_api(host=host, port=port)
+            final_base_url = f"http://{host}:{port}"
         else:
             raise HTTPException(status_code=400, detail="Must provide either base_url or host+port")
         
-        # Test connection
+        # Test connection first
+        ollama_api = create_ollama_api(base_url=final_base_url)
         test_result = await ollama_api.test_connection()
         
+        if not test_result.get("success", False):
+            return {
+                "success": False,
+                "base_url": final_base_url,
+                "error": test_result.get("message", "Connection test failed"),
+                "message": "Configuration not saved - connection test failed"
+            }
+        
+        # Persist configuration to .env file using LLMProviderManager
+        manager = LLMProviderManager()
+        save_result = await manager.set_api_key("ollama", api_key="", base_url=final_base_url)
+        
+        if not save_result.get("success", False):
+            logger.warning(f"Failed to save Ollama config to .env: {save_result.get('error')}")
+            return {
+                "success": False,
+                "base_url": final_base_url,
+                "error": save_result.get("error", "Failed to save configuration"),
+                "message": "Connection successful but configuration not persisted"
+            }
+        
+        logger.info(f"Ollama configuration saved: {final_base_url}")
+        
         return {
-            "success": test_result.get("success", False),
-            "base_url": ollama_api.base_url,
-            "message": test_result.get("message", "Configuration set"),
+            "success": True,
+            "base_url": final_base_url,
+            "message": "Configuration saved and connection verified",
             "model_count": test_result.get("model_count", 0)
         }
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to set Ollama config: {e}")
+        logger.error(f"Failed to set Ollama config: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to set Ollama config: {e}")
 
 
