@@ -145,6 +145,36 @@ async def get_session_metrics(session_id: str) -> Dict[str, Any]:
         raise HTTPException(status_code=404, detail="Session not found")
     return {"session_id": session_id, "metrics": metrics}
 
+@router.get("/knowledge")
+async def get_knowledge_base() -> Dict[str, Any]:
+    """Get the mindterm knowledge base."""
+    svc = get_service()
+    return svc.get_knowledge_base()
+
+@router.get("/knowledge/repositories/{repo_name}")
+async def get_repository_info(repo_name: str) -> Dict[str, Any]:
+    """Get information about a specific repository from the knowledge base."""
+    svc = get_service()
+    repo_info = svc.get_repository_info(repo_name)
+    if not repo_info:
+        raise HTTPException(status_code=404, detail=f"Repository '{repo_name}' not found in knowledge base")
+    return {"repository": repo_info}
+
+@router.get("/knowledge/integrations")
+async def get_all_integrations() -> Dict[str, Any]:
+    """Get all integrations from the knowledge base."""
+    svc = get_service()
+    return {"integrations": svc.get_all_integrations()}
+
+@router.get("/knowledge/integrations/{integration_name}")
+async def get_integration_info(integration_name: str) -> Dict[str, Any]:
+    """Get information about a specific integration (e.g., xterm.js) from the knowledge base."""
+    svc = get_service()
+    integration_info = svc.get_integration_info(integration_name)
+    if not integration_info:
+        raise HTTPException(status_code=404, detail=f"Integration '{integration_name}' not found in knowledge base")
+    return {"integration": integration_info}
+
 @router.websocket("/sessions/{session_id}/ws")
 async def session_ws(ws: WebSocket, session_id: str):
     """

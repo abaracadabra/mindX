@@ -73,23 +73,23 @@
       "status": "created"
     },
     {
-      "branch_name": "backup/daily-backup-20260116_030005",
+      "branch_name": "backup/daily-backup-20260116_030007",
       "backup_type": "daily_backup",
       "reason": "Scheduled daily backup",
       "source_branch": "pgvectorscale-integration",
-      "source_commit": "638978b52eec7027ffab220c64009db462698b79",
-      "created_at": "2026-01-16T03:00:07.720620",
+      "source_commit": "9c81aaf8482f282b7fda8b4e857c12eabb589361",
+      "created_at": "2026-01-16T03:00:09.910939",
       "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/daily-backup-20260116_030005",
+    "branch_name": "backup/daily-backup-20260116_030007",
     "backup_type": "daily_backup",
     "reason": "Scheduled daily backup",
     "source_branch": "pgvectorscale-integration",
-    "source_commit": "638978b52eec7027ffab220c64009db462698b79",
-    "created_at": "2026-01-16T03:00:07.720620",
+    "source_commit": "9c81aaf8482f282b7fda8b4e857c12eabb589361",
+    "created_at": "2026-01-16T03:00:09.910939",
     "status": "created"
   },
-  "last_backup_at": "2026-01-16T03:00:07.721198"
+  "last_backup_at": "2026-01-16T03:00:09.910962"
 }

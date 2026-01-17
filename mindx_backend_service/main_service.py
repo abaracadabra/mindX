@@ -25,11 +25,14 @@ from agents.memory_agent import MemoryAgent, MemoryType, MemoryImportance
 from agents.guardian_agent import GuardianAgent
 from agents.core.id_manager_agent import IDManagerAgent
 from agents.core.belief_system import BeliefSystem, BeliefSource
+from agents.faicey_agent import FaiceyAgent
+from agents.persona_agent import PersonaAgent
 from tools.user_persistence_manager import get_user_persistence_manager
 from llm.model_registry import get_model_registry_async
 from utils.config import Config, PROJECT_ROOT
 from api.command_handler import CommandHandler
 from utils.logging_config import setup_logging, get_logger
+from mindx_backend_service.vault_manager import get_vault_manager
 
 # Setup logging
 setup_logging()
@@ -2817,4 +2820,447 @@ async def get_agents_activity():
     """
     # Delegate to the comprehensive real-time activity endpoint
     return await get_real_time_agent_activity()
+
+
+# --- Vault and PostgreSQL Management Endpoints ---
+
+class PostgreSQLConfigPayload(BaseModel):
+    host: str = "localhost"
+    port: int = 5432
+    database: str = "mindx_memory"
+    user: str = "mindx"
+    password: Optional[str] = None
+
+
+@app.get("/admin/postgresql/config", summary="Get PostgreSQL configuration")
+async def get_postgresql_config():
+    """Get current PostgreSQL configuration from vault."""
+    try:
+        vault_manager = get_vault_manager()
+        config = vault_manager.get_postgresql_config()
+        # Don't return password in response
+        safe_config = {k: v for k, v in config.items() if k != "password"}
+        safe_config["has_password"] = "password" in config
+        return {
+            "status": "success",
+            "config": safe_config
+        }
+    except Exception as e:
+        logger.error(f"Error getting PostgreSQL config: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/admin/postgresql/config", summary="Save PostgreSQL configuration")
+async def save_postgresql_config(payload: PostgreSQLConfigPayload):
+    """Save PostgreSQL configuration to vault."""
+    try:
+        vault_manager = get_vault_manager()
+        config = {
+            "host": payload.host,
+            "port": payload.port,
+            "database": payload.database,
+            "user": payload.user
+        }
+        if payload.password:
+            config["password"] = payload.password
+        
+        if vault_manager.store_postgresql_config(config):
+            return {
+                "status": "success",
+                "message": "PostgreSQL configuration saved to vault"
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to save configuration")
+    except Exception as e:
+        logger.error(f"Error saving PostgreSQL config: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/admin/postgresql/test", summary="Test PostgreSQL connection")
+async def test_postgresql_connection(payload: PostgreSQLConfigPayload):
+    """Test PostgreSQL connection with provided credentials."""
+    try:
+        import psycopg2
+        from psycopg2 import sql
+        
+        conn = None
+        try:
+            conn = psycopg2.connect(
+                host=payload.host,
+                port=payload.port,
+                database=payload.database,
+                user=payload.user,
+                password=payload.password or "",
+                connect_timeout=5
+            )
+            cursor = conn.cursor()
+            cursor.execute("SELECT version();")
+            version = cursor.fetchone()[0]
+            cursor.close()
+            
+            return {
+                "status": "success",
+                "message": "Connection successful",
+                "version": version
+            }
+        except psycopg2.Error as e:
+            return {
+                "status": "error",
+                "message": f"Connection failed: {str(e)}"
+            }
+        finally:
+            if conn:
+                conn.close()
+    except ImportError:
+        return {
+            "status": "error",
+            "message": "psycopg2 not installed. Install with: pip install psycopg2-binary"
+        }
+    except Exception as e:
+        logger.error(f"Error testing PostgreSQL connection: {e}", exc_info=True)
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+
+@app.get("/admin/vault/keys", summary="List agent private keys in vault")
+async def list_vault_keys():
+    """List all agent private keys stored in vault."""
+    try:
+        vault_manager = get_vault_manager()
+        keys = vault_manager.list_agent_keys()
+        return {
+            "status": "success",
+            "keys": keys,
+            "count": len(keys)
+        }
+    except Exception as e:
+        logger.error(f"Error listing vault keys: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/admin/vault/migrate", summary="Migrate keys from legacy storage to vault")
+async def migrate_keys_to_vault():
+    """Migrate agent private keys from legacy .wallet_keys.env to vault."""
+    try:
+        vault_manager = get_vault_manager()
+        legacy_path = PROJECT_ROOT / "data" / "identity" / ".wallet_keys.env"
+        result = vault_manager.migrate_keys_from_legacy(legacy_path)
+        return {
+            "status": "success",
+            "migration": result
+        }
+    except Exception as e:
+        logger.error(f"Error migrating keys: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Faicey Expression Endpoints ---
+
+class FaiceyExpressionPayload(BaseModel):
+    agent_id: str
+    persona_id: Optional[str] = None
+    prompt: Optional[str] = None
+    agent_config: Optional[Dict[str, Any]] = None
+    dataset_info: Optional[Dict[str, Any]] = None
+    model_settings: Optional[Dict[str, Any]] = None  # Renamed from model_config to avoid Pydantic conflict
+
+
+class FaiceyUpdatePayload(BaseModel):
+    ui_modules: Optional[List[Dict[str, Any]]] = None
+    customization_options: Optional[Dict[str, Any]] = None
+
+
+# Global Faicey agent instance
+_faicey_agent: Optional[FaiceyAgent] = None
+
+
+async def get_faicey_agent() -> FaiceyAgent:
+    """Get or create Faicey agent instance."""
+    global _faicey_agent
+    if _faicey_agent is None:
+        memory_agent = MemoryAgent(config=Config())
+        persona_agent = None  # Can be initialized if needed
+        _faicey_agent = FaiceyAgent(
+            agent_id="faicey_agent",
+            memory_agent=memory_agent,
+            persona_agent=persona_agent,
+            config=Config()
+        )
+    return _faicey_agent
+
+
+@app.post("/faicey/expressions", summary="Create a Faicey expression from persona")
+async def create_faicey_expression(payload: FaiceyExpressionPayload):
+    """
+    Create a Faicey UI/UX expression for an agent.
+    
+    This combines prompt, agent, dataset, model, and persona to create
+    a personalized modular interface expression.
+    """
+    try:
+        faicey_agent = await get_faicey_agent()
+        result = await faicey_agent.create_expression_from_persona(
+            agent_id=payload.agent_id,
+            persona_id=payload.persona_id,
+            prompt=payload.prompt,
+            agent_config=payload.agent_config,
+            dataset_info=payload.dataset_info,
+            model_config=payload.model_settings  # Map model_settings to model_config
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error creating Faicey expression: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/faicey/expressions", summary="List all Faicey expressions")
+async def list_faicey_expressions(agent_id: Optional[str] = None):
+    """List all Faicey expressions, optionally filtered by agent."""
+    try:
+        faicey_agent = await get_faicey_agent()
+        result = await faicey_agent.list_expressions(agent_id=agent_id)
+        return result
+    except Exception as e:
+        logger.error(f"Error listing Faicey expressions: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/faicey/expressions/{expression_id}", summary="Get a Faicey expression")
+async def get_faicey_expression(expression_id: str):
+    """Get a specific Faicey expression by ID."""
+    try:
+        faicey_agent = await get_faicey_agent()
+        result = await faicey_agent.get_expression(expression_id)
+        if not result.get("success"):
+            raise HTTPException(status_code=404, detail=result.get("error"))
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting Faicey expression: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/faicey/expressions/agent/{agent_id}", summary="Get expression for agent")
+async def get_faicey_expression_for_agent(agent_id: str):
+    """Get the most recent Faicey expression for an agent."""
+    try:
+        faicey_agent = await get_faicey_agent()
+        result = await faicey_agent.get_expression_for_agent(agent_id)
+        if not result.get("success"):
+            raise HTTPException(status_code=404, detail=result.get("error"))
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting Faicey expression for agent: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/faicey/expressions/{expression_id}", summary="Update a Faicey expression")
+async def update_faicey_expression(expression_id: str, payload: FaiceyUpdatePayload):
+    """Update a Faicey expression's UI modules or customization options."""
+    try:
+        faicey_agent = await get_faicey_agent()
+        result = await faicey_agent.update_expression(
+            expression_id=expression_id,
+            ui_modules=payload.ui_modules,
+            customization_options=payload.customization_options
+        )
+        if not result.get("success"):
+            raise HTTPException(status_code=404, detail=result.get("error"))
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating Faicey expression: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/faicey/expressions/{expression_id}/ui-config", summary="Export expression as UI config")
+async def export_faicey_ui_config(expression_id: str):
+    """Export a Faicey expression as UI configuration for frontend consumption."""
+    try:
+        faicey_agent = await get_faicey_agent()
+        result = await faicey_agent.export_expression_ui_config(expression_id)
+        if not result.get("success"):
+            raise HTTPException(status_code=404, detail=result.get("error"))
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting Faicey UI config: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Speech Inflection Endpoints ---
+
+class SpeechInflectionPayload(BaseModel):
+    text: str
+    audio_url: Optional[str] = None
+    alphabet: Optional[str] = "english"
+    tone_system: Optional[str] = None
+
+
+@app.post("/faicey/speech/speak", summary="Start speaking with morph target animation")
+async def start_speaking(payload: SpeechInflectionPayload):
+    """
+    Start speaking mode with text-to-speech and morph target animation.
+    
+    This endpoint triggers the speech inflection system to animate the agent's
+    face based on the provided text, mapping phonemes to visemes and synchronizing
+    with audio if provided.
+    """
+    try:
+        # This would typically be called from the frontend with the morph mesh
+        # For now, return configuration
+        return {
+            "success": True,
+            "message": "Speech inflection started",
+            "text": payload.text,
+            "alphabet": payload.alphabet,
+            "tone_system": payload.tone_system,
+            "audio_url": payload.audio_url
+        }
+    except Exception as e:
+        logger.error(f"Error starting speech: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/faicey/speech/listen", summary="Start listening mode")
+async def start_listening():
+    """
+    Start listening mode with ear and eye animations.
+    
+    This triggers the listening mode animations where ears perk up,
+    eyes focus forward, and eyebrows slightly raise for engagement.
+    """
+    try:
+        return {
+            "success": True,
+            "message": "Listening mode activated",
+            "animations": {
+                "ears": "perked_up",
+                "eyes": "focused_forward",
+                "eyebrows": "slightly_raised"
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error starting listening mode: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/faicey/speech/stop", summary="Stop speaking or listening")
+async def stop_speech():
+    """Stop current speech or listening mode and return to idle."""
+    try:
+        return {
+            "success": True,
+            "message": "Speech/listening stopped, returning to idle"
+        }
+    except Exception as e:
+        logger.error(f"Error stopping speech: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- MindX Agent Endpoints ---
+
+class MindXAgentAutonomousPayload(BaseModel):
+    model: Optional[str] = "mistral-nemo:latest"
+    provider: Optional[str] = "ollama"
+
+
+@app.post("/mindxagent/autonomous/start", summary="Start mindXagent in autonomous mode")
+async def start_mindxagent_autonomous(payload: MindXAgentAutonomousPayload = MindXAgentAutonomousPayload()):
+    """
+    Start mindXagent in autonomous mode for continuous self-improvement.
+    
+    Uses the specified model (default: mistral-nemo:latest from Ollama) to continuously
+    analyze the system, identify improvement opportunities, and execute improvements
+    using Blueprint Agent and Strategic Evolution Agent.
+    """
+    try:
+        from agents.core.mindXagent import MindXAgent
+        from agents.memory_agent import MemoryAgent
+        from utils.config import Config
+        
+        # Get or create mindXagent instance
+        memory_agent = MemoryAgent(config=Config())
+        mindxagent = await MindXAgent.get_instance(
+            agent_id="mindx_meta_agent",
+            memory_agent=memory_agent,
+            config=Config()
+        )
+        
+        # Start autonomous mode
+        result = await mindxagent.start_autonomous_mode(
+            model=payload.model,
+            provider=payload.provider
+        )
+        
+        return {
+            "success": True,
+            "result": result
+        }
+    except Exception as e:
+        logger.error(f"Error starting mindXagent autonomous mode: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/mindxagent/autonomous/stop", summary="Stop mindXagent autonomous mode")
+async def stop_mindxagent_autonomous():
+    """Stop mindXagent autonomous mode."""
+    try:
+        from agents.core.mindXagent import MindXAgent
+        
+        # Get existing instance
+        mindxagent = await MindXAgent.get_instance()
+        
+        if mindxagent:
+            result = await mindxagent.stop_autonomous_mode()
+            return {
+                "success": True,
+                "result": result
+            }
+        else:
+            return {
+                "success": False,
+                "error": "mindXagent not initialized"
+            }
+    except Exception as e:
+        logger.error(f"Error stopping mindXagent autonomous mode: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/mindxagent/status", summary="Get mindXagent status")
+async def get_mindxagent_status():
+    """Get current status of mindXagent."""
+    try:
+        from agents.core.mindXagent import MindXAgent
+        
+        mindxagent = await MindXAgent.get_instance()
+        
+        if mindxagent:
+            return {
+                "success": True,
+                "status": {
+                    "initialized": mindxagent.initialized,
+                    "running": mindxagent.running,
+                    "autonomous_mode": mindxagent.autonomous_mode,
+                    "agent_count": len(mindxagent.agent_knowledge),
+                    "improvement_history_count": len(mindxagent.improvement_history),
+                    "llm_model": mindxagent.llm_model,
+                    "llm_provider": mindxagent.llm_provider
+                }
+            }
+        else:
+            return {
+                "success": False,
+                "error": "mindXagent not initialized"
+            }
+    except Exception as e:
+        logger.error(f"Error getting mindXagent status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 

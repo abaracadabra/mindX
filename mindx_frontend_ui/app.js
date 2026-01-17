@@ -2,6 +2,89 @@
 console.log('🚀 mindX app.js loaded at:', new Date().toISOString());
 console.log('🔧 Version: FRESH CACHE BUSTED LOAD');
 
+// Connect MetaMask wallet - Enhanced version (inline version in HTML handles initial connection)
+// This version adds enhanced error handling and integration with app.js features
+async function connectMetaMask() {
+    try {
+        console.log('🔗 Connecting to MetaMask (app.js version)...');
+        console.log('window.ethereum available:', typeof window.ethereum !== 'undefined');
+        
+        // Check if MetaMask is available
+        if (typeof window.ethereum === 'undefined') {
+            throw new Error('MetaMask is not installed. Please install MetaMask browser extension to continue.');
+        }
+        
+        console.log('MetaMask detected, requesting account access...');
+        console.log('window.ethereum:', window.ethereum);
+        
+        // Request account access - This should trigger MetaMask popup
+        console.log('Calling window.ethereum.request({ method: "eth_requestAccounts" })...');
+        const accounts = await window.ethereum.request({
+            method: 'eth_requestAccounts'
+        });
+        
+        console.log('MetaMask response received:', accounts);
+
+        if (accounts.length === 0) {
+            throw new Error('No accounts found. Please unlock MetaMask and try again.');
+        }
+
+        const walletAddress = accounts[0];
+        console.log('Getting wallet information...');
+        
+        // Get chain ID
+        const chainId = await window.ethereum.request({
+            method: 'eth_chainId'
+        });
+
+        // Create user object
+        const userData = {
+            id: walletAddress,
+            address: walletAddress,
+            provider: 'metamask',
+            chainId: chainId,
+            authMethod: 'wallet',
+            timestamp: Date.now()
+        };
+
+        // Store in localStorage (compatible with existing CrossMint integration)
+        localStorage.setItem('crossmint_user', JSON.stringify(userData));
+        localStorage.setItem('crossmint_wallet', walletAddress);
+        localStorage.setItem('crossmint_authenticated', 'true');
+        localStorage.setItem('crossmint_auth_method', 'wallet');
+        
+        // Trigger authentication success
+        if (typeof handleAuthenticationSuccess === 'function') {
+            handleAuthenticationSuccess(userData);
+        } else {
+            console.warn('handleAuthenticationSuccess not available yet, will be called when loaded');
+            // Store for later
+            window.pendingAuthSuccess = userData;
+        }
+        
+        console.log('✅ MetaMask wallet connected successfully!');
+        
+    } catch (error) {
+        console.error('❌ MetaMask connection failed:', error);
+        if (error.code === 4001) {
+            throw new Error('MetaMask connection rejected. Please approve the connection request.');
+        } else if (error.code === -32002) {
+            throw new Error('MetaMask connection already pending. Please check MetaMask and try again.');
+        } else {
+            throw new Error('MetaMask connection failed: ' + (error.message || 'Unknown error'));
+        }
+    }
+}
+
+// Only override if inline version doesn't exist, otherwise enhance it
+if (!window.connectMetaMask) {
+    window.connectMetaMask = connectMetaMask;
+} else {
+    console.log('✅ Using inline connectMetaMask function from HTML');
+    // Store reference to app.js version for potential use
+    window.connectMetaMaskAppJS = connectMetaMask;
+}
+
 // Test functions for debugging
 window.testMetaMaskConnection = async function() {
     console.log('🧪 Testing MetaMask connection...');
@@ -1779,6 +1862,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadTabData(tabId) {
+        // Load Faicey expressions when Faicey tab is activated
+        if (tabId === 'faicey') {
+            loadFaiceyExpressions();
+            initializeFaiceyTabs();
+        }
+        
         // Initialize window manager when admin tab is activated
         if (tabId === 'admin' && window.windowManager) {
             // Window manager is already initialized, just ensure it's ready
@@ -1829,6 +1918,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'admin':
                 loadAdminData();
+                break;
+            case 'faicey':
+                loadFaiceyExpressions();
+                initializeFaiceyTabs();
                 break;
         }
     }
@@ -4253,8 +4346,183 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const config = await sendRequest('/system/config');
             displayConfig(config);
+            // Load PostgreSQL settings and vault keys
+            await loadPostgreSQLSettings();
+            await loadVaultKeys();
+            initializePostgreSQLHandlers();
+            initializeVaultHandlers();
         } catch (error) {
             addLog(`Failed to load admin data: ${error.message}`, 'ERROR');
+        }
+    }
+    
+    // PostgreSQL Management Functions
+    async function loadPostgreSQLSettings() {
+        try {
+            const response = await sendRequest('/admin/postgresql/config');
+            if (response.status === 'success' && response.config) {
+                const config = response.config;
+                document.getElementById('postgres-host').value = config.host || 'localhost';
+                document.getElementById('postgres-port').value = config.port || 5432;
+                document.getElementById('postgres-database').value = config.database || 'mindx_memory';
+                document.getElementById('postgres-user').value = config.user || 'mindx';
+                if (config.has_password) {
+                    document.getElementById('postgres-password').placeholder = 'Password is set (enter new to change)';
+                }
+            }
+        } catch (error) {
+            addLog(`Failed to load PostgreSQL settings: ${error.message}`, 'ERROR');
+        }
+    }
+    
+    async function savePostgreSQLSettings() {
+        const config = {
+            host: document.getElementById('postgres-host').value,
+            port: parseInt(document.getElementById('postgres-port').value),
+            database: document.getElementById('postgres-database').value,
+            user: document.getElementById('postgres-user').value,
+            password: document.getElementById('postgres-password').value || undefined
+        };
+        
+        try {
+            const response = await sendRequest('/admin/postgresql/config', 'POST', config);
+            if (response.status === 'success') {
+                addLog('PostgreSQL settings saved to vault', 'SUCCESS');
+                document.getElementById('postgres-password').value = '';
+                document.getElementById('postgres-password').placeholder = 'Password saved';
+            }
+        } catch (error) {
+            addLog(`Failed to save PostgreSQL settings: ${error.message}`, 'ERROR');
+        }
+    }
+    
+    async function testPostgreSQLConnection() {
+        const config = {
+            host: document.getElementById('postgres-host').value,
+            port: parseInt(document.getElementById('postgres-port').value),
+            database: document.getElementById('postgres-database').value,
+            user: document.getElementById('postgres-user').value,
+            password: document.getElementById('postgres-password').value || undefined
+        };
+        
+        const statusDiv = document.getElementById('postgres-connection-status');
+        statusDiv.innerHTML = '<p>Testing connection...</p>';
+        statusDiv.className = 'connection-status testing';
+        
+        try {
+            const response = await sendRequest('/admin/postgresql/test', 'POST', config);
+            if (response.status === 'success') {
+                statusDiv.innerHTML = `<p class="success">✓ Connection successful</p><p>${response.version}</p>`;
+                statusDiv.className = 'connection-status success';
+            } else {
+                statusDiv.innerHTML = `<p class="error">✗ ${response.message}</p>`;
+                statusDiv.className = 'connection-status error';
+            }
+        } catch (error) {
+            statusDiv.innerHTML = `<p class="error">✗ Connection failed: ${error.message}</p>`;
+            statusDiv.className = 'connection-status error';
+        }
+    }
+    
+    function initializePostgreSQLHandlers() {
+        const loadBtn = document.getElementById('load-postgres-settings-btn');
+        const saveBtn = document.getElementById('save-postgres-settings-btn');
+        const testBtn = document.getElementById('test-postgres-connection-btn');
+        const togglePasswordBtn = document.getElementById('toggle-postgres-password');
+        
+        if (loadBtn) {
+            loadBtn.addEventListener('click', loadPostgreSQLSettings);
+        }
+        if (saveBtn) {
+            saveBtn.addEventListener('click', savePostgreSQLSettings);
+        }
+        if (testBtn) {
+            testBtn.addEventListener('click', testPostgreSQLConnection);
+        }
+        if (togglePasswordBtn) {
+            togglePasswordBtn.addEventListener('click', () => {
+                const passwordInput = document.getElementById('postgres-password');
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    togglePasswordBtn.textContent = '🙈';
+                } else {
+                    passwordInput.type = 'password';
+                    togglePasswordBtn.textContent = '👁️';
+                }
+            });
+        }
+    }
+    
+    // Vault Management Functions
+    async function loadVaultKeys() {
+        try {
+            const response = await sendRequest('/admin/vault/keys');
+            if (response.status === 'success') {
+                const keysList = document.getElementById('vault-keys-list');
+                if (response.keys && response.keys.length > 0) {
+                    keysList.innerHTML = `
+                        <table class="vault-keys-table">
+                            <thead>
+                                <tr>
+                                    <th>Agent ID</th>
+                                    <th>Environment Variable</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${response.keys.map(key => `
+                                    <tr>
+                                        <td>${key.agent_id}</td>
+                                        <td><code>${key.env_var}</code></td>
+                                        <td>${key.has_key ? '<span class="status-badge success">Stored</span>' : '<span class="status-badge warning">Missing</span>'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        <p>Total: ${response.count} keys</p>
+                    `;
+                } else {
+                    keysList.innerHTML = '<p>No agent keys found in vault. Use "Migrate Keys to Vault" to move existing keys.</p>';
+                }
+            }
+        } catch (error) {
+            addLog(`Failed to load vault keys: ${error.message}`, 'ERROR');
+        }
+    }
+    
+    async function migrateKeysToVault() {
+        const statusDiv = document.getElementById('vault-migration-status');
+        statusDiv.innerHTML = '<p>Migrating keys from legacy storage...</p>';
+        statusDiv.className = 'migration-status processing';
+        
+        try {
+            const response = await sendRequest('/admin/vault/migrate', 'POST');
+            if (response.status === 'success') {
+                const migration = response.migration;
+                statusDiv.innerHTML = `
+                    <p class="success">Migration complete!</p>
+                    <p>Migrated: ${migration.migrated} keys</p>
+                    <p>Failed: ${migration.failed} keys</p>
+                    ${migration.errors.length > 0 ? `<p class="error">Errors: ${migration.errors.join(', ')}</p>` : ''}
+                `;
+                statusDiv.className = 'migration-status success';
+                await loadVaultKeys(); // Refresh the list
+            }
+        } catch (error) {
+            statusDiv.innerHTML = `<p class="error">Migration failed: ${error.message}</p>`;
+            statusDiv.className = 'migration-status error';
+        }
+    }
+    
+    function initializeVaultHandlers() {
+        const refreshBtn = document.getElementById('refresh-vault-keys-btn');
+        const migrateBtn = document.getElementById('migrate-keys-to-vault-btn');
+        
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', loadVaultKeys);
+        }
+        if (migrateBtn) {
+            migrateBtn.addEventListener('click', migrateKeysToVault);
         }
     }
 
@@ -4307,6 +4575,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (addBtn) {
             addBtn.addEventListener('click', addNewAPIProvider);
         }
+        
+        // Show add provider form button
+        const showAddFormBtn = document.getElementById('show-add-provider-form-btn');
+        if (showAddFormBtn) {
+            showAddFormBtn.addEventListener('click', () => {
+                const addForm = document.querySelector('.api-add-form');
+                if (addForm) {
+                    addForm.style.display = addForm.style.display === 'none' ? 'block' : 'none';
+                    if (addForm.style.display === 'block') {
+                        addForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }
+            });
+        }
+        
+        // Initialize drag and drop for provider cards
+        initializeProviderCardDragDrop();
 
         if (closeModalBtn) {
             closeModalBtn.addEventListener('click', () => {
@@ -4666,6 +4951,20 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const providerName = dropdown.value;
         
+        // Special handling for Ollama - show settings instead of add form
+        if (providerName === 'ollama') {
+            await showProviderSettings('ollama');
+            // Scroll to Ollama section
+            const ollamaSection = document.querySelector('.ollama-setup-section');
+            if (ollamaSection) {
+                ollamaSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            if (statusDiv) {
+                statusDiv.innerHTML = '<p class="info-message">Ollama settings displayed below</p>';
+            }
+            return;
+        }
+        
         try {
             if (statusDiv) {
                 statusDiv.innerHTML = '<p class="info-message">Loading provider configuration...</p>';
@@ -4676,6 +4975,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (suggestions.success && suggestions.suggestions) {
                 const sugg = suggestions.suggestions;
+                
+                // Show the add form if hidden
+                const addForm = document.querySelector('.api-add-form');
+                if (addForm) {
+                    addForm.style.display = 'block';
+                }
                 
                 // Auto-fill the form
                 document.getElementById('new-provider-name').value = sugg.provider_name || '';
@@ -4731,7 +5036,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 addLog(`Provider configuration loaded for ${providerName}`, 'SUCCESS');
                 
                 // Scroll to form
-                document.querySelector('.api-add-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (addForm) {
+                    addForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
             } else {
                 if (statusDiv) {
                     statusDiv.innerHTML = '<p class="error-message">Failed to load provider configuration</p>';
@@ -5192,8 +5499,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Sort providers: Ollama first if enabled, then others
+        const sortedProviders = [...registryProviders].sort((a, b) => {
+            const aIsOllama = a.name === 'ollama' && (providers[a.name]?.enabled || false);
+            const bIsOllama = b.name === 'ollama' && (providers[b.name]?.enabled || false);
+            if (aIsOllama && !bIsOllama) return -1;
+            if (!aIsOllama && bIsOllama) return 1;
+            return 0;
+        });
+
         // Display providers from registry
-        registryProviders.forEach(provider => {
+        sortedProviders.forEach(provider => {
             const providerCard = createProviderCard(provider, providers[provider.name]);
             providersList.appendChild(providerCard);
         });
@@ -5210,12 +5526,91 @@ document.addEventListener('DOMContentLoaded', () => {
                 providersList.appendChild(providerCard);
             }
         });
+        
+        // Re-initialize drag and drop after cards are created
+        initializeProviderCardDragDrop();
+    }
+    
+    function initializeProviderCardDragDrop() {
+        const cards = document.querySelectorAll('.draggable-provider-card');
+        cards.forEach(card => {
+            card.addEventListener('dragstart', handleDragStart);
+            card.addEventListener('dragover', handleDragOver);
+            card.addEventListener('drop', handleDrop);
+            card.addEventListener('dragend', handleDragEnd);
+        });
+    }
+    
+    let draggedElement = null;
+    
+    function handleDragStart(e) {
+        draggedElement = this;
+        this.style.opacity = '0.5';
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', this.innerHTML);
+    }
+    
+    function handleDragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault();
+        }
+        e.dataTransfer.dropEffect = 'move';
+        return false;
+    }
+    
+    function handleDrop(e) {
+        if (e.stopPropagation) {
+            e.stopPropagation();
+        }
+        
+        if (draggedElement !== this) {
+            const providersList = document.getElementById('api-providers-list');
+            const allCards = Array.from(providersList.querySelectorAll('.draggable-provider-card'));
+            const draggedIndex = allCards.indexOf(draggedElement);
+            const targetIndex = allCards.indexOf(this);
+            
+            if (draggedIndex < targetIndex) {
+                providersList.insertBefore(draggedElement, this.nextSibling);
+            } else {
+                providersList.insertBefore(draggedElement, this);
+            }
+            
+            // Save order to localStorage
+            saveProviderOrder();
+        }
+        
+        return false;
+    }
+    
+    function handleDragEnd(e) {
+        this.style.opacity = '1';
+        draggedElement = null;
+    }
+    
+    function saveProviderOrder() {
+        const providersList = document.getElementById('api-providers-list');
+        const cards = Array.from(providersList.querySelectorAll('.draggable-provider-card'));
+        const order = cards.map(card => card.dataset.providerName);
+        localStorage.setItem('mindx_provider_order', JSON.stringify(order));
+    }
+    
+    function loadProviderOrder() {
+        const order = localStorage.getItem('mindx_provider_order');
+        if (order) {
+            try {
+                return JSON.parse(order);
+            } catch (e) {
+                return null;
+            }
+        }
+        return null;
     }
 
     function createProviderCard(provider, providerDetails) {
         const card = document.createElement('div');
-        card.className = 'api-provider-card clickable-card';
+        card.className = 'api-provider-card clickable-card draggable-provider-card';
         card.setAttribute('data-provider-name', provider.name);
+        card.draggable = true;
         card.style.cursor = 'pointer';
         
         card.innerHTML = `
@@ -5257,6 +5652,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 showProviderSettings(provider.name);
             }
         });
+        
+        // Add drag event listeners
+        card.addEventListener('dragstart', handleDragStart);
+        card.addEventListener('dragover', handleDragOver);
+        card.addEventListener('drop', handleDrop);
+        card.addEventListener('dragend', handleDragEnd);
         
         return card;
     }
@@ -9129,6 +9530,94 @@ window.refreshUserAgents = refreshUserAgents;
 
 // Authentication System - Variables moved to top of file
 
+// Set up MetaMask event listeners (per MetaMask docs)
+function setupMetaMaskEventListeners() {
+    if (typeof window.ethereum === 'undefined' || !window.ethereum.isMetaMask) {
+        return;
+    }
+
+    // Remove existing listeners to avoid duplicates
+    if (window.ethereum.removeListener) {
+        try {
+            window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+            window.ethereum.removeListener('chainChanged', handleChainChanged);
+        } catch (e) {
+            // Ignore if listeners don't exist
+        }
+    }
+
+    // Listen for account changes (per MetaMask docs)
+    window.ethereum.on('accountsChanged', handleAccountsChanged);
+    
+    // Listen for chain changes (per MetaMask docs)
+    window.ethereum.on('chainChanged', handleChainChanged);
+
+    console.log('✅ MetaMask event listeners set up');
+}
+
+// Handle account changes (per MetaMask docs)
+function handleAccountsChanged(accounts) {
+    console.log('🔄 MetaMask accounts changed:', accounts);
+    
+    if (accounts.length === 0) {
+        // User disconnected their account
+        console.log('⚠️ User disconnected MetaMask account');
+        localStorage.removeItem('crossmint_user');
+        localStorage.removeItem('crossmint_wallet');
+        localStorage.removeItem('crossmint_authenticated');
+        localStorage.removeItem('crossmint_auth_method');
+        
+        // Reload to show login page
+        if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
+            window.location.reload();
+        }
+    } else {
+        // User switched accounts
+        const newAddress = accounts[0];
+        console.log('✅ User switched to account:', newAddress);
+        
+        // Update stored user data
+        const existingUser = localStorage.getItem('crossmint_user');
+        if (existingUser) {
+            try {
+                const userData = JSON.parse(existingUser);
+                userData.address = newAddress;
+                userData.id = newAddress;
+                localStorage.setItem('crossmint_user', JSON.stringify(userData));
+                localStorage.setItem('crossmint_wallet', newAddress);
+                
+                // Update UI if authenticated
+                if (typeof handleAuthenticationSuccess === 'function' && typeof isAuthenticated !== 'undefined' && isAuthenticated) {
+                    handleAuthenticationSuccess(userData);
+                }
+            } catch (e) {
+                console.error('Error updating account:', e);
+            }
+        }
+    }
+}
+
+// Handle chain changes (per MetaMask docs)
+function handleChainChanged(chainId) {
+    console.log('🔄 MetaMask chain changed:', chainId);
+    
+    // Update stored chain ID
+    const existingUser = localStorage.getItem('crossmint_user');
+    if (existingUser) {
+        try {
+            const userData = JSON.parse(existingUser);
+            userData.chainId = chainId;
+            localStorage.setItem('crossmint_user', JSON.stringify(userData));
+            
+            // Optionally reload to ensure compatibility with new chain
+            // For now, just log the change
+            console.log('✅ Chain ID updated to:', chainId);
+        } catch (e) {
+            console.error('Error updating chain:', e);
+        }
+    }
+}
+
 // Initialize authentication system
 async function initializeAuthenticationSystem() {
     console.log('🔐 Initializing authentication system...');
@@ -9141,91 +9630,95 @@ async function initializeAuthenticationSystem() {
     console.log('Document body:', document.body);
     console.log('Login button exists:', !!document.getElementById('loginConnectBtn'));
     
-    // Set up login button event listener
+    // Set up login button - use the inline onclick handler which is already working
+    // The inline onclick calls window.connectMetaMask() which is defined in the HTML head
     const loginConnectBtn = document.getElementById('loginConnectBtn');
     if (loginConnectBtn) {
-        console.log('✅ Login button found, adding event listener...');
-        console.log('Button element:', loginConnectBtn);
-        console.log('Button disabled:', loginConnectBtn.disabled);
-        console.log('Button innerHTML:', loginConnectBtn.innerHTML);
+        console.log('✅ Login button found. Using inline onclick handler (window.connectMetaMask)');
+        console.log('Button onclick attribute:', loginConnectBtn.getAttribute('onclick'));
         
-        // Remove any existing event listeners first
-        const newBtn = loginConnectBtn.cloneNode(true);
-        loginConnectBtn.parentNode.replaceChild(newBtn, loginConnectBtn);
+        // Verify the inline function is available
+        if (typeof window.connectMetaMask === 'function') {
+            console.log('✅ window.connectMetaMask is available and ready');
+        } else {
+            console.warn('⚠️ window.connectMetaMask not found - inline script may not have loaded');
+        }
         
-        // Add click event listener to the new button
-        newBtn.addEventListener('click', function(event) {
-            console.log('🔘 LOGIN BUTTON CLICKED!', event);
-            console.log('Event target:', event.target);
-            console.log('Event currentTarget:', event.currentTarget);
-            console.log('handleLogin function exists:', typeof handleLogin);
-            event.preventDefault();
-            event.stopPropagation();
-            
-            // Call handleLogin directly
-            try {
-                console.log('Calling handleLogin...');
-                handleLogin();
-            } catch (error) {
-                console.error('Error in handleLogin:', error);
-            }
-        });
+        // Don't add an event listener - the inline onclick is working
+        // If we need to add additional functionality, we can enhance window.connectMetaMask instead
         
-        // Also add onclick attribute as backup
-        newBtn.setAttribute('onclick', 'handleLogin()');
+        // Ensure button is clickable
+        loginConnectBtn.style.cursor = 'pointer';
+        loginConnectBtn.style.pointerEvents = 'auto';
         
-        // Add a simple test click to verify the button works
-        setTimeout(() => {
-            console.log('🧪 Testing button click in 3 seconds...');
-            setTimeout(() => {
-                console.log('🧪 Simulating button click for testing...');
-                try {
-                    newBtn.click();
-                } catch (error) {
-                    console.error('Test click failed:', error);
-                }
-            }, 3000);
-        }, 1000);
-        
-        // Test if button is actually clickable
-        newBtn.style.cursor = 'pointer';
-        newBtn.style.userSelect = 'none';
-        newBtn.style.pointerEvents = 'auto';
-        
-        console.log('✅ Event listener added to button');
+        console.log('✅ Button is ready - inline onclick will handle the click');
         
         // Check if MetaMask is available and update button text if needed
         if (typeof window.ethereum === 'undefined') {
-            newBtn.innerHTML = `
+            loginConnectBtn.innerHTML = `
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                    <path d="M2 17l10 5 10-5"/>
-                    <path d="M2 12l10 5 10-5"/>
+                    <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                 </svg>
                 Install MetaMask First
             `;
+            loginConnectBtn.disabled = true;
             loginConnectBtn.title = 'MetaMask browser extension is required';
+            loginConnectBtn.style.cursor = 'not-allowed';
         } else {
             console.log('✅ MetaMask is available');
-        }
-        
-        // Check CrossMint integration status
-        if (window.CrossMintIntegration) {
-            console.log('✅ CrossMint integration is available');
-            if (window.CrossMintIntegration.login) {
-                console.log('✅ CrossMint login method is available');
-            } else {
-                console.warn('⚠️ CrossMint login method is not available');
+            // Set up event listeners if already connected
+            if (window.ethereum.isMetaMask) {
+                setupMetaMaskEventListeners();
             }
-        } else {
-            console.warn('⚠️ CrossMint integration is not available');
         }
+
+        // Also add a direct test function for debugging
+        window.testMetaMaskButton = function() {
+            console.log('🧪 Testing MetaMask button click programmatically...');
+            loginConnectBtn.click();
+        };
         
-        // Check for MetaMask availability
-        if (typeof window.ethereum !== 'undefined') {
-            console.log('✅ MetaMask is available');
+        // Add a direct test function that calls MetaMask request
+        window.testMetaMaskDirect = async function() {
+            console.log('🧪 Testing MetaMask request directly...');
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    console.error('MetaMask not installed');
+                    return;
+                }
+                console.log('Calling eth_requestAccounts directly...');
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                console.log('✅ Direct test successful:', accounts);
+                return accounts;
+            } catch (error) {
+                console.error('❌ Direct test failed:', error);
+                throw error;
+            }
+        };
+
+        // Check if MetaMask is available and update button text if needed
+        if (typeof window.ethereum === 'undefined') {
+            loginConnectBtn.innerHTML = `
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                Install MetaMask First
+            `;
+            loginConnectBtn.disabled = true;
+            loginConnectBtn.title = 'MetaMask browser extension is required';
+            loginConnectBtn.style.cursor = 'not-allowed';
         } else {
-            console.log('⚠️ MetaMask is not installed');
+            console.log('✅ MetaMask is available');
+            console.log('MetaMask provider details:', {
+                isMetaMask: window.ethereum.isMetaMask,
+                request: typeof window.ethereum.request,
+                selectedAddress: window.ethereum.selectedAddress,
+                chainId: window.ethereum.chainId
+            });
+            // Set up event listeners if already connected
+            if (window.ethereum.isMetaMask) {
+                setupMetaMaskEventListeners();
+            }
         }
     }
     
@@ -9371,69 +9864,9 @@ window.testMetaMaskConnection = async function() {
     }
 };
 
-// Connect MetaMask wallet - Working version from crossmint-google-wallet.html
-async function connectMetaMask() {
-    try {
-        console.log('🔗 Connecting to MetaMask...');
-        
-        // Check if MetaMask is available
-        if (typeof window.ethereum === 'undefined') {
-            throw new Error('MetaMask is not installed. Please install MetaMask browser extension to continue.');
-        }
-        
-        console.log('Requesting MetaMask access...');
-        
-        // Request account access - This should trigger MetaMask popup
-        const accounts = await window.ethereum.request({
-            method: 'eth_requestAccounts'
-        });
+// Note: connectMetaMask is now defined at the top of the file for early availability
 
-        if (accounts.length === 0) {
-            throw new Error('No accounts found. Please unlock MetaMask and try again.');
-        }
-
-        const walletAddress = accounts[0];
-        console.log('Getting wallet information...');
-        
-        // Get chain ID
-        const chainId = await window.ethereum.request({
-            method: 'eth_chainId'
-        });
-
-        // Create user object
-        const userData = {
-            id: walletAddress,
-            address: walletAddress,
-            provider: 'metamask',
-            chainId: chainId,
-            authMethod: 'wallet',
-            timestamp: Date.now()
-        };
-
-        // Store in localStorage (compatible with existing CrossMint integration)
-        localStorage.setItem('crossmint_user', JSON.stringify(userData));
-        localStorage.setItem('crossmint_wallet', walletAddress);
-        localStorage.setItem('crossmint_authenticated', 'true');
-        localStorage.setItem('crossmint_auth_method', 'wallet');
-        
-        // Trigger authentication success
-        handleAuthenticationSuccess(userData);
-        
-        console.log('✅ MetaMask wallet connected successfully!');
-        
-    } catch (error) {
-        console.error('❌ MetaMask connection failed:', error);
-        if (error.code === 4001) {
-            throw new Error('MetaMask connection rejected. Please approve the connection request.');
-        } else if (error.code === -32002) {
-            throw new Error('MetaMask connection already pending. Please check MetaMask and try again.');
-        } else {
-            throw new Error('MetaMask connection failed: ' + (error.message || 'Unknown error'));
-        }
-    }
-}
-
-// Connect MetaMask wallet (from working crossmint-google-wallet.html)
+// Connect MetaMask wallet (alternative function name - kept for compatibility)
 async function connectMetaMaskWallet() {
     try {
         console.log('🔗 Connecting to MetaMask...');
@@ -9519,14 +9952,37 @@ function handleAuthenticationSuccess(userData) {
     showMainApplication();
     
     // Initialize user-specific features
-    initializeUserSpecificFeatures();
+    if (typeof initializeUserSpecificFeatures === 'function') {
+        initializeUserSpecificFeatures();
+    }
     
     // Log successful authentication
-    logAuthenticationEvent('login_success', {
-        walletAddress: userData.address,
-        sessionId: sessionId,
-        timestamp: timestamp
-    });
+    if (typeof logAuthenticationEvent === 'function') {
+        logAuthenticationEvent('login_success', {
+            walletAddress: userData.address,
+            sessionId: sessionId,
+            timestamp: timestamp
+        });
+    }
+}
+
+// Make handleAuthenticationSuccess globally accessible
+window.handleAuthenticationSuccess = handleAuthenticationSuccess;
+
+// Check for pending authentication on load
+if (window.pendingAuthSuccess) {
+    console.log('Processing pending authentication...');
+    const pendingAuth = window.pendingAuthSuccess;
+    delete window.pendingAuthSuccess;
+    // Wait a bit for handleAuthenticationSuccess to be defined
+    setTimeout(() => {
+        if (typeof handleAuthenticationSuccess === 'function') {
+            handleAuthenticationSuccess(pendingAuth);
+        } else {
+            // Store it again for later
+            window.pendingAuthSuccess = pendingAuth;
+        }
+    }, 100);
 }
 
 // Handle secure logout
@@ -10323,3 +10779,236 @@ async function testOllamaCompletion() {
         if (loadingDiv) loadingDiv.style.display = 'none';
     }
 }
+    // Faicey Functions
+    async function loadFaiceyExpressions() {
+        try {
+            const response = await sendRequest('/faicey/expressions', 'GET');
+            if (response.success && response.expressions) {
+                displayFaiceyExpressions(response.expressions);
+            } else {
+                const listEl = document.getElementById('faicey-expressions-list');
+                if (listEl) {
+                    listEl.innerHTML = '<div class="error-message">No expressions found</div>';
+                }
+            }
+        } catch (error) {
+            console.error('Error loading Faicey expressions:', error);
+            const listEl = document.getElementById('faicey-expressions-list');
+            if (listEl) {
+                listEl.innerHTML = '<div class="error-message">Error loading expressions: ' + error.message + '</div>';
+            }
+        }
+    }
+    
+    function displayFaiceyExpressions(expressions) {
+        const listContainer = document.getElementById('faicey-expressions-list');
+        if (!listContainer) return;
+        
+        if (!expressions || expressions.length === 0) {
+            listContainer.innerHTML = '<div class="info-message">No expressions available. Create one to get started.</div>';
+            return;
+        }
+        
+        const expressionsHTML = expressions.map(expr => {
+            const createdDate = new Date(expr.created_at).toLocaleDateString();
+            const skillsCount = expr.skills ? expr.skills.length : 0;
+            const modulesCount = expr.ui_modules ? expr.ui_modules.length : 0;
+            
+            return `
+                <div class="expression-card" onclick="showExpressionDetails('${expr.expression_id}')">
+                    <div class="expression-header">
+                        <h3>${(expr.prompt || expr.expression_id).replace(/'/g, "&#39;")}</h3>
+                        <span class="expression-id">${expr.expression_id}</span>
+                    </div>
+                    <div class="expression-info">
+                        <div class="info-item">
+                            <span class="info-label">Agent:</span>
+                            <span class="info-value">${expr.agent_id}</span>
+                        </div>
+                        <div class="info-item">
+                            <div class="badge-group">
+                                <span class="badge">${skillsCount} Skills</span>
+                                <span class="badge">${modulesCount} Modules</span>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Created:</span>
+                            <span class="info-value">${createdDate}</span>
+                        </div>
+                    </div>
+                    <div class="expression-actions">
+                        <button class="action-btn-small" onclick="event.stopPropagation(); loadExpression('${expr.expression_id}')">Load</button>
+                        <button class="action-btn-small" onclick="event.stopPropagation(); exportExpression('${expr.expression_id}')">Export</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        listContainer.innerHTML = expressionsHTML;
+    }
+    
+    async function showExpressionDetails(expressionId) {
+        try {
+            const response = await sendRequest(`/faicey/expressions/${expressionId}`, 'GET');
+            if (response.success && response.expression) {
+                const expr = response.expression;
+                const detailsContainer = document.getElementById('faicey-expression-details');
+                if (!detailsContainer) return;
+                
+                document.getElementById('expression-name').textContent = expr.prompt || expressionId;
+                document.getElementById('detail-agent-id').textContent = expr.agent_id || '-';
+                document.getElementById('detail-persona-id').textContent = expr.persona_id || '-';
+                document.getElementById('detail-created').textContent = new Date(expr.created_at).toLocaleString();
+                
+                const skillsContainer = document.getElementById('detail-skills');
+                if (skillsContainer) {
+                    if (expr.skills && expr.skills.length > 0) {
+                        skillsContainer.innerHTML = expr.skills.map(skill => 
+                            `<div class="skill-badge">${(skill.name || skill.skill_id).replace(/'/g, "&#39;")} (Level ${skill.level || 'N/A'})</div>`
+                        ).join('');
+                    } else {
+                        skillsContainer.innerHTML = '<div class="no-data">No skills</div>';
+                    }
+                }
+                
+                const modulesContainer = document.getElementById('detail-modules');
+                if (modulesContainer) {
+                    if (expr.ui_modules && expr.ui_modules.length > 0) {
+                        modulesContainer.innerHTML = expr.ui_modules.map(module => 
+                            `<div class="module-badge">${(module.name || module.module_id).replace(/'/g, "&#39;")}</div>`
+                        ).join('');
+                    } else {
+                        modulesContainer.innerHTML = '<div class="no-data">No modules</div>';
+                    }
+                }
+                
+                const speechConfig = expr.speech_inflection_config || {};
+                const speechEnabledEl = document.getElementById('detail-speech-enabled');
+                const speechAlphabetEl = document.getElementById('detail-speech-alphabet');
+                const speechBlendEl = document.getElementById('detail-speech-blend');
+                if (speechEnabledEl) speechEnabledEl.textContent = speechConfig.enabled ? 'Yes' : 'No';
+                if (speechAlphabetEl) speechAlphabetEl.textContent = speechConfig.alphabet || '-';
+                if (speechBlendEl) speechBlendEl.textContent = speechConfig.viseme_blend_duration || '-';
+                
+                detailsContainer.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Error loading expression details:', error);
+            alert('Error loading expression details: ' + error.message);
+        }
+    }
+    
+    function closeExpressionDetails() {
+        const detailsEl = document.getElementById('faicey-expression-details');
+        if (detailsEl) detailsEl.style.display = 'none';
+    }
+    
+    async function loadExpression(expressionId) {
+        try {
+            const response = await sendRequest(`/faicey/expressions/${expressionId}/ui-config`, 'GET');
+            if (response.success) {
+                console.log('Expression UI config loaded:', response);
+                alert('Expression loaded successfully! UI configuration available in console.');
+            }
+        } catch (error) {
+            console.error('Error loading expression:', error);
+            alert('Error loading expression: ' + error.message);
+        }
+    }
+    
+    async function exportExpression(expressionId) {
+        try {
+            const response = await sendRequest(`/faicey/expressions/${expressionId}/ui-config`, 'GET');
+            if (response.success) {
+                const dataStr = JSON.stringify(response.config, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `faicey-expression-${expressionId}.json`;
+                link.click();
+                URL.revokeObjectURL(url);
+            }
+        } catch (error) {
+            console.error('Error exporting expression:', error);
+            alert('Error exporting expression: ' + error.message);
+        }
+    }
+    
+    function initializeFaiceyTabs() {
+        const faiceyTabBtns = document.querySelectorAll('.faicey-tab-btn');
+        const faiceySections = document.querySelectorAll('.faicey-section');
+        
+        faiceyTabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.getAttribute('data-faicey-tab');
+                
+                faiceyTabBtns.forEach(b => b.classList.remove('active'));
+                faiceySections.forEach(s => s.classList.remove('active'));
+                
+                btn.classList.add('active');
+                const sectionEl = document.getElementById(`faicey-${tabId}-section`);
+                if (sectionEl) sectionEl.classList.add('active');
+                
+                if (tabId === 'speech') {
+                    loadSpeechInflectionData();
+                } else if (tabId === 'modules') {
+                    loadFaiceyModules();
+                }
+            });
+        });
+    }
+    
+    async function loadSpeechInflectionData() {
+        try {
+            const response = await fetch('/data/faicey/morph_target_definitions.json');
+            const data = await response.json();
+            displayMorphTargets(data);
+        } catch (error) {
+            console.error('Error loading morph target definitions:', error);
+        }
+    }
+    
+    function displayMorphTargets(definitions) {
+        const grid = document.getElementById('targets-grid');
+        if (!grid || !definitions || !definitions.morph_targets) return;
+        
+        const categories = ['mouth', 'eyes', 'eyebrows', 'ears'];
+        let html = '';
+        
+        categories.forEach(category => {
+            const targets = definitions.morph_targets[category];
+            if (!targets || !targets.targets) return;
+            
+            html += `<div class="target-category">
+                <h5>${category.charAt(0).toUpperCase() + category.slice(1)}</h5>
+                <div class="target-items">`;
+            
+            Object.keys(targets.targets).forEach(targetName => {
+                const target = targets.targets[targetName];
+                html += `
+                    <div class="target-item">
+                        <span class="target-name">${(target.name || targetName).replace(/'/g, "&#39;")}</span>
+                        <span class="target-description">${(target.description || '').replace(/'/g, "&#39;")}</span>
+                    </div>
+                `;
+            });
+            
+            html += `</div></div>`;
+        });
+        
+        grid.innerHTML = html;
+    }
+    
+    async function loadFaiceyModules() {
+        const modulesList = document.getElementById('faicey-modules-list');
+        if (modulesList) {
+            modulesList.innerHTML = '<div class="info-message">Module registry loading...</div>';
+        }
+    }
+    
+    // Make functions globally accessible
+    window.showExpressionDetails = showExpressionDetails;
+    window.closeExpressionDetails = closeExpressionDetails;
+    window.loadExpression = loadExpression;
+    window.exportExpression = exportExpression;

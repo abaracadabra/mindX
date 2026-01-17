@@ -47,9 +47,37 @@ class CommandHandler:
         return await self.mastermind.id_manager_agent.list_managed_identities()
 
     async def handle_id_create(self, entity_id: str) -> Dict[str, Any]:
+        """
+        Create a new identity. Note: If this is for an agent, use handle_agent_create instead
+        which will create both identity and agent, and publish identity.created event via coordinator.
+        For non-agent entities, identity events may not be published.
+        """
         if not self.mastermind.id_manager_agent:
             return {"error": "Mastermind's IDManagerAgent is not available."}
         public_address, env_var_name = await self.mastermind.id_manager_agent.create_new_wallet(entity_id=entity_id)
+        
+        # If coordinator is available and this is for an agent, publish identity.created event
+        # Note: This is a fallback - ideally agents should be created via handle_agent_create
+        if self.mastermind.coordinator_agent and entity_id.startswith(("agent_", "bdi_agent_", "coordinator_", "mastermind_")):
+            try:
+                import time
+                await self.mastermind.coordinator_agent.publish_event(
+                    "identity.created",
+                    {
+                        "agent_id": entity_id,
+                        "public_key": public_address,
+                        "env_var": env_var_name,
+                        "timestamp": time.time(),
+                        "metadata": {
+                            "created_by": "command_handler",
+                            "entity_id": entity_id
+                        }
+                    }
+                )
+            except Exception:
+                # Event publishing is optional, don't fail the command
+                pass
+        
         return {"public_address": public_address, "env_var_name": env_var_name}
 
     async def handle_id_deprecate(self, public_address: str, entity_id_hint: Optional[str] = None) -> Dict[str, Any]:
@@ -116,6 +144,12 @@ class CommandHandler:
         return await self.mastermind.coordinator_agent.handle_user_input(content=content, user_id="api_user", interaction_type=InteractionType.REJECT_IMPROVEMENT, metadata=metadata)
 
     async def handle_agent_create(self, agent_type: str, agent_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a new agent. Events flow through coordinator:
+        - agent.created event published by coordinator.create_and_register_agent()
+        - identity.created event published when identity is created
+        - agent.registered event published when agent is registered
+        """
         return await self.mastermind.bdi_agent._internal_action_handlers["CREATE_AGENT"]({"params": {"agent_type": agent_type, "agent_id": agent_id, "config": config}})
 
     async def handle_agent_delete(self, agent_id: str) -> Dict[str, Any]:

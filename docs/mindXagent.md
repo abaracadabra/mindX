@@ -39,7 +39,7 @@ The MindX Agent implements:
 ## Usage
 
 ```python
-from agents.orchestration.mindXagent import MindXAgent
+from agents.core.mindXagent import MindXAgent
 
 # Get MindX Agent instance
 mindx_agent = await MindXAgent.get_instance(
@@ -169,7 +169,7 @@ Each agent in the knowledge base contains:
 
 ## File Location
 
-- **Path**: `agents/orchestration/mindXagent.py`
+- **Path**: `agents/core/mindXagent.py`
 - **Documentation**: `docs/mindXagent.md`
 
 ## NFT Metadata

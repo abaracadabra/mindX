@@ -1,0 +1,119 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-01-16T23:45:00Z",
+  "description": "Comprehensive phoneme-to-viseme mapping for speech inflection system",
+  
+  "alphabets": {
+    "english": {
+      "name": "English",
+      "phonemes": {
+        "vowels": {
+          "A": {"viseme": "viseme_A", "description": "Open mouth, wide", "ipa": "/æ/ or /ɑː/"},
+          "E": {"viseme": "viseme_E", "description": "Slight smile, mid-open", "ipa": "/ɛ/ or /eɪ/"},
+          "I": {"viseme": "viseme_I", "description": "Smile, teeth visible", "ipa": "/ɪ/ or /iː/"},
+          "O": {"viseme": "viseme_O", "description": "Rounded lips, open", "ipa": "/ɒ/ or /oʊ/"},
+          "U": {"viseme": "viseme_U", "description": "Puckered lips, rounded", "ipa": "/ʊ/ or /uː/"},
+          "Y": {"viseme": "viseme_I", "description": "Similar to I", "ipa": "/j/ or /ɪ/"},
+          "AW": {"viseme": "viseme_AW", "description": "Open wide, rounded", "ipa": "/ɔː/"},
+          "AY": {"viseme": "viseme_A", "description": "Open to smile", "ipa": "/aɪ/"},
+          "EY": {"viseme": "viseme_E", "description": "Mid-open to smile", "ipa": "/eɪ/"},
+          "OY": {"viseme": "viseme_O", "description": "Rounded to smile", "ipa": "/ɔɪ/"}
+        },
+        "consonants": {
+          "M": {"viseme": "viseme_M", "description": "Closed lips", "ipa": "/m/"},
+          "B": {"viseme": "viseme_M", "description": "Closed lips, burst", "ipa": "/b/"},
+          "P": {"viseme": "viseme_P", "description": "Closed lips, plosive", "ipa": "/p/"},
+          "F": {"viseme": "viseme_F", "description": "Lower lip to upper teeth", "ipa": "/f/"},
+          "V": {"viseme": "viseme_F", "description": "Lower lip to upper teeth, voiced", "ipa": "/v/"},
+          "TH": {"viseme": "viseme_TH", "description": "Tongue between teeth", "ipa": "/θ/ or /ð/"},
+          "L": {"viseme": "viseme_L", "description": "Tongue tip to roof", "ipa": "/l/"},
+          "W": {"viseme": "viseme_W", "description": "Rounded lips, slight protrusion", "ipa": "/w/"},
+          "Q": {"viseme": "viseme_W", "description": "Rounded lips", "ipa": "/kw/"},
+          "S": {"viseme": "viseme_S", "description": "Teeth together, air stream", "ipa": "/s/"},
+          "Z": {"viseme": "viseme_S", "description": "Teeth together, voiced", "ipa": "/z/"},
+          "SH": {"viseme": "viseme_SH", "description": "Puckered, air stream", "ipa": "/ʃ/"},
+          "ZH": {"viseme": "viseme_SH", "description": "Puckered, voiced", "ipa": "/ʒ/"},
+          "CH": {"viseme": "viseme_CH", "description": "Puckered, plosive", "ipa": "/tʃ/"},
+          "J": {"viseme": "viseme_CH", "description": "Puckered, voiced plosive", "ipa": "/dʒ/"},
+          "R": {"viseme": "viseme_R", "description": "Tongue curled back", "ipa": "/r/"},
+          "N": {"viseme": "viseme_N", "description": "Tongue to roof, nasal", "ipa": "/n/"},
+          "D": {"viseme": "viseme_N", "description": "Tongue to roof, plosive", "ipa": "/d/"},
+          "T": {"viseme": "viseme_N", "description": "Tongue to roof, unvoiced", "ipa": "/t/"},
+          "K": {"viseme": "viseme_K", "description": "Back of tongue up", "ipa": "/k/"},
+          "G": {"viseme": "viseme_K", "description": "Back of tongue up, voiced", "ipa": "/g/"},
+          "NG": {"viseme": "viseme_N", "description": "Back of tongue, nasal", "ipa": "/ŋ/"},
+          "H": {"viseme": "viseme_H", "description": "Open mouth, breath", "ipa": "/h/"},
+          "X": {"viseme": "viseme_K", "description": "Back of tongue", "ipa": "/ks/"},
+          "C": {"viseme": "viseme_K", "description": "K or S sound", "ipa": "/k/ or /s/"}
+        },
+        "silence": {
+          "SIL": {"viseme": "viseme_SIL", "description": "Silence, neutral mouth", "ipa": ""},
+          "SP": {"viseme": "viseme_SIL", "description": "Short pause", "ipa": ""}
+        }
+      }
+    }
+  },
+  
+  "tone_systems": {
+    "english": {
+      "name": "English",
+      "tones": [],
+      "description": "Non-tonal language"
+    },
+    "chinese": {
+      "name": "Chinese (Mandarin)",
+      "tones": [1, 2, 3, 4],
+      "description": "Four tones: flat, rising, falling-rising, falling",
+      "tone_effects": {
+        "1": {"eyebrow": "neutral", "mouth": "slight_open"},
+        "2": {"eyebrow": "slight_raise", "mouth": "rising"},
+        "3": {"eyebrow": "furrowed", "mouth": "dip"},
+        "4": {"eyebrow": "relaxed", "mouth": "falling"}
+      }
+    },
+    "thai": {
+      "name": "Thai",
+      "tones": [1, 2, 3, 4, 5],
+      "description": "Five tones: mid, low, falling, high, rising",
+      "tone_effects": {
+        "1": {"eyebrow": "neutral", "mouth": "neutral"},
+        "2": {"eyebrow": "relaxed", "mouth": "low"},
+        "3": {"eyebrow": "slight_furrow", "mouth": "falling"},
+        "4": {"eyebrow": "raised", "mouth": "high"},
+        "5": {"eyebrow": "slight_raise", "mouth": "rising"}
+      }
+    },
+    "vietnamese": {
+      "name": "Vietnamese",
+      "tones": [1, 2, 3, 4, 5, 6],
+      "description": "Six tones with various pitch contours",
+      "tone_effects": {
+        "1": {"eyebrow": "neutral", "mouth": "flat"},
+        "2": {"eyebrow": "slight_raise", "mouth": "rising"},
+        "3": {"eyebrow": "furrowed", "mouth": "dipping"},
+        "4": {"eyebrow": "raised", "mouth": "high_rising"},
+        "5": {"eyebrow": "relaxed", "mouth": "low_falling"},
+        "6": {"eyebrow": "slight_furrow", "mouth": "low_rising"}
+      }
+    }
+  },
+  
+  "viseme_blending": {
+    "blend_duration": 0.1,
+    "easing": "ease_in_out",
+    "overlap": 0.05,
+    "rules": {
+      "vowel_to_vowel": {"duration": 0.15, "smooth": true},
+      "consonant_to_vowel": {"duration": 0.1, "smooth": true},
+      "vowel_to_consonant": {"duration": 0.08, "smooth": true},
+      "consonant_to_consonant": {"duration": 0.12, "smooth": false}
+    }
+  },
+  
+  "word_boundaries": {
+    "pause_viseme": "viseme_SIL",
+    "pause_duration": 0.2,
+    "sentence_pause": 0.5,
+    "paragraph_pause": 1.0
+  }
+}

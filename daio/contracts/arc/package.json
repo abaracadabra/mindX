@@ -1,0 +1,13 @@
+{
+  "name": "agenticplace-settlement",
+  "version": "1.0.0",
+  "description": "Settlement layer for AgenticPlace marketplace",
+  "scripts": {
+    "compile": "echo 'Solidity contracts ready for deployment'",
+    "test": "echo 'Run tests with your preferred framework (Hardhat/Foundry)'",
+    "deploy": "echo 'Deploy contracts to Arc testnet'"
+  },
+  "keywords": ["blockchain", "settlement", "escrow", "agents", "marketplace"],
+  "author": "AgenticPlace",
+  "license": "MIT"
+}

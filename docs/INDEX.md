@@ -113,7 +113,7 @@ All tool documentation is organized in the `tools/` folder. See [TOOLS_INDEX.md]
 
 #### Specialized Tools
 
-- **[GitHub Agent Tool](GITHUB_AGENT.md)** - GitHub backup and version control automation
+- **[GitHub Agent Tool](GITHUB_AGENT.md)** - GitHub backup and version control automation with integrated UI controls for backup operations, schedule management, and repository access. The tool provides real-time status monitoring, backup creation, and synchronization capabilities through the mindX frontend interface. See [GitHub Agent Documentation](GITHUB_AGENT.md) for complete details on operations, integration, and UI features.
 
 **Complete Tool Registry**: See [TOOLS_INDEX.md](TOOLS_INDEX.md) for full details and usage information.
 
@@ -232,7 +232,7 @@ All tool documentation is organized in the `tools/` folder. See [TOOLS_INDEX.md]
 
 #### External Integrations
 
-- **[GitHub Agent](GITHUB_AGENT.md)** - GitHub integration
+- **[GitHub Agent](GITHUB_AGENT.md)** - GitHub integration with comprehensive UI controls, backup automation, schedule management, and repository synchronization. The GitHub Agent Tool is fully integrated into the mindX frontend, providing a dedicated section in the Control tab with status monitoring, backup operations, and direct repository access. See [GitHub Agent Documentation](GITHUB_AGENT.md) for architecture, operations, and UI integration details.
 - **[CrossMint Integration](coral_id_agent.md)** - CrossMint NFT integration
 
 ---

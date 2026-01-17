@@ -487,6 +487,7 @@ All agents are registered in the mindX system through:
 - [Resource Monitor Documentation](docs/resource_monitor.md)
 - [Error Recovery Coordinator Documentation](docs/error_recovery_coordinator.md)
 - [Monitoring Integration Documentation](docs/monitoring_integration.md)
+- [Token Calculator Tool Documentation](docs/token_calculator_tool_robust.md)
 
 ### Orchestration Components
 - [Coordinator Agent Documentation](docs/coordinator_agent.md)

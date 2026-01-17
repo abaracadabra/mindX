@@ -1,0 +1,310 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-01-16T23:45:00Z",
+  "description": "Morph target definitions for speech inflection system",
+  
+  "morph_targets": {
+    "mouth": {
+      "category": "viseme",
+      "description": "Mouth shapes for speech (visemes)",
+      "targets": {
+        "viseme_SIL": {
+          "name": "Silence",
+          "description": "Neutral, closed mouth",
+          "influence_range": [0.0, 1.0],
+          "default": 1.0
+        },
+        "viseme_A": {
+          "name": "A (Open Wide)",
+          "description": "Open mouth, wide, for A sounds",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "viseme_E": {
+          "name": "E (Slight Smile)",
+          "description": "Slight smile, mid-open mouth",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "viseme_I": {
+          "name": "I (Smile)",
+          "description": "Smile, teeth visible",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "viseme_O": {
+          "name": "O (Rounded)",
+          "description": "Rounded lips, open mouth",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "viseme_U": {
+          "name": "U (Puckered)",
+          "description": "Puckered lips, rounded",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "viseme_AW": {
+          "name": "AW (Open Rounded)",
+          "description": "Open wide, rounded",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "viseme_M": {
+          "name": "M/B (Closed Lips)",
+          "description": "Closed lips for M, B, P sounds",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "viseme_P": {
+          "name": "P (Plosive)",
+          "description": "Closed lips, plosive burst",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "viseme_F": {
+          "name": "F/V (Lip to Teeth)",
+          "description": "Lower lip to upper teeth",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "viseme_TH": {
+          "name": "TH (Tongue Between Teeth)",
+          "description": "Tongue between teeth",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "viseme_L": {
+          "name": "L (Tongue Up)",
+          "description": "Tongue tip to roof of mouth",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "viseme_W": {
+          "name": "W/Q (Rounded Lips)",
+          "description": "Rounded lips, slight protrusion",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "viseme_S": {
+          "name": "S/Z (Teeth Together)",
+          "description": "Teeth together, air stream",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "viseme_SH": {
+          "name": "SH/ZH (Puckered)",
+          "description": "Puckered lips, air stream",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "viseme_CH": {
+          "name": "CH/J (Puckered Plosive)",
+          "description": "Puckered, plosive sound",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "viseme_R": {
+          "name": "R (Tongue Curled)",
+          "description": "Tongue curled back",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "viseme_N": {
+          "name": "N/D/T (Tongue to Roof)",
+          "description": "Tongue to roof of mouth",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "viseme_K": {
+          "name": "K/G (Back of Tongue)",
+          "description": "Back of tongue raised",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "viseme_H": {
+          "name": "H (Open Breath)",
+          "description": "Open mouth, breath sound",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        }
+      }
+    },
+    
+    "eyes": {
+      "category": "expression",
+      "description": "Eye states and movements",
+      "targets": {
+        "eye_open": {
+          "name": "Open",
+          "description": "Eyes fully open (default)",
+          "influence_range": [0.0, 1.0],
+          "default": 1.0
+        },
+        "eye_closed": {
+          "name": "Closed",
+          "description": "Eyes fully closed",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "eye_blink": {
+          "name": "Blink",
+          "description": "Temporary blink animation",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0,
+          "temporary": true,
+          "duration": 0.15
+        },
+        "eye_look_left": {
+          "name": "Look Left",
+          "description": "Eyes look to the left",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "eye_look_right": {
+          "name": "Look Right",
+          "description": "Eyes look to the right",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "eye_look_up": {
+          "name": "Look Up",
+          "description": "Eyes look upward",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "eye_look_down": {
+          "name": "Look Down",
+          "description": "Eyes look downward",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "eye_squint": {
+          "name": "Squint",
+          "description": "Eyes slightly closed, squinting",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "eye_wide": {
+          "name": "Wide Open",
+          "description": "Eyes wide open (surprise/attention)",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        }
+      }
+    },
+    
+    "eyebrows": {
+      "category": "expression",
+      "description": "Eyebrow positions and expressions",
+      "targets": {
+        "eyebrow_neutral": {
+          "name": "Neutral",
+          "description": "Neutral eyebrow position (default)",
+          "influence_range": [0.0, 1.0],
+          "default": 1.0
+        },
+        "eyebrow_raised": {
+          "name": "Raised",
+          "description": "Eyebrows raised (surprise/attention)",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "eyebrow_furrowed": {
+          "name": "Furrowed",
+          "description": "Eyebrows furrowed (concentration/concern)",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "eyebrow_relaxed": {
+          "name": "Relaxed",
+          "description": "Eyebrows relaxed (calm)",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "eyebrow_left_raised": {
+          "name": "Left Raised",
+          "description": "Left eyebrow raised (questioning)",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "eyebrow_right_raised": {
+          "name": "Right Raised",
+          "description": "Right eyebrow raised (questioning)",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "eyebrow_both_raised": {
+          "name": "Both Raised",
+          "description": "Both eyebrows raised (surprise)",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        }
+      }
+    },
+    
+    "ears": {
+      "category": "expression",
+      "description": "Ear positions for listening",
+      "targets": {
+        "ear_neutral": {
+          "name": "Neutral",
+          "description": "Neutral ear position (default)",
+          "influence_range": [0.0, 1.0],
+          "default": 1.0
+        },
+        "ear_perked_up": {
+          "name": "Perked Up",
+          "description": "Ears perked up (listening/attention)",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "ear_slightly_raised": {
+          "name": "Slightly Raised",
+          "description": "Ears slightly raised (moderate attention)",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        },
+        "ear_relaxed": {
+          "name": "Relaxed",
+          "description": "Ears relaxed (idle)",
+          "influence_range": [0.0, 1.0],
+          "default": 0.0
+        }
+      }
+    }
+  },
+  
+  "blending_rules": {
+    "mouth_visemes": {
+      "exclusive": true,
+      "description": "Only one viseme should be active at a time (with blending)",
+      "blend_method": "weighted_average"
+    },
+    "eyes": {
+      "exclusive": false,
+      "description": "Eye states can combine (e.g., look-left + blink)",
+      "blend_method": "additive"
+    },
+    "eyebrows": {
+      "exclusive": true,
+      "description": "One primary eyebrow state at a time",
+      "blend_method": "weighted_average"
+    },
+    "ears": {
+      "exclusive": true,
+      "description": "One ear state at a time",
+      "blend_method": "weighted_average"
+    }
+  },
+  
+  "animation_timing": {
+    "viseme_transition": 0.1,
+    "eye_blink_duration": 0.15,
+    "eye_blink_interval": 3.0,
+    "eyebrow_transition": 0.2,
+    "ear_transition": 0.3,
+    "listening_ear_animation": 0.5,
+    "speaking_eye_tracking_delay": 0.05
+  }
+}

@@ -4,6 +4,25 @@
 
 The A2A (Agent-to-Agent) Tool enables standardized agent-to-agent communication following the A2A protocol. It provides capabilities for agent discovery, message passing, authentication, and interoperability with external A2A-compatible systems.
 
+## External Resources
+
+### Official A2A Python SDK
+- **Repository**: https://github.com/a2aproject/a2a-python
+- **Installation**: `pip install a2a-sdk` (or `pip install 'a2a-sdk[all]'` for full features)
+- **Features**: HTTP server (FastAPI), gRPC, OpenTelemetry, SQL backends, encryption
+- **API Docs**: https://a2a-protocol.org
+- **API Reference**: https://a2a-protocol.org/latest/sdk/python/api/
+
+### AgenticPlace Organization
+- **Organization**: https://github.com/AgenticPlace
+- **Key Repositories**:
+  - `A2A`: Open protocol for agent communication and interoperability
+  - `mindXalpha/beta/gamma`: mindX augmentic deployments
+  - `SimpleCoder`: Coding agent working with mindX BDI control
+  - `mcp.agent`: Google Cloud MCP server/client for agents
+  - `ROMA`: Meta-agent framework for multi-agent systems
+  - `DeepResearchAgent`: Hierarchical multi-agent research system
+
 ## Technical Explanation
 
 The A2A Tool follows mindX doctrine:
@@ -11,6 +30,7 @@ The A2A Tool follows mindX doctrine:
 - **Standardized protocols**: Enables interoperability with external systems
 - **Cryptographic verification**: Ensures trust through signatures
 - **Discovery mechanism**: Agents can discover and communicate with each other
+- **GitHub Integration**: Works with GitHub agent for repository operations
 
 ### Architecture
 
@@ -141,6 +161,7 @@ discovery_url = result["discovery_endpoint"]
 
 ## Operations
 
+### Core Operations
 - `register_agent`: Register an agent with A2A protocol
 - `discover_agents`: Discover available agents
 - `send_message`: Send a message to another agent
@@ -151,12 +172,40 @@ discovery_url = result["discovery_endpoint"]
 - `list_agents`: List all registered agents
 - `generate_discovery_endpoint`: Generate `.well-known/agents.json`
 
+### External Resource Operations
+- `get_external_resources`: Get external A2A resources (SDK, AgenticPlace info)
+- `get_agenticplace_repos`: Get AgenticPlace organization repositories
+- `clone_external_repo`: Clone an external A2A repository via GitHub agent
+- `sync_with_agenticplace`: Sync with AgenticPlace A2A repositories
+
 ## Integration
 
 The A2A Tool integrates with:
 - **Memory Agent**: All communications logged to memory
+- **GitHub Agent**: Repository operations, backup before sync
 - **Coordinator Agent**: Automatic agent registration
 - **External Systems**: A2A-compatible systems can discover and communicate
+
+### GitHub Agent Integration
+
+```python
+from tools.a2a_tool import A2ATool
+from tools.github_agent_tool import GitHubAgentTool
+from agents.memory_agent import MemoryAgent
+
+memory_agent = MemoryAgent()
+github_agent = GitHubAgentTool(memory_agent=memory_agent)
+a2a_tool = A2ATool(memory_agent=memory_agent, github_agent=github_agent)
+
+# Get external resources
+result = await a2a_tool.execute(operation="get_external_resources")
+
+# Get AgenticPlace repositories
+result = await a2a_tool.execute(operation="get_agenticplace_repos")
+
+# Sync with AgenticPlace (creates backup first)
+result = await a2a_tool.execute(operation="sync_with_agenticplace")
+```
 
 ## File Structure
 
@@ -212,6 +261,22 @@ data/a2a/
 3. **Action Delegation**: Delegate tasks to specialized agents
 4. **External Integration**: Connect with A2A-compatible systems
 5. **Agent Marketplace**: Enable agent discovery and interaction
+6. **A2A SDK Integration**: Use official a2a-python SDK for protocol compliance
+7. **AgenticPlace Sync**: Sync with AgenticPlace repositories for interoperability
+8. **GitHub Backup**: Automatic backup before syncing external resources
+
+## Claude Access
+
+Claude has access to the following external resources through this tool:
+
+- **Official A2A SDK**: https://github.com/a2aproject/a2a-python
+- **AgenticPlace Organization**: https://github.com/AgenticPlace
+  - A2A protocol implementation
+  - mindX deployment variants (alpha, beta, gamma)
+  - SimpleCoder coding agent
+  - MCP agent for Google Cloud
+  - ROMA multi-agent framework
+  - DeepResearchAgent
 
 
 

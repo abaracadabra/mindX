@@ -1,0 +1,138 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-01-16T23:35:00Z",
+  "repositories": {
+    "aiterm": {
+      "name": "aiterm",
+      "url": "https://github.com/aiterm",
+      "description": "AI Terminal - Terminal interface and execution system for AI agents",
+      "type": "github",
+      "added_at": "2026-01-16T23:15:00Z",
+      "tags": [
+        "terminal",
+        "ai",
+        "execution",
+        "agent-interface"
+      ],
+      "notes": "Repository for AI terminal interface and execution capabilities. May be relevant for mindterm integration and terminal operation improvements."
+    },
+    "xtermjs": {
+      "name": "xterm.js",
+      "url": "https://xtermjs.org/",
+      "description": "A terminal emulator for the web - Build terminals in the browser",
+      "type": "library",
+      "added_at": "2026-01-16T23:20:00Z",
+      "tags": [
+        "terminal",
+        "browser",
+        "emulator",
+        "frontend",
+        "xterm"
+      ],
+      "version": "5.3.0",
+      "npm_package": "@xterm/xterm",
+      "integration_status": "fully_integrated",
+      "notes": "xterm.js is the frontend terminal emulator used by mindterm. It provides the browser-based terminal interface that connects to mindterm's PTY backend via WebSocket. The integration includes FitAddon for automatic terminal resizing. Used by major applications like VS Code, JupyterLab, and many others."
+    },
+    "faicey": {
+      "name": "Faicey",
+      "url": "https://github.com/faicey",
+      "description": "UIUX AIML modular response system - Creates personalized interface expressions (faces) for AI agents",
+      "type": "github",
+      "added_at": "2026-01-16T23:30:00Z",
+      "tags": [
+        "uiux",
+        "aiml",
+        "modular",
+        "interface",
+        "persona",
+        "expression"
+      ],
+      "notes": "Faicey is a UI/UX AIML modular response system that creates personalized interface expressions for agents. It combines prompt, agent, dataset, model, and persona to create modular, customizable UI/UX systems. Key principles: user-friendliness, customization, real-time feedback, seamless AI integration, modular/scalable design, multi-modal/multi-model support."
+    },
+    "mlodular": {
+      "name": "mlodular",
+      "url": "https://github.com/mlodular",
+      "description": "Modular machine learning components",
+      "type": "github",
+      "added_at": "2026-01-16T23:30:00Z",
+      "tags": [
+        "ml",
+        "modular",
+        "components",
+        "machine-learning"
+      ],
+      "notes": "mlodular provides modular machine learning components that can be integrated into Faicey expressions for enhanced AI capabilities."
+    }
+  },
+  "knowledge_entries": [
+    {
+      "id": "aiterm_repo",
+      "type": "repository",
+      "title": "aiterm GitHub Repository",
+      "content": "The aiterm repository (https://github.com/aiterm) provides terminal interface and execution capabilities for AI agents. This repository may contain relevant patterns, implementations, or utilities that could enhance mindterm's terminal execution capabilities.",
+      "repository_id": "aiterm",
+      "created_at": "2026-01-16T23:15:00Z"
+    },
+    {
+      "id": "xtermjs_integration",
+      "type": "integration",
+      "title": "xterm.js Frontend Integration",
+      "content": "mindterm uses xterm.js (https://xtermjs.org/) as its frontend terminal emulator. The integration is implemented in mindx_frontend_ui/src/components/MindTerm.tsx using React. Key features: Terminal emulation with proper ANSI support, FitAddon for automatic resizing, WebSocket connection to mindterm backend, Real-time output streaming, Keystroke forwarding, Policy-gated command execution. The xterm.js library (v5.3.0) is installed via npm and provides the browser-based terminal interface that connects to mindterm's PTY backend.",
+      "library_id": "xtermjs",
+      "created_at": "2026-01-16T23:20:00Z",
+      "implementation_details": {
+        "frontend_component": "mindx_frontend_ui/src/components/MindTerm.tsx",
+        "package": "xterm@^5.3.0",
+        "addons": ["xterm-addon-fit@^0.8.0"],
+        "connection_protocol": "WebSocket",
+        "features": [
+          "ANSI escape sequence support",
+          "Automatic terminal resizing",
+          "Real-time output streaming",
+          "Keystroke forwarding",
+          "Policy-gated command execution",
+          "Risk assessment integration"
+        ]
+      }
+    },
+    {
+      "id": "faicey_concept",
+      "type": "concept",
+      "title": "Faicey UI/UX Expression System",
+      "content": "Faicey creates personalized interface expressions (faces) for agents by combining: Prompt (agent instructions), Agent (identity and capabilities), Dataset (knowledge base), Model (LLM configuration), Persona (cognitive identity). The resulting expression is a modular, customizable UI/UX system that adapts to the agent's identity. Faicey principles include: user-friendliness, customization options (drag-and-drop, toggles), real-time feedback, seamless AI integration, modular/scalable/fast design, multi-modal/multi-model support.",
+      "repository_id": "faicey",
+      "created_at": "2026-01-16T23:30:00Z",
+      "related_repos": ["mlodular"]
+    }
+  ],
+  "integrations": {
+    "xtermjs": {
+      "status": "fully_integrated",
+      "version": "5.3.0",
+      "frontend_location": "mindx_frontend_ui/src/components/MindTerm.tsx",
+      "documentation": "https://xtermjs.org/",
+      "features_used": [
+        "Terminal emulation",
+        "FitAddon for resizing",
+        "WebSocket integration",
+        "ANSI support",
+        "Cursor control"
+      ]
+    },
+    "faicey": {
+      "status": "integrated",
+      "version": "1.0.0",
+      "agent_location": "agents/faicey_agent.py",
+      "documentation": "https://github.com/faicey",
+      "features_used": [
+        "Persona-based UI generation",
+        "Modular component system",
+        "Real-time feedback",
+        "Customization options",
+        "Multi-modal support"
+      ],
+      "related_integrations": ["mlodular"]
+    }
+  }
+}

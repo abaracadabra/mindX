@@ -174,6 +174,98 @@ The mindX orchestration environment now features **COMPLETE IDENTITY MANAGEMENT*
 - **Role**: Automated documentation generation
 - **Capabilities**: Code documentation, API docs, system documentation
 
+### **Tier 4: Cognitive Sub-Agents (Augmentic Development)**
+
+#### 🔮 **PredictionAgent** (`prediction_agent`)
+- **File**: `agents/learning/prediction_agent.py`
+- **Type**: `cognitive_sub_agent`
+- **Status**: ✅ **Available (On-Demand)**
+- **Lifecycle**: On-demand (created when needed)
+- **Parent Agent**: MastermindAgent
+- **Role**: Forecasting future states, outcomes, and system behavior
+- **Capabilities**: System performance prediction, agent behavior prediction, task outcome prediction, resource need prediction
+- **Documentation**: `docs/prediction_agent.md`
+
+#### 🧠 **ReasoningAgent** (`reasoning_agent`)
+- **File**: `agents/core/reasoning_agent.py`
+- **Type**: `cognitive_sub_agent`
+- **Status**: ✅ **Available (On-Demand)**
+- **Lifecycle**: On-demand (created when needed)
+- **Parent Agent**: MastermindAgent
+- **Role**: Advanced logical reasoning (deductive, inductive, abductive)
+- **Capabilities**: Deductive reasoning, inductive reasoning, abductive reasoning, logical inference
+- **Documentation**: `docs/reasoning_agent.md`
+
+#### 🔄 **NonMonotonicAgent** (`nonmonotonic_agent`)
+- **File**: `agents/core/nonmonotonic_agent.py`
+- **Type**: `cognitive_sub_agent`
+- **Status**: ✅ **Available (On-Demand)**
+- **Lifecycle**: On-demand (created when needed)
+- **Parent Agent**: MastermindAgent
+- **Role**: Non-monotonic reasoning and belief adaptation
+- **Capabilities**: Belief revision, conflict detection, default assumption management, environment adaptation
+- **Documentation**: `docs/nonmonotonic_agent.md`
+
+#### 📚 **EpistemicAgent** (`epistemic_agent`)
+- **File**: `agents/core/epistemic_agent.py`
+- **Type**: `cognitive_sub_agent`
+- **Status**: ✅ **Available (On-Demand)**
+- **Lifecycle**: On-demand (created when needed)
+- **Parent Agent**: MastermindAgent
+- **Role**: Knowledge and belief management
+- **Capabilities**: Epistemic state queries, knowledge base management, belief certainty tracking, knowledge dynamics
+- **Documentation**: `docs/epistemic_agent.md`
+
+#### ❓ **SocraticAgent** (`socratic_agent`)
+- **File**: `agents/learning/socratic_agent.py`
+- **Type**: `cognitive_sub_agent`
+- **Status**: ✅ **Available (On-Demand)**
+- **Lifecycle**: On-demand (created when needed)
+- **Parent Agent**: MastermindAgent
+- **Role**: Socratic method for learning and problem-solving
+- **Capabilities**: Socratic question generation, learning guidance, assumption challenging, understanding deepening
+- **Documentation**: `docs/socratic_agent.md`
+
+### **Tier 5: Lifecycle Management Agents**
+
+#### 🚀 **StartupAgent** (`startup_agent`)
+- **File**: `agents/orchestration/startup_agent.py`
+- **Type**: `lifecycle_management_agent`
+- **Status**: ✅ **Always-On (Critical)**
+- **Lifecycle**: Always-on (critical system component)
+- **Role**: Controls agent startup and initialization
+- **Capabilities**: System initialization, agent registry loading, blockchain state restoration, always-on agent initialization
+- **Documentation**: `docs/startup_agent.md`
+
+#### 🔄 **ReplicationAgent** (`replication_agent`)
+- **File**: `agents/orchestration/replication_agent.py`
+- **Type**: `lifecycle_management_agent`
+- **Status**: ✅ **Always-On (Critical)**
+- **Lifecycle**: Always-on (critical system component)
+- **Role**: Handles replication (local + GitHub + blockchain)
+- **Capabilities**: Local replication (pgvectorscale), GitHub replication, blockchain replication, proven entity management
+- **Documentation**: `docs/replication_agent.md`
+
+#### 🛑 **ShutdownAgent** (`shutdown_agent`)
+- **File**: `agents/orchestration/shutdown_agent.py`
+- **Type**: `lifecycle_management_agent`
+- **Status**: ✅ **Always-On (Critical)**
+- **Lifecycle**: Always-on (critical system component)
+- **Role**: Controls graceful shutdown and cleanup
+- **Capabilities**: Graceful shutdown, state saving (pgvectorscale), final backup (GitHub), proven entity archival (blockchain)
+- **Documentation**: `docs/shutdown_agent.md`
+
+### **Tier 6: Storage & Registry Agents**
+
+#### ⛓️ **BlockchainAgent** (`blockchain_agent`)
+- **File**: `agents/orchestration/blockchain_agent.py`
+- **Type**: `storage_agent`
+- **Status**: ✅ **Available (On-Demand)**
+- **Lifecycle**: On-demand (created when needed)
+- **Role**: Immutable archival of proven agents/tools to blockchain
+- **Capabilities**: Agent archival, tool archival, knowledge sharing, marketplace integration (Agenticplace)
+- **Documentation**: `docs/blockchain_agent.md`
+
 ### **Testing & Validation Agents**
 
 #### 🧪 **UltimateCognitionTestAgent**
@@ -221,11 +313,15 @@ The mindX orchestration environment now features **COMPLETE IDENTITY MANAGEMENT*
 
 ## 📊 **Agent Statistics**
 
-- **Total Agents Found**: 20+
-- **Registered Agents**: 9 (45% → up from 30%)
-- **Unregistered Agents**: 11+ (55% → down from 70%)
+- **Total Agents Found**: 30+ (includes new sub-agents)
+- **Registered Agents**: 9 (30% of total)
+- **Unregistered Agents**: 11+ (37% of total)
+- **Sub-Agents (On-Demand)**: 9 (30% of total)
+  - PredictionAgent, ReasoningAgent, NonMonotonicAgent, EpistemicAgent, SocraticAgent
+  - StartupAgent, ReplicationAgent, ShutdownAgent, BlockchainAgent
 - **Critical Registered**: 3/3 (100% → up from 0%)
 - **Active Registered**: 9 (100% of registered)
+- **Lifecycle Agents**: 3 (Always-on: StartupAgent, ReplicationAgent, ShutdownAgent)
 - **Tools Secured**: 17/17 (100% → up from 0%)
 
 ---

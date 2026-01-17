@@ -8,6 +8,7 @@ Allows easy addition and removal of providers from UI and enables mindX to manag
 import json
 import os
 import asyncio
+import time
 from typing import Dict, List, Optional, Any, Type, Callable
 from dataclasses import dataclass, asdict
 from pathlib import Path
@@ -56,8 +57,9 @@ class ProviderRegistry:
     Supports dynamic registration, configuration, and lifecycle management.
     """
     
-    def __init__(self, config: Optional[Config] = None):
+    def __init__(self, config: Optional[Config] = None, coordinator_agent: Optional[Any] = None):
         self.config = config or Config()
+        self.coordinator_agent = coordinator_agent  # Optional reference to coordinator for event publishing
         self.registry_file = PROJECT_ROOT / "data" / "config" / "provider_registry.json"
         self.registry_file.parent.mkdir(parents=True, exist_ok=True)
         
@@ -225,6 +227,11 @@ class ProviderRegistry:
             self.providers[name] = provider
             self._save_registry()
             logger.info(f"Registered new provider: {name}")
+            
+            # Publish provider.registered event if coordinator is available
+            if self.coordinator_agent:
+                asyncio.create_task(self._publish_provider_event("provider.registered", name, provider))
+            
             return True
             
         except Exception as e:
@@ -307,6 +314,11 @@ class ProviderRegistry:
         self.providers[name].enabled = True
         self.providers[name].status = ProviderStatus.ENABLED
         self._save_registry()
+        
+        # Publish provider.enabled event if coordinator is available
+        if self.coordinator_agent:
+            asyncio.create_task(self._publish_provider_event("provider.enabled", name, self.providers[name]))
+        
         return True
     
     def disable_provider(self, name: str) -> bool:
@@ -322,7 +334,36 @@ class ProviderRegistry:
             del self.provider_instances[name]
         
         self._save_registry()
+        
+        # Publish provider.disabled event if coordinator is available
+        if self.coordinator_agent:
+            asyncio.create_task(self._publish_provider_event("provider.disabled", name, self.providers[name]))
+        
         return True
+    
+    async def _publish_provider_event(self, event_topic: str, provider_name: str, provider: ProviderConfig):
+        """Publish provider event via coordinator if available"""
+        try:
+            if self.coordinator_agent and hasattr(self.coordinator_agent, 'publish_event'):
+                await self.coordinator_agent.publish_event(
+                    event_topic,
+                    {
+                        "provider_name": provider_name,
+                        "name": provider_name,
+                        "display_name": provider.display_name,
+                        "status": provider.status.value,
+                        "enabled": provider.enabled,
+                        "timestamp": time.time(),
+                        "metadata": {
+                            "module_path": provider.module_path,
+                            "factory_function": provider.factory_function,
+                            "rate_limit_rpm": provider.default_rate_limit_rpm,
+                            "rate_limit_tpm": provider.default_rate_limit_tpm
+                        }
+                    }
+                )
+        except Exception as e:
+            logger.warning(f"Failed to publish provider event {event_topic}: {e}")
     
     def update_provider_rate_limits(self, name: str, rpm: Optional[int] = None, tpm: Optional[int] = None) -> bool:
         """Update rate limits for a provider"""
@@ -341,6 +382,11 @@ class ProviderRegistry:
                 instance.update_rate_limits(rpm=rpm, tpm=tpm)
         
         self._save_registry()
+        
+        # Publish provider.updated event if coordinator is available
+        if self.coordinator_agent:
+            asyncio.create_task(self._publish_provider_event("provider.updated", name, self.providers[name]))
+        
         return True
 
 

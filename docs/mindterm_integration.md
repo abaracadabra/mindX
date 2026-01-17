@@ -4,6 +4,51 @@
 
 mindterm is now fully integrated into the mindX augmentic intelligence system as the secure terminal execution plane. This document describes the complete integration, orchestration, monitoring, and autonomous improvement capabilities.
 
+## Frontend Integration: xterm.js
+
+mindterm uses [xterm.js](https://xtermjs.org/) as its frontend terminal emulator. xterm.js is a battle-tested terminal emulator library used by major applications including:
+
+- **Microsoft Visual Studio Code** - Integrated terminal
+- **JupyterLab** - Terminal interface
+- **Eclipse Che** - Cloud IDE terminal
+- **Azure Cloud Shell** - Web-based admin terminal
+- **And many more** - See [xterm.js real-world uses](https://xtermjs.org/)
+
+### xterm.js Integration Details
+
+**Location**: `mindx_frontend_ui/src/components/MindTerm.tsx`
+
+**Package**: `xterm@^5.3.0` with `xterm-addon-fit@^0.8.0`
+
+**Key Features**:
+- Full ANSI escape sequence support
+- Automatic terminal resizing via FitAddon
+- Real-time output streaming via WebSocket
+- Keystroke forwarding to PTY backend
+- Policy-gated command execution
+- Risk assessment integration
+
+**Connection Flow**:
+1. React component initializes xterm.js Terminal instance
+2. Terminal connects to mindterm backend via WebSocket (`/mindterm/sessions/{session_id}/ws`)
+3. Keystrokes forwarded as `{type: "in", data: "..."}`
+4. Command lines sent as `{type: "line", data: "..."}` for policy gating
+5. Output received as `{type: "out", data: "..."}` and written to terminal
+6. Risk prompts displayed as `{type: "risk", ...}` for user confirmation
+
+**Terminal Configuration**:
+```typescript
+const term = new Terminal({
+  convertEol: true,
+  cursorBlink: true,
+  fontSize: 13
+});
+const fit = new FitAddon();
+term.loadAddon(fit);
+```
+
+The terminal automatically resizes based on container dimensions and sends resize events to the backend PTY session.
+
 ## Architecture Integration
 
 ### Orchestration Hierarchy

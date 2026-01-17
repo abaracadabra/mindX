@@ -116,6 +116,11 @@ class MastermindAgent:
         self.strategic_campaigns_history: List[Dict[str,Any]] = self._load_json_file("mastermind_campaigns_history.json", [])
         self.high_level_objectives: List[Dict[str,Any]] = self._load_json_file("mastermind_objectives.json", [])
         self.autonomous_loop_task: Optional[asyncio.Task] = None
+        
+        # Sub-agent management
+        self.sub_agents: Dict[str, Any] = {}  # Registry of created sub-agents
+        self.lifecycle_agents: Dict[str, Any] = {}  # Lifecycle management agents
+        
         self._initialized_sync = True
         self._initialized_async = False
 
@@ -171,6 +176,9 @@ class MastermindAgent:
             config_override=self.config
         )
         await self.strategic_evolution_agent._async_init()
+        
+        # Initialize lifecycle management agents
+        await self._initialize_lifecycle_agents()
 
         logger.info(f"{self.log_prefix} Asynchronously initialized.")
 
@@ -609,7 +617,251 @@ class MastermindAgent:
         
         return campaign_outcome
 
+    async def _initialize_lifecycle_agents(self):
+        """Initialize lifecycle management agents."""
+        try:
+            from agents.orchestration.startup_agent import StartupAgent
+            from agents.orchestration.replication_agent import ReplicationAgent
+            from agents.orchestration.shutdown_agent import ShutdownAgent
+            
+            # Initialize StartupAgent
+            self.lifecycle_agents["startup"] = StartupAgent(
+                agent_id="startup_agent",
+                coordinator_agent=self.coordinator_agent,
+                memory_agent=self.memory_agent,
+                config=self.config,
+                test_mode=self.test_mode
+            )
+            
+            # Initialize ReplicationAgent
+            github_agent = None
+            if self.coordinator_agent and hasattr(self.coordinator_agent, 'github_agent'):
+                github_agent = self.coordinator_agent.github_agent
+            
+            self.lifecycle_agents["replication"] = ReplicationAgent(
+                agent_id="replication_agent",
+                coordinator_agent=self.coordinator_agent,
+                memory_agent=self.memory_agent,
+                github_agent=github_agent,
+                config=self.config,
+                test_mode=self.test_mode
+            )
+            
+            # Initialize ShutdownAgent
+            self.lifecycle_agents["shutdown"] = ShutdownAgent(
+                agent_id="shutdown_agent",
+                coordinator_agent=self.coordinator_agent,
+                memory_agent=self.memory_agent,
+                github_agent=github_agent,
+                config=self.config,
+                test_mode=self.test_mode
+            )
+            
+            logger.info(f"{self.log_prefix} Lifecycle management agents initialized")
+        except Exception as e:
+            logger.error(f"{self.log_prefix} Error initializing lifecycle agents: {e}", exc_info=True)
+    
+    async def _create_sub_agent(
+        self,
+        agent_type: str,
+        agent_id: Optional[str] = None,
+        config: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Create a sub-agent on-demand for augmentic development.
+        
+        Args:
+            agent_type: Type of sub-agent to create
+            agent_id: Optional ID for the agent (auto-generated if not provided)
+            config: Optional configuration
+        
+        Returns:
+            Dictionary with creation results
+        """
+        if not agent_id:
+            agent_id = f"{agent_type}_{int(time.time())}"
+        
+        # Check if agent already exists
+        if agent_id in self.sub_agents:
+            logger.info(f"{self.log_prefix} Sub-agent {agent_id} already exists")
+            return {
+                "success": True,
+                "agent_id": agent_id,
+                "message": "Agent already exists",
+                "agent": self.sub_agents[agent_id]
+            }
+        
+        try:
+            agent = None
+            config = config or {}
+            
+            # Create appropriate sub-agent based on type
+            if agent_type == "prediction_agent":
+                from agents.learning.prediction_agent import PredictionAgent
+                agent = PredictionAgent(
+                    agent_id=agent_id,
+                    belief_system=self.belief_system,
+                    coordinator_agent=self.coordinator_agent,
+                    memory_agent=self.memory_agent,
+                    llm_handler=self.llm_handler,
+                    config=self.config,
+                    test_mode=self.test_mode
+                )
+                await agent._async_init()
+            
+            elif agent_type == "reasoning_agent":
+                from agents.core.reasoning_agent import ReasoningAgent
+                agent = ReasoningAgent(
+                    agent_id=agent_id,
+                    belief_system=self.belief_system,
+                    coordinator_agent=self.coordinator_agent,
+                    memory_agent=self.memory_agent,
+                    llm_handler=self.llm_handler,
+                    config=self.config,
+                    test_mode=self.test_mode
+                )
+                await agent._async_init()
+            
+            elif agent_type == "nonmonotonic_agent":
+                from agents.core.nonmonotonic_agent import NonMonotonicAgent
+                agent = NonMonotonicAgent(
+                    agent_id=agent_id,
+                    belief_system=self.belief_system,
+                    coordinator_agent=self.coordinator_agent,
+                    memory_agent=self.memory_agent,
+                    llm_handler=self.llm_handler,
+                    config=self.config,
+                    test_mode=self.test_mode
+                )
+                await agent._async_init()
+            
+            elif agent_type == "epistemic_agent":
+                from agents.core.epistemic_agent import EpistemicAgent
+                agent = EpistemicAgent(
+                    agent_id=agent_id,
+                    belief_system=self.belief_system,
+                    coordinator_agent=self.coordinator_agent,
+                    memory_agent=self.memory_agent,
+                    llm_handler=self.llm_handler,
+                    config=self.config,
+                    test_mode=self.test_mode
+                )
+                await agent._async_init()
+            
+            elif agent_type == "socratic_agent":
+                from agents.learning.socratic_agent import SocraticAgent
+                agent = SocraticAgent(
+                    agent_id=agent_id,
+                    belief_system=self.belief_system,
+                    coordinator_agent=self.coordinator_agent,
+                    memory_agent=self.memory_agent,
+                    llm_handler=self.llm_handler,
+                    config=self.config,
+                    test_mode=self.test_mode
+                )
+                await agent._async_init()
+            
+            else:
+                return {
+                    "success": False,
+                    "error": f"Unknown agent type: {agent_type}"
+                }
+            
+            if agent:
+                # Assign cryptographic identity
+                if self.id_manager_agent:
+                    try:
+                        public_key, env_var = await self.id_manager_agent.create_new_wallet(entity_id=agent_id)
+                        logger.info(f"{self.log_prefix} Created identity for sub-agent {agent_id}: {public_key}")
+                    except Exception as e:
+                        logger.warning(f"{self.log_prefix} Failed to create identity for {agent_id}: {e}")
+                
+                # Register sub-agent
+                self.sub_agents[agent_id] = {
+                    "agent_id": agent_id,
+                    "agent_type": agent_type,
+                    "instance": agent,
+                    "created_at": time.time(),
+                    "config": config
+                }
+                
+                # Register with coordinator if available
+                if self.coordinator_agent:
+                    await self.coordinator_agent.register_agent(
+                        agent_id=agent_id,
+                        agent_type=agent_type,
+                        description=f"Sub-agent created by {self.agent_id}",
+                        instance=agent
+                    )
+                
+                # Trigger replication
+                if "replication" in self.lifecycle_agents:
+                    replication_agent = self.lifecycle_agents["replication"]
+                    await replication_agent.replicate_entity(
+                        entity_type="agent",
+                        entity_id=agent_id,
+                        entity_data={
+                            "agent_type": agent_type,
+                            "created_by": self.agent_id,
+                            "config": config
+                        },
+                        proven=False,
+                        replicate_local=True,
+                        replicate_github=True,
+                        replicate_blockchain=False
+                    )
+                
+                logger.info(f"{self.log_prefix} Created sub-agent: {agent_id} (type: {agent_type})")
+                return {
+                    "success": True,
+                    "agent_id": agent_id,
+                    "agent_type": agent_type,
+                    "agent": agent
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Failed to create agent instance"
+                }
+        except Exception as e:
+            logger.error(f"{self.log_prefix} Error creating sub-agent: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    def get_sub_agent(self, agent_id: str) -> Optional[Any]:
+        """Get a sub-agent by ID."""
+        sub_agent_data = self.sub_agents.get(agent_id)
+        return sub_agent_data.get("instance") if sub_agent_data else None
+    
+    def list_sub_agents(self) -> List[Dict[str, Any]]:
+        """List all created sub-agents."""
+        return [
+            {
+                "agent_id": agent_id,
+                "agent_type": data.get("agent_type"),
+                "created_at": data.get("created_at")
+            }
+            for agent_id, data in self.sub_agents.items()
+        ]
+    
     async def shutdown(self):
         logger.info(f"MastermindAgent '{self.agent_id}' shutting down...")
+        
+        # Shutdown sub-agents
+        for agent_id, agent_data in self.sub_agents.items():
+            try:
+                instance = agent_data.get("instance")
+                if instance and hasattr(instance, 'shutdown'):
+                    await instance.shutdown()
+            except Exception as e:
+                logger.error(f"{self.log_prefix} Error shutting down sub-agent {agent_id}: {e}")
+        
+        # Shutdown lifecycle agents
+        if "shutdown" in self.lifecycle_agents:
+            shutdown_agent = self.lifecycle_agents["shutdown"]
+            await shutdown_agent.shutdown_system(save_state=True, create_backup=True, archive_proven=True)
+        
         if self.bdi_agent: await self.bdi_agent.shutdown()
         logger.info(f"MastermindAgent '{self.agent_id}' shutdown complete.")

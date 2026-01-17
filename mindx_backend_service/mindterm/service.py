@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import fcntl
+import json
 import os
 import pty
 import signal
@@ -13,7 +14,8 @@ import re
 import time
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, Optional, Tuple
+from pathlib import Path
+from typing import Dict, Optional, Tuple, Any
 
 from utils.logging_config import get_logger
 from .models import SessionMeta, CommandBlock
@@ -55,7 +57,47 @@ class MindTermService:
         self.resource_monitor = resource_monitor
         self.performance_monitor = performance_monitor
         self._session_metrics: Dict[str, Dict[str, Any]] = {}
+        self._knowledge_base: Dict[str, Any] = {}
+        self._load_knowledge_base()
         logger.info("MindTermService initialized with mindX integration")
+
+    def _load_knowledge_base(self) -> None:
+        """Load knowledge base from JSON file."""
+        knowledge_base_path = Path(__file__).parent / "knowledge_base.json"
+        try:
+            if knowledge_base_path.exists():
+                with open(knowledge_base_path, 'r', encoding='utf-8') as f:
+                    self._knowledge_base = json.load(f)
+                repo_count = len(self._knowledge_base.get('repositories', {}))
+                integration_count = len(self._knowledge_base.get('integrations', {}))
+                logger.info(f"MindTerm: Loaded knowledge base with {repo_count} repositories and {integration_count} integrations")
+                
+                # Log xterm.js integration status if available
+                xterm_info = self._knowledge_base.get('integrations', {}).get('xtermjs')
+                if xterm_info:
+                    logger.info(f"MindTerm: xterm.js integration status: {xterm_info.get('status', 'unknown')} (v{xterm_info.get('version', 'unknown')})")
+            else:
+                logger.warning(f"MindTerm: Knowledge base file not found at {knowledge_base_path}")
+                self._knowledge_base = {"repositories": {}, "knowledge_entries": [], "integrations": {}}
+        except Exception as e:
+            logger.error(f"MindTerm: Failed to load knowledge base: {e}")
+            self._knowledge_base = {"repositories": {}, "knowledge_entries": [], "integrations": {}}
+    
+    def get_knowledge_base(self) -> Dict[str, Any]:
+        """Get the knowledge base."""
+        return self._knowledge_base
+    
+    def get_repository_info(self, repo_name: str) -> Optional[Dict[str, Any]]:
+        """Get information about a repository from the knowledge base."""
+        return self._knowledge_base.get("repositories", {}).get(repo_name)
+    
+    def get_integration_info(self, integration_name: str) -> Optional[Dict[str, Any]]:
+        """Get information about an integration (e.g., xterm.js) from the knowledge base."""
+        return self._knowledge_base.get("integrations", {}).get(integration_name)
+    
+    def get_all_integrations(self) -> Dict[str, Any]:
+        """Get all integrations from the knowledge base."""
+        return self._knowledge_base.get("integrations", {})
 
     def get(self, session_id: str) -> Optional[PtySession]:
         return self._sessions.get(session_id)

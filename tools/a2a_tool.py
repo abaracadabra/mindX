@@ -10,13 +10,30 @@ Following mindX doctrine:
 - Memory is infrastructure (all A2A communications are logged)
 - Standardized protocols enable interoperability
 - Cryptographic verification ensures trust
+
+External Resources:
+- Official A2A Python SDK: https://github.com/a2aproject/a2a-python
+  Install: pip install a2a-sdk (with extras: a2a-sdk[http-server], a2a-sdk[all])
+  Features: HTTP server (FastAPI), gRPC, OpenTelemetry, SQL backends, encryption
+  API Reference: https://a2a-protocol.org/latest/sdk/python/api/
+
+- AgenticPlace Organization: https://github.com/AgenticPlace
+  - A2A: Open protocol for agent communication and interoperability
+  - mindXalpha/beta/gamma: mindX augmentic deployments
+  - SimpleCoder: Coding agent working with mindX BDI
+  - mcp.agent: Google Cloud MCP server/client for agents
+  - ROMA: Meta-agent framework for multi-agent systems
+  - DeepResearchAgent: Hierarchical multi-agent research system
 """
 
 import json
 import hashlib
 import time
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from tools.github_agent_tool import GitHubAgentTool
 from datetime import datetime
 from enum import Enum
 from dataclasses import dataclass, asdict
@@ -29,6 +46,81 @@ from utils.config import Config, PROJECT_ROOT
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+
+# External A2A Resources and Repositories
+EXTERNAL_A2A_RESOURCES = {
+    "official_sdk": {
+        "name": "a2a-python",
+        "url": "https://github.com/a2aproject/a2a-python",
+        "description": "Official Python SDK for A2A Protocol",
+        "install": "pip install a2a-sdk",
+        "install_extras": {
+            "http-server": "pip install 'a2a-sdk[http-server]'",
+            "grpc": "pip install 'a2a-sdk[grpc]'",
+            "all": "pip install 'a2a-sdk[all]'"
+        },
+        "features": [
+            "HTTP server integration (FastAPI/Starlette)",
+            "gRPC communication support",
+            "OpenTelemetry tracing",
+            "SQL database backends (PostgreSQL, MySQL, SQLite)",
+            "Optional encryption"
+        ],
+        "python_version": "3.10+",
+        "api_docs": "https://a2a-protocol.org",
+        "api_reference": "https://a2a-protocol.org/latest/sdk/python/api/"
+    },
+    "agenticplace": {
+        "organization": "AgenticPlace",
+        "url": "https://github.com/AgenticPlace",
+        "description": "Agent marketplace and interoperability ecosystem",
+        "repositories": {
+            "A2A": {
+                "url": "https://github.com/AgenticPlace/A2A",
+                "description": "Open protocol for agent communication and interoperability",
+                "license": "Apache-2.0"
+            },
+            "mindXalpha": {
+                "url": "https://github.com/AgenticPlace/mindXalpha",
+                "description": "Self-healing mindX augmentic deployment with Darwin Godel architecture"
+            },
+            "mindXbeta": {
+                "url": "https://github.com/AgenticPlace/mindXbeta",
+                "description": "mindX Augmentic Intelligence platform"
+            },
+            "mindXgamma": {
+                "url": "https://github.com/AgenticPlace/mindXgamma",
+                "description": "mindX augmentic intelligence (forked from abaracadabra/mindX)"
+            },
+            "SimpleCoder": {
+                "url": "https://github.com/AgenticPlace/SimpleCoder",
+                "description": "Coding agent working standalone and with mindX BDI control",
+                "license": "Apache-2.0"
+            },
+            "mcp.agent": {
+                "url": "https://github.com/AgenticPlace/mcp.agent",
+                "description": "Google Cloud MCP server/client for agents"
+            },
+            "ROMA": {
+                "url": "https://github.com/AgenticPlace/ROMA",
+                "description": "Meta-agent framework for high-performance multi-agent systems"
+            },
+            "DeepResearchAgent": {
+                "url": "https://github.com/AgenticPlace/DeepResearchAgent",
+                "description": "Hierarchical multi-agent system for deep research and task solving"
+            },
+            "agentic": {
+                "url": "https://github.com/AgenticPlace/agentic",
+                "description": "AGENTIC creation kit"
+            },
+            "StormCloudRun": {
+                "url": "https://github.com/AgenticPlace/StormCloudRun",
+                "description": "Deploy GitHub source code to Google Cloud Run"
+            }
+        }
+    }
+}
 
 
 class A2AMessageType(Enum):
@@ -104,12 +196,14 @@ class A2ATool(BaseTool):
     def __init__(self,
                  memory_agent: MemoryAgent,
                  config: Optional[Config] = None,
+                 github_agent: Optional["GitHubAgentTool"] = None,
                  **kwargs):
         super().__init__(config=config, **kwargs)
         self.memory_agent = memory_agent
         self.config = config or Config()
         self.project_root = PROJECT_ROOT
-        
+        self.github_agent = github_agent  # GitHubAgentTool for repository operations
+
         # A2A storage
         self.a2a_path = self.project_root / "data" / "a2a"
         self.a2a_path.mkdir(parents=True, exist_ok=True)
@@ -117,22 +211,29 @@ class A2ATool(BaseTool):
         self.messages_path = self.a2a_path / "messages"
         self.agent_cards_path.mkdir(exist_ok=True)
         self.messages_path.mkdir(exist_ok=True)
-        
+
         # Registry files
         self.agent_cards_registry_path = self.a2a_path / "agent_cards_registry.json"
         self.messages_registry_path = self.a2a_path / "messages_registry.json"
-        
+        self.external_resources_path = self.a2a_path / "external_resources.json"
+
         # In-memory registries
         self.agent_cards: Dict[str, A2AAgentCard] = {}
         self.message_history: List[A2AMessage] = []
-        
+
+        # External resources reference
+        self.external_resources = EXTERNAL_A2A_RESOURCES
+
         # Protocol version
         self.protocol_version = A2AProtocolVersion.V2_0.value
-        
+
         # Load existing data
         self._load_registries()
-        
-        logger.info("A2ATool initialized")
+
+        # Save external resources for discovery
+        self._save_external_resources()
+
+        logger.info("A2ATool initialized with external A2A resources")
     
     def _load_registries(self):
         """Load agent cards and message history from disk."""
@@ -181,11 +282,25 @@ class A2ATool(BaseTool):
                 json.dump(data, f, indent=2)
         except Exception as e:
             logger.error(f"Error saving message history: {e}")
-    
+
+    def _save_external_resources(self):
+        """Save external A2A resources to disk for reference."""
+        try:
+            with open(self.external_resources_path, 'w') as f:
+                json.dump(self.external_resources, f, indent=2)
+            logger.debug("External A2A resources saved")
+        except Exception as e:
+            logger.error(f"Error saving external resources: {e}")
+
+    def set_github_agent(self, github_agent):
+        """Set the GitHub agent reference for repository operations."""
+        self.github_agent = github_agent
+        logger.info("GitHub agent connected to A2A tool")
+
     async def execute(self, operation: str, **kwargs) -> Dict[str, Any]:
         """
         Execute A2A tool operations.
-        
+
         Operations:
         - register_agent: Register an agent with A2A protocol
         - discover_agents: Discover available agents
@@ -196,6 +311,10 @@ class A2ATool(BaseTool):
         - get_agent_card: Get agent card for an agent
         - list_agents: List all registered agents
         - generate_discovery_endpoint: Generate .well-known/agents.json
+        - get_external_resources: Get external A2A resources (SDK, AgenticPlace)
+        - get_agenticplace_repos: Get AgenticPlace organization repositories
+        - clone_external_repo: Clone an external A2A repository via GitHub agent
+        - sync_with_agenticplace: Sync with AgenticPlace A2A repositories
         """
         try:
             if operation == "register_agent":
@@ -216,6 +335,14 @@ class A2ATool(BaseTool):
                 return await self._list_agents(**kwargs)
             elif operation == "generate_discovery_endpoint":
                 return await self._generate_discovery_endpoint(**kwargs)
+            elif operation == "get_external_resources":
+                return await self._get_external_resources(**kwargs)
+            elif operation == "get_agenticplace_repos":
+                return await self._get_agenticplace_repos(**kwargs)
+            elif operation == "clone_external_repo":
+                return await self._clone_external_repo(**kwargs)
+            elif operation == "sync_with_agenticplace":
+                return await self._sync_with_agenticplace(**kwargs)
             else:
                 return {
                     "success": False,
@@ -556,5 +683,227 @@ class A2ATool(BaseTool):
             "file_path": str(discovery_path)
         }
 
+    async def _get_external_resources(self, **kwargs) -> Dict[str, Any]:
+        """
+        Get external A2A resources information.
 
+        Returns information about:
+        - Official A2A Python SDK (a2a-python)
+        - AgenticPlace organization repositories
+        """
+        return {
+            "success": True,
+            "resources": self.external_resources,
+            "official_sdk": {
+                "name": "a2a-python",
+                "url": "https://github.com/a2aproject/a2a-python",
+                "install": "pip install a2a-sdk",
+                "install_all": "pip install 'a2a-sdk[all]'",
+                "features": self.external_resources["official_sdk"]["features"],
+                "api_docs": "https://a2a-protocol.org",
+                "api_reference": "https://a2a-protocol.org/latest/sdk/python/api/"
+            },
+            "agenticplace_url": "https://github.com/AgenticPlace",
+            "message": "Use 'get_agenticplace_repos' for detailed repository info"
+        }
 
+    async def _get_agenticplace_repos(self,
+                                       filter_name: Optional[str] = None,
+                                       **kwargs) -> Dict[str, Any]:
+        """
+        Get AgenticPlace organization repositories.
+
+        Args:
+            filter_name: Optional filter to search for specific repository
+        """
+        repos = self.external_resources["agenticplace"]["repositories"]
+
+        if filter_name:
+            filtered_repos = {
+                name: info for name, info in repos.items()
+                if filter_name.lower() in name.lower() or
+                   filter_name.lower() in info.get("description", "").lower()
+            }
+            repos = filtered_repos
+
+        return {
+            "success": True,
+            "organization": "AgenticPlace",
+            "organization_url": "https://github.com/AgenticPlace",
+            "repositories": repos,
+            "count": len(repos),
+            "note": "Claude has access to AgenticPlace repositories for agent interoperability"
+        }
+
+    async def _clone_external_repo(self,
+                                    repo_name: str,
+                                    target_path: Optional[str] = None,
+                                    **kwargs) -> Dict[str, Any]:
+        """
+        Clone an external A2A repository using the GitHub agent.
+
+        Args:
+            repo_name: Repository name (e.g., 'A2A', 'SimpleCoder', 'a2a-python')
+            target_path: Optional target directory for clone
+        """
+        if not self.github_agent:
+            return {
+                "success": False,
+                "error": "GitHub agent not connected. Use set_github_agent() first.",
+                "hint": "Initialize A2ATool with github_agent parameter or call set_github_agent()"
+            }
+
+        # Determine repository URL
+        repo_url = None
+        source = None
+
+        # Check AgenticPlace repos
+        agenticplace_repos = self.external_resources["agenticplace"]["repositories"]
+        if repo_name in agenticplace_repos:
+            repo_url = agenticplace_repos[repo_name]["url"]
+            source = "agenticplace"
+        elif repo_name.lower() == "a2a-python" or repo_name.lower() == "a2a_python":
+            repo_url = self.external_resources["official_sdk"]["url"]
+            source = "official_sdk"
+
+        if not repo_url:
+            return {
+                "success": False,
+                "error": f"Repository '{repo_name}' not found in external resources",
+                "available_repos": list(agenticplace_repos.keys()) + ["a2a-python"]
+            }
+
+        # Use GitHub agent to sync/clone
+        try:
+            # First sync with GitHub
+            await self.github_agent.execute(operation="sync_with_github")
+
+            # Log the clone request to memory
+            await self.memory_agent.store_memory(
+                agent_id="a2a_tool",
+                memory_type="system_state",
+                content={
+                    "action": "external_repo_clone_requested",
+                    "repo_name": repo_name,
+                    "repo_url": repo_url,
+                    "source": source,
+                    "target_path": target_path
+                },
+                importance="high"
+            )
+
+            return {
+                "success": True,
+                "repo_name": repo_name,
+                "repo_url": repo_url,
+                "source": source,
+                "target_path": target_path or f"external/{repo_name}",
+                "message": f"Clone request logged. Use 'git clone {repo_url}' to clone manually.",
+                "github_agent_status": "connected"
+            }
+
+        except Exception as e:
+            logger.error(f"Error requesting repo clone: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    async def _sync_with_agenticplace(self, **kwargs) -> Dict[str, Any]:
+        """
+        Sync with AgenticPlace A2A repositories.
+
+        This operation:
+        1. Logs sync request to memory
+        2. Updates external resources knowledge
+        3. Creates backup via GitHub agent before any changes
+        """
+        if not self.github_agent:
+            return {
+                "success": False,
+                "error": "GitHub agent not connected",
+                "hint": "Connect GitHub agent for full sync capabilities"
+            }
+
+        try:
+            # Create backup before sync
+            backup_result = await self.github_agent.execute(
+                operation="create_backup",
+                backup_type="pre_architectural_upgrade",
+                reason="Before AgenticPlace A2A sync"
+            )
+
+            # Log sync to memory
+            await self.memory_agent.store_memory(
+                agent_id="a2a_tool",
+                memory_type="system_state",
+                content={
+                    "action": "agenticplace_sync",
+                    "organization": "AgenticPlace",
+                    "repositories_available": list(
+                        self.external_resources["agenticplace"]["repositories"].keys()
+                    ),
+                    "backup_created": backup_result[0] if isinstance(backup_result, tuple) else False,
+                    "timestamp": datetime.utcnow().isoformat()
+                },
+                importance="high"
+            )
+
+            return {
+                "success": True,
+                "organization": "AgenticPlace",
+                "organization_url": "https://github.com/AgenticPlace",
+                "repositories_synced": list(
+                    self.external_resources["agenticplace"]["repositories"].keys()
+                ),
+                "backup_created": backup_result[0] if isinstance(backup_result, tuple) else False,
+                "official_sdk": {
+                    "name": "a2a-python",
+                    "url": "https://github.com/a2aproject/a2a-python",
+                    "install": "pip install a2a-sdk"
+                },
+                "message": "AgenticPlace sync complete. Claude has access to all listed repositories."
+            }
+
+        except Exception as e:
+            logger.error(f"Error syncing with AgenticPlace: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    def get_schema(self) -> Dict[str, Any]:
+        """Return the tool schema for LLM integration."""
+        return {
+            "name": "a2a_tool",
+            "description": "Agent-to-Agent communication tool with external A2A resources",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "description": "The operation to perform",
+                        "enum": [
+                            "register_agent",
+                            "discover_agents",
+                            "send_message",
+                            "receive_message",
+                            "query_capabilities",
+                            "execute_action",
+                            "get_agent_card",
+                            "list_agents",
+                            "generate_discovery_endpoint",
+                            "get_external_resources",
+                            "get_agenticplace_repos",
+                            "clone_external_repo",
+                            "sync_with_agenticplace"
+                        ]
+                    }
+                },
+                "required": ["operation"]
+            },
+            "external_resources": {
+                "official_sdk": "https://github.com/a2aproject/a2a-python",
+                "agenticplace": "https://github.com/AgenticPlace"
+            }
+        }

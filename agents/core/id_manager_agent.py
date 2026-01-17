@@ -39,6 +39,14 @@ from utils.logging_config import get_logger
 from agents.memory_agent import MemoryAgent
 from .belief_system import BeliefSystem, BeliefSource
 
+# Try to import vault manager, fallback to legacy if not available
+try:
+    from mindx_backend_service.vault_manager import get_vault_manager
+    VAULT_AVAILABLE = True
+except ImportError:
+    VAULT_AVAILABLE = False
+    get_vault_manager = None
+
 logger = get_logger(__name__)
 
 class IDManagerAgent:
@@ -64,8 +72,23 @@ class IDManagerAgent:
         key_store_dir_rel_str = self.config.get("id_manager.key_store_dir_relative_to_project", "data/identity")
         self.key_store_dir: Path = PROJECT_ROOT / key_store_dir_rel_str
         self.env_file_path: Path = self.key_store_dir / ".wallet_keys.env"
+        
+        # Try to use vault if available, otherwise use legacy location
+        self.use_vault = VAULT_AVAILABLE and self.config.get("id_manager.use_vault", True)
+        if self.use_vault and get_vault_manager:
+            try:
+                self.vault_manager = get_vault_manager()
+                logger.info(f"{self.log_prefix} Using vault for key storage")
+            except Exception as e:
+                logger.warning(f"{self.log_prefix} Failed to initialize vault, falling back to legacy storage: {e}")
+                self.use_vault = False
+                self.vault_manager = None
+        else:
+            self.use_vault = False
+            self.vault_manager = None
+        
         self._ensure_env_setup_sync()
-        logger.info(f"{self.log_prefix} Initialized. Secure central key store: {self.env_file_path}")
+        logger.info(f"{self.log_prefix} Initialized. Secure central key store: {self.env_file_path} (vault: {self.use_vault})")
 
     def _ensure_env_setup_sync(self):
         try:
@@ -97,9 +120,17 @@ class IDManagerAgent:
             )
             return belief.value
         
-        env_var_name = self._generate_env_var_name(entity_id)
-        load_dotenv(dotenv_path=self.env_file_path, override=True)
-        private_key_hex = os.getenv(env_var_name)
+        # Try vault first if available, then fall back to legacy
+        private_key_hex = None
+        if self.use_vault and self.vault_manager:
+            private_key_hex = self.vault_manager.get_agent_private_key(entity_id)
+        
+        if not private_key_hex:
+            # Fall back to legacy storage
+            env_var_name = self._generate_env_var_name(entity_id)
+            load_dotenv(dotenv_path=self.env_file_path, override=True)
+            private_key_hex = os.getenv(env_var_name)
+        
         if private_key_hex:
             try:
                 address = Account.from_key(private_key_hex).address
@@ -175,8 +206,18 @@ class IDManagerAgent:
             public_address = account.address
             env_var_name = self._generate_env_var_name(entity_id)
             
-            if set_key(self.env_file_path, env_var_name, private_key_hex, quote_mode='never'):
-                logger.info(f"{self.log_prefix} Stored new private key for '{entity_id}' in {self.env_file_path}.")
+            # Store in vault if available, otherwise use legacy location
+            stored = False
+            if self.use_vault and self.vault_manager:
+                stored = self.vault_manager.store_agent_private_key(entity_id, private_key_hex)
+                if stored:
+                    logger.info(f"{self.log_prefix} Stored new private key for '{entity_id}' in vault.")
+            else:
+                stored = set_key(self.env_file_path, env_var_name, private_key_hex, quote_mode='never')
+                if stored:
+                    logger.info(f"{self.log_prefix} Stored new private key for '{entity_id}' in {self.env_file_path}.")
+            
+            if stored:
                 await self.belief_system.add_belief(f"identity.map.entity_to_address.{entity_id}", public_address, 1.0, BeliefSource.DERIVED)
                 await self.belief_system.add_belief(f"identity.map.address_to_entity.{public_address}", entity_id, 1.0, BeliefSource.DERIVED)
                 
@@ -207,9 +248,17 @@ class IDManagerAgent:
             raise
 
     def get_private_key_for_guardian(self, entity_id: str) -> Optional[str]:
-        env_var_name = self._generate_env_var_name(entity_id)
-        load_dotenv(dotenv_path=self.env_file_path, override=True)
-        private_key = os.getenv(env_var_name)
+        # Try vault first if available, then fall back to legacy
+        private_key = None
+        if self.use_vault and self.vault_manager:
+            private_key = self.vault_manager.get_agent_private_key(entity_id)
+        
+        if not private_key:
+            # Fall back to legacy storage
+            env_var_name = self._generate_env_var_name(entity_id)
+            load_dotenv(dotenv_path=self.env_file_path, override=True)
+            private_key = os.getenv(env_var_name)
+        
         if not private_key:
             logger.warning(f"{self.log_prefix} Private key not found for entity '{entity_id}' with Guardian authorization.")
         return private_key

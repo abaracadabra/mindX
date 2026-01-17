@@ -7,10 +7,97 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta http-equiv="Last-Modified" content="0">
-    <title>mindX</title>
+    <title>mindX - Augmentic Agency Management Platform</title>
     <link rel="stylesheet" href="styles3.css">
     <script src="crossmint-integration.js"></script>
     <script src="window-manager.js"></script>
+    <!-- Inline MetaMask connection function - available immediately -->
+    <script>
+        // Define connectMetaMask immediately so it's available for onclick
+        window.connectMetaMask = async function() {
+            try {
+                console.log('🔗 Connecting to MetaMask...');
+                
+                // Check if MetaMask is available
+                if (typeof window.ethereum === 'undefined') {
+                    alert('MetaMask is not installed. Please install MetaMask browser extension to continue.');
+                    return;
+                }
+                
+                console.log('Requesting MetaMask account access...');
+                
+                // Request account access - This should trigger MetaMask popup
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts'
+                });
+                
+                console.log('MetaMask response:', accounts);
+
+                if (accounts.length === 0) {
+                    alert('No accounts found. Please unlock MetaMask and try again.');
+                    return;
+                }
+
+                const walletAddress = accounts[0];
+                console.log('Connected to:', walletAddress);
+                
+                // Get chain ID
+                const chainId = await window.ethereum.request({
+                    method: 'eth_chainId'
+                });
+
+                // Create user object
+                const userData = {
+                    id: walletAddress,
+                    address: walletAddress,
+                    provider: 'metamask',
+                    chainId: chainId,
+                    authMethod: 'wallet',
+                    timestamp: Date.now()
+                };
+
+                // Store in localStorage
+                localStorage.setItem('crossmint_user', JSON.stringify(userData));
+                localStorage.setItem('crossmint_wallet', walletAddress);
+                localStorage.setItem('crossmint_authenticated', 'true');
+                localStorage.setItem('crossmint_auth_method', 'wallet');
+                
+                // Store for app.js to process when it loads
+                window.pendingAuthSuccess = userData;
+                
+                // Try to call handleAuthenticationSuccess if available
+                if (typeof handleAuthenticationSuccess === 'function') {
+                    handleAuthenticationSuccess(userData);
+                } else {
+                    // Wait a bit and try again
+                    setTimeout(() => {
+                        if (typeof handleAuthenticationSuccess === 'function') {
+                            handleAuthenticationSuccess(userData);
+                        } else {
+                            // Reload page to trigger authentication
+                            window.location.reload();
+                        }
+                    }, 500);
+                }
+                
+                console.log('✅ MetaMask wallet connected successfully!');
+                
+            } catch (error) {
+                console.error('❌ MetaMask connection failed:', error);
+                let errorMsg = 'Failed to connect to MetaMask';
+                if (error.code === 4001) {
+                    errorMsg = 'MetaMask connection rejected. Please approve the connection request.';
+                } else if (error.code === -32002) {
+                    errorMsg = 'MetaMask connection already pending. Please check MetaMask and try again.';
+                } else if (error.message) {
+                    errorMsg = error.message;
+                }
+                alert(errorMsg);
+            }
+        };
+        
+        console.log('✅ connectMetaMask function defined inline and ready');
+    </script>
 </head>
 <body>
     <!-- Login Landing Page -->
@@ -31,11 +118,11 @@
                         </svg>
                     </div>
                     
-                    <h2>Welcome to mindX</h2>
+                    <h2>Agency Management</h2>
                     <p>Connect your wallet to access the agent management platform</p>
                     
                     <div class="wallet-connection">
-                        <button id="loginConnectBtn" class="login-connect-btn">
+                        <button id="loginConnectBtn" class="login-connect-btn" onclick="window.connectMetaMask().catch(err => { console.error('MetaMask error:', err); alert(err.message || 'Failed to connect to MetaMask'); }); return false;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3 4-3 9-3 9 1.34 9 3z"/>
                                 <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
@@ -89,70 +176,68 @@
     <!-- Main Application (Hidden until authenticated) -->
     <div id="main-application" class="container" style="display: none;">
         <header>
-            <div class="header-left">
-                <h1>mindX</h1>
-                <div class="github-link">
-                    <a href="https://github.com/abaracadabra/mindX" target="_blank" rel="noopener noreferrer">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
-                        </svg>
-                        <span>GitHub</span>
-                    </a>
+            <div class="header-single-line">
+                <div class="header-left">
+                    <div class="mindx-branding">
+                        <h1>mindX</h1>
+                    </div>
                 </div>
-            </div>
-            <div class="header-right">
-                <div class="crossmint-login" id="crossmintLogin">
-                    <a href="crossmint-google-wallet.html" id="crossmintLoginBtn" class="crossmint-btn enhanced-login-btn" style="display: none;">
-                        <div class="login-btn-content">
-                            <div class="login-btn-text">
-                                <span class="login-btn-title">Login</span>
-                                <span class="login-btn-subtitle">Connect Wallet</span>
+                <div class="header-center">
+                    <div class="crossmint-login" id="crossmintLogin">
+                        <a href="crossmint-google-wallet.html" id="crossmintLoginBtn" class="crossmint-btn enhanced-login-btn" style="display: none;">
+                            <div class="login-btn-content">
+                                <div class="login-btn-text">
+                                    <span class="login-btn-title">Login</span>
+                                    <span class="login-btn-subtitle">Connect Wallet</span>
+                                </div>
+                                <div class="login-btn-arrow">→</div>
                             </div>
-                            <div class="login-btn-arrow">→</div>
-                        </div>
-                        <div class="login-btn-glow"></div>
-                    </a>
-                    <div id="crossmintUserInfo" class="crossmint-user-info enhanced-user-info" style="display: none;">
-                        <div class="wallet-secure-container">
-                            <div class="wallet-address-field">
-                                <div class="address-header">
-                                    <span class="address-label">Receive Address</span>
-                                    <div class="wallet-security-icon">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                                        </svg>
+                            <div class="login-btn-glow"></div>
+                        </a>
+                        <div id="crossmintUserInfo" class="crossmint-user-info enhanced-user-info" style="display: none;">
+                            <div class="wallet-secure-container">
+                                <div class="wallet-address-field">
+                                    <div class="address-header">
+                                        <span class="address-label">Receive Address</span>
+                                        <div class="wallet-security-icon">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <div class="address-display">
+                                        <span class="user-wallet" id="crossmintWalletAddress"></span>
+                                        <button class="wallet-copy-btn" onclick="copyWalletAddress(document.getElementById('crossmintWalletAddress').getAttribute('data-full-address'))" title="Copy address">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                            </svg>
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="address-display">
-                                    <span class="user-wallet" id="crossmintWalletAddress"></span>
-                                    <button class="wallet-copy-btn" onclick="copyWalletAddress(document.getElementById('crossmintWalletAddress').getAttribute('data-full-address'))" title="Copy address">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                        </svg>
-                                    </button>
+                            </div>
+                            <div class="logout-container">
+                                <div class="logout-status">
+                                    <span class="status-dot"></span>
+                                    <span class="status-text">Connected</span>
                                 </div>
+                                <button id="crossmintLogoutBtn" class="crossmint-logout-btn enhanced-logout-btn">
+                                    <span class="logout-text">Logout</span>
+                                </button>
                             </div>
-                        </div>
-                        <div class="logout-container">
-                            <div class="logout-status">
-                                <span class="status-dot"></span>
-                                <span class="status-text">Connected</span>
-                            </div>
-                            <button id="crossmintLogoutBtn" class="crossmint-logout-btn enhanced-logout-btn">
-                                <span class="logout-text">Logout</span>
-                            </button>
                         </div>
                     </div>
                 </div>
-                <div class="autonomous-control">
-                    <label class="autonomous-toggle">
-                        <input type="checkbox" id="autonomous-mode">
-                        <span class="toggle-slider"></span>
-                        <span class="toggle-label">AUTONOMOUS</span>
-                    </label>
+                <div class="header-right">
+                    <div class="autonomous-control">
+                        <label class="autonomous-toggle">
+                            <input type="checkbox" id="autonomous-mode">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">AUTONOMOUS</span>
+                        </label>
+                    </div>
+                    <div id="status-light" class="status-light-red" title="Disconnected"></div>
                 </div>
-            <div id="status-light" class="status-light-red" title="Disconnected"></div>
             </div>
         </header>
 
@@ -165,6 +250,7 @@
                     <button class="tab-btn" data-tab="usage">Usage</button>
                     <button class="tab-btn" data-tab="logs">Logs</button>
                     <button class="tab-btn" data-tab="api">API</button>
+                    <button class="tab-btn" data-tab="faicey">Faicey</button>
                     <button class="tab-btn" data-tab="admin">Admin</button>
                 </div>
                 <div class="tab-row core-tabs">
@@ -214,6 +300,14 @@
                 
                 <!-- GitHub Agent Section -->
                 <div id="github-section" class="section-content">
+                    <div class="github-repo-header">
+                        <a href="https://github.com/abaracadabra/mindX" target="_blank" rel="noopener noreferrer" class="github-repo-link">
+                            <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                            </svg>
+                            <span>GitHub Repository</span>
+                        </a>
+                    </div>
                     <div class="github-agent-container">
                         <div class="github-status-panel">
                             <h3>GitHub Agent Status</h3>
@@ -2099,7 +2193,8 @@
                 <!-- Add New API Provider (Manual) -->
                 <div class="control-section">
                     <h3>Add New API Provider (Manual)</h3>
-                    <div class="api-add-form">
+                    <button id="show-add-provider-form-btn" class="action-btn primary" style="margin-bottom: 15px;">➕ Add New Provider</button>
+                    <div class="api-add-form" style="display: none;">
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Provider Name:</label>
@@ -2155,6 +2250,144 @@
                             </div>
                         </div>
                         <button id="add-api-provider-btn" class="add-btn">Add Provider</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Faicey Tab -->
+        <div id="faicey-tab" class="tab-content">
+            <div class="control-section">
+                <div class="section-header">
+                    <h2>Faicey Expressions</h2>
+                    <div class="faicey-controls">
+                        <button id="refresh-faicey-btn" class="action-btn">Refresh</button>
+                        <button id="create-faicey-expression-btn" class="action-btn">Create Expression</button>
+                        <button id="load-faicey-expression-btn" class="action-btn">Load Expression</button>
+                    </div>
+                </div>
+                
+                <div class="faicey-tabs">
+                    <button class="faicey-tab-btn active" data-faicey-tab="expressions">Expressions</button>
+                    <button class="faicey-tab-btn" data-faicey-tab="speech">Speech Inflection</button>
+                    <button class="faicey-tab-btn" data-faicey-tab="modules">Modules</button>
+                </div>
+                
+                <!-- Expressions Section -->
+                <div id="faicey-expressions-section" class="faicey-section active">
+                    <div class="expressions-list" id="faicey-expressions-list">
+                        <div class="loading-message">Loading expressions...</div>
+                    </div>
+                    
+                    <div class="expression-details" id="faicey-expression-details" style="display: none;">
+                        <div class="details-header">
+                            <h3 id="expression-name">Expression Name</h3>
+                            <button class="close-details-btn" onclick="closeExpressionDetails()">×</button>
+                        </div>
+                        <div class="details-content">
+                            <div class="detail-section">
+                                <h4>Agent Information</h4>
+                                <div class="detail-item">
+                                    <span class="detail-label">Agent ID:</span>
+                                    <span class="detail-value" id="detail-agent-id">-</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Persona ID:</span>
+                                    <span class="detail-value" id="detail-persona-id">-</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Created:</span>
+                                    <span class="detail-value" id="detail-created">-</span>
+                                </div>
+                            </div>
+                            
+                            <div class="detail-section">
+                                <h4>Skills</h4>
+                                <div class="skills-list" id="detail-skills"></div>
+                            </div>
+                            
+                            <div class="detail-section">
+                                <h4>UI Modules</h4>
+                                <div class="modules-list" id="detail-modules"></div>
+                            </div>
+                            
+                            <div class="detail-section">
+                                <h4>Speech Inflection</h4>
+                                <div class="speech-config" id="detail-speech-config">
+                                    <div class="detail-item">
+                                        <span class="detail-label">Enabled:</span>
+                                        <span class="detail-value" id="detail-speech-enabled">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Alphabet:</span>
+                                        <span class="detail-value" id="detail-speech-alphabet">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Viseme Blend Duration:</span>
+                                        <span class="detail-value" id="detail-speech-blend">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="detail-actions">
+                                <button class="action-btn" onclick="exportExpressionUI()">Export UI Config</button>
+                                <button class="action-btn" onclick="updateExpression()">Update Expression</button>
+                                <button class="action-btn delete-btn" onclick="deleteExpression()">Delete Expression</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Speech Inflection Section -->
+                <div id="faicey-speech-section" class="faicey-section">
+                    <div class="speech-controls">
+                        <div class="speech-input-group">
+                            <label for="speech-text-input">Text to Speak:</label>
+                            <textarea id="speech-text-input" placeholder="Enter text for speech animation..." rows="3"></textarea>
+                        </div>
+                        <div class="speech-input-group">
+                            <label for="speech-audio-url">Audio URL (optional):</label>
+                            <input type="text" id="speech-audio-url" placeholder="https://example.com/audio.mp3">
+                        </div>
+                        <div class="speech-input-group">
+                            <label for="speech-alphabet">Alphabet:</label>
+                            <select id="speech-alphabet">
+                                <option value="english">English</option>
+                                <option value="chinese">Chinese</option>
+                                <option value="thai">Thai</option>
+                                <option value="vietnamese">Vietnamese</option>
+                            </select>
+                        </div>
+                        <div class="speech-actions">
+                            <button id="start-speaking-btn" class="action-btn">Start Speaking</button>
+                            <button id="start-listening-btn" class="action-btn">Start Listening</button>
+                            <button id="stop-speech-btn" class="action-btn">Stop</button>
+                        </div>
+                    </div>
+                    
+                    <div class="speech-status" id="speech-status" style="display: none;">
+                        <div class="status-item">
+                            <span class="status-label">Mode:</span>
+                            <span class="status-value" id="speech-mode">Idle</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Current Viseme:</span>
+                            <span class="status-value" id="current-viseme">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="morph-targets-preview" id="morph-targets-preview">
+                        <h4>Morph Targets</h4>
+                        <div class="targets-grid" id="targets-grid">
+                            <!-- Morph targets will be displayed here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Modules Section -->
+                <div id="faicey-modules-section" class="faicey-section">
+                    <div class="modules-list" id="faicey-modules-list">
+                        <div class="loading-message">Loading modules...</div>
                     </div>
                 </div>
             </div>
@@ -2264,6 +2497,58 @@
             </div>
             
             <!-- Ollama section removed - moved to API tab -->
+            
+            <!-- PostgreSQL Settings Section -->
+            <div class="control-section">
+                <h2>PostgreSQL Database Settings</h2>
+                <div class="admin-subsection">
+                    <div class="postgresql-settings-form">
+                        <div class="form-group">
+                            <label for="postgres-host">Host:</label>
+                            <input type="text" id="postgres-host" placeholder="localhost" value="localhost">
+                        </div>
+                        <div class="form-group">
+                            <label for="postgres-port">Port:</label>
+                            <input type="number" id="postgres-port" placeholder="5432" value="5432">
+                        </div>
+                        <div class="form-group">
+                            <label for="postgres-database">Database:</label>
+                            <input type="text" id="postgres-database" placeholder="mindx_memory" value="mindx_memory">
+                        </div>
+                        <div class="form-group">
+                            <label for="postgres-user">User:</label>
+                            <input type="text" id="postgres-user" placeholder="mindx" value="mindx">
+                        </div>
+                        <div class="form-group">
+                            <label for="postgres-password">Password:</label>
+                            <input type="password" id="postgres-password" placeholder="Enter password">
+                            <button id="toggle-postgres-password" class="toggle-password-btn" title="Show/Hide Password">👁️</button>
+                        </div>
+                        <div class="form-actions">
+                            <button id="load-postgres-settings-btn" class="action-btn">Load Current Settings</button>
+                            <button id="save-postgres-settings-btn" class="action-btn primary">Save Settings</button>
+                            <button id="test-postgres-connection-btn" class="action-btn">Test Connection</button>
+                        </div>
+                        <div id="postgres-connection-status" class="connection-status"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Vault Management Section -->
+            <div class="control-section">
+                <h2>Vault Management</h2>
+                <div class="admin-subsection">
+                    <h3>Agent Private Keys</h3>
+                    <div id="vault-keys-list" class="vault-keys-list">
+                        <p>Loading agent keys...</p>
+                    </div>
+                    <div class="vault-actions">
+                        <button id="refresh-vault-keys-btn" class="action-btn">Refresh Keys</button>
+                        <button id="migrate-keys-to-vault-btn" class="action-btn primary">Migrate Keys to Vault</button>
+                    </div>
+                    <div id="vault-migration-status" class="migration-status"></div>
+                </div>
+            </div>
             
             <!-- Model Selection Section -->
             <div class="control-section">

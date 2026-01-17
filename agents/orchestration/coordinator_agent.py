@@ -141,7 +141,9 @@ class CoordinatorAgent:
         
         # GitHub agent for backup coordination (lazy initialization)
         self.github_agent: Optional[Any] = None
-        
+        # GitHub feedback tool for zero-cost AI debugging
+        self.feedback_tool: Optional[Any] = None
+
         self.llm_handler: Optional[LLMHandlerInterface] = None
         self.performance_monitor: Optional[Any] = None
         self.resource_monitor: Optional[Any] = None
@@ -165,11 +167,13 @@ class CoordinatorAgent:
         id_manager = await IDManagerAgent.get_instance(agent_id=f"id_manager_for_{self.agent_id}", config_override=self.config, memory_agent=self.memory_agent, belief_system=self.belief_system)
         await id_manager.create_new_wallet(entity_id=self.agent_id)
 
-        self.register_agent(
+        # Note: register_agent is now async, but we're in async_init so we can await
+        # However, we can't await in __init__, so we'll use create_task for self-registration
+        asyncio.create_task(self.register_agent(
             agent_id="coordinator_agent", agent_type="kernel",
             description="MindX Central Kernel and Service Bus",
             instance=self
-        )
+        ))
         await self._initialize_tools()
 
         # Initialize and start monitors
@@ -199,6 +203,20 @@ class CoordinatorAgent:
         except Exception as e:
             self.logger.warning(f"Failed to initialize GitHub agent: {e}")
             self.github_agent = None
+
+        # Initialize GitHub feedback tool for zero-cost AI debugging
+        try:
+            from tools.github_feedback_tool import GitHubFeedbackTool
+            self.feedback_tool = GitHubFeedbackTool(
+                memory_agent=self.memory_agent,
+                config=self.config
+            )
+            # Subscribe to feedback collection events
+            self.subscribe("feedback.collection.requested", self._handle_feedback_collection)
+            self.logger.info("GitHub feedback tool initialized for zero-cost AI debugging")
+        except Exception as e:
+            self.logger.warning(f"Failed to initialize GitHub feedback tool: {e}")
+            self.feedback_tool = None
 
         self.logger.info("CoordinatorAgent fully initialized.")
 
@@ -351,7 +369,7 @@ class CoordinatorAgent:
 
     # --- Public API for Agent Society ---
 
-    def register_agent(self, agent_id: str, agent_type: str, description: str, instance: Any):
+    async def register_agent(self, agent_id: str, agent_type: str, description: str, instance: Any):
         """Registers a running agent instance, making it known to the system."""
         self.agent_registry[agent_id] = {
             "agent_id": agent_id, "agent_type": agent_type,
@@ -359,6 +377,22 @@ class CoordinatorAgent:
             "status": "active", "registered_at": time.time(),
         }
         self.logger.info(f"Registered agent '{agent_id}' (Type: {agent_type}). Total agents: {len(self.agent_registry)}")
+        
+        # Publish agent.registered event
+        await self.publish_event(
+            "agent.registered",
+            {
+                "agent_id": agent_id,
+                "agent_type": agent_type,
+                "description": description,
+                "status": "active",
+                "registered_at": time.time(),
+                "timestamp": time.time(),
+                "metadata": {
+                    "total_agents": len(self.agent_registry)
+                }
+            }
+        )
 
     def subscribe(self, topic: str, callback: Callable[..., Coroutine[Any, Any, None]]):
         """Allows an agent to listen for a specific event topic."""
@@ -628,6 +662,21 @@ class CoordinatorAgent:
                 },
                 metadata={"agent_id": self.agent_id}
             )
+            
+            # Publish identity.created event
+            await self.publish_event(
+                "identity.created",
+                {
+                    "agent_id": agent_id,
+                    "public_key": public_key,
+                    "env_var": env_var,
+                    "timestamp": time.time(),
+                    "metadata": {
+                        "created_by": self.agent_id,
+                        "entity_id": agent_id
+                    }
+                }
+            )
 
             # Validate with Guardian
             from agents.guardian_agent import GuardianAgent
@@ -689,7 +738,7 @@ class CoordinatorAgent:
                 return result
 
             # Register the agent
-            self.register_agent(
+            await self.register_agent(
                 agent_id=agent_id,
                 agent_type=agent_type,
                 description=config.get("description", f"Dynamically created {agent_type}"),
@@ -728,6 +777,27 @@ class CoordinatorAgent:
                 data=result,
                 metadata={"agent_id": self.agent_id}
             )
+            
+            # Publish agent.created event with full metadata
+            await self.publish_event(
+                "agent.created",
+                {
+                    "agent_id": agent_id,
+                    "agent_type": agent_type,
+                    "public_key": public_key,
+                    "model_card": model_card,
+                    "config": config,
+                    "validation_details": validation_result,
+                    "timestamp": time.time(),
+                    "metadata": {
+                        "created_by": self.agent_id,
+                        "description": config.get("description", f"Dynamically created {agent_type}"),
+                        "capabilities": config.get("capabilities", []),
+                        "total_agents": len(self.agent_registry)
+                    }
+                }
+            )
+            
             return result
 
         except Exception as e:
@@ -799,6 +869,7 @@ class CoordinatorAgent:
             )
 
             # Remove from registry
+            agent_type = agent_info.get("agent_type", "unknown")
             del self.agent_registry[agent_id]
             
             result = {
@@ -813,6 +884,22 @@ class CoordinatorAgent:
                 data=result,
                 metadata={"agent_id": self.agent_id}
             )
+            
+            # Publish agent.deregistered event
+            await self.publish_event(
+                "agent.deregistered",
+                {
+                    "agent_id": agent_id,
+                    "agent_type": agent_type,
+                    "timestamp": time.time(),
+                    "metadata": {
+                        "deregistered_by": self.agent_id,
+                        "total_agents": len(self.agent_registry),
+                        "had_shutdown_method": bool(agent_instance and hasattr(agent_instance, 'shutdown'))
+                    }
+                }
+            )
+            
             return result
 
         except Exception as e:
@@ -1012,7 +1099,103 @@ class CoordinatorAgent:
                 )
         except Exception as e:
             self.logger.error(f"Error checking architectural changes: {e}", exc_info=True)
-    
+
+    async def _handle_feedback_collection(self, data: Dict[str, Any]):
+        """Event handler for feedback collection requests - zero-cost AI debugging."""
+        if not self.feedback_tool:
+            self.logger.warning("Feedback tool not available for collection")
+            return
+
+        try:
+            repo = data.get("repo")
+            pr_number = data.get("pr_number")
+            auto_process = data.get("auto_process", True)
+
+            self.logger.info(f"Collecting AI feedback from GitHub (repo={repo}, pr={pr_number})")
+
+            # Collect feedback from Gemini and other AI bots
+            result = await self.feedback_tool.execute(
+                operation="collect_feedback",
+                repo=repo,
+                pr_number=pr_number
+            )
+
+            if result.get("success"):
+                new_errors = result.get("new_errors", 0)
+                self.logger.info(f"Collected {new_errors} new errors from AI feedback")
+
+                # Auto-process if requested and there are new errors
+                if auto_process and new_errors > 0:
+                    process_result = await self.feedback_tool.execute(
+                        operation="process_errors",
+                        limit=10
+                    )
+
+                    # Publish event for agents to handle fixes
+                    errors_to_fix = process_result.get("errors_to_fix", [])
+                    if errors_to_fix:
+                        await self.publish_event(
+                            "feedback.errors.ready_for_fix",
+                            {
+                                "errors": errors_to_fix,
+                                "source": "gemini_feedback",
+                                "auto_fix_enabled": data.get("auto_fix", False)
+                            }
+                        )
+            else:
+                self.logger.warning(f"Feedback collection failed: {result.get('error')}")
+
+        except Exception as e:
+            self.logger.error(f"Error handling feedback collection: {e}", exc_info=True)
+
+    async def run_feedback_loop(self, repo: Optional[str] = None, auto_fix: bool = False):
+        """
+        Run the zero-cost AI debugging feedback loop.
+
+        This collects feedback from Gemini bot on GitHub and processes
+        it for mindX to automatically fix.
+
+        Args:
+            repo: Repository in owner/repo format (optional)
+            auto_fix: Whether to automatically apply fixes
+        """
+        if not self.feedback_tool:
+            self.logger.warning("Feedback tool not available")
+            return {"success": False, "error": "Feedback tool not initialized"}
+
+        # Collect feedback
+        collect_result = await self.feedback_tool.execute(
+            operation="collect_feedback",
+            repo=repo
+        )
+
+        if not collect_result.get("success"):
+            return collect_result
+
+        new_errors = collect_result.get("new_errors", 0)
+        self.logger.info(f"Feedback loop: collected {new_errors} new errors")
+
+        if new_errors == 0:
+            return {
+                "success": True,
+                "message": "No new errors found",
+                "stats": await self.feedback_tool.execute(operation="get_stats")
+            }
+
+        # Process errors for fixing
+        process_result = await self.feedback_tool.execute(
+            operation="process_errors",
+            auto_fix=auto_fix,
+            limit=10
+        )
+
+        return {
+            "success": True,
+            "collected": collect_result,
+            "processed": process_result,
+            "message": f"Processed {len(process_result.get('errors_to_fix', []))} errors for fixing"
+        }
+
     async def _update_model_registry_for_agent(self, agent_id: str, agent_type: str, config: Dict[str, Any]):
         """Update the model registry if the agent provides models."""
         provided_models = config.get("provided_models", [])
