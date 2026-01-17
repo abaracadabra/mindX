@@ -89,16 +89,25 @@
       "source_commit": "d34dec5f1536203d4276c5bc2555c1b26b693114",
       "created_at": "2026-01-17T04:26:45.545888",
       "status": "created"
+    },
+    {
+      "branch_name": "backup/shutdown-backup-20260117_150640",
+      "backup_type": "shutdown_backup",
+      "reason": "System shutdown - automatic backup",
+      "source_branch": "pgvectorscale-integration",
+      "source_commit": "0400c33e04304b304b1a80de043aaf7c125c320b",
+      "created_at": "2026-01-17T15:06:46.251184",
+      "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/shutdown-backup-20260117_042643",
+    "branch_name": "backup/shutdown-backup-20260117_150640",
     "backup_type": "shutdown_backup",
     "reason": "System shutdown - automatic backup",
     "source_branch": "pgvectorscale-integration",
-    "source_commit": "d34dec5f1536203d4276c5bc2555c1b26b693114",
-    "created_at": "2026-01-17T04:26:45.545888",
+    "source_commit": "0400c33e04304b304b1a80de043aaf7c125c320b",
+    "created_at": "2026-01-17T15:06:46.251184",
     "status": "created"
   },
-  "last_backup_at": "2026-01-17T04:26:45.545935"
+  "last_backup_at": "2026-01-17T15:06:46.251223"
 }
