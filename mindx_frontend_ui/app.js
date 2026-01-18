@@ -11567,15 +11567,22 @@ async function testOllamaCompletion() {
     }
     
     // Load Ollama conversation history
-    async function loadMindXagentOllamaConversation() {
+    async function loadMindXagentOllamaConversation(conversationId = null) {
         try {
-            const conversation = await sendRequest('/mindxagent/ollama/conversation?limit=100');
+            const url = conversationId 
+                ? `/mindxagent/ollama/conversation?conversation_id=${encodeURIComponent(conversationId)}&limit=100`
+                : '/mindxagent/ollama/conversation?limit=100';
+            const conversation = await sendRequest(url);
             updateMindXagentOllamaConversationDisplay(conversation);
         } catch (error) {
             console.error('Failed to load conversation:', error);
             const displayEl = document.getElementById('mindxagent-ollama-conversation-display');
             if (displayEl) {
-                displayEl.innerHTML = `<div style="text-align: center; color: #ff0000; padding: 20px;">Failed to load conversation: ${error.message}</div>`;
+                displayEl.innerHTML = `<div style="text-align: center; color: #ff0000; padding: 40px;">
+                    <div style="font-size: 24px; margin-bottom: 10px;">❌</div>
+                    <div>Failed to load conversation</div>
+                    <div style="font-size: 11px; margin-top: 10px; color: #666;">${error.message}</div>
+                </div>`;
             }
         }
     }
@@ -11585,70 +11592,121 @@ async function testOllamaCompletion() {
         const displayEl = document.getElementById('mindxagent-ollama-conversation-display');
         if (!displayEl) return;
         
+        // Update conversation stats
+        const totalEl = document.getElementById('conversation-total-messages');
+        const userEl = document.getElementById('conversation-user-messages');
+        const assistantEl = document.getElementById('conversation-assistant-messages');
+        
         if (!conversation.success || !conversation.messages || conversation.messages.length === 0) {
             const errorMsg = conversation.error ? `Error: ${conversation.error}` : 'No conversation history yet. Start chatting with Ollama to see messages here.';
-            displayEl.innerHTML = `<div style="text-align: center; color: #888; padding: 20px;">${errorMsg}</div>`;
+            displayEl.innerHTML = `<div style="text-align: center; color: #888; padding: 40px;">
+                <div style="font-size: 24px; margin-bottom: 10px;">💬</div>
+                <div>${errorMsg}</div>
+            </div>`;
+            if (totalEl) totalEl.textContent = '0';
+            if (userEl) userEl.textContent = '0';
+            if (assistantEl) assistantEl.textContent = '0';
             return;
         }
         
-        let html = '<div style="margin-bottom: 10px; padding: 10px; background: rgba(139, 92, 246, 0.1); border-radius: 6px; border-left: 3px solid rgba(139, 92, 246, 0.5);">';
-        html += '<div style="font-size: 11px; color: #aaa; margin-bottom: 5px;">Powered by <a href="https://github.com/autoglm" target="_blank" style="color: #8b5cf6;">aGLM</a> | <a href="https://opensea.io/collection/aglm" target="_blank" style="color: #8b5cf6;">OpenSea Collection</a> | <a href="https://bankon.gitbook.io/aglm-investor/aglm" target="_blank" style="color: #8b5cf6;">BANKON Investor</a></div>';
-        html += `<div style="font-size: 11px; color: #888;">Conversation ID: ${conversation.conversation_id || 'default'} | Total Messages: ${conversation.total_count || 0}</div>`;
-        html += '</div>';
+        // Count messages by role
+        const userCount = conversation.messages.filter(m => m.role === 'user').length;
+        const assistantCount = conversation.messages.filter(m => m.role === 'assistant').length;
+        const totalCount = conversation.messages.length;
         
+        // Update stats
+        if (totalEl) totalEl.textContent = totalCount;
+        if (userEl) userEl.textContent = userCount;
+        if (assistantEl) assistantEl.textContent = assistantCount;
+        
+        // Build conversation header
+        let html = '<div style="margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(0, 168, 255, 0.2)); border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.4);">';
+        html += '<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">';
+        html += '<div>';
+        html += '<div style="font-size: 12px; color: #aaa; margin-bottom: 5px;">Powered by <a href="https://github.com/autoglm" target="_blank" style="color: #8b5cf6; text-decoration: none;">aGLM</a> | <a href="https://opensea.io/collection/aglm" target="_blank" style="color: #8b5cf6; text-decoration: none;">OpenSea Collection</a> | <a href="https://bankon.gitbook.io/aglm-investor/aglm" target="_blank" style="color: #8b5cf6; text-decoration: none;">BANKON Investor</a></div>';
+        html += `<div style="font-size: 13px; color: #fff; font-weight: bold;">Conversation: ${conversation.conversation_id || 'default'}</div>`;
+        html += '</div>';
+        html += `<div style="text-align: right;">
+            <div style="font-size: 11px; color: #888;">Last updated</div>
+            <div style="font-size: 12px; color: #aaa;">${conversation.last_updated ? new Date(conversation.last_updated).toLocaleString() : 'Just now'}</div>
+        </div>`;
+        html += '</div></div>';
+        
+        // Display messages with improved styling
         conversation.messages.forEach((msg, index) => {
             const role = msg.role || 'unknown';
             const content = msg.content || '';
             const isUser = role === 'user';
             const isAssistant = role === 'assistant';
+            const isSystem = role === 'system';
             
-            const bgColor = isUser ? 'rgba(0, 168, 255, 0.15)' : isAssistant ? 'rgba(0, 255, 136, 0.15)' : 'rgba(255, 255, 255, 0.05)';
-            const borderColor = isUser ? 'rgba(0, 168, 255, 0.4)' : isAssistant ? 'rgba(0, 255, 136, 0.4)' : 'rgba(255, 255, 255, 0.2)';
-            const label = isUser ? 'mindXagent → Ollama' : isAssistant ? 'Ollama → mindXagent' : 'System';
+            const bgColor = isUser ? 'rgba(0, 168, 255, 0.2)' : isAssistant ? 'rgba(0, 255, 136, 0.2)' : 'rgba(255, 255, 255, 0.1)';
+            const borderColor = isUser ? 'rgba(0, 168, 255, 0.6)' : isAssistant ? 'rgba(0, 255, 136, 0.6)' : 'rgba(255, 255, 255, 0.3)';
+            const label = isUser ? '🤖 mindXagent' : isAssistant ? '💬 Ollama Model' : '⚙️ System';
             const textColor = isUser ? '#00a8ff' : isAssistant ? '#00ff88' : '#ffffff';
+            const icon = isUser ? '→' : isAssistant ? '←' : '⚙';
+            
+            // Format content with better readability
+            const formattedContent = escapeHtml(content).replace(/\n/g, '<br>');
             
             html += `
                 <div style="
-                    margin-bottom: 15px;
-                    padding: 12px;
+                    margin-bottom: 20px;
+                    padding: 15px;
                     background: ${bgColor};
-                    border-left: 3px solid ${borderColor};
-                    border-radius: 6px;
-                    animation: fadeIn 0.3s ease;
+                    border-left: 4px solid ${borderColor};
+                    border-radius: 8px;
+                    animation: slideIn 0.3s ease;
                     position: relative;
                     overflow: hidden;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
                 ">
                     <div style="
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
-                        margin-bottom: 8px;
+                        margin-bottom: 12px;
+                        padding-bottom: 8px;
+                        border-bottom: 1px solid ${borderColor};
                     ">
-                        <span style="
-                            font-weight: bold;
-                            color: ${textColor};
-                            font-size: 12px;
-                            text-transform: uppercase;
-                        ">${label}</span>
-                        <span style="color: #888; font-size: 11px;">Message ${index + 1}</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="
+                                font-weight: bold;
+                                color: ${textColor};
+                                font-size: 13px;
+                                text-transform: uppercase;
+                                letter-spacing: 0.5px;
+                            ">${icon} ${label}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="color: #888; font-size: 11px;">#${index + 1}</span>
+                            ${msg.timestamp ? `<span style="color: #666; font-size: 10px;">${new Date(msg.timestamp).toLocaleTimeString()}</span>` : ''}
+                        </div>
                     </div>
                     <div style="
                         color: #ffffff;
                         font-size: 14px;
-                        line-height: 1.6;
+                        line-height: 1.8;
                         white-space: pre-wrap;
                         word-wrap: break-word;
                         position: relative;
                         z-index: 1;
-                    ">${escapeHtml(content)}</div>
+                        font-family: 'Courier New', monospace;
+                    ">${formattedContent}</div>
+                    ${content.length > 200 ? `<div style="margin-top: 8px; font-size: 11px; color: #888;">${content.length} characters</div>` : ''}
                 </div>
             `;
         });
         
         displayEl.innerHTML = html;
         
-        // Scroll to bottom
-        displayEl.scrollTop = displayEl.scrollHeight;
+        // Scroll to bottom with smooth animation
+        setTimeout(() => {
+            displayEl.scrollTo({
+                top: displayEl.scrollHeight,
+                behavior: 'smooth'
+            });
+        }, 100);
     }
     
     // Update Ollama status display

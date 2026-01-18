@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-01-18T14:31:27.161154",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "id_manager_for_mindx_meta_agent",
+  "content": {
+    "process_name": "id_manager_address_derived",
+    "data": {
+      "entity_id": "guardian_agent_main",
+      "address": "0x2C0fFCf9677EE77a8C7f84D3d7dB67b47A5D4D25",
+      "source": "private_key"
+    }
+  },
+  "context": {
+    "agent_id": "id_manager_for_mindx_meta_agent"
+  },
+  "tags": [
+    "id_manager_address_derived",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "c12ee6fa7a8f6489"
+}

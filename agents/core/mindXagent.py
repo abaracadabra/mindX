@@ -194,6 +194,8 @@ class MindXAgent:
         # Improvement tracking
         self.improvement_goals: List[Dict[str, Any]] = []
         self.improvement_history: List[Dict[str, Any]] = []
+        self.improvement_opportunities: List[Dict[str, Any]] = []  # Initialize improvement opportunities
+        self._improvement_opportunities: List[Dict[str, Any]] = []  # Internal list for opportunities
         self.result_analyses: Dict[str, ResultAnalysis] = {}
         
         # Data directory
@@ -2396,7 +2398,7 @@ class MindXAgent:
             "settings": self.settings.copy(),
             "thinking_steps_count": len(self.thinking_process),
             "action_choices_count": len(self.action_choices),
-            "improvement_opportunities_count": len(self.improvement_opportunities),
+            "improvement_opportunities_count": len(getattr(self, 'improvement_opportunities', [])),
             "ollama": {
                 "enabled": self.ollama_chat_manager is not None,
                 "connected": False,

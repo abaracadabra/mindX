@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-01-18T14:00:24.664735",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "process_name": "ollama_model_discovered",
+    "data": {
+      "model": "hf.co\/nomic-ai\/nomic-embed-text-v1.5-GGUF:F32",
+      "discovered_at": 1768770024.6647294
+    }
+  },
+  "context": {
+    "agent_id": "mindx_meta_agent"
+  },
+  "tags": [
+    "ollama_model_discovered",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "f6983de84217993a"
+}

@@ -2373,21 +2373,61 @@
                 
                 <!-- Ollama Conversation Display Section -->
                 <div class="control-section">
-                    <h3>Ollama Conversation</h3>
-                    <div style="margin-bottom: 10px;">
-                        <button id="refresh-ollama-conversation-btn" class="refresh-btn">Refresh Conversation</button>
-                        <button id="clear-ollama-conversation-btn" class="action-btn" style="margin-left: 10px;">Clear History</button>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0;">Ollama Conversation History</h3>
+                        <div>
+                            <select id="ollama-conversation-selector" style="
+                                padding: 8px 12px;
+                                background: rgba(0, 0, 0, 0.5);
+                                border: 1px solid rgba(0, 168, 255, 0.3);
+                                border-radius: 4px;
+                                color: #fff;
+                                font-size: 13px;
+                                margin-right: 10px;
+                                cursor: pointer;
+                            ">
+                                <option value="default">Default Conversation</option>
+                            </select>
+                            <button id="refresh-ollama-conversation-btn" class="refresh-btn">🔄 Refresh</button>
+                            <button id="clear-ollama-conversation-btn" class="action-btn" style="margin-left: 10px;">🗑️ Clear</button>
+                        </div>
+                    </div>
+                    <div id="mindxagent-ollama-conversation-stats" style="
+                        display: grid;
+                        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                        gap: 10px;
+                        margin-bottom: 15px;
+                        padding: 10px;
+                        background: rgba(0, 0, 0, 0.2);
+                        border-radius: 6px;
+                    ">
+                        <div style="text-align: center;">
+                            <div style="font-size: 11px; color: #888; margin-bottom: 3px;">Total Messages</div>
+                            <div id="conversation-total-messages" style="font-size: 18px; font-weight: bold; color: #00a8ff;">0</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 11px; color: #888; margin-bottom: 3px;">User Messages</div>
+                            <div id="conversation-user-messages" style="font-size: 18px; font-weight: bold; color: #00ff88;">0</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 11px; color: #888; margin-bottom: 3px;">Assistant Messages</div>
+                            <div id="conversation-assistant-messages" style="font-size: 18px; font-weight: bold; color: #8b5cf6;">0</div>
+                        </div>
                     </div>
                     <div id="mindxagent-ollama-conversation-display" style="
-                        max-height: 500px;
+                        max-height: 600px;
                         overflow-y: auto;
-                        padding: 15px;
-                        background: rgba(0, 0, 0, 0.3);
+                        padding: 20px;
+                        background: rgba(0, 0, 0, 0.4);
                         border-radius: 8px;
                         border: 1px solid rgba(0, 168, 255, 0.3);
+                        font-family: 'Courier New', monospace;
+                        font-size: 13px;
                     ">
-                        <div style="text-align: center; color: #888; padding: 20px;">
-                            Loading conversation history...
+                        <div style="text-align: center; color: #888; padding: 40px;">
+                            <div style="font-size: 24px; margin-bottom: 10px;">💬</div>
+                            <div>Loading conversation history...</div>
+                            <div style="font-size: 11px; margin-top: 10px; color: #666;">Click "Refresh" to load messages</div>
                         </div>
                     </div>
                 </div>
