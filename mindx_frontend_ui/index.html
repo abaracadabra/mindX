@@ -251,6 +251,7 @@
                     <button class="tab-btn" data-tab="logs">Logs</button>
                     <button class="tab-btn" data-tab="api">API</button>
                     <button class="tab-btn" data-tab="faicey">Faicey</button>
+                    <button class="tab-btn" data-tab="mindxagent">mindXagent</button>
                     <button class="tab-btn" data-tab="admin">Admin</button>
                 </div>
                 <div class="tab-row core-tabs">
@@ -2266,6 +2267,109 @@
             </div>
         </div>
 
+        <!-- mindXagent Tab -->
+        <div id="mindxagent-tab" class="tab-content">
+            <div class="control-section">
+                <div class="section-header">
+                    <h2>mindXagent - Gödel Machine Self-Improvement</h2>
+                    <div class="mindxagent-controls">
+                        <button id="refresh-mindxagent-status-btn" class="refresh-btn">Refresh Status</button>
+                    </div>
+                </div>
+                
+                <!-- Status Section -->
+                <div class="control-section">
+                    <h3>Status</h3>
+                    <div id="mindxagent-status-display" class="status-display">
+                        <div class="status-item">
+                            <span class="status-label">Autonomous Mode:</span>
+                            <span id="mindxagent-autonomous-status" class="status-value">Loading...</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Model:</span>
+                            <span id="mindxagent-model" class="status-value">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Provider:</span>
+                            <span id="mindxagent-provider" class="status-value">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Thinking Steps:</span>
+                            <span id="mindxagent-thinking-count" class="status-value">0</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Action Choices:</span>
+                            <span id="mindxagent-actions-count" class="status-value">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Settings Section -->
+                <div class="control-section">
+                    <h3>Settings</h3>
+                    <div class="mindxagent-settings">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="mindxagent-autonomous-enabled" />
+                                Enable Autonomous Mode
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="mindxagent-show-thinking" checked />
+                                Show Thinking Process
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="mindxagent-show-actions" checked />
+                                Show Action Choices
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="mindxagent-auto-apply" checked />
+                                Auto-Apply Safe Improvements
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>Model Selection Strategy:</label>
+                            <select id="mindxagent-model-strategy">
+                                <option value="best_for_task">Best for Task</option>
+                                <option value="user_preference">User Preference</option>
+                                <option value="balanced">Balanced</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Improvement Cycle Interval (seconds):</label>
+                            <input type="number" id="mindxagent-cycle-interval" value="300" min="60" max="3600" />
+                        </div>
+                        <button id="save-mindxagent-settings-btn" class="action-btn primary">Save Settings</button>
+                    </div>
+                </div>
+                
+                <!-- Thinking Process Display -->
+                <div class="control-section">
+                    <h3>Thinking Process</h3>
+                    <div class="thinking-process-container">
+                        <div id="mindxagent-thinking-display" class="thinking-display">
+                            <p style="color: #888; font-style: italic;">Thinking process will appear here...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action Choices Display -->
+                <div class="control-section">
+                    <h3>Action Choices</h3>
+                    <div class="action-choices-container">
+                        <div id="mindxagent-actions-display" class="actions-display">
+                            <p style="color: #888; font-style: italic;">Action choices will appear here...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Faicey Tab -->
         <div id="faicey-tab" class="tab-content">
             <div class="control-section">

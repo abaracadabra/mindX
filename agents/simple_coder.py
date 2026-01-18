@@ -89,12 +89,18 @@ class SimpleCoder:
         return []
     
     def _save_update_requests(self):
-        """Save update requests to persistent storage."""
+        """Save update requests to persistent storage in simple_coder_sandbox directory."""
         try:
+            # Ensure directory exists
+            self.update_requests_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Save to file
             with open(self.update_requests_file, 'w') as f:
                 json.dump(self.update_requests, f, indent=2)
+            
+            logger.debug(f"Saved {len(self.update_requests)} update requests to {self.update_requests_file}")
         except Exception as e:
-            logger.error(f"Failed to save update requests: {e}")
+            logger.error(f"Failed to save update requests to {self.update_requests_file}: {e}", exc_info=True)
     
     def _initialize_directories(self):
         """Initialize backup and sandbox directories."""

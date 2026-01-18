@@ -35,6 +35,7 @@ All agent documentation is organized in the `agents/` folder structure. See [age
 - **[Enhanced Simple Coder](enhanced_simple_coder.md)** - Advanced coding agent with multi-model intelligence
 - **[Simple Coder Agent](simple_coder_agent.md)** - BDI-integrated coding assistant
 - **[Simple Coder](simple_coder.md)** - Enhanced coding agent with sandbox and autonomous mode
+- **[SimpleCoder Memory Integration](simplecodermemory.md)** - Comprehensive memory integration with update requests stored in `simple_coder_sandbox/update_requests.json`
 
 #### Dynamic Agents (agents/)
 
@@ -104,6 +105,7 @@ All tool documentation is organized in the `tools/` folder. See [TOOLS_INDEX.md]
 - **[Token Calculator Tool (Robust)](token_calculator_tool_robust.md)** - Enhanced token counting and cost calculation
 - **[Identity Sync Tool](identity_sync_tool.md)** - Identity synchronization and management
 - **[User Persistence Manager](user_persistence_manager.md)** - User persistence and state management
+- **[Ollama Model Capability Tool](ollama_model_capability_tool.md)** - Ollama model capability storage and intelligent model selection for task-specific optimization
 
 #### Communication & Cognition Tools
 
@@ -133,6 +135,7 @@ All tool documentation is organized in the `tools/` folder. See [TOOLS_INDEX.md]
 - **[BDI Agent](bdi_agent.md)** - Belief-Desire-Intention cognitive architecture
 - **[Belief System](belief_system.md)** - Belief management and confidence scoring
 - **[Memory System](memory.md)** - Memory architecture and persistence
+- **[Vault System](vault_system.md)** - Persistent local storage for access credentials and URL/IP access tracking for ML inference
 - **[Identity Management](IDENTITY.md)** - Identity and authentication systems
 - **[Orchestration](ORCHESTRATION.md)** - System orchestration and coordination
 
@@ -182,6 +185,7 @@ All tool documentation is organized in the `tools/` folder. See [TOOLS_INDEX.md]
 - **[Frontend Backend Analysis](frontend_backend_analysis.md)** - Frontend/backend architecture analysis
 - **[MindX Internal Workflow Analysis](MINDX_INTERNAL_WORKFLOW_ANALYSIS.md)** - Internal workflow analysis
 - **[Memory System Replacement Audit](memory_system_replacement_audit.md)** - Memory system audit
+- **[Memory Storage and Data Folder Log Review](memory_storage_review.md)** - Comprehensive review of memory_agent storage architecture, data folder organization, and log system patterns
 - **[Orchestration Audit](orchestration_audit.md)** - Orchestration system audit
 
 #### Implementation Reports

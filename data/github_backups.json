@@ -91,23 +91,23 @@
       "status": "created"
     },
     {
-      "branch_name": "backup/shutdown-backup-20260117_150640",
+      "branch_name": "backup/shutdown-backup-20260117_150646",
       "backup_type": "shutdown_backup",
       "reason": "System shutdown - automatic backup",
       "source_branch": "pgvectorscale-integration",
-      "source_commit": "0400c33e04304b304b1a80de043aaf7c125c320b",
-      "created_at": "2026-01-17T15:06:46.251184",
+      "source_commit": "9b5e441b1060ab8b993caaefc10c57a2db5bfa4e",
+      "created_at": "2026-01-17T15:06:49.051660",
       "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/shutdown-backup-20260117_150640",
+    "branch_name": "backup/shutdown-backup-20260117_150646",
     "backup_type": "shutdown_backup",
     "reason": "System shutdown - automatic backup",
     "source_branch": "pgvectorscale-integration",
-    "source_commit": "0400c33e04304b304b1a80de043aaf7c125c320b",
-    "created_at": "2026-01-17T15:06:46.251184",
+    "source_commit": "9b5e441b1060ab8b993caaefc10c57a2db5bfa4e",
+    "created_at": "2026-01-17T15:06:49.051660",
     "status": "created"
   },
-  "last_backup_at": "2026-01-17T15:06:46.251223"
+  "last_backup_at": "2026-01-17T15:06:49.051709"
 }

@@ -11535,3 +11535,220 @@ async function testOllamaCompletion() {
     window.clearOllamaConversation = clearOllamaConversation;
     window.addMessageToConversation = addMessageToConversation;
     window.getSelectedOllamaModel = function() { return selectedOllamaModel; };
+    
+    // ==================== mindXagent UI Functions ====================
+    
+    // Load mindXagent status
+    async function loadMindXagentStatus() {
+        try {
+            const status = await sendRequest('/mindxagent/status');
+            updateMindXagentStatusDisplay(status);
+        } catch (error) {
+            console.error('Failed to load mindXagent status:', error);
+            addLog(`Failed to load mindXagent status: ${error.message}`, 'ERROR');
+        }
+    }
+    
+    // Update status display
+    function updateMindXagentStatusDisplay(status) {
+        const autonomousEl = document.getElementById('mindxagent-autonomous-status');
+        const modelEl = document.getElementById('mindxagent-model');
+        const providerEl = document.getElementById('mindxagent-provider');
+        const thinkingCountEl = document.getElementById('mindxagent-thinking-count');
+        const actionsCountEl = document.getElementById('mindxagent-actions-count');
+        
+        if (autonomousEl) {
+            autonomousEl.textContent = status.autonomous_mode ? '🟢 Running' : '🔴 Stopped';
+            autonomousEl.style.color = status.autonomous_mode ? '#00ff00' : '#ff0000';
+        }
+        if (modelEl) modelEl.textContent = status.model || '-';
+        if (providerEl) providerEl.textContent = status.provider || '-';
+        if (thinkingCountEl) thinkingCountEl.textContent = status.thinking_steps_count || 0;
+        if (actionsCountEl) actionsCountEl.textContent = status.action_choices_count || 0;
+        
+        // Update settings checkboxes
+        if (status.settings) {
+            const autonomousCheck = document.getElementById('mindxagent-autonomous-enabled');
+            const showThinkingCheck = document.getElementById('mindxagent-show-thinking');
+            const showActionsCheck = document.getElementById('mindxagent-show-actions');
+            const autoApplyCheck = document.getElementById('mindxagent-auto-apply');
+            const strategySelect = document.getElementById('mindxagent-model-strategy');
+            const intervalInput = document.getElementById('mindxagent-cycle-interval');
+            
+            if (autonomousCheck) autonomousCheck.checked = status.settings.autonomous_mode_enabled || false;
+            if (showThinkingCheck) showThinkingCheck.checked = status.settings.show_thinking_process !== false;
+            if (showActionsCheck) showActionsCheck.checked = status.settings.show_action_choices !== false;
+            if (autoApplyCheck) autoApplyCheck.checked = status.settings.auto_apply_safe_improvements !== false;
+            if (strategySelect) strategySelect.value = status.settings.model_selection_strategy || 'best_for_task';
+            if (intervalInput) intervalInput.value = status.settings.improvement_cycle_interval || 300;
+        }
+    }
+    
+    // Load thinking process
+    async function loadMindXagentThinking() {
+        try {
+            const result = await sendRequest('/mindxagent/thinking?limit=100');
+            displayThinkingProcess(result.thinking_process || []);
+        } catch (error) {
+            console.error('Failed to load thinking process:', error);
+        }
+    }
+    
+    // Display thinking process
+    function displayThinkingProcess(thinking) {
+        const displayEl = document.getElementById('mindxagent-thinking-display');
+        if (!displayEl) return;
+        
+        if (thinking.length === 0) {
+            displayEl.innerHTML = '<p style="color: #888; font-style: italic;">No thinking process recorded yet...</p>';
+            return;
+        }
+        
+        let html = '<div class="thinking-list">';
+        thinking.forEach((entry, index) => {
+            const time = new Date(entry.timestamp * 1000).toLocaleTimeString();
+            html += `
+                <div class="thinking-entry" style="padding: 10px; margin-bottom: 10px; background: rgba(0, 0, 0, 0.3); border-left: 3px solid #00ffff; border-radius: 4px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span style="color: #00ffff; font-weight: bold;">${entry.step}</span>
+                        <span style="color: #888; font-size: 12px;">${time}</span>
+                    </div>
+                    <div style="color: #ffffff; font-size: 14px;">${escapeHtml(entry.thought)}</div>
+                    ${entry.metadata && Object.keys(entry.metadata).length > 0 ? `
+                        <div style="margin-top: 5px; padding: 5px; background: rgba(0, 255, 255, 0.1); border-radius: 3px; font-size: 12px; color: #aaa;">
+                            ${JSON.stringify(entry.metadata, null, 2)}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        });
+        html += '</div>';
+        displayEl.innerHTML = html;
+    }
+    
+    // Load action choices
+    async function loadMindXagentActions() {
+        try {
+            const result = await sendRequest('/mindxagent/actions?limit=50');
+            displayActionChoices(result.action_choices || []);
+        } catch (error) {
+            console.error('Failed to load action choices:', error);
+        }
+    }
+    
+    // Display action choices
+    function displayActionChoices(actions) {
+        const displayEl = document.getElementById('mindxagent-actions-display');
+        if (!displayEl) return;
+        
+        if (actions.length === 0) {
+            displayEl.innerHTML = '<p style="color: #888; font-style: italic;">No action choices recorded yet...</p>';
+            return;
+        }
+        
+        let html = '<div class="actions-list">';
+        actions.forEach((entry, index) => {
+            const time = new Date(entry.timestamp * 1000).toLocaleTimeString();
+            const selected = entry.selected;
+            html += `
+                <div class="action-entry" style="padding: 15px; margin-bottom: 15px; background: rgba(0, 0, 0, 0.3); border: 2px solid ${selected ? '#00ff00' : '#00ffff'}; border-radius: 4px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span style="color: #00ffff; font-weight: bold;">${entry.context}</span>
+                        <span style="color: #888; font-size: 12px;">${time}</span>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <div style="color: #00ff00; font-weight: bold; margin-bottom: 5px;">Selected:</div>
+                        <div style="padding: 8px; background: rgba(0, 255, 0, 0.1); border-radius: 3px;">
+                            ${selected ? escapeHtml(JSON.stringify(selected, null, 2)) : 'None'}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="color: #00ffff; font-weight: bold; margin-bottom: 5px;">Options Considered (${entry.choices.length}):</div>
+                        <div style="display: grid; gap: 5px;">
+                            ${entry.choices.map((choice, i) => `
+                                <div style="padding: 5px; background: rgba(0, 255, 255, 0.05); border-left: 2px solid ${i === 0 ? '#00ff00' : '#00ffff'}; border-radius: 3px; font-size: 12px;">
+                                    ${i + 1}. ${escapeHtml(choice.goal || JSON.stringify(choice))}
+                                    ${choice.priority ? ` <span style="color: #888;">(${choice.priority})</span>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        displayEl.innerHTML = html;
+    }
+    
+    // Save settings
+    async function saveMindXagentSettings() {
+        try {
+            const settings = {
+                autonomous_mode_enabled: document.getElementById('mindxagent-autonomous-enabled').checked,
+                show_thinking_process: document.getElementById('mindxagent-show-thinking').checked,
+                show_action_choices: document.getElementById('mindxagent-show-actions').checked,
+                auto_apply_safe_improvements: document.getElementById('mindxagent-auto-apply').checked,
+                model_selection_strategy: document.getElementById('mindxagent-model-strategy').value,
+                improvement_cycle_interval: parseInt(document.getElementById('mindxagent-cycle-interval').value)
+            };
+            
+            const result = await sendRequest('/mindxagent/settings', 'POST', settings);
+            if (result.success) {
+                addLog('mindXagent settings saved successfully', 'SUCCESS');
+                await loadMindXagentStatus();
+            } else {
+                addLog('Failed to save mindXagent settings', 'ERROR');
+            }
+        } catch (error) {
+            console.error('Failed to save settings:', error);
+            addLog(`Failed to save settings: ${error.message}`, 'ERROR');
+        }
+    }
+    
+    // Initialize mindXagent tab
+    function initializeMindXagentTab() {
+        const refreshBtn = document.getElementById('refresh-mindxagent-status-btn');
+        const saveBtn = document.getElementById('save-mindxagent-settings-btn');
+        
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', async () => {
+                await loadMindXagentStatus();
+                await loadMindXagentThinking();
+                await loadMindXagentActions();
+            });
+        }
+        
+        if (saveBtn) {
+            saveBtn.addEventListener('click', saveMindXagentSettings);
+        }
+        
+        // Auto-refresh when tab is shown
+        document.addEventListener('click', async (e) => {
+            if (e.target && e.target.getAttribute('data-tab') === 'mindxagent') {
+                await loadMindXagentStatus();
+                await loadMindXagentThinking();
+                await loadMindXagentActions();
+                
+                // Set up auto-refresh every 5 seconds
+                if (window.mindxagentRefreshInterval) {
+                    clearInterval(window.mindxagentRefreshInterval);
+                }
+                window.mindxagentRefreshInterval = setInterval(async () => {
+                    await loadMindXagentStatus();
+                    await loadMindXagentThinking();
+                    await loadMindXagentActions();
+                }, 5000);
+            } else {
+                if (window.mindxagentRefreshInterval) {
+                    clearInterval(window.mindxagentRefreshInterval);
+                }
+            }
+        });
+    }
+    
+    // Initialize on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeMindXagentTab);
+    } else {
+        initializeMindXagentTab();
+    }

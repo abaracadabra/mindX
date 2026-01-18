@@ -228,6 +228,23 @@ class MindXAgent:
         self.llm_provider = "ollama"
         self.llm_model = "mistral-nemo:latest"
         
+        # Thinking process tracking for UI display
+        self.thinking_process: List[Dict[str, Any]] = []
+        self.max_thinking_history = 1000  # Keep last 1000 thinking steps
+        self.action_choices: List[Dict[str, Any]] = []  # Track action choices
+        self.max_action_history = 500
+        
+        # Settings for UI control
+        self.settings = {
+            "autonomous_mode_enabled": False,
+            "show_thinking_process": True,
+            "show_action_choices": True,
+            "improvement_cycle_interval": 300,  # 5 minutes
+            "model_selection_strategy": "best_for_task",  # best_for_task, user_preference, balanced
+            "max_concurrent_improvements": 1,
+            "auto_apply_safe_improvements": True
+        }
+        
     async def _async_init(self):
         """Asynchronous initialization of all components"""
         logger.info(f"{self.log_prefix} Initializing MindX Agent...")
@@ -1978,21 +1995,34 @@ class MindXAgent:
                 if await self._check_identity_crisis():
                     logger.info(f"{self.log_prefix} Identity restored from INDEX.md")
                 
+                # Log thinking step
+                self._log_thinking("analyzing_system_state", "Analyzing current system state for improvement opportunities")
+                
                 # Analyze system state
                 system_state = await self._analyze_system_state()
                 
+                self._log_thinking("system_state_analyzed", f"System state analyzed: {len(system_state)} metrics collected")
+                
                 # Identify improvement opportunities
+                self._log_thinking("identifying_opportunities", "Identifying improvement opportunities from system state")
                 improvement_opportunities = await self._identify_improvement_opportunities(system_state)
                 
                 if improvement_opportunities:
                     logger.info(f"{self.log_prefix} Found {len(improvement_opportunities)} improvement opportunities")
                     
                     # Prioritize opportunities
+                    self._log_thinking("prioritizing", f"Prioritizing {len(improvement_opportunities)} improvement opportunities")
                     prioritized = await self._prioritize_improvements(improvement_opportunities)
+                    
+                    # Log action choices
+                    if prioritized:
+                        choices = [{"goal": p["goal"], "priority": p.get("priority", "medium"), "estimated_impact": p.get("impact", "unknown")} for p in prioritized[:5]]
+                        self._log_action_choices("improvement_selection", choices)
                     
                     # Execute top priority improvement
                     if prioritized:
                         top_priority = prioritized[0]
+                        self._log_thinking("executing_improvement", f"Executing improvement: {top_priority['goal']}")
                         logger.info(f"{self.log_prefix} Executing improvement: {top_priority['goal']}")
                         
                         # Use Blueprint Agent for strategic planning
@@ -2021,6 +2051,161 @@ class MindXAgent:
             except Exception as e:
                 logger.error(f"{self.log_prefix} Error in autonomous loop: {e}", exc_info=True)
                 await asyncio.sleep(60)  # Wait 1 minute before retrying
+    
+    def _log_thinking(self, step: str, thought: str, metadata: Optional[Dict[str, Any]] = None):
+        """Log a thinking step for UI display"""
+        if not self.settings.get("show_thinking_process", True):
+            return
+        
+        thinking_entry = {
+            "timestamp": time.time(),
+            "step": step,
+            "thought": thought,
+            "metadata": metadata or {}
+        }
+        
+        self.thinking_process.append(thinking_entry)
+        
+        # Keep only last N entries
+        if len(self.thinking_process) > self.max_thinking_history:
+            self.thinking_process = self.thinking_process[-self.max_thinking_history:]
+        
+        logger.debug(f"{self.log_prefix} [THINKING] {step}: {thought}")
+    
+    def _log_action_choices(self, context: str, choices: List[Dict[str, Any]]):
+        """Log action choices for UI display"""
+        if not self.settings.get("show_action_choices", True):
+            return
+        
+        action_entry = {
+            "timestamp": time.time(),
+            "context": context,
+            "choices": choices,
+            "selected": choices[0] if choices else None
+        }
+        
+        self.action_choices.append(action_entry)
+        
+        # Keep only last N entries
+        if len(self.action_choices) > self.max_action_history:
+            self.action_choices = self.action_choices[-self.max_action_history:]
+        
+        logger.info(f"{self.log_prefix} [ACTION CHOICE] {context}: {len(choices)} options, selected: {choices[0].get('goal', 'N/A') if choices else 'None'}")
+    
+    async def receive_startup_information(self, startup_info: Dict[str, Any]):
+        """
+        Receive startup information from startup_agent for Gödel machine self-improvement.
+        
+        Args:
+            startup_info: Dictionary with startup information including Ollama connection status
+        """
+        self._log_thinking("receiving_startup_info", "Received startup information from startup_agent", startup_info)
+        
+        # Store startup information
+        if not hasattr(self, 'startup_info'):
+            self.startup_info = {}
+        
+        self.startup_info.update(startup_info)
+        
+        # If Ollama is connected and autonomous mode is enabled, use best model
+        if startup_info.get("ollama_connected") and self.settings.get("autonomous_mode_enabled"):
+            models = startup_info.get("ollama_models", [])
+            if models:
+                # Select best model based on strategy
+                strategy = self.settings.get("model_selection_strategy", "best_for_task")
+                if strategy == "best_for_task":
+                    # Use model capability tool if available
+                    try:
+                        from tools.ollama_model_capability_tool import OllamaModelCapabilityTool
+                        capability_tool = OllamaModelCapabilityTool(config=self.config)
+                        best_model = capability_tool.get_best_model_for_task("reasoning")
+                        if best_model:
+                            self.llm_model = best_model
+                            self._log_thinking("model_selected", f"Selected best model for reasoning: {best_model}")
+                    except Exception as e:
+                        logger.debug(f"{self.log_prefix} Could not use capability tool: {e}")
+                        # Fallback to first available model
+                        if models:
+                            self.llm_model = models[0]
+                elif strategy == "user_preference":
+                    # Use user-selected model if available
+                    try:
+                        from pathlib import Path
+                        import json
+                        prefs_file = Path("data/config/ollama_user_preferences.json")
+                        if prefs_file.exists():
+                            with open(prefs_file, 'r') as f:
+                                prefs = json.load(f)
+                                selected = prefs.get("selected_model")
+                                if selected and selected in models:
+                                    self.llm_model = selected
+                                    self._log_thinking("model_selected", f"Using user-selected model: {selected}")
+                    except Exception as e:
+                        logger.debug(f"{self.log_prefix} Could not load user preference: {e}")
+        
+        # Identify improvement opportunities from startup info
+        if startup_info.get("terminal_log"):
+            terminal_log = startup_info["terminal_log"]
+            if terminal_log.get("errors_count", 0) > 0 or terminal_log.get("warnings_count", 0) > 0:
+                self._log_thinking("startup_issues_detected", 
+                    f"Startup issues detected: {terminal_log.get('errors_count', 0)} errors, {terminal_log.get('warnings_count', 0)} warnings")
+                
+                # Add to improvement opportunities
+                if terminal_log.get("errors_count", 0) > 0:
+                    self.improvement_opportunities.append({
+                        "goal": "Fix startup errors",
+                        "priority": "high",
+                        "source": "startup_agent",
+                        "details": terminal_log.get("sample_errors", [])[:3]
+                    })
+    
+    def update_settings(self, settings: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Update mindXagent settings from UI.
+        
+        Args:
+            settings: Dictionary with settings to update
+            
+        Returns:
+            Updated settings dictionary
+        """
+        self.settings.update(settings)
+        
+        # Apply settings that affect behavior
+        if "autonomous_mode_enabled" in settings:
+            if settings["autonomous_mode_enabled"] and not self.autonomous_mode:
+                # Start autonomous mode if enabled
+                asyncio.create_task(self.start_autonomous_mode(
+                    model=self.llm_model,
+                    provider=self.llm_provider
+                ))
+            elif not settings["autonomous_mode_enabled"] and self.autonomous_mode:
+                # Stop autonomous mode if disabled
+                asyncio.create_task(self.stop_autonomous_mode())
+        
+        logger.info(f"{self.log_prefix} Settings updated: {list(settings.keys())}")
+        return self.settings.copy()
+    
+    def get_thinking_process(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Get recent thinking process for UI display"""
+        return self.thinking_process[-limit:] if self.thinking_process else []
+    
+    def get_action_choices(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get recent action choices for UI display"""
+        return self.action_choices[-limit:] if self.action_choices else []
+    
+    def get_status(self) -> Dict[str, Any]:
+        """Get current status for UI display"""
+        return {
+            "autonomous_mode": self.autonomous_mode,
+            "running": self.running,
+            "model": self.llm_model,
+            "provider": self.llm_provider,
+            "settings": self.settings.copy(),
+            "thinking_steps_count": len(self.thinking_process),
+            "action_choices_count": len(self.action_choices),
+            "improvement_opportunities_count": len(self.improvement_opportunities)
+        }
     
     async def _analyze_system_state(self) -> Dict[str, Any]:
         """Analyze current system state for improvement opportunities"""

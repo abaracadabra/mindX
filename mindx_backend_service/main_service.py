@@ -2441,6 +2441,246 @@ async def agint_stream(payload: DirectivePayload):
     
     return StreamingResponse(generate_agint_stream(), media_type="text/plain")
 
+# ================================
+# VAULT API ENDPOINTS
+# ================================
+
+class AccessCredentialPayload(BaseModel):
+    credential_id: str
+    credential_type: str
+    credential_value: str
+    metadata: Optional[Dict[str, Any]] = None
+
+class URLAccessPayload(BaseModel):
+    url: str
+    ip_address: Optional[str] = None
+    agent_id: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+class IPAccessPayload(BaseModel):
+    ip_address: str
+    url: Optional[str] = None
+    agent_id: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+@app.post("/vault/credentials/store", summary="Store access credential in vault")
+async def store_access_credential(payload: AccessCredentialPayload):
+    """Store an access credential (API key, token, etc.) in the vault."""
+    try:
+        vault_manager = get_vault_manager()
+        success = vault_manager.store_access_credential(
+            credential_id=payload.credential_id,
+            credential_type=payload.credential_type,
+            credential_value=payload.credential_value,
+            metadata=payload.metadata
+        )
+        
+        if success:
+            # Also log to memory
+            if MEMORY_AVAILABLE:
+                memory_agent = MemoryAgent()
+                await memory_agent.save_timestamped_memory(
+                    agent_id=payload.agent_id or "system",
+                    memory_type=MemoryType.SYSTEM_STATE,
+                    content={
+                        "action": "credential_stored",
+                        "credential_id": payload.credential_id,
+                        "credential_type": payload.credential_type
+                    },
+                    importance=MemoryImportance.HIGH,
+                    tags=["vault", "credential", "security"]
+                )
+        
+        return {
+            "success": success,
+            "credential_id": payload.credential_id
+        }
+    except Exception as e:
+        logger.error(f"Error storing access credential: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/vault/credentials/get/{credential_id}", summary="Get access credential from vault")
+async def get_access_credential(credential_id: str, mark_used: bool = True):
+    """Retrieve an access credential from the vault."""
+    try:
+        vault_manager = get_vault_manager()
+        credential_value = vault_manager.get_access_credential(credential_id, mark_used=mark_used)
+        
+        if credential_value:
+            return {
+                "success": True,
+                "credential_id": credential_id,
+                "has_credential": True
+                # Don't return actual credential value for security
+            }
+        else:
+            return {
+                "success": False,
+                "credential_id": credential_id,
+                "has_credential": False
+            }
+    except Exception as e:
+        logger.error(f"Error getting access credential: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/vault/credentials/list", summary="List all access credentials")
+async def list_access_credentials():
+    """List all access credentials stored in vault (metadata only, no values)."""
+    try:
+        vault_manager = get_vault_manager()
+        credentials = vault_manager.list_access_credentials()
+        return {
+            "success": True,
+            "credentials": credentials,
+            "count": len(credentials)
+        }
+    except Exception as e:
+        logger.error(f"Error listing access credentials: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/vault/access/url", summary="Log URL access")
+async def log_url_access(payload: URLAccessPayload):
+    """Log URL access for ML inference tracking."""
+    try:
+        vault_manager = get_vault_manager()
+        success = vault_manager.log_url_access(
+            url=payload.url,
+            ip_address=payload.ip_address,
+            agent_id=payload.agent_id,
+            metadata=payload.metadata
+        )
+        
+        if success:
+            # Also log to memory
+            if MEMORY_AVAILABLE:
+                memory_agent = MemoryAgent()
+                await memory_agent.save_timestamped_memory(
+                    agent_id=payload.agent_id or "system",
+                    memory_type=MemoryType.INTERACTION,
+                    content={
+                        "action": "url_access",
+                        "url": payload.url,
+                        "ip_address": payload.ip_address
+                    },
+                    importance=MemoryImportance.MEDIUM,
+                    tags=["vault", "url_access", "inference"]
+                )
+        
+        return {
+            "success": success,
+            "url": payload.url
+        }
+    except Exception as e:
+        logger.error(f"Error logging URL access: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/vault/access/ip", summary="Log IP access")
+async def log_ip_access(payload: IPAccessPayload):
+    """Log IP access point for ML inference tracking."""
+    try:
+        vault_manager = get_vault_manager()
+        success = vault_manager.log_ip_access(
+            ip_address=payload.ip_address,
+            url=payload.url,
+            agent_id=payload.agent_id,
+            metadata=payload.metadata
+        )
+        
+        if success:
+            # Also log to memory
+            if MEMORY_AVAILABLE:
+                memory_agent = MemoryAgent()
+                await memory_agent.save_timestamped_memory(
+                    agent_id=payload.agent_id or "system",
+                    memory_type=MemoryType.INTERACTION,
+                    content={
+                        "action": "ip_access",
+                        "ip_address": payload.ip_address,
+                        "url": payload.url
+                    },
+                    importance=MemoryImportance.MEDIUM,
+                    tags=["vault", "ip_access", "inference"]
+                )
+        
+        return {
+            "success": success,
+            "ip_address": payload.ip_address
+        }
+    except Exception as e:
+        logger.error(f"Error logging IP access: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/vault/access/url/history", summary="Get URL access history for ML inference")
+async def get_url_access_history(
+    url: Optional[str] = None,
+    days_back: int = 7,
+    limit: int = 100
+):
+    """Get URL access history for ML inference."""
+    try:
+        vault_manager = get_vault_manager()
+        history = vault_manager.get_url_access_history(
+            url=url,
+            days_back=days_back,
+            limit=limit
+        )
+        return {
+            "success": True,
+            "history": history,
+            "count": len(history),
+            "filters": {
+                "url": url,
+                "days_back": days_back,
+                "limit": limit
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error getting URL access history: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/vault/access/ip/history", summary="Get IP access history for ML inference")
+async def get_ip_access_history(
+    ip_address: Optional[str] = None,
+    days_back: int = 7,
+    limit: int = 100
+):
+    """Get IP access history for ML inference."""
+    try:
+        vault_manager = get_vault_manager()
+        history = vault_manager.get_ip_access_history(
+            ip_address=ip_address,
+            days_back=days_back,
+            limit=limit
+        )
+        return {
+            "success": True,
+            "history": history,
+            "count": len(history),
+            "filters": {
+                "ip_address": ip_address,
+                "days_back": days_back,
+                "limit": limit
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error getting IP access history: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/vault/access/summary", summary="Get access summary for ML inference")
+async def get_access_summary():
+    """Get comprehensive access summary for ML inference (URLs, IPs, statistics)."""
+    try:
+        vault_manager = get_vault_manager()
+        summary = vault_manager.get_access_summary_for_inference()
+        return {
+            "success": True,
+            "summary": summary
+        }
+    except Exception as e:
+        logger.error(f"Error getting access summary: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
@@ -3231,18 +3471,86 @@ async def stop_mindxagent_autonomous():
         
         if mindxagent:
             result = await mindxagent.stop_autonomous_mode()
-            return {
-                "success": True,
-                "result": result
-            }
+            return result
         else:
-            return {
-                "success": False,
-                "error": "mindXagent not initialized"
-            }
+            return {"status": "error", "message": "mindXagent not initialized"}
     except Exception as e:
         logger.error(f"Error stopping mindXagent autonomous mode: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Error stopping autonomous mode: {str(e)}")
+
+
+@app.get("/mindxagent/status", summary="Get mindXagent status")
+async def get_mindxagent_status():
+    """Get current mindXagent status including settings and thinking process."""
+    try:
+        from agents.core.mindXagent import MindXAgent
+        
+        mindxagent = await MindXAgent.get_instance()
+        if mindxagent:
+            return mindxagent.get_status()
+        else:
+            return {"status": "not_initialized"}
+    except Exception as e:
+        logger.error(f"Error getting mindXagent status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error getting status: {str(e)}")
+
+
+@app.get("/mindxagent/thinking", summary="Get mindXagent thinking process")
+async def get_mindxagent_thinking(limit: int = 100):
+    """Get recent thinking process from mindXagent."""
+    try:
+        from agents.core.mindXagent import MindXAgent
+        
+        mindxagent = await MindXAgent.get_instance()
+        if mindxagent:
+            return {
+                "thinking_process": mindxagent.get_thinking_process(limit=limit),
+                "count": len(mindxagent.thinking_process)
+            }
+        else:
+            return {"thinking_process": [], "count": 0}
+    except Exception as e:
+        logger.error(f"Error getting thinking process: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error getting thinking process: {str(e)}")
+
+
+@app.get("/mindxagent/actions", summary="Get mindXagent action choices")
+async def get_mindxagent_actions(limit: int = 50):
+    """Get recent action choices from mindXagent."""
+    try:
+        from agents.core.mindXagent import MindXAgent
+        
+        mindxagent = await MindXAgent.get_instance()
+        if mindxagent:
+            return {
+                "action_choices": mindxagent.get_action_choices(limit=limit),
+                "count": len(mindxagent.action_choices)
+            }
+        else:
+            return {"action_choices": [], "count": 0}
+    except Exception as e:
+        logger.error(f"Error getting action choices: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error getting action choices: {str(e)}")
+
+
+@app.post("/mindxagent/settings", summary="Update mindXagent settings")
+async def update_mindxagent_settings(settings: Dict[str, Any] = Body(...)):
+    """Update mindXagent settings from UI."""
+    try:
+        from agents.core.mindXagent import MindXAgent
+        
+        mindxagent = await MindXAgent.get_instance()
+        if mindxagent:
+            updated = mindxagent.update_settings(settings)
+            return {
+                "success": True,
+                "settings": updated
+            }
+        else:
+            return {"success": False, "error": "mindXagent not initialized"}
+    except Exception as e:
+        logger.error(f"Error updating mindXagent settings: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error updating settings: {str(e)}")
 
 
 @app.get("/mindxagent/status", summary="Get mindXagent status")

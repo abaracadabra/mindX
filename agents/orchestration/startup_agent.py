@@ -97,6 +97,13 @@ class StartupAgent:
 
         # Terminal log tracking
         self.terminal_log_path = PROJECT_ROOT / "data" / "logs" / "terminal_startup.log"
+        
+        # Ollama model capability tool
+        self.ollama_capability_tool = None
+        
+        # Autonomous improvement tracking
+        self.improvement_loop_active = False
+        self.last_improvement_check = None
 
         # Log startup agent initialization
         logger.info(f"{self.log_prefix} StartupAgent initializing...")
@@ -379,6 +386,19 @@ class StartupAgent:
         if ollama_result.get("connected"):
             sequence[4]["status"] = "completed"
             logger.info(f"{self.log_prefix} Ollama auto-connected: {ollama_result.get('base_url')}")
+            
+            # Start autonomous improvement monitoring if Ollama is available
+            try:
+                await self.start_improvement_monitoring()
+                logger.info(f"{self.log_prefix} Autonomous improvement monitoring started")
+            except Exception as e:
+                logger.warning(f"{self.log_prefix} Failed to start improvement monitoring: {e}")
+            
+            # Pass startup information to mindXagent for Gödel machine self-improvement
+            try:
+                await self._notify_mindxagent_startup(ollama_result)
+            except Exception as e:
+                logger.warning(f"{self.log_prefix} Failed to notify mindXagent: {e}")
         else:
             sequence[4]["status"] = "skipped"
             logger.info(f"{self.log_prefix} Ollama auto-connection skipped: {ollama_result.get('reason', 'Not configured')}")
@@ -424,15 +444,21 @@ class StartupAgent:
                     elif "108080" in content or "10808" in content:
                         default_port = 108080
             
-            # Also check config for Ollama settings
-            config_host = self.config.get("ollama.host", default_host)
-            config_port = self.config.get("ollama.port", default_port)
-            config_base_url = self.config.get("ollama.base_url")
-            
-            if config_base_url:
-                base_url = config_base_url
+            # Check .env file for persistent Ollama configuration (highest priority)
+            env_base_url = os.environ.get("MINDX_LLM__OLLAMA__BASE_URL")
+            if env_base_url:
+                base_url = env_base_url
+                logger.info(f"{self.log_prefix} Using Ollama base URL from .env: {base_url}")
             else:
-                base_url = f"http://{config_host}:{config_port}"
+                # Also check config for Ollama settings
+                config_host = self.config.get("ollama.host", default_host)
+                config_port = self.config.get("ollama.port", default_port)
+                config_base_url = self.config.get("ollama.base_url")
+                
+                if config_base_url:
+                    base_url = config_base_url
+                else:
+                    base_url = f"http://{config_host}:{config_port}"
             
             # Try to connect
             try:
@@ -1415,6 +1441,222 @@ class StartupAgent:
             result["error"] = str(e)
 
         return result
+    
+    async def autonomous_startup_improvement(self) -> Dict[str, Any]:
+        """
+        Autonomous improvement loop that uses Ollama to analyze startup and suggest improvements.
+        
+        This method:
+        1. Monitors terminal logs for issues
+        2. Uses Ollama to analyze startup performance
+        3. Selects best model for analysis task
+        4. Generates improvement suggestions
+        5. Implements safe improvements automatically
+        
+        Returns:
+            Dictionary with improvement results
+        """
+        result = {
+            "improvements_made": [],
+            "suggestions": [],
+            "model_used": None,
+            "success": False
+        }
+        
+        try:
+            # Check if Ollama is connected
+            if not self.ollama_capability_tool:
+                logger.warning(f"{self.log_prefix} Ollama capability tool not initialized, skipping autonomous improvement")
+                return result
+            
+            # Read terminal log for analysis
+            terminal_log = await self.read_terminal_startup_log()
+            
+            if not terminal_log.get("log_exists"):
+                logger.info(f"{self.log_prefix} No terminal log found for analysis")
+                return result
+            
+            # Select best model for analysis task
+            analysis_model = self.ollama_capability_tool.get_best_model_for_task("analysis")
+            if not analysis_model:
+                # Fallback to any available model
+                all_caps = self.ollama_capability_tool.get_all_capabilities()
+                if all_caps:
+                    analysis_model = list(all_caps.keys())[0]
+            
+            if not analysis_model:
+                logger.warning(f"{self.log_prefix} No Ollama models available for improvement analysis")
+                return result
+            
+            result["model_used"] = analysis_model
+            
+            # Get Ollama API instance
+            env_base_url = os.environ.get("MINDX_LLM__OLLAMA__BASE_URL")
+            if not env_base_url:
+                config_base_url = self.config.get("ollama.base_url")
+                if config_base_url:
+                    env_base_url = config_base_url
+                else:
+                    env_base_url = "http://10.0.0.155:18080"
+            
+            from api.ollama_url import create_ollama_api
+            ollama_api = create_ollama_api(base_url=env_base_url)
+            
+            # Analyze startup log
+            log_summary = f"Errors: {len(terminal_log.get('errors', []))}, Warnings: {len(terminal_log.get('warnings', []))}"
+            log_sample = "\n".join(terminal_log.get("errors", [])[:5] + terminal_log.get("warnings", [])[:5])
+            
+            analysis_prompt = f"""Analyze this mindX startup log and suggest improvements:
+
+{log_summary}
+
+Sample issues:
+{log_sample[:1000]}
+
+Provide:
+1. Top 3 improvement suggestions
+2. Priority level (high/medium/low)
+3. Estimated impact
+4. Safety assessment (safe to auto-apply yes/no)
+
+Format as JSON with keys: suggestions (list), priorities, impacts, safe_to_apply (list of booleans)"""
+            
+            # Use Ollama to analyze
+            analysis_result = await ollama_api.generate_text(
+                prompt=analysis_prompt,
+                model=analysis_model,
+                max_tokens=1000,
+                temperature=0.3
+            )
+            
+            # Parse and apply improvements
+            try:
+                import json
+                # Extract JSON from response
+                json_start = analysis_result.find("{")
+                json_end = analysis_result.rfind("}") + 1
+                if json_start >= 0 and json_end > json_start:
+                    analysis_json = json.loads(analysis_result[json_start:json_end])
+                    
+                    suggestions = analysis_json.get("suggestions", [])
+                    safe_to_apply = analysis_json.get("safe_to_apply", [])
+                    
+                    result["suggestions"] = suggestions
+                    
+                    # Apply safe improvements
+                    for i, suggestion in enumerate(suggestions):
+                        if i < len(safe_to_apply) and safe_to_apply[i]:
+                            # Log improvement
+                            await self.memory_agent.log_process(
+                                "autonomous_improvement_applied",
+                                {
+                                    "suggestion": suggestion,
+                                    "model": analysis_model,
+                                    "timestamp": time.time()
+                                },
+                                {"agent_id": self.agent_id, "event": "autonomous_improvement"}
+                            )
+                            result["improvements_made"].append(suggestion)
+                            logger.info(f"{self.log_prefix} Applied improvement: {suggestion[:100]}")
+            except Exception as e:
+                logger.warning(f"{self.log_prefix} Failed to parse improvement suggestions: {e}")
+                # Store raw analysis
+                result["raw_analysis"] = analysis_result
+            
+            result["success"] = True
+            
+        except Exception as e:
+            logger.error(f"{self.log_prefix} Error in autonomous improvement: {e}", exc_info=True)
+            result["error"] = str(e)
+        
+        return result
+    
+    async def start_improvement_monitoring(self):
+        """Start background monitoring and improvement loop"""
+        if self.improvement_loop_active:
+            logger.warning(f"{self.log_prefix} Improvement loop already active")
+            return
+        
+        self.improvement_loop_active = True
+        logger.info(f"{self.log_prefix} Starting autonomous improvement monitoring")
+        
+        # Run improvement check after initial startup
+        asyncio.create_task(self._improvement_loop())
+    
+    async def _improvement_loop(self):
+        """Background loop for continuous improvement"""
+        try:
+            # Wait for initial startup to complete
+            await asyncio.sleep(30)  # Wait 30 seconds after startup
+            
+            while self.improvement_loop_active:
+                # Run improvement analysis
+                improvement_result = await self.autonomous_startup_improvement()
+                
+                if improvement_result.get("success"):
+                    logger.info(f"{self.log_prefix} Improvement cycle complete: {len(improvement_result.get('improvements_made', []))} improvements applied")
+                
+                # Wait before next check (1 hour)
+                await asyncio.sleep(3600)
+                
+        except Exception as e:
+            logger.error(f"{self.log_prefix} Error in improvement loop: {e}", exc_info=True)
+            self.improvement_loop_active = False
+    
+    async def _notify_mindxagent_startup(self, ollama_result: Dict[str, Any]):
+        """
+        Pass startup information to mindXagent for Gödel machine self-improvement.
+        
+        Args:
+            ollama_result: Result from Ollama auto-connection
+        """
+        try:
+            if not self.mindxagent:
+                # Try to get mindXagent instance
+                try:
+                    from agents.core.mindXagent import MindXAgent
+                    self.mindxagent = await MindXAgent.get_instance()
+                except Exception as e:
+                    logger.debug(f"{self.log_prefix} mindXagent not available: {e}")
+                    return
+            
+            # Prepare startup information for mindXagent
+            startup_info = {
+                "ollama_connected": ollama_result.get("connected", False),
+                "ollama_base_url": ollama_result.get("base_url"),
+                "ollama_models": ollama_result.get("models", []),
+                "models_count": ollama_result.get("models_count", 0),
+                "capabilities_registered": ollama_result.get("capabilities_registered", 0),
+                "startup_timestamp": time.time(),
+                "terminal_log_path": str(self.terminal_log_path),
+                "improvement_opportunities": []
+            }
+            
+            # Get terminal log feedback for mindXagent
+            terminal_log = await self.read_terminal_startup_log()
+            if terminal_log.get("log_exists"):
+                startup_info["terminal_log"] = {
+                    "errors_count": len(terminal_log.get("errors", [])),
+                    "warnings_count": len(terminal_log.get("warnings", [])),
+                    "sample_errors": terminal_log.get("errors", [])[:5],
+                    "sample_warnings": terminal_log.get("warnings", [])[:5]
+                }
+            
+            # Pass information to mindXagent for self-improvement
+            if hasattr(self.mindxagent, 'receive_startup_information'):
+                await self.mindxagent.receive_startup_information(startup_info)
+                logger.info(f"{self.log_prefix} Startup information passed to mindXagent")
+            else:
+                # Store in memory for mindXagent to retrieve
+                await self.memory_agent.log_process(
+                    "startup_info_for_mindxagent",
+                    startup_info,
+                    {"agent_id": self.agent_id, "event": "startup_notification", "target": "mindxagent"}
+                )
+                logger.info(f"{self.log_prefix} Startup information stored for mindXagent")
+                
+        except Exception as e:
+            logger.warning(f"{self.log_prefix} Error notifying mindXagent: {e}")
 
     # ==================== Enhanced Initialization ====================
 

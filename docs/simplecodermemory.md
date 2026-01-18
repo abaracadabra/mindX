@@ -144,6 +144,16 @@ Memory files follow a consistent naming pattern:
 
 **Purpose**: Track update request creation and management
 
+**Storage Location**: Update requests are persisted to local storage in `simple_coder_sandbox/update_requests.json`
+
+**Local Storage**: The `_save_update_requests()` method ensures all update requests are written to:
+- **File Path**: `simple_coder_sandbox/update_requests.json`
+- **Format**: JSON array of update request objects
+- **Persistence**: Automatically saved when:
+  - New update requests are created
+  - Update requests are approved
+  - Update requests are rejected
+
 **Data Structure**:
 ```json
 {
@@ -165,6 +175,22 @@ Memory files follow a consistent naming pattern:
     "changes_count": 3
   }
 }
+```
+
+**Local Storage Format** (in `simple_coder_sandbox/update_requests.json`):
+```json
+[
+  {
+    "request_id": "update_1758314347_1",
+    "original_file": "test_file.py",
+    "sandbox_file": "simple_coder_sandbox/working/test_file.py",
+    "changes": [...],
+    "cycle": 1,
+    "timestamp": "2025-09-19T13:52:48.234567",
+    "status": "pending",
+    "backup_created": true
+  }
+]
 ```
 
 ### 4. Errors Memory (`errors/`)
@@ -236,6 +262,11 @@ async def _log_to_memory(self, memory_type: str, category: str, data: Dict[str, 
 
 3. **Update Request Logging**:
    - `_log_update_request()` - Logs update request creation
+   - `_save_update_requests()` - Saves update requests to `simple_coder_sandbox/update_requests.json`
+   - Update requests are automatically persisted to local storage when:
+     - Created during sandbox mode operations
+     - Approved via `approve_update_request()`
+     - Rejected via `reject_update_request()`
 
 4. **Error Logging**:
    - `_log_error()` - Logs errors and exceptions
