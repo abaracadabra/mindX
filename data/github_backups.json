@@ -98,16 +98,25 @@
       "source_commit": "9b5e441b1060ab8b993caaefc10c57a2db5bfa4e",
       "created_at": "2026-01-17T15:06:49.051660",
       "status": "created"
+    },
+    {
+      "branch_name": "backup/shutdown-backup-20260117_210341",
+      "backup_type": "shutdown_backup",
+      "reason": "System shutdown - automatic backup",
+      "source_branch": "api-tab-reorganization-ollama-improvements",
+      "source_commit": "a419b92dcaf9b59354605976c2cc544e27e47787",
+      "created_at": "2026-01-17T21:03:44.650496",
+      "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/shutdown-backup-20260117_150646",
+    "branch_name": "backup/shutdown-backup-20260117_210341",
     "backup_type": "shutdown_backup",
     "reason": "System shutdown - automatic backup",
-    "source_branch": "pgvectorscale-integration",
-    "source_commit": "9b5e441b1060ab8b993caaefc10c57a2db5bfa4e",
-    "created_at": "2026-01-17T15:06:49.051660",
+    "source_branch": "api-tab-reorganization-ollama-improvements",
+    "source_commit": "a419b92dcaf9b59354605976c2cc544e27e47787",
+    "created_at": "2026-01-17T21:03:44.650496",
     "status": "created"
   },
-  "last_backup_at": "2026-01-17T15:06:49.051709"
+  "last_backup_at": "2026-01-17T21:03:44.650527"
 }

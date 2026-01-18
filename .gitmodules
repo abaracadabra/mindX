@@ -1,6 +1,3 @@
-[submodule "DAIO/CONTRACTS/lib/forge-std"]
-	path = DAIO/CONTRACTS/lib/forge-std
-	url = https://github.com/foundry-rs/forge-std
 [submodule "daio/contracts/bonding/lib/openzeppelin-contracts"]
 	path = daio/contracts/bonding/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts

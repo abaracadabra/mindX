@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-01-17T21:03:51.407650",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "startup_agent",
+  "content": {
+    "process_name": "startup_agent_initialized",
+    "data": {
+      "agent_id": "startup_agent",
+      "timestamp": 1768709031.4076207,
+      "coordinator_available": true,
+      "memory_agent_available": true,
+      "test_mode": false,
+      "always_on_agents": [
+        "coordinator_agent",
+        "mindxagent",
+        "memory_agent"
+      ]
+    }
+  },
+  "context": {
+    "agent_id": "startup_agent",
+    "event": "self_initialization"
+  },
+  "tags": [
+    "startup_agent_initialized",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "32c76a5c9b340513"
+}
