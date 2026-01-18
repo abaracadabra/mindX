@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-01-17T22:42:19.015577",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "process_name": "ollama_model_discovered",
+    "data": {
+      "model": "hf.co\/Orenguteng\/Llama-3.1-8B-Lexi-Uncensored-V2-GGUF:latest",
+      "discovered_at": 1768714939.0155652
+    }
+  },
+  "context": {
+    "agent_id": "mindx_meta_agent"
+  },
+  "tags": [
+    "ollama_model_discovered",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "e2322a7100b2097d"
+}

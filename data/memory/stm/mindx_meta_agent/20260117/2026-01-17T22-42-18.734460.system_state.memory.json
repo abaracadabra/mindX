@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-01-17T22:42:18.734460",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "process_name": "mindxagent_identity_loaded",
+    "data": {
+      "source": "docs\/INDEX.md",
+      "content": "# MindX Documentation Index\n\n## Comprehensive Documentation Index\n\nThis document provides a complete index of all documentation in the mindX system, organized by category and component type.\n\n**Last Updated**: 2026-01-11  \n**Total Documentation Files**: 170+  \n**Agent Documentation**: 34+  \n**Tool Documentation**: 29+  \n\n---\n\n## \ud83d\udcda Documentation Categories\n\n### \ud83e\udd16 Agent Documentation\n\nAll agent documentation is organized in the `agents\/` folder structure. See [agents\/index.md](..\/agents\/index.md) for the complete agent registry.\n\n#### Core Components (agents\/core\/)\n\n- **[BDI Agent](bdi_agent.md)** - Foundational cognitive architecture implementing Belief-Desire-Intention model\n- **[Belief System](belief_system.md)** - Singleton belief management system with confidence scores\n- **[ID Manager Agent](id_manager_agent.md)** - Central secure ledger for cryptographic identity management\n- **[AGInt Agent](agint.md)** - High-level cognitive orchestrator with P-O-D-A loop\n\n#### Agent Implementations (agents\/)\n\n- **[Guardian Agent](guardian_agent.md)** - Security backbone with identity validation and access control\n- **[Memory Agent](memory_agent.md)** - Infrastructure layer for persistent memory\n- **[AutoMINDX Agent](automindx_agent.md)** - Persona manager with iNFT export and marketplace integration\n- **[Persona Agent](persona_agent.md)** - Persona adoption and management with BDI integration\n- **[Avatar Agent](avatar_agent.md)** - Avatar generation for agents and participants\n- **[Coral ID Agent](coral_id_agent.md)** - CrossMint-integrated identity management with multi-chain support\n- **[Enhanced Simple Coder](enhanced_simple_coder.md)** - Advanced coding agent with multi-model intelligence\n- **[Simple Coder Agent](simple_coder_agent.md)** - BDI-integrated coding assistant\n- **[Simple Coder](simple_coder.md)** - Enhanced coding agent with sandbox and autonomous mode\n- **[SimpleCoder Memory Integration](simplecodermemory.md)** - Comprehensive memory integration with update requests stored in `simple_coder_sandbox\/update_requests.json`\n\n#### Dynamic Agents (agents\/)\n\n- **[Analyzer Agent](analyzer.md)** - Dynamic code analysis agent\n- **[Benchmark Agent](benchmark.md)** - Performance benchmarking agent\n- **[Checker Agent](checker.md)** - Quality assurance agent\n- **[Processor Agent](processor.md)** - Data processing agent\n- **[Reporter Agent](reporter.md)** - Test reporting agent\n- **[Validator Agent](validator.md)** - Test data validation and integrity verification\n\n#### Evolution Components (agents\/evolution\/)\n\n- **[Blueprint Agent](blueprint_agent.md)** - Strategic planning agent generating blueprints for self-improvement iterations\n- **[Blueprint to Action Converter](blueprint_to_action_converter.md)** - Converts strategic blueprints into executable BDI actions\n\n#### Learning Components (agents\/learning\/)\n\n- **[Strategic Evolution Agent](strategic_evolution_agent.md)** - Comprehensive campaign orchestrator with audit-driven self-improvement pipeline\n- **[Goal Management System](goal_management.md)** - Comprehensive goal management with priority queue and dependency tracking\n- **[Plan Management System](plan_management.md)** - Multi-step plan management with action execution and dependency tracking\n- **[Self Improvement Agent](self_improve_agent.md)** - Self-modifying agent for code analysis, implementation, and evaluation\n\n#### Monitoring Components (agents\/monitoring\/)\n\n- **[Performance Monitor](performance_monitor.md)** - Singleton performance monitoring system tracking LLM call metrics\n- **[Resource Monitor](resource_monitor.md)** - Comprehensive real-time system resource monitoring\n- **[Error Recovery Coordinator](error_recovery_coordinator.md)** - Centralized error recovery coordinator for system-wide reliability\n- **[Monitoring Integration](monitoring_integration.md)** - Unified monitoring integration layer coordinating all monitoring components\n- **[Token Calculator Tool](token_calculator_tool_robust.md)** - Production-grade token cost calculation and usage tracking\n\n#### Orchestration Components (agents\/orchestration\/)\n\n- **[Coordinator Agent](coordinator_agent.md)** - Central kernel and service bus orchestrating all system interactions\n- **[Mastermind Agent](mastermind_agent.md)** - Strategic intelligence layer orchestrating high-level objectives and campaigns\n- **[CEO Agent](ceo_agent.md)** - Highest-level strategic executive coordinator with business planning\n- **[Autonomous Audit Coordinator](autonomous_audit_coordinator.md)** - Autonomous audit coordinator scheduling systematic audit campaigns\n\n**Complete Agent Registry**: See [agents\/index.md](..\/agents\/index.md) for full details, NFT metadata, and registry information.\n\n---\n\n### \ud83d\udee0\ufe0f Tool Documentation\n\nAll tool documentation is organized in the `tools\/` folder. See [TOOLS_INDEX.md](TOOLS_INDEX.md) for the complete tool registry.\n\n#### Core Tools\n\n- **[CLI Command Tool](cli_command_tool.md)** - Command-line interface execution tool\n- **[Shell Command ",
+      "loaded_at": 1768714938.7344441,
+      "key_points": [
+        "MindX Agent is the meta-agent that understands all agents",
+        "Serves as execution mind of the G\u00f6del machine",
+        "Orchestrates self-improvement through SEA, BDI, Mastermind",
+        "Subservient to higher intelligence",
+        "Maintains comprehensive knowledge of all agents"
+      ]
+    }
+  },
+  "context": {
+    "agent_id": "mindx_meta_agent",
+    "source": "INDEX.md"
+  },
+  "tags": [
+    "mindxagent_identity_loaded",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "33dec4805099d135"
+}

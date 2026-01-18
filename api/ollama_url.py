@@ -109,12 +109,13 @@ class OllamaAPI:
             raise RuntimeError("aiohttp not available")
         
         if self.http_session is None or self.http_session.closed:
-            # Shorter timeout for connection testing
+            # Extended timeout for large model inference (per Ollama API docs)
+            # Total timeout: 120s for large models, sock_read: 60s for streaming responses
             self.http_session = aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(
-                    total=10,  # 10 second timeout for connection tests
-                    connect=5,  # 5 second connection timeout
-                    sock_read=5  # 5 second read timeout
+                    total=120,  # 120 second total timeout for large models
+                    connect=10,  # 10 second connection timeout
+                    sock_read=60  # 60 second read timeout for inference
                 )
             )
         return self.http_session
@@ -184,39 +185,62 @@ class OllamaAPI:
                 payload = {
                     "model": model,
                     "messages": chat_messages,
-                    "stream": False,
+                    "stream": False,  # Non-streaming mode
+                    "keep_alive": kwargs.get("keep_alive", "5m"),  # Keep model loaded (default 5m per API docs)
                     "options": {
                         "num_predict": max_tokens,
                         "temperature": temperature,
                     }
                 }
                 endpoint = f"{self.api_url}/chat"
-                logger.debug(f"Using Ollama chat endpoint: {endpoint} with {len(chat_messages)} messages")
+                logger.debug(f"Using Ollama chat endpoint: {endpoint} with {len(chat_messages)} messages, keep_alive={payload['keep_alive']}")
             else:
                 # Use generate endpoint (POST /api/generate) - standard Ollama endpoint
+                # Per Ollama API docs: https://github.com/ollama/ollama/blob/main/docs/api.md
                 payload = {
                     "model": model,
                     "prompt": prompt,
-                    "stream": False,
+                    "stream": False,  # Non-streaming mode for simpler handling
+                    "keep_alive": kwargs.get("keep_alive", "5m"),  # Keep model loaded (default 5m per API docs)
                     "options": {
                         "num_predict": max_tokens,
                         "temperature": temperature,
                     }
                 }
                 endpoint = f"{self.api_url}/generate"
-                logger.debug(f"Using Ollama generate endpoint: {endpoint}")
+                logger.debug(f"Using Ollama generate endpoint: {endpoint} with keep_alive={payload['keep_alive']}")
             
+            # Update options with any additional parameters from kwargs
             payload["options"].update(kwargs.get("options", {}))
             
-            async with session.post(endpoint, json=payload) as response:
+            # Add any additional top-level parameters from kwargs (e.g., format, system, template)
+            for key in ["format", "system", "template", "raw", "suffix", "images", "think"]:
+                if key in kwargs:
+                    payload[key] = kwargs[key]
+            
+            # Use extended timeout for inference requests (per Ollama API docs)
+            inference_timeout = aiohttp.ClientTimeout(
+                total=120,  # 120 seconds total for large models
+                connect=10,
+                sock_read=60  # 60 seconds for reading response
+            )
+            
+            async with session.post(endpoint, json=payload, timeout=inference_timeout) as response:
                 if response.status == 200:
                     data = await response.json()
                     
-                    # Extract content based on endpoint
+                    # Extract content based on endpoint (per Ollama API docs)
                     if use_chat:
+                        # Chat endpoint returns: {"message": {"role": "assistant", "content": "..."}}
                         content = data.get("message", {}).get("content", "")
                     else:
+                        # Generate endpoint returns: {"response": "..."}
                         content = data.get("response", "")
+                    
+                    # Extract performance metrics if available (per Ollama API docs)
+                    eval_count = data.get("eval_count", 0)
+                    prompt_eval_count = data.get("prompt_eval_count", 0)
+                    total_duration = data.get("total_duration", 0)  # nanoseconds
                     
                     latency_ms = (asyncio.get_event_loop().time() - start_time) * 1000
                     self.metrics.total_requests += 1
@@ -227,9 +251,14 @@ class OllamaAPI:
                         self.metrics.total_requests
                     )
                     
-                    # Estimate tokens
-                    estimated_tokens = len(prompt.split()) * 1.3 + len(content.split()) * 1.3
-                    self.metrics.total_tokens += int(estimated_tokens)
+                    # Use actual token counts if available, otherwise estimate
+                    if eval_count > 0 or prompt_eval_count > 0:
+                        total_tokens = eval_count + prompt_eval_count
+                        self.metrics.total_tokens += total_tokens
+                    else:
+                        # Fallback estimation
+                        estimated_tokens = len(prompt.split()) * 1.3 + len(content.split()) * 1.3
+                        self.metrics.total_tokens += int(estimated_tokens)
                     
                     return content
                 else:
@@ -244,6 +273,16 @@ class OllamaAPI:
             self.metrics.failed_requests += 1
             logger.error(f"Ollama connection error: {e}")
             return json.dumps({"error": "ConnectionError", "message": f"Cannot connect to Ollama at {self.base_url}"})
+        except asyncio.TimeoutError as e:
+            self.metrics.total_requests += 1
+            self.metrics.failed_requests += 1
+            logger.error(f"Ollama API timeout: {e}")
+            return json.dumps({"error": "TimeoutError", "message": f"Request timed out after 120s. Model may be too large or server overloaded."})
+        except aiohttp.ServerTimeoutError as e:
+            self.metrics.total_requests += 1
+            self.metrics.failed_requests += 1
+            logger.error(f"Ollama API server timeout: {e}")
+            return json.dumps({"error": "ServerTimeoutError", "message": f"Server timeout reading response. Model may need more time to generate."})
         except Exception as e:
             self.metrics.total_requests += 1
             self.metrics.failed_requests += 1

@@ -228,6 +228,9 @@ class MindXAgent:
         self.llm_provider = "ollama"
         self.llm_model = "mistral-nemo:latest"
         
+        # Ollama chat manager for persistent connections and chat
+        self.ollama_chat_manager: Optional[Any] = None
+        
         # Thinking process tracking for UI display
         self.thinking_process: List[Dict[str, Any]] = []
         self.max_thinking_history = 1000  # Keep last 1000 thinking steps
@@ -284,6 +287,9 @@ class MindXAgent:
             
             # Start terminal log monitoring for self-audit
             await self._start_terminal_log_monitoring()
+            
+            # Initialize Ollama Chat Manager for persistent connections
+            await self._init_ollama_chat_manager()
             
             # Start self-improvement cycle from terminal logs
             asyncio.create_task(self._self_improvement_from_logs())
@@ -1781,6 +1787,92 @@ class MindXAgent:
         except Exception as e:
             logger.warning(f"{self.log_prefix} Could not load identity from INDEX.md: {e}")
     
+    async def _init_ollama_chat_manager(self):
+        """Initialize Ollama Chat Manager for persistent connections and chat"""
+        try:
+            from agents.core.ollama_chat_manager import OllamaChatManager
+            import os
+            base_url = self.config.get("llm.ollama.base_url") or os.getenv("MINDX_LLM__OLLAMA__BASE_URL", "http://localhost:11434")
+            conversation_history_path = self.data_dir / "ollama_chat_history.json"
+            self.ollama_chat_manager = OllamaChatManager(
+                base_url=base_url,
+                config=self.config,
+                model_discovery_interval=300,
+                keep_alive="10m",
+                conversation_history_path=conversation_history_path
+            )
+            async def on_new_models(new_models, all_models):
+                logger.info(f"{self.log_prefix} New Ollama models discovered: {new_models}")
+                for model_name in new_models:
+                    await self.memory_agent.log_process(
+                        "ollama_model_discovered",
+                        {"model": model_name, "discovered_at": time.time()},
+                        {"agent_id": self.agent_id}
+                    )
+            self.ollama_chat_manager.register_model_selection_callback(on_new_models)
+            connected = await self.ollama_chat_manager.initialize()
+            if connected:
+                logger.info(f"{self.log_prefix} Ollama Chat Manager initialized and connected")
+                available_models = self.ollama_chat_manager.available_models
+                if available_models:
+                    best_model = await self.ollama_chat_manager.select_best_model("reasoning")
+                    if best_model:
+                        self.llm_model = best_model
+                        logger.info(f"{self.log_prefix} Selected Ollama model: {best_model}")
+            else:
+                logger.warning(f"{self.log_prefix} Ollama Chat Manager initialized but not connected")
+        except Exception as e:
+            logger.warning(f"{self.log_prefix} Could not initialize Ollama Chat Manager: {e}")
+            self.ollama_chat_manager = None
+    
+    async def chat_with_ollama(self, message: str, model: Optional[str] = None, conversation_id: Optional[str] = None, system_prompt: Optional[str] = None, temperature: float = 0.7, max_tokens: int = 2000, **kwargs) -> Dict[str, Any]:
+        """Chat with Ollama model using persistent connection"""
+        if not self.ollama_chat_manager:
+            await self._init_ollama_chat_manager()
+        if not self.ollama_chat_manager:
+            return {"success": False, "error": "Ollama Chat Manager not available"}
+        conv_id = conversation_id or f"{self.agent_id}_default"
+        self._log_thinking("ollama_chat_request", {"message": message[:100] + "..." if len(message) > 100 else message, "model": model or "auto", "conversation_id": conv_id})
+        result = await self.ollama_chat_manager.chat(message=message, model=model, conversation_id=conv_id, system_prompt=system_prompt, temperature=temperature, max_tokens=max_tokens, **kwargs)
+        if result.get("success"):
+            self._log_thinking("ollama_chat_response", {"model": result.get("model"), "latency": result.get("latency"), "content_length": len(result.get("content", ""))})
+            from agents.memory_agent import MemoryType
+            await self.memory_agent.save_timestamped_memory(agent_id=self.agent_id, memory_type=MemoryType.INTERACTION, content={"type": "ollama_chat", "message": message, "response": result.get("content"), "model": result.get("model"), "conversation_id": conv_id}, context={"chat": True, "ollama": True}, tags=["chat", "ollama", "interaction"])
+        else:
+            self._log_thinking("ollama_chat_error", {"error": result.get("error")})
+        return result
+    
+    async def get_available_ollama_models(self) -> List[Dict[str, Any]]:
+        """Get list of available Ollama models"""
+        if not self.ollama_chat_manager:
+            await self._init_ollama_chat_manager()
+        if not self.ollama_chat_manager:
+            return []
+        await self.ollama_chat_manager.discover_models(force=True)
+        return self.ollama_chat_manager.available_models
+    
+    async def select_ollama_model(self, task_type: str = "chat", preferred_models: Optional[List[str]] = None) -> Optional[str]:
+        """Select best Ollama model for a task"""
+        if not self.ollama_chat_manager:
+            await self._init_ollama_chat_manager()
+        if not self.ollama_chat_manager:
+            return None
+        return await self.ollama_chat_manager.select_best_model(task_type, preferred_models)
+    
+    def get_ollama_conversation_history(self, conversation_id: Optional[str] = None) -> List[Dict[str, str]]:
+        """Get conversation history for a conversation"""
+        if not self.ollama_chat_manager:
+            return []
+        conv_id = conversation_id or f"{self.agent_id}_default"
+        return self.ollama_chat_manager.get_conversation_history(conv_id)
+    
+    def clear_ollama_conversation(self, conversation_id: Optional[str] = None):
+        """Clear conversation history"""
+        if not self.ollama_chat_manager:
+            return
+        conv_id = conversation_id or f"{self.agent_id}_default"
+        self.ollama_chat_manager.clear_conversation(conv_id)
+
     async def _check_identity_crisis(self) -> bool:
         """Check if mindXagent is forgetting who it is - fallback to INDEX.md"""
         try:

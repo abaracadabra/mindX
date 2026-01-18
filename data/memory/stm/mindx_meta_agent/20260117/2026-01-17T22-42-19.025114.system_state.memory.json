@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-01-17T22:42:19.025114",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "process_name": "ollama_model_discovered",
+    "data": {
+      "model": "mistral-nemo:latest",
+      "discovered_at": 1768714939.0250998
+    }
+  },
+  "context": {
+    "agent_id": "mindx_meta_agent"
+  },
+  "tags": [
+    "ollama_model_discovered",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "cce6d9e98b476870"
+}
