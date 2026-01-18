@@ -11619,20 +11619,20 @@ async function testOllamaCompletion() {
         if (userEl) userEl.textContent = userCount;
         if (assistantEl) assistantEl.textContent = assistantCount;
         
-        // Build conversation header
-        let html = '<div style="margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(0, 168, 255, 0.2)); border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.4);">';
-        html += '<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">';
+        // Build conversation header with elegant styling
+        let html = '<div class="conversation-header-info">';
+        html += '<div class="conversation-header-info-content">';
         html += '<div>';
-        html += '<div style="font-size: 12px; color: #aaa; margin-bottom: 5px;">Powered by <a href="https://github.com/autoglm" target="_blank" style="color: #8b5cf6; text-decoration: none;">aGLM</a> | <a href="https://opensea.io/collection/aglm" target="_blank" style="color: #8b5cf6; text-decoration: none;">OpenSea Collection</a> | <a href="https://bankon.gitbook.io/aglm-investor/aglm" target="_blank" style="color: #8b5cf6; text-decoration: none;">BANKON Investor</a></div>';
-        html += `<div style="font-size: 13px; color: #fff; font-weight: bold;">Conversation: ${conversation.conversation_id || 'default'}</div>`;
+        html += '<div class="conversation-links">Powered by <a href="https://github.com/autoglm" target="_blank">aGLM</a> | <a href="https://opensea.io/collection/aglm" target="_blank">OpenSea Collection</a> | <a href="https://bankon.gitbook.io/aglm-investor/aglm" target="_blank">BANKON Investor</a></div>';
+        html += `<div class="conversation-id">Conversation: ${escapeHtml(conversation.conversation_id || 'default')}</div>`;
         html += '</div>';
-        html += `<div style="text-align: right;">
-            <div style="font-size: 11px; color: #888;">Last updated</div>
-            <div style="font-size: 12px; color: #aaa;">${conversation.last_updated ? new Date(conversation.last_updated).toLocaleString() : 'Just now'}</div>
-        </div>`;
+        html += '<div class="conversation-timestamp">';
+        html += '<div class="timestamp-label">Last updated</div>';
+        html += `<div class="timestamp-value">${conversation.last_updated ? new Date(conversation.last_updated).toLocaleString() : 'Just now'}</div>`;
+        html += '</div>';
         html += '</div></div>';
         
-        // Display messages with improved styling
+        // Display messages with professional styling
         conversation.messages.forEach((msg, index) => {
             const role = msg.role || 'unknown';
             const content = msg.content || '';
@@ -11640,60 +11640,28 @@ async function testOllamaCompletion() {
             const isAssistant = role === 'assistant';
             const isSystem = role === 'system';
             
-            const bgColor = isUser ? 'rgba(0, 168, 255, 0.2)' : isAssistant ? 'rgba(0, 255, 136, 0.2)' : 'rgba(255, 255, 255, 0.1)';
-            const borderColor = isUser ? 'rgba(0, 168, 255, 0.6)' : isAssistant ? 'rgba(0, 255, 136, 0.6)' : 'rgba(255, 255, 255, 0.3)';
+            const messageClass = isUser ? 'user' : isAssistant ? 'assistant' : 'system';
             const label = isUser ? '🤖 mindXagent' : isAssistant ? '💬 Ollama Model' : '⚙️ System';
-            const textColor = isUser ? '#00a8ff' : isAssistant ? '#00ff88' : '#ffffff';
             const icon = isUser ? '→' : isAssistant ? '←' : '⚙';
             
             // Format content with better readability
             const formattedContent = escapeHtml(content).replace(/\n/g, '<br>');
+            const timestamp = msg.timestamp ? new Date(msg.timestamp).toLocaleString() : '';
             
             html += `
-                <div style="
-                    margin-bottom: 20px;
-                    padding: 15px;
-                    background: ${bgColor};
-                    border-left: 4px solid ${borderColor};
-                    border-radius: 8px;
-                    animation: slideIn 0.3s ease;
-                    position: relative;
-                    overflow: hidden;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-                ">
-                    <div style="
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        margin-bottom: 12px;
-                        padding-bottom: 8px;
-                        border-bottom: 1px solid ${borderColor};
-                    ">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="
-                                font-weight: bold;
-                                color: ${textColor};
-                                font-size: 13px;
-                                text-transform: uppercase;
-                                letter-spacing: 0.5px;
-                            ">${icon} ${label}</span>
+                <div class="conversation-message ${messageClass}">
+                    <div class="message-header">
+                        <div class="message-label ${messageClass}">
+                            <span>${icon}</span>
+                            <span>${escapeHtml(label)}</span>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="color: #888; font-size: 11px;">#${index + 1}</span>
-                            ${msg.timestamp ? `<span style="color: #666; font-size: 10px;">${new Date(msg.timestamp).toLocaleTimeString()}</span>` : ''}
+                        <div class="message-meta">
+                            <span>#${index + 1}</span>
+                            ${timestamp ? `<span>${timestamp}</span>` : ''}
                         </div>
                     </div>
-                    <div style="
-                        color: #ffffff;
-                        font-size: 14px;
-                        line-height: 1.8;
-                        white-space: pre-wrap;
-                        word-wrap: break-word;
-                        position: relative;
-                        z-index: 1;
-                        font-family: 'Courier New', monospace;
-                    ">${formattedContent}</div>
-                    ${content.length > 200 ? `<div style="margin-top: 8px; font-size: 11px; color: #888;">${content.length} characters</div>` : ''}
+                    <div class="message-content">${formattedContent}</div>
+                    ${content.length > 200 ? `<div class="message-footer">${content.length} characters</div>` : ''}
                 </div>
             `;
         });
@@ -11776,20 +11744,106 @@ async function testOllamaCompletion() {
     
     // Update status display
     function updateMindXagentStatusDisplay(status) {
+        // Core Status
         const autonomousEl = document.getElementById('mindxagent-autonomous-status');
+        const runningEl = document.getElementById('mindxagent-running-status');
         const modelEl = document.getElementById('mindxagent-model');
         const providerEl = document.getElementById('mindxagent-provider');
-        const thinkingCountEl = document.getElementById('mindxagent-thinking-count');
-        const actionsCountEl = document.getElementById('mindxagent-actions-count');
         
         if (autonomousEl) {
-            autonomousEl.textContent = status.autonomous_mode ? '🟢 Running' : '🔴 Stopped';
-            autonomousEl.style.color = status.autonomous_mode ? '#00ff00' : '#ff0000';
+            autonomousEl.textContent = status.autonomous_mode ? 'Active' : 'Inactive';
+            autonomousEl.className = 'status-value status-badge ' + (status.autonomous_mode ? 'active' : 'inactive');
+        }
+        if (runningEl) {
+            runningEl.textContent = status.running ? 'Running' : 'Stopped';
+            runningEl.className = 'status-value status-badge ' + (status.running ? 'active' : 'inactive');
         }
         if (modelEl) modelEl.textContent = status.model || '-';
         if (providerEl) providerEl.textContent = status.provider || '-';
+        
+        // Activity Metrics
+        const thinkingCountEl = document.getElementById('mindxagent-thinking-count');
+        const actionsCountEl = document.getElementById('mindxagent-actions-count');
+        const improvementsCountEl = document.getElementById('mindxagent-improvements-count');
+        const activeAgentsEl = document.getElementById('mindxagent-active-agents');
+        
         if (thinkingCountEl) thinkingCountEl.textContent = status.thinking_steps_count || 0;
         if (actionsCountEl) actionsCountEl.textContent = status.action_choices_count || 0;
+        if (improvementsCountEl) improvementsCountEl.textContent = status.improvement_opportunities_count || 0;
+        if (activeAgentsEl) activeAgentsEl.textContent = status.agent_knowledge?.active_agents || 0;
+        
+        // Recent Actions
+        const recentActionsEl = document.getElementById('mindxagent-recent-actions');
+        if (recentActionsEl) {
+            if (status.recent_actions && status.recent_actions.length > 0) {
+                let html = '';
+                status.recent_actions.forEach((action, index) => {
+                    const time = action.timestamp ? new Date(action.timestamp * 1000).toLocaleString() : 'Unknown';
+                    html += `
+                        <div class="recent-item">
+                            <div class="recent-item-header">
+                                <div class="recent-item-title">${escapeHtml(action.context || 'Unknown Context')}</div>
+                                <div class="recent-item-time">${time}</div>
+                            </div>
+                            <div class="recent-item-content">Selected: ${escapeHtml(action.selected || 'None')}</div>
+                            <div class="recent-item-meta">
+                                <span>Options: ${action.options_count || 0}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                recentActionsEl.innerHTML = html;
+            } else {
+                recentActionsEl.innerHTML = '<div class="empty-state">No recent actions</div>';
+            }
+        }
+        
+        // Recent Thinking
+        const recentThinkingEl = document.getElementById('mindxagent-recent-thinking');
+        if (recentThinkingEl) {
+            if (status.recent_thinking && status.recent_thinking.length > 0) {
+                let html = '';
+                status.recent_thinking.forEach((thinking, index) => {
+                    const time = thinking.timestamp ? new Date(thinking.timestamp * 1000).toLocaleString() : 'Unknown';
+                    html += `
+                        <div class="recent-item">
+                            <div class="recent-item-header">
+                                <div class="recent-item-title">${escapeHtml(thinking.step || 'Unknown Step')}</div>
+                                <div class="recent-item-time">${time}</div>
+                            </div>
+                            <div class="recent-item-content">${escapeHtml(thinking.thought_preview || 'No thought')}</div>
+                        </div>
+                    `;
+                });
+                recentThinkingEl.innerHTML = html;
+            } else {
+                recentThinkingEl.innerHTML = '<div class="empty-state">No recent thinking steps</div>';
+            }
+        }
+        
+        // Improvement Opportunities
+        const improvementsEl = document.getElementById('mindxagent-improvements');
+        if (improvementsEl) {
+            if (status.improvement_opportunities && status.improvement_opportunities.length > 0) {
+                let html = '';
+                status.improvement_opportunities.forEach((opp, index) => {
+                    const priorityClass = opp.priority === 'high' ? 'status-badge inactive' : 
+                                         opp.priority === 'low' ? 'status-badge active' : '';
+                    html += `
+                        <div class="recent-item">
+                            <div class="recent-item-header">
+                                <div class="recent-item-title">${escapeHtml(opp.type || 'Unknown Type')}</div>
+                                ${opp.priority ? `<span class="${priorityClass}">${escapeHtml(opp.priority)}</span>` : ''}
+                            </div>
+                            <div class="recent-item-content">${escapeHtml(opp.description || 'No description')}</div>
+                        </div>
+                    `;
+                });
+                improvementsEl.innerHTML = html;
+            } else {
+                improvementsEl.innerHTML = '<div class="empty-state">No improvement opportunities</div>';
+            }
+        }
         
         // Update Ollama status from main status if available
         if (status.ollama) {
@@ -11803,23 +11857,6 @@ async function testOllamaCompletion() {
                     ollamaConnectedEl.style.color = '#ffaa00';
                 }
             }
-        }
-        
-        // Update settings checkboxes
-        if (status.settings) {
-            const autonomousCheck = document.getElementById('mindxagent-autonomous-enabled');
-            const showThinkingCheck = document.getElementById('mindxagent-show-thinking');
-            const showActionsCheck = document.getElementById('mindxagent-show-actions');
-            const autoApplyCheck = document.getElementById('mindxagent-auto-apply');
-            const strategySelect = document.getElementById('mindxagent-model-strategy');
-            const intervalInput = document.getElementById('mindxagent-cycle-interval');
-            
-            if (autonomousCheck) autonomousCheck.checked = status.settings.autonomous_mode_enabled || false;
-            if (showThinkingCheck) showThinkingCheck.checked = status.settings.show_thinking_process !== false;
-            if (showActionsCheck) showActionsCheck.checked = status.settings.show_action_choices !== false;
-            if (autoApplyCheck) autoApplyCheck.checked = status.settings.auto_apply_safe_improvements !== false;
-            if (strategySelect) strategySelect.value = status.settings.model_selection_strategy || 'best_for_task';
-            if (intervalInput) intervalInput.value = status.settings.improvement_cycle_interval || 300;
         }
     }
     
@@ -11838,24 +11875,49 @@ async function testOllamaCompletion() {
         const displayEl = document.getElementById('mindxagent-thinking-display');
         if (!displayEl) return;
         
-        if (thinking.length === 0) {
-            displayEl.innerHTML = '<p style="color: #888; font-style: italic;">No thinking process recorded yet...</p>';
+        if (!thinking || thinking.length === 0) {
+            displayEl.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #888;">
+                    <div style="font-size: 24px; margin-bottom: 10px;">🧠</div>
+                    <div style="font-style: italic; margin-bottom: 5px;">No thinking process recorded yet...</div>
+                    <div style="font-size: 11px; color: #666;">Thinking steps will appear here when mindXagent processes tasks</div>
+                </div>
+            `;
             return;
         }
         
-        let html = '<div class="thinking-list">';
+        let html = '<div class="thinking-list" style="max-height: 600px; overflow-y: auto;">';
         thinking.forEach((entry, index) => {
-            const time = new Date(entry.timestamp * 1000).toLocaleTimeString();
+            const timestamp = entry.timestamp || entry.time || Date.now() / 1000;
+            const time = new Date(timestamp * 1000).toLocaleString();
+            const step = entry.step || entry.type || 'thinking';
+            const thought = entry.thought || entry.content || entry.message || JSON.stringify(entry);
+            const metadata = entry.metadata || entry.data || {};
+            
             html += `
-                <div class="thinking-entry" style="padding: 10px; margin-bottom: 10px; background: rgba(0, 0, 0, 0.3); border-left: 3px solid #00ffff; border-radius: 4px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                        <span style="color: #00ffff; font-weight: bold;">${entry.step}</span>
-                        <span style="color: #888; font-size: 12px;">${time}</span>
+                <div class="thinking-entry" style="
+                    padding: 15px;
+                    margin-bottom: 15px;
+                    background: linear-gradient(135deg, rgba(0, 255, 255, 0.15), rgba(0, 168, 255, 0.1));
+                    border-left: 4px solid #00ffff;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                    animation: slideIn 0.3s ease;
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(0, 255, 255, 0.3);">
+                        <span style="color: #00ffff; font-weight: bold; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">🧠 ${escapeHtml(step)}</span>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="color: #888; font-size: 11px;">#${index + 1}</span>
+                            <span style="color: #666; font-size: 10px;">${time}</span>
+                        </div>
                     </div>
-                    <div style="color: #ffffff; font-size: 14px;">${escapeHtml(entry.thought)}</div>
-                    ${entry.metadata && Object.keys(entry.metadata).length > 0 ? `
-                        <div style="margin-top: 5px; padding: 5px; background: rgba(0, 255, 255, 0.1); border-radius: 3px; font-size: 12px; color: #aaa;">
-                            ${JSON.stringify(entry.metadata, null, 2)}
+                    <div style="color: #ffffff; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', monospace;">
+                        ${escapeHtml(thought)}
+                    </div>
+                    ${Object.keys(metadata).length > 0 ? `
+                        <div style="margin-top: 10px; padding: 10px; background: rgba(0, 255, 255, 0.1); border-radius: 4px; font-size: 12px; color: #aaa; max-height: 200px; overflow-y: auto;">
+                            <div style="color: #00ffff; font-weight: bold; margin-bottom: 5px;">Metadata:</div>
+                            <pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(JSON.stringify(metadata, null, 2))}</pre>
                         </div>
                     ` : ''}
                 </div>
@@ -11863,6 +11925,9 @@ async function testOllamaCompletion() {
         });
         html += '</div>';
         displayEl.innerHTML = html;
+        
+        // Scroll to top to show most recent
+        displayEl.scrollTop = 0;
     }
     
     // Load action choices
@@ -11880,19 +11945,51 @@ async function testOllamaCompletion() {
         const displayEl = document.getElementById('mindxagent-actions-display');
         if (!displayEl) return;
         
-        if (actions.length === 0) {
-            displayEl.innerHTML = '<p style="color: #888; font-style: italic;">No action choices recorded yet...</p>';
+        if (!actions || actions.length === 0) {
+            displayEl.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #888;">
+                    <div style="font-size: 24px; margin-bottom: 10px;">⚡</div>
+                    <div style="font-style: italic; margin-bottom: 5px;">No action choices recorded yet...</div>
+                    <div style="font-size: 11px; color: #666;">Action choices will appear here when mindXagent makes decisions</div>
+                </div>
+            `;
             return;
         }
         
-        let html = '<div class="actions-list">';
+        let html = '<div class="actions-list" style="max-height: 600px; overflow-y: auto;">';
         actions.forEach((entry, index) => {
-            const time = new Date(entry.timestamp * 1000).toLocaleTimeString();
-            const selected = entry.selected;
+            const timestamp = entry.timestamp || entry.time || Date.now() / 1000;
+            const time = new Date(timestamp * 1000).toLocaleString();
+            const selected = entry.selected || entry.chosen || false;
+            const context = entry.context || entry.goal || entry.action || 'Action';
+            const choices = entry.choices || entry.options || [];
+            const goal = entry.goal || entry.description || '';
+            
+            const borderColor = selected ? '#00ff00' : '#ffaa00';
+            const bgColor = selected ? 'rgba(0, 255, 0, 0.15)' : 'rgba(255, 170, 0, 0.15)';
+            
             html += `
-                <div class="action-entry" style="padding: 15px; margin-bottom: 15px; background: rgba(0, 0, 0, 0.3); border: 2px solid ${selected ? '#00ff00' : '#00ffff'}; border-radius: 4px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                        <span style="color: #00ffff; font-weight: bold;">${entry.context}</span>
+                <div class="action-entry" style="
+                    padding: 15px;
+                    margin-bottom: 15px;
+                    background: linear-gradient(135deg, ${bgColor}, rgba(0, 0, 0, 0.2));
+                    border-left: 4px solid ${borderColor};
+                    border-radius: 8px;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                    animation: slideIn 0.3s ease;
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid ${borderColor}40;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: ${borderColor}; font-weight: bold; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                ${selected ? '✅ SELECTED' : '⚡'} ${escapeHtml(context)}
+                            </span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="color: #888; font-size: 11px;">#${index + 1}</span>
+                            <span style="color: #666; font-size: 10px;">${time}</span>
+                        </div>
+                    </div>
+                    ${goal ? `<div style="color: #ffffff; font-size: 14px; margin-bottom: 10px; font-weight: 500;">${escapeHtml(goal)}</div>` : ''}
                         <span style="color: #888; font-size: 12px;">${time}</span>
                     </div>
                     <div style="margin-bottom: 10px;">
@@ -11976,6 +12073,7 @@ async function testOllamaCompletion() {
         if (refreshBtn) {
             refreshBtn.addEventListener('click', async () => {
                 await loadMindXagentStatus();
+                await loadMindXagentOllamaStatus();
                 await loadMindXagentOllamaConversation();
                 await loadMindXagentThinking();
                 await loadMindXagentActions();
@@ -11988,8 +12086,13 @@ async function testOllamaCompletion() {
         
         // Auto-refresh when tab is shown
         document.addEventListener('click', async (e) => {
-            if (e.target && e.target.getAttribute('data-tab') === 'mindxagent') {
+            // Check if mindXagent tab button was clicked
+            const tabBtn = e.target.closest('[data-tab="mindxagent"]');
+            if (tabBtn) {
+                console.log('mindXagent tab clicked - loading all data...');
                 await loadMindXagentStatus();
+                await loadMindXagentOllamaStatus();
+                await loadMindXagentOllamaConversation();
                 await loadMindXagentThinking();
                 await loadMindXagentActions();
                 
@@ -11999,6 +12102,8 @@ async function testOllamaCompletion() {
                 }
                 window.mindxagentRefreshInterval = setInterval(async () => {
                     await loadMindXagentStatus();
+                    await loadMindXagentOllamaStatus();
+                    await loadMindXagentOllamaConversation();
                     await loadMindXagentThinking();
                     await loadMindXagentActions();
                 }, 5000);
@@ -12006,6 +12111,20 @@ async function testOllamaCompletion() {
                 if (window.mindxagentRefreshInterval) {
                     clearInterval(window.mindxagentRefreshInterval);
                 }
+            }
+        });
+        
+        // Also load on initial page load if mindXagent tab is active
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check if mindXagent tab is already active
+            const mindxagentTab = document.getElementById('mindxagent-tab');
+            if (mindxagentTab && mindxagentTab.style.display !== 'none') {
+                console.log('mindXagent tab is active on load - loading data...');
+                await loadMindXagentStatus();
+                await loadMindXagentOllamaStatus();
+                await loadMindXagentOllamaConversation();
+                await loadMindXagentThinking();
+                await loadMindXagentActions();
             }
         });
     }

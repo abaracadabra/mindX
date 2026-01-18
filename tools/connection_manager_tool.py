@@ -9,35 +9,21 @@ import os
 from typing import Dict, Any, Optional, List
 from utils.logging_config import get_logger
 from utils.config import Config
-from tools.base_tool import BaseTool
 
 logger = get_logger(__name__)
 
 
-class ConnectionManagerTool(BaseTool):
+class ConnectionManagerTool:
     """
     Tool for managing LLM provider connections and defaulting to Ollama.
     """
     
     def __init__(self, config: Optional[Config] = None):
         """Initialize Connection Manager Tool"""
-        super().__init__(
-            name="connection_manager",
-            description="Manages LLM provider connections, checks API keys, and defaults to Ollama",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "action": {
-                        "type": "string",
-                        "enum": ["check_connections", "get_available_providers", "default_to_ollama"],
-                        "description": "Action to perform"
-                    }
-                },
-                "required": ["action"]
-            }
-        )
         self.config = config or Config()
         self.log_prefix = "ConnectionManagerTool:"
+        self.name = "connection_manager"
+        self.description = "Manages LLM provider connections, checks API keys, and defaults to Ollama"
     
     async def execute(self, action: str, **kwargs) -> Dict[str, Any]:
         """

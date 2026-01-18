@@ -17,6 +17,7 @@ from utils.config import Config
 from utils.logging_config import get_logger
 from api.ollama_url import OllamaAPI, create_ollama_api
 from agents.core.inference_optimizer import InferenceOptimizer
+from agents.core.model_scorer import HierarchicalModelScorer
 
 logger = get_logger(__name__)
 
@@ -72,7 +73,21 @@ class OllamaChatManager:
         # Inference optimizer for frequency optimization
         self.inference_optimizer: Optional[InferenceOptimizer] = None
         
+        # Hierarchical model scorer for adaptive model selection
+        self.model_scorer: Optional[HierarchicalModelScorer] = None
+        self._init_model_scorer()
+        
         logger.info(f"OllamaChatManager initialized for {self.base_url}")
+    
+    def _init_model_scorer(self):
+        """Initialize hierarchical model scorer"""
+        try:
+            metrics_file = Path("data/model_performance_metrics.json")
+            self.model_scorer = HierarchicalModelScorer(metrics_file=metrics_file)
+            logger.info("Hierarchical model scorer initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize model scorer: {e}")
+            self.model_scorer = None
     
     async def initialize(self) -> bool:
         """Initialize connection and discover models"""
@@ -348,12 +363,35 @@ class OllamaChatManager:
             # Save conversation history
             self._save_conversation_history()
             
+            # Calculate tokens per second (estimate)
+            response_length = len(response.split()) if isinstance(response, str) else 0
+            tokens_per_second = (response_length * 1.3) / latency if latency > 0 else 0  # Rough estimate
+            
+            # Record feedback for model scoring (successful request)
+            if self.model_scorer:
+                try:
+                    # Extract task type from conversation context or default to "chat"
+                    task_type = kwargs.get("task_type", "chat")
+                    self.model_scorer.record_feedback(
+                        model_name=model,
+                        task_type=task_type,
+                        success=True,
+                        latency_ms=latency * 1000,
+                        tokens_per_second=tokens_per_second,
+                        response_quality=kwargs.get("response_quality"),  # Can be provided by caller
+                        code_quality=kwargs.get("code_quality"),  # Can be provided by caller
+                        memory_usage_mb=kwargs.get("memory_usage_mb")
+                    )
+                except Exception as e:
+                    logger.debug(f"Failed to record model feedback: {e}")
+            
             return {
                 "success": True,
                 "content": response,
                 "model": model,
                 "conversation_id": conv_id,
                 "latency": latency,
+                "tokens_per_second": tokens_per_second,
                 "messages_count": len(messages)
             }
             
@@ -379,6 +417,20 @@ class OllamaChatManager:
             except Exception as log_error:
                 logger.debug(f"Failed to log error to memory: {log_error}")
             
+            # Record feedback for model scoring (failed request)
+            if self.model_scorer and 'model' in locals():
+                try:
+                    task_type = kwargs.get("task_type", "chat")
+                    self.model_scorer.record_feedback(
+                        model_name=model,
+                        task_type=task_type,
+                        success=False,
+                        latency_ms=0,
+                        tokens_per_second=0
+                    )
+                except Exception as e:
+                    logger.debug(f"Failed to record model feedback: {e}")
+            
             # Check if it's a connection error and mark as disconnected
             if any(keyword in error_msg.lower() for keyword in [
                 'connection', 'timeout', 'refused', 'unreachable', 'network'
@@ -399,7 +451,7 @@ class OllamaChatManager:
         preferred_models: Optional[List[str]] = None
     ) -> Optional[str]:
         """
-        Select best model for a task.
+        Select best model for a task using hierarchical scoring.
         
         Args:
             task_type: Type of task (chat, reasoning, coding, etc.)
@@ -413,6 +465,17 @@ class OllamaChatManager:
         if not self.available_models:
             return None
         
+        # Use hierarchical model scorer if available
+        if self.model_scorer:
+            selected = self.model_scorer.select_best_model(
+                available_models=self.available_models,
+                task_type=task_type,
+                preferred_models=preferred_models
+            )
+            if selected:
+                return selected
+        
+        # Fallback to simple selection if scorer not available
         # Use preferred models if provided
         if preferred_models:
             for preferred in preferred_models:

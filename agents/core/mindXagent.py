@@ -2389,7 +2389,54 @@ class MindXAgent:
         return self.action_choices[-limit:] if self.action_choices else []
     
     def get_status(self) -> Dict[str, Any]:
-        """Get current status for UI display"""
+        """Get current status for UI display with actual choices and events"""
+        # Ensure all required attributes exist (for backward compatibility)
+        if not hasattr(self, 'improvement_opportunities'):
+            self.improvement_opportunities = []
+        if not hasattr(self, 'action_choices'):
+            self.action_choices = []
+        if not hasattr(self, 'thinking_process'):
+            self.thinking_process = []
+        if not hasattr(self, 'agent_knowledge'):
+            self.agent_knowledge = {}
+        
+        # Get recent action choices (last 3)
+        recent_actions = self.action_choices[-3:] if self.action_choices else []
+        recent_actions_summary = [
+            {
+                "context": action.get("context", "Unknown"),
+                "selected": action.get("selected", {}).get("goal", "None") if action.get("selected") else "None",
+                "options_count": len(action.get("choices", [])),
+                "timestamp": action.get("timestamp", time.time())
+            }
+            for action in recent_actions
+        ]
+        
+        # Get recent thinking steps (last 3)
+        recent_thinking = self.thinking_process[-3:] if self.thinking_process else []
+        recent_thinking_summary = [
+            {
+                "step": thinking.get("step", "Unknown"),
+                "thought_preview": (thinking.get("thought", "")[:100] + "...") if len(thinking.get("thought", "")) > 100 else thinking.get("thought", ""),
+                "timestamp": thinking.get("timestamp", time.time())
+            }
+            for thinking in recent_thinking
+        ]
+        
+        # Get agent knowledge base stats
+        agent_count = len(self.agent_knowledge) if hasattr(self, 'agent_knowledge') else 0
+        registered_agents = len([k for k, v in self.agent_knowledge.items() if v.status == AgentStatus.ACTIVE]) if hasattr(self, 'agent_knowledge') else 0
+        
+        # Get improvement opportunities summary
+        improvement_summary = []
+        if self.improvement_opportunities:
+            for opp in self.improvement_opportunities[-3:]:
+                improvement_summary.append({
+                    "type": opp.get("type", "Unknown"),
+                    "description": opp.get("description", "")[:80] + "..." if len(opp.get("description", "")) > 80 else opp.get("description", ""),
+                    "priority": opp.get("priority", "medium")
+                })
+        
         status = {
             "autonomous_mode": self.autonomous_mode,
             "running": self.running,
@@ -2398,13 +2445,23 @@ class MindXAgent:
             "settings": self.settings.copy(),
             "thinking_steps_count": len(self.thinking_process),
             "action_choices_count": len(self.action_choices),
-            "improvement_opportunities_count": len(getattr(self, 'improvement_opportunities', [])),
+            "improvement_opportunities_count": len(self.improvement_opportunities),
+            "recent_actions": recent_actions_summary,
+            "recent_thinking": recent_thinking_summary,
+            "improvement_opportunities": improvement_summary,
+            "agent_knowledge": {
+                "total_agents": agent_count,
+                "active_agents": registered_agents,
+                "last_updated": max([v.last_updated for v in self.agent_knowledge.values()]) if hasattr(self, 'agent_knowledge') and self.agent_knowledge else None
+            },
             "ollama": {
                 "enabled": self.ollama_chat_manager is not None,
                 "connected": False,
                 "available_models_count": 0,
                 "current_model": None,
-                "base_url": None
+                "base_url": None,
+                "model_selection_enabled": False,
+                "model_scorer_available": False
             }
         }
         
@@ -2415,6 +2472,19 @@ class MindXAgent:
                 status["ollama"]["available_models_count"] = len(self.ollama_chat_manager.available_models) if self.ollama_chat_manager.available_models else 0
                 status["ollama"]["current_model"] = self.llm_model if self.llm_provider == "ollama" else None
                 status["ollama"]["base_url"] = str(self.ollama_chat_manager.base_url) if hasattr(self.ollama_chat_manager, 'base_url') else None
+                status["ollama"]["model_selection_enabled"] = hasattr(self.ollama_chat_manager, 'model_scorer') and self.ollama_chat_manager.model_scorer is not None
+                status["ollama"]["model_scorer_available"] = status["ollama"]["model_selection_enabled"]
+                
+                # Add model selection rankings if scorer is available
+                if status["ollama"]["model_selection_enabled"] and self.ollama_chat_manager.available_models:
+                    try:
+                        rankings = self.ollama_chat_manager.model_scorer.get_model_rankings(
+                            available_models=self.ollama_chat_manager.available_models[:5],  # Top 5
+                            task_type="reasoning"  # Default task type for status display
+                        )
+                        status["ollama"]["model_rankings"] = rankings
+                    except Exception as e:
+                        logger.debug(f"{self.log_prefix} Error getting model rankings: {e}")
                 
                 # Add inference optimizer status if available
                 if hasattr(self.ollama_chat_manager, 'inference_optimizer') and self.ollama_chat_manager.inference_optimizer:

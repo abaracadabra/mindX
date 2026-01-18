@@ -3487,9 +3487,40 @@ async def get_mindxagent_status():
         
         mindxagent = await MindXAgent.get_instance()
         if mindxagent:
-            return mindxagent.get_status()
+            # Ensure all required attributes exist before calling get_status
+            if not hasattr(mindxagent, 'improvement_opportunities'):
+                mindxagent.improvement_opportunities = []
+            if not hasattr(mindxagent, '_improvement_opportunities'):
+                mindxagent._improvement_opportunities = []
+            if not hasattr(mindxagent, 'action_choices'):
+                mindxagent.action_choices = []
+            if not hasattr(mindxagent, 'thinking_process'):
+                mindxagent.thinking_process = []
+            if not hasattr(mindxagent, 'agent_knowledge'):
+                mindxagent.agent_knowledge = {}
+            try:
+                return mindxagent.get_status()
+            except AttributeError as attr_err:
+                # If get_status fails, fix the attribute and try again
+                if 'improvement_opportunities' in str(attr_err):
+                    mindxagent.improvement_opportunities = []
+                    mindxagent._improvement_opportunities = []
+                    return mindxagent.get_status()
+                raise
         else:
             return {"status": "not_initialized"}
+    except AttributeError as e:
+        # Handle missing attributes gracefully
+        if 'improvement_opportunities' in str(e):
+            logger.warning(f"Missing improvement_opportunities attribute, initializing: {e}")
+            try:
+                mindxagent = await MindXAgent.get_instance()
+                if mindxagent:
+                    mindxagent.improvement_opportunities = []
+                    return mindxagent.get_status()
+            except:
+                pass
+        raise HTTPException(status_code=500, detail=f"Error getting status: {str(e)}")
     except Exception as e:
         logger.error(f"Error getting mindXagent status: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error getting status: {str(e)}")

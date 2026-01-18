@@ -68,13 +68,36 @@ class OllamaChatDisplayTool:
                     "total_count": 0
                 }
             
-            history = mindxagent.get_ollama_conversation_history(conversation_id)
+            # Get conversation history from mindXagent
+            conv_id = conversation_id or f"{mindxagent.agent_id}_default"
+            history = mindxagent.get_ollama_conversation_history(conv_id)
+            
+            # Format messages for display
+            formatted_messages = []
+            if history:
+                for msg in history[-limit:]:
+                    # Ensure message has required fields
+                    if isinstance(msg, dict):
+                        formatted_msg = {
+                            "role": msg.get("role", "unknown"),
+                            "content": msg.get("content", msg.get("message", "")),
+                            "timestamp": msg.get("timestamp", datetime.now().timestamp())
+                        }
+                        formatted_messages.append(formatted_msg)
+                    elif isinstance(msg, str):
+                        # Handle string messages (legacy format)
+                        formatted_messages.append({
+                            "role": "assistant",
+                            "content": msg,
+                            "timestamp": datetime.now().timestamp()
+                        })
             
             return {
                 "success": True,
-                "conversation_id": conversation_id or f"{mindxagent.agent_id}_default",
-                "messages": history[-limit:] if history else [],
+                "conversation_id": conv_id,
+                "messages": formatted_messages,
                 "total_count": len(history) if history else 0,
+                "last_updated": datetime.now().isoformat(),
                 "timestamp": datetime.now().isoformat()
             }
         except Exception as e:
