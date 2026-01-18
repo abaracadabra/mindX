@@ -231,6 +231,9 @@ class MindXAgent:
         # Ollama chat manager for persistent connections and chat
         self.ollama_chat_manager: Optional[Any] = None
         
+        # Connection manager tool for API key checking and Ollama defaulting
+        self.connection_manager_tool: Optional[Any] = None
+        
         # Thinking process tracking for UI display
         self.thinking_process: List[Dict[str, Any]] = []
         self.max_thinking_history = 1000  # Keep last 1000 thinking steps
@@ -287,6 +290,12 @@ class MindXAgent:
             
             # Start terminal log monitoring for self-audit
             await self._start_terminal_log_monitoring()
+            
+            # Initialize Connection Manager Tool
+            await self._init_connection_manager()
+            
+            # Check connections and default to Ollama if no API keys
+            await self._check_and_default_connection()
             
             # Initialize Ollama Chat Manager for persistent connections
             await self._init_ollama_chat_manager()
@@ -1787,6 +1796,66 @@ class MindXAgent:
         except Exception as e:
             logger.warning(f"{self.log_prefix} Could not load identity from INDEX.md: {e}")
     
+    async def _init_connection_manager(self):
+        """Initialize Connection Manager Tool for API key checking and Ollama defaulting"""
+        try:
+            from tools.connection_manager_tool import ConnectionManagerTool
+            self.connection_manager_tool = ConnectionManagerTool(config=self.config)
+            logger.info(f"{self.log_prefix} Connection Manager Tool initialized")
+        except Exception as e:
+            logger.warning(f"{self.log_prefix} Could not initialize Connection Manager Tool: {e}")
+            self.connection_manager_tool = None
+    
+    async def _check_and_default_connection(self):
+        """
+        Check for available LLM connections and default to Ollama if no API keys found.
+        This is called during initialization and when receiving startup information.
+        """
+        try:
+            if not self.connection_manager_tool:
+                await self._init_connection_manager()
+            
+            if not self.connection_manager_tool:
+                logger.warning(f"{self.log_prefix} Connection Manager Tool not available, skipping connection check")
+                return
+            
+            # Check if we should default to Ollama
+            default_result = await self.connection_manager_tool.execute("default_to_ollama")
+            
+            if default_result.get("success") and default_result.get("should_default_to_ollama"):
+                logger.info(f"{self.log_prefix} No API keys found, defaulting to Ollama at {default_result.get('ollama_base_url')}")
+                self.llm_provider = "ollama"
+                
+                # Update config if needed
+                if not self.config.get("llm.ollama.base_url"):
+                    ollama_url = default_result.get("ollama_base_url", "http://localhost:11434")
+                    self.config.set("llm.ollama.base_url", ollama_url)
+                    logger.info(f"{self.log_prefix} Set Ollama base URL to {ollama_url}")
+                
+                # Log to memory
+                await self.memory_agent.log_process(
+                    "connection_defaulted_to_ollama",
+                    {
+                        "reason": "no_api_keys_found",
+                        "ollama_base_url": default_result.get("ollama_base_url"),
+                        "timestamp": time.time()
+                    },
+                    {"agent_id": self.agent_id, "event": "connection_management"}
+                )
+            else:
+                # Check all connections
+                connections = await self.connection_manager_tool.execute("check_connections")
+                if connections.get("success"):
+                    recommended = connections.get("recommended_provider")
+                    if recommended:
+                        logger.info(f"{self.log_prefix} Recommended provider: {recommended}")
+                        if recommended == "ollama":
+                            self.llm_provider = "ollama"
+                        else:
+                            self.llm_provider = recommended
+        except Exception as e:
+            logger.warning(f"{self.log_prefix} Error checking connections: {e}")
+    
     async def _init_ollama_chat_manager(self):
         """Initialize Ollama Chat Manager for persistent connections and chat"""
         try:
@@ -2211,8 +2280,19 @@ class MindXAgent:
         
         self.startup_info.update(startup_info)
         
+        # Check connections and default to Ollama if no API keys found
+        await self._check_and_default_connection()
+        
+        # If Ollama is connected (from startup or defaulted), use it
+        ollama_connected = startup_info.get("ollama_connected", False)
+        
+        # If we defaulted to Ollama, ensure it's initialized
+        if self.llm_provider == "ollama" and not self.ollama_chat_manager:
+            await self._init_ollama_chat_manager()
+            ollama_connected = self.ollama_chat_manager and self.ollama_chat_manager.connected
+        
         # If Ollama is connected and autonomous mode is enabled, use best model
-        if startup_info.get("ollama_connected") and self.settings.get("autonomous_mode_enabled"):
+        if ollama_connected and self.settings.get("autonomous_mode_enabled"):
             models = startup_info.get("ollama_models", [])
             if models:
                 # Select best model based on strategy

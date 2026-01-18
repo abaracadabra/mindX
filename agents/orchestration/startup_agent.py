@@ -402,6 +402,11 @@ class StartupAgent:
         else:
             sequence[4]["status"] = "skipped"
             logger.info(f"{self.log_prefix} Ollama auto-connection skipped: {ollama_result.get('reason', 'Not configured')}")
+            # Still notify mindXagent even if Ollama is not connected (so it can default to Ollama)
+            try:
+                await self._notify_mindxagent_startup(ollama_result)
+            except Exception as e:
+                logger.warning(f"{self.log_prefix} Failed to notify mindXagent: {e}")
         
         sequence[5]["status"] = "completed"
         self.startup_sequence = sequence
@@ -1632,14 +1637,25 @@ Format as JSON with keys: suggestions (list), priorities, impacts, safe_to_apply
                 "improvement_opportunities": []
             }
             
-            # Get terminal log feedback for mindXagent
+            # Get terminal log feedback for mindXagent (full log content)
             terminal_log = await self.read_terminal_startup_log()
             if terminal_log.get("log_exists"):
                 startup_info["terminal_log"] = {
+                    "log_exists": True,
+                    "log_path": str(self.terminal_log_path),
                     "errors_count": len(terminal_log.get("errors", [])),
                     "warnings_count": len(terminal_log.get("warnings", [])),
-                    "sample_errors": terminal_log.get("errors", [])[:5],
-                    "sample_warnings": terminal_log.get("warnings", [])[:5]
+                    "sample_errors": terminal_log.get("errors", [])[:10],  # Increased from 5 to 10
+                    "sample_warnings": terminal_log.get("warnings", [])[:10],  # Increased from 5 to 10
+                    "all_errors": terminal_log.get("errors", []),  # Full error list
+                    "all_warnings": terminal_log.get("warnings", []),  # Full warning list
+                    "log_content": terminal_log.get("content", ""),  # Full log content if available
+                    "log_size": terminal_log.get("size", 0)
+                }
+            else:
+                startup_info["terminal_log"] = {
+                    "log_exists": False,
+                    "log_path": str(self.terminal_log_path)
                 }
             
             # Pass information to mindXagent for self-improvement
