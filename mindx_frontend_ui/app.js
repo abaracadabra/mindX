@@ -1862,6 +1862,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadTabData(tabId) {
+        // Load mindXagent data when mindXagent tab is activated
+        if (tabId === 'mindxagent') {
+            console.log('mindXagent tab activated - loading all data...');
+            loadMindXagentStatus();
+            loadMindXagentOllamaStatus();
+            loadMindXagentOllamaConversation();
+            loadMindXagentThinking();
+            loadMindXagentActions();
+            
+            // Set up auto-refresh every 5 seconds
+            if (window.mindxagentRefreshInterval) {
+                clearInterval(window.mindxagentRefreshInterval);
+            }
+            window.mindxagentRefreshInterval = setInterval(async () => {
+                await loadMindXagentStatus();
+                await loadMindXagentOllamaStatus();
+                await loadMindXagentOllamaConversation();
+                await loadMindXagentThinking();
+                await loadMindXagentActions();
+            }, 5000);
+            return;
+        }
+        
+        // Stop auto-refresh when leaving mindXagent tab
+        if (window.mindxagentRefreshInterval) {
+            clearInterval(window.mindxagentRefreshInterval);
+            window.mindxagentRefreshInterval = null;
+        }
+        
         // Load Faicey expressions when Faicey tab is activated
         if (tabId === 'faicey') {
             loadFaiceyExpressions();
@@ -11634,8 +11663,9 @@ async function testOllamaCompletion() {
         
         // Display messages with professional styling
         conversation.messages.forEach((msg, index) => {
+            // Handle different message formats
             const role = msg.role || 'unknown';
-            const content = msg.content || '';
+            const content = msg.content || msg.message || '';
             const isUser = role === 'user';
             const isAssistant = role === 'assistant';
             const isSystem = role === 'system';
@@ -11645,8 +11675,17 @@ async function testOllamaCompletion() {
             const icon = isUser ? '→' : isAssistant ? '←' : '⚙';
             
             // Format content with better readability
-            const formattedContent = escapeHtml(content).replace(/\n/g, '<br>');
-            const timestamp = msg.timestamp ? new Date(msg.timestamp).toLocaleString() : '';
+            const formattedContent = escapeHtml(String(content)).replace(/
+/g, '<br>');
+            // Handle timestamp - could be number (seconds) or ISO string
+            let timestamp = '';
+            if (msg.timestamp) {
+                if (typeof msg.timestamp === 'number') {
+                    timestamp = new Date(msg.timestamp * 1000).toLocaleString();
+                } else {
+                    timestamp = new Date(msg.timestamp).toLocaleString();
+                }
+            }
             
             html += `
                 <div class="conversation-message ${messageClass}">
@@ -11667,6 +11706,9 @@ async function testOllamaCompletion() {
         });
         
         displayEl.innerHTML = html;
+        
+        // Scroll to top to show newest messages (they're in reverse order)
+        displayEl.scrollTop = 0;
         
         // Scroll to bottom with smooth animation
         setTimeout(() => {
