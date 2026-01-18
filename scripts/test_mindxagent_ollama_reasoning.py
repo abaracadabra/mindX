@@ -187,13 +187,25 @@ async def select_best_model(models: List[Dict[str, Any]], task_type: str = "reas
     if not models:
         return None
     
-    # Prefer models with "reasoning", "thinking", or "nemo" in name
-    preferred_keywords = ["nemo", "reasoning", "thinking", "mistral", "llama"]
+    # Prefer smaller/faster models first to avoid timeouts
+    # Order: small models first, then reasoning-specific, then others
+    preferred_keywords = ["7b", "8b", "13b", "mistral", "llama"]
+    reasoning_keywords = ["nemo", "reasoning", "thinking"]
     
+    # First try smaller models
     for model in models:
         model_name = model.get("name", "").lower()
         if any(keyword in model_name for keyword in preferred_keywords):
-            logger.info(f"✓ Selected model: {model.get('name')} (matches reasoning keywords)")
+            # Skip very large models (30b+) for initial test
+            if "30b" not in model_name and "70b" not in model_name:
+                logger.info(f"✓ Selected model: {model.get('name')} (smaller model for faster inference)")
+                return model.get("name")
+    
+    # Then try reasoning-specific models
+    for model in models:
+        model_name = model.get("name", "").lower()
+        if any(keyword in model_name for keyword in reasoning_keywords):
+            logger.info(f"✓ Selected model: {model.get('name')} (reasoning-specific)")
             return model.get("name")
     
     # Fallback to first model
@@ -242,22 +254,45 @@ async def test_mindxagent_ollama_inference(
         })
         
         # Use Ollama chat API
-        response = await ollama_api.generate_text(
-            prompt=test_message,
-            model=model,
-            max_tokens=2000,
-            temperature=0.7,
-            use_chat=True,
-            messages=[{"role": "user", "content": test_message}]
-        )
+        # Note: For large models, the default 5s timeout may be insufficient
+        # The OllamaAPI uses a 5s sock_read timeout which may timeout for large models
+        # We'll try with the default timeout first, and log if timeout occurs
+        try:
+            response = await ollama_api.generate_text(
+                prompt=test_message,
+                model=model,
+                max_tokens=1000,  # Reduced for faster inference
+                temperature=0.7,
+                use_chat=True,
+                messages=[{"role": "user", "content": test_message}]
+            )
+        except Exception as e:
+            # If timeout occurs, log it and continue with error handling
+            reasoning_logger.log_step("inference_exception", {
+                "exception_type": type(e).__name__,
+                "exception_message": str(e)
+            })
+            response = json.dumps({"error": type(e).__name__, "message": str(e)})
         
         inference_time = time.time() - start_time
+        
+        # Extract error message if present
+        error_message = None
+        if response and response.startswith('{"error"'):
+            try:
+                import json
+                error_data = json.loads(response)
+                error_message = error_data.get("message", error_data.get("error", "Unknown error"))
+            except:
+                error_message = response[:200] if response else "Unknown error"
         
         # Step 4: Process response
         reasoning_logger.log_step("ollama_inference_response", {
             "response_length": len(response) if response else 0,
             "inference_time_seconds": inference_time,
-            "success": response is not None and not response.startswith('{"error"')
+            "success": response is not None and not response.startswith('{"error"'),
+            "error": error_message if error_message else None,
+            "response_preview": response[:200] if response and not response.startswith('{"error"') else None
         })
         
         # Step 5: mindXagent processes response
@@ -268,15 +303,21 @@ async def test_mindxagent_ollama_inference(
         })
         
         # Step 6: Assessment from agents and tools
+        response_success = response is not None and not response.startswith('{"error"')
+        response_text = response if response_success else None
+        
         assessment = {
-            "success": response is not None and not response.startswith('{"error"'),
+            "success": response_success,
             "inference_time": inference_time,
             "model": model,
-            "response_quality": "high" if response and len(response) > 100 else "low",
+            "response_quality": "high" if response_text and len(response_text) > 100 else ("medium" if response_text and len(response_text) > 50 else "low"),
+            "error_occurred": not response_success,
+            "error_message": error_message if error_message else None,
             "model_performance": {
                 "latency_ms": inference_time * 1000,
-                "tokens_generated": len(response.split()) if response else 0,
-                "throughput": len(response) / inference_time if inference_time > 0 else 0
+                "tokens_generated": len(response_text.split()) if response_text else 0,
+                "throughput": len(response_text) / inference_time if response_text and inference_time > 0 else 0,
+                "timeout_occurred": inference_time >= 5.0 and not response_success
             }
         }
         
@@ -310,8 +351,9 @@ async def test_mindxagent_ollama_inference(
         })
         
         return {
-            "success": True,
-            "response": response,
+            "success": response_success,
+            "response": response_text if response_success else None,
+            "error": error_message if error_message else None,
             "model": model,
             "inference_time": inference_time,
             "assessment": assessment,
@@ -402,10 +444,10 @@ async def main():
         # Initialize agents
         agents = await initialize_agents()
         
-        # Test message for reasoning
-        test_message = """Analyze the current state of the mindX system and identify one key improvement opportunity. 
-        Consider: system performance, agent coordination, and knowledge management. 
-        Provide a concise assessment with actionable recommendations."""
+        # Test message for reasoning (shorter for faster inference)
+        test_message = """Analyze the mindX system and identify one improvement opportunity. 
+        Focus on: performance, agent coordination, or knowledge management. 
+        Provide a brief assessment."""
         
         logger.info("\n" + "="*70)
         logger.info("Starting Inference Test")
