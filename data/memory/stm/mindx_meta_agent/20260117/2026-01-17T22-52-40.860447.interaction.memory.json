@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-01-17T22:52:40.860447",
+  "memory_type": "interaction",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "type": "ollama_chat",
+    "message": "Test message 1",
+    "response": " Ok",
+    "model": "mistral-nemo:latest",
+    "conversation_id": "mindx_meta_agent_default"
+  },
+  "context": {
+    "chat": true,
+    "ollama": true
+  },
+  "tags": [
+    "chat",
+    "ollama",
+    "interaction"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "2d3bba092c7b3862"
+}

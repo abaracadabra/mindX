@@ -1872,6 +1872,18 @@ class MindXAgent:
             return
         conv_id = conversation_id or f"{self.agent_id}_default"
         self.ollama_chat_manager.clear_conversation(conv_id)
+    
+    def get_inference_optimization_metrics(self) -> Dict[str, Any]:
+        """Get inference optimization metrics"""
+        if not self.ollama_chat_manager:
+            return {"status": "chat_manager_not_initialized"}
+        return self.ollama_chat_manager.get_optimization_metrics()
+    
+    def get_optimal_inference_frequency(self) -> float:
+        """Get current optimal inference frequency"""
+        if not self.ollama_chat_manager:
+            return 10.0  # Default
+        return self.ollama_chat_manager.get_optimal_frequency()
 
     async def _check_identity_crisis(self) -> bool:
         """Check if mindXagent is forgetting who it is - fallback to INDEX.md"""

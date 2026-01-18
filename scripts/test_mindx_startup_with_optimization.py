@@ -333,13 +333,16 @@ async def main():
         logger.info(f"✓ ML inference connected: {inference_connected}")
         logger.info(f"✓ Optimization started: {optimization_started}")
         
-        if agents["mindx_agent"].ollama_chat_manager:
-            optimizer = agents["mindx_agent"].ollama_chat_manager.inference_optimizer
-            if optimizer:
-                metrics = optimizer.get_metrics_summary()
-                logger.info(f"✓ Current frequency: {metrics.get('current_frequency', 'N/A')} rpm")
-                logger.info(f"✓ Total requests: {metrics.get('total_requests', 0)}")
-                logger.info(f"✓ Success rate: {metrics.get('recent_success_rate', 0)*100:.1f}%")
+        # Get optimization metrics
+        opt_metrics = agents["mindx_agent"].get_inference_optimization_metrics()
+        if opt_metrics.get("status") != "no_data":
+            logger.info(f"✓ Current frequency: {opt_metrics.get('current_frequency', 'N/A')} rpm")
+            logger.info(f"✓ Optimal frequency: {opt_metrics.get('optimal_frequency', 'N/A')} rpm")
+            logger.info(f"✓ Total requests: {opt_metrics.get('total_requests', 0)}")
+            logger.info(f"✓ Recent success rate: {opt_metrics.get('recent_success_rate', 0)*100:.1f}%")
+            logger.info(f"✓ Recent avg latency: {opt_metrics.get('recent_avg_latency_ms', 0):.0f}ms")
+        else:
+            logger.info("✓ Optimization data collection in progress...")
         
         logger.info("="*70)
         

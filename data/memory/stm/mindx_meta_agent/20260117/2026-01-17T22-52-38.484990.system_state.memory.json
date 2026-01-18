@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-01-17T22:52:38.484990",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "process_name": "ollama_model_discovered",
+    "data": {
+      "model": "deepseek-coder-v2:latest",
+      "discovered_at": 1768715558.4849823
+    }
+  },
+  "context": {
+    "agent_id": "mindx_meta_agent"
+  },
+  "tags": [
+    "ollama_model_discovered",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "c3427a97ad53d311"
+}
