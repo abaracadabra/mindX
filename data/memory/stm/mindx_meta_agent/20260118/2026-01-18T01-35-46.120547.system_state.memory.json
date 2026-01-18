@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-01-18T01:35:46.120547",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "process_name": "ollama_model_discovered",
+    "data": {
+      "model": "hf.co\/mixedbread-ai\/mxbai-embed-large-v1:latest",
+      "discovered_at": 1768725346.1205392
+    }
+  },
+  "context": {
+    "agent_id": "mindx_meta_agent"
+  },
+  "tags": [
+    "ollama_model_discovered",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "688a71fb84b67804"
+}

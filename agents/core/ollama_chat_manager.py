@@ -103,7 +103,28 @@ class OllamaChatManager:
                 return False
                 
         except Exception as e:
-            logger.error(f"Failed to initialize OllamaChatManager: {e}")
+            error_type = type(e).__name__
+            error_msg = str(e)
+            logger.error(f"Failed to initialize OllamaChatManager ({error_type}): {error_msg}", exc_info=True)
+            
+            # Log initialization failure
+            try:
+                if hasattr(self, 'memory_agent') and self.memory_agent:
+                    await self.memory_agent.log_process(
+                        "ollama_init_error",
+                        {
+                            "error_type": error_type,
+                            "error_message": error_msg,
+                            "base_url": str(self.base_url),
+                            "timestamp": time.time()
+                        },
+                        {"agent_id": "ollama_chat_manager", "error": True, "critical": True}
+                    )
+            except Exception as log_error:
+                logger.debug(f"Failed to log initialization error: {log_error}")
+            
+            self.connected = False
+            raise
             self.connected = False
             return False
     
@@ -234,9 +255,38 @@ class OllamaChatManager:
             Response dictionary with content, model, and metadata
         """
         try:
-            # Ensure connection
+            # Ensure connection with retry logic
             if not self.connected:
-                await self.initialize()
+                logger.info("Connection not active, attempting to initialize...")
+                max_retries = 3
+                for attempt in range(max_retries):
+                    try:
+                        connected = await self.initialize()
+                        if connected:
+                            logger.info("Connection restored successfully")
+                            break
+                        else:
+                            if attempt < max_retries - 1:
+                                wait_time = 2 ** attempt  # Exponential backoff
+                                logger.warning(f"Connection failed, retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})")
+                                await asyncio.sleep(wait_time)
+                            else:
+                                logger.error("Failed to establish connection after retries")
+                                return {
+                                    "success": False,
+                                    "error": "Failed to establish Ollama connection after retries"
+                                }
+                    except Exception as e:
+                        if attempt < max_retries - 1:
+                            wait_time = 2 ** attempt
+                            logger.warning(f"Connection attempt {attempt + 1} failed: {e}, retrying in {wait_time}s...")
+                            await asyncio.sleep(wait_time)
+                        else:
+                            logger.error(f"Connection initialization failed after {max_retries} attempts: {e}")
+                            return {
+                                "success": False,
+                                "error": f"Connection initialization failed: {str(e)}"
+                            }
             
             # Select model if not provided
             if not model:
@@ -308,10 +358,39 @@ class OllamaChatManager:
             }
             
         except Exception as e:
-            logger.error(f"Chat error: {e}")
+            error_type = type(e).__name__
+            error_msg = str(e)
+            logger.error(f"Chat error ({error_type}): {error_msg}", exc_info=True)
+            
+            # Log to memory if available
+            try:
+                if hasattr(self, 'memory_agent') and self.memory_agent:
+                    await self.memory_agent.log_process(
+                        "ollama_chat_error",
+                        {
+                            "error_type": error_type,
+                            "error_message": error_msg,
+                            "model": model,
+                            "conversation_id": conv_id,
+                            "timestamp": time.time()
+                        },
+                        {"agent_id": "ollama_chat_manager", "error": True}
+                    )
+            except Exception as log_error:
+                logger.debug(f"Failed to log error to memory: {log_error}")
+            
+            # Check if it's a connection error and mark as disconnected
+            if any(keyword in error_msg.lower() for keyword in [
+                'connection', 'timeout', 'refused', 'unreachable', 'network'
+            ]):
+                self.connected = False
+                logger.warning("Marking Ollama connection as disconnected due to error")
+            
             return {
                 "success": False,
-                "error": str(e)
+                "error": error_msg,
+                "error_type": error_type,
+                "timestamp": time.time()
             }
     
     async def select_best_model(
@@ -453,3 +532,69 @@ class OllamaChatManager:
         if self.inference_optimizer:
             return self.inference_optimizer.get_metrics_summary()
         return {"status": "optimizer_not_initialized"}
+
+    async def check_health(self) -> Dict[str, Any]:
+        """
+        Check the health of the Ollama connection and return detailed status.
+        
+        Returns:
+            Dictionary with health status, connection info, and metrics
+        """
+        health = {
+            "timestamp": time.time(),
+            "healthy": False,
+            "connected": False,
+            "base_url": str(self.base_url),
+            "available_models": 0,
+            "issues": [],
+            "metrics": {}
+        }
+        
+        try:
+            # Check connection status
+            health["connected"] = self.connected
+            
+            if not self.connected:
+                health["issues"].append("Not connected to Ollama server")
+                return health
+            
+            # Check available models
+            if self.available_models:
+                health["available_models"] = len(self.available_models)
+                health["metrics"]["models"] = [m.get("name", "unknown") for m in self.available_models[:5]]
+            else:
+                health["issues"].append("No models available")
+            
+            # Test connection with a simple request
+            try:
+                if self.ollama_api:
+                    test_models = await self.ollama_api.list_models()
+                    if test_models:
+                        health["healthy"] = True
+                        health["metrics"]["test_successful"] = True
+                    else:
+                        health["issues"].append("Connection test returned no models")
+                else:
+                    health["issues"].append("Ollama API not initialized")
+            except Exception as e:
+                health["issues"].append(f"Connection test failed: {str(e)}")
+                health["metrics"]["test_error"] = str(e)
+            
+            # Check inference optimizer if available
+            if hasattr(self, 'inference_optimizer') and self.inference_optimizer:
+                try:
+                    opt_metrics = self.inference_optimizer.get_metrics_summary()
+                    health["metrics"]["optimization"] = {
+                        "enabled": True,
+                        "current_frequency": opt_metrics.get("current_frequency"),
+                        "total_requests": opt_metrics.get("total_requests", 0),
+                        "success_rate": opt_metrics.get("recent_success_rate", 0)
+                    }
+                except Exception as e:
+                    health["issues"].append(f"Optimizer check failed: {str(e)}")
+            
+        except Exception as e:
+            health["issues"].append(f"Health check error: {str(e)}")
+            logger.error(f"Health check error: {e}", exc_info=True)
+        
+        return health

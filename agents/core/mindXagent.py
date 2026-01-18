@@ -2308,7 +2308,7 @@ class MindXAgent:
     
     def get_status(self) -> Dict[str, Any]:
         """Get current status for UI display"""
-        return {
+        status = {
             "autonomous_mode": self.autonomous_mode,
             "running": self.running,
             "model": self.llm_model,
@@ -2316,8 +2316,83 @@ class MindXAgent:
             "settings": self.settings.copy(),
             "thinking_steps_count": len(self.thinking_process),
             "action_choices_count": len(self.action_choices),
-            "improvement_opportunities_count": len(self.improvement_opportunities)
+            "improvement_opportunities_count": len(self.improvement_opportunities),
+            "ollama": {
+                "enabled": self.ollama_chat_manager is not None,
+                "connected": False,
+                "available_models_count": 0,
+                "current_model": None,
+                "base_url": None
+            }
         }
+        
+        # Add Ollama connection status if available
+        if self.ollama_chat_manager:
+            try:
+                status["ollama"]["connected"] = self.ollama_chat_manager.connected
+                status["ollama"]["available_models_count"] = len(self.ollama_chat_manager.available_models) if self.ollama_chat_manager.available_models else 0
+                status["ollama"]["current_model"] = self.llm_model if self.llm_provider == "ollama" else None
+                status["ollama"]["base_url"] = str(self.ollama_chat_manager.base_url) if hasattr(self.ollama_chat_manager, 'base_url') else None
+                
+                # Add inference optimizer status if available
+                if hasattr(self.ollama_chat_manager, 'inference_optimizer') and self.ollama_chat_manager.inference_optimizer:
+                    optimizer = self.ollama_chat_manager.inference_optimizer
+                    status["ollama"]["optimization"] = {
+                        "enabled": True,
+                        "current_frequency": optimizer.get_current_frequency(),
+                        "min_frequency": optimizer.min_frequency,
+                        "max_frequency": optimizer.max_frequency
+                    }
+                else:
+                    status["ollama"]["optimization"] = {"enabled": False}
+            except Exception as e:
+                logger.debug(f"{self.log_prefix} Error getting Ollama status: {e}")
+                status["ollama"]["error"] = str(e)
+        
+        return status
+    
+    async def get_ollama_status(self) -> Dict[str, Any]:
+        """Get detailed Ollama connection and inference status"""
+        if not self.ollama_chat_manager:
+            return {
+                "connected": False,
+                "error": "Ollama Chat Manager not initialized",
+                "available_models": [],
+                "models_count": 0
+            }
+        
+        try:
+            # Get available models
+            models = await self.get_available_ollama_models()
+            
+            # Get inference optimization metrics
+            opt_metrics = {}
+            if hasattr(self.ollama_chat_manager, 'inference_optimizer') and self.ollama_chat_manager.inference_optimizer:
+                opt_metrics = self.get_inference_optimization_metrics()
+            
+            # Get conversation history count
+            conversation_count = 0
+            if hasattr(self.ollama_chat_manager, 'conversation_history'):
+                conversation_count = len(self.ollama_chat_manager.conversation_history)
+            
+            return {
+                "connected": self.ollama_chat_manager.connected,
+                "base_url": str(self.ollama_chat_manager.base_url) if hasattr(self.ollama_chat_manager, 'base_url') else None,
+                "available_models": [{"name": m.get("name", "unknown"), "size": m.get("size", 0)} for m in models],
+                "models_count": len(models),
+                "current_model": self.llm_model if self.llm_provider == "ollama" else None,
+                "conversation_count": conversation_count,
+                "optimization": opt_metrics,
+                "last_discovery": self.ollama_chat_manager.last_discovery_time if hasattr(self.ollama_chat_manager, 'last_discovery_time') else None
+            }
+        except Exception as e:
+            logger.error(f"{self.log_prefix} Error getting Ollama status: {e}", exc_info=True)
+            return {
+                "connected": False,
+                "error": str(e),
+                "available_models": [],
+                "models_count": 0
+            }
     
     async def _analyze_system_state(self) -> Dict[str, Any]:
         """Analyze current system state for improvement opportunities"""

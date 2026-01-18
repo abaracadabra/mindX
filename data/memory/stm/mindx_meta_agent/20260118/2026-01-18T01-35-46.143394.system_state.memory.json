@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-01-18T01:35:46.143394",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "process_name": "ollama_model_discovered",
+    "data": {
+      "model": "gpt-oss:20b",
+      "discovered_at": 1768725346.143389
+    }
+  },
+  "context": {
+    "agent_id": "mindx_meta_agent"
+  },
+  "tags": [
+    "ollama_model_discovered",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "cd8d8c1fc9a4ef0a"
+}

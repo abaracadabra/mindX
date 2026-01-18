@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-01-18T01:35:46.128869",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "process_name": "ollama_model_discovered",
+    "data": {
+      "model": "nemotron-3-nano:30b",
+      "discovered_at": 1768725346.1288383
+    }
+  },
+  "context": {
+    "agent_id": "mindx_meta_agent"
+  },
+  "tags": [
+    "ollama_model_discovered",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "b9071a8e330d89c8"
+}

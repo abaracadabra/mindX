@@ -11543,9 +11543,176 @@ async function testOllamaCompletion() {
         try {
             const status = await sendRequest('/mindxagent/status');
             updateMindXagentStatusDisplay(status);
+            
+            // Also load Ollama status
+            await loadMindXagentOllamaStatus();
         } catch (error) {
             console.error('Failed to load mindXagent status:', error);
             addLog(`Failed to load mindXagent status: ${error.message}`, 'ERROR');
+        }
+    }
+    
+    // Load Ollama status
+    async function loadMindXagentOllamaStatus() {
+        try {
+            const ollamaStatus = await sendRequest('/mindxagent/ollama/status');
+            updateMindXagentOllamaStatusDisplay(ollamaStatus);
+        } catch (error) {
+            console.error('Failed to load Ollama status:', error);
+            // Don't show error if Ollama is not configured
+            if (!error.message.includes('not initialized')) {
+                addLog(`Failed to load Ollama status: ${error.message}`, 'WARNING');
+            }
+        }
+    }
+    
+    // Load Ollama conversation history
+    async function loadMindXagentOllamaConversation() {
+        try {
+            const conversation = await sendRequest('/mindxagent/ollama/conversation?limit=100');
+            updateMindXagentOllamaConversationDisplay(conversation);
+        } catch (error) {
+            console.error('Failed to load conversation:', error);
+            const displayEl = document.getElementById('mindxagent-ollama-conversation-display');
+            if (displayEl) {
+                displayEl.innerHTML = `<div style="text-align: center; color: #ff0000; padding: 20px;">Failed to load conversation: ${error.message}</div>`;
+            }
+        }
+    }
+    
+    // Update conversation display (using OllamaChatDisplayTool formatting)
+    function updateMindXagentOllamaConversationDisplay(conversation) {
+        const displayEl = document.getElementById('mindxagent-ollama-conversation-display');
+        if (!displayEl) return;
+        
+        if (!conversation.success || !conversation.messages || conversation.messages.length === 0) {
+            const errorMsg = conversation.error ? `Error: ${conversation.error}` : 'No conversation history yet. Start chatting with Ollama to see messages here.';
+            displayEl.innerHTML = `<div style="text-align: center; color: #888; padding: 20px;">${errorMsg}</div>`;
+            return;
+        }
+        
+        let html = '<div style="margin-bottom: 10px; padding: 10px; background: rgba(139, 92, 246, 0.1); border-radius: 6px; border-left: 3px solid rgba(139, 92, 246, 0.5);">';
+        html += '<div style="font-size: 11px; color: #aaa; margin-bottom: 5px;">Powered by <a href="https://github.com/autoglm" target="_blank" style="color: #8b5cf6;">aGLM</a> | <a href="https://opensea.io/collection/aglm" target="_blank" style="color: #8b5cf6;">OpenSea Collection</a> | <a href="https://bankon.gitbook.io/aglm-investor/aglm" target="_blank" style="color: #8b5cf6;">BANKON Investor</a></div>';
+        html += `<div style="font-size: 11px; color: #888;">Conversation ID: ${conversation.conversation_id || 'default'} | Total Messages: ${conversation.total_count || 0}</div>`;
+        html += '</div>';
+        
+        conversation.messages.forEach((msg, index) => {
+            const role = msg.role || 'unknown';
+            const content = msg.content || '';
+            const isUser = role === 'user';
+            const isAssistant = role === 'assistant';
+            
+            const bgColor = isUser ? 'rgba(0, 168, 255, 0.15)' : isAssistant ? 'rgba(0, 255, 136, 0.15)' : 'rgba(255, 255, 255, 0.05)';
+            const borderColor = isUser ? 'rgba(0, 168, 255, 0.4)' : isAssistant ? 'rgba(0, 255, 136, 0.4)' : 'rgba(255, 255, 255, 0.2)';
+            const label = isUser ? 'mindXagent → Ollama' : isAssistant ? 'Ollama → mindXagent' : 'System';
+            const textColor = isUser ? '#00a8ff' : isAssistant ? '#00ff88' : '#ffffff';
+            
+            html += `
+                <div style="
+                    margin-bottom: 15px;
+                    padding: 12px;
+                    background: ${bgColor};
+                    border-left: 3px solid ${borderColor};
+                    border-radius: 6px;
+                    animation: fadeIn 0.3s ease;
+                    position: relative;
+                    overflow: hidden;
+                ">
+                    <div style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 8px;
+                    ">
+                        <span style="
+                            font-weight: bold;
+                            color: ${textColor};
+                            font-size: 12px;
+                            text-transform: uppercase;
+                        ">${label}</span>
+                        <span style="color: #888; font-size: 11px;">Message ${index + 1}</span>
+                    </div>
+                    <div style="
+                        color: #ffffff;
+                        font-size: 14px;
+                        line-height: 1.6;
+                        white-space: pre-wrap;
+                        word-wrap: break-word;
+                        position: relative;
+                        z-index: 1;
+                    ">${escapeHtml(content)}</div>
+                </div>
+            `;
+        });
+        
+        displayEl.innerHTML = html;
+        
+        // Scroll to bottom
+        displayEl.scrollTop = displayEl.scrollHeight;
+    }
+    
+    // Update Ollama status display
+    function updateMindXagentOllamaStatusDisplay(ollamaStatus) {
+        const connectedEl = document.getElementById('mindxagent-ollama-connected');
+        const urlEl = document.getElementById('mindxagent-ollama-url');
+        const modelsCountEl = document.getElementById('mindxagent-ollama-models-count');
+        const currentModelEl = document.getElementById('mindxagent-ollama-current-model');
+        const conversationsEl = document.getElementById('mindxagent-ollama-conversations');
+        const modelsListEl = document.getElementById('mindxagent-ollama-models-list');
+        const modelsDisplayEl = document.getElementById('mindxagent-ollama-models-display');
+        const optSectionEl = document.getElementById('mindxagent-ollama-optimization');
+        
+        if (connectedEl) {
+            if (ollamaStatus.connected) {
+                connectedEl.textContent = '🟢 Connected';
+                connectedEl.style.color = '#00ff00';
+            } else {
+                connectedEl.textContent = '🔴 Disconnected';
+                connectedEl.style.color = '#ff0000';
+            }
+        }
+        
+        if (urlEl) urlEl.textContent = ollamaStatus.base_url || '-';
+        if (modelsCountEl) modelsCountEl.textContent = ollamaStatus.models_count || 0;
+        if (currentModelEl) currentModelEl.textContent = ollamaStatus.current_model || '-';
+        if (conversationsEl) conversationsEl.textContent = ollamaStatus.conversation_count || 0;
+        
+        // Display available models
+        if (modelsDisplayEl && ollamaStatus.available_models && ollamaStatus.available_models.length > 0) {
+            modelsListEl.style.display = 'block';
+            modelsDisplayEl.innerHTML = ollamaStatus.available_models.map(model => 
+                `<div style="padding: 5px; margin: 2px 0; background: rgba(0,255,0,0.1); border-radius: 3px;">
+                    <strong>${model.name}</strong> ${model.size ? `(${(model.size / 1024 / 1024 / 1024).toFixed(2)} GB)` : ''}
+                </div>`
+            ).join('');
+        } else if (modelsListEl) {
+            modelsListEl.style.display = 'none';
+        }
+        
+        // Display optimization metrics
+        if (optSectionEl && ollamaStatus.optimization) {
+            const opt = ollamaStatus.optimization;
+            if (opt.status !== 'no_data') {
+                optSectionEl.style.display = 'block';
+                
+                const optStatusEl = document.getElementById('mindxagent-ollama-opt-status');
+                const optFreqEl = document.getElementById('mindxagent-ollama-opt-frequency');
+                const optOptimalEl = document.getElementById('mindxagent-ollama-opt-optimal');
+                const optRequestsEl = document.getElementById('mindxagent-ollama-opt-requests');
+                const optSuccessRateEl = document.getElementById('mindxagent-ollama-opt-success-rate');
+                const optLatencyEl = document.getElementById('mindxagent-ollama-opt-latency');
+                const optThroughputEl = document.getElementById('mindxagent-ollama-opt-throughput');
+                
+                if (optStatusEl) optStatusEl.textContent = opt.status === 'active' ? '🟢 Active' : '🟡 Collecting Data';
+                if (optFreqEl) optFreqEl.textContent = opt.current_frequency ? `${opt.current_frequency.toFixed(1)} req/min` : '-';
+                if (optOptimalEl) optOptimalEl.textContent = opt.optimal_frequency ? `${opt.optimal_frequency.toFixed(1)} req/min` : '-';
+                if (optRequestsEl) optRequestsEl.textContent = opt.total_requests || 0;
+                if (optSuccessRateEl) optSuccessRateEl.textContent = opt.recent_success_rate ? `${(opt.recent_success_rate * 100).toFixed(1)}%` : '-';
+                if (optLatencyEl) optLatencyEl.textContent = opt.recent_avg_latency_ms ? `${opt.recent_avg_latency_ms.toFixed(0)} ms` : '-';
+                if (optThroughputEl) optThroughputEl.textContent = opt.recent_throughput ? `${opt.recent_throughput.toFixed(2)} tokens/s` : '-';
+            } else {
+                optSectionEl.style.display = 'none';
+            }
         }
     }
     
@@ -11565,6 +11732,20 @@ async function testOllamaCompletion() {
         if (providerEl) providerEl.textContent = status.provider || '-';
         if (thinkingCountEl) thinkingCountEl.textContent = status.thinking_steps_count || 0;
         if (actionsCountEl) actionsCountEl.textContent = status.action_choices_count || 0;
+        
+        // Update Ollama status from main status if available
+        if (status.ollama) {
+            const ollamaConnectedEl = document.getElementById('mindxagent-ollama-connected');
+            if (ollamaConnectedEl && status.ollama.enabled) {
+                if (status.ollama.connected) {
+                    ollamaConnectedEl.textContent = '🟢 Connected';
+                    ollamaConnectedEl.style.color = '#00ff00';
+                } else {
+                    ollamaConnectedEl.textContent = '🟡 Not Connected';
+                    ollamaConnectedEl.style.color = '#ffaa00';
+                }
+            }
+        }
         
         // Update settings checkboxes
         if (status.settings) {
@@ -11710,9 +11891,34 @@ async function testOllamaCompletion() {
         const refreshBtn = document.getElementById('refresh-mindxagent-status-btn');
         const saveBtn = document.getElementById('save-mindxagent-settings-btn');
         
+        // Conversation refresh button
+        const refreshConvBtn = document.getElementById('refresh-ollama-conversation-btn');
+        if (refreshConvBtn) {
+            refreshConvBtn.addEventListener('click', async () => {
+                await loadMindXagentOllamaConversation();
+            });
+        }
+        
+        // Clear conversation button
+        const clearConvBtn = document.getElementById('clear-ollama-conversation-btn');
+        if (clearConvBtn) {
+            clearConvBtn.addEventListener('click', async () => {
+                if (confirm('Clear conversation history?')) {
+                    try {
+                        await sendRequest('/mindxagent/ollama/conversation/clear', 'POST', {});
+                        await loadMindXagentOllamaConversation();
+                        addLog('Conversation history cleared', 'INFO');
+                    } catch (error) {
+                        addLog(`Failed to clear conversation: ${error.message}`, 'ERROR');
+                    }
+                }
+            });
+        }
+        
         if (refreshBtn) {
             refreshBtn.addEventListener('click', async () => {
                 await loadMindXagentStatus();
+                await loadMindXagentOllamaConversation();
                 await loadMindXagentThinking();
                 await loadMindXagentActions();
             });

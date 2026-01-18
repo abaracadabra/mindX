@@ -251,7 +251,6 @@
                     <button class="tab-btn" data-tab="logs">Logs</button>
                     <button class="tab-btn" data-tab="api">API</button>
                     <button class="tab-btn" data-tab="faicey">Faicey</button>
-                    <button class="tab-btn" data-tab="mindxagent">mindXagent</button>
                     <button class="tab-btn" data-tab="admin">Admin</button>
                 </div>
                 <div class="tab-row core-tabs">
@@ -260,6 +259,7 @@
                     <button class="tab-btn core-tab" data-tab="evolution">Evolution</button>
                     <button class="tab-btn core-tab" data-tab="learning">Learning</button>
                     <button class="tab-btn core-tab" data-tab="orchestration">Orchestration</button>
+                    <button class="tab-btn core-tab" data-tab="mindxagent">mindXagent</button>
                 </div>
             </nav>
 
@@ -2272,6 +2272,11 @@
             <div class="control-section">
                 <div class="section-header">
                     <h2>mindXagent - Gödel Machine Self-Improvement</h2>
+                    <div style="font-size: 11px; color: #888; margin-top: 5px;">
+                        Powered by <a href="https://github.com/autoglm" target="_blank" style="color: #8b5cf6;">aGLM</a> | 
+                        <a href="https://opensea.io/collection/aglm" target="_blank" style="color: #8b5cf6;">OpenSea Collection</a> | 
+                        <a href="https://bankon.gitbook.io/aglm-investor/aglm" target="_blank" style="color: #8b5cf6;">BANKON Investor</a>
+                    </div>
                     <div class="mindxagent-controls">
                         <button id="refresh-mindxagent-status-btn" class="refresh-btn">Refresh Status</button>
                     </div>
@@ -2300,6 +2305,89 @@
                         <div class="status-item">
                             <span class="status-label">Action Choices:</span>
                             <span id="mindxagent-actions-count" class="status-value">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Ollama Integration Section -->
+                <div class="control-section">
+                    <h3>Ollama Integration</h3>
+                    <div id="mindxagent-ollama-status-display" class="status-display">
+                        <div class="status-item">
+                            <span class="status-label">Connection Status:</span>
+                            <span id="mindxagent-ollama-connected" class="status-value">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Base URL:</span>
+                            <span id="mindxagent-ollama-url" class="status-value">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Available Models:</span>
+                            <span id="mindxagent-ollama-models-count" class="status-value">0</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Current Model:</span>
+                            <span id="mindxagent-ollama-current-model" class="status-value">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Conversations:</span>
+                            <span id="mindxagent-ollama-conversations" class="status-value">0</span>
+                        </div>
+                        <div id="mindxagent-ollama-optimization" style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 5px; display: none;">
+                            <h4 style="margin-top: 0;">Inference Optimization</h4>
+                            <div class="status-item">
+                                <span class="status-label">Status:</span>
+                                <span id="mindxagent-ollama-opt-status" class="status-value">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Current Frequency:</span>
+                                <span id="mindxagent-ollama-opt-frequency" class="status-value">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Optimal Frequency:</span>
+                                <span id="mindxagent-ollama-opt-optimal" class="status-value">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Total Requests:</span>
+                                <span id="mindxagent-ollama-opt-requests" class="status-value">0</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Success Rate:</span>
+                                <span id="mindxagent-ollama-opt-success-rate" class="status-value">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Avg Latency:</span>
+                                <span id="mindxagent-ollama-opt-latency" class="status-value">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Throughput:</span>
+                                <span id="mindxagent-ollama-opt-throughput" class="status-value">-</span>
+                            </div>
+                        </div>
+                        <div id="mindxagent-ollama-models-list" style="margin-top: 15px; max-height: 200px; overflow-y: auto; display: none;">
+                            <h4 style="margin-top: 0;">Available Models</h4>
+                            <div id="mindxagent-ollama-models-display"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Ollama Conversation Display Section -->
+                <div class="control-section">
+                    <h3>Ollama Conversation</h3>
+                    <div style="margin-bottom: 10px;">
+                        <button id="refresh-ollama-conversation-btn" class="refresh-btn">Refresh Conversation</button>
+                        <button id="clear-ollama-conversation-btn" class="action-btn" style="margin-left: 10px;">Clear History</button>
+                    </div>
+                    <div id="mindxagent-ollama-conversation-display" style="
+                        max-height: 500px;
+                        overflow-y: auto;
+                        padding: 15px;
+                        background: rgba(0, 0, 0, 0.3);
+                        border-radius: 8px;
+                        border: 1px solid rgba(0, 168, 255, 0.3);
+                    ">
+                        <div style="text-align: center; color: #888; padding: 20px;">
+                            Loading conversation history...
                         </div>
                     </div>
                 </div>

@@ -3495,6 +3495,54 @@ async def get_mindxagent_status():
         raise HTTPException(status_code=500, detail=f"Error getting status: {str(e)}")
 
 
+@app.get("/mindxagent/ollama/status", summary="Get mindXagent Ollama connection and inference status")
+async def get_mindxagent_ollama_status():
+    """Get detailed Ollama connection status, available models, and inference metrics."""
+    try:
+        from agents.core.mindXagent import MindXAgent
+        
+        mindxagent = await MindXAgent.get_instance()
+        if mindxagent:
+            return await mindxagent.get_ollama_status()
+        else:
+            return {"connected": False, "error": "mindXagent not initialized"}
+    except Exception as e:
+        logger.error(f"Error getting Ollama status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error getting Ollama status: {str(e)}")
+
+
+@app.get("/mindxagent/ollama/conversation", summary="Get Ollama conversation history")
+async def get_mindxagent_ollama_conversation(conversation_id: Optional[str] = None, limit: int = 50):
+    """Get conversation history between mindXagent and Ollama models using OllamaChatDisplayTool."""
+    try:
+        from tools.ollama_chat_display_tool import OllamaChatDisplayTool
+        from utils.config import Config
+        
+        config = Config()
+        display_tool = OllamaChatDisplayTool(config=config)
+        result = await display_tool.get_conversation_history(conversation_id, limit)
+        return result
+    except Exception as e:
+        logger.error(f"Error getting conversation history: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error getting conversation history: {str(e)}")
+
+
+@app.post("/mindxagent/ollama/conversation/clear", summary="Clear Ollama conversation history")
+async def clear_mindxagent_ollama_conversation(conversation_id: Optional[str] = None):
+    """Clear conversation history between mindXagent and Ollama models using OllamaChatDisplayTool."""
+    try:
+        from tools.ollama_chat_display_tool import OllamaChatDisplayTool
+        from utils.config import Config
+        
+        config = Config()
+        display_tool = OllamaChatDisplayTool(config=config)
+        result = await display_tool.clear_conversation(conversation_id)
+        return result
+    except Exception as e:
+        logger.error(f"Error clearing conversation: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error clearing conversation: {str(e)}")
+
+
 @app.get("/mindxagent/thinking", summary="Get mindXagent thinking process")
 async def get_mindxagent_thinking(limit: int = 100):
     """Get recent thinking process from mindXagent."""
