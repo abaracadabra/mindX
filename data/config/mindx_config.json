@@ -35,6 +35,7 @@
     }
   },
   "coordinator": {
+    "max_concurrent_heavy_tasks": 5,
     "autonomous_improvement": {
       "critical_components": [
         "mindx.learning.self_improve_agent",

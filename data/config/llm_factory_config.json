@@ -1,0 +1,11 @@
+{
+  "rate_limit_profiles": {
+    "default_rpm": 60,
+    "high_throughput": 120,
+    "conservative": 30,
+    "ollama_local": 1000,
+    "mistral": 50,
+    "gemini": 40
+  },
+  "default_provider_preference_order": ["mistral", "ollama", "gemini"]
+}

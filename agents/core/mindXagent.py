@@ -241,7 +241,7 @@ class MindXAgent:
             "show_action_choices": True,
             "improvement_cycle_interval": 300,  # 5 minutes
             "model_selection_strategy": "best_for_task",  # best_for_task, user_preference, balanced
-            "max_concurrent_improvements": 1,
+            "max_concurrent_improvements": 5,  # Increased from 1 to 5 for better parallelism
             "auto_apply_safe_improvements": True
         }
         
