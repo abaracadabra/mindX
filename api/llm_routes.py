@@ -208,38 +208,42 @@ async def set_ollama_config(
         else:
             raise HTTPException(status_code=400, detail="Must provide either base_url or host+port")
         
-        # Test connection first
-        ollama_api = create_ollama_api(base_url=final_base_url)
-        test_result = await ollama_api.test_connection()
-        
-        if not test_result.get("success", False):
-            return {
-                "success": False,
-                "base_url": final_base_url,
-                "error": test_result.get("message", "Connection test failed"),
-                "message": "Configuration not saved - connection test failed"
-            }
-        
-        # Persist configuration to .env file using LLMProviderManager
+        # Always save configuration first, then test connection
         manager = LLMProviderManager()
         save_result = await manager.set_api_key("ollama", api_key="", base_url=final_base_url)
         
         if not save_result.get("success", False):
-            logger.warning(f"Failed to save Ollama config to .env: {save_result.get('error')}")
+            logger.error(f"Failed to save Ollama config to .env: {save_result.get('error')}")
             return {
                 "success": False,
                 "base_url": final_base_url,
                 "error": save_result.get("error", "Failed to save configuration"),
-                "message": "Connection successful but configuration not persisted"
+                "message": "Configuration could not be persisted to .env file"
             }
         
-        logger.info(f"Ollama configuration saved: {final_base_url}")
+        logger.info(f"Ollama configuration saved to .env: {final_base_url}")
         
+        # Test connection after saving (but don't fail if test fails)
+        test_result = None
+        connection_warning = None
+        try:
+            ollama_api = create_ollama_api(base_url=final_base_url)
+            test_result = await ollama_api.test_connection()
+            
+            if not test_result.get("success", False):
+                connection_warning = test_result.get("message", "Connection test failed")
+                logger.warning(f"Ollama configuration saved but connection test failed: {connection_warning}")
+        except Exception as e:
+            connection_warning = f"Connection test error: {str(e)}"
+            logger.warning(f"Ollama configuration saved but connection test failed: {connection_warning}")
+        
+        # Return success even if connection test failed (config is saved)
         return {
             "success": True,
             "base_url": final_base_url,
-            "message": "Configuration saved and connection verified",
-            "model_count": test_result.get("model_count", 0)
+            "message": "Configuration saved successfully" + (f" (Warning: {connection_warning})" if connection_warning else " and connection verified"),
+            "model_count": test_result.get("model_count", 0) if test_result else 0,
+            "connection_warning": connection_warning if connection_warning else None
         }
     except HTTPException:
         raise
@@ -250,22 +254,32 @@ async def set_ollama_config(
 
 @router.post("/ollama/generate", summary="Generate text completion using Ollama")
 async def generate_ollama_completion(
-    base_url: Optional[str] = Query(None),
-    host: Optional[str] = Query(None),
-    port: Optional[int] = Query(None),
     model: str = Body(..., description="Model name"),
     prompt: str = Body(..., description="Prompt text"),
-    max_tokens: Optional[int] = Body(500, description="Maximum tokens"),
-    temperature: Optional[float] = Body(0.7, description="Temperature")
+    max_tokens: Optional[int] = Body(2000, description="Maximum tokens"),
+    temperature: Optional[float] = Body(0.7, description="Temperature"),
+    base_url: Optional[str] = Body(None, description="Ollama server base URL"),
+    host: Optional[str] = Body(None, description="Ollama server host"),
+    port: Optional[int] = Body(None, description="Ollama server port")
 ):
     """Generate text completion using Ollama"""
     try:
         from api.ollama_url import create_ollama_api
         
+        # Determine base_url from parameters or use default
+        final_base_url = None
         if base_url:
-            ollama_api = create_ollama_api(base_url=base_url)
+            final_base_url = base_url
         elif host and port:
-            ollama_api = create_ollama_api(host=host, port=port)
+            final_base_url = f"http://{host}:{port}"
+        else:
+            # Try to get from environment/config
+            ollama_api = create_ollama_api()
+            final_base_url = ollama_api.base_url
+        
+        # Create API instance with determined base_url
+        if final_base_url:
+            ollama_api = create_ollama_api(base_url=final_base_url)
         else:
             ollama_api = create_ollama_api()
         
@@ -294,6 +308,153 @@ async def generate_ollama_completion(
     except Exception as e:
         logger.error(f"Failed to generate Ollama completion: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to generate completion: {str(e)}")
+
+
+@router.get("/ollama/selected-model", summary="Get currently selected Ollama model")
+async def get_selected_ollama_model():
+    """
+    Get the currently selected Ollama model from user preferences.
+    This model is selected via the UI and can be used as a preference for model selection.
+    """
+    try:
+        import os
+        from pathlib import Path
+        
+        # Try to get from localStorage via a config file or environment
+        # For now, we'll use a simple config file approach
+        config_file = Path("data/config/ollama_user_preferences.json")
+        selected_model = None
+        
+        if config_file.exists():
+            import json
+            with open(config_file, 'r') as f:
+                prefs = json.load(f)
+                selected_model = prefs.get("selected_model")
+        
+        return {
+            "success": True,
+            "selected_model": selected_model,
+            "message": "Selected model retrieved" if selected_model else "No model selected"
+        }
+    except Exception as e:
+        logger.error(f"Failed to get selected Ollama model: {e}", exc_info=True)
+        return {
+            "success": False,
+            "selected_model": None,
+            "error": str(e)
+        }
+
+
+@router.post("/ollama/set-selected-model", summary="Set selected Ollama model")
+async def set_selected_ollama_model(
+    model: str = Body(..., description="Model name to set as selected")
+):
+    """
+    Set the currently selected Ollama model as a user preference.
+    This will be considered when mindX selects models for tasks.
+    """
+    try:
+        from pathlib import Path
+        import json
+        
+        config_file = Path("data/config/ollama_user_preferences.json")
+        config_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        prefs = {}
+        if config_file.exists():
+            with open(config_file, 'r') as f:
+                prefs = json.load(f)
+        
+        prefs["selected_model"] = model
+        prefs["last_updated"] = time.time()
+        
+        with open(config_file, 'w') as f:
+            json.dump(prefs, f, indent=2)
+        
+        logger.info(f"User selected Ollama model: {model}")
+        
+        return {
+            "success": True,
+            "selected_model": model,
+            "message": f"Selected model set to {model}"
+        }
+    except Exception as e:
+        logger.error(f"Failed to set selected Ollama model: {e}", exc_info=True)
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@router.post("/ollama/chat", summary="Chat completion using Ollama")
+async def ollama_chat_completion(
+    model: str = Body(..., description="Model name"),
+    messages: list = Body(..., description="Conversation messages"),
+    temperature: Optional[float] = Body(0.7, description="Temperature"),
+    max_tokens: Optional[int] = Body(2000, description="Maximum tokens"),
+    base_url: Optional[str] = Body(None, description="Ollama server base URL")
+):
+    """
+    Chat completion using Ollama with conversation history.
+    Uses Ollama's /api/chat endpoint for proper conversation handling.
+    """
+    try:
+        from api.ollama_url import create_ollama_api
+        
+        # Determine base_url from parameters or use default
+        final_base_url = None
+        if base_url:
+            final_base_url = base_url
+        else:
+            # Try to get from environment/config
+            ollama_api = create_ollama_api()
+            final_base_url = ollama_api.base_url
+        
+        # Create API instance with determined base_url
+        if final_base_url:
+            ollama_api = create_ollama_api(base_url=final_base_url)
+        else:
+            ollama_api = create_ollama_api()
+        
+        # Convert messages to Ollama format if needed
+        ollama_messages = []
+        for msg in messages:
+            if isinstance(msg, dict):
+                ollama_messages.append({
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", "")
+                })
+            else:
+                ollama_messages.append(msg)
+        
+        # Use chat endpoint with conversation history
+        result = await ollama_api.generate_text(
+            prompt=ollama_messages[-1]["content"] if ollama_messages else "",
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            use_chat=True,
+            messages=ollama_messages  # Pass full conversation history
+        )
+        
+        if result and not result.startswith('{"error"'):
+            return {
+                "success": True,
+                "content": result,
+                "model": model,
+                "base_url": ollama_api.base_url
+            }
+        else:
+            import json
+            error_data = json.loads(result) if result.startswith('{') else {"error": result}
+            return {
+                "success": False,
+                "error": error_data.get("error", "Chat completion failed"),
+                "message": error_data.get("message", "Unknown error")
+            }
+    except Exception as e:
+        logger.error(f"Failed to generate Ollama chat completion: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to generate chat completion: {str(e)}")
 
 
 @router.get("/model-selection/info", summary="Get model selection system information")

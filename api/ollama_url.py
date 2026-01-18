@@ -150,6 +150,7 @@ class OllamaAPI:
         max_tokens: Optional[int] = 2048,
         temperature: Optional[float] = 0.7,
         use_chat: bool = False,
+        messages: Optional[List[Dict[str, str]]] = None,
         **kwargs
     ) -> Optional[str]:
         """
@@ -176,11 +177,13 @@ class OllamaAPI:
             
             if use_chat:
                 # Use chat endpoint (POST /api/chat)
+                # Use provided messages if available, otherwise create from prompt
+                chat_messages = messages if messages else [
+                    {"role": "user", "content": prompt}
+                ]
                 payload = {
                     "model": model,
-                    "messages": [
-                        {"role": "user", "content": prompt}
-                    ],
+                    "messages": chat_messages,
                     "stream": False,
                     "options": {
                         "num_predict": max_tokens,
@@ -188,7 +191,7 @@ class OllamaAPI:
                     }
                 }
                 endpoint = f"{self.api_url}/chat"
-                logger.debug(f"Using Ollama chat endpoint: {endpoint}")
+                logger.debug(f"Using Ollama chat endpoint: {endpoint} with {len(chat_messages)} messages")
             else:
                 # Use generate endpoint (POST /api/generate) - standard Ollama endpoint
                 payload = {

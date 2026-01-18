@@ -59,6 +59,7 @@ class ModelSelector:
         "latency_factor": 0.5,
         "cost_factor": 1.5,
         "provider_preference": 0.2,
+        "user_preference": 1.5,  # Weight for user-selected model preference
     }
 
     def __init__(self, config: Optional[Config] = None):
@@ -94,6 +95,19 @@ class ModelSelector:
 
     def _score_models(self, capabilities: List[ModelCapability], task_type: TaskType, context: Dict, audit_data: Optional[List[Dict[str, Any]]] = None) -> List[Tuple[str, float]]:
         """Scores all provided models and returns a sorted list."""
+        # Get user-selected Ollama model if available
+        user_selected_ollama_model = None
+        try:
+            from pathlib import Path
+            import json
+            prefs_file = Path("data/config/ollama_user_preferences.json")
+            if prefs_file.exists():
+                with open(prefs_file, 'r') as f:
+                    prefs = json.load(f)
+                    user_selected_ollama_model = prefs.get("selected_model")
+        except Exception:
+            pass  # Ignore errors, just don't use user preference
+        
         scores = {}
         for cap in capabilities:
             # Exclude models based on context if necessary
@@ -119,6 +133,21 @@ class ModelSelector:
             
             #  Provider Preference
             score += self.provider_preferences.get(cap.provider, 0.5) * self.selection_weights.get("provider_preference", 1.0)
+            
+            #  User Preference Bonus (if user selected an Ollama model and this matches)
+            if user_selected_ollama_model and cap.provider.lower() == "ollama":
+                # Check if this model matches the user-selected one
+                # Model ID format is typically "provider/model_name" or just "model_name"
+                model_name_match = (
+                    cap.model_id.endswith(f"/{user_selected_ollama_model}") or
+                    cap.model_id == user_selected_ollama_model or
+                    cap.model_id.split("/")[-1] == user_selected_ollama_model.split(":")[0]  # Handle tags like "model:latest"
+                )
+                if model_name_match:
+                    # Add significant bonus for user preference (but still allow task-based override)
+                    user_preference_bonus = 2.0 * self.selection_weights.get("user_preference", 1.0)
+                    score += user_preference_bonus
+                    logger.debug(f"Applied user preference bonus (+{user_preference_bonus}) to {cap.model_id} (user selected: {user_selected_ollama_model})")
             
             # Add audit data to the score
             if audit_data:

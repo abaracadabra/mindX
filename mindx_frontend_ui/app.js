@@ -4751,6 +4751,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (result.success) {
                 addLog('Ollama connection successful!', 'SUCCESS');
                 updateOllamaConnectionBanner(true, baseUrl, result);
+                // Refresh provider list and prioritize Ollama
+                await refreshAndPrioritizeOllama();
             } else {
                 addLog('Ollama connection failed', 'ERROR');
                 updateOllamaConnectionBanner(false, baseUrl, result);
@@ -4780,6 +4782,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 addLog('Ollama configuration saved!', 'SUCCESS');
                 // Also register Ollama provider if not already registered
                 await registerOllamaProvider(baseUrl);
+                // Refresh provider list and prioritize Ollama
+                await refreshAndPrioritizeOllama();
             }
         } catch (error) {
             addLog(`Failed to save Ollama config: ${error.message}`, 'ERROR');
@@ -4848,6 +4852,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let html = '<h4>Available Models:</h4><ul class="models-list">';
         models.forEach(model => {
             const modelName = model.name || model.id || model;
+                    const escapedModelName = modelName.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, ' ').replace(/\r/g, '');
             html += `<li class="model-item">${modelName}</li>`;
         });
         html += '</ul>';
@@ -4951,17 +4956,61 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const providerName = dropdown.value;
         
-        // Special handling for Ollama - show settings instead of add form
+        // Special handling for Ollama - show Ollama configuration section right under quick provider setup
         if (providerName === 'ollama') {
-            await showProviderSettings('ollama');
-            // Scroll to Ollama section
-            const ollamaSection = document.querySelector('.ollama-setup-section');
-            if (ollamaSection) {
-                ollamaSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Find the quick provider section
+            const providerDropdownSection = document.querySelector('.provider-dropdown-section');
+            const quickProviderSection = providerDropdownSection ? providerDropdownSection.closest('.control-section') : null;
+            
+            // Find the Ollama section by ID or class
+            let ollamaControlSection = document.getElementById('ollama-config-section');
+            if (!ollamaControlSection) {
+                const ollamaSetupSection = document.querySelector('.ollama-setup-section');
+                ollamaControlSection = ollamaSetupSection ? ollamaSetupSection.closest('.control-section') : null;
             }
+            
+            if (ollamaControlSection && quickProviderSection) {
+                // Make sure it's visible
+                ollamaControlSection.style.display = 'block';
+                ollamaControlSection.style.visibility = 'visible';
+                ollamaControlSection.style.opacity = '1';
+                
+                // Move it to be right after the quick provider section
+                const nextSibling = quickProviderSection.nextElementSibling;
+                
+                // Only move if not already in the right position
+                if (nextSibling !== ollamaControlSection) {
+                    ollamaControlSection.remove();
+                    quickProviderSection.insertAdjacentElement('afterend', ollamaControlSection);
+                }
+                
+                // Scroll and highlight
+                setTimeout(() => {
+                    quickProviderSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    
+                    const ollamaSetupSection = ollamaControlSection.querySelector('.ollama-setup-section');
+                    if (ollamaSetupSection) {
+                        ollamaControlSection.style.transition = 'all 0.3s';
+                        ollamaControlSection.style.backgroundColor = 'rgba(0, 255, 255, 0.1)';
+                        ollamaControlSection.style.border = '2px solid rgba(0, 255, 255, 0.5)';
+                        setTimeout(() => {
+                            ollamaControlSection.style.backgroundColor = '';
+                            ollamaControlSection.style.border = '';
+                        }, 2000);
+                    }
+                }, 50);
+            } else {
+                console.error('Could not find Ollama section or quick provider section', {
+                    quickProviderSection: !!quickProviderSection,
+                    ollamaControlSection: !!ollamaControlSection
+                });
+            }
+            
             if (statusDiv) {
-                statusDiv.innerHTML = '<p class="info-message">Ollama settings displayed below</p>';
+                statusDiv.innerHTML = '<p class="info-message" style="color: #00ffff;">✓ Ollama configuration displayed below</p>';
             }
+            
+            addLog('Ollama configuration loaded', 'SUCCESS');
             return;
         }
         
@@ -5499,12 +5548,29 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Sort providers: Ollama first if enabled, then others
+        // Sort providers: Connected/tested Ollama first, then enabled providers, then others
         const sortedProviders = [...registryProviders].sort((a, b) => {
-            const aIsOllama = a.name === 'ollama' && (providers[a.name]?.enabled || false);
-            const bIsOllama = b.name === 'ollama' && (providers[b.name]?.enabled || false);
-            if (aIsOllama && !bIsOllama) return -1;
-            if (!aIsOllama && bIsOllama) return 1;
+            const aIsOllama = a.name === 'ollama';
+            const bIsOllama = b.name === 'ollama';
+            const aIsConnected = aIsOllama && (providers[a.name]?.enabled || false) && isOllamaConnected();
+            const bIsConnected = bIsOllama && (providers[b.name]?.enabled || false) && isOllamaConnected();
+            
+            // Connected Ollama goes first
+            if (aIsConnected && !bIsConnected) return -1;
+            if (!aIsConnected && bIsConnected) return 1;
+            
+            // Then enabled Ollama
+            const aIsOllamaEnabled = aIsOllama && (providers[a.name]?.enabled || false);
+            const bIsOllamaEnabled = bIsOllama && (providers[b.name]?.enabled || false);
+            if (aIsOllamaEnabled && !bIsOllamaEnabled) return -1;
+            if (!aIsOllamaEnabled && bIsOllamaEnabled) return 1;
+            
+            // Then other enabled providers
+            const aEnabled = providers[a.name]?.enabled || false;
+            const bEnabled = providers[b.name]?.enabled || false;
+            if (aEnabled && !bEnabled) return -1;
+            if (!aEnabled && bEnabled) return 1;
+            
             return 0;
         });
 
@@ -5529,6 +5595,81 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Re-initialize drag and drop after cards are created
         initializeProviderCardDragDrop();
+    }
+    
+    // Check if Ollama is connected (has saved config)
+    function isOllamaConnected() {
+        try {
+            // Check if there's a connection banner showing success
+            const banner = document.getElementById('ollama-connection-banner');
+            if (banner && banner.style.display !== 'none') {
+                const statusText = document.getElementById('ollama-connection-status-text');
+                if (statusText && statusText.textContent.includes('Connected')) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (e) {
+            return false;
+        }
+    }
+    
+    // Refresh provider list and prioritize Ollama
+    async function refreshAndPrioritizeOllama() {
+        try {
+            await loadAPIProviders();
+            // Update Ollama card if it exists
+            const ollamaCard = document.querySelector('[data-provider-name="ollama"]');
+            if (ollamaCard) {
+                // Add visual indicator that it's connected
+                ollamaCard.style.border = '2px solid #00ff00';
+                ollamaCard.style.boxShadow = '0 0 15px rgba(0, 255, 0, 0.3)';
+                setTimeout(() => {
+                    ollamaCard.style.border = '';
+                    ollamaCard.style.boxShadow = '';
+                }, 3000);
+            }
+        } catch (error) {
+            console.error('Failed to refresh providers:', error);
+        }
+    }
+    
+    // Check if Ollama is connected (has saved config)
+    function isOllamaConnected() {
+        try {
+            const savedModel = localStorage.getItem('selectedOllamaModel');
+            // Check if there's a connection banner showing success
+            const banner = document.getElementById('ollama-connection-banner');
+            if (banner && banner.style.display !== 'none') {
+                const statusText = document.getElementById('ollama-connection-status-text');
+                if (statusText && statusText.textContent.includes('Connected')) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (e) {
+            return false;
+        }
+    }
+    
+    // Refresh provider list and prioritize Ollama
+    async function refreshAndPrioritizeOllama() {
+        try {
+            await loadAPIProviders();
+            // Update Ollama card if it exists
+            const ollamaCard = document.querySelector('[data-provider-name="ollama"]');
+            if (ollamaCard) {
+                // Add visual indicator that it's connected
+                ollamaCard.style.border = '2px solid #00ff00';
+                ollamaCard.style.boxShadow = '0 0 15px rgba(0, 255, 0, 0.3)';
+                setTimeout(() => {
+                    ollamaCard.style.border = '';
+                    ollamaCard.style.boxShadow = '';
+                }, 3000);
+            }
+        } catch (error) {
+            console.error('Failed to refresh providers:', error);
+        }
     }
     
     function initializeProviderCardDragDrop() {
@@ -10493,13 +10634,18 @@ async function listOllamaModels() {
                 response.models.forEach((model, index) => {
                     const sizeGB = model.size ? (model.size / (1024**3)).toFixed(2) : 'Unknown';
                     const modifiedDate = model.modified_at ? new Date(model.modified_at).toLocaleDateString() : null;
-                    html += `
-                        <div style="padding: 20px; background: white; border: 2px solid #dee2e6; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s;" 
+                    const modelName = model.name || 'Unknown';
+                                        const escapedModelName = modelName.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, ' ').replace(/\r/g, '');
+html += `
+                        <div class="ollama-model-card" 
+                             data-model-name="${escapedModelName}"
+                             style="padding: 20px; background: white; border: 2px solid #dee2e6; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.2s; cursor: pointer;" 
                              onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)';" 
-                             onmouseout="this.style.transform=''; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)';">
+                             onmouseout="this.style.transform=''; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)';"
+                             onclick="if(typeof window.selectOllamaModel === \'function\') { window.selectOllamaModel(\'${escapedModelName}\'); }">
                             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
                                 <span style="font-size: 24px;">🤖</span>
-                                <h5 style="margin: 0; color: #333; font-size: 16px; font-weight: bold; word-break: break-word;">${model.name || 'Unknown'}</h5>
+                                <h5 style="margin: 0; color: #333; font-size: 16px; font-weight: bold; word-break: break-word;">${modelName}</h5>
                             </div>
                             <div style="font-size: 14px; color: #666; display: grid; gap: 8px;">
                                 <div style="display: flex; justify-content: space-between; padding: 8px; background: #f8f9fa; border-radius: 4px;">
@@ -10513,6 +10659,9 @@ async function listOllamaModels() {
                                 </div>
                                 ` : ''}
                             </div>
+                            <div style="margin-top: 12px; padding: 8px; background: #e7f3ff; border-radius: 4px; text-align: center; font-size: 12px; color: #0066cc; font-weight: bold;">
+                                Click to select
+                            </div>
                         </div>
                     `;
                 });
@@ -10521,7 +10670,7 @@ async function listOllamaModels() {
                 modelsEl.style.display = 'block';
                 addLog(`Loaded ${response.count || response.models.length} Ollama models from ${response.base_url}`, 'SUCCESS');
                 
-                // Populate model dropdown
+                // Populate model dropdown for testing
                 if (ollamaTestModel) {
                     ollamaTestModel.innerHTML = '<option value="">Select a model</option>';
                     response.models.forEach(model => {
@@ -10531,6 +10680,58 @@ async function listOllamaModels() {
                         ollamaTestModel.appendChild(option);
                     });
                 }
+                
+                // Populate model selector for conversation
+                const modelSelect = document.getElementById('ollama-model-select');
+                if (modelSelect) {
+                    modelSelect.innerHTML = '<option value="">-- Select a model --</option>';
+                    response.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.name || '';
+                        option.textContent = model.name || 'Unknown';
+                        modelSelect.appendChild(option);
+                    });
+                    addLog(`Populated model selector with ${response.models.length} models`, 'SUCCESS');
+                }
+                
+                // Add click handlers to model cards after they are rendered
+                setTimeout(() => {
+                    const modelCards = document.querySelectorAll(".ollama-model-card");
+                    modelCards.forEach(card => {
+                        card.removeAttribute("onclick");
+                        card.addEventListener("click", function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const modelName = this.getAttribute("data-model-name");
+                            if (modelName) {
+                                if (typeof window.selectOllamaModel === "function") {
+                                    window.selectOllamaModel(modelName);
+                                } else if (typeof selectOllamaModel === "function") {
+                                    selectOllamaModel(modelName);
+                                } else {
+                                    const modelSelect = document.getElementById("ollama-model-select");
+                                    if (modelSelect) {
+                                        modelSelect.value = modelName;
+                                        addLog(`Selected model: ${modelName}`, "SUCCESS");
+                                        card.style.border = "3px solid #00ffff";
+                                        card.style.background = "rgba(0, 255, 255, 0.15)";
+                                        card.style.boxShadow = "0 0 20px rgba(0, 255, 255, 0.6)";
+                                    }
+                                }
+                            }
+                        });
+                        card.addEventListener("mousedown", function() {
+                            if (!this.classList.contains("selected")) {
+                                this.style.transform = "scale(0.98)";
+                            }
+                        });
+                        card.addEventListener("mouseup", function() {
+                            if (!this.classList.contains("selected")) {
+                                this.style.transform = "translateY(-2px)";
+                            }
+                        });
+                    });
+                }, 100);
             }
         } else {
             modelsEl.innerHTML = `
@@ -10577,50 +10778,108 @@ async function listOllamaModels() {
 
 async function saveOllamaConfig() {
     console.log('💾 saveOllamaConfig called');
-    const config = getOllamaConfig();
-    console.log('📋 Config to save:', config);
     
-    const statusEl = ollamaStatus || document.getElementById('ollama-status');
-    if (!statusEl) {
-        console.error('❌ ollama-status element not found');
-        alert('Error: Cannot find status element');
-        return;
+    // Get the configuration method and values
+    const methodEl = document.getElementById('ollama-config-method');
+    const method = methodEl ? methodEl.value : 'host-port';
+    
+    let baseUrl = null;
+    let config = {};
+    
+    if (method === 'base-url') {
+        const baseUrlEl = document.getElementById('ollama-base-url');
+        baseUrl = baseUrlEl ? baseUrlEl.value.trim() : '';
+        if (!baseUrl) {
+            alert('Please enter a base URL');
+            return;
+        }
+        config = { base_url: baseUrl };
+    } else {
+        // host-port method
+        const hostEl = document.getElementById('ollama-host');
+        const portEl = document.getElementById('ollama-port');
+        const host = hostEl ? hostEl.value.trim() : 'localhost';
+        const port = portEl ? parseInt(portEl.value) : 11434;
+        
+        if (!host || !port) {
+            alert('Please enter both host and port');
+            return;
+        }
+        
+        baseUrl = `http://${host}:${port}`;
+        config = { base_url: baseUrl };
     }
     
-    statusEl.style.display = 'block';
-    statusEl.innerHTML = '<p style="color: #666;">Saving configuration...</p>';
+    console.log('📋 Config to save:', config);
+    
+    const statusEl = document.getElementById('ollama-status') || 
+                     document.querySelector('.ollama-setup-section')?.querySelector('.status-message');
+    
+    if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.innerHTML = '<p style="color: #666;">Saving configuration...</p>';
+    }
     
     try {
         const response = await sendRequest('/api/llm/ollama/config', 'POST', config);
         console.log('✅ Save response:', response);
         
         if (response.success) {
-            addLog(`Ollama configuration saved: ${response.base_url}`, 'SUCCESS');
-            statusEl.innerHTML = `
-                <div style="padding: 15px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">
-                    <p style="margin: 0; font-weight: bold;">✓ Configuration saved</p>
-                    <p style="margin: 5px 0 0 0; font-size: 14px;">Server: <strong>${response.base_url}</strong></p>
-                </div>
-            `;
-            statusEl.style.display = 'block';
+            const warningMsg = response.connection_warning ? `\n\n⚠️ Warning: ${response.connection_warning}` : '';
+            addLog(`Ollama configuration saved successfully: ${response.base_url}${warningMsg ? ' - ' + response.connection_warning : ''}`, response.connection_warning ? 'WARNING' : 'SUCCESS');
+            
+            if (statusEl) {
+                const bgColor = response.connection_warning ? '#fff3cd' : '#d4edda';
+                const borderColor = response.connection_warning ? '#ffc107' : '#c3e6cb';
+                const textColor = response.connection_warning ? '#856404' : '#155724';
+                
+                statusEl.innerHTML = `
+                    <div style="padding: 15px; background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 4px; color: ${textColor};">
+                        <p style="margin: 0; font-weight: bold;">✓ Configuration saved successfully</p>
+                        <p style="margin: 5px 0 0 0; font-size: 14px;">Server: <strong>${response.base_url}</strong></p>
+                        <p style="margin: 5px 0 0 0; font-size: 12px; color: ${response.connection_warning ? '#856404' : '#6c757d'};">${response.connection_warning ? '⚠️ ' + response.connection_warning + '<br>' : ''}Configuration has been persisted to .env file</p>
+                    </div>
+                `;
+                statusEl.style.display = 'block';
+            }
+            
+            // Refresh provider list and prioritize Ollama
+            await refreshAndPrioritizeOllama();
+            
+            // Show success notification
+            const alertMsg = response.connection_warning 
+                ? `✓ Ollama configuration saved!\n\nServer: ${response.base_url}\n\n⚠️ Warning: ${response.connection_warning}\n\nConfiguration has been persisted to .env file.`
+                : `✓ Ollama configuration saved!\n\nServer: ${response.base_url}\n\nConfiguration has been persisted and will be loaded on next startup.`;
+            alert(alertMsg);
         } else {
-            addLog(`Failed to save Ollama configuration: ${response.error}`, 'ERROR');
-            statusEl.innerHTML = `
-                <div style="padding: 15px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
-                    <p style="margin: 0; font-weight: bold;">✗ ${response.error || 'Failed to save'}</p>
-                </div>
-            `;
-            statusEl.style.display = 'block';
+            const errorMsg = response.error || response.message || 'Failed to save configuration';
+            addLog(`Failed to save Ollama configuration: ${errorMsg}`, 'ERROR');
+            
+            if (statusEl) {
+                statusEl.innerHTML = `
+                    <div style="padding: 15px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
+                        <p style="margin: 0; font-weight: bold;">✗ ${errorMsg}</p>
+                    </div>
+                `;
+                statusEl.style.display = 'block';
+            }
+            
+            alert(`✗ Failed to save configuration: ${errorMsg}`);
         }
     } catch (error) {
         console.error('❌ Error saving config:', error);
         addLog(`Error saving Ollama configuration: ${error.message}`, 'ERROR');
-        statusEl.innerHTML = `
-            <div style="padding: 15px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
-                <p style="margin: 0; font-weight: bold;">✗ Error: ${error.message}</p>
-            </div>
-        `;
-        statusEl.style.display = 'block';
+        
+        if (statusEl) {
+            statusEl.innerHTML = `
+                <div style="padding: 15px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; color: #721c24;">
+                    <p style="margin: 0; font-weight: bold;">✗ Error: ${error.message}</p>
+                </div>
+            `;
+            statusEl.style.display = 'block';
+        }
+        
+        alert(`✗ Error saving configuration: ${error.message}`);
     }
 }
 
@@ -11012,3 +11271,267 @@ async function testOllamaCompletion() {
     window.closeExpressionDetails = closeExpressionDetails;
     window.loadExpression = loadExpression;
     window.exportExpression = exportExpression;
+    
+    // Ollama Model Selection Function
+    function selectOllamaModel(modelName) {
+        const modelSelect = document.getElementById('ollama-model-select');
+        if (modelSelect) {
+            // Set the dropdown value
+            modelSelect.value = modelName;
+            
+            // Trigger change event
+            const changeEvent = new Event('change', { bubbles: true });
+            modelSelect.dispatchEvent(changeEvent);
+            
+            // Highlight the selected model card
+            const modelCards = document.querySelectorAll('.ollama-model-card');
+            modelCards.forEach(card => {
+                const cardModelName = card.getAttribute('data-model-name');
+                if (cardModelName === modelName) {
+                    card.style.border = '3px solid #00ffff';
+                    card.style.background = 'rgba(0, 255, 255, 0.15)';
+                    card.style.boxShadow = '0 0 20px rgba(0, 255, 255, 0.6)';
+                    card.style.transform = 'scale(1.02)';
+                } else {
+                    card.style.border = '2px solid #dee2e6';
+                    card.style.background = 'white';
+                    card.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                    card.style.transform = '';
+                }
+            });
+            
+            // Scroll to conversation interface
+            const conversationSection = document.querySelector('.ollama-model-conversation');
+            if (conversationSection) {
+                setTimeout(() => {
+                    conversationSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 300);
+            }
+            
+            // Focus on input field
+            const inputEl = document.getElementById('ollama-conversation-input');
+            if (inputEl) {
+                setTimeout(() => {
+                    inputEl.focus();
+                }, 500);
+            }
+            
+            addLog(`Selected model: ${modelName}`, 'SUCCESS');
+        }
+    }
+    
+    // Make function globally accessible
+    window.selectOllamaModel = selectOllamaModel;
+    
+    // Store selected model globally for mindX access
+    let selectedOllamaModel = null;
+    
+    // Update selectOllamaModel to store globally and notify backend
+    const originalSelectOllamaModel = selectOllamaModel;
+    selectOllamaModel = async function(modelName) {
+        selectedOllamaModel = modelName;
+        localStorage.setItem('selectedOllamaModel', modelName);
+        
+        // Notify backend of selected model
+        try {
+            await sendRequest('/api/llm/ollama/set-selected-model', 'POST', { model: modelName });
+            console.log(`✅ Selected model ${modelName} saved to backend`);
+        } catch (error) {
+            console.warn('Failed to save selected model to backend:', error);
+        }
+        
+        originalSelectOllamaModel(modelName);
+    };
+    window.selectOllamaModel = selectOllamaModel;
+    
+    // Load selected model from localStorage on page load
+    window.addEventListener('DOMContentLoaded', function() {
+        const savedModel = localStorage.getItem('selectedOllamaModel');
+        if (savedModel) {
+            selectedOllamaModel = savedModel;
+            const modelSelect = document.getElementById('ollama-model-select');
+            if (modelSelect) {
+                modelSelect.value = savedModel;
+            }
+        }
+    });
+    
+    // Conversation history
+    let ollamaConversationHistory = [];
+    
+    // Load conversation history from localStorage
+    try {
+        const savedHistory = localStorage.getItem('ollamaConversationHistory');
+        if (savedHistory) {
+            ollamaConversationHistory = JSON.parse(savedHistory);
+        }
+    } catch (e) {
+        console.warn('Failed to load conversation history:', e);
+    }
+    
+    // Function to add message to conversation UI
+    function addMessageToConversation(role, content, model = null) {
+        const messagesEl = document.getElementById('ollama-conversation-messages');
+        if (!messagesEl) return;
+        
+        // Clear placeholder if exists
+        if (messagesEl.children.length === 1 && messagesEl.children[0].textContent.includes('Conversation will appear here')) {
+            messagesEl.innerHTML = '';
+        }
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.style.marginBottom = '15px';
+        messageDiv.style.padding = '10px';
+        messageDiv.style.borderRadius = '4px';
+        
+        if (role === 'user') {
+            messageDiv.style.background = 'rgba(0, 100, 200, 0.2)';
+            messageDiv.style.borderLeft = '3px solid #0066cc';
+            messageDiv.innerHTML = `
+                <div style="color: #00ffff; font-weight: bold; margin-bottom: 5px;">You:</div>
+                <div style="color: #ffffff; white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(content)}</div>
+            `;
+        } else {
+            messageDiv.style.background = 'rgba(0, 150, 0, 0.2)';
+            messageDiv.style.borderLeft = '3px solid #00ff00';
+            const modelInfo = model ? ` <span style="color: #888; font-size: 12px;">(${escapeHtml(model)})</span>` : '';
+            messageDiv.innerHTML = `
+                <div style="color: #00ff00; font-weight: bold; margin-bottom: 5px;">Assistant:${modelInfo}</div>
+                <div style="color: #ffffff; white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(content)}</div>
+            `;
+        }
+        
+        messagesEl.appendChild(messageDiv);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        
+        // Save to history
+        ollamaConversationHistory.push({ role, content, model, timestamp: new Date().toISOString() });
+        try {
+            localStorage.setItem('ollamaConversationHistory', JSON.stringify(ollamaConversationHistory));
+        } catch (e) {
+            console.warn('Failed to save conversation history:', e);
+        }
+    }
+    
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Function to send message to Ollama
+    async function sendOllamaMessage() {
+        const inputEl = document.getElementById('ollama-conversation-input');
+        const sendBtn = document.getElementById('ollama-send-message-btn');
+        const modelSelect = document.getElementById('ollama-model-select');
+        
+        if (!inputEl || !modelSelect) {
+            alert('Conversation interface not found');
+            return;
+        }
+        
+        const message = inputEl.value.trim();
+        if (!message) {
+            return;
+        }
+        
+        const selectedModel = modelSelect.value || selectedOllamaModel;
+        if (!selectedModel) {
+            alert('Please select a model first');
+            return;
+        }
+        
+        // Disable input and button
+        inputEl.disabled = true;
+        if (sendBtn) sendBtn.disabled = true;
+        
+        // Add user message to UI
+        addMessageToConversation('user', message);
+        
+        // Clear input
+        inputEl.value = '';
+        
+        // Show thinking indicator
+        const thinkingId = 'thinking-' + Date.now();
+        addMessageToConversation('assistant', 'Thinking...', selectedModel);
+        const thinkingEl = document.getElementById('ollama-conversation-messages').lastElementChild;
+        thinkingEl.id = thinkingId;
+        
+        try {
+            // Build conversation history for API
+            const messages = ollamaConversationHistory
+                .filter(msg => msg.role !== 'assistant' || !msg.content.includes('Thinking...'))
+                .map(msg => ({
+                    role: msg.role,
+                    content: msg.content
+                }));
+            
+            // Add current user message
+            messages.push({
+                role: 'user',
+                content: message
+            });
+            
+            // Send to API
+            const response = await sendRequest('/api/llm/ollama/chat', 'POST', {
+                model: selectedModel,
+                messages: messages,
+                temperature: 0.7,
+                max_tokens: 2000
+            });
+            
+            // Remove thinking indicator
+            const thinkingElement = document.getElementById(thinkingId);
+            if (thinkingElement) {
+                thinkingElement.remove();
+            }
+            
+            if (response.success && response.content) {
+                addMessageToConversation('assistant', response.content, selectedModel);
+                addLog(`Ollama chat response received from ${selectedModel}`, 'SUCCESS');
+            } else {
+                const errorMsg = response.error || response.message || 'Unknown error';
+                addMessageToConversation('assistant', `Error: ${errorMsg}`, selectedModel);
+                addLog(`Ollama chat error: ${errorMsg}`, 'ERROR');
+            }
+        } catch (error) {
+            // Remove thinking indicator
+            const thinkingElement = document.getElementById(thinkingId);
+            if (thinkingElement) {
+                thinkingElement.remove();
+            }
+            
+            const errorMsg = error.message || 'Failed to send message';
+            addMessageToConversation('assistant', `Error: ${errorMsg}`, selectedModel);
+            addLog(`Ollama chat error: ${errorMsg}`, 'ERROR');
+        } finally {
+            // Re-enable input and button
+            inputEl.disabled = false;
+            if (sendBtn) sendBtn.disabled = false;
+            inputEl.focus();
+        }
+    }
+    
+    // Function to clear conversation
+    function clearOllamaConversation() {
+        if (confirm('Clear conversation history?')) {
+            ollamaConversationHistory = [];
+            const messagesEl = document.getElementById('ollama-conversation-messages');
+            if (messagesEl) {
+                messagesEl.innerHTML = '<div style="color: #888; font-style: italic;">Conversation cleared. Select a model and start chatting...</div>';
+            }
+            try {
+                localStorage.removeItem('ollamaConversationHistory');
+            } catch (e) {
+                console.warn('Failed to clear conversation history:', e);
+            }
+            addLog('Ollama conversation cleared', 'INFO');
+        }
+    }
+    
+    // Make functions globally accessible
+    window.sendOllamaMessage = sendOllamaMessage;
+    window.clearOllamaConversation = clearOllamaConversation;
+    window.addMessageToConversation = addMessageToConversation;
+    window.getSelectedOllamaModel = function() { return selectedOllamaModel; };
