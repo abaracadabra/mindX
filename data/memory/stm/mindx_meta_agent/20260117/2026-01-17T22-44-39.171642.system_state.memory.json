@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-01-17T22:44:39.171642",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "process_name": "ollama_model_discovered",
+    "data": {
+      "model": "qwen2.5:14b",
+      "discovered_at": 1768715079.171629
+    }
+  },
+  "context": {
+    "agent_id": "mindx_meta_agent"
+  },
+  "tags": [
+    "ollama_model_discovered",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "6d8fa931b9607f1e"
+}

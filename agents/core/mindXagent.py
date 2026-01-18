@@ -2242,14 +2242,22 @@ class MindXAgent:
                 self._log_thinking("startup_issues_detected", 
                     f"Startup issues detected: {terminal_log.get('errors_count', 0)} errors, {terminal_log.get('warnings_count', 0)} warnings")
                 
-                # Add to improvement opportunities
+                # Add to improvement opportunities (use method if available)
                 if terminal_log.get("errors_count", 0) > 0:
-                    self.improvement_opportunities.append({
-                        "goal": "Fix startup errors",
-                        "priority": "high",
-                        "source": "startup_agent",
-                        "details": terminal_log.get("sample_errors", [])[:3]
-                    })
+                    if hasattr(self, 'improvement_goals'):
+                        self.improvement_goals.append({
+                            "goal": "Fix startup errors",
+                            "priority": "high",
+                            "source": "startup_agent",
+                            "details": terminal_log.get("sample_errors", [])[:3]
+                        })
+                    elif hasattr(self, '_add_improvement_opportunities'):
+                        self._add_improvement_opportunities([{
+                            "goal": "Fix startup errors",
+                            "priority": "high",
+                            "source": "startup_agent",
+                            "details": terminal_log.get("sample_errors", [])[:3]
+                        }])
     
     def update_settings(self, settings: Dict[str, Any]) -> Dict[str, Any]:
         """
