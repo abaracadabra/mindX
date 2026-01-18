@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-01-17T23:04:45.570347",
+  "memory_type": "interaction",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "type": "ollama_chat",
+    "message": "Request 12: What is the purpose of the Coordinator Agent?",
+    "response": "The purpose of the Coordinator Agent in a multi-agent system is to facilitate cooperation among other agents by managing shared resources, coordinating actions, and mediating conflicts between agents. Here are some key responsibilities:\n\n1. **Resource Management**: Allocates shared resources (e.g., processing power, memory) among agents based on their needs and priorities.\n2. **Task Coordination**: Assigns tasks to appropriate agents based on their capabilities and availability. It also schedules tasks and manages deadlines.\n3. **Conflict",
+    "model": "mistral-nemo:latest",
+    "conversation_id": "mindx_meta_agent_default"
+  },
+  "context": {
+    "chat": true,
+    "ollama": true
+  },
+  "tags": [
+    "chat",
+    "ollama",
+    "interaction"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "ff74e03366efbdaf"
+}

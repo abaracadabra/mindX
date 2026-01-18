@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-01-17T23:07:29.347232",
+  "memory_type": "interaction",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "type": "ollama_chat",
+    "message": "Request 26: How does mindX handle identity management?",
+    "response": "mindX handles identity management through a combination of built-in features and integrations with external Identity & Access Management (IAM) systems. Here's how it works:\n\n1. **Built-in User Management**:\n\t* mindX provides native user creation, editing, and deletion functionalities to manage users within the platform.\n\t* Users can be assigned roles with varying levels of permissions and access to features and data.\n2. **Single Sign-On (SSO)**:\n\t* mindX supports SSO",
+    "model": "mistral-nemo:latest",
+    "conversation_id": "mindx_meta_agent_default"
+  },
+  "context": {
+    "chat": true,
+    "ollama": true
+  },
+  "tags": [
+    "chat",
+    "ollama",
+    "interaction"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "f7411bca94a6728d"
+}

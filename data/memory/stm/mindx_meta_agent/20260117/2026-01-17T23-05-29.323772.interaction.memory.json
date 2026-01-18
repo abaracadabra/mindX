@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-01-17T23:05:29.323772",
+  "memory_type": "interaction",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "type": "ollama_chat",
+    "message": "Request 16: Describe the Ollama integration.",
+    "response": "Ollama is an open-source language model developed by Meta (formerly Facebook). I am integrated with Ollama's models to provide interactive, context-aware conversations and generation capabilities. Here are some key aspects of my integration with Ollama:\n\n1. **Model Architecture**: I am based on Ollama's 7B parameter size model, which is designed for efficient inference and good performance on a wide range of tasks.\n2. **Context Window**: My context window is 2048 tokens",
+    "model": "mistral-nemo:latest",
+    "conversation_id": "mindx_meta_agent_default"
+  },
+  "context": {
+    "chat": true,
+    "ollama": true
+  },
+  "tags": [
+    "chat",
+    "ollama",
+    "interaction"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "163f2c2a309db379"
+}

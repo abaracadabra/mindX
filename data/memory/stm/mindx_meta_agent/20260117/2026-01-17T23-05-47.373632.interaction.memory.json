@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-01-17T23:05:47.373632",
+  "memory_type": "interaction",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "type": "ollama_chat",
+    "message": "Request 17: Explain how the BDI agent works.",
+    "response": "Here's a concise explanation of how a Behavior-Driven Intelligence (BDI) agent works:\n\n1. **Perceive**: The agent senses its environment using sensors or receives messages, updating its beliefs about the current state.\n2. **Reason**: Based on its updated beliefs and predefined goals:\n\t* It selects relevant goals to pursue.\n\t* For each goal, it generates potential plans or actions to achieve it.\n\t* It evaluates each plan based on its expected outcome, cost, risk,",
+    "model": "mistral-nemo:latest",
+    "conversation_id": "mindx_meta_agent_default"
+  },
+  "context": {
+    "chat": true,
+    "ollama": true
+  },
+  "tags": [
+    "chat",
+    "ollama",
+    "interaction"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "6ccd73dec695b310"
+}

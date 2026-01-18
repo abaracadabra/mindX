@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-01-17T23:02:24.518132",
+  "memory_type": "interaction",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "type": "ollama_chat",
+    "message": "Request 3: Describe the Ollama integration.",
+    "response": " Ollama is a state-of-the-art language model developed by researchers at Meta (formerly Facebook). It is integrated into this system to provide advanced natural language understanding and generation capabilities. With Ollama, the system can understand complex queries, generate detailed responses, and engage in more sophisticated conversations compared to previous models. This integration allows for improved performance across a wide range of tasks, such as answering questions, providing explanations, and assisting with various informational needs.",
+    "model": "mistral-nemo:latest",
+    "conversation_id": "mindx_meta_agent_default"
+  },
+  "context": {
+    "chat": true,
+    "ollama": true
+  },
+  "tags": [
+    "chat",
+    "ollama",
+    "interaction"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "b49e15642d1abb6f"
+}
