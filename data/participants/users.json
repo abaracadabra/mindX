@@ -1,0 +1,16 @@
+{
+  "0x016a45DBA76982d9c2fA1f3c01278c451e5beD5e": {
+    "wallet_address": "0x016a45DBA76982d9c2fA1f3c01278c451e5beD5e",
+    "user_id": "user_0x016a45",
+    "created_at": 1768785971.2150276,
+    "last_active": 1768801233.9951482,
+    "signature_count": 12,
+    "agent_count": 0,
+    "metadata": {
+      "chainId": "0x89",
+      "provider": "metamask",
+      "authMethod": "wallet"
+    },
+    "public_key": null
+  }
+}

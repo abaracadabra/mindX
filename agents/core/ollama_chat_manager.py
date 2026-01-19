@@ -7,6 +7,7 @@ for mindXagent to interact with Ollama models.
 
 import asyncio
 import json
+import os
 import time
 from datetime import datetime
 from pathlib import Path
@@ -43,7 +44,31 @@ class OllamaChatManager:
         conversation_history_path: Optional[Path] = None
     ):
         self.config = config or Config()
-        self.base_url = base_url or self.config.get("llm.ollama.base_url", "http://localhost:11434")
+        
+        # Determine base_url following ollama_handler.py pattern
+        if base_url is None:
+            # Try to load from settings if available (matching ollama_handler.py pattern)
+            try:
+                from webmind.settings import SettingsManager
+                settings = SettingsManager()
+                base_url = settings.get('ollama_base_url', None)
+            except:
+                pass
+            
+            # Fall back to config or environment
+            if not base_url:
+                base_url = self.config.get("llm.ollama.base_url") or os.getenv("MINDX_LLM__OLLAMA__BASE_URL")
+                # Default to 10.0.0.155:18080 if nothing is configured (matching startup_agent default)
+                if not base_url:
+                    base_url = "http://10.0.0.155:18080"
+                    logger.info(f"Using default Ollama base URL: {base_url}")
+        
+        # Ensure base_url doesn't have trailing /api - we'll add it (matching ollama_handler.py pattern)
+        base_url = base_url.rstrip('/')
+        if base_url.endswith('/api'):
+            base_url = base_url[:-4]
+        
+        self.base_url = base_url
         self.model_discovery_interval = model_discovery_interval
         self.keep_alive = keep_alive
         
@@ -78,6 +103,25 @@ class OllamaChatManager:
         self._init_model_scorer()
         
         logger.info(f"OllamaChatManager initialized for {self.base_url}")
+    
+    def update_base_url(self, base_url: str):
+        """
+        Update the base URL and rebuild API connection.
+        Matches ollama_handler.py pattern.
+        """
+        # Ensure base_url doesn't have trailing /api - we'll add it
+        base_url = base_url.rstrip('/')
+        if base_url.endswith('/api'):
+            base_url = base_url[:-4]
+        
+        old_base_url = self.base_url
+        self.base_url = base_url
+        
+        # Reset API connection to use new URL
+        self.ollama_api = None
+        self.connected = False
+        
+        logger.info(f"Ollama base URL updated from {old_base_url} to {base_url}")
     
     def _init_model_scorer(self):
         """Initialize hierarchical model scorer"""

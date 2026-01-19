@@ -1858,12 +1858,29 @@ class MindXAgent:
         except Exception as e:
             logger.warning(f"{self.log_prefix} Error checking connections: {e}")
     
-    async def _init_ollama_chat_manager(self):
+    async def _init_ollama_chat_manager(self, base_url: Optional[str] = None):
         """Initialize Ollama Chat Manager for persistent connections and chat"""
         try:
             from agents.core.ollama_chat_manager import OllamaChatManager
             import os
-            base_url = self.config.get("llm.ollama.base_url") or os.getenv("MINDX_LLM__OLLAMA__BASE_URL", "http://localhost:11434")
+            
+            # Priority: provided base_url > startup_info > config > env > default
+            if not base_url:
+                # Check startup_info first (from startup_agent)
+                if hasattr(self, 'startup_info') and self.startup_info:
+                    base_url = self.startup_info.get("ollama_base_url")
+                    if base_url:
+                        logger.info(f"{self.log_prefix} Using Ollama base URL from startup_info: {base_url}")
+                
+                # Fall back to config or environment
+                if not base_url:
+                    base_url = self.config.get("llm.ollama.base_url") or os.getenv("MINDX_LLM__OLLAMA__BASE_URL")
+                    # Default to 10.0.0.155:18080 if nothing is configured (matching startup_agent default)
+                    if not base_url:
+                        base_url = "http://10.0.0.155:18080"
+                        logger.info(f"{self.log_prefix} Using default Ollama base URL: {base_url}")
+            
+            logger.info(f"{self.log_prefix} Initializing Ollama Chat Manager with base_url: {base_url}")
             conversation_history_path = self.data_dir / "ollama_chat_history.json"
             self.ollama_chat_manager = OllamaChatManager(
                 base_url=base_url,
@@ -2287,9 +2304,31 @@ class MindXAgent:
         
         # If Ollama is connected (from startup or defaulted), use it
         ollama_connected = startup_info.get("ollama_connected", False)
+        ollama_base_url = startup_info.get("ollama_base_url") or startup_info.get("base_url")
         
-        # If we defaulted to Ollama, ensure it's initialized
-        if self.llm_provider == "ollama" and not self.ollama_chat_manager:
+        # If Ollama is connected from startup, use the provided base_url
+        if ollama_connected and ollama_base_url:
+            logger.info(f"{self.log_prefix} Ollama connected from startup at {ollama_base_url}, initializing chat manager...")
+            # Update config with the startup URL
+            if not self.config.get("llm.ollama.base_url"):
+                self.config.set("llm.ollama.base_url", ollama_base_url)
+            
+            # Initialize or update Ollama chat manager with the correct URL
+            if not self.ollama_chat_manager:
+                await self._init_ollama_chat_manager(base_url=ollama_base_url)
+            elif hasattr(self.ollama_chat_manager, 'update_base_url'):
+                # Update existing manager if URL changed
+                if self.ollama_chat_manager.base_url != ollama_base_url:
+                    logger.info(f"{self.log_prefix} Updating Ollama base URL from {self.ollama_chat_manager.base_url} to {ollama_base_url}")
+                    self.ollama_chat_manager.update_base_url(ollama_base_url)
+                    await self.ollama_chat_manager.initialize()
+            
+            # Ensure connection is established
+            if self.ollama_chat_manager and not self.ollama_chat_manager.connected:
+                connected = await self.ollama_chat_manager.initialize()
+                ollama_connected = connected
+        elif self.llm_provider == "ollama" and not self.ollama_chat_manager:
+            # Default to Ollama if no API keys found
             await self._init_ollama_chat_manager()
             ollama_connected = self.ollama_chat_manager and self.ollama_chat_manager.connected
         

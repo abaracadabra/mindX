@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-01-18T18:57:38.224008",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "unknown",
+  "content": {
+    "process_name": "user_registered_with_signature",
+    "data": {
+      "wallet_address": "0x016a45DBA76982d9c2fA1f3c01278c451e5beD5e",
+      "signature_verified": true,
+      "metadata": {
+        "chainId": "0x89",
+        "provider": "metamask",
+        "authMethod": "wallet"
+      }
+    }
+  },
+  "context": {
+    "user_wallet": "0x016a45DBA76982d9c2fA1f3c01278c451e5beD5e"
+  },
+  "tags": [
+    "user_registered_with_signature",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "f7b0168d314491fb"
+}

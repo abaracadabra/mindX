@@ -13,23 +13,70 @@
     <script src="window-manager.js"></script>
     <!-- Inline MetaMask connection function - available immediately -->
     <script>
+        // Define a stub for handleAuthenticationSuccess that will be replaced when app.js loads
+        window.handleAuthenticationSuccess = function(userData) {
+            console.log('⚠️ handleAuthenticationSuccess stub called (app.js not loaded yet)');
+            console.log('Storing userData for later processing:', userData);
+            // Store for app.js to process when it loads
+            window.pendingAuthSuccess = userData;
+            // Try to manually show main app as fallback
+            setTimeout(() => {
+                const loginLanding = document.getElementById('login-landing');
+                const mainApplication = document.getElementById('main-application');
+                if (loginLanding) {
+                    loginLanding.style.display = 'none';
+                    console.log('✅ Login landing hidden (fallback)');
+                }
+                if (mainApplication) {
+                    mainApplication.style.display = 'block';
+                    console.log('✅ Main application shown (fallback)');
+                }
+                document.body.classList.add('authenticated');
+            }, 100);
+        };
+        
         // Define connectMetaMask immediately so it's available for onclick
+        // Uses viem for proper wallet connection and challenge-response authentication
         window.connectMetaMask = async function() {
             try {
-                console.log('🔗 Connecting to MetaMask...');
+                console.log('🔗 Connecting to MetaMask with viem...');
                 
                 // Check if MetaMask is available
                 if (typeof window.ethereum === 'undefined') {
                     alert('MetaMask is not installed. Please install MetaMask browser extension to continue.');
                     return;
                 }
+
+                // Dynamically import viem (ESM module)
+                let viem;
+                try {
+                    viem = await import('https://cdn.jsdelivr.net/npm/viem@2.21.45/+esm');
+                } catch (importError) {
+                    console.error('Failed to load viem:', importError);
+                    alert('Wallet connection library failed to load. Please refresh the page.');
+                    return;
+                }
+
+                // Get API base URL
+                const apiBaseUrl = window.MINDX_API_URL || `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`;
                 
-                console.log('Requesting MetaMask account access...');
+                // Create viem wallet client
+                // Handle both namespace and named exports
+                const createWalletClient = viem.createWalletClient || viem.default?.createWalletClient;
+                const custom = viem.custom || viem.default?.custom;
                 
-                // Request account access - This should trigger MetaMask popup
-                const accounts = await window.ethereum.request({
-                    method: 'eth_requestAccounts'
+                if (!createWalletClient || !custom) {
+                    throw new Error('viem exports not found. Please refresh the page.');
+                }
+                
+                const walletClient = createWalletClient({
+                    transport: custom(window.ethereum)
                 });
+
+                console.log('Requesting account access via viem...');
+                
+                // Request account access using viem
+                const accounts = await walletClient.requestAddresses();
                 
                 console.log('MetaMask response:', accounts);
 
@@ -41,10 +88,87 @@
                 const walletAddress = accounts[0];
                 console.log('Connected to:', walletAddress);
                 
-                // Get chain ID
+                // Get chain ID using viem
                 const chainId = await window.ethereum.request({
                     method: 'eth_chainId'
                 });
+
+                // Step 1: Get challenge from backend
+                console.log('Requesting authentication challenge from:', `${apiBaseUrl}/users/challenge`);
+                let challengeResponse;
+                try {
+                    challengeResponse = await fetch(`${apiBaseUrl}/users/challenge`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            wallet_address: walletAddress,
+                            action: 'login'
+                        })
+                    });
+                } catch (fetchError) {
+                    console.error('Fetch error:', fetchError);
+                    throw new Error(`Failed to connect to backend at ${apiBaseUrl}. Please ensure the backend is running on port 8000. Error: ${fetchError.message}`);
+                }
+
+                if (!challengeResponse.ok) {
+                    const errorText = await challengeResponse.text();
+                    console.error('Challenge response error:', errorText);
+                    throw new Error(`Failed to get authentication challenge from server (${challengeResponse.status}): ${errorText}`);
+                }
+
+                const challengeData = await challengeResponse.json();
+                const challengeMessage = challengeData.challenge_message;
+                console.log('Challenge received:', challengeMessage);
+
+                // Step 2: Sign challenge message using viem
+                console.log('Requesting signature from MetaMask...');
+                const signature = await walletClient.signMessage({
+                    account: walletAddress,
+                    message: challengeMessage
+                });
+                console.log('Challenge signed:', signature);
+
+                // Step 3: Register/authenticate user with backend
+                console.log('Authenticating with backend at:', `${apiBaseUrl}/users/register-with-signature`);
+                let authResponse;
+                try {
+                    authResponse = await fetch(`${apiBaseUrl}/users/register-with-signature`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            wallet_address: walletAddress,
+                            signature: signature,
+                            message: challengeMessage,
+                            metadata: {
+                                chainId: chainId,
+                                provider: 'metamask',
+                                authMethod: 'wallet'
+                            }
+                        })
+                    });
+                } catch (fetchError) {
+                    console.error('Auth fetch error:', fetchError);
+                    throw new Error(`Failed to connect to backend at ${apiBaseUrl}. Please ensure the backend is running on port 8000. Error: ${fetchError.message}`);
+                }
+
+                if (!authResponse.ok) {
+                    const errorText = await authResponse.text();
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch (e) {
+                        errorData = { error: errorText };
+                    }
+                    console.error('Auth response error:', errorData);
+                    throw new Error(errorData.error || `Authentication failed (${authResponse.status}): ${errorText}`);
+                }
+
+                const authData = await authResponse.json();
+                console.log('Authentication successful:', authData);
 
                 // Create user object
                 const userData = {
@@ -53,6 +177,7 @@
                     provider: 'metamask',
                     chainId: chainId,
                     authMethod: 'wallet',
+                    signature: signature,
                     timestamp: Date.now()
                 };
 
@@ -65,22 +190,34 @@
                 // Store for app.js to process when it loads
                 window.pendingAuthSuccess = userData;
                 
-                // Try to call handleAuthenticationSuccess if available
-                if (typeof handleAuthenticationSuccess === 'function') {
-                    handleAuthenticationSuccess(userData);
-                } else {
-                    // Wait a bit and try again
+                // Call handleAuthenticationSuccess (now always available via window)
+                console.log('Calling handleAuthenticationSuccess...');
+                try {
+                    if (typeof window.handleAuthenticationSuccess === 'function') {
+                        window.handleAuthenticationSuccess(userData);
+                        console.log('✅ handleAuthenticationSuccess called successfully');
+                    } else {
+                        console.error('❌ handleAuthenticationSuccess is not a function!');
+                        // Fallback: manually show main app
+                        const loginLanding = document.getElementById('login-landing');
+                        const mainApplication = document.getElementById('main-application');
+                        if (loginLanding) loginLanding.style.display = 'none';
+                        if (mainApplication) mainApplication.style.display = 'block';
+                        document.body.classList.add('authenticated');
+                    }
+                } catch (error) {
+                    console.error('❌ Error calling handleAuthenticationSuccess:', error);
+                    // Fallback: manually show main app
                     setTimeout(() => {
-                        if (typeof handleAuthenticationSuccess === 'function') {
-                            handleAuthenticationSuccess(userData);
-                        } else {
-                            // Reload page to trigger authentication
-                            window.location.reload();
-                        }
-                    }, 500);
+                        const loginLanding = document.getElementById('login-landing');
+                        const mainApplication = document.getElementById('main-application');
+                        if (loginLanding) loginLanding.style.display = 'none';
+                        if (mainApplication) mainApplication.style.display = 'block';
+                        document.body.classList.add('authenticated');
+                    }, 100);
                 }
                 
-                console.log('✅ MetaMask wallet connected successfully!');
+                console.log('✅ MetaMask wallet connected and authenticated successfully!');
                 
             } catch (error) {
                 console.error('❌ MetaMask connection failed:', error);
@@ -96,7 +233,7 @@
             }
         };
         
-        console.log('✅ connectMetaMask function defined inline and ready');
+        console.log('✅ connectMetaMask function defined inline and ready (using viem)');
     </script>
 </head>
 <body>
@@ -181,8 +318,6 @@
                     <div class="mindx-branding">
                         <h1>mindX</h1>
                     </div>
-                </div>
-                <div class="header-center">
                     <div class="crossmint-login" id="crossmintLogin">
                         <a href="crossmint-google-wallet.html" id="crossmintLoginBtn" class="crossmint-btn enhanced-login-btn" style="display: none;">
                             <div class="login-btn-content">
@@ -227,6 +362,8 @@
                             </div>
                         </div>
                     </div>
+                </div>
+                <div class="header-center">
                 </div>
                 <div class="header-right">
                     <div class="autonomous-control">
@@ -2765,6 +2902,23 @@
             </div>
             
             <!-- Ollama section removed - moved to API tab -->
+            
+            <!-- Application Settings Section -->
+            <div class="control-section">
+                <h2>Application Settings</h2>
+                <div class="admin-subsection">
+                    <h3>Features</h3>
+                    <div class="settings-controls">
+                        <label class="setting-toggle">
+                            <input type="checkbox" id="crossmint-enabled-toggle">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Enable CrossMint Integration</span>
+                            <span class="setting-description">Enable CrossMint wallet and social login features (requires page refresh)</span>
+                        </label>
+                    </div>
+                    <button id="save-settings-btn" class="action-btn primary" style="margin-top: 15px;">Save Settings</button>
+                </div>
+            </div>
             
             <!-- PostgreSQL Settings Section -->
             <div class="control-section">

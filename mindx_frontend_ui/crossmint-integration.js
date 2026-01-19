@@ -970,11 +970,28 @@ class CrossMintIntegration {
 // Create global instance
 window.CrossMintIntegration = new CrossMintIntegration();
 
-// Auto-initialize when DOM is ready
+// Auto-initialize when DOM is ready (only if enabled in settings)
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        await window.CrossMintIntegration.initialize();
-        await window.CrossMintIntegration.restoreSession();
+        // Check if CrossMint is enabled in settings (default: disabled/off)
+        // If setting doesn't exist, default to false (off)
+        let crossmintEnabled = localStorage.getItem('crossmint_enabled') === 'true';
+        
+        // If setting doesn't exist yet, set it to false (off) as default
+        if (localStorage.getItem('crossmint_enabled') === null) {
+            localStorage.setItem('crossmint_enabled', 'false');
+            crossmintEnabled = false;
+        }
+        
+        if (crossmintEnabled) {
+            console.log('CrossMint is enabled, initializing...');
+            await window.CrossMintIntegration.initialize();
+            await window.CrossMintIntegration.restoreSession();
+        } else {
+            console.log('CrossMint is disabled by default (off). Enable it in Admin > Application Settings to use.');
+            // Set disabled flag
+            window.CrossMintIntegration.isInitialized = false;
+        }
     } catch (error) {
         console.error('Failed to auto-initialize CrossMint integration:', error);
     }

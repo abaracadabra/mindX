@@ -150,6 +150,8 @@ body::after {
     padding: 40px; 
     border-radius: 15px; 
     border: 2px solid var(--border-glow);
+    min-height: 400px; /* Ensure container has minimum height */
+    overflow: visible; /* Ensure content is not clipped */
     box-shadow: 
         0 0 30px rgba(0, 168, 255, 0.2),
         inset 0 0 30px rgba(0, 168, 255, 0.05),
@@ -1229,12 +1231,110 @@ pre::before {
 }
 
 .tab-content {
-    display: none;
+    display: none !important;
     animation: fadeIn 0.3s ease-in-out;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    min-height: 200px; /* Ensure tabs have space */
+    width: 100%;
+    position: relative;
 }
 
 .tab-content.active {
-    display: block;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Ensure tab content is visible when main application is shown */
+#main-application .tab-content.active {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Ensure tab content is visible inside container */
+.container .tab-content.active {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Make sure tab content takes up space */
+.tab-content.active .control-section {
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* Ensure tab content has minimum height and is visible */
+.tab-content.active {
+    min-height: 300px !important;
+    padding: 20px 0 !important;
+}
+
+/* Ensure all child elements in active tabs are visible */
+.tab-content.active * {
+    visibility: visible !important;
+}
+
+/* Nuclear option: Force active tabs to be visible no matter what */
+.tab-content.active,
+#main-application .tab-content.active,
+.container .tab-content.active,
+body.authenticated .tab-content.active {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+    min-height: 300px !important;
+    width: 100% !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+/* Ensure main application shows tabs */
+#main-application {
+    display: block !important;
+    visibility: visible !important;
+}
+
+body.authenticated #main-application {
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* Settings toggle styling */
+.setting-toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px;
+    background: rgba(0, 168, 255, 0.05);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.setting-toggle:hover {
+    background: rgba(0, 168, 255, 0.1);
+}
+
+.setting-toggle input[type="checkbox"] {
+    margin: 0;
+}
+
+.setting-description {
+    font-size: 0.85em;
+    color: rgba(255, 255, 255, 0.6);
+    margin-left: 40px;
+    margin-top: -5px;
+}
+
+.settings-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 @keyframes fadeIn {

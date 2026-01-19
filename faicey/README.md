@@ -11,9 +11,9 @@ A three.js-based holographic face rendering system that creates expressive, wire
 - **3D Holographic Wireframe**: Interactive browser-based 3D face rendering
 - **Wireframe Rendering**: Stylized wireframe faces using three.js materials
 - **Facial Expressions**: Dynamic eye and mouth movements using morph targets and blendshapes
-- **8 Morph Targets**: smile, frown, mouth_open, blink, wink_left, wink_right, eyebrows_raised, eyebrows_furrowed
-- **12+ Expression Presets**: neutral, smile, laugh, thinking, coding, confused, etc.
-- **4 Personas**: Professor Codephreak, mindX Base, Friendly Assistant, Mysterious Oracle
+- **28 Morph Targets**: Advanced facial control including ears, nose, and expressions
+- **14 Expression Presets**: neutral, smile, laugh, thinking, coding, concentrated, excited, etc.
+- **5 Personas**: Professor Codephreak, mindX Base, Friendly Assistant, Mysterious Oracle, Jaimla (Female)
 - **Modular Architecture**: Easy to create custom personas
 - **Pure JavaScript**: No external dependencies beyond three.js
 - **Real-time Animation**: Smooth expression transitions and animations

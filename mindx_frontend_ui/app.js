@@ -2,26 +2,44 @@
 console.log('🚀 mindX app.js loaded at:', new Date().toISOString());
 console.log('🔧 Version: FRESH CACHE BUSTED LOAD');
 
-// Connect MetaMask wallet - Enhanced version (inline version in HTML handles initial connection)
-// This version adds enhanced error handling and integration with app.js features
+// Connect MetaMask wallet - Enhanced version using viem
+// This version uses viem for proper wallet connection and challenge-response authentication
 async function connectMetaMask() {
     try {
-        console.log('🔗 Connecting to MetaMask (app.js version)...');
+        console.log('🔗 Connecting to MetaMask with viem (app.js version)...');
         console.log('window.ethereum available:', typeof window.ethereum !== 'undefined');
         
         // Check if MetaMask is available
         if (typeof window.ethereum === 'undefined') {
             throw new Error('MetaMask is not installed. Please install MetaMask browser extension to continue.');
         }
+
+        // Dynamically import viem (ESM module)
+        let viem;
+        try {
+            viem = await import('https://cdn.jsdelivr.net/npm/viem@2.21.45/+esm');
+        } catch (importError) {
+            throw new Error('Failed to load viem library. Please refresh the page.');
+        }
         
-        console.log('MetaMask detected, requesting account access...');
-        console.log('window.ethereum:', window.ethereum);
+        console.log('MetaMask detected, creating viem wallet client...');
         
-        // Request account access - This should trigger MetaMask popup
-        console.log('Calling window.ethereum.request({ method: "eth_requestAccounts" })...');
-        const accounts = await window.ethereum.request({
-            method: 'eth_requestAccounts'
+        // Create viem wallet client
+        // Handle both namespace and named exports
+        const createWalletClient = viem.createWalletClient || viem.default?.createWalletClient;
+        const custom = viem.custom || viem.default?.custom;
+        
+        if (!createWalletClient || !custom) {
+            throw new Error('viem exports not found. Please refresh the page.');
+        }
+        
+        const walletClient = createWalletClient({
+            transport: custom(window.ethereum)
         });
+        
+        // Request account access using viem
+        console.log('Requesting account access via viem...');
+        const accounts = await walletClient.requestAddresses();
         
         console.log('MetaMask response received:', accounts);
 
@@ -37,6 +55,80 @@ async function connectMetaMask() {
             method: 'eth_chainId'
         });
 
+        // Get API base URL (from API_CONFIG if available, otherwise use defaults)
+        const apiBaseUrl = (typeof API_CONFIG !== 'undefined' && API_CONFIG.baseUrl) 
+            ? API_CONFIG.baseUrl 
+            : (window.MINDX_API_URL || `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`);
+
+        // Step 1: Get challenge from backend
+        console.log('Requesting authentication challenge...');
+        const challengeResponse = await fetch(`${apiBaseUrl}/users/challenge`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                wallet_address: walletAddress,
+                action: 'login'
+            })
+        });
+
+        if (!challengeResponse.ok) {
+            throw new Error('Failed to get authentication challenge from server');
+        }
+
+        const challengeData = await challengeResponse.json();
+        const challengeMessage = challengeData.challenge_message;
+        console.log('Challenge received:', challengeMessage);
+
+        // Step 2: Sign challenge message using viem
+        console.log('Requesting signature from MetaMask...');
+        const signature = await walletClient.signMessage({
+            account: walletAddress,
+            message: challengeMessage
+        });
+        console.log('Challenge signed:', signature);
+
+        // Step 3: Register/authenticate user with backend
+        console.log('Authenticating with backend at:', `${apiBaseUrl}/users/register-with-signature`);
+        let authResponse;
+        try {
+            authResponse = await fetch(`${apiBaseUrl}/users/register-with-signature`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    wallet_address: walletAddress,
+                    signature: signature,
+                    message: challengeMessage,
+                    metadata: {
+                        chainId: chainId,
+                        provider: 'metamask',
+                        authMethod: 'wallet'
+                    }
+                })
+            });
+        } catch (fetchError) {
+            console.error('Auth fetch error:', fetchError);
+            throw new Error(`Failed to connect to backend at ${apiBaseUrl}. Please ensure the backend is running on port 8000. Error: ${fetchError.message}`);
+        }
+
+        if (!authResponse.ok) {
+            const errorText = await authResponse.text();
+            let errorData;
+            try {
+                errorData = JSON.parse(errorText);
+            } catch (e) {
+                errorData = { error: errorText };
+            }
+            console.error('Auth response error:', errorData);
+            throw new Error(errorData.error || `Authentication failed (${authResponse.status}): ${errorText}`);
+        }
+
+        const authData = await authResponse.json();
+        console.log('Authentication successful:', authData);
+
         // Create user object
         const userData = {
             id: walletAddress,
@@ -44,6 +136,7 @@ async function connectMetaMask() {
             provider: 'metamask',
             chainId: chainId,
             authMethod: 'wallet',
+            signature: signature,
             timestamp: Date.now()
         };
 
@@ -62,7 +155,7 @@ async function connectMetaMask() {
             window.pendingAuthSuccess = userData;
         }
         
-        console.log('✅ MetaMask wallet connected successfully!');
+        console.log('✅ MetaMask wallet connected and authenticated successfully!');
         
     } catch (error) {
         console.error('❌ MetaMask connection failed:', error);
@@ -1824,63 +1917,268 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Tab Management
     function initializeTabs() {
+        // Get fresh references to tab elements
+        const allTabBtns = document.querySelectorAll('.tab-btn');
+        const allTabContents = document.querySelectorAll('.tab-content');
+        
+        console.log('Tab initialization:', {
+            tabButtons: allTabBtns.length,
+            tabContents: allTabContents.length
+        });
+        
         // Ensure control tab is active by default
         const controlTab = document.getElementById('control-tab');
         const controlTabBtn = document.querySelector('[data-tab="control"]');
         
-        console.log('Tab initialization:', {
-            controlTab: !!controlTab,
-            controlTabBtn: !!controlTabBtn,
-            controlTabClasses: controlTab ? controlTab.className : 'No tab',
-            controlTabBtnClasses: controlTabBtn ? controlTabBtn.className : 'No button'
+        // Hide all tab contents first
+        allTabContents.forEach(content => {
+            content.classList.remove('active');
+        });
+        
+        // Remove active from all buttons
+        allTabBtns.forEach(btn => {
+            btn.classList.remove('active');
         });
         
         if (controlTab && controlTabBtn) {
             controlTab.classList.add('active');
+            // Use setProperty with important to override any CSS
+            controlTab.style.setProperty('display', 'block', 'important');
+            controlTab.style.setProperty('visibility', 'visible', 'important');
+            controlTab.style.setProperty('opacity', '1', 'important');
             controlTabBtn.classList.add('active');
-            console.log('Control tab activated');
+            console.log('✅ Control tab activated and made visible');
+            console.log('Control tab check:', {
+                hasActive: controlTab.classList.contains('active'),
+                computedDisplay: window.getComputedStyle(controlTab).display,
+                computedVisibility: window.getComputedStyle(controlTab).visibility,
+                innerHTMLLength: controlTab.innerHTML.length,
+                hasContent: controlTab.querySelector('.control-section') !== null
+            });
         } else {
-            console.error('Control tab or button not found!');
+            console.error('❌ Control tab or button not found!', {
+                controlTab: !!controlTab,
+                controlTabBtn: !!controlTabBtn
+            });
         }
         
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tabId = btn.getAttribute('data-tab');
+        // Add click handlers to all tab buttons
+        allTabBtns.forEach(btn => {
+            // Remove any existing listeners by cloning
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            
+            newBtn.addEventListener('click', () => {
+                const tabId = newBtn.getAttribute('data-tab');
+                console.log(`🔄 Switching to tab: ${tabId}`);
+                console.log(`Tab button clicked:`, {
+                    tabId: tabId,
+                    buttonText: newBtn.textContent,
+                    buttonClasses: newBtn.className
+                });
                 
                 // Remove active class from all tabs and contents
-                tabBtns.forEach(b => b.classList.remove('active'));
-                tabContents.forEach(c => c.classList.remove('active'));
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => {
+                    c.classList.remove('active');
+                    c.style.setProperty('display', 'none', 'important');
+                    c.style.setProperty('visibility', 'hidden', 'important');
+                    c.style.setProperty('opacity', '0', 'important');
+                });
                 
                 // Add active class to clicked tab and corresponding content
-                btn.classList.add('active');
-                document.getElementById(`${tabId}-tab`).classList.add('active');
+                newBtn.classList.add('active');
+                const tabContent = document.getElementById(`${tabId}-tab`);
+                console.log(`Looking for tab content with ID: ${tabId}-tab`, {
+                    found: !!tabContent,
+                    tabContentId: tabContent ? tabContent.id : 'N/A'
+                });
                 
-                // Load tab-specific data
-                loadTabData(tabId);
+                if (tabContent) {
+                    tabContent.classList.add('active');
+                    // Force display to ensure visibility with !important override
+                    tabContent.style.setProperty('display', 'block', 'important');
+                    tabContent.style.setProperty('visibility', 'visible', 'important');
+                    tabContent.style.setProperty('opacity', '1', 'important');
+                    
+                    // Also ensure parent containers are visible
+                    let parent = tabContent.parentElement;
+                    while (parent && parent !== document.body) {
+                        if (parent.id !== 'main-application') {
+                            parent.style.setProperty('display', 'block', 'important');
+                            parent.style.setProperty('visibility', 'visible', 'important');
+                        }
+                        parent = parent.parentElement;
+                    }
+                    
+                    console.log(`✅ Tab ${tabId} activated and made visible`);
+                    console.log(`Tab content details:`, {
+                        id: tabContent.id,
+                        display: window.getComputedStyle(tabContent).display,
+                        visibility: window.getComputedStyle(tabContent).visibility,
+                        opacity: window.getComputedStyle(tabContent).opacity,
+                        height: tabContent.offsetHeight,
+                        width: tabContent.offsetWidth,
+                        hasContent: tabContent.innerHTML.length > 0,
+                        contentLength: tabContent.innerHTML.length,
+                        firstChild: tabContent.firstElementChild ? tabContent.firstElementChild.tagName : 'none',
+                        parentDisplay: tabContent.parentElement ? window.getComputedStyle(tabContent.parentElement).display : 'N/A'
+                    });
+                    
+                    // Force a reflow to ensure the browser renders the change
+                    void tabContent.offsetHeight;
+                    
+                    // Load tab-specific data immediately (no delay needed)
+                    const loadTabDataFn = window.loadTabData || loadTabData;
+                    console.log(`Attempting to load data for tab ${tabId}`, {
+                        loadTabDataFnAvailable: typeof loadTabDataFn === 'function',
+                        windowLoadTabData: typeof window.loadTabData === 'function',
+                        localLoadTabData: typeof loadTabData === 'function'
+                    });
+                    
+                    if (typeof loadTabDataFn === 'function') {
+                        try {
+                            console.log(`Calling loadTabData for ${tabId}...`);
+                            loadTabDataFn(tabId);
+                            console.log(`✅ loadTabData called for ${tabId}`);
+                        } catch (error) {
+                            console.error(`❌ Error loading data for tab ${tabId}:`, error);
+                            console.error('Error stack:', error.stack);
+                        }
+                    } else {
+                        console.warn(`⚠️ loadTabData function not available for tab: ${tabId}`);
+                        console.warn('Available functions:', {
+                            windowLoadTabData: typeof window.loadTabData,
+                            localLoadTabData: typeof loadTabData
+                        });
+                    }
+                } else {
+                    console.error(`❌ Tab content not found for: ${tabId}`);
+                    const allTabs = Array.from(document.querySelectorAll('.tab-content'));
+                    console.error('Available tab contents:', allTabs.map(t => t.id));
+                    console.error('Looking for:', `${tabId}-tab`);
+                }
             });
         });
+        
+        console.log('✅ Tab initialization complete');
+        
+        // Debug: Log all tab contents and their visibility
+        const allTabs = document.querySelectorAll('.tab-content');
+        console.log('📊 Tab content visibility check:');
+        allTabs.forEach(tab => {
+            const computedStyle = window.getComputedStyle(tab);
+            console.log(`  - ${tab.id}: display=${computedStyle.display}, visibility=${computedStyle.visibility}, hasActive=${tab.classList.contains('active')}`);
+        });
     }
+    
+    // Make initializeTabs globally accessible
+    window.initializeTabs = initializeTabs;
+    
+    // Debug function to check tab visibility
+    window.debugTabs = function() {
+        console.log('🔍 Tab Debug Info:');
+        const mainApp = document.getElementById('main-application');
+        console.log('Main application:', {
+            exists: !!mainApp,
+            display: mainApp ? window.getComputedStyle(mainApp).display : 'N/A',
+            visibility: mainApp ? window.getComputedStyle(mainApp).visibility : 'N/A'
+        });
+        
+        const tabNav = document.querySelector('.tab-navigation');
+        console.log('Tab navigation:', {
+            exists: !!tabNav,
+            display: tabNav ? window.getComputedStyle(tabNav).display : 'N/A'
+        });
+        
+        const allTabs = document.querySelectorAll('.tab-content');
+        console.log('All tab contents:', allTabs.length);
+        allTabs.forEach(tab => {
+            const style = window.getComputedStyle(tab);
+            console.log(`  ${tab.id}:`, {
+                display: style.display,
+                visibility: style.visibility,
+                active: tab.classList.contains('active'),
+                offsetHeight: tab.offsetHeight,
+                offsetWidth: tab.offsetWidth
+            });
+        });
+        
+        const activeTab = document.querySelector('.tab-content.active');
+        console.log('Active tab:', activeTab ? {
+            id: activeTab.id,
+            display: window.getComputedStyle(activeTab).display,
+            visibility: window.getComputedStyle(activeTab).visibility
+        } : 'None');
+    };
 
     function loadTabData(tabId) {
+        console.log(`📋 Loading data for tab: ${tabId}`);
         // Load mindXagent data when mindXagent tab is activated
         if (tabId === 'mindxagent') {
             console.log('mindXagent tab activated - loading all data...');
-            loadMindXagentStatus();
-            loadMindXagentOllamaStatus();
-            loadMindXagentOllamaConversation();
-            loadMindXagentThinking();
-            loadMindXagentActions();
+            
+            // Ensure tab content is visible first
+            const mindxagentTab = document.getElementById('mindxagent-tab');
+            if (mindxagentTab) {
+                mindxagentTab.style.setProperty('display', 'block', 'important');
+                mindxagentTab.style.setProperty('visibility', 'visible', 'important');
+                mindxagentTab.style.setProperty('opacity', '1', 'important');
+                console.log('✅ mindXagent tab made visible');
+            }
+            
+            // Load all data with error handling
+            (async () => {
+                try {
+                    console.log('Loading mindXagent status...');
+                    await loadMindXagentStatus();
+                } catch (error) {
+                    console.error('Error loading mindXagent status:', error);
+                }
+                
+                try {
+                    console.log('Loading mindXagent Ollama status...');
+                    await loadMindXagentOllamaStatus();
+                } catch (error) {
+                    console.error('Error loading mindXagent Ollama status:', error);
+                }
+                
+                try {
+                    console.log('Loading mindXagent Ollama conversation...');
+                    await loadMindXagentOllamaConversation();
+                } catch (error) {
+                    console.error('Error loading mindXagent Ollama conversation:', error);
+                }
+                
+                try {
+                    console.log('Loading mindXagent thinking...');
+                    await loadMindXagentThinking();
+                } catch (error) {
+                    console.error('Error loading mindXagent thinking:', error);
+                }
+                
+                try {
+                    console.log('Loading mindXagent actions...');
+                    await loadMindXagentActions();
+                } catch (error) {
+                    console.error('Error loading mindXagent actions:', error);
+                }
+            })();
             
             // Set up auto-refresh every 5 seconds
             if (window.mindxagentRefreshInterval) {
                 clearInterval(window.mindxagentRefreshInterval);
             }
             window.mindxagentRefreshInterval = setInterval(async () => {
-                await loadMindXagentStatus();
-                await loadMindXagentOllamaStatus();
-                await loadMindXagentOllamaConversation();
-                await loadMindXagentThinking();
-                await loadMindXagentActions();
+                try {
+                    await loadMindXagentStatus();
+                    await loadMindXagentOllamaStatus();
+                    await loadMindXagentOllamaConversation();
+                    await loadMindXagentThinking();
+                    await loadMindXagentActions();
+                } catch (error) {
+                    console.error('Error in mindXagent auto-refresh:', error);
+                }
             }, 5000);
             return;
         }
@@ -1954,6 +2252,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
         }
     }
+    
+    // Make loadTabData globally accessible
+    window.loadTabData = loadTabData;
 
     // Control Tab Functions
     function initializeControlTab() {
@@ -4360,6 +4661,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadAdminData() {
+        // Load and apply CrossMint setting
+        const crossmintToggle = document.getElementById('crossmint-enabled-toggle');
+        const saveSettingsBtn = document.getElementById('save-settings-btn');
+        
+        if (crossmintToggle) {
+            // Load current setting (default: false/off if not set)
+            const crossmintEnabled = localStorage.getItem('crossmint_enabled') === 'true';
+            crossmintToggle.checked = crossmintEnabled;
+            // Ensure default is off if setting doesn't exist
+            if (localStorage.getItem('crossmint_enabled') === null) {
+                localStorage.setItem('crossmint_enabled', 'false');
+            }
+            console.log('CrossMint setting loaded:', crossmintEnabled, '(default: off)');
+        }
+        
+        if (saveSettingsBtn) {
+            saveSettingsBtn.addEventListener('click', () => {
+                if (crossmintToggle) {
+                    const enabled = crossmintToggle.checked;
+                    localStorage.setItem('crossmint_enabled', enabled.toString());
+                    console.log('CrossMint setting saved:', enabled);
+                    alert(`CrossMint integration ${enabled ? 'enabled' : 'disabled'}. Please refresh the page for changes to take effect.`);
+                }
+            });
+        }
+        
         // Ensure window manager is initialized when admin tab loads
         if (!window.windowManager) {
             console.log('Waiting for window manager to initialize...');
@@ -9725,8 +10052,8 @@ function setupMetaMaskEventListeners() {
     console.log('✅ MetaMask event listeners set up');
 }
 
-// Handle account changes (per MetaMask docs)
-function handleAccountsChanged(accounts) {
+// Handle account changes (per MetaMask docs) - Enhanced with viem support
+async function handleAccountsChanged(accounts) {
     console.log('🔄 MetaMask accounts changed:', accounts);
     
     if (accounts.length === 0) {
@@ -9742,50 +10069,109 @@ function handleAccountsChanged(accounts) {
             window.location.reload();
         }
     } else {
-        // User switched accounts
+        // User switched accounts - need to re-authenticate with new account
         const newAddress = accounts[0];
         console.log('✅ User switched to account:', newAddress);
         
-        // Update stored user data
-        const existingUser = localStorage.getItem('crossmint_user');
-        if (existingUser) {
+        // Clear old authentication
+        localStorage.removeItem('crossmint_authenticated');
+        
+        // Re-authenticate with new account if MetaMask is available
+        if (typeof window.ethereum !== 'undefined') {
             try {
-                const userData = JSON.parse(existingUser);
-                userData.address = newAddress;
-                userData.id = newAddress;
-                localStorage.setItem('crossmint_user', JSON.stringify(userData));
-                localStorage.setItem('crossmint_wallet', newAddress);
-                
-                // Update UI if authenticated
-                if (typeof handleAuthenticationSuccess === 'function' && typeof isAuthenticated !== 'undefined' && isAuthenticated) {
-                    handleAuthenticationSuccess(userData);
+                console.log('Re-authenticating with new account...');
+                // Use the connectMetaMask function to re-authenticate
+                if (typeof connectMetaMask === 'function') {
+                    await connectMetaMask();
+                } else {
+                    // Fallback: just update the address
+                    const existingUser = localStorage.getItem('crossmint_user');
+                    if (existingUser) {
+                        try {
+                            const userData = JSON.parse(existingUser);
+                            userData.address = newAddress;
+                            userData.id = newAddress;
+                            localStorage.setItem('crossmint_user', JSON.stringify(userData));
+                            localStorage.setItem('crossmint_wallet', newAddress);
+                            
+                            // Update UI if authenticated
+                            if (typeof handleAuthenticationSuccess === 'function' && typeof isAuthenticated !== 'undefined' && isAuthenticated) {
+                                handleAuthenticationSuccess(userData);
+                            }
+                        } catch (e) {
+                            console.error('Error updating account:', e);
+                        }
+                    }
                 }
-            } catch (e) {
-                console.error('Error updating account:', e);
+            } catch (error) {
+                console.error('Failed to re-authenticate with new account:', error);
+                // Fallback to just updating address
+                const existingUser = localStorage.getItem('crossmint_user');
+                if (existingUser) {
+                    try {
+                        const userData = JSON.parse(existingUser);
+                        userData.address = newAddress;
+                        userData.id = newAddress;
+                        localStorage.setItem('crossmint_user', JSON.stringify(userData));
+                        localStorage.setItem('crossmint_wallet', newAddress);
+                    } catch (e) {
+                        console.error('Error updating account:', e);
+                    }
+                }
+            }
+        } else {
+            // Fallback: just update the address if viem not available
+            const existingUser = localStorage.getItem('crossmint_user');
+            if (existingUser) {
+                try {
+                    const userData = JSON.parse(existingUser);
+                    userData.address = newAddress;
+                    userData.id = newAddress;
+                    localStorage.setItem('crossmint_user', JSON.stringify(userData));
+                    localStorage.setItem('crossmint_wallet', newAddress);
+                    
+                    // Update UI if authenticated
+                    if (typeof handleAuthenticationSuccess === 'function' && typeof isAuthenticated !== 'undefined' && isAuthenticated) {
+                        handleAuthenticationSuccess(userData);
+                    }
+                } catch (e) {
+                    console.error('Error updating account:', e);
+                }
             }
         }
     }
 }
 
-// Handle chain changes (per MetaMask docs)
+// Handle chain changes (per MetaMask docs) - Enhanced with viem support
 function handleChainChanged(chainId) {
     console.log('🔄 MetaMask chain changed:', chainId);
+    
+    // MetaMask returns chainId as hex string, convert if needed
+    const chainIdString = typeof chainId === 'string' ? chainId : `0x${chainId.toString(16)}`;
     
     // Update stored chain ID
     const existingUser = localStorage.getItem('crossmint_user');
     if (existingUser) {
         try {
             const userData = JSON.parse(existingUser);
-            userData.chainId = chainId;
+            userData.chainId = chainIdString;
             localStorage.setItem('crossmint_user', JSON.stringify(userData));
             
-            // Optionally reload to ensure compatibility with new chain
-            // For now, just log the change
-            console.log('✅ Chain ID updated to:', chainId);
+            // Log the change
+            console.log('✅ Chain ID updated to:', chainIdString);
+            
+            // Optionally show a notification to user about chain change
+            if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
+                console.log('Chain changed while authenticated. User may need to re-authenticate for new chain.');
+            }
         } catch (e) {
             console.error('Error updating chain:', e);
         }
     }
+    
+    // Reload page to ensure compatibility with new chain (per MetaMask docs recommendation)
+    // This is a common pattern to avoid stale state
+    window.location.reload();
 }
 
 // Initialize authentication system
@@ -9949,13 +10335,53 @@ function isSessionValid(auth) {
     return sessionAge < maxSessionAge;
 }
 
-// Handle login process - Using working CrossMint MetaMask connection
+// Helper function to get user-friendly error messages
+function getErrorMessage(error) {
+    // MetaMask error codes
+    if (error.code === 4001) {
+        return 'MetaMask connection rejected. Please approve the connection request.';
+    } else if (error.code === -32002) {
+        return 'MetaMask connection already pending. Please check MetaMask and try again.';
+    } else if (error.code === -32603) {
+        return 'Internal JSON-RPC error. Please try again.';
+    } else if (error.code === -32602) {
+        return 'Invalid parameters. Please try again.';
+    }
+    
+    // Network errors
+    if (error.message && error.message.includes('fetch')) {
+        return 'Network error. Please check your connection and try again.';
+    }
+    
+    // Viem-specific errors
+    if (error.message && error.message.includes('viem')) {
+        return 'Wallet connection library error. Please refresh the page.';
+    }
+    
+    // Authentication errors
+    if (error.message && (error.message.includes('challenge') || error.message.includes('authentication'))) {
+        return 'Authentication failed. Please try connecting again.';
+    }
+    
+    // Generic error message
+    return error.message || 'Login failed. Please try again.';
+}
+
+// Handle login process - Using viem with challenge-response authentication
 async function handleLogin() {
     console.log('🔑 Starting login process...');
     
+    const loginBtn = document.getElementById('loginConnectBtn');
+    
     try {
+        // Check prerequisites
+        if (typeof window.ethereum === 'undefined') {
+            throw new Error('MetaMask is not installed. Please install MetaMask browser extension to continue.');
+        }
+        
+        // viem will be loaded dynamically in connectMetaMask, so no need to check here
+        
         // Show loading state
-        const loginBtn = document.getElementById('loginConnectBtn');
         if (loginBtn) {
             loginBtn.disabled = true;
             loginBtn.innerHTML = `
@@ -9966,26 +10392,17 @@ async function handleLogin() {
             `;
         }
         
-        // Use the working CrossMint MetaMask connection from crossmint-google-wallet.html
-        console.log('🔗 Using working CrossMint MetaMask connection...');
+        // Use viem-based connection with challenge-response
+        console.log('🔗 Connecting with viem and challenge-response authentication...');
         await connectMetaMask();
         
     } catch (error) {
         console.error('❌ Login failed:', error);
         
-        let errorMessage = 'Login failed. Please try again.';
-        if (error.code === 4001) {
-            errorMessage = 'MetaMask connection rejected. Please approve the connection request.';
-        } else if (error.code === -32002) {
-            errorMessage = 'MetaMask connection already pending. Please check MetaMask and try again.';
-        } else if (error.message) {
-            errorMessage = error.message;
-        }
-        
+        const errorMessage = getErrorMessage(error);
         showLoginError(errorMessage);
         
         // Reset button
-        const loginBtn = document.getElementById('loginConnectBtn');
         if (loginBtn) {
             loginBtn.disabled = false;
             loginBtn.innerHTML = `
@@ -10037,19 +10454,39 @@ window.testMetaMaskConnection = async function() {
 // Note: connectMetaMask is now defined at the top of the file for early availability
 
 // Connect MetaMask wallet (alternative function name - kept for compatibility)
+// Updated to use viem with challenge-response authentication
 async function connectMetaMaskWallet() {
     try {
-        console.log('🔗 Connecting to MetaMask...');
+        console.log('🔗 Connecting to MetaMask with viem...');
         
         // Check if MetaMask is available
         if (typeof window.ethereum === 'undefined') {
             throw new Error('MetaMask is not installed. Please install MetaMask browser extension to continue.');
         }
+
+        // Dynamically import viem (ESM module)
+        let viem;
+        try {
+            viem = await import('https://cdn.jsdelivr.net/npm/viem@2.21.45/+esm');
+        } catch (importError) {
+            throw new Error('Failed to load viem library. Please refresh the page.');
+        }
         
-        // Request account access
-        const accounts = await window.ethereum.request({
-            method: 'eth_requestAccounts'
+        // Create viem wallet client
+        // Handle both namespace and named exports
+        const createWalletClient = viem.createWalletClient || viem.default?.createWalletClient;
+        const custom = viem.custom || viem.default?.custom;
+        
+        if (!createWalletClient || !custom) {
+            throw new Error('viem exports not found. Please refresh the page.');
+        }
+        
+        const walletClient = createWalletClient({
+            transport: custom(window.ethereum)
         });
+        
+        // Request account access using viem
+        const accounts = await walletClient.requestAddresses();
 
         if (accounts.length === 0) {
             throw new Error('No accounts found. Please unlock MetaMask and try again.');
@@ -10063,6 +10500,80 @@ async function connectMetaMaskWallet() {
             method: 'eth_chainId'
         });
 
+        // Get API base URL
+        const apiBaseUrl = (typeof API_CONFIG !== 'undefined' && API_CONFIG.baseUrl) 
+            ? API_CONFIG.baseUrl 
+            : (window.MINDX_API_URL || `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`);
+
+        // Step 1: Get challenge from backend
+        console.log('Requesting authentication challenge...');
+        const challengeResponse = await fetch(`${apiBaseUrl}/users/challenge`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                wallet_address: walletAddress,
+                action: 'login'
+            })
+        });
+
+        if (!challengeResponse.ok) {
+            throw new Error('Failed to get authentication challenge from server');
+        }
+
+        const challengeData = await challengeResponse.json();
+        const challengeMessage = challengeData.challenge_message;
+        console.log('Challenge received:', challengeMessage);
+
+        // Step 2: Sign challenge message using viem
+        console.log('Requesting signature from MetaMask...');
+        const signature = await walletClient.signMessage({
+            account: walletAddress,
+            message: challengeMessage
+        });
+        console.log('Challenge signed:', signature);
+
+        // Step 3: Register/authenticate user with backend
+        console.log('Authenticating with backend at:', `${apiBaseUrl}/users/register-with-signature`);
+        let authResponse;
+        try {
+            authResponse = await fetch(`${apiBaseUrl}/users/register-with-signature`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    wallet_address: walletAddress,
+                    signature: signature,
+                    message: challengeMessage,
+                    metadata: {
+                        chainId: chainId,
+                        provider: 'metamask',
+                        authMethod: 'wallet'
+                    }
+                })
+            });
+        } catch (fetchError) {
+            console.error('Auth fetch error:', fetchError);
+            throw new Error(`Failed to connect to backend at ${apiBaseUrl}. Please ensure the backend is running on port 8000. Error: ${fetchError.message}`);
+        }
+
+        if (!authResponse.ok) {
+            const errorText = await authResponse.text();
+            let errorData;
+            try {
+                errorData = JSON.parse(errorText);
+            } catch (e) {
+                errorData = { error: errorText };
+            }
+            console.error('Auth response error:', errorData);
+            throw new Error(errorData.error || `Authentication failed (${authResponse.status}): ${errorText}`);
+        }
+
+        const authData = await authResponse.json();
+        console.log('Authentication successful:', authData);
+
         // Create user data
         const userData = {
             id: walletAddress,
@@ -10070,6 +10581,7 @@ async function connectMetaMaskWallet() {
             provider: 'metamask',
             chainId: chainId,
             authMethod: 'wallet',
+            signature: signature,
             timestamp: Date.now()
         };
 
@@ -10080,7 +10592,12 @@ async function connectMetaMaskWallet() {
         localStorage.setItem('crossmint_auth_method', 'wallet');
         
         // Trigger authentication success
-        handleAuthenticationSuccess(userData);
+        if (typeof handleAuthenticationSuccess === 'function') {
+            handleAuthenticationSuccess(userData);
+        } else {
+            console.warn('handleAuthenticationSuccess not available yet');
+            window.pendingAuthSuccess = userData;
+        }
         
         console.log('✅ MetaMask login successful');
         
@@ -10099,6 +10616,7 @@ function waitForCrossMintIntegration() {
 // Handle successful authentication
 function handleAuthenticationSuccess(userData) {
     console.log('✅ Authentication successful:', userData);
+    console.log('📋 User data:', JSON.stringify(userData, null, 2));
     
     // Create session
     const sessionId = generateSessionId();
@@ -10114,12 +10632,30 @@ function handleAuthenticationSuccess(userData) {
     
     // Store authentication state
     localStorage.setItem('mindx_auth', JSON.stringify(authenticationState));
+    console.log('💾 Authentication state stored in localStorage');
     
     isAuthenticated = true;
     currentUser = userData;
     
     // Show main application
-    showMainApplication();
+    console.log('🔄 Calling showMainApplication()...');
+    try {
+        showMainApplication();
+        console.log('✅ showMainApplication() completed');
+    } catch (error) {
+        console.error('❌ Error in showMainApplication():', error);
+        // Fallback: try to manually show/hide elements
+        const loginLanding = document.getElementById('login-landing');
+        const mainApplication = document.getElementById('main-application');
+        if (loginLanding) {
+            loginLanding.style.display = 'none';
+            console.log('✅ Login landing hidden');
+        }
+        if (mainApplication) {
+            mainApplication.style.display = 'block';
+            console.log('✅ Main application shown');
+        }
+    }
     
     // Initialize user-specific features
     if (typeof initializeUserSpecificFeatures === 'function') {
@@ -10137,7 +10673,25 @@ function handleAuthenticationSuccess(userData) {
 }
 
 // Make handleAuthenticationSuccess globally accessible
+// Replace the stub if it exists
 window.handleAuthenticationSuccess = handleAuthenticationSuccess;
+console.log('✅ handleAuthenticationSuccess function registered globally');
+
+// Check if there's a pending authentication from before app.js loaded
+if (window.pendingAuthSuccess) {
+    console.log('🔄 Processing pending authentication from before app.js loaded...');
+    const pendingAuth = window.pendingAuthSuccess;
+    delete window.pendingAuthSuccess;
+    // Wait a bit for DOM to be ready
+    setTimeout(() => {
+        if (typeof handleAuthenticationSuccess === 'function') {
+            handleAuthenticationSuccess(pendingAuth);
+            console.log('✅ Pending authentication processed');
+        } else {
+            console.error('❌ handleAuthenticationSuccess still not available for pending auth');
+        }
+    }, 100);
+}
 
 // Check for pending authentication on load
 if (window.pendingAuthSuccess) {
@@ -10252,16 +10806,139 @@ function showLoginLanding() {
 
 // Show main application
 function showMainApplication() {
+    console.log('🔄 showMainApplication() called');
     const loginLanding = document.getElementById('login-landing');
     const mainApplication = document.getElementById('main-application');
     
-    if (loginLanding) loginLanding.style.display = 'none';
-    if (mainApplication) mainApplication.style.display = 'block';
+    console.log('Login landing element:', loginLanding);
+    console.log('Main application element:', mainApplication);
+    
+    // Debug: Check all tab contents exist
+    const allTabContents = document.querySelectorAll('.tab-content');
+    console.log(`Found ${allTabContents.length} tab content divs:`, Array.from(allTabContents).map(t => ({
+        id: t.id,
+        hasContent: t.innerHTML.length > 0,
+        contentLength: t.innerHTML.length,
+        display: window.getComputedStyle(t).display,
+        visibility: window.getComputedStyle(t).visibility
+    })));
+    
+    if (loginLanding) {
+        loginLanding.style.display = 'none';
+        console.log('✅ Login landing hidden');
+    } else {
+        console.warn('⚠️ Login landing element not found!');
+    }
+    
+    if (mainApplication) {
+        mainApplication.style.setProperty('display', 'block', 'important');
+        mainApplication.style.setProperty('visibility', 'visible', 'important');
+        console.log('✅ Main application shown');
+        
+        // Force all tab contents to be properly initialized
+        const allTabContents = document.querySelectorAll('.tab-content');
+        console.log(`Found ${allTabContents.length} tab content divs`);
+        
+        allTabContents.forEach(tab => {
+            // Remove active from all first and hide them
+            tab.classList.remove('active');
+            tab.style.setProperty('display', 'none', 'important');
+            tab.style.setProperty('visibility', 'hidden', 'important');
+            tab.style.setProperty('opacity', '0', 'important');
+        });
+        
+        // Ensure the control tab content is visible
+        const controlTab = document.getElementById('control-tab');
+        if (controlTab) {
+            controlTab.classList.add('active');
+            controlTab.style.setProperty('display', 'block', 'important');
+            controlTab.style.setProperty('visibility', 'visible', 'important');
+            controlTab.style.setProperty('opacity', '1', 'important');
+            console.log('✅ Control tab content made visible');
+            console.log('Control tab computed style:', {
+                display: window.getComputedStyle(controlTab).display,
+                visibility: window.getComputedStyle(controlTab).visibility,
+                opacity: window.getComputedStyle(controlTab).opacity,
+                height: controlTab.offsetHeight,
+                width: controlTab.offsetWidth,
+                innerHTML: controlTab.innerHTML.substring(0, 200) + '...',
+                parentDisplay: window.getComputedStyle(controlTab.parentElement).display,
+                parentVisibility: window.getComputedStyle(controlTab.parentElement).visibility
+            });
+            
+            // Ensure parent container is visible
+            if (controlTab.parentElement) {
+                controlTab.parentElement.style.setProperty('display', 'block', 'important');
+                controlTab.parentElement.style.setProperty('visibility', 'visible', 'important');
+            }
+        } else {
+            console.error('❌ Control tab not found!');
+        }
+        
+        // Ensure tab navigation is visible
+        const tabNav = document.querySelector('.tab-navigation');
+        if (tabNav) {
+            tabNav.style.setProperty('display', 'block', 'important');
+            tabNav.style.setProperty('visibility', 'visible', 'important');
+            console.log('✅ Tab navigation made visible');
+        } else {
+            console.error('❌ Tab navigation not found!');
+        }
+    } else {
+        console.warn('⚠️ Main application element not found!');
+    }
     
     document.body.classList.add('authenticated');
+    console.log('✅ Authenticated class added to body');
     
     // Update wallet display
     updateWalletDisplay();
+    
+    // Initialize tabs if not already initialized
+    const initTabs = window.initializeTabs || initializeTabs;
+    if (typeof initTabs === 'function') {
+        console.log('🔄 Initializing tabs...');
+        try {
+            initTabs();
+            console.log('✅ Tabs initialized');
+            
+            // Force show the active tab content after initialization
+            setTimeout(() => {
+                const activeTabContent = document.querySelector('.tab-content.active');
+                if (activeTabContent) {
+                    activeTabContent.style.display = 'block';
+                    activeTabContent.style.visibility = 'visible';
+                    console.log('✅ Active tab content forced visible:', activeTabContent.id);
+                } else {
+                    console.warn('⚠️ No active tab content found');
+                }
+            }, 100);
+        } catch (error) {
+            console.error('❌ Error initializing tabs:', error);
+        }
+    } else {
+        console.warn('⚠️ initializeTabs function not available yet');
+        // Wait for DOMContentLoaded to complete
+        setTimeout(() => {
+            const delayedInitTabs = window.initializeTabs || initializeTabs;
+            if (typeof delayedInitTabs === 'function') {
+                delayedInitTabs();
+                console.log('✅ Tabs initialized (delayed)');
+                
+                // Force show the active tab content
+                setTimeout(() => {
+                    const activeTabContent = document.querySelector('.tab-content.active');
+                    if (activeTabContent) {
+                        activeTabContent.style.display = 'block';
+                        activeTabContent.style.visibility = 'visible';
+                        console.log('✅ Active tab content forced visible (delayed):', activeTabContent.id);
+                    }
+                }, 100);
+            } else {
+                console.error('❌ initializeTabs still not available after delay');
+            }
+        }, 500);
+    }
     
     // Load system data
     setTimeout(() => {
@@ -12126,49 +12803,9 @@ async function testOllamaCompletion() {
             saveBtn.addEventListener('click', saveMindXagentSettings);
         }
         
-        // Auto-refresh when tab is shown
-        document.addEventListener('click', async (e) => {
-            // Check if mindXagent tab button was clicked
-            const tabBtn = e.target.closest('[data-tab="mindxagent"]');
-            if (tabBtn) {
-                console.log('mindXagent tab clicked - loading all data...');
-                await loadMindXagentStatus();
-                await loadMindXagentOllamaStatus();
-                await loadMindXagentOllamaConversation();
-                await loadMindXagentThinking();
-                await loadMindXagentActions();
-                
-                // Set up auto-refresh every 5 seconds
-                if (window.mindxagentRefreshInterval) {
-                    clearInterval(window.mindxagentRefreshInterval);
-                }
-                window.mindxagentRefreshInterval = setInterval(async () => {
-                    await loadMindXagentStatus();
-                    await loadMindXagentOllamaStatus();
-                    await loadMindXagentOllamaConversation();
-                    await loadMindXagentThinking();
-                    await loadMindXagentActions();
-                }, 5000);
-            } else {
-                if (window.mindxagentRefreshInterval) {
-                    clearInterval(window.mindxagentRefreshInterval);
-                }
-            }
-        });
-        
-        // Also load on initial page load if mindXagent tab is active
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Check if mindXagent tab is already active
-            const mindxagentTab = document.getElementById('mindxagent-tab');
-            if (mindxagentTab && mindxagentTab.style.display !== 'none') {
-                console.log('mindXagent tab is active on load - loading data...');
-                await loadMindXagentStatus();
-                await loadMindXagentOllamaStatus();
-                await loadMindXagentOllamaConversation();
-                await loadMindXagentThinking();
-                await loadMindXagentActions();
-            }
-        });
+        // Note: Tab switching and data loading is handled by initializeTabs() and loadTabData()
+        // This function only sets up button event listeners for the mindXagent tab
+        console.log('✅ mindXagent tab button listeners initialized');
     }
     
     // Initialize on DOM ready

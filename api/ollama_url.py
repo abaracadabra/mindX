@@ -73,18 +73,30 @@ class OllamaAPI:
         elif host and port:
             self.base_url = f"http://{host}:{port}"
         else:
-            # Try environment/config
-            env_url = os.getenv("MINDX_LLM__OLLAMA__BASE_URL")
-            config_url = self.config.get("llm.ollama.base_url")
-            config_host = self.config.get("llm.ollama.host", "localhost")
-            config_port = self.config.get("llm.ollama.port", 11434)
+            # Try to load from settings if available (matching chatter.py pattern)
+            try:
+                from webmind.settings import SettingsManager
+                settings = SettingsManager()
+                base_url = settings.get('ollama_base_url', None)
+                if base_url:
+                    self.base_url = base_url
+            except:
+                pass
             
-            if env_url:
-                self.base_url = env_url
-            elif config_url:
-                self.base_url = config_url
-            else:
-                self.base_url = f"http://{config_host}:{config_port}"
+            # Fall back to environment/config if settings didn't provide it
+            if not hasattr(self, 'base_url') or not self.base_url:
+                env_url = os.getenv("MINDX_LLM__OLLAMA__BASE_URL")
+                config_url = self.config.get("llm.ollama.base_url")
+                # Default to 10.0.0.155:18080 (matching startup_agent default)
+                config_host = self.config.get("llm.ollama.host", "10.0.0.155")
+                config_port = self.config.get("llm.ollama.port", 18080)
+                
+                if env_url:
+                    self.base_url = env_url
+                elif config_url:
+                    self.base_url = config_url
+                else:
+                    self.base_url = f"http://{config_host}:{config_port}"
         
         # Ensure base_url doesn't end with /api
         self.base_url = self.base_url.rstrip('/').replace('/api', '')
@@ -109,11 +121,22 @@ class OllamaAPI:
             raise RuntimeError("aiohttp not available")
         
         if self.http_session is None or self.http_session.closed:
+            # Get timeout from settings (matching chatter.py pattern)
+            try:
+                from webmind.settings import SettingsManager
+                timeout_settings = SettingsManager()
+                ollama_timeout = timeout_settings.get('ollama_timeout', 10.0)
+                # For inference, use longer timeout if available
+                ollama_inference_timeout = timeout_settings.get('ollama_inference_timeout', 120.0)
+            except:
+                ollama_timeout = 10.0
+                ollama_inference_timeout = 120.0
+            
             # Extended timeout for large model inference (per Ollama API docs)
-            # Total timeout: 120s for large models, sock_read: 60s for streaming responses
+            # Total timeout: configurable for large models, sock_read: 60s for streaming responses
             self.http_session = aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(
-                    total=120,  # 120 second total timeout for large models
+                    total=ollama_inference_timeout,  # Configurable total timeout for large models
                     connect=10,  # 10 second connection timeout
                     sock_read=60  # 60 second read timeout for inference
                 )
@@ -123,8 +146,16 @@ class OllamaAPI:
     async def list_models(self) -> List[Dict[str, Any]]:
         """List all available models from Ollama server"""
         try:
+            # Get timeout from settings (matching chatter.py pattern)
+            try:
+                from webmind.settings import SettingsManager
+                timeout_settings = SettingsManager()
+                ollama_timeout = timeout_settings.get('ollama_timeout', 10.0)
+            except:
+                ollama_timeout = 10.0
+            
             session = await self._get_session()
-            async with session.get(f"{self.api_url}/tags", timeout=aiohttp.ClientTimeout(total=10)) as response:
+            async with session.get(f"{self.api_url}/tags", timeout=aiohttp.ClientTimeout(total=ollama_timeout)) as response:
                 if response.status == 200:
                     data = await response.json()
                     models = data.get("models", [])
