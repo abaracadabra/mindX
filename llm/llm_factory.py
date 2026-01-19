@@ -10,8 +10,8 @@ import logging
 from utils.config import Config, PROJECT_ROOT
 from utils.logging_config import get_logger
 from .llm_interface import LLMHandlerInterface
-# ADDED: Import the new RateLimiter class
-from .rate_limiter import RateLimiter
+# ADDED: Import the new RateLimiter classes
+from .rate_limiter import RateLimiter, DualLayerRateLimiter
 
 logger = get_logger(__name__)
 
@@ -89,7 +89,8 @@ async def create_llm_handler(
     model_name: Optional[str] = None,
     api_key: Optional[str] = None,
     base_url: Optional[str] = None,
-    rate_limit_profile: str = "default_rpm"
+    rate_limit_profile: str = "default_rpm",
+    execution_timeout_minutes: Optional[int] = None
 ) -> LLMHandlerInterface:
     global_config = Config() # Get a Config instance to pass to handlers if needed
     factory_config = _load_llm_factory_config_json()
@@ -165,33 +166,77 @@ async def create_llm_handler(
 
         # ADDED: Create the rate limiter instance based on provider config
         rate_limit_profiles = factory_config.get("rate_limit_profiles", {})
-        requests_per_minute = rate_limit_profiles.get(rate_limit_profile, 2)
+        profile_config = rate_limit_profiles.get(rate_limit_profile, {})
+        
+        # Handle both old format (int) and new format (dict)
+        if isinstance(profile_config, dict):
+            requests_per_minute = profile_config.get("rpm", 60)
+            requests_per_hour = profile_config.get("rph", 100)
+        else:
+            # Legacy format: just RPM as integer
+            requests_per_minute = profile_config if isinstance(profile_config, int) else 60
+            requests_per_hour = rate_limit_profiles.get("default_rph", 100)
+        
         provider_config = global_config.get(f"llm.{eff_provider_name}", {})
         max_retries = provider_config.get("rate_limit_max_retries", 5)
         initial_backoff = provider_config.get("rate_limit_initial_backoff_s", 1.0)
         
-        rate_limiter = RateLimiter(
+        # Use dual-layer rate limiter (minute + hourly)
+        rate_limiter = DualLayerRateLimiter(
             requests_per_minute=requests_per_minute,
+            requests_per_hour=requests_per_hour,
             max_retries=max_retries,
             initial_backoff_s=initial_backoff
         )
+        
+        # Get execution timeout from config
+        timeout_config = factory_config.get("execution_timeouts", {})
+        if execution_timeout_minutes is None:
+            execution_timeout_minutes = timeout_config.get("default_minutes", 15)
+        
+        # Validate timeout range
+        min_timeout = timeout_config.get("min_minutes", 1)
+        max_timeout = timeout_config.get("max_minutes", 120)
+        execution_timeout_minutes = max(min_timeout, min(max_timeout, execution_timeout_minutes))
 
-        # ADDED: Pass the rate_limiter to each handler's constructor
+        # ADDED: Pass the rate_limiter and timeout to each handler's constructor
         if eff_provider_name == "ollama":
-            if OllamaHandler: handler_instance = OllamaHandler(model_name_for_api=model_arg_for_handler, base_url=eff_base_url)
+            if OllamaHandler: handler_instance = OllamaHandler(
+                model_name_for_api=model_arg_for_handler, 
+                base_url=eff_base_url,
+                execution_timeout_minutes=execution_timeout_minutes
+            )
             else: logger.error("LLMFactory (mindX): OllamaHandler not imported."); handler_instance = MockLLMHandler(model_name=model_arg_for_handler)
         elif eff_provider_name == "gemini":
             if GeminiHandler:
-                handler_instance = GeminiHandler(model_name_for_api=model_arg_for_handler, api_key=eff_api_key, rate_limiter=rate_limiter, config=global_config)
+                handler_instance = GeminiHandler(
+                    model_name_for_api=model_arg_for_handler, 
+                    api_key=eff_api_key, 
+                    rate_limiter=rate_limiter, 
+                    config=global_config,
+                    execution_timeout_minutes=execution_timeout_minutes
+                )
             else:
                 logger.error("LLMFactory (mindX): GeminiHandler not imported.")
                 handler_instance = MockLLMHandler(model_name=model_arg_for_handler)
         elif eff_provider_name == "groq":
-            if GroqHandler: handler_instance = GroqHandler(model_name_for_api=model_arg_for_handler, api_key=eff_api_key, rate_limiter=rate_limiter, config=global_config)
+            if GroqHandler: handler_instance = GroqHandler(
+                model_name_for_api=model_arg_for_handler, 
+                api_key=eff_api_key, 
+                rate_limiter=rate_limiter, 
+                config=global_config,
+                execution_timeout_minutes=execution_timeout_minutes
+            )
             else: logger.error("LLMFactory (mindX): GroqHandler not imported."); handler_instance = MockLLMHandler(model_name=model_arg_for_handler)
         elif eff_provider_name == "mistral":
             if MistralHandler: 
-                handler_instance = MistralHandler(model_name_for_api=model_arg_for_handler, api_key=eff_api_key, rate_limiter=rate_limiter, config=global_config)
+                handler_instance = MistralHandler(
+                    model_name_for_api=model_arg_for_handler, 
+                    api_key=eff_api_key, 
+                    rate_limiter=rate_limiter, 
+                    config=global_config,
+                    execution_timeout_minutes=execution_timeout_minutes
+                )
                 if not eff_api_key:
                     logger.warning("LLMFactory (mindX): Mistral API key not provided. Handler will operate in degraded mode.")
             else: 

@@ -1981,9 +1981,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 document.querySelectorAll('.tab-content').forEach(c => {
                     c.classList.remove('active');
-                    c.style.setProperty('display', 'none', 'important');
-                    c.style.setProperty('visibility', 'hidden', 'important');
-                    c.style.setProperty('opacity', '0', 'important');
+                    // Hide all tabs
+                    c.style.display = 'none';
+                    c.style.visibility = 'hidden';
+                    c.style.opacity = '0';
                 });
                 
                 // Add active class to clicked tab and corresponding content
@@ -1991,15 +1992,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 const tabContent = document.getElementById(`${tabId}-tab`);
                 console.log(`Looking for tab content with ID: ${tabId}-tab`, {
                     found: !!tabContent,
-                    tabContentId: tabContent ? tabContent.id : 'N/A'
+                    tabContentId: tabContent ? tabContent.id : 'N/A',
+                    innerHTML: tabContent ? tabContent.innerHTML.substring(0, 100) : 'N/A'
                 });
                 
                 if (tabContent) {
+                    // First, ensure the tab content element itself is visible
                     tabContent.classList.add('active');
-                    // Force display to ensure visibility with !important override
-                    tabContent.style.setProperty('display', 'block', 'important');
-                    tabContent.style.setProperty('visibility', 'visible', 'important');
-                    tabContent.style.setProperty('opacity', '1', 'important');
+                    
+                    // Force display using multiple methods to ensure it works
+                    tabContent.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; height: auto !important; min-height: 300px !important; position: relative !important;';
+                    
+                    // Also ensure all child elements are visible
+                    const allChildren = tabContent.querySelectorAll('*');
+                    allChildren.forEach(child => {
+                        const computedStyle = window.getComputedStyle(child);
+                        if (computedStyle.display === 'none') {
+                            child.style.display = '';
+                        }
+                        if (computedStyle.visibility === 'hidden') {
+                            child.style.visibility = '';
+                        }
+                    });
+                    
+                    // Ensure control-sections are visible
+                    const controlSections = tabContent.querySelectorAll('.control-section');
+                    controlSections.forEach(section => {
+                        section.style.display = 'block';
+                        section.style.visibility = 'visible';
+                    });
                     
                     // Also ensure parent containers are visible
                     let parent = tabContent.parentElement;

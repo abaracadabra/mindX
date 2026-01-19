@@ -1,11 +1,37 @@
 {
   "rate_limit_profiles": {
     "default_rpm": 60,
-    "high_throughput": 120,
-    "conservative": 30,
-    "ollama_local": 1000,
-    "mistral": 50,
-    "gemini": 40
+    "default_rph": 100,
+    "high_throughput": {
+      "rpm": 120,
+      "rph": 200
+    },
+    "conservative": {
+      "rpm": 30,
+      "rph": 50
+    },
+    "ollama_local": {
+      "rpm": 1000,
+      "rph": 50000
+    },
+    "mistral": {
+      "rpm": 50,
+      "rph": 80
+    },
+    "gemini": {
+      "rpm": 40,
+      "rph": 60
+    }
+  },
+  "execution_timeouts": {
+    "default_minutes": 15,
+    "max_minutes": 120,
+    "min_minutes": 1
+  },
+  "stuck_loop_detection": {
+    "max_cycles_no_progress": 3,
+    "max_repeated_errors": 5,
+    "circuit_breaker_threshold": 3
   },
   "default_provider_preference_order": ["mistral", "ollama", "gemini"]
 }

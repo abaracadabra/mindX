@@ -81,7 +81,12 @@ class GroqHandler(LLMHandlerInterface): # pragma: no cover
              request_params.pop("stream", None) # For now, force non-streamed if this method is called
 
         try:
-            chat_completion = await self.async_client.chat.completions.create(**request_params)
+            # Enforce execution timeout
+            timeout_seconds = getattr(self, 'execution_timeout_minutes', 15) * 60
+            chat_completion = await asyncio.wait_for(
+                self.async_client.chat.completions.create(**request_params),
+                timeout=timeout_seconds
+            )
             
             if not chat_completion.choices or not chat_completion.choices[0].message: # pragma: no cover
                 logger.warning(f"GroqHandler: Response for '{model}' from Groq had no choices or message content.")
@@ -96,6 +101,10 @@ class GroqHandler(LLMHandlerInterface): # pragma: no cover
 
             logger.debug(f"Groq response for '{model}' (first 100 chars): {final_response[:100]}")
             return final_response
+        except asyncio.TimeoutError:
+            timeout_minutes = getattr(self, 'execution_timeout_minutes', 15)
+            logger.error(f"Groq API call timed out after {timeout_minutes} minutes")
+            return f"Error: ExecutionTimeout - API call exceeded timeout of {timeout_minutes} minutes"
         except Exception as e: # pragma: no cover
             logger.error(f"Groq API call failed for model '{model}': {e}", exc_info=True)
             # Groq SDK might raise specific exceptions, e.g., groq.APIError

@@ -16,12 +16,14 @@ class LLMHandlerInterface(ABC): # pragma: no cover
                  api_key: Optional[str] = None,
                  base_url: Optional[str] = None,
                  rate_limiter: Optional[RateLimiter] = None,
+                 execution_timeout_minutes: Optional[int] = None,
                  **kwargs: Any):
         self.provider_name = provider_name
         self.model_name_for_api = model_name_for_api
         self.api_key = api_key
         self.base_url = base_url
         self.rate_limiter = rate_limiter
+        self.execution_timeout_minutes = execution_timeout_minutes or 15  # Default 15 minutes
 
 
     @abstractmethod

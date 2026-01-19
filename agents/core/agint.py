@@ -17,6 +17,8 @@ from agents.core.belief_system import BeliefSystem
 from agents.core.bdi_agent import BDIAgent
 from agents.orchestration.coordinator_agent import CoordinatorAgent, InteractionType, InteractionStatus
 from agents.memory_agent import MemoryAgent
+from .stuck_loop_detector import StuckLoopDetector
+from .exit_detector import ExitDetector
 
 logger = get_logger(__name__)
 
@@ -74,6 +76,16 @@ class AGInt:
         }
         self.last_action_context: Optional[Dict[str, Any]] = None
         self.q_values: Dict[Tuple[str, DecisionType], float] = {}  # Q-table for RL learning
+        
+        # Stuck loop detection
+        self.stuck_loop_detector = StuckLoopDetector()
+        
+        # Dual-condition exit detection
+        self.exit_detector = ExitDetector(
+            min_consecutive_done_signals=2,
+            require_file_changes=True,
+            require_tests_pass=False
+        )
 
     def start(self, directive: str):
         if self.status == AgentStatus.RUNNING: return
@@ -149,6 +161,17 @@ class AGInt:
                 cycle_count += 1
                 logger.info(f"{self.log_prefix} === COGNITIVE CYCLE {cycle_count} ===")
                 
+                # Check for stuck loop
+                stuck_status = self.stuck_loop_detector.check_stuck()
+                if stuck_status["is_stuck"] and stuck_status["circuit_breaker_open"]:
+                    logger.error(
+                        f"{self.log_prefix} Loop is stuck! Circuit breaker OPEN. "
+                        f"Reasons: {', '.join(stuck_status.get('reasons', []))}"
+                    )
+                    # Wait longer before retrying when stuck
+                    await asyncio.sleep(300)  # 5 minutes
+                    continue
+                
                 # PERCEPTION: Occurs first, aware of the *previous* cycle's outcome.
                 logger.info(f"{self.log_prefix} 🔍 PERCEPTION: Analyzing system state...")
                 perception = await self._perceive()
@@ -181,6 +204,53 @@ class AGInt:
                     logger.info(f"{self.log_prefix} ✅ Action result: {result_data}")
                 else:
                     logger.warning(f"{self.log_prefix} ❌ Action failed: {result_data}")
+                
+                # Check for file changes in result_data
+                has_file_changes = False
+                if result_data and isinstance(result_data, dict):
+                    # Check various indicators of file changes
+                    has_file_changes = (
+                        result_data.get('file_changes') or
+                        result_data.get('files_modified') or
+                        result_data.get('code_changes') or
+                        (isinstance(result_data.get('changes'), list) and len(result_data.get('changes', [])) > 0)
+                    )
+                
+                # Record cycle in stuck loop detector
+                error_message = None if success else str(result_data) if result_data else "Action failed"
+                self.stuck_loop_detector.record_cycle(
+                    cycle_number=cycle_count,
+                    has_file_changes=has_file_changes,
+                    error_message=error_message,
+                    success=success,
+                    done_signal=False,  # TODO: Add done signal detection
+                    result_data=result_data
+                )
+                
+                # Check for exit signal in result_data
+                exit_signal = False
+                if result_data:
+                    exit_signal = self.exit_detector.parse_exit_signal_from_response(result_data)
+                    if exit_signal:
+                        self.exit_detector.record_explicit_signal(True, "action_result")
+                
+                # Record heuristic indicators
+                self.exit_detector.record_heuristic(
+                    file_changes=has_file_changes,
+                    tests_passed=False,  # TODO: Add test result checking
+                    completion_indicators=result_data if isinstance(result_data, dict) else {}
+                )
+                
+                # Check exit conditions
+                exit_check = self.exit_detector.check_exit_conditions()
+                if exit_check["should_exit"] and not autonomous_mode:
+                    logger.info(
+                        f"{self.log_prefix} Exit conditions met! "
+                        f"Heuristic: {exit_check['heuristic_met']}, "
+                        f"Explicit signal: {exit_check['explicit_signal_met']}"
+                    )
+                    self.status = AgentStatus.INACTIVE
+                    break
                 
                 # Show current LLM status after action
                 logger.info(f"{self.log_prefix} Current LLM Status: {self.state_summary.get('llm_status', 'Unknown')} | Operational: {self.state_summary.get('llm_operational', False)}")

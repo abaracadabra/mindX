@@ -2557,6 +2557,55 @@
                     </div>
                 </div>
                 
+                <!-- Ollama Connection Monitor Section -->
+                <div class="control-section">
+                    <h3>Ollama Connection Monitor</h3>
+                    <div id="ollama-connection-monitor" class="connection-monitor">
+                        <div class="monitor-header">
+                            <div class="monitor-status">
+                                <span class="status-indicator" id="ollama-monitor-indicator"></span>
+                                <span id="ollama-monitor-status-text">Monitoring...</span>
+                            </div>
+                            <div class="monitor-controls">
+                                <button id="start-ollama-monitor-btn" class="action-btn">Start Monitor</button>
+                                <button id="stop-ollama-monitor-btn" class="action-btn" style="display: none;">Stop Monitor</button>
+                            </div>
+                        </div>
+                        <div class="monitor-metrics">
+                            <div class="metric-card">
+                                <div class="metric-label">Connection Status</div>
+                                <div id="ollama-monitor-connection" class="metric-value">-</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Server URL</div>
+                                <div id="ollama-monitor-url" class="metric-value">-</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Last Check</div>
+                                <div id="ollama-monitor-last-check" class="metric-value">-</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Response Time</div>
+                                <div id="ollama-monitor-response-time" class="metric-value">-</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Models Available</div>
+                                <div id="ollama-monitor-models" class="metric-value">-</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Active Conversations</div>
+                                <div id="ollama-monitor-conversations" class="metric-value">-</div>
+                            </div>
+                        </div>
+                        <div class="monitor-log">
+                            <h4>Connection Log</h4>
+                            <div id="ollama-monitor-log" class="monitor-log-content">
+                                <div class="log-entry">Monitor not started</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Ollama Conversation Display Section -->
                 <div class="control-section ollama-conversation-section">
                     <div class="conversation-header">

@@ -28,6 +28,9 @@ from datetime import datetime
 
 from utils.config import Config, PROJECT_ROOT
 from utils.logging_config import get_logger
+from .stuck_loop_detector import StuckLoopDetector
+from .exit_detector import ExitDetector
+from .session_manager import SessionManager
 from agents.core.belief_system import BeliefSystem, BeliefSource
 from agents.memory_agent import MemoryAgent
 from agents.core.id_manager_agent import IDManagerAgent
@@ -252,6 +255,20 @@ class MindXAgent:
             "max_concurrent_improvements": 5,  # Increased from 1 to 5 for better parallelism
             "auto_apply_safe_improvements": True
         }
+        
+        # Stuck loop detection
+        self.stuck_loop_detector = StuckLoopDetector()
+        
+        # Dual-condition exit detection
+        self.exit_detector = ExitDetector(
+            min_consecutive_done_signals=2,
+            require_file_changes=True,
+            require_tests_pass=False
+        )
+        
+        # Session management
+        self.session_manager = SessionManager(default_expiration_hours=24)
+        self.current_session: Optional[Any] = None
         
     async def _async_init(self):
         """Asynchronous initialization of all components"""
@@ -2176,12 +2193,50 @@ class MindXAgent:
         """Main autonomous improvement loop"""
         logger.info(f"{self.log_prefix} Autonomous improvement loop started")
         
+        # Create or get session
+        if not self.current_session:
+            self.current_session = self.session_manager.create_session(
+                agent_id=self.agent_id,
+                metadata={"autonomous_mode": True}
+            )
+        else:
+            # Check if session expired
+            session = self.session_manager.get_session(self.current_session.session_id)
+            if not session or session.is_expired():
+                logger.info(f"{self.log_prefix} Session expired, creating new session")
+                self.current_session = self.session_manager.create_session(
+                    agent_id=self.agent_id,
+                    metadata={"autonomous_mode": True, "previous_session": self.current_session.session_id if self.current_session else None}
+                )
+        
         cycle_count = 0
         
         while self.running and self.autonomous_mode:
             try:
                 cycle_count += 1
                 logger.info(f"{self.log_prefix} === AUTONOMOUS CYCLE {cycle_count} ===")
+                
+                # Check for stuck loop
+                stuck_status = self.stuck_loop_detector.check_stuck()
+                if stuck_status["is_stuck"] and stuck_status["circuit_breaker_open"]:
+                    logger.error(
+                        f"{self.log_prefix} Loop is stuck! Circuit breaker OPEN. "
+                        f"Reasons: {', '.join(stuck_status.get('reasons', []))}"
+                    )
+                    # Record circuit breaker trip
+                    if self.current_session:
+                        self.session_manager.record_circuit_breaker_trip(self.current_session.session_id)
+                        # Auto-reset if too many trips
+                        new_session = self.session_manager.auto_reset_on_circuit_breaker(
+                            self.current_session.session_id,
+                            max_trips=3
+                        )
+                        if new_session:
+                            self.current_session = new_session
+                            logger.info(f"{self.log_prefix} Session auto-reset due to circuit breaker trips")
+                    # Wait longer before retrying when stuck
+                    await asyncio.sleep(600)  # 10 minutes
+                    continue
                 
                 # Check for identity crisis
                 if await self._check_identity_crisis():
@@ -2198,6 +2253,10 @@ class MindXAgent:
                 # Identify improvement opportunities
                 self._log_thinking("identifying_opportunities", "Identifying improvement opportunities from system state")
                 improvement_opportunities = await self._identify_improvement_opportunities(system_state)
+                
+                has_file_changes = False
+                error_message = None
+                success = False
                 
                 if improvement_opportunities:
                     logger.info(f"{self.log_prefix} Found {len(improvement_opportunities)} improvement opportunities")
@@ -2227,12 +2286,70 @@ class MindXAgent:
                                 logger.warning(f"{self.log_prefix} Error using Blueprint Agent: {e}")
                         
                         # Orchestrate improvement
-                        result = await self.orchestrate_self_improvement(top_priority['goal'])
-                        
-                        if result.success:
-                            logger.info(f"{self.log_prefix} Improvement cycle {cycle_count} completed successfully")
-                        else:
-                            logger.warning(f"{self.log_prefix} Improvement cycle {cycle_count} had issues")
+                        try:
+                            result = await self.orchestrate_self_improvement(top_priority['goal'])
+                            
+                            if result.success:
+                                logger.info(f"{self.log_prefix} Improvement cycle {cycle_count} completed successfully")
+                                success = True
+                                # Check if result indicates file changes
+                                if hasattr(result, 'file_changes') and result.file_changes:
+                                    has_file_changes = len(result.file_changes) > 0
+                                elif hasattr(result, 'changes_made') and result.changes_made:
+                                    has_file_changes = True
+                            else:
+                                logger.warning(f"{self.log_prefix} Improvement cycle {cycle_count} had issues")
+                                error_message = getattr(result, 'error', 'Improvement cycle had issues')
+                        except Exception as e:
+                            error_message = str(e)
+                            logger.error(f"{self.log_prefix} Error in improvement execution: {e}", exc_info=True)
+                
+                # Update session activity
+                if self.current_session:
+                    self.session_manager.update_session_activity(
+                        self.current_session.session_id,
+                        cycle_count=cycle_count,
+                        metadata={"last_improvement": top_priority['goal'] if prioritized else None}
+                    )
+                
+                # Record cycle in stuck loop detector
+                self.stuck_loop_detector.record_cycle(
+                    cycle_number=cycle_count,
+                    has_file_changes=has_file_changes,
+                    error_message=error_message,
+                    success=success,
+                    done_signal=False  # TODO: Add done signal detection
+                )
+                
+                # Check for exit signal in result
+                exit_signal = False
+                if result and hasattr(result, 'exit_signal'):
+                    exit_signal = result.exit_signal
+                elif result and isinstance(result, dict):
+                    exit_signal = self.exit_detector.parse_exit_signal_from_response(result)
+                
+                if exit_signal:
+                    self.exit_detector.record_explicit_signal(True, "improvement_result")
+                
+                # Record heuristic indicators
+                self.exit_detector.record_heuristic(
+                    file_changes=has_file_changes,
+                    tests_passed=False,  # TODO: Add test result checking
+                    completion_indicators={"improvement_success": success}
+                )
+                
+                # Check exit conditions (only in non-autonomous mode)
+                exit_check = self.exit_detector.check_exit_conditions()
+                if exit_check["should_exit"]:
+                    logger.info(
+                        f"{self.log_prefix} Exit conditions met! "
+                        f"Heuristic: {exit_check['heuristic_met']}, "
+                        f"Explicit signal: {exit_check['explicit_signal_met']}"
+                    )
+                    # In autonomous mode, we don't exit, but log the condition
+                    if not self.autonomous_mode:
+                        self.running = False
+                        break
                 
                 # Wait before next cycle (configurable interval)
                 await asyncio.sleep(300)  # 5 minutes between cycles
@@ -2241,7 +2358,16 @@ class MindXAgent:
                 logger.info(f"{self.log_prefix} Autonomous loop cancelled")
                 break
             except Exception as e:
+                error_message = str(e)
                 logger.error(f"{self.log_prefix} Error in autonomous loop: {e}", exc_info=True)
+                # Record error cycle
+                self.stuck_loop_detector.record_cycle(
+                    cycle_number=cycle_count,
+                    has_file_changes=False,
+                    error_message=error_message,
+                    success=False,
+                    done_signal=False
+                )
                 await asyncio.sleep(60)  # Wait 1 minute before retrying
     
     def _log_thinking(self, step: str, thought: str, metadata: Optional[Dict[str, Any]] = None):

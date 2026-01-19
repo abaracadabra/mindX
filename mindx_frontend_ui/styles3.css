@@ -1231,10 +1231,10 @@ pre::before {
 }
 
 .tab-content {
-    display: none !important;
+    display: none;
     animation: fadeIn 0.3s ease-in-out;
-    visibility: hidden !important;
-    opacity: 0 !important;
+    visibility: hidden;
+    opacity: 0;
     min-height: 200px; /* Ensure tabs have space */
     width: 100%;
     position: relative;
@@ -1244,6 +1244,8 @@ pre::before {
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
+    height: auto !important;
+    min-height: 300px !important;
 }
 
 /* Ensure tab content is visible when main application is shown */
@@ -1290,6 +1292,27 @@ body.authenticated .tab-content.active {
     width: 100% !important;
     position: relative !important;
     z-index: 1 !important;
+}
+
+/* Force all children of active tabs to be visible */
+.tab-content.active * {
+    visibility: visible !important;
+}
+
+.tab-content.active .control-section {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.tab-content.active .status-display,
+.tab-content.active .status-display-enhanced,
+.tab-content.active .conversation-display,
+.tab-content.active .thinking-display,
+.tab-content.active .actions-display {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 /* Ensure main application shows tabs */

@@ -106,13 +106,26 @@ class GeminiHandler(LLMHandlerInterface):
 
             framework_logger.debug(f"{self.log_prefix} Attempting API call (Attempt {attempt + 1}/{max_retries}) with model: {model_api_name}")
             try:
-                response = await asyncio.to_thread(
-                    model_instance.generate_content,
-                    contents=prompt,
-                    generation_config=generation_config,
-                    **kwargs
+                # Enforce execution timeout
+                timeout_seconds = self.execution_timeout_minutes * 60
+                response = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        model_instance.generate_content,
+                        contents=prompt,
+                        generation_config=generation_config,
+                        **kwargs
+                    ),
+                    timeout=timeout_seconds
                 )
                 return response.text
+            except asyncio.TimeoutError:
+                framework_logger.error(
+                    f"{self.log_prefix} API call timed out after {self.execution_timeout_minutes} minutes"
+                )
+                return json.dumps({
+                    "error": "ExecutionTimeout",
+                    "message": f"API call exceeded timeout of {self.execution_timeout_minutes} minutes"
+                })
             except Exception as e:
                 error_message = str(e)
                 is_rate_limit_error = "429" in error_message

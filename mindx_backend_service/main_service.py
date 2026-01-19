@@ -33,6 +33,7 @@ from utils.config import Config, PROJECT_ROOT
 from api.command_handler import CommandHandler
 from utils.logging_config import setup_logging, get_logger
 from mindx_backend_service.vault_manager import get_vault_manager
+from agents.monitoring.rate_limit_dashboard import RateLimitDashboard
 
 # Setup logging
 setup_logging()
@@ -1228,6 +1229,73 @@ def get_resource_usage():
         return result
     except Exception as e:
         logger.error(f"Failed to get resource usage: {e}")
+        return {
+            "error": str(e),
+            "timestamp": time.time()
+        }
+
+@app.get("/monitoring/rate-limits", summary="Get rate limit monitoring dashboard data")
+def get_rate_limit_monitoring(session_id: Optional[str] = None):
+    """
+    Get comprehensive rate limit monitoring dashboard data including:
+    - Rate limit metrics (minute and hourly)
+    - Circuit breaker status
+    - Session information
+    - Alerts
+    """
+    try:
+        dashboard = RateLimitDashboard()
+        
+        # Try to get rate limiter from a handler (if available)
+        rate_limiter = None
+        try:
+            from llm.llm_factory import create_llm_handler
+            import asyncio
+            # Create a handler to get rate limiter (non-blocking check)
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # If loop is running, we can't use it synchronously
+                # Just return basic info
+                pass
+            else:
+                handler = loop.run_until_complete(create_llm_handler())
+                if handler and hasattr(handler, 'rate_limiter'):
+                    rate_limiter = handler.rate_limiter
+        except Exception as e:
+            logger.debug(f"Could not get rate limiter: {e}")
+        
+        # Try to get stuck loop detector from mindXagent (if available)
+        stuck_loop_detector = None
+        try:
+            from agents.core.mindXagent import MindXAgent
+            import asyncio
+            loop = asyncio.get_event_loop()
+            if not loop.is_running():
+                agent = loop.run_until_complete(MindXAgent.get_instance())
+                if agent and hasattr(agent, 'stuck_loop_detector'):
+                    stuck_loop_detector = agent.stuck_loop_detector
+        except Exception as e:
+            logger.debug(f"Could not get stuck loop detector: {e}")
+        
+        # Try to get session manager
+        session_manager = None
+        try:
+            from agents.core.session_manager import SessionManager
+            session_manager = SessionManager()
+        except Exception as e:
+            logger.debug(f"Could not get session manager: {e}")
+        
+        # Get dashboard data
+        dashboard_data = dashboard.get_dashboard_data(
+            rate_limiter=rate_limiter,
+            stuck_loop_detector=stuck_loop_detector,
+            session_manager=session_manager,
+            session_id=session_id
+        )
+        
+        return dashboard_data
+    except Exception as e:
+        logger.error(f"Failed to get rate limit monitoring: {e}")
         return {
             "error": str(e),
             "timestamp": time.time()

@@ -2,11 +2,14 @@
 import asyncio
 import time
 import random
+import json
 from typing import Callable, Optional, Dict, Any
 from dataclasses import dataclass, asdict
 from collections import deque
+from pathlib import Path
 
 from utils.logging_config import get_logger
+from utils.config import PROJECT_ROOT
 
 logger = get_logger(__name__)
 
@@ -204,4 +207,193 @@ class RateLimiter:
             "success_rate": f"{metrics['success_rate']:.1%}",
             "avg_wait_time": f"{metrics['avg_wait_time_ms']:.1f}ms",
             "status": "healthy" if metrics['success_rate'] > 0.9 else "degraded" if metrics['success_rate'] > 0.5 else "critical"
+        }
+
+
+class HourlyRateLimiter:
+    """
+    Hourly rate limiter tracking API calls per hour.
+    Provides dual-layer protection alongside per-minute rate limiting.
+    """
+    def __init__(
+        self,
+        requests_per_hour: int = 100,
+        storage_path: Optional[Path] = None
+    ):
+        self.requests_per_hour = requests_per_hour
+        self.storage_path = storage_path or (PROJECT_ROOT / "data" / "monitoring" / "hourly_rate_limits.json")
+        self.storage_path.parent.mkdir(parents=True, exist_ok=True)
+        self.lock = asyncio.Lock()
+        
+        # Load existing call history
+        self.call_history: list = []
+        self._load_history()
+        
+        logger.info(f"HourlyRateLimiter initialized. Rate: {requests_per_hour}/hour")
+    
+    def _load_history(self):
+        """Load call history from persistent storage."""
+        try:
+            if self.storage_path.exists():
+                with self.storage_path.open("r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    self.call_history = data.get("call_history", [])
+                    # Clean old entries (older than 1 hour)
+                    self._clean_old_entries()
+        except Exception as e:
+            logger.warning(f"Failed to load hourly rate limit history: {e}. Starting fresh.")
+            self.call_history = []
+    
+    def _save_history(self):
+        """Save call history to persistent storage."""
+        try:
+            with self.storage_path.open("w", encoding="utf-8") as f:
+                json.dump({
+                    "call_history": self.call_history,
+                    "last_updated": time.time()
+                }, f, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to save hourly rate limit history: {e}")
+    
+    def _clean_old_entries(self):
+        """Remove call timestamps older than 1 hour."""
+        current_time = time.time()
+        hour_ago = current_time - 3600
+        self.call_history = [ts for ts in self.call_history if ts > hour_ago]
+    
+    async def check_and_record(self) -> bool:
+        """
+        Check if we can make a call (within hourly limit) and record it.
+        Returns True if allowed, False if limit exceeded.
+        """
+        async with self.lock:
+            current_time = time.time()
+            hour_ago = current_time - 3600
+            
+            # Clean old entries
+            self._clean_old_entries()
+            
+            # Check if we're at the limit
+            if len(self.call_history) >= self.requests_per_hour:
+                logger.warning(
+                    f"Hourly rate limit exceeded: {len(self.call_history)}/{self.requests_per_hour} calls/hour. "
+                    f"Oldest call: {time.time() - min(self.call_history):.1f}s ago"
+                )
+                return False
+            
+            # Record this call
+            self.call_history.append(current_time)
+            self._save_history()
+            
+            return True
+    
+    def get_remaining_calls(self) -> int:
+        """Get number of remaining calls in the current hour."""
+        self._clean_old_entries()
+        return max(0, self.requests_per_hour - len(self.call_history))
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get hourly rate limiter metrics."""
+        self._clean_old_entries()
+        current_time = time.time()
+        hour_ago = current_time - 3600
+        
+        # Calculate time until oldest call expires
+        oldest_call = min(self.call_history) if self.call_history else current_time
+        seconds_until_reset = max(0, 3600 - (current_time - oldest_call))
+        
+        return {
+            "requests_per_hour": self.requests_per_hour,
+            "calls_this_hour": len(self.call_history),
+            "remaining_calls": self.get_remaining_calls(),
+            "utilization": len(self.call_history) / self.requests_per_hour if self.requests_per_hour > 0 else 0.0,
+            "seconds_until_reset": seconds_until_reset,
+            "at_limit": len(self.call_history) >= self.requests_per_hour
+        }
+    
+    def get_status_summary(self) -> Dict[str, Any]:
+        """Get a human-readable status summary."""
+        metrics = self.get_metrics()
+        
+        return {
+            "rate_limit": f"{self.requests_per_hour}/hour",
+            "calls_this_hour": metrics["calls_this_hour"],
+            "remaining": metrics["remaining_calls"],
+            "utilization": f"{metrics['utilization']:.1%}",
+            "status": "at_limit" if metrics["at_limit"] else "available",
+            "reset_in": f"{metrics['seconds_until_reset']:.0f}s" if metrics["seconds_until_reset"] > 0 else "now"
+        }
+
+
+class DualLayerRateLimiter:
+    """
+    Combines per-minute and per-hour rate limiting for dual-layer protection.
+    Wraps both RateLimiter and HourlyRateLimiter.
+    """
+    def __init__(
+        self,
+        requests_per_minute: int,
+        requests_per_hour: int = 100,
+        max_retries: int = 5,
+        initial_backoff_s: float = 1.0,
+        status_callback: Optional[Callable[[int, int, float], None]] = None,
+        monitoring_callback: Optional[Callable[[Dict[str, Any]], None]] = None
+    ):
+        self.minute_limiter = RateLimiter(
+            requests_per_minute=requests_per_minute,
+            max_retries=max_retries,
+            initial_backoff_s=initial_backoff_s,
+            status_callback=status_callback,
+            monitoring_callback=monitoring_callback
+        )
+        self.hourly_limiter = HourlyRateLimiter(requests_per_hour=requests_per_hour)
+        
+        logger.info(
+            f"DualLayerRateLimiter initialized. "
+            f"Rate: {requests_per_minute}/min, {requests_per_hour}/hour"
+        )
+    
+    async def wait(self) -> bool:
+        """
+        Wait until both minute and hourly limits allow a request.
+        Returns True if successful, False if retries exhausted.
+        """
+        # First check hourly limit (non-blocking check)
+        if not await self.hourly_limiter.check_and_record():
+            logger.warning("Hourly rate limit exceeded. Request blocked.")
+            return False
+        
+        # Then wait for minute limit (may block with retries)
+        return await self.minute_limiter.wait()
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get combined metrics from both limiters."""
+        minute_metrics = self.minute_limiter.get_metrics()
+        hourly_metrics = self.hourly_limiter.get_metrics()
+        
+        return {
+            "minute_limiter": minute_metrics,
+            "hourly_limiter": hourly_metrics,
+            "combined_status": {
+                "minute_available": minute_metrics.get("success_rate", 0) > 0.5,
+                "hourly_available": not hourly_metrics["at_limit"],
+                "overall_available": (
+                    minute_metrics.get("success_rate", 0) > 0.5 and 
+                    not hourly_metrics["at_limit"]
+                )
+            }
+        }
+    
+    def get_status_summary(self) -> Dict[str, Any]:
+        """Get combined status summary."""
+        minute_status = self.minute_limiter.get_status_summary()
+        hourly_status = self.hourly_limiter.get_status_summary()
+        
+        return {
+            "minute_limiter": minute_status,
+            "hourly_limiter": hourly_status,
+            "overall_status": "healthy" if (
+                minute_status.get("status") == "healthy" and 
+                hourly_status.get("status") == "available"
+            ) else "degraded"
         }

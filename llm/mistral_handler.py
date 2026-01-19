@@ -87,7 +87,11 @@ class MistralHandler(LLMHandlerInterface):
             self.model_name_for_api = self.config.get("llm.mistral.default_model", "mistral-large-latest")
         
         # Get timeout settings
-        self.timeout = self.config.get("llm.mistral.timeout", 30)
+        # Use execution_timeout_minutes from parent if available, otherwise config
+        if hasattr(self, 'execution_timeout_minutes'):
+            self.timeout = self.execution_timeout_minutes * 60  # Convert to seconds
+        else:
+            self.timeout = self.config.get("llm.mistral.timeout", 30)
         self.max_retries = self.config.get("llm.mistral.max_retries", 3)
         
         # Initialize token counting
@@ -438,25 +442,34 @@ class MistralHandler(LLMHandlerInterface):
             # Count input tokens for cost calculation
             input_tokens = self.count_tokens(prompt, model)
             
-            # Make API request
-            async with self.session.post(f"{self.base_url}/chat/completions", json=payload) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    response_text = data["choices"][0]["message"]["content"]
-                    
-                    # Count output tokens and calculate cost
-                    output_tokens = self.count_tokens(response_text, model)
-                    cost = self.calculate_cost(input_tokens, output_tokens, model)
-                    
-                    # Log usage information
-                    logger.info(f"Mistral API call - Model: {model}, Input tokens: {input_tokens}, Output tokens: {output_tokens}, Cost: ${cost:.6f}")
-                    
-                    return response_text
-                else:
-                    error_text = await response.text()
-                    logger.error(f"Mistral API error {response.status}: {error_text}")
-                    return f"Error: Mistral API returned {response.status}: {error_text}"
+            # Make API request with timeout enforcement
+            async def _make_request():
+                async with self.session.post(f"{self.base_url}/chat/completions", json=payload) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        response_text = data["choices"][0]["message"]["content"]
+                        
+                        # Count output tokens and calculate cost
+                        output_tokens = self.count_tokens(response_text, model)
+                        cost = self.calculate_cost(input_tokens, output_tokens, model)
+                        
+                        # Log usage information
+                        logger.info(f"Mistral API call - Model: {model}, Input tokens: {input_tokens}, Output tokens: {output_tokens}, Cost: ${cost:.6f}")
+                        
+                        return response_text
+                    else:
+                        error_text = await response.text()
+                        logger.error(f"Mistral API error {response.status}: {error_text}")
+                        return f"Error: Mistral API returned {response.status}: {error_text}"
+            
+            # Enforce timeout
+            timeout_seconds = self.timeout
+            response_text = await asyncio.wait_for(_make_request(), timeout=timeout_seconds)
+            return response_text
         
+        except asyncio.TimeoutError:
+            logger.error(f"Mistral API call timed out after {self.timeout} seconds")
+            return f"Error: ExecutionTimeout - API call exceeded timeout of {self.timeout} seconds"
         except aiohttp.ClientError as e:
             logger.error(f"Mistral API request failed: {e}")
             return f"Error: Request failed: {e}"
