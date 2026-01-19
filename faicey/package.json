@@ -5,6 +5,11 @@
   "main": "core/FaceRenderer.js",
   "type": "module",
   "scripts": {
+    "test": "node test.js",
+    "demo": "node examples/ascii-face.js",
+    "personas": "node examples/show-personas.js",
+    "serve": "node serve.js",
+    "web": "node serve.js",
     "dev": "node --watch examples/professor-codephreak.js",
     "start": "node core/FaceRenderer.js",
     "example:professor": "node examples/professor-codephreak.js",

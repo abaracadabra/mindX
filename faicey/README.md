@@ -59,7 +59,16 @@ renderer.animate();
 ### Run Examples
 
 ```bash
-# Professor Codephreak example
+# Run tests
+npm test
+
+# Show all personas
+npm run personas
+
+# Animated demo (cycles through expressions)
+npm run demo
+
+# Professor Codephreak example (full demo)
 npm run example:professor
 
 # Basic face example
