@@ -1249,7 +1249,7 @@ function start_web_frontend {
     log_setup_info "Starting MindX Backend API on port $BACKEND_PORT_EFFECTIVE..."
     cd "$PROJECT_ROOT"
     VENV_PYTHON="$MINDX_VENV_PATH_ABS/bin/python"
-    $VENV_PYTHON -m uvicorn mindx_backend_service:app --host 0.0.0.0 --port $BACKEND_PORT_EFFECTIVE &
+    $VENV_PYTHON -m uvicorn mindx_backend_service.main_service:app --host 0.0.0.0 --port $BACKEND_PORT_EFFECTIVE &
     BACKEND_PID=$!
 
     # Wait for backend to start
@@ -1446,7 +1446,9 @@ function setup_virtual_environment_and_mindx_deps {
 
     # Upgrade pip
     log_setup_info "Upgrading pip..."
-    python -m pip install --upgrade pip -q || { log_setup_error "Failed to upgrade pip."; deactivate; return 1; }
+    if ! python -m pip install --upgrade pip -q 2>&1; then
+        log_setup_warn "pip upgrade had issues, but continuing..."
+    fi
 
     # Install dependencies from requirements.txt
     local requirements_file="$PROJECT_ROOT/requirements.txt"
@@ -1496,7 +1498,7 @@ elif [[ "$RUN_SERVICES_FLAG" == true ]]; then
     # The backend's main_service.py now calls uvicorn.run itself.
     # We need to ensure it uses the venv's python.
     VENV_PYTHON="$MINDX_VENV_PATH_ABS/bin/python"
-    BACKEND_EXEC_COMMAND="$VENV_PYTHON -m uvicorn mindx_backend_service:app --host 0.0.0.0 --port $BACKEND_PORT_EFFECTIVE"
+    BACKEND_EXEC_COMMAND="$VENV_PYTHON -m uvicorn mindx_backend_service.main_service:app --host 0.0.0.0 --port $BACKEND_PORT_EFFECTIVE"
 
     start_mindx_service "MindX Backend Service" "$BACKEND_EXEC_COMMAND" "$BACKEND_PID_FILE" "$MINDX_BACKEND_APP_LOG_FILE" "$PROJECT_ROOT" || \
         { log_setup_error "MindX Backend Service failed to start. Check logs. Exiting."; exit 1; }

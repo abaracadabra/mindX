@@ -2424,8 +2424,8 @@ class MindXAgent:
         ]
         
         # Get agent knowledge base stats
-        agent_count = len(self.agent_knowledge) if hasattr(self, 'agent_knowledge') else 0
-        registered_agents = len([k for k, v in self.agent_knowledge.items() if v.status == AgentStatus.ACTIVE]) if hasattr(self, 'agent_knowledge') else 0
+        agent_count = len(self.agent_knowledge) if hasattr(self, 'agent_knowledge') and self.agent_knowledge else 0
+        registered_agents = len([k for k, v in self.agent_knowledge.items() if hasattr(v, 'status') and v.status == AgentStatus.ACTIVE]) if hasattr(self, 'agent_knowledge') and self.agent_knowledge else 0
         
         # Get improvement opportunities summary
         improvement_summary = []
@@ -2452,7 +2452,7 @@ class MindXAgent:
             "agent_knowledge": {
                 "total_agents": agent_count,
                 "active_agents": registered_agents,
-                "last_updated": max([v.last_updated for v in self.agent_knowledge.values()]) if hasattr(self, 'agent_knowledge') and self.agent_knowledge else None
+                "last_updated": self._safe_get_last_updated()
             },
             "ollama": {
                 "enabled": self.ollama_chat_manager is not None,
@@ -2502,6 +2502,18 @@ class MindXAgent:
                 status["ollama"]["error"] = str(e)
         
         return status
+    
+    def _safe_get_last_updated(self) -> Optional[float]:
+        """Safely get the most recent last_updated timestamp from agent_knowledge"""
+        try:
+            if not hasattr(self, 'agent_knowledge') or not self.agent_knowledge:
+                return None
+            timestamps = [v.last_updated for v in self.agent_knowledge.values() 
+                         if hasattr(v, 'last_updated') and v.last_updated is not None]
+            return max(timestamps) if timestamps else None
+        except (TypeError, ValueError) as e:
+            logger.debug(f"{self.log_prefix} Error getting last_updated: {e}")
+            return None
     
     async def get_ollama_status(self) -> Dict[str, Any]:
         """Get detailed Ollama connection and inference status"""
@@ -2619,7 +2631,8 @@ class MindXAgent:
     async def _prioritize_improvements(self, opportunities: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Prioritize improvement opportunities"""
         # Sort by priority (lower number = higher priority)
-        return sorted(opportunities, key=lambda x: x.get("priority", 99))
+        # Handle None priorities safely
+        return sorted(opportunities, key=lambda x: x.get("priority") if x.get("priority") is not None else 99)
     
     async def shutdown(self):
         """Shutdown MindX Agent with replication and backup to GitHub"""

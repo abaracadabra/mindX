@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 class ASCIIFace {
-  constructor(personaName = 'professor-codephreak') {
+  constructor(personaName = 'jaimla') {
     this.personaName = personaName;
     this.currentExpression = 'neutral';
     this.morphValues = {
@@ -144,6 +144,7 @@ class ASCIIFace {
     else if (color.includes('00aaff')) colorCode = '\x1b[96m'; // Cyan
     else if (color.includes('ffaa00')) colorCode = '\x1b[93m'; // Yellow
     else if (color.includes('9900ff')) colorCode = '\x1b[95m'; // Magenta
+    else if (color.includes('ff0080')) colorCode = '\x1b[95m'; // Bright Pink/Magenta (Jaimla)
     else if (color.includes('ff00ff')) colorCode = '\x1b[95m'; // Magenta
 
     console.log('\n');

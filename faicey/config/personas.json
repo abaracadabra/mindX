@@ -118,6 +118,62 @@
           "intensity": 1.0
         }
       }
+    },
+    "jaimla": {
+      "name": "Jaimla",
+      "description": "Versatile multimodal ML agent with collaborative intelligence",
+      "gender": "female",
+      "defaultExpression": "happy",
+      "wireframe": {
+        "enabled": true,
+        "color": "0xff0080",
+        "style": "vibrant",
+        "thickness": 1.1
+      },
+      "expressions": {
+        "idle": {
+          "base": "smile",
+          "blink": true,
+          "blinkFrequency": 0.25
+        },
+        "processing": {
+          "base": "concentrated",
+          "intensity": 0.7
+        },
+        "learning": {
+          "base": "thinking",
+          "intensity": 0.6
+        },
+        "collaborating": {
+          "base": "happy",
+          "speaking": true,
+          "intensity": 0.9
+        },
+        "discovering": {
+          "base": "surprised",
+          "intensity": 0.8
+        },
+        "teaching": {
+          "base": "smile",
+          "speaking": true,
+          "intensity": 1.0
+        }
+      },
+      "animations": {
+        "multimodal": ["thinking", "concentrated", "happy"],
+        "collaboration": ["smile", "happy", "excited"],
+        "learning": ["thinking", "surprised", "smile"]
+      },
+      "personality": {
+        "traits": ["versatile", "collaborative", "intelligent", "adaptive", "empathetic"],
+        "expertise": ["multimodal-ai", "nlp", "computer-vision", "audio-recognition", "autonomous-agents"],
+        "specialties": ["local-models", "offline-operation", "decentralized-ai"]
+      },
+      "capabilities": {
+        "modalities": ["text", "voice", "vision", "recommendation"],
+        "deployment": ["local", "handheld", "offline"],
+        "collaboration": ["AUTOMINDx", "Faicey", "open-source"]
+      }
     }
   }
 }

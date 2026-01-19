@@ -3500,12 +3500,27 @@ async def get_mindxagent_status():
                 mindxagent.agent_knowledge = {}
             try:
                 return mindxagent.get_status()
-            except AttributeError as attr_err:
+            except (AttributeError, TypeError) as attr_err:
                 # If get_status fails, fix the attribute and try again
                 if 'improvement_opportunities' in str(attr_err):
                     mindxagent.improvement_opportunities = []
                     mindxagent._improvement_opportunities = []
                     return mindxagent.get_status()
+                # Handle None comparison errors
+                if 'not supported between instances' in str(attr_err) or 'NoneType' in str(attr_err):
+                    logger.warning(f"Comparison error in get_status, using safe fallback: {attr_err}")
+                    # Return a safe status without problematic fields
+                    return {
+                        "autonomous_mode": getattr(mindxagent, 'autonomous_mode', False),
+                        "running": getattr(mindxagent, 'running', False),
+                        "model": getattr(mindxagent, 'llm_model', None),
+                        "provider": getattr(mindxagent, 'llm_provider', None),
+                        "settings": getattr(mindxagent, 'settings', {}).copy() if hasattr(mindxagent, 'settings') else {},
+                        "thinking_steps_count": len(getattr(mindxagent, 'thinking_process', [])),
+                        "action_choices_count": len(getattr(mindxagent, 'action_choices', [])),
+                        "improvement_opportunities_count": len(getattr(mindxagent, 'improvement_opportunities', [])),
+                        "error": "Status calculation had issues, showing partial data"
+                    }
                 raise
         else:
             return {"status": "not_initialized"}

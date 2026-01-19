@@ -28,9 +28,14 @@ const mimeTypes = {
 const server = createServer((req, res) => {
     console.log(`${req.method} ${req.url}`);
 
-    let filePath = req.url === '/'
-        ? join(__dirname, 'examples', 'holographic-face.html')
-        : join(__dirname, req.url);
+    let filePath;
+    if (req.url === '/') {
+        filePath = join(__dirname, 'examples', 'holographic-face-3d.html');
+    } else if (req.url === '/basic') {
+        filePath = join(__dirname, 'examples', 'holographic-face.html');
+    } else {
+        filePath = join(__dirname, req.url);
+    }
 
     const ext = extname(filePath).toLowerCase();
     const contentType = mimeTypes[ext] || 'application/octet-stream';
