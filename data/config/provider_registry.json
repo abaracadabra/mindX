@@ -85,6 +85,21 @@
     "requires_base_url": true,
     "default_rate_limit_rpm": 1000,
     "default_rate_limit_tpm": 10000000,
+    "status": "enabled",
+    "enabled": true,
+    "metadata": {}
+  },
+  "grok": {
+    "name": "grok",
+    "display_name": "Grok (xAI)",
+    "module_path": "api.grok_api",
+    "factory_function": "create_grok_api",
+    "api_key_env_var": "GROK_API_KEY",
+    "base_url_env_var": null,
+    "requires_api_key": true,
+    "requires_base_url": false,
+    "default_rate_limit_rpm": 30,
+    "default_rate_limit_tpm": 100000,
     "status": "disabled",
     "enabled": false,
     "metadata": {}

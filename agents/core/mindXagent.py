@@ -1892,10 +1892,10 @@ class MindXAgent:
                 # Fall back to config or environment
                 if not base_url:
                     base_url = self.config.get("llm.ollama.base_url") or os.getenv("MINDX_LLM__OLLAMA__BASE_URL")
-                    # Default to 10.0.0.155:18080 if nothing is configured (matching startup_agent default)
+                    # Primary: 10.0.0.155:18080 (GPU server), Fallback: localhost:11434 (CPU)
                     if not base_url:
                         base_url = "http://10.0.0.155:18080"
-                        logger.info(f"{self.log_prefix} Using default Ollama base URL: {base_url}")
+                        logger.info(f"{self.log_prefix} Using primary GPU Ollama server: {base_url}")
             
             logger.info(f"{self.log_prefix} Initializing Ollama Chat Manager with base_url: {base_url}")
             conversation_history_path = self.data_dir / "ollama_chat_history.json"

@@ -58,10 +58,10 @@ class OllamaChatManager:
             # Fall back to config or environment
             if not base_url:
                 base_url = self.config.get("llm.ollama.base_url") or os.getenv("MINDX_LLM__OLLAMA__BASE_URL")
-                # Default to 10.0.0.155:18080 if nothing is configured (matching startup_agent default)
+                # Primary: 10.0.0.155:18080 (GPU server), Fallback: localhost:11434 (CPU)
                 if not base_url:
                     base_url = "http://10.0.0.155:18080"
-                    logger.info(f"Using default Ollama base URL: {base_url}")
+                    logger.info(f"Using primary GPU Ollama server: {base_url}")
         
         # Ensure base_url doesn't have trailing /api - we'll add it (matching ollama_handler.py pattern)
         base_url = base_url.rstrip('/')

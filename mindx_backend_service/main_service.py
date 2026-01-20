@@ -3745,3 +3745,156 @@ async def get_mindxagent_status():
         logger.error(f"Error getting mindXagent status: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@app.get("/mindxagent/memory/logs", summary="Get mindXagent memory storage logs")
+async def get_mindxagent_memory_logs(limit: int = 100, agent_id: Optional[str] = None):
+    """Get memory storage logs for mindXagent."""
+    try:
+        from agents.core.mindXagent import MindXAgent
+        from agents.memory_agent import MemoryAgent
+        from pathlib import Path
+        import json
+        
+        mindxagent = await MindXAgent.get_instance()
+        if not mindxagent:
+            return {"success": False, "error": "mindXagent not initialized", "logs": []}
+        
+        target_agent_id = agent_id or mindxagent.agent_id
+        memory_agent = mindxagent.memory_agent
+        
+        if not memory_agent:
+            return {"success": False, "error": "Memory agent not available", "logs": []}
+        
+        # Get memory directory
+        memory_dir = memory_agent.get_agent_data_directory(target_agent_id)
+        stm_dir = memory_agent.stm_path / target_agent_id
+        
+        logs = []
+        
+        # Read from STM (Short Term Memory) - most recent
+        if stm_dir.exists():
+            for date_dir in sorted(stm_dir.iterdir(), reverse=True):
+                if not date_dir.is_dir():
+                    continue
+                for memory_file in sorted(date_dir.glob("*.memory.json"), reverse=True):
+                    try:
+                        with open(memory_file, 'r', encoding='utf-8') as f:
+                            memory_data = json.load(f)
+                            logs.append({
+                                "timestamp": memory_data.get("timestamp"),
+                                "memory_type": memory_data.get("memory_type"),
+                                "importance": memory_data.get("importance"),
+                                "content_preview": str(memory_data.get("content", {}))[:200],
+                                "tags": memory_data.get("tags", []),
+                                "file": str(memory_file.relative_to(PROJECT_ROOT))
+                            })
+                            if len(logs) >= limit:
+                                break
+                    except Exception as e:
+                        logger.warning(f"Error reading memory file {memory_file}: {e}")
+                if len(logs) >= limit:
+                    break
+        
+        return {
+            "success": True,
+            "logs": logs[:limit],
+            "total": len(logs),
+            "agent_id": target_agent_id
+        }
+    except Exception as e:
+        logger.error(f"Error getting memory logs: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/mindxagent/metrics", summary="Get mindXagent metrics including iterations and tokens")
+async def get_mindxagent_metrics():
+    """Get comprehensive metrics for mindXagent including iterations, token usage, and performance."""
+    try:
+        from agents.core.mindXagent import MindXAgent
+        from pathlib import Path
+        import json
+        
+        mindxagent = await MindXAgent.get_instance()
+        if not mindxagent:
+            return {
+                "success": False,
+                "error": "mindXagent not initialized",
+                "metrics": {}
+            }
+        
+        metrics = {
+            "iterations": {
+                "improvement_cycles": len(mindxagent.improvement_history),
+                "thinking_steps": len(mindxagent.thinking_process),
+                "action_choices": len(mindxagent.action_choices),
+                "autonomous_cycles": getattr(mindxagent, 'autonomous_cycle_count', 0)
+            },
+            "agent_knowledge": {
+                "total_agents": len(mindxagent.agent_knowledge),
+                "active_agents": sum(1 for ak in mindxagent.agent_knowledge.values() 
+                                    if hasattr(ak, 'status') and ak.status.value == 'ACTIVE'),
+                "agent_types": {}
+            },
+            "improvements": {
+                "total_opportunities": len(mindxagent.improvement_opportunities),
+                "completed": len([h for h in mindxagent.improvement_history if h.get("status") == "completed"]),
+                "pending": len(mindxagent.improvement_opportunities)
+            },
+            "session": {
+                "current_session": mindxagent.current_session.session_id if mindxagent.current_session else None,
+                "session_active": mindxagent.current_session is not None
+            }
+        }
+        
+        # Count agent types
+        for ak in mindxagent.agent_knowledge.values():
+            agent_type = getattr(ak, 'agent_type', 'unknown')
+            metrics["agent_knowledge"]["agent_types"][agent_type] = \
+                metrics["agent_knowledge"]["agent_types"].get(agent_type, 0) + 1
+        
+        # Get token usage from usage metrics endpoint
+        try:
+            usage_metrics = get_token_usage_metrics()
+            if usage_metrics and "metrics" in usage_metrics:
+                metrics["token_usage"] = {
+                    "total_tokens": usage_metrics["metrics"].get("total_tokens", 0),
+                    "daily_tokens": usage_metrics["metrics"].get("daily_tokens", 0),
+                    "total_cost": usage_metrics["metrics"].get("total_cost", 0.0),
+                    "daily_cost": usage_metrics["metrics"].get("daily_cost", 0.0),
+                    "provider_breakdown": usage_metrics["metrics"].get("provider_breakdown", {})
+                }
+        except Exception as e:
+            logger.warning(f"Could not get token usage metrics: {e}")
+            metrics["token_usage"] = {"error": "Not available"}
+        
+        # Get startup information
+        startup_log_path = PROJECT_ROOT / "data" / "logs" / "terminal_startup.log"
+        startup_info = {
+            "log_exists": startup_log_path.exists(),
+            "last_modified": None,
+            "log_size": 0
+        }
+        
+        if startup_log_path.exists():
+            startup_info["last_modified"] = startup_log_path.stat().st_mtime
+            startup_info["log_size"] = startup_log_path.stat().st_size
+            
+            # Read last few lines
+            try:
+                with open(startup_log_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    lines = f.readlines()
+                    startup_info["last_lines"] = lines[-20:] if len(lines) > 20 else lines
+                    startup_info["total_lines"] = len(lines)
+            except Exception as e:
+                logger.warning(f"Could not read startup log: {e}")
+        
+        metrics["startup"] = startup_info
+        
+        return {
+            "success": True,
+            "metrics": metrics
+        }
+    except Exception as e:
+        logger.error(f"Error getting mindXagent metrics: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+

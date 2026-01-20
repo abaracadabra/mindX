@@ -87,7 +87,7 @@ class OllamaAPI:
             if not hasattr(self, 'base_url') or not self.base_url:
                 env_url = os.getenv("MINDX_LLM__OLLAMA__BASE_URL")
                 config_url = self.config.get("llm.ollama.base_url")
-                # Default to 10.0.0.155:18080 (matching startup_agent default)
+                # Primary: 10.0.0.155:18080 (GPU server), Fallback: localhost:11434 (CPU)
                 config_host = self.config.get("llm.ollama.host", "10.0.0.155")
                 config_port = self.config.get("llm.ollama.port", 18080)
                 
@@ -97,6 +97,10 @@ class OllamaAPI:
                     self.base_url = config_url
                 else:
                     self.base_url = f"http://{config_host}:{config_port}"
+        
+        # Store fallback URL for connection failures
+        self.fallback_url = self.config.get("llm.ollama.fallback_url", "http://localhost:11434")
+        self.using_fallback = False
         
         # Ensure base_url doesn't end with /api
         self.base_url = self.base_url.rstrip('/').replace('/api', '')
@@ -377,6 +381,8 @@ class OllamaAPI:
             "last_request_time": self.metrics.last_request_time.isoformat() if self.metrics.last_request_time else None,
             "available_models": self.metrics.available_models,
             "base_url": self.base_url,
+            "fallback_url": getattr(self, 'fallback_url', None),
+            "using_fallback": getattr(self, 'using_fallback', False),
             "rate_limits": {
                 "rpm": self.rate_limits.requests_per_minute,
                 "tpm": self.rate_limits.tokens_per_minute,
@@ -384,13 +390,63 @@ class OllamaAPI:
             "rate_limiter_metrics": self.rate_limiter.get_metrics()
         }
     
-    async def test_connection(self) -> Dict[str, Any]:
-        """Test API connection with detailed feedback"""
+    def switch_to_fallback(self):
+        """Switch to fallback URL (localhost CPU server)"""
+        if hasattr(self, 'fallback_url') and self.fallback_url and not self.using_fallback:
+            old_url = self.base_url
+            self.base_url = self.fallback_url.rstrip('/').replace('/api', '')
+            self.api_url = f"{self.base_url}/api"
+            self.using_fallback = True
+            # Reset HTTP session to use new URL
+            if self.http_session and not self.http_session.closed:
+                asyncio.create_task(self.http_session.close())
+            self.http_session = None
+            logger.warning(f"⚠️ Switched to fallback Ollama server: {old_url} → {self.base_url} (CPU)")
+            return True
+        return False
+    
+    def switch_to_primary(self):
+        """Switch back to primary URL (GPU server)"""
+        if self.using_fallback:
+            primary_url = self.config.get("llm.ollama.base_url", "http://10.0.0.155:18080")
+            old_url = self.base_url
+            self.base_url = primary_url.rstrip('/').replace('/api', '')
+            self.api_url = f"{self.base_url}/api"
+            self.using_fallback = False
+            # Reset HTTP session to use new URL
+            if self.http_session and not self.http_session.closed:
+                asyncio.create_task(self.http_session.close())
+            self.http_session = None
+            logger.info(f"✓ Switched back to primary Ollama server: {old_url} → {self.base_url} (GPU)")
+            return True
+        return False
+    
+    async def test_connection(self, try_fallback: bool = True) -> Dict[str, Any]:
+        """Test API connection with detailed feedback and optional fallback"""
+        result = await self._test_single_connection()
+        
+        # If primary failed and fallback is enabled, try fallback
+        if not result.get("success") and try_fallback and not self.using_fallback:
+            logger.warning(f"Primary Ollama server ({self.base_url}) unreachable, trying fallback...")
+            if self.switch_to_fallback():
+                fallback_result = await self._test_single_connection()
+                if fallback_result.get("success"):
+                    fallback_result["switched_to_fallback"] = True
+                    fallback_result["primary_error"] = result.get("error")
+                    return fallback_result
+                else:
+                    # Both failed, switch back to primary for next attempt
+                    self.switch_to_primary()
+                    result["fallback_also_failed"] = True
+                    result["fallback_error"] = fallback_result.get("error")
+        
+        return result
+    
+    async def _test_single_connection(self) -> Dict[str, Any]:
+        """Test connection to current URL"""
         try:
-            # First, try a simple health check
             session = await self._get_session()
             
-            # Try to connect to /api/tags endpoint
             try:
                 async with session.get(f"{self.api_url}/tags", timeout=aiohttp.ClientTimeout(total=5)) as response:
                     if response.status == 200:
@@ -401,6 +457,7 @@ class OllamaAPI:
                             "message": f"Successfully connected to Ollama at {self.base_url}",
                             "model_count": len(models),
                             "base_url": self.base_url,
+                            "using_fallback": self.using_fallback,
                             "status_code": response.status
                         }
                     else:
@@ -421,7 +478,7 @@ class OllamaAPI:
             except aiohttp.ClientConnectorError as e:
                 return {
                     "success": False,
-                    "error": f"Cannot connect to Ollama server at {self.base_url}. Check if Ollama is running and the URL is correct. Error: {str(e)}",
+                    "error": f"Cannot connect to Ollama server at {self.base_url}. Error: {str(e)}",
                     "base_url": self.base_url,
                     "connection_error": True
                 }

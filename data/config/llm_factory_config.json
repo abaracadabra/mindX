@@ -1,4 +1,25 @@
 {
+  "llm": {
+    "grok": {
+      "base_url": "https://api.x.ai/v1",
+      "default_model": "grok-beta",
+      "timeout": 120,
+      "inference_timeout": 180
+    },
+    "ollama": {
+      "base_url": "http://10.0.0.155:18080",
+      "host": "10.0.0.155",
+      "port": 18080,
+      "fallback_url": "http://localhost:11434",
+      "fallback_host": "localhost",
+      "fallback_port": 11434,
+      "default_model": "mistral-nemo:latest",
+      "keep_alive": "10m",
+      "timeout": 120,
+      "inference_timeout": 180,
+      "prefer_gpu": true
+    }
+  },
   "rate_limit_profiles": {
     "default_rpm": 60,
     "default_rph": 100,
@@ -21,6 +42,10 @@
     "gemini": {
       "rpm": 40,
       "rph": 60
+    },
+    "grok": {
+      "rpm": 30,
+      "rph": 10000
     }
   },
   "execution_timeouts": {
@@ -33,5 +58,5 @@
     "max_repeated_errors": 5,
     "circuit_breaker_threshold": 3
   },
-  "default_provider_preference_order": ["mistral", "ollama", "gemini"]
+  "default_provider_preference_order": ["ollama", "grok", "mistral", "gemini"]
 }

@@ -2,6 +2,140 @@
 console.log('🚀 mindX app.js loaded at:', new Date().toISOString());
 console.log('🔧 Version: FRESH CACHE BUSTED LOAD');
 
+// ===== GLOBAL HANDLER FUNCTIONS FOR INLINE EVENT HANDLERS =====
+// These must be defined at the top level for inline onkeydown handlers to work
+
+// Global handler for Evolve Codebase - called from inline onkeydown
+window.handleEvolveCodebaseGlobal = async function() {
+    console.log('🔧 handleEvolveCodebaseGlobal called');
+    const directiveInput = document.getElementById('evolve-tab-directive');
+    const directive = directiveInput?.value?.trim();
+    
+    if (!directive) {
+        alert('Please enter a directive for evolution');
+        return;
+    }
+    
+    const evolveBtn = document.getElementById('evolve-tab-btn');
+    const stopBtn = document.getElementById('evolve-stop-btn');
+    
+    // Prevent double submission
+    if (evolveBtn?.disabled) {
+        console.log('Evolution already in progress');
+        return;
+    }
+    
+    const maxCycles = parseInt(document.getElementById('evolve-tab-cycle-count')?.value || '8');
+    const autonomous = document.getElementById('evolve-tab-autonomous-mode')?.checked || false;
+    
+    // Update UI
+    if (evolveBtn) {
+        evolveBtn.disabled = true;
+        evolveBtn.textContent = 'Evolving...';
+    }
+    if (stopBtn) {
+        stopBtn.style.display = 'inline-block';
+    }
+    if (directiveInput) {
+        directiveInput.disabled = true;
+    }
+    
+    try {
+        console.log('Starting evolution with directive:', directive);
+        const response = await fetch('http://localhost:8000/commands/evolve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                directive,
+                max_cycles: maxCycles,
+                autonomous_mode: autonomous
+            })
+        });
+        
+        const result = await response.json();
+        console.log('Evolution started:', result);
+        alert('Evolution started successfully!');
+        
+    } catch (error) {
+        console.error('Evolution error:', error);
+        alert('Failed to start evolution: ' + error.message);
+    } finally {
+        // Re-enable controls
+        if (evolveBtn) {
+            evolveBtn.disabled = false;
+            evolveBtn.textContent = 'Evolve';
+        }
+        if (stopBtn) {
+            stopBtn.style.display = 'none';
+        }
+        if (directiveInput) {
+            directiveInput.disabled = false;
+        }
+    }
+};
+
+// Global handler for Query Coordinator - called from inline onkeydown
+window.handleQueryCoordinatorGlobal = async function() {
+    console.log('🔧 handleQueryCoordinatorGlobal called');
+    const queryInput = document.getElementById('query-tab-input');
+    const query = queryInput?.value?.trim();
+    
+    if (!query) {
+        alert('Please enter a query');
+        return;
+    }
+    
+    const queryBtn = document.getElementById('query-tab-btn');
+    
+    // Prevent double submission
+    if (queryBtn?.disabled) {
+        console.log('Query already in progress');
+        return;
+    }
+    
+    // Update UI
+    if (queryBtn) {
+        queryBtn.disabled = true;
+        queryBtn.textContent = 'Processing...';
+    }
+    if (queryInput) {
+        queryInput.disabled = true;
+    }
+    
+    try {
+        console.log('Sending query:', query);
+        const response = await fetch('http://localhost:8000/coordinator/query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query })
+        });
+        
+        const result = await response.json();
+        console.log('Query result:', result);
+        alert('Query processed! Check console for results.');
+        
+        // Clear input
+        if (queryInput) {
+            queryInput.value = '';
+        }
+        
+    } catch (error) {
+        console.error('Query error:', error);
+        alert('Query failed: ' + error.message);
+    } finally {
+        // Re-enable controls
+        if (queryBtn) {
+            queryBtn.disabled = false;
+            queryBtn.textContent = 'Send Query';
+        }
+        if (queryInput) {
+            queryInput.disabled = false;
+        }
+    }
+};
+
+console.log('✅ Global handlers registered: handleEvolveCodebaseGlobal, handleQueryCoordinatorGlobal');
+
 // Connect MetaMask wallet - Enhanced version using viem
 // This version uses viem for proper wallet connection and challenge-response authentication
 async function connectMetaMask() {
@@ -212,6 +346,16 @@ let authenticationState = {
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM Content Loaded - Starting mindX Application...');
+    
+    // Immediately show landing page and hide main app on initial load
+    const loginLanding = document.getElementById('login-landing');
+    const mainApplication = document.getElementById('main-application');
+    if (loginLanding) {
+        loginLanding.style.setProperty('display', 'block', 'important');
+    }
+    if (mainApplication) {
+        mainApplication.style.setProperty('display', 'none', 'important');
+    }
 
     // ===== Centralized API Configuration =====
     const API_CONFIG = {
@@ -2271,11 +2415,324 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadFaiceyExpressions();
                 initializeFaiceyTabs();
                 break;
+            case 'evolve-codebase':
+                initializeEvolveCodebaseTab();
+                break;
+            case 'query-coordinator':
+                initializeQueryCoordinatorTab();
+                break;
+            case 'github-agent':
+                initializeGitHubAgentTab();
+                break;
         }
     }
     
     // Make loadTabData globally accessible
     window.loadTabData = loadTabData;
+
+    // Initialize Evolve Codebase Tab
+    function initializeEvolveCodebaseTab() {
+        console.log('🚀 Initializing Evolve Codebase tab...');
+        
+        // Set up event listeners for the evolve codebase tab
+        const directiveInput = document.getElementById('evolve-tab-directive');
+        const evolveBtn = document.getElementById('evolve-tab-btn');
+        const stopBtn = document.getElementById('evolve-stop-btn');
+        
+        if (directiveInput && !directiveInput._eventsAttached) {
+            directiveInput._eventsAttached = true;
+            
+            // Enter key handler
+            directiveInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleEvolveCodebase();
+                }
+            });
+            
+            console.log('✅ Evolve directive input Enter key listener attached');
+        }
+        
+        if (evolveBtn && !evolveBtn._eventsAttached) {
+            evolveBtn._eventsAttached = true;
+            evolveBtn.addEventListener('click', handleEvolveCodebase);
+            console.log('✅ Evolve button click listener attached');
+        }
+        
+        if (stopBtn && !stopBtn._eventsAttached) {
+            stopBtn._eventsAttached = true;
+            stopBtn.addEventListener('click', handleStopEvolution);
+        }
+    }
+
+    // Handle Evolve Codebase action
+    async function handleEvolveCodebase() {
+        const directiveInput = document.getElementById('evolve-tab-directive');
+        const directive = directiveInput?.value?.trim();
+        
+        if (!directive) {
+            showNotification('Please enter a directive for evolution', 'warning');
+            return;
+        }
+        
+        const evolveBtn = document.getElementById('evolve-tab-btn');
+        const stopBtn = document.getElementById('evolve-stop-btn');
+        
+        // Prevent double submission
+        if (evolveBtn?.disabled) {
+            console.log('Evolution already in progress');
+            return;
+        }
+        
+        const maxCycles = parseInt(document.getElementById('evolve-tab-cycle-count')?.value || '8');
+        const autonomous = document.getElementById('evolve-tab-autonomous-mode')?.checked || false;
+        
+        // Update UI
+        if (evolveBtn) {
+            evolveBtn.disabled = true;
+            evolveBtn.textContent = 'Evolving...';
+        }
+        if (stopBtn) {
+            stopBtn.style.display = 'inline-block';
+        }
+        if (directiveInput) {
+            directiveInput.disabled = true;
+        }
+        
+        try {
+            console.log('Starting evolution with directive:', directive);
+            const response = await sendRequest('/commands/evolve', 'POST', {
+                directive,
+                max_cycles: maxCycles,
+                autonomous_mode: autonomous
+            });
+            
+            console.log('Evolution started:', response);
+            showNotification('Evolution started successfully', 'success');
+            addLog(`Evolution started: ${directive}`, 'SUCCESS');
+            
+        } catch (error) {
+            console.error('Evolution error:', error);
+            showNotification(`Failed to start evolution: ${error.message}`, 'error');
+            addLog(`Evolution failed: ${error.message}`, 'ERROR');
+        } finally {
+            // Re-enable controls
+            if (evolveBtn) {
+                evolveBtn.disabled = false;
+                evolveBtn.textContent = 'Evolve';
+            }
+            if (stopBtn) {
+                stopBtn.style.display = 'none';
+            }
+            if (directiveInput) {
+                directiveInput.disabled = false;
+            }
+        }
+    }
+
+    // Handle Stop Evolution
+    async function handleStopEvolution() {
+        try {
+            await sendRequest('/commands/stop', 'POST', {});
+            showNotification('Evolution stopped', 'info');
+            
+            const evolveBtn = document.getElementById('evolve-tab-btn');
+            const stopBtn = document.getElementById('evolve-stop-btn');
+            const directiveInput = document.getElementById('evolve-tab-directive');
+            
+            if (evolveBtn) {
+                evolveBtn.disabled = false;
+                evolveBtn.textContent = 'Evolve';
+            }
+            if (stopBtn) {
+                stopBtn.style.display = 'none';
+            }
+            if (directiveInput) {
+                directiveInput.disabled = false;
+            }
+        } catch (error) {
+            console.error('Failed to stop evolution:', error);
+            showNotification(`Failed to stop: ${error.message}`, 'error');
+        }
+    }
+
+    // Initialize Query Coordinator Tab
+    function initializeQueryCoordinatorTab() {
+        console.log('🚀 Initializing Query Coordinator tab...');
+        
+        const queryInput = document.getElementById('query-tab-input');
+        const queryBtn = document.getElementById('query-tab-btn');
+        
+        if (queryInput && !queryInput._eventsAttached) {
+            queryInput._eventsAttached = true;
+            
+            // Enter key handler
+            queryInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleQueryCoordinator();
+                }
+            });
+            
+            console.log('✅ Query input Enter key listener attached');
+        }
+        
+        if (queryBtn && !queryBtn._eventsAttached) {
+            queryBtn._eventsAttached = true;
+            queryBtn.addEventListener('click', handleQueryCoordinator);
+            console.log('✅ Query button click listener attached');
+        }
+    }
+
+    // Handle Query Coordinator action
+    async function handleQueryCoordinator() {
+        const queryInput = document.getElementById('query-tab-input');
+        const query = queryInput?.value?.trim();
+        
+        if (!query) {
+            showNotification('Please enter a query', 'warning');
+            return;
+        }
+        
+        const queryBtn = document.getElementById('query-tab-btn');
+        
+        // Prevent double submission
+        if (queryBtn?.disabled) {
+            console.log('Query already in progress');
+            return;
+        }
+        
+        // Update UI
+        if (queryBtn) {
+            queryBtn.disabled = true;
+            queryBtn.textContent = 'Processing...';
+        }
+        if (queryInput) {
+            queryInput.disabled = true;
+        }
+        
+        try {
+            console.log('Sending query:', query);
+            const response = await sendRequest('/coordinator/query', 'POST', { query });
+            
+            console.log('Query result:', response);
+            showNotification('Query processed successfully', 'success');
+            
+            // Display result in window if window manager is available
+            if (window.windowManager) {
+                displayQueryResultWindow(query, response);
+            }
+            
+            // Clear input
+            if (queryInput) {
+                queryInput.value = '';
+            }
+            
+        } catch (error) {
+            console.error('Query error:', error);
+            showNotification(`Query failed: ${error.message}`, 'error');
+        } finally {
+            // Re-enable controls
+            if (queryBtn) {
+                queryBtn.disabled = false;
+                queryBtn.textContent = 'Send Query';
+            }
+            if (queryInput) {
+                queryInput.disabled = false;
+            }
+        }
+    }
+
+    // Display query result in draggable window
+    function displayQueryResultWindow(query, result) {
+        const timestamp = new Date().toLocaleString();
+        const resultJson = JSON.stringify(result, null, 2);
+        
+        const content = `
+            <div class="query-result-window-content">
+                <div class="query-result-meta">
+                    <div class="meta-item">
+                        <span class="meta-label">Query:</span>
+                        <span class="meta-value query-text">${escapeHtml(query)}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Time:</span>
+                        <span class="meta-value">${timestamp}</span>
+                    </div>
+                </div>
+                <div class="query-result-body">
+                    <pre class="result-json">${escapeHtml(resultJson)}</pre>
+                </div>
+            </div>
+        `;
+        
+        const windowId = window.windowManager.createWindow({
+            title: 'Query Result: ' + query.substring(0, 30) + (query.length > 30 ? '...' : ''),
+            content: content,
+            width: 600,
+            height: 450,
+            x: 100 + Math.random() * 100,
+            y: 100 + Math.random() * 100,
+            minWidth: 400,
+            minHeight: 300,
+            resizable: true,
+            draggable: true,
+            closable: true,
+            maximizable: true
+        });
+        
+        // Apply semi-transparent styling
+        const windowEl = document.getElementById(windowId);
+        if (windowEl) {
+            windowEl.classList.add('query-result-window', 'semi-transparent');
+        }
+    }
+
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Show notification helper
+    function showNotification(message, type = 'info') {
+        // Try tab-specific notification first
+        let notificationEl = document.getElementById('evolve-notification') || 
+                            document.getElementById('query-notification') ||
+                            document.getElementById('github-notification');
+        
+        if (notificationEl) {
+            notificationEl.textContent = message;
+            notificationEl.className = 'notification ' + type;
+            notificationEl.style.display = 'block';
+            
+            setTimeout(() => {
+                notificationEl.style.display = 'none';
+            }, 5000);
+        } else {
+            // Fallback to console and alert for important messages
+            console.log('[' + type.toUpperCase() + '] ' + message);
+            if (type === 'error') {
+                alert(message);
+            }
+        }
+    }
+
+    // Initialize GitHub Agent Tab
+    function initializeGitHubAgentTab() {
+        console.log('🚀 Initializing GitHub Agent tab...');
+        // GitHub Agent tab initialization - event listeners are set up in the component
+    }
+
+    // Make tab handlers globally accessible for inline event handlers
+    window.handleEvolveCodebase = handleEvolveCodebase;
+    window.handleQueryCoordinator = handleQueryCoordinator;
+    window.handleStopEvolution = handleStopEvolution;
+    window.initializeEvolveCodebaseTab = initializeEvolveCodebaseTab;
+    window.initializeQueryCoordinatorTab = initializeQueryCoordinatorTab;
 
     // Control Tab Functions
     function initializeControlTab() {
@@ -8048,18 +8505,42 @@ ${logContent}`;
 
     // AGInt Response Window Functions
     function showAGIntResponseWindow() {
-        // Create AGInt response window if it doesn't exist
+        // Use WindowManager for advanced functionality if available
+        if (window.windowManager) {
+            const windowId = window.windowManager.createWindow({
+                title: 'AGInt Cognitive Loop',
+                content: createAGIntWindowContent(),
+                width: 900,
+                height: 600,
+                x: window.innerWidth * 0.1,
+                y: window.innerHeight * 0.1,
+                minWidth: 600,
+                minHeight: 400,
+                resizable: true,
+                draggable: true,
+                closable: true,
+                maximizable: true,
+                onClose: hideAGIntResponseWindow
+            });
+
+            agintResponseWindow = document.getElementById(windowId);
+            return;
+        }
+
+        // Fallback: Create basic AGInt response window if WindowManager not available
         if (!agintResponseWindow) {
             agintResponseWindow = document.createElement('div');
             agintResponseWindow.id = 'agint-response-window';
+            agintResponseWindow.className = 'agint-response-window';
             agintResponseWindow.style.cssText = `
                 position: fixed;
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
                 width: 80%;
-                max-width: 800px;
+                max-width: 900px;
                 height: 60%;
+                min-height: 400px;
                 background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
                 border: 2px solid #00ff88;
                 border-radius: 10px;
@@ -8069,118 +8550,23 @@ ${logContent}`;
                 flex-direction: column;
                 font-family: 'Courier New', monospace;
                 color: #00ff88;
+                opacity: 0.95;
             `;
-            
-            // Header
-            const header = document.createElement('div');
-            header.style.cssText = `
-                padding: 15px;
-                border-bottom: 1px solid #00ff88;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                background: rgba(0, 255, 136, 0.1);
-            `;
-            header.innerHTML = `
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <h3 style="margin: 0; color: #00ff88; text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);">AGInt Cognitive Loop</h3>
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <label style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: #00ff88;">
-                            <input type="checkbox" id="verbose-toggle" checked style="accent-color: #00ff88;">
-                            Verbose Output
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: #00ff88;">
-                            <input type="checkbox" id="code-changes-toggle" checked style="accent-color: #00ff88;">
-                            Show Code Changes
-                        </label>
-                    </div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span id="agint-status-indicator" style="font-size: 12px; color: #888;">Running...</span>
-                    <button id="copy-agint-output" style="background: linear-gradient(135deg, #00aa88, #008866); border: 1px solid #00aa88; color: white; padding: 8px 15px; cursor: pointer; border-radius: 5px; font-weight: bold; box-shadow: 0 2px 5px rgba(0, 170, 136, 0.3);">Copy Output</button>
-                    <button id="close-agint-window" style="background: linear-gradient(135deg, #ff4444, #cc0000); border: 1px solid #ff4444; color: white; padding: 8px 15px; cursor: pointer; border-radius: 5px; font-weight: bold; box-shadow: 0 2px 5px rgba(255, 68, 68, 0.3);">Close</button>                                                                     
-                </div>
-            `;
-            
-            // Content area
-            const content = document.createElement('div');
-            content.id = 'agint-response-content';
-            content.style.cssText = `
-                flex: 1;
-                padding: 15px;
-                overflow-y: auto;
-                background: rgba(0, 0, 0, 0.3);
-                font-size: 14px;
-                line-height: 1.4;
-            `;
-            
-            agintResponseWindow.appendChild(header);
-            agintResponseWindow.appendChild(content);
+
+            agintResponseWindow.innerHTML = createAGIntWindowContent();
             document.body.appendChild(agintResponseWindow);
-            
-            // Close button event
-            const closeBtn = document.getElementById('close-agint-window');
-            closeBtn.addEventListener('click', hideAGIntResponseWindow);
-            
-            // Copy button event
-            const copyBtn = document.getElementById('copy-agint-output');
-            copyBtn.addEventListener('click', function() {
-                const content = document.getElementById('agint-response-content');
-                if (content) {
-                    const text = content.innerText || content.textContent;
-                    navigator.clipboard.writeText(text).then(() => {
-                        // Show feedback
-                        const originalText = copyBtn.textContent;
-                        copyBtn.textContent = 'Copied!';
-                        copyBtn.style.background = 'linear-gradient(135deg, #00ff00, #00cc00)';
-                        setTimeout(() => {
-                            copyBtn.textContent = originalText;
-                            copyBtn.style.background = 'linear-gradient(135deg, #00aa88, #008866)';
-                        }, 2000);
-                    }).catch(err => {
-                        console.error('Failed to copy text: ', err);
-                        // Fallback for older browsers
-                        const textArea = document.createElement('textarea');
-                        textArea.value = text;
-                        document.body.appendChild(textArea);
-                        textArea.select();
-                        document.execCommand('copy');
-                        document.body.removeChild(textArea);
-                        
-                        const originalText = copyBtn.textContent;
-                        copyBtn.textContent = 'Copied!';
-                        copyBtn.style.background = 'linear-gradient(135deg, #00ff00, #00cc00)';
-                        setTimeout(() => {
-                            copyBtn.textContent = originalText;
-                            copyBtn.style.background = 'linear-gradient(135deg, #00aa88, #008866)';
-                        }, 2000);
-                    });
-                }
-            });
-            
-            // Add hover effects for close button
-            closeBtn.addEventListener('mouseenter', function() {
-                this.style.background = 'linear-gradient(135deg, #ff6666, #ff0000)';
-                this.style.transform = 'scale(1.05)';
-            });
-            closeBtn.addEventListener('mouseleave', function() {
-                this.style.background = 'linear-gradient(135deg, #ff4444, #cc0000)';
-                this.style.transform = 'scale(1)';
-            });
-            
-            // Add hover effects for copy button
-            copyBtn.addEventListener('mouseenter', function() {
-                this.style.background = 'linear-gradient(135deg, #00ccaa, #00aa88)';
-                this.style.transform = 'scale(1.05)';
-            });
-            copyBtn.addEventListener('mouseleave', function() {
-                this.style.background = 'linear-gradient(135deg, #00aa88, #008866)';
-                this.style.transform = 'scale(1)';
-            });
+
+            // Make it draggable and resizable manually if WindowManager not available
+            makeWindowDraggable(agintResponseWindow);
+            makeWindowResizable(agintResponseWindow);
+
+            // Setup event listeners
+            setupAGIntWindowEvents();
         }
-        
-            // Clear previous content
-            const content = document.getElementById('agint-response-content');
+
+        // Clear previous content
+        const content = document.getElementById('agint-response-content');
+        if (content) {
             content.innerHTML = `
                 <div style="color: #00ff88; text-align: center; padding: 20px;">
                     <h4 style="margin: 0 0 10px 0; color: #00ff88;">AGInt Cognitive Loop Starting...</h4>
@@ -8197,9 +8583,232 @@ ${logContent}`;
                     </div>
                 </div>
             `;
-        
+        }
+
         // Show the window
         agintResponseWindow.style.display = 'flex';
+    }
+
+    function createAGIntWindowContent() {
+        return `
+            <div class="agint-window-header">
+                <div class="agint-window-header-left">
+                    <h3 class="agint-window-title">AGInt Cognitive Loop</h3>
+                    <div class="agint-controls-row">
+                        <label class="agint-toggle-label">
+                            <input type="checkbox" id="verbose-toggle" checked>
+                            <span class="agint-toggle-slider"></span>
+                            <span class="agint-toggle-text">Verbose Output</span>
+                        </label>
+                        <label class="agint-toggle-label">
+                            <input type="checkbox" id="code-changes-toggle" checked>
+                            <span class="agint-toggle-slider"></span>
+                            <span class="agint-toggle-text">Show Code Changes</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="agint-window-header-right">
+                    <div class="agint-transparency-control">
+                        <label for="agint-transparency-slider" class="agint-transparency-label">Opacity:</label>
+                        <input type="range" id="agint-transparency-slider" min="0.1" max="1" step="0.05" value="0.95" class="agint-transparency-slider">
+                        <span id="agint-transparency-value" class="agint-transparency-value">95%</span>
+                    </div>
+                    <span id="agint-status-indicator" class="agint-status-indicator">Running...</span>
+                    <button id="copy-agint-output" class="agint-button agint-copy-btn">
+                        <span class="agint-button-icon">📋</span>
+                        <span class="agint-button-text">Copy</span>
+                    </button>
+                    <button id="close-agint-window" class="agint-button agint-close-btn">
+                        <span class="agint-button-icon">✕</span>
+                        <span class="agint-button-text">Close</span>
+                    </button>
+                </div>
+            </div>
+            <div id="agint-response-content" class="agint-window-content">
+                <div style="color: #00ff88; text-align: center; padding: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: #00ff88;">AGInt Cognitive Loop Starting...</h4>
+                    <div style="font-size: 12px; color: #888; margin-bottom: 15px;">
+                        P-O-D-A Cycle: Perception → Orientation → Decision → Action
+                    </div>
+                    <div style="font-size: 11px; color: #666; background: rgba(0, 255, 136, 0.1); padding: 10px; border-radius: 5px; text-align: left;">
+                        <strong>Verbose Mode Active:</strong><br>
+                        🔍 PERCEPTION: System state analysis<br>
+                        🧠 ORIENTATION: Options evaluation<br>
+                        ⚡ DECISION: Strategy selection<br>
+                        🚀 ACTION: Task execution<br>
+                        🎯 DETAILS: Real-time action feedback
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function setupAGIntWindowEvents() {
+        // Close button event
+        const closeBtn = document.getElementById('close-agint-window');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', hideAGIntResponseWindow);
+        }
+
+        // Copy button event
+        const copyBtn = document.getElementById('copy-agint-output');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', function() {
+                const content = document.getElementById('agint-response-content');
+                if (content) {
+                    const text = content.innerText || content.textContent;
+                    navigator.clipboard.writeText(text).then(() => {
+                        // Show feedback
+                        this.innerHTML = '<span class="agint-button-icon">✓</span><span class="agint-button-text">Copied!</span>';
+                        this.classList.add('agint-button-success');
+                        setTimeout(() => {
+                            this.innerHTML = '<span class="agint-button-icon">📋</span><span class="agint-button-text">Copy</span>';
+                            this.classList.remove('agint-button-success');
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy text: ', err);
+                        // Fallback for older browsers
+                        const textArea = document.createElement('textarea');
+                        textArea.value = text;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+
+                        this.innerHTML = '<span class="agint-button-icon">✓</span><span class="agint-button-text">Copied!</span>';
+                        this.classList.add('agint-button-success');
+                        setTimeout(() => {
+                            this.innerHTML = '<span class="agint-button-icon">📋</span><span class="agint-button-text">Copy</span>';
+                            this.classList.remove('agint-button-success');
+                        }, 2000);
+                    });
+                }
+            });
+        }
+
+        // Transparency slider
+        const transparencySlider = document.getElementById('agint-transparency-slider');
+        const transparencyValue = document.getElementById('agint-transparency-value');
+        if (transparencySlider && transparencyValue) {
+            transparencySlider.addEventListener('input', function() {
+                const opacity = parseFloat(this.value);
+                const percentage = Math.round(opacity * 100);
+                transparencyValue.textContent = percentage + '%';
+
+                if (agintResponseWindow) {
+                    agintResponseWindow.style.opacity = opacity;
+                }
+            });
+        }
+    }
+
+    function makeWindowDraggable(element) {
+        let isDragging = false;
+        let startX, startY, initialX, initialY;
+
+        const header = element.querySelector('.agint-window-header');
+        if (!header) return;
+
+        header.style.cursor = 'move';
+
+        header.addEventListener('mousedown', startDrag);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', stopDrag);
+
+        function startDrag(e) {
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            const rect = element.getBoundingClientRect();
+            initialX = rect.left;
+            initialY = rect.top;
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+
+            const newLeft = initialX + dx;
+            const newTop = initialY + dy;
+
+            // Keep window within viewport bounds
+            const maxLeft = window.innerWidth - element.offsetWidth;
+            const maxTop = window.innerHeight - element.offsetHeight;
+
+            element.style.left = Math.max(0, Math.min(maxLeft, newLeft)) + 'px';
+            element.style.top = Math.max(0, Math.min(maxTop, newTop)) + 'px';
+            element.style.transform = 'none';
+        }
+
+        function stopDrag() {
+            isDragging = false;
+        }
+    }
+
+    function makeWindowResizable(element) {
+        let isResizing = false;
+        let startX, startY, startWidth, startHeight;
+
+        // Add resize handle
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'agint-resize-handle';
+        resizeHandle.style.cssText = `
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 20px;
+            height: 20px;
+            cursor: nw-resize;
+            background: linear-gradient(-45deg, transparent 0%, transparent 40%, #00ff88 40%, #00ff88 60%, transparent 60%);
+        `;
+        element.appendChild(resizeHandle);
+
+        resizeHandle.addEventListener('mousedown', startResize);
+        document.addEventListener('mousemove', resize);
+        document.addEventListener('mouseup', stopResize);
+
+        function startResize(e) {
+            isResizing = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            startWidth = element.offsetWidth;
+            startHeight = element.offsetHeight;
+            e.preventDefault();
+        }
+
+        function resize(e) {
+            if (!isResizing) return;
+
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+
+            let newWidth = startWidth + dx;
+            let newHeight = startHeight + dy;
+
+            // Enforce minimum size
+            const minWidth = 600;
+            const minHeight = 400;
+
+            newWidth = Math.max(minWidth, newWidth);
+            newHeight = Math.max(minHeight, newHeight);
+
+            // Enforce maximum size (80% of viewport)
+            const maxWidth = window.innerWidth * 0.8;
+            const maxHeight = window.innerHeight * 0.8;
+
+            newWidth = Math.min(maxWidth, newWidth);
+            newHeight = Math.min(maxHeight, newHeight);
+
+            element.style.width = newWidth + 'px';
+            element.style.height = newHeight + 'px';
+        }
+
+        function stopResize() {
+            isResizing = false;
+        }
     }
     
     function updateAGIntResponse(data, output) {
@@ -10310,6 +10919,9 @@ async function initializeAuthenticationSystem() {
 
 // Check authentication state on page load
 async function checkAuthenticationState() {
+    // Always show landing page first, then check for existing auth
+    showLoginLanding();
+    
     const authData = localStorage.getItem('mindx_auth');
     const crossmintAuth = localStorage.getItem('crossmint_authenticated');
     
@@ -10324,6 +10936,7 @@ async function checkAuthenticationState() {
                         try {
                             const accounts = await window.ethereum.request({ method: 'eth_accounts' });
                             if (accounts.length > 0 && accounts[0].toLowerCase() === auth.walletAddress.toLowerCase()) {
+                                // Valid session and MetaMask still connected - auto-login
                                 authenticationState = auth;
                                 isAuthenticated = true;
                                 showMainApplication();
@@ -10341,7 +10954,7 @@ async function checkAuthenticationState() {
         }
     }
     
-    // No valid authentication found
+    // No valid authentication found - ensure landing page is shown
     showLoginLanding();
     clearAuthenticationState();
 }
@@ -10651,32 +11264,28 @@ function handleAuthenticationSuccess(userData) {
         timestamp: timestamp
     };
     
-    // Store authentication state
-    localStorage.setItem('mindx_auth', JSON.stringify(authenticationState));
-    console.log('💾 Authentication state stored in localStorage');
-    
-    isAuthenticated = true;
-    currentUser = userData;
-    
-    // Show main application
-    console.log('🔄 Calling showMainApplication()...');
-    try {
-        showMainApplication();
-        console.log('✅ showMainApplication() completed');
-    } catch (error) {
-        console.error('❌ Error in showMainApplication():', error);
-        // Fallback: try to manually show/hide elements
-        const loginLanding = document.getElementById('login-landing');
-        const mainApplication = document.getElementById('main-application');
-        if (loginLanding) {
-            loginLanding.style.display = 'none';
-            console.log('✅ Login landing hidden');
-        }
-        if (mainApplication) {
-            mainApplication.style.display = 'block';
-            console.log('✅ Main application shown');
-        }
-    }
+                // Store authentication state
+                localStorage.setItem('mindx_auth', JSON.stringify(authenticationState));
+                console.log('💾 Authentication state stored in localStorage');
+                
+                isAuthenticated = true;
+                currentUser = userData;
+                
+                // If we're on login.html, redirect to /app
+                if (window.location.pathname === '/login' || window.location.pathname.endsWith('login.html')) {
+                    console.log('🔄 Redirecting to /app after successful login...');
+                    window.location.href = '/app';
+                    return;
+                }
+                
+                // Show main application (if we're already on app.html)
+                console.log('🔄 Calling showMainApplication()...');
+                try {
+                    showMainApplication();
+                    console.log('✅ showMainApplication() completed');
+                } catch (error) {
+                    console.error('❌ Error in showMainApplication():', error);
+                }
     
     // Initialize user-specific features
     if (typeof initializeUserSpecificFeatures === 'function') {
@@ -10756,8 +11365,10 @@ async function handleSecureLogout() {
         // Clear all user data
         clearUserData();
         
-        // Show login landing
-        showLoginLanding();
+        // Redirect to login page
+        console.log('🔄 Redirecting to login page...');
+        window.location.href = '/login';
+        return;
         
         // Force page refresh to ensure complete state reset
         setTimeout(() => {
@@ -10816,12 +11427,29 @@ function clearUserData() {
 
 // Show login landing page
 function showLoginLanding() {
+    console.log('🔄 showLoginLanding() called - showing landing page');
     const loginLanding = document.getElementById('login-landing');
     const mainApplication = document.getElementById('main-application');
     
-    if (loginLanding) loginLanding.style.display = 'flex';
-    if (mainApplication) mainApplication.style.display = 'none';
+    // Show landing page
+    if (loginLanding) {
+        loginLanding.style.setProperty('display', 'block', 'important');
+        loginLanding.style.setProperty('visibility', 'visible', 'important');
+        console.log('✅ Login landing page shown');
+    } else {
+        console.warn('⚠️ Login landing element not found!');
+    }
     
+    // Hide main application
+    if (mainApplication) {
+        mainApplication.style.setProperty('display', 'none', 'important');
+        mainApplication.style.setProperty('visibility', 'hidden', 'important');
+        console.log('✅ Main application hidden');
+    } else {
+        console.warn('⚠️ Main application element not found!');
+    }
+    
+    // Remove authenticated class from body
     document.body.classList.remove('authenticated');
 }
 
@@ -10915,10 +11543,34 @@ function showMainApplication() {
     // Update wallet display
     updateWalletDisplay();
     
-    // Initialize tabs if not already initialized
+    // Initialize modular tab system if available
+    if (window.tabRegistry && window.TabConfig) {
+        console.log('🔄 Initializing modular tab system...');
+        try {
+            // Register all tabs from configuration
+            window.TabConfig.registerAllTabs();
+            
+            // Integrate with existing tab buttons
+            const allTabBtns = document.querySelectorAll('.tab-btn');
+            allTabBtns.forEach(btn => {
+                const tabId = btn.getAttribute('data-tab');
+                if (tabId) {
+                    btn.addEventListener('click', async () => {
+                        await window.tabRegistry.activateTab(tabId);
+                    });
+                }
+            });
+            
+            console.log('✅ Modular tab system initialized');
+        } catch (error) {
+            console.error('❌ Error initializing modular tab system:', error);
+        }
+    }
+    
+    // Initialize tabs if not already initialized (fallback to legacy system)
     const initTabs = window.initializeTabs || initializeTabs;
     if (typeof initTabs === 'function') {
-        console.log('🔄 Initializing tabs...');
+        console.log('🔄 Initializing tabs (legacy system)...');
         try {
             initTabs();
             console.log('✅ Tabs initialized');
@@ -12373,8 +13025,7 @@ async function testOllamaCompletion() {
             const icon = isUser ? '→' : isAssistant ? '←' : '⚙';
             
             // Format content with better readability
-            const formattedContent = escapeHtml(String(content)).replace(/
-/g, '<br>');
+            const formattedContent = escapeHtml(String(content)).replace(/\n/g, '<br>');
             // Handle timestamp - could be number (seconds) or ISO string
             let timestamp = '';
             if (msg.timestamp) {

@@ -159,6 +159,17 @@ class ProviderRegistry:
                 status=ProviderStatus.DISABLED
             ),
             ProviderConfig(
+                name="grok",
+                display_name="Grok (xAI)",
+                module_path="api.grok_api",
+                factory_function="create_grok_api",
+                api_key_env_var="GROK_API_KEY",
+                requires_api_key=True,
+                default_rate_limit_rpm=30,
+                default_rate_limit_tpm=100000,
+                status=ProviderStatus.DISABLED
+            ),
+            ProviderConfig(
                 name="ollama",
                 display_name="Ollama (Local)",
                 module_path="api.ollama_url",

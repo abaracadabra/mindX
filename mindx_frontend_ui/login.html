@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>mindX - Login</title>
+    <link rel="stylesheet" href="styles3.css">
+    <!-- Inline MetaMask connection function - available immediately -->
+    <script>
+        // Define connectMetaMask immediately so it's available for onclick
+        // Uses viem for proper wallet connection and challenge-response authentication
+        window.connectMetaMask = async function() {
+            try {
+                console.log('🔗 Connecting to MetaMask with viem...');
+                
+                // Check if MetaMask is available
+                if (typeof window.ethereum === 'undefined') {
+                    alert('MetaMask is not installed. Please install MetaMask browser extension to continue.');
+                    return;
+                }
+
+                // Dynamically import viem (ESM module)
+                let viem;
+                try {
+                    viem = await import('https://cdn.jsdelivr.net/npm/viem@2.21.45/+esm');
+                } catch (importError) {
+                    console.error('Failed to load viem:', importError);
+                    alert('Wallet connection library failed to load. Please refresh the page.');
+                    return;
+                }
+
+                // Get API base URL
+                const apiBaseUrl = window.MINDX_API_URL || `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`;
+                
+                // Create viem wallet client
+                const createWalletClient = viem.createWalletClient || viem.default?.createWalletClient;
+                const custom = viem.custom || viem.default?.custom;
+                
+                if (!createWalletClient || !custom) {
+                    throw new Error('viem exports not found. Please refresh the page.');
+                }
+                
+                const walletClient = createWalletClient({
+                    transport: custom(window.ethereum)
+                });
+
+                console.log('Requesting account access via viem...');
+                
+                // Request account access using viem
+                const accounts = await walletClient.requestAddresses();
+                
+                console.log('MetaMask response:', accounts);
+
+                if (accounts.length === 0) {
+                    alert('No accounts found. Please unlock MetaMask and try again.');
+                    return;
+                }
+
+                const walletAddress = accounts[0];
+                console.log('Connected to:', walletAddress);
+                
+                // Get chain ID using viem
+                const chainId = await window.ethereum.request({
+                    method: 'eth_chainId'
+                });
+
+                // Step 1: Get challenge from backend
+                console.log('Requesting authentication challenge from:', `${apiBaseUrl}/users/challenge`);
+                let challengeResponse;
+                try {
+                    challengeResponse = await fetch(`${apiBaseUrl}/users/challenge`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            wallet_address: walletAddress,
+                            action: 'login'
+                        })
+                    });
+                } catch (fetchError) {
+                    console.error('Fetch error:', fetchError);
+                    throw new Error(`Failed to connect to backend at ${apiBaseUrl}. Please ensure the backend is running on port 8000. Error: ${fetchError.message}`);
+                }
+
+                if (!challengeResponse.ok) {
+                    const errorText = await challengeResponse.text();
+                    console.error('Challenge response error:', errorText);
+                    throw new Error(`Failed to get authentication challenge from server (${challengeResponse.status}): ${errorText}`);
+                }
+
+                const challengeData = await challengeResponse.json();
+                const challengeMessage = challengeData.challenge_message;
+                console.log('Challenge received:', challengeMessage);
+
+                // Step 2: Sign challenge message using viem
+                console.log('Requesting signature from MetaMask...');
+                const signature = await walletClient.signMessage({
+                    account: walletAddress,
+                    message: challengeMessage
+                });
+                console.log('Challenge signed:', signature);
+
+                // Step 3: Register/authenticate user with backend
+                console.log('Authenticating with backend at:', `${apiBaseUrl}/users/register-with-signature`);
+                let authResponse;
+                try {
+                    authResponse = await fetch(`${apiBaseUrl}/users/register-with-signature`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            wallet_address: walletAddress,
+                            signature: signature,
+                            message: challengeMessage,
+                            metadata: {
+                                chainId: chainId,
+                                provider: 'metamask',
+                                authMethod: 'wallet'
+                            }
+                        })
+                    });
+                } catch (fetchError) {
+                    console.error('Auth fetch error:', fetchError);
+                    throw new Error(`Failed to connect to backend at ${apiBaseUrl}. Please ensure the backend is running on port 8000. Error: ${fetchError.message}`);
+                }
+
+                if (!authResponse.ok) {
+                    const errorText = await authResponse.text();
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch (e) {
+                        errorData = { error: errorText };
+                    }
+                    console.error('Auth response error:', errorData);
+                    throw new Error(errorData.error || `Authentication failed (${authResponse.status}): ${errorText}`);
+                }
+
+                const authData = await authResponse.json();
+                console.log('Authentication successful:', authData);
+
+                // Create user object
+                const userData = {
+                    id: walletAddress,
+                    address: walletAddress,
+                    provider: 'metamask',
+                    chainId: chainId,
+                    authMethod: 'wallet',
+                    signature: signature,
+                    timestamp: Date.now()
+                };
+
+                // Store in localStorage
+                localStorage.setItem('crossmint_user', JSON.stringify(userData));
+                localStorage.setItem('crossmint_wallet', walletAddress);
+                localStorage.setItem('crossmint_authenticated', 'true');
+                localStorage.setItem('crossmint_auth_method', 'wallet');
+                
+                // Store authentication state for app.html
+                const sessionId = 'session_' + Date.now();
+                const authenticationState = {
+                    isLoggedIn: true,
+                    walletAddress: walletAddress,
+                    userData: userData,
+                    sessionId: sessionId,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('mindx_auth', JSON.stringify(authenticationState));
+                
+                console.log('✅ MetaMask wallet connected and authenticated successfully!');
+                console.log('🔄 Redirecting to main application...');
+                
+                // Redirect to main application
+                window.location.href = '/app';
+                
+            } catch (error) {
+                console.error('❌ MetaMask connection failed:', error);
+                let errorMsg = 'Failed to connect to MetaMask';
+                if (error.code === 4001) {
+                    errorMsg = 'MetaMask connection rejected. Please approve the connection request.';
+                } else if (error.code === -32002) {
+                    errorMsg = 'MetaMask connection already pending. Please check MetaMask and try again.';
+                } else if (error.message) {
+                    errorMsg = error.message;
+                }
+                
+                // Show error message
+                const errorDiv = document.getElementById('login-error');
+                if (errorDiv) {
+                    errorDiv.textContent = errorMsg;
+                    errorDiv.style.display = 'block';
+                } else {
+                    alert(errorMsg);
+                }
+                
+                // Re-enable button
+                const loginBtn = document.getElementById('loginConnectBtn');
+                if (loginBtn) {
+                    loginBtn.disabled = false;
+                    loginBtn.innerHTML = `
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3 4-3 9-3 9 1.34 9 3z"/>
+                            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+                        </svg>
+                        Connect MetaMask Wallet
+                    `;
+                }
+            }
+        };
+        
+        console.log('✅ connectMetaMask function defined and ready (using viem)');
+    </script>
+</head>
+<body>
+    <!-- Login Landing Page -->
+    <div id="login-landing" class="login-landing">
+        <div class="login-container">
+            <div class="login-header">
+                <h1>mindX</h1>
+                <p>Secure Agent Management Platform</p>
+            </div>
+            
+            <div class="login-content">
+                <div class="login-card">
+                    <div class="login-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                            <path d="M2 17l10 5 10-5"/>
+                            <path d="M2 12l10 5 10-5"/>
+                        </svg>
+                    </div>
+                    
+                    <h2>Agency Management</h2>
+                    <p>Connect your wallet to access the agent management platform</p>
+                    
+                    <div id="login-error" class="login-error" style="display: none;"></div>
+                    
+                    <div class="wallet-connection">
+                        <button id="loginConnectBtn" class="login-connect-btn" onclick="window.connectMetaMask().catch(err => { console.error('MetaMask error:', err); }); return false;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3 4-3 9-3 9 1.34 9 3z"/>
+                                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+                            </svg>
+                            Connect MetaMask Wallet
+                        </button>
+                    </div>
+                    
+                    <div class="login-features">
+                        <div class="feature">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 12l2 2 4-4"/>
+                                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3 4-3 9-3 9 1.34 9 3z"/>
+                            </svg>
+                            <span>Secure Agent Management</span>
+                        </div>
+                        <div class="feature">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            </svg>
+                            <span>Wallet-Based Authentication</span>
+                        </div>
+                        <div class="feature">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14,2 14,8 20,8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                <polyline points="10,9 9,9 8,9"/>
+                            </svg>
+                            <span>Complete User Separation</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="login-footer">
+                <p>By connecting your wallet, you agree to our terms of service</p>
+                <div class="github-link">
+                    <a href="https://github.com/abaracadabra/mindX" target="_blank" rel="noopener noreferrer">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                        </svg>
+                        GitHub
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        .login-error {
+            background-color: rgba(255, 0, 0, 0.1);
+            border: 1px solid #ff0000;
+            color: #ff6666;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+    </style>
+</body>
+</html>

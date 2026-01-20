@@ -1,0 +1,3554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta http-equiv="Last-Modified" content="0">
+    <title>mindX - Augmentic Agency Management Platform</title>
+    <link rel="stylesheet" href="styles3.css">
+    <script src="crossmint-integration.js"></script>
+    <script src="window-manager.js"></script>
+    <!-- Authentication Check - Redirect to login if not authenticated -->
+    <script>
+        // Check authentication on page load
+        (function() {
+            const authData = localStorage.getItem('mindx_auth');
+            const crossmintAuth = localStorage.getItem('crossmint_authenticated');
+            
+            if (!authData || crossmintAuth !== 'true') {
+                console.log('❌ Not authenticated, redirecting to login...');
+                window.location.href = '/login';
+                return;
+            }
+            
+            try {
+                const auth = JSON.parse(authData);
+                // Check if session is still valid (24 hours)
+                if (auth.timestamp) {
+                    const sessionAge = Date.now() - auth.timestamp;
+                    const maxSessionAge = 24 * 60 * 60 * 1000; // 24 hours
+                    if (sessionAge > maxSessionAge) {
+                        console.log('❌ Session expired, redirecting to login...');
+                        localStorage.removeItem('mindx_auth');
+                        localStorage.removeItem('crossmint_authenticated');
+                        window.location.href = '/login';
+                        return;
+                    }
+                }
+                
+                console.log('✅ Authentication valid, showing application');
+            } catch (e) {
+                console.error('Error parsing auth data:', e);
+                window.location.href = '/login';
+                return;
+            }
+        })();
+        
+        // Populate wallet info in header
+        document.addEventListener('DOMContentLoaded', function() {
+            const authData = localStorage.getItem('mindx_auth');
+            const walletAddress = localStorage.getItem('crossmint_wallet');
+            
+            if (walletAddress) {
+                const headerWalletEl = document.getElementById('headerWalletAddress');
+                if (headerWalletEl) {
+                    // Show full address
+                    headerWalletEl.textContent = walletAddress;
+                    headerWalletEl.setAttribute('data-full-address', walletAddress);
+                }
+                
+                // Also set for the old crossmint elements if they exist
+                const crossmintWalletEl = document.getElementById('crossmintWalletAddress');
+                if (crossmintWalletEl) {
+                    crossmintWalletEl.textContent = walletAddress;
+                    crossmintWalletEl.setAttribute('data-full-address', walletAddress);
+                }
+            }
+        });
+        
+        // Copy wallet address to clipboard
+        function copyWalletToClipboard() {
+            const walletAddress = localStorage.getItem('crossmint_wallet');
+            if (walletAddress) {
+                navigator.clipboard.writeText(walletAddress).then(() => {
+                    // Show feedback
+                    const btn = document.querySelector('.copy-btn-small');
+                    if (btn) {
+                        const originalHTML = btn.innerHTML;
+                        btn.innerHTML = '✓';
+                        btn.style.color = '#00ff88';
+                        setTimeout(() => {
+                            btn.innerHTML = originalHTML;
+                            btn.style.color = '';
+                        }, 1500);
+                    }
+                }).catch(err => {
+                    console.error('Failed to copy:', err);
+                    alert('Failed to copy address');
+                });
+            }
+        }
+        
+        // Handle logout
+        function handleLogout() {
+            if (confirm('Are you sure you want to logout?')) {
+                // Clear all auth data
+                localStorage.removeItem('mindx_auth');
+                localStorage.removeItem('crossmint_authenticated');
+                localStorage.removeItem('crossmint_wallet');
+                localStorage.removeItem('crossmint_user');
+                localStorage.removeItem('crossmint_auth_method');
+                
+                console.log('🚪 Logged out, redirecting to login...');
+                window.location.href = '/login';
+            }
+        }
+    </script>
+    
+    <!-- Inline Styles for Wallet Info -->
+    <style>
+        .wallet-info-inline {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-left: 20px;
+            padding: 6px 12px;
+            background: rgba(0, 168, 255, 0.08);
+            border: 1px solid rgba(0, 168, 255, 0.2);
+            border-radius: 6px;
+        }
+        
+        .wallet-address-inline {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+        
+        .wallet-address-inline .address-label-small {
+            font-size: 10px;
+            color: #888;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        
+        .wallet-address-inline .wallet-address-text {
+            font-size: 11px;
+            color: #00a8ff;
+            font-family: 'Share Tech Mono', monospace;
+            word-break: break-all;
+        }
+        
+        .copy-btn-small {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            transition: color 0.2s;
+            flex-shrink: 0;
+        }
+        
+        .copy-btn-small:hover {
+            color: #00a8ff;
+        }
+        
+        .logout-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .connection-status .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ff4444;
+        }
+        
+        .connection-status .status-dot.connected {
+            background-color: #00ff88;
+            box-shadow: 0 0 6px rgba(0, 255, 136, 0.5);
+        }
+        
+        .connection-status .status-label {
+            font-size: 10px;
+            color: #00ff88;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .logout-btn-inline {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            border-radius: 4px;
+            color: #ff6666;
+            font-size: 10px;
+            font-family: 'Share Tech Mono', monospace;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .logout-btn-inline:hover {
+            background: rgba(255, 68, 68, 0.2);
+            border-color: rgba(255, 68, 68, 0.5);
+            color: #ff4444;
+        }
+        
+        .logout-btn-inline svg {
+            stroke: currentColor;
+        }
+    </style>
+    <!-- Inline MetaMask connection function - available immediately -->
+    <script>
+        // Define a stub for handleAuthenticationSuccess that will be replaced when app.js loads
+        window.handleAuthenticationSuccess = function(userData) {
+            console.log('⚠️ handleAuthenticationSuccess stub called (app.js not loaded yet)');
+            console.log('Storing userData for later processing:', userData);
+            // Store for app.js to process when it loads
+            window.pendingAuthSuccess = userData;
+        };
+        
+        // Define connectMetaMask immediately so it's available for onclick
+        // Uses viem for proper wallet connection and challenge-response authentication
+        window.connectMetaMask = async function() {
+            try {
+                console.log('🔗 Connecting to MetaMask with viem...');
+                
+                // Check if MetaMask is available
+                if (typeof window.ethereum === 'undefined') {
+                    alert('MetaMask is not installed. Please install MetaMask browser extension to continue.');
+                    return;
+                }
+
+                // Dynamically import viem (ESM module)
+                let viem;
+                try {
+                    viem = await import('https://cdn.jsdelivr.net/npm/viem@2.21.45/+esm');
+                } catch (importError) {
+                    console.error('Failed to load viem:', importError);
+                    alert('Wallet connection library failed to load. Please refresh the page.');
+                    return;
+                }
+
+                // Get API base URL
+                const apiBaseUrl = window.MINDX_API_URL || `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`;
+                
+                // Create viem wallet client
+                // Handle both namespace and named exports
+                const createWalletClient = viem.createWalletClient || viem.default?.createWalletClient;
+                const custom = viem.custom || viem.default?.custom;
+                
+                if (!createWalletClient || !custom) {
+                    throw new Error('viem exports not found. Please refresh the page.');
+                }
+                
+                const walletClient = createWalletClient({
+                    transport: custom(window.ethereum)
+                });
+
+                console.log('Requesting account access via viem...');
+                
+                // Request account access using viem
+                const accounts = await walletClient.requestAddresses();
+                
+                console.log('MetaMask response:', accounts);
+
+                if (accounts.length === 0) {
+                    alert('No accounts found. Please unlock MetaMask and try again.');
+                    return;
+                }
+
+                const walletAddress = accounts[0];
+                console.log('Connected to:', walletAddress);
+                
+                // Get chain ID using viem
+                const chainId = await window.ethereum.request({
+                    method: 'eth_chainId'
+                });
+
+                // Step 1: Get challenge from backend
+                console.log('Requesting authentication challenge from:', `${apiBaseUrl}/users/challenge`);
+                let challengeResponse;
+                try {
+                    challengeResponse = await fetch(`${apiBaseUrl}/users/challenge`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            wallet_address: walletAddress,
+                            action: 'login'
+                        })
+                    });
+                } catch (fetchError) {
+                    console.error('Fetch error:', fetchError);
+                    throw new Error(`Failed to connect to backend at ${apiBaseUrl}. Please ensure the backend is running on port 8000. Error: ${fetchError.message}`);
+                }
+
+                if (!challengeResponse.ok) {
+                    const errorText = await challengeResponse.text();
+                    console.error('Challenge response error:', errorText);
+                    throw new Error(`Failed to get authentication challenge from server (${challengeResponse.status}): ${errorText}`);
+                }
+
+                const challengeData = await challengeResponse.json();
+                const challengeMessage = challengeData.challenge_message;
+                console.log('Challenge received:', challengeMessage);
+
+                // Step 2: Sign challenge message using viem
+                console.log('Requesting signature from MetaMask...');
+                const signature = await walletClient.signMessage({
+                    account: walletAddress,
+                    message: challengeMessage
+                });
+                console.log('Challenge signed:', signature);
+
+                // Step 3: Register/authenticate user with backend
+                console.log('Authenticating with backend at:', `${apiBaseUrl}/users/register-with-signature`);
+                let authResponse;
+                try {
+                    authResponse = await fetch(`${apiBaseUrl}/users/register-with-signature`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            wallet_address: walletAddress,
+                            signature: signature,
+                            message: challengeMessage,
+                            metadata: {
+                                chainId: chainId,
+                                provider: 'metamask',
+                                authMethod: 'wallet'
+                            }
+                        })
+                    });
+                } catch (fetchError) {
+                    console.error('Auth fetch error:', fetchError);
+                    throw new Error(`Failed to connect to backend at ${apiBaseUrl}. Please ensure the backend is running on port 8000. Error: ${fetchError.message}`);
+                }
+
+                if (!authResponse.ok) {
+                    const errorText = await authResponse.text();
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch (e) {
+                        errorData = { error: errorText };
+                    }
+                    console.error('Auth response error:', errorData);
+                    throw new Error(errorData.error || `Authentication failed (${authResponse.status}): ${errorText}`);
+                }
+
+                const authData = await authResponse.json();
+                console.log('Authentication successful:', authData);
+
+                // Create user object
+                const userData = {
+                    id: walletAddress,
+                    address: walletAddress,
+                    provider: 'metamask',
+                    chainId: chainId,
+                    authMethod: 'wallet',
+                    signature: signature,
+                    timestamp: Date.now()
+                };
+
+                // Store in localStorage
+                localStorage.setItem('crossmint_user', JSON.stringify(userData));
+                localStorage.setItem('crossmint_wallet', walletAddress);
+                localStorage.setItem('crossmint_authenticated', 'true');
+                localStorage.setItem('crossmint_auth_method', 'wallet');
+                
+                // Store for app.js to process when it loads
+                window.pendingAuthSuccess = userData;
+                
+                // Call handleAuthenticationSuccess (now always available via window)
+                console.log('Calling handleAuthenticationSuccess...');
+                try {
+                    if (typeof window.handleAuthenticationSuccess === 'function') {
+                        window.handleAuthenticationSuccess(userData);
+                        console.log('✅ handleAuthenticationSuccess called successfully');
+                    } else {
+                        console.error('❌ handleAuthenticationSuccess is not a function!');
+                        // Fallback: manually show main app
+                        const loginLanding = document.getElementById('login-landing');
+                        const mainApplication = document.getElementById('main-application');
+                        if (loginLanding) loginLanding.style.display = 'none';
+                        if (mainApplication) mainApplication.style.display = 'block';
+                        document.body.classList.add('authenticated');
+                    }
+                } catch (error) {
+                    console.error('❌ Error calling handleAuthenticationSuccess:', error);
+                    // Fallback: manually show main app
+                    setTimeout(() => {
+                        const loginLanding = document.getElementById('login-landing');
+                        const mainApplication = document.getElementById('main-application');
+                        if (loginLanding) loginLanding.style.display = 'none';
+                        if (mainApplication) mainApplication.style.display = 'block';
+                        document.body.classList.add('authenticated');
+                    }, 100);
+                }
+                
+                console.log('✅ MetaMask wallet connected and authenticated successfully!');
+                
+            } catch (error) {
+                console.error('❌ MetaMask connection failed:', error);
+                let errorMsg = 'Failed to connect to MetaMask';
+                if (error.code === 4001) {
+                    errorMsg = 'MetaMask connection rejected. Please approve the connection request.';
+                } else if (error.code === -32002) {
+                    errorMsg = 'MetaMask connection already pending. Please check MetaMask and try again.';
+                } else if (error.message) {
+                    errorMsg = error.message;
+                }
+                alert(errorMsg);
+            }
+        };
+        
+        console.log('✅ connectMetaMask function defined inline and ready (using viem)');
+    </script>
+</head>
+<body>
+    <!-- Main Application -->
+    <div id="main-application" class="container">
+        <header>
+            <div class="header-single-line">
+                <div class="header-left">
+                    <div class="mindx-branding">
+                        <h1>mindX</h1>
+                    </div>
+                    <!-- Wallet Info - Inline Display -->
+                    <div class="wallet-info-inline" id="walletInfoInline">
+                        <div class="wallet-address-inline">
+                            <span class="address-label-small">Receive Address:</span>
+                            <span class="wallet-address-text" id="headerWalletAddress">Loading...</span>
+                            <button class="copy-btn-small" onclick="copyWalletToClipboard()" title="Copy address">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="logout-section">
+                            <div class="connection-status">
+                                <span class="status-dot connected"></span>
+                                <span class="status-label">Connected</span>
+                            </div>
+                            <button class="logout-btn-inline" id="headerLogoutBtn" onclick="handleLogout()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                    <polyline points="16,17 21,12 16,7"/>
+                                    <line x1="21" y1="12" x2="9" y2="12"/>
+                                </svg>
+                                Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-center">
+                </div>
+                <div class="header-right">
+                    <div class="autonomous-control">
+                        <label class="autonomous-toggle">
+                            <input type="checkbox" id="autonomous-mode">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">AUTONOMOUS</span>
+                        </label>
+                    </div>
+                    <div id="status-light" class="status-light-red" title="Disconnected"></div>
+                </div>
+            </div>
+        </header>
+
+            <!-- Tab Navigation -->
+            <nav class="tab-navigation">
+                <div class="tab-row">
+                    <button class="tab-btn active" data-tab="control">Control</button>
+                    <button class="tab-btn" data-tab="agents">Agents</button>
+                    <button class="tab-btn" data-tab="system">System</button>
+                    <button class="tab-btn" data-tab="usage">Usage</button>
+                    <button class="tab-btn" data-tab="logs">Logs</button>
+                    <button class="tab-btn" data-tab="api">API</button>
+                    <button class="tab-btn" data-tab="faicey">Faicey</button>
+                    <button class="tab-btn" data-tab="admin">Admin</button>
+                </div>
+                <div class="tab-row core-tabs">
+                    <div class="core-tabs-label">Core Components</div>
+                    <button class="tab-btn core-tab" data-tab="core">Core Systems</button>
+                    <button class="tab-btn core-tab" data-tab="evolution">Evolution</button>
+                    <button class="tab-btn core-tab" data-tab="learning">Learning</button>
+                    <button class="tab-btn core-tab" data-tab="orchestration">Orchestration</button>
+                    <button class="tab-btn core-tab" data-tab="evolve-codebase">Evolve Codebase</button>
+                    <button class="tab-btn core-tab" data-tab="query-coordinator">Query Coordinator</button>
+                    <button class="tab-btn core-tab" data-tab="mindxagent">mindXagent</button>
+                    <button class="tab-btn core-tab" data-tab="github-agent">GitHub Agent</button>
+                </div>
+            </nav>
+
+        <!-- Control Tab -->
+        <div id="control-tab" class="tab-content active">
+            <div class="control-section">
+                <div class="section-header">
+                    <div class="section-tabs">
+                        <button class="section-tab active" data-section="evolve">Evolve Codebase</button>
+                        <button class="section-tab" data-section="query">Query Coordinator</button>
+                        <button class="section-tab" data-section="github">GitHub Agent</button>
+                    </div>
+                </div>
+                
+                <!-- Evolve Codebase Section -->
+                <div id="evolve-section" class="section-content active">
+                    <textarea id="evolve-directive" placeholder="Enter a high-level directive for evolution..."></textarea>
+                    <div class="evolve-controls">
+                        <button id="evolve-btn" class="evolve-action-btn">mindX</button>
+                        <div class="cycle-control">
+                            <label for="cycle-count">Max Cycles:</label>
+                            <input type="number" id="cycle-count" value="8" min="1" max="100">
+                        </div>
+                        <div class="autonomous-control">
+                            <label class="autonomous-toggle">
+                                <input type="checkbox" id="evolve-autonomous-mode">
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label">Autonomous Mode</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Query Coordinator Section -->
+                <div id="query-section" class="section-content">
+                    <input type="text" id="query-input" placeholder="explain augmentic development">
+                    <button id="query-btn">Send Query</button>
+                </div>
+                
+                <!-- GitHub Agent Section -->
+                <div id="github-section" class="section-content">
+                    <div class="github-repo-header">
+                        <a href="https://github.com/abaracadabra/mindX" target="_blank" rel="noopener noreferrer" class="github-repo-link">
+                            <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                            </svg>
+                            <span>GitHub Repository</span>
+                        </a>
+                    </div>
+                    <div class="github-agent-container">
+                        <div class="github-status-panel">
+                            <h3>GitHub Agent Status</h3>
+                            <div id="github-status-display" class="status-display">
+                                <p>Loading status...</p>
+                            </div>
+                            <button id="refresh-github-status-btn" class="action-btn">Refresh Status</button>
+                        </div>
+                        
+                        <div class="github-backup-panel">
+                            <h3>Backup Operations</h3>
+                            <div class="backup-controls">
+                                <button id="create-backup-btn" class="action-btn primary">Create Backup</button>
+                                <button id="list-backups-btn" class="action-btn">List Backups</button>
+                                <button id="sync-github-btn" class="action-btn">Sync with GitHub</button>
+                            </div>
+                            <div class="backup-form" style="margin-top: 15px;">
+                                <label>Backup Reason:</label>
+                                <input type="text" id="backup-reason-input" placeholder="Enter reason for backup">
+                                <label>Backup Type:</label>
+                                <select id="backup-type-select">
+                                    <option value="manual">Manual</option>
+                                    <option value="pre_architectural_upgrade">Pre-Upgrade</option>
+                                    <option value="milestone_backup">Milestone</option>
+                                    <option value="scheduled_backup">Scheduled</option>
+                                </select>
+                            </div>
+                            <div id="backups-list" class="backups-list" style="margin-top: 15px; max-height: 300px; overflow-y: auto;"></div>
+                        </div>
+                        
+                        <div class="github-schedule-panel">
+                            <h3>Backup Schedule Settings</h3>
+                            <div class="schedule-controls">
+                                <div class="schedule-item">
+                                    <label>
+                                        <input type="checkbox" id="daily-backup-enabled">
+                                        Daily Backup
+                                    </label>
+                                    <input type="time" id="daily-backup-time" value="02:00" style="margin-left: 10px;">
+                                    <button id="save-daily-schedule-btn" class="action-btn small">Save</button>
+                                </div>
+                                <div class="schedule-item">
+                                    <label>
+                                        <input type="checkbox" id="hourly-backup-enabled">
+                                        Hourly Backup
+                                    </label>
+                                    <button id="save-hourly-schedule-btn" class="action-btn small">Save</button>
+                                </div>
+                                <div class="schedule-item">
+                                    <label>
+                                        <input type="checkbox" id="weekly-backup-enabled">
+                                        Weekly Backup
+                                    </label>
+                                    <select id="weekly-backup-day" style="margin-left: 10px;">
+                                        <option value="sunday">Sunday</option>
+                                        <option value="monday">Monday</option>
+                                        <option value="tuesday">Tuesday</option>
+                                        <option value="wednesday">Wednesday</option>
+                                        <option value="thursday">Thursday</option>
+                                        <option value="friday">Friday</option>
+                                        <option value="saturday">Saturday</option>
+                                    </select>
+                                    <input type="time" id="weekly-backup-time" value="03:00" style="margin-left: 10px;">
+                                    <button id="save-weekly-schedule-btn" class="action-btn small">Save</button>
+                                </div>
+                                <div class="schedule-item">
+                                    <label>
+                                        <input type="checkbox" id="shutdown-backup-enabled" checked>
+                                        Backup on Shutdown
+                                    </label>
+                                </div>
+                            </div>
+                            <button id="refresh-schedule-btn" class="action-btn" style="margin-top: 10px;">Refresh Schedule</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Simple Coder Update Requests</h2>
+                <div class="update-request-controls">
+                    <button id="refresh-updates-btn">Refresh Updates</button>
+                <button id="select-all-btn" disabled style="font-size: 12px; padding: 6px 12px;">Select All</button>
+                    <button id="approve-all-btn" disabled>Approve All</button>
+                <button id="delete-all-btn" disabled>Delete All Selected</button>
+                </div>
+                <div id="update-requests-container">
+                    <p>No pending update requests</p>
+            </div>
+            
+                <script>
+                // Global variables for selection
+                let allUpdateRequests = [];
+                let selectedRequests = new Set();
+                
+            // Simple inline script to load updates immediately
+            function loadUpdatesInline() {
+                console.log('Loading updates inline...');
+                console.log('Current selected requests before load:', Array.from(selectedRequests));
+                const container = document.getElementById('update-requests-container');
+                const selectAllBtn = document.getElementById('select-all-btn');
+                const approveAllBtn = document.getElementById('approve-all-btn');
+                const deleteAllBtn = document.getElementById('delete-all-btn');
+                
+                // Add timeout to prevent hanging
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                    
+                    fetch('http://localhost:8000/simple-coder/update-requests', {
+                        signal: controller.signal
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Data received:', data);
+                            console.log('Previous allUpdateRequests count:', allUpdateRequests.length);
+                            console.log('Data type:', typeof data, 'Is array:', Array.isArray(data));
+                            console.log('Data length:', data ? data.length : 'null/undefined');
+                            allUpdateRequests = data;
+                            console.log('New allUpdateRequests count:', allUpdateRequests.length);
+                            console.log('Clearing selectedRequests, previous count:', selectedRequests.size);
+                            selectedRequests.clear();
+                            console.log('SelectedRequests cleared, new count:', selectedRequests.size);
+                            
+                            // Always clear the container first
+                                container.innerHTML = '';
+                            
+                            if (data && data.length > 0) {
+                                data.forEach((request, index) => {
+                                    const div = document.createElement('div');
+                                    div.className = 'update-request';
+                                    div.style.margin = '10px 0';
+                                    div.style.padding = '15px';
+                                    div.style.border = '1px solid #555';
+                                    div.style.borderRadius = '8px';
+                                    div.style.background = '#1a1a1a';
+                                    div.style.color = '#fff';
+                                    div.setAttribute('data-request-id', request.request_id);
+                                    
+                                    div.innerHTML = `
+                                        <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                                            <input type="checkbox" class="update-checkbox" data-request-id="${request.request_id}" style="margin-right: 10px; transform: scale(1.2);">
+                                            <h4 style="margin: 0; flex: 1;">Update Request ${index + 1}: ${request.request_id}</h4>
+                                            <span style="background: #ffaa00; color: #000; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold;">${request.status}</span>
+                                        </div>
+                                        <p><strong>Original File:</strong> ${request.original_file}</p>
+                                        <p><strong>Sandbox File:</strong> ${request.sandbox_file}</p>
+                                        <p><strong>Cycle:</strong> ${request.cycle}</p>
+                                        <p><strong>Changes:</strong> ${request.changes.length} modifications</p>
+                                        <p><strong>Timestamp:</strong> ${new Date(request.timestamp).toLocaleString()}</p>
+                                        <div style="margin-top: 10px;">
+                                            <button onclick="approveUpdate('${request.request_id}')" style="margin: 5px; padding: 5px 10px; background: #00aa00; color: white; border: none; border-radius: 3px; cursor: pointer;">Approve</button>
+                                            <button onclick="rejectUpdate('${request.request_id}')" style="margin: 5px; padding: 5px 10px; background: #aa0000; color: white; border: none; border-radius: 3px; cursor: pointer;">Reject</button>
+                                        </div>
+                                    `;
+                                    container.appendChild(div);
+                                });
+                                
+                                // Enable control buttons
+                                if (selectAllBtn) selectAllBtn.disabled = false;
+                                if (approveAllBtn) approveAllBtn.disabled = false;
+                                if (deleteAllBtn) deleteAllBtn.disabled = false;
+                                
+                                // Add event listeners
+                                setupSelectionHandlers();
+                                
+                                console.log(`Displayed ${data.length} update requests`);
+                            } else {
+                                // Show message when no requests
+                                container.innerHTML = '<p style="color: #888; text-align: center; padding: 20px;">No pending update requests</p>';
+                                
+                                // Disable control buttons
+                                if (selectAllBtn) selectAllBtn.disabled = true;
+                                if (approveAllBtn) approveAllBtn.disabled = true;
+                                if (deleteAllBtn) deleteAllBtn.disabled = true;
+                                
+                                console.log('No update requests to display');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            if (error.name === 'AbortError') {
+                                container.innerHTML = `<p style="color: #ffaa00;">Request timed out - please refresh the page</p>`;
+                            } else {
+                                container.innerHTML = `<p style="color: #ff6666;">Error: ${error.message}</p>`;
+                            }
+                        })
+                        .finally(() => {
+                            clearTimeout(timeoutId);
+                        });
+                }
+                
+                // Setup selection handlers
+                function setupSelectionHandlers() {
+                // Checkbox change handlers
+                document.querySelectorAll('.update-checkbox').forEach(checkbox => {
+                    // Remove any existing event listeners
+                    checkbox.replaceWith(checkbox.cloneNode(true));
+                });
+                
+                // Re-add event listeners to all checkboxes
+                document.querySelectorAll('.update-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', function() {
+                        const requestId = this.getAttribute('data-request-id');
+                        console.log('Checkbox changed:', requestId, 'checked:', this.checked);
+                        if (this.checked) {
+                            selectedRequests.add(requestId);
+                            this.closest('.update-request').style.border = '2px solid #00ff00';
+                        } else {
+                            selectedRequests.delete(requestId);
+                            this.closest('.update-request').style.border = '1px solid #555';
+                        }
+                        console.log('Selected requests after change:', selectedRequests.size);
+                        updateButtonStates();
+                    });
+                });
+                    
+                // Select All button
+                const selectAllBtn = document.getElementById('select-all-btn');
+                if (selectAllBtn) {
+                    // Remove any existing event listeners
+                    selectAllBtn.replaceWith(selectAllBtn.cloneNode(true));
+                    const newSelectAllBtn = document.getElementById('select-all-btn');
+                    
+                    newSelectAllBtn.addEventListener('click', function() {
+                        console.log('Select All clicked, current selected:', selectedRequests.size, 'total:', allUpdateRequests.length);
+                        const allChecked = selectedRequests.size === allUpdateRequests.length;
+                        console.log('All checked:', allChecked);
+                        
+                        // Toggle all checkboxes
+                        document.querySelectorAll('.update-checkbox').forEach(checkbox => {
+                            const requestId = checkbox.getAttribute('data-request-id');
+                            
+                            if (allChecked) {
+                                // Deselect all - uncheck all boxes
+                                checkbox.checked = false;
+                                selectedRequests.delete(requestId);
+                                checkbox.closest('.update-request').style.border = '1px solid #555';
+                            } else {
+                                // Select all - check all boxes
+                                checkbox.checked = true;
+                                selectedRequests.add(requestId);
+                                checkbox.closest('.update-request').style.border = '2px solid #00ff00';
+                            }
+                        });
+                        console.log('After select all, selected:', selectedRequests.size);
+                        updateButtonStates();
+                    });
+                }
+                    
+                    // Delete All Selected button
+                    const deleteAllBtn = document.getElementById('delete-all-btn');
+                    if (deleteAllBtn) {
+                        // Remove any existing event listeners
+                        deleteAllBtn.replaceWith(deleteAllBtn.cloneNode(true));
+                        const newDeleteAllBtn = document.getElementById('delete-all-btn');
+                        
+                        newDeleteAllBtn.addEventListener('click', function() {
+                            console.log('Delete All Selected button clicked!');
+                            console.log('Selected requests:', Array.from(selectedRequests));
+                            if (selectedRequests.size === 0) {
+                                alert('No requests selected');
+                                return;
+                            }
+                            
+                        if (confirm(`Delete ${selectedRequests.size} selected requests?`)) {
+                            const requestsToDelete = Array.from(selectedRequests);
+                            let completed = 0;
+                            
+                            console.log('Starting bulk delete of', requestsToDelete.length, 'requests');
+                            console.log('Requests to delete:', requestsToDelete);
+                            
+                            requestsToDelete.forEach(requestId => {
+                                console.log('Deleting request:', requestId);
+                                fetch(`http://localhost:8000/simple-coder/reject-update/${requestId}`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json'
+                                    }
+                                })
+                                .then(response => {
+                                    console.log('Delete response for', requestId, ':', response.status, response.statusText);
+                                    console.log('Response headers for', requestId, ':', Object.fromEntries(response.headers.entries()));
+                                    if (response.ok) {
+                                        return response.json();
+                                    } else {
+                                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                                    }
+                                })
+                                .then(data => {
+                                    console.log('Delete success for', requestId, ':', data);
+                                })
+                                .catch(error => {
+                                    console.error('Error deleting request:', requestId, error);
+                                })
+                                .finally(() => {
+                                    completed++;
+                                    console.log(`Completed ${completed}/${requestsToDelete.length} deletions`);
+                                    if (completed === requestsToDelete.length) {
+                                        console.log('Bulk delete completed, refreshing...');
+                                        selectedRequests.clear();
+                                        // Reset button states immediately
+                                        updateButtonStates();
+                                        // Refresh immediately - polling will handle future updates
+                                        loadUpdatesInline();
+                                    }
+                                });
+                                });
+                            }
+                        });
+                    }
+                    
+                    // Approve All button
+                    const approveAllBtn = document.getElementById('approve-all-btn');
+                    if (approveAllBtn) {
+                        // Remove any existing event listeners
+                        approveAllBtn.replaceWith(approveAllBtn.cloneNode(true));
+                        const newApproveAllBtn = document.getElementById('approve-all-btn');
+                        
+                        newApproveAllBtn.addEventListener('click', function() {
+                            console.log('Approve All button clicked!');
+                            console.log('Selected requests:', Array.from(selectedRequests));
+                            console.log('Selected requests size:', selectedRequests.size);
+                            
+                            if (selectedRequests.size === 0) {
+                                alert('No requests selected');
+                                return;
+                            }
+                            
+                            if (confirm(`Approve ${selectedRequests.size} selected requests?`)) {
+                                const requestsToApprove = Array.from(selectedRequests);
+                                let completed = 0;
+                                
+                                console.log('Starting bulk approve of', requestsToApprove.length, 'requests');
+                                
+                                requestsToApprove.forEach(requestId => {
+                                    fetch(`http://localhost:8000/simple-coder/approve-update/${requestId}`, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'Accept': 'application/json'
+                                        }
+                                    })
+                                    .then(response => {
+                                        console.log('Approve response for', requestId, ':', response.status, response.statusText);
+                                        if (response.ok) {
+                                            return response.json();
+                                        } else {
+                                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                                        }
+                                    })
+                                    .then(data => {
+                                        console.log('Approve success for', requestId, ':', data);
+                                    })
+                                    .catch(error => {
+                                        console.error('Error approving request:', requestId, error);
+                                    })
+                                    .finally(() => {
+                                        completed++;
+                                        console.log(`Completed ${completed}/${requestsToApprove.length} approvals`);
+                                        if (completed === requestsToApprove.length) {
+                                            console.log('Bulk approve completed, refreshing...');
+                                            selectedRequests.clear();
+                                            // Reset button states immediately
+                                            updateButtonStates();
+                                            // Refresh immediately - polling will handle future updates
+                                            loadUpdatesInline();
+                                        }
+                                    });
+                                });
+                            }
+                        });
+                    }
+                }
+                
+                // Update button states
+                function updateButtonStates() {
+                    const selectAllBtn = document.getElementById('select-all-btn');
+                    const deleteAllBtn = document.getElementById('delete-all-btn');
+                    const approveAllBtn = document.getElementById('approve-all-btn');
+                    
+                    if (selectAllBtn) {
+                        if (allUpdateRequests.length === 0) {
+                            selectAllBtn.textContent = 'Select All';
+                            selectAllBtn.disabled = true;
+                        } else {
+                            selectAllBtn.disabled = false;
+                            selectAllBtn.textContent = selectedRequests.size === allUpdateRequests.length ? 'Deselect All' : 'Select All';
+                        }
+                    }
+                    
+                    if (deleteAllBtn) {
+                        deleteAllBtn.disabled = selectedRequests.size === 0;
+                        deleteAllBtn.textContent = `Delete All Selected (${selectedRequests.size})`;
+                    }
+                    
+                    if (approveAllBtn) {
+                        approveAllBtn.disabled = selectedRequests.size === 0;
+                        approveAllBtn.textContent = `Approve All Selected (${selectedRequests.size})`;
+                    }
+                }
+                
+            // Make functions globally accessible
+            window.approveUpdate = function(requestId) {
+                console.log('Approving individual request:', requestId);
+                fetch(`http://localhost:8000/simple-coder/approve-update/${requestId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => {
+                    console.log('Individual approve response:', response.status, response.statusText);
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                })
+                .then(data => {
+                    console.log('Individual approve success:', data);
+                    selectedRequests.delete(requestId);
+                    // Reset button states immediately
+                    updateButtonStates();
+                    // Refresh immediately - polling will handle future updates
+                    loadUpdatesInline();
+                })
+                .catch(error => {
+                    console.error('Error approving individual request:', error);
+                    alert('Error approving request: ' + error.message);
+                });
+            };
+                
+            window.rejectUpdate = function(requestId) {
+                console.log('Rejecting individual request:', requestId);
+                console.log('Current selected requests before reject:', Array.from(selectedRequests));
+                
+                fetch(`http://localhost:8000/simple-coder/reject-update/${requestId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => {
+                    console.log('Individual reject response:', response.status, response.statusText);
+                    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                })
+                .then(data => {
+                    console.log('Individual reject success:', data);
+                    selectedRequests.delete(requestId);
+                    console.log('Selected requests after reject:', Array.from(selectedRequests));
+                    // Reset button states immediately
+                    updateButtonStates();
+                    // Refresh immediately - polling will handle future updates
+                    console.log('Refreshing immediately...');
+                    loadUpdatesInline();
+                })
+                .catch(error => {
+                    console.error('Error rejecting individual request:', error);
+                    alert('Error rejecting request: ' + error.message);
+                });
+            };
+                
+                
+            // Auto-refresh function
+            function autoRefresh() {
+                console.log('Auto-refreshing updates...');
+                console.log('Current selected requests before auto-refresh:', Array.from(selectedRequests));
+                loadUpdatesInline();
+            }
+            
+            // Test function to verify functions are accessible
+            window.testFunctions = function() {
+                console.log('Testing functions...');
+                console.log('approveUpdate function:', typeof window.approveUpdate);
+                console.log('rejectUpdate function:', typeof window.rejectUpdate);
+                console.log('autoRefresh function:', typeof autoRefresh);
+            };
+            
+            // Global clear logs function
+            window.clearLogs = function() {
+                console.log('Global clearLogs called');
+                if (typeof clearLogs === 'function') {
+                    clearLogs();
+                } else {
+                    console.error('clearLogs function not found');
+                }
+            };
+            
+            // Test function to add sample logs
+            window.addTestLogs = function() {
+                if (typeof addLog === 'function') {
+                    addLog('Test log message 1', 'INFO');
+                    addLog('Test log message 2', 'WARNING');
+                    addLog('Test log message 3', 'ERROR');
+                    addLog('Test log message 4', 'DEBUG');
+                    console.log('Test logs added');
+                } else {
+                    console.error('addLog function not found');
+                }
+            };
+            
+            // Global export logs function - opens format selection modal
+            window.exportLogs = function() {
+                console.log('Global exportLogs called');
+                if (typeof showExportFormatModal === 'function') {
+                    showExportFormatModal();
+                } else {
+                    console.error('showExportFormatModal function not found');
+                    // Fallback: try to export directly as TXT
+                    if (typeof exportLogs === 'function') {
+                        exportLogs('txt');
+                    }
+                }
+            };
+            
+            // Test function to check modal
+            window.testExportModal = function() {
+                console.log('Testing export modal...');
+                const modal = document.getElementById('export-format-modal');
+                console.log('Modal found:', !!modal);
+                if (modal) {
+                    modal.style.display = 'flex';
+                    console.log('Modal should be visible now');
+                }
+            };
+            
+            
+            
+            // Auto-refresh polling mechanism
+            let refreshInterval = null;
+            let lastRequestCount = 0;
+            let lastCycleCount = 0;
+            let lastTotalUpdates = 0;
+            
+            function startAutoRefresh() {
+                // Clear any existing interval
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                }
+                
+                // Poll every 3 seconds for changes
+                refreshInterval = setInterval(async () => {
+                    try {
+                        // Check both update requests and status
+                        const [requestsResponse, statusResponse] = await Promise.all([
+                            fetch('http://localhost:8000/simple-coder/update-requests'),
+                            fetch('http://localhost:8000/simple-coder/status')
+                        ]);
+                        
+                        const requestsData = await requestsResponse.json();
+                        const statusData = await statusResponse.json();
+                        
+                        // Check if the number of requests has changed
+                        if (requestsData && requestsData.length !== lastRequestCount) {
+                            console.log(`Update request count changed: ${lastRequestCount} -> ${requestsData.length}`);
+                            lastRequestCount = requestsData.length;
+                            
+                            // Show notification for new requests
+                            showBuildNotification(`New update requests detected: ${requestsData.length} pending`);
+                            
+                            // Refresh the UI to show new requests
+                            loadUpdatesInline();
+                        }
+                        
+                        // Check if cycle count or total updates have increased (indicating build completion)
+                        const currentCycleCount = statusData?.cycle_count || 0;
+                        const currentTotalUpdates = statusData?.total_updates || 0;
+                        
+                        if (currentCycleCount > lastCycleCount || currentTotalUpdates > lastTotalUpdates) {
+                            console.log(`Build progress detected - cycles: ${lastCycleCount} -> ${currentCycleCount}, updates: ${lastTotalUpdates} -> ${currentTotalUpdates}`);
+                            
+                            // Update tracking variables
+                            lastCycleCount = currentCycleCount;
+                            lastTotalUpdates = currentTotalUpdates;
+                            
+                            // Show notification for build completion only if there are new updates
+                            if (currentTotalUpdates > lastTotalUpdates) {
+                                showBuildNotification('Build completed - checking for new requests...');
+                            }
+                            
+                            // Refresh the UI to show any new requests from completed builds
+                            loadUpdatesInline();
+                        }
+                    } catch (error) {
+                        console.error('Auto-refresh polling error:', error);
+                    }
+                }, 5000); // Poll every 5 seconds (reduced frequency to prevent conflicts)
+                
+                console.log('Auto-refresh polling started');
+            }
+            
+            function stopAutoRefresh() {
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                    refreshInterval = null;
+                    console.log('Auto-refresh polling stopped');
+                }
+            }
+            
+            // Show build notification
+            function showBuildNotification(message) {
+                // Create notification element
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #0066cc;
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 6px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    z-index: 10000;
+                    font-size: 14px;
+                    font-weight: 500;
+                    max-width: 300px;
+                    animation: slideIn 0.3s ease-out;
+                `;
+                notification.textContent = message;
+                
+                // Add animation keyframes
+                if (!document.getElementById('notification-styles')) {
+                    const style = document.createElement('style');
+                    style.id = 'notification-styles';
+                    style.textContent = `
+                        @keyframes slideIn {
+                            from { transform: translateX(100%); opacity: 0; }
+                            to { transform: translateX(0); opacity: 1; }
+                        }
+                        @keyframes slideOut {
+                            from { transform: translateX(0); opacity: 1; }
+                            to { transform: translateX(100%); opacity: 0; }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+                
+                // Add to page
+                document.body.appendChild(notification);
+                
+                // Auto-remove after 4 seconds
+                setTimeout(() => {
+                    notification.style.animation = 'slideOut 0.3s ease-in';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }, 4000);
+            }
+            
+            // Load updates when page loads
+            window.addEventListener('load', function() {
+                console.log('Page loaded, loading updates...');
+                setTimeout(loadUpdatesInline, 1000);
+                
+                // Initialize tracking variables
+                setTimeout(async () => {
+                    try {
+                        const statusResponse = await fetch('http://localhost:8000/simple-coder/status');
+                        const statusData = await statusResponse.json();
+                        lastCycleCount = statusData?.cycle_count || 0;
+                        lastTotalUpdates = statusData?.total_updates || 0;
+                        console.log('Initialized tracking - cycles:', lastCycleCount, 'updates:', lastTotalUpdates);
+                    } catch (error) {
+                        console.error('Failed to initialize tracking variables:', error);
+                    }
+                }, 2000);
+                
+                // Start auto-refresh polling
+                startAutoRefresh();
+                
+                // Set up refresh button
+                const refreshBtn = document.getElementById('refresh-updates-btn');
+                if (refreshBtn) {
+                    refreshBtn.addEventListener('click', function() {
+                        console.log('Refresh button clicked');
+                        this.disabled = true;
+                        this.textContent = 'Refreshing...';
+                        loadUpdatesInline();
+                        setTimeout(() => {
+                            this.disabled = false;
+                            this.textContent = 'Refresh Updates';
+                        }, 2000);
+                    });
+                }
+                
+            });
+            
+            // Test function to manually trigger approve all
+            window.testApproveAll = function() {
+                console.log('Testing approve all manually...');
+                console.log('Selected requests:', Array.from(selectedRequests));
+                if (selectedRequests.size === 0) {
+                    console.log('No requests selected, selecting all...');
+                    // Select all first
+                    document.querySelectorAll('.update-checkbox').forEach(checkbox => {
+                        checkbox.checked = true;
+                        const requestId = checkbox.getAttribute('data-request-id');
+                        selectedRequests.add(requestId);
+                        checkbox.closest('.update-request').style.border = '2px solid #00ff00';
+                    });
+                    updateButtonStates();
+                    console.log('Now selected requests:', Array.from(selectedRequests));
+                }
+
+                // Now trigger approve all
+                const approveAllBtn = document.getElementById('approve-all-btn');
+                if (approveAllBtn) {
+                    console.log('Clicking approve all button...');
+                    approveAllBtn.click();
+                } else {
+                    console.error('Approve all button not found!');
+                }
+            };
+
+            // Emergency refresh function if tab gets stuck
+            window.forceRefresh = function() {
+                console.log('Force refreshing page...');
+                window.location.reload();
+            };
+
+            // Add keyboard shortcut for emergency refresh (Ctrl+Shift+R)
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+                    e.preventDefault();
+                    console.log('Emergency refresh triggered by keyboard shortcut');
+                    forceRefresh();
+                }
+            });
+
+            // Test function to verify input fields are working
+            window.testInputs = function() {
+                console.log('Testing input fields...');
+                const evolveInput = document.getElementById('evolve-directive');
+                const queryInput = document.getElementById('query-input');
+                const cycleInput = document.getElementById('cycle-count');
+                
+                if (evolveInput) {
+                    console.log('Evolve directive input found:', evolveInput.value);
+                    evolveInput.focus();
+                    setTimeout(() => {
+                        evolveInput.value = 'Test directive';
+                        console.log('Evolve input test completed');
+                    }, 100);
+                }
+                
+                if (queryInput) {
+                    console.log('Query input found:', queryInput.value);
+                    setTimeout(() => {
+                        queryInput.focus();
+                        queryInput.value = 'Test query';
+                        console.log('Query input test completed');
+                    }, 200);
+                }
+                
+                if (cycleInput) {
+                    console.log('Cycle count input found:', cycleInput.value);
+                    setTimeout(() => {
+                        cycleInput.focus();
+                        cycleInput.value = '5';
+                        console.log('Cycle input test completed');
+                    }, 300);
+                }
+            };
+
+            // Stop auto-refresh when page is unloaded
+            window.addEventListener('beforeunload', function() {
+                stopAutoRefresh();
+            });
+                </script>
+            </div>
+            
+        </div>
+
+        <!-- Core Systems Tab -->
+        <div id="core-tab" class="tab-content">
+            <div class="control-section">
+                <h2>BDI Agent Status</h2>
+                <div id="bdi-status" class="system-status">
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <span class="status-label">BDI Agent:</span>
+                            <span id="bdi-agent-status" class="status-value">Loading...</span>
+                            <div id="bdi-status-indicator" class="status-indicator"></div>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Last Action:</span>
+                            <span id="bdi-last-action" class="status-value">None</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Active Goals:</span>
+                            <span id="bdi-goal-count" class="status-value">0</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Belief Count:</span>
+                            <span id="belief-count" class="status-value">Loading...</span>
+                        </div>
+                    </div>
+                    <div class="goals-section">
+                        <h3>Current Goals</h3>
+                        <div id="bdi-goals" class="goals-list"></div>
+                    </div>
+                    <div class="plans-section">
+                        <h3>Active Plans</h3>
+                        <div id="bdi-plans" class="plans-list"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Belief System</h2>
+                <div id="belief-system" class="system-status">
+                    <div class="bdi-components">
+                        <div class="bdi-component">
+                            <h4>Beliefs</h4>
+                            <div id="bdi-beliefs" class="bdi-list"></div>
+                    </div>
+                        <div class="bdi-component">
+                            <h4>Desires</h4>
+                            <div id="bdi-desires" class="bdi-list"></div>
+                        </div>
+                        <div class="bdi-component">
+                            <h4>Intentions</h4>
+                            <div id="bdi-intentions" class="bdi-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>ID Manager</h2>
+                <div id="id-manager" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">ID Manager Status:</span>
+                        <span id="id-manager-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Active Identities:</span>
+                        <div id="active-identities" class="identities-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evolution Tab -->
+        <div id="evolution-tab" class="tab-content">
+            <!-- Blueprint Agent Section -->
+            <div class="control-section">
+                <h2>Blueprint Agent</h2>
+                <div id="blueprint-agent" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Status:</span>
+                        <span id="blueprint-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Agent ID:</span>
+                        <span id="blueprint-agent-id" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Last Blueprint:</span>
+                        <span id="blueprint-last-generated" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Confidence Score:</span>
+                        <span id="blueprint-confidence" class="status-value">Loading...</span>
+                    </div>
+                </div>
+                
+                <!-- Current Blueprint Details -->
+                <div class="blueprint-details">
+                    <h3>Current Blueprint</h3>
+                    <div id="current-blueprint-title" class="blueprint-title">Loading...</div>
+                    <div id="current-blueprint-version" class="blueprint-version">Loading...</div>
+                    
+                    <div class="blueprint-sections">
+                        <div class="blueprint-section">
+                            <h4>Focus Areas</h4>
+                            <div id="blueprint-focus-areas" class="focus-areas-list"></div>
+                        </div>
+                        
+                        <div class="blueprint-section">
+                            <h4>BDI Todo List</h4>
+                            <div id="blueprint-todo-list" class="todo-list"></div>
+                        </div>
+                        
+                        <div class="blueprint-section">
+                            <h4>Key Performance Indicators</h4>
+                            <div id="blueprint-kpis" class="kpis-list"></div>
+                        </div>
+                        
+                        <div class="blueprint-section">
+                            <h4>Potential Risks</h4>
+                            <div id="blueprint-risks" class="risks-list"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Blueprint History -->
+                <div class="blueprint-history">
+                    <h3>Blueprint History</h3>
+                    <div id="blueprint-history-list" class="history-list"></div>
+                </div>
+                
+                <!-- Blueprint Metrics -->
+                <div class="blueprint-metrics">
+                    <h3>Metrics</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <span class="metric-label">Total Blueprints:</span>
+                            <span id="blueprint-total" class="metric-value">0</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Successful Implementations:</span>
+                            <span id="blueprint-successful" class="metric-value">0</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Avg Implementation Time:</span>
+                            <span id="blueprint-avg-time" class="metric-value">0h</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Blueprint to Action Converter Section -->
+            <div class="control-section">
+                <h2>Blueprint to Action Converter</h2>
+                
+                <!-- Compact Status Overview -->
+                <div class="converter-overview">
+                    <div class="overview-grid">
+                        <div class="overview-item">
+                            <div class="overview-icon">🔄</div>
+                            <div class="overview-content">
+                                <span class="overview-label">Status</span>
+                                <span id="converter-status" class="overview-value">Active</span>
+                            </div>
+                        </div>
+                        <div class="overview-item">
+                            <div class="overview-icon">📊</div>
+                            <div class="overview-content">
+                                <span class="overview-label">Total Conversions</span>
+                                <span id="converter-total" class="overview-value">45</span>
+                            </div>
+                        </div>
+                        <div class="overview-item">
+                            <div class="overview-icon">⚡</div>
+                            <div class="overview-content">
+                                <span class="overview-label">Success Rate</span>
+                                <span id="converter-success-rate" class="overview-value">92%</span>
+                            </div>
+                        </div>
+                        <div class="overview-item">
+                            <div class="overview-icon">⏱️</div>
+                            <div class="overview-content">
+                                <span class="overview-label">Avg Time</span>
+                                <span id="converter-avg-time" class="overview-value">45s</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Compact Workflow -->
+                <div class="compact-workflow">
+                    <h3>Conversion Process</h3>
+                    <div class="workflow-container">
+                        <div class="workflow-step compact active">
+                            <div class="step-icon">📋</div>
+                            <div class="step-text">Blueprint</div>
+                        </div>
+                        <div class="workflow-connector"></div>
+                        <div class="workflow-step compact">
+                            <div class="step-icon">🔍</div>
+                            <div class="step-text">Decompose</div>
+                        </div>
+                        <div class="workflow-connector"></div>
+                        <div class="workflow-step compact">
+                            <div class="step-icon">✅</div>
+                            <div class="step-text">Validate</div>
+                        </div>
+                        <div class="workflow-connector"></div>
+                        <div class="workflow-step compact">
+                            <div class="step-icon">🎯</div>
+                            <div class="step-text">Actions</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Conversions -->
+                <div class="recent-conversions">
+                    <h3>Recent Conversions</h3>
+                    <div id="recent-conversions" class="conversions-list">
+                        <div class="conversion-item">
+                            <div class="conversion-header">
+                                <span class="conversion-id">conv_001</span>
+                                <span class="conversion-time">2 min ago</span>
+                            </div>
+                            <div class="conversion-details">
+                                <span class="conversion-title">Enhanced Cognitive Architecture v2.1</span>
+                                <div class="conversion-meta">
+                                    <span class="meta-item">15 actions</span>
+                                    <span class="meta-item">$2.45 cost</span>
+                                    <span class="meta-item safety-high">High Safety</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="conversion-item">
+                            <div class="conversion-header">
+                                <span class="conversion-id">conv_002</span>
+                                <span class="conversion-time">5 min ago</span>
+                            </div>
+                            <div class="conversion-details">
+                                <span class="conversion-title">Economic Controls Integration v1.5</span>
+                                <div class="conversion-meta">
+                                    <span class="meta-item">8 actions</span>
+                                    <span class="meta-item">$1.20 cost</span>
+                                    <span class="meta-item safety-standard">Standard</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Types -->
+                <div class="action-types">
+                    <h3>Action Types</h3>
+                    <div class="action-types-grid">
+                        <div class="action-type-item">
+                            <span class="action-type-name">ANALYZE_SYSTEM</span>
+                            <div class="action-type-bar">
+                                <div class="action-type-fill" style="width: 75%"></div>
+                            </div>
+                            <span class="action-type-count">15</span>
+                        </div>
+                        <div class="action-type-item">
+                            <span class="action-type-name">GENERATE_CODE</span>
+                            <div class="action-type-bar">
+                                <div class="action-type-fill" style="width: 90%"></div>
+                            </div>
+                            <span class="action-type-count">28</span>
+                        </div>
+                        <div class="action-type-item">
+                            <span class="action-type-name">VALIDATE_CHANGES</span>
+                            <div class="action-type-bar">
+                                <div class="action-type-fill" style="width: 60%"></div>
+                            </div>
+                            <span class="action-type-count">12</span>
+                        </div>
+                        <div class="action-type-item">
+                            <span class="action-type-name">CREATE_ROLLBACK_PLAN</span>
+                            <div class="action-type-bar">
+                                <div class="action-type-fill" style="width: 40%"></div>
+                            </div>
+                            <span class="action-type-count">8</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="converter-actions">
+                    <h3>Quick Actions</h3>
+                    <div class="action-buttons">
+                        <button class="action-btn primary" onclick="startNewConversion()">
+                            <span class="btn-icon">🚀</span>
+                            <span class="btn-text">Start Conversion</span>
+                        </button>
+                        <button class="action-btn secondary" onclick="validateAllActions()">
+                            <span class="btn-icon">✅</span>
+                            <span class="btn-text">Validate All</span>
+                        </button>
+                        <button class="action-btn secondary" onclick="exportAllConversions()">
+                            <span class="btn-icon">📊</span>
+                            <span class="btn-text">Export Data</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Strategic Evolution Agent Section -->
+            <div class="control-section">
+                <h2>Strategic Evolution Agent</h2>
+                <div id="strategic-evolution" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Status:</span>
+                        <span id="sea-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Agent ID:</span>
+                        <span id="sea-agent-id" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Current Campaign:</span>
+                        <span id="sea-current-campaign" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Progress:</span>
+                        <span id="sea-progress" class="status-value">Loading...</span>
+                    </div>
+                </div>
+                
+                <!-- Learning Metrics -->
+                <div class="learning-metrics">
+                    <h3>Learning Metrics</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <span class="metric-label">Lessons Learned:</span>
+                            <span id="sea-lessons-learned" class="metric-value">0</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Successful Adaptations:</span>
+                            <span id="sea-adaptations" class="metric-value">0</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Learning Rate:</span>
+                            <span id="sea-learning-rate" class="metric-value">0%</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Adaptation Confidence:</span>
+                            <span id="sea-confidence" class="metric-value">0%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Active Plans -->
+                <div class="active-plans">
+                    <h3>Active Plans</h3>
+                    <div id="sea-active-plans" class="plans-list"></div>
+                </div>
+                
+                <!-- Recent Activities -->
+                <div class="recent-activities">
+                    <h3>Recent Activities</h3>
+                    <div id="sea-recent-activities" class="activities-list"></div>
+                </div>
+            </div>
+            
+            <!-- Evolution Controls -->
+            <div class="control-section">
+                <h2>Evolution Controls</h2>
+                <div class="evolution-controls">
+                    <button id="generate-blueprint-btn">Generate New Blueprint</button>
+                    <button id="execute-evolution-btn">Execute Evolution</button>
+                    <button id="analyze-system-btn">Analyze System</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Learning Tab -->
+        <div id="learning-tab" class="tab-content">
+            <div class="control-section">
+                <h2>Strategic Evolution Agent</h2>
+                <div id="strategic-evolution" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">SEA Status:</span>
+                        <span id="sea-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Learning Progress:</span>
+                        <div id="learning-progress" class="progress-bar"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Goal Management</h2>
+                <div id="goal-management" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Active Goals:</span>
+                        <div id="active-goals" class="goals-list"></div>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Completed Goals:</span>
+                        <div id="completed-goals" class="goals-list"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Plan Management</h2>
+                <div id="plan-management" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Current Plans:</span>
+                        <div id="current-plans" class="plans-list"></div>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Plan Execution Status:</span>
+                        <div id="plan-execution" class="execution-status"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orchestration Tab -->
+        <div id="orchestration-tab" class="tab-content">
+            <div class="control-section">
+                <h2>Mastermind Agent</h2>
+                <div id="mastermind-agent" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Mastermind Status:</span>
+                        <span id="mastermind-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Current Campaign:</span>
+                        <div id="current-campaign" class="campaign-info"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>Coordinator Agent</h2>
+                <div id="coordinator-agent" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">Coordinator Status:</span>
+                        <span id="coordinator-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Active Interactions:</span>
+                        <div id="active-interactions" class="interactions-list"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="control-section">
+                <h2>CEO Agent</h2>
+                <div id="ceo-agent" class="system-status">
+                    <div class="status-item">
+                        <span class="status-label">CEO Status:</span>
+                        <span id="ceo-status" class="status-value">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Strategic Decisions:</span>
+                        <div id="strategic-decisions" class="decisions-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agents Tab -->
+        <div id="agents-tab" class="tab-content">
+            <div class="control-section">
+                <div class="section-header">
+                    <h2>Agent Management</h2>
+                    <div class="agent-controls">
+                        <button id="refresh-agents-btn">Refresh Agents</button>
+                        <button id="create-agent-btn" onclick="createAgentWithUserContext()">Create User Agent</button>
+                        <button id="delete-agent-btn" class="delete-btn" disabled>Delete Agent</button>
+                        <button id="new-agent-window-btn" class="new-window-btn" title="Open Agent in New Window">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="9" y1="3" x2="9" y2="21"/>
+                                <line x1="3" y1="9" x2="21" y2="9"/>
+                            </svg>
+                            New Window
+                        </button>
+                    </div>
+                </div>
+                <div class="agent-tabs">
+                    <button class="agent-tab-btn active" data-agent-tab="system">System Agents</button>
+                    <button class="agent-tab-btn" data-agent-tab="user">User Agents</button>
+                    <button class="agent-tab-btn" data-agent-tab="all">All Agents</button>
+                </div>
+                
+                <!-- User Agent Management Section -->
+                <div id="user-agent-section" class="user-agent-section" style="display: none;">
+                    <h3>Your Agents</h3>
+                    <div class="user-agent-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Agents:</span>
+                            <span class="stat-value user-agent-count">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Active Agents:</span>
+                            <span class="stat-value user-active-agents">0</span>
+                        </div>
+                    </div>
+                    <div class="user-agent-actions">
+                        <button onclick="createAgentWithUserContext()" class="create-user-agent-btn">Create New Agent</button>
+                        <button onclick="refreshUserAgents()" class="refresh-user-agents-btn">Refresh My Agents</button>
+                    </div>
+                </div>
+                
+                <!-- Agents List - Now supports drag and drop -->
+                <div id="agents-list" class="agents-list drag-drop-container"></div>
+            </div>
+            
+            <!-- AGIVITY - Executive Dashboard -->
+            <div class="control-section">
+                <div class="section-header">
+                    <h2>AGIVITY</h2>
+                    <div class="activity-controls">
+                        <button id="pause-activity" class="control-btn">Pause</button>
+                        <button id="clear-activity" class="control-btn">Clear</button>
+                        <button id="refresh-metrics" class="control-btn">Refresh</button>
+                    </div>
+                </div>
+                
+                <!-- Executive Metrics Overview -->
+                <div class="metrics-overview">
+                    <div class="metric-card">
+                        <div class="metric-icon">🧠</div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="active-agents">0</div>
+                            <div class="metric-label">Active Agents</div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">⚡</div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="tasks-completed">0</div>
+                            <div class="metric-label">Tasks Completed</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agent Status Grid -->
+                <div class="agent-status-grid">
+                    <div class="agent-status-card" id="bdi-status">
+                        <div class="agent-header">
+                            <div class="agent-name">BDI Agent</div>
+                            <div class="agent-status-indicator" id="bdi-indicator"></div>
+                        </div>
+                        <div class="agent-activity" id="bdi-activity">Standby</div>
+                        <div class="agent-metrics">
+                            <span class="metric">Decisions: <span id="bdi-decisions">0</span></span>
+                            <span class="metric">Success: <span id="bdi-success">0%</span></span>
+                        </div>
+                    </div>
+                    
+                    <div class="agent-status-card" id="agint-status">
+                        <div class="agent-header">
+                            <div class="agent-name">AGInt Core</div>
+                            <div class="agent-status-indicator" id="agint-indicator"></div>
+                        </div>
+                        <div class="agent-activity" id="agint-activity">Idle</div>
+                        <div class="agent-metrics">
+                            <span class="metric">Cycles: <span id="agint-cycles">0</span></span>
+                            <span class="metric">Progress: <span id="agint-progress">0%</span></span>
+                        </div>
+                    </div>
+                    
+                    <div class="agent-status-card" id="simple-coder-status">
+                        <div class="agent-header">
+                            <div class="agent-name">Simple Coder</div>
+                            <div class="agent-status-indicator" id="simple-coder-indicator"></div>
+                        </div>
+                        <div class="agent-activity" id="simple-coder-activity">Ready</div>
+                        <div class="agent-metrics">
+                            <span class="metric">Requests: <span id="simple-coder-requests">0</span></span>
+                            <span class="metric">Approved: <span id="simple-coder-approved">0</span></span>
+                        </div>
+                    </div>
+                    
+                    <div class="agent-status-card" id="coordinator-status">
+                        <div class="agent-header">
+                            <div class="agent-name">Coordinator</div>
+                            <div class="agent-status-indicator" id="coordinator-indicator"></div>
+                        </div>
+                        <div class="agent-activity" id="coordinator-activity">Monitoring</div>
+                        <div class="agent-metrics">
+                            <span class="metric">Delegations: <span id="coordinator-delegations">0</span></span>
+                            <span class="metric">Active: <span id="coordinator-active">0</span></span>
+                        </div>
+                    </div>
+                    
+                    <div class="agent-status-card" id="mastermind-status">
+                        <div class="agent-header">
+                            <div class="agent-name">MastermindAgent</div>
+                            <div class="agent-status-indicator" id="mastermind-indicator"></div>
+                        </div>
+                        <div class="agent-activity" id="mastermind-activity">Orchestrating</div>
+                        <div class="agent-metrics">
+                            <span class="metric">Strategies: <span id="mastermind-strategies">0</span></span>
+                            <span class="metric">Active: <span id="mastermind-active">0</span></span>
+                        </div>
+                    </div>
+                    
+                    <div class="agent-status-card" id="resource-monitor-status">
+                        <div class="agent-header">
+                            <div class="agent-name">Resource Monitor</div>
+                            <div class="agent-status-indicator" id="resource-monitor-indicator"></div>
+                        </div>
+                        <div class="agent-activity" id="resource-monitor-activity">Monitoring</div>
+                        <div class="agent-metrics">
+                            <span class="metric">CPU: <span id="resource-monitor-cpu">0%</span></span>
+                            <span class="metric">Memory: <span id="resource-monitor-memory">0%</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Workflow Visualization -->
+                <div class="workflow-visualization">
+                    <div class="workflow-header">
+                        <h3>Agent Workflow</h3>
+                        <div class="workflow-controls">
+                            <button id="refresh-workflow" class="workflow-btn">Refresh</button>
+                        </div>
+                    </div>
+                    <div class="workflow-diagram">
+                        <div class="workflow-node mastermind">
+                            <div class="node-icon">🧠</div>
+                            <div class="node-name">MastermindAgent</div>
+                            <div class="node-status" id="mastermind-workflow-status">Active</div>
+                        </div>
+                        <div class="workflow-arrow">→</div>
+                        <div class="workflow-node coordinator">
+                            <div class="node-icon">🎯</div>
+                            <div class="node-name">Coordinator</div>
+                            <div class="node-status" id="coordinator-workflow-status">Active</div>
+                        </div>
+                        <div class="workflow-arrow">→</div>
+                        <div class="workflow-node agint">
+                            <div class="node-icon">🔄</div>
+                            <div class="node-name">AGInt Core</div>
+                            <div class="node-status" id="agint-workflow-status">Processing</div>
+                        </div>
+                        <div class="workflow-arrow">→</div>
+                        <div class="workflow-node bdi">
+                            <div class="node-icon">⚡</div>
+                            <div class="node-name">BDI Agent</div>
+                            <div class="node-status" id="bdi-workflow-status">Deciding</div>
+                        </div>
+                        <div class="workflow-arrow">→</div>
+                        <div class="workflow-node simple-coder">
+                            <div class="node-icon">💻</div>
+                            <div class="node-name">Simple Coder</div>
+                            <div class="node-status" id="simple-coder-workflow-status">Generating</div>
+                        </div>
+                    </div>
+                    <div class="workflow-legend">
+                        <div class="legend-item">
+                            <span class="legend-color active"></span>
+                            <span>Active</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color processing"></span>
+                            <span>Processing</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color waiting"></span>
+                            <span>Waiting</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Display -->
+                <div class="activity-summary">
+                    <div id="agent-activity-log" class="activity-log-compact"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agent Detail Popup -->
+        <div id="agent-detail-popup" class="agent-detail-popup">
+            <div class="popup-backdrop" id="popup-backdrop"></div>
+            <div class="popup-content">
+                <div class="popup-header">
+                    <h3 id="popup-agent-name">Agent Details</h3>
+                    <button class="popup-close" id="popup-close">&times;</button>
+                </div>
+                <div class="popup-body">
+                    <div class="agent-detail-section">
+                        <div class="detail-header">
+                            <div class="agent-icon" id="popup-agent-icon">🧠</div>
+                            <div class="agent-info">
+                                <div class="agent-name" id="popup-agent-title">Agent Name</div>
+                                <div class="agent-status" id="popup-agent-status">Status</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="agent-detail-section">
+                        <h4>Current Activity</h4>
+                        <div class="activity-detail" id="popup-current-activity">No current activity</div>
+                    </div>
+                    
+                    <div class="agent-detail-section">
+                        <h4>Metrics</h4>
+                        <div class="metrics-grid" id="popup-metrics">
+                            <!-- Dynamic metrics will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <div class="agent-detail-section">
+                        <h4>Recent Activity</h4>
+                        <div class="activity-history" id="popup-activity-history">
+                            <!-- Recent activities will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <div class="agent-detail-section">
+                        <h4>Capabilities</h4>
+                        <div class="capabilities-list" id="popup-capabilities">
+                            <!-- Agent capabilities will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Tab -->
+        <div id="system-tab" class="tab-content">
+            <div class="control-section">
+                <div class="monitoring-header">
+                    <h2>System Monitoring</h2>
+                </div>
+
+                <!-- Performance Monitoring -->
+                <div class="monitoring-section">
+                    <div class="section-header">
+                        <h3>Performance Monitor</h3>
+                        <div class="agent-status" id="performance-agent-status">
+                            <span class="status-dot" id="perf-status-indicator"></span>
+                            <span id="perf-agent-status">Loading...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metrics-row">
+                        <div class="metric-item">
+                            <div class="metric-label">API Calls</div>
+                            <div class="metric-value" id="perf-total-calls">0</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Success Rate</div>
+                            <div class="metric-value" id="perf-success-rate">0%</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Avg Latency</div>
+                            <div class="metric-value" id="perf-avg-latency">0ms</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Total Cost</div>
+                            <div class="metric-value" id="perf-total-cost">$0.00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resource Monitoring -->
+                <div class="monitoring-section">
+                    <div class="section-header">
+                        <h3>Resource Monitor</h3>
+                        <div class="agent-status" id="resource-agent-status">
+                            <span class="status-dot" id="res-status-indicator"></span>
+                            <span id="res-agent-status">Loading...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metrics-row">
+                        <div class="metric-item">
+                            <div class="metric-label">CPU Usage</div>
+                            <div class="metric-value" id="res-cpu-usage">0%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="res-cpu-progress"></div>
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Memory Usage</div>
+                            <div class="metric-value" id="res-memory-usage">0%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="res-memory-progress"></div>
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Disk Usage</div>
+                            <div class="metric-value" id="res-disk-usage">0%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="res-disk-progress"></div>
+                            </div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Alerts</div>
+                            <div class="metric-value" id="res-alerts">0</div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- System Commands -->
+                <div class="monitoring-section">
+                    <div class="section-header">
+                        <h3>System Commands</h3>
+                    </div>
+                    <div class="button-grid">
+                        <button id="status-btn">SYSTEM STATUS</button>
+                        <button id="agents-btn">List Agents</button>
+                        <button id="tools-btn">List Tools</button>
+                        <button id="replicate-btn">Trigger Replication</button>
+                    </div>
+                </div>
+
+                <!-- API Response -->
+                <div class="monitoring-section">
+                    <div class="section-header">
+                        <h3>API Response</h3>
+                    </div>
+                    <pre id="response-output">Loading system health check...</pre>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Usage Tab - Token Calculator & Cost Tracking -->
+        <div id="usage-tab" class="tab-content">
+            <div class="control-section">
+                <div class="usage-header">
+                    <h2>API Usage & Cost Tracking</h2>
+                    <div class="usage-controls">
+                        <button id="refresh-usage-btn" class="action-btn">Refresh</button>
+                        <button id="export-usage-btn" class="action-btn">Export CSV</button>
+                        <select id="usage-timeframe">
+                            <option value="1">Last 24 Hours</option>
+                            <option value="7" selected>Last 7 Days</option>
+                            <option value="30">Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Cost Summary Section -->
+                <div class="usage-cost-summary">
+                    <!-- Today's Cost - Primary Display -->
+                    <div class="todays-cost-card">
+                        <div class="cost-icon-large">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="1" x2="12" y2="23"/>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                            </svg>
+                        </div>
+                        <div class="todays-cost-content">
+                            <span class="todays-cost-label">Today's Cost</span>
+                            <span class="todays-cost-value" id="usage-daily-cost">$0.0000</span>
+                            <span class="todays-cost-tokens" id="usage-daily-tokens">0 tokens used today</span>
+                        </div>
+                    </div>
+
+                    <!-- Budget & Period Costs -->
+                    <div class="budget-costs-panel">
+                        <div class="budget-section">
+                            <div class="budget-header">
+                                <span class="budget-label">Daily Budget</span>
+                                <span class="budget-value" id="usage-daily-budget">$100.00</span>
+                            </div>
+                            <div class="budget-progress">
+                                <div class="budget-bar" id="budget-bar" style="width: 0%"></div>
+                            </div>
+                            <span class="budget-utilization" id="budget-utilization">0% used</span>
+                        </div>
+
+                        <div class="period-costs">
+                            <div class="period-cost-item">
+                                <span class="period-label">Daily</span>
+                                <span class="period-value" id="usage-daily-cost-small">$0.0000</span>
+                            </div>
+                            <div class="period-cost-item">
+                                <span class="period-label">Weekly</span>
+                                <span class="period-value" id="usage-weekly-cost">$0.0000</span>
+                            </div>
+                            <div class="period-cost-item">
+                                <span class="period-label">Monthly</span>
+                                <span class="period-value" id="usage-monthly-cost">$0.0000</span>
+                            </div>
+                        </div>
+
+                        <div class="total-stats">
+                            <span id="usage-total-ops">0 operations</span>
+                            <span id="usage-total-tokens">0 total tokens</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Token Usage Summary Table -->
+                <div class="usage-summary-table">
+                    <h3>Token Usage by Provider & Model</h3>
+                    <div class="summary-table-container">
+                        <table class="token-summary-table" id="token-summary-table">
+                            <thead>
+                                <tr>
+                                    <th>Provider</th>
+                                    <th>Model</th>
+                                    <th>Tokens Used</th>
+                                    <th>Price ($/1M tokens)</th>
+                                    <th>Cost ($)</th>
+                                    <th>API Calls</th>
+                                </tr>
+                            </thead>
+                            <tbody id="token-summary-body">
+                                <tr><td colspan="6" class="no-data">No usage data recorded yet</td></tr>
+                            </tbody>
+                            <tfoot id="token-summary-footer">
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Breakdown Grid -->
+                <div class="usage-breakdown-grid">
+                    <div class="breakdown-section hourly-section">
+                        <h3>Today's Usage by Hour</h3>
+                        <div class="hourly-chart" id="hourly-chart">
+                            <div class="chart-bars" id="hourly-bars"></div>
+                            <div class="chart-labels">
+                                <span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>12am</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Operations Log -->
+                <div class="usage-operations">
+                    <div class="operations-header">
+                        <h3>Recent API Calls</h3>
+                        <div class="operations-filter">
+                            <input type="text" id="usage-search" placeholder="Filter by model or agent...">
+                        </div>
+                    </div>
+                    <div class="operations-table-container">
+                        <table class="operations-table" id="operations-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Provider</th>
+                                    <th>Model</th>
+                                    <th>Agent</th>
+                                    <th>Input</th>
+                                    <th>Output</th>
+                                    <th>Cost</th>
+                                </tr>
+                            </thead>
+                            <tbody id="operations-body">
+                                <tr><td colspan="7" class="no-data">No operations recorded yet</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div id="logs-tab" class="tab-content">
+            <div class="control-section">
+                <div class="logs-header">
+                    <h2>System Logs</h2>
+                    <button id="copy-logs-btn" class="copy-btn" title="Copy logs to clipboard">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6z"/>
+                            <path d="M2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1H2z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="log-controls">
+                    <button id="refresh-logs-btn">Refresh Logs</button>
+                    <button id="clear-logs-btn" onclick="window.clearLogs()">Clear Logs</button>
+                    <button onclick="window.addTestLogs()">Add Test Logs</button>
+                    <button onclick="window.exportLogs()">Export Logs</button>
+                    <select id="log-level-filter">
+                        <option value="all">All Levels</option>
+                        <option value="DEBUG">DEBUG</option>
+                        <option value="INFO">INFO</option>
+                        <option value="WARNING">WARNING</option>
+                        <option value="ERROR">ERROR</option>
+                        <option value="CRITICAL">CRITICAL</option>
+                    </select>
+                </div>
+                <div id="logs-output" class="logs-output"></div>
+            </div>
+        </div>
+
+        <!-- API Tab -->
+        <div id="api-tab" class="tab-content">
+            <div class="control-section">
+                <div class="section-header">
+                    <h2>API Provider Management</h2>
+                    <div class="api-controls">
+                        <button id="refresh-api-providers-btn" class="refresh-btn">Refresh Providers</button>
+                        <button id="scan-api-folder-btn" class="scan-btn">Scan API Folder</button>
+                    </div>
+                </div>
+                
+                <!-- SECTION 1: Quick Provider Selection & Configuration -->
+                <div class="control-section">
+                    <h3>Quick Provider Selection</h3>
+                    <div class="provider-dropdown-section">
+                        <div class="form-group">
+                            <label>Select Provider from API Folder:</label>
+                            <select id="provider-dropdown" class="provider-dropdown-select">
+                                <option value="">-- Select a provider --</option>
+                                <option value="gemini">Google Gemini</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="anthropic">Anthropic Claude</option>
+                                <option value="mistral">Mistral AI</option>
+                                <option value="together">Together AI</option>
+                                <option value="ollama">Ollama (Local)</option>
+                            </select>
+                            <button id="load-provider-config-btn" class="load-config-btn">Load Provider Configuration</button>
+                        </div>
+                        <div id="provider-dropdown-status" class="provider-status-message"></div>
+                    </div>
+                </div>
+                
+                <!-- Ollama Configuration (Grouped with Quick Provider Selection) -->
+                <div class="control-section" id="ollama-config-section">
+                    <h3>Ollama Configuration</h3>
+                    <div class="ollama-setup-section">
+                        <div id="ollama-connection-banner" class="connection-banner" style="display: none;">
+                            <div class="banner-content">
+                                <span id="ollama-connection-icon" class="connection-icon">⚪</span>
+                                <div class="connection-info">
+                                    <strong id="ollama-connection-status-text">Not Connected</strong>
+                                    <div id="ollama-connection-details" class="connection-details"></div>
+                                </div>
+                                <button id="ollama-quick-test-btn" class="quick-test-btn">Quick Test</button>
+                            </div>
+                        </div>
+                        <div class="ollama-controls">
+                            <div class="ollama-url-config">
+                                <label>Configuration Method:</label>
+                                <select id="ollama-config-method">
+                                    <option value="host-port">Host & Port</option>
+                                    <option value="base-url">Base URL</option>
+                                </select>
+                            </div>
+                            <div id="ollama-host-port-config" class="ollama-config-group">
+                                <div class="form-group">
+                                    <label>Host:</label>
+                                    <input type="text" id="ollama-host" placeholder="e.g., localhost or 10.0.0.155" value="localhost" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Port:</label>
+                                    <input type="number" id="ollama-port" placeholder="e.g., 11434" value="11434" min="1" max="65535" />
+                                </div>
+                            </div>
+                            <div id="ollama-base-url-config" class="ollama-config-group" style="display: none;">
+                                <div class="form-group">
+                                    <label>Base URL:</label>
+                                    <input type="text" id="ollama-base-url" placeholder="e.g., http://localhost:11434" value="http://localhost:11434" />
+                                </div>
+                            </div>
+                            <div class="ollama-actions">
+                                <button id="ollama-test-connection-btn" class="action-btn">Test Connection</button>
+                                <button id="ollama-save-config-btn" class="action-btn primary">Save Configuration</button>
+                                <button id="ollama-list-models-btn" class="action-btn">List Models</button>
+                            </div>
+                            <div id="ollama-models-list" class="ollama-models-list"></div>
+                            
+                            <!-- Model Selection and Conversation Interface -->
+                            <div class="ollama-model-conversation" style="margin-top: 30px; padding-top: 30px; border-top: 2px solid rgba(0, 255, 255, 0.3);">
+                                <h4 style="color: #00ffff; margin-bottom: 15px;">Model Selection & Conversation</h4>
+                                
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label style="color: #00ffff; display: block; margin-bottom: 8px;">Select Model:</label>
+                                    <select id="ollama-model-select" class="provider-dropdown-select" style="width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.5); border: 1px solid #00ffff; color: #00ffff; border-radius: 4px;">
+                                        <option value="">-- Select a model (click "List Models" first) --</option>
+                                    </select>
+                                    <p style="font-size: 12px; color: #888; margin-top: 5px;">Click "List Models" above to load available models</p>
+                                </div>
+                                
+                                <!-- Conversation Window -->
+                                <div class="conversation-container" style="background: rgba(0, 0, 0, 0.3); border: 1px solid #00ffff; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                                    <div id="ollama-conversation-messages" style="height: 300px; overflow-y: auto; padding: 10px; background: rgba(0, 0, 0, 0.5); border-radius: 4px; margin-bottom: 15px; font-family: 'Courier New', monospace; font-size: 14px; color: #00ff00;">
+                                        <div style="color: #888; font-style: italic;">Conversation will appear here. Select a model and start chatting...</div>
+                                    </div>
+                                    
+                                    <div class="conversation-input-container" style="display: flex; gap: 10px;">
+                                        <input 
+                                            type="text" 
+                                            id="ollama-conversation-input" 
+                                            placeholder="Type your message here..." 
+                                            style="flex: 1; padding: 12px; background: rgba(0, 0, 0, 0.5); border: 1px solid #00ffff; color: #00ffff; border-radius: 4px; font-size: 14px;"
+                                            onkeypress="if(event.key === 'Enter') sendOllamaMessage()"
+                                        />
+                                        <button 
+                                            id="ollama-send-message-btn" 
+                                            class="action-btn primary" 
+                                            onclick="sendOllamaMessage()"
+                                            style="padding: 12px 24px;"
+                                        >
+                                            Send
+                                        </button>
+                                        <button 
+                                            id="ollama-clear-conversation-btn" 
+                                            class="action-btn" 
+                                            onclick="clearOllamaConversation()"
+                                            style="padding: 12px 20px;"
+                                        >
+                                            Clear
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Add New API Provider (Manual) -->
+                <div class="control-section">
+                    <h3>Add New API Provider (Manual)</h3>
+                    <button id="show-add-provider-form-btn" class="action-btn primary" style="margin-bottom: 15px;">➕ Add New Provider</button>
+                    <div class="api-add-form" style="display: none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Provider Name:</label>
+                                <input type="text" id="new-provider-name" placeholder="e.g., my_custom_api" />
+                            </div>
+                            <div class="form-group">
+                                <label>Display Name:</label>
+                                <input type="text" id="new-provider-display-name" placeholder="e.g., My Custom API" />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Module Path:</label>
+                                <input type="text" id="new-provider-module-path" placeholder="e.g., api.my_custom_api" />
+                            </div>
+                            <div class="form-group">
+                                <label>Factory Function:</label>
+                                <input type="text" id="new-provider-factory-function" placeholder="e.g., create_my_custom_api" />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>API Key Environment Variable:</label>
+                                <input type="text" id="new-provider-api-key-env" placeholder="e.g., MY_CUSTOM_API_KEY" />
+                            </div>
+                            <div class="form-group">
+                                <label>Base URL Environment Variable (optional):</label>
+                                <input type="text" id="new-provider-base-url-env" placeholder="e.g., MY_CUSTOM_API_BASE_URL" />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="new-provider-requires-api-key" checked />
+                                    Requires API Key
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="new-provider-requires-base-url" />
+                                    Requires Base URL
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Rate Limit (RPM):</label>
+                                <input type="number" id="new-provider-rate-limit-rpm" value="60" />
+                            </div>
+                            <div class="form-group">
+                                <label>Rate Limit (TPM):</label>
+                                <input type="number" id="new-provider-rate-limit-tpm" value="100000" />
+                            </div>
+                        </div>
+                        <button id="add-api-provider-btn" class="add-btn">Add Provider</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evolve Codebase Tab -->
+        <div id="evolve-codebase-tab" class="tab-content">
+            <div id="evolve-notification" class="notification" style="display: none;"></div>
+            <div class="control-section">
+                <div class="section-header">
+                    <h2>Evolve Codebase</h2>
+                    <div class="evolve-status-bar">
+                        <span id="evolve-status-indicator" class="status-indicator inactive">🔴 Idle</span>
+                    </div>
+                </div>
+                
+                <!-- Evolution Controls -->
+                <div class="evolution-input-section">
+                    <label for="evolve-tab-directive">Evolution Directive:</label>
+                    <textarea id="evolve-tab-directive" class="directive-input" 
+                        placeholder="Enter a high-level directive for codebase evolution... (Press Enter to submit, Shift+Enter for new line)"
+                        onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.stopPropagation(); console.log('Enter pressed in evolve directive'); window.handleEvolveCodebaseGlobal(); return false; }"></textarea>
+                    
+                    <div class="evolve-controls">
+                        <button id="evolve-tab-btn" class="evolve-action-btn primary">Evolve</button>
+                        <button id="evolve-stop-btn" class="evolve-action-btn danger" style="display: none;">Stop</button>
+                        
+                        <div class="cycle-control">
+                            <label for="evolve-tab-cycle-count">Max Cycles:</label>
+                            <input type="number" id="evolve-tab-cycle-count" value="8" min="1" max="100">
+                        </div>
+                        
+                        <div class="autonomous-control">
+                            <label class="autonomous-toggle">
+                                <input type="checkbox" id="evolve-tab-autonomous-mode">
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label">Autonomous Mode</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Evolution Progress -->
+                <div class="evolution-progress-section">
+                    <h3>Progress</h3>
+                    <div id="evolve-progress-display" class="progress-display">
+                        <div class="empty-state">No evolution in progress</div>
+                    </div>
+                </div>
+
+                <!-- API Provider Status -->
+                <div class="api-provider-section">
+                    <h3>Connected LLM Providers</h3>
+                    <div id="evolve-api-provider-status" class="api-provider-status">
+                        <div class="api-status-item loading">Loading provider status...</div>
+                    </div>
+                </div>
+                
+                <!-- Evolution History -->
+                <div class="evolution-history-section">
+                    <div class="section-header-inline">
+                        <h3>Evolution History</h3>
+                        <button id="evolve-clear-history-btn" class="clear-btn small">Clear</button>
+                    </div>
+                    <div id="evolve-history-list" class="history-list">
+                        <div class="empty-state">No evolution history yet</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Ollama Monitor for Evolution -->
+            <div class="control-section">
+                <h3>Ollama AI Interaction</h3>
+                <div id="evolve-ollama-monitor-container" class="ollama-monitor-container">
+                    <!-- OllamaMonitor component will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Query Coordinator Tab -->
+        <div id="query-coordinator-tab" class="tab-content">
+            <div id="query-notification" class="notification" style="display: none;"></div>
+            <div class="control-section">
+                <div class="section-header">
+                    <h2>Query Coordinator</h2>
+                    <div class="coordinator-status-bar">
+                        <span id="query-coordinator-status" class="status-indicator online">🟢 Online</span>
+                    </div>
+                </div>
+                
+                <!-- Query Input -->
+                <div class="query-input-section">
+                    <label for="query-tab-input">Enter your query:</label>
+                    <input type="text" id="query-tab-input" class="query-input" 
+                        placeholder="explain augmentic development, analyze system architecture... (Press Enter to submit)"
+                        onkeydown="if(event.key === 'Enter') { event.preventDefault(); event.stopPropagation(); console.log('Enter pressed in query input'); window.handleQueryCoordinatorGlobal(); return false; }">
+                    
+                    <div class="query-controls">
+                        <button id="query-tab-btn" class="query-action-btn primary">Send Query</button>
+                        <button id="query-analyze-btn" class="query-action-btn">Analyze System</button>
+                        <button id="query-backlog-btn" class="query-action-btn">View Backlog</button>
+                        <button id="query-clear-results-btn" class="query-action-btn">Clear Results</button>
+                    </div>
+                </div>
+                
+                <!-- Coordinator Status -->
+                <div class="coordinator-info-section">
+                    <h3>Coordinator Info</h3>
+                    <div class="coordinator-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Registered Agents:</span>
+                            <span id="query-registered-agents" class="stat-value">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Registered Tools:</span>
+                            <span id="query-registered-tools" class="stat-value">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Total Interactions:</span>
+                            <span id="query-total-interactions" class="stat-value">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- API Provider Status -->
+                <div class="api-provider-section">
+                    <h3>Connected LLM Providers</h3>
+                    <div id="query-api-provider-status" class="api-provider-status">
+                        <div class="api-status-item loading">Loading provider status...</div>
+                    </div>
+                </div>
+                
+                <!-- Query Results -->
+                <div class="query-results-section">
+                    <h3>Query Results</h3>
+                    <div id="query-results-display" class="results-display">
+                        <div class="empty-state">No query results yet</div>
+                    </div>
+                </div>
+                
+                <!-- Backlog Display -->
+                <div class="backlog-section" style="display: none;">
+                    <div id="query-backlog-display" class="backlog-display"></div>
+                </div>
+                
+                <!-- Query History -->
+                <div class="query-history-section">
+                    <h3>Recent Queries</h3>
+                    <div id="query-history-list" class="history-list">
+                        <div class="empty-state">No query history yet</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Ollama Monitor for Query -->
+            <div class="control-section">
+                <h3>Ollama AI Interaction</h3>
+                <div id="query-ollama-monitor-container" class="ollama-monitor-container">
+                    <!-- OllamaMonitor component will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- mindXagent Tab -->
+        <div id="mindxagent-tab" class="tab-content">
+            <div class="control-section">
+                <div class="section-header">
+                    <h2>mindXagent - Gödel Machine Self-Improvement</h2>
+                    <div style="font-size: 11px; color: #888; margin-top: 5px;">
+                        Powered by <a href="https://github.com/autoglm" target="_blank" style="color: #8b5cf6;">aGLM</a> | 
+                        <a href="https://opensea.io/collection/aglm" target="_blank" style="color: #8b5cf6;">OpenSea Collection</a> | 
+                        <a href="https://bankon.gitbook.io/aglm-investor/aglm" target="_blank" style="color: #8b5cf6;">BANKON Investor</a>
+                    </div>
+                    <div class="mindxagent-controls">
+                        <button id="refresh-mindxagent-status-btn" class="refresh-btn">Refresh Status</button>
+                    </div>
+                </div>
+                
+                <!-- Status Section -->
+                <div class="control-section status-section">
+                    <h3>Status</h3>
+                    <div id="mindxagent-status-display" class="status-display-enhanced">
+                        <!-- Core Status -->
+                        <div class="status-group">
+                            <h4 class="status-group-title">Core Status</h4>
+                            <div class="status-grid">
+                                <div class="status-card">
+                                    <div class="status-label">Autonomous Mode</div>
+                                    <div id="mindxagent-autonomous-status" class="status-value status-badge">Loading...</div>
+                                </div>
+                                <div class="status-card">
+                                    <div class="status-label">Running</div>
+                                    <div id="mindxagent-running-status" class="status-value status-badge">-</div>
+                                </div>
+                                <div class="status-card">
+                                    <div class="status-label">Model</div>
+                                    <div id="mindxagent-model" class="status-value">-</div>
+                                </div>
+                                <div class="status-card">
+                                    <div class="status-label">Provider</div>
+                                    <div id="mindxagent-provider" class="status-value">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Activity Metrics -->
+                        <div class="status-group">
+                            <h4 class="status-group-title">Activity Metrics</h4>
+                            <div class="status-grid">
+                                <div class="status-card">
+                                    <div class="status-label">Thinking Steps</div>
+                                    <div id="mindxagent-thinking-count" class="status-value stat-number">0</div>
+                                </div>
+                                <div class="status-card">
+                                    <div class="status-label">Action Choices</div>
+                                    <div id="mindxagent-actions-count" class="status-value stat-number">0</div>
+                                </div>
+                                <div class="status-card">
+                                    <div class="status-label">Improvement Opportunities</div>
+                                    <div id="mindxagent-improvements-count" class="status-value stat-number">0</div>
+                                </div>
+                                <div class="status-card">
+                                    <div class="status-label">Active Agents</div>
+                                    <div id="mindxagent-active-agents" class="status-value stat-number">0</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Recent Actions -->
+                        <div class="status-group">
+                            <h4 class="status-group-title">Recent Action Choices</h4>
+                            <div id="mindxagent-recent-actions" class="recent-items-list">
+                                <div class="empty-state">No recent actions</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Recent Thinking -->
+                        <div class="status-group">
+                            <h4 class="status-group-title">Recent Thinking Steps</h4>
+                            <div id="mindxagent-recent-thinking" class="recent-items-list">
+                                <div class="empty-state">No recent thinking steps</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Improvement Opportunities -->
+                        <div class="status-group">
+                            <h4 class="status-group-title">Improvement Opportunities</h4>
+                            <div id="mindxagent-improvements" class="recent-items-list">
+                                <div class="empty-state">No improvement opportunities</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Ollama Integration Section -->
+                <div class="control-section">
+                    <h3>Ollama Integration</h3>
+                    <div id="mindxagent-ollama-status-display" class="status-display">
+                        <div class="status-item">
+                            <span class="status-label">Connection Status:</span>
+                            <span id="mindxagent-ollama-connected" class="status-value">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Base URL:</span>
+                            <span id="mindxagent-ollama-url" class="status-value">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Available Models:</span>
+                            <span id="mindxagent-ollama-models-count" class="status-value">0</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Current Model:</span>
+                            <span id="mindxagent-ollama-current-model" class="status-value">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Conversations:</span>
+                            <span id="mindxagent-ollama-conversations" class="status-value">0</span>
+                        </div>
+                        <div id="mindxagent-ollama-optimization" style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 5px; display: none;">
+                            <h4 style="margin-top: 0;">Inference Optimization</h4>
+                            <div class="status-item">
+                                <span class="status-label">Status:</span>
+                                <span id="mindxagent-ollama-opt-status" class="status-value">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Current Frequency:</span>
+                                <span id="mindxagent-ollama-opt-frequency" class="status-value">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Optimal Frequency:</span>
+                                <span id="mindxagent-ollama-opt-optimal" class="status-value">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Total Requests:</span>
+                                <span id="mindxagent-ollama-opt-requests" class="status-value">0</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Success Rate:</span>
+                                <span id="mindxagent-ollama-opt-success-rate" class="status-value">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Avg Latency:</span>
+                                <span id="mindxagent-ollama-opt-latency" class="status-value">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Throughput:</span>
+                                <span id="mindxagent-ollama-opt-throughput" class="status-value">-</span>
+                            </div>
+                        </div>
+                        <div id="mindxagent-ollama-models-list" style="margin-top: 15px; max-height: 200px; overflow-y: auto; display: none;">
+                            <h4 style="margin-top: 0;">Available Models</h4>
+                            <div id="mindxagent-ollama-models-display"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Ollama Interaction Monitor Section (Enhanced Modular System) -->
+                <div class="control-section">
+                    <h3>Ollama Interaction Monitor</h3>
+                    <div id="mindxagent-ollama-monitor-container"></div>
+                </div>
+                
+                <!-- Legacy Ollama Connection Monitor Section (for backward compatibility) -->
+                <div class="control-section" style="display: none;">
+                    <h3>Ollama Connection Monitor</h3>
+                    <div id="ollama-connection-monitor" class="connection-monitor">
+                        <div class="monitor-header">
+                            <div class="monitor-status">
+                                <span class="status-indicator" id="ollama-monitor-indicator"></span>
+                                <span id="ollama-monitor-status-text">Monitoring...</span>
+                            </div>
+                            <div class="monitor-controls">
+                                <button id="start-ollama-monitor-btn" class="action-btn">Start Monitor</button>
+                                <button id="stop-ollama-monitor-btn" class="action-btn" style="display: none;">Stop Monitor</button>
+                            </div>
+                        </div>
+                        <div class="monitor-metrics">
+                            <div class="metric-card">
+                                <div class="metric-label">Connection Status</div>
+                                <div id="ollama-monitor-connection" class="metric-value">-</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Server URL</div>
+                                <div id="ollama-monitor-url" class="metric-value">-</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Last Check</div>
+                                <div id="ollama-monitor-last-check" class="metric-value">-</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Response Time</div>
+                                <div id="ollama-monitor-response-time" class="metric-value">-</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Models Available</div>
+                                <div id="ollama-monitor-models" class="metric-value">-</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Active Conversations</div>
+                                <div id="ollama-monitor-conversations" class="metric-value">-</div>
+                            </div>
+                        </div>
+                        <div class="monitor-log">
+                            <h4>Connection Log</h4>
+                            <div id="ollama-monitor-log" class="monitor-log-content">
+                                <div class="log-entry">Monitor not started</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Ollama Conversation Display Section -->
+                <div class="control-section ollama-conversation-section">
+                    <div class="conversation-header">
+                        <h3>Ollama Conversation History</h3>
+                        <div class="conversation-controls">
+                            <select id="ollama-conversation-selector" class="conversation-selector">
+                                <option value="default">Default Conversation</option>
+                            </select>
+                            <button id="refresh-ollama-conversation-btn" class="refresh-btn">🔄 Refresh</button>
+                            <button id="clear-ollama-conversation-btn" class="action-btn">🗑️ Clear</button>
+                        </div>
+                    </div>
+                    
+                    <div id="mindxagent-ollama-conversation-stats" class="conversation-stats">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Messages</div>
+                            <div id="conversation-total-messages" class="stat-value stat-primary">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">User Messages</div>
+                            <div id="conversation-user-messages" class="stat-value stat-user">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Assistant Messages</div>
+                            <div id="conversation-assistant-messages" class="stat-value stat-assistant">0</div>
+                        </div>
+                    </div>
+                    
+                    <div id="mindxagent-ollama-conversation-display" class="conversation-display">
+                        <div class="conversation-loading">
+                            <div class="loading-icon">💬</div>
+                            <div class="loading-text">Loading conversation history...</div>
+                            <div class="loading-hint">Click "Refresh" to load messages</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Settings Section -->
+                <div class="control-section">
+                    <h3>Settings</h3>
+                    <div class="mindxagent-settings">
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="mindxagent-autonomous-enabled" />
+                                Enable Autonomous Mode
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="mindxagent-show-thinking" checked />
+                                Show Thinking Process
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="mindxagent-show-actions" checked />
+                                Show Action Choices
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="mindxagent-auto-apply" checked />
+                                Auto-Apply Safe Improvements
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>Model Selection Strategy:</label>
+                            <select id="mindxagent-model-strategy">
+                                <option value="best_for_task">Best for Task</option>
+                                <option value="user_preference">User Preference</option>
+                                <option value="balanced">Balanced</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Improvement Cycle Interval (seconds):</label>
+                            <input type="number" id="mindxagent-cycle-interval" value="300" min="60" max="3600" />
+                        </div>
+                        <button id="save-mindxagent-settings-btn" class="action-btn primary">Save Settings</button>
+                    </div>
+                </div>
+                
+                <!-- Thinking Process Display -->
+                <div class="control-section">
+                    <h3>Thinking Process</h3>
+                    <div class="thinking-process-container">
+                        <div id="mindxagent-thinking-display" class="thinking-display">
+                            <p style="color: #888; font-style: italic;">Thinking process will appear here...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action Choices Display -->
+                <div class="control-section">
+                    <h3>Action Choices</h3>
+                    <div class="action-choices-container">
+                        <div id="mindxagent-actions-display" class="actions-display">
+                            <p style="color: #888; font-style: italic;">Action choices will appear here...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GitHub Agent Tab -->
+        <div id="github-agent-tab" class="tab-content">
+            <div id="github-notification" class="notification" style="display: none;"></div>
+            <div class="control-section">
+                <div class="section-header">
+                    <h2>GitHub Agent</h2>
+                    <div class="github-repo-header">
+                        <a href="https://github.com/abaracadabra/mindX" target="_blank" rel="noopener noreferrer" class="github-repo-link">
+                            <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                            </svg>
+                            <span>abaracadabra/mindX</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Status Panel -->
+                <div class="github-status-section">
+                    <h3>Status</h3>
+                    <div id="github-tab-status-display" class="status-display-grid">
+                        <p>Loading status...</p>
+                    </div>
+                    <button id="github-tab-refresh-btn" class="action-btn">Refresh Status</button>
+                </div>
+            </div>
+            
+            <!-- Backup Operations -->
+            <div class="control-section">
+                <h3>Backup Operations</h3>
+                <div class="backup-controls-row">
+                    <button id="github-tab-create-backup-btn" class="action-btn primary">Create Backup</button>
+                    <button id="github-tab-list-backups-btn" class="action-btn">List Backups</button>
+                    <button id="github-tab-sync-btn" class="action-btn">Sync with GitHub</button>
+                </div>
+                
+                <div class="backup-form-section">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="github-tab-backup-reason">Backup Reason:</label>
+                            <input type="text" id="github-tab-backup-reason" placeholder="Enter reason for backup">
+                        </div>
+                        <div class="form-group">
+                            <label for="github-tab-backup-type">Backup Type:</label>
+                            <select id="github-tab-backup-type">
+                                <option value="manual">Manual</option>
+                                <option value="pre_architectural_upgrade">Pre-Upgrade</option>
+                                <option value="milestone_backup">Milestone</option>
+                                <option value="scheduled_backup">Scheduled</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="backups-list-section">
+                    <h4>Backup History</h4>
+                    <div id="github-tab-backups-list" class="backups-list">
+                        <div class="empty-state">No backups loaded</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Schedule Settings -->
+            <div class="control-section">
+                <h3>Backup Schedule Settings</h3>
+                <div class="schedule-controls-grid">
+                    <div class="schedule-item">
+                        <label class="schedule-toggle">
+                            <input type="checkbox" id="github-tab-daily-enabled">
+                            <span class="toggle-slider"></span>
+                            <span>Daily Backup</span>
+                        </label>
+                        <input type="time" id="github-tab-daily-time" value="02:00">
+                        <button id="github-tab-save-daily-btn" class="action-btn small">Save</button>
+                    </div>
+                    
+                    <div class="schedule-item">
+                        <label class="schedule-toggle">
+                            <input type="checkbox" id="github-tab-hourly-enabled">
+                            <span class="toggle-slider"></span>
+                            <span>Hourly Backup</span>
+                        </label>
+                        <button id="github-tab-save-hourly-btn" class="action-btn small">Save</button>
+                    </div>
+                    
+                    <div class="schedule-item">
+                        <label class="schedule-toggle">
+                            <input type="checkbox" id="github-tab-weekly-enabled">
+                            <span class="toggle-slider"></span>
+                            <span>Weekly Backup</span>
+                        </label>
+                        <select id="github-tab-weekly-day">
+                            <option value="sunday">Sunday</option>
+                            <option value="monday">Monday</option>
+                            <option value="tuesday">Tuesday</option>
+                            <option value="wednesday">Wednesday</option>
+                            <option value="thursday">Thursday</option>
+                            <option value="friday">Friday</option>
+                            <option value="saturday">Saturday</option>
+                        </select>
+                        <input type="time" id="github-tab-weekly-time" value="03:00">
+                        <button id="github-tab-save-weekly-btn" class="action-btn small">Save</button>
+                    </div>
+                    
+                    <div class="schedule-item">
+                        <label class="schedule-toggle">
+                            <input type="checkbox" id="github-tab-shutdown-enabled" checked>
+                            <span class="toggle-slider"></span>
+                            <span>Backup on Shutdown</span>
+                        </label>
+                    </div>
+                </div>
+                <button id="github-tab-refresh-schedule-btn" class="action-btn" style="margin-top: 15px;">Refresh Schedule</button>
+            </div>
+        </div>
+        
+        <!-- Faicey Tab -->
+        <div id="faicey-tab" class="tab-content">
+            <div class="control-section">
+                <div class="section-header">
+                    <h2>Faicey Expressions</h2>
+                    <div class="faicey-controls">
+                        <button id="refresh-faicey-btn" class="action-btn">Refresh</button>
+                        <button id="create-faicey-expression-btn" class="action-btn">Create Expression</button>
+                        <button id="load-faicey-expression-btn" class="action-btn">Load Expression</button>
+                    </div>
+                </div>
+                
+                <div class="faicey-tabs">
+                    <button class="faicey-tab-btn active" data-faicey-tab="expressions">Expressions</button>
+                    <button class="faicey-tab-btn" data-faicey-tab="speech">Speech Inflection</button>
+                    <button class="faicey-tab-btn" data-faicey-tab="modules">Modules</button>
+                </div>
+                
+                <!-- Expressions Section -->
+                <div id="faicey-expressions-section" class="faicey-section active">
+                    <div class="expressions-list" id="faicey-expressions-list">
+                        <div class="loading-message">Loading expressions...</div>
+                    </div>
+                    
+                    <div class="expression-details" id="faicey-expression-details" style="display: none;">
+                        <div class="details-header">
+                            <h3 id="expression-name">Expression Name</h3>
+                            <button class="close-details-btn" onclick="closeExpressionDetails()">×</button>
+                        </div>
+                        <div class="details-content">
+                            <div class="detail-section">
+                                <h4>Agent Information</h4>
+                                <div class="detail-item">
+                                    <span class="detail-label">Agent ID:</span>
+                                    <span class="detail-value" id="detail-agent-id">-</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Persona ID:</span>
+                                    <span class="detail-value" id="detail-persona-id">-</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Created:</span>
+                                    <span class="detail-value" id="detail-created">-</span>
+                                </div>
+                            </div>
+                            
+                            <div class="detail-section">
+                                <h4>Skills</h4>
+                                <div class="skills-list" id="detail-skills"></div>
+                            </div>
+                            
+                            <div class="detail-section">
+                                <h4>UI Modules</h4>
+                                <div class="modules-list" id="detail-modules"></div>
+                            </div>
+                            
+                            <div class="detail-section">
+                                <h4>Speech Inflection</h4>
+                                <div class="speech-config" id="detail-speech-config">
+                                    <div class="detail-item">
+                                        <span class="detail-label">Enabled:</span>
+                                        <span class="detail-value" id="detail-speech-enabled">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Alphabet:</span>
+                                        <span class="detail-value" id="detail-speech-alphabet">-</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Viseme Blend Duration:</span>
+                                        <span class="detail-value" id="detail-speech-blend">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="detail-actions">
+                                <button class="action-btn" onclick="exportExpressionUI()">Export UI Config</button>
+                                <button class="action-btn" onclick="updateExpression()">Update Expression</button>
+                                <button class="action-btn delete-btn" onclick="deleteExpression()">Delete Expression</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Speech Inflection Section -->
+                <div id="faicey-speech-section" class="faicey-section">
+                    <div class="speech-controls">
+                        <div class="speech-input-group">
+                            <label for="speech-text-input">Text to Speak:</label>
+                            <textarea id="speech-text-input" placeholder="Enter text for speech animation..." rows="3"></textarea>
+                        </div>
+                        <div class="speech-input-group">
+                            <label for="speech-audio-url">Audio URL (optional):</label>
+                            <input type="text" id="speech-audio-url" placeholder="https://example.com/audio.mp3">
+                        </div>
+                        <div class="speech-input-group">
+                            <label for="speech-alphabet">Alphabet:</label>
+                            <select id="speech-alphabet">
+                                <option value="english">English</option>
+                                <option value="chinese">Chinese</option>
+                                <option value="thai">Thai</option>
+                                <option value="vietnamese">Vietnamese</option>
+                            </select>
+                        </div>
+                        <div class="speech-actions">
+                            <button id="start-speaking-btn" class="action-btn">Start Speaking</button>
+                            <button id="start-listening-btn" class="action-btn">Start Listening</button>
+                            <button id="stop-speech-btn" class="action-btn">Stop</button>
+                        </div>
+                    </div>
+                    
+                    <div class="speech-status" id="speech-status" style="display: none;">
+                        <div class="status-item">
+                            <span class="status-label">Mode:</span>
+                            <span class="status-value" id="speech-mode">Idle</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Current Viseme:</span>
+                            <span class="status-value" id="current-viseme">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="morph-targets-preview" id="morph-targets-preview">
+                        <h4>Morph Targets</h4>
+                        <div class="targets-grid" id="targets-grid">
+                            <!-- Morph targets will be displayed here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Modules Section -->
+                <div id="faicey-modules-section" class="faicey-section">
+                    <div class="modules-list" id="faicey-modules-list">
+                        <div class="loading-message">Loading modules...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Tab -->
+        <div id="admin-tab" class="tab-content">
+            <!-- Top Menu Bar for Window Management -->
+            <div id="top-menu-bar" class="top-menu-bar">
+                <div class="menu-section">
+                    <span class="menu-label">Windows:</span>
+                    <button class="menu-btn" id="menu-new-window" title="New Window">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="9" y1="3" x2="9" y2="21"/>
+                            <line x1="3" y1="9" x2="21" y2="9"/>
+                        </svg>
+                        New
+                    </button>
+                    <button class="menu-btn" id="menu-tile-windows" title="Tile Windows">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                        </svg>
+                        Tile
+                    </button>
+                    <button class="menu-btn" id="menu-cascade-windows" title="Cascade Windows">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="2" width="20" height="20" rx="2" ry="2"/>
+                            <rect x="4" y="4" width="20" height="20" rx="2" ry="2"/>
+                        </svg>
+                        Cascade
+                    </button>
+                    <button class="menu-btn" id="menu-close-all" title="Close All Windows">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                        Close All
+                    </button>
+                </div>
+                <div class="menu-section">
+                    <span class="menu-label">Layout:</span>
+                    <button class="menu-btn" id="menu-save-layout" title="Save Layout">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                            <polyline points="17,21 17,13 7,13 7,21"/>
+                            <polyline points="7,3 7,8 15,8"/>
+                        </svg>
+                        Save
+                    </button>
+                    <button class="menu-btn" id="menu-load-layout" title="Load Layout">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7,10 12,15 17,10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Load
+                    </button>
+                </div>
+                <div class="menu-section">
+                    <span class="menu-label">Active Windows:</span>
+                    <span id="active-window-count" class="menu-count">0</span>
+                </div>
+            </div>
+            
+            <!-- Window Container for Window Management -->
+            <div id="window-container" class="window-container"></div>
+            
+            <div class="control-section">
+                <h2>Admin Controls</h2>
+                <div class="admin-controls">
+                    <button id="restart-system-btn">Restart System</button>
+                    <button id="backup-system-btn">Backup System</button>
+                    <button id="update-config-btn">Update Config</button>
+                    <button id="export-logs-btn">Export Logs</button>
+                </div>
+            </div>
+            
+            <!-- LLM Provider Management Section -->
+            <div class="control-section">
+                <h2>LLM Provider Management</h2>
+                <div class="admin-subsection">
+                    <h3>API Keys</h3>
+                    <div id="api-keys-container" class="api-keys-container">
+                        <button id="refresh-api-keys-btn" class="refresh-btn">Refresh Providers</button>
+                        <div id="api-keys-list" class="api-keys-list"></div>
+                    </div>
+                    
+                    <div class="api-key-form">
+                        <h4>Add/Update API Key</h4>
+                        <select id="provider-select">
+                            <option value="gemini">Gemini</option>
+                            <option value="mistral">Mistral</option>
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic</option>
+                            <option value="groq">Groq</option>
+                            <option value="ollama">Ollama (Base URL)</option>
+                        </select>
+                        <input type="text" id="api-key-input" placeholder="Enter API key or base URL for Ollama">
+                        <button id="set-api-key-btn">Set API Key</button>
+                        <button id="test-api-key-btn">Test Connection</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Ollama section removed - moved to API tab -->
+            
+            <!-- Application Settings Section -->
+            <div class="control-section">
+                <h2>Application Settings</h2>
+                <div class="admin-subsection">
+                    <h3>Features</h3>
+                    <div class="settings-controls">
+                        <label class="setting-toggle">
+                            <input type="checkbox" id="crossmint-enabled-toggle">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Enable CrossMint Integration</span>
+                            <span class="setting-description">Enable CrossMint wallet and social login features (requires page refresh)</span>
+                        </label>
+                    </div>
+                    <button id="save-settings-btn" class="action-btn primary" style="margin-top: 15px;">Save Settings</button>
+                </div>
+            </div>
+            
+            <!-- PostgreSQL Settings Section -->
+            <div class="control-section">
+                <h2>PostgreSQL Database Settings</h2>
+                <div class="admin-subsection">
+                    <div class="postgresql-settings-form">
+                        <div class="form-group">
+                            <label for="postgres-host">Host:</label>
+                            <input type="text" id="postgres-host" placeholder="localhost" value="localhost">
+                        </div>
+                        <div class="form-group">
+                            <label for="postgres-port">Port:</label>
+                            <input type="number" id="postgres-port" placeholder="5432" value="5432">
+                        </div>
+                        <div class="form-group">
+                            <label for="postgres-database">Database:</label>
+                            <input type="text" id="postgres-database" placeholder="mindx_memory" value="mindx_memory">
+                        </div>
+                        <div class="form-group">
+                            <label for="postgres-user">User:</label>
+                            <input type="text" id="postgres-user" placeholder="mindx" value="mindx">
+                        </div>
+                        <div class="form-group">
+                            <label for="postgres-password">Password:</label>
+                            <input type="password" id="postgres-password" placeholder="Enter password">
+                            <button id="toggle-postgres-password" class="toggle-password-btn" title="Show/Hide Password">👁️</button>
+                        </div>
+                        <div class="form-actions">
+                            <button id="load-postgres-settings-btn" class="action-btn">Load Current Settings</button>
+                            <button id="save-postgres-settings-btn" class="action-btn primary">Save Settings</button>
+                            <button id="test-postgres-connection-btn" class="action-btn">Test Connection</button>
+                        </div>
+                        <div id="postgres-connection-status" class="connection-status"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Vault Management Section -->
+            <div class="control-section">
+                <h2>Vault Management</h2>
+                <div class="admin-subsection">
+                    <h3>Agent Private Keys</h3>
+                    <div id="vault-keys-list" class="vault-keys-list">
+                        <p>Loading agent keys...</p>
+                    </div>
+                    <div class="vault-actions">
+                        <button id="refresh-vault-keys-btn" class="action-btn">Refresh Keys</button>
+                        <button id="migrate-keys-to-vault-btn" class="action-btn primary">Migrate Keys to Vault</button>
+                    </div>
+                    <div id="vault-migration-status" class="migration-status"></div>
+                </div>
+            </div>
+            
+            <!-- Model Selection Section -->
+            <div class="control-section">
+                <h2>Model Selection System</h2>
+                <div class="admin-subsection">
+                    <button id="refresh-model-selection-btn" class="refresh-btn">Refresh Model Info</button>
+                    <div id="model-selection-info" class="model-selection-info"></div>
+                    
+                    <div class="model-selector-test">
+                        <h4>Test Model Selection</h4>
+                        <select id="task-type-select">
+                            <option value="reasoning">Reasoning</option>
+                            <option value="code_generation">Code Generation</option>
+                            <option value="simple_chat">Simple Chat</option>
+                            <option value="data_analysis">Data Analysis</option>
+                            <option value="writing">Writing</option>
+                            <option value="speed_sensitive">Speed Sensitive</option>
+                        </select>
+                        <button id="get-best-model-btn">Get Best Model</button>
+                        <div id="best-model-result" class="best-model-result"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Performance Metrics Section -->
+            <div class="control-section">
+                <h2>LLM Performance Metrics</h2>
+                <div class="admin-subsection">
+                    <div class="metrics-controls">
+                        <select id="metrics-model-filter">
+                            <option value="">All Models</option>
+                        </select>
+                        <select id="metrics-task-filter">
+                            <option value="">All Task Types</option>
+                            <option value="reasoning">Reasoning</option>
+                            <option value="code_generation">Code Generation</option>
+                            <option value="simple_chat">Simple Chat</option>
+                            <option value="data_analysis">Data Analysis</option>
+                            <option value="writing">Writing</option>
+                            <option value="speed_sensitive">Speed Sensitive</option>
+                        </select>
+                        <select id="metrics-time-range">
+                            <option value="24h">Last 24 Hours</option>
+                            <option value="7d">Last 7 Days</option>
+                            <option value="30d">Last 30 Days</option>
+                            <option value="all">All Time</option>
+                        </select>
+                        <button id="refresh-metrics-btn" class="refresh-btn">Refresh Metrics</button>
+                    </div>
+                    <div id="performance-metrics-display" class="performance-metrics-display"></div>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h2>System Configuration</h2>
+                <div id="config-display" class="config-display"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent Details Popup Modal -->
+    <div id="agent-details-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-agent-name">Agent Details</h2>
+                <button id="close-agent-modal" class="close-btn" onclick="closeAgentDetailsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="agent-details-content" class="agent-details-content">
+                    <p>Loading agent details...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Format Selection Modal -->
+    <div id="export-format-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Export Logs</h3>
+                <button id="close-export-modal" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Choose export format:</p>
+                <div class="format-options">
+                    <button class="format-btn" data-format="txt">
+                        <div class="format-icon">📄</div>
+                        <div class="format-name">Text File</div>
+                        <div class="format-desc">Human-readable format</div>
+                    </button>
+                    <button class="format-btn" data-format="json">
+                        <div class="format-icon">🔧</div>
+                        <div class="format-name">JSON</div>
+                        <div class="format-desc">Structured data format</div>
+                    </button>
+                    <button class="format-btn" data-format="csv">
+                        <div class="format-icon">📊</div>
+                        <div class="format-name">CSV</div>
+                        <div class="format-desc">Spreadsheet format</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div> <!-- End main-application -->
+
+    <script>
+        window.MINDX_BACKEND_PORT = "8000";
+    </script>
+    <!-- Nuclear cache busting - Force fresh load -->
+    <script>
+        // Kill any service workers that might be caching
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
+        
+        // Clear all caches
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                for (let name of names) {
+                    caches.delete(name);
+                }
+            });
+        }
+        
+        // Force reload with timestamp
+        const timestamp = Date.now();
+        // Load modular tab system components first
+        document.write('<script src="tab-registry.js?v=' + timestamp + '"><\/script>');
+        document.write('<script src="components/tab-component.js?v=' + timestamp + '"><\/script>');
+        document.write('<script src="components/ollama-monitor.js?v=' + timestamp + '"><\/script>');
+        document.write('<script src="components/mindxagent-tab.js?v=' + timestamp + '"><\/script>');
+        document.write('<script src="components/evolve-codebase-tab.js?v=' + timestamp + '"><\/script>');
+        document.write('<script src="components/query-coordinator-tab.js?v=' + timestamp + '"><\/script>');
+        document.write('<script src="components/github-agent-tab.js?v=' + timestamp + '"><\/script>');
+        document.write('<script src="components/control-tab.js?v=' + timestamp + '"><\/script>');
+        document.write('<script src="components/agents-tab.js?v=' + timestamp + '"><\/script>');
+        document.write('<script src="tab-config.js?v=' + timestamp + '"><\/script>');
+        document.write('<script src="app.js?v=' + timestamp + '"><\/script>');
+    </script>
+</body>
+</html>

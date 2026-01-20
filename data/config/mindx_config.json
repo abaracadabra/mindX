@@ -36,6 +36,10 @@
   },
   "coordinator": {
     "max_concurrent_heavy_tasks": 5,
+    "llm": {
+      "provider": "ollama",
+      "model": "mistral-nemo:latest"
+    },
     "autonomous_improvement": {
       "critical_components": [
         "mindx.learning.self_improve_agent",

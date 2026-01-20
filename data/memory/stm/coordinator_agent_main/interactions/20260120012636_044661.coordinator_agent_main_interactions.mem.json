@@ -1,0 +1,29 @@
+{
+  "timestamp_utc": "2026-01-20T08:26:36.047654",
+  "memory_type": "STM",
+  "category": "coordinator_agent_main/interactions",
+  "metadata": {
+    "interaction_id": "inter_query_1bc4ec07",
+    "agent": "coordinator_agent_main",
+    "agent_id": "coordinator_agent_main",
+    "timestamp": 1768897596.03982
+  },
+  "data": {
+    "interaction_id": "inter_query_1bc4ec07",
+    "interaction_type": "query",
+    "content": "Query for mindX Coordinator (Augmentic Intelligence): who are you?",
+    "metadata": {},
+    "status": "completed",
+    "response": {
+      "status": "SUCCESS",
+      "response_text": "[MOCK RESPONSE] Mistral API key not configured. Would process: Query for mindX Coordinator (Augmentic Intelligence): who are you?...",
+      "model_used": "mistral/default_model_for_mistral",
+      "tokens_used": "N/A",
+      "cost": "N/A",
+      "provider": "mistral"
+    },
+    "error": null,
+    "created_at": 1768897595.9656675,
+    "completed_at": 1768897595.975659
+  }
+}

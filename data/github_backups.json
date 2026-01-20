@@ -188,16 +188,25 @@
       "source_commit": "b0cd591bf1a94c94e3f86910ef53340a9650f0de",
       "created_at": "2026-01-18T22:47:22.416051",
       "status": "created"
+    },
+    {
+      "branch_name": "backup/shutdown-backup-20260119_165043",
+      "backup_type": "shutdown_backup",
+      "reason": "System shutdown - automatic backup",
+      "source_branch": "api-tab-reorganization-ollama-improvements",
+      "source_commit": "fd88b769d05f1587e93a6fe7b8476735af2ca816",
+      "created_at": "2026-01-19T16:50:46.071408",
+      "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/shutdown-backup-20260118_224717",
+    "branch_name": "backup/shutdown-backup-20260119_165043",
     "backup_type": "shutdown_backup",
     "reason": "System shutdown - automatic backup",
     "source_branch": "api-tab-reorganization-ollama-improvements",
-    "source_commit": "b0cd591bf1a94c94e3f86910ef53340a9650f0de",
-    "created_at": "2026-01-18T22:47:22.416051",
+    "source_commit": "fd88b769d05f1587e93a6fe7b8476735af2ca816",
+    "created_at": "2026-01-19T16:50:46.071408",
     "status": "created"
   },
-  "last_backup_at": "2026-01-18T22:47:22.417232"
+  "last_backup_at": "2026-01-19T16:50:46.071444"
 }

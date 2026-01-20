@@ -3,8 +3,22 @@
     "wallet_address": "0x016a45DBA76982d9c2fA1f3c01278c451e5beD5e",
     "user_id": "user_0x016a45",
     "created_at": 1768785971.2150276,
-    "last_active": 1768801233.9951482,
-    "signature_count": 12,
+    "last_active": 1768867897.755976,
+    "signature_count": 13,
+    "agent_count": 0,
+    "metadata": {
+      "chainId": "0x89",
+      "provider": "metamask",
+      "authMethod": "wallet"
+    },
+    "public_key": null
+  },
+  "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169": {
+    "wallet_address": "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169",
+    "user_id": "user_0x10f7Ee",
+    "created_at": 1768876182.016803,
+    "last_active": 1768876182.0168035,
+    "signature_count": 1,
     "agent_count": 0,
     "metadata": {
       "chainId": "0x89",

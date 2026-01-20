@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-01-20T02:15:06.269244",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "coordinator_agent_main",
+  "content": {
+    "process_name": "coordinator_interaction",
+    "data": {
+      "interaction_id": "inter_query_c6bcb46c",
+      "interaction_type": "query",
+      "content": "Query for mindX Coordinator (Augmentic Intelligence): What is your role in the mindX system?",
+      "metadata": {},
+      "status": "failed",
+      "response": null,
+      "error": "Coordinator's LLM handler is not available.",
+      "created_at": 1768900506.268219,
+      "completed_at": 1768900506.2687466
+    }
+  },
+  "context": {
+    "agent_id": "coordinator_agent_main",
+    "interaction_id": "inter_query_c6bcb46c"
+  },
+  "tags": [
+    "coordinator_interaction",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "4774b46350bd5102"
+}
