@@ -31,7 +31,8 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
     """
     def __init__(self, model_name_for_api: Optional[str], # Default model this instance is configured for
                        api_key: Optional[str] = None, # Not used by Ollama
-                       base_url: Optional[str] = None):
+                       base_url: Optional[str] = None,
+                       **kwargs):
         
         # model_name_for_api is the default model tag (e.g., "llama3:8b") this handler might use
         # if no specific model is passed to generate_text.
