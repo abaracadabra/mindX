@@ -1,0 +1,59 @@
+{
+  "timestamp_utc": "2026-01-20T09:24:50.998365",
+  "memory_type": "STM",
+  "category": "complete_output",
+  "metadata": {
+    "agent": "coordinator_agent_main",
+    "agent_id": "coordinator_agent_main",
+    "interaction_id": "inter_query_ebf294a3",
+    "interaction_type": "query",
+    "timestamp": 1768901090.9981544,
+    "output_type": "complete_coordinator_output"
+  },
+  "data": {
+    "interaction": {
+      "interaction_id": "inter_query_ebf294a3",
+      "interaction_type": "query",
+      "content": "Query for mindX Coordinator (Augmentic Intelligence): What is your role in the mindX system?",
+      "metadata": {},
+      "status": "failed",
+      "response": null,
+      "error": "Coordinator's LLM handler is not available.",
+      "created_at": 1768901090.9971375,
+      "completed_at": 1768901090.9978228
+    },
+    "system_state": {
+      "agent_registry": {
+        "coordinator_agent": {
+          "agent_id": "coordinator_agent",
+          "agent_type": "kernel",
+          "description": "MindX Central Kernel and Service Bus",
+          "status": "active",
+          "registered_at": 1768900698.829502
+        }
+      },
+      "tool_registry": {},
+      "active_interactions": 0,
+      "total_interactions": 2,
+      "improvement_backlog_count": 2,
+      "event_listeners": [
+        "architectural.change.detected",
+        "component.improvement.success",
+        "feedback.collection.requested",
+        "agent.created",
+        "agent.registered",
+        "tool.created",
+        "identity.created"
+      ]
+    },
+    "coordinator_state": {
+      "agent_id": "coordinator_agent_main",
+      "initialized": true,
+      "llm_handler_available": false,
+      "performance_monitor_available": true,
+      "resource_monitor_available": true
+    },
+    "timestamp": 1768901090.9981515,
+    "memory_type": "complete_output"
+  }
+}

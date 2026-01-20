@@ -154,12 +154,21 @@ class CoordinatorAgent:
     async def async_init(self):
         """Asynchronously initializes monitoring components and registers self."""
         try:
-            self.llm_handler = await create_llm_handler(
-                provider_name=self.config.get("coordinator.llm.provider"),
-                model_name=self.config.get("coordinator.llm.model")
-            )
-            if self.llm_handler:
-                self.logger.info(f"Coordinator LLM handler initialized: {self.llm_handler.provider_name}/{self.llm_handler.model_name_for_api}")
+            provider_name = self.config.get("coordinator.llm.provider")
+            model_name = self.config.get("coordinator.llm.model")
+            self.logger.info(f"Initializing Coordinator LLM handler with provider='{provider_name}', model='{model_name}'")
+
+            if provider_name and model_name:
+                self.llm_handler = await create_llm_handler(
+                    provider_name=provider_name,
+                    model_name=model_name
+                )
+                if self.llm_handler:
+                    self.logger.info(f"Coordinator LLM handler initialized: {self.llm_handler.provider_name}/{self.llm_handler.model_name_for_api}")
+                else:
+                    self.logger.error("Coordinator LLM handler creation returned None")
+            else:
+                self.logger.warning(f"Coordinator LLM config incomplete: provider='{provider_name}', model='{model_name}'")
         except Exception as e:
             self.logger.error(f"Failed to initialize Coordinator LLM handler: {e}", exc_info=True)
         
