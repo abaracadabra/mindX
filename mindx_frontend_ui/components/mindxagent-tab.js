@@ -19,6 +19,8 @@ class MindXagentTab extends TabComponent {
         });
 
         this.ollamaMonitor = null;
+        this.interactionHistory = [];
+        this.memoryLogs = [];
     }
 
     /**
@@ -56,13 +58,17 @@ class MindXagentTab extends TabComponent {
             this.loadOllamaStatus(),
             this.loadConversation(),
             this.loadThinking(),
-            this.loadActions()
+            this.loadActions(),
+            this.loadMemoryLogs()
         ]);
 
         // Start Ollama monitoring
         if (this.ollamaMonitor) {
             this.ollamaMonitor.startMonitoring();
         }
+
+        // Initialize prompt status
+        this.updatePromptStatus('Ready to inject prompt', 'ready');
 
         return true;
     }
@@ -118,6 +124,39 @@ class MindXagentTab extends TabComponent {
         const clearConvBtn = document.getElementById('clear-ollama-conversation-btn');
         if (clearConvBtn) {
             clearConvBtn.addEventListener('click', () => this.clearConversation());
+        }
+
+        // Interactive prompt controls
+        const promptInput = document.getElementById('mindxagent-prompt-input');
+        if (promptInput) {
+            // Enter key handler for prompt input
+            promptInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.sendPromptToMindXagent();
+                }
+            });
+        }
+
+        const sendPromptBtn = document.getElementById('mindxagent-send-prompt-btn');
+        if (sendPromptBtn) {
+            sendPromptBtn.addEventListener('click', () => this.sendPromptToMindXagent());
+        }
+
+        const clearPromptBtn = document.getElementById('mindxagent-clear-prompt-btn');
+        if (clearPromptBtn) {
+            clearPromptBtn.addEventListener('click', () => this.clearPromptInput());
+        }
+
+        // Memory logs controls
+        const refreshMemoryBtn = document.getElementById('refresh-memory-logs-btn');
+        if (refreshMemoryBtn) {
+            refreshMemoryBtn.addEventListener('click', () => this.loadMemoryLogs());
+        }
+
+        const clearMemoryBtn = document.getElementById('clear-memory-logs-btn');
+        if (clearMemoryBtn) {
+            clearMemoryBtn.addEventListener('click', () => this.clearMemoryLogs());
         }
     }
 
@@ -216,6 +255,243 @@ class MindXagentTab extends TabComponent {
             console.error('Failed to clear conversation:', error);
             alert('Failed to clear conversation: ' + error.message);
         }
+    }
+
+    /**
+     * Send prompt to mindXagent for injection into Ollama conversation
+     */
+    async sendPromptToMindXagent() {
+        const promptInput = document.getElementById('mindxagent-prompt-input');
+        const statusEl = document.getElementById('mindxagent-prompt-status');
+        const sendBtn = document.getElementById('mindxagent-send-prompt-btn');
+
+        const prompt = promptInput?.value?.trim();
+        if (!prompt) {
+            this.updatePromptStatus('Please enter a prompt', 'warning');
+            return;
+        }
+
+        // Update UI state
+        this.updatePromptStatus('Sending prompt to mindXagent...', 'processing');
+        if (sendBtn) sendBtn.disabled = true;
+        if (promptInput) promptInput.disabled = true;
+
+        try {
+            // Send prompt to mindXagent
+            const result = await this.apiRequest('/mindxagent/interact', 'POST', {
+                prompt: prompt,
+                source: 'ui_interaction',
+                timestamp: new Date().toISOString()
+            });
+
+            // Log interaction to memory
+            await this.logInteractionToMemory({
+                type: 'prompt_injection',
+                prompt: prompt,
+                response: result.response || 'No response',
+                timestamp: new Date().toISOString(),
+                mindxagent_response: result
+            });
+
+            // Add to interaction history
+            this.addToInteractionHistory({
+                prompt: prompt,
+                response: result.response || 'No response',
+                timestamp: new Date().toISOString(),
+                success: result.success !== false
+            });
+
+            // Clear input on success
+            if (promptInput) promptInput.value = '';
+
+            this.updatePromptStatus('Prompt injected successfully!', 'success');
+
+            // Refresh conversation and memory logs
+            await Promise.all([
+                this.loadConversation(),
+                this.loadMemoryLogs()
+            ]);
+
+        } catch (error) {
+            console.error('Failed to send prompt to mindXagent:', error);
+            this.updatePromptStatus(`Failed to inject prompt: ${error.message}`, 'error');
+
+            // Log failed interaction
+            this.addToInteractionHistory({
+                prompt: prompt,
+                error: error.message,
+                timestamp: new Date().toISOString(),
+                success: false
+            });
+        } finally {
+            // Reset UI state
+            if (sendBtn) sendBtn.disabled = false;
+            if (promptInput) promptInput.disabled = false;
+        }
+    }
+
+    /**
+     * Clear prompt input field
+     */
+    clearPromptInput() {
+        const promptInput = document.getElementById('mindxagent-prompt-input');
+        if (promptInput) {
+            promptInput.value = '';
+            this.updatePromptStatus('Ready to inject prompt', 'ready');
+        }
+    }
+
+    /**
+     * Update prompt status display
+     */
+    updatePromptStatus(message, type = 'info') {
+        const statusEl = document.getElementById('mindxagent-prompt-status');
+        if (statusEl) {
+            statusEl.textContent = message;
+            statusEl.className = `prompt-status-text status-${type}`;
+        }
+    }
+
+    /**
+     * Add interaction to history
+     */
+    addToInteractionHistory(interaction) {
+        this.interactionHistory.unshift(interaction);
+        if (this.interactionHistory.length > 50) {
+            this.interactionHistory.pop();
+        }
+        this.updateInteractionHistoryDisplay();
+    }
+
+    /**
+     * Update interaction history display
+     */
+    updateInteractionHistoryDisplay() {
+        const container = document.getElementById('mindxagent-interaction-history');
+        if (!container) return;
+
+        if (this.interactionHistory.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📝</div>
+                    <div class="empty-text">No prompt injections yet</div>
+                    <div class="empty-hint">Use the input field above to inject prompts into mindXagent</div>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = this.interactionHistory.map((interaction, index) => `
+            <div class="interaction-entry ${interaction.success ? 'success' : 'error'}">
+                <div class="interaction-header">
+                    <span class="interaction-index">#${index + 1}</span>
+                    <span class="interaction-timestamp">${new Date(interaction.timestamp).toLocaleString()}</span>
+                    <span class="interaction-status ${interaction.success ? 'success' : 'error'}">
+                        ${interaction.success ? '✅ Success' : '❌ Failed'}
+                    </span>
+                </div>
+                <div class="interaction-content">
+                    <div class="interaction-prompt">
+                        <strong>Prompt:</strong> ${this.escapeHtml(interaction.prompt)}
+                    </div>
+                    ${interaction.response ? `
+                        <div class="interaction-response">
+                            <strong>mindXagent Response:</strong> ${this.escapeHtml(interaction.response)}
+                        </div>
+                    ` : ''}
+                    ${interaction.error ? `
+                        <div class="interaction-error">
+                            <strong>Error:</strong> ${this.escapeHtml(interaction.error)}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    /**
+     * Load memory logs
+     */
+    async loadMemoryLogs() {
+        try {
+            const logs = await this.apiRequest('/mindxagent/memory/logs?limit=50');
+            this.memoryLogs = logs.logs || [];
+            this.updateMemoryLogsDisplay();
+        } catch (error) {
+            console.error('Failed to load memory logs:', error);
+            this.updateMemoryLogsDisplay();
+        }
+    }
+
+    /**
+     * Update memory logs display
+     */
+    updateMemoryLogsDisplay() {
+        const container = document.getElementById('mindxagent-memory-logs');
+        if (!container) return;
+
+        if (!this.memoryLogs || this.memoryLogs.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">🧠</div>
+                    <div class="empty-text">No memory logs yet</div>
+                    <div class="empty-hint">Memory events will appear here as they are logged</div>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = this.memoryLogs.map(log => `
+            <div class="memory-log-entry">
+                <div class="log-header">
+                    <span class="log-timestamp">${new Date(log.timestamp * 1000).toLocaleString()}</span>
+                    <span class="log-type">${log.type || 'memory'}</span>
+                </div>
+                <div class="log-content">
+                    ${this.escapeHtml(log.content || log.message || JSON.stringify(log))}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    /**
+     * Clear memory logs
+     */
+    async clearMemoryLogs() {
+        try {
+            await this.apiRequest('/mindxagent/memory/logs/clear', 'POST', {});
+            this.memoryLogs = [];
+            this.updateMemoryLogsDisplay();
+            console.log('✅ Memory logs cleared');
+        } catch (error) {
+            console.error('Failed to clear memory logs:', error);
+            alert('Failed to clear memory logs: ' + error.message);
+        }
+    }
+
+    /**
+     * Log interaction to memory
+     */
+    async logInteractionToMemory(interactionData) {
+        try {
+            await this.apiRequest('/mindxagent/memory/log', 'POST', {
+                type: 'ui_interaction',
+                content: interactionData,
+                timestamp: new Date().toISOString()
+            });
+        } catch (error) {
+            console.warn('Failed to log interaction to memory:', error);
+            // Don't show error to user as this is secondary functionality
+        }
+    }
+
+    /**
+     * Escape HTML for safe display
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     /**

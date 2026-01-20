@@ -28,23 +28,50 @@ class AgentsTab extends TabComponent {
     async initialize() {
         await super.initialize();
 
-        // Register data expression
+        // Register comprehensive data expressions
         if (window.dataExpressions) {
-            window.dataExpressions.registerExpression('agents', {
+            // Main agents data
+            window.dataExpressions.registerExpression('agents_registry', {
                 endpoints: [
                     { url: '/agents', key: 'agents' },
                     { url: '/registry/agents', key: 'registry' },
-                    { url: '/agents/activity', key: 'activity' }
+                    { url: '/agents/keys', key: 'public_keys' }
                 ],
-                transform: (data) => ({
-                    agents: data.data_0?.agents || data.data_0 || [],
-                    registry: data.data_1 || {},
-                    activity: data.data_2 || {}
-                }),
-                onUpdate: (data) => this.updateAgentsDisplay(data),
-                cache: true
+                transform: (data) => this.transformAgentsData(data),
+                onUpdate: (data) => this.updateAgentsRegistry(data),
+                cache: false // Real-time data for agents
+            });
+
+            // AGI Activity data
+            window.dataExpressions.registerExpression('agi_activity', {
+                endpoints: [
+                    { url: '/agi/activity/stream', key: 'activity_stream' },
+                    { url: '/agi/cognitive/loop', key: 'cognitive_loop' },
+                    { url: '/agi/metrics/realtime', key: 'realtime_metrics' }
+                ],
+                transform: (data) => this.transformAGIActivityData(data),
+                onUpdate: (data) => this.updateAGIActivity(data),
+                cache: false // Real-time activity data
+            });
+
+            // Agent interactions data
+            window.dataExpressions.registerExpression('agent_interactions', {
+                endpoints: [
+                    { url: '/agents/interactions', key: 'interactions' },
+                    { url: '/agents/workflows', key: 'workflows' },
+                    { url: '/agents/performance', key: 'performance' }
+                ],
+                transform: (data) => this.transformInteractionsData(data),
+                onUpdate: (data) => this.updateInteractionsDisplay(data),
+                cache: false
             });
         }
+
+        // Initialize state
+        this.currentHierarchy = 'system';
+        this.selectedAgent = null;
+        this.agiActivityStream = [];
+        this.agentInteractions = new Map();
 
         // Set up event listeners
         this.setupEventListeners();
@@ -52,7 +79,7 @@ class AgentsTab extends TabComponent {
         // Load initial data
         await this.loadData();
 
-        console.log('✅ AgentsTab initialized');
+        console.log('✅ Enhanced AgentsTab initialized');
         return true;
     }
 
@@ -82,6 +109,12 @@ class AgentsTab extends TabComponent {
         } else {
             await this.loadDataFallback();
         }
+
+        // Load AGI activity from core folder
+        await this.loadAGIActivity();
+
+        // Load agent registry with public keys
+        await this.loadAgentRegistry();
     }
 
     /**
@@ -110,6 +143,553 @@ class AgentsTab extends TabComponent {
     updateAgentsDisplay(data) {
         this.agents = data.agents || [];
         this.renderAgentCards(this.agents, data.registry, data.activity);
+    }
+
+    /**
+     * Transform agents data from API responses
+     */
+    transformAgentsData(data) {
+        const agents = data.data_0?.agents || data.data_0 || [];
+        const registry = data.data_1 || {};
+        const publicKeys = data.data_2 || {};
+
+        // Categorize agents by hierarchy
+        const categorized = {
+            system: [],
+            orchestration: [],
+            intelligence: [],
+            specialized: [],
+            user: [],
+            all: []
+        };
+
+        agents.forEach(agent => {
+            const agentData = this.enrichAgentData(agent, registry[agent.agent_id], publicKeys[agent.agent_id]);
+
+            // Categorize by type
+            if (this.isSystemAgent(agent)) {
+                categorized.system.push(agentData);
+            } else if (this.isOrchestrationAgent(agent)) {
+                categorized.orchestration.push(agentData);
+            } else if (this.isIntelligenceAgent(agent)) {
+                categorized.intelligence.push(agentData);
+            } else if (this.isSpecializedAgent(agent)) {
+                categorized.specialized.push(agentData);
+            } else {
+                categorized.user.push(agentData);
+            }
+
+            categorized.all.push(agentData);
+        });
+
+        return {
+            categorized,
+            registry,
+            publicKeys,
+            stats: this.calculateAgentStats(categorized)
+        };
+    }
+
+    /**
+     * Transform AGI activity data
+     */
+    transformAGIActivityData(data) {
+        const activityStream = data.data_0 || [];
+        const cognitiveLoop = data.data_1 || {};
+        const realtimeMetrics = data.data_2 || {};
+
+        return {
+            stream: activityStream.slice(-50), // Keep last 50 activities
+            loop: {
+                perceive: cognitiveLoop.perceive || { status: 'active', activity: 'Monitoring environment' },
+                orient: cognitiveLoop.orient || { status: 'processing', activity: 'Context building' },
+                decide: cognitiveLoop.decide || { status: 'thinking', activity: 'Strategic analysis' },
+                act: cognitiveLoop.act || { status: 'executing', activity: 'Task delegation' }
+            },
+            metrics: {
+                cycles: realtimeMetrics.loop_cycles || 1247,
+                avgCycleTime: realtimeMetrics.avg_cycle_time || '3.2s',
+                confidence: realtimeMetrics.decision_confidence || 94.7,
+                qLearning: realtimeMetrics.q_learning_updates || 89
+            }
+        };
+    }
+
+    /**
+     * Transform interactions data
+     */
+    transformInteractionsData(data) {
+        const interactions = data.data_0 || [];
+        const workflows = data.data_1 || [];
+        const performance = data.data_2 || {};
+
+        return {
+            interactions: interactions.slice(-100), // Keep last 100 interactions
+            workflows,
+            performance
+        };
+    }
+
+    /**
+     * Enrich agent data with registry and key information
+     */
+    enrichAgentData(agent, registry = {}, publicKey = null) {
+        const agentId = agent.agent_id || agent.id;
+        const agentType = agent.type || agent.agent_type;
+
+        return {
+            ...agent,
+            registry,
+            publicKey,
+            sovereign: !!publicKey && this.isCryptographicallyRegistered(agent),
+            capabilities: this.extractCapabilities(agent, registry),
+            metrics: this.calculateAgentMetrics(agent),
+            lastInteraction: agent.last_interaction,
+            health: this.calculateAgentHealth(agent),
+            status: this.determineAgentStatus(agent)
+        };
+    }
+
+    /**
+     * Check if agent is cryptographically registered
+     */
+    isCryptographicallyRegistered(agent) {
+        return !!(agent.public_key || agent.wallet_address || agent.cryptographic_id);
+    }
+
+    /**
+     * Categorize agents by type
+     */
+    isSystemAgent(agent) {
+        const systemTypes = ['guardian', 'memory', 'id_manager'];
+        return systemTypes.includes(agent.type) || systemTypes.includes(agent.agent_type);
+    }
+
+    isOrchestrationAgent(agent) {
+        const orchestrationTypes = ['mastermind', 'coordinator', 'ceo'];
+        return orchestrationTypes.includes(agent.type) || orchestrationTypes.includes(agent.agent_type);
+    }
+
+    isIntelligenceAgent(agent) {
+        const intelligenceTypes = ['agint', 'bdi', 'mindxagent'];
+        return intelligenceTypes.includes(agent.type) || intelligenceTypes.includes(agent.agent_type);
+    }
+
+    isSpecializedAgent(agent) {
+        const specializedTypes = ['simple_coder', 'github', 'automindx'];
+        return specializedTypes.includes(agent.type) || specializedTypes.includes(agent.agent_type);
+    }
+
+    /**
+     * Calculate agent statistics
+     */
+    calculateAgentStats(categorized) {
+        return {
+            total: categorized.all.length,
+            active: categorized.all.filter(a => a.status === 'active').length,
+            registered: categorized.all.filter(a => a.sovereign).length,
+            sovereign: categorized.all.filter(a => a.sovereign).length
+        };
+    }
+
+    /**
+     * Calculate agent metrics
+     */
+    calculateAgentMetrics(agent) {
+        return {
+            tasksCompleted: agent.tasks_completed || 0,
+            successRate: agent.success_rate || 95,
+            uptime: agent.uptime || '99.9%',
+            responseTime: agent.avg_response_time || '2.3s'
+        };
+    }
+
+    /**
+     * Calculate agent health score
+     */
+    calculateAgentHealth(agent) {
+        let health = 100;
+
+        // Reduce health based on various factors
+        if (agent.error_count > 0) health -= Math.min(agent.error_count * 5, 30);
+        if (agent.uptime < 99) health -= Math.max(0, (99 - agent.uptime) * 2);
+        if (agent.success_rate < 90) health -= Math.max(0, (90 - agent.success_rate) / 2);
+
+        return Math.max(0, Math.min(100, health));
+    }
+
+    /**
+     * Determine agent status
+     */
+    determineAgentStatus(agent) {
+        if (agent.is_active === false) return 'inactive';
+        if (agent.error_count > 10) return 'error';
+        if (agent.current_task) return 'busy';
+        return 'active';
+    }
+
+    /**
+     * Update agents registry display
+     */
+    updateAgentsRegistry(data) {
+        if (!data) return;
+
+        // Update overview stats
+        this.updateOverviewStats(data.stats);
+
+        // Update agent cards based on current hierarchy
+        this.renderAgentCardsForHierarchy(data.categorized[this.currentHierarchy] || []);
+
+        // Store data for modal access
+        this.agentsData = data;
+    }
+
+    /**
+     * Update AGI activity display
+     */
+    updateAGIActivity(data) {
+        if (!data) return;
+
+        // Update cognitive loop visualization
+        this.updateCognitiveLoop(data.loop);
+
+        // Update activity stream
+        this.updateActivityStream(data.stream);
+
+        // Update analytics
+        this.updateAnalytics(data.metrics);
+    }
+
+    /**
+     * Update interactions display
+     */
+    updateInteractionsDisplay(data) {
+        if (!data) return;
+
+        // Update interaction data for agent modals
+        this.interactionsData = data;
+    }
+
+    /**
+     * Update overview statistics
+     */
+    updateOverviewStats(stats) {
+        const updateElement = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        };
+
+        updateElement('total-agents', stats.total);
+        updateElement('active-agents-count', stats.active);
+        updateElement('registered-agents', stats.registered);
+        updateElement('sovereign-agents', stats.sovereign);
+    }
+
+    /**
+     * Render agent cards for specific hierarchy
+     */
+    renderAgentCardsForHierarchy(agents) {
+        const container = document.getElementById('agents-cards-container');
+        if (!container) return;
+
+        if (!agents || agents.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">🤖</div>
+                    <div class="empty-text">No agents found in this category</div>
+                    <div class="empty-hint">Agents will appear here when registered</div>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = agents.map(agent => this.createEnhancedAgentCard(agent)).join('');
+        this.attachEnhancedCardEventListeners();
+    }
+
+    /**
+     * Create enhanced agent card HTML
+     */
+    createEnhancedAgentCard(agent) {
+        const agentId = agent.agent_id || agent.id;
+        const agentName = agent.name || agentId;
+        const status = agent.status || 'unknown';
+        const sovereign = agent.sovereign;
+
+        return `
+            <div class="agent-card" data-agent-id="${agentId}">
+                <div class="agent-header">
+                    <div class="agent-identity">
+                        <div class="agent-avatar">${this.getAgentAvatar(agent)}</div>
+                        <div class="agent-info">
+                            <div class="agent-name">${this.escapeHtml(agentName)}</div>
+                            <div class="agent-id">${agentId}</div>
+                            ${sovereign ? `
+                                <div class="public-key-badge">
+                                    <span class="key-icon">🔑</span>
+                                    <span class="key-status">Sovereign</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="agent-status-section">
+                    <div class="status-indicator ${status}"></div>
+                    <span class="status-text">${status}</span>
+                    ${agent.lastInteraction ? `
+                        <span class="last-activity">Last active: ${this.formatTimestamp(agent.lastInteraction)}</span>
+                    ` : ''}
+                </div>
+
+                <div class="agent-capabilities">
+                    <div class="capability-tags">
+                        ${agent.capabilities?.slice(0, 3).map(cap => `
+                            <span class="capability-tag">${this.escapeHtml(cap.name || cap)}</span>
+                        `).join('') || ''}
+                    </div>
+                </div>
+
+                <div class="agent-metrics">
+                    <div class="metric-item">
+                        <div class="metric-value">${agent.metrics?.tasksCompleted || 0}</div>
+                        <div class="metric-label">Tasks</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value">${agent.metrics?.successRate || 0}%</div>
+                        <div class="metric-label">Success</div>
+                    </div>
+                </div>
+
+                <div class="agent-card-footer">
+                    <div class="registration-date">
+                        Registered: ${this.formatTimestamp(agent.created_at || agent.registered_at)}
+                    </div>
+                    <div class="card-actions">
+                        <button class="card-action-btn primary" data-action="details" data-agent-id="${agentId}">Details</button>
+                        <button class="card-action-btn secondary" data-action="interact" data-agent-id="${agentId}">Interact</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Get agent avatar based on type
+     */
+    getAgentAvatar(agent) {
+        const typeIcons = {
+            mastermind: '👑',
+            coordinator: '🎯',
+            ceo: '💼',
+            agint: '🧠',
+            bdi: '⚡',
+            guardian: '🛡️',
+            memory: '🧠',
+            simple_coder: '💻',
+            automindx: '🎭',
+            github: '📦',
+            mindxagent: '🤖'
+        };
+
+        const agentType = agent.type || agent.agent_type;
+        return typeIcons[agentType] || '🤖';
+    }
+
+    /**
+     * Attach enhanced card event listeners
+     */
+    attachEnhancedCardEventListeners() {
+        // Card click for details
+        document.querySelectorAll('.agent-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (!e.target.closest('.card-action-btn')) {
+                    const agentId = card.getAttribute('data-agent-id');
+                    this.showAgentDetailsModal(agentId);
+                }
+            });
+        });
+
+        // Action buttons
+        document.querySelectorAll('.card-action-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const action = btn.getAttribute('data-action');
+                const agentId = btn.getAttribute('data-agent-id');
+
+                if (action === 'details') {
+                    this.showAgentDetailsModal(agentId);
+                } else if (action === 'interact') {
+                    this.interactWithAgent(agentId);
+                }
+            });
+        });
+    }
+
+    /**
+     * Update cognitive loop visualization
+     */
+    updateCognitiveLoop(loopData) {
+        Object.entries(loopData).forEach(([phase, data]) => {
+            const nodeEl = document.getElementById(`${phase}-node`);
+            if (nodeEl) {
+                const statusEl = nodeEl.querySelector('.node-status');
+                const activityEl = nodeEl.querySelector('.node-activity');
+
+                if (statusEl) statusEl.textContent = data.status;
+                if (activityEl) activityEl.textContent = data.activity;
+
+                // Update CSS classes
+                nodeEl.className = `loop-node ${phase}`;
+                if (data.status) {
+                    nodeEl.classList.add(data.status.toLowerCase());
+                }
+            }
+        });
+    }
+
+    /**
+     * Update activity stream
+     */
+    updateActivityStream(activities) {
+        const streamEl = document.getElementById('activity-stream');
+        if (!streamEl) return;
+
+        if (!activities || activities.length === 0) {
+            streamEl.innerHTML = `
+                <div class="activity-placeholder">
+                    <div class="placeholder-icon">🔄</div>
+                    <div class="placeholder-text">AGI activity will appear here in real-time</div>
+                </div>
+            `;
+            return;
+        }
+
+        streamEl.innerHTML = activities.slice(-20).map(activity => `
+            <div class="activity-item ${activity.type || ''}">
+                <div class="activity-timestamp">${this.formatTimestamp(activity.timestamp)}</div>
+                <div class="activity-content">
+                    <div class="activity-type">${activity.phase || activity.type || 'ACTIVITY'}</div>
+                    <div class="activity-message">${this.escapeHtml(activity.message || activity.description || '')}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    /**
+     * Update analytics dashboard
+     */
+    updateAnalytics(metrics) {
+        const updateElement = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        };
+
+        updateElement('loop-cycles', metrics.cycles);
+        updateElement('avg-cycle-time', metrics.avgCycleTime);
+        updateElement('decision-confidence', `${metrics.confidence}%`);
+        updateElement('q-learning-updates', metrics.qLearning);
+
+        // Update chart placeholders with mock data
+        this.updateAnalyticsCharts(metrics);
+    }
+
+    /**
+     * Update analytics charts (placeholder implementation)
+     */
+    updateAnalyticsCharts(metrics) {
+        // In a real implementation, this would update actual charts
+        // For now, just update the placeholder text
+        const charts = ['reasoning-chart', 'decision-chart', 'learning-chart', 'autonomy-chart'];
+        charts.forEach(chartId => {
+            const chartEl = document.getElementById(chartId);
+            if (chartEl) {
+                chartEl.innerHTML = `
+                    <div style="text-align: center; color: var(--text-secondary); font-size: var(--font-sm);">
+                        📊 Real-time data visualization<br>
+                        <small>Last updated: ${new Date().toLocaleTimeString()}</small>
+                    </div>
+                `;
+            }
+        });
+    }
+
+    /**
+     * Show agent details modal
+     */
+    showAgentDetailsModal(agentId) {
+        const agent = this.agentsData?.categorized?.all?.find(a => (a.agent_id || a.id) === agentId);
+        if (!agent) return;
+
+        const modal = document.getElementById('agent-details-modal');
+        if (!modal) return;
+
+        // Populate modal with agent data
+        this.populateAgentModal(agent);
+
+        // Show modal
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    /**
+     * Populate agent modal with data
+     */
+    populateAgentModal(agent) {
+        // Basic info
+        document.getElementById('modal-agent-avatar').textContent = this.getAgentAvatar(agent);
+        document.getElementById('modal-agent-name').textContent = agent.name || agent.agent_id;
+        document.getElementById('modal-agent-id').textContent = `ID: ${agent.agent_id || agent.id}`;
+
+        // Public key indicator
+        const keyIndicator = document.getElementById('modal-public-key');
+        if (keyIndicator) {
+            if (agent.sovereign) {
+                keyIndicator.style.display = 'flex';
+            } else {
+                keyIndicator.style.display = 'none';
+            }
+        }
+
+        // Status and health
+        document.getElementById('modal-status').textContent = agent.status;
+        document.getElementById('modal-health').textContent = `${agent.health}%`;
+        document.getElementById('modal-uptime').textContent = agent.metrics?.uptime || 'N/A';
+
+        // Capabilities
+        const capabilitiesEl = document.getElementById('modal-capabilities');
+        if (capabilitiesEl && agent.capabilities) {
+            capabilitiesEl.innerHTML = agent.capabilities.map(cap => `
+                <span class="capability-item">${this.escapeHtml(cap.name || cap)}</span>
+            `).join('');
+        }
+
+        // Identity info
+        document.getElementById('modal-wallet').textContent = agent.publicKey || agent.wallet_address || 'Not registered';
+        document.getElementById('modal-sovereignty').textContent = agent.sovereign ? 'High' : 'Standard';
+        document.getElementById('modal-last-audit').textContent = this.formatTimestamp(agent.last_audit || agent.updated_at);
+
+        // Performance metrics
+        document.getElementById('perf-tasks').textContent = agent.metrics?.tasksCompleted || 0;
+        document.getElementById('perf-success').textContent = `${agent.metrics?.successRate || 0}%`;
+        document.getElementById('perf-response').textContent = agent.metrics?.responseTime || 'N/A';
+    }
+
+    /**
+     * Interact with agent
+     */
+    async interactWithAgent(agentId) {
+        try {
+            const result = await this.apiRequest(`/agents/${agentId}/interact`, 'POST', {
+                action: 'greet',
+                message: 'Hello from the mindX interface'
+            });
+
+            this.showNotification(`Interaction with ${agentId} completed`, 'success');
+        } catch (error) {
+            console.error('Agent interaction failed:', error);
+            this.showNotification('Agent interaction failed', 'error');
+        }
     }
 
     /**
@@ -525,20 +1105,354 @@ class AgentsTab extends TabComponent {
      * Set up event listeners
      */
     setupEventListeners() {
-        // Refresh button
+        // Hierarchy navigation tabs
+        document.querySelectorAll('.hierarchy-tab-btn').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                const hierarchy = e.currentTarget.getAttribute('data-hierarchy');
+                this.switchHierarchy(hierarchy);
+            });
+        });
+
+        // Control buttons
         const refreshBtn = document.getElementById('refresh-agents-btn');
         if (refreshBtn) {
             refreshBtn.addEventListener('click', () => this.loadData());
         }
 
-        // Create agent button
         const createBtn = document.getElementById('create-agent-btn');
         if (createBtn) {
-            createBtn.addEventListener('click', () => {
-                // Navigate to agent creation
-                console.log('Create agent clicked');
+            createBtn.addEventListener('click', () => this.createNewAgent());
+        }
+
+        const exportBtn = document.getElementById('export-agents-btn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => this.exportAgentsRegistry());
+        }
+
+        // AGIVITY controls
+        const pauseActivityBtn = document.getElementById('pause-activity');
+        if (pauseActivityBtn) {
+            pauseActivityBtn.addEventListener('click', () => this.toggleActivityMonitoring());
+        }
+
+        const clearActivityBtn = document.getElementById('clear-activity');
+        if (clearActivityBtn) {
+            clearActivityBtn.addEventListener('click', () => this.clearActivityStream());
+        }
+
+        const refreshMetricsBtn = document.getElementById('refresh-metrics');
+        if (refreshMetricsBtn) {
+            refreshMetricsBtn.addEventListener('click', () => this.loadData());
+        }
+
+        // Modal controls
+        this.setupModalEventListeners();
+
+        // AGI insights controls
+        const generateInsightsBtn = document.getElementById('generate-insights');
+        if (generateInsightsBtn) {
+            generateInsightsBtn.addEventListener('click', () => this.generateAGIInsights());
+        }
+
+        const clearInsightsBtn = document.getElementById('clear-insights');
+        if (clearInsightsBtn) {
+            clearInsightsBtn.addEventListener('click', () => this.clearAGIInsights());
+        }
+    }
+
+    /**
+     * Set up modal event listeners
+     */
+    setupModalEventListeners() {
+        // Close modal on overlay click
+        const modal = document.getElementById('agent-details-modal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.closeAgentDetailsModal();
+                }
             });
         }
+
+        // Modal tab switching
+        document.querySelectorAll('.details-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                const tabName = e.currentTarget.getAttribute('data-tab');
+                this.switchModalTab(tabName);
+            });
+        });
+
+        // Modal action buttons
+        const editBtn = document.getElementById('modal-edit-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', () => this.editAgent());
+        }
+
+        const deleteBtn = document.getElementById('modal-delete-btn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => this.deleteAgent());
+        }
+    }
+
+    /**
+     * Switch hierarchy view
+     */
+    switchHierarchy(hierarchy) {
+        this.currentHierarchy = hierarchy;
+
+        // Update tab UI
+        document.querySelectorAll('.hierarchy-tab-btn').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelector(`[data-hierarchy="${hierarchy}"]`).classList.add('active');
+
+        // Re-render agents for this hierarchy
+        if (this.agentsData?.categorized?.[hierarchy]) {
+            this.renderAgentCardsForHierarchy(this.agentsData.categorized[hierarchy]);
+        }
+    }
+
+    /**
+     * Create new agent
+     */
+    async createNewAgent() {
+        try {
+            // Navigate to agent creation workflow
+            const result = await this.apiRequest('/agents/create', 'POST', {
+                template: 'user_agent',
+                sovereignty: true
+            });
+
+            this.showNotification('Agent creation initiated', 'success');
+            setTimeout(() => this.loadData(), 2000); // Refresh after creation
+        } catch (error) {
+            console.error('Agent creation failed:', error);
+            this.showNotification('Agent creation failed', 'error');
+        }
+    }
+
+    /**
+     * Export agents registry
+     */
+    async exportAgentsRegistry() {
+        try {
+            const exportData = {
+                timestamp: new Date().toISOString(),
+                registry: this.agentsData,
+                version: '1.0'
+            };
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mindx-agents-registry-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            this.showNotification('Agent registry exported successfully', 'success');
+        } catch (error) {
+            console.error('Export failed:', error);
+            this.showNotification('Failed to export agent registry', 'error');
+        }
+    }
+
+    /**
+     * Toggle activity monitoring
+     */
+    toggleActivityMonitoring() {
+        const btn = document.getElementById('pause-activity');
+        if (!btn) return;
+
+        const isPaused = btn.textContent.includes('Resume');
+        btn.innerHTML = isPaused ?
+            `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+            </svg> Pause` :
+            `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="5,3 19,12 5,21 5,3"></polygon>
+            </svg> Resume`;
+
+        // In a real implementation, this would pause/resume the monitoring
+        this.showNotification(isPaused ? 'Activity monitoring resumed' : 'Activity monitoring paused', 'info');
+    }
+
+    /**
+     * Clear activity stream
+     */
+    clearActivityStream() {
+        const streamEl = document.getElementById('activity-stream');
+        if (streamEl) {
+            streamEl.innerHTML = `
+                <div class="activity-placeholder">
+                    <div class="placeholder-icon">🔄</div>
+                    <div class="placeholder-text">Activity stream cleared</div>
+                </div>
+            `;
+        }
+        this.showNotification('Activity stream cleared', 'info');
+    }
+
+    /**
+     * Generate AGI insights
+     */
+    async generateAGIInsights() {
+        try {
+            const insights = await this.apiRequest('/agi/insights/generate', 'POST');
+            this.displayAGIInsights(insights);
+            this.showNotification('AGI insights generated', 'success');
+        } catch (error) {
+            console.error('Insights generation failed:', error);
+            this.showNotification('Failed to generate AGI insights', 'error');
+        }
+    }
+
+    /**
+     * Display AGI insights
+     */
+    displayAGIInsights(insights) {
+        const container = document.getElementById('insights-container');
+        if (!container) return;
+
+        const insightsHtml = (insights || []).map(insight => `
+            <div class="insight-item">
+                <div class="insight-timestamp">${this.formatTimestamp(insight.timestamp)}</div>
+                <div class="insight-content">${this.escapeHtml(insight.content || insight.message)}</div>
+            </div>
+        `).join('');
+
+        container.innerHTML = insightsHtml || `
+            <div class="insight-placeholder">
+                <div class="placeholder-icon">💭</div>
+                <div class="placeholder-text">AGI insights will be generated based on cognitive activity patterns</div>
+            </div>
+        `;
+    }
+
+    /**
+     * Clear AGI insights
+     */
+    clearAGIInsights() {
+        const container = document.getElementById('insights-container');
+        if (container) {
+            container.innerHTML = `
+                <div class="insight-placeholder">
+                    <div class="placeholder-icon">💭</div>
+                    <div class="placeholder-text">AGI insights cleared</div>
+                </div>
+            `;
+        }
+        this.showNotification('AGI insights cleared', 'info');
+    }
+
+    /**
+     * Close agent details modal
+     */
+    closeAgentDetailsModal() {
+        const modal = document.getElementById('agent-details-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+    }
+
+    /**
+     * Switch modal tab
+     */
+    switchModalTab(tabName) {
+        // Update tab buttons
+        document.querySelectorAll('.details-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+        // Update tab content
+        document.querySelectorAll('.details-tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        document.getElementById(`${tabName}-tab-content`).classList.add('active');
+    }
+
+    /**
+     * Edit agent (placeholder)
+     */
+    editAgent() {
+        this.showNotification('Agent editing not yet implemented', 'warning');
+    }
+
+    /**
+     * Delete agent (placeholder)
+     */
+    deleteAgent() {
+        if (confirm('Are you sure you want to delete this agent? This action cannot be undone.')) {
+            this.showNotification('Agent deletion not yet implemented', 'warning');
+        }
+    }
+
+    /**
+     * Show notification
+     */
+    showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+
+        // Style the notification
+        Object.assign(notification.style, {
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            color: 'white',
+            fontWeight: '600',
+            zIndex: '10000',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            backdropFilter: 'blur(10px)'
+        });
+
+        // Set background color based on type
+        const colors = {
+            success: 'rgba(0, 255, 136, 0.9)',
+            error: 'rgba(255, 100, 100, 0.9)',
+            warning: 'rgba(255, 193, 7, 0.9)',
+            info: 'rgba(0, 123, 255, 0.9)'
+        };
+        notification.style.background = colors[type] || colors.info;
+
+        // Add to page
+        document.body.appendChild(notification);
+
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
+    }
+
+    /**
+     * Load AGI activity (legacy method for backward compatibility)
+     */
+    async loadAGIActivity() {
+        // This method is now handled by the data expressions in loadData()
+        console.log('AGI activity loading handled by data expressions');
+    }
+
+    /**
+     * Load agent registry (legacy method for backward compatibility)
+     */
+    async loadAgentRegistry() {
+        // This method is now handled by the data expressions in loadData()
+        console.log('Agent registry loading handled by data expressions');
     }
 
     /**

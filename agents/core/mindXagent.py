@@ -2798,7 +2798,88 @@ class MindXAgent:
         # Sort by priority (lower number = higher priority)
         # Handle None priorities safely
         return sorted(opportunities, key=lambda x: x.get("priority") if x.get("priority") is not None else 99)
-    
+
+    async def inject_user_prompt(self, prompt: str, source: str = "api", metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Inject a user prompt directly into mindXagent's Ollama conversation.
+        This allows real-time interaction with the agent's reasoning process.
+
+        Args:
+            prompt: The user prompt to inject
+            source: Source of the prompt (e.g., "ui_interaction", "api")
+            metadata: Additional metadata about the interaction
+
+        Returns:
+            Dict containing the response and conversation details
+        """
+        try:
+            logger.info(f"{self.log_prefix} Injecting user prompt from {source}: {prompt[:100]}...")
+
+            # Ensure Ollama chat manager is available
+            if not self.ollama_chat_manager:
+                return {
+                    "success": False,
+                    "error": "Ollama chat manager not available",
+                    "response": "Cannot inject prompt: Ollama not connected"
+                }
+
+            # Add the user prompt to the conversation
+            conversation_result = await self.ollama_chat_manager.add_user_message(
+                message=prompt,
+                metadata={
+                    "source": source,
+                    "user_initiated": True,
+                    "ui_interaction": source == "ui_interaction",
+                    **(metadata or {})
+                }
+            )
+
+            # Generate a response using the current model
+            response_result = await self.ollama_chat_manager.generate_response(
+                use_current_conversation=True,
+                metadata={
+                    "source": source,
+                    "prompt_injection": True,
+                    **(metadata or {})
+                }
+            )
+
+            # Log this interaction in thinking process
+            thinking_entry = {
+                "timestamp": time.time(),
+                "type": "user_prompt_injection",
+                "prompt": prompt,
+                "source": source,
+                "response": response_result.get("response", ""),
+                "conversation_id": conversation_result.get("conversation_id"),
+                "model_used": self.ollama_chat_manager.current_model,
+                "metadata": metadata or {}
+            }
+            self.thinking_process.append(thinking_entry)
+
+            # Keep thinking process size manageable
+            if len(self.thinking_process) > 1000:
+                self.thinking_process = self.thinking_process[-500:]
+
+            logger.info(f"{self.log_prefix} User prompt injected successfully, response generated")
+
+            return {
+                "success": True,
+                "response": response_result.get("response", "Prompt processed successfully"),
+                "conversation_id": conversation_result.get("conversation_id"),
+                "model_used": self.ollama_chat_manager.current_model,
+                "thinking_logged": True,
+                "timestamp": time.time()
+            }
+
+        except Exception as e:
+            logger.error(f"{self.log_prefix} Error injecting user prompt: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+                "response": f"Failed to inject prompt: {str(e)}"
+            }
+
     async def shutdown(self):
         """Shutdown MindX Agent with replication and backup to GitHub"""
         logger.info(f"{self.log_prefix} Shutting down...")

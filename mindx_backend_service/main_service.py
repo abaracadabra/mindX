@@ -3695,6 +3695,165 @@ async def get_mindxagent_actions(limit: int = 50):
         raise HTTPException(status_code=500, detail=f"Error getting action choices: {str(e)}")
 
 
+@app.post("/mindxagent/interact", summary="Interact with mindXagent by injecting prompt into Ollama conversation")
+async def interact_with_mindxagent(interaction: Dict[str, Any] = Body(...)):
+    """
+    Inject a user prompt into mindXagent's active Ollama conversation.
+    This allows real-time interaction with the agent's reasoning process.
+    """
+    try:
+        prompt = interaction.get("prompt", "").strip()
+        if not prompt:
+            raise HTTPException(status_code=400, detail="Prompt is required")
+
+        source = interaction.get("source", "api")
+        timestamp = interaction.get("timestamp", time.time())
+
+        from agents.core.mindXagent import MindXAgent
+        mindxagent = await MindXAgent.get_instance()
+        if not mindxagent:
+            raise HTTPException(status_code=503, detail="mindXagent not available")
+
+        # Inject the prompt into mindXagent's Ollama conversation
+        result = await mindxagent.inject_user_prompt(
+            prompt=prompt,
+            source=source,
+            metadata={
+                "timestamp": timestamp,
+                "ui_interaction": True,
+                "user_initiated": True
+            }
+        )
+
+        # Log this interaction to memory
+        if mindxagent.memory_agent:
+            await mindxagent.memory_agent.store_memory(
+                content=f"UI Interaction: User injected prompt into mindXagent - '{prompt}'",
+                memory_type="interaction",
+                importance="medium",
+                metadata={
+                    "interaction_type": "prompt_injection",
+                    "source": source,
+                    "timestamp": timestamp,
+                    "mindxagent_response": result,
+                    "ui_generated": True
+                }
+            )
+
+        return {
+            "success": True,
+            "response": result.get("response", "Prompt injected into mindXagent conversation"),
+            "conversation_id": result.get("conversation_id"),
+            "timestamp": timestamp,
+            "logged_to_memory": True
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error interacting with mindXagent: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error interacting with mindXagent: {str(e)}")
+
+
+@app.post("/mindxagent/memory/log", summary="Log event to mindXagent memory")
+async def log_to_mindxagent_memory(log_entry: Dict[str, Any] = Body(...)):
+    """
+    Log an event or interaction to mindXagent's memory system.
+    All logs become memories and memories become logs.
+    """
+    try:
+        content = log_entry.get("content", "")
+        log_type = log_entry.get("type", "interaction")
+        timestamp = log_entry.get("timestamp", time.time())
+
+        from agents.core.mindXagent import MindXAgent
+        mindxagent = await MindXAgent.get_instance()
+        if not mindxagent or not mindxagent.memory_agent:
+            raise HTTPException(status_code=503, detail="mindXagent memory system not available")
+
+        # Store as memory
+        memory_result = await mindxagent.memory_agent.store_memory(
+            content=f"[MEMORY LOG] {content}",
+            memory_type=log_type,
+            importance="low",  # Memory logs are generally low importance
+            metadata={
+                "timestamp": timestamp,
+                "log_type": log_type,
+                "source": "ui_interaction",
+                "auto_logged": True,
+                **log_entry.get("metadata", {})
+            }
+        )
+
+        # Also log to the logs folder as a memory file
+        try:
+            from pathlib import Path
+            log_filename = f"memory_log_{int(timestamp)}.json"
+            log_path = Path("data/logs/memories") / log_filename
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+
+            with open(log_path, 'w') as f:
+                json.dump({
+                    "timestamp": timestamp,
+                    "type": log_type,
+                    "content": content,
+                    "memory_id": memory_result.get("memory_id"),
+                    "metadata": log_entry.get("metadata", {})
+                }, f, indent=2)
+
+        except Exception as log_error:
+            logger.warning(f"Failed to write memory log file: {log_error}")
+
+        return {
+            "success": True,
+            "memory_id": memory_result.get("memory_id"),
+            "logged_to_file": True,
+            "timestamp": timestamp
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error logging to memory: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error logging to memory: {str(e)}")
+
+
+@app.post("/mindxagent/memory/logs/clear", summary="Clear mindXagent memory logs")
+async def clear_mindxagent_memory_logs():
+    """
+    Clear the memory logs directory and reset memory log history.
+    """
+    try:
+        from agents.core.mindXagent import MindXAgent
+        mindxagent = await MindXAgent.get_instance()
+        if not mindxagent:
+            raise HTTPException(status_code=503, detail="mindXagent not available")
+
+        # Clear memory logs directory
+        from pathlib import Path
+        import shutil
+        logs_dir = Path("data/logs/memories")
+        if logs_dir.exists():
+            shutil.rmtree(logs_dir)
+
+        # Recreate directory
+        logs_dir.mkdir(parents=True, exist_ok=True)
+
+        # Clear from memory agent if possible
+        if mindxagent.memory_agent and hasattr(mindxagent.memory_agent, 'clear_logs'):
+            await mindxagent.memory_agent.clear_logs()
+
+        return {
+            "success": True,
+            "message": "Memory logs cleared successfully",
+            "logs_directory": str(logs_dir)
+        }
+
+    except Exception as e:
+        logger.error(f"Error clearing memory logs: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error clearing memory logs: {str(e)}")
+
+
 @app.post("/mindxagent/settings", summary="Update mindXagent settings")
 async def update_mindxagent_settings(settings: Dict[str, Any] = Body(...)):
     """Update mindXagent settings from UI."""

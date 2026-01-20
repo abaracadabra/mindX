@@ -2424,6 +2424,27 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'github-agent':
                 initializeGitHubAgentTab();
                 break;
+            case 'platform':
+                initializePlatformTab();
+                break;
+            case 'system':
+                initializeSystemTab();
+                break;
+            case 'workflow':
+                initializeWorkflowTab();
+                break;
+            case 'governance':
+                initializeGovernanceTab();
+                break;
+            case 'knowledge':
+                initializeKnowledgeTab();
+                break;
+            case 'economy':
+                initializeEconomyTab();
+                break;
+            case 'security':
+                initializeSecurityTab();
+                break;
         }
     }
     
@@ -2725,6 +2746,286 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeGitHubAgentTab() {
         console.log('🚀 Initializing GitHub Agent tab...');
         // GitHub Agent tab initialization - event listeners are set up in the component
+    }
+
+    // Initialize Platform Tab
+    function initializePlatformTab() {
+        console.log('🚀 Initializing Platform tab...');
+
+        // Initialize PlatformTab component if available
+        if (typeof PlatformTab !== 'undefined') {
+            try {
+                if (!window.platformTab) {
+                    window.platformTab = new PlatformTab();
+                    window.platformTab.initialize();
+                    console.log('✅ PlatformTab component initialized');
+                } else {
+                    // Just activate if already exists
+                    window.platformTab.onActivate();
+                    console.log('✅ PlatformTab component activated');
+                }
+            } catch (error) {
+                console.error('❌ Error initializing PlatformTab component:', error);
+                // Fallback: ensure tab content is visible
+                const platformTab = document.getElementById('platform-tab');
+                if (platformTab) {
+                    platformTab.style.setProperty('display', 'block', 'important');
+                    platformTab.style.setProperty('visibility', 'visible', 'important');
+                    platformTab.style.setProperty('opacity', '1', 'important');
+                    console.log('✅ Platform tab made visible (fallback)');
+                }
+            }
+        } else {
+            console.warn('⚠️ PlatformTab component not available, loading fallback...');
+            // Fallback: ensure tab content is visible
+            const platformTab = document.getElementById('platform-tab');
+            if (platformTab) {
+                platformTab.style.setProperty('display', 'block', 'important');
+                platformTab.style.setProperty('visibility', 'visible', 'important');
+                platformTab.style.setProperty('opacity', '1', 'important');
+                console.log('✅ Platform tab made visible (fallback)');
+            }
+        }
+    }
+
+    // Initialize System Tab
+    function initializeSystemTab() {
+        console.log('🚀 Initializing System Performance tab...');
+
+        // Initialize SystemTab component if available
+        if (typeof SystemTab !== 'undefined') {
+            try {
+                if (!window.systemTab) {
+                    window.systemTab = new SystemTab();
+                    window.systemTab.initialize();
+                    console.log('✅ SystemTab component initialized');
+                } else {
+                    // Just activate if already exists
+                    window.systemTab.onActivate();
+                    console.log('✅ SystemTab component activated');
+                }
+            } catch (error) {
+                console.error('❌ Error initializing SystemTab component:', error);
+                // Fallback: ensure tab content is visible
+                const systemTab = document.getElementById('system-tab');
+                if (systemTab) {
+                    systemTab.style.setProperty('display', 'block', 'important');
+                    systemTab.style.setProperty('visibility', 'visible', 'important');
+                    systemTab.style.setProperty('opacity', '1', 'important');
+                    console.log('✅ System tab made visible (fallback)');
+                }
+            }
+        } else {
+            console.warn('⚠️ SystemTab component not available, loading fallback...');
+            // Fallback: ensure tab content is visible
+            const systemTab = document.getElementById('system-tab');
+            if (systemTab) {
+                systemTab.style.setProperty('display', 'block', 'important');
+                systemTab.style.setProperty('visibility', 'visible', 'important');
+                systemTab.style.setProperty('opacity', '1', 'important');
+                console.log('✅ System tab made visible (fallback)');
+            }
+        }
+    }
+
+    // Initialize Workflow Tab
+    function initializeWorkflowTab() {
+        console.log('🚀 Initializing Workflow tab...');
+
+        // Initialize WorkflowTab component if available
+        if (typeof WorkflowTab !== 'undefined') {
+            try {
+                if (!window.workflowTab) {
+                    window.workflowTab = new WorkflowTab();
+                    window.workflowTab.initialize();
+                    console.log('✅ WorkflowTab component initialized');
+                } else {
+                    // Just activate if already exists
+                    window.workflowTab.onActivate();
+                    console.log('✅ WorkflowTab component activated');
+                }
+            } catch (error) {
+                console.error('❌ Error initializing WorkflowTab component:', error);
+                // Fallback: ensure tab content is visible
+                const workflowTab = document.getElementById('workflow-tab');
+                if (workflowTab) {
+                    workflowTab.style.setProperty('display', 'block', 'important');
+                    workflowTab.style.setProperty('visibility', 'visible', 'important');
+                    workflowTab.style.setProperty('opacity', '1', 'important');
+                    console.log('✅ Workflow tab made visible (fallback)');
+                }
+            }
+        } else {
+            console.warn('⚠️ WorkflowTab component not available, loading fallback...');
+            // Fallback: ensure tab content is visible
+            const workflowTab = document.getElementById('workflow-tab');
+            if (workflowTab) {
+                workflowTab.style.setProperty('display', 'block', 'important');
+                workflowTab.style.setProperty('visibility', 'visible', 'important');
+                workflowTab.style.setProperty('opacity', '1', 'important');
+                console.log('✅ Workflow tab made visible (fallback)');
+            }
+        }
+    }
+
+    // Initialize Governance Tab
+    function initializeGovernanceTab() {
+        console.log('🚀 Initializing Governance tab...');
+
+        // Initialize GovernanceTab component if available
+        if (typeof GovernanceTab !== 'undefined') {
+            try {
+                if (!window.governanceTab) {
+                    window.governanceTab = new GovernanceTab();
+                    window.governanceTab.initialize();
+                    console.log('✅ GovernanceTab component initialized');
+                } else {
+                    // Just activate if already exists
+                    window.governanceTab.onActivate();
+                    console.log('✅ GovernanceTab component activated');
+                }
+            } catch (error) {
+                console.error('❌ Error initializing GovernanceTab component:', error);
+                // Fallback: ensure tab content is visible
+                const governanceTab = document.getElementById('governance-tab');
+                if (governanceTab) {
+                    governanceTab.style.setProperty('display', 'block', 'important');
+                    governanceTab.style.setProperty('visibility', 'visible', 'important');
+                    governanceTab.style.setProperty('opacity', '1', 'important');
+                    console.log('✅ Governance tab made visible (fallback)');
+                }
+            }
+        } else {
+            console.warn('⚠️ GovernanceTab component not available, loading fallback...');
+            // Fallback: ensure tab content is visible
+            const governanceTab = document.getElementById('governance-tab');
+            if (governanceTab) {
+                governanceTab.style.setProperty('display', 'block', 'important');
+                governanceTab.style.setProperty('visibility', 'visible', 'important');
+                governanceTab.style.setProperty('opacity', '1', 'important');
+                console.log('✅ Governance tab made visible (fallback)');
+            }
+        }
+    }
+
+    // Initialize Knowledge Tab
+    function initializeKnowledgeTab() {
+        console.log('🚀 Initializing Knowledge tab...');
+
+        // Initialize KnowledgeTab component if available
+        if (typeof KnowledgeTab !== 'undefined') {
+            try {
+                if (!window.knowledgeTab) {
+                    window.knowledgeTab = new KnowledgeTab();
+                    window.knowledgeTab.initialize();
+                    console.log('✅ KnowledgeTab component initialized');
+                } else {
+                    // Just activate if already exists
+                    window.knowledgeTab.onActivate();
+                    console.log('✅ KnowledgeTab component activated');
+                }
+            } catch (error) {
+                console.error('❌ Error initializing KnowledgeTab component:', error);
+                // Fallback: ensure tab content is visible
+                const knowledgeTab = document.getElementById('knowledge-tab');
+                if (knowledgeTab) {
+                    knowledgeTab.style.setProperty('display', 'block', 'important');
+                    knowledgeTab.style.setProperty('visibility', 'visible', 'important');
+                    knowledgeTab.style.setProperty('opacity', '1', 'important');
+                    console.log('✅ Knowledge tab made visible (fallback)');
+                }
+            }
+        } else {
+            console.warn('⚠️ KnowledgeTab component not available, loading fallback...');
+            // Fallback: ensure tab content is visible
+            const knowledgeTab = document.getElementById('knowledge-tab');
+            if (knowledgeTab) {
+                knowledgeTab.style.setProperty('display', 'block', 'important');
+                knowledgeTab.style.setProperty('visibility', 'visible', 'important');
+                knowledgeTab.style.setProperty('opacity', '1', 'important');
+                console.log('✅ Knowledge tab made visible (fallback)');
+            }
+        }
+    }
+
+    // Initialize Economy Tab
+    function initializeEconomyTab() {
+        console.log('🚀 Initializing Economy tab...');
+
+        // Initialize EconomyTab component if available
+        if (typeof EconomyTab !== 'undefined') {
+            try {
+                if (!window.economyTab) {
+                    window.economyTab = new EconomyTab();
+                    window.economyTab.initialize();
+                    console.log('✅ EconomyTab component initialized');
+                } else {
+                    // Just activate if already exists
+                    window.economyTab.onActivate();
+                    console.log('✅ EconomyTab component activated');
+                }
+            } catch (error) {
+                console.error('❌ Error initializing EconomyTab component:', error);
+                // Fallback: ensure tab content is visible
+                const economyTab = document.getElementById('economy-tab');
+                if (economyTab) {
+                    economyTab.style.setProperty('display', 'block', 'important');
+                    economyTab.style.setProperty('visibility', 'visible', 'important');
+                    economyTab.style.setProperty('opacity', '1', 'important');
+                    console.log('✅ Economy tab made visible (fallback)');
+                }
+            }
+        } else {
+            console.warn('⚠️ EconomyTab component not available, loading fallback...');
+            // Fallback: ensure tab content is visible
+            const economyTab = document.getElementById('economy-tab');
+            if (economyTab) {
+                economyTab.style.setProperty('display', 'block', 'important');
+                economyTab.style.setProperty('visibility', 'visible', 'important');
+                economyTab.style.setProperty('opacity', '1', 'important');
+                console.log('✅ Economy tab made visible (fallback)');
+            }
+        }
+    }
+
+    // Initialize Security Tab
+    function initializeSecurityTab() {
+        console.log('🚀 Initializing Security tab...');
+
+        // Initialize SecurityTab component if available
+        if (typeof SecurityTab !== 'undefined') {
+            try {
+                if (!window.securityTab) {
+                    window.securityTab = new SecurityTab();
+                    window.securityTab.initialize();
+                    console.log('✅ SecurityTab component initialized');
+                } else {
+                    // Just activate if already exists
+                    window.securityTab.onActivate();
+                    console.log('✅ SecurityTab component activated');
+                }
+            } catch (error) {
+                console.error('❌ Error initializing SecurityTab component:', error);
+                // Fallback: ensure tab content is visible
+                const securityTab = document.getElementById('security-tab');
+                if (securityTab) {
+                    securityTab.style.setProperty('display', 'block', 'important');
+                    securityTab.style.setProperty('visibility', 'visible', 'important');
+                    securityTab.style.setProperty('opacity', '1', 'important');
+                    console.log('✅ Security tab made visible (fallback)');
+                }
+            }
+        } else {
+            console.warn('⚠️ SecurityTab component not available, loading fallback...');
+            // Fallback: ensure tab content is visible
+            const securityTab = document.getElementById('security-tab');
+            if (securityTab) {
+                securityTab.style.setProperty('display', 'block', 'important');
+                securityTab.style.setProperty('visibility', 'visible', 'important');
+                securityTab.style.setProperty('opacity', '1', 'important');
+                console.log('✅ Security tab made visible (fallback)');
+            }
+        }
     }
 
     // Make tab handlers globally accessible for inline event handlers
@@ -13480,6 +13781,34 @@ async function testOllamaCompletion() {
         console.log('✅ mindXagent tab button listeners initialized');
     }
     
+    // Global modal functions for agents tab
+    window.closeAgentDetailsModal = function() {
+        if (window.agentsTab && typeof window.agentsTab.closeAgentDetailsModal === 'function') {
+            window.agentsTab.closeAgentDetailsModal();
+        } else {
+            // Fallback
+            const modal = document.getElementById('agent-details-modal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        }
+    };
+
+    // Global modal functions for governance tab
+    window.closeConstitutionViewer = function() {
+        if (window.governanceTab && typeof window.governanceTab.closeConstitutionViewer === 'function') {
+            window.governanceTab.closeConstitutionViewer();
+        } else {
+            // Fallback
+            const modal = document.getElementById('constitution-viewer-modal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        }
+    };
+
     // Initialize on DOM ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initializeMindXagentTab);
