@@ -1084,37 +1084,71 @@ class MindXAgent:
     
     async def get_memory_feedback(self, context: str) -> MemoryContext:
         """
-        Get feedback and context from Memory Agent and data/ folder.
-        
+        Get feedback and context from RAGE memory system and data/ folder.
+
+        Uses semantic search through RAGE API to retrieve relevant memories.
+
         Args:
             context: Context string to search for in memories
-            
+
         Returns:
             MemoryContext with memories, system state, and improvement history
         """
         logger.info(f"{self.log_prefix} Getting memory feedback for context: {context[:50]}...")
-        
+
         try:
             memories = []
             system_state = {}
             improvement_history = []
             lessons_learned = []
             data_folder_state = {}
-            
-            # Query Memory Agent
-            if self.memory_agent:
-                # Search memories related to context
-                # This is a simplified version - full implementation would use memory search
-                try:
-                    # Get agent's memory directory
-                    agent_memories_dir = self.memory_agent.get_agent_data_directory(self.agent_id)
-                    if agent_memories_dir.exists():
-                        # Load recent memories
-                        # In a full implementation, we'd search memory by context
-                        pass
-                except Exception as e:
-                    logger.debug(f"{self.log_prefix} Error querying memory agent: {e}")
-            
+
+            # Query RAGE memory system for semantic search
+            try:
+                memories_data = await self._query_rage_memories(context)
+                if memories_data and memories_data.get("success"):
+                    # Convert RAGE contexts to memory format
+                    for context_item in memories_data.get("contexts", []):
+                        memory = {
+                            "content": context_item.get("content", ""),
+                            "metadata": context_item.get("metadata", {}),
+                            "similarity": context_item.get("similarity", 1.0),
+                            "source": context_item.get("metadata", {}).get("source", "rage_system"),
+                            "timestamp": context_item.get("metadata", {}).get("timestamp"),
+                            "agent_id": context_item.get("metadata", {}).get("agent_id", "unknown")
+                        }
+                        memories.append(memory)
+                else:
+                    logger.debug(f"{self.log_prefix} RAGE memory query returned no results")
+            except Exception as e:
+                logger.warning(f"{self.log_prefix} RAGE memory query failed, falling back to memory agent: {e}")
+                # Fallback to memory agent
+                if self.memory_agent:
+                    try:
+                        # Try semantic search if available
+                        if hasattr(self.memory_agent, 'query_memories_semantic'):
+                            semantic_memories = await self.memory_agent.query_memories_semantic(
+                                query=context,
+                                agent_id=self.agent_id,
+                                limit=10
+                            )
+                            for mem in semantic_memories:
+                                memories.append({
+                                    "content": json.dumps(mem.content) if hasattr(mem, 'content') else str(mem),
+                                    "metadata": {"agent_id": getattr(mem, 'agent_id', 'unknown')},
+                                    "similarity": getattr(mem, 'similarity', 1.0),
+                                    "source": "memory_agent_semantic",
+                                    "timestamp": getattr(mem, 'timestamp', None)
+                                })
+                        else:
+                            # Fallback to basic memory retrieval
+                            agent_memories_dir = self.memory_agent.get_agent_data_directory(self.agent_id)
+                            if agent_memories_dir.exists():
+                                # Load recent memory files (simplified)
+                                pass
+                    except Exception as mem_e:
+                        logger.debug(f"{self.log_prefix} Memory agent fallback failed: {mem_e}")
+
             # Load improvement history
             if self.improvement_history_file.exists():
                 try:
@@ -1122,7 +1156,7 @@ class MindXAgent:
                         improvement_history = json.load(f)
                 except Exception as e:
                     logger.warning(f"{self.log_prefix} Error loading improvement history: {e}")
-            
+
             # Get data folder state
             data_dir = PROJECT_ROOT / "data"
             if data_dir.exists():
@@ -1157,7 +1191,98 @@ class MindXAgent:
                 lessons_learned=[],
                 data_folder_state={}
             )
-    
+
+    async def _query_rage_memories(self, query: str, top_k: int = 10) -> Optional[Dict[str, Any]]:
+        """
+        Query memories using RAGE semantic search API.
+
+        Args:
+            query: Semantic search query
+            top_k: Number of memories to retrieve
+
+        Returns:
+            RAGE API response or None if failed
+        """
+        try:
+            import aiohttp
+
+            # Use backend URL from config or default
+            backend_url = self.config.get("backend.base_url", "http://localhost:8000")
+
+            async with aiohttp.ClientSession() as session:
+                url = f"{backend_url}/api/rage/memory/retrieve"
+                payload = {
+                    "query": query,
+                    "agent_id": self.agent_id,
+                    "top_k": top_k,
+                    "min_similarity": 0.3  # Lower threshold for broader results
+                }
+
+                async with session.post(url, json=payload) as response:
+                    if response.status == 200:
+                        return await response.json()
+                    else:
+                        logger.warning(f"{self.log_prefix} RAGE memory query failed: {response.status}")
+                        return None
+
+        except ImportError:
+            logger.warning(f"{self.log_prefix} aiohttp not available for RAGE queries")
+            return None
+        except Exception as e:
+            logger.error(f"{self.log_prefix} Error querying RAGE memories: {e}")
+            return None
+
+    async def store_memory_via_rage(self, memory_type: str, content: Dict[str, Any],
+                                   context: Optional[Dict[str, Any]] = None,
+                                   tags: Optional[List[str]] = None) -> Optional[str]:
+        """
+        Store memory using RAGE system for semantic retrieval.
+
+        Args:
+            memory_type: Type of memory (e.g., "interaction", "learning", "system")
+            content: Memory content
+            context: Additional context
+            tags: Memory tags
+
+        Returns:
+            Memory ID if successful, None otherwise
+        """
+        try:
+            import aiohttp
+
+            backend_url = self.config.get("backend.base_url", "http://localhost:8000")
+
+            async with aiohttp.ClientSession() as session:
+                url = f"{backend_url}/api/rage/memory/store"
+                payload = {
+                    "agent_id": self.agent_id,
+                    "memory_type": memory_type,
+                    "content": content,
+                    "context": context,
+                    "tags": tags or []
+                }
+
+                async with session.post(url, json=payload) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        if result.get("success"):
+                            memory_id = result.get("memory_id")
+                            logger.info(f"{self.log_prefix} Memory stored via RAGE: {memory_id}")
+                            return memory_id
+                        else:
+                            logger.warning(f"{self.log_prefix} RAGE memory storage failed: {result}")
+                            return None
+                    else:
+                        logger.warning(f"{self.log_prefix} RAGE memory storage HTTP error: {response.status}")
+                        return None
+
+        except ImportError:
+            logger.warning(f"{self.log_prefix} aiohttp not available for RAGE storage")
+            return None
+        except Exception as e:
+            logger.error(f"{self.log_prefix} Error storing memory via RAGE: {e}")
+            return None
+
     async def analyze_actual_results(self, task_id: str) -> ResultAnalysis:
         """
         Analyze actual results vs expected outcomes from monitoring and memory.

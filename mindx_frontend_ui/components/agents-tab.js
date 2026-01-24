@@ -51,6 +51,21 @@ class AgentsTab extends TabComponent {
                 ],
                 transform: (data) => this.transformAGIActivityData(data),
                 onUpdate: (data) => this.updateAGIActivity(data),
+                cache: false // Real-time AGI activity
+            });
+
+            // RAGE Memory retrieval for context
+            window.dataExpressions.registerExpression('rage_memory', {
+                endpoints: [
+                    { url: '/api/rage/memory/retrieve', method: 'POST', key: 'memories', body: { query: 'agent activity and interactions', top_k: 20 } }
+                ],
+                transform: (data) => this.transformRageMemoryData(data),
+                onUpdate: (data) => this.updateRageMemories(data),
+                cache: true,
+                refreshInterval: 30000 // 30 seconds for memory data
+                ],
+                transform: (data) => this.transformAGIActivityData(data),
+                onUpdate: (data) => this.updateAGIActivity(data),
                 cache: false // Real-time activity data
             });
 
@@ -231,6 +246,79 @@ class AgentsTab extends TabComponent {
     }
 
     /**
+     * Transform RAGE memory data
+     */
+    transformRageMemoryData(data) {
+        const memoriesResponse = data.data_0 || {};
+
+        if (!memoriesResponse.success) {
+            return {
+                memories: [],
+                query: '',
+                count: 0,
+                error: 'Failed to retrieve memories'
+            };
+        }
+
+        const memories = memoriesResponse.contexts || [];
+        const processedMemories = memories.map(memory => ({
+            id: memory.doc_id || `memory_${Math.random().toString(36).substr(2, 9)}`,
+            content: this.extractMemoryContent(memory),
+            metadata: memory.metadata || {},
+            similarity: memory.similarity || 1.0,
+            timestamp: memory.metadata?.timestamp || new Date().toISOString(),
+            agent_id: memory.metadata?.agent_id || 'unknown',
+            source: memory.metadata?.source || 'rage_system'
+        }));
+
+        return {
+            memories: processedMemories,
+            query: memoriesResponse.query || '',
+            count: memoriesResponse.count || 0,
+            timestamp: memoriesResponse.timestamp || Date.now()
+        };
+    }
+
+    /**
+     * Extract readable content from memory data
+     */
+    extractMemoryContent(memory) {
+        try {
+            // If content is already a string, use it
+            if (typeof memory.content === 'string') {
+                return memory.content;
+            }
+
+            // If content is JSON, try to parse and format
+            if (typeof memory.content === 'object') {
+                const content = memory.content;
+
+                // Handle different memory types
+                if (content.agent_id && content.memory_type) {
+                    // This is a structured memory record
+                    let summary = `${content.memory_type.toUpperCase()}: `;
+                    if (content.content && typeof content.content === 'object') {
+                        // Extract key information
+                        const keys = Object.keys(content.content);
+                        summary += keys.slice(0, 3).map(key => `${key}: ${content.content[key]}`).join(', ');
+                        if (keys.length > 3) summary += '...';
+                    } else {
+                        summary += String(content.content || 'No content');
+                    }
+                    return summary;
+                }
+
+                // Fallback to JSON string
+                return JSON.stringify(content, null, 2);
+            }
+
+            return String(memory.content || 'No content');
+        } catch (e) {
+            return `Error parsing memory content: ${e.message}`;
+        }
+    }
+
+    /**
      * Enrich agent data with registry and key information
      */
     enrichAgentData(agent, registry = {}, publicKey = null) {
@@ -368,6 +456,76 @@ class AgentsTab extends TabComponent {
 
         // Update interaction data for agent modals
         this.interactionsData = data;
+    }
+
+    /**
+     * Update RAGE memories display
+     */
+    updateRageMemories(data) {
+        if (!data || !data.memories) return;
+
+        // Store memories for agent context
+        this.rageMemories = data.memories;
+
+        // Update memory count in overview if element exists
+        const memoryCountEl = document.getElementById('memory-count');
+        if (memoryCountEl) {
+            memoryCountEl.textContent = data.count || 0;
+        }
+
+        // Update memory insights in agent cards if they have memory context sections
+        this.updateAgentMemoryInsights(data.memories);
+
+        console.log(`📚 Updated ${data.count || 0} RAGE memories for agent context`);
+    }
+
+    /**
+     * Update agent cards with memory insights
+     */
+    updateAgentMemoryInsights(memories) {
+        if (!memories || !Array.isArray(memories)) return;
+
+        // Group memories by agent
+        const memoriesByAgent = {};
+        memories.forEach(memory => {
+            const agentId = memory.agent_id || 'unknown';
+            if (!memoriesByAgent[agentId]) {
+                memoriesByAgent[agentId] = [];
+            }
+            memoriesByAgent[agentId].push(memory);
+        });
+
+        // Update agent cards with memory insights
+        Object.keys(memoriesByAgent).forEach(agentId => {
+            const agentMemories = memoriesByAgent[agentId];
+            const agentCard = document.querySelector(`[data-agent-id="${agentId}"]`);
+
+            if (agentCard) {
+                // Add memory count badge
+                let memoryBadge = agentCard.querySelector('.memory-badge');
+                if (!memoryBadge) {
+                    memoryBadge = document.createElement('div');
+                    memoryBadge.className = 'memory-badge';
+                    memoryBadge.style.cssText = `
+                        position: absolute;
+                        top: 10px;
+                        right: 10px;
+                        background: rgba(0, 255, 136, 0.9);
+                        color: #000;
+                        padding: 2px 6px;
+                        border-radius: 10px;
+                        font-size: 11px;
+                        font-weight: bold;
+                    `;
+                    agentCard.style.position = 'relative';
+                    agentCard.appendChild(memoryBadge);
+                }
+                memoryBadge.textContent = `${agentMemories.length} mem`;
+
+                // Add memory preview on hover
+                agentCard.title = `Recent memories: ${agentMemories.slice(0, 2).map(m => m.content.substring(0, 50) + '...').join('; ')}`;
+            }
+        });
     }
 
     /**

@@ -135,6 +135,7 @@ All tool documentation is organized in the `tools/` folder. See [TOOLS_INDEX.md]
 - **[BDI Agent](bdi_agent.md)** - Belief-Desire-Intention cognitive architecture
 - **[Belief System](belief_system.md)** - Belief management and confidence scoring
 - **[Memory System](memory.md)** - Memory architecture and persistence
+- **[pgvectorscale Memory Integration](pgvectorscale_memory_integration.md)** - Semantic memory with vector similarity search
 - **[Vault System](vault_system.md)** - Persistent local storage for access credentials and URL/IP access tracking for ML inference
 - **[Identity Management](IDENTITY.md)** - Identity and authentication systems
 - **[Orchestration](ORCHESTRATION.md)** - System orchestration and coordination
@@ -176,6 +177,13 @@ All tool documentation is organized in the `tools/` folder. See [TOOLS_INDEX.md]
 - **[MindX.sh Documentation](mindXsh.md)** - Complete mindX.sh documentation
 - **[Run MindX Coordinator](run_mindx_coordinator.md)** - Coordinator execution guide
 
+#### User Interface
+
+- **[MindX Frontend](mindxfrontend.md)** - Web interface documentation
+- **[Platform Tab](platform-tab.md)** - Enterprise platform dashboard
+- **[Agents Tab](agents-tab.md)** - Agent management and AGIVITY monitoring
+- **[Workflow Tab](workflow-tab.md)** - Agent interaction visualization
+
 ---
 
 ### 🔬 Analysis & Reports
@@ -203,7 +211,7 @@ All tool documentation is organized in the `tools/` folder. See [TOOLS_INDEX.md]
 
 - **[Monetization Blueprint](monetization_blueprint.md)** - Monetization strategy
 - **[Roadmap](roadmap.md)** - Project roadmap
-- **[Autonomous Roadmap](autonomousROADMAP.md)** - Autonomous system roadmap
+- **[Strategic Roadmap](roadmap.md)** - Complete platform roadmap and milestones
 - **[Manifesto](MANIFESTO.md)** - Project manifesto
 
 #### Business Documentation
