@@ -11,6 +11,7 @@ DEFAULT_PROJECT_ROOT_NAME="augmentic_mindx" # Used if deploying into a new dir
 DEFAULT_VENV_NAME=".mindx_env" # Changed for clarity
 DEFAULT_FRONTEND_PORT="3000"
 DEFAULT_BACKEND_PORT="8000"
+DEFAULT_AGENTICPLACE_PORT="5173"
 DEFAULT_LOG_LEVEL="INFO" # For MindX application
 
 # --- Logging ---
@@ -70,6 +71,7 @@ function show_help { # pragma: no cover
     echo "  --venv-name <name>           Override default virtual environment name (Default: ${DEFAULT_VENV_NAME})."
     echo "  --frontend-port <port>       Override default frontend port (Default: ${DEFAULT_FRONTEND_PORT})."
     echo "  --backend-port <port>        Override default backend port (Default: ${DEFAULT_BACKEND_PORT})."
+    echo "  --agenticplace-port <port>    Override default AgenticPlace port (Default: ${DEFAULT_AGENTICPLACE_PORT})."
     echo "  --log-level <level>          MindX application log level (DEBUG, INFO, etc. Default: ${DEFAULT_LOG_LEVEL})."
     echo "  -h, --help                   Show this help message."
     exit 0
@@ -87,6 +89,7 @@ while [[ $# -gt 0 ]]; do
         --venv-name) MINDX_VENV_NAME_OVERRIDE="$2"; shift 2;;
         --frontend-port) FRONTEND_PORT_OVERRIDE="$2"; shift 2;;
         --backend-port) BACKEND_PORT_OVERRIDE="$2"; shift 2;;
+        --agenticplace-port) AGENTICPLACE_PORT_OVERRIDE="$2"; shift 2;;
         --log-level) LOG_LEVEL_OVERRIDE="$2"; shift 2;;
         -h|--help) show_help;;
         *)
@@ -139,6 +142,7 @@ log_setup_info "Final Project Root: $PROJECT_ROOT"
 MINDX_VENV_NAME="${MINDX_VENV_NAME_OVERRIDE:-${MINDX_VENV_NAME:-$DEFAULT_VENV_NAME}}"
 FRONTEND_PORT_EFFECTIVE="${FRONTEND_PORT_OVERRIDE:-${FRONTEND_PORT:-$DEFAULT_FRONTEND_PORT}}"
 BACKEND_PORT_EFFECTIVE="${BACKEND_PORT_OVERRIDE:-${BACKEND_PORT:-$DEFAULT_BACKEND_PORT}}"
+AGENTICPLACE_PORT_EFFECTIVE="${AGENTICPLACE_PORT_OVERRIDE:-${AGENTICPLACE_PORT:-$DEFAULT_AGENTICPLACE_PORT}}"
 MINDX_APP_LOG_LEVEL="${LOG_LEVEL_OVERRIDE:-${MINDX_LOG_LEVEL:-$DEFAULT_LOG_LEVEL}}" # For app, not this script
 
 # --- Derived Paths (Absolute) ---
@@ -1304,8 +1308,11 @@ function start_web_frontend {
 
     # Function to cleanup on exit
     cleanup_web_frontend() {
-        log_setup_info "Shutting down MindX Web Interface..."
+        log_setup_info "Shutting down MindX Services..."
         kill $BACKEND_PID $FRONTEND_PID 2>/dev/null
+        if [ -n "$AGENTICPLACE_PID" ]; then
+            kill $AGENTICPLACE_PID 2>/dev/null
+        fi
         log_setup_info "Shutdown complete"
         exit 0
     }
@@ -1514,6 +1521,36 @@ elif [[ "$RUN_SERVICES_FLAG" == true ]]; then
     log_setup_info "  Backend Logs: tail -f $MINDX_BACKEND_APP_LOG_FILE"
     log_setup_info "  Frontend UI: http://localhost:$FRONTEND_PORT_EFFECTIVE"
     log_setup_info "  Frontend Logs: tail -f $MINDX_FRONTEND_APP_LOG_FILE"
+    
+    # Start AgenticPlace if directory exists
+    AGENTICPLACE_DIR_ABS="$PROJECT_ROOT/AgenticPlace"
+    AGENTICPLACE_PID=""
+    if [ -d "$AGENTICPLACE_DIR_ABS" ]; then
+        log_setup_info "  Starting AgenticPlace UI on port $AGENTICPLACE_PORT_EFFECTIVE..."
+        cd "$AGENTICPLACE_DIR_ABS"
+        if [ ! -d "node_modules" ]; then
+            log_setup_info "  Installing AgenticPlace dependencies..."
+            npm install --silent > /dev/null 2>&1
+        fi
+        PORT=$AGENTICPLACE_PORT_EFFECTIVE npm run dev > /dev/null 2>&1 &
+        AGENTICPLACE_PID=$!
+        sleep 3
+        if check_port $AGENTICPLACE_PORT_EFFECTIVE; then
+            log_setup_info "  ✅ AgenticPlace UI: http://localhost:$AGENTICPLACE_PORT_EFFECTIVE"
+        else
+            log_setup_warn "  ⚠️  AgenticPlace may not have started properly"
+        fi
+    else
+        log_setup_warn "  AgenticPlace directory not found, skipping"
+    fi
+    
+    log_setup_info ""
+    log_setup_info ">>> All Services Running <<<"
+    log_setup_info "  📊 MindX Frontend: http://localhost:$FRONTEND_PORT_EFFECTIVE"
+    log_setup_info "  🔧 MindX Backend: http://localhost:$BACKEND_PORT_EFFECTIVE"
+    if [ -n "$AGENTICPLACE_PID" ] && check_port $AGENTICPLACE_PORT_EFFECTIVE; then
+        log_setup_info "  🚀 AgenticPlace: http://localhost:$AGENTICPLACE_PORT_EFFECTIVE"
+    fi
     log_setup_info ">>> Press Ctrl+C to stop all services and exit this script. <<<"
 
     log_setup_info "Deployment script running in foreground, monitoring services via 'wait'."

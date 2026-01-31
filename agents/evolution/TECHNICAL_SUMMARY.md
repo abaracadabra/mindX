@@ -96,7 +96,7 @@ from agents.core.belief_system import BeliefSystem
 from agents.orchestration.coordinator_agent import CoordinatorAgent
 from llm.model_registry import ModelRegistry
 from agents.memory_agent import MemoryAgent
-from tools.base_gen_agent import BaseGenAgent
+from agents.utility.base_gen_agent import BaseGenAgent
 
 # Initialize dependencies
 belief_system = BeliefSystem()

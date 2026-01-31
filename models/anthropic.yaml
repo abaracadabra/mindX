@@ -1,0 +1,57 @@
+# Anthropic Claude Model Configuration
+
+provider: anthropic
+display_name: Anthropic Claude
+base_url: https://api.anthropic.com
+
+# API configuration
+api_key_env: ANTHROPIC_API_KEY
+requires_api_key: true
+
+# Rate limits
+rate_limits:
+  requests_per_minute: 50
+  requests_per_day: 50000
+  tokens_per_minute: 40000
+  tokens_per_day: 1000000
+
+# Default model settings
+default_model: claude-3-5-sonnet-20241022
+default_temperature: 0.7
+default_max_tokens: 4096
+
+# Available models
+models:
+  - name: claude-3-5-sonnet-20241022
+    display_name: Claude 3.5 Sonnet
+    context_size: 200000
+    recommended: true
+    
+  - name: claude-3-5-haiku-20241022
+    display_name: Claude 3.5 Haiku
+    context_size: 200000
+    recommended: true
+    
+  - name: claude-3-opus-20240229
+    display_name: Claude 3 Opus
+    context_size: 200000
+    recommended: false
+    
+  - name: claude-3-sonnet-20240229
+    display_name: Claude 3 Sonnet
+    context_size: 200000
+    recommended: false
+
+# Features
+features:
+  streaming: true
+  embeddings: false
+  function_calling: true
+  vision: true
+  tool_use: true
+
+# Model selection preferences
+model_selection:
+  prefer_cheaper: false
+  prefer_faster: false
+  prefer_latest: true

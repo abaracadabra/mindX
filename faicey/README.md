@@ -6,6 +6,8 @@ UIUX = User Interface User Experience | AIML = Artificial Intelligence Machine L
 
 A three.js-based holographic face rendering system that creates expressive, wireframe-style humanoid faces as visual feedback for AI agents. Faicey serves as the "mirror of collective human consciousness" through universal facial expressions, providing real-time emotional and cognitive state visualization for generative AI models.
 
+see also https://github.com/faicey https://github.com/mlodular https://github.com/Professor-Codephreak and https://github.com/javascriptit
+
 ## Features
 
 - **3D Holographic Wireframe**: Interactive browser-based 3D face rendering

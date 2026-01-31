@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-01-30T18:50:09.589870",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "simple_coder_agent",
+  "content": {
+    "process_name": "coding_learning",
+    "data": {
+      "execution_result": {
+        "status": "ERROR",
+        "message": "LLM handler not available"
+      },
+      "context": {
+        "operation": "analyze_code",
+        "parameters": {
+          "file_path": "augmentic.py",
+          "code_content": "#!\/usr\/bin\/env python3\n\"\"\"\nAugmentic - Autonomous Agentic Development for MindX\n===================================================\n\nThis script provides a comprehensive single call to start MindX for autonomous agentic development.\nIt incorporates all reasoning and functionality from existing scripts including:\n- CLI interface capabilities\n- Monitoring and analysis\n- Token calculation and cost tracking\n- Gemini model auditing\n- Enhanced memory and performance tracking\n- Real-time system health monitoring\n\nUsage:\n    python3 augmentic.py \"Improve the system's error handling and resilience\"\n    python3 augmentic.py \"Enhance the learning capabilities of the strategic evolution agent\"\n    python3 augmentic.py --interactive  # Start interactive CLI mode\n    python3 augmentic.py --monitor      # Start monitoring mode\n    python3 augmentic.py --audit-gemini # Audit Gemini models\n    python3 augmentic.py  # Uses default augmentic directive\n\"\"\"\n\nimport asyncio\nimport sys\nimport os\nimport argparse\nimport json\nimport time\nfrom pathlib import Path\nfrom typing import Optional, Dict, Any, List\nfrom datetime import datetime\n\n# Add the current directory to Python path\nsys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))\n\nfrom orchestration.mastermind_agent import MastermindAgent\nfrom orchestration.coordinator_agent import get_coordinator_agent_mindx_async\nfrom orchestration.autonomous_audit_coordinator import AutonomousAuditCoordinator\nfrom agents.memory_agent import MemoryAgent\nfrom agents.guardian_agent import GuardianAgent\nfrom agents.automindx_agent import AutoMINDXAgent\nfrom core.id_manager_agent import IDManagerAgent\nfrom core.belief_system import BeliefSystem\nfrom llm.model_registry import get_model_registry_async\nfrom utils.logging_config import get_logger, setup_logging\nfrom utils.config import Config\n\n# Import monitoring and analysis capabilities\nfrom monitoring.enhanced_monitoring_system import get_enhanced_monitoring_system\nfrom monitoring.monitoring_integration import get_integrated_monitoring_manager\nfrom tools.token_calculator_tool import TokenCalculatorTool\n\nlogger = get_logger(__name__)\n\nclass AugmenticSystem:\n    \"\"\"Comprehensive Augmentic Development System\"\"\"\n    \n    def __init__(self, config: Config):\n        self.config = config\n        self.mastermind: Optional[MastermindAgent] = None\n        self.coordinator = None\n        self.audit_coordinator: Optional[AutonomousAuditCoordinator] = None\n        self.memory_agent: Optional[MemoryAgent] = None\n        self.belief_system: Optional[BeliefSystem] = None\n        self.model_registry = None\n        self.monitoring_system = None\n        self.integrated_manager = None\n        self.token_calculator = None\n        self.is_running = False\n        \n    async def initialize(self):\n        \"\"\"Initialize all MindX components for augmentic development\"\"\"\n        logger.info(\"\ud83e\udde0 Initializing MindX Augmentic Development System...\")\n        \n        try:\n            # Initialize core components\n            print(\"\ud83d\udd27 Initializing core components...\")\n            self.memory_agent = MemoryAgent(config=self.config)\n            self.belief_system = BeliefSystem()\n            self.model_registry = await get_model_registry_async(config=self.config)\n            \n            # Initialize ID Manager\n            id_manager = await IDManagerAgent.get_instance(\n                config_override=self.config, \n                belief_system=self.belief_system\n            )\n            \n            # Initialize AutoMINDX Agent\n            automindx_instance = await AutoMINDXAgent.get_instance(\n                memory_agent=self.memory_agent, \n                config_override=self.config\n            )\n            \n            # Initialize Guardian Agent\n            guardian_agent = await GuardianAgent.get_instance(\n                id_manager=id_manager, \n                config_override=self.config\n            )\n            \n            # Initialize Coordinator Agent\n            print(\"\ud83c\udf10 Initializing Coordinator Agent...\")\n            self.coordinator = await get_coordinator_agent_mindx_async(\n                config_override=self.config,\n                memory_agent=self.memory_agent,\n                belief_system=self.belief_system\n            )\n            \n            if not self.coordinator:\n                raise RuntimeError(\"Failed to initialize CoordinatorAgent\")\n            \n            # Configure tools registry for augmentic development\n            print(\"\ud83d\udd27 Configuring augmentic tools registry...\")\n            self.config.set(\"mastermind_agent.augmentic_mastermind.tools_registry_path\", \"data\/config\/augmentic_tools_registry.json\")\n            \n            # Initialize Mastermind Agent with full tool integration\n            print(\"\ud83e\udde0 Initializing Mastermind Agent with full tool integration...\")\n            self.mastermind = await MastermindAgent.get_instance(\n                agent_id=\"augmentic_mastermind\",\n                config_override=self.config,\n                coor"
+        },
+        "duration": 0.0023238658905029297
+      },
+      "timestamp": 1769824209.589847,
+      "success": false
+    }
+  },
+  "context": {
+    "agent_id": "simple_coder_agent"
+  },
+  "tags": [
+    "coding_learning",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "a1ec08925a2c90aa"
+}

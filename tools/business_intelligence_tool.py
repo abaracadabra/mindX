@@ -1,17 +1,26 @@
 """
-Business Intelligence Tool for CEO Agent
+Business Intelligence Tool for CEO and CFO Agents
 
 Provides real-time business intelligence, KPI monitoring, and performance analytics.
+Integrates with system_health_tool and token_calculator_tool for comprehensive metrics.
+
+CFO Priority Access: The CFO agent has priority access to all financial and system metrics.
 """
 
 import json
 import asyncio
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, asdict
 import uuid
+from pathlib import Path
 
+from agents.core.bdi_agent import BaseTool
+from agents.memory_agent import MemoryAgent
+from utils.config import Config, PROJECT_ROOT
 from utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 @dataclass
 class BusinessMetrics:
@@ -34,15 +43,38 @@ class KPIReport:
     alerts: List[str]
     recommendations: List[str]
 
-class BusinessIntelligenceTool:
-    """Business Intelligence Tool for CEO Dashboard"""
+class BusinessIntelligenceTool(BaseTool):
+    """
+    Business Intelligence Tool for CEO and CFO Dashboard
     
-    def __init__(self):
+    Provides comprehensive business intelligence with integration to:
+    - system_health_tool: System performance and resource metrics
+    - token_calculator_tool: Cost tracking and budget management
+    - Memory system: Historical data and trend analysis
+    
+    CFO Priority Access: CFO agent has priority access to all financial metrics,
+    cost data, and system health information for capital discipline enforcement.
+    """
+    
+    def __init__(self, 
+                 memory_agent: Optional[MemoryAgent] = None,
+                 config: Optional[Config] = None,
+                 **kwargs):
+        super().__init__(config=config, **kwargs)
+        self.memory_agent = memory_agent
+        self.config = config or Config()
         self.logger = get_logger(__name__)
         self.tool_name = "business_intelligence"
-        self.version = "1.0"
+        self.version = "2.0"
         
-        # Sample business data for demo
+        # CFO priority access flag
+        self.cfo_priority_enabled = True
+        
+        # Tool references (lazy loaded)
+        self._system_health_tool = None
+        self._token_calculator_tool = None
+        
+        # Sample business data for demo (can be replaced with real data sources)
         self.business_data = {
             "revenue": {
                 "monthly_recurring": 25000.0,
@@ -65,6 +97,31 @@ class BusinessIntelligenceTool:
                 "error_rate": 0.2
             }
         }
+    
+    async def _get_system_health_tool(self):
+        """Lazy load system health tool"""
+        if self._system_health_tool is None:
+            try:
+                from tools.system_health_tool import SystemHealthTool
+                self._system_health_tool = SystemHealthTool(config=self.config)
+            except Exception as e:
+                self.logger.warning(f"Could not load system_health_tool: {e}")
+                self._system_health_tool = None
+        return self._system_health_tool
+    
+    async def _get_token_calculator_tool(self):
+        """Lazy load token calculator tool"""
+        if self._token_calculator_tool is None:
+            try:
+                from tools.token_calculator_tool_robust import TokenCalculatorToolRobust
+                self._token_calculator_tool = TokenCalculatorToolRobust(
+                    memory_agent=self.memory_agent,
+                    config=self.config
+                )
+            except Exception as e:
+                self.logger.warning(f"Could not load token_calculator_tool: {e}")
+                self._token_calculator_tool = None
+        return self._token_calculator_tool
     
     async def get_business_metrics(self, period: str = "current") -> BusinessMetrics:
         """Get comprehensive business metrics"""
@@ -196,47 +253,111 @@ class BusinessIntelligenceTool:
             self.logger.error(f"Failed to generate KPI report: {e}")
             raise
     
-    async def analyze_performance_trends(self, metric: str, timeframe: int = 30) -> Dict[str, Any]:
-        """Analyze performance trends for specific metrics"""
+    async def get_cfo_metrics(self, agent_id: str = "cfo") -> Dict[str, Any]:
+        """
+        Get comprehensive CFO metrics with priority access.
+        
+        CFO has priority access to:
+        - System health metrics (CPU, memory, disk, network)
+        - Token/cost metrics (LLM usage, costs, budgets)
+        - Financial metrics (revenue, costs, margins)
+        - Operational efficiency metrics
+        """
         try:
-            self.logger.info(f"Analyzing trends for metric: {metric}")
+            self.logger.info(f"Generating CFO metrics for agent: {agent_id}")
             
-            # Simulate trend analysis
-            trend_data = {
-                "metric": metric,
-                "timeframe_days": timeframe,
-                "trend_direction": "UPWARD",
-                "trend_strength": "STRONG",
-                "volatility": "LOW",
-                "predictions": {
-                    "next_30_days": "CONTINUED_GROWTH",
-                    "confidence": 85.0
-                },
-                "key_factors": [
-                    "Successful product launches",
-                    "Improved customer satisfaction",
-                    "Market expansion initiatives"
-                ],
-                "risk_factors": [
-                    "Seasonal variations",
-                    "Competitive pressure",
-                    "Economic conditions"
-                ]
-            }
+            # Get system health metrics
+            system_health = None
+            health_tool = await self._get_system_health_tool()
+            if health_tool:
+                try:
+                    # Get CPU and memory metrics
+                    cpu_result = await health_tool.execute("monitor_cpu")
+                    memory_result = await health_tool.execute("monitor_memory_disk")
+                    system_health = {
+                        "cpu_usage": cpu_result.get("cpu_percent", 0) if isinstance(cpu_result, dict) else 0,
+                        "memory_usage": memory_result.get("memory_percent", 0) if isinstance(memory_result, dict) else 0,
+                        "disk_usage": memory_result.get("disk_percent", 0) if isinstance(memory_result, dict) else 0,
+                        "timestamp": datetime.now().isoformat()
+                    }
+                except Exception as e:
+                    self.logger.warning(f"Could not fetch system health: {e}")
             
-            return {
-                "analysis_id": str(uuid.uuid4()),
+            # Get token/cost metrics
+            cost_metrics = None
+            token_tool = await self._get_token_calculator_tool()
+            if token_tool:
+                try:
+                    # Get usage report
+                    usage_result = await token_tool.execute("get_usage_report", agent_id=agent_id, days_back=30)
+                    metrics_result = await token_tool.execute("get_metrics")
+                    
+                    if isinstance(usage_result, tuple):
+                        success, data = usage_result
+                        if success and isinstance(data, dict):
+                            cost_metrics = {
+                                "total_cost_30d": data.get("total_cost", 0),
+                                "total_tokens": data.get("total_tokens", 0),
+                                "operations_count": data.get("operations_count", 0),
+                                "average_cost_per_operation": data.get("avg_cost_per_op", 0)
+                            }
+                    
+                    if isinstance(metrics_result, tuple):
+                        success, metrics_data = metrics_result
+                        if success and isinstance(metrics_data, dict):
+                            if cost_metrics:
+                                cost_metrics.update({
+                                    "budget_status": metrics_data.get("budget_status", "UNKNOWN"),
+                                    "budget_utilization": metrics_data.get("budget_utilization", 0),
+                                    "cost_trend": metrics_data.get("cost_trend", "STABLE")
+                                })
+                except Exception as e:
+                    self.logger.warning(f"Could not fetch cost metrics: {e}")
+            
+            # Get business metrics
+            business_metrics = await self.get_business_metrics()
+            
+            # Combine all metrics for CFO
+            cfo_metrics = {
+                "report_id": str(uuid.uuid4()),
                 "timestamp": datetime.now().isoformat(),
-                "trend_analysis": trend_data,
-                "recommendations": [
-                    f"Continue current strategy for {metric}",
-                    "Monitor for trend reversal indicators",
-                    "Prepare contingency plans for risk factors"
-                ]
+                "agent_id": agent_id,
+                "priority_access": True,
+                "system_health": system_health,
+                "cost_metrics": cost_metrics,
+                "financial_metrics": {
+                    "revenue": business_metrics.revenue_metrics,
+                    "costs": business_metrics.cost_metrics,
+                    "performance": business_metrics.performance_metrics,
+                    "efficiency": business_metrics.efficiency_metrics
+                },
+                "roi_analysis": {
+                    "llm_cost_per_revenue": (cost_metrics.get("total_cost_30d", 0) / max(business_metrics.revenue_metrics.get("monthly_recurring_revenue", 1), 1) * 100) if cost_metrics else 0,
+                    "operational_efficiency": business_metrics.efficiency_metrics.get("operational_efficiency", 0),
+                    "cost_per_customer": business_metrics.cost_metrics.get("cost_per_customer", 0)
+                },
+                "alerts": [],
+                "recommendations": []
             }
+            
+            # Generate alerts based on metrics
+            if cost_metrics and cost_metrics.get("budget_utilization", 0) > 75:
+                cfo_metrics["alerts"].append("Budget utilization exceeds 75% - review spending")
+            if system_health and system_health.get("cpu_usage", 0) > 80:
+                cfo_metrics["alerts"].append("High CPU usage may indicate resource inefficiency")
+            if business_metrics.performance_metrics.get("gross_margin", 0) < 20:
+                cfo_metrics["alerts"].append("Gross margin below 20% - cost optimization needed")
+            
+            # Generate recommendations
+            if cost_metrics:
+                cfo_metrics["recommendations"].append("Monitor LLM costs and optimize model selection")
+            if system_health and system_health.get("memory_usage", 0) > 80:
+                cfo_metrics["recommendations"].append("Consider infrastructure scaling for memory efficiency")
+            
+            return cfo_metrics
             
         except Exception as e:
-            self.logger.error(f"Failed to analyze trends: {e}")
+            self.logger.error(f"Failed to generate CFO metrics: {e}", exc_info=True)
             raise
     
     async def get_financial_dashboard(self) -> Dict[str, Any]:
@@ -286,10 +407,22 @@ class BusinessIntelligenceTool:
         try:
             self.logger.info("Monitoring business health")
             
+            # Get system health if available
+            system_health_score = 90.0
+            health_tool = await self._get_system_health_tool()
+            if health_tool:
+                try:
+                    cpu_result = await health_tool.execute("monitor_cpu")
+                    if isinstance(cpu_result, dict):
+                        cpu_usage = cpu_result.get("cpu_percent", 0)
+                        system_health_score = max(0, 100 - cpu_usage)  # Invert CPU usage for health score
+                except:
+                    pass
+            
             # Health scoring algorithm
             health_scores = {
                 "financial_health": 85.0,  # Based on profitability, cash flow
-                "operational_health": 92.0,  # Based on uptime, efficiency
+                "operational_health": system_health_score,  # Based on system metrics
                 "customer_health": 88.0,  # Based on satisfaction, retention
                 "growth_health": 78.0,  # Based on acquisition, expansion
                 "competitive_health": 82.0  # Based on market position
@@ -335,10 +468,50 @@ class BusinessIntelligenceTool:
         except Exception as e:
             self.logger.error(f"Failed to monitor business health: {e}")
             raise
+    
+    async def execute(self, action: str, agent_id: str = None, **kwargs) -> Tuple[bool, Any]:
+        """
+        Execute business intelligence operations.
+        
+        Actions:
+        - "get_metrics": Get business metrics
+        - "get_kpi_report": Generate KPI report
+        - "get_cfo_metrics": Get CFO priority metrics (includes system health and costs)
+        - "get_financial_dashboard": Get financial dashboard
+        - "monitor_health": Monitor business health
+        """
+        try:
+            if action == "get_metrics":
+                metrics = await self.get_business_metrics(kwargs.get("period", "current"))
+                return True, asdict(metrics)
+            
+            elif action == "get_kpi_report":
+                report = await self.generate_kpi_report(kwargs.get("period", "monthly"))
+                return True, asdict(report)
+            
+            elif action == "get_cfo_metrics":
+                # CFO priority access
+                cfo_metrics = await self.get_cfo_metrics(agent_id=agent_id or kwargs.get("agent_id", "cfo"))
+                return True, cfo_metrics
+            
+            elif action == "get_financial_dashboard":
+                dashboard = await self.get_financial_dashboard()
+                return True, dashboard
+            
+            elif action == "monitor_health":
+                health = await self.monitor_business_health()
+                return True, health
+            
+            else:
+                return False, f"Unknown action: {action}"
+                
+        except Exception as e:
+            self.logger.error(f"Error executing business intelligence action {action}: {e}", exc_info=True)
+            return False, str(e)
 
-def create_business_intelligence_tool() -> BusinessIntelligenceTool:
+def create_business_intelligence_tool(memory_agent: Optional[MemoryAgent] = None, config: Optional[Config] = None) -> BusinessIntelligenceTool:
     """Factory function to create business intelligence tool"""
-    return BusinessIntelligenceTool()
+    return BusinessIntelligenceTool(memory_agent=memory_agent, config=config)
 
 if __name__ == "__main__":
     async def main():
@@ -359,5 +532,9 @@ if __name__ == "__main__":
         # Business health
         health = await tool.monitor_business_health()
         print(f"Business Health: {health['overall_health_score']:.1f} ({health['health_status']})")
+        
+        # CFO metrics
+        cfo_metrics = await tool.get_cfo_metrics()
+        print(f"CFO Metrics: {cfo_metrics.get('priority_access', False)}")
     
     asyncio.run(main())

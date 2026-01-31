@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Ollama Model Capability Tool (`tools/ollama_model_capability_tool.py`) manages Ollama model capabilities and enables intelligent, task-specific model selection for mindX. It maintains a registry of available Ollama models with their capabilities, performance metrics, and task-specific suitability scores.
+The Ollama Model Capability Tool (`api/ollama/ollama_model_capability_tool.py`) manages Ollama model capabilities and enables intelligent, task-specific model selection for mindX. It maintains a registry of available Ollama models with their capabilities, performance metrics, and task-specific suitability scores.
 
 ## Features
 
@@ -17,7 +17,7 @@ The Ollama Model Capability Tool (`tools/ollama_model_capability_tool.py`) manag
 ### Initialization
 
 ```python
-from tools.ollama_model_capability_tool import OllamaModelCapabilityTool
+from api.ollama.ollama_model_capability_tool import OllamaModelCapabilityTool
 from utils.config import Config
 
 config = Config()

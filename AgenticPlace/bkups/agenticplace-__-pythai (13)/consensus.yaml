@@ -1,0 +1,23 @@
+
+version: "1.0"
+dao_name: "OpenDAO"
+logic: "Cross-Domain Supermajority"
+
+thresholds:
+  overall_consensus: 0.666  # 2/3 of domains must agree
+  domain_internal: 0.666    # 2/3 within a domain must agree
+
+domains:
+  development:
+    weight: 1.0
+    voters: ["CTO", "Security_Lead", "Core_Devs"]
+  marketing:
+    weight: 1.0
+    voters: ["CMO", "Growth_Lead", "Community_Managers"]
+  community:
+    weight: 1.0
+    voters: ["Token_Holders", "Ecosystem_Partners"]
+
+resolution:
+  on_success: "board_meeting.execute()"
+  on_failure: "openmind.return_to_dojo()"

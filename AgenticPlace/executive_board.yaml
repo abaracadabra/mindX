@@ -1,0 +1,18 @@
+
+version: "1.2"
+board: "Seven Soldiers"
+consensus_logic:
+  supermajority_threshold: 0.666
+  ceo_override: "Emergency_Halt_Only"
+  weights:
+    COO: 1.0
+    CFO: 1.0
+    CTO: 1.0
+    CISO: 1.2  # Security has high veto weight
+    CLO: 0.8
+    CPO: 1.0
+    CRO: 1.2  # Risk has high veto weight
+cycle:
+  preparation: "openmind"
+  connection: "openmindX"
+  execution: "mindX"

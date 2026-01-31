@@ -23,7 +23,7 @@ from llm.llm_interface import LLMHandlerInterface
 from llm.model_registry import ModelRegistry, get_model_registry_async
 from agents.orchestration.coordinator_agent import CoordinatorAgent, InteractionType
 from agents.memory_agent import MemoryAgent
-from tools.base_gen_agent import BaseGenAgent
+from agents.utility.base_gen_agent import BaseGenAgent
 
 logger = get_logger(__name__)
 

@@ -16,7 +16,7 @@ from collections import defaultdict
 
 from utils.config import Config
 from utils.logging_config import get_logger
-from api.ollama_url import OllamaAPI, create_ollama_api
+from api.ollama import OllamaAPI, create_ollama_api
 from agents.core.inference_optimizer import InferenceOptimizer
 from agents.core.model_scorer import HierarchicalModelScorer
 

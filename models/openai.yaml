@@ -1,0 +1,57 @@
+# OpenAI Model Configuration
+
+provider: openai
+display_name: OpenAI
+base_url: https://api.openai.com/v1
+
+# API configuration
+api_key_env: OPENAI_API_KEY
+requires_api_key: true
+
+# Rate limits (conservative defaults)
+rate_limits:
+  requests_per_minute: 3
+  requests_per_day: 10000
+  tokens_per_minute: 40000
+  tokens_per_day: 1000000
+
+# Default model settings
+default_model: gpt-4o-mini
+default_temperature: 0.7
+default_max_tokens: 2048
+
+# Available models
+models:
+  - name: gpt-4o
+    display_name: GPT-4o
+    context_size: 128000
+    recommended: true
+    
+  - name: gpt-4o-mini
+    display_name: GPT-4o Mini
+    context_size: 128000
+    recommended: true
+    
+  - name: gpt-4-turbo
+    display_name: GPT-4 Turbo
+    context_size: 128000
+    recommended: false
+    
+  - name: gpt-3.5-turbo
+    display_name: GPT-3.5 Turbo
+    context_size: 16385
+    recommended: false
+
+# Features
+features:
+  streaming: true
+  embeddings: true
+  function_calling: true
+  vision: true
+  tool_use: true
+
+# Model selection preferences
+model_selection:
+  prefer_cheaper: true
+  prefer_faster: false
+  prefer_latest: true

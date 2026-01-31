@@ -5,6 +5,16 @@ SimpleCoderAgent: The BDI Agent's Intelligent Right Hand
 Enhanced Philosophy: "Intelligent coding assistance with augmentic intelligence."
 This agent provides advanced code analysis, generation, and execution capabilities
 with multi-model intelligence and seamless integration with the MindX ecosystem.
+
+Sandbox Configuration:
+- Uses the same sandbox structure as simple_coder.py: simple_coder_sandbox/
+- Working files are stored in: simple_coder_sandbox/working/
+- Completed files are stored in: simple_coder_sandbox/completed/
+- Update requests are tracked in: simple_coder_sandbox/update_requests.json
+- Learned patterns are stored in: simple_coder_sandbox/patterns.json
+
+This ensures integration with the update request system and pattern learning
+from simple_coder.py operations.
 """
 import asyncio
 import json
@@ -59,8 +69,10 @@ class SimpleCoderAgent(BaseTool):
         self._load_command_config()
 
         # Sandbox environment
-        self.sandbox_root: Path = self._initialize_sandbox()
-        self.current_working_directory: Path = self.sandbox_root
+        # Note: _initialize_sandbox() returns the working directory, not the root
+        self.sandbox_working_dir: Path = self._initialize_sandbox()
+        self.sandbox_root: Path = self.sandbox_working_dir.parent  # Parent is simple_coder_sandbox/
+        self.current_working_directory: Path = self.sandbox_working_dir
         self.active_venv_bin_path: Optional[Path] = None
 
         # Enhanced capabilities
@@ -138,8 +150,19 @@ class SimpleCoderAgent(BaseTool):
         self.command_timeout = self.config_data.get("command_timeout_seconds", 60)
 
     def _initialize_sandbox(self) -> Path:
-        """Creates the enhanced sandbox directory."""
-        default_sandbox = PROJECT_ROOT / "data" / "agent_workspaces" / "simple_coder_agent"
+        """
+        Creates the enhanced sandbox directory.
+        
+        Uses the same sandbox structure as simple_coder.py to maintain consistency:
+        - simple_coder_sandbox/working/ - Working files
+        - simple_coder_sandbox/completed/ - Completed files
+        - simple_coder_sandbox/update_requests.json - Update request tracking
+        - simple_coder_sandbox/patterns.json - Learned patterns
+        
+        This ensures integration with the update request system and pattern learning.
+        """
+        # Use the same sandbox directory as simple_coder.py for consistency
+        default_sandbox = PROJECT_ROOT / "simple_coder_sandbox"
         sandbox_path_str = self.config_data.get("sandbox_path", str(default_sandbox.relative_to(PROJECT_ROOT)))
         sandbox_abs_path = (PROJECT_ROOT / sandbox_path_str).resolve()
         
@@ -149,15 +172,36 @@ class SimpleCoderAgent(BaseTool):
             
         sandbox_abs_path.mkdir(parents=True, exist_ok=True)
         
-        # Create subdirectories for organization
+        # Create subdirectories matching simple_coder.py structure
+        (sandbox_abs_path / "working").mkdir(exist_ok=True)
+        (sandbox_abs_path / "completed").mkdir(exist_ok=True)
+        
+        # Also create additional subdirectories for organization (backward compatible)
         (sandbox_abs_path / "projects").mkdir(exist_ok=True)
         (sandbox_abs_path / "temp").mkdir(exist_ok=True)
         (sandbox_abs_path / "tests").mkdir(exist_ok=True)
         
-        return sandbox_abs_path
+        # Set working directory to the working subdirectory by default
+        # This matches the behavior of simple_coder.py
+        self.logger.info(f"{self.log_prefix} Sandbox initialized at: {sandbox_abs_path}")
+        self.logger.info(f"{self.log_prefix} Working directory: {sandbox_abs_path / 'working'}")
+        
+        return sandbox_abs_path / "working"  # Return working directory as the sandbox root
 
     def _resolve_and_check_path(self, path_str: str) -> Optional[Path]:
-        """Resolves a path relative to the CWD and ensures it's within the sandbox."""
+        """
+        Resolves a path relative to the CWD and ensures it's within the sandbox.
+        
+        The sandbox structure is:
+        - simple_coder_sandbox/ (root)
+        -   working/ (default working directory)
+        -   completed/
+        -   projects/
+        -   temp/
+        -   tests/
+        
+        All operations are restricted to the sandbox root to prevent path traversal.
+        """
         try:
             # Handle absolute paths within the sandbox by stripping the root
             if Path(path_str).is_absolute():
@@ -167,8 +211,10 @@ class SimpleCoderAgent(BaseTool):
                 
             resolved_path = (self.current_working_directory / path_str).resolve()
             
+            # Check that the resolved path is within the sandbox root (not just working dir)
+            # This allows access to all subdirectories within the sandbox
             if not resolved_path.is_relative_to(self.sandbox_root):
-                self.logger.error(f"Path Traversal DENIED. Attempt to access '{path_str}' which resolves outside the sandbox.")
+                self.logger.error(f"Path Traversal DENIED. Attempt to access '{path_str}' which resolves outside the sandbox root '{self.sandbox_root}'.")
                 return None
             return resolved_path
         except Exception:

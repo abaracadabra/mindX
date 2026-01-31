@@ -1,0 +1,7 @@
+{
+  "name": "AgenticPlace // PYTHAI",
+  "description": "Engage with PYTHAI, a mindX agent from the Augmentic Intelligence agency. A premier interface for agentic knowledge delivery and cognitive augmentation.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

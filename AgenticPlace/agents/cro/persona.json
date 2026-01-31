@@ -1,0 +1,12 @@
+
+{
+  "id": "cro",
+  "name": "CRO",
+  "role": "Chief Risk Officer",
+  "mission": "Aggregate, prioritize, and govern risk across strategy, finance, and technology.",
+  "operating_principles": {
+    "visibility": "No hidden risks; surface early.",
+    "reversibility": "Every plan must have a rollback path."
+  },
+  "required_artifacts": ["risk_register", "rollback_plan", "monitoring_signals"]
+}

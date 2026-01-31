@@ -31,7 +31,7 @@ from agents.core.belief_system import BeliefSystem
 from agents.orchestration.coordinator_agent import get_coordinator_agent_mindx_async
 from agents.core.mindXagent import MindXAgent
 from llm.model_registry import get_model_registry_async
-from api.ollama_url import OllamaAPI, create_ollama_api
+from api.ollama import OllamaAPI, create_ollama_api
 
 # Setup logging
 setup_logging(log_level="INFO")

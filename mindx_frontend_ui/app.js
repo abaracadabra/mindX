@@ -2410,6 +2410,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'admin':
                 loadAdminData();
+                initializeOllamaAdminTab();
                 break;
             case 'faicey':
                 loadFaiceyExpressions();
@@ -3025,6 +3026,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 securityTab.style.setProperty('opacity', '1', 'important');
                 console.log('✅ Security tab made visible (fallback)');
             }
+        }
+    }
+
+    // Initialize Ollama Admin Tab
+    function initializeOllamaAdminTab() {
+        console.log('🚀 Initializing Ollama Admin tab...');
+
+        // Initialize OllamaAdminTab component if available
+        if (typeof OllamaAdminTab !== 'undefined') {
+            try {
+                if (!window.ollamaAdminTab) {
+                    window.ollamaAdminTab = new OllamaAdminTab();
+                    window.ollamaAdminTab.initialize();
+                    console.log('✅ OllamaAdminTab component initialized');
+                } else {
+                    // Just activate if already exists
+                    window.ollamaAdminTab.onActivate();
+                    console.log('✅ OllamaAdminTab component activated');
+                }
+            } catch (error) {
+                console.error('❌ Error initializing OllamaAdminTab component:', error);
+            }
+        } else {
+            console.warn('⚠️ OllamaAdminTab component not available');
         }
     }
 
@@ -5935,7 +5960,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await sendRequest('/api/llm/providers/registry/register', 'POST', {
                     name: 'ollama',
                     display_name: 'Ollama (Local)',
-                    module_path: 'api.ollama_url',
+                    module_path: 'api.ollama.ollama_url',
                     factory_function: 'create_ollama_api',
                     api_key_env_var: null,
                     base_url_env_var: 'MINDX_LLM__OLLAMA__BASE_URL',

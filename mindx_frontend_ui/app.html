@@ -6220,7 +6220,87 @@
                 </div>
             </div>
             
-            <!-- Ollama section removed - moved to API tab -->
+            <!-- Ollama Admin Section -->
+            <div class="control-section">
+                <h2>Ollama Admin & Diagnostics</h2>
+                <div class="admin-subsection">
+                    <div class="ollama-admin-header">
+                        <h3>Connection Management</h3>
+                        <div class="admin-controls-inline">
+                            <button id="ollama-test-connection" class="action-btn primary">Test Connection</button>
+                            <button id="ollama-refresh" class="action-btn">Refresh</button>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="ollama-auto-refresh" checked>
+                                <span class="toggle-slider"></span>
+                                <span>Auto-refresh</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="ollama-connection-status" class="connection-status-container">
+                        <!-- Connection status will be populated here -->
+                    </div>
+                    
+                    <div class="ollama-metrics-section">
+                        <h4>API Metrics</h4>
+                        <div id="ollama-metrics-display" class="metrics-container">
+                            <!-- Metrics will be populated here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="admin-subsection">
+                    <h3>Interaction Testing</h3>
+                    <div class="ollama-interaction-panel">
+                        <div class="interaction-controls">
+                            <select id="ollama-model-select" class="model-select">
+                                <option value="">Loading models...</option>
+                            </select>
+                            <button id="ollama-send-interaction" class="action-btn primary">Send</button>
+                        </div>
+                        <div class="interaction-input-group">
+                            <label for="ollama-interaction-input">Input Prompt:</label>
+                            <textarea id="ollama-interaction-input" class="interaction-input" rows="4" placeholder="Enter your prompt here..."></textarea>
+                        </div>
+                        <div class="interaction-output-group">
+                            <label for="ollama-response-output">Response:</label>
+                            <textarea id="ollama-response-output" class="interaction-output" rows="8" readonly></textarea>
+                        </div>
+                        <div id="ollama-interaction-history" class="interaction-history">
+                            <h5>Recent Interactions</h5>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="admin-subsection">
+                    <h3>Diagnostic Logs</h3>
+                    <div class="log-controls">
+                        <div class="log-filters">
+                            <label for="ollama-log-level">Log Level:</label>
+                            <select id="ollama-log-level" class="log-level-select">
+                                <option value="">All Levels</option>
+                                <option value="DEBUG">DEBUG</option>
+                                <option value="INFO" selected>INFO</option>
+                                <option value="WARNING">WARNING</option>
+                                <option value="ERROR">ERROR</option>
+                            </select>
+                            
+                            <label for="ollama-log-limit">Limit:</label>
+                            <select id="ollama-log-limit" class="log-limit-select">
+                                <option value="50">50</option>
+                                <option value="100" selected>100</option>
+                                <option value="200">200</option>
+                                <option value="500">500</option>
+                            </select>
+                            
+                            <button id="ollama-clear-logs" class="action-btn secondary">Clear Display</button>
+                        </div>
+                    </div>
+                    <div id="ollama-logs-display" class="logs-display">
+                        <!-- Logs will be populated here -->
+                    </div>
+                </div>
+            </div>
             
             <!-- Application Settings Section -->
             <div class="control-section">
@@ -6438,6 +6518,7 @@
         document.write('<script src="components/economy-tab.js?v=' + timestamp + '"><\/script>');
         document.write('<script src="components/security-tab.js?v=' + timestamp + '"><\/script>');
         document.write('<script src="components/platform-tab.js?v=' + timestamp + '"><\/script>');
+        document.write('<script src="components/ollama-admin-tab.js?v=' + timestamp + '"><\/script>');
         document.write('<script src="tab-config.js?v=' + timestamp + '"><\/script>');
         document.write('<script src="app.js?v=' + timestamp + '"><\/script>');
     </script>

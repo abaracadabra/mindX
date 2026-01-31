@@ -22,8 +22,8 @@ from agents.core.belief_system import BeliefSystem
 from agents.memory_agent import MemoryAgent
 from agents.core.id_manager_agent import IDManagerAgent
 from agents.guardian_agent import GuardianAgent
-from tools.agent_factory_tool import AgentFactoryTool
-from tools.registry_manager_tool import RegistryManagerTool
+from tools.registry.agent_factory_tool import AgentFactoryTool
+from tools.registry.registry_manager_tool import RegistryManagerTool
 
 logger = get_logger(__name__)
 

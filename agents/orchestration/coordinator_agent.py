@@ -545,7 +545,7 @@ class CoordinatorAgent:
             return
 
         # This is where the logic to call the SIA CLI would go.
-        from tools.system_analyzer_tool import SystemAnalyzerTool
+        from tools.monitoring.system_analyzer_tool import SystemAnalyzerTool
         analyzer = SystemAnalyzerTool(
             config=self.config,
             belief_system=self.belief_system,
@@ -1045,7 +1045,7 @@ class CoordinatorAgent:
         provided_tools = config.get("provided_tools", [])
         
         if provided_tools:
-            from tools.registry_manager_tool import RegistryManagerTool
+            from tools.registry.registry_manager_tool import RegistryManagerTool
             registry_manager = RegistryManagerTool(memory_agent=self.memory_agent, config=self.config)
             
             for tool_config in provided_tools:

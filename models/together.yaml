@@ -1,0 +1,52 @@
+# Together AI Model Configuration
+
+provider: together
+display_name: Together AI
+base_url: https://api.together.xyz/v1
+
+# API configuration
+api_key_env: TOGETHER_API_KEY
+requires_api_key: true
+
+# Rate limits
+rate_limits:
+  requests_per_minute: 60
+  requests_per_day: 100000
+  tokens_per_minute: 1000000
+  tokens_per_day: 10000000
+
+# Default model settings
+default_model: meta-llama/Llama-3-8b-chat-hf
+default_temperature: 0.7
+default_max_tokens: 2048
+
+# Available models
+models:
+  - name: meta-llama/Llama-3-8b-chat-hf
+    display_name: Llama 3 8B Chat
+    context_size: 8192
+    recommended: true
+    
+  - name: meta-llama/Llama-3-70b-chat-hf
+    display_name: Llama 3 70B Chat
+    context_size: 8192
+    recommended: false
+    
+  - name: mistralai/Mixtral-8x7B-Instruct-v0.1
+    display_name: Mixtral 8x7B Instruct
+    context_size: 32768
+    recommended: true
+
+# Features
+features:
+  streaming: true
+  embeddings: true
+  function_calling: false
+  vision: false
+  tool_use: false
+
+# Model selection preferences
+model_selection:
+  prefer_cheaper: true
+  prefer_faster: true
+  prefer_latest: true

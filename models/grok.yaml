@@ -1,0 +1,47 @@
+# Grok (xAI) Model Configuration
+
+provider: grok
+display_name: Grok (xAI)
+base_url: https://api.x.ai/v1
+
+# API configuration
+api_key_env: GROK_API_KEY
+requires_api_key: true
+
+# Rate limits
+rate_limits:
+  requests_per_minute: 30
+  requests_per_day: 10000
+  tokens_per_minute: 100000
+  tokens_per_day: 1000000
+
+# Default model settings
+default_model: grok-beta
+default_temperature: 0.7
+default_max_tokens: 2048
+
+# Available models
+models:
+  - name: grok-beta
+    display_name: Grok Beta
+    context_size: 131072
+    recommended: true
+    
+  - name: grok-2
+    display_name: Grok 2
+    context_size: 131072
+    recommended: false
+
+# Features
+features:
+  streaming: true
+  embeddings: false
+  function_calling: true
+  vision: false
+  tool_use: true
+
+# Model selection preferences
+model_selection:
+  prefer_cheaper: false
+  prefer_faster: false
+  prefer_latest: true

@@ -3,90 +3,158 @@
     "audit_and_improve_tool": {
       "enabled": true,
       "class_name": "AuditAndImproveTool",
-      "module_path": "tools.audit_and_improve_tool",
+      "module_path": "tools.development.audit_and_improve_tool",
       "description": "Audits and improves code using BaseGenAgent summary as context",
       "priority": 9,
-      "category": "augmentic_development"
+      "category": "development",
+      "access_control": {
+        "allowed_agents": ["mastermind_prime", "strategic_evolution_agent"]
+      }
     },
     "augmentic_intelligence_tool": {
       "enabled": true,
       "class_name": "AugmenticIntelligenceTool",
-      "module_path": "tools.augmentic_intelligence_tool",
+      "module_path": "tools.development.augmentic_intelligence_tool",
       "description": "Comprehensive tool providing access to all MindX capabilities for self-improvement",
       "priority": 10,
-      "category": "augmentic_development"
+      "category": "development",
+      "access_control": {
+        "allowed_agents": ["*"]
+      }
     },
     "system_analyzer_tool": {
       "enabled": true,
       "class_name": "SystemAnalyzerTool",
-      "module_path": "tools.system_analyzer_tool",
+      "module_path": "tools.monitoring.system_analyzer_tool",
       "description": "Analyzes system components and generates improvement suggestions",
       "priority": 8,
-      "category": "augmentic_development"
+      "category": "monitoring",
+      "access_control": {
+        "allowed_agents": ["mastermind_prime", "coordinator_agent", "strategic_evolution_agent"]
+      }
     },
     "base_gen_agent": {
       "enabled": true,
       "class_name": "BaseGenAgent",
-      "module_path": "tools.base_gen_agent",
+      "module_path": "agents.utility.base_gen_agent",
       "description": "Generates comprehensive codebase summaries and documentation",
       "priority": 7,
-      "category": "augmentic_development"
+      "category": "development",
+      "access_control": {
+        "allowed_agents": ["mastermind_prime", "strategic_evolution_agent", "blueprint_agent"]
+      }
     },
     "strategic_analysis_tool": {
       "enabled": true,
       "class_name": "StrategicAnalysisTool",
-      "module_path": "tools.strategic_analysis_tool",
+      "module_path": "tools.development.strategic_analysis_tool",
       "description": "Performs strategic analysis and planning for system improvements",
       "priority": 8,
-      "category": "augmentic_development"
+      "category": "development",
+      "access_control": {
+        "allowed_agents": ["mastermind_prime", "ceo_agent", "strategic_evolution_agent"]
+      }
     },
     "registry_manager_tool": {
       "enabled": true,
       "class_name": "RegistryManagerTool",
-      "module_path": "tools.registry_manager_tool",
+      "module_path": "tools.registry.registry_manager_tool",
       "description": "Manages tool and agent registries for dynamic system updates",
       "priority": 6,
-      "category": "augmentic_development"
+      "category": "registry",
+      "access_control": {
+        "allowed_agents": ["mastermind_prime", "coordinator_agent"]
+      }
+    },
+    "registry_sync_tool": {
+      "enabled": true,
+      "class_name": "RegistrySyncTool",
+      "module_path": "tools.registry.registry_sync_tool",
+      "description": "Synchronizes runtime and persistent registries with cryptographic validation",
+      "priority": 6,
+      "category": "registry",
+      "access_control": {
+        "allowed_agents": ["mastermind_prime", "coordinator_agent"]
+      }
+    },
+    "tool_registry_manager": {
+      "enabled": true,
+      "class_name": "ToolRegistryManager",
+      "module_path": "tools.registry.tool_registry_manager",
+      "description": "Manages the official tools registry with validation and synchronization",
+      "priority": 6,
+      "category": "registry",
+      "access_control": {
+        "allowed_agents": ["mastermind_prime", "coordinator_agent"]
+      }
     },
     "agent_factory_tool": {
       "enabled": true,
       "class_name": "AgentFactoryTool",
-      "module_path": "tools.agent_factory_tool",
-      "description": "Creates and manages new agents dynamically",
+      "module_path": "tools.registry.agent_factory_tool",
+      "description": "Creates and manages new agents dynamically with full lifecycle support",
       "priority": 7,
-      "category": "augmentic_development"
+      "category": "registry",
+      "access_control": {
+        "allowed_agents": ["*"]
+      }
     },
     "tool_factory_tool": {
       "enabled": true,
       "class_name": "ToolFactoryTool",
-      "module_path": "tools.tool_factory_tool",
+      "module_path": "tools.registry.tool_factory_tool",
       "description": "Creates and manages new tools dynamically",
       "priority": 7,
-      "category": "augmentic_development"
+      "category": "registry",
+      "access_control": {
+        "allowed_agents": ["*"]
+      }
     },
     "memory_analysis_tool": {
       "enabled": true,
       "class_name": "MemoryAnalysisTool",
-      "module_path": "tools.memory_analysis_tool",
+      "module_path": "tools.monitoring.memory_analysis_tool",
       "description": "Analyzes memory usage and learning patterns",
       "priority": 5,
-      "category": "augmentic_development"
+      "category": "monitoring",
+      "access_control": {
+        "allowed_agents": ["mastermind_prime", "strategic_evolution_agent"]
+      }
     },
     "system_health_tool": {
       "enabled": true,
       "class_name": "SystemHealthTool",
-      "module_path": "tools.system_health_tool",
-      "description": "Monitors system health and performance metrics",
+      "module_path": "tools.core.system_health_tool",
+      "description": "Monitors system health and performance metrics (CPU, memory, disk, network)",
       "priority": 6,
-      "category": "augmentic_development"
+      "category": "core",
+      "access_control": {
+        "allowed_agents": ["*"],
+        "priority_access": ["cfo", "ceo_agent", "mastermind_prime"]
+      },
+      "cfo_priority": true
     },
     "shell_command_tool": {
       "enabled": true,
       "class_name": "ShellCommandTool",
-      "module_path": "tools.shell_command_tool",
-      "description": "Executes shell commands for system operations",
+      "module_path": "tools.core.shell_command_tool",
+      "description": "Executes shell commands for system operations with security validation",
       "priority": 4,
-      "category": "augmentic_development"
+      "category": "core",
+      "access_control": {
+        "allowed_agents": ["mastermind_prime", "coordinator_agent"]
+      }
+    },
+    "cli_command_tool": {
+      "enabled": true,
+      "class_name": "CLICommandTool",
+      "module_path": "tools.core.cli_command_tool",
+      "description": "Command-line interface execution tool",
+      "priority": 4,
+      "category": "core",
+      "access_control": {
+        "allowed_agents": ["*"]
+      }
     },
     "web_search_tool": {
       "enabled": true,
@@ -94,31 +162,63 @@
       "module_path": "tools.web_search_tool",
       "description": "Searches the web for information and resources",
       "priority": 3,
-      "category": "augmentic_development"
+      "category": "external",
+      "access_control": {
+        "allowed_agents": ["*"]
+      }
     },
     "note_taking_tool": {
       "enabled": true,
       "class_name": "NoteTakingTool",
-      "module_path": "tools.note_taking_tool",
+      "module_path": "tools.development.note_taking_tool",
       "description": "Takes and manages notes for augmentic development",
       "priority": 4,
-      "category": "augmentic_development"
+      "category": "development",
+      "access_control": {
+        "allowed_agents": ["*"]
+      }
     },
     "summarization_tool": {
       "enabled": true,
       "class_name": "SummarizationTool",
-      "module_path": "tools.summarization_tool",
+      "module_path": "tools.development.summarization_tool",
       "description": "Summarizes content and generates reports",
       "priority": 5,
-      "category": "augmentic_development"
+      "category": "development",
+      "access_control": {
+        "allowed_agents": ["*"]
+      }
     },
     "business_intelligence_tool": {
       "enabled": true,
       "class_name": "BusinessIntelligenceTool",
-      "module_path": "tools.business_intelligence_tool",
-      "description": "Provides business intelligence and analytics",
-      "priority": 4,
-      "category": "augmentic_development"
+      "module_path": "tools.financial.business_intelligence_tool",
+      "description": "Provides business intelligence and analytics with CFO priority access. Integrates with system_health_tool and token_calculator_tool for comprehensive metrics.",
+      "priority": 8,
+      "category": "financial",
+      "version": "2.0",
+      "access_control": {
+        "allowed_agents": ["*"],
+        "priority_access": ["cfo", "ceo_agent", "mastermind_prime"]
+      },
+      "cfo_priority": true,
+      "integrations": [
+        "system_health_tool",
+        "token_calculator_tool_robust"
+      ]
+    },
+    "token_calculator_tool_robust": {
+      "enabled": true,
+      "class_name": "TokenCalculatorToolRobust",
+      "module_path": "tools.financial.token_calculator_tool_robust",
+      "description": "Enhanced token counting and cost calculation with production-grade accuracy. Critical for CFO cost management and budget enforcement.",
+      "priority": 9,
+      "category": "financial",
+      "access_control": {
+        "allowed_agents": ["*"],
+        "priority_access": ["cfo", "ceo_agent", "mastermind_prime"]
+      },
+      "cfo_priority": true
     },
     "tree_agent": {
       "enabled": true,
@@ -126,7 +226,10 @@
       "module_path": "tools.tree_agent",
       "description": "Navigates and analyzes directory structures",
       "priority": 3,
-      "category": "augmentic_development"
+      "category": "development",
+      "access_control": {
+        "allowed_agents": ["*"]
+      }
     },
     "github_agent_tool": {
       "enabled": true,
@@ -188,10 +291,13 @@
     "prompt_tool": {
       "enabled": true,
       "class_name": "PromptTool",
-      "module_path": "tools.prompt_tool",
-      "description": "Manages, stores, and executes prompts as first-class infrastructure. Prompts are versioned, searchable, and can be ingested from external sources like AgenticPlace.",
+      "module_path": "tools.communication.prompt_tool",
+      "description": "Manages, stores, and executes prompts as first-class infrastructure. Prompts are versioned, searchable, and can be ingested from external sources like AgenticPlace. Distinction: agent.persona defines behavioral traits, agent.prompt defines specific instructions.",
       "priority": 7,
-      "category": "cognition",
+      "category": "communication",
+      "access_control": {
+        "allowed_agents": ["*"]
+      },
       "commands": [
         {
           "name": "create",
@@ -242,46 +348,80 @@
     "a2a_tool": {
       "enabled": true,
       "class_name": "A2ATool",
-      "module_path": "tools.a2a_tool",
+      "module_path": "tools.communication.a2a_tool",
       "description": "Enables standardized agent-to-agent communication following the A2A protocol",
       "priority": 8,
-      "category": "communication"
+      "category": "communication",
+      "access_control": {
+        "allowed_agents": ["*"]
+      }
     },
     "mcp_tool": {
       "enabled": true,
       "class_name": "MCPTool",
-      "module_path": "tools.mcp_tool",
+      "module_path": "tools.communication.mcp_tool",
       "description": "Provides Model Context Protocol support for structured context provision to agents",
       "priority": 8,
-      "category": "cognition"
+      "category": "communication",
+      "access_control": {
+        "allowed_agents": ["*"]
+      }
+    },
+    "identity_sync_tool": {
+      "enabled": true,
+      "class_name": "IdentitySyncTool",
+      "module_path": "tools.identity.identity_sync_tool",
+      "description": "Comprehensive identity synchronization tool for agents and tools. Manages cryptographic identities, registry updates, and validation.",
+      "priority": 7,
+      "category": "identity",
+      "access_control": {
+        "allowed_agents": ["mastermind_prime", "coordinator_agent", "guardian_agent"]
+      }
     }
   },
   "tool_categories": {
-    "augmentic_development": {
-      "description": "Tools specifically designed for autonomous agentic development",
+    "core": {
+      "description": "Core system tools for basic operations",
       "priority": 10
     },
-    "system_analysis": {
-      "description": "Tools for analyzing and understanding system state",
-      "priority": 8
+    "financial": {
+      "description": "Financial and cost management tools with CFO priority access",
+      "priority": 10
     },
-    "code_improvement": {
-      "description": "Tools for improving and refactoring code",
+    "registry": {
+      "description": "Tools for managing registries and creating new agents/tools",
       "priority": 9
     },
-    "agent_management": {
-      "description": "Tools for creating and managing agents",
-      "priority": 7
+    "communication": {
+      "description": "Tools for agent communication and prompt management",
+      "priority": 8
     },
-    "tool_management": {
-      "description": "Tools for creating and managing other tools",
+    "monitoring": {
+      "description": "Tools for system monitoring and analysis",
+      "priority": 8
+    },
+    "development": {
+      "description": "Tools for code development and improvement",
+      "priority": 9
+    },
+    "identity": {
+      "description": "Tools for identity synchronization and management",
       "priority": 7
     },
     "version_control": {
       "description": "Tools for GitHub operations, backups, and version control",
       "priority": 10
+    },
+    "external": {
+      "description": "External service integration tools",
+      "priority": 5
     }
   },
+  "cfo_priority_tools": [
+    "business_intelligence_tool",
+    "token_calculator_tool_robust",
+    "system_health_tool"
+  ],
   "augmentic_workflow": {
     "analysis_phase": [
       "system_analyzer_tool",
@@ -302,5 +442,12 @@
       "system_health_tool",
       "memory_analysis_tool"
     ]
+  },
+  "metadata": {
+    "last_updated": "2026-01-31",
+    "version": "2.0",
+    "total_tools": 22,
+    "organized_folders": true,
+    "cfo_priority_enabled": true
   }
 }

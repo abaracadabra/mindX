@@ -332,7 +332,7 @@ class MindXAgent:
     async def _init_registry_manager(self):
         """Initialize Registry Manager Tool"""
         try:
-            from tools.registry_manager_tool import RegistryManagerTool
+            from tools.registry.registry_manager_tool import RegistryManagerTool
             self.registry_manager_tool = RegistryManagerTool(
                 memory_agent=self.memory_agent,
                 config=self.config
@@ -764,7 +764,7 @@ class MindXAgent:
             
             # Also check identity sync tool if available
             try:
-                from tools.identity_sync_tool import IdentitySyncTool
+                from tools.identity.identity_sync_tool import IdentitySyncTool
                 identity_sync = IdentitySyncTool(memory_agent=self.memory_agent, config=self.config)
                 # Identity sync tool can provide additional identity information
             except ImportError:
@@ -2592,7 +2592,7 @@ class MindXAgent:
                 if strategy == "best_for_task":
                     # Use model capability tool if available
                     try:
-                        from tools.ollama_model_capability_tool import OllamaModelCapabilityTool
+                        from api.ollama.ollama_model_capability_tool import OllamaModelCapabilityTool
                         capability_tool = OllamaModelCapabilityTool(config=self.config)
                         best_model = capability_tool.get_best_model_for_task("reasoning")
                         if best_model:

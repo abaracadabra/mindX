@@ -1,0 +1,509 @@
+
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import ReactDOM from 'react-dom/client';
+import { GoogleGenAI } from "@google/genai";
+import { marked } from "marked";
+import { Visualizer, DAOBoard, PersonaSelector, DAO3DView, AgentNexusClassic } from './SubstrateComponents.tsx';
+import { AGENT_REGISTRY } from './agents/registry.ts';
+import { epistemic, LogEntry } from './epistemic.ts';
+import { mindXService, MindXAgentRequest } from './api/mindx-service.ts';
+
+interface WindowState {
+    id: string;
+    type: 'agent' | 'system' | 'console' | 'visual' | 'spawned' | 'engine';
+    title: string;
+    text?: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    isCollapsed: boolean;
+    isMaximized?: boolean;
+    isThinking: boolean;
+    zIndex: number;
+    component?: string;
+    dockedTo?: string | null;
+    meta?: any;
+}
+
+interface ChatMessage {
+    id: string;
+    role: 'user' | 'agent' | 'system';
+    content: string;
+    persona: string;
+    timestamp: number;
+    status: 'transmitting' | 'accepted' | 'archived';
+}
+
+const App = () => {
+    const [inputValue, setInputValue] = useState('');
+    const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
+        { id: 'h1', role: 'user', content: 'INITIALIZING_SUBSTRATE...', persona: 'SYSTEM', timestamp: Date.now() - 10000, status: 'accepted' },
+        { id: 'h2', role: 'agent', content: 'PYTHAI MASTERMIND ONLINE. COMMAND_DIRECTIVE_READY.', persona: 'PYTHAI', timestamp: Date.now() - 5000, status: 'accepted' }
+    ]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [activePersona, setActivePersona] = useState('mindx');
+    const [mode, setMode] = useState<'query' | 'execution'>('execution');
+    const [maxZIndex, setMaxZIndex] = useState(10000);
+    const [consensusProgress, setConsensusProgress] = useState(7);
+    const [activityPulse, setActivityPulse] = useState(0);
+    const [isVoting, setIsVoting] = useState(false);
+    const [votingIndex, setVotingIndex] = useState(-1);
+    const [logs, setLogs] = useState<LogEntry[]>(epistemic.getLogs());
+    const [notification, setNotification] = useState<string | null>(null);
+    const [horizontalScroll, setHorizontalScroll] = useState(0);
+    
+    // UI Menu States
+    const [showRoutingMenu, setShowRoutingMenu] = useState(false);
+    const [showUtilMenu, setShowUtilMenu] = useState(false);
+
+    // Substrate Engine State
+    const [cubeRotation, setCubeRotation] = useState({ x: -20, y: 45 });
+    const [cubeResonance, setCubeResonance] = useState(50);
+
+    const historyRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
+
+    const draggingId = useRef<string | null>(null);
+    const dragOffset = useRef<{ x: number, y: number }>({ x: 0, y: 0 });
+    const resizingId = useRef<string | null>(null);
+
+    const getInitialWindows = (): WindowState[] => [
+        { id: 'console', type: 'console', title: 'SUPREME_COMMAND_SUBSTRATE', x: 420, y: 50, w: 900, h: 800, isCollapsed: false, isThinking: false, zIndex: 9000 },
+        { id: 'sys_pythai_master', type: 'visual', title: 'MASTER_COGNITIVE_CUBE', x: 20, y: 50, w: 380, h: 420, isCollapsed: false, isThinking: false, zIndex: 9005, component: 'PYTHAI_MASTER_CUBE' },
+        { id: 'sys_nexus', type: 'visual', title: 'AGENT_NEXUS_CORE', x: 20, y: 490, w: 380, h: 420, isCollapsed: false, isThinking: false, zIndex: 9006, component: 'AGENT_NEXUS' },
+        { id: 'savante_view', type: 'visual', title: 'SAVANTE_sAGI_STREAM', x: 1340, y: 50, w: 420, h: 560, isCollapsed: false, isThinking: false, zIndex: 9001, component: 'SAVANTE' },
+        { id: 'sys_dao', type: 'system', title: 'DAO_VOTING_CONSENSUS', x: 420, y: 870, w: 900, h: 320, isCollapsed: false, isThinking: false, zIndex: 8001, component: 'DAO' },
+        { id: 'sys_logs', type: 'system', title: 'TELEMETRY_LOGS', x: 1340, y: 630, w: 420, h: 250, isCollapsed: false, isThinking: false, zIndex: 8002, component: 'LOGS' }
+    ];
+
+    const [windows, setWindows] = useState<WindowState[]>(getInitialWindows());
+
+    useEffect(() => {
+        const sub = epistemic.subscribe(() => {
+            setLogs(epistemic.getLogs());
+        });
+        return sub;
+    }, []);
+
+    const scrollHistory = useCallback((dir: 'up' | 'down') => {
+        if (!historyRef.current) return;
+        const scrollAmount = 400;
+        historyRef.current.scrollBy({ top: dir === 'up' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+    }, []);
+
+    // Global Key Interception for Tactical Navigation
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // If typing in input, allow arrows normally UNLESS alt is held
+            if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) {
+                if (e.altKey && e.key === 'ArrowUp') { e.preventDefault(); scrollHistory('up'); }
+                if (e.altKey && e.key === 'ArrowDown') { e.preventDefault(); scrollHistory('down'); }
+                return;
+            }
+            // If navigating workspace
+            if (e.key === 'ArrowUp') { e.preventDefault(); scrollHistory('up'); }
+            if (e.key === 'ArrowDown') { e.preventDefault(); scrollHistory('down'); }
+            if (e.key === '/' && inputRef.current) { e.preventDefault(); inputRef.current.focus(); }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [scrollHistory]);
+
+    const notify = (msg: string) => {
+        setNotification(msg);
+        setTimeout(() => setNotification(null), 3000);
+    };
+
+    const handleSendMessage = async (text: string, forceMode?: 'ingest', personaOverride?: string) => {
+        if (!text.trim() || isLoading) return;
+
+        // SUBSTRATE_COMMAND_INTERCEPTION
+        const lowText = text.toLowerCase().trim();
+        if (lowText.startsWith('/')) {
+            const parts = lowText.split(' ');
+            const cmd = parts[0];
+            if (cmd === '/rotate') {
+                setCubeRotation(prev => ({ ...prev, y: prev.y + (parseInt(parts[1]) || 90) }));
+                notify("ROTATION_PROTOCOL_EXECUTED");
+                setInputValue('');
+                return;
+            }
+            if (cmd === '/reset') {
+                setWindows(getInitialWindows());
+                notify("WINDOW_POSITIONS_RECALIBRATED");
+                setInputValue('');
+                return;
+            }
+            if (cmd === '/clear') {
+                setChatHistory([]);
+                notify("TELEMETRY_PURGED");
+                setInputValue('');
+                return;
+            }
+        }
+
+        setIsLoading(true);
+        setActivityPulse(Date.now());
+        
+        const currentPersona = personaOverride || activePersona;
+        const messageId = `msg_${Date.now()}`;
+        
+        setChatHistory(prev => [...prev, { 
+            id: messageId, role: 'user', content: text, persona: 'OPERATOR', timestamp: Date.now(), status: 'transmitting'
+        }]);
+        
+        setInputValue('');
+        if (inputRef.current) inputRef.current.focus();
+
+        setTimeout(() => {
+            setChatHistory(prev => prev.map(m => m.id === messageId ? { ...m, status: 'accepted' } : m));
+        }, 300);
+
+        epistemic.logEvent("directiveTransmitted", `Directive issued to ${currentPersona}`, { mode: forceMode || mode, length: text.length });
+
+        if (mode === 'execution' && !forceMode) {
+            setIsVoting(true);
+            setVotingIndex(-1);
+            const soldiers = ["COO", "CFO", "CTO", "CISO", "CLO", "CPO", "CRO"];
+            for (let i = 0; i < soldiers.length; i++) {
+                setVotingIndex(i);
+                await new Promise(r => setTimeout(r, 40));
+            }
+        }
+
+        const reportId = `${currentPersona}_report_${Date.now()}`;
+        setWindows(prev => {
+            const consoleWin = prev.find(w => w.id === 'console')!;
+            return [...prev, {
+                id: reportId, type: 'agent', title: `${currentPersona.toUpperCase()}_DECREE`,
+                text: "", x: consoleWin.x + 50, y: consoleWin.y + 50,
+                w: 750, h: 550, isCollapsed: false, isThinking: true, zIndex: maxZIndex + 1
+            }];
+        });
+
+        try {
+            // Check if this should route to mindX backend
+            // CFO also routes to mindX for financial tool access
+            const shouldUseMindX = ['ceo', 'mastermind', 'mindx', 'suntsu', 'pythai', 'cfo'].includes(currentPersona) || forceMode === 'ingest';
+            
+            let aiText: string;
+            
+            if (shouldUseMindX) {
+                // Route to mindX backend via AgenticPlace service layer
+                if (forceMode === 'ingest') {
+                    // Ollama ingestion mode
+                    const ollamaResponse = await mindXService.ingestOllama({
+                        prompt: text,
+                        store_in_memory: true
+                    });
+                    aiText = ollamaResponse.response || "OLLAMA_INGESTION_COMPLETE";
+                } else {
+                    // Agent call mode (CEO, mastermind, mindX, SunTsu, CFO)
+                    // CFO routes through CEO agent with CFO context for priority tool access
+                    const agentType = currentPersona === 'mindx' ? 'mindx' : 
+                                     currentPersona === 'suntsu' ? 'suntsu' :
+                                     currentPersona === 'pythai' ? 'pythai' :
+                                     currentPersona === 'cfo' ? 'ceo' : 'ceo';
+                    
+                    // Add CFO-specific context for priority tool access
+                    const context = currentPersona === 'cfo' ? {
+                        agent_id: 'cfo',
+                        priority_access: true,
+                        tools: ['business_intelligence_tool', 'token_calculator_tool_robust', 'system_health_tool'],
+                        action: 'get_cfo_metrics'
+                    } : {};
+                    
+                    const mindXResponse = await mindXService.callMindXAgent({
+                        agent: agentType as any,
+                        directive: currentPersona === 'cfo' ? 
+                            `[CFO Priority Access] ${text}` : text,
+                        mode: mode,
+                        persona: currentPersona,
+                        context: context
+                    });
+                    aiText = mindXResponse.response || "MINDX_AGENT_ACKNOWLEDGED";
+                }
+            } else {
+                // Use Gemini for other agents (RAGE, COO, CFO, etc.)
+                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                const agent = AGENT_REGISTRY.find(a => a.id === currentPersona);
+                
+                // Intelligence Toolset
+                const tools: any[] = [];
+                if (currentPersona === 'rage' || mode === 'execution') {
+                    tools.push({ googleSearch: {} });
+                }
+
+                const sysPrompt = `You are ${agent?.name}. Role: ${agent?.role}. Mode: ${mode}. Directive: ${text}. MISSION: ${agent?.mission}. You are an elite cognitive asset within the PYTHAI substrate. Respond with strategic dominance. USE MARKDOWN. If using Google Search, explicitly cite URLs.`;
+
+                const response = await ai.models.generateContent({
+                    model: 'gemini-3-pro-preview',
+                    contents: text,
+                    config: { 
+                        systemInstruction: sysPrompt,
+                        thinkingConfig: { thinkingBudget: mode === 'execution' ? 16000 : 4000 },
+                        tools
+                    }
+                });
+                aiText = response.text || "SYSTEM_ACKNOWLEDGED_WITHOUT_DATA.";
+            }
+            
+            setChatHistory(prev => [...prev, { 
+                id: `resp_${Date.now()}`, role: 'agent', content: aiText, persona: currentPersona, timestamp: Date.now(), status: 'accepted'
+            }]);
+            setWindows(prev => prev.map(w => w.id === reportId ? { ...w, text: aiText, isThinking: false } : w));
+
+            // Recursive Board Critique
+            if (mode === 'execution') {
+                const auditors = ['ciso', 'cro'];
+                for (const aId of auditors) {
+                    const auditorAgent = AGENT_REGISTRY.find(a => a.id === aId);
+                    const aReportId = `audit_${aId}_${Date.now()}`;
+                    setWindows(p => [...p, {
+                        id: aReportId, type: 'agent', title: `${aId.toUpperCase()}_AUDIT`,
+                        text: "PROCESSING_DIRECTIVE...", x: 100 + Math.random()*300, y: 300 + Math.random()*300,
+                        w: 500, h: 400, isCollapsed: false, isThinking: true, zIndex: maxZIndex + 10
+                    }]);
+
+                    const aResp = await ai.models.generateContent({
+                        model: 'gemini-3-flash-preview',
+                        contents: `Critique the following decree from ${currentPersona}: "${aiText}". Mission focus: ${auditorAgent?.mission}. Be concise and authoritative.`,
+                    });
+                    setWindows(prev => prev.map(w => w.id === aReportId ? { ...w, text: aResp.text || "NO_VULNERABILITIES_DETECTED.", isThinking: false } : w));
+                }
+            }
+
+        } catch (e: any) {
+            setWindows(prev => prev.map(w => w.id === reportId ? { ...w, text: "SUBSTRATE_ERROR: " + e.message, isThinking: false } : w));
+        } finally {
+            setIsLoading(false);
+            setActivityPulse(0);
+            setIsVoting(false);
+            setVotingIndex(-1);
+            setShowRoutingMenu(false);
+            setShowUtilMenu(false);
+        }
+    };
+
+    const focusWindow = (id: string) => {
+        setWindows(prev => {
+            const stack: string[] = [];
+            const findChildren = (pid: string) => {
+                prev.filter(w => w.dockedTo === pid).forEach(c => { stack.push(c.id); findChildren(c.id); });
+            };
+            stack.push(id);
+            findChildren(id);
+            return prev.map(w => stack.includes(w.id) ? { ...w, zIndex: maxZIndex + stack.indexOf(w.id) + 1 } : w);
+        });
+        setMaxZIndex(prev => prev + 20);
+    };
+
+    const updateWindowPos = useCallback((id: string, newX: number, newY: number) => {
+        setWindows(prev => {
+            const target = prev.find(w => w.id === id);
+            if (!target || target.isMaximized) return prev;
+            const dx = newX - target.x;
+            const dy = newY - target.y;
+            const next = prev.map(w => w.id === id ? { ...w, x: newX, y: newY } : w);
+            const moveChildren = (parentId: string, deltaX: number, deltaY: number) => {
+                next.forEach((w, idx) => {
+                    if (w.dockedTo === parentId) {
+                        next[idx] = { ...next[idx], x: next[idx].x + deltaX, y: next[idx].y + deltaY };
+                        moveChildren(next[idx].id, deltaX, deltaY);
+                    }
+                });
+            };
+            moveChildren(id, dx, dy);
+            return [...next];
+        });
+    }, []);
+
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            const sy = window.scrollY;
+            if (draggingId.current) {
+                updateWindowPos(draggingId.current, e.clientX - dragOffset.current.x, (e.clientY + sy) - dragOffset.current.y);
+            } else if (resizingId.current) {
+                const id = resizingId.current;
+                setWindows(prev => prev.map(w => w.id === id ? { ...w, w: Math.max(300, e.clientX - w.x), h: Math.max(100, (e.clientY + sy) - w.y) } : w));
+            }
+        };
+        const handleMouseUp = () => { draggingId.current = null; resizingId.current = null; };
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
+    }, [updateWindowPos, windows]);
+
+    return (
+        <div className="app-container">
+            {notification && <div className="global-notification">{notification}</div>}
+            
+            <header className="substrate-header">
+                <div className="header-brand">
+                    <div className="logo-main"><span className="text-accent">PYTHAI</span> MASTERMIND</div>
+                    <div className="logo-sub">// NEURAL_OPERATING_SYSTEM_v0.7</div>
+                </div>
+                <div className="header-stats">
+                    <div className="h-stat">QUORUM: {consensusProgress}/7</div>
+                    <div className="h-stat">MODE: {mode.toUpperCase()}</div>
+                </div>
+            </header>
+
+            <main className="workspace-canvas">
+                {windows.map((w) => (
+                    <div 
+                        key={w.id} 
+                        className={`hud-window type-${w.type} ${w.isThinking ? 'thinking' : ''} ${w.dockedTo ? 'is-docked' : ''} ${w.isMaximized ? 'maximized' : ''}`}
+                        style={{ 
+                            left: w.isMaximized ? 0 : w.x, 
+                            top: w.isMaximized ? 0 : w.y, 
+                            width: w.isMaximized ? '100vw' : w.w, 
+                            height: w.isCollapsed ? '32px' : (w.isMaximized ? '100vh' : w.h), 
+                            zIndex: w.isMaximized ? 999998 : w.zIndex 
+                        }}
+                        onMouseDown={() => focusWindow(w.id)}
+                    >
+                        <div className="window-handle" onMouseDown={(e) => { 
+                            if (w.isMaximized) return;
+                            draggingId.current = w.id; 
+                            dragOffset.current = { x: e.clientX - w.x, y: (e.clientY + window.scrollY) - w.y }; 
+                        }}>
+                            <div className="handle-left">
+                                <div className="win-status-indicator"></div>
+                                <span className="handle-title">{w.title}</span>
+                            </div>
+                            <div className="handle-controls">
+                                <button className="win-act-btn" onClick={(e) => { e.stopPropagation(); setWindows(p => p.map(win => win.id === w.id ? {...win, isMaximized: !win.isMaximized} : win)) }}>{w.isMaximized ? '◱' : '◰'}</button>
+                                <button className="win-act-btn" onClick={(e) => { e.stopPropagation(); setWindows(p => p.map(win => win.id === w.id ? {...win, isCollapsed: !win.isCollapsed} : win)) }}>{w.isCollapsed ? '□' : '–'}</button>
+                                {w.type !== 'console' && <button className="win-act-btn close" onClick={(e) => { e.stopPropagation(); setWindows(p => p.filter(win => win.id !== w.id)) }}>✕</button>}
+                            </div>
+                        </div>
+                        {!w.isCollapsed && (
+                            <div className="window-content-inner">
+                                {w.id === 'console' ? (
+                                    <div className="hud-content-full console-layout flipped-central">
+                                        <div className="console-input-dock supreme-directive-shell central-panel">
+                                            <div className="shell-header">
+                                                <div className="shell-auth">ROOT_MAINFRAME // DIRECT_UPLINK</div>
+                                                <div className="shell-title">SUPREME_DIRECTIVE</div>
+                                            </div>
+                                            <PersonaSelector current={activePersona} onSelect={setActivePersona} />
+                                            <div className="input-with-tools">
+                                                <textarea 
+                                                    ref={inputRef}
+                                                    value={inputValue} 
+                                                    onChange={(e) => setInputValue(e.target.value)} 
+                                                    placeholder="TRANSMIT UNIVERSAL COMMAND..." 
+                                                    autoFocus
+                                                    onKeyDown={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(inputValue); } }}
+                                                />
+                                                <div className="input-footer-hint">ENTER: TRANSMIT // ALT+ARROWS: SCRUB HISTORY</div>
+                                                <div className="input-action-bar">
+                                                    <div className="action-group">
+                                                        <div className="relative-anchor">
+                                                            <button className={`nav-trigger concept ${showRoutingMenu ? 'open' : ''}`} onClick={() => setShowRoutingMenu(!showRoutingMenu)}>ROUTING</button>
+                                                            {showRoutingMenu && (
+                                                                <div className="dropdown-matrix grid">
+                                                                    <div className="matrix-header">ACTIVE_NODES</div>
+                                                                    <div className="matrix-grid">
+                                                                        {AGENT_REGISTRY.map(a => (
+                                                                            <button key={a.id} className="matrix-item" onClick={() => handleSendMessage(inputValue, undefined, a.id)}>{a.id.toUpperCase()}</button>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="relative-anchor">
+                                                            <button className={`nav-trigger action ${showUtilMenu ? 'open' : ''}`} onClick={() => setShowUtilMenu(!showUtilMenu)}>UTILITIES</button>
+                                                            {showUtilMenu && (
+                                                                <div className="dropdown-matrix list">
+                                                                    <div className="matrix-header">SUBSTRATE_BUFFERS</div>
+                                                                    <button className="matrix-item" onClick={() => { notify("BUFFER_COPIED"); navigator.clipboard.writeText(inputValue); setShowUtilMenu(false); }}>CLONE_INPUT</button>
+                                                                    <button className="matrix-item" onClick={() => setInputValue('')}>WIPE_CELL</button>
+                                                                    <button className="matrix-item rage" onClick={() => handleSendMessage(inputValue, 'ingest')}>FORCE_INGEST</button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="main-actions">
+                                                        <div className="mode-toggle">
+                                                            <button className={mode === 'query' ? 'active' : ''} title="Query Mode" onClick={() => setMode('query')}>Q</button>
+                                                            <button className={mode === 'execution' ? 'active' : ''} title="Execution Mode" onClick={() => setMode('execution')}>E</button>
+                                                        </div>
+                                                        <button className="transmit-btn-dominance" onClick={() => handleSendMessage(inputValue)} disabled={isLoading}>
+                                                            {isLoading ? 'SYNCING...' : 'TRANSMIT'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="response-field-wrapper">
+                                            <div className="nav-arrow-sidebar">
+                                                <button className="nav-arrow up" onClick={() => scrollHistory('up')}>▲</button>
+                                                <button className="nav-arrow down" onClick={() => scrollHistory('down')}>▼</button>
+                                            </div>
+                                            <div className="chat-history-viewport response-field" ref={historyRef} style={{ transform: `translateX(${horizontalScroll}%)` }}>
+                                                {chatHistory.map((msg) => (
+                                                    <div key={msg.id} className={`history-line ${msg.role} status-${msg.status || 'accepted'}`}>
+                                                        <span className="h-persona">[{msg.persona.toUpperCase()}]</span>
+                                                        <span className="h-text">{msg.content}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="substrate-footer-scrubber">
+                                            <div className="scrubber-label">PLANE_SCRUBBER</div>
+                                            <input 
+                                                type="range" 
+                                                min="-40" 
+                                                max="40" 
+                                                value={horizontalScroll} 
+                                                onChange={(e) => setHorizontalScroll(parseInt(e.target.value))} 
+                                                className="substrate-slider"
+                                            />
+                                        </div>
+                                    </div>
+                                ) : w.component === 'PYTHAI_MASTER_CUBE' ? (
+                                    <DAO3DView 
+                                       rotation={cubeRotation} 
+                                       resonance={cubeResonance} 
+                                       onRotationChange={setCubeRotation} 
+                                       onSelectFace={(id) => handleSendMessage(`Analyze node: ${id}`, 'ingest')}
+                                    />
+                                ) : w.component === 'AGENT_NEXUS' ? (
+                                    <AgentNexusClassic onSelectAgent={(id) => handleSendMessage(`Activate agent: ${id}`, undefined, id)} />
+                                ) : w.component === 'SAVANTE' ? (
+                                    <div className="savante-graphic-viewport">
+                                        <img src="input_file_4.png" alt="Savante sAGI" className="savante-img" />
+                                        <div className="savante-overlay">
+                                            <div className="s-header">SAVANTE // sAGI_COGNITION</div>
+                                            <div className="s-status">SUBSTRATE_UPLINK_STABLE</div>
+                                        </div>
+                                    </div>
+                                ) : w.component === 'DAO' ? <DAOBoard isCompact={w.h < 220} votingStep={isVoting ? votingIndex : -1} activeCEO={activePersona} /> : 
+                                 w.component === 'LOGS' ? <Visualizer activityPulse={activityPulse} isCompact={w.w < 350} logSource={logs} /> :
+                                 (
+                                     <div className="decree-layout">
+                                         <div className="decree-toolbar">
+                                             <button className="decree-tool-btn" onClick={() => { notify("BUFFER_COPIED"); navigator.clipboard.writeText(w.text || ""); }}>CLONE_DECREE</button>
+                                         </div>
+                                         <div className="markdown-report" dangerouslySetInnerHTML={{ __html: marked.parse(w.text || "") as string }} />
+                                     </div>
+                                 )}
+                            </div>
+                        )}
+                        {!w.isCollapsed && !w.isMaximized && <div className="window-corner-resizer" onMouseDown={(e) => { e.stopPropagation(); resizingId.current = w.id; }}></div>}
+                    </div>
+                ))}
+            </main>
+        </div>
+    );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root')!);
+root.render(<App />);

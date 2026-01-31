@@ -172,7 +172,7 @@ class ProviderRegistry:
             ProviderConfig(
                 name="ollama",
                 display_name="Ollama (Local)",
-                module_path="api.ollama_url",
+                module_path="api.ollama.ollama_url",
                 factory_function="create_ollama_api",
                 base_url_env_var="MINDX_LLM__OLLAMA__BASE_URL",
                 requires_api_key=False,

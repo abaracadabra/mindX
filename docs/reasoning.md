@@ -779,7 +779,7 @@ async def receive_startup_information(self, startup_info: Dict[str, Any]):
         
         if strategy == "best_for_task":
             # Reasoning: "I need the best model for reasoning tasks"
-            from tools.ollama_model_capability_tool import OllamaModelCapabilityTool
+            from api.ollama.ollama_model_capability_tool import OllamaModelCapabilityTool
             capability_tool = OllamaModelCapabilityTool(config=self.config)
             best_model = capability_tool.get_best_model_for_task("reasoning")
             # Reasoning: "Based on capabilities, this model is best for reasoning"

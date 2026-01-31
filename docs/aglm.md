@@ -136,7 +136,7 @@ The `OllamaChatDisplayTool` enables mindXagent to:
 - Clear conversation history
 - Get display status and configuration
 
-**Tool Location**: `tools/ollama_chat_display_tool.py`
+**Tool Location**: `api/ollama/ollama_chat_display_tool.py`
 
 ### Usage in mindXagent
 
@@ -150,7 +150,7 @@ mindXagent uses the Ollama Chat Display Tool to:
 ### Example Integration
 
 ```python
-from tools.ollama_chat_display_tool import OllamaChatDisplayTool
+from api.ollama.ollama_chat_display_tool import OllamaChatDisplayTool
 
 # Initialize tool
 display_tool = OllamaChatDisplayTool(config=config)

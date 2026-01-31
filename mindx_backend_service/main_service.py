@@ -177,6 +177,14 @@ app.include_router(llm_router)
 from mindx_backend_service.rage.routes import router as rage_router
 app.include_router(rage_router)
 
+# Include Ollama Admin router
+from api.ollama.ollama_admin_routes import router as ollama_admin_router
+app.include_router(ollama_admin_router)
+
+# Include AgenticPlace router
+from mindx_backend_service.agenticplace_routes import router as agenticplace_router
+app.include_router(agenticplace_router)
+
 command_handler: Optional[CommandHandler] = None
 
 @app.on_event("startup")
@@ -3629,7 +3637,7 @@ async def get_mindxagent_ollama_status():
 async def get_mindxagent_ollama_conversation(conversation_id: Optional[str] = None, limit: int = 50):
     """Get conversation history between mindXagent and Ollama models using OllamaChatDisplayTool."""
     try:
-        from tools.ollama_chat_display_tool import OllamaChatDisplayTool
+        from api.ollama.ollama_chat_display_tool import OllamaChatDisplayTool
         from utils.config import Config
         
         config = Config()
@@ -3645,7 +3653,7 @@ async def get_mindxagent_ollama_conversation(conversation_id: Optional[str] = No
 async def clear_mindxagent_ollama_conversation(conversation_id: Optional[str] = None):
     """Clear conversation history between mindXagent and Ollama models using OllamaChatDisplayTool."""
     try:
-        from tools.ollama_chat_display_tool import OllamaChatDisplayTool
+        from api.ollama.ollama_chat_display_tool import OllamaChatDisplayTool
         from utils.config import Config
         
         config = Config()

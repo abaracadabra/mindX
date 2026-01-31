@@ -297,7 +297,7 @@ class BDIAgent:
                     tool_kwargs["llm_handler"] = self.llm_handler
 
                 if class_name == "AuditAndImproveTool":
-                    from tools.base_gen_agent import BaseGenAgent
+                    from agents.utility.base_gen_agent import BaseGenAgent
                     tool_kwargs["base_gen_agent"] = BaseGenAgent(memory_agent=self.memory_agent)
                     tool_kwargs["automindx_agent"] = self.automindx_agent
                 elif class_name == "TreeAgent":

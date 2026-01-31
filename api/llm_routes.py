@@ -100,7 +100,7 @@ async def list_ollama_models(
     Supports both base_url and host/port configuration.
     """
     try:
-        from api.ollama_url import create_ollama_api
+        from api.ollama import create_ollama_api
         
         # Create API instance with host/port or base_url
         if base_url:
@@ -134,7 +134,7 @@ async def test_ollama_connection(
     Supports both base_url and host/port configuration.
     """
     try:
-        from api.ollama_url import create_ollama_api
+        from api.ollama import create_ollama_api
         
         if base_url:
             ollama_api = create_ollama_api(base_url=base_url)
@@ -164,7 +164,7 @@ async def get_ollama_model_info(
 ):
     """Get detailed information about a specific Ollama model"""
     try:
-        from api.ollama_url import create_ollama_api
+        from api.ollama import create_ollama_api
         
         if base_url:
             ollama_api = create_ollama_api(base_url=base_url)
@@ -196,7 +196,7 @@ async def set_ollama_config(
     Can use base_url or host/port combination.
     """
     try:
-        from api.ollama_url import create_ollama_api
+        from api.ollama import create_ollama_api
         from api.llm_provider_api import LLMProviderManager
         
         # Determine the base_url to use
@@ -264,7 +264,7 @@ async def generate_ollama_completion(
 ):
     """Generate text completion using Ollama"""
     try:
-        from api.ollama_url import create_ollama_api
+        from api.ollama import create_ollama_api
         
         # Determine base_url from parameters or use default
         final_base_url = None
@@ -399,7 +399,7 @@ async def ollama_chat_completion(
     Uses Ollama's /api/chat endpoint for proper conversation handling.
     """
     try:
-        from api.ollama_url import create_ollama_api
+        from api.ollama import create_ollama_api
         
         # Determine base_url from parameters or use default
         final_base_url = None
@@ -861,7 +861,7 @@ async def intelligently_detect_providers():
             "ollama": {
                 "name": "ollama",
                 "display_name": "Ollama (Local)",
-                "module_path": "api.ollama_url",
+                "module_path": "api.ollama.ollama_url",
                 "factory_function": "create_ollama_api",
                 "api_key_env_var": None,
                 "base_url_env_var": "MINDX_LLM__OLLAMA__BASE_URL",

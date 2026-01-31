@@ -1,0 +1,29 @@
+{
+  "timestamp_utc": "2026-01-20T20:48:30.428545",
+  "memory_type": "STM",
+  "category": "coordinator_agent_main/interactions",
+  "metadata": {
+    "interaction_id": "inter_query_9725986d",
+    "agent": "coordinator_agent_main",
+    "agent_id": "coordinator_agent_main",
+    "timestamp": 1768942110.427108
+  },
+  "data": {
+    "interaction_id": "inter_query_9725986d",
+    "interaction_type": "query",
+    "content": "Query for mindX Coordinator (Augmentic Intelligence): explain augmentic development",
+    "metadata": {},
+    "status": "completed",
+    "response": {
+      "status": "SUCCESS",
+      "response_text": null,
+      "model_used": "ollama/mistral-nemo:latest",
+      "tokens_used": "N/A",
+      "cost": "N/A",
+      "provider": "ollama"
+    },
+    "error": null,
+    "created_at": 1768942079.3577397,
+    "completed_at": 1768942110.4144769
+  }
+}

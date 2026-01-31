@@ -1,0 +1,72 @@
+# Ollama Model Configuration
+# GPU-accelerated local inference server (10.0.0.155:18080)
+
+provider: ollama
+display_name: Ollama (Local GPU)
+base_url: http://10.0.0.155:18080
+fallback_url: http://localhost:11434
+
+# Connection settings
+timeout: 120.0
+connect_timeout: 10.0
+sock_read_timeout: 60.0
+
+# Rate limits (local server, typically high limits)
+rate_limits:
+  requests_per_minute: 1000
+  requests_per_day: 1000000
+  tokens_per_minute: 10000000
+  tokens_per_day: 1000000000
+
+# Default model settings
+default_model: llama3:8b
+keep_alive: 10m  # Keep models loaded in memory
+
+# Available models (discovered dynamically)
+models:
+  - name: llama3:8b
+    display_name: Llama 3 8B
+    context_size: 8192
+    recommended: true
+    
+  - name: llama3:70b
+    display_name: Llama 3 70B
+    context_size: 8192
+    recommended: false
+    
+  - name: mistral-nemo:latest
+    display_name: Mistral Nemo
+    context_size: 32768
+    recommended: true
+    
+  - name: mistral-small-latest
+    display_name: Mistral Small
+    context_size: 32768
+    recommended: true
+
+# Model selection preferences
+model_selection:
+  default_temperature: 0.7
+  default_max_tokens: 2048
+  use_chat_endpoint: true  # Prefer /api/chat over /api/generate
+
+# Features
+features:
+  streaming: true
+  embeddings: true
+  function_calling: false
+  vision: false
+  tool_use: false
+
+# GPU configuration
+gpu:
+  enabled: true
+  server_host: 10.0.0.155
+  server_port: 18080
+  fallback_to_cpu: true
+
+# Health check
+health_check:
+  enabled: true
+  interval_seconds: 30
+  endpoint: /api/tags

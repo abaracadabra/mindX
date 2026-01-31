@@ -23,13 +23,13 @@ from llm.model_registry import ModelRegistry
 from llm.model_selector import ModelSelector, TaskType
 from agents.orchestration.coordinator_agent import CoordinatorAgent, InteractionType
 from .plan_management import PlanManager, Plan, Action, PlanSt as SEA_PlanSt
-from tools.system_analyzer_tool import SystemAnalyzerTool
+from tools.monitoring.system_analyzer_tool import SystemAnalyzerTool
 from agents.evolution.blueprint_agent import BlueprintAgent
 from agents.evolution.blueprint_to_action_converter import BlueprintToActionConverter, DetailedAction
 from agents.memory_agent import MemoryAgent
-from tools.base_gen_agent import BaseGenAgent
-from tools.registry_manager_tool import RegistryManagerTool
-from tools.audit_and_improve_tool import AuditAndImproveTool
+from agents.utility.base_gen_agent import BaseGenAgent
+from tools.registry.registry_manager_tool import RegistryManagerTool
+from tools.development.audit_and_improve_tool import AuditAndImproveTool
 from tools.optimized_audit_gen_agent import OptimizedAuditGenAgent
 from agents.automindx_agent import AutoMINDXAgent
 from tools.github_agent_tool import GitHubAgentTool

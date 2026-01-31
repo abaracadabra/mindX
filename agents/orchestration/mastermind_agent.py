@@ -548,7 +548,7 @@ class MastermindAgent:
         
         # --- Step 1: Analyze the system to get concrete suggestions ---
         logger.info(f"{self.log_prefix} Running SystemAnalyzerTool to generate a blueprint for the directive.")
-        from tools.system_analyzer_tool import SystemAnalyzerTool
+        from tools.monitoring.system_analyzer_tool import SystemAnalyzerTool
         analyzer = SystemAnalyzerTool(
             config=self.config,
             belief_system=self.belief_system,

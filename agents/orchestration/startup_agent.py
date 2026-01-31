@@ -1504,7 +1504,7 @@ class StartupAgent:
                 else:
                     env_base_url = "http://10.0.0.155:18080"
             
-            from api.ollama_url import create_ollama_api
+            from api.ollama import create_ollama_api
             ollama_api = create_ollama_api(base_url=env_base_url)
             
             # Analyze startup log
