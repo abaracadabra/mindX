@@ -2307,7 +2307,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (error) {
                     console.error('Error loading mindXagent Ollama status:', error);
                 }
-                
+                try {
+                    console.log('Loading mindXagent startup flow...');
+                    await loadMindXagentStartup();
+                } catch (error) {
+                    console.error('Error loading mindXagent startup:', error);
+                }
                 try {
                     console.log('Loading mindXagent Ollama conversation...');
                     await loadMindXagentOllamaConversation();
@@ -2338,6 +2343,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     await loadMindXagentStatus();
                     await loadMindXagentOllamaStatus();
+                    await loadMindXagentStartup();
                     await loadMindXagentOllamaConversation();
                     await loadMindXagentThinking();
                     await loadMindXagentActions();
@@ -5892,6 +5898,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    // Test Ollama connection using api/ollama (backend /api/llm/ollama/connection → create_ollama_api + test_connection)
     async function testOllamaConnection() {
         try {
             const method = document.getElementById('ollama-config-method').value;
@@ -13271,6 +13278,75 @@ async function testOllamaCompletion() {
         }
     }
     
+    // Load startup flow (startup_agent → mindXagent → Ollama)
+    async function loadMindXagentStartup() {
+        try {
+            const data = await sendRequest('/mindxagent/startup');
+            updateMindXagentStartupDisplay(data);
+        } catch (error) {
+            console.error('Failed to load mindXagent startup:', error);
+            const stepsEl = document.getElementById('mindxagent-startup-steps');
+            const ioEl = document.getElementById('mindxagent-startup-ollama-io');
+            const logEl = document.getElementById('mindxagent-startup-terminal-log');
+            if (stepsEl) stepsEl.innerHTML = '<div class="empty-hint">Startup flow unavailable: ' + (error.message || 'not loaded') + '</div>';
+            if (ioEl) ioEl.innerHTML = '';
+            if (logEl) logEl.innerHTML = '';
+        }
+    }
+    
+    function updateMindXagentStartupDisplay(data) {
+        const stepsEl = document.getElementById('mindxagent-startup-steps');
+        const ioEl = document.getElementById('mindxagent-startup-ollama-io');
+        const logEl = document.getElementById('mindxagent-startup-terminal-log');
+        if (!data || !data.success) {
+            if (stepsEl) stepsEl.innerHTML = '<div class="empty-hint">No startup data yet. Run backend with startup_agent to see steps.</div>';
+            if (ioEl) ioEl.innerHTML = '';
+            if (logEl) logEl.innerHTML = '';
+            return;
+        }
+        // Startup sequence steps
+        const sequence = data.startup_sequence || [];
+        if (stepsEl) {
+            if (sequence.length === 0) {
+                stepsEl.innerHTML = '<div class="empty-hint">No startup sequence yet. Startup runs when backend initializes.</div>';
+            } else {
+                stepsEl.innerHTML = '<h4 style="margin:0 0 8px 0;">Steps</h4><ul class="steps-list" style="margin:0; padding-left:20px;">' +
+                    sequence.map(function(s) {
+                        const status = s.status === 'completed' ? '✅' : s.status === 'skipped' ? '⏭' : '⏳';
+                        return '<li><span>' + status + '</span> ' + (s.name || s.step || '') + '</li>';
+                    }).join('') + '</ul>';
+            }
+        }
+        // Ollama input/response (from startup_agent → mindXagent)
+        const ollamaIO = data.ollama_input_response;
+        if (ioEl) {
+            if (!ollamaIO) {
+                ioEl.innerHTML = '<div class="empty-hint">Ollama connection result will appear here after startup.</div>';
+            } else {
+                const connected = ollamaIO.connected ? '🟢 Connected' : '🔴 Disconnected';
+                let html = '<h4 style="margin:0 0 8px 0;">Ollama (startup_agent → mindXagent)</h4>';
+                html += '<div class="startup-ollama-summary"><strong>Result:</strong> ' + connected;
+                if (ollamaIO.base_url) html += ' · <strong>URL:</strong> ' + escapeHtml(ollamaIO.base_url);
+                if (ollamaIO.models_count != null) html += ' · <strong>Models:</strong> ' + ollamaIO.models_count;
+                if (ollamaIO.reason) html += ' · ' + escapeHtml(ollamaIO.reason);
+                html += '</div>';
+                if (ollamaIO.models && ollamaIO.models.length) {
+                    html += '<div class="startup-ollama-models" style="margin-top:6px; font-size:12px;">Models: ' + ollamaIO.models.slice(0, 10).map(function(m) { return typeof m === 'string' ? m : (m.name || m.model || ''); }).filter(Boolean).join(', ') + (ollamaIO.models.length > 10 ? '…' : '') + '</div>';
+                }
+                ioEl.innerHTML = html;
+            }
+        }
+        // Terminal log last lines
+        const terminal = data.terminal_log || {};
+        if (logEl) {
+            if (!terminal.log_exists || !terminal.last_lines || terminal.last_lines.length === 0) {
+                logEl.innerHTML = '<h4 style="margin:0 0 8px 0;">Terminal startup log</h4><div class="empty-hint">No terminal_startup.log or empty.</div>';
+            } else {
+                logEl.innerHTML = '<h4 style="margin:0 0 8px 0;">Terminal startup log (last ' + terminal.last_lines.length + ' lines)</h4><pre class="terminal-log-pre" style="margin:0; padding:8px; background:rgba(0,0,0,0.3); border-radius:4px; font-size:11px; white-space:pre-wrap; word-break:break-all;">' + terminal.last_lines.map(function(l) { return escapeHtml(l.replace(/\r/g, '')); }).join('') + '</pre>';
+            }
+        }
+    }
+    
     // Load Ollama conversation history
     async function loadMindXagentOllamaConversation(conversationId = null) {
         try {
@@ -13791,9 +13867,17 @@ async function testOllamaCompletion() {
             refreshBtn.addEventListener('click', async () => {
                 await loadMindXagentStatus();
                 await loadMindXagentOllamaStatus();
+                await loadMindXagentStartup();
                 await loadMindXagentOllamaConversation();
                 await loadMindXagentThinking();
                 await loadMindXagentActions();
+            });
+        }
+        
+        const refreshStartupBtn = document.getElementById('refresh-mindxagent-startup-btn');
+        if (refreshStartupBtn) {
+            refreshStartupBtn.addEventListener('click', async () => {
+                await loadMindXagentStartup();
             });
         }
         

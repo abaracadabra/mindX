@@ -239,11 +239,15 @@ class StartupAgent:
             )
             
             # Comprehensive startup record with resource and performance data
+            sequence_result = initialization_results.get("sequence", {})
             startup_record = {
                 "timestamp": time.time(),
                 "duration": initialization_results["duration_seconds"],
                 "steps": initialization_results["steps_completed"],
                 "agents_initialized": initialization_results["agents_initialized"],
+                "sequence": sequence_result.get("sequence", []),
+                "ollama_connection": sequence_result.get("ollama_connection"),
+                "all_completed": sequence_result.get("all_completed"),
                 "before_state": {
                     "resource_snapshot": asdict(before_state.resource_snapshot) if before_state.resource_snapshot else None,
                     "performance_snapshot": asdict(before_state.performance_snapshot) if before_state.performance_snapshot else None

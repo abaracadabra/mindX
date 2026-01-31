@@ -5576,6 +5576,18 @@
                     </div>
                 </div>
                 
+                <!-- Startup & core flow (startup_agent → mindXagent → Ollama) -->
+                <div class="control-section" id="mindxagent-startup-flow-section">
+                    <h3>Startup &amp; core flow</h3>
+                    <p class="section-hint">Actual steps from startup_agent and mindXagent interaction with Ollama (input/response).</p>
+                    <div id="mindxagent-startup-flow-display" class="status-display" style="margin-top: 10px;">
+                        <div id="mindxagent-startup-steps" class="startup-steps-list"></div>
+                        <div id="mindxagent-startup-ollama-io" class="startup-ollama-io" style="margin-top: 12px;"></div>
+                        <div id="mindxagent-startup-terminal-log" class="startup-terminal-log" style="margin-top: 12px; max-height: 200px; overflow-y: auto;"></div>
+                    </div>
+                    <button type="button" id="refresh-mindxagent-startup-btn" class="refresh-btn" style="margin-top: 8px;">Refresh startup flow</button>
+                </div>
+                
                 <!-- Ollama Integration Section -->
                 <div class="control-section">
                     <h3>Ollama Integration</h3>

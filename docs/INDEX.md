@@ -262,6 +262,8 @@ All tool documentation is organized in the `tools/` folder. Tools are now organi
 
 ### 🌐 API & Integration
 
+**Interactive API reference:** When the backend is running (default port 8000), **http://localhost:8000/docs** (FastAPI Swagger UI) shows all API endpoints and lets you try requests and inspect schemas—the best way to explore and audit API interactions.
+
 #### LLM Providers & External Intelligence
 
 **External Intelligence Agnostic Architecture**: mindX is designed to be external intelligence agnostic. The system does not depend on any specific external LLM provider until mindXagent replicates itself into a model. During this replication process, mindXagent makes decisions from a choice of THOT (Transferable Hyper-Optimized Tensors) processes, enabling the creation of sovereign AI models.

@@ -119,8 +119,10 @@ export const mindXContext: MindXSystemContext = {
     documentation: {
         index: "docs/INDEX.md - Comprehensive documentation index with 170+ files",
         keyDocs: [
+            "http://localhost:8000/docs - Interactive API reference (Swagger UI); best way to explore and test API interactions",
             "docs/INDEX.md - Complete documentation index",
             "docs/mindXagent.md - MindX Agent documentation",
+            "docs/AgenticPlace_Deep_Dive.md - AgenticPlace architecture and mindX integration",
             "docs/system_architecture_map.md - System architecture comprehensive map",
             "docs/MARKETING.md - Complete system overview",
             "docs/cognitive_economy.md - Cognitive economy and autonomous operations",

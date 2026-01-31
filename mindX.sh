@@ -110,6 +110,8 @@ if [[ -z "$TARGET_INSTALL_DIR_ARG" ]]; then
     log_setup_info "No target directory specified. Using current directory: $TARGET_INSTALL_DIR_ARG"
     # Enable interactive setup by default for default installation
     INTERACTIVE_SETUP_FLAG=true
+    # Start web interface by default when running ./mindX.sh from project directory
+    FRONTEND_FLAG=true
     log_setup_info "Default installation mode: Interactive setup enabled for API key configuration."
 fi
 
@@ -936,11 +938,21 @@ function setup_frontend_ui { # pragma: no cover
   log_setup_info "Setting up MindX Frontend UI files in '$MINDX_FRONTEND_UI_DIR_ABS'..."
   mkdir -p "$MINDX_FRONTEND_UI_DIR_ABS"
 
+  # Only copy from mindx_frontend_ui when source and destination differ (e.g. when installing to another dir)
+  FRONTEND_SRC_DIR="$PROJECT_ROOT/mindx_frontend_ui"
+  _src_canon="" _dst_canon=""
+  [ -d "$FRONTEND_SRC_DIR" ] && _src_canon=$(cd "$FRONTEND_SRC_DIR" && pwd -P 2>/dev/null)
+  [ -d "$MINDX_FRONTEND_UI_DIR_ABS" ] && _dst_canon=$(cd "$MINDX_FRONTEND_UI_DIR_ABS" && pwd -P 2>/dev/null)
+  FRONTEND_COPY_FROM_SOURCE=false
+  [ -n "$_src_canon" ] && [ -n "$_dst_canon" ] && [ "$_src_canon" != "$_dst_canon" ] && FRONTEND_COPY_FROM_SOURCE=true
+
   # Copy existing enhanced frontend files instead of generating basic ones
   # Priority: Current UI first, then backup, then fallback
-  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/index.html" ]; then
+  if [ "$FRONTEND_COPY_FROM_SOURCE" = true ] && [ -f "$PROJECT_ROOT/mindx_frontend_ui/index.html" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui/index.html" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied current enhanced index.html from mindx_frontend_ui"
+  elif [ -f "$MINDX_FRONTEND_UI_DIR_ABS/index.html" ]; then
+    log_setup_info "index.html already in place in mindx_frontend_ui"
   elif [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/index.html" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui_backup/index.html" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied enhanced index.html from backup"
@@ -990,9 +1002,11 @@ EOF_INDEX_HTML
 
   # Copy existing enhanced styles3.css if available
   # Priority: Current UI first, then backup, then fallback
-  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" ]; then
+  if [ "$FRONTEND_COPY_FROM_SOURCE" = true ] && [ -f "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied current enhanced styles3.css from mindx_frontend_ui"
+  elif [ -f "$MINDX_FRONTEND_UI_DIR_ABS/styles3.css" ]; then
+    log_setup_info "styles3.css already in place in mindx_frontend_ui"
   elif [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/styles3.css" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui_backup/styles3.css" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied enhanced styles3.css from backup"
@@ -1051,9 +1065,11 @@ EOF_STYLES_CSS
 
   # Copy existing enhanced app.js if available
   # Priority: Current UI first, then backup, then fallback
-  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/app.js" ]; then
+  if [ "$FRONTEND_COPY_FROM_SOURCE" = true ] && [ -f "$PROJECT_ROOT/mindx_frontend_ui/app.js" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui/app.js" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied current enhanced app.js from mindx_frontend_ui with full frontend-backend integration"
+  elif [ -f "$MINDX_FRONTEND_UI_DIR_ABS/app.js" ]; then
+    log_setup_info "app.js already in place in mindx_frontend_ui"
   elif [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/app.js" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui_backup/app.js" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied enhanced app.js from backup"
@@ -1128,9 +1144,11 @@ EOF_APP_JS
 
   # Copy existing package.json if available
   # Priority: Current UI first, then backup, then fallback
-  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/package.json" ]; then
+  if [ "$FRONTEND_COPY_FROM_SOURCE" = true ] && [ -f "$PROJECT_ROOT/mindx_frontend_ui/package.json" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui/package.json" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied current package.json from mindx_frontend_ui"
+  elif [ -f "$MINDX_FRONTEND_UI_DIR_ABS/package.json" ]; then
+    log_setup_info "package.json already in place in mindx_frontend_ui"
   elif [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/package.json" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui_backup/package.json" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied package.json from backup"
@@ -1155,9 +1173,11 @@ EOF_PACKAGE_JSON
 
   # Copy existing server.js if available
   # Priority: Current UI first, then backup, then fallback
-  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/server.js" ]; then
+  if [ "$FRONTEND_COPY_FROM_SOURCE" = true ] && [ -f "$PROJECT_ROOT/mindx_frontend_ui/server.js" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui/server.js" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied current server.js from mindx_frontend_ui"
+  elif [ -f "$MINDX_FRONTEND_UI_DIR_ABS/server.js" ]; then
+    log_setup_info "server.js already in place in mindx_frontend_ui"
   elif [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/server.js" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui_backup/server.js" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied server.js from backup"

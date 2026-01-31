@@ -52,10 +52,11 @@ class MindXagentTab extends TabComponent {
     async onActivate() {
         await super.onActivate();
 
-        // Load all data
+        // Load all data (including startup flow: startup_agent → mindXagent → Ollama)
         await Promise.all([
             this.loadStatus(),
             this.loadOllamaStatus(),
+            this.loadStartup(),
             this.loadConversation(),
             this.loadThinking(),
             this.loadActions(),
@@ -95,8 +96,38 @@ class MindXagentTab extends TabComponent {
         await Promise.all([
             this.loadStatus(),
             this.loadOllamaStatus(),
+            this.loadStartup(),
             this.loadConversation()
         ]);
+    }
+
+    /**
+     * Load startup flow (startup_agent → mindXagent → Ollama)
+     */
+    async loadStartup() {
+        try {
+            const data = await this.apiRequest('/mindxagent/startup');
+            this.updateStartupDisplay(data);
+        } catch (error) {
+            console.error('Failed to load startup flow:', error);
+        }
+    }
+
+    /**
+     * Update startup flow display (uses app.js updateMindXagentStartupDisplay if available)
+     */
+    updateStartupDisplay(data) {
+        if (typeof updateMindXagentStartupDisplay === 'function') {
+            updateMindXagentStartupDisplay(data);
+        } else {
+            const stepsEl = document.getElementById('mindxagent-startup-steps');
+            if (stepsEl && data && data.success && data.startup_sequence && data.startup_sequence.length) {
+                stepsEl.innerHTML = '<h4>Steps</h4><ul>' + data.startup_sequence.map(s => {
+                    const status = s.status === 'completed' ? '✅' : s.status === 'skipped' ? '⏭' : '⏳';
+                    return `<li>${status} ${s.name || ''}</li>`;
+                }).join('') + '</ul>';
+            }
+        }
     }
 
     /**

@@ -2,7 +2,9 @@
 
 **✅ PRODUCTION READY** - Fully Autonomous Self-Improving AI System
 
-MindX is a comprehensive autonomous AI framework that operates as a fully self-improving artificial intelligence system. With complete autonomous operation, safety controls, economic viability, and advanced audit capabilities, MindX represents a production-grade implementation of autonomous intelligence.
+MindX is a comprehensive autonomous AI framework that operates as a fully self-improving artificial intelligence system.
+
+**API reference:** When the backend is running (default port 8000), **http://localhost:8000/docs** provides the interactive FastAPI Swagger UI—the best way to explore and test API interactions (endpoints, request/response schemas, try-it-out). With complete autonomous operation, safety controls, economic viability, and advanced audit capabilities, MindX represents a production-grade implementation of autonomous intelligence.
 
 ## 🚀 Autonomous System Status
 

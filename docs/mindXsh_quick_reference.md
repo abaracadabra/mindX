@@ -80,7 +80,7 @@ kill $(cat /opt/mindx/data/pids/mindx_frontend.pid)
 ### **Services**
 - **Backend API:** http://localhost:8000
 - **Frontend UI:** http://localhost:3000
-- **API Docs:** http://localhost:8000/docs
+- **API Docs (Swagger UI):** http://localhost:8000/docs — interactive API reference; use it to browse endpoints, try requests, and inspect request/response schemas. Best way to explore API interactions.
 
 ### **Key Endpoints**
 - `GET /` - Root endpoint

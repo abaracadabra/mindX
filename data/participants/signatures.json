@@ -129,6 +129,13 @@
       "signature": "0xdd85140725f4ac8497a32d892722089c1b100fbd7031a84f84a91bf9c33b9ca9484bfdd086120afc3dc5c6c8a84474bf88b5206457618c5f642c9f6db4b3055f1b",
       "recovered_address": "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169",
       "timestamp": 1768941822.8577778
+    },
+    {
+      "is_valid": true,
+      "message": "mindX Challenge: login for 0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169 at 1769851505 (nonce: 4f5954aa)",
+      "signature": "0x324d7690e9e43b550910b10f65c0f056fa70d4114562bc21ff6d66c7ceff03fe35226f9340bf640222189671dff9842725ef7b04e251b9beecc3cae526a4771e1b",
+      "recovered_address": "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169",
+      "timestamp": 1769851534.2068677
     }
   ]
 }

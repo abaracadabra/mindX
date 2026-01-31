@@ -3617,6 +3617,84 @@ async def get_mindxagent_status():
         raise HTTPException(status_code=500, detail=f"Error getting status: {str(e)}")
 
 
+@app.get("/mindxagent/startup", summary="Get startup_agent and mindXagent startup flow (input, response, steps)")
+async def get_mindxagent_startup():
+    """
+    Return actual startup flow: startup_agent steps, Ollama connection input/response,
+    and mindXagent startup_info (from receive_startup_information). Used by mindXagent tab UI.
+    """
+    try:
+        from agents.core.mindXagent import MindXAgent
+        from pathlib import Path
+
+        result = {
+            "success": True,
+            "startup_info": None,
+            "startup_sequence": [],
+            "startup_record": None,
+            "terminal_log": {"log_exists": False, "last_lines": [], "total_lines": 0},
+            "ollama_input_response": None,
+        }
+
+        # 1. mindXagent.startup_info (what was received from startup_agent)
+        mindxagent = await MindXAgent.get_instance()
+        if mindxagent and getattr(mindxagent, "startup_info", None):
+            si = mindxagent.startup_info
+            result["startup_info"] = {
+                "ollama_connected": si.get("ollama_connected", False),
+                "ollama_base_url": si.get("ollama_base_url"),
+                "ollama_models": si.get("ollama_models", [])[:20],
+                "models_count": si.get("models_count", 0),
+                "startup_timestamp": si.get("startup_timestamp"),
+                "terminal_log_path": si.get("terminal_log_path"),
+            }
+            if si.get("terminal_log"):
+                tl = si["terminal_log"]
+                result["startup_info"]["terminal_log_summary"] = {
+                    "log_exists": tl.get("log_exists"),
+                    "errors_count": tl.get("errors_count", 0),
+                    "warnings_count": tl.get("warnings_count", 0),
+                }
+
+        # 2. startup_agent: sequence, last record, ollama result (from mastermind lifecycle)
+        if command_handler and getattr(command_handler, "mastermind", None):
+            mastermind = command_handler.mastermind
+            lifecycle = getattr(mastermind, "lifecycle_agents", {}) or {}
+            startup_agent = lifecycle.get("startup")
+            if startup_agent:
+                result["startup_sequence"] = getattr(startup_agent, "startup_sequence", []) or []
+                startup_log = getattr(startup_agent, "startup_log", []) or []
+                if startup_log:
+                    last_record = startup_log[-1]
+                    result["startup_record"] = last_record
+                    # Ollama input/response from startup flow (from startup_agent → mindXagent)
+                    ollama_conn = last_record.get("ollama_connection")
+                    if ollama_conn is not None:
+                        result["ollama_input_response"] = {
+                            "connected": ollama_conn.get("connected", False),
+                            "base_url": ollama_conn.get("base_url"),
+                            "models": ollama_conn.get("models", [])[:20],
+                            "models_count": ollama_conn.get("models_count", 0),
+                            "reason": ollama_conn.get("reason"),
+                        }
+        # 3. terminal_startup.log last lines
+        startup_log_path = PROJECT_ROOT / "data" / "logs" / "terminal_startup.log"
+        if startup_log_path.exists():
+            result["terminal_log"]["log_exists"] = True
+            try:
+                with open(startup_log_path, "r", encoding="utf-8", errors="ignore") as f:
+                    lines = f.readlines()
+                    result["terminal_log"]["total_lines"] = len(lines)
+                    result["terminal_log"]["last_lines"] = lines[-40:] if len(lines) > 40 else lines
+            except Exception as e:
+                logger.warning(f"Could not read terminal_startup.log: {e}")
+
+        return result
+    except Exception as e:
+        logger.error(f"Error getting mindXagent startup: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/mindxagent/ollama/status", summary="Get mindXagent Ollama connection and inference status")
 async def get_mindxagent_ollama_status():
     """Get detailed Ollama connection status, available models, and inference metrics."""
