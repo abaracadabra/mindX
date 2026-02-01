@@ -88,6 +88,33 @@ class Config:
                     }
                 }
                 self._deep_merge(self.config_data, provider_config)
+                # Expose Ollama connection from models/ollama.yaml so api/ollama and llm_factory can use config.get("llm.ollama.base_url") etc.
+                if provider_name == "ollama":
+                    if "llm" not in self.config_data:
+                        self.config_data["llm"] = {}
+                    if "ollama" not in self.config_data["llm"]:
+                        self.config_data["llm"]["ollama"] = {}
+                    ollama_flat = self.config_data["llm"]["ollama"]
+                    if model_data.get("base_url") and not ollama_flat.get("base_url"):
+                        ollama_flat["base_url"] = model_data["base_url"]
+                    if model_data.get("fallback_url") and not ollama_flat.get("fallback_url"):
+                        ollama_flat["fallback_url"] = model_data["fallback_url"]
+                    gpu = model_data.get("gpu") or {}
+                    if gpu.get("server_host") and not ollama_flat.get("host"):
+                        ollama_flat["host"] = gpu["server_host"]
+                    if gpu.get("server_port") is not None and ollama_flat.get("port") is None:
+                        ollama_flat["port"] = gpu["server_port"]
+                    # Ensure host/port from base_url if not in gpu
+                    if not ollama_flat.get("host") and model_data.get("base_url"):
+                        try:
+                            from urllib.parse import urlparse
+                            p = urlparse(model_data["base_url"])
+                            if p.hostname:
+                                ollama_flat["host"] = p.hostname
+                            if p.port is not None:
+                                ollama_flat["port"] = p.port
+                        except Exception:
+                            pass
 
     def _deep_merge(self, source, destination):
         """Recursively merges dictionary `destination` into `source`."""

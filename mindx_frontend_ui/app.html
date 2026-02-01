@@ -6263,23 +6263,26 @@
                 
                 <div class="admin-subsection">
                     <h3>Interaction Testing</h3>
+                    <p class="ollama-admin-hint">Test the Ollama connection above, then pick a model and send a prompt. Response appears below.</p>
                     <div class="ollama-interaction-panel">
                         <div class="interaction-controls">
-                            <select id="ollama-model-select" class="model-select">
+                            <label for="ollama-admin-model-select">Model:</label>
+                            <select id="ollama-admin-model-select" class="model-select" title="Select an Ollama model (from /api/tags)">
                                 <option value="">Loading models...</option>
                             </select>
-                            <button id="ollama-send-interaction" class="action-btn primary">Send</button>
+                            <button id="ollama-admin-send" class="action-btn primary" type="button">Send</button>
+                            <button id="ollama-admin-reload-models" class="action-btn secondary" type="button" title="Reload model list">Reload models</button>
                         </div>
                         <div class="interaction-input-group">
-                            <label for="ollama-interaction-input">Input Prompt:</label>
-                            <textarea id="ollama-interaction-input" class="interaction-input" rows="4" placeholder="Enter your prompt here..."></textarea>
+                            <label for="ollama-admin-input">Prompt:</label>
+                            <textarea id="ollama-admin-input" class="interaction-input" rows="4" placeholder="e.g. Why is the sky blue? or Write a hello world in Python"></textarea>
                         </div>
                         <div class="interaction-output-group">
-                            <label for="ollama-response-output">Response:</label>
-                            <textarea id="ollama-response-output" class="interaction-output" rows="8" readonly></textarea>
+                            <label for="ollama-admin-response">Response:</label>
+                            <textarea id="ollama-admin-response" class="interaction-output" rows="8" readonly placeholder="Response will appear here after you send."></textarea>
                         </div>
-                        <div id="ollama-interaction-history" class="interaction-history">
-                            <h5>Recent Interactions</h5>
+                        <div id="ollama-admin-history" class="interaction-history">
+                            <h5>Recent (prompt → response)</h5>
                         </div>
                     </div>
                 </div>

@@ -98,12 +98,15 @@ class OllamaAPI:
                 else:
                     self.base_url = f"http://{config_host}:{config_port}"
         
-        # Store fallback URL for connection failures
+        # Store fallback URL for connection failures (localhost is good policy)
         self.fallback_url = self.config.get("llm.ollama.fallback_url", "http://localhost:11434")
         self.using_fallback = False
-        
+        # Primary URL we try first (e.g. 10.0.0.155:18080); kept so UI can show "Trying primary…"
+        self.primary_url = None  # set below after normalizing base_url
+
         # Ensure base_url doesn't end with /api
         self.base_url = self.base_url.rstrip('/').replace('/api', '')
+        self.primary_url = self.base_url
         self.api_url = f"{self.base_url}/api"
         
         self.rate_limits = rate_limits or OllamaRateLimits()
@@ -381,6 +384,7 @@ class OllamaAPI:
             "last_request_time": self.metrics.last_request_time.isoformat() if self.metrics.last_request_time else None,
             "available_models": self.metrics.available_models,
             "base_url": self.base_url,
+            "primary_url": getattr(self, 'primary_url', None) or self.base_url,
             "fallback_url": getattr(self, 'fallback_url', None),
             "using_fallback": getattr(self, 'using_fallback', False),
             "rate_limits": {
@@ -422,14 +426,21 @@ class OllamaAPI:
         return False
     
     async def test_connection(self, try_fallback: bool = True) -> Dict[str, Any]:
-        """Test API connection with detailed feedback and optional fallback"""
+        """Test API connection with detailed feedback and optional fallback (primary then localhost)."""
         result = await self._test_single_connection()
-        
-        # If primary failed and fallback is enabled, try fallback
+        result["primary_url"] = self.primary_url
+        result["fallback_url"] = self.fallback_url
+
+        # If primary failed and fallback is enabled, try fallback (e.g. localhost:11434)
         if not result.get("success") and try_fallback and not self.using_fallback:
-            logger.warning(f"Primary Ollama server ({self.base_url}) unreachable, trying fallback...")
+            logger.warning(f"Primary Ollama server ({self.primary_url}) unreachable, trying fallback {self.fallback_url}...")
             if self.switch_to_fallback():
                 fallback_result = await self._test_single_connection()
+                fallback_result["primary_url"] = self.primary_url
+                fallback_result["fallback_url"] = self.fallback_url
+                fallback_result["primary_request_sent"] = result.get("request_sent", "")
+                fallback_result["primary_response_preview"] = result.get("response_preview") or result.get("error", "")
+                fallback_result["primary_response_status"] = result.get("response_status", 0)
                 if fallback_result.get("success"):
                     fallback_result["switched_to_fallback"] = True
                     fallback_result["primary_error"] = result.get("error")
@@ -439,7 +450,6 @@ class OllamaAPI:
                     self.switch_to_primary()
                     result["fallback_also_failed"] = True
                     result["fallback_error"] = fallback_result.get("error")
-        
         return result
     
     async def _test_single_connection(self) -> Dict[str, Any]:
@@ -448,53 +458,91 @@ class OllamaAPI:
             session = await self._get_session()
             
             try:
+                request_sent = f"GET {self.api_url}/tags"
                 async with session.get(f"{self.api_url}/tags", timeout=aiohttp.ClientTimeout(total=5)) as response:
+                    resp_status = response.status
                     if response.status == 200:
                         data = await response.json()
                         models = data.get("models", [])
+                        resp_preview = f"{resp_status} OK, {len(models)} model(s)"
                         return {
                             "success": True,
                             "message": f"Successfully connected to Ollama at {self.base_url}",
                             "model_count": len(models),
                             "base_url": self.base_url,
+                            "primary_url": getattr(self, "primary_url", None) or self.base_url,
+                            "fallback_url": getattr(self, "fallback_url", None),
                             "using_fallback": self.using_fallback,
-                            "status_code": response.status
+                            "status_code": resp_status,
+                            "request_sent": request_sent,
+                            "response_status": resp_status,
+                            "response_preview": resp_preview,
                         }
                     else:
                         error_text = await response.text()
+                        resp_preview = (error_text[:300] + "…") if len(error_text) > 300 else error_text
                         return {
                             "success": False,
                             "error": f"Server returned status {response.status}: {error_text[:200]}",
                             "base_url": self.base_url,
-                            "status_code": response.status
+                            "primary_url": getattr(self, "primary_url", None) or self.base_url,
+                            "fallback_url": getattr(self, "fallback_url", None),
+                            "status_code": response.status,
+                            "request_sent": request_sent,
+                            "response_status": response.status,
+                            "response_preview": resp_preview or f"HTTP {response.status}",
                         }
             except asyncio.TimeoutError:
+                request_sent = f"GET {self.api_url}/tags"
                 return {
                     "success": False,
                     "error": f"Connection timeout: Ollama server at {self.base_url} did not respond within 5 seconds",
                     "base_url": self.base_url,
-                    "timeout": True
+                    "primary_url": getattr(self, "primary_url", None) or self.base_url,
+                    "fallback_url": getattr(self, "fallback_url", None),
+                    "timeout": True,
+                    "request_sent": request_sent,
+                    "response_status": 0,
+                    "response_preview": "Timeout (no response in 5s)",
                 }
             except aiohttp.ClientConnectorError as e:
+                request_sent = f"GET {self.api_url}/tags"
                 return {
                     "success": False,
                     "error": f"Cannot connect to Ollama server at {self.base_url}. Error: {str(e)}",
                     "base_url": self.base_url,
-                    "connection_error": True
+                    "primary_url": getattr(self, "primary_url", None) or self.base_url,
+                    "fallback_url": getattr(self, "fallback_url", None),
+                    "connection_error": True,
+                    "request_sent": request_sent,
+                    "response_status": 0,
+                    "response_preview": str(e),
                 }
             except aiohttp.ClientError as e:
+                request_sent = f"GET {self.api_url}/tags"
                 return {
                     "success": False,
                     "error": f"Connection error: {str(e)}",
                     "base_url": self.base_url,
-                    "client_error": True
+                    "primary_url": getattr(self, "primary_url", None) or self.base_url,
+                    "fallback_url": getattr(self, "fallback_url", None),
+                    "client_error": True,
+                    "request_sent": request_sent,
+                    "response_status": 0,
+                    "response_preview": str(e),
                 }
         except Exception as e:
             logger.error(f"Error testing Ollama connection: {e}", exc_info=True)
+            request_sent = f"GET {getattr(self, 'api_url', self.base_url + '/api')}/tags"
             return {
                 "success": False,
                 "error": f"Unexpected error: {str(e)}",
-                "base_url": self.base_url
+                "base_url": self.base_url,
+                "primary_url": getattr(self, "primary_url", None) or self.base_url,
+                "fallback_url": getattr(self, "fallback_url", None),
+                "request_sent": request_sent,
+                "response_status": 0,
+                "response_preview": str(e),
             }
     
     async def shutdown(self):

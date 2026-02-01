@@ -91,9 +91,9 @@ async def test_provider_api_key(provider: str):
 
 @router.get("/ollama/models", summary="List available Ollama models")
 async def list_ollama_models(
-    base_url: Optional[str] = Query(None, description="Ollama server base URL (e.g., http://10.0.0.155:108080)"),
+    base_url: Optional[str] = Query(None, description="Ollama server base URL (e.g., http://10.0.0.155:18080)"),
     host: Optional[str] = Query(None, description="Ollama server host (e.g., 10.0.0.155)"),
-    port: Optional[int] = Query(None, description="Ollama server port (e.g., 108080)")
+    port: Optional[int] = Query(None, description="Ollama server port (e.g., 18080)")
 ):
     """
     List all available models from Ollama server.

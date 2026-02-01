@@ -58,5 +58,5 @@
     "max_repeated_errors": 5,
     "circuit_breaker_threshold": 3
   },
-  "default_provider_preference_order": ["ollama", "grok", "mistral", "gemini"]
+  "default_provider_preference_order": ["gemini", "mistral", "grok", "ollama"]
 }

@@ -1806,6 +1806,29 @@ body.autonomous-mode .tab-btn.active {
     margin-bottom: var(--spacing-lg);
 }
 
+.ollama-admin-hint {
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+    margin: 0 0 var(--spacing-md);
+}
+
+.ollama-interaction-panel .interaction-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.ollama-interaction-panel .interaction-controls label {
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+}
+
+.ollama-interaction-panel .model-select {
+    min-width: 200px;
+}
+
 .admin-controls-inline {
     display: flex;
     gap: var(--spacing-md);
@@ -1871,6 +1894,32 @@ body.autonomous-mode .tab-btn.active {
 .connection-status-card.disconnected {
     border-color: var(--corp-red);
     box-shadow: 0 0 10px rgba(255, 71, 87, 0.2);
+}
+
+.connection-status-card.testing {
+    border-color: var(--corp-yellow, #ffc107);
+    box-shadow: 0 0 10px rgba(255, 193, 7, 0.25);
+}
+
+.status-dot.testing {
+    background: var(--corp-yellow, #ffc107);
+    box-shadow: 0 0 8px var(--corp-yellow, #ffc107);
+    animation: pulse 1.2s ease-in-out infinite;
+}
+
+.status-item.request-response .status-value,
+.status-value.mono {
+    font-family: var(--font-mono, 'Share Tech Mono', monospace);
+    font-size: 0.9em;
+    word-break: break-all;
+}
+
+.connection-detail-line {
+    margin: 4px 0;
+    font-size: 0.9em;
+}
+.connection-detail-line.error {
+    color: var(--corp-red);
 }
 
 .status-indicator {

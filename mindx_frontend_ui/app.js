@@ -2027,10 +2027,15 @@ document.addEventListener('DOMContentLoaded', () => {
             clearTimeout(timeoutId);
             
             if (!response.ok) {
-                if (response.status === 503) {
-                    throw new Error('Service temporarily unavailable. MindX may still be initializing.');
-                }
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                let errMsg = `HTTP ${response.status}: ${response.statusText}`;
+                try {
+                    const errBody = await response.json();
+                    const detail = errBody.detail || errBody.message || errBody.error;
+                    if (detail) errMsg = typeof detail === 'string' ? detail : (detail.msg || detail.message || JSON.stringify(detail));
+                } catch (_) { /* ignore */ }
+                const e = new Error(errMsg);
+                if (response.status === 503) e.message = 'Service temporarily unavailable. MindX may still be initializing.';
+                throw e;
             }
             
             const result = await response.json();
@@ -5447,27 +5452,273 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Admin Tab Functions
     function initializeAdminTab() {
-        // Restricted admin functions - disabled for regular users
-        restartSystemBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            addLog('Restart System: Access denied - Admin privileges required', 'WARNING');
-            showResponse('Access denied: Admin privileges required for system restart');
+        // Restricted admin functions - disabled for regular users (guard so missing elements don't block Ollama wiring)
+        if (restartSystemBtn) {
+            restartSystemBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                addLog('Restart System: Access denied - Admin privileges required', 'WARNING');
+                showResponse('Access denied: Admin privileges required for system restart');
+            });
+        }
+        if (backupSystemBtn) {
+            backupSystemBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                addLog('Backup System: Access denied - Admin privileges required', 'WARNING');
+                showResponse('Access denied: Admin privileges required for system backup');
+            });
+        }
+        if (updateConfigBtn) {
+            updateConfigBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                addLog('Update Config: Access denied - Admin privileges required', 'WARNING');
+                showResponse('Access denied: Admin privileges required for config updates');
+            });
+        }
+        if (exportLogsBtn) {
+            exportLogsBtn.addEventListener('click', showExportFormatModal);
+        }
+
+        // Admin tab Ollama – wire Reload models and Send (Test is handled by delegation below so it always works)
+        const adminOllamaReloadBtn = document.getElementById('ollama-admin-reload-models');
+        if (adminOllamaReloadBtn) adminOllamaReloadBtn.addEventListener('click', loadOllamaAdminModels);
+        const adminOllamaSendBtn = document.getElementById('ollama-admin-send');
+        if (adminOllamaSendBtn) adminOllamaSendBtn.addEventListener('click', sendOllamaAdminInteraction);
+        // Load models once when Admin tab is set up so dropdown is ready
+        loadOllamaAdminModels().catch(() => {});
+    }
+
+    // Event delegation for Admin Ollama Test so it works even if the button wasn't in DOM at init (e.g. lazy tab)
+    document.body.addEventListener('click', function adminOllamaTestDelegation(e) {
+        const btn = e.target.id === 'ollama-test-connection' ? e.target : (e.target.closest && e.target.closest('#ollama-test-connection'));
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof testOllamaConnectionAdmin === 'function') testOllamaConnectionAdmin();
+    });
+
+    function updateOllamaAdminStatusCard(status) {
+        const statusContainer = document.getElementById('ollama-connection-status');
+        if (!statusContainer) return;
+        const escapeHtml = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const isTesting = status?.testing === true;
+        const conn = status?.connection || {};
+        const isConnected = !isTesting && (status?.success ?? status?.connected ?? conn?.connected ?? false);
+        const baseUrl = status?.base_url ?? conn?.base_url ?? '—';
+        const primaryUrl = status?.primary_url ?? conn?.primary_url ?? '10.0.0.155:18080';
+        const fallbackUrl = status?.fallback_url ?? conn?.fallback_url ?? 'localhost:11434';
+        const modelCount = status?.model_count ?? conn?.model_count ?? 0;
+        const usingFallback = status?.using_fallback ?? conn?.using_fallback ?? false;
+        const errorHtml = status?.error ? `<div class="status-item error"><span class="status-label">Error:</span><span class="status-value">${escapeHtml(String(status.error))}</span></div>` : '';
+        const messageHtml = status?.message ? `<div class="status-item"><span class="status-label">Message:</span><span class="status-value">${escapeHtml(String(status.message))}</span></div>` : '';
+        let cardClass = 'connection-status-card ';
+        let dotClass = 'status-dot ';
+        let statusText = 'Disconnected';
+        if (isTesting) {
+            cardClass += 'testing';
+            dotClass += 'testing';
+            statusText = 'Testing…';
+        } else {
+            cardClass += isConnected ? 'connected' : 'disconnected';
+            dotClass += isConnected ? 'active' : 'inactive';
+            statusText = isConnected ? 'Connected' : 'Disconnected';
+        }
+        const primaryDisplay = escapeHtml(String(primaryUrl).replace(/^https?:\/\//, ''));
+        const fallbackDisplay = escapeHtml(String(fallbackUrl).replace(/^https?:\/\//, ''));
+        const baseDisplay = escapeHtml(String(baseUrl).replace(/^https?:\/\//, ''));
+        const requestSent = status?.request_sent ?? conn?.request_sent ?? '';
+        const responseStatus = status?.response_status ?? conn?.response_status ?? status?.status_code ?? '';
+        const responsePreview = status?.response_preview ?? conn?.response_preview ?? '';
+        const primaryRequest = status?.primary_request_sent ?? conn?.primary_request_sent ?? '';
+        const primaryResponse = status?.primary_response_preview ?? conn?.primary_response_preview ?? '';
+        const primaryRespStatus = status?.primary_response_status ?? conn?.primary_response_status ?? '';
+        const requestBlock = requestSent ? `<div class="status-item request-response"><span class="status-label">Request:</span><span class="status-value mono">${escapeHtml(requestSent)}</span></div>` : '';
+        const responseBlock = (responseStatus !== '' || responsePreview) ? `<div class="status-item request-response"><span class="status-label">Response:</span><span class="status-value mono">${responseStatus !== '' ? escapeHtml(String(responseStatus)) + ' — ' : ''}${escapeHtml(String(responsePreview))}</span></div>` : '';
+        const primaryBlock = (primaryRequest || primaryResponse) ? `<div class="status-item request-response primary-attempt"><span class="status-label">Primary attempt:</span><span class="status-value mono">${escapeHtml(primaryRequest || '—')} → ${primaryRespStatus !== '' ? primaryRespStatus + ' ' : ''}${escapeHtml(String(primaryResponse))}</span></div>` : '';
+        statusContainer.innerHTML = `
+            <div class="${cardClass}">
+                <div class="status-indicator">
+                    <span class="${dotClass}"></span>
+                    <span class="status-text">${statusText}</span>
+                </div>
+                <div class="status-details">
+                    <div class="status-item">
+                        <span class="status-label">Primary (try first):</span>
+                        <span class="status-value">${primaryDisplay}</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Fallback (localhost):</span>
+                        <span class="status-value">${fallbackDisplay}</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">${status?.error ? 'Backend' : 'Connected at'} URL:</span>
+                        <span class="status-value">${baseDisplay}</span>
+                    </div>
+                    ${!isTesting ? `<div class="status-item"><span class="status-label">Models:</span><span class="status-value">${modelCount}</span></div>` : ''}
+                    ${usingFallback ? '<div class="status-item warning"><span class="status-label">⚠️ Using Fallback</span></div>' : ''}
+                    ${primaryBlock}
+                    ${requestBlock}
+                    ${responseBlock}
+                    ${messageHtml}
+                    ${errorHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    async function testOllamaConnectionAdmin() {
+        const testBtn = document.getElementById('ollama-test-connection');
+        const originalText = testBtn?.textContent;
+        if (testBtn) {
+            testBtn.disabled = true;
+            testBtn.textContent = 'Testing…';
+        }
+        updateOllamaAdminStatusCard({
+            testing: true,
+            primary_url: 'http://10.0.0.155:18080',
+            fallback_url: 'http://localhost:11434',
+            message: 'Trying 10.0.0.155:18080… then localhost:11434 if needed'
         });
-        
-        backupSystemBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            addLog('Backup System: Access denied - Admin privileges required', 'WARNING');
-            showResponse('Access denied: Admin privileges required for system backup');
-        });
-        
-        updateConfigBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            addLog('Update Config: Access denied - Admin privileges required', 'WARNING');
-            showResponse('Access denied: Admin privileges required for config updates');
-        });
-        
-        // Export logs is available to all users - opens format selection modal
-        exportLogsBtn.addEventListener('click', showExportFormatModal);
+        const baseUrl = (typeof apiUrl !== 'undefined' ? apiUrl : (window.API_CONFIG && window.API_CONFIG.baseUrl) || '') || '';
+        try {
+            const response = await fetch(`${baseUrl}/api/admin/ollama/test`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ try_fallback: true })
+            });
+            const data = await response.json().catch(() => ({}));
+            const result = data.test_result;
+            if (!response.ok) {
+                const err = (typeof data.detail === 'string' ? data.detail : data.error || data.message) || `HTTP ${response.status}`;
+                updateOllamaAdminStatusCard({ success: false, error: err });
+                addLog(`Ollama test failed: ${err}`, 'ERROR');
+            } else {
+                updateOllamaAdminStatusCard(result != null ? result : { success: false, error: 'No result from server' });
+                if (result && result.success) {
+                    addLog(`Ollama connected · ${result.model_count ?? 0} model(s)`, 'SUCCESS');
+                } else {
+                    const err = (result && (result.error || result.message)) || data.detail || 'Connection failed';
+                    addLog(`Ollama test failed: ${err}`, 'ERROR');
+                }
+            }
+        } catch (error) {
+            const errMsg = error && (error.message || String(error));
+            updateOllamaAdminStatusCard({ success: false, error: errMsg });
+            addLog(`Ollama test error: ${errMsg}`, 'ERROR');
+        } finally {
+            if (testBtn) {
+                testBtn.disabled = false;
+                testBtn.textContent = originalText || 'Test Connection';
+            }
+        }
+    }
+
+    async function loadOllamaAdminModels() {
+        const select = document.getElementById('ollama-admin-model-select');
+        const reloadBtn = document.getElementById('ollama-admin-reload-models');
+        if (!select) return;
+        const baseUrl = (typeof apiUrl !== 'undefined' ? apiUrl : (window.API_CONFIG && window.API_CONFIG.baseUrl) || '') || '';
+        if (reloadBtn) { reloadBtn.disabled = true; reloadBtn.textContent = 'Loading…'; }
+        try {
+            const response = await fetch(`${baseUrl}/api/admin/ollama/models`);
+            const data = await response.json().catch(() => ({}));
+            const models = data.models || [];
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">Select model…</option>';
+            models.forEach(m => {
+                const name = typeof m === 'string' ? m : (m.name || m.model || '');
+                if (!name) return;
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                if (name === currentVal) opt.selected = true;
+                select.appendChild(opt);
+            });
+            if (models.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = 'No models – Test connection first';
+                opt.disabled = true;
+                select.appendChild(opt);
+            }
+            addLog(`Ollama: ${models.length} model(s) loaded`, models.length ? 'SUCCESS' : 'WARNING');
+        } catch (e) {
+            addLog(`Ollama models failed: ${e.message}`, 'ERROR');
+            select.innerHTML = '<option value="">Failed to load – check backend</option>';
+        } finally {
+            if (reloadBtn) { reloadBtn.disabled = false; reloadBtn.textContent = 'Reload models'; }
+        }
+    }
+
+    async function sendOllamaAdminInteraction() {
+        const inputEl = document.getElementById('ollama-admin-input');
+        const modelSelect = document.getElementById('ollama-admin-model-select');
+        const responseEl = document.getElementById('ollama-admin-response');
+        const sendBtn = document.getElementById('ollama-admin-send');
+        const historyEl = document.getElementById('ollama-admin-history');
+        if (!inputEl || !modelSelect) return;
+        const prompt = inputEl.value.trim();
+        if (!prompt) {
+            addLog('Enter a prompt in the text area', 'WARNING');
+            if (responseEl) responseEl.value = 'Enter a prompt and click Send.';
+            return;
+        }
+        const model = modelSelect.value;
+        if (!model) {
+            addLog('Select a model (use Reload models if empty)', 'WARNING');
+            if (responseEl) responseEl.value = 'Select a model from the dropdown, then send.';
+            return;
+        }
+        if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending…'; }
+        if (responseEl) responseEl.value = 'Sending to Ollama…';
+        const baseUrl = (typeof apiUrl !== 'undefined' ? apiUrl : (window.API_CONFIG && window.API_CONFIG.baseUrl) || '') || '';
+        try {
+            const response = await fetch(`${baseUrl}/api/admin/ollama/interact`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: prompt,
+                    model: model,
+                    use_chat: true,
+                    temperature: 0.7,
+                    max_tokens: 2048
+                })
+            });
+            const data = await response.json().catch(() => ({}));
+            let text = data.response;
+            let err = data.error || (data.detail && (typeof data.detail === 'string' ? data.detail : data.detail.message || JSON.stringify(data.detail)));
+            if (typeof text === 'string' && text.trim().startsWith('{')) {
+                try {
+                    const parsed = JSON.parse(text);
+                    if (parsed.error || parsed.message) {
+                        err = err || parsed.message || parsed.error;
+                        text = null;
+                    }
+                } catch (_) {}
+            }
+            if (response.ok && data.success && text != null && typeof text === 'string') {
+                if (responseEl) responseEl.value = String(text).trim();
+                addLog('Ollama response received', 'SUCCESS');
+                if (historyEl) {
+                    const esc = (s) => (s == null ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
+                    const entry = document.createElement('div');
+                    entry.className = 'interaction-history-entry';
+                    entry.innerHTML = `<div class="interaction-prompt"><strong>Prompt:</strong> ${esc(prompt.slice(0, 200))}${prompt.length > 200 ? '…' : ''}</div><div class="interaction-response"><strong>Response:</strong> ${esc(String(text).slice(0, 500))}${String(text).length > 500 ? '…' : ''}</div><div class="interaction-timestamp">${new Date().toLocaleString()}</div>`;
+                    const h5 = historyEl.querySelector('h5');
+                    if (h5 && h5.nextSibling) historyEl.insertBefore(entry, h5.nextSibling);
+                    else historyEl.appendChild(entry);
+                }
+            } else {
+                const msg = err || text || `HTTP ${response.status}`;
+                if (responseEl) responseEl.value = `Error: ${msg}`;
+                addLog(`Ollama interaction failed: ${msg}`, 'ERROR');
+            }
+        } catch (e) {
+            const msg = e.message || String(e);
+            if (responseEl) responseEl.value = `Error: ${msg}`;
+            addLog(`Ollama send failed: ${msg}`, 'ERROR');
+        } finally {
+            if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send'; }
+        }
     }
 
     async function loadAdminData() {
@@ -5900,34 +6151,64 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Test Ollama connection using api/ollama (backend /api/llm/ollama/connection → create_ollama_api + test_connection)
     async function testOllamaConnection() {
+        const method = document.getElementById('ollama-config-method').value;
+        let baseUrl = null;
+        if (method === 'base-url') {
+            baseUrl = (document.getElementById('ollama-base-url').value || '').trim() || 'http://localhost:11434';
+        } else {
+            const host = (document.getElementById('ollama-host').value || '').trim() || 'localhost';
+            const port = (document.getElementById('ollama-port').value || '').trim() || '11434';
+            baseUrl = `http://${host}:${port}`;
+        }
+
+        const testBtn = document.getElementById('ollama-test-connection-btn');
+        const quickBtn = document.getElementById('ollama-quick-test-btn');
+        const setButtonsTesting = (testing) => {
+            [testBtn, quickBtn].forEach(btn => {
+                if (!btn) return;
+                btn.disabled = testing;
+                btn.textContent = testing ? 'Testing…' : (btn === quickBtn ? 'Quick Test' : 'Test Connection');
+            });
+        };
+
+        // Show banner immediately with "Testing..." so user sees feedback
+        showOllamaConnectionBannerTesting(baseUrl);
+        setButtonsTesting(true);
+        addLog(`Testing Ollama connection to ${baseUrl}…`, 'INFO');
+
         try {
-            const method = document.getElementById('ollama-config-method').value;
-            let baseUrl = null;
-            
-            if (method === 'base-url') {
-                baseUrl = document.getElementById('ollama-base-url').value;
-            } else {
-                const host = document.getElementById('ollama-host').value;
-                const port = document.getElementById('ollama-port').value;
-                baseUrl = `http://${host}:${port}`;
-            }
-            
-            addLog(`Testing Ollama connection to ${baseUrl}...`, 'INFO');
             const result = await sendRequest(`/api/llm/ollama/connection?base_url=${encodeURIComponent(baseUrl)}`);
-            
+            setButtonsTesting(false);
             if (result.success) {
                 addLog('Ollama connection successful!', 'SUCCESS');
                 updateOllamaConnectionBanner(true, baseUrl, result);
-                // Refresh provider list and prioritize Ollama
                 await refreshAndPrioritizeOllama();
             } else {
                 addLog('Ollama connection failed', 'ERROR');
                 updateOllamaConnectionBanner(false, baseUrl, result);
             }
         } catch (error) {
+            setButtonsTesting(false);
             addLog(`Failed to test Ollama: ${error.message}`, 'ERROR');
-            updateOllamaConnectionBanner(false, null, { error: error.message });
+            updateOllamaConnectionBanner(false, baseUrl, { error: error.message });
         }
+    }
+
+    function showOllamaConnectionBannerTesting(baseUrl) {
+        const banner = document.getElementById('ollama-connection-banner');
+        const icon = document.getElementById('ollama-connection-icon');
+        const statusText = document.getElementById('ollama-connection-status-text');
+        const details = document.getElementById('ollama-connection-details');
+        if (!banner || !icon || !statusText || !details) return;
+        banner.style.display = 'block';
+        banner.style.background = 'rgba(255, 193, 7, 0.12)';
+        banner.style.borderLeftColor = 'var(--corp-yellow, #ffc107)';
+        icon.textContent = '⏳';
+        statusText.textContent = 'Testing connection…';
+        details.textContent = baseUrl
+            ? `Trying ${baseUrl.replace(/^https?:\/\//, '')}. Policy: primary 10.0.0.155:18080, fallback localhost:11434`
+            : 'Trying 10.0.0.155:18080… then localhost:11434 if needed';
+        banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     
     async function saveOllamaConfig() {
@@ -6031,24 +6312,42 @@ document.addEventListener('DOMContentLoaded', () => {
         const icon = document.getElementById('ollama-connection-icon');
         const statusText = document.getElementById('ollama-connection-status-text');
         const details = document.getElementById('ollama-connection-details');
-        
-        if (!banner) return;
-        
+        if (!banner || !icon || !statusText || !details) return;
+
         banner.style.display = 'block';
-        
+        const displayUrl = baseUrl || (result && result.base_url) || '';
+        const esc = (s) => (s == null ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
+        const req = result && result.request_sent;
+        const respStatus = result && (result.response_status ?? result.status_code);
+        const respPreview = result && result.response_preview;
+        const primaryReq = result && result.primary_request_sent;
+        const primaryResp = result && result.primary_response_preview;
+        let detailsHtml = '';
+        if (primaryReq || primaryResp) detailsHtml += `<div class="connection-detail-line"><strong>Primary attempt:</strong> ${esc(primaryReq || '—')} → ${esc(primaryResp || '')}</div>`;
+        if (req) detailsHtml += `<div class="connection-detail-line"><strong>Request:</strong> ${esc(req)}</div>`;
+        if (respStatus !== undefined || respPreview) detailsHtml += `<div class="connection-detail-line"><strong>Response:</strong> ${respStatus !== undefined ? esc(String(respStatus)) + ' — ' : ''}${esc(respPreview || result?.error || '')}</div>`;
+
         if (connected) {
             icon.textContent = '🟢';
             statusText.textContent = 'Connected';
-            details.textContent = `Base URL: ${baseUrl}`;
+            const modelCount = result && typeof result.model_count === 'number';
+            const primary = (result && result.primary_url) ? result.primary_url.replace(/^https?:\/\//, '') : '10.0.0.155:18080';
+            const fallback = (result && result.fallback_url) ? result.fallback_url.replace(/^https?:\/\//, '') : 'localhost:11434';
+            detailsHtml += `<div class="connection-detail-line">${displayUrl.replace(/^https?:\/\//, '')} · ${modelCount ? result.model_count + ' model(s)' : 'OK'}. Primary: ${primary}, fallback: ${fallback}</div>`;
+            details.innerHTML = detailsHtml || 'OK';
             banner.style.background = 'rgba(0, 255, 136, 0.1)';
             banner.style.borderLeftColor = 'var(--corp-green)';
         } else {
             icon.textContent = '🔴';
-            statusText.textContent = 'Not Connected';
-            details.textContent = result.error || 'Connection failed';
+            statusText.textContent = 'Not connected';
+            const err = (result && (result.error || result.message)) || 'Connection failed';
+            if (!detailsHtml) detailsHtml = `<div class="connection-detail-line">${esc(err)}</div>`;
+            else detailsHtml += `<div class="connection-detail-line error">${esc(err)}</div>`;
+            details.innerHTML = detailsHtml;
             banner.style.background = 'rgba(255, 71, 87, 0.1)';
             banner.style.borderLeftColor = 'var(--corp-red)';
         }
+        banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     
     async function loadProvidersIntoDropdown() {

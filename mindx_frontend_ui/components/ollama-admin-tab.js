@@ -3,11 +3,10 @@
  * 
  * Professional admin interface for Ollama connection management, diagnostics,
  * and interaction testing. Supports multiple agents connecting to Ollama.
+ * Loaded as classic script; Test Connection is wired in app.js for reliable feedback.
  */
 
-import { TabComponent } from './tab-component.js';
-
-export class OllamaAdminTab extends TabComponent {
+class OllamaAdminTab extends TabComponent {
     constructor() {
         super('ollama-admin');
         this.logLevel = 'INFO'; // Default log level
@@ -17,6 +16,45 @@ export class OllamaAdminTab extends TabComponent {
         this.connectionStatus = null;
         this.metrics = null;
         this.logs = [];
+    }
+
+    /**
+     * Base URL for API requests (mindX backend). Uses same config as rest of app.
+     */
+    getApiBaseUrl() {
+        if (typeof window !== 'undefined' && window.API_CONFIG && window.API_CONFIG.baseUrl) {
+            return window.API_CONFIG.baseUrl.replace(/\/$/, '');
+        }
+        return '';
+    }
+
+    /**
+     * Fetch from admin Ollama API (backend at API_CONFIG.baseUrl).
+     * @param {string} endpoint - e.g. '/api/admin/ollama/status'
+     * @param {{ method?: string, body?: string }} options - method and body for POST
+     * @returns {Promise<object>} parsed JSON
+     */
+    async fetchData(endpoint, options = {}) {
+        const baseUrl = this.getApiBaseUrl();
+        const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
+        const fetchOptions = {
+            method: options.method || 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        };
+        if (options.body && fetchOptions.method !== 'GET') {
+            fetchOptions.body = options.body;
+        }
+        const response = await fetch(url, fetchOptions);
+        if (!response.ok) {
+            const text = await response.text();
+            let detail = text;
+            try {
+                const j = JSON.parse(text);
+                detail = j.detail || j.error || text;
+            } catch (_) {}
+            throw new Error(`Ollama admin API error: ${response.status} - ${detail}`);
+        }
+        return response.json();
     }
 
     async initialize() {
@@ -38,20 +76,22 @@ export class OllamaAdminTab extends TabComponent {
     }
 
     setupEventListeners() {
-        // Connection test button
-        const testBtn = document.getElementById('ollama-test-connection');
-        if (testBtn) {
-            testBtn.addEventListener('click', () => this.testConnection());
-        }
+        // Test Connection is wired in app.js (testOllamaConnectionAdmin) so it always gives feedback
 
-        // Send interaction button
-        const sendBtn = document.getElementById('ollama-send-interaction');
+        // Send interaction button (admin panel uses ollama-admin-* IDs)
+        const sendBtn = document.getElementById('ollama-admin-send') || document.getElementById('ollama-send-interaction');
         if (sendBtn) {
             sendBtn.addEventListener('click', () => this.sendInteraction());
         }
 
+        // Reload models
+        const reloadModelsBtn = document.getElementById('ollama-admin-reload-models');
+        if (reloadModelsBtn) {
+            reloadModelsBtn.addEventListener('click', () => this.loadModels());
+        }
+
         // Enter key for interaction input
-        const inputField = document.getElementById('ollama-interaction-input');
+        const inputField = document.getElementById('ollama-admin-input') || document.getElementById('ollama-interaction-input');
         if (inputField) {
             inputField.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -104,11 +144,12 @@ export class OllamaAdminTab extends TabComponent {
             clearLogsBtn.addEventListener('click', () => this.clearLogsDisplay());
         }
 
-        // Model selector
-        const modelSelect = document.getElementById('ollama-model-select');
+        // Model selector (admin panel)
+        const modelSelect = document.getElementById('ollama-admin-model-select') || document.getElementById('ollama-model-select');
         if (modelSelect) {
             modelSelect.addEventListener('change', () => {
-                // Model changed, update UI if needed
+                const opt = modelSelect.options[modelSelect.selectedIndex];
+                if (opt && opt.value) this.showSuccess(`Model: ${opt.textContent}`);
             });
         }
     }
@@ -129,18 +170,37 @@ export class OllamaAdminTab extends TabComponent {
             this.updateConnectionStatus(response);
         } catch (error) {
             console.error('Error loading connection status:', error);
-            this.showError('Failed to load connection status', error);
+            this.connectionStatus = null;
+            this.updateConnectionStatus({
+                success: false,
+                base_url: this.getApiBaseUrl() || 'Backend',
+                error: error.message || 'Backend unreachable'
+            });
+            this.showError('Failed to load connection status', error.message || error);
         }
     }
 
     async loadModels() {
+        const modelSelect = document.getElementById('ollama-admin-model-select') || document.getElementById('ollama-model-select');
+        if (modelSelect) {
+            modelSelect.innerHTML = '<option value="">Loading...</option>';
+            modelSelect.disabled = true;
+        }
         try {
             const response = await this.fetchData('/api/admin/ollama/models');
-            if (response.success && response.models) {
+            if (response.success && response.models && response.models.length > 0) {
                 this.updateModelSelector(response.models);
+                this.showSuccess(`Loaded ${response.models.length} model(s)`);
+            } else {
+                this.updateModelSelector([]);
+                this.showError('No models', 'Ollama returned no models. Test connection and ensure at least one model is pulled (e.g. ollama pull llama3.2).');
             }
         } catch (error) {
             console.error('Error loading models:', error);
+            this.updateModelSelector([]);
+            this.showError('Load models failed', error.message || String(error));
+        } finally {
+            if (modelSelect) modelSelect.disabled = false;
         }
     }
 
@@ -177,8 +237,10 @@ export class OllamaAdminTab extends TabComponent {
         const originalText = testBtn?.textContent;
         if (testBtn) {
             testBtn.disabled = true;
-            testBtn.textContent = 'Testing...';
+            testBtn.textContent = 'Testing…';
         }
+        // Show "Testing…" in the status card immediately so user sees feedback
+        this.updateConnectionStatus({ testing: true, message: 'Testing connection…' });
 
         try {
             const response = await this.fetchData('/api/admin/ollama/test', {
@@ -188,15 +250,20 @@ export class OllamaAdminTab extends TabComponent {
                 })
             });
 
-            if (response.success) {
-                this.showSuccess('Connection test completed');
-                this.updateConnectionStatus(response.test_result);
+            const result = response.test_result;
+            this.updateConnectionStatus(result);
+
+            if (result && result.success) {
+                this.showSuccess(`Connected · ${result.model_count ?? 0} model(s) available`);
                 await this.loadConnectionStatus();
             } else {
-                this.showError('Connection test failed', response.test_result?.error);
+                const err = (result && (result.error || result.message)) || 'Connection failed';
+                this.showError('Connection test failed', err);
             }
         } catch (error) {
-            this.showError('Connection test error', error);
+            const errMsg = error && (error.message || String(error));
+            this.updateConnectionStatus({ success: false, error: errMsg });
+            this.showError('Connection test error', errMsg);
         } finally {
             if (testBtn) {
                 testBtn.disabled = false;
@@ -206,20 +273,25 @@ export class OllamaAdminTab extends TabComponent {
     }
 
     async sendInteraction() {
-        const inputField = document.getElementById('ollama-interaction-input');
-        const modelSelect = document.getElementById('ollama-model-select');
-        const responseArea = document.getElementById('ollama-response-output');
-        const sendBtn = document.getElementById('ollama-send-interaction');
+        const inputField = document.getElementById('ollama-admin-input') || document.getElementById('ollama-interaction-input');
+        const modelSelect = document.getElementById('ollama-admin-model-select') || document.getElementById('ollama-model-select');
+        const responseArea = document.getElementById('ollama-admin-response') || document.getElementById('ollama-response-output');
+        const sendBtn = document.getElementById('ollama-admin-send') || document.getElementById('ollama-send-interaction');
 
         if (!inputField || !modelSelect) return;
 
         const prompt = inputField.value.trim();
         if (!prompt) {
-            this.showError('Please enter a prompt');
+            this.showError('Prompt required', 'Enter a prompt in the text area.');
             return;
         }
 
         const model = modelSelect.value;
+        if (!model) {
+            this.showError('Model required', 'Select a model from the dropdown. Use "Reload models" if the list is empty.');
+            return;
+        }
+
         const originalText = sendBtn?.textContent;
 
         if (sendBtn) {
@@ -228,7 +300,7 @@ export class OllamaAdminTab extends TabComponent {
         }
 
         if (responseArea) {
-            responseArea.value = 'Processing...';
+            responseArea.value = 'Sending to Ollama...';
         }
 
         try {
@@ -243,27 +315,24 @@ export class OllamaAdminTab extends TabComponent {
                 })
             });
 
-            if (response.success) {
+            const responseText = response.response ?? response.message?.content ?? (response.message && typeof response.message === 'object' ? response.message.content : null) ?? 'No response received';
+            if (response.success && (responseText && !String(responseText).trim().startsWith('Error:'))) {
                 if (responseArea) {
-                    responseArea.value = response.response || 'No response received';
+                    responseArea.value = String(responseText).trim();
                 }
-                this.showSuccess('Interaction completed');
-                
-                // Add to interaction history
-                this.addInteractionToHistory(prompt, response.response);
-                
-                // Refresh diagnostics to show new log entry
+                this.showSuccess('Response received');
+                this.addInteractionToHistory(prompt, responseText);
                 await this.loadDiagnostics();
                 await this.loadMetrics();
             } else {
-                const errorMsg = response.error || 'Interaction failed';
+                const errorMsg = response.error || responseText || 'Interaction failed';
                 if (responseArea) {
                     responseArea.value = `Error: ${errorMsg}`;
                 }
                 this.showError('Interaction failed', errorMsg);
             }
         } catch (error) {
-            const errorMsg = error.message || 'Failed to send interaction';
+            const errorMsg = error.message || 'Failed to send (check backend and Ollama).';
             if (responseArea) {
                 responseArea.value = `Error: ${errorMsg}`;
             }
@@ -280,47 +349,96 @@ export class OllamaAdminTab extends TabComponent {
         const statusContainer = document.getElementById('ollama-connection-status');
         if (!statusContainer) return;
 
-        const isConnected = status?.success || status?.connected;
-        const baseUrl = status?.base_url || this.connectionStatus?.connection?.base_url || 'Unknown';
-        const modelCount = status?.model_count || this.connectionStatus?.connection?.model_count || 0;
-        const usingFallback = status?.using_fallback || this.connectionStatus?.connection?.using_fallback || false;
+        const escapeHtml = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const isTesting = status?.testing === true;
+        const conn = status?.connection || {};
+        const isConnected = !isTesting && (status?.success ?? status?.connected ?? conn?.connected ?? false);
+        const baseUrl = status?.base_url ?? conn?.base_url ?? this.connectionStatus?.connection?.base_url ?? '—';
+        const primaryUrl = status?.primary_url ?? conn?.primary_url ?? this.connectionStatus?.connection?.primary_url ?? '10.0.0.155:18080';
+        const fallbackUrl = status?.fallback_url ?? conn?.fallback_url ?? this.connectionStatus?.connection?.fallback_url ?? 'localhost:11434';
+        const modelCount = status?.model_count ?? conn?.model_count ?? this.connectionStatus?.connection?.model_count ?? 0;
+        const usingFallback = status?.using_fallback ?? conn?.using_fallback ?? this.connectionStatus?.connection?.using_fallback ?? false;
+
+        const errorHtml = status?.error ? `<div class="status-item error"><span class="status-label">Error:</span><span class="status-value">${escapeHtml(String(status.error))}</span></div>` : '';
+        const messageHtml = status?.message ? `<div class="status-item"><span class="status-label">Message:</span><span class="status-value">${escapeHtml(String(status.message))}</span></div>` : '';
+
+        let cardClass = 'connection-status-card ';
+        let dotClass = 'status-dot ';
+        let statusText = 'Disconnected';
+        if (isTesting) {
+            cardClass += 'testing';
+            dotClass += 'testing';
+            statusText = 'Testing…';
+        } else {
+            cardClass += isConnected ? 'connected' : 'disconnected';
+            dotClass += isConnected ? 'active' : 'inactive';
+            statusText = isConnected ? 'Connected' : 'Disconnected';
+        }
+        const primaryDisplay = escapeHtml(String(primaryUrl).replace(/^https?:\/\//, ''));
+        const fallbackDisplay = escapeHtml(String(fallbackUrl).replace(/^https?:\/\//, ''));
+        const baseDisplay = escapeHtml(String(baseUrl).replace(/^https?:\/\//, ''));
+        const requestSent = status?.request_sent ?? conn?.request_sent ?? '';
+        const responseStatus = status?.response_status ?? conn?.response_status ?? status?.status_code ?? '';
+        const responsePreview = status?.response_preview ?? conn?.response_preview ?? '';
+        const primaryRequest = status?.primary_request_sent ?? conn?.primary_request_sent ?? '';
+        const primaryResponse = status?.primary_response_preview ?? conn?.primary_response_preview ?? '';
+        const primaryRespStatus = status?.primary_response_status ?? conn?.primary_response_status ?? '';
+        const requestBlock = requestSent ? `<div class="status-item request-response"><span class="status-label">Request:</span><span class="status-value mono">${escapeHtml(requestSent)}</span></div>` : '';
+        const responseBlock = (responseStatus !== '' || responsePreview) ? `<div class="status-item request-response"><span class="status-label">Response:</span><span class="status-value mono">${responseStatus !== '' ? escapeHtml(String(responseStatus)) + ' — ' : ''}${escapeHtml(String(responsePreview))}</span></div>` : '';
+        const primaryBlock = (primaryRequest || primaryResponse) ? `<div class="status-item request-response primary-attempt"><span class="status-label">Primary attempt:</span><span class="status-value mono">${escapeHtml(primaryRequest || '—')} → ${primaryRespStatus !== '' ? primaryRespStatus + ' ' : ''}${escapeHtml(String(primaryResponse))}</span></div>` : '';
 
         statusContainer.innerHTML = `
-            <div class="connection-status-card ${isConnected ? 'connected' : 'disconnected'}">
+            <div class="${cardClass}">
                 <div class="status-indicator">
-                    <span class="status-dot ${isConnected ? 'active' : 'inactive'}"></span>
-                    <span class="status-text">${isConnected ? 'Connected' : 'Disconnected'}</span>
+                    <span class="${dotClass}"></span>
+                    <span class="status-text">${statusText}</span>
                 </div>
                 <div class="status-details">
                     <div class="status-item">
-                        <span class="status-label">Base URL:</span>
-                        <span class="status-value">${baseUrl}</span>
+                        <span class="status-label">Primary (try first):</span>
+                        <span class="status-value">${primaryDisplay}</span>
                     </div>
                     <div class="status-item">
-                        <span class="status-label">Models:</span>
-                        <span class="status-value">${modelCount}</span>
+                        <span class="status-label">Fallback (localhost):</span>
+                        <span class="status-value">${fallbackDisplay}</span>
                     </div>
+                    <div class="status-item">
+                        <span class="status-label">${status?.error ? 'Backend' : 'Connected at'} URL:</span>
+                        <span class="status-value">${baseDisplay}</span>
+                    </div>
+                    ${!isTesting ? `<div class="status-item"><span class="status-label">Models:</span><span class="status-value">${modelCount}</span></div>` : ''}
                     ${usingFallback ? '<div class="status-item warning"><span class="status-label">⚠️ Using Fallback</span></div>' : ''}
+                    ${primaryBlock}
+                    ${requestBlock}
+                    ${responseBlock}
+                    ${messageHtml}
+                    ${errorHtml}
                 </div>
             </div>
         `;
     }
 
     updateModelSelector(models) {
-        const modelSelect = document.getElementById('ollama-model-select');
+        const modelSelect = document.getElementById('ollama-admin-model-select') || document.getElementById('ollama-model-select');
         if (!modelSelect) return;
 
         const currentValue = modelSelect.value;
-        modelSelect.innerHTML = '<option value="">Select Model...</option>';
-        
+        modelSelect.innerHTML = '<option value="">Select model...</option>';
+        if (!models || models.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = 'No models – Test connection & Reload models';
+            opt.disabled = true;
+            modelSelect.appendChild(opt);
+            return;
+        }
         models.forEach(model => {
-            const modelName = model.name || model;
+            const modelName = typeof model === 'string' ? model : (model.name || model.model || String(model));
+            if (!modelName) return;
             const option = document.createElement('option');
             option.value = modelName;
             option.textContent = modelName;
-            if (modelName === currentValue) {
-                option.selected = true;
-            }
+            if (modelName === currentValue) option.selected = true;
             modelSelect.appendChild(option);
         });
     }
@@ -400,24 +518,22 @@ export class OllamaAdminTab extends TabComponent {
     }
 
     addInteractionToHistory(prompt, response) {
-        const historyContainer = document.getElementById('ollama-interaction-history');
+        const historyContainer = document.getElementById('ollama-admin-history') || document.getElementById('ollama-interaction-history');
         if (!historyContainer) return;
+
+        const esc = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const p = esc(prompt).substring(0, 120) + (prompt.length > 120 ? '...' : '');
+        const r = esc(String(response || '')).substring(0, 200) + ((response || '').length > 200 ? '...' : '');
 
         const entry = document.createElement('div');
         entry.className = 'interaction-history-entry';
         entry.innerHTML = `
-            <div class="interaction-prompt">
-                <strong>Prompt:</strong> ${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}
-            </div>
-            <div class="interaction-response">
-                <strong>Response:</strong> ${(response || '').substring(0, 200)}${(response || '').length > 200 ? '...' : ''}
-            </div>
+            <div class="interaction-prompt"><strong>Prompt:</strong> ${p}</div>
+            <div class="interaction-response"><strong>Response:</strong> ${r}</div>
             <div class="interaction-timestamp">${new Date().toLocaleString()}</div>
         `;
-        
         historyContainer.insertBefore(entry, historyContainer.firstChild);
-        
-        // Limit history to 20 entries
+
         while (historyContainer.children.length > 20) {
             historyContainer.removeChild(historyContainer.lastChild);
         }
@@ -466,4 +582,8 @@ export class OllamaAdminTab extends TabComponent {
         document.body.appendChild(notification);
         setTimeout(() => notification.remove(), 5000);
     }
+}
+
+if (typeof window !== 'undefined') {
+    window.OllamaAdminTab = OllamaAdminTab;
 }

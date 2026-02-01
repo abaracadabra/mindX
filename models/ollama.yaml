@@ -1,8 +1,13 @@
 # Ollama Model Configuration
-# GPU-accelerated local inference server (10.0.0.155:18080)
+# Primary: GPU server at 10.0.0.155:18080 (set here; used by api/ollama, llm_factory, mindXagent, admin tab).
+# Fallback: localhost:11434 when primary is unreachable.
+# Test: python scripts/test_ollama_connection.py  (uses this base_url when no arg)
+# Override: MINDX_LLM__OLLAMA__BASE_URL env or llm.ollama.base_url in data/config.
+# Resilience: Ollama is the failsafe/fallback inference (see llm/RESILIENCE.md). Keep enabled: true.
 
 provider: ollama
 display_name: Ollama (Local GPU)
+enabled: true
 base_url: http://10.0.0.155:18080
 fallback_url: http://localhost:11434
 
@@ -22,27 +27,52 @@ rate_limits:
 default_model: llama3:8b
 keep_alive: 10m  # Keep models loaded in memory
 
-# Available models (discovered dynamically)
+# Available models (discovered dynamically). task_scores align with ModelSelector TaskType for graded inference hierarchy.
 models:
   - name: llama3:8b
     display_name: Llama 3 8B
     context_size: 8192
     recommended: true
-    
+    task_scores:
+      reasoning: 0.75
+      code_generation: 0.78
+      simple_chat: 0.88
+      data_analysis: 0.72
+      writing: 0.80
+      speed_sensitive: 0.85
   - name: llama3:70b
     display_name: Llama 3 70B
     context_size: 8192
     recommended: false
-    
+    task_scores:
+      reasoning: 0.90
+      code_generation: 0.88
+      simple_chat: 0.92
+      data_analysis: 0.88
+      writing: 0.90
+      speed_sensitive: 0.60
   - name: mistral-nemo:latest
     display_name: Mistral Nemo
     context_size: 32768
     recommended: true
-    
+    task_scores:
+      reasoning: 0.82
+      code_generation: 0.80
+      simple_chat: 0.90
+      data_analysis: 0.82
+      writing: 0.85
+      speed_sensitive: 0.88
   - name: mistral-small-latest
     display_name: Mistral Small
     context_size: 32768
     recommended: true
+    task_scores:
+      reasoning: 0.85
+      code_generation: 0.83
+      simple_chat: 0.92
+      data_analysis: 0.84
+      writing: 0.86
+      speed_sensitive: 0.86
 
 # Model selection preferences
 model_selection:
