@@ -4076,6 +4076,50 @@ async def get_mindxagent_status():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/mindxagent/logs/process", summary="Get mindXagent process trace (memory_agent log_process)")
+async def get_mindxagent_process_trace(limit: int = 100):
+    """
+    Read process_trace.jsonl for mindXagent from data/memory (agent_workspaces).
+    This is the actual logging from memory_agent.log_process() used across mindX.
+    """
+    try:
+        from agents.core.mindXagent import MindXAgent
+        from pathlib import Path
+
+        mindxagent = await MindXAgent.get_instance()
+        if not mindxagent or not mindxagent.memory_agent:
+            return {"success": False, "error": "mindXagent or memory_agent not available", "entries": []}
+
+        agent_id = getattr(mindxagent, "agent_id", "mindx_meta_agent")
+        agent_dir = mindxagent.memory_agent.get_agent_data_directory(agent_id, ensure_exists=False)
+        filepath = agent_dir / "process_trace.jsonl"
+        if not filepath.exists():
+            return {"success": True, "entries": [], "total": 0, "path": str(filepath)}
+
+        entries = []
+        with open(filepath, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    record = json.loads(line)
+                    entries.append(record)
+                except json.JSONDecodeError:
+                    continue
+        entries = entries[-limit:] if limit else entries
+        entries.reverse()
+        return {
+            "success": True,
+            "entries": entries,
+            "total": len(entries),
+            "path": str(filepath),
+        }
+    except Exception as e:
+        logger.error(f"Error reading mindXagent process trace: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/mindxagent/memory/logs", summary="Get mindXagent memory storage logs")
 async def get_mindxagent_memory_logs(limit: int = 100, agent_id: Optional[str] = None):
     """Get memory storage logs for mindXagent."""

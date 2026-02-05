@@ -22253,3 +22253,54 @@ details pre {
     line-height: 1.4;
     word-break: break-word;
 }
+
+/* mindXagent tab: logging from memory_agent (data/ as memory) */
+.mindxagent-logging-toolbar {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.mindxagent-logging-panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-lg);
+}
+
+.mindxagent-logging-panels .log-panel {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-md);
+}
+
+.mindxagent-logging-panels .log-panel h5 {
+    margin: 0 0 var(--spacing-sm) 0;
+    color: var(--color-neon-blue);
+    font-size: var(--font-sm);
+}
+
+.process-trace-log,
+.godel-choices-log {
+    font-size: var(--font-sm);
+}
+
+.process-trace-entry,
+.godel-choice-entry {
+    margin-bottom: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background: rgba(0, 0, 0, 0.2);
+    border-left: 3px solid var(--color-neon-green);
+    border-radius: var(--radius-xs);
+}
+
+.process-trace-entry .log-content,
+.godel-choice-entry .log-content {
+    margin-top: var(--spacing-xs);
+}
+
+.log-meta {
+    font-size: 10px;
+    color: var(--text-secondary);
+    margin-left: auto;
+}

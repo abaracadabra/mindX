@@ -5470,6 +5470,7 @@
             <div class="control-section">
                 <div class="section-header">
                     <h2>mindXagent - Gödel Machine Self-Improvement</h2>
+                    <p class="section-hint" style="margin: 6px 0 0 0;">All data from actual APIs and data/: GET /mindxagent/status, /mindxagent/startup, /mindxagent/logs/process, /godel/choices, /mindxagent/memory/logs, and live Ollama/thinking/actions.</p>
                     <div style="font-size: 11px; color: #888; margin-top: 5px;">
                         Powered by <a href="https://github.com/autoglm" target="_blank" style="color: #8b5cf6;">aGLM</a> | 
                         <a href="https://opensea.io/collection/aglm" target="_blank" style="color: #8b5cf6;">OpenSea Collection</a> | 
@@ -5480,7 +5481,7 @@
                     </div>
                 </div>
                 
-                <!-- Status Section -->
+                <!-- Status Section (from actual GET /mindxagent/status) -->
                 <div class="control-section status-section">
                     <h3>Status</h3>
                     <div id="mindxagent-status-display" class="status-display-enhanced">
@@ -5776,14 +5777,37 @@
                             </div>
                         </div>
 
-                        <!-- Memory Logs -->
+                        <!-- Logging from memory_agent (data/ as memory) -->
+                        <div class="logs-section control-section">
+                            <h4>Logging from memory_agent (data/ as memory)</h4>
+                            <p class="section-hint">Actual logs written by memory_agent across mindX: process trace (log_process) and Gödel choices.</p>
+                            <div class="mindxagent-logging-toolbar">
+                                <button type="button" id="refresh-mindxagent-process-trace-btn" class="refresh-btn">Refresh process trace</button>
+                                <button type="button" id="refresh-mindxagent-godel-choices-btn" class="refresh-btn">Refresh Gödel choices</button>
+                            </div>
+                            <div class="mindxagent-logging-panels">
+                                <div class="log-panel">
+                                    <h5>Process trace (process_trace.jsonl)</h5>
+                                    <div id="mindxagent-process-trace" class="process-trace-log" style="max-height: 280px; overflow-y: auto;">
+                                        <div class="empty-state">Loading…</div>
+                                    </div>
+                                </div>
+                                <div class="log-panel">
+                                    <h5>Gödel choices (mindx_meta_agent)</h5>
+                                    <div id="mindxagent-godel-choices" class="godel-choices-log" style="max-height: 280px; overflow-y: auto;">
+                                        <div class="empty-state">Loading…</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Memory Logs (STM / timestamped memory) -->
                         <div class="logs-section">
-                            <h4>Memory Storage Logs</h4>
+                            <h4>Memory Storage Logs (STM)</h4>
                             <div id="mindxagent-memory-logs" class="memory-logs">
                                 <div class="empty-state">
                                     <div class="empty-icon">🧠</div>
                                     <div class="empty-text">No memory logs yet</div>
-                                    <div class="empty-hint">Memory events will appear here as they are logged</div>
+                                    <div class="empty-hint">Memory events from data/memory/stm will appear here</div>
                                 </div>
                             </div>
                         </div>
