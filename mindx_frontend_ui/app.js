@@ -2064,6 +2064,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Expose for tab components (admin-tab.js, etc.)
+    window.sendRequest = sendRequest;
+    window.addLog = addLog;
+
     // Tab Management
     function initializeTabs() {
         // Get fresh references to tab elements
@@ -2283,185 +2287,65 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function loadTabData(tabId) {
-        console.log(`📋 Loading data for tab: ${tabId}`);
-        // Load mindXagent data when mindXagent tab is activated
-        if (tabId === 'mindxagent') {
-            console.log('mindXagent tab activated - loading all data...');
-            
-            // Ensure tab content is visible first
-            const mindxagentTab = document.getElementById('mindxagent-tab');
-            if (mindxagentTab) {
-                mindxagentTab.style.setProperty('display', 'block', 'important');
-                mindxagentTab.style.setProperty('visibility', 'visible', 'important');
-                mindxagentTab.style.setProperty('opacity', '1', 'important');
-                console.log('✅ mindXagent tab made visible');
+        if (window.tabRegistry && window.tabRegistry.tabs && window.tabRegistry.tabs.has(tabId)) {
+            return window.tabRegistry.activateTab(tabId);
+        }
+        // Legacy fallback when registry not used
+        const legacy = {
+            control: () => setTimeout(() => loadUpdateRequests(), 100),
+            core: loadCoreSystems,
+            evolution: loadEvolution,
+            learning: loadLearning,
+            orchestration: loadOrchestration,
+            agents: loadAgents,
+            system: () => { if (typeof initializeSystemTab === 'function') initializeSystemTab(); },
+            usage: () => { if (typeof window.loadUsage === 'function') window.loadUsage(); },
+            logs: loadLogs,
+            api: loadAPIData,
+            admin: () => { if (window.AdminTab && window.AdminTab.load) window.AdminTab.load(); },
+            ollama: () => { if (window.OllamaTab && window.OllamaTab.onActivate) window.OllamaTab.onActivate(); },
+            faicey: () => { if (typeof window.loadFaiceyAndInit === 'function') window.loadFaiceyAndInit(); },
+            'evolve-codebase': initializeEvolveCodebaseTab,
+            'query-coordinator': initializeQueryCoordinatorTab,
+            'github-agent': initializeGitHubAgentTab,
+            platform: initializePlatformTab,
+            workflow: initializeWorkflowTab,
+            governance: initializeGovernanceTab,
+            knowledge: initializeKnowledgeTab,
+            economy: initializeEconomyTab,
+            security: initializeSecurityTab,
+            mindxagent: () => {
+                if (typeof loadMindXagentStatus === 'function') loadMindXagentStatus().catch(() => {});
+                if (typeof loadMindXagentOllamaStatus === 'function') loadMindXagentOllamaStatus().catch(() => {});
+                if (typeof loadMindXagentStartup === 'function') loadMindXagentStartup().catch(() => {});
+                if (typeof loadMindXagentOllamaConversation === 'function') loadMindXagentOllamaConversation().catch(() => {});
+                if (typeof loadMindXagentThinking === 'function') loadMindXagentThinking().catch(() => {});
+                if (typeof loadMindXagentActions === 'function') loadMindXagentActions().catch(() => {});
             }
-            
-            // Load all data with error handling
-            (async () => {
-                try {
-                    console.log('Loading mindXagent status...');
-                    await loadMindXagentStatus();
-                } catch (error) {
-                    console.error('Error loading mindXagent status:', error);
-                }
-                
-                try {
-                    console.log('Loading mindXagent Ollama status...');
-                    await loadMindXagentOllamaStatus();
-                } catch (error) {
-                    console.error('Error loading mindXagent Ollama status:', error);
-                }
-                try {
-                    console.log('Loading mindXagent startup flow...');
-                    await loadMindXagentStartup();
-                } catch (error) {
-                    console.error('Error loading mindXagent startup:', error);
-                }
-                try {
-                    console.log('Loading mindXagent Ollama conversation...');
-                    await loadMindXagentOllamaConversation();
-                } catch (error) {
-                    console.error('Error loading mindXagent Ollama conversation:', error);
-                }
-                
-                try {
-                    console.log('Loading mindXagent thinking...');
-                    await loadMindXagentThinking();
-                } catch (error) {
-                    console.error('Error loading mindXagent thinking:', error);
-                }
-                
-                try {
-                    console.log('Loading mindXagent actions...');
-                    await loadMindXagentActions();
-                } catch (error) {
-                    console.error('Error loading mindXagent actions:', error);
-                }
-            })();
-            
-            // Set up auto-refresh every 5 seconds
-            if (window.mindxagentRefreshInterval) {
-                clearInterval(window.mindxagentRefreshInterval);
-            }
-            window.mindxagentRefreshInterval = setInterval(async () => {
-                try {
-                    await loadMindXagentStatus();
-                    await loadMindXagentOllamaStatus();
-                    await loadMindXagentStartup();
-                    await loadMindXagentOllamaConversation();
-                    await loadMindXagentThinking();
-                    await loadMindXagentActions();
-                } catch (error) {
-                    console.error('Error in mindXagent auto-refresh:', error);
-                }
-            }, 5000);
-            return;
+        };
+        const fn = legacy[tabId];
+        if (fn) {
+            const r = fn();
+            return r && typeof r.then === 'function' ? r : Promise.resolve();
         }
-        
-        // Stop auto-refresh when leaving mindXagent tab
-        if (window.mindxagentRefreshInterval) {
-            clearInterval(window.mindxagentRefreshInterval);
-            window.mindxagentRefreshInterval = null;
-        }
-        
-        // Load Faicey expressions when Faicey tab is activated
-        if (tabId === 'faicey') {
-            loadFaiceyExpressions();
-            initializeFaiceyTabs();
-        }
-        
-        // Initialize window manager when admin tab is activated
-        if (tabId === 'admin' && window.windowManager) {
-            // Window manager is already initialized, just ensure it's ready
-            console.log('Admin tab activated - window manager ready');
-        } else if (tabId === 'admin' && !window.windowManager) {
-            // Wait a bit for window manager to initialize if it hasn't yet
-            setTimeout(() => {
-                if (window.windowManager) {
-                    console.log('Window manager initialized for admin tab');
-                } else {
-                    console.warn('Window manager not available');
-                }
-            }, 100);
-        }
-        
-        switch(tabId) {
-            case 'control':
-                // Control tab is already loaded
-                console.log('Control tab loaded, refreshing update requests...');
-                // Refresh update requests when control tab is shown
-                setTimeout(() => {
-                    loadUpdateRequests();
-                }, 100);
-                break;
-            case 'core':
-                loadCoreSystems();
-                break;
-            case 'evolution':
-                loadEvolution();
-                break;
-            case 'learning':
-                loadLearning();
-                break;
-            case 'orchestration':
-                loadOrchestration();
-                break;
-            case 'agents':
-                loadAgents();
-                break;
-            case 'system':
-                loadSystemStatus();
-                break;
-            case 'logs':
-                loadLogs();
-                break;
-            case 'api':
-                loadAPIData();
-                break;
-            case 'admin':
-                loadAdminData();
-                initializeOllamaAdminTab();
-                break;
-            case 'faicey':
-                loadFaiceyExpressions();
-                initializeFaiceyTabs();
-                break;
-            case 'evolve-codebase':
-                initializeEvolveCodebaseTab();
-                break;
-            case 'query-coordinator':
-                initializeQueryCoordinatorTab();
-                break;
-            case 'github-agent':
-                initializeGitHubAgentTab();
-                break;
-            case 'platform':
-                initializePlatformTab();
-                break;
-            case 'system':
-                initializeSystemTab();
-                break;
-            case 'workflow':
-                initializeWorkflowTab();
-                break;
-            case 'governance':
-                initializeGovernanceTab();
-                break;
-            case 'knowledge':
-                initializeKnowledgeTab();
-                break;
-            case 'economy':
-                initializeEconomyTab();
-                break;
-            case 'security':
-                initializeSecurityTab();
-                break;
-        }
+        return Promise.resolve();
     }
-    
-    // Make loadTabData globally accessible
+
+    // Make loadTabData globally accessible (delegates to registry when available)
     window.loadTabData = loadTabData;
+
+    // Legacy loaders for tabs without components (used by TabConfig when registry is active)
+    window.loadUsage = function loadUsage() {};
+    window.loadLogs = loadLogs;
+    window.loadAPIData = loadAPIData;
+    window.loadFaiceyAndInit = function loadFaiceyAndInit() {
+        loadFaiceyExpressions();
+        initializeFaiceyTabs();
+    };
+    window.loadCoreSystems = loadCoreSystems;
+    window.loadEvolution = loadEvolution;
+    window.loadLearning = loadLearning;
+    window.loadOrchestration = loadOrchestration;
 
     // Initialize Evolve Codebase Tab
     function initializeEvolveCodebaseTab() {
@@ -5456,22 +5340,34 @@ document.addEventListener('DOMContentLoaded', () => {
         if (restartSystemBtn) {
             restartSystemBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                addLog('Restart System: Access denied - Admin privileges required', 'WARNING');
-                showResponse('Access denied: Admin privileges required for system restart');
+                if (window.AdminTab && typeof window.AdminTab.restartSystem === 'function') {
+                    window.AdminTab.restartSystem();
+                } else {
+                    addLog('Restart System: Access denied - Admin privileges required', 'WARNING');
+                    showResponse('Access denied: Admin privileges required for system restart');
+                }
             });
         }
         if (backupSystemBtn) {
             backupSystemBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                addLog('Backup System: Access denied - Admin privileges required', 'WARNING');
-                showResponse('Access denied: Admin privileges required for system backup');
+                if (window.AdminTab && typeof window.AdminTab.backupSystem === 'function') {
+                    window.AdminTab.backupSystem();
+                } else {
+                    addLog('Backup System: Access denied - Admin privileges required', 'WARNING');
+                    showResponse('Access denied: Admin privileges required for system backup');
+                }
             });
         }
         if (updateConfigBtn) {
             updateConfigBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                addLog('Update Config: Access denied - Admin privileges required', 'WARNING');
-                showResponse('Access denied: Admin privileges required for config updates');
+                if (window.AdminTab && typeof window.AdminTab.updateConfig === 'function') {
+                    window.AdminTab.updateConfig();
+                } else {
+                    addLog('Update Config: Access denied - Admin privileges required', 'WARNING');
+                    showResponse('Access denied: Admin privileges required for config updates');
+                }
             });
         }
         if (exportLogsBtn) {
@@ -5495,6 +5391,10 @@ document.addEventListener('DOMContentLoaded', () => {
         e.stopPropagation();
         if (typeof testOllamaConnectionAdmin === 'function') testOllamaConnectionAdmin();
     });
+
+    // Expose for Ollama tab component
+    window.initializeOllamaAdminTab = initializeOllamaAdminTab;
+    window.loadOllamaAdminModels = loadOllamaAdminModels;
 
     function updateOllamaAdminStatusCard(status) {
         const statusContainer = document.getElementById('ollama-connection-status');
@@ -5614,18 +5514,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadOllamaAdminModels() {
         const select = document.getElementById('ollama-admin-model-select');
+        const listEl = document.getElementById('ollama-admin-models-list');
         const reloadBtn = document.getElementById('ollama-admin-reload-models');
         if (!select) return;
         const baseUrl = (typeof apiUrl !== 'undefined' ? apiUrl : (window.API_CONFIG && window.API_CONFIG.baseUrl) || '') || '';
         if (reloadBtn) { reloadBtn.disabled = true; reloadBtn.textContent = 'Loading…'; }
+        if (listEl) listEl.innerHTML = '<span class="ollama-models-list-hint">Loading models from Ollama…</span>';
         try {
             const response = await fetch(`${baseUrl}/api/admin/ollama/models`);
             const data = await response.json().catch(() => ({}));
-            const models = data.models || [];
+            const models = Array.isArray(data.models) ? data.models : [];
             const currentVal = select.value;
             select.innerHTML = '<option value="">Select model…</option>';
             models.forEach(m => {
-                const name = typeof m === 'string' ? m : (m.name || m.model || '');
+                const name = typeof m === 'string' ? m : (m.name || m.model || (m.details && m.details.parent_model) || '');
                 if (!name) return;
                 const opt = document.createElement('option');
                 opt.value = name;
@@ -5636,14 +5538,32 @@ document.addEventListener('DOMContentLoaded', () => {
             if (models.length === 0) {
                 const opt = document.createElement('option');
                 opt.value = '';
-                opt.textContent = 'No models – Test connection first';
+                opt.textContent = 'No models – Test connection first, then Reload models';
                 opt.disabled = true;
                 select.appendChild(opt);
             }
-            addLog(`Ollama: ${models.length} model(s) loaded`, models.length ? 'SUCCESS' : 'WARNING');
+            if (listEl) {
+                if (models.length === 0) {
+                    listEl.innerHTML = '<span class="ollama-models-list-hint">No models listed. Test connection, then click “Reload models” to fetch from Ollama (GET /api/tags).</span>';
+                } else {
+                    const esc = (s) => (s == null ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
+                    listEl.innerHTML = '<strong class="ollama-models-list-title">Available models (' + models.length + '):</strong><ul class="ollama-models-ul">' +
+                        models.map(m => {
+                            const name = typeof m === 'string' ? m : (m.name || m.model || '');
+                            const details = typeof m === 'object' && m.details ? m.details : {};
+                            const param = details.parameter_size || '';
+                            const family = details.family || (Array.isArray(details.families) && details.families[0]) || '';
+                            const size = typeof m.size === 'number' ? (m.size / 1e9).toFixed(2) + ' GB' : '';
+                            const extra = [param, family, size].filter(Boolean).join(' · ');
+                            return '<li class="ollama-model-li"><span class="ollama-model-name">' + esc(name) + '</span>' + (extra ? ' <span class="ollama-model-details">(' + esc(extra) + ')</span>' : '') + '</li>';
+                        }).join('') + '</ul>';
+                }
+            }
+            addLog(`Ollama: ${models.length} actual model(s) loaded from server`, models.length ? 'SUCCESS' : 'WARNING');
         } catch (e) {
             addLog(`Ollama models failed: ${e.message}`, 'ERROR');
             select.innerHTML = '<option value="">Failed to load – check backend</option>';
+            if (listEl) listEl.innerHTML = '<span class="ollama-models-list-hint error">Failed to load models: ' + (e.message || 'check backend') + '</span>';
         } finally {
             if (reloadBtn) { reloadBtn.disabled = false; reloadBtn.textContent = 'Reload models'; }
         }
@@ -5718,228 +5638,6 @@ document.addEventListener('DOMContentLoaded', () => {
             addLog(`Ollama send failed: ${msg}`, 'ERROR');
         } finally {
             if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send'; }
-        }
-    }
-
-    async function loadAdminData() {
-        // Load and apply CrossMint setting
-        const crossmintToggle = document.getElementById('crossmint-enabled-toggle');
-        const saveSettingsBtn = document.getElementById('save-settings-btn');
-        
-        if (crossmintToggle) {
-            // Load current setting (default: false/off if not set)
-            const crossmintEnabled = localStorage.getItem('crossmint_enabled') === 'true';
-            crossmintToggle.checked = crossmintEnabled;
-            // Ensure default is off if setting doesn't exist
-            if (localStorage.getItem('crossmint_enabled') === null) {
-                localStorage.setItem('crossmint_enabled', 'false');
-            }
-            console.log('CrossMint setting loaded:', crossmintEnabled, '(default: off)');
-        }
-        
-        if (saveSettingsBtn) {
-            saveSettingsBtn.addEventListener('click', () => {
-                if (crossmintToggle) {
-                    const enabled = crossmintToggle.checked;
-                    localStorage.setItem('crossmint_enabled', enabled.toString());
-                    console.log('CrossMint setting saved:', enabled);
-                    alert(`CrossMint integration ${enabled ? 'enabled' : 'disabled'}. Please refresh the page for changes to take effect.`);
-                }
-            });
-        }
-        
-        // Ensure window manager is initialized when admin tab loads
-        if (!window.windowManager) {
-            console.log('Waiting for window manager to initialize...');
-            // Wait a bit more for window manager
-            setTimeout(() => {
-                if (window.windowManager) {
-                    console.log('Window manager ready for admin tab');
-                }
-            }, 200);
-        } else {
-            console.log('Window manager already initialized');
-        }
-        try {
-            const config = await sendRequest('/system/config');
-            displayConfig(config);
-            // Load PostgreSQL settings and vault keys
-            await loadPostgreSQLSettings();
-            await loadVaultKeys();
-            initializePostgreSQLHandlers();
-            initializeVaultHandlers();
-        } catch (error) {
-            addLog(`Failed to load admin data: ${error.message}`, 'ERROR');
-        }
-    }
-    
-    // PostgreSQL Management Functions
-    async function loadPostgreSQLSettings() {
-        try {
-            const response = await sendRequest('/admin/postgresql/config');
-            if (response.status === 'success' && response.config) {
-                const config = response.config;
-                document.getElementById('postgres-host').value = config.host || 'localhost';
-                document.getElementById('postgres-port').value = config.port || 5432;
-                document.getElementById('postgres-database').value = config.database || 'mindx_memory';
-                document.getElementById('postgres-user').value = config.user || 'mindx';
-                if (config.has_password) {
-                    document.getElementById('postgres-password').placeholder = 'Password is set (enter new to change)';
-                }
-            }
-        } catch (error) {
-            addLog(`Failed to load PostgreSQL settings: ${error.message}`, 'ERROR');
-        }
-    }
-    
-    async function savePostgreSQLSettings() {
-        const config = {
-            host: document.getElementById('postgres-host').value,
-            port: parseInt(document.getElementById('postgres-port').value),
-            database: document.getElementById('postgres-database').value,
-            user: document.getElementById('postgres-user').value,
-            password: document.getElementById('postgres-password').value || undefined
-        };
-        
-        try {
-            const response = await sendRequest('/admin/postgresql/config', 'POST', config);
-            if (response.status === 'success') {
-                addLog('PostgreSQL settings saved to vault', 'SUCCESS');
-                document.getElementById('postgres-password').value = '';
-                document.getElementById('postgres-password').placeholder = 'Password saved';
-            }
-        } catch (error) {
-            addLog(`Failed to save PostgreSQL settings: ${error.message}`, 'ERROR');
-        }
-    }
-    
-    async function testPostgreSQLConnection() {
-        const config = {
-            host: document.getElementById('postgres-host').value,
-            port: parseInt(document.getElementById('postgres-port').value),
-            database: document.getElementById('postgres-database').value,
-            user: document.getElementById('postgres-user').value,
-            password: document.getElementById('postgres-password').value || undefined
-        };
-        
-        const statusDiv = document.getElementById('postgres-connection-status');
-        statusDiv.innerHTML = '<p>Testing connection...</p>';
-        statusDiv.className = 'connection-status testing';
-        
-        try {
-            const response = await sendRequest('/admin/postgresql/test', 'POST', config);
-            if (response.status === 'success') {
-                statusDiv.innerHTML = `<p class="success">✓ Connection successful</p><p>${response.version}</p>`;
-                statusDiv.className = 'connection-status success';
-            } else {
-                statusDiv.innerHTML = `<p class="error">✗ ${response.message}</p>`;
-                statusDiv.className = 'connection-status error';
-            }
-        } catch (error) {
-            statusDiv.innerHTML = `<p class="error">✗ Connection failed: ${error.message}</p>`;
-            statusDiv.className = 'connection-status error';
-        }
-    }
-    
-    function initializePostgreSQLHandlers() {
-        const loadBtn = document.getElementById('load-postgres-settings-btn');
-        const saveBtn = document.getElementById('save-postgres-settings-btn');
-        const testBtn = document.getElementById('test-postgres-connection-btn');
-        const togglePasswordBtn = document.getElementById('toggle-postgres-password');
-        
-        if (loadBtn) {
-            loadBtn.addEventListener('click', loadPostgreSQLSettings);
-        }
-        if (saveBtn) {
-            saveBtn.addEventListener('click', savePostgreSQLSettings);
-        }
-        if (testBtn) {
-            testBtn.addEventListener('click', testPostgreSQLConnection);
-        }
-        if (togglePasswordBtn) {
-            togglePasswordBtn.addEventListener('click', () => {
-                const passwordInput = document.getElementById('postgres-password');
-                if (passwordInput.type === 'password') {
-                    passwordInput.type = 'text';
-                    togglePasswordBtn.textContent = '🙈';
-                } else {
-                    passwordInput.type = 'password';
-                    togglePasswordBtn.textContent = '👁️';
-                }
-            });
-        }
-    }
-    
-    // Vault Management Functions
-    async function loadVaultKeys() {
-        try {
-            const response = await sendRequest('/admin/vault/keys');
-            if (response.status === 'success') {
-                const keysList = document.getElementById('vault-keys-list');
-                if (response.keys && response.keys.length > 0) {
-                    keysList.innerHTML = `
-                        <table class="vault-keys-table">
-                            <thead>
-                                <tr>
-                                    <th>Agent ID</th>
-                                    <th>Environment Variable</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${response.keys.map(key => `
-                                    <tr>
-                                        <td>${key.agent_id}</td>
-                                        <td><code>${key.env_var}</code></td>
-                                        <td>${key.has_key ? '<span class="status-badge success">Stored</span>' : '<span class="status-badge warning">Missing</span>'}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                        <p>Total: ${response.count} keys</p>
-                    `;
-                } else {
-                    keysList.innerHTML = '<p>No agent keys found in vault. Use "Migrate Keys to Vault" to move existing keys.</p>';
-                }
-            }
-        } catch (error) {
-            addLog(`Failed to load vault keys: ${error.message}`, 'ERROR');
-        }
-    }
-    
-    async function migrateKeysToVault() {
-        const statusDiv = document.getElementById('vault-migration-status');
-        statusDiv.innerHTML = '<p>Migrating keys from legacy storage...</p>';
-        statusDiv.className = 'migration-status processing';
-        
-        try {
-            const response = await sendRequest('/admin/vault/migrate', 'POST');
-            if (response.status === 'success') {
-                const migration = response.migration;
-                statusDiv.innerHTML = `
-                    <p class="success">Migration complete!</p>
-                    <p>Migrated: ${migration.migrated} keys</p>
-                    <p>Failed: ${migration.failed} keys</p>
-                    ${migration.errors.length > 0 ? `<p class="error">Errors: ${migration.errors.join(', ')}</p>` : ''}
-                `;
-                statusDiv.className = 'migration-status success';
-                await loadVaultKeys(); // Refresh the list
-            }
-        } catch (error) {
-            statusDiv.innerHTML = `<p class="error">Migration failed: ${error.message}</p>`;
-            statusDiv.className = 'migration-status error';
-        }
-    }
-    
-    function initializeVaultHandlers() {
-        const refreshBtn = document.getElementById('refresh-vault-keys-btn');
-        const migrateBtn = document.getElementById('migrate-keys-to-vault-btn');
-        
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', loadVaultKeys);
-        }
-        if (migrateBtn) {
-            migrateBtn.addEventListener('click', migrateKeysToVault);
         }
     }
 
@@ -7507,46 +7205,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.showProviderModels = showProviderModels;
     window.testProvider = testProvider;
     window.removeProvider = removeProvider;
-
-    function displayConfig(config) {
-        configDisplay.innerHTML = config ? 
-            `<pre>${JSON.stringify(config, null, 2)}</pre>` : 
-            '<p>Configuration unavailable</p>';
-    }
-
-    async function restartSystem() {
-        if (confirm('Are you sure you want to restart the system?')) {
-            try {
-                await sendRequest('/system/restart', 'POST');
-                addLog('System restart initiated', 'INFO');
-            } catch (error) {
-                addLog(`System restart failed: ${error.message}`, 'ERROR');
-            }
-        }
-    }
-
-    async function backupSystem() {
-        try {
-            await sendRequest('/system/backup', 'POST');
-            addLog('System backup initiated', 'INFO');
-        } catch (error) {
-            addLog(`System backup failed: ${error.message}`, 'ERROR');
-        }
-    }
-
-    async function updateConfig() {
-        const newConfig = prompt('Enter new configuration (JSON):', '{}');
-        if (newConfig) {
-            try {
-                const config = JSON.parse(newConfig);
-                await sendRequest('/system/config', 'PUT', config);
-                addLog('Configuration updated', 'INFO');
-                loadAdminData();
-            } catch (error) {
-                addLog(`Configuration update failed: ${error.message}`, 'ERROR');
-            }
-        }
-    }
 
     // Export Format Modal Functions
     function showExportFormatModal() {
@@ -12175,14 +11833,11 @@ function showMainApplication() {
     // Update wallet display
     updateWalletDisplay();
     
-    // Initialize modular tab system if available
+    // Single tab system: registry handles all tab clicks when available
     if (window.tabRegistry && window.TabConfig) {
-        console.log('🔄 Initializing modular tab system...');
+        console.log('🔄 Initializing modular tab system (single click path)...');
         try {
-            // Register all tabs from configuration
             window.TabConfig.registerAllTabs();
-            
-            // Integrate with existing tab buttons
             const allTabBtns = document.querySelectorAll('.tab-btn');
             allTabBtns.forEach(btn => {
                 const tabId = btn.getAttribute('data-tab');
@@ -12192,57 +11847,53 @@ function showMainApplication() {
                     });
                 }
             });
-            
+            // Initial state: hide all tab contents and buttons, then activate control
+            document.querySelectorAll('.tab-content').forEach(c => {
+                c.classList.remove('active');
+                c.style.display = 'none';
+                c.style.visibility = 'hidden';
+                c.style.opacity = '0';
+            });
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            if (window.tabRegistry.tabs.has('control')) {
+                window.tabRegistry.activateTab('control').catch(() => {});
+            }
             console.log('✅ Modular tab system initialized');
         } catch (error) {
             console.error('❌ Error initializing modular tab system:', error);
         }
-    }
-    
-    // Initialize tabs if not already initialized (fallback to legacy system)
-    const initTabs = window.initializeTabs || initializeTabs;
-    if (typeof initTabs === 'function') {
-        console.log('🔄 Initializing tabs (legacy system)...');
-        try {
-            initTabs();
-            console.log('✅ Tabs initialized');
-            
-            // Force show the active tab content after initialization
-            setTimeout(() => {
-                const activeTabContent = document.querySelector('.tab-content.active');
-                if (activeTabContent) {
-                    activeTabContent.style.display = 'block';
-                    activeTabContent.style.visibility = 'visible';
-                    console.log('✅ Active tab content forced visible:', activeTabContent.id);
-                } else {
-                    console.warn('⚠️ No active tab content found');
-                }
-            }, 100);
-        } catch (error) {
-            console.error('❌ Error initializing tabs:', error);
-        }
     } else {
-        console.warn('⚠️ initializeTabs function not available yet');
-        // Wait for DOMContentLoaded to complete
-        setTimeout(() => {
-            const delayedInitTabs = window.initializeTabs || initializeTabs;
-            if (typeof delayedInitTabs === 'function') {
-                delayedInitTabs();
-                console.log('✅ Tabs initialized (delayed)');
-                
-                // Force show the active tab content
+        // Fallback: legacy tab system with click handlers and loadTabData
+        const initTabs = window.initializeTabs || initializeTabs;
+        if (typeof initTabs === 'function') {
+            console.log('🔄 Initializing tabs (legacy system)...');
+            try {
+                initTabs();
                 setTimeout(() => {
                     const activeTabContent = document.querySelector('.tab-content.active');
                     if (activeTabContent) {
                         activeTabContent.style.display = 'block';
                         activeTabContent.style.visibility = 'visible';
-                        console.log('✅ Active tab content forced visible (delayed):', activeTabContent.id);
                     }
                 }, 100);
-            } else {
-                console.error('❌ initializeTabs still not available after delay');
+            } catch (error) {
+                console.error('❌ Error initializing tabs:', error);
             }
-        }, 500);
+        } else {
+            setTimeout(() => {
+                const delayedInitTabs = window.initializeTabs || initializeTabs;
+                if (typeof delayedInitTabs === 'function') {
+                    delayedInitTabs();
+                    setTimeout(() => {
+                        const activeTabContent = document.querySelector('.tab-content.active');
+                        if (activeTabContent) {
+                            activeTabContent.style.display = 'block';
+                            activeTabContent.style.visibility = 'visible';
+                        }
+                    }, 100);
+                }
+            }, 500);
+        }
     }
     
     // Load system data

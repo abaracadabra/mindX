@@ -11,6 +11,42 @@ The **Platform Tab** provides a comprehensive enterprise-grade dashboard for mon
 
 ---
 
+## 🔍 mindX Accuracy Audit (Display vs Reality)
+
+The Platform tab **must reflect what mindX actually is and what the backend exposes**. The following is the source of truth for implementation.
+
+### What mindX Actually Uses (Real Data Sources)
+
+| Area | Real Backend | Endpoints | Notes |
+|------|-------------|-----------|--------|
+| **Health** | FastAPI backend | `GET /health`, `GET /system/status` | status, components (llm_provider, mistral_api, agint, coordinator) |
+| **Agents** | Command handler / registry | `GET /agents`, `GET /agents/`, `GET /registry/agents` | Registered + file-based agents |
+| **Inbound API** | InboundMetrics middleware | `GET /api/monitoring/inbound` | total_requests, requests_per_minute, average_latency_ms, latency_p50/p90/p99_ms, rate_limit_rejects |
+| **System resources** | psutil | `GET /system/resources`, `GET /system/metrics` | CPU, memory, disk; optional mindterm |
+| **Rate limits** | Rate limit dashboard | `GET /monitoring/rate-limits` | Rate limit and circuit breaker status |
+| **Tools** | tools/ folder | `GET /tools` | tools_count, tools list |
+| **GitHub** | GitHub agent | `GET /github/status`, `GET /github/schedule` | Backup status, schedule |
+| **Memory** | data/memory/ STM/LTM | No vector-count API in main service | Memory vectors: show "—" or add endpoint later |
+| **Ollama/LLM** | mindXagent / startup | `GET /mindxagent/ollama/status` | Ollama connection, models |
+
+### What mindX Does NOT Use (Do Not Display as Current)
+
+- **No** Istio, OpenTelemetry, Prometheus, or Kubernetes in the current stack.
+- **No** Terraform, GitOps sync, or multi-cloud deployment in the default setup.
+- **No** `/monitoring/health`, `/monitoring/performance`, or `/monitoring/sre/compliance` — those are doc examples; use `/health`, `/system/status`, `/system/metrics`, `/api/monitoring/inbound` instead.
+- SRE/DORA metrics (SLO, SLI, error budget, deployment frequency) are **targets/framework** — display only when backend provides them or show "—" / "N/A".
+
+### Display Rules
+
+1. **Platform Header Metrics**: Populate from `/health`, `/agents`, `/api/monitoring/inbound`. Memory Vectors = "—" until an endpoint exists.
+2. **Topology**: Use `/agents` or `/agents/`; map agents to orchestration/core/specialized per AGENTS.md.
+3. **Backend & LLM Status**: Replace generic "Observability & Service Mesh" with Backend health, System components, Inbound metrics, Rate limits, Ollama status.
+4. **Request flow**: Show mindX flow: Client → FastAPI → Coordinator → Agents → LLM (Ollama/API).
+5. **SRE/DevOps cards**: Show "—" or "N/A" for metrics not provided by API; fill from `/system/metrics`, `/api/monitoring/inbound` where applicable.
+6. **Metadata**: Avoid "Multi-Cloud Global" unless multi-region is true; use "Single instance" or "Local" for default deployment.
+
+---
+
 ## 🎯 Dashboard Sections
 
 ### 1. Platform Header Metrics

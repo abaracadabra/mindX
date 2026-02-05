@@ -4,10 +4,31 @@
 
 This document provides a complete index of all documentation in the mindX system, organized by category and component type.
 
-**Last Updated**: 2026-01-30  
+**Last Updated**: 2026-02-05  
 **Total Documentation Files**: 170+  
 **Agent Documentation**: 34+  
 **Tool Documentation**: 29+  
+
+---
+
+## 🌐 mindX API (read the docs)
+
+mindX provides an API for agents, UIs, and external systems. When the backend is running (default port 8000):
+
+- **Interactive docs (Swagger UI):** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **API reference:** **[API.md](API.md)** — base URL, route groups, AgenticPlace connection, connecting mindX to Ollama
+
+AgenticPlace uses mindX as its provider; see [AgenticPlace_Deep_Dive.md](AgenticPlace_Deep_Dive.md) and [API.md](API.md).
+
+---
+
+## 📊 Monitoring and Rate Control (both directions)
+
+Whether mindX is **ingesting**, **providing inference**, or **services**, monitoring and rate control are essential in **both directions** (inbound and outbound). Actual network and data metrics are in scientific units (ms, bytes, req/min).
+
+- **Doc:** **[monitoring_rate_control.md](monitoring_rate_control.md)** — bidirectional monitoring, scientific metrics (latency ms, payload bytes, throughput req/s and req/min), where they are collected (inbound middleware, outbound limiters, PerformanceMonitor)
+- **Inbound API:** `GET /api/monitoring/inbound` — inbound request metrics (latency_ms, request/response bytes, requests_per_minute, rate_limit_rejects)
+- **Outbound:** `llm/rate_limiter.py`, `api/ollama/ollama_url.py` and other provider APIs expose `get_metrics()`; see [rate_limiting_optimization.md](rate_limiting_optimization.md)
 
 ---
 
@@ -74,6 +95,7 @@ All agent documentation is organized in the `agents/` folder structure. See [age
 - **[Coordinator Agent](agents/coordinator_agent.md)** - Central kernel and service bus orchestrating all system interactions
 - **[Mastermind Agent](agents/mastermind_agent.md)** - Strategic intelligence layer orchestrating high-level objectives and campaigns
 - **[CEO Agent](agents/ceo_agent.md)** - Highest-level strategic executive coordinator with business planning
+- **[Startup Agent](agents/startup_agent.md)** - Controls agent startup and initialization; the backend startup process connects to Ollama and initializes the StartupAgent (via Mastermind lifecycle) to drive mindXagent startup flow
 - **[Autonomous Audit Coordinator](autonomous_audit_coordinator.md)** - Autonomous audit coordinator scheduling systematic audit campaigns
 
 **Complete Agent Registry**: See [agents/index.md](../agents/index.md) for full details, NFT metadata, and registry information.
@@ -169,8 +191,10 @@ All tool documentation is organized in the `tools/` folder. Tools are now organi
 
 #### Monitoring & Performance
 
+- **[Monitoring and Rate Control (both directions)](monitoring_rate_control.md)** - Bidirectional monitoring and rate control (inbound/outbound); actual network and data metrics in scientific units (ms, bytes, req/min); ingestion, inference, and services
 - **[Performance Monitor](performance_monitor.md)** - Performance monitoring and metrics
 - **[Resource Monitor](resource_monitor.md)** - Resource monitoring and alerts
+- **[Rate Limiting & Optimization](rate_limiting_optimization.md)** - Rate limit profiles, provider YAML, quota distribution, API references
 - **[Enhanced Monitoring System](enhanced_monitoring_system.md)** - Enhanced monitoring capabilities
 - **[Monitoring Implementation Summary](monitoring_implementation_summary.md)** - Monitoring implementation details
 
@@ -188,6 +212,7 @@ All tool documentation is organized in the `tools/` folder. Tools are now organi
 #### Getting Started
 
 - **[README](README.md)** - Main project documentation
+- **[INSTALL](../INSTALL.md)** - Installation and deployment (use with **mindX.sh** for one-command setup and service management)
 - **[Usage Guide](USAGE.md)** - Usage instructions and examples
 - **[Technical Documentation](TECHNICAL.md)** - Technical specifications
 - **[Instructions](INSTRUCTIONS.md)** - Setup and configuration instructions
@@ -476,7 +501,7 @@ See [System Architecture Map](system_architecture_map.md) for complete architect
 
 ---
 
-**Last Updated**: 2026-01-30  
+**Last Updated**: 2026-02-05  
 **Maintained By**: mindX Documentation System  
 **For Issues**: See project repository
 

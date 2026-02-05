@@ -163,6 +163,12 @@ app.add_middleware(
     allow_methods=["*"],  # Allow all methods
     allow_headers=["*"],  # Allow all headers
 )
+# Inbound metrics and optional rate control (both directions: see docs/monitoring_rate_control.md)
+try:
+    from mindx_backend_service.inbound_metrics import InboundMetricsMiddleware, get_inbound_metrics, set_inbound_rate_limit
+    app.add_middleware(InboundMetricsMiddleware)
+except Exception as e:
+    logger.warning(f"InboundMetricsMiddleware not added: {e}")
 
 # Include mindterm router
 from mindx_backend_service.mindterm import mindterm_router
@@ -217,6 +223,18 @@ async def startup_event():
         )
         
         command_handler = CommandHandler(mastermind_instance)
+        
+        # Connect mindX to Ollama so AgenticPlace (and other clients) can use inference
+        try:
+            from api.ollama.ollama_url import create_ollama_api
+            ollama_api = create_ollama_api(config=app_config)
+            ollama_test = await ollama_api.test_connection(try_fallback=True)
+            if ollama_test.get("success"):
+                logger.info(f"mindX connected to Ollama at {ollama_test.get('base_url', 'unknown')} (model_count={ollama_test.get('model_count', 0)}) — AgenticPlace can use mindX as provider.")
+            else:
+                logger.warning(f"mindX Ollama connection failed: {ollama_test.get('error', 'unknown')} — ensure Ollama is running (e.g. localhost:11434) for AgenticPlace.")
+        except Exception as ollama_e:
+            logger.warning(f"mindX Ollama startup check failed: {ollama_e} — AgenticPlace may fail until Ollama is available.")
         
         # Initialize mindterm with coordinator and monitors
         try:
@@ -419,6 +437,20 @@ async def introspect(payload: DirectivePayload):
 async def mastermind_status():
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
     return await command_handler.handle_mastermind_status()
+
+@app.get("/api/monitoring/inbound", summary="Get inbound request metrics (latency ms, bytes, req/min)")
+async def get_inbound_monitoring():
+    """Inbound metrics: latency (ms), request/response bytes, requests per minute. See docs/monitoring_rate_control.md."""
+    try:
+        from mindx_backend_service.inbound_metrics import get_inbound_metrics, get_inbound_rate_limit
+        metrics = get_inbound_metrics()
+        rpm_limit, window_s = get_inbound_rate_limit()
+        return {
+            "inbound_metrics": metrics.get_metrics(window_s=window_s),
+            "inbound_rate_limit": {"requests_per_minute": rpm_limit, "window_s": window_s} if rpm_limit else None,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Inbound metrics not available: {e}")
 
 @app.get("/registry/agents", summary="Show agent registry")
 async def show_agent_registry():

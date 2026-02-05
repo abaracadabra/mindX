@@ -4,7 +4,7 @@
 
 MindX is a comprehensive autonomous AI framework that operates as a fully self-improving artificial intelligence system.
 
-**API reference:** When the backend is running (default port 8000), **http://localhost:8000/docs** provides the interactive FastAPI Swagger UI—the best way to explore and test API interactions (endpoints, request/response schemas, try-it-out). With complete autonomous operation, safety controls, economic viability, and advanced audit capabilities, MindX represents a production-grade implementation of autonomous intelligence.
+**API reference:** mindX provides an API. When the backend is running (default port 8000), **http://localhost:8000/docs** provides the interactive FastAPI Swagger UI—the best way to explore and test API interactions (endpoints, request/response schemas, try-it-out). See **[docs/API.md](API.md)** for base URL, route groups, AgenticPlace connection, and how to connect mindX to Ollama so AgenticPlace can use it.
 
 ## 🚀 Autonomous System Status
 

@@ -452,6 +452,52 @@ class MemoryAgent:
             logger.error(f"Failed to write process log: {e}", exc_info=True)
             return None
 
+    async def store_memory(
+        self,
+        content: Any,
+        memory_type: str = "interaction",
+        importance: str = "medium",
+        metadata: Optional[Dict[str, Any]] = None,
+        agent_id: str = "system",
+    ) -> Optional[str]:
+        """
+        Store a memory (compatibility with AgenticPlace, main_service, etc.).
+        Maps to save_timestamped_memory. content can be str or dict.
+        """
+        try:
+            mt = memory_type.lower() if isinstance(memory_type, str) else "interaction"
+            imp = importance.lower() if isinstance(importance, str) else "medium"
+            type_map = {
+                "interaction": MemoryType.INTERACTION,
+                "system_state": MemoryType.SYSTEM_STATE,
+                "performance": MemoryType.PERFORMANCE,
+                "error": MemoryType.ERROR,
+                "learning": MemoryType.LEARNING,
+                "context": MemoryType.CONTEXT,
+            }
+            imp_map = {
+                "critical": MemoryImportance.CRITICAL,
+                "high": MemoryImportance.HIGH,
+                "medium": MemoryImportance.MEDIUM,
+                "low": MemoryImportance.LOW,
+            }
+            mem_type = type_map.get(mt, MemoryType.INTERACTION)
+            mem_imp = imp_map.get(imp, MemoryImportance.MEDIUM)
+            payload = {"content": content} if isinstance(content, (str, int, float)) else content
+            if not isinstance(payload, dict):
+                payload = {"content": str(content)}
+            return await self.save_timestamped_memory(
+                agent_id=agent_id,
+                memory_type=mem_type,
+                content=payload,
+                importance=mem_imp,
+                context=metadata or {},
+                tags=["store_memory", mt],
+            )
+        except Exception as e:
+            logger.error(f"Failed to store memory: {e}", exc_info=True)
+            return None
+
     async def log_terminal_output(self, output: str) -> Optional[Path]:
         """Log terminal output (compatibility method)."""
         try:

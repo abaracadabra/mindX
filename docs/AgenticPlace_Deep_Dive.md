@@ -22,12 +22,12 @@ AgenticPlace represents a paradigm shift from traditional software-as-a-service 
 
 ### API reference (mindX backend)
 
-When the mindX backend is running (default port 8000), **http://localhost:8000/docs** provides the interactive FastAPI Swagger UI. Use it to:
+mindX provides an API. **Read the docs:** when the mindX backend is running (default port 8000), **http://localhost:8000/docs** provides the interactive FastAPI Swagger UI. Use it to:
 
 - Browse and try all API endpoints, including **AgenticPlace** routes (`/agenticplace/agent/call`, `/agenticplace/ollama/ingest`, `/agenticplace/ceo/status`)
 - Inspect request/response schemas and test integrations
 
-This is the best way to explore and audit API interactions for AgenticPlace and the rest of the mindX API.
+See **[docs/API.md](API.md)** for base URL, route groups, how AgenticPlace connects to mindX, and how to connect mindX to Ollama so AgenticPlace can use it.
 
 ---
 

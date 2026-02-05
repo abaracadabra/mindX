@@ -11,7 +11,7 @@ from datetime import datetime
 from agents.core.mindXagent import MindXAgent
 from agents.orchestration.ceo_agent import CEOAgent
 from agents.orchestration.mastermind_agent import MastermindAgent
-from agents.memory_agent import MemoryAgent, MemoryType, MemoryImportance
+from agents.memory_agent import MemoryAgent
 from api.ollama.ollama_url import create_ollama_api
 from utils.config import Config
 from utils.logging_config import get_logger
@@ -142,14 +142,15 @@ async def call_mindx_agent(request: Dict[str, Any] = Body(...)):
         if memory_agent:
             await memory_agent.store_memory(
                 content=f"AgenticPlace agent call: {agent_type} - {directive[:100]}",
-                memory_type=MemoryType.INTERACTION,
-                importance=MemoryImportance.MEDIUM,
-                context={
+                memory_type="interaction",
+                importance="medium",
+                metadata={
                     "source": "agenticplace",
                     "agent_type": agent_type,
                     "mode": mode,
                     "persona": persona
-                }
+                },
+                agent_id="agenticplace",
             )
         
         return {
@@ -173,6 +174,7 @@ async def call_mindx_agent(request: Dict[str, Any] = Body(...)):
 async def ingest_ollama(request: Dict[str, Any] = Body(...)):
     """
     Ingest prompt through Ollama AI and optionally store in memory.
+    mindX is connected to Ollama via config (llm.ollama.base_url, e.g. localhost:11434).
     """
     try:
         prompt = request.get("prompt", "").strip()
@@ -183,18 +185,27 @@ async def ingest_ollama(request: Dict[str, Any] = Body(...)):
         if not prompt:
             raise HTTPException(status_code=400, detail="Prompt is required")
         
-        # Get Ollama API
+        # Get Ollama API (uses config: localhost:11434 or llm.ollama.base_url)
         ollama_api = create_ollama_api(config=get_config())
         
-        # Generate response
-        response = await ollama_api.generate(
-            model=model,
+        # Generate response via Ollama (generate_text returns str)
+        response_text = await ollama_api.generate_text(
             prompt=prompt,
-            context=context
+            model=model,
+            max_tokens=2048,
+            temperature=0.7,
+            **({} if not context else {"options": context}),
         )
-        
-        response_text = response.get("response", "") if isinstance(response, dict) else str(response)
-        tokens_used = response.get("tokens_used", 0) if isinstance(response, dict) else 0
+        if response_text is None or (isinstance(response_text, str) and response_text.startswith("{") and "error" in response_text.lower()):
+            response_text = response_text or "Ollama returned no response"
+        if isinstance(response_text, str) and response_text.startswith("{"):
+            try:
+                import json as _json
+                parsed = _json.loads(response_text)
+                response_text = parsed.get("message", {}).get("content", parsed.get("response", response_text)) if isinstance(parsed.get("message"), dict) else parsed.get("response", response_text)
+            except Exception:
+                pass
+        tokens_used = 0
         
         # Store in memory if requested
         memory_stored = False
@@ -203,14 +214,15 @@ async def ingest_ollama(request: Dict[str, Any] = Body(...)):
             if memory_agent:
                 await memory_agent.store_memory(
                     content=f"Ollama ingestion: {prompt[:200]}",
-                    memory_type=MemoryType.PERFORMANCE,
-                    importance=MemoryImportance.LOW,
-                    context={
+                    memory_type="performance",
+                    importance="low",
+                    metadata={
                         "source": "agenticplace_ollama",
                         "model": model,
                         "tokens_used": tokens_used,
-                        "response_preview": response_text[:200]
-                    }
+                        "response_preview": (response_text or "")[:200]
+                    },
+                    agent_id="agenticplace_ollama",
                 )
                 memory_stored = True
         

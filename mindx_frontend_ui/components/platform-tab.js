@@ -1,8 +1,10 @@
 /**
- * Platform Architecture Tab Component
+ * Platform Tab: Enterprise SRE Dashboard
  *
- * Professional platform architecture dashboard with system topology,
- * Godel machine self-assessment, and constitutional governance monitoring.
+ * Enterprise-grade dashboard for monitoring and managing the mindX autonomous
+ * intelligence platform. Aligned with docs/platform-tab.md:
+ * - Platform Header Metrics (System Health, Active Agents, Memory Vectors, API Throughput, Error Rate, Uptime)
+ * - Topology, SRE Metrics (SLOs/SLIs/Error Budget), Performance, DevOps Excellence, Infrastructure & Operations
  *
  * @module PlatformTab
  */
@@ -13,7 +15,7 @@ class PlatformTab extends TabComponent {
             id: 'platform',
             label: 'Platform',
             group: 'main',
-            refreshInterval: 10000, // 10 seconds for real-time monitoring
+            refreshInterval: 5000, // 5-second updates per docs/platform-tab.md
             autoRefresh: true,
             ...config
         });
@@ -29,24 +31,38 @@ class PlatformTab extends TabComponent {
     async initialize() {
         await super.initialize();
 
-        // Register data expressions for real-time monitoring
+        // Register data expressions per docs/platform-tab.md (health, performance, SRE, topology, governance)
         if (window.dataExpressions) {
+            // Platform Header Metrics: doc section 1 — System Health, Active Agents, Memory Vectors, API Throughput, Error Rate, Uptime
+            window.dataExpressions.registerExpression('platform_header_metrics', {
+                endpoints: [
+                    { url: '/health', key: 'health' },
+                    { url: '/agents', key: 'agents' },
+                    { url: '/api/monitoring/inbound', key: 'inbound' }
+                ],
+                transform: (data) => this.transformHeaderMetricsData(data),
+                onUpdate: (data) => this.updateHeaderMetrics(data),
+                cache: false
+            });
+
             window.dataExpressions.registerExpression('platform_topology', {
                 endpoints: [
                     { url: '/agents', key: 'agents' },
                     { url: '/agents/activity', key: 'activity' },
-                    { url: '/system/status', key: 'system' }
+                    { url: '/health', key: 'system' }
                 ],
                 transform: (data) => this.transformTopologyData(data),
                 onUpdate: (data) => this.updateTopologyVisualization(data),
-                cache: false // Real-time data
+                cache: false
             });
 
+            // SRE/performance: doc mentions /monitoring/performance, /monitoring/sre/compliance; fallback to /agents + /health
             window.dataExpressions.registerExpression('platform_assessment', {
                 endpoints: [
                     { url: '/monitoring/performance', key: 'performance' },
-                    { url: '/agents/metrics', key: 'agent_metrics' },
-                    { url: '/evolution/status', key: 'evolution' }
+                    { url: '/agents', key: 'agent_metrics' },
+                    { url: '/evolution/status', key: 'evolution' },
+                    { url: '/health', key: 'health' }
                 ],
                 transform: (data) => this.transformAssessmentData(data),
                 onUpdate: (data) => this.updateAssessmentDashboard(data),
@@ -61,6 +77,22 @@ class PlatformTab extends TabComponent {
                 ],
                 transform: (data) => this.transformGovernanceData(data),
                 onUpdate: (data) => this.updateGovernanceDashboard(data),
+                cache: false
+            });
+
+            // mindX-real: Backend status, inbound, rate limits, resources, tools, GitHub (docs/platform-tab.md audit)
+            window.dataExpressions.registerExpression('platform_real', {
+                endpoints: [
+                    { url: '/system/status', key: 'systemStatus' },
+                    { url: '/system/resources', key: 'resources' },
+                    { url: '/api/monitoring/inbound', key: 'inbound' },
+                    { url: '/monitoring/rate-limits', key: 'rateLimits' },
+                    { url: '/tools', key: 'tools' },
+                    { url: '/github/status', key: 'githubStatus' },
+                    { url: '/github/schedule', key: 'githubSchedule' }
+                ],
+                transform: (data) => this.transformPlatformRealData(data),
+                onUpdate: (data) => this.updateBackendAndOperations(data),
                 cache: false
             });
         }
@@ -101,16 +133,20 @@ class PlatformTab extends TabComponent {
         if (window.dataExpressions) {
             try {
                 // Load all platform data in parallel
-                const [topologyData, assessmentData, governanceData] = await Promise.all([
+                const [headerMetrics, topologyData, assessmentData, governanceData, realData] = await Promise.all([
+                    window.dataExpressions.executeExpression('platform_header_metrics'),
                     window.dataExpressions.executeExpression('platform_topology'),
                     window.dataExpressions.executeExpression('platform_assessment'),
-                    window.dataExpressions.executeExpression('platform_governance')
+                    window.dataExpressions.executeExpression('platform_governance'),
+                    window.dataExpressions.executeExpression('platform_real').catch(() => null)
                 ]);
 
                 this.updateAllDashboards({
+                    headerMetrics,
                     topology: topologyData,
                     assessment: assessmentData,
-                    governance: governanceData
+                    governance: governanceData,
+                    real: realData
                 });
             } catch (error) {
                 console.error('Failed to load platform data:', error);
@@ -136,12 +172,13 @@ class PlatformTab extends TabComponent {
     }
 
     /**
-     * Transform topology data from API responses
+     * Transform topology data from API responses (keys: agents, activity, system)
      */
     transformTopologyData(data) {
-        const agents = data.data_0?.agents || data.data_0 || [];
-        const activity = data.data_1 || {};
-        const system = data.data_2 || {};
+        const agentsRaw = data.agents ?? data.data_0;
+        const agents = agentsRaw?.agents || (Array.isArray(agentsRaw) ? agentsRaw : []) || [];
+        const activity = data.activity ?? data.data_1 ?? {};
+        const system = data.system ?? data.data_2 ?? {};
 
         return {
             mastermind: this.extractAgentData(agents, 'mastermind'),
@@ -157,12 +194,12 @@ class PlatformTab extends TabComponent {
     }
 
     /**
-     * Transform assessment data
+     * Transform assessment data (keys: performance, agent_metrics, evolution, health)
      */
     transformAssessmentData(data) {
-        const performance = data.data_0 || {};
-        const agentMetrics = data.data_1 || {};
-        const evolution = data.data_2 || {};
+        const performance = data.performance ?? data.data_0 ?? {};
+        const agentMetrics = data.agent_metrics ?? data.data_1 ?? {};
+        const evolution = data.evolution ?? data.data_2 ?? {};
 
         return {
             autonomy: {
@@ -190,12 +227,12 @@ class PlatformTab extends TabComponent {
     }
 
     /**
-     * Transform governance data
+     * Transform governance data (keys: constitution, actions, security)
      */
     transformGovernanceData(data) {
-        const constitution = data.data_0 || {};
-        const actions = data.data_1 || {};
-        const security = data.data_2 || {};
+        const constitution = data.constitution ?? data.data_0 ?? {};
+        const actions = data.actions ?? data.data_1 ?? {};
+        const security = data.security ?? data.data_2 ?? {};
 
         return {
             compliance: constitution.compliance_rate || 98,
@@ -330,9 +367,134 @@ class PlatformTab extends TabComponent {
      * Update all dashboards
      */
     updateAllDashboards(data) {
+        this.updateHeaderMetrics(data.headerMetrics);
         this.updateTopologyVisualization(data.topology);
         this.updateAssessmentDashboard(data.assessment);
         this.updateGovernanceDashboard(data.governance);
+        this.updateBackendAndOperations(data.real);
+    }
+
+    /**
+     * Transform Platform Header Metrics from API (docs: System Health, Active Agents, Memory Vectors, API Throughput, Error Rate, Uptime)
+     * Endpoint keys: health, agents, inbound. inbound response: { inbound_metrics, inbound_rate_limit }.
+     */
+    transformHeaderMetricsData(data) {
+        const health = data.health || data.data_0 || {};
+        const agents = data.agents || data.data_1 || [];
+        const agentsList = Array.isArray(agents) ? agents : (agents.agents || agents.items || []);
+        const inboundPayload = data.inbound || data.data_2 || {};
+        const inbound = inboundPayload.inbound_metrics || inboundPayload;
+
+        const status = health.status || 'unknown';
+        const systemHealth = status === 'healthy' ? 'Healthy' : (status === 'degraded' ? 'Degraded' : status === 'unhealthy' ? 'Critical' : String(status));
+        const activeAgents = Array.isArray(agentsList) ? agentsList.length : (agentsList.length || 0);
+
+        const memoryVectors = (inbound.memory_vectors ?? health.memory_vectors) ?? '—';
+        const reqPerMin = inbound.requests_per_minute ?? inbound.req_min;
+        const apiThroughput = reqPerMin != null ? `${reqPerMin}/min` : '—';
+        const errorRate = (inbound.rate_limit_rejects != null && inbound.total_requests > 0)
+            ? ((inbound.rate_limit_rejects / inbound.total_requests) * 100).toFixed(2) + '%' : '—';
+        const uptimePct = health.uptime != null ? (typeof health.uptime === 'number' ? (health.uptime / 86400 * 100).toFixed(2) : health.uptime) : '—';
+
+        return {
+            systemHealth,
+            activeAgents,
+            memoryVectors,
+            apiThroughput,
+            errorRate: errorRate === '—' ? '—' : errorRate,
+            uptime: typeof uptimePct === 'string' && uptimePct.includes('%') ? uptimePct : (uptimePct === '—' ? '—' : `${uptimePct}%`)
+        };
+    }
+
+    /**
+     * Update Platform Header Metrics (doc section 1)
+     */
+    updateHeaderMetrics(data) {
+        if (!data) return;
+        this.updateElement('platform-system-health', data.systemHealth ?? '—');
+        this.updateElement('platform-active-agents', data.activeAgents ?? '—');
+        this.updateElement('platform-memory-vectors', data.memoryVectors ?? '—');
+        this.updateElement('platform-api-throughput', data.apiThroughput ?? '—');
+        this.updateElement('platform-error-rate', data.errorRate ?? '—');
+        this.updateElement('platform-uptime', data.uptime ?? '—');
+        this.updateElement('platform-backend-status', data.systemHealth ?? '—');
+        this.updateElement('platform-metadata-agents', data.activeAgents ?? '—');
+        this.updateElement('system-uptime-display', data.uptime ?? '—');
+    }
+
+    /**
+     * Transform platform_real data (system status, resources, inbound, rate limits, tools, GitHub)
+     */
+    transformPlatformRealData(data) {
+        const sys = data.systemStatus ?? data.data_0 ?? {};
+        const res = data.resources ?? data.data_1 ?? {};
+        const inboundPayload = data.inbound ?? data.data_2 ?? {};
+        const inboundMetrics = inboundPayload.inbound_metrics || inboundPayload;
+        const rateLimits = data.rateLimits ?? data.data_3 ?? {};
+        const tools = data.tools ?? data.data_4 ?? {};
+        const githubStatus = data.githubStatus ?? data.data_5 ?? {};
+        const githubSchedule = data.githubSchedule ?? data.data_6 ?? {};
+
+        const components = sys.components || {};
+        const cpu = res.cpu?.usage ?? (typeof res.cpu === 'number' ? res.cpu : null);
+        const mem = res.memory?.percentage ?? (typeof res.memory === 'number' ? res.memory : null);
+        const disk = res.disk?.percentage ?? (typeof res.disk === 'number' ? res.disk : null);
+
+        return {
+            backendStatus: sys.status ?? '—',
+            coordinator: components.coordinator ?? '—',
+            agint: components.agint ?? '—',
+            llm: components.llm_provider ?? components.mistral_api ?? '—',
+            inbound: {
+                total_requests: inboundMetrics.total_requests,
+                requests_per_minute: inboundMetrics.requests_per_minute,
+                average_latency_ms: inboundMetrics.average_latency_ms,
+                latency_p99_ms: inboundMetrics.latency_p99_ms,
+                rate_limit_rejects: inboundMetrics.rate_limit_rejects
+            },
+            rateLimit: inboundPayload.inbound_rate_limit || rateLimits?.inbound_rate_limit || rateLimits,
+            rateLimitRejects: inboundMetrics.rate_limit_rejects,
+            cpu: typeof cpu === 'number' ? cpu : (cpu?.usage ?? null),
+            memory: typeof mem === 'number' ? mem : (mem?.percentage ?? null),
+            disk: typeof disk === 'number' ? disk : (res.disk?.percentage ?? null),
+            toolsCount: tools.tools_count ?? (tools.tools?.length ?? null),
+            toolsDir: tools.tools_directory ?? 'tools/',
+            githubStatus: githubStatus.status ?? githubStatus,
+            githubNext: githubSchedule.next_backup ?? githubStatus.next ?? null,
+            githubSchedule: githubSchedule.schedule ?? githubSchedule.time ?? '—'
+        };
+    }
+
+    /**
+     * Update Backend & LLM Status, Inbound, Rate Limits, Resources, mindX Operations (docs/platform-tab.md audit)
+     */
+    updateBackendAndOperations(data) {
+        if (!data) return;
+        this.updateElement('backend-health-status', data.backendStatus ?? '—');
+        this.updateElement('backend-coordinator', data.coordinator ?? '—');
+        this.updateElement('backend-agint', data.agint ?? '—');
+        this.updateElement('backend-llm', data.llm ?? '—');
+        this.updateElement('inbound-total-requests', data.inbound?.total_requests ?? '—');
+        this.updateElement('inbound-rpm', data.inbound?.requests_per_minute ?? '—');
+        this.updateElement('inbound-avg-latency-ms', data.inbound?.average_latency_ms != null ? `${data.inbound.average_latency_ms} ms` : '—');
+        this.updateElement('inbound-p99-ms', data.inbound?.latency_p99_ms != null ? `${data.inbound.latency_p99_ms} ms` : '—');
+        const rpmLimit = data.rateLimit?.requests_per_minute ?? data.rateLimit?.rpm;
+        this.updateElement('rate-limit-rpm', rpmLimit != null ? rpmLimit : '—');
+        this.updateElement('rate-limit-rejects', data.rateLimitRejects ?? data.inbound?.rate_limit_rejects ?? '—');
+        this.updateElement('rate-limit-circuit', data.rateLimit?.circuit_breaker ?? '—');
+        this.updateElement('system-cpu-pct', data.cpu != null ? `${Math.round(data.cpu)}%` : '—');
+        this.updateElement('system-memory-pct', data.memory != null ? `${Math.round(data.memory)}%` : '—');
+        this.updateElement('system-disk-pct', data.disk != null ? `${Math.round(data.disk)}%` : '—');
+        this.updateElement('platform-tools-count', data.toolsCount ?? '—');
+        this.updateElement('platform-tools-dir', data.toolsDir ?? 'tools/');
+        this.updateElement('github-backup-status', data.githubStatus ?? '—');
+        this.updateElement('github-next-backup', data.githubNext ?? '—');
+        this.updateElement('github-schedule', data.githubSchedule ?? '—');
+        this.updateElement('flow-client-metrics', data.inbound?.requests_per_minute != null ? `${data.inbound.requests_per_minute} req/min` : '—');
+        this.updateElement('flow-fastapi-metrics', data.inbound?.average_latency_ms != null ? `${data.inbound.average_latency_ms} ms avg` : '—');
+        this.updateElement('flow-coordinator-metrics', data.coordinator ?? '—');
+        this.updateElement('flow-llm-metrics', data.llm ?? '—');
+        this.updateElement('flow-response-metrics', data.inbound?.latency_p99_ms != null ? `P99 ${data.inbound.latency_p99_ms} ms` : '—');
     }
 
     /**
@@ -419,102 +581,56 @@ class PlatformTab extends TabComponent {
         this.updateElement('intelligence-score', `${data.intelligence?.strategicReasoning}%`);
         this.updateElement('sovereignty-score', `${data.security?.sovereignOps}%`);
 
-        // Update advanced SRE metrics
+        // Update SRE metrics (only when API provides; otherwise leave as —)
         if (data.sre) {
-            // System Reliability
-            this.updateElement('system-reliability-score', `${data.sre.systemReliability?.uptime}%`);
-            this.updateElement('mttr-value', data.sre.systemReliability?.mttr);
-            this.updateElement('mtbf-value', data.sre.systemReliability?.mtbf);
-            this.updateElement('error-budget-remaining', `${data.sre.systemReliability?.errorBudget}%`);
-
-            // Performance Engineering
-            this.updateElement('performance-sli-score', `${data.sre.performance?.sli}%`);
-            this.updateElement('p50-latency', `${data.sre.performance?.p50}ms`);
-            this.updateElement('p95-latency', `${data.sre.performance?.p95}ms`);
-            this.updateElement('p99-latency', `${data.sre.performance?.p99}ms`);
-            this.updateElement('system-throughput', `${data.sre.performance?.throughput} RPS`);
-
-            // Scalability Engineering
-            this.updateElement('scalability-score', `${data.sre.scalability?.index}%`);
-            this.updateElement('horizontal-scale-efficiency', `${data.sre.scalability?.horizontalScale}%`);
-            this.updateElement('load-balancer-efficiency', `${data.sre.scalability?.loadBalance}%`);
-            this.updateElement('resource-optimization', `${data.sre.scalability?.resourceOpt}%`);
-
-            // DevOps Maturity (DORA metrics)
-            this.updateElement('devops-maturity-score', `${data.sre.devopsMaturity?.deploymentFreq}%`);
-            this.updateElement('deployment-frequency', `${data.sre.devopsMaturity?.deploymentFreq}/day`);
-            this.updateElement('lead-time-changes', data.sre.devopsMaturity?.leadTime);
-            this.updateElement('change-failure-rate', `${data.sre.devopsMaturity?.changeFailRate}%`);
-            this.updateElement('time-to-restore', data.sre.devopsMaturity?.timeToRestore);
-
-            // Security Posture
-            this.updateElement('security-posture-score', `${data.sre.security?.posture}%`);
-            this.updateElement('threat-detection-score', `${data.sre.security?.threatScore}%`);
-            this.updateElement('crypto-operations', `${data.sre.security?.cryptoOps.toLocaleString()}/sec`);
-            this.updateElement('vulnerability-patches', data.sre.security?.vulnPatches);
-
-            // Architecture Quality
-            this.updateElement('architecture-quality-score', `${data.sre.architecture?.quality}%`);
-            this.updateElement('coupling-metric', data.sre.architecture?.coupling);
-            this.updateElement('cohesion-metric', data.sre.architecture?.cohesion);
-            this.updateElement('technical-debt-ratio', `${data.sre.architecture?.techDebt}%`);
+            if (data.sre.systemReliability) {
+                this.updateElement('system-reliability-score', data.sre.systemReliability.uptime != null ? `${data.sre.systemReliability.uptime}%` : '—');
+                this.updateElement('mttr-value', data.sre.systemReliability.mttr ?? '—');
+                this.updateElement('mtbf-value', data.sre.systemReliability.mtbf ?? '—');
+                this.updateElement('error-budget-remaining', data.sre.systemReliability.errorBudget != null ? `${data.sre.systemReliability.errorBudget}%` : '—');
+            }
+            if (data.sre.performance) {
+                this.updateElement('performance-sli-score', data.sre.performance.sli != null ? `${data.sre.performance.sli}%` : '—');
+                this.updateElement('p50-latency', data.sre.performance.p50 != null ? `${data.sre.performance.p50}ms` : '—');
+                this.updateElement('p95-latency', data.sre.performance.p95 != null ? `${data.sre.performance.p95}ms` : '—');
+                this.updateElement('p99-latency', data.sre.performance.p99 != null ? `${data.sre.performance.p99}ms` : '—');
+            }
+            if (data.sre.scalability) {
+                this.updateElement('scalability-score', data.sre.scalability.index != null ? `${data.sre.scalability.index}%` : '—');
+                this.updateElement('horizontal-scale-efficiency', data.sre.scalability.horizontalScale != null ? `${data.sre.scalability.horizontalScale}%` : '—');
+                this.updateElement('load-balancer-efficiency', data.sre.scalability.loadBalance != null ? `${data.sre.scalability.loadBalance}%` : '—');
+                this.updateElement('resource-optimization', data.sre.scalability.resourceOpt != null ? `${data.sre.scalability.resourceOpt}%` : '—');
+            }
+            if (data.sre.devopsMaturity) {
+                this.updateElement('devops-maturity-score', data.sre.devopsMaturity.deploymentFreq != null ? `${data.sre.devopsMaturity.deploymentFreq}%` : '—');
+                this.updateElement('devops-deploy-freq', data.sre.devopsMaturity.deploymentFreq != null ? `${data.sre.devopsMaturity.deploymentFreq}/day` : '—');
+                this.updateElement('devops-lead-time', data.sre.devopsMaturity.leadTime ?? '—');
+                this.updateElement('devops-change-fail', data.sre.devopsMaturity.changeFailRate != null ? `${data.sre.devopsMaturity.changeFailRate}%` : '—');
+                this.updateElement('deployment-frequency', data.sre.devopsMaturity.deploymentFreq != null ? `${data.sre.devopsMaturity.deploymentFreq}/day` : '—');
+                this.updateElement('lead-time-changes', data.sre.devopsMaturity.leadTime ?? '—');
+                this.updateElement('change-failure-rate', data.sre.devopsMaturity.changeFailRate != null ? `${data.sre.devopsMaturity.changeFailRate}%` : '—');
+                this.updateElement('time-to-restore', data.sre.devopsMaturity.timeToRestore ?? '—');
+            }
+            if (data.sre.security) {
+                this.updateElement('security-posture-score', data.sre.security.posture != null ? `${data.sre.security.posture}%` : '—');
+                this.updateElement('threat-detection-score', data.sre.security.threatScore != null ? `${data.sre.security.threatScore}%` : '—');
+                this.updateElement('crypto-operations', data.sre.security.cryptoOps != null ? `${Number(data.sre.security.cryptoOps).toLocaleString()}/sec` : '—');
+                this.updateElement('vulnerability-patches', data.sre.security.vulnPatches ?? '—');
+            }
+            if (data.sre.architecture) {
+                this.updateElement('architecture-quality-score', data.sre.architecture.quality != null ? `${data.sre.architecture.quality}%` : '—');
+                this.updateElement('coupling-metric', data.sre.architecture.coupling ?? '—');
+                this.updateElement('cohesion-metric', data.sre.architecture.cohesion ?? '—');
+                this.updateElement('technical-debt-ratio', data.sre.architecture.techDebt != null ? `${data.sre.architecture.techDebt}%` : '—');
+            }
         }
 
-        // Update observability metrics
-        if (data.observability) {
-            // Distributed Tracing
-            this.updateElement('total-traces', data.observability.tracing?.totalTraces.toLocaleString());
-            this.updateElement('avg-trace-depth', data.observability.tracing?.avgTraceDepth);
-            this.updateElement('cross-service-calls', `${data.observability.tracing?.crossServiceCalls}%`);
-            this.updateElement('trace-sampling-rate', `${data.observability.tracing?.samplingRate}%`);
-
-            // Service Mesh
-            this.updateElement('mesh-latency-overhead', `${data.observability.serviceMesh?.latencyOverhead}ms`);
-            this.updateElement('circuit-breakers-active', data.observability.serviceMesh?.circuitBreakers);
-            this.updateElement('mtls-handshakes', `${data.observability.serviceMesh?.mTls}%`);
-            this.updateElement('traffic-splitting-active', data.observability.serviceMesh?.trafficSplitting);
-
-            // Anomaly Detection
-            this.updateElement('anomaly-score', data.observability.anomalyDetection?.score);
-            this.updateElement('false-positives', `${data.observability.anomalyDetection?.falsePositives}%`);
-            this.updateElement('detection-latency', `${data.observability.anomalyDetection?.detectionLatency}s`);
-            this.updateElement('ml-model-accuracy', `${data.observability.anomalyDetection?.mlAccuracy}%`);
-
-            // Chaos Engineering
-            this.updateElement('active-chaos-experiments', data.observability.chaosEngineering?.activeExperiments);
-            this.updateElement('chaos-blast-radius', `${data.observability.chaosEngineering?.blastRadius}%`);
-            this.updateElement('resilience-score', `${data.observability.chaosEngineering?.resilience}%`);
-            this.updateElement('chaos-recovery-time', `${data.observability.chaosEngineering?.recovery}s`);
-        }
-
-        // Update DevOps metrics
-        if (data.devops) {
-            // Deployment metrics (already covered in SRE section)
-
-            // Infrastructure metrics
-            this.updateElement('iac-coverage', `${data.devops.infrastructure?.iacCoverage}%`);
-            this.updateElement('config-drift', `${data.devops.infrastructure?.configDrift}%`);
-            this.updateElement('immutable-infra-score', `${data.devops.infrastructure?.immutableInfra}%`);
-            this.updateElement('multi-cloud-coverage', `${data.devops.infrastructure?.multiCloud}%`);
-
-            // Quality Gates
-            this.updateElement('test-coverage', `${data.devops.quality?.testCoverage}%`);
-            this.updateElement('security-scan-score', `${data.devops.quality?.securityScans}%`);
-            this.updateElement('performance-test-pass', `${data.devops.quality?.performanceTests}%`);
-            this.updateElement('code-quality-score', `${data.devops.quality?.codeQuality}%`);
-
-            // Cost Optimization
-            this.updateElement('cloud-cost-efficiency', `${data.devops.cost?.efficiency}%`);
-            this.updateElement('resource-utilization-score', `${data.devops.cost?.utilization}%`);
-            this.updateElement('reserved-instances', `${data.devops.cost?.reserved}%`);
-            this.updateElement('waste-reduction', `${data.devops.cost?.waste}%`);
-        }
-
-        // Update system health
-        if (data.system) {
+        if (data.system?.uptime != null) {
             this.updateElement('system-uptime-display', `${(data.system.uptime / 86400 * 100).toFixed(2)}%`);
-            this.updateElement('active-alerts-count', data.system.alerts?.active || 0);
-            this.updateElement('critical-alerts-count', data.system.alerts?.critical || 0);
+        }
+        if (data.system?.alerts) {
+            this.updateElement('active-alerts-count', data.system.alerts.active ?? 0);
+            this.updateElement('critical-alerts-count', data.system.alerts.critical ?? 0);
         }
     }
 
@@ -560,6 +676,14 @@ class PlatformTab extends TabComponent {
         const uptime = Math.floor(Math.random() * 86400) + 86400; // 1-2 days in seconds
 
         return {
+            headerMetrics: {
+                systemHealth: 'Healthy',
+                activeAgents: 12,
+                memoryVectors: '—',
+                apiThroughput: '—',
+                errorRate: '<0.1%',
+                uptime: '99.97%'
+            },
             topology: {
                 mastermind: { id: 'mastermind', name: 'MastermindAgent', status: 'active', metrics: { objectives: 3, delegations: 12 } },
                 coordinator: { id: 'coordinator', name: 'CoordinatorAgent', status: 'active', metrics: { tasks: 8, success: 94 } },
@@ -589,108 +713,24 @@ class PlatformTab extends TabComponent {
                 vetoes: 3,
                 articles: this.getDefaultArticles()
             },
-            // Advanced SRE and DevOps metrics
-            sre: {
-                systemReliability: {
-                    uptime: 99.97,
-                    mttr: '4.2min',
-                    mtbf: '47.3d',
-                    errorBudget: 2.1
-                },
-                performance: {
-                    sli: 97.8,
-                    p50: 23,
-                    p95: 127,
-                    p99: 347,
-                    throughput: 2400
-                },
-                scalability: {
-                    index: 94.2,
-                    horizontalScale: 96.3,
-                    loadBalance: 98.7,
-                    resourceOpt: 87.4
-                },
-                devopsMaturity: {
-                    deploymentFreq: 47,
-                    leadTime: '2.3min',
-                    changeFailRate: 0.7,
-                    timeToRestore: '4.2min'
-                },
-                security: {
-                    posture: 98.9,
-                    threatScore: 99.2,
-                    cryptoOps: 1200000,
-                    vulnPatches: '24h'
-                },
-                architecture: {
-                    quality: 91.8,
-                    coupling: 0.23,
-                    cohesion: 0.87,
-                    techDebt: 12.3
-                }
-            },
-            // Observability metrics
-            observability: {
-                tracing: {
-                    totalTraces: 847293,
-                    avgTraceDepth: 12.7,
-                    crossServiceCalls: 94.2,
-                    samplingRate: 15.7
-                },
-                serviceMesh: {
-                    latencyOverhead: 2.3,
-                    circuitBreakers: 12,
-                    mTls: 99.97,
-                    trafficSplitting: 8
-                },
-                anomalyDetection: {
-                    score: 0.23,
-                    falsePositives: 0.07,
-                    detectionLatency: 1.2,
-                    mlAccuracy: 96.8
-                },
-                chaosEngineering: {
-                    activeExperiments: 3,
-                    blastRadius: 12.3,
-                    resilience: 94.7,
-                    recovery: 4.7
-                }
-            },
-            // DevOps and Infrastructure metrics
-            devops: {
-                deployment: {
-                    frequency: 47,
-                    leadTime: '2.3min',
-                    failRate: 0.7,
-                    restoreTime: '4.2min'
-                },
-                infrastructure: {
-                    iacCoverage: 98.7,
-                    configDrift: 0.03,
-                    immutableInfra: 94.2,
-                    multiCloud: 87.3
-                },
-                quality: {
-                    testCoverage: 87.4,
-                    securityScans: 99.1,
-                    performanceTests: 96.7,
-                    codeQuality: 91.8
-                },
-                cost: {
-                    efficiency: 87.4,
-                    utilization: 76.4,
-                    reserved: 68.9,
-                    waste: 23.7
-                }
-            },
-            // System health
-            system: {
-                uptime: uptime,
-                mttr: '4.2min',
-                alerts: {
-                    active: 0,
-                    critical: 0
-                }
+            sre: null,
+            system: { uptime, alerts: { active: 0, critical: 0 } },
+            real: {
+                backendStatus: '—',
+                coordinator: '—',
+                agint: '—',
+                llm: '—',
+                inbound: {},
+                rateLimit: null,
+                rateLimitRejects: '—',
+                cpu: null,
+                memory: null,
+                disk: null,
+                toolsCount: '—',
+                toolsDir: 'tools/',
+                githubStatus: '—',
+                githubNext: '—',
+                githubSchedule: '—'
             }
         };
     }
@@ -918,18 +958,12 @@ class PlatformTab extends TabComponent {
      */
     async refreshObservabilityMetrics() {
         try {
-            // Simulate API call to refresh observability data
-            this.showNotification('Refreshing observability metrics...', 'info');
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate delay
-
-            // Generate fresh mock data with slight variations
-            const freshData = this.generateMockData();
-            this.updateAssessmentDashboard(freshData);
-
-            this.showNotification('Observability metrics refreshed successfully', 'success');
+            this.showNotification('Refreshing backend & metrics...', 'info');
+            await this.loadData();
+            this.showNotification('Backend & LLM status refreshed', 'success');
         } catch (error) {
             console.error('Failed to refresh observability metrics:', error);
-            this.showNotification('Failed to refresh observability metrics', 'error');
+            this.showNotification('Failed to refresh metrics', 'error');
         }
     }
 
@@ -1024,16 +1058,12 @@ class PlatformTab extends TabComponent {
      */
     async refreshIaCMetrics() {
         try {
-            this.showNotification('Refreshing IaC metrics...', 'info');
-            await new Promise(resolve => setTimeout(resolve, 800));
-
-            const freshData = this.generateMockData();
-            this.updateAssessmentDashboard(freshData);
-
-            this.showNotification('IaC metrics refreshed successfully', 'success');
+            this.showNotification('Refreshing mindX operations...', 'info');
+            await this.loadData();
+            this.showNotification('mindX operations refreshed', 'success');
         } catch (error) {
-            console.error('Failed to refresh IaC metrics:', error);
-            this.showNotification('Failed to refresh IaC metrics', 'error');
+            console.error('Failed to refresh operations:', error);
+            this.showNotification('Failed to refresh operations', 'error');
         }
     }
 

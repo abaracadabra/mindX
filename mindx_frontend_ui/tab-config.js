@@ -1,98 +1,45 @@
 /**
  * mindX Tab Configuration
- * 
+ *
  * Centralized configuration for all tabs in mindX UI.
  * Easy to extend for new agents, tools, and addons.
- * 
+ *
+ * Tab-as-extension contract:
+ * 1. Add a button with data-tab="my-tab" and a panel with id="my-tab-tab" in app.html (or inject via script).
+ * 2. Register the tab: either add an entry to TabConfig.main/core/tools/addons and call TabConfig.registerAllTabs(),
+ *    or call tabRegistry.registerTab({ id, label, group, onActivate, onDeactivate }) directly.
+ * 3. Optionally add a script (e.g. components/my-tab.js) that provides the onActivate logic or exposes a facade (e.g. window.MyTab.load()).
+ * Convention: Tab content panels use id="${tabId}-tab" so the registry can show/hide them without extra config.
+ *
  * @module TabConfig
  */
 
 const TabConfig = {
-    // Main tabs
+    // Main tabs (component = TabComponent class name, or legacyLoader = window function name, or facade)
     main: [
-        {
-            id: 'control',
-            label: 'Control',
-            group: 'main',
-            priority: 100,
-            component: 'ControlTab'
-        },
-        {
-            id: 'agents',
-            label: 'Agents',
-            group: 'main',
-            priority: 90,
-            component: 'AgentsTab'
-        },
-        {
-            id: 'system',
-            label: 'System',
-            group: 'main',
-            priority: 80
-        },
-        {
-            id: 'usage',
-            label: 'Usage',
-            group: 'main',
-            priority: 70
-        },
-        {
-            id: 'logs',
-            label: 'Logs',
-            group: 'main',
-            priority: 60
-        },
-        {
-            id: 'api',
-            label: 'API',
-            group: 'main',
-            priority: 50
-        },
-        {
-            id: 'faicey',
-            label: 'Faicey',
-            group: 'main',
-            priority: 40
-        },
-        {
-            id: 'admin',
-            label: 'Admin',
-            group: 'main',
-            priority: 30
-        }
+        { id: 'control', label: 'Control', group: 'main', priority: 100, component: 'ControlTab' },
+        { id: 'platform', label: 'Platform', group: 'main', priority: 95, component: 'PlatformTab' },
+        { id: 'agents', label: 'Agents', group: 'main', priority: 90, component: 'AgentsTab' },
+        { id: 'workflow', label: 'Workflow', group: 'main', priority: 88, component: 'WorkflowTab' },
+        { id: 'governance', label: 'Governance', group: 'main', priority: 86, component: 'GovernanceTab' },
+        { id: 'knowledge', label: 'Knowledge', group: 'main', priority: 84, component: 'KnowledgeTab' },
+        { id: 'economy', label: 'Economy', group: 'main', priority: 82, component: 'EconomyTab' },
+        { id: 'security', label: 'Security', group: 'main', priority: 80, component: 'SecurityTab' },
+        { id: 'system', label: 'System', group: 'main', priority: 78, component: 'SystemTab' },
+        { id: 'usage', label: 'Usage', group: 'main', priority: 70, legacyLoader: 'loadUsage' },
+        { id: 'logs', label: 'Logs', group: 'main', priority: 60, legacyLoader: 'loadLogs' },
+        { id: 'api', label: 'API', group: 'main', priority: 50, legacyLoader: 'loadAPIData' },
+        { id: 'faicey', label: 'Faicey', group: 'main', priority: 40, legacyLoader: 'loadFaiceyAndInit' },
+        { id: 'admin', label: 'Admin', group: 'main', priority: 30, facade: 'AdminTab', facadeMethod: 'load' },
+        { id: 'ollama', label: 'Ollama', group: 'main', priority: 25, facade: 'OllamaTab', facadeMethod: 'onActivate' }
     ],
 
-    // Core component tabs - ordered by priority (higher = first)
-    // New order: Core Systems, Evolution, Learning, Orchestration, Evolve Codebase, Query Coordinator, mindXagent, GitHub Agent
+    // Core tabs: component when class exists, legacyLoader for app.js loaders
     core: [
-        {
-            id: 'core',
-            label: 'Core Systems',
-            group: 'core',
-            priority: 100,
-            component: 'CoreSystemsTab'
-        },
-        {
-            id: 'evolution',
-            label: 'Evolution',
-            group: 'core',
-            priority: 90,
-            component: 'EvolutionTab'
-        },
-        {
-            id: 'learning',
-            label: 'Learning',
-            group: 'core',
-            priority: 80,
-            component: 'LearningTab'
-        },
-        {
-            id: 'orchestration',
-            label: 'Orchestration',
-            group: 'core',
-            priority: 70,
-            component: 'OrchestrationTab'
-        },
+        { id: 'core', label: 'Core Systems', group: 'core', priority: 100, legacyLoader: 'loadCoreSystems' },
+        { id: 'evolution', label: 'Evolution', group: 'core', priority: 90, legacyLoader: 'loadEvolution' },
+        { id: 'learning', label: 'Learning', group: 'core', priority: 80, legacyLoader: 'loadLearning' },
+        { id: 'orchestration', label: 'Orchestration', group: 'core', priority: 70, legacyLoader: 'loadOrchestration' },
         {
             id: 'evolve-codebase',
             label: 'Evolve Codebase',
@@ -210,36 +157,27 @@ const TabConfig = {
         ];
 
         allTabs.forEach(tabConfig => {
-            // Create activation callback
             const onActivate = async (tab) => {
-                // If component class exists, instantiate it
                 if (tabConfig.component && window[tabConfig.component]) {
                     const ComponentClass = window[tabConfig.component];
                     const component = new ComponentClass(tabConfig);
                     await component.initialize();
                     await component.onActivate();
-                    
-                    // Store component instance
                     tab.componentInstance = component;
-                    
-                    // Global reference for certain tabs
                     if (tabConfig.id === 'query-coordinator') {
                         window.queryCoordinatorTab = component;
                     }
-                } else {
-                    // Fallback to existing functions
-                    if (tabConfig.id === 'mindxagent') {
-                        // Use existing mindXagent functions
-                        if (typeof loadMindXagentStatus === 'function') {
-                            await loadMindXagentStatus();
-                        }
-                        if (typeof loadMindXagentOllamaStatus === 'function') {
-                            await loadMindXagentOllamaStatus();
-                        }
-                        if (typeof loadMindXagentOllamaConversation === 'function') {
-                            await loadMindXagentOllamaConversation();
-                        }
+                } else if (tabConfig.facade && tabConfig.facadeMethod && window[tabConfig.facade]) {
+                    const fn = window[tabConfig.facade][tabConfig.facadeMethod];
+                    if (typeof fn === 'function') {
+                        await Promise.resolve(fn.call(window[tabConfig.facade]));
                     }
+                } else if (tabConfig.legacyLoader && typeof window[tabConfig.legacyLoader] === 'function') {
+                    await Promise.resolve(window[tabConfig.legacyLoader]());
+                } else if (tabConfig.id === 'mindxagent') {
+                    if (typeof window.loadMindXagentStatus === 'function') await window.loadMindXagentStatus();
+                    if (typeof window.loadMindXagentOllamaStatus === 'function') await window.loadMindXagentOllamaStatus();
+                    if (typeof window.loadMindXagentOllamaConversation === 'function') await window.loadMindXagentOllamaConversation();
                 }
             };
 

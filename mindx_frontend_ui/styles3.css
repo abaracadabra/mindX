@@ -1043,24 +1043,25 @@ pre::before {
 }
 
 .core-tabs {
-    background: rgba(0, 168, 255, 0.1);
+    background: rgba(0, 168, 255, 0.08);
     border: 1px solid var(--corp-blue);
     border-radius: 8px;
-    padding: 10px;
+    padding: 10px 10px 10px 14px;
     position: relative;
+    padding-top: 20px;
 }
 
 .core-tabs-label {
     position: absolute;
-    top: -8px;
-    left: 15px;
-    background: var(--dark-bg);
-    color: var(--corp-blue);
-    padding: 0 8px;
-    font-size: 12px;
+    top: 6px;
+    left: 14px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.55);
+    padding: 0;
+    font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
 }
 
 .core-tab {
@@ -2029,6 +2030,42 @@ body.autonomous-mode .tab-btn.active {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-lg);
+}
+
+.ollama-admin-models-list {
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-md);
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius-sm);
+    font-size: 0.9em;
+}
+.ollama-models-list-hint {
+    color: var(--text-muted, #888);
+}
+.ollama-models-list-hint.error {
+    color: var(--corp-red);
+}
+.ollama-admin-models-list .ollama-models-list-title {
+    display: block;
+    margin-bottom: var(--spacing-xs);
+    color: var(--corp-cyan, #00ffff);
+}
+.ollama-admin-models-list .ollama-models-ul {
+    margin: 0;
+    padding-left: 1.2em;
+    list-style: disc;
+}
+.ollama-admin-models-list .ollama-model-li {
+    margin: 2px 0;
+}
+.ollama-admin-models-list .ollama-model-name {
+    font-family: var(--font-mono, monospace);
+    color: var(--text-primary);
+}
+.ollama-admin-models-list .ollama-model-details {
+    color: var(--text-muted, #888);
+    font-size: 0.9em;
 }
 
 .interaction-controls {
@@ -15056,6 +15093,25 @@ details pre {
     margin-bottom: var(--spacing-lg);
 }
 
+/* Platform Header Metrics (docs/platform-tab.md section 1) */
+.platform-header-metrics {
+    margin-bottom: var(--spacing-lg);
+}
+.platform-header-metrics .section-label {
+    font-size: 0.9rem;
+    color: rgba(0, 212, 255, 0.9);
+    margin: 0 0 var(--spacing-sm) 0;
+    font-weight: 600;
+}
+.platform-header-kpis .kpi-card {
+    min-height: auto;
+}
+.platform-header-kpis .kpi-sub {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 0.25rem;
+}
+
 .system-alerts {
     background: rgba(255, 255, 255, 0.02);
     border-radius: var(--radius-sm);
@@ -15344,6 +15400,85 @@ details pre {
     color: #fbbf24;
 }
 
+/* IaC & DevOps Excellence (platform-tab.md §5–6) */
+.iac-devops-section .section-header {
+    align-items: flex-start;
+}
+
+.iac-devops-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--spacing-lg);
+    padding: var(--spacing-md);
+}
+
+.iac-devops-card {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(0, 212, 255, 0.25);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    backdrop-filter: blur(8px);
+}
+
+.iac-devops-card h3 {
+    margin: 0 0 var(--spacing-xs) 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-neon-blue);
+}
+
+.iac-devops-card .card-note {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.badge-framework {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: rgba(0, 212, 255, 0.9);
+    background: rgba(0, 212, 255, 0.15);
+    padding: 0.15rem 0.4rem;
+    border-radius: var(--radius-xs);
+}
+
+.metrics-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.metrics-table th,
+.metrics-table td {
+    padding: 0.4rem 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.metrics-table th {
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 600;
+}
+
+.metrics-table td:last-child {
+    color: var(--color-neon-green);
+    font-family: 'SF Mono', Monaco, monospace;
+}
+
+.metric-na {
+    color: rgba(255, 255, 255, 0.45);
+    font-style: italic;
+}
+
+.control-btn-link {
+    text-decoration: none;
+}
+
+.control-btn-muted {
+    cursor: default;
+    opacity: 0.8;
+}
+
 /* GitOps Pipeline Styles */
 .gitops-pipeline {
     margin-top: var(--spacing-md);
@@ -15582,9 +15717,11 @@ details pre {
 
 .section-header {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    padding: var(--spacing-sm);
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
     background: linear-gradient(90deg, rgba(0, 123, 255, 0.1), rgba(0, 255, 136, 0.1));
     border-bottom: 1px solid var(--border-glow);
     margin-bottom: var(--spacing-sm);
@@ -15595,6 +15732,18 @@ details pre {
     color: var(--color-neon-blue);
     font-size: 1.1rem;
     font-weight: 600;
+}
+
+.section-subtitle {
+    width: 100%;
+    margin: 0.25rem 0 0 0;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.4;
+}
+
+.section-subtitle strong {
+    color: rgba(255, 200, 100, 0.95);
 }
 
 .section-controls {

@@ -138,7 +138,9 @@ mindx_agent.settings["max_concurrent_improvements"] = 5
 }
 ```
 
-## Monitoring
+## Monitoring (both directions)
+
+Whether mindX is ingesting, providing inference, or services, monitoring and rate control are essential in **both directions** (inbound and outbound). See **[docs/monitoring_rate_control.md](monitoring_rate_control.md)** for scientific network and data metrics (latency ms, bytes, req/min). Inbound: `GET /api/monitoring/inbound`; outbound: rate limiter and provider `get_metrics()`.
 
 Monitor the following metrics to ensure optimal performance:
 
