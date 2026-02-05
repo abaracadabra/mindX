@@ -74,6 +74,8 @@ All agent documentation is organized in the `agents/` folder structure. See [age
 
 - **[Blueprint Agent](agents/blueprint_agent.md)** - Strategic planning agent generating blueprints for self-improvement iterations
 - **[Blueprint to Action Converter](blueprint_to_action_converter.md)** - Converts strategic blueprints into executable BDI actions
+- **[Blueprint: mindX Framework](Blueprint.md)** - Gödel Machine–inspired blueprint: blockchain + PGVectorScale for THOTs (Higher Order Thoughts) and thlnks (links); directive for building mindX as self-referential, attestable memory system
+- **[Directives](DIRECTIVES.md)** - Canonical mindX directives (e.g. Blueprint directive) for evolve/strategic commands
 
 #### Learning Components (agents/learning/)
 
