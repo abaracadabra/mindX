@@ -19,6 +19,7 @@ const TabConfig = {
     main: [
         { id: 'control', label: 'Control', group: 'main', priority: 100, component: 'ControlTab' },
         { id: 'platform', label: 'Platform', group: 'main', priority: 95, component: 'PlatformTab' },
+        { id: 'godel', label: 'Gödel', group: 'main', priority: 93, component: 'GodelTab' },
         { id: 'agents', label: 'Agents', group: 'main', priority: 90, component: 'AgentsTab' },
         { id: 'workflow', label: 'Workflow', group: 'main', priority: 88, component: 'WorkflowTab' },
         { id: 'governance', label: 'Governance', group: 'main', priority: 86, component: 'GovernanceTab' },

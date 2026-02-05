@@ -2393,7 +2393,7 @@ class MindXAgent:
                     # Log action choices
                     if prioritized:
                         choices = [{"goal": p["goal"], "priority": p.get("priority", "medium"), "estimated_impact": p.get("impact", "unknown")} for p in prioritized[:5]]
-                        self._log_action_choices("improvement_selection", choices)
+                        await self._log_action_choices("improvement_selection", choices)
                     
                     # Execute top priority improvement
                     if prioritized:
@@ -2413,11 +2413,9 @@ class MindXAgent:
                         # Orchestrate improvement
                         try:
                             result = await self.orchestrate_self_improvement(top_priority['goal'])
-                            
                             if result.success:
                                 logger.info(f"{self.log_prefix} Improvement cycle {cycle_count} completed successfully")
                                 success = True
-                                # Check if result indicates file changes
                                 if hasattr(result, 'file_changes') and result.file_changes:
                                     has_file_changes = len(result.file_changes) > 0
                                 elif hasattr(result, 'changes_made') and result.changes_made:
@@ -2428,7 +2426,16 @@ class MindXAgent:
                         except Exception as e:
                             error_message = str(e)
                             logger.error(f"{self.log_prefix} Error in improvement execution: {e}", exc_info=True)
-                
+                        if self.memory_agent:
+                            await self.memory_agent.log_godel_choice({
+                                "source_agent": self.agent_id,
+                                "choice_type": "mindx_improvement_execution",
+                                "perception_summary": top_priority["goal"][:500],
+                                "options_considered": [top_priority["goal"]],
+                                "chosen_option": top_priority["goal"],
+                                "rationale": "autonomous_improvement_loop",
+                                "outcome": "success" if success else ("error: " + (error_message or "unknown")[:200]),
+                            })
                 # Update session activity
                 if self.current_session:
                     self.session_manager.update_session_activity(
@@ -2515,25 +2522,31 @@ class MindXAgent:
         
         logger.debug(f"{self.log_prefix} [THINKING] {step}: {thought}")
     
-    def _log_action_choices(self, context: str, choices: List[Dict[str, Any]]):
-        """Log action choices for UI display"""
+    async def _log_action_choices(self, context: str, choices: List[Dict[str, Any]]):
+        """Log action choices for UI display and persist as Gödel core choice."""
         if not self.settings.get("show_action_choices", True):
             return
-        
         action_entry = {
             "timestamp": time.time(),
             "context": context,
             "choices": choices,
             "selected": choices[0] if choices else None
         }
-        
         self.action_choices.append(action_entry)
-        
-        # Keep only last N entries
         if len(self.action_choices) > self.max_action_history:
             self.action_choices = self.action_choices[-self.max_action_history:]
-        
         logger.info(f"{self.log_prefix} [ACTION CHOICE] {context}: {len(choices)} options, selected: {choices[0].get('goal', 'N/A') if choices else 'None'}")
+        if self.memory_agent and choices:
+            options_considered = [c.get("goal", str(c)) for c in choices]
+            chosen = choices[0].get("goal", str(choices[0]))
+            await self.memory_agent.log_godel_choice({
+                "source_agent": self.agent_id,
+                "choice_type": "mindx_improvement_selection",
+                "perception_summary": context,
+                "options_considered": options_considered,
+                "chosen_option": chosen,
+                "rationale": f"priority={choices[0].get('priority', 'N/A')}",
+            })
     
     async def receive_startup_information(self, startup_info: Dict[str, Any]):
         """

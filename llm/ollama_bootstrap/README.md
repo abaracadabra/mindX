@@ -66,9 +66,10 @@ See [api/ollama/ollamaapi.md](../../api/ollama/ollamaapi.md) and [docs.ollama.co
 ## When mindX uses this (no inference connection)
 
 1. **Detection:** All providers fail (no API key, rate limit, or unreachable) and Ollama at primary/fallback URL is not reachable.
-2. **Bootstrap:** mindX can invoke `llm/ollama_bootstrap/aion.sh` (Linux) or prompt the operator to run it.
-3. **Config:** After install, `models/ollama.yaml` **fallback_url** `http://localhost:11434` is used; no code change needed.
-4. **Continue:** `ModelRegistry.generate_with_fallback` or explicit Ollama handler then succeeds, and self-improvement continues from core.
+2. **Find/kill (optional):** To free the Ollama port or stop a stuck Ollama process first, the operator can run **doubletap**: `./api/ollama/doubletap.sh`. Handy for startup_agent when the host must clear the port or terminate Ollama before bootstrap. See [api/ollama/ollamaapi.md](../../api/ollama/ollamaapi.md) (Find and kill Ollama).
+3. **Bootstrap:** mindX can invoke `llm/ollama_bootstrap/aion.sh` (Linux) or prompt the operator to run it.
+4. **Config:** After install, `models/ollama.yaml` **fallback_url** `http://localhost:11434` is used; no code change needed.
+5. **Continue:** `ModelRegistry.generate_with_fallback` or explicit Ollama handler then succeeds, and self-improvement continues from core.
 
 See [RESILIENCE.md](../RESILIENCE.md) for the full resilience design and the “No inference connection” section.
 

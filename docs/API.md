@@ -2,6 +2,8 @@
 
 mindX provides an API for agents, UIs, and external systems. **Read the docs** at the interactive Swagger UI when the backend is running.
 
+**Port:** The mindX backend runs by default on **port 8000**. In the UI, the **API** tab (main menu) includes a direct link to the API information mindX provides: the interactive Swagger UI at that base URL.
+
 ---
 
 ## Base URL and interactive docs

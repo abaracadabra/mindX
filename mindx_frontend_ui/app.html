@@ -498,6 +498,7 @@
                     <button class="tab-btn" data-tab="logs">Logs</button>
                     <button class="tab-btn" data-tab="api">API</button>
                     <button class="tab-btn" data-tab="faicey">Faicey</button>
+                    <button class="tab-btn" data-tab="godel">Gödel</button>
                     <button class="tab-btn" data-tab="admin">Admin</button>
                     <button class="tab-btn" data-tab="ollama">Ollama</button>
                 </div>
@@ -516,6 +517,9 @@
 
         <!-- Control Tab -->
         <div id="control-tab" class="tab-content active">
+            <div class="inference-blurb control-inference-blurb">
+                <p><strong>Inference access:</strong> The coordinator agent and any agents on this front page that need inference can access inference through the <strong>inference_agent</strong>. The inference_agent handles all requests for inference from agents. There is never enough inference; we track each provider and work with settings to maintain solvency and maximum inference consumption over time in accordance with budget as a guideline.</p>
+            </div>
             <div class="control-section">
                 <div class="section-header">
                     <div class="section-tabs">
@@ -1347,8 +1351,8 @@
             <div class="platform-dashboard">
                 <div class="platform-header">
                     <div class="platform-title">
-                        <h1>Enterprise SRE Dashboard</h1>
-                        <div class="platform-subtitle">mindX: BDI multi-agent orchestration · FastAPI backend · Ollama/LLM · Real-time health, agents, and API metrics (see docs/platform-tab.md)</div>
+                        <h1>mindX Platform</h1>
+                        <div class="platform-subtitle">BDI orchestration · FastAPI · Ollama/LLM · Health, agents, API metrics</div>
                         <div class="platform-metadata">
                             <span class="metadata-item">Version: v2.1.4</span>
                             <span class="metadata-item">Environment: Production</span>
@@ -1787,6 +1791,33 @@
                     </div>
                 </div>
 
+                <!-- Gödel core choices (audit log for Gödel machine behavior) -->
+                <div class="platform-section godel-choices-section">
+                    <div class="section-header">
+                        <h2>Gödel core choices</h2>
+                        <p class="section-subtitle">Last core decisions (source, type, chosen option, rationale, time). Read-only audit log.</p>
+                        <div class="section-controls">
+                            <button class="control-btn" id="godel-choices-refresh">Refresh</button>
+                        </div>
+                    </div>
+                    <div class="godel-choices-table-wrap">
+                        <table class="metrics-table godel-choices-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Source</th>
+                                    <th>Type</th>
+                                    <th>Chosen option</th>
+                                    <th>Rationale</th>
+                                </tr>
+                            </thead>
+                            <tbody id="godel-choices-tbody">
+                                <tr><td colspan="5">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- Platform Content Grid -->
                 <div class="platform-content">
                 <!-- System Topology Visualization -->
@@ -2144,6 +2175,22 @@
             </div>
         </div>
 
+        <!-- Gödel Tab: diagnostics (startup_agent ↔ host, mindXagent ↔ Ollama) -->
+        <div id="godel-tab" class="tab-content">
+            <div id="godel-tab-inner" class="godel-tab-inner">
+                <div class="godel-tab-header">
+                    <h1>Gödel diagnostics</h1>
+                    <p class="godel-tab-subtitle">Startup Agent ↔ host machine · mindXagent ↔ Ollama inference</p>
+                    <div class="godel-tab-controls">
+                        <button type="button" class="control-btn" id="godel-diagnostics-refresh">Refresh</button>
+                    </div>
+                </div>
+                <div id="godel-diagnostics-output" class="godel-diagnostics-output">
+                    <p class="godel-loading">Loading…</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Workflow Tab -->
         <div id="workflow-tab" class="tab-content">
             <!-- Workflow Overview Dashboard -->
@@ -2407,14 +2454,13 @@
             </div>
         </div>
 
-        <!-- Governance Tab -->
+        <!-- Governance Tab: DAIO Constitutional Governance -->
         <div id="governance-tab" class="tab-content">
-            <!-- Governance Overview Header -->
             <div class="governance-overview">
                 <div class="governance-header">
                     <div class="governance-title">
-                        <h1>⚖️ DAIO Constitutional Governance</h1>
-                        <div class="governance-subtitle">Code Is Law - Immutable Constitutional Framework & Agent Actions Validation</div>
+                        <h1>DAIO Constitutional Governance</h1>
+                        <div class="governance-subtitle">Code is law — immutable constitutional framework and agent action validation</div>
                     </div>
                     <div class="governance-controls">
                         <button id="validate-constitution-btn" class="governance-btn primary">
@@ -5060,8 +5106,18 @@
             </div>
         </div>
 
-        <!-- API Tab -->
+        <!-- API Tab: mindX API docs link + provider management -->
         <div id="api-tab" class="tab-content">
+            <div class="mindx-api-docs-blurb">
+                <h2>mindX API</h2>
+                <p>mindX exposes its own API for agents, UIs, and external systems. <strong>Backend port (default): 8000.</strong></p>
+                <ul>
+                    <li><strong>Base URL:</strong> <code id="mindx-api-base-url">http://localhost:8000</code></li>
+                    <li><strong>Interactive API docs (Swagger UI):</strong> <a id="mindx-api-docs-link" href="http://localhost:8000/docs" target="_blank" rel="noopener noreferrer">http://localhost:8000/docs</a> — browse endpoints, try requests, inspect schemas.</li>
+                    <li>ReDoc (if enabled): <a href="http://localhost:8000/redoc" target="_blank" rel="noopener noreferrer">http://localhost:8000/redoc</a></li>
+                </ul>
+                <p class="mindx-api-docs-note">See also <code>docs/API.md</code> for route groups and usage.</p>
+            </div>
             <div class="control-section">
                 <div class="section-header">
                     <h2>API Provider Management</h2>
@@ -6563,6 +6619,7 @@
         document.write('<script src="components/economy-tab.js?v=' + timestamp + '"><\/script>');
         document.write('<script src="components/security-tab.js?v=' + timestamp + '"><\/script>');
         document.write('<script src="components/platform-tab.js?v=' + timestamp + '"><\/script>');
+        document.write('<script src="components/godel-tab.js?v=' + timestamp + '"><\/script>');
         document.write('<script src="components/admin-tab.js?v=' + timestamp + '"><\/script>');
         document.write('<script src="components/ollama-tab.js?v=' + timestamp + '"><\/script>');
         document.write('<script src="components/ollama-admin-tab.js?v=' + timestamp + '"><\/script>');

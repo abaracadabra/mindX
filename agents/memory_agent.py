@@ -452,6 +452,31 @@ class MemoryAgent:
             logger.error(f"Failed to write process log: {e}", exc_info=True)
             return None
 
+    async def log_godel_choice(self, choice_record: Dict[str, Any]) -> Optional[Path]:
+        """
+        Append a single Gödel core choice to the global log (data/logs/godel_choices.jsonl).
+        Used to audit mindX as a Gödel machine: perception, options, chosen option, rationale, outcome.
+        """
+        try:
+            self.log_path.mkdir(parents=True, exist_ok=True)
+            filepath = self.log_path / "godel_choices.jsonl"
+            ts = datetime.utcnow().isoformat() + "Z"
+            record = dict(choice_record)
+            if "timestamp_utc" not in record:
+                record["timestamp_utc"] = ts
+            log_line = json_lib.dumps(record, default=str) + "\n"
+            async with aiofiles.open(filepath, "a", encoding="utf-8") as f:
+                await f.write(log_line)
+            await self.log_process(
+                "godel_core_choice",
+                record,
+                {"agent_id": record.get("source_agent", "system")},
+            )
+            return filepath
+        except Exception as e:
+            logger.error(f"Failed to write Gödel choice log: {e}", exc_info=True)
+            return None
+
     async def store_memory(
         self,
         content: Any,

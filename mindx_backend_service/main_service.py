@@ -540,6 +540,47 @@ async def id_deprecate(payload: IdDeprecatePayload):
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
     return await command_handler.handle_id_deprecate(payload.public_address, payload.entity_id_hint)
 
+
+@app.get("/godel/choices", summary="Get last N Gödel core choices (read-only audit log)")
+async def godel_choices(limit: int = 50, source_agent: Optional[str] = None):
+    """Read last N lines from data/logs/godel_choices.jsonl, newest first. Optional filter by source_agent."""
+    log_path = Path(PROJECT_ROOT) / "data" / "logs" / "godel_choices.jsonl"
+    if not log_path.exists():
+        return {"choices": [], "total": 0}
+    choices = []
+    try:
+        with open(log_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    record = json.loads(line)
+                    if source_agent is not None and record.get("source_agent") != source_agent:
+                        continue
+                    choices.append(record)
+                except json.JSONDecodeError:
+                    continue
+        choices = choices[-limit:] if limit else choices
+        choices.reverse()
+        return {"choices": choices, "total": len(choices)}
+    except Exception as e:
+        logger.warning(f"Failed to read Gödel choices log: {e}")
+        return {"choices": [], "total": 0, "error": str(e)}
+
+
+@app.get("/inference/status", summary="Get inference_agent status (providers, usage, budget)")
+async def get_inference_status():
+    """Return inference_agent status: providers tracked, usage per provider, budget guideline, solvency."""
+    try:
+        from agents.orchestration.inference_agent import InferenceAgent
+        agent = await InferenceAgent.get_instance()
+        return agent.get_status()
+    except Exception as e:
+        logger.warning(f"inference_agent status failed: {e}")
+        return {"agent_id": "inference_agent", "error": str(e), "providers": [], "usage_by_provider": {}}
+
+
 @app.post("/commands/audit_gemini", summary="Audit Gemini models")
 async def audit_gemini(payload: AuditGeminiPayload):
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
@@ -1826,6 +1867,18 @@ async def make_actual_code_changes_with_bdi_reasoning(directive: str, cycle: int
         
         # Update global BDI state for real-time updates
         update_bdi_state(directive, chosen_agent, bdi_reasoning)
+        
+        # Log Gödel core choice for BDI agent selection
+        if command_handler and command_handler.mastermind.memory_agent:
+            await command_handler.mastermind.memory_agent.log_godel_choice({
+                "source_agent": "bdi_directive_handler",
+                "cycle_id": cycle,
+                "choice_type": "bdi_agent_selection",
+                "perception_summary": directive[:500],
+                "options_considered": list(available_agents.keys()),
+                "chosen_option": chosen_agent,
+                "rationale": bdi_reasoning,
+            })
         
         # Add detailed BDI activity to log
         if not hasattr(update_bdi_state, 'activity_log'):

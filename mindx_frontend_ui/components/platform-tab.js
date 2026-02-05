@@ -148,6 +148,7 @@ class PlatformTab extends TabComponent {
                     governance: governanceData,
                     real: realData
                 });
+                await this.refreshGodelChoices();
             } catch (error) {
                 console.error('Failed to load platform data:', error);
                 this.showError('Failed to load platform data', document.getElementById('platform-tab'));
@@ -372,6 +373,67 @@ class PlatformTab extends TabComponent {
         this.updateAssessmentDashboard(data.assessment);
         this.updateGovernanceDashboard(data.governance);
         this.updateBackendAndOperations(data.real);
+    }
+
+    /**
+     * Fetch and display last N Gödel core choices from GET /godel/choices
+     */
+    async refreshGodelChoices() {
+        const tbody = document.getElementById('godel-choices-tbody');
+        if (!tbody) return;
+        const base = window.__MINDX_API_BASE__ || '';
+        try {
+            const res = await fetch(`${base}/godel/choices?limit=20`);
+            const data = await res.json().catch(() => ({ choices: [] }));
+            const choices = data.choices || [];
+            tbody.innerHTML = '';
+            if (choices.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">No core choices recorded yet.</td></tr>';
+                return;
+            }
+            choices.forEach((c) => {
+                const tr = document.createElement('tr');
+                const time = c.timestamp_utc || c.timestamp || '—';
+                const source = (c.source_agent || '—').toString();
+                const type = (c.choice_type || '—').toString();
+                const chosen = (c.chosen_option != null ? String(c.chosen_option) : '—').slice(0, 80);
+                const rationale = (c.rationale != null ? String(c.rationale) : '—').slice(0, 120);
+                ['time', 'source', 'type', 'chosen', 'rationale'].forEach((key, i) => {
+                    const td = document.createElement('td');
+                    td.textContent = { time, source, type, chosen, rationale }[key];
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="5">Failed to load choices.</td></tr>';
+        }
+    }
+
+    updateGodelChoices(data) {
+        if (!data || !data.choices) return;
+        const tbody = document.getElementById('godel-choices-tbody');
+        if (!tbody) return;
+        const choices = data.choices;
+        tbody.innerHTML = '';
+        if (choices.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5">No core choices recorded yet.</td></tr>';
+            return;
+        }
+        choices.forEach((c) => {
+            const tr = document.createElement('tr');
+            const time = c.timestamp_utc || c.timestamp || '—';
+            const source = (c.source_agent || '—').toString();
+            const type = (c.choice_type || '—').toString();
+            const chosen = (c.chosen_option != null ? String(c.chosen_option) : '—').slice(0, 80);
+            const rationale = (c.rationale != null ? String(c.rationale) : '—').slice(0, 120);
+            [time, source, type, chosen, rationale].forEach((val) => {
+                const td = document.createElement('td');
+                td.textContent = val;
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
     }
 
     /**
@@ -739,6 +801,10 @@ class PlatformTab extends TabComponent {
      * Set up event listeners
      */
     setupEventListeners() {
+        const godelRefreshBtn = document.getElementById('godel-choices-refresh');
+        if (godelRefreshBtn) {
+            godelRefreshBtn.addEventListener('click', () => this.refreshGodelChoices());
+        }
         // Topology controls
         const refreshTopologyBtn = document.getElementById('refresh-topology');
         if (refreshTopologyBtn) {

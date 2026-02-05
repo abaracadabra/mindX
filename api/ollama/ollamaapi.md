@@ -2,7 +2,15 @@
 
 **Last updated:** 2026-01-31
 
-This file is a **working reference** derived from the official Ollama API docs. Use it for day-to-day development; for the canonical source and to get updates, use the official repository:
+This file is a **working reference** derived from the official Ollama API docs.
+
+## Find and kill Ollama (doubletap)
+
+When you need to free the Ollama port or terminate Ollama (e.g. before re-running bootstrap, or for startup_agent when the host must clear the port), use the **doubletap** script in this directory:
+
+- **Script:** `api/ollama/doubletap.sh` (c) 2025 Gregory L. Magnusson  
+- **Usage (from project root):** `./api/ollama/doubletap.sh` or `bash api/ollama/doubletap.sh`  
+- **What it does:** find and kill Ollama/llama on a custom port (default 11434), Ollama shepherd boot y/N control, UFW rules to keep Ollama as localhost-only, and a local-access audit. Interactive; run by an operator when needed. Handy for startup_agent workflows where the host must ensure the port is free or Ollama is stopped before bootstrap. Use it for day-to-day development; for the canonical source and to get updates, use the official repository:
 
 - **Get updates (canonical source):** [github.com/ollama/ollama — docs/api.md](https://github.com/ollama/ollama/edit/main/docs/api.md)
 - **Official API docs:** [docs.ollama.com/api](https://docs.ollama.com/api)

@@ -5649,6 +5649,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initializeAPITab() {
+        const base = (typeof API_CONFIG !== 'undefined' && API_CONFIG.baseUrl) ? API_CONFIG.baseUrl : (window.MINDX_API_URL || `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`);
+        const docsLink = document.getElementById('mindx-api-docs-link');
+        const baseUrlEl = document.getElementById('mindx-api-base-url');
+        if (docsLink) {
+            docsLink.href = base.replace(/\/$/, '') + '/docs';
+            docsLink.textContent = base.replace(/\/$/, '') + '/docs';
+        }
+        if (baseUrlEl) baseUrlEl.textContent = base.replace(/\/$/, '');
+
         const refreshBtn = document.getElementById('refresh-api-providers-btn');
         const scanBtn = document.getElementById('scan-api-folder-btn');
         const detectBtn = document.getElementById('detect-providers-btn');
