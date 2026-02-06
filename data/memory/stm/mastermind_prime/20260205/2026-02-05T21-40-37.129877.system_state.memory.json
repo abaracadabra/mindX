@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-02-05T21:40:37.129877",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mastermind_prime",
+  "content": {
+    "process_name": "mastermind_agent_creation_completed",
+    "data": {
+      "success": false,
+      "result": {
+        "status": "FAILURE",
+        "message": "Exception during agent creation: name 'IDManagerAgent' is not defined",
+        "agent_id": "test_json_1770352830",
+        "error": "name 'IDManagerAgent' is not defined"
+      },
+      "agent_type": "processor",
+      "agent_id": "test_json_1770352830"
+    }
+  },
+  "context": {
+    "agent_id": "mastermind_prime"
+  },
+  "tags": [
+    "mastermind_agent_creation_completed",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "72814e555a28c830"
+}

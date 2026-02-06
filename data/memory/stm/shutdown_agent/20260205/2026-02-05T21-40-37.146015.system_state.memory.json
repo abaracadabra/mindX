@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-02-05T21:40:37.146015",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "shutdown_agent",
+  "content": {
+    "process_name": "shutdown_initiation",
+    "data": {
+      "timestamp": 1770352837.145997,
+      "previous_state": {
+        "event_id": "shutdown_1770352837",
+        "timestamp": 1770352837.134168,
+        "improvement_count": 0,
+        "rollback_count": 0
+      },
+      "save_state": true,
+      "create_backup": true,
+      "archive_proven": true
+    }
+  },
+  "context": {
+    "agent_id": "shutdown_agent",
+    "event": "shutdown_initiation"
+  },
+  "tags": [
+    "shutdown_initiation",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "28e1a13c618a7d5d"
+}
