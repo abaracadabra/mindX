@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-02-05T21:43:19.487320",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "coordinator_agent_main",
+  "content": {
+    "process_name": "coordinator_agent_creation_failed",
+    "data": {
+      "status": "FAILURE",
+      "message": "Exception during agent creation: name 'IDManagerAgent' is not defined",
+      "agent_id": "test_sign_1770352993",
+      "error": "name 'IDManagerAgent' is not defined"
+    }
+  },
+  "context": {
+    "agent_id": "coordinator_agent_main"
+  },
+  "tags": [
+    "coordinator_agent_creation_failed",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "a95b71720708628c"
+}
