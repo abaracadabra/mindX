@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-02-05T21:42:52.988382",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "coordinator_agent_main",
+  "content": {
+    "process_name": "coordinator_agent_deregistration_failed",
+    "data": {
+      "status": "FAILURE",
+      "message": "Agent with ID 'test_lifecycle_1770352906' not found in registry",
+      "agent_id": "test_lifecycle_1770352906"
+    }
+  },
+  "context": {
+    "agent_id": "coordinator_agent_main"
+  },
+  "tags": [
+    "coordinator_agent_deregistration_failed",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "46e61eba27821685"
+}
