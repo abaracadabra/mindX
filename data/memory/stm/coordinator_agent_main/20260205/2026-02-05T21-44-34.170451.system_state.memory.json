@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-02-05T21:44:34.170451",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "coordinator_agent_main",
+  "content": {
+    "process_name": "coordinator_agent_deregistration_request",
+    "data": {
+      "agent_id": "nonexistent_agent",
+      "current_agent_count": 1
+    }
+  },
+  "context": {
+    "agent_id": "coordinator_agent_main"
+  },
+  "tags": [
+    "coordinator_agent_deregistration_request",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "eeb46ebcd218889f"
+}
