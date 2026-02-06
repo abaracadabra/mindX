@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-02-05T21:41:49.898806",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mastermind_prime",
+  "content": {
+    "process_name": "mastermind_agent_creation_start",
+    "data": {
+      "agent_type": "validator",
+      "agent_id": "test_lifecycle_1770352906",
+      "config": {
+        "description": "lifecycle test agent",
+        "created_via": "cli_natural_language"
+      }
+    }
+  },
+  "context": {
+    "agent_id": "mastermind_prime"
+  },
+  "tags": [
+    "mastermind_agent_creation_start",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "1c021531d551ffd4"
+}
