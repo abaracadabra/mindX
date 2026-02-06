@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-02-05T07:16:55.006201",
+  "memory_type": "performance",
+  "importance": 3,
+  "agent_id": "admin",
+  "content": {
+    "event_type": "status_check",
+    "log_level": "INFO",
+    "base_url": "http://10.0.0.155:18080",
+    "using_fallback": false,
+    "connection_test": {
+      "success": true,
+      "message": "Successfully connected to Ollama at http://10.0.0.155:18080",
+      "model_count": 14,
+      "base_url": "http://10.0.0.155:18080",
+      "primary_url": "http://10.0.0.155:18080",
+      "fallback_url": "http://localhost:11434",
+      "using_fallback": false,
+      "status_code": 200,
+      "request_sent": "GET http://10.0.0.155:18080/api/tags",
+      "response_status": 200,
+      "response_preview": "200 OK, 14 model(s)"
+    }
+  },
+  "context": {
+    "source": "ollama_admin",
+    "timestamp": "2026-02-05T07:16:55.006182"
+  },
+  "tags": [
+    "ollama",
+    "diagnostics",
+    "info"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "7ad25f9d6c2db904"
+}

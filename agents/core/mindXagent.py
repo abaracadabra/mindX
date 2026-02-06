@@ -1986,6 +1986,17 @@ class MindXAgent:
                     },
                     {"agent_id": self.agent_id, "event": "connection_management"}
                 )
+                # Gödel choice: inference selected when no active API
+                await self.memory_agent.log_godel_choice({
+                    "source_agent": self.agent_id,
+                    "choice_type": "inference_selection",
+                    "perception_summary": "no active API connection found (no API keys)",
+                    "options_considered": ["ollama", "skip_inference"],
+                    "chosen_option": "ollama",
+                    "rationale": f"default_to_ollama: {default_result.get('ollama_base_url', 'N/A')}",
+                    "outcome": "pending_connect",
+                    "ollama_base_url": default_result.get("ollama_base_url"),
+                })
             else:
                 # Check all connections
                 connections = await self.connection_manager_tool.execute("check_connections")
@@ -2027,7 +2038,7 @@ class MindXAgent:
             self.ollama_chat_manager = OllamaChatManager(
                 base_url=base_url,
                 config=self.config,
-                model_discovery_interval=300,
+                model_discovery_interval=86400,  # Refresh model list once per day; manual get_available_ollama_models() or discover_models(force=True) to refresh sooner
                 keep_alive="10m",
                 conversation_history_path=conversation_history_path
             )
@@ -2049,6 +2060,15 @@ class MindXAgent:
                     if best_model:
                         self.llm_model = best_model
                         logger.info(f"{self.log_prefix} Selected Ollama model: {best_model}")
+                        await self.memory_agent.log_godel_choice({
+                            "source_agent": self.agent_id,
+                            "choice_type": "ollama_model_selection",
+                            "perception_summary": "Ollama connected; model list available",
+                            "options_considered": [m.get("name", "") for m in available_models[:10]],
+                            "chosen_option": best_model,
+                            "rationale": "best_for_task reasoning",
+                            "outcome": "success",
+                        })
             else:
                 logger.warning(f"{self.log_prefix} Ollama Chat Manager initialized but not connected")
         except Exception as e:
@@ -2573,6 +2593,17 @@ class MindXAgent:
         # If Ollama is connected from startup, use the provided base_url
         if ollama_connected and ollama_base_url:
             logger.info(f"{self.log_prefix} Ollama connected from startup at {ollama_base_url}, initializing chat manager...")
+            # Gödel choice: mindXagent adopts Ollama as inference from startup_agent
+            await self.memory_agent.log_godel_choice({
+                "source_agent": self.agent_id,
+                "choice_type": "inference_from_startup",
+                "perception_summary": "startup_agent reported ollama_connected with base_url",
+                "options_considered": ["use_ollama_from_startup", "ignore_startup_ollama"],
+                "chosen_option": "use_ollama_from_startup",
+                "rationale": f"adopt startup Ollama at {ollama_base_url} for inference",
+                "outcome": "pending_init",
+                "ollama_base_url": ollama_base_url,
+            })
             # Update config with the startup URL
             if not self.config.get("llm.ollama.base_url"):
                 self.config.set("llm.ollama.base_url", ollama_base_url)
@@ -2611,6 +2642,15 @@ class MindXAgent:
                         if best_model:
                             self.llm_model = best_model
                             self._log_thinking("model_selected", f"Selected best model for reasoning: {best_model}")
+                            await self.memory_agent.log_godel_choice({
+                                "source_agent": self.agent_id,
+                                "choice_type": "ollama_model_selection",
+                                "perception_summary": "startup_info provided ollama_models; autonomous mode",
+                                "options_considered": list(models)[:10] if isinstance(models, (list, tuple)) else [best_model],
+                                "chosen_option": best_model,
+                                "rationale": "best_for_task reasoning via capability tool",
+                                "outcome": "success",
+                            })
                     except Exception as e:
                         logger.debug(f"{self.log_prefix} Could not use capability tool: {e}")
                         # Fallback to first available model

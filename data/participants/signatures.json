@@ -150,6 +150,20 @@
       "signature": "0xbb3db41d2737840c1346dfbd77b21337d75dd66d4d16db171852f82c72d0e5f77eadd71cdde25bb76fe4e1b0b49a4cb191ad7209b1792758408c72f44eaf60fa1c",
       "recovered_address": "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169",
       "timestamp": 1770283405.7374496
+    },
+    {
+      "is_valid": true,
+      "message": "mindX Challenge: login for 0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169 at 1770297887 (nonce: 05d0a237)",
+      "signature": "0xc519f51703d073612d746072632b90ae593bdf427bc2c308aaebc7189b22f4386aae10add68f6a5a481f6a98cf8133b3d433aa520f3a1919d04f20a56df857511c",
+      "recovered_address": "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169",
+      "timestamp": 1770297938.0566332
+    },
+    {
+      "is_valid": true,
+      "message": "mindX Challenge: login for 0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169 at 1770350440 (nonce: 47a89fe8)",
+      "signature": "0xb94ac0eb8ff119b388f2506503c64ca15061ba2497ece1d3e2f7e2151737406267c058cee5c366b2a08a1efb723953679e8b38762dac787144a40b64b4e80b3d1c",
+      "recovered_address": "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169",
+      "timestamp": 1770350454.516682
     }
   ]
 }

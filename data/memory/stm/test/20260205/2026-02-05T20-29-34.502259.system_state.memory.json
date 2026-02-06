@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-02-05T20:29:34.502259",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "test",
+  "content": {
+    "process_name": "godel_core_choice",
+    "data": {
+      "source_agent": "test",
+      "choice_type": "test_choice",
+      "perception_summary": "test",
+      "options_considered": [
+        "a",
+        "b"
+      ],
+      "chosen_option": "a",
+      "rationale": "test",
+      "timestamp_utc": "2026-02-06T03:29:34.474907Z"
+    }
+  },
+  "context": {
+    "agent_id": "test"
+  },
+  "tags": [
+    "godel_core_choice",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "29119e53862493d7"
+}

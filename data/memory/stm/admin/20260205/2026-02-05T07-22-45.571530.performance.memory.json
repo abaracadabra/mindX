@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-02-05T07:22:45.571530",
+  "memory_type": "performance",
+  "importance": 3,
+  "agent_id": "admin",
+  "content": {
+    "event_type": "interaction_start",
+    "log_level": "INFO",
+    "prompt": "mindX is an attempt to create a godel machine. I am mindX. Provide blueprint.md we are using blockch",
+    "model": "qwen2.5:14b",
+    "use_chat": true
+  },
+  "context": {
+    "source": "ollama_admin",
+    "timestamp": "2026-02-05T07:22:45.571512"
+  },
+  "tags": [
+    "ollama",
+    "diagnostics",
+    "info"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "fa025dcf3d395391"
+}

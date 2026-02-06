@@ -52,7 +52,7 @@ class GodelTab extends TabComponent {
             const [startupRes, convRes, choicesRes] = await Promise.all([
                 fetch(`${base}/mindxagent/startup`).then(r => r.json()).catch(() => ({})),
                 fetch(`${base}/mindxagent/ollama/conversation?limit=30`).then(r => r.json()).catch(() => ({})),
-                fetch(`${base}/godel/choices?limit=15`).then(r => r.json()).catch(() => ({}))
+                fetch(`${base}/godel/choices?limit=50`).then(r => r.json()).catch(() => ({}))
             ]);
             this.startupData = startupRes;
             this.conversationData = convRes;
@@ -86,10 +86,10 @@ class GodelTab extends TabComponent {
         sec2.appendChild(ollamaOut);
         frag.appendChild(sec2);
 
-        // 3. Recent Gödel choices (short)
+        // 3. Core choices audit log (perception, options, chosen, why, outcome)
         const sec3 = document.createElement('section');
         sec3.className = 'godel-section';
-        sec3.innerHTML = '<h2 class="godel-section-title">Recent core choices</h2>';
+        sec3.innerHTML = '<h2 class="godel-section-title">Core choices audit</h2><p class="godel-section-desc">Single log: what was perceived, options considered, chosen, why, outcome.</p>';
         const choicesOut = document.createElement('div');
         choicesOut.className = 'godel-diagnostics-block godel-choices-block';
         choicesOut.appendChild(this.renderRecentChoices());

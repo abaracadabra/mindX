@@ -157,7 +157,7 @@ export MINDX_LLM__OLLAMA__BASE_URL="http://10.0.0.155:18080"
 ### OllamaChatManager Parameters
 
 - `base_url`: Ollama server URL (default: `http://localhost:11434`)
-- `model_discovery_interval`: Seconds between model discovery (default: 300)
+- `model_discovery_interval`: Seconds between periodic model list refresh (default: 86400 = once per day). Use manual discover_models(force=True) or GET /mindxagent/ollama/status (which can trigger refresh) to update sooner.
 - `keep_alive`: How long to keep models loaded (default: `"10m"`)
 - `conversation_history_path`: Path to save conversation history
 

@@ -2180,7 +2180,7 @@
             <div id="godel-tab-inner" class="godel-tab-inner">
                 <div class="godel-tab-header">
                     <h1>Gödel diagnostics</h1>
-                    <p class="godel-tab-subtitle">Startup Agent ↔ host machine · mindXagent ↔ Ollama inference</p>
+                    <p class="godel-tab-subtitle">Single log of core choices: <strong>perception → options → chosen → rationale → outcome</strong>. Shows whether mindX is a Gödel machine. Data from actual startup_agent directives (Ollama when no API) and mindXagent↔Ollama (chosen inference/model).</p>
                     <div class="godel-tab-controls">
                         <button type="button" class="control-btn" id="godel-diagnostics-refresh">Refresh</button>
                     </div>
@@ -6159,6 +6159,32 @@
                             <!-- Metrics will be populated here -->
                         </div>
                     </div>
+                </div>
+                <div class="admin-subsection ollama-settings-section">
+                    <h3>Settings</h3>
+                    <p class="section-hint">Calls per minute (rate limit) and how often the model list is updated. mindXagent Ollama connection.</p>
+                    <div class="ollama-settings-grid">
+                        <div class="form-group">
+                            <label for="ollama-settings-calls-per-minute">Calls per minute</label>
+                            <input type="number" id="ollama-settings-calls-per-minute" min="1" max="10000" step="1" placeholder="e.g. 60" title="Rate limit for Ollama API calls">
+                            <span class="form-hint">Rate limit (1–10000). Applied to mindXagent Ollama requests.</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="ollama-settings-model-update-interval">Model list update interval</label>
+                            <select id="ollama-settings-model-update-interval" title="How often to refresh the list of available models">
+                                <option value="0">Manual only</option>
+                                <option value="3600">Every hour</option>
+                                <option value="86400" selected>Every 24 hours</option>
+                                <option value="604800">Every 7 days</option>
+                            </select>
+                            <span class="form-hint">Periodic refresh of available models. Use “Refresh model list now” to update immediately.</span>
+                        </div>
+                    </div>
+                    <div class="ollama-settings-actions">
+                        <button type="button" id="ollama-settings-save" class="action-btn primary">Save settings</button>
+                        <button type="button" id="ollama-settings-refresh-models" class="action-btn secondary" title="Force refresh model list from Ollama">Refresh model list now</button>
+                    </div>
+                    <div id="ollama-settings-status" class="ollama-settings-status" aria-live="polite"></div>
                 </div>
                 <div class="admin-subsection">
                     <h3>Interaction Testing</h3>

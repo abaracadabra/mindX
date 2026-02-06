@@ -543,7 +543,11 @@ async def id_deprecate(payload: IdDeprecatePayload):
 
 @app.get("/godel/choices", summary="Get last N Gödel core choices (read-only audit log)")
 async def godel_choices(limit: int = 50, source_agent: Optional[str] = None):
-    """Read last N lines from data/logs/godel_choices.jsonl, newest first. Optional filter by source_agent."""
+    """Read last N Gödel choices via memory_agent (all logs are memories in data). Fallback to file read if memory_agent unavailable."""
+    if command_handler and getattr(command_handler.mastermind, "memory_agent", None):
+        ma = command_handler.mastermind.memory_agent
+        choices, total = ma.get_godel_choices(limit=limit, source_agent=source_agent)
+        return {"choices": choices, "total": total}
     log_path = Path(PROJECT_ROOT) / "data" / "logs" / "godel_choices.jsonl"
     if not log_path.exists():
         return {"choices": [], "total": 0}
@@ -1170,23 +1174,26 @@ def update_bdi_state(directive: str, chosen_agent: str, reasoning: str):
 async def get_bdi_status():
     """Get BDI Agent status with belief, desire, intention details"""
     try:
-        # Read the latest BDI reasoning from the log file for additional context
-        agint_log_file = "data/logs/agint/agint_cognitive_cycles.log"
-        
-        if os.path.exists(agint_log_file):
-            with open(agint_log_file, 'r') as f:
-                lines = f.readlines()
-                # Get the last few entries to supplement global state
-                for line in lines[-5:]:  # Last 5 lines
-                    if "BDI Reasoning:" in line and not any(r["reasoning"] == line.strip() for r in bdi_state["reasoning_history"]):
-                        # Add new reasoning if not already in state
-                        timestamp = line.split(']')[0][1:] if ']' in line else time.strftime('%Y-%m-%d %H:%M:%S')
-                        bdi_state["reasoning_history"].append({
-                            "timestamp": timestamp,
-                            "reasoning": line.strip(),
-                            "directive": bdi_state["current_directive"],
-                            "agent": bdi_state["chosen_agent"]
-                        })
+        # Read the latest BDI reasoning via memory_agent (all logs are memories) or fallback to file
+        lines = []
+        if command_handler and getattr(command_handler.mastermind, "memory_agent", None):
+            lines = command_handler.mastermind.memory_agent.get_agint_cycle_log(last_n_lines=20)
+        else:
+            agint_log_file = "data/logs/agint/agint_cognitive_cycles.log"
+            if os.path.exists(agint_log_file):
+                with open(agint_log_file, 'r') as f:
+                    lines = f.readlines()
+        if lines:
+            for line in (lines[-5:] if len(lines) > 5 else lines):  # Last 5 lines
+                line_str = line.strip() if isinstance(line, str) else str(line).strip()
+                if "BDI Reasoning:" in line_str and not any(r["reasoning"] == line_str for r in bdi_state["reasoning_history"]):
+                    timestamp = line_str.split(']')[0][1:] if ']' in line_str else time.strftime('%Y-%m-%d %H:%M:%S')
+                    bdi_state["reasoning_history"].append({
+                        "timestamp": timestamp,
+                        "reasoning": line_str,
+                        "directive": bdi_state["current_directive"],
+                        "agent": bdi_state["chosen_agent"]
+                    })
         
         # Determine agent status based on current state
         agent_status = "active" if bdi_state["chosen_agent"] != "None" else "idle"
@@ -1772,17 +1779,8 @@ def clear_usage_history(keep_days: int = 0):
 
 
 def initialize_agint_logging():
-    """Initialize AGInt logging directory and create initial log file"""
-    agint_log_dir = "data/logs/agint"
-    os.makedirs(agint_log_dir, exist_ok=True)
-    
-    # Create initial log file with header
-    agint_log_file = os.path.join(agint_log_dir, "agint_cognitive_cycles.log")
-    if not os.path.exists(agint_log_file):
-        with open(agint_log_file, 'w') as f:
-            f.write("# AGInt Cognitive Loop Log\n")
-            f.write(f"# Started: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write("# Format: [TIMESTAMP] CYCLE X - MESSAGE\n\n")
+    """AGInt log file and directory are owned by memory_agent (all logs are memories). No-op here; memory_agent creates them in _initialize_storage."""
+    pass
 
 async def make_actual_code_changes_with_bdi_reasoning(directive: str, cycle: int, autonomous_mode: bool = False) -> List[Dict[str, Any]]:
     """Make actual code changes using simplified BDI reasoning to choose the best agent/tool."""
@@ -1865,10 +1863,7 @@ async def make_actual_code_changes_with_bdi_reasoning(directive: str, cycle: int
             }
         }
         
-        # Update global BDI state for real-time updates
-        update_bdi_state(directive, chosen_agent, bdi_reasoning)
-        
-        # Log Gödel core choice for BDI agent selection
+        # Log Gödel core choice for BDI agent selection (before update_bdi_state)
         if command_handler and command_handler.mastermind.memory_agent:
             await command_handler.mastermind.memory_agent.log_godel_choice({
                 "source_agent": "bdi_directive_handler",
@@ -1880,6 +1875,9 @@ async def make_actual_code_changes_with_bdi_reasoning(directive: str, cycle: int
                 "rationale": bdi_reasoning,
             })
         
+        # Update global BDI state for real-time updates
+        update_bdi_state(directive, chosen_agent, bdi_reasoning)
+        
         # Add detailed BDI activity to log
         if not hasattr(update_bdi_state, 'activity_log'):
             update_bdi_state.activity_log = []
@@ -1887,16 +1885,12 @@ async def make_actual_code_changes_with_bdi_reasoning(directive: str, cycle: int
         if len(update_bdi_state.activity_log) > 50:
             update_bdi_state.activity_log = update_bdi_state.activity_log[-50:]
         
-        # Log BDI decision - ensure directory exists
-        agint_log_dir = "data/logs/agint"
-        os.makedirs(agint_log_dir, exist_ok=True)
-        agint_log_file = os.path.join(agint_log_dir, "agint_cognitive_cycles.log")
-        
-        # Always log BDI reasoning, even if execution fails
-        with open(agint_log_file, 'a') as f:
-            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - {bdi_reasoning}\n")
-            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - Chosen Agent: {chosen_agent}\n")
-            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - Directive: {directive}\n")
+        # Log BDI decision via memory_agent (all logs are memories in data)
+        ma = command_handler.mastermind.memory_agent if (command_handler and getattr(command_handler.mastermind, "memory_agent", None)) else None
+        if ma:
+            await ma.log_agint_cycle(cycle, "bdi_reasoning", bdi_reasoning)
+            await ma.log_agint_cycle(cycle, "chosen_agent", f"Chosen Agent: {chosen_agent}")
+            await ma.log_agint_cycle(cycle, "directive", directive)
         
         # Execute based on BDI decision
         try:
@@ -1912,16 +1906,16 @@ async def make_actual_code_changes_with_bdi_reasoning(directive: str, cycle: int
                 # Fallback to default behavior
                 changes = await execute_default_changes(directive, cycle)
             
-            # Log successful completion
-            with open(agint_log_file, 'a') as f:
-                f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - Status: Completed using {chosen_agent}\n")
-                f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - Changes made: {len(changes)} items\n\n")
+            # Log successful completion via memory_agent
+            if ma:
+                await ma.log_agint_cycle(cycle, "status", f"Status: Completed using {chosen_agent}")
+                await ma.log_agint_cycle(cycle, "changes", f"Changes made: {len(changes)} items")
                 
         except Exception as execution_error:
-            # Log execution error but keep BDI reasoning
-            with open(agint_log_file, 'a') as f:
-                f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - Execution Error: {str(execution_error)}\n")
-                f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - BDI reasoning completed, execution failed\n\n")
+            # Log execution error via memory_agent
+            if ma:
+                await ma.log_agint_cycle(cycle, "execution_error", f"Execution Error: {str(execution_error)}")
+                await ma.log_agint_cycle(cycle, "message", "BDI reasoning completed, execution failed")
             logger.error(f"BDI execution failed for {chosen_agent}: {execution_error}")
             # Still return some basic changes to maintain flow
             changes = [{"type": "bdi_reasoning", "agent": chosen_agent, "status": "reasoned_but_failed_execution"}]
@@ -1931,13 +1925,11 @@ async def make_actual_code_changes_with_bdi_reasoning(directive: str, cycle: int
         logger.error(f"BDI reasoning failed, falling back to default: {e}")
         changes = await execute_default_changes(directive, cycle)
         
-        # Log the fallback
-        agint_log_dir = "data/logs/agint"
-        os.makedirs(agint_log_dir, exist_ok=True)
-        agint_log_file = os.path.join(agint_log_dir, "agint_cognitive_cycles.log")
-        with open(agint_log_file, 'a') as f:
-            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - BDI Reasoning Failed: {str(e)}\n")
-            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - Fallback to default behavior\n\n")
+        # Log the fallback via memory_agent
+        ma = command_handler.mastermind.memory_agent if (command_handler and getattr(command_handler.mastermind, "memory_agent", None)) else None
+        if ma:
+            await ma.log_agint_cycle(cycle, "bdi_failed", f"BDI Reasoning Failed: {str(e)}")
+            await ma.log_agint_cycle(cycle, "fallback", "Fallback to default behavior")
     
     return changes
 
@@ -2125,34 +2117,17 @@ Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}
     return changes
 
 async def execute_audit_improve_changes(directive: str, cycle: int) -> List[Dict[str, Any]]:
-    """Execute changes using audit_and_improve_tool approach."""
+    """Execute changes using audit_and_improve_tool approach. Log via memory_agent (all logs are memories)."""
     changes = []
-    
-    # Store audit files in data/logs/agint directory instead of root
-    # Note: memory_agent already handles AGInt logging, so we'll just log to the existing system
-    agint_log_dir = "data/logs/agint"
-    os.makedirs(agint_log_dir, exist_ok=True)
-    
-    # Log to existing AGInt log file instead of creating separate audit files
-    agint_log_file = os.path.join(agint_log_dir, "agint_cognitive_cycles.log")
-    audit_content = f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - AUDIT: Code quality audited and improvements suggested for directive: {directive}\n"
-    
-    with open(agint_log_file, 'a') as f:
-        f.write(audit_content)
-    
-    # Create a minimal change entry for tracking purposes
+    audit_message = f"AUDIT: Code quality audited and improvements suggested for directive: {directive}"
+    ma = command_handler.mastermind.memory_agent if (command_handler and getattr(command_handler.mastermind, "memory_agent", None)) else None
+    if ma:
+        await ma.log_agint_cycle(cycle, "audit", audit_message)
     changes.append({
-        "file": f"data/logs/agint/agint_cognitive_cycles.log",
+        "file": "data/logs/agint/agint_cognitive_cycles.log",
         "type": "modification",
-        "changes": [
-            {
-                "line": "end",
-                "old": "",
-                "new": audit_content.strip()
-            }
-        ]
+        "changes": [{"line": "end", "old": "", "new": audit_message}]
     })
-    
     return changes
 
 async def execute_default_changes(directive: str, cycle: int) -> List[Dict[str, Any]]:
@@ -2866,21 +2841,24 @@ async def get_agent_activity():
     if hasattr(update_bdi_state, 'activity_log'):
         activities.extend(update_bdi_state.activity_log)
     
-    # Get AGInt activities from logs
+    # Get AGInt activities from logs via memory_agent (all logs are memories) or fallback
     try:
-        agint_log_file = "data/logs/agint/agint_cognitive_cycles.log"
-        if os.path.exists(agint_log_file):
-            with open(agint_log_file, 'r') as f:
-                lines = f.readlines()
-                # Get last 10 lines
-                for line in lines[-10:]:
-                    if line.strip():
-                        activities.append({
-                            "timestamp": time.time(),
-                            "agent": "AGInt Core",
-                            "message": line.strip(),
-                            "type": "info"
-                        })
+        lines = []
+        if command_handler and getattr(command_handler.mastermind, "memory_agent", None):
+            lines = command_handler.mastermind.memory_agent.get_agint_cycle_log(last_n_lines=10)
+        else:
+            agint_log_file = "data/logs/agint/agint_cognitive_cycles.log"
+            if os.path.exists(agint_log_file):
+                with open(agint_log_file, 'r') as f:
+                    lines = [ln.rstrip("\n") for ln in f.readlines()]
+        for line in (lines[-10:] if len(lines) > 10 else lines):
+            if line and str(line).strip():
+                activities.append({
+                    "timestamp": time.time(),
+                    "agent": "AGInt Core",
+                    "message": str(line).strip(),
+                    "type": "info"
+                })
     except Exception as e:
         logger.error(f"Error reading AGInt logs: {e}")
     
@@ -2979,26 +2957,30 @@ async def get_real_time_agent_activity():
     except Exception as e:
         logger.error(f"Error reading AGInt memory: {e}")
     
-    # Get AGInt cognitive cycle logs for workflow tracking
+    # Get AGInt cognitive cycle logs via memory_agent (all logs are memories) or fallback
     try:
-        agint_log_file = "data/logs/agint/agint_cognitive_cycles.log"
-        if os.path.exists(agint_log_file):
-            with open(agint_log_file, 'r') as f:
-                lines = f.readlines()
-                for line in lines[-5:]:  # Last 5 lines
-                    if line.strip():
-                        activities.append({
-                            "timestamp": time.time(),
-                            "agent": "AGInt Core",
-                            "message": line.strip(),
-                            "type": "info",
-                            "workflow_context": {
-                                'workflow_step': 'cognitive_cycle',
-                                'triggers': ['User Directive'],
-                                'workflow_type': 'poda_cycle',
-                                'cycle_phase': 'perception_orientation_decision_action'
-                            }
-                        })
+        lines = []
+        if command_handler and getattr(command_handler.mastermind, "memory_agent", None):
+            lines = command_handler.mastermind.memory_agent.get_agint_cycle_log(last_n_lines=5)
+        else:
+            agint_log_file = "data/logs/agint/agint_cognitive_cycles.log"
+            if os.path.exists(agint_log_file):
+                with open(agint_log_file, 'r') as f:
+                    lines = [ln.rstrip("\n") for ln in f.readlines()]
+        for line in (lines[-5:] if len(lines) > 5 else lines):
+            if line and str(line).strip():
+                activities.append({
+                    "timestamp": time.time(),
+                    "agent": "AGInt Core",
+                    "message": str(line).strip(),
+                    "type": "info",
+                    "workflow_context": {
+                        'workflow_step': 'cognitive_cycle',
+                        'triggers': ['User Directive'],
+                        'workflow_type': 'poda_cycle',
+                        'cycle_phase': 'perception_orientation_decision_action'
+                    }
+                })
     except Exception as e:
         logger.error(f"Error reading AGInt logs: {e}")
     
@@ -3794,6 +3776,96 @@ async def get_mindxagent_ollama_status():
     except Exception as e:
         logger.error(f"Error getting Ollama status: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error getting Ollama status: {str(e)}")
+
+
+@app.get("/mindxagent/ollama/settings", summary="Get Ollama settings (calls/min, model update interval)")
+async def get_mindxagent_ollama_settings():
+    """Return current Ollama settings: calls_per_minute (rate limit), model_discovery_interval_seconds, last_model_discovery."""
+    try:
+        from agents.core.mindXagent import MindXAgent
+
+        mindxagent = await MindXAgent.get_instance()
+        if not mindxagent or not mindxagent.ollama_chat_manager:
+            raise HTTPException(status_code=503, detail="mindXagent or Ollama chat manager not available")
+        mgr = mindxagent.ollama_chat_manager
+        rpm = None
+        if mgr.ollama_api and hasattr(mgr.ollama_api, "rate_limits"):
+            rpm = getattr(mgr.ollama_api.rate_limits, "requests_per_minute", None)
+        return {
+            "success": True,
+            "calls_per_minute": rpm,
+            "model_discovery_interval_seconds": mgr.model_discovery_interval,
+            "last_model_discovery": mgr.last_model_discovery,
+            "models_count": len(mgr.available_models),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting Ollama settings: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class MindXagentOllamaSettingsPayload(BaseModel):
+    """Payload for PATCH /mindxagent/ollama/settings."""
+
+    calls_per_minute: Optional[int] = None
+    model_discovery_interval_seconds: Optional[int] = None
+
+
+@app.patch("/mindxagent/ollama/settings", summary="Update Ollama settings")
+async def update_mindxagent_ollama_settings(payload: MindXagentOllamaSettingsPayload = Body(...)):
+    """Update calls_per_minute (rate limit) and/or model_discovery_interval_seconds (0 = manual only)."""
+    try:
+        from agents.core.mindXagent import MindXAgent
+
+        mindxagent = await MindXAgent.get_instance()
+        if not mindxagent or not mindxagent.ollama_chat_manager:
+            raise HTTPException(status_code=503, detail="mindXagent or Ollama chat manager not available")
+        mgr = mindxagent.ollama_chat_manager
+        if payload.calls_per_minute is not None:
+            rpm = max(1, min(10000, payload.calls_per_minute))
+            if mgr.ollama_api is None:
+                from api.ollama import create_ollama_api
+                async with mgr._api_lock:
+                    if mgr.ollama_api is None:
+                        mgr.ollama_api = create_ollama_api(base_url=mgr.base_url)
+            if mgr.ollama_api and hasattr(mgr.ollama_api, "update_rate_limits"):
+                mgr.ollama_api.update_rate_limits(rpm=rpm)
+        if payload.model_discovery_interval_seconds is not None:
+            await mgr.set_model_discovery_interval(payload.model_discovery_interval_seconds)
+        rpm = None
+        if mgr.ollama_api and hasattr(mgr.ollama_api, "rate_limits"):
+            rpm = getattr(mgr.ollama_api.rate_limits, "requests_per_minute", None)
+        return {
+            "success": True,
+            "calls_per_minute": rpm,
+            "model_discovery_interval_seconds": mgr.model_discovery_interval,
+            "last_model_discovery": mgr.last_model_discovery,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating Ollama settings: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/mindxagent/ollama/models/refresh", summary="Refresh Ollama model list (manual)")
+async def refresh_mindxagent_ollama_models():
+    """Force refresh of the Ollama model list. Periodic refresh runs once per day; use this to update sooner."""
+    try:
+        from agents.core.mindXagent import MindXAgent
+        
+        mindxagent = await MindXAgent.get_instance()
+        if not mindxagent or not mindxagent.ollama_chat_manager:
+            raise HTTPException(status_code=503, detail="mindXagent or Ollama chat manager not available")
+        await mindxagent.ollama_chat_manager.discover_models(force=True)
+        models = mindxagent.ollama_chat_manager.available_models
+        return {"success": True, "models_count": len(models), "models": [m.get("name") for m in models[:50]]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error refreshing Ollama models: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/mindxagent/ollama/conversation", summary="Get Ollama conversation history")

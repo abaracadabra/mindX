@@ -2100,6 +2100,50 @@ body.autonomous-mode .tab-btn.active {
     font-size: 0.9em;
 }
 
+.ollama-settings-section .section-hint {
+    margin-bottom: var(--spacing-md);
+}
+.ollama-settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+}
+.ollama-settings-grid .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+.ollama-settings-grid label {
+    font-weight: 600;
+    color: var(--color-neon-blue, #00bfff);
+}
+.ollama-settings-grid input[type="number"],
+.ollama-settings-grid select {
+    max-width: 200px;
+    padding: var(--spacing-sm);
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+}
+.form-hint {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+}
+.ollama-settings-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+}
+.ollama-settings-status {
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+}
+.ollama-settings-status.error {
+    color: var(--color-error, #f44);
+}
+
 .interaction-controls {
     display: flex;
     gap: var(--spacing-md);

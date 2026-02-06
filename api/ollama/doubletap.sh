@@ -4,8 +4,8 @@
 # ollama shepherd boot y/N control
 # ufw rules to keep llama as localhost
 #
-# Handy for startup_agent: run this script to free the Ollama port or
-# terminate Ollama before bootstrap (e.g. llm/ollama_bootstrap/aion.sh).
+# Find is handy for startup_agent: run this script to find/kill Ollama and free
+# the port (or terminate before bootstrap, e.g. llm/ollama_bootstrap/aion.sh).
 # Usage: from project root, ./api/ollama/doubletap.sh
 
 # Colors for output

@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-02-05T07:18:13.616150",
+  "memory_type": "performance",
+  "importance": 3,
+  "agent_id": "admin",
+  "content": {
+    "event_type": "interaction_start",
+    "log_level": "INFO",
+    "prompt": "tell me everything you know about how to build a godel machine",
+    "model": "qwen2.5:14b",
+    "use_chat": true
+  },
+  "context": {
+    "source": "ollama_admin",
+    "timestamp": "2026-02-05T07:18:13.616140"
+  },
+  "tags": [
+    "ollama",
+    "diagnostics",
+    "info"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "0dabec8433a94b3e"
+}

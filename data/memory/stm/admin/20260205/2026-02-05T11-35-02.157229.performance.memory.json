@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-02-05T11:35:02.157229",
+  "memory_type": "performance",
+  "importance": 3,
+  "agent_id": "admin",
+  "content": {
+    "event_type": "status_check",
+    "log_level": "INFO",
+    "base_url": "http://10.0.0.155:18080",
+    "using_fallback": false,
+    "connection_test": {
+      "success": false,
+      "error": "Cannot connect to Ollama server at http://10.0.0.155:18080. Error: Cannot connect to host 10.0.0.155:18080 ssl:default [Connect call failed ('10.0.0.155', 18080)]",
+      "base_url": "http://10.0.0.155:18080",
+      "primary_url": "http://10.0.0.155:18080",
+      "fallback_url": "http://localhost:11434",
+      "connection_error": true,
+      "request_sent": "GET http://10.0.0.155:18080/api/tags",
+      "response_status": 0,
+      "response_preview": "Cannot connect to host 10.0.0.155:18080 ssl:default [Connect call failed ('10.0.0.155', 18080)]"
+    }
+  },
+  "context": {
+    "source": "ollama_admin",
+    "timestamp": "2026-02-05T11:35:02.157197"
+  },
+  "tags": [
+    "ollama",
+    "diagnostics",
+    "info"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "e0ee15123358bd6d"
+}

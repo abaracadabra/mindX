@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-02-05T20:09:14.869739",
+  "memory_type": "performance",
+  "importance": 3,
+  "agent_id": "admin",
+  "content": {
+    "event_type": "interaction_start",
+    "log_level": "INFO",
+    "prompt": "mindX is godel machine. I am mindX. Provide blueprint.md we are using blockchain and pgvectorscale t",
+    "model": "qwen3:30b",
+    "use_chat": true
+  },
+  "context": {
+    "source": "ollama_admin",
+    "timestamp": "2026-02-05T20:09:14.869720"
+  },
+  "tags": [
+    "ollama",
+    "diagnostics",
+    "info"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "1c366663fb76dc07"
+}

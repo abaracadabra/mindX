@@ -152,6 +152,17 @@ class OllamaAdminTab extends TabComponent {
                 if (opt && opt.value) this.showSuccess(`Model: ${opt.textContent}`);
             });
         }
+
+        // Settings: save
+        const settingsSaveBtn = document.getElementById('ollama-settings-save');
+        if (settingsSaveBtn) {
+            settingsSaveBtn.addEventListener('click', () => this.saveOllamaSettings());
+        }
+        // Settings: refresh model list now (manual)
+        const settingsRefreshModelsBtn = document.getElementById('ollama-settings-refresh-models');
+        if (settingsRefreshModelsBtn) {
+            settingsRefreshModelsBtn.addEventListener('click', () => this.refreshOllamaModelsNow());
+        }
     }
 
     async loadInitialData() {
@@ -159,7 +170,8 @@ class OllamaAdminTab extends TabComponent {
             this.loadConnectionStatus(),
             this.loadModels(),
             this.loadMetrics(),
-            this.loadDiagnostics()
+            this.loadDiagnostics(),
+            this.loadOllamaSettings()
         ]);
     }
 
@@ -229,6 +241,101 @@ class OllamaAdminTab extends TabComponent {
             }
         } catch (error) {
             console.error('Error loading diagnostics:', error);
+        }
+    }
+
+    setOllamaSettingsStatus(message, isError = false) {
+        const el = document.getElementById('ollama-settings-status');
+        if (!el) return;
+        el.textContent = message || '';
+        el.className = 'ollama-settings-status' + (isError ? ' error' : '');
+    }
+
+    async loadOllamaSettings() {
+        try {
+            const response = await this.fetchData('/mindxagent/ollama/settings');
+            if (!response.success) {
+                this.setOllamaSettingsStatus('Settings unavailable', true);
+                return;
+            }
+            const rpmInput = document.getElementById('ollama-settings-calls-per-minute');
+            const intervalSelect = document.getElementById('ollama-settings-model-update-interval');
+            if (rpmInput && response.calls_per_minute != null) {
+                rpmInput.value = response.calls_per_minute;
+            }
+            if (intervalSelect && response.model_discovery_interval_seconds != null) {
+                const val = String(response.model_discovery_interval_seconds);
+                if (intervalSelect.querySelector(`option[value="${val}"]`)) {
+                    intervalSelect.value = val;
+                } else {
+                    intervalSelect.value = val;
+                    const opt = document.createElement('option');
+                    opt.value = val;
+                    opt.textContent = `${val}s`;
+                    intervalSelect.appendChild(opt);
+                    intervalSelect.value = val;
+                }
+            }
+            const lastDiscovery = response.last_model_discovery;
+            const lastStr = lastDiscovery ? new Date(lastDiscovery * 1000).toLocaleString() : 'Never';
+            this.setOllamaSettingsStatus(`Model list: ${response.models_count || 0} models; last updated ${lastStr}`);
+        } catch (error) {
+            if (error.message && (error.message.includes('503') || error.message.includes('not available'))) {
+                this.setOllamaSettingsStatus('mindXagent Ollama not available. Start mindX to use these settings.', true);
+            } else {
+                this.setOllamaSettingsStatus('Failed to load settings: ' + (error.message || error), true);
+            }
+            console.warn('Ollama settings load failed:', error);
+        }
+    }
+
+    async saveOllamaSettings() {
+        const rpmInput = document.getElementById('ollama-settings-calls-per-minute');
+        const intervalSelect = document.getElementById('ollama-settings-model-update-interval');
+        const payload = {};
+        if (rpmInput && rpmInput.value !== '') {
+            const rpm = parseInt(rpmInput.value, 10);
+            if (!isNaN(rpm) && rpm >= 1 && rpm <= 10000) payload.calls_per_minute = rpm;
+        }
+        if (intervalSelect && intervalSelect.value !== '') {
+            payload.model_discovery_interval_seconds = parseInt(intervalSelect.value, 10);
+        }
+        if (Object.keys(payload).length === 0) {
+            this.setOllamaSettingsStatus('No changes to save.');
+            return;
+        }
+        this.setOllamaSettingsStatus('Saving…');
+        try {
+            const response = await this.fetchData('/mindxagent/ollama/settings', {
+                method: 'PATCH',
+                body: JSON.stringify(payload)
+            });
+            if (response.success) {
+                this.setOllamaSettingsStatus('Settings saved.');
+                this.showSuccess('Ollama settings saved');
+            } else {
+                this.setOllamaSettingsStatus('Save failed', true);
+            }
+        } catch (error) {
+            this.setOllamaSettingsStatus('Save failed: ' + (error.message || error), true);
+            this.showError('Save failed', error.message || String(error));
+        }
+    }
+
+    async refreshOllamaModelsNow() {
+        this.setOllamaSettingsStatus('Refreshing model list…');
+        try {
+            const response = await this.fetchData('/mindxagent/ollama/models/refresh', { method: 'POST' });
+            if (response.success) {
+                this.setOllamaSettingsStatus(`Model list refreshed: ${response.models_count || 0} models.`);
+                this.showSuccess('Model list refreshed');
+                await this.loadModels();
+            } else {
+                this.setOllamaSettingsStatus('Refresh failed', true);
+            }
+        } catch (error) {
+            this.setOllamaSettingsStatus('Refresh failed: ' + (error.message || error), true);
+            this.showError('Refresh failed', error.message || String(error));
         }
     }
 
