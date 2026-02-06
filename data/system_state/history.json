@@ -60,45 +60,33 @@
     "state_file": "states/shutdown_1770352872.json"
   },
   {
-    "event_id": "shutdown_1770352955",
+    "event_id": "shutdown_1770352909",
     "event_type": "shutdown",
-    "timestamp": 1770352955.7270653,
-    "state_file": "states/shutdown_1770352955.json"
+    "timestamp": 1770352909.9168186,
+    "state_file": "states/shutdown_1770352909.json"
   },
   {
-    "event_id": "shutdown_1770352959",
+    "event_id": "shutdown_1770352913",
     "event_type": "shutdown",
-    "timestamp": 1770352959.2354448,
-    "state_file": "states/shutdown_1770352959.json"
+    "timestamp": 1770352913.6590662,
+    "state_file": "states/shutdown_1770352913.json"
   },
   {
-    "event_id": "shutdown_1770352961",
+    "event_id": "shutdown_1770352920",
     "event_type": "shutdown",
-    "timestamp": 1770352961.627745,
-    "state_file": "states/shutdown_1770352961.json"
+    "timestamp": 1770352920.0498927,
+    "state_file": "states/shutdown_1770352920.json"
   },
   {
-    "event_id": "shutdown_1770352964",
+    "event_id": "shutdown_1770352922",
     "event_type": "shutdown",
-    "timestamp": 1770352964.7810273,
-    "state_file": "states/shutdown_1770352964.json"
+    "timestamp": 1770352922.5084777,
+    "state_file": "states/shutdown_1770352922.json"
   },
   {
-    "event_id": "shutdown_1770352972",
+    "event_id": "shutdown_1770352989",
     "event_type": "shutdown",
-    "timestamp": 1770352972.9965532,
-    "state_file": "states/shutdown_1770352972.json"
-  },
-  {
-    "event_id": "shutdown_1770352976",
-    "event_type": "shutdown",
-    "timestamp": 1770352976.1853342,
-    "state_file": "states/shutdown_1770352976.json"
-  },
-  {
-    "event_id": "shutdown_1770352984",
-    "event_type": "shutdown",
-    "timestamp": 1770352984.883849,
-    "state_file": "states/shutdown_1770352984.json"
+    "timestamp": 1770352989.6999032,
+    "state_file": "states/shutdown_1770352989.json"
   }
 ]

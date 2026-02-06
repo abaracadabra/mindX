@@ -12,27 +12,21 @@
     "priority": 7
   },
   {
-    "target_component_path": "data_validation.input_validator",
-    "suggestion": "Implement robust input validation for all incoming data streams to prevent invalid data from entering the system.",
-    "justification": "Invalid inputs can cause unexpected errors, crashes, or security vulnerabilities. Robust validation ensures data quality and system stability.",
+    "target_component_path": "validation.input_validator",
+    "suggestion": "Implement comprehensive input validation for API requests",
+    "justification": "Prevent malicious or erroneous inputs from causing system failures and security vulnerabilities",
     "priority": 9
   },
   {
-    "target_component_path": "data_processing.preprocessor",
-    "suggestion": "Add comprehensive checks for missing values and outliers in preprocessing stage to ensure data integrity.",
-    "justification": "Missing or outlier values can skew results, leading to inaccurate analysis. Early detection helps maintain data quality.",
+    "target_component_path": "validation.output_validator",
+    "suggestion": "Add output validation checks to ensure expected formats and data types",
+    "justification": "Ensure consistent, valid outputs from AI models and prevent unexpected behavior",
     "priority": 8
   },
   {
-    "target_component_path": "model_training.data_splitter",
-    "suggestion": "Implement stratified sampling for training/test/validation splits to preserve class distribution and improve model generalization.",
-    "justification": "Uneven class distributions can lead to biased models. Stratified sampling ensures representative subsets, enhancing model performance.",
+    "target_component_path": "validation.model_input_validator",
+    "suggestion": "Enhance model input validation with specific checks for LLM providers",
+    "justification": "Prevent incompatible or invalid inputs from causing failures in AI inference processes",
     "priority": 7
-  },
-  {
-    "target_component_path": "model_evaluation.metric_calculator",
-    "suggestion": "Include confidence intervals and standard deviations in evaluation metrics to provide a more comprehensive view of model performance.",
-    "justification": "Reporting only point estimates can be misleading. Including confidence intervals gives a better understanding of model variability and reliability.",
-    "priority": 6
   }
 ]
