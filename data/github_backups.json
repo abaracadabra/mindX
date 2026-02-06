@@ -325,23 +325,23 @@
       "status": "created"
     },
     {
-      "branch_name": "backup/shutdown-backup-20260205_214253",
+      "branch_name": "backup/shutdown-backup-20260205_214256",
       "backup_type": "shutdown_backup",
       "reason": "System shutdown - automatic backup",
       "source_branch": "backup/shutdown-backup-20260205_214239",
-      "source_commit": "b3b411f993c7eea6c6d7ea39955fbcd685cc0e0e",
-      "created_at": "2026-02-05T21:42:56.124713",
+      "source_commit": "3be16470ea21eca79e7b88963b94a1b7886017dc",
+      "created_at": "2026-02-05T21:43:00.230609",
       "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/shutdown-backup-20260205_214253",
+    "branch_name": "backup/shutdown-backup-20260205_214256",
     "backup_type": "shutdown_backup",
     "reason": "System shutdown - automatic backup",
     "source_branch": "backup/shutdown-backup-20260205_214239",
-    "source_commit": "b3b411f993c7eea6c6d7ea39955fbcd685cc0e0e",
-    "created_at": "2026-02-05T21:42:56.124713",
+    "source_commit": "3be16470ea21eca79e7b88963b94a1b7886017dc",
+    "created_at": "2026-02-05T21:43:00.230609",
     "status": "created"
   },
-  "last_backup_at": "2026-02-05T21:42:56.124745"
+  "last_backup_at": "2026-02-05T21:43:00.230635"
 }
