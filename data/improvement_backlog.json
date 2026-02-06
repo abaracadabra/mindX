@@ -10,5 +10,29 @@
     "suggestion": "Implement fallback provider selection when primary LLM fails",
     "justification": "System should gracefully degrade when primary LLM provider is unavailable",
     "priority": 7
+  },
+  {
+    "target_component_path": "data_validation.input_validator",
+    "suggestion": "Implement robust input validation for all incoming data streams to prevent invalid data from entering the system.",
+    "justification": "Invalid inputs can cause unexpected errors, crashes, or security vulnerabilities. Robust validation ensures data quality and system stability.",
+    "priority": 9
+  },
+  {
+    "target_component_path": "data_processing.preprocessor",
+    "suggestion": "Add comprehensive checks for missing values and outliers in preprocessing stage to ensure data integrity.",
+    "justification": "Missing or outlier values can skew results, leading to inaccurate analysis. Early detection helps maintain data quality.",
+    "priority": 8
+  },
+  {
+    "target_component_path": "model_training.data_splitter",
+    "suggestion": "Implement stratified sampling for training/test/validation splits to preserve class distribution and improve model generalization.",
+    "justification": "Uneven class distributions can lead to biased models. Stratified sampling ensures representative subsets, enhancing model performance.",
+    "priority": 7
+  },
+  {
+    "target_component_path": "model_evaluation.metric_calculator",
+    "suggestion": "Include confidence intervals and standard deviations in evaluation metrics to provide a more comprehensive view of model performance.",
+    "justification": "Reporting only point estimates can be misleading. Including confidence intervals gives a better understanding of model variability and reliability.",
+    "priority": 6
   }
 ]

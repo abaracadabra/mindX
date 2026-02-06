@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-02-05T21:42:09.079722",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "default_identity_manager",
+  "content": {
+    "process_name": "id_manager_address_lookup",
+    "data": {
+      "entity_id": "coordinator_agent_main",
+      "address": "0xcB706B1C69aF79B08a89116E9d4fB6Df2755e630",
+      "source": "belief_system"
+    }
+  },
+  "context": {
+    "agent_id": "default_identity_manager"
+  },
+  "tags": [
+    "id_manager_address_lookup",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "235a72ad9b43e3f0"
+}
