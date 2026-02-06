@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-02-05T21:41:09.296542",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "default_identity_manager",
+  "content": {
+    "process_name": "id_manager_address_derived",
+    "data": {
+      "entity_id": "blueprint_agent_mindx_v2",
+      "address": "0xa57da2e1ddAb29AF7D36C362814718114DfCfc32",
+      "source": "private_key"
+    }
+  },
+  "context": {
+    "agent_id": "default_identity_manager"
+  },
+  "tags": [
+    "id_manager_address_derived",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "cf225cd9eb24382a"
+}
