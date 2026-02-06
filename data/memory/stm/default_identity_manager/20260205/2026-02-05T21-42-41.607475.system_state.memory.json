@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-02-05T21:42:41.607475",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "default_identity_manager",
+  "content": {
+    "process_name": "id_manager_wallet_exists",
+    "data": {
+      "entity_id": "blueprint_agent_mindx_v2",
+      "address": "0xa57da2e1ddAb29AF7D36C362814718114DfCfc32",
+      "env_var": "MINDX_WALLET_PK_BLUEPRINT_AGENT_MINDX_V2"
+    }
+  },
+  "context": {
+    "agent_id": "default_identity_manager"
+  },
+  "tags": [
+    "id_manager_wallet_exists",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "a02a8ced039551f9"
+}
