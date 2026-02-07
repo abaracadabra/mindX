@@ -29,6 +29,8 @@ pip install -r requirements.txt
 uvicorn mindx_backend_service.main_service:app --reload --port 8000
 ```
 
+**API interactions:** When the backend is running, **http://localhost:8000/docs** (FastAPI Swagger UI) shows all API endpoints and lets you try requests and inspect schemas—very useful for auditing and integrating with the API.
+
 ### Testing
 ```bash
 # Run all tests

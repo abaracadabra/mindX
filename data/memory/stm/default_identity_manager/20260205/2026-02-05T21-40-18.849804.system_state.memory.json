@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-02-05T21:40:18.849804",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "default_identity_manager",
+  "content": {
+    "process_name": "id_manager_wallet_created",
+    "data": {
+      "entity_id": "automindx_agent_main",
+      "address": "0xa89Ddd6A53C267C966D3bba04e5b76BD9c2Cdf19",
+      "env_var": "MINDX_WALLET_PK_AUTOMINDX_AGENT_MAIN",
+      "success": true,
+      "key_stored": true
+    }
+  },
+  "context": {
+    "agent_id": "default_identity_manager"
+  },
+  "tags": [
+    "id_manager_wallet_created",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "ac4f77551a449efa"
+}

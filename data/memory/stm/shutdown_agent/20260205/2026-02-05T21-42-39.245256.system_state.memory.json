@@ -1,0 +1,56 @@
+{
+  "timestamp": "2026-02-05T21:42:39.245256",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "shutdown_agent",
+  "content": {
+    "process_name": "system_shutdown_complete",
+    "data": {
+      "timestamp": 1770352959.2452316,
+      "duration": 3.5082645416259766,
+      "steps": [
+        "save_state",
+        "create_backup",
+        "archive_proven",
+        "shutdown_agents",
+        "cleanup"
+      ],
+      "agents_shutdown": [
+        "coordinator_agent"
+      ],
+      "before_state": {
+        "resource_snapshot": null,
+        "performance_snapshot": null
+      },
+      "after_state": {
+        "resource_snapshot": null,
+        "performance_snapshot": null,
+        "agents_registered": [
+          "coordinator_agent"
+        ],
+        "agents_active": [
+          "coordinator_agent"
+        ],
+        "tools_registered": []
+      },
+      "improvement_count": 0,
+      "rollback_count": 0,
+      "previous_state": {
+        "event_id": "shutdown_1770352955",
+        "timestamp": 1770352955.7270653,
+        "improvement_count": 0,
+        "rollback_count": 0
+      }
+    }
+  },
+  "context": {
+    "agent_id": "shutdown_agent",
+    "event": "shutdown_complete"
+  },
+  "tags": [
+    "system_shutdown_complete",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "84e713064533356f"
+}

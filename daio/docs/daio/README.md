@@ -74,11 +74,16 @@ All contracts are located in `/home/hacker/mindX/daio/contracts/daio/`
 
 ## Related Documentation
 
+- **Ecosystem and references:** [ECOSYSTEM.md](ECOSYSTEM.md) — ipNFTfs, w3DAIO, DAONOW, dairef, MakerDAO/dss.
 - Constitution: `docs/daio/constitution/DAIO_Constitution.md`
 - Governance: `docs/daio/governance/`
 - Identity: `docs/daio/identity/`
 - Treasury: `docs/daio/treasury/`
 - Settings: `docs/daio/settings/`
+
+## References and ecosystem
+
+See [ECOSYSTEM.md](ECOSYSTEM.md) for the full list. Summary: [interplanetaryfilesystem](https://github.com/interplanetaryfilesystem), [ipNFTfs](https://github.com/ipNFTfs), [mlodular](https://github.com/mlodular), [faicey](https://github.com/faicey), [jaimla](https://github.com/jaimla), [Professor-Codephreak](https://github.com/Professor-Codephreak), [w3DAIO](https://github.com/w3DAIO), [DAONOW](https://github.com/DAONOW), [dairef](https://github.com/dairef). Sites: [rage.pythai.net](https://rage.pythai.net), [mindx.pythai.net](https://mindx.pythai.net), [agenticplace.pythai.net](https://agenticplace.pythai.net), [daio.pythai.net](https://daio.pythai.net) (voting UI).
 
 ---
 

@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-02-05T06:35:33.201047",
+  "memory_type": "performance",
+  "importance": 3,
+  "agent_id": "admin",
+  "content": {
+    "event_type": "interaction_complete",
+    "log_level": "ERROR",
+    "model": "nemotron-3-nano:30b",
+    "response_length": 114,
+    "duration_ms": 60058.405,
+    "success": false
+  },
+  "context": {
+    "source": "ollama_admin",
+    "timestamp": "2026-02-05T06:35:33.201007"
+  },
+  "tags": [
+    "ollama",
+    "diagnostics",
+    "error"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "22ca5b5ca2c92964"
+}

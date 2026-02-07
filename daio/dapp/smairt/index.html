@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>S.M.A.I.R.T Presale — DAIO Bonding</title>
+  <link rel="stylesheet" href="styled.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>S.M.A.I.R.T Presale</h1>
+        <a href="https://daio.pythai.net" rel="noopener">daio.pythai.net</a>
+        ·
+        <a href="https://mindx.pythai.net" rel="noopener">mindx.pythai.net</a>
+        ·
+        <a href="../../contracts/bonding/docs/SMAIRT_BONDING_PRESALE_ARTICLE.md" class="external">Docs</a>
+      </div>
+      <div class="wallet-row">
+        <span id="account"></span>
+        <button type="button" class="btn btn-primary" id="connect-btn">Connect wallet</button>
+      </div>
+    </header>
+
+    <div id="message" role="alert"></div>
+
+    <section class="panel" id="panel-state">
+      <h2>Presale state</h2>
+      <div id="state-content">
+        <p>Connect wallet and set <code>PRESALE_ADDRESS</code> in smairt.js.</p>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-contribute">
+      <h2>Contribute (ETH)</h2>
+      <p>Send ETH during the active presale. Min/max per wallet are enforced on-chain.</p>
+      <label for="contribute-amount">Amount (ETH)</label>
+      <input type="text" id="contribute-amount" placeholder="0.1" />
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="contribute-btn">Contribute</button>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-claim">
+      <h2>Claim tokens</h2>
+      <p>After presale is finalized, claim your proportional share of tokens.</p>
+      <div class="stat"><span class="label">Your claimable</span><span class="value" id="claimable-amount">—</span></div>
+      <div class="actions">
+        <button type="button" class="btn btn-success" id="claim-btn">Claim</button>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-refund">
+      <h2>Refund</h2>
+      <p>If presale was canceled or failed, recover your contribution.</p>
+      <div class="stat"><span class="label">Your contribution (refundable)</span><span class="value" id="refund-amount">—</span></div>
+      <div class="actions">
+        <button type="button" class="btn btn-warn" id="refund-btn">Refund</button>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-owner">
+      <h2>Owner actions</h2>
+      <p>Presale creator only: activate, finalize, or cancel.</p>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="activate-btn">Activate presale</button>
+        <button type="button" class="btn btn-success" id="finalize-btn">Finalize presale</button>
+        <button type="button" class="btn btn-danger" id="cancel-btn">Cancel presale</button>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-lock">
+      <h2>LP lock</h2>
+      <p>Time-locked liquidity details (LiquidityLocker).</p>
+      <div id="lock-content"><p>—</p></div>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="withdraw-lp-btn">Withdraw LP (beneficiary)</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+  <script src="abis/PresaleABI.js"></script>
+  <script src="abis/LiquidityLockerABI.js"></script>
+  <script src="smairt.js"></script>
+</body>
+</html>

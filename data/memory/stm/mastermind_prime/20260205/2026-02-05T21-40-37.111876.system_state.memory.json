@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-02-05T21:40:37.111876",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mastermind_prime",
+  "content": {
+    "process_name": "mastermind_agent_creation_start",
+    "data": {
+      "agent_type": "processor",
+      "agent_id": "test_json_1770352830",
+      "config": {
+        "description": "'{timeout: 30, enabled: true}'",
+        "created_via": "cli_natural_language"
+      }
+    }
+  },
+  "context": {
+    "agent_id": "mastermind_prime"
+  },
+  "tags": [
+    "mastermind_agent_creation_start",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "02aa6fa3c8c9587b"
+}

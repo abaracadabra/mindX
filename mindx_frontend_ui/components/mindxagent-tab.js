@@ -21,6 +21,8 @@ class MindXagentTab extends TabComponent {
         this.ollamaMonitor = null;
         this.interactionHistory = [];
         this.memoryLogs = [];
+        this.processTraceEntries = [];
+        this.godelChoices = [];
     }
 
     /**
@@ -52,14 +54,17 @@ class MindXagentTab extends TabComponent {
     async onActivate() {
         await super.onActivate();
 
-        // Load all data
+        // Load all data (including startup flow, logging from memory_agent)
         await Promise.all([
             this.loadStatus(),
             this.loadOllamaStatus(),
+            this.loadStartup(),
             this.loadConversation(),
             this.loadThinking(),
             this.loadActions(),
-            this.loadMemoryLogs()
+            this.loadMemoryLogs(),
+            this.loadProcessTrace(),
+            this.loadGodelChoices()
         ]);
 
         // Start Ollama monitoring
@@ -95,8 +100,40 @@ class MindXagentTab extends TabComponent {
         await Promise.all([
             this.loadStatus(),
             this.loadOllamaStatus(),
-            this.loadConversation()
+            this.loadStartup(),
+            this.loadConversation(),
+            this.loadProcessTrace(),
+            this.loadGodelChoices()
         ]);
+    }
+
+    /**
+     * Load startup flow (startup_agent → mindXagent → Ollama)
+     */
+    async loadStartup() {
+        try {
+            const data = await this.apiRequest('/mindxagent/startup');
+            this.updateStartupDisplay(data);
+        } catch (error) {
+            console.error('Failed to load startup flow:', error);
+        }
+    }
+
+    /**
+     * Update startup flow display (uses app.js updateMindXagentStartupDisplay if available)
+     */
+    updateStartupDisplay(data) {
+        if (typeof updateMindXagentStartupDisplay === 'function') {
+            updateMindXagentStartupDisplay(data);
+        } else {
+            const stepsEl = document.getElementById('mindxagent-startup-steps');
+            if (stepsEl && data && data.success && data.startup_sequence && data.startup_sequence.length) {
+                stepsEl.innerHTML = '<h4>Steps</h4><ul>' + data.startup_sequence.map(s => {
+                    const status = s.status === 'completed' ? '✅' : s.status === 'skipped' ? '⏭' : '⏳';
+                    return `<li>${status} ${s.name || ''}</li>`;
+                }).join('') + '</ul>';
+            }
+        }
     }
 
     /**
@@ -157,6 +194,16 @@ class MindXagentTab extends TabComponent {
         const clearMemoryBtn = document.getElementById('clear-memory-logs-btn');
         if (clearMemoryBtn) {
             clearMemoryBtn.addEventListener('click', () => this.clearMemoryLogs());
+        }
+
+        // Logging (memory_agent) controls
+        const refreshProcessTraceBtn = document.getElementById('refresh-mindxagent-process-trace-btn');
+        if (refreshProcessTraceBtn) {
+            refreshProcessTraceBtn.addEventListener('click', () => this.loadProcessTrace());
+        }
+        const refreshGodelBtn = document.getElementById('refresh-mindxagent-godel-choices-btn');
+        if (refreshGodelBtn) {
+            refreshGodelBtn.addEventListener('click', () => this.loadGodelChoices());
         }
     }
 
@@ -410,21 +457,135 @@ class MindXagentTab extends TabComponent {
     }
 
     /**
-     * Load memory logs
+     * Load process trace (memory_agent log_process → process_trace.jsonl)
+     */
+    async loadProcessTrace() {
+        try {
+            const result = await this.apiRequest('/mindxagent/logs/process?limit=80');
+            this.processTraceEntries = result.entries || [];
+            this.updateProcessTraceDisplay();
+        } catch (error) {
+            console.error('Failed to load process trace:', error);
+            this.updateProcessTraceDisplay(true);
+        }
+    }
+
+    /**
+     * Update process trace display
+     */
+    updateProcessTraceDisplay(isError = false) {
+        const container = document.getElementById('mindxagent-process-trace');
+        if (!container) return;
+
+        if (isError) {
+            container.innerHTML = '<div class="empty-state">Failed to load process trace</div>';
+            return;
+        }
+        const entries = this.processTraceEntries || [];
+        if (entries.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-text">No process trace entries</div>
+                    <div class="empty-hint">Written by memory_agent.log_process() under data/memory/agent_workspaces</div>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = entries.map((e, i) => {
+            const ts = e.timestamp_utc || e.timestamp || '';
+            const name = e.process_name || '';
+            const meta = e.metadata || {};
+            const data = e.process_data || e.data || {};
+            const preview = typeof data === 'object' ? JSON.stringify(data).slice(0, 120) : String(data).slice(0, 120);
+            return `
+                <div class="process-trace-entry">
+                    <div class="log-header">
+                        <span class="log-timestamp">${ts ? new Date(ts).toLocaleString() : '-'}</span>
+                        <span class="log-type">${this.escapeHtml(name)}</span>
+                        ${meta.agent_id ? `<span class="log-meta">${this.escapeHtml(meta.agent_id)}</span>` : ''}
+                    </div>
+                    <div class="log-content">${this.escapeHtml(preview)}${(typeof data === 'object' ? JSON.stringify(data).length : String(data).length) > 120 ? '…' : ''}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    /**
+     * Load Gödel choices for mindx_meta_agent
+     */
+    async loadGodelChoices() {
+        try {
+            const result = await this.apiRequest('/godel/choices?limit=50&source_agent=mindx_meta_agent');
+            this.godelChoices = result.choices || [];
+            this.updateGodelChoicesDisplay();
+        } catch (error) {
+            console.error('Failed to load Gödel choices:', error);
+            this.updateGodelChoicesDisplay(true);
+        }
+    }
+
+    /**
+     * Update Gödel choices display
+     */
+    updateGodelChoicesDisplay(isError = false) {
+        const container = document.getElementById('mindxagent-godel-choices');
+        if (!container) return;
+
+        if (isError) {
+            container.innerHTML = '<div class="empty-state">Failed to load Gödel choices</div>';
+            return;
+        }
+        const choices = this.godelChoices || [];
+        if (choices.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-text">No Gödel choices for mindx_meta_agent</div>
+                    <div class="empty-hint">From data/logs/godel_choices.jsonl</div>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = choices.map((c, i) => {
+            const ts = c.timestamp_utc || c.timestamp || '';
+            const source = c.source_agent || '';
+            const kind = c.choice_type || c.event || 'choice';
+            const rationale = c.rationale || c.reason || '';
+            const outcome = c.outcome || c.result || '';
+            const opt = c.chosen_option || c.option || '';
+            return `
+                <div class="godel-choice-entry">
+                    <div class="log-header">
+                        <span class="log-timestamp">${ts ? new Date(ts).toLocaleString() : '-'}</span>
+                        <span class="log-type">${this.escapeHtml(kind)}</span>
+                        ${source ? `<span class="log-meta">${this.escapeHtml(source)}</span>` : ''}
+                    </div>
+                    ${opt ? `<div class="log-content"><strong>Chosen:</strong> ${this.escapeHtml(String(opt).slice(0, 80))}${String(opt).length > 80 ? '…' : ''}</div>` : ''}
+                    ${rationale ? `<div class="log-content"><strong>Rationale:</strong> ${this.escapeHtml(String(rationale).slice(0, 100))}${String(rationale).length > 100 ? '…' : ''}</div>` : ''}
+                    ${outcome ? `<div class="log-content"><strong>Outcome:</strong> ${this.escapeHtml(String(outcome).slice(0, 80))}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+
+    /**
+     * Load memory logs (STM / timestamped memory from memory_agent)
      */
     async loadMemoryLogs() {
         try {
-            const logs = await this.apiRequest('/mindxagent/memory/logs?limit=50');
-            this.memoryLogs = logs.logs || [];
+            const result = await this.apiRequest('/mindxagent/memory/logs?limit=50');
+            this.memoryLogs = result.logs || [];
             this.updateMemoryLogsDisplay();
         } catch (error) {
             console.error('Failed to load memory logs:', error);
+            this.memoryLogs = [];
             this.updateMemoryLogsDisplay();
         }
     }
 
     /**
-     * Update memory logs display
+     * Update memory logs display (API: timestamp ISO, memory_type, content_preview, tags, file)
      */
     updateMemoryLogsDisplay() {
         const container = document.getElementById('mindxagent-memory-logs');
@@ -435,23 +596,29 @@ class MindXagentTab extends TabComponent {
                 <div class="empty-state">
                     <div class="empty-icon">🧠</div>
                     <div class="empty-text">No memory logs yet</div>
-                    <div class="empty-hint">Memory events will appear here as they are logged</div>
+                    <div class="empty-hint">Memory events from data/memory/stm will appear here</div>
                 </div>
             `;
             return;
         }
 
-        container.innerHTML = this.memoryLogs.map(log => `
-            <div class="memory-log-entry">
-                <div class="log-header">
-                    <span class="log-timestamp">${new Date(log.timestamp * 1000).toLocaleString()}</span>
-                    <span class="log-type">${log.type || 'memory'}</span>
+        container.innerHTML = this.memoryLogs.map(log => {
+            const ts = log.timestamp;
+            const dateStr = ts ? (typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts)).toLocaleString() : '-';
+            const type = log.memory_type || log.type || 'memory';
+            const content = log.content_preview || log.content || log.message || '';
+            const tags = Array.isArray(log.tags) ? log.tags.join(', ') : '';
+            return `
+                <div class="memory-log-entry">
+                    <div class="log-header">
+                        <span class="log-timestamp">${dateStr}</span>
+                        <span class="log-type">${this.escapeHtml(type)}</span>
+                        ${tags ? `<span class="log-meta">${this.escapeHtml(tags)}</span>` : ''}
+                    </div>
+                    <div class="log-content">${this.escapeHtml(content)}</div>
                 </div>
-                <div class="log-content">
-                    ${this.escapeHtml(log.content || log.message || JSON.stringify(log))}
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     /**
@@ -539,16 +706,90 @@ class MindXagentTab extends TabComponent {
         if (modelEl) modelEl.textContent = status.model || '-';
         if (providerEl) providerEl.textContent = status.provider || '-';
 
-        // Activity metrics
+        // Activity metrics (from actual GET /mindxagent/status)
         const thinkingCountEl = document.getElementById('mindxagent-thinking-count');
         const actionsCountEl = document.getElementById('mindxagent-actions-count');
         const improvementsCountEl = document.getElementById('mindxagent-improvements-count');
         const activeAgentsEl = document.getElementById('mindxagent-active-agents');
 
-        if (thinkingCountEl) thinkingCountEl.textContent = status.thinking_count || 0;
-        if (actionsCountEl) actionsCountEl.textContent = status.actions_count || 0;
-        if (improvementsCountEl) improvementsCountEl.textContent = status.improvements_count || 0;
-        if (activeAgentsEl) activeAgentsEl.textContent = status.active_agents || 0;
+        const thinkingCount = status.thinking_steps_count ?? status.thinking_count ?? 0;
+        const actionsCount = status.action_choices_count ?? status.actions_count ?? 0;
+        const improvementsCount = status.improvement_opportunities_count ?? status.improvements_count ?? 0;
+        const activeAgents = (status.agent_knowledge && status.agent_knowledge.active_agents) ?? status.active_agents ?? 0;
+
+        if (thinkingCountEl) thinkingCountEl.textContent = thinkingCount;
+        if (actionsCountEl) actionsCountEl.textContent = actionsCount;
+        if (improvementsCountEl) improvementsCountEl.textContent = improvementsCount;
+        if (activeAgentsEl) activeAgentsEl.textContent = activeAgents;
+
+        // Recent Action Choices (from actual status.recent_actions)
+        const recentActionsEl = document.getElementById('mindxagent-recent-actions');
+        if (recentActionsEl) {
+            const recent = status.recent_actions || [];
+            if (recent.length > 0) {
+                recentActionsEl.innerHTML = recent.map((action) => {
+                    const time = action.timestamp ? new Date(action.timestamp * 1000).toLocaleString() : '-';
+                    return `
+                        <div class="recent-item">
+                            <div class="recent-item-header">
+                                <div class="recent-item-title">${this.escapeHtml(action.context || 'Unknown')}</div>
+                                <div class="recent-item-time">${time}</div>
+                            </div>
+                            <div class="recent-item-content">Selected: ${this.escapeHtml(action.selected || 'None')}</div>
+                            <div class="recent-item-meta">Options: ${action.options_count ?? 0}</div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                recentActionsEl.innerHTML = '<div class="empty-state">No recent actions (from live mindXagent)</div>';
+            }
+        }
+
+        // Recent Thinking Steps (from actual status.recent_thinking)
+        const recentThinkingEl = document.getElementById('mindxagent-recent-thinking');
+        if (recentThinkingEl) {
+            const recent = status.recent_thinking || [];
+            if (recent.length > 0) {
+                recentThinkingEl.innerHTML = recent.map((thinking) => {
+                    const time = thinking.timestamp ? new Date(thinking.timestamp * 1000).toLocaleString() : '-';
+                    return `
+                        <div class="recent-item">
+                            <div class="recent-item-header">
+                                <div class="recent-item-title">${this.escapeHtml(thinking.step || 'Unknown')}</div>
+                                <div class="recent-item-time">${time}</div>
+                            </div>
+                            <div class="recent-item-content">${this.escapeHtml(thinking.thought_preview || '')}</div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                recentThinkingEl.innerHTML = '<div class="empty-state">No recent thinking steps (from live mindXagent)</div>';
+            }
+        }
+
+        // Improvement Opportunities (from actual status.improvement_opportunities)
+        const improvementsEl = document.getElementById('mindxagent-improvements');
+        if (improvementsEl) {
+            const opps = status.improvement_opportunities || [];
+            if (opps.length > 0) {
+                improvementsEl.innerHTML = opps.map((opp) => {
+                    const type = opp.type || opp.opportunity || 'Unknown';
+                    const desc = opp.description || (typeof opp.opportunity === 'string' ? opp.opportunity : '') || '';
+                    const priority = opp.priority || '';
+                    return `
+                        <div class="recent-item">
+                            <div class="recent-item-header">
+                                <div class="recent-item-title">${this.escapeHtml(type)}</div>
+                                ${priority ? `<span class="status-badge">${this.escapeHtml(priority)}</span>` : ''}
+                            </div>
+                            <div class="recent-item-content">${this.escapeHtml(desc)}</div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                improvementsEl.innerHTML = '<div class="empty-state">No improvement opportunities (from live mindXagent)</div>';
+            }
+        }
     }
 
     /**
@@ -556,6 +797,7 @@ class MindXagentTab extends TabComponent {
      * @param {Object} ollamaStatus - Ollama status data
      */
     updateOllamaStatusDisplay(ollamaStatus) {
+        if (!ollamaStatus) return;
         const connectedEl = document.getElementById('mindxagent-ollama-connected');
         const urlEl = document.getElementById('mindxagent-ollama-url');
         const modelsCountEl = document.getElementById('mindxagent-ollama-models-count');
@@ -567,9 +809,10 @@ class MindXagentTab extends TabComponent {
             connectedEl.style.color = ollamaStatus.connected ? '#00ff00' : '#ff0000';
         }
         if (urlEl) urlEl.textContent = ollamaStatus.base_url || '-';
-        if (modelsCountEl) modelsCountEl.textContent = ollamaStatus.models_count || 0;
+        const modelsCount = ollamaStatus.models_count ?? (Array.isArray(ollamaStatus.available_models) ? ollamaStatus.available_models.length : 0);
+        if (modelsCountEl) modelsCountEl.textContent = modelsCount;
         if (currentModelEl) currentModelEl.textContent = ollamaStatus.current_model || '-';
-        if (conversationsEl) conversationsEl.textContent = ollamaStatus.conversation_count || 0;
+        if (conversationsEl) conversationsEl.textContent = ollamaStatus.conversation_count ?? 0;
     }
 
     /**
@@ -604,52 +847,61 @@ class MindXagentTab extends TabComponent {
     }
 
     /**
-     * Update thinking display
-     * @param {Object} result - Thinking data
+     * Update thinking display (from actual GET /mindxagent/thinking → thinking_process)
      */
     updateThinkingDisplay(result) {
         const displayEl = document.getElementById('mindxagent-thinking-display');
         if (!displayEl) return;
 
-        if (!result.thinking || result.thinking.length === 0) {
-            displayEl.innerHTML = '<p style="color: #888; font-style: italic;">No thinking steps yet</p>';
+        const steps = result.thinking_process || result.thinking || [];
+        if (steps.length === 0) {
+            displayEl.innerHTML = '<p style="color: #888; font-style: italic;">No thinking steps yet (from GET /mindxagent/thinking)</p>';
             return;
         }
 
-        displayEl.innerHTML = result.thinking.map((step, index) => `
-            <div class="thinking-step">
-                <div class="thinking-step-header">
-                    <span class="step-number">#${index + 1}</span>
-                    <span class="step-timestamp">${step.timestamp ? new Date(step.timestamp).toLocaleString() : ''}</span>
+        displayEl.innerHTML = steps.map((step, index) => {
+            const ts = step.timestamp ? (typeof step.timestamp === 'number' ? new Date(step.timestamp * 1000) : new Date(step.timestamp)).toLocaleString() : '';
+            const content = step.thought || step.content || step.message || '';
+            return `
+                <div class="thinking-step">
+                    <div class="thinking-step-header">
+                        <span class="step-number">#${index + 1}</span>
+                        <span class="step-timestamp">${ts}</span>
+                    </div>
+                    <div class="thinking-step-content">${this.escapeHtml(content)}</div>
                 </div>
-                <div class="thinking-step-content">${step.content || step.message || ''}</div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     /**
-     * Update actions display
-     * @param {Object} result - Actions data
+     * Update actions display (from actual GET /mindxagent/actions → action_choices)
      */
     updateActionsDisplay(result) {
         const displayEl = document.getElementById('mindxagent-actions-display');
         if (!displayEl) return;
 
-        if (!result.actions || result.actions.length === 0) {
-            displayEl.innerHTML = '<p style="color: #888; font-style: italic;">No actions yet</p>';
+        const actions = result.action_choices || result.actions || [];
+        if (actions.length === 0) {
+            displayEl.innerHTML = '<p style="color: #888; font-style: italic;">No actions yet (from GET /mindxagent/actions)</p>';
             return;
         }
 
-        displayEl.innerHTML = result.actions.map((action, index) => `
-            <div class="action-item">
-                <div class="action-header">
-                    <span class="action-number">#${index + 1}</span>
-                    <span class="action-type">${action.type || 'unknown'}</span>
-                    <span class="action-timestamp">${action.timestamp ? new Date(action.timestamp).toLocaleString() : ''}</span>
+        displayEl.innerHTML = actions.map((action, index) => {
+            const ts = action.timestamp ? (typeof action.timestamp === 'number' ? new Date(action.timestamp * 1000) : new Date(action.timestamp)).toLocaleString() : '';
+            const selected = action.selected && (typeof action.selected === 'object' ? action.selected.goal : action.selected) || action.description || action.content || '';
+            const ctx = action.context || action.type || 'action';
+            return `
+                <div class="action-item">
+                    <div class="action-header">
+                        <span class="action-number">#${index + 1}</span>
+                        <span class="action-type">${this.escapeHtml(ctx)}</span>
+                        <span class="action-timestamp">${ts}</span>
+                    </div>
+                    <div class="action-content">${this.escapeHtml(selected)}</div>
                 </div>
-                <div class="action-content">${action.description || action.content || ''}</div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     /**

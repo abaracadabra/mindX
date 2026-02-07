@@ -8,8 +8,9 @@ import time
 import json
 import uuid
 from datetime import datetime, timedelta
-from fastapi import FastAPI, HTTPException, Request, Body
+from fastapi import FastAPI, HTTPException, Request, Body, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 
@@ -31,7 +32,7 @@ from tools.user_persistence_manager import get_user_persistence_manager
 from llm.model_registry import get_model_registry_async
 from utils.config import Config, PROJECT_ROOT
 from api.command_handler import CommandHandler
-from utils.logging_config import setup_logging, get_logger
+from utils.logging_config import setup_logging, get_logger, LOG_DIR, LOG_FILENAME
 from mindx_backend_service.vault_manager import get_vault_manager
 from agents.monitoring.rate_limit_dashboard import RateLimitDashboard
 
@@ -163,11 +164,21 @@ app.add_middleware(
     allow_methods=["*"],  # Allow all methods
     allow_headers=["*"],  # Allow all headers
 )
+# Inbound metrics and optional rate control (both directions: see docs/monitoring_rate_control.md)
+try:
+    from mindx_backend_service.inbound_metrics import InboundMetricsMiddleware, get_inbound_metrics, set_inbound_rate_limit
+    app.add_middleware(InboundMetricsMiddleware)
+except Exception as e:
+    logger.warning(f"InboundMetricsMiddleware not added: {e}")
 
 # Include mindterm router
 from mindx_backend_service.mindterm import mindterm_router
 from mindx_backend_service.mindterm.routes import set_coordinator_and_monitors
 app.include_router(mindterm_router)
+# Serve local xterm.js assets for mindterm (mindx_backend_service/mindterm/static/xterm/)
+_mindterm_static = PROJECT_ROOT / "mindx_backend_service" / "mindterm" / "static"
+if _mindterm_static.exists():
+    app.mount("/mindterm/static", StaticFiles(directory=str(_mindterm_static)), name="mindterm_static")
 
 # Include LLM provider management router
 from api.llm_routes import router as llm_router
@@ -184,6 +195,10 @@ app.include_router(ollama_admin_router)
 # Include AgenticPlace router
 from mindx_backend_service.agenticplace_routes import router as agenticplace_router
 app.include_router(agenticplace_router)
+
+# Include bankon ("I do not understand") router
+from mindx_backend_service.bankon import bankon_router
+app.include_router(bankon_router)
 
 command_handler: Optional[CommandHandler] = None
 
@@ -218,6 +233,18 @@ async def startup_event():
         
         command_handler = CommandHandler(mastermind_instance)
         
+        # Connect mindX to Ollama so AgenticPlace (and other clients) can use inference
+        try:
+            from api.ollama.ollama_url import create_ollama_api
+            ollama_api = create_ollama_api(config=app_config)
+            ollama_test = await ollama_api.test_connection(try_fallback=True)
+            if ollama_test.get("success"):
+                logger.info(f"mindX connected to Ollama at {ollama_test.get('base_url', 'unknown')} (model_count={ollama_test.get('model_count', 0)}) — AgenticPlace can use mindX as provider.")
+            else:
+                logger.warning(f"mindX Ollama connection failed: {ollama_test.get('error', 'unknown')} — ensure Ollama is running (e.g. localhost:11434) for AgenticPlace.")
+        except Exception as ollama_e:
+            logger.warning(f"mindX Ollama startup check failed: {ollama_e} — AgenticPlace may fail until Ollama is available.")
+        
         # Initialize mindterm with coordinator and monitors
         try:
             set_coordinator_and_monitors(
@@ -230,6 +257,35 @@ async def startup_event():
             logger.warning(f"Failed to integrate mindterm with coordinator: {e}", exc_info=True)
         
         logger.info("mindX components initialized successfully. API is ready.")
+
+        # Log backend startup transcript to data/ via memory_agent (logs are memories; startup_agent can get a copy)
+        try:
+            transcript_lines = []
+            runtime_log_path = LOG_DIR / LOG_FILENAME
+            if runtime_log_path.exists():
+                with open(runtime_log_path, "r", encoding="utf-8", errors="replace") as f:
+                    lines = f.readlines()
+                    transcript_lines = lines[-500:] if len(lines) > 500 else lines
+            transcript_text = "".join(transcript_lines).strip() or "(no runtime log captured)"
+            terminal_startup_path = PROJECT_ROOT / "data" / "logs" / "terminal_startup.log"
+            terminal_startup_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(terminal_startup_path, "a", encoding="utf-8") as f:
+                f.write(f"\n--- backend_startup {datetime.utcnow().isoformat()}Z ---\n")
+                f.write(transcript_text)
+                f.write("\n")
+            await memory_agent.log_process(
+                "backend_startup_transcript",
+                {
+                    "transcript": transcript_text,
+                    "runtime_log_path": str(runtime_log_path),
+                    "terminal_startup_path": str(terminal_startup_path),
+                    "summary": "Backend startup completed; transcript stored in data/logs and as memory.",
+                },
+                {"agent_id": "main_service", "event": "backend_startup"},
+            )
+        except Exception as log_e:
+            logger.warning(f"Failed to log backend startup transcript to data/memory_agent: {log_e}", exc_info=True)
+
     except Exception as e:
         logger.critical(f"Failed to initialize mindX components during startup: {e}", exc_info=True)
         command_handler = None
@@ -247,6 +303,12 @@ async def handle_user_register_with_signature(wallet_address: str, signature: st
         if not success:
             return {"error": message_result}
         
+        # Optional: gate issuance of access on NFT/fungible (public key must hold token)
+        from mindx_backend_service.access_gate import check_access_gate
+        allowed, gate_message = check_access_gate(wallet_address)
+        if not allowed:
+            return {"error": gate_message, "access_denied": True}
+        
         # Log user registration
         if command_handler and command_handler.mastermind.memory_agent:
             await command_handler.mastermind.memory_agent.log_process(
@@ -258,6 +320,20 @@ async def handle_user_register_with_signature(wallet_address: str, signature: st
                 },
                 metadata={"user_wallet": wallet_address}
             )
+
+        # Issue vault-backed session for authenticated access
+        session_id = str(uuid.uuid4())
+        expires_at = (datetime.utcnow() + timedelta(hours=24)).isoformat() + "Z"
+        vault = get_vault_manager()
+        if vault.store_user_session(session_id, wallet_address, expires_at, metadata=metadata):
+            return {
+                "status": "success",
+                "wallet_address": wallet_address,
+                "message": message_result,
+                "signature_verified": True,
+                "session_token": session_id,
+                "expires_at": expires_at
+            }
         
         return {
             "status": "success",
@@ -420,6 +496,20 @@ async def mastermind_status():
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
     return await command_handler.handle_mastermind_status()
 
+@app.get("/api/monitoring/inbound", summary="Get inbound request metrics (latency ms, bytes, req/min)")
+async def get_inbound_monitoring():
+    """Inbound metrics: latency (ms), request/response bytes, requests per minute. See docs/monitoring_rate_control.md."""
+    try:
+        from mindx_backend_service.inbound_metrics import get_inbound_metrics, get_inbound_rate_limit
+        metrics = get_inbound_metrics()
+        rpm_limit, window_s = get_inbound_rate_limit()
+        return {
+            "inbound_metrics": metrics.get_metrics(window_s=window_s),
+            "inbound_rate_limit": {"requests_per_minute": rpm_limit, "window_s": window_s} if rpm_limit else None,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Inbound metrics not available: {e}")
+
 @app.get("/registry/agents", summary="Show agent registry")
 async def show_agent_registry():
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
@@ -507,6 +597,51 @@ async def id_create(payload: IdCreatePayload):
 async def id_deprecate(payload: IdDeprecatePayload):
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
     return await command_handler.handle_id_deprecate(payload.public_address, payload.entity_id_hint)
+
+
+@app.get("/godel/choices", summary="Get last N Gödel core choices (read-only audit log)")
+async def godel_choices(limit: int = 50, source_agent: Optional[str] = None):
+    """Read last N Gödel choices via memory_agent (all logs are memories in data). Fallback to file read if memory_agent unavailable."""
+    if command_handler and getattr(command_handler.mastermind, "memory_agent", None):
+        ma = command_handler.mastermind.memory_agent
+        choices, total = ma.get_godel_choices(limit=limit, source_agent=source_agent)
+        return {"choices": choices, "total": total}
+    log_path = Path(PROJECT_ROOT) / "data" / "logs" / "godel_choices.jsonl"
+    if not log_path.exists():
+        return {"choices": [], "total": 0}
+    choices = []
+    try:
+        with open(log_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    record = json.loads(line)
+                    if source_agent is not None and record.get("source_agent") != source_agent:
+                        continue
+                    choices.append(record)
+                except json.JSONDecodeError:
+                    continue
+        choices = choices[-limit:] if limit else choices
+        choices.reverse()
+        return {"choices": choices, "total": len(choices)}
+    except Exception as e:
+        logger.warning(f"Failed to read Gödel choices log: {e}")
+        return {"choices": [], "total": 0, "error": str(e)}
+
+
+@app.get("/inference/status", summary="Get inference_agent status (providers, usage, budget)")
+async def get_inference_status():
+    """Return inference_agent status: providers tracked, usage per provider, budget guideline, solvency."""
+    try:
+        from agents.orchestration.inference_agent import InferenceAgent
+        agent = await InferenceAgent.get_instance()
+        return agent.get_status()
+    except Exception as e:
+        logger.warning(f"inference_agent status failed: {e}")
+        return {"agent_id": "inference_agent", "error": str(e), "providers": [], "usage_by_provider": {}}
+
 
 @app.post("/commands/audit_gemini", summary="Audit Gemini models")
 async def audit_gemini(payload: AuditGeminiPayload):
@@ -909,9 +1044,12 @@ async def register_user(payload: UserRegisterPayload):
 @app.post("/users/register-with-signature", summary="Register a new user with wallet signature verification")
 async def register_user_with_signature(payload: UserRegisterWithSignaturePayload):
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
-    return await handle_user_register_with_signature(
+    result = await handle_user_register_with_signature(
         payload.wallet_address, payload.signature, payload.message, payload.metadata
     )
+    if result.get("access_denied"):
+        raise HTTPException(status_code=403, detail=result.get("error", "Access denied"))
+    return result
 
 @app.post("/users/agents", summary="Create a new agent for a user")
 async def create_user_agent(payload: UserAgentCreatePayload):
@@ -961,6 +1099,103 @@ async def generate_challenge(payload: ChallengeRequestPayload):
         "action": payload.action,
         "challenge_message": challenge
     }
+
+@app.get("/users/session/validate", summary="Validate session token (vault-backed)")
+async def validate_session(
+    request: Request,
+    session_token: Optional[str] = None
+):
+    """Validate a session token issued after wallet sign-in. Accepts session_token as query param or X-Session-Token header. Returns 401 if missing or invalid."""
+    token = session_token or request.headers.get("X-Session-Token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing session token")
+    vault = get_vault_manager()
+    session = vault.get_user_session(token)
+    if not session:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+    return {"wallet_address": session["wallet_address"], "expires_at": session.get("expires_at")}
+
+@app.post("/users/logout", summary="Invalidate session (logout)")
+async def logout_session(request: Request):
+    """Invalidate the session token. Accepts X-Session-Token header. Returns 200 even if token was already invalid."""
+    token = request.headers.get("X-Session-Token")
+    if not token:
+        return {"logged_out": False, "message": "No session token provided"}
+    vault = get_vault_manager()
+    invalidated = vault.invalidate_user_session(token)
+    return {"logged_out": invalidated}
+
+async def require_session_wallet(request: Request) -> str:
+    """Dependency: validate session and return wallet address. Use for vault user folder access (folder = public key)."""
+    token = request.headers.get("X-Session-Token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing session token")
+    vault = get_vault_manager()
+    session = vault.get_user_session(token)
+    if not session:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+    return session["wallet_address"]
+
+@app.get("/vault/user/keys", summary="List keys in the authenticated user's vault folder")
+async def vault_user_list_keys(wallet_address: str = Depends(require_session_wallet)):
+    """List key names in the vault folder for the wallet that holds the valid session (signature). No access to other folders."""
+    try:
+        vault = get_vault_manager()
+        keys = vault.list_user_folder_keys(wallet_address)
+        return {"keys": keys, "wallet_address": wallet_address}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Vault user list keys: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/vault/user/keys/{key}", summary="Get value for a key in the authenticated user's vault folder")
+async def vault_user_get_key(key: str, wallet_address: str = Depends(require_session_wallet)):
+    """Get value for key. Access only to the folder that corresponds to the public key (wallet) that holds the signature."""
+    try:
+        vault = get_vault_manager()
+        value = vault.get_user_folder_key(wallet_address, key)
+        if value is None:
+            raise HTTPException(status_code=404, detail="Key not found")
+        return {"key": key, "value": value, "wallet_address": wallet_address}
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Vault user get key: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/vault/user/keys/{key}", summary="Set value for a key in the authenticated user's vault folder")
+async def vault_user_set_key(key: str, request: Request, wallet_address: str = Depends(require_session_wallet)):
+    """Set value for key. Access only to the folder that corresponds to the public key (wallet) that holds the signature."""
+    try:
+        value = await request.json()
+        vault = get_vault_manager()
+        success = vault.set_user_folder_key(wallet_address, key, value)
+        if not success:
+            raise HTTPException(status_code=400, detail="Invalid key or write failed")
+        return {"key": key, "success": True, "wallet_address": wallet_address}
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Vault user set key: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/vault/user/keys/{key}", summary="Delete a key in the authenticated user's vault folder")
+async def vault_user_delete_key(key: str, wallet_address: str = Depends(require_session_wallet)):
+    """Delete key. Access only to the folder that corresponds to the public key (wallet) that holds the signature."""
+    try:
+        vault = get_vault_manager()
+        success = vault.delete_user_folder_key(wallet_address, key)
+        return {"key": key, "deleted": success, "wallet_address": wallet_address}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Vault user delete key: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/logs/runtime", summary="Get runtime logs")
 async def get_runtime_logs():
@@ -1097,23 +1332,26 @@ def update_bdi_state(directive: str, chosen_agent: str, reasoning: str):
 async def get_bdi_status():
     """Get BDI Agent status with belief, desire, intention details"""
     try:
-        # Read the latest BDI reasoning from the log file for additional context
-        agint_log_file = "data/logs/agint/agint_cognitive_cycles.log"
-        
-        if os.path.exists(agint_log_file):
-            with open(agint_log_file, 'r') as f:
-                lines = f.readlines()
-                # Get the last few entries to supplement global state
-                for line in lines[-5:]:  # Last 5 lines
-                    if "BDI Reasoning:" in line and not any(r["reasoning"] == line.strip() for r in bdi_state["reasoning_history"]):
-                        # Add new reasoning if not already in state
-                        timestamp = line.split(']')[0][1:] if ']' in line else time.strftime('%Y-%m-%d %H:%M:%S')
-                        bdi_state["reasoning_history"].append({
-                            "timestamp": timestamp,
-                            "reasoning": line.strip(),
-                            "directive": bdi_state["current_directive"],
-                            "agent": bdi_state["chosen_agent"]
-                        })
+        # Read the latest BDI reasoning via memory_agent (all logs are memories) or fallback to file
+        lines = []
+        if command_handler and getattr(command_handler.mastermind, "memory_agent", None):
+            lines = command_handler.mastermind.memory_agent.get_agint_cycle_log(last_n_lines=20)
+        else:
+            agint_log_file = "data/logs/agint/agint_cognitive_cycles.log"
+            if os.path.exists(agint_log_file):
+                with open(agint_log_file, 'r') as f:
+                    lines = f.readlines()
+        if lines:
+            for line in (lines[-5:] if len(lines) > 5 else lines):  # Last 5 lines
+                line_str = line.strip() if isinstance(line, str) else str(line).strip()
+                if "BDI Reasoning:" in line_str and not any(r["reasoning"] == line_str for r in bdi_state["reasoning_history"]):
+                    timestamp = line_str.split(']')[0][1:] if ']' in line_str else time.strftime('%Y-%m-%d %H:%M:%S')
+                    bdi_state["reasoning_history"].append({
+                        "timestamp": timestamp,
+                        "reasoning": line_str,
+                        "directive": bdi_state["current_directive"],
+                        "agent": bdi_state["chosen_agent"]
+                    })
         
         # Determine agent status based on current state
         agent_status = "active" if bdi_state["chosen_agent"] != "None" else "idle"
@@ -1699,17 +1937,8 @@ def clear_usage_history(keep_days: int = 0):
 
 
 def initialize_agint_logging():
-    """Initialize AGInt logging directory and create initial log file"""
-    agint_log_dir = "data/logs/agint"
-    os.makedirs(agint_log_dir, exist_ok=True)
-    
-    # Create initial log file with header
-    agint_log_file = os.path.join(agint_log_dir, "agint_cognitive_cycles.log")
-    if not os.path.exists(agint_log_file):
-        with open(agint_log_file, 'w') as f:
-            f.write("# AGInt Cognitive Loop Log\n")
-            f.write(f"# Started: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write("# Format: [TIMESTAMP] CYCLE X - MESSAGE\n\n")
+    """AGInt log file and directory are owned by memory_agent (all logs are memories). No-op here; memory_agent creates them in _initialize_storage."""
+    pass
 
 async def make_actual_code_changes_with_bdi_reasoning(directive: str, cycle: int, autonomous_mode: bool = False) -> List[Dict[str, Any]]:
     """Make actual code changes using simplified BDI reasoning to choose the best agent/tool."""
@@ -1792,6 +2021,18 @@ async def make_actual_code_changes_with_bdi_reasoning(directive: str, cycle: int
             }
         }
         
+        # Log Gödel core choice for BDI agent selection (before update_bdi_state)
+        if command_handler and command_handler.mastermind.memory_agent:
+            await command_handler.mastermind.memory_agent.log_godel_choice({
+                "source_agent": "bdi_directive_handler",
+                "cycle_id": cycle,
+                "choice_type": "bdi_agent_selection",
+                "perception_summary": directive[:500],
+                "options_considered": list(available_agents.keys()),
+                "chosen_option": chosen_agent,
+                "rationale": bdi_reasoning,
+            })
+        
         # Update global BDI state for real-time updates
         update_bdi_state(directive, chosen_agent, bdi_reasoning)
         
@@ -1802,16 +2043,12 @@ async def make_actual_code_changes_with_bdi_reasoning(directive: str, cycle: int
         if len(update_bdi_state.activity_log) > 50:
             update_bdi_state.activity_log = update_bdi_state.activity_log[-50:]
         
-        # Log BDI decision - ensure directory exists
-        agint_log_dir = "data/logs/agint"
-        os.makedirs(agint_log_dir, exist_ok=True)
-        agint_log_file = os.path.join(agint_log_dir, "agint_cognitive_cycles.log")
-        
-        # Always log BDI reasoning, even if execution fails
-        with open(agint_log_file, 'a') as f:
-            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - {bdi_reasoning}\n")
-            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - Chosen Agent: {chosen_agent}\n")
-            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - Directive: {directive}\n")
+        # Log BDI decision via memory_agent (all logs are memories in data)
+        ma = command_handler.mastermind.memory_agent if (command_handler and getattr(command_handler.mastermind, "memory_agent", None)) else None
+        if ma:
+            await ma.log_agint_cycle(cycle, "bdi_reasoning", bdi_reasoning)
+            await ma.log_agint_cycle(cycle, "chosen_agent", f"Chosen Agent: {chosen_agent}")
+            await ma.log_agint_cycle(cycle, "directive", directive)
         
         # Execute based on BDI decision
         try:
@@ -1827,16 +2064,16 @@ async def make_actual_code_changes_with_bdi_reasoning(directive: str, cycle: int
                 # Fallback to default behavior
                 changes = await execute_default_changes(directive, cycle)
             
-            # Log successful completion
-            with open(agint_log_file, 'a') as f:
-                f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - Status: Completed using {chosen_agent}\n")
-                f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - Changes made: {len(changes)} items\n\n")
+            # Log successful completion via memory_agent
+            if ma:
+                await ma.log_agint_cycle(cycle, "status", f"Status: Completed using {chosen_agent}")
+                await ma.log_agint_cycle(cycle, "changes", f"Changes made: {len(changes)} items")
                 
         except Exception as execution_error:
-            # Log execution error but keep BDI reasoning
-            with open(agint_log_file, 'a') as f:
-                f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - Execution Error: {str(execution_error)}\n")
-                f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - BDI reasoning completed, execution failed\n\n")
+            # Log execution error via memory_agent
+            if ma:
+                await ma.log_agint_cycle(cycle, "execution_error", f"Execution Error: {str(execution_error)}")
+                await ma.log_agint_cycle(cycle, "message", "BDI reasoning completed, execution failed")
             logger.error(f"BDI execution failed for {chosen_agent}: {execution_error}")
             # Still return some basic changes to maintain flow
             changes = [{"type": "bdi_reasoning", "agent": chosen_agent, "status": "reasoned_but_failed_execution"}]
@@ -1846,13 +2083,11 @@ async def make_actual_code_changes_with_bdi_reasoning(directive: str, cycle: int
         logger.error(f"BDI reasoning failed, falling back to default: {e}")
         changes = await execute_default_changes(directive, cycle)
         
-        # Log the fallback
-        agint_log_dir = "data/logs/agint"
-        os.makedirs(agint_log_dir, exist_ok=True)
-        agint_log_file = os.path.join(agint_log_dir, "agint_cognitive_cycles.log")
-        with open(agint_log_file, 'a') as f:
-            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - BDI Reasoning Failed: {str(e)}\n")
-            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - Fallback to default behavior\n\n")
+        # Log the fallback via memory_agent
+        ma = command_handler.mastermind.memory_agent if (command_handler and getattr(command_handler.mastermind, "memory_agent", None)) else None
+        if ma:
+            await ma.log_agint_cycle(cycle, "bdi_failed", f"BDI Reasoning Failed: {str(e)}")
+            await ma.log_agint_cycle(cycle, "fallback", "Fallback to default behavior")
     
     return changes
 
@@ -2040,34 +2275,17 @@ Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}
     return changes
 
 async def execute_audit_improve_changes(directive: str, cycle: int) -> List[Dict[str, Any]]:
-    """Execute changes using audit_and_improve_tool approach."""
+    """Execute changes using audit_and_improve_tool approach. Log via memory_agent (all logs are memories)."""
     changes = []
-    
-    # Store audit files in data/logs/agint directory instead of root
-    # Note: memory_agent already handles AGInt logging, so we'll just log to the existing system
-    agint_log_dir = "data/logs/agint"
-    os.makedirs(agint_log_dir, exist_ok=True)
-    
-    # Log to existing AGInt log file instead of creating separate audit files
-    agint_log_file = os.path.join(agint_log_dir, "agint_cognitive_cycles.log")
-    audit_content = f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle} - AUDIT: Code quality audited and improvements suggested for directive: {directive}\n"
-    
-    with open(agint_log_file, 'a') as f:
-        f.write(audit_content)
-    
-    # Create a minimal change entry for tracking purposes
+    audit_message = f"AUDIT: Code quality audited and improvements suggested for directive: {directive}"
+    ma = command_handler.mastermind.memory_agent if (command_handler and getattr(command_handler.mastermind, "memory_agent", None)) else None
+    if ma:
+        await ma.log_agint_cycle(cycle, "audit", audit_message)
     changes.append({
-        "file": f"data/logs/agint/agint_cognitive_cycles.log",
+        "file": "data/logs/agint/agint_cognitive_cycles.log",
         "type": "modification",
-        "changes": [
-            {
-                "line": "end",
-                "old": "",
-                "new": audit_content.strip()
-            }
-        ]
+        "changes": [{"line": "end", "old": "", "new": audit_message}]
     })
-    
     return changes
 
 async def execute_default_changes(directive: str, cycle: int) -> List[Dict[str, Any]]:
@@ -2781,21 +2999,24 @@ async def get_agent_activity():
     if hasattr(update_bdi_state, 'activity_log'):
         activities.extend(update_bdi_state.activity_log)
     
-    # Get AGInt activities from logs
+    # Get AGInt activities from logs via memory_agent (all logs are memories) or fallback
     try:
-        agint_log_file = "data/logs/agint/agint_cognitive_cycles.log"
-        if os.path.exists(agint_log_file):
-            with open(agint_log_file, 'r') as f:
-                lines = f.readlines()
-                # Get last 10 lines
-                for line in lines[-10:]:
-                    if line.strip():
-                        activities.append({
-                            "timestamp": time.time(),
-                            "agent": "AGInt Core",
-                            "message": line.strip(),
-                            "type": "info"
-                        })
+        lines = []
+        if command_handler and getattr(command_handler.mastermind, "memory_agent", None):
+            lines = command_handler.mastermind.memory_agent.get_agint_cycle_log(last_n_lines=10)
+        else:
+            agint_log_file = "data/logs/agint/agint_cognitive_cycles.log"
+            if os.path.exists(agint_log_file):
+                with open(agint_log_file, 'r') as f:
+                    lines = [ln.rstrip("\n") for ln in f.readlines()]
+        for line in (lines[-10:] if len(lines) > 10 else lines):
+            if line and str(line).strip():
+                activities.append({
+                    "timestamp": time.time(),
+                    "agent": "AGInt Core",
+                    "message": str(line).strip(),
+                    "type": "info"
+                })
     except Exception as e:
         logger.error(f"Error reading AGInt logs: {e}")
     
@@ -2894,26 +3115,30 @@ async def get_real_time_agent_activity():
     except Exception as e:
         logger.error(f"Error reading AGInt memory: {e}")
     
-    # Get AGInt cognitive cycle logs for workflow tracking
+    # Get AGInt cognitive cycle logs via memory_agent (all logs are memories) or fallback
     try:
-        agint_log_file = "data/logs/agint/agint_cognitive_cycles.log"
-        if os.path.exists(agint_log_file):
-            with open(agint_log_file, 'r') as f:
-                lines = f.readlines()
-                for line in lines[-5:]:  # Last 5 lines
-                    if line.strip():
-                        activities.append({
-                            "timestamp": time.time(),
-                            "agent": "AGInt Core",
-                            "message": line.strip(),
-                            "type": "info",
-                            "workflow_context": {
-                                'workflow_step': 'cognitive_cycle',
-                                'triggers': ['User Directive'],
-                                'workflow_type': 'poda_cycle',
-                                'cycle_phase': 'perception_orientation_decision_action'
-                            }
-                        })
+        lines = []
+        if command_handler and getattr(command_handler.mastermind, "memory_agent", None):
+            lines = command_handler.mastermind.memory_agent.get_agint_cycle_log(last_n_lines=5)
+        else:
+            agint_log_file = "data/logs/agint/agint_cognitive_cycles.log"
+            if os.path.exists(agint_log_file):
+                with open(agint_log_file, 'r') as f:
+                    lines = [ln.rstrip("\n") for ln in f.readlines()]
+        for line in (lines[-5:] if len(lines) > 5 else lines):
+            if line and str(line).strip():
+                activities.append({
+                    "timestamp": time.time(),
+                    "agent": "AGInt Core",
+                    "message": str(line).strip(),
+                    "type": "info",
+                    "workflow_context": {
+                        'workflow_step': 'cognitive_cycle',
+                        'triggers': ['User Directive'],
+                        'workflow_type': 'poda_cycle',
+                        'cycle_phase': 'perception_orientation_decision_action'
+                    }
+                })
     except Exception as e:
         logger.error(f"Error reading AGInt logs: {e}")
     
@@ -3617,6 +3842,84 @@ async def get_mindxagent_status():
         raise HTTPException(status_code=500, detail=f"Error getting status: {str(e)}")
 
 
+@app.get("/mindxagent/startup", summary="Get startup_agent and mindXagent startup flow (input, response, steps)")
+async def get_mindxagent_startup():
+    """
+    Return actual startup flow: startup_agent steps, Ollama connection input/response,
+    and mindXagent startup_info (from receive_startup_information). Used by mindXagent tab UI.
+    """
+    try:
+        from agents.core.mindXagent import MindXAgent
+        from pathlib import Path
+
+        result = {
+            "success": True,
+            "startup_info": None,
+            "startup_sequence": [],
+            "startup_record": None,
+            "terminal_log": {"log_exists": False, "last_lines": [], "total_lines": 0},
+            "ollama_input_response": None,
+        }
+
+        # 1. mindXagent.startup_info (what was received from startup_agent)
+        mindxagent = await MindXAgent.get_instance()
+        if mindxagent and getattr(mindxagent, "startup_info", None):
+            si = mindxagent.startup_info
+            result["startup_info"] = {
+                "ollama_connected": si.get("ollama_connected", False),
+                "ollama_base_url": si.get("ollama_base_url"),
+                "ollama_models": si.get("ollama_models", [])[:20],
+                "models_count": si.get("models_count", 0),
+                "startup_timestamp": si.get("startup_timestamp"),
+                "terminal_log_path": si.get("terminal_log_path"),
+            }
+            if si.get("terminal_log"):
+                tl = si["terminal_log"]
+                result["startup_info"]["terminal_log_summary"] = {
+                    "log_exists": tl.get("log_exists"),
+                    "errors_count": tl.get("errors_count", 0),
+                    "warnings_count": tl.get("warnings_count", 0),
+                }
+
+        # 2. startup_agent: sequence, last record, ollama result (from mastermind lifecycle)
+        if command_handler and getattr(command_handler, "mastermind", None):
+            mastermind = command_handler.mastermind
+            lifecycle = getattr(mastermind, "lifecycle_agents", {}) or {}
+            startup_agent = lifecycle.get("startup")
+            if startup_agent:
+                result["startup_sequence"] = getattr(startup_agent, "startup_sequence", []) or []
+                startup_log = getattr(startup_agent, "startup_log", []) or []
+                if startup_log:
+                    last_record = startup_log[-1]
+                    result["startup_record"] = last_record
+                    # Ollama input/response from startup flow (from startup_agent → mindXagent)
+                    ollama_conn = last_record.get("ollama_connection")
+                    if ollama_conn is not None:
+                        result["ollama_input_response"] = {
+                            "connected": ollama_conn.get("connected", False),
+                            "base_url": ollama_conn.get("base_url"),
+                            "models": ollama_conn.get("models", [])[:20],
+                            "models_count": ollama_conn.get("models_count", 0),
+                            "reason": ollama_conn.get("reason"),
+                        }
+        # 3. terminal_startup.log last lines
+        startup_log_path = PROJECT_ROOT / "data" / "logs" / "terminal_startup.log"
+        if startup_log_path.exists():
+            result["terminal_log"]["log_exists"] = True
+            try:
+                with open(startup_log_path, "r", encoding="utf-8", errors="ignore") as f:
+                    lines = f.readlines()
+                    result["terminal_log"]["total_lines"] = len(lines)
+                    result["terminal_log"]["last_lines"] = lines[-40:] if len(lines) > 40 else lines
+            except Exception as e:
+                logger.warning(f"Could not read terminal_startup.log: {e}")
+
+        return result
+    except Exception as e:
+        logger.error(f"Error getting mindXagent startup: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/mindxagent/ollama/status", summary="Get mindXagent Ollama connection and inference status")
 async def get_mindxagent_ollama_status():
     """Get detailed Ollama connection status, available models, and inference metrics."""
@@ -3631,6 +3934,96 @@ async def get_mindxagent_ollama_status():
     except Exception as e:
         logger.error(f"Error getting Ollama status: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error getting Ollama status: {str(e)}")
+
+
+@app.get("/mindxagent/ollama/settings", summary="Get Ollama settings (calls/min, model update interval)")
+async def get_mindxagent_ollama_settings():
+    """Return current Ollama settings: calls_per_minute (rate limit), model_discovery_interval_seconds, last_model_discovery."""
+    try:
+        from agents.core.mindXagent import MindXAgent
+
+        mindxagent = await MindXAgent.get_instance()
+        if not mindxagent or not mindxagent.ollama_chat_manager:
+            raise HTTPException(status_code=503, detail="mindXagent or Ollama chat manager not available")
+        mgr = mindxagent.ollama_chat_manager
+        rpm = None
+        if mgr.ollama_api and hasattr(mgr.ollama_api, "rate_limits"):
+            rpm = getattr(mgr.ollama_api.rate_limits, "requests_per_minute", None)
+        return {
+            "success": True,
+            "calls_per_minute": rpm,
+            "model_discovery_interval_seconds": mgr.model_discovery_interval,
+            "last_model_discovery": mgr.last_model_discovery,
+            "models_count": len(mgr.available_models),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting Ollama settings: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class MindXagentOllamaSettingsPayload(BaseModel):
+    """Payload for PATCH /mindxagent/ollama/settings."""
+
+    calls_per_minute: Optional[int] = None
+    model_discovery_interval_seconds: Optional[int] = None
+
+
+@app.patch("/mindxagent/ollama/settings", summary="Update Ollama settings")
+async def update_mindxagent_ollama_settings(payload: MindXagentOllamaSettingsPayload = Body(...)):
+    """Update calls_per_minute (rate limit) and/or model_discovery_interval_seconds (0 = manual only)."""
+    try:
+        from agents.core.mindXagent import MindXAgent
+
+        mindxagent = await MindXAgent.get_instance()
+        if not mindxagent or not mindxagent.ollama_chat_manager:
+            raise HTTPException(status_code=503, detail="mindXagent or Ollama chat manager not available")
+        mgr = mindxagent.ollama_chat_manager
+        if payload.calls_per_minute is not None:
+            rpm = max(1, min(10000, payload.calls_per_minute))
+            if mgr.ollama_api is None:
+                from api.ollama import create_ollama_api
+                async with mgr._api_lock:
+                    if mgr.ollama_api is None:
+                        mgr.ollama_api = create_ollama_api(base_url=mgr.base_url)
+            if mgr.ollama_api and hasattr(mgr.ollama_api, "update_rate_limits"):
+                mgr.ollama_api.update_rate_limits(rpm=rpm)
+        if payload.model_discovery_interval_seconds is not None:
+            await mgr.set_model_discovery_interval(payload.model_discovery_interval_seconds)
+        rpm = None
+        if mgr.ollama_api and hasattr(mgr.ollama_api, "rate_limits"):
+            rpm = getattr(mgr.ollama_api.rate_limits, "requests_per_minute", None)
+        return {
+            "success": True,
+            "calls_per_minute": rpm,
+            "model_discovery_interval_seconds": mgr.model_discovery_interval,
+            "last_model_discovery": mgr.last_model_discovery,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating Ollama settings: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/mindxagent/ollama/models/refresh", summary="Refresh Ollama model list (manual)")
+async def refresh_mindxagent_ollama_models():
+    """Force refresh of the Ollama model list. Periodic refresh runs once per day; use this to update sooner."""
+    try:
+        from agents.core.mindXagent import MindXAgent
+        
+        mindxagent = await MindXAgent.get_instance()
+        if not mindxagent or not mindxagent.ollama_chat_manager:
+            raise HTTPException(status_code=503, detail="mindXagent or Ollama chat manager not available")
+        await mindxagent.ollama_chat_manager.discover_models(force=True)
+        models = mindxagent.ollama_chat_manager.available_models
+        return {"success": True, "models_count": len(models), "models": [m.get("name") for m in models[:50]]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error refreshing Ollama models: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/mindxagent/ollama/conversation", summary="Get Ollama conversation history")
@@ -3910,6 +4303,50 @@ async def get_mindxagent_status():
             }
     except Exception as e:
         logger.error(f"Error getting mindXagent status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/mindxagent/logs/process", summary="Get mindXagent process trace (memory_agent log_process)")
+async def get_mindxagent_process_trace(limit: int = 100):
+    """
+    Read process_trace.jsonl for mindXagent from data/memory (agent_workspaces).
+    This is the actual logging from memory_agent.log_process() used across mindX.
+    """
+    try:
+        from agents.core.mindXagent import MindXAgent
+        from pathlib import Path
+
+        mindxagent = await MindXAgent.get_instance()
+        if not mindxagent or not mindxagent.memory_agent:
+            return {"success": False, "error": "mindXagent or memory_agent not available", "entries": []}
+
+        agent_id = getattr(mindxagent, "agent_id", "mindx_meta_agent")
+        agent_dir = mindxagent.memory_agent.get_agent_data_directory(agent_id, ensure_exists=False)
+        filepath = agent_dir / "process_trace.jsonl"
+        if not filepath.exists():
+            return {"success": True, "entries": [], "total": 0, "path": str(filepath)}
+
+        entries = []
+        with open(filepath, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    record = json.loads(line)
+                    entries.append(record)
+                except json.JSONDecodeError:
+                    continue
+        entries = entries[-limit:] if limit else entries
+        entries.reverse()
+        return {
+            "success": True,
+            "entries": entries,
+            "total": len(entries),
+            "path": str(filepath),
+        }
+    except Exception as e:
+        logger.error(f"Error reading mindXagent process trace: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

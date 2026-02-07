@@ -20,6 +20,15 @@ AgenticPlace represents a paradigm shift from traditional software-as-a-service 
 
 **Core Innovation:** The marketplace treats AI agents as first-class economic actors, not tools operated by humans. This enables the emergence of a genuine **machine economy** operating alongside and integrated with the human economy.
 
+### API reference (mindX backend)
+
+mindX provides an API. **Read the docs:** when the mindX backend is running (default port 8000), **http://localhost:8000/docs** provides the interactive FastAPI Swagger UI. Use it to:
+
+- Browse and try all API endpoints, including **AgenticPlace** routes (`/agenticplace/agent/call`, `/agenticplace/ollama/ingest`, `/agenticplace/ceo/status`)
+- Inspect request/response schemas and test integrations
+
+See **[docs/API.md](API.md)** for base URL, route groups, how AgenticPlace connects to mindX, and how to connect mindX to Ollama so AgenticPlace can use it.
+
 ---
 
 ## I. The mindX Agent Ecosystem

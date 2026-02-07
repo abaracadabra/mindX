@@ -7,13 +7,19 @@ in the vault folder structure.
 """
 
 import os
+import re
 import json
 import stat
 import hashlib
 from pathlib import Path
 from typing import Dict, Optional, List, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv, set_key, unset_key
+
+# Session id must be safe for filename (no path traversal)
+_SESSION_ID_RE = re.compile(r"^[a-zA-Z0-9_-]{20,64}$")
+# User folder key: alphanumeric, underscore, hyphen, dot; 1–128 chars
+_USER_KEY_RE = re.compile(r"^[a-zA-Z0-9_.-]{1,128}$")
 
 from utils.config import PROJECT_ROOT
 from utils.logging_config import get_logger
@@ -26,6 +32,8 @@ VAULT_POSTGRESQL = VAULT_ROOT / "postgresql"
 VAULT_SECRETS = VAULT_ROOT / "secrets"
 VAULT_CREDENTIALS = VAULT_ROOT / "credentials"  # Access credentials (API keys, tokens)
 VAULT_ACCESS_LOG = VAULT_ROOT / "access_log"  # URL and IP access tracking
+VAULT_SESSIONS = VAULT_ROOT / "sessions"  # User login sessions (wallet auth)
+VAULT_USER_FOLDERS = VAULT_ROOT / "user_folders"  # One folder per wallet (key = public key); access only with valid signature/session
 
 
 class VaultManager:
@@ -39,7 +47,7 @@ class VaultManager:
         """Ensure vault directory structure exists with proper permissions."""
         try:
             for directory in [VAULT_ROOT, VAULT_AGENTS, VAULT_POSTGRESQL, VAULT_SECRETS, 
-                             VAULT_CREDENTIALS, VAULT_ACCESS_LOG]:
+                             VAULT_CREDENTIALS, VAULT_ACCESS_LOG, VAULT_SESSIONS, VAULT_USER_FOLDERS]:
                 directory.mkdir(parents=True, exist_ok=True)
                 if os.name != 'nt':
                     os.chmod(directory, stat.S_IRWXU)
@@ -358,6 +366,184 @@ class VaultManager:
         except Exception as e:
             logger.error(f"Error listing access credentials: {e}", exc_info=True)
             return []
+
+    # ================================
+    # USER SESSIONS (wallet auth)
+    # ================================
+
+    def store_user_session(
+        self,
+        session_id: str,
+        wallet_address: str,
+        expires_at_iso: str,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """
+        Store a user session in vault (wallet-authenticated).
+        Caller must verify signature before creating session.
+
+        Args:
+            session_id: Opaque session token (e.g. uuid).
+            wallet_address: Verified wallet address.
+            expires_at_iso: ISO expiry time.
+            metadata: Optional (e.g. user_agent, ip).
+
+        Returns:
+            True if stored successfully.
+        """
+        try:
+            if not _SESSION_ID_RE.match(session_id or ""):
+                logger.warning("store_user_session: invalid session_id format")
+                return False
+            session_file = VAULT_SESSIONS / f"{session_id}.json"
+            record = {
+                "session_id": session_id,
+                "wallet_address": wallet_address,
+                "expires_at": expires_at_iso,
+                "created_at": datetime.now().isoformat(),
+                "metadata": metadata or {}
+            }
+            with open(session_file, 'w') as f:
+                json.dump(record, f, indent=2)
+            if os.name != 'nt':
+                os.chmod(session_file, stat.S_IRUSR | stat.S_IWUSR)
+            logger.info(f"Stored user session for {wallet_address[:10]}... in vault")
+            return True
+        except Exception as e:
+            logger.error(f"Error storing user session: {e}", exc_info=True)
+            return False
+
+    def get_user_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve and validate a user session. Returns None if missing or expired.
+        Does not delete the session file; caller may optionally invalidate.
+        """
+        try:
+            if not _SESSION_ID_RE.match(session_id or ""):
+                return None
+            session_file = VAULT_SESSIONS / f"{session_id}.json"
+            if not session_file.exists():
+                return None
+            with open(session_file, 'r') as f:
+                record = json.load(f)
+            expires_at = record.get("expires_at")
+            if expires_at:
+                try:
+                    exp = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                    if exp.tzinfo is None:
+                        exp = exp.replace(tzinfo=timezone.utc)
+                    now = datetime.now(timezone.utc)
+                    if exp <= now:
+                        return None
+                except Exception:
+                    return None
+            return {
+                "wallet_address": record.get("wallet_address"),
+                "expires_at": record.get("expires_at"),
+                "metadata": record.get("metadata", {})
+            }
+        except Exception as e:
+            logger.error(f"Error getting user session: {e}", exc_info=True)
+            return None
+
+    def invalidate_user_session(self, session_id: str) -> bool:
+        """Remove a session from vault (logout)."""
+        try:
+            if not _SESSION_ID_RE.match(session_id or ""):
+                return False
+            session_file = VAULT_SESSIONS / f"{session_id}.json"
+            if session_file.exists():
+                session_file.unlink()
+                logger.info(f"Invalidated user session {session_id[:8]}...")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Error invalidating session: {e}", exc_info=True)
+            return False
+
+    # ================================
+    # USER FOLDERS (one folder per wallet; access only with valid signature/session)
+    # ================================
+
+    @staticmethod
+    def _user_folder_name(wallet_address: str) -> str:
+        """Normalize wallet address to a safe folder name (no path traversal)."""
+        if not wallet_address or not isinstance(wallet_address, str):
+            raise ValueError("Invalid wallet_address")
+        raw = wallet_address.strip().lower()
+        if raw.startswith("0x"):
+            raw = raw[2:]
+        if len(raw) != 40 or not all(c in "0123456789abcdef" for c in raw):
+            raise ValueError("Wallet address must be 40 hex chars (with or without 0x)")
+        return "0x" + raw
+
+    def _user_folder_path(self, wallet_address: str) -> Path:
+        """Path to the vault folder for this wallet only. Never expose other wallets."""
+        name = self._user_folder_name(wallet_address)
+        return VAULT_USER_FOLDERS / name
+
+    def ensure_user_folder(self, wallet_address: str) -> Path:
+        """Create the user's vault folder if it does not exist. Caller must have verified identity."""
+        path = self._user_folder_path(wallet_address)
+        path.mkdir(parents=True, exist_ok=True)
+        if os.name != 'nt':
+            os.chmod(path, stat.S_IRWXU)
+        return path
+
+    def list_user_folder_keys(self, wallet_address: str) -> List[str]:
+        """List key names in this wallet's folder only. No cross-wallet access."""
+        folder = self._user_folder_path(wallet_address)
+        if not folder.exists():
+            return []
+        keys = []
+        for f in folder.iterdir():
+            if f.is_file() and f.suffix == ".json":
+                keys.append(f.stem)
+        return sorted(keys)
+
+    def get_user_folder_key(self, wallet_address: str, key: str) -> Optional[Any]:
+        """Get value for key in this wallet's folder only. Key must be a safe filename stem."""
+        if not key or not _USER_KEY_RE.match(key):
+            return None
+        path = self._user_folder_path(wallet_address) / f"{key}.json"
+        if not path.exists():
+            return None
+        try:
+            with open(path, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning(f"Error reading user folder key {key}: {e}")
+            return None
+
+    def set_user_folder_key(self, wallet_address: str, key: str, value: Any) -> bool:
+        """Set value for key in this wallet's folder only. Key must be a safe filename stem."""
+        if not key or not _USER_KEY_RE.match(key):
+            return False
+        self.ensure_user_folder(wallet_address)
+        path = self._user_folder_path(wallet_address) / f"{key}.json"
+        try:
+            with open(path, 'w') as f:
+                json.dump(value, f, indent=2)
+            if os.name != 'nt':
+                os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
+            return True
+        except Exception as e:
+            logger.error(f"Error setting user folder key {key}: {e}", exc_info=True)
+            return False
+
+    def delete_user_folder_key(self, wallet_address: str, key: str) -> bool:
+        """Delete key in this wallet's folder only."""
+        if not key or not _USER_KEY_RE.match(key):
+            return False
+        path = self._user_folder_path(wallet_address) / f"{key}.json"
+        try:
+            if path.exists():
+                path.unlink()
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Error deleting user folder key {key}: {e}", exc_info=True)
+            return False
     
     # ================================
     # URL AND IP ACCESS TRACKING

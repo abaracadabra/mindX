@@ -1,0 +1,32 @@
+{
+  "event_type": "shutdown",
+  "timestamp": 1770353014.3598711,
+  "event_id": "shutdown_1770353014",
+  "resource_snapshot": null,
+  "performance_snapshot": null,
+  "agents_registered": [
+    "coordinator_agent"
+  ],
+  "agents_active": [
+    "coordinator_agent"
+  ],
+  "tools_registered": [],
+  "system_version": null,
+  "improvement_count": 0,
+  "rollback_count": 0,
+  "last_improvement": null,
+  "last_rollback": null,
+  "errors": [],
+  "warnings": [],
+  "metadata": {
+    "phase": "after_shutdown",
+    "duration_seconds": 2.4398982524871826,
+    "steps_completed": [
+      "save_state",
+      "create_backup",
+      "archive_proven",
+      "shutdown_agents",
+      "cleanup"
+    ]
+  }
+}

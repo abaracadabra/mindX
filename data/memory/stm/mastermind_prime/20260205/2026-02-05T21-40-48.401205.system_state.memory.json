@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-02-05T21:40:48.401205",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mastermind_prime",
+  "content": {
+    "process_name": "mastermind_agent_creation_start",
+    "data": {
+      "agent_type": "validator",
+      "agent_id": "test_delete_1770352844",
+      "config": {
+        "description": "Agent of type validator with ID test_delete_1770352844",
+        "created_via": "cli_minimal"
+      }
+    }
+  },
+  "context": {
+    "agent_id": "mastermind_prime"
+  },
+  "tags": [
+    "mastermind_agent_creation_start",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "4a2a1df73211879b"
+}

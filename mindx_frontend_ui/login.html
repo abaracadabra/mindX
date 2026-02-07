@@ -144,6 +144,12 @@
                 const authData = await authResponse.json();
                 console.log('Authentication successful:', authData);
 
+                // Store vault-backed session token (server-authoritative; required for /app and API)
+                if (authData.session_token) {
+                    localStorage.setItem('mindx_session_token', authData.session_token);
+                    if (authData.expires_at) localStorage.setItem('mindx_session_expires_at', authData.expires_at);
+                }
+
                 // Create user object
                 const userData = {
                     id: walletAddress,
@@ -161,22 +167,25 @@
                 localStorage.setItem('crossmint_authenticated', 'true');
                 localStorage.setItem('crossmint_auth_method', 'wallet');
                 
-                // Store authentication state for app.html
-                const sessionId = 'session_' + Date.now();
+                // Store authentication state for app.html (legacy shape; gate is now session validate)
+                const sessionId = authData.session_token || ('session_' + Date.now());
                 const authenticationState = {
                     isLoggedIn: true,
                     walletAddress: walletAddress,
                     userData: userData,
                     sessionId: sessionId,
+                    session_token: authData.session_token,
                     timestamp: Date.now()
                 };
                 localStorage.setItem('mindx_auth', JSON.stringify(authenticationState));
                 
                 console.log('✅ MetaMask wallet connected and authenticated successfully!');
-                console.log('🔄 Redirecting to main application...');
-                
-                // Redirect to main application
-                window.location.href = '/app';
+                if (authData.session_token) {
+                    console.log('🔄 Redirecting to main application...');
+                    window.location.href = '/app';
+                } else {
+                    console.warn('No session token from backend; staying on login. Check backend/vault.');
+                }
                 
             } catch (error) {
                 console.error('❌ MetaMask connection failed:', error);

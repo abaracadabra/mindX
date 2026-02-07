@@ -1,4 +1,7 @@
 # mindx/llm/llm_factory.py
+# Resilience: Ollama is the failsafe/fallback (see llm/RESILIENCE.md). default_provider_preference_order
+# should list cloud providers first and Ollama last so create_llm_handler() without args uses best available;
+# Ollama remains explicitly selectable via provider_name="ollama".
 from typing import Optional, Any, Dict, List, Tuple
 import json
 import asyncio

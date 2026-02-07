@@ -19,6 +19,10 @@ mindx_backend_service/vault/
 ├── credentials/         # Access credentials (API keys, tokens)
 │   ├── .credentials.env
 │   └── {credential_id}.json
+├── sessions/            # User login sessions (wallet auth); one file per session
+│   └── {session_id}.json
+├── user_folders/        # One folder per wallet (0x...); access only with valid session
+│   └── 0x{40 hex}/      # Per-wallet key-value store (*.json)
 └── access_log/          # URL and IP access tracking
     ├── url_access_{YYYYMMDD}.jsonl
     ├── ip_access_{YYYYMMDD}.jsonl
@@ -180,6 +184,36 @@ summary = vault_manager.get_access_summary_for_inference()
 ### Summary
 
 - `GET /vault/access/summary` - Get comprehensive access summary for ML inference
+
+### User sessions (wallet auth)
+
+- `GET /users/session/validate` - Validate session token (query `session_token` or header `X-Session-Token`); returns `wallet_address` and `expires_at` or 401.
+- `POST /users/logout` - Invalidate session (header `X-Session-Token`). Removes session from vault.
+
+Sessions are stored in `vault/sessions/`; created only after successful wallet signature verification. Used to gate `/app` and vault user folder access.
+
+### User vault folders (signature-scoped)
+
+Access is **only** to the folder that corresponds to the public key (wallet) that holds the valid session. No whole-vault or cross-wallet access.
+
+- `GET /vault/user/keys` - List key names in the authenticated user's folder (requires `X-Session-Token`).
+- `GET /vault/user/keys/{key}` - Get value for key (requires `X-Session-Token`).
+- `PUT /vault/user/keys/{key}` - Set value (body = JSON; requires `X-Session-Token`).
+- `DELETE /vault/user/keys/{key}` - Delete key (requires `X-Session-Token`).
+
+Keys must be 1–128 chars, alphanumeric plus `_`, `.`, `-`. Values are JSON.
+
+### Access gate (optional token-gating)
+
+Session **issuance** can be gated on on-chain state (NFT or fungible). See [LIT_AND_ACCESS_ISSUANCE.md](LIT_AND_ACCESS_ISSUANCE.md). Env: `MINDX_ACCESS_GATE_ENABLED`, `MINDX_ACCESS_GATE_TYPE=erc20|erc721`, `MINDX_ACCESS_GATE_CONTRACT`, `MINDX_ACCESS_GATE_RPC_URL`, etc. DAIO keyminter contracts (VaultKeyDynamic / VaultKeyIntelligent) can be used as the ERC721 contract.
+
+## Frontend: vault_manager.js
+
+The frontend module `mindx_frontend_ui/vault_manager.js` provides signature-scoped vault folder access:
+
+- **Concept**: Only a valid session token (from wallet sign-in) grants access; access is only to the folder for the current signer's public key.
+- **API**: `VaultManager.getDefault()` then `listKeys()`, `getKey(key)`, `setKey(key, value)`, `deleteKey(key)`. All requests send `X-Session-Token`.
+- **Key rules**: Same as backend (1–128 chars, `[a-zA-Z0-9_.-]`).
 
 ## Integration with Memory System
 

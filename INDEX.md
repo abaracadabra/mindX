@@ -27,6 +27,16 @@ python -m uvicorn mindx_backend_service.main_service:app --host 0.0.0.0 --port 8
 cd mindx_frontend_ui && node server.js
 ```
 
+### 📖 API reference and interactions
+
+Once the backend is running (default port 8000), **http://localhost:8000/docs** provides the interactive FastAPI Swagger UI. Use it to:
+
+- Browse all API endpoints (coordinator, commands, AgenticPlace, admin, etc.)
+- Try requests with custom payloads and see responses
+- Inspect request/response schemas
+
+This is the best way to explore and test API interactions without the frontend.
+
 ---
 
 ## 📊 Platform Architecture

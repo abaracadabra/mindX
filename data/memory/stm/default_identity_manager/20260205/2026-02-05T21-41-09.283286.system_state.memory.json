@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-02-05T21:41:09.283286",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "default_identity_manager",
+  "content": {
+    "process_name": "id_manager_address_derived",
+    "data": {
+      "entity_id": "sea_for_mastermind",
+      "address": "0xf553b643407b3C1279F2Cd14DeA940b33a0b73Bf",
+      "source": "private_key"
+    }
+  },
+  "context": {
+    "agent_id": "default_identity_manager"
+  },
+  "tags": [
+    "id_manager_address_derived",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "05ee71fb83f0b39e"
+}

@@ -1,6 +1,12 @@
 # mindx/agents/enhanced_memory_agent.py
 """
 Enhanced MemoryAgent with timestamped memory, context management, and self-awareness.
+
+mindX architecture: all logs are memories in data, and all memories are logged.
+Logging (Gödel choices, AGInt cycles, process traces) goes through this agent into
+data/logs and data/memory; each log entry is also stored as timestamped memory and
+process_trace so it is queryable as memory. Do not write logs directly to data/—use
+memory_agent so the system stays consistent.
 """
 from __future__ import annotations
 import asyncio
@@ -11,7 +17,7 @@ import json
 import hashlib
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 from dataclasses import dataclass, asdict
 from enum import Enum
 from collections import defaultdict
@@ -64,7 +70,14 @@ class MemoryRecord:
             self.memory_id = hash_obj.hexdigest()[:16]
 
 class MemoryAgent:
-    """Enhanced memory agent with timestamped records, context management, and backward compatibility."""
+    """
+    Enhanced memory agent with timestamped records, context management, and backward compatibility.
+
+    mindX architecture principle: all logs are memories in data, and all memories are logged.
+    Logs (Gödel choices, AGInt cycles, process traces) are stored under data/logs and data/memory
+    via this agent; each log entry is also recorded as timestamped memory and process_trace
+    so it is queryable as memory. Do not write logs directly to data/—use memory_agent.
+    """
 
     def __init__(self, config: Optional[Config] = None, log_level: str = "INFO"):
         self.config = config or Config()
@@ -73,7 +86,7 @@ class MemoryAgent:
         log_file_enabled = self.config.get("logging.file.enabled", True)
         setup_logging(log_level=log_level, console=True, log_file=log_file_enabled)
 
-        # Define base paths
+        # Define base paths (all logs and memories live under data/ via memory_agent)
         self.data_path = PROJECT_ROOT / self.config.get("system.data_path", "data")
         self.memory_base_path = self.data_path / "memory"
         self.context_path = self.memory_base_path / "context"
@@ -81,6 +94,7 @@ class MemoryAgent:
         self.ltm_path = self.memory_base_path / "ltm"  # Long Term Memory - learned patterns and insights
         self.log_path = self.data_path / "logs"
         self.process_trace_path = self.log_path / "process_traces"
+        self.agint_log_path = self.log_path / "agint" / "agint_cognitive_cycles.log"
 
         # In-memory caches
         self.memory_cache: Dict[str, MemoryRecord] = {}
@@ -105,12 +119,20 @@ class MemoryAgent:
                 self.ltm_path,
                 self.log_path,
                 self.process_trace_path,
+                self.log_path / "agint",
                 self.memory_base_path / "agent_workspaces",
                 self.memory_base_path / "analytics"
             ]
             
             for directory in directories:
                 directory.mkdir(parents=True, exist_ok=True)
+
+            # Ensure AGInt cognitive cycle log exists (all logs are memories; memory_agent owns this file)
+            if not self.agint_log_path.exists():
+                with open(self.agint_log_path, "w", encoding="utf-8") as f:
+                    f.write("# AGInt Cognitive Loop Log\n")
+                    f.write(f"# Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                    f.write("# Format: [TIMESTAMP] CYCLE X - MESSAGE\n\n")
             
             logger.info(f"MemoryAgent Initialized: All memory and log directories verified/created under '{self.data_path}'.")
         except OSError as e:
@@ -450,6 +472,141 @@ class MemoryAgent:
             return filepath
         except Exception as e:
             logger.error(f"Failed to write process log: {e}", exc_info=True)
+            return None
+
+    async def log_godel_choice(self, choice_record: Dict[str, Any]) -> Optional[Path]:
+        """
+        Append a single Gödel core choice to the global log (data/logs/godel_choices.jsonl).
+        Used to audit mindX as a Gödel machine: perception, options, chosen option, rationale, outcome.
+        Also stored as memory via log_process so all logs are memories.
+        """
+        try:
+            self.log_path.mkdir(parents=True, exist_ok=True)
+            filepath = self.log_path / "godel_choices.jsonl"
+            ts = datetime.utcnow().isoformat() + "Z"
+            record = dict(choice_record)
+            if "timestamp_utc" not in record:
+                record["timestamp_utc"] = ts
+            log_line = json_lib.dumps(record, default=str) + "\n"
+            async with aiofiles.open(filepath, "a", encoding="utf-8") as f:
+                await f.write(log_line)
+            await self.log_process(
+                "godel_core_choice",
+                record,
+                {"agent_id": record.get("source_agent", "system")},
+            )
+            return filepath
+        except Exception as e:
+            logger.error(f"Failed to write Gödel choice log: {e}", exc_info=True)
+            return None
+
+    async def log_agint_cycle(self, cycle_id: int, message_type: str, message: str) -> Optional[Path]:
+        """
+        Append an AGInt cognitive cycle log line. All logs are memories: also stored via log_process.
+        Call this instead of writing directly to data/logs/agint/.
+        """
+        try:
+            line = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] CYCLE {cycle_id} - {message}\n"
+            async with aiofiles.open(self.agint_log_path, "a", encoding="utf-8") as f:
+                await f.write(line)
+            await self.log_process(
+                "agint_cycle_log",
+                {"cycle_id": cycle_id, "message_type": message_type, "message": message},
+                {"agent_id": "agint_system"},
+            )
+            return self.agint_log_path
+        except Exception as e:
+            logger.error(f"Failed to write AGInt cycle log: {e}", exc_info=True)
+            return None
+
+    def get_godel_choices(self, limit: int = 50, source_agent: Optional[str] = None) -> Tuple[List[Dict[str, Any]], int]:
+        """
+        Read last N Gödel core choices from data/logs/godel_choices.jsonl (newest first).
+        All logs are in data and readable through memory_agent.
+        """
+        filepath = self.log_path / "godel_choices.jsonl"
+        if not filepath.exists():
+            return [], 0
+        choices: List[Dict[str, Any]] = []
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        record = json_lib.loads(line)
+                        if source_agent is not None and record.get("source_agent") != source_agent:
+                            continue
+                        choices.append(record)
+                    except (json.JSONDecodeError, TypeError):
+                        continue
+            total = len(choices)
+            choices = choices[-limit:] if limit else choices
+            choices.reverse()
+            return choices, total
+        except Exception as e:
+            logger.warning(f"Failed to read Gödel choices: {e}")
+            return [], 0
+
+    def get_agint_cycle_log(self, last_n_lines: Optional[int] = None) -> List[str]:
+        """Read AGInt cognitive cycle log from memory_agent-owned path. Returns lines (newest last if last_n_lines set)."""
+        if not self.agint_log_path.exists():
+            return []
+        try:
+            with open(self.agint_log_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            if last_n_lines is not None:
+                lines = lines[-last_n_lines:]
+            return [ln.rstrip("\n") for ln in lines]
+        except Exception as e:
+            logger.warning(f"Failed to read AGInt cycle log: {e}")
+            return []
+
+    async def store_memory(
+        self,
+        content: Any,
+        memory_type: str = "interaction",
+        importance: str = "medium",
+        metadata: Optional[Dict[str, Any]] = None,
+        agent_id: str = "system",
+    ) -> Optional[str]:
+        """
+        Store a memory (compatibility with AgenticPlace, main_service, etc.).
+        Maps to save_timestamped_memory. content can be str or dict.
+        """
+        try:
+            mt = memory_type.lower() if isinstance(memory_type, str) else "interaction"
+            imp = importance.lower() if isinstance(importance, str) else "medium"
+            type_map = {
+                "interaction": MemoryType.INTERACTION,
+                "system_state": MemoryType.SYSTEM_STATE,
+                "performance": MemoryType.PERFORMANCE,
+                "error": MemoryType.ERROR,
+                "learning": MemoryType.LEARNING,
+                "context": MemoryType.CONTEXT,
+            }
+            imp_map = {
+                "critical": MemoryImportance.CRITICAL,
+                "high": MemoryImportance.HIGH,
+                "medium": MemoryImportance.MEDIUM,
+                "low": MemoryImportance.LOW,
+            }
+            mem_type = type_map.get(mt, MemoryType.INTERACTION)
+            mem_imp = imp_map.get(imp, MemoryImportance.MEDIUM)
+            payload = {"content": content} if isinstance(content, (str, int, float)) else content
+            if not isinstance(payload, dict):
+                payload = {"content": str(content)}
+            return await self.save_timestamped_memory(
+                agent_id=agent_id,
+                memory_type=mem_type,
+                content=payload,
+                importance=mem_imp,
+                context=metadata or {},
+                tags=["store_memory", mt],
+            )
+        except Exception as e:
+            logger.error(f"Failed to store memory: {e}", exc_info=True)
             return None
 
     async def log_terminal_output(self, output: str) -> Optional[Path]:

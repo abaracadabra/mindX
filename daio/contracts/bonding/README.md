@@ -4,9 +4,13 @@ A complete Foundry project implementing a protocol-first power bonding curve (co
 - Multiple token types (CurveToken, ReflectionRewardToken, RebaseToken)
 - Optional protocol fee (bps, default 0)
 - Factory launcher with configurable token creation
-- SMAIRT presale extension (uses the bonding curve, not the reverse)
+- **S.M.A.I.R.T (Solidity Machine Augmented Intelligent Response Technology)** presale extension — uses the bonding curve to run a fair, configurable presale with automatic LP provision and time-locking
 - Uniswap V2 liquidity provisioner (production-ready)
 - Uniswap V3/V4 extension stubs with on/off switches for safety
+
+## S.M.A.I.R.T Bonding Presale
+
+S.M.A.I.R.T provides a "Presale as a Service" model: creators define token and presale parameters; the system deploys the curve token and pool, runs the presale (raising native currency), and on success buys tokens from the curve for distribution and for DEX liquidity, then time-locks LP tokens in the **LiquidityLocker**. All mechanics are on-chain and event-logged. For a full technical and professional description of the S.M.A.I.R.T bonding presale mechanics, see **[docs/SMAIRT_BONDING_PRESALE_ARTICLE.md](docs/SMAIRT_BONDING_PRESALE_ARTICLE.md)**.
 
 ## Features
 

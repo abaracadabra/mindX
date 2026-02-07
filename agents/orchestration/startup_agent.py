@@ -25,6 +25,10 @@ from agents.orchestration.system_state_tracker import SystemStateTracker, System
 
 logger = get_logger(__name__)
 
+# Path to doubletap script (find and kill Ollama on custom port; UFW localhost; (c) 2025 Gregory L. Magnusson).
+# Handy for startup_agent: operator can run this to free the Ollama port or terminate Ollama before bootstrap.
+OLLAMA_DOUBLETAP_SCRIPT = PROJECT_ROOT / "api" / "ollama" / "doubletap.sh"
+
 # DeltaVerse configuration
 DELTAVERSE_CONFIG = {
     "enabled": True,
@@ -239,11 +243,15 @@ class StartupAgent:
             )
             
             # Comprehensive startup record with resource and performance data
+            sequence_result = initialization_results.get("sequence", {})
             startup_record = {
                 "timestamp": time.time(),
                 "duration": initialization_results["duration_seconds"],
                 "steps": initialization_results["steps_completed"],
                 "agents_initialized": initialization_results["agents_initialized"],
+                "sequence": sequence_result.get("sequence", []),
+                "ollama_connection": sequence_result.get("ollama_connection"),
+                "all_completed": sequence_result.get("all_completed"),
                 "before_state": {
                     "resource_snapshot": asdict(before_state.resource_snapshot) if before_state.resource_snapshot else None,
                     "performance_snapshot": asdict(before_state.performance_snapshot) if before_state.performance_snapshot else None
@@ -383,18 +391,65 @@ class StartupAgent:
         
         # Attempt Ollama auto-connection
         ollama_result = await self._auto_connect_ollama()
+        if not ollama_result.get("connected"):
+            # Gain inference when no API is found: try Ollama bootstrap (Linux).
+            # To free the port or kill Ollama first, operator can run: ./api/ollama/doubletap.sh (see OLLAMA_DOUBLETAP_SCRIPT).
+            try:
+                from llm.ollama_bootstrap import ensure_ollama_available
+                base_url = ollama_result.get("base_url") or "http://10.0.0.155:18080"
+                available, msg = await ensure_ollama_available(
+                    base_url=base_url,
+                    fallback_url="http://localhost:11434",
+                    try_bootstrap_linux=True,
+                )
+                if available:
+                    prev_env = os.environ.get("MINDX_LLM__OLLAMA__BASE_URL")
+                    os.environ["MINDX_LLM__OLLAMA__BASE_URL"] = "http://localhost:11434"
+                    try:
+                        ollama_result = await self._auto_connect_ollama()
+                    finally:
+                        if prev_env is not None:
+                            os.environ["MINDX_LLM__OLLAMA__BASE_URL"] = prev_env
+                        else:
+                            os.environ.pop("MINDX_LLM__OLLAMA__BASE_URL", None)
+                    await self.memory_agent.log_godel_choice({
+                        "source_agent": self.agent_id,
+                        "choice_type": "startup_ollama_bootstrap",
+                        "perception_summary": "no inference connection",
+                        "options_considered": ["ollama_bootstrap_linux", "skip"],
+                        "chosen_option": "ollama_bootstrap_linux",
+                        "rationale": msg,
+                        "outcome": "success" if ollama_result.get("connected") else "retry_failed",
+                    })
+                else:
+                    await self.memory_agent.log_godel_choice({
+                        "source_agent": self.agent_id,
+                        "choice_type": "startup_ollama_bootstrap",
+                        "perception_summary": "no inference connection",
+                        "options_considered": ["ollama_bootstrap_linux", "skip"],
+                        "chosen_option": "ollama_bootstrap_linux",
+                        "rationale": msg,
+                        "outcome": "failure",
+                    })
+            except Exception as bootstrap_err:
+                logger.warning(f"{self.log_prefix} Ollama bootstrap attempt failed: {bootstrap_err}")
+                await self.memory_agent.log_godel_choice({
+                    "source_agent": self.agent_id,
+                    "choice_type": "startup_ollama_bootstrap",
+                    "perception_summary": "no inference connection",
+                    "options_considered": ["ollama_bootstrap_linux", "skip"],
+                    "chosen_option": "ollama_bootstrap_linux",
+                    "rationale": str(bootstrap_err),
+                    "outcome": "error",
+                })
         if ollama_result.get("connected"):
             sequence[4]["status"] = "completed"
             logger.info(f"{self.log_prefix} Ollama auto-connected: {ollama_result.get('base_url')}")
-            
-            # Start autonomous improvement monitoring if Ollama is available
             try:
                 await self.start_improvement_monitoring()
                 logger.info(f"{self.log_prefix} Autonomous improvement monitoring started")
             except Exception as e:
                 logger.warning(f"{self.log_prefix} Failed to start improvement monitoring: {e}")
-            
-            # Pass startup information to mindXagent for Gödel machine self-improvement
             try:
                 await self._notify_mindxagent_startup(ollama_result)
             except Exception as e:
@@ -402,7 +457,6 @@ class StartupAgent:
         else:
             sequence[4]["status"] = "skipped"
             logger.info(f"{self.log_prefix} Ollama auto-connection skipped: {ollama_result.get('reason', 'Not configured')}")
-            # Still notify mindXagent even if Ollama is not connected (so it can default to Ollama)
             try:
                 await self._notify_mindxagent_startup(ollama_result)
             except Exception as e:
@@ -499,7 +553,7 @@ class StartupAgent:
                         "host": config_host,
                         "port": config_port,
                         "models_count": len(models),
-                        "models": [m.get("name", "unknown") for m in models[:5]]  # First 5 model names
+                        "models": [m.get("name", m) if isinstance(m, str) else m.get("name", "unknown") for m in models[:30]],  # Full list for mindXagent model choice (up to 30)
                     }
                 else:
                     return {
@@ -1548,10 +1602,9 @@ Format as JSON with keys: suggestions (list), priorities, impacts, safe_to_apply
                     
                     result["suggestions"] = suggestions
                     
-                    # Apply safe improvements
+                    applied = []
                     for i, suggestion in enumerate(suggestions):
                         if i < len(safe_to_apply) and safe_to_apply[i]:
-                            # Log improvement
                             await self.memory_agent.log_process(
                                 "autonomous_improvement_applied",
                                 {
@@ -1562,7 +1615,20 @@ Format as JSON with keys: suggestions (list), priorities, impacts, safe_to_apply
                                 {"agent_id": self.agent_id, "event": "autonomous_improvement"}
                             )
                             result["improvements_made"].append(suggestion)
+                            applied.append(suggestion[:200] if isinstance(suggestion, str) else str(suggestion)[:200])
                             logger.info(f"{self.log_prefix} Applied improvement: {suggestion[:100]}")
+                    
+                    chosen_option = ", ".join(applied) if applied else "none"
+                    await self.memory_agent.log_godel_choice({
+                        "source_agent": self.agent_id,
+                        "choice_type": "startup_ollama_improvement",
+                        "perception_summary": "startup log analysis",
+                        "options_considered": [s[:200] if isinstance(s, str) else str(s)[:200] for s in suggestions],
+                        "chosen_option": chosen_option,
+                        "rationale": analysis_result[:500] if analysis_result else "",
+                        "llm_model": analysis_model,
+                        "outcome": "success" if applied else "none_applied",
+                    })
             except Exception as e:
                 logger.warning(f"{self.log_prefix} Failed to parse improvement suggestions: {e}")
                 # Store raw analysis
@@ -1625,8 +1691,9 @@ Format as JSON with keys: suggestions (list), priorities, impacts, safe_to_apply
                     logger.debug(f"{self.log_prefix} mindXagent not available: {e}")
                     return
             
-            # Prepare startup information for mindXagent
+            # Prepare startup information for mindXagent (pipe: list models → choice → interaction)
             startup_info = {
+                "startup_command": "begin_ollama_interaction",
                 "ollama_connected": ollama_result.get("connected", False),
                 "ollama_base_url": ollama_result.get("base_url"),
                 "ollama_models": ollama_result.get("models", []),
@@ -1634,7 +1701,7 @@ Format as JSON with keys: suggestions (list), priorities, impacts, safe_to_apply
                 "capabilities_registered": ollama_result.get("capabilities_registered", 0),
                 "startup_timestamp": time.time(),
                 "terminal_log_path": str(self.terminal_log_path),
-                "improvement_opportunities": []
+                "improvement_opportunities": [],
             }
             
             # Get terminal log feedback for mindXagent (full log content)

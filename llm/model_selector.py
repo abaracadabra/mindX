@@ -46,8 +46,9 @@ class ModelCapability:
         self.availability: float = data.get("availability", 1.0)
 
     def get_capability_score(self, task_type: TaskType) -> float:
-        """Returns the model's score for a specific task type."""
-        return self.task_scores.get(task_type, 0.1) # Default low score if not specified
+        """Returns the model's score for a specific task type (keys from YAML are strings, e.g. 'reasoning')."""
+        key = getattr(task_type, "value", task_type)
+        return self.task_scores.get(key, 0.1)  # Default low score if not specified
 
 class ModelSelector:
     """

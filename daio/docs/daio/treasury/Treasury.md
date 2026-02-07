@@ -12,7 +12,7 @@
 
 ## Summary
 
-Treasury is a multi-project treasury contract with automatic 15% tithe collection and multi-signature allocation management. It supports both native ETH and ERC20 tokens, enforces constitutional constraints, and enables reward distribution to agents.
+Treasury is a multi-project treasury contract with automatic 15% tithe collection and multi-signature allocation management. **The treasury can own any and all assets:** native ETH (via `receive`), ERC20 (via `depositERC20` or direct transfer to the contract address), and ERC721/ERC1155 (implements receiver interfaces; use `recoverERC721` / `recoverERC1155` to transfer out). It enforces constitutional constraints and enables reward distribution to agents.
 
 ## Purpose
 
@@ -22,6 +22,24 @@ Treasury is a multi-project treasury contract with automatic 15% tithe collectio
 - Distribute rewards to agents (85% of profits)
 - Enforce constitutional diversification constraints
 - Support multi-signature execution for large amounts
+
+## DAI and stablecoin support
+
+The Treasury is designed to **hold and distribute DAI and other stablecoins**. Use the DAI token address for your chain as the `token` argument when creating allocations, distributing rewards, or depositing via `depositERC20`. On mainnet, DAI is the recommended canonical stablecoin for allocations and rewards; other stables (USDC, USDT, etc.) work the same way.
+
+**References for utilities and stablecoin work:**
+
+- **[MakerDAO/dss](https://github.com/makerdao/dss)** — Dai Stablecoin System: core DAI mechanics, collateral, and stability. Use as reference for patterns (e.g. stability, collateralization) when building stablecoin or stable-cloning features that interact with DAIO.
+- **[dairef](https://github.com/dairef)** — Programmable DAI reference (dss, dss-flash, OpenZeppelin, Synthetix forks). Preferred for **DAI as stablecoin** or **stable cloning/creation** endeavours that need utilities (flash mint, vaults, oracles, etc.).
+
+Preferred stablecoin for a deployment can be set via documentation or configuration (e.g. recommended `token` for allocations on a given chain).
+
+## Companion contracts (same directory)
+
+| Contract | Description |
+|----------|-------------|
+| **CustomERC20Minter.sol** | ERC20 with `MINTER_ROLE`; grant role to Treasury or governance for minting. Replace or extend with your own working examples later. |
+| **WETH.sol** | Wrapped Ether (value-inheritance example): deposit ETH to mint WETH 1:1, withdraw to burn. Treasury can hold WETH as an ERC20 and use it in allocations. |
 
 ## Technical Specification
 
@@ -65,12 +83,15 @@ struct Allocation {
 
 | Function | Parameters | Access | Description |
 |----------|------------|--------|-------------|
-| `deposit` | `projectId`, `token` | Public (payable) | Deposit funds (15% tithe) |
+| `deposit` | `projectId`, `token` | Public (payable) | Deposit native ETH (15% tithe); `token` must be address(0) |
+| `depositERC20` | `projectId`, `token`, `amount` | Public | Deposit ERC20 (e.g. DAI); caller must approve first |
 | `createAllocation` | `proposalId`, `projectId`, `recipient`, `amount`, `token` | Governance | Create allocation |
 | `executeAllocation` | `proposalId` | Signer | Execute allocation |
 | `distributeReward` | `projectId`, `recipient`, `amount`, `token`, `reason` | Governance | Distribute rewards |
 | `addSigner` | `signer` | Owner | Add multi-sig signer |
 | `removeSigner` | `signer` | Owner | Remove multi-sig signer |
+| `recoverERC721` | `token`, `to`, `tokenId` | Owner | Transfer ERC721 out (treasury owns any asset) |
+| `recoverERC1155` | `token`, `to`, `id`, `amount`, `data` | Owner | Transfer ERC1155 out (treasury owns any asset) |
 
 #### Read Functions
 
@@ -121,18 +142,18 @@ await treasury.deposit(projectId, ethers.constants.AddressZero, {
 // Tithe collected: 1.5 ETH (15%)
 ```
 
-### Depositing ERC20 Tokens
+### Depositing ERC20 Tokens (e.g. DAI)
 
 ```javascript
 const projectId = "FinancialMind";
-const tokenAddress = usdcAddress;
-const amount = ethers.utils.parseUnits("1000", 6); // 1000 USDC
+const tokenAddress = daiAddress; // or USDC, etc.
+const amount = ethers.utils.parseEther("1000"); // 1000 DAI (18 decimals)
 
 // Approve treasury first
-await usdc.approve(treasury.address, amount);
+await dai.approve(treasury.address, amount);
 
 // Deposit ERC20 (15% tithe applied)
-await treasury.deposit(projectId, tokenAddress);
+await treasury.depositERC20(projectId, tokenAddress, amount);
 ```
 
 ### Creating and Executing Allocation

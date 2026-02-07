@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-02-05T21:41:19.945152",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "default_identity_manager",
+  "content": {
+    "process_name": "id_manager_wallet_exists",
+    "data": {
+      "entity_id": "sea_for_mastermind",
+      "address": "0xf553b643407b3C1279F2Cd14DeA940b33a0b73Bf",
+      "env_var": "MINDX_WALLET_PK_SEA_FOR_MASTERMIND"
+    }
+  },
+  "context": {
+    "agent_id": "default_identity_manager"
+  },
+  "tags": [
+    "id_manager_wallet_exists",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "493253aa96559811"
+}

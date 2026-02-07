@@ -1986,6 +1986,17 @@ class MindXAgent:
                     },
                     {"agent_id": self.agent_id, "event": "connection_management"}
                 )
+                # Gödel choice: inference selected when no active API
+                await self.memory_agent.log_godel_choice({
+                    "source_agent": self.agent_id,
+                    "choice_type": "inference_selection",
+                    "perception_summary": "no active API connection found (no API keys)",
+                    "options_considered": ["ollama", "skip_inference"],
+                    "chosen_option": "ollama",
+                    "rationale": f"default_to_ollama: {default_result.get('ollama_base_url', 'N/A')}",
+                    "outcome": "pending_connect",
+                    "ollama_base_url": default_result.get("ollama_base_url"),
+                })
             else:
                 # Check all connections
                 connections = await self.connection_manager_tool.execute("check_connections")
@@ -2027,7 +2038,7 @@ class MindXAgent:
             self.ollama_chat_manager = OllamaChatManager(
                 base_url=base_url,
                 config=self.config,
-                model_discovery_interval=300,
+                model_discovery_interval=86400,  # Refresh model list once per day; manual get_available_ollama_models() or discover_models(force=True) to refresh sooner
                 keep_alive="10m",
                 conversation_history_path=conversation_history_path
             )
@@ -2049,6 +2060,15 @@ class MindXAgent:
                     if best_model:
                         self.llm_model = best_model
                         logger.info(f"{self.log_prefix} Selected Ollama model: {best_model}")
+                        await self.memory_agent.log_godel_choice({
+                            "source_agent": self.agent_id,
+                            "choice_type": "ollama_model_selection",
+                            "perception_summary": "Ollama connected; model list available",
+                            "options_considered": [m.get("name", "") for m in available_models[:10]],
+                            "chosen_option": best_model,
+                            "rationale": "best_for_task reasoning",
+                            "outcome": "success",
+                        })
             else:
                 logger.warning(f"{self.log_prefix} Ollama Chat Manager initialized but not connected")
         except Exception as e:
@@ -2393,7 +2413,7 @@ class MindXAgent:
                     # Log action choices
                     if prioritized:
                         choices = [{"goal": p["goal"], "priority": p.get("priority", "medium"), "estimated_impact": p.get("impact", "unknown")} for p in prioritized[:5]]
-                        self._log_action_choices("improvement_selection", choices)
+                        await self._log_action_choices("improvement_selection", choices)
                     
                     # Execute top priority improvement
                     if prioritized:
@@ -2413,11 +2433,9 @@ class MindXAgent:
                         # Orchestrate improvement
                         try:
                             result = await self.orchestrate_self_improvement(top_priority['goal'])
-                            
                             if result.success:
                                 logger.info(f"{self.log_prefix} Improvement cycle {cycle_count} completed successfully")
                                 success = True
-                                # Check if result indicates file changes
                                 if hasattr(result, 'file_changes') and result.file_changes:
                                     has_file_changes = len(result.file_changes) > 0
                                 elif hasattr(result, 'changes_made') and result.changes_made:
@@ -2428,7 +2446,16 @@ class MindXAgent:
                         except Exception as e:
                             error_message = str(e)
                             logger.error(f"{self.log_prefix} Error in improvement execution: {e}", exc_info=True)
-                
+                        if self.memory_agent:
+                            await self.memory_agent.log_godel_choice({
+                                "source_agent": self.agent_id,
+                                "choice_type": "mindx_improvement_execution",
+                                "perception_summary": top_priority["goal"][:500],
+                                "options_considered": [top_priority["goal"]],
+                                "chosen_option": top_priority["goal"],
+                                "rationale": "autonomous_improvement_loop",
+                                "outcome": "success" if success else ("error: " + (error_message or "unknown")[:200]),
+                            })
                 # Update session activity
                 if self.current_session:
                     self.session_manager.update_session_activity(
@@ -2515,25 +2542,31 @@ class MindXAgent:
         
         logger.debug(f"{self.log_prefix} [THINKING] {step}: {thought}")
     
-    def _log_action_choices(self, context: str, choices: List[Dict[str, Any]]):
-        """Log action choices for UI display"""
+    async def _log_action_choices(self, context: str, choices: List[Dict[str, Any]]):
+        """Log action choices for UI display and persist as Gödel core choice."""
         if not self.settings.get("show_action_choices", True):
             return
-        
         action_entry = {
             "timestamp": time.time(),
             "context": context,
             "choices": choices,
             "selected": choices[0] if choices else None
         }
-        
         self.action_choices.append(action_entry)
-        
-        # Keep only last N entries
         if len(self.action_choices) > self.max_action_history:
             self.action_choices = self.action_choices[-self.max_action_history:]
-        
         logger.info(f"{self.log_prefix} [ACTION CHOICE] {context}: {len(choices)} options, selected: {choices[0].get('goal', 'N/A') if choices else 'None'}")
+        if self.memory_agent and choices:
+            options_considered = [c.get("goal", str(c)) for c in choices]
+            chosen = choices[0].get("goal", str(choices[0]))
+            await self.memory_agent.log_godel_choice({
+                "source_agent": self.agent_id,
+                "choice_type": "mindx_improvement_selection",
+                "perception_summary": context,
+                "options_considered": options_considered,
+                "chosen_option": chosen,
+                "rationale": f"priority={choices[0].get('priority', 'N/A')}",
+            })
     
     async def receive_startup_information(self, startup_info: Dict[str, Any]):
         """
@@ -2560,6 +2593,17 @@ class MindXAgent:
         # If Ollama is connected from startup, use the provided base_url
         if ollama_connected and ollama_base_url:
             logger.info(f"{self.log_prefix} Ollama connected from startup at {ollama_base_url}, initializing chat manager...")
+            # Gödel choice: mindXagent adopts Ollama as inference from startup_agent
+            await self.memory_agent.log_godel_choice({
+                "source_agent": self.agent_id,
+                "choice_type": "inference_from_startup",
+                "perception_summary": "startup_agent reported ollama_connected with base_url",
+                "options_considered": ["use_ollama_from_startup", "ignore_startup_ollama"],
+                "chosen_option": "use_ollama_from_startup",
+                "rationale": f"adopt startup Ollama at {ollama_base_url} for inference",
+                "outcome": "pending_init",
+                "ollama_base_url": ollama_base_url,
+            })
             # Update config with the startup URL
             if not self.config.get("llm.ollama.base_url"):
                 self.config.set("llm.ollama.base_url", ollama_base_url)
@@ -2598,6 +2642,15 @@ class MindXAgent:
                         if best_model:
                             self.llm_model = best_model
                             self._log_thinking("model_selected", f"Selected best model for reasoning: {best_model}")
+                            await self.memory_agent.log_godel_choice({
+                                "source_agent": self.agent_id,
+                                "choice_type": "ollama_model_selection",
+                                "perception_summary": "startup_info provided ollama_models; autonomous mode",
+                                "options_considered": list(models)[:10] if isinstance(models, (list, tuple)) else [best_model],
+                                "chosen_option": best_model,
+                                "rationale": "best_for_task reasoning via capability tool",
+                                "outcome": "success",
+                            })
                     except Exception as e:
                         logger.debug(f"{self.log_prefix} Could not use capability tool: {e}")
                         # Fallback to first available model
@@ -2642,7 +2695,22 @@ class MindXAgent:
                             "source": "startup_agent",
                             "details": terminal_log.get("sample_errors", [])[:3]
                         }])
-    
+
+        # Log pipeline to data/ via memory_agent: startup_agent command → list models → choice → ready for interaction
+        if self.memory_agent:
+            await self.memory_agent.log_process(
+                "mindxagent_startup_ollama_ready",
+                {
+                    "startup_command": startup_info.get("startup_command"),
+                    "ollama_connected": ollama_connected,
+                    "models_list": (startup_info.get("ollama_models") or [])[:20],
+                    "models_count": startup_info.get("models_count", 0),
+                    "chosen_model": getattr(self, "llm_model", None),
+                    "ready_for_interaction": bool(self.ollama_chat_manager and ollama_connected),
+                },
+                {"agent_id": self.agent_id, "event": "startup_pipeline", "source": "startup_agent"},
+            )
+
     def update_settings(self, settings: Dict[str, Any]) -> Dict[str, Any]:
         """
         Update mindXagent settings from UI.
@@ -2981,6 +3049,32 @@ class MindXAgent:
                 "metadata": metadata or {}
             }
             self.thinking_process.append(thinking_entry)
+
+            # Apply solution/action to core logging via memory_agent (data/logs, data/memory)
+            response_text = response_result.get("response", "")
+            if self.memory_agent:
+                await self.memory_agent.log_process(
+                    "mindxagent_ollama_interaction",
+                    {
+                        "prompt": prompt[:2000],
+                        "response": response_text[:5000],
+                        "model_used": self.ollama_chat_manager.current_model,
+                        "conversation_id": conversation_result.get("conversation_id"),
+                        "source": source,
+                        "timestamp": time.time(),
+                    },
+                    {"agent_id": self.agent_id, "event": "ollama_interaction", "source": source},
+                )
+                await self.memory_agent.log_godel_choice({
+                    "source_agent": self.agent_id,
+                    "choice_type": "ollama_interaction",
+                    "perception_summary": prompt[:500],
+                    "options_considered": ["generate_response"],
+                    "chosen_option": "generate_response",
+                    "rationale": f"model={self.ollama_chat_manager.current_model}",
+                    "outcome": "success",
+                    "response_preview": (response_text[:300] + "…") if len(response_text) > 300 else response_text,
+                })
 
             # Keep thinking process size manageable
             if len(self.thinking_process) > 1000:

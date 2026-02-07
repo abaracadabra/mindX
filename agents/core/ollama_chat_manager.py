@@ -39,7 +39,7 @@ class OllamaChatManager:
         self,
         base_url: Optional[str] = None,
         config: Optional[Config] = None,
-        model_discovery_interval: int = 300,  # 5 minutes
+        model_discovery_interval: int = 86400,  # 24 hours; use manual discover_models(force=True) or API to refresh sooner
         keep_alive: str = "10m",  # Keep models loaded for 10 minutes
         conversation_history_path: Optional[Path] = None
     ):
@@ -212,8 +212,8 @@ class OllamaChatManager:
         """
         current_time = time.time()
         
-        # Skip if recently discovered (unless forced)
-        if not force and (current_time - self.last_model_discovery) < 60:
+        # Skip if recently discovered (unless forced). Throttle ad-hoc callers to 1/hour.
+        if not force and (current_time - self.last_model_discovery) < 3600:
             return self.available_models
         
         try:
@@ -271,10 +271,13 @@ class OllamaChatManager:
             return []
     
     def _start_model_discovery(self):
-        """Start periodic model discovery task"""
+        """Start periodic model discovery task. No task if model_discovery_interval <= 0 (manual only)."""
         if self._model_discovery_task and not self._model_discovery_task.done():
             return
-        
+        if self.model_discovery_interval <= 0:
+            logger.info("Periodic model discovery disabled (interval <= 0); use manual refresh only.")
+            return
+
         async def _discovery_loop():
             while self.connected:
                 try:
@@ -284,9 +287,22 @@ class OllamaChatManager:
                     break
                 except Exception as e:
                     logger.error(f"Model discovery loop error: {e}")
-        
+
         self._model_discovery_task = asyncio.create_task(_discovery_loop())
         logger.info(f"Started periodic model discovery (interval: {self.model_discovery_interval}s)")
+
+    async def set_model_discovery_interval(self, seconds: int) -> None:
+        """Update model discovery interval and restart the periodic task (0 = manual only)."""
+        self.model_discovery_interval = max(0, int(seconds))
+        if self._model_discovery_task and not self._model_discovery_task.done():
+            self._model_discovery_task.cancel()
+            try:
+                await self._model_discovery_task
+            except asyncio.CancelledError:
+                pass
+            self._model_discovery_task = None
+        if self.connected and self.model_discovery_interval > 0:
+            self._start_model_discovery()
     
     async def chat(
         self,

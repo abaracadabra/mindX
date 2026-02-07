@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-02-05T21:43:19.478201",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "coordinator_agent_main",
+  "content": {
+    "process_name": "coordinator_agent_creation_request",
+    "data": {
+      "agent_type": "validator",
+      "agent_id": "test_sign_1770352993",
+      "config": {
+        "description": "Agent of type validator with ID test_sign_1770352993",
+        "created_via": "cli_minimal"
+      },
+      "current_agent_count": 1
+    }
+  },
+  "context": {
+    "agent_id": "coordinator_agent_main"
+  },
+  "tags": [
+    "coordinator_agent_creation_request",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "c9f948a64c973109"
+}

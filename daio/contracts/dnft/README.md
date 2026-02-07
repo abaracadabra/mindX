@@ -4,6 +4,8 @@
 **Status:** Ready for deployment  
 **Version:** 1.0.0
 
+**Full technical summary and usage:** **[USAGE.md](USAGE.md)** — complete API, NFTMetadata, token URI building, authorization, deployment, minting, updates, freezing, and integration (iNFT, keyminter, THOT, AgenticPlace).
+
 ---
 
 ## Overview
@@ -28,18 +30,21 @@ Dynamic NFTs (dNFT) are ERC721 tokens with updateable metadata. They can be crea
 Base contract for dynamic NFTs.
 
 **Functions:**
-- `mint(address to, NFTMetadata memory nftMetadata)` - Mint new NFT
-- `updateMetadata(uint256 tokenId, NFTMetadata memory newMetadata)` - Update metadata
-- `freezeMetadata(uint256 tokenId)` - Freeze metadata
+- `mint(address to, NFTMetadata memory nftMetadata)` - Mint new NFT (onlyOwner)
+- `updateMetadata(uint256 tokenId, NFTMetadata memory newMetadata)` - Update metadata (owner or token owner; not frozen)
+- `setTokenURI(uint256 tokenId, string memory newURI)` - Set token URI directly
+- `freezeMetadata(uint256 tokenId)` - Freeze metadata (owner or token owner)
 - `metadata(uint256 tokenId)` - Get metadata
 - `frozen(uint256 tokenId)` - Check if frozen
+- `setAgenticPlace(address)` - Set marketplace (onlyOwner)
+- `offerSkillOnMarketplace(...)` - List skill (token owner; requires AgenticPlace)
 
 ### DynamicNFTFactory.sol
 
 Factory contract for easy deployment.
 
 **Functions:**
-- `deployDynamicNFT(string memory name, string memory symbol)` - Deploy new dNFT contract
+- `deployDynamicNFT(string memory name, string memory symbol, address agenticPlace)` - Deploy new dNFT contract
 - `getDeployedContracts(address deployer)` - Get contracts by deployer
 - `getTotalContracts()` - Get total deployed contracts
 
@@ -50,8 +55,8 @@ Factory contract for easy deployment.
 ### Deploy via Factory
 
 ```solidity
-// Deploy factory first
-factory.deployDynamicNFT("My Collection", "MC");
+// Deploy factory first (agenticPlace can be address(0))
+factory.deployDynamicNFT("My Collection", "MC", agenticPlace);
 
 // Then mint NFTs
 nft.mint(to, metadata);
@@ -90,4 +95,4 @@ struct NFTMetadata {
 
 ---
 
-**Last Updated:** 2025-01-27
+**Last Updated:** 2026-02-05

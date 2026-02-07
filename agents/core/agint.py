@@ -189,10 +189,8 @@ class AGInt:
                 logger.info(f"{self.log_prefix} 🧠 ORIENTATION & DECISION: Processing perception and selecting action...")
                 decision = await self._orient_and_decide(perception)
                 logger.info(f"{self.log_prefix} Decision made: {decision}")
-                if self.memory_agent and decision: 
-                    # Decision is already in JSON-serializable format
+                if self.memory_agent and decision:
                     await self.memory_agent.log_process('agint_decision', decision, {'agent_id': self.agent_id})
-                
                 # ACTION: The outcome of this action will be perceived in the *next* cycle.
                 logger.info(f"{self.log_prefix} 🚀 ACTION: Executing decision...")
                 success, result_data = await self._act(decision)
@@ -204,6 +202,22 @@ class AGInt:
                     logger.info(f"{self.log_prefix} ✅ Action result: {result_data}")
                 else:
                     logger.warning(f"{self.log_prefix} ❌ Action failed: {result_data}")
+                
+                # Single Gödel core choice record (perception, options, chosen, rationale, outcome) after action so outcome is known
+                if self.memory_agent and decision:
+                    options = [d.value for d in DecisionType]
+                    perception_summary = json.dumps(perception, default=str)[:500] if perception else ""
+                    outcome_str = "success" if success else ("failure: " + (str(result_data)[:300] if result_data else "unknown"))
+                    await self.memory_agent.log_godel_choice({
+                        "source_agent": self.agent_id,
+                        "cycle_id": cycle_count,
+                        "choice_type": "agint_decision",
+                        "perception_summary": perception_summary,
+                        "options_considered": options,
+                        "chosen_option": decision.get("type", ""),
+                        "rationale": (self.state_summary.get("awareness", "") or str(decision.get("details", "")))[:500],
+                        "outcome": outcome_str,
+                    })
                 
                 # Check for file changes in result_data
                 has_file_changes = False

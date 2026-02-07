@@ -2027,10 +2027,15 @@ document.addEventListener('DOMContentLoaded', () => {
             clearTimeout(timeoutId);
             
             if (!response.ok) {
-                if (response.status === 503) {
-                    throw new Error('Service temporarily unavailable. MindX may still be initializing.');
-                }
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                let errMsg = `HTTP ${response.status}: ${response.statusText}`;
+                try {
+                    const errBody = await response.json();
+                    const detail = errBody.detail || errBody.message || errBody.error;
+                    if (detail) errMsg = typeof detail === 'string' ? detail : (detail.msg || detail.message || JSON.stringify(detail));
+                } catch (_) { /* ignore */ }
+                const e = new Error(errMsg);
+                if (response.status === 503) e.message = 'Service temporarily unavailable. MindX may still be initializing.';
+                throw e;
             }
             
             const result = await response.json();
@@ -2058,6 +2063,10 @@ document.addEventListener('DOMContentLoaded', () => {
             throw error;
         }
     }
+
+    // Expose for tab components (admin-tab.js, etc.)
+    window.sendRequest = sendRequest;
+    window.addLog = addLog;
 
     // Tab Management
     function initializeTabs() {
@@ -2278,179 +2287,65 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function loadTabData(tabId) {
-        console.log(`📋 Loading data for tab: ${tabId}`);
-        // Load mindXagent data when mindXagent tab is activated
-        if (tabId === 'mindxagent') {
-            console.log('mindXagent tab activated - loading all data...');
-            
-            // Ensure tab content is visible first
-            const mindxagentTab = document.getElementById('mindxagent-tab');
-            if (mindxagentTab) {
-                mindxagentTab.style.setProperty('display', 'block', 'important');
-                mindxagentTab.style.setProperty('visibility', 'visible', 'important');
-                mindxagentTab.style.setProperty('opacity', '1', 'important');
-                console.log('✅ mindXagent tab made visible');
+        if (window.tabRegistry && window.tabRegistry.tabs && window.tabRegistry.tabs.has(tabId)) {
+            return window.tabRegistry.activateTab(tabId);
+        }
+        // Legacy fallback when registry not used
+        const legacy = {
+            control: () => setTimeout(() => loadUpdateRequests(), 100),
+            core: loadCoreSystems,
+            evolution: loadEvolution,
+            learning: loadLearning,
+            orchestration: loadOrchestration,
+            agents: loadAgents,
+            system: () => { if (typeof initializeSystemTab === 'function') initializeSystemTab(); },
+            usage: () => { if (typeof window.loadUsage === 'function') window.loadUsage(); },
+            logs: loadLogs,
+            api: loadAPIData,
+            admin: () => { if (window.AdminTab && window.AdminTab.load) window.AdminTab.load(); },
+            ollama: () => { if (window.OllamaTab && window.OllamaTab.onActivate) window.OllamaTab.onActivate(); },
+            faicey: () => { if (typeof window.loadFaiceyAndInit === 'function') window.loadFaiceyAndInit(); },
+            'evolve-codebase': initializeEvolveCodebaseTab,
+            'query-coordinator': initializeQueryCoordinatorTab,
+            'github-agent': initializeGitHubAgentTab,
+            platform: initializePlatformTab,
+            workflow: initializeWorkflowTab,
+            governance: initializeGovernanceTab,
+            knowledge: initializeKnowledgeTab,
+            economy: initializeEconomyTab,
+            security: initializeSecurityTab,
+            mindxagent: () => {
+                if (typeof loadMindXagentStatus === 'function') loadMindXagentStatus().catch(() => {});
+                if (typeof loadMindXagentOllamaStatus === 'function') loadMindXagentOllamaStatus().catch(() => {});
+                if (typeof loadMindXagentStartup === 'function') loadMindXagentStartup().catch(() => {});
+                if (typeof loadMindXagentOllamaConversation === 'function') loadMindXagentOllamaConversation().catch(() => {});
+                if (typeof loadMindXagentThinking === 'function') loadMindXagentThinking().catch(() => {});
+                if (typeof loadMindXagentActions === 'function') loadMindXagentActions().catch(() => {});
             }
-            
-            // Load all data with error handling
-            (async () => {
-                try {
-                    console.log('Loading mindXagent status...');
-                    await loadMindXagentStatus();
-                } catch (error) {
-                    console.error('Error loading mindXagent status:', error);
-                }
-                
-                try {
-                    console.log('Loading mindXagent Ollama status...');
-                    await loadMindXagentOllamaStatus();
-                } catch (error) {
-                    console.error('Error loading mindXagent Ollama status:', error);
-                }
-                
-                try {
-                    console.log('Loading mindXagent Ollama conversation...');
-                    await loadMindXagentOllamaConversation();
-                } catch (error) {
-                    console.error('Error loading mindXagent Ollama conversation:', error);
-                }
-                
-                try {
-                    console.log('Loading mindXagent thinking...');
-                    await loadMindXagentThinking();
-                } catch (error) {
-                    console.error('Error loading mindXagent thinking:', error);
-                }
-                
-                try {
-                    console.log('Loading mindXagent actions...');
-                    await loadMindXagentActions();
-                } catch (error) {
-                    console.error('Error loading mindXagent actions:', error);
-                }
-            })();
-            
-            // Set up auto-refresh every 5 seconds
-            if (window.mindxagentRefreshInterval) {
-                clearInterval(window.mindxagentRefreshInterval);
-            }
-            window.mindxagentRefreshInterval = setInterval(async () => {
-                try {
-                    await loadMindXagentStatus();
-                    await loadMindXagentOllamaStatus();
-                    await loadMindXagentOllamaConversation();
-                    await loadMindXagentThinking();
-                    await loadMindXagentActions();
-                } catch (error) {
-                    console.error('Error in mindXagent auto-refresh:', error);
-                }
-            }, 5000);
-            return;
+        };
+        const fn = legacy[tabId];
+        if (fn) {
+            const r = fn();
+            return r && typeof r.then === 'function' ? r : Promise.resolve();
         }
-        
-        // Stop auto-refresh when leaving mindXagent tab
-        if (window.mindxagentRefreshInterval) {
-            clearInterval(window.mindxagentRefreshInterval);
-            window.mindxagentRefreshInterval = null;
-        }
-        
-        // Load Faicey expressions when Faicey tab is activated
-        if (tabId === 'faicey') {
-            loadFaiceyExpressions();
-            initializeFaiceyTabs();
-        }
-        
-        // Initialize window manager when admin tab is activated
-        if (tabId === 'admin' && window.windowManager) {
-            // Window manager is already initialized, just ensure it's ready
-            console.log('Admin tab activated - window manager ready');
-        } else if (tabId === 'admin' && !window.windowManager) {
-            // Wait a bit for window manager to initialize if it hasn't yet
-            setTimeout(() => {
-                if (window.windowManager) {
-                    console.log('Window manager initialized for admin tab');
-                } else {
-                    console.warn('Window manager not available');
-                }
-            }, 100);
-        }
-        
-        switch(tabId) {
-            case 'control':
-                // Control tab is already loaded
-                console.log('Control tab loaded, refreshing update requests...');
-                // Refresh update requests when control tab is shown
-                setTimeout(() => {
-                    loadUpdateRequests();
-                }, 100);
-                break;
-            case 'core':
-                loadCoreSystems();
-                break;
-            case 'evolution':
-                loadEvolution();
-                break;
-            case 'learning':
-                loadLearning();
-                break;
-            case 'orchestration':
-                loadOrchestration();
-                break;
-            case 'agents':
-                loadAgents();
-                break;
-            case 'system':
-                loadSystemStatus();
-                break;
-            case 'logs':
-                loadLogs();
-                break;
-            case 'api':
-                loadAPIData();
-                break;
-            case 'admin':
-                loadAdminData();
-                initializeOllamaAdminTab();
-                break;
-            case 'faicey':
-                loadFaiceyExpressions();
-                initializeFaiceyTabs();
-                break;
-            case 'evolve-codebase':
-                initializeEvolveCodebaseTab();
-                break;
-            case 'query-coordinator':
-                initializeQueryCoordinatorTab();
-                break;
-            case 'github-agent':
-                initializeGitHubAgentTab();
-                break;
-            case 'platform':
-                initializePlatformTab();
-                break;
-            case 'system':
-                initializeSystemTab();
-                break;
-            case 'workflow':
-                initializeWorkflowTab();
-                break;
-            case 'governance':
-                initializeGovernanceTab();
-                break;
-            case 'knowledge':
-                initializeKnowledgeTab();
-                break;
-            case 'economy':
-                initializeEconomyTab();
-                break;
-            case 'security':
-                initializeSecurityTab();
-                break;
-        }
+        return Promise.resolve();
     }
-    
-    // Make loadTabData globally accessible
+
+    // Make loadTabData globally accessible (delegates to registry when available)
     window.loadTabData = loadTabData;
+
+    // Legacy loaders for tabs without components (used by TabConfig when registry is active)
+    window.loadUsage = function loadUsage() {};
+    window.loadLogs = loadLogs;
+    window.loadAPIData = loadAPIData;
+    window.loadFaiceyAndInit = function loadFaiceyAndInit() {
+        loadFaiceyExpressions();
+        initializeFaiceyTabs();
+    };
+    window.loadCoreSystems = loadCoreSystems;
+    window.loadEvolution = loadEvolution;
+    window.loadLearning = loadLearning;
+    window.loadOrchestration = loadOrchestration;
 
     // Initialize Evolve Codebase Tab
     function initializeEvolveCodebaseTab() {
@@ -5441,248 +5336,308 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Admin Tab Functions
     function initializeAdminTab() {
-        // Restricted admin functions - disabled for regular users
-        restartSystemBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            addLog('Restart System: Access denied - Admin privileges required', 'WARNING');
-            showResponse('Access denied: Admin privileges required for system restart');
-        });
-        
-        backupSystemBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            addLog('Backup System: Access denied - Admin privileges required', 'WARNING');
-            showResponse('Access denied: Admin privileges required for system backup');
-        });
-        
-        updateConfigBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            addLog('Update Config: Access denied - Admin privileges required', 'WARNING');
-            showResponse('Access denied: Admin privileges required for config updates');
-        });
-        
-        // Export logs is available to all users - opens format selection modal
-        exportLogsBtn.addEventListener('click', showExportFormatModal);
+        // Restricted admin functions - disabled for regular users (guard so missing elements don't block Ollama wiring)
+        if (restartSystemBtn) {
+            restartSystemBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (window.AdminTab && typeof window.AdminTab.restartSystem === 'function') {
+                    window.AdminTab.restartSystem();
+                } else {
+                    addLog('Restart System: Access denied - Admin privileges required', 'WARNING');
+                    showResponse('Access denied: Admin privileges required for system restart');
+                }
+            });
+        }
+        if (backupSystemBtn) {
+            backupSystemBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (window.AdminTab && typeof window.AdminTab.backupSystem === 'function') {
+                    window.AdminTab.backupSystem();
+                } else {
+                    addLog('Backup System: Access denied - Admin privileges required', 'WARNING');
+                    showResponse('Access denied: Admin privileges required for system backup');
+                }
+            });
+        }
+        if (updateConfigBtn) {
+            updateConfigBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (window.AdminTab && typeof window.AdminTab.updateConfig === 'function') {
+                    window.AdminTab.updateConfig();
+                } else {
+                    addLog('Update Config: Access denied - Admin privileges required', 'WARNING');
+                    showResponse('Access denied: Admin privileges required for config updates');
+                }
+            });
+        }
+        if (exportLogsBtn) {
+            exportLogsBtn.addEventListener('click', showExportFormatModal);
+        }
+
+        // Admin tab Ollama – wire Reload models and Send (Test is handled by delegation below so it always works)
+        const adminOllamaReloadBtn = document.getElementById('ollama-admin-reload-models');
+        if (adminOllamaReloadBtn) adminOllamaReloadBtn.addEventListener('click', loadOllamaAdminModels);
+        const adminOllamaSendBtn = document.getElementById('ollama-admin-send');
+        if (adminOllamaSendBtn) adminOllamaSendBtn.addEventListener('click', sendOllamaAdminInteraction);
+        // Load models once when Admin tab is set up so dropdown is ready
+        loadOllamaAdminModels().catch(() => {});
     }
 
-    async function loadAdminData() {
-        // Load and apply CrossMint setting
-        const crossmintToggle = document.getElementById('crossmint-enabled-toggle');
-        const saveSettingsBtn = document.getElementById('save-settings-btn');
-        
-        if (crossmintToggle) {
-            // Load current setting (default: false/off if not set)
-            const crossmintEnabled = localStorage.getItem('crossmint_enabled') === 'true';
-            crossmintToggle.checked = crossmintEnabled;
-            // Ensure default is off if setting doesn't exist
-            if (localStorage.getItem('crossmint_enabled') === null) {
-                localStorage.setItem('crossmint_enabled', 'false');
-            }
-            console.log('CrossMint setting loaded:', crossmintEnabled, '(default: off)');
-        }
-        
-        if (saveSettingsBtn) {
-            saveSettingsBtn.addEventListener('click', () => {
-                if (crossmintToggle) {
-                    const enabled = crossmintToggle.checked;
-                    localStorage.setItem('crossmint_enabled', enabled.toString());
-                    console.log('CrossMint setting saved:', enabled);
-                    alert(`CrossMint integration ${enabled ? 'enabled' : 'disabled'}. Please refresh the page for changes to take effect.`);
-                }
-            });
-        }
-        
-        // Ensure window manager is initialized when admin tab loads
-        if (!window.windowManager) {
-            console.log('Waiting for window manager to initialize...');
-            // Wait a bit more for window manager
-            setTimeout(() => {
-                if (window.windowManager) {
-                    console.log('Window manager ready for admin tab');
-                }
-            }, 200);
+    // Event delegation for Admin Ollama Test so it works even if the button wasn't in DOM at init (e.g. lazy tab)
+    document.body.addEventListener('click', function adminOllamaTestDelegation(e) {
+        const btn = e.target.id === 'ollama-test-connection' ? e.target : (e.target.closest && e.target.closest('#ollama-test-connection'));
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof testOllamaConnectionAdmin === 'function') testOllamaConnectionAdmin();
+    });
+
+    // Expose for Ollama tab component
+    window.initializeOllamaAdminTab = initializeOllamaAdminTab;
+    window.loadOllamaAdminModels = loadOllamaAdminModels;
+
+    function updateOllamaAdminStatusCard(status) {
+        const statusContainer = document.getElementById('ollama-connection-status');
+        if (!statusContainer) return;
+        const escapeHtml = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const isTesting = status?.testing === true;
+        const conn = status?.connection || {};
+        const isConnected = !isTesting && (status?.success ?? status?.connected ?? conn?.connected ?? false);
+        const baseUrl = status?.base_url ?? conn?.base_url ?? '—';
+        const primaryUrl = status?.primary_url ?? conn?.primary_url ?? '10.0.0.155:18080';
+        const fallbackUrl = status?.fallback_url ?? conn?.fallback_url ?? 'localhost:11434';
+        const modelCount = status?.model_count ?? conn?.model_count ?? 0;
+        const usingFallback = status?.using_fallback ?? conn?.using_fallback ?? false;
+        const errorHtml = status?.error ? `<div class="status-item error"><span class="status-label">Error:</span><span class="status-value">${escapeHtml(String(status.error))}</span></div>` : '';
+        const messageHtml = status?.message ? `<div class="status-item"><span class="status-label">Message:</span><span class="status-value">${escapeHtml(String(status.message))}</span></div>` : '';
+        let cardClass = 'connection-status-card ';
+        let dotClass = 'status-dot ';
+        let statusText = 'Disconnected';
+        if (isTesting) {
+            cardClass += 'testing';
+            dotClass += 'testing';
+            statusText = 'Testing…';
         } else {
-            console.log('Window manager already initialized');
+            cardClass += isConnected ? 'connected' : 'disconnected';
+            dotClass += isConnected ? 'active' : 'inactive';
+            statusText = isConnected ? 'Connected' : 'Disconnected';
         }
-        try {
-            const config = await sendRequest('/system/config');
-            displayConfig(config);
-            // Load PostgreSQL settings and vault keys
-            await loadPostgreSQLSettings();
-            await loadVaultKeys();
-            initializePostgreSQLHandlers();
-            initializeVaultHandlers();
-        } catch (error) {
-            addLog(`Failed to load admin data: ${error.message}`, 'ERROR');
-        }
+        const primaryDisplay = escapeHtml(String(primaryUrl).replace(/^https?:\/\//, ''));
+        const fallbackDisplay = escapeHtml(String(fallbackUrl).replace(/^https?:\/\//, ''));
+        const baseDisplay = escapeHtml(String(baseUrl).replace(/^https?:\/\//, ''));
+        const requestSent = status?.request_sent ?? conn?.request_sent ?? '';
+        const responseStatus = status?.response_status ?? conn?.response_status ?? status?.status_code ?? '';
+        const responsePreview = status?.response_preview ?? conn?.response_preview ?? '';
+        const primaryRequest = status?.primary_request_sent ?? conn?.primary_request_sent ?? '';
+        const primaryResponse = status?.primary_response_preview ?? conn?.primary_response_preview ?? '';
+        const primaryRespStatus = status?.primary_response_status ?? conn?.primary_response_status ?? '';
+        const requestBlock = requestSent ? `<div class="status-item request-response"><span class="status-label">Request:</span><span class="status-value mono">${escapeHtml(requestSent)}</span></div>` : '';
+        const responseBlock = (responseStatus !== '' || responsePreview) ? `<div class="status-item request-response"><span class="status-label">Response:</span><span class="status-value mono">${responseStatus !== '' ? escapeHtml(String(responseStatus)) + ' — ' : ''}${escapeHtml(String(responsePreview))}</span></div>` : '';
+        const primaryBlock = (primaryRequest || primaryResponse) ? `<div class="status-item request-response primary-attempt"><span class="status-label">Primary attempt:</span><span class="status-value mono">${escapeHtml(primaryRequest || '—')} → ${primaryRespStatus !== '' ? primaryRespStatus + ' ' : ''}${escapeHtml(String(primaryResponse))}</span></div>` : '';
+        statusContainer.innerHTML = `
+            <div class="${cardClass}">
+                <div class="status-indicator">
+                    <span class="${dotClass}"></span>
+                    <span class="status-text">${statusText}</span>
+                </div>
+                <div class="status-details">
+                    <div class="status-item">
+                        <span class="status-label">Primary (try first):</span>
+                        <span class="status-value">${primaryDisplay}</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Fallback (localhost):</span>
+                        <span class="status-value">${fallbackDisplay}</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">${status?.error ? 'Backend' : 'Connected at'} URL:</span>
+                        <span class="status-value">${baseDisplay}</span>
+                    </div>
+                    ${!isTesting ? `<div class="status-item"><span class="status-label">Models:</span><span class="status-value">${modelCount}</span></div>` : ''}
+                    ${usingFallback ? '<div class="status-item warning"><span class="status-label">⚠️ Using Fallback</span></div>' : ''}
+                    ${primaryBlock}
+                    ${requestBlock}
+                    ${responseBlock}
+                    ${messageHtml}
+                    ${errorHtml}
+                </div>
+            </div>
+        `;
     }
-    
-    // PostgreSQL Management Functions
-    async function loadPostgreSQLSettings() {
-        try {
-            const response = await sendRequest('/admin/postgresql/config');
-            if (response.status === 'success' && response.config) {
-                const config = response.config;
-                document.getElementById('postgres-host').value = config.host || 'localhost';
-                document.getElementById('postgres-port').value = config.port || 5432;
-                document.getElementById('postgres-database').value = config.database || 'mindx_memory';
-                document.getElementById('postgres-user').value = config.user || 'mindx';
-                if (config.has_password) {
-                    document.getElementById('postgres-password').placeholder = 'Password is set (enter new to change)';
-                }
-            }
-        } catch (error) {
-            addLog(`Failed to load PostgreSQL settings: ${error.message}`, 'ERROR');
-        }
-    }
-    
-    async function savePostgreSQLSettings() {
-        const config = {
-            host: document.getElementById('postgres-host').value,
-            port: parseInt(document.getElementById('postgres-port').value),
-            database: document.getElementById('postgres-database').value,
-            user: document.getElementById('postgres-user').value,
-            password: document.getElementById('postgres-password').value || undefined
-        };
-        
-        try {
-            const response = await sendRequest('/admin/postgresql/config', 'POST', config);
-            if (response.status === 'success') {
-                addLog('PostgreSQL settings saved to vault', 'SUCCESS');
-                document.getElementById('postgres-password').value = '';
-                document.getElementById('postgres-password').placeholder = 'Password saved';
-            }
-        } catch (error) {
-            addLog(`Failed to save PostgreSQL settings: ${error.message}`, 'ERROR');
-        }
-    }
-    
-    async function testPostgreSQLConnection() {
-        const config = {
-            host: document.getElementById('postgres-host').value,
-            port: parseInt(document.getElementById('postgres-port').value),
-            database: document.getElementById('postgres-database').value,
-            user: document.getElementById('postgres-user').value,
-            password: document.getElementById('postgres-password').value || undefined
-        };
-        
-        const statusDiv = document.getElementById('postgres-connection-status');
-        statusDiv.innerHTML = '<p>Testing connection...</p>';
-        statusDiv.className = 'connection-status testing';
-        
-        try {
-            const response = await sendRequest('/admin/postgresql/test', 'POST', config);
-            if (response.status === 'success') {
-                statusDiv.innerHTML = `<p class="success">✓ Connection successful</p><p>${response.version}</p>`;
-                statusDiv.className = 'connection-status success';
-            } else {
-                statusDiv.innerHTML = `<p class="error">✗ ${response.message}</p>`;
-                statusDiv.className = 'connection-status error';
-            }
-        } catch (error) {
-            statusDiv.innerHTML = `<p class="error">✗ Connection failed: ${error.message}</p>`;
-            statusDiv.className = 'connection-status error';
-        }
-    }
-    
-    function initializePostgreSQLHandlers() {
-        const loadBtn = document.getElementById('load-postgres-settings-btn');
-        const saveBtn = document.getElementById('save-postgres-settings-btn');
-        const testBtn = document.getElementById('test-postgres-connection-btn');
-        const togglePasswordBtn = document.getElementById('toggle-postgres-password');
-        
-        if (loadBtn) {
-            loadBtn.addEventListener('click', loadPostgreSQLSettings);
-        }
-        if (saveBtn) {
-            saveBtn.addEventListener('click', savePostgreSQLSettings);
-        }
+
+    async function testOllamaConnectionAdmin() {
+        const testBtn = document.getElementById('ollama-test-connection');
+        const originalText = testBtn?.textContent;
         if (testBtn) {
-            testBtn.addEventListener('click', testPostgreSQLConnection);
+            testBtn.disabled = true;
+            testBtn.textContent = 'Testing…';
         }
-        if (togglePasswordBtn) {
-            togglePasswordBtn.addEventListener('click', () => {
-                const passwordInput = document.getElementById('postgres-password');
-                if (passwordInput.type === 'password') {
-                    passwordInput.type = 'text';
-                    togglePasswordBtn.textContent = '🙈';
-                } else {
-                    passwordInput.type = 'password';
-                    togglePasswordBtn.textContent = '👁️';
-                }
+        updateOllamaAdminStatusCard({
+            testing: true,
+            primary_url: 'http://10.0.0.155:18080',
+            fallback_url: 'http://localhost:11434',
+            message: 'Trying 10.0.0.155:18080… then localhost:11434 if needed'
+        });
+        const baseUrl = (typeof apiUrl !== 'undefined' ? apiUrl : (window.API_CONFIG && window.API_CONFIG.baseUrl) || '') || '';
+        try {
+            const response = await fetch(`${baseUrl}/api/admin/ollama/test`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ try_fallback: true })
             });
-        }
-    }
-    
-    // Vault Management Functions
-    async function loadVaultKeys() {
-        try {
-            const response = await sendRequest('/admin/vault/keys');
-            if (response.status === 'success') {
-                const keysList = document.getElementById('vault-keys-list');
-                if (response.keys && response.keys.length > 0) {
-                    keysList.innerHTML = `
-                        <table class="vault-keys-table">
-                            <thead>
-                                <tr>
-                                    <th>Agent ID</th>
-                                    <th>Environment Variable</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${response.keys.map(key => `
-                                    <tr>
-                                        <td>${key.agent_id}</td>
-                                        <td><code>${key.env_var}</code></td>
-                                        <td>${key.has_key ? '<span class="status-badge success">Stored</span>' : '<span class="status-badge warning">Missing</span>'}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                        <p>Total: ${response.count} keys</p>
-                    `;
+            const data = await response.json().catch(() => ({}));
+            const result = data.test_result;
+            if (!response.ok) {
+                const err = (typeof data.detail === 'string' ? data.detail : data.error || data.message) || `HTTP ${response.status}`;
+                updateOllamaAdminStatusCard({ success: false, error: err });
+                addLog(`Ollama test failed: ${err}`, 'ERROR');
+            } else {
+                updateOllamaAdminStatusCard(result != null ? result : { success: false, error: 'No result from server' });
+                if (result && result.success) {
+                    addLog(`Ollama connected · ${result.model_count ?? 0} model(s)`, 'SUCCESS');
                 } else {
-                    keysList.innerHTML = '<p>No agent keys found in vault. Use "Migrate Keys to Vault" to move existing keys.</p>';
+                    const err = (result && (result.error || result.message)) || data.detail || 'Connection failed';
+                    addLog(`Ollama test failed: ${err}`, 'ERROR');
                 }
             }
         } catch (error) {
-            addLog(`Failed to load vault keys: ${error.message}`, 'ERROR');
-        }
-    }
-    
-    async function migrateKeysToVault() {
-        const statusDiv = document.getElementById('vault-migration-status');
-        statusDiv.innerHTML = '<p>Migrating keys from legacy storage...</p>';
-        statusDiv.className = 'migration-status processing';
-        
-        try {
-            const response = await sendRequest('/admin/vault/migrate', 'POST');
-            if (response.status === 'success') {
-                const migration = response.migration;
-                statusDiv.innerHTML = `
-                    <p class="success">Migration complete!</p>
-                    <p>Migrated: ${migration.migrated} keys</p>
-                    <p>Failed: ${migration.failed} keys</p>
-                    ${migration.errors.length > 0 ? `<p class="error">Errors: ${migration.errors.join(', ')}</p>` : ''}
-                `;
-                statusDiv.className = 'migration-status success';
-                await loadVaultKeys(); // Refresh the list
+            const errMsg = error && (error.message || String(error));
+            updateOllamaAdminStatusCard({ success: false, error: errMsg });
+            addLog(`Ollama test error: ${errMsg}`, 'ERROR');
+        } finally {
+            if (testBtn) {
+                testBtn.disabled = false;
+                testBtn.textContent = originalText || 'Test Connection';
             }
-        } catch (error) {
-            statusDiv.innerHTML = `<p class="error">Migration failed: ${error.message}</p>`;
-            statusDiv.className = 'migration-status error';
         }
     }
-    
-    function initializeVaultHandlers() {
-        const refreshBtn = document.getElementById('refresh-vault-keys-btn');
-        const migrateBtn = document.getElementById('migrate-keys-to-vault-btn');
-        
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', loadVaultKeys);
+
+    async function loadOllamaAdminModels() {
+        const select = document.getElementById('ollama-admin-model-select');
+        const listEl = document.getElementById('ollama-admin-models-list');
+        const reloadBtn = document.getElementById('ollama-admin-reload-models');
+        if (!select) return;
+        const baseUrl = (typeof apiUrl !== 'undefined' ? apiUrl : (window.API_CONFIG && window.API_CONFIG.baseUrl) || '') || '';
+        if (reloadBtn) { reloadBtn.disabled = true; reloadBtn.textContent = 'Loading…'; }
+        if (listEl) listEl.innerHTML = '<span class="ollama-models-list-hint">Loading models from Ollama…</span>';
+        try {
+            const response = await fetch(`${baseUrl}/api/admin/ollama/models`);
+            const data = await response.json().catch(() => ({}));
+            const models = Array.isArray(data.models) ? data.models : [];
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">Select model…</option>';
+            models.forEach(m => {
+                const name = typeof m === 'string' ? m : (m.name || m.model || (m.details && m.details.parent_model) || '');
+                if (!name) return;
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                if (name === currentVal) opt.selected = true;
+                select.appendChild(opt);
+            });
+            if (models.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = 'No models – Test connection first, then Reload models';
+                opt.disabled = true;
+                select.appendChild(opt);
+            }
+            if (listEl) {
+                if (models.length === 0) {
+                    listEl.innerHTML = '<span class="ollama-models-list-hint">No models listed. Test connection, then click “Reload models” to fetch from Ollama (GET /api/tags).</span>';
+                } else {
+                    const esc = (s) => (s == null ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
+                    listEl.innerHTML = '<strong class="ollama-models-list-title">Available models (' + models.length + '):</strong><ul class="ollama-models-ul">' +
+                        models.map(m => {
+                            const name = typeof m === 'string' ? m : (m.name || m.model || '');
+                            const details = typeof m === 'object' && m.details ? m.details : {};
+                            const param = details.parameter_size || '';
+                            const family = details.family || (Array.isArray(details.families) && details.families[0]) || '';
+                            const size = typeof m.size === 'number' ? (m.size / 1e9).toFixed(2) + ' GB' : '';
+                            const extra = [param, family, size].filter(Boolean).join(' · ');
+                            return '<li class="ollama-model-li"><span class="ollama-model-name">' + esc(name) + '</span>' + (extra ? ' <span class="ollama-model-details">(' + esc(extra) + ')</span>' : '') + '</li>';
+                        }).join('') + '</ul>';
+                }
+            }
+            addLog(`Ollama: ${models.length} actual model(s) loaded from server`, models.length ? 'SUCCESS' : 'WARNING');
+        } catch (e) {
+            addLog(`Ollama models failed: ${e.message}`, 'ERROR');
+            select.innerHTML = '<option value="">Failed to load – check backend</option>';
+            if (listEl) listEl.innerHTML = '<span class="ollama-models-list-hint error">Failed to load models: ' + (e.message || 'check backend') + '</span>';
+        } finally {
+            if (reloadBtn) { reloadBtn.disabled = false; reloadBtn.textContent = 'Reload models'; }
         }
-        if (migrateBtn) {
-            migrateBtn.addEventListener('click', migrateKeysToVault);
+    }
+
+    async function sendOllamaAdminInteraction() {
+        const inputEl = document.getElementById('ollama-admin-input');
+        const modelSelect = document.getElementById('ollama-admin-model-select');
+        const responseEl = document.getElementById('ollama-admin-response');
+        const sendBtn = document.getElementById('ollama-admin-send');
+        const historyEl = document.getElementById('ollama-admin-history');
+        if (!inputEl || !modelSelect) return;
+        const prompt = inputEl.value.trim();
+        if (!prompt) {
+            addLog('Enter a prompt in the text area', 'WARNING');
+            if (responseEl) responseEl.value = 'Enter a prompt and click Send.';
+            return;
+        }
+        const model = modelSelect.value;
+        if (!model) {
+            addLog('Select a model (use Reload models if empty)', 'WARNING');
+            if (responseEl) responseEl.value = 'Select a model from the dropdown, then send.';
+            return;
+        }
+        if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending…'; }
+        if (responseEl) responseEl.value = 'Sending to Ollama…';
+        const baseUrl = (typeof apiUrl !== 'undefined' ? apiUrl : (window.API_CONFIG && window.API_CONFIG.baseUrl) || '') || '';
+        try {
+            const response = await fetch(`${baseUrl}/api/admin/ollama/interact`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: prompt,
+                    model: model,
+                    use_chat: true,
+                    temperature: 0.7,
+                    max_tokens: 2048
+                })
+            });
+            const data = await response.json().catch(() => ({}));
+            let text = data.response;
+            let err = data.error || (data.detail && (typeof data.detail === 'string' ? data.detail : data.detail.message || JSON.stringify(data.detail)));
+            if (typeof text === 'string' && text.trim().startsWith('{')) {
+                try {
+                    const parsed = JSON.parse(text);
+                    if (parsed.error || parsed.message) {
+                        err = err || parsed.message || parsed.error;
+                        text = null;
+                    }
+                } catch (_) {}
+            }
+            if (response.ok && data.success && text != null && typeof text === 'string') {
+                if (responseEl) responseEl.value = String(text).trim();
+                addLog('Ollama response received', 'SUCCESS');
+                if (historyEl) {
+                    const esc = (s) => (s == null ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
+                    const entry = document.createElement('div');
+                    entry.className = 'interaction-history-entry';
+                    entry.innerHTML = `<div class="interaction-prompt"><strong>Prompt:</strong> ${esc(prompt.slice(0, 200))}${prompt.length > 200 ? '…' : ''}</div><div class="interaction-response"><strong>Response:</strong> ${esc(String(text).slice(0, 500))}${String(text).length > 500 ? '…' : ''}</div><div class="interaction-timestamp">${new Date().toLocaleString()}</div>`;
+                    const h5 = historyEl.querySelector('h5');
+                    if (h5 && h5.nextSibling) historyEl.insertBefore(entry, h5.nextSibling);
+                    else historyEl.appendChild(entry);
+                }
+            } else {
+                const msg = err || text || `HTTP ${response.status}`;
+                if (responseEl) responseEl.value = `Error: ${msg}`;
+                addLog(`Ollama interaction failed: ${msg}`, 'ERROR');
+            }
+        } catch (e) {
+            const msg = e.message || String(e);
+            if (responseEl) responseEl.value = `Error: ${msg}`;
+            addLog(`Ollama send failed: ${msg}`, 'ERROR');
+        } finally {
+            if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send'; }
         }
     }
 
@@ -5694,6 +5649,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initializeAPITab() {
+        const base = (typeof API_CONFIG !== 'undefined' && API_CONFIG.baseUrl) ? API_CONFIG.baseUrl : (window.MINDX_API_URL || `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`);
+        const docsLink = document.getElementById('mindx-api-docs-link');
+        const baseUrlEl = document.getElementById('mindx-api-base-url');
+        if (docsLink) {
+            docsLink.href = base.replace(/\/$/, '') + '/docs';
+            docsLink.textContent = base.replace(/\/$/, '') + '/docs';
+        }
+        if (baseUrlEl) baseUrlEl.textContent = base.replace(/\/$/, '');
+
         const refreshBtn = document.getElementById('refresh-api-providers-btn');
         const scanBtn = document.getElementById('scan-api-folder-btn');
         const detectBtn = document.getElementById('detect-providers-btn');
@@ -5892,35 +5856,66 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    // Test Ollama connection using api/ollama (backend /api/llm/ollama/connection → create_ollama_api + test_connection)
     async function testOllamaConnection() {
+        const method = document.getElementById('ollama-config-method').value;
+        let baseUrl = null;
+        if (method === 'base-url') {
+            baseUrl = (document.getElementById('ollama-base-url').value || '').trim() || 'http://localhost:11434';
+        } else {
+            const host = (document.getElementById('ollama-host').value || '').trim() || 'localhost';
+            const port = (document.getElementById('ollama-port').value || '').trim() || '11434';
+            baseUrl = `http://${host}:${port}`;
+        }
+
+        const testBtn = document.getElementById('ollama-test-connection-btn');
+        const quickBtn = document.getElementById('ollama-quick-test-btn');
+        const setButtonsTesting = (testing) => {
+            [testBtn, quickBtn].forEach(btn => {
+                if (!btn) return;
+                btn.disabled = testing;
+                btn.textContent = testing ? 'Testing…' : (btn === quickBtn ? 'Quick Test' : 'Test Connection');
+            });
+        };
+
+        // Show banner immediately with "Testing..." so user sees feedback
+        showOllamaConnectionBannerTesting(baseUrl);
+        setButtonsTesting(true);
+        addLog(`Testing Ollama connection to ${baseUrl}…`, 'INFO');
+
         try {
-            const method = document.getElementById('ollama-config-method').value;
-            let baseUrl = null;
-            
-            if (method === 'base-url') {
-                baseUrl = document.getElementById('ollama-base-url').value;
-            } else {
-                const host = document.getElementById('ollama-host').value;
-                const port = document.getElementById('ollama-port').value;
-                baseUrl = `http://${host}:${port}`;
-            }
-            
-            addLog(`Testing Ollama connection to ${baseUrl}...`, 'INFO');
             const result = await sendRequest(`/api/llm/ollama/connection?base_url=${encodeURIComponent(baseUrl)}`);
-            
+            setButtonsTesting(false);
             if (result.success) {
                 addLog('Ollama connection successful!', 'SUCCESS');
                 updateOllamaConnectionBanner(true, baseUrl, result);
-                // Refresh provider list and prioritize Ollama
                 await refreshAndPrioritizeOllama();
             } else {
                 addLog('Ollama connection failed', 'ERROR');
                 updateOllamaConnectionBanner(false, baseUrl, result);
             }
         } catch (error) {
+            setButtonsTesting(false);
             addLog(`Failed to test Ollama: ${error.message}`, 'ERROR');
-            updateOllamaConnectionBanner(false, null, { error: error.message });
+            updateOllamaConnectionBanner(false, baseUrl, { error: error.message });
         }
+    }
+
+    function showOllamaConnectionBannerTesting(baseUrl) {
+        const banner = document.getElementById('ollama-connection-banner');
+        const icon = document.getElementById('ollama-connection-icon');
+        const statusText = document.getElementById('ollama-connection-status-text');
+        const details = document.getElementById('ollama-connection-details');
+        if (!banner || !icon || !statusText || !details) return;
+        banner.style.display = 'block';
+        banner.style.background = 'rgba(255, 193, 7, 0.12)';
+        banner.style.borderLeftColor = 'var(--corp-yellow, #ffc107)';
+        icon.textContent = '⏳';
+        statusText.textContent = 'Testing connection…';
+        details.textContent = baseUrl
+            ? `Trying ${baseUrl.replace(/^https?:\/\//, '')}. Policy: primary 10.0.0.155:18080, fallback localhost:11434`
+            : 'Trying 10.0.0.155:18080… then localhost:11434 if needed';
+        banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     
     async function saveOllamaConfig() {
@@ -6024,24 +6019,42 @@ document.addEventListener('DOMContentLoaded', () => {
         const icon = document.getElementById('ollama-connection-icon');
         const statusText = document.getElementById('ollama-connection-status-text');
         const details = document.getElementById('ollama-connection-details');
-        
-        if (!banner) return;
-        
+        if (!banner || !icon || !statusText || !details) return;
+
         banner.style.display = 'block';
-        
+        const displayUrl = baseUrl || (result && result.base_url) || '';
+        const esc = (s) => (s == null ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
+        const req = result && result.request_sent;
+        const respStatus = result && (result.response_status ?? result.status_code);
+        const respPreview = result && result.response_preview;
+        const primaryReq = result && result.primary_request_sent;
+        const primaryResp = result && result.primary_response_preview;
+        let detailsHtml = '';
+        if (primaryReq || primaryResp) detailsHtml += `<div class="connection-detail-line"><strong>Primary attempt:</strong> ${esc(primaryReq || '—')} → ${esc(primaryResp || '')}</div>`;
+        if (req) detailsHtml += `<div class="connection-detail-line"><strong>Request:</strong> ${esc(req)}</div>`;
+        if (respStatus !== undefined || respPreview) detailsHtml += `<div class="connection-detail-line"><strong>Response:</strong> ${respStatus !== undefined ? esc(String(respStatus)) + ' — ' : ''}${esc(respPreview || result?.error || '')}</div>`;
+
         if (connected) {
             icon.textContent = '🟢';
             statusText.textContent = 'Connected';
-            details.textContent = `Base URL: ${baseUrl}`;
+            const modelCount = result && typeof result.model_count === 'number';
+            const primary = (result && result.primary_url) ? result.primary_url.replace(/^https?:\/\//, '') : '10.0.0.155:18080';
+            const fallback = (result && result.fallback_url) ? result.fallback_url.replace(/^https?:\/\//, '') : 'localhost:11434';
+            detailsHtml += `<div class="connection-detail-line">${displayUrl.replace(/^https?:\/\//, '')} · ${modelCount ? result.model_count + ' model(s)' : 'OK'}. Primary: ${primary}, fallback: ${fallback}</div>`;
+            details.innerHTML = detailsHtml || 'OK';
             banner.style.background = 'rgba(0, 255, 136, 0.1)';
             banner.style.borderLeftColor = 'var(--corp-green)';
         } else {
             icon.textContent = '🔴';
-            statusText.textContent = 'Not Connected';
-            details.textContent = result.error || 'Connection failed';
+            statusText.textContent = 'Not connected';
+            const err = (result && (result.error || result.message)) || 'Connection failed';
+            if (!detailsHtml) detailsHtml = `<div class="connection-detail-line">${esc(err)}</div>`;
+            else detailsHtml += `<div class="connection-detail-line error">${esc(err)}</div>`;
+            details.innerHTML = detailsHtml;
             banner.style.background = 'rgba(255, 71, 87, 0.1)';
             banner.style.borderLeftColor = 'var(--corp-red)';
         }
+        banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     
     async function loadProvidersIntoDropdown() {
@@ -7201,46 +7214,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.showProviderModels = showProviderModels;
     window.testProvider = testProvider;
     window.removeProvider = removeProvider;
-
-    function displayConfig(config) {
-        configDisplay.innerHTML = config ? 
-            `<pre>${JSON.stringify(config, null, 2)}</pre>` : 
-            '<p>Configuration unavailable</p>';
-    }
-
-    async function restartSystem() {
-        if (confirm('Are you sure you want to restart the system?')) {
-            try {
-                await sendRequest('/system/restart', 'POST');
-                addLog('System restart initiated', 'INFO');
-            } catch (error) {
-                addLog(`System restart failed: ${error.message}`, 'ERROR');
-            }
-        }
-    }
-
-    async function backupSystem() {
-        try {
-            await sendRequest('/system/backup', 'POST');
-            addLog('System backup initiated', 'INFO');
-        } catch (error) {
-            addLog(`System backup failed: ${error.message}`, 'ERROR');
-        }
-    }
-
-    async function updateConfig() {
-        const newConfig = prompt('Enter new configuration (JSON):', '{}');
-        if (newConfig) {
-            try {
-                const config = JSON.parse(newConfig);
-                await sendRequest('/system/config', 'PUT', config);
-                addLog('Configuration updated', 'INFO');
-                loadAdminData();
-            } catch (error) {
-                addLog(`Configuration update failed: ${error.message}`, 'ERROR');
-            }
-        }
-    }
 
     // Export Format Modal Functions
     function showExportFormatModal() {
@@ -11869,14 +11842,11 @@ function showMainApplication() {
     // Update wallet display
     updateWalletDisplay();
     
-    // Initialize modular tab system if available
+    // Single tab system: registry handles all tab clicks when available
     if (window.tabRegistry && window.TabConfig) {
-        console.log('🔄 Initializing modular tab system...');
+        console.log('🔄 Initializing modular tab system (single click path)...');
         try {
-            // Register all tabs from configuration
             window.TabConfig.registerAllTabs();
-            
-            // Integrate with existing tab buttons
             const allTabBtns = document.querySelectorAll('.tab-btn');
             allTabBtns.forEach(btn => {
                 const tabId = btn.getAttribute('data-tab');
@@ -11886,57 +11856,53 @@ function showMainApplication() {
                     });
                 }
             });
-            
+            // Initial state: hide all tab contents and buttons, then activate control
+            document.querySelectorAll('.tab-content').forEach(c => {
+                c.classList.remove('active');
+                c.style.display = 'none';
+                c.style.visibility = 'hidden';
+                c.style.opacity = '0';
+            });
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            if (window.tabRegistry.tabs.has('control')) {
+                window.tabRegistry.activateTab('control').catch(() => {});
+            }
             console.log('✅ Modular tab system initialized');
         } catch (error) {
             console.error('❌ Error initializing modular tab system:', error);
         }
-    }
-    
-    // Initialize tabs if not already initialized (fallback to legacy system)
-    const initTabs = window.initializeTabs || initializeTabs;
-    if (typeof initTabs === 'function') {
-        console.log('🔄 Initializing tabs (legacy system)...');
-        try {
-            initTabs();
-            console.log('✅ Tabs initialized');
-            
-            // Force show the active tab content after initialization
-            setTimeout(() => {
-                const activeTabContent = document.querySelector('.tab-content.active');
-                if (activeTabContent) {
-                    activeTabContent.style.display = 'block';
-                    activeTabContent.style.visibility = 'visible';
-                    console.log('✅ Active tab content forced visible:', activeTabContent.id);
-                } else {
-                    console.warn('⚠️ No active tab content found');
-                }
-            }, 100);
-        } catch (error) {
-            console.error('❌ Error initializing tabs:', error);
-        }
     } else {
-        console.warn('⚠️ initializeTabs function not available yet');
-        // Wait for DOMContentLoaded to complete
-        setTimeout(() => {
-            const delayedInitTabs = window.initializeTabs || initializeTabs;
-            if (typeof delayedInitTabs === 'function') {
-                delayedInitTabs();
-                console.log('✅ Tabs initialized (delayed)');
-                
-                // Force show the active tab content
+        // Fallback: legacy tab system with click handlers and loadTabData
+        const initTabs = window.initializeTabs || initializeTabs;
+        if (typeof initTabs === 'function') {
+            console.log('🔄 Initializing tabs (legacy system)...');
+            try {
+                initTabs();
                 setTimeout(() => {
                     const activeTabContent = document.querySelector('.tab-content.active');
                     if (activeTabContent) {
                         activeTabContent.style.display = 'block';
                         activeTabContent.style.visibility = 'visible';
-                        console.log('✅ Active tab content forced visible (delayed):', activeTabContent.id);
                     }
                 }, 100);
-            } else {
-                console.error('❌ initializeTabs still not available after delay');
+            } catch (error) {
+                console.error('❌ Error initializing tabs:', error);
             }
-        }, 500);
+        } else {
+            setTimeout(() => {
+                const delayedInitTabs = window.initializeTabs || initializeTabs;
+                if (typeof delayedInitTabs === 'function') {
+                    delayedInitTabs();
+                    setTimeout(() => {
+                        const activeTabContent = document.querySelector('.tab-content.active');
+                        if (activeTabContent) {
+                            activeTabContent.style.display = 'block';
+                            activeTabContent.style.visibility = 'visible';
+                        }
+                    }, 100);
+                }
+            }, 500);
+        }
     }
     
     // Load system data
@@ -13271,6 +13237,75 @@ async function testOllamaCompletion() {
         }
     }
     
+    // Load startup flow (startup_agent → mindXagent → Ollama)
+    async function loadMindXagentStartup() {
+        try {
+            const data = await sendRequest('/mindxagent/startup');
+            updateMindXagentStartupDisplay(data);
+        } catch (error) {
+            console.error('Failed to load mindXagent startup:', error);
+            const stepsEl = document.getElementById('mindxagent-startup-steps');
+            const ioEl = document.getElementById('mindxagent-startup-ollama-io');
+            const logEl = document.getElementById('mindxagent-startup-terminal-log');
+            if (stepsEl) stepsEl.innerHTML = '<div class="empty-hint">Startup flow unavailable: ' + (error.message || 'not loaded') + '</div>';
+            if (ioEl) ioEl.innerHTML = '';
+            if (logEl) logEl.innerHTML = '';
+        }
+    }
+    
+    function updateMindXagentStartupDisplay(data) {
+        const stepsEl = document.getElementById('mindxagent-startup-steps');
+        const ioEl = document.getElementById('mindxagent-startup-ollama-io');
+        const logEl = document.getElementById('mindxagent-startup-terminal-log');
+        if (!data || !data.success) {
+            if (stepsEl) stepsEl.innerHTML = '<div class="empty-hint">No startup data yet. Run backend with startup_agent to see steps.</div>';
+            if (ioEl) ioEl.innerHTML = '';
+            if (logEl) logEl.innerHTML = '';
+            return;
+        }
+        // Startup sequence steps
+        const sequence = data.startup_sequence || [];
+        if (stepsEl) {
+            if (sequence.length === 0) {
+                stepsEl.innerHTML = '<div class="empty-hint">No startup sequence yet. Startup runs when backend initializes.</div>';
+            } else {
+                stepsEl.innerHTML = '<h4 style="margin:0 0 8px 0;">Steps</h4><ul class="steps-list" style="margin:0; padding-left:20px;">' +
+                    sequence.map(function(s) {
+                        const status = s.status === 'completed' ? '✅' : s.status === 'skipped' ? '⏭' : '⏳';
+                        return '<li><span>' + status + '</span> ' + (s.name || s.step || '') + '</li>';
+                    }).join('') + '</ul>';
+            }
+        }
+        // Ollama input/response (from startup_agent → mindXagent)
+        const ollamaIO = data.ollama_input_response;
+        if (ioEl) {
+            if (!ollamaIO) {
+                ioEl.innerHTML = '<div class="empty-hint">Ollama connection result will appear here after startup.</div>';
+            } else {
+                const connected = ollamaIO.connected ? '🟢 Connected' : '🔴 Disconnected';
+                let html = '<h4 style="margin:0 0 8px 0;">Ollama (startup_agent → mindXagent)</h4>';
+                html += '<div class="startup-ollama-summary"><strong>Result:</strong> ' + connected;
+                if (ollamaIO.base_url) html += ' · <strong>URL:</strong> ' + escapeHtml(ollamaIO.base_url);
+                if (ollamaIO.models_count != null) html += ' · <strong>Models:</strong> ' + ollamaIO.models_count;
+                if (ollamaIO.reason) html += ' · ' + escapeHtml(ollamaIO.reason);
+                html += '</div>';
+                if (ollamaIO.models && ollamaIO.models.length) {
+                    html += '<div class="startup-ollama-models" style="margin-top:6px; font-size:12px;">Models: ' + ollamaIO.models.slice(0, 10).map(function(m) { return typeof m === 'string' ? m : (m.name || m.model || ''); }).filter(Boolean).join(', ') + (ollamaIO.models.length > 10 ? '…' : '') + '</div>';
+                }
+                ioEl.innerHTML = html;
+            }
+        }
+        // Terminal log last lines
+        const terminal = data.terminal_log || {};
+        if (logEl) {
+            if (!terminal.log_exists || !terminal.last_lines || terminal.last_lines.length === 0) {
+                logEl.innerHTML = '<h4 style="margin:0 0 8px 0;">Terminal startup log</h4><div class="empty-hint">No terminal_startup.log or empty.</div>';
+            } else {
+                logEl.innerHTML = '<h4 style="margin:0 0 8px 0;">Terminal startup log (last ' + terminal.last_lines.length + ' lines)</h4><pre class="terminal-log-pre" style="margin:0; padding:8px; background:rgba(0,0,0,0.3); border-radius:4px; font-size:11px; white-space:pre-wrap; word-break:break-all;">' + terminal.last_lines.map(function(l) { return escapeHtml(l.replace(/\r/g, '')); }).join('') + '</pre>';
+            }
+        }
+    }
+    
     // Load Ollama conversation history
     async function loadMindXagentOllamaConversation(conversationId = null) {
         try {
@@ -13791,9 +13826,17 @@ async function testOllamaCompletion() {
             refreshBtn.addEventListener('click', async () => {
                 await loadMindXagentStatus();
                 await loadMindXagentOllamaStatus();
+                await loadMindXagentStartup();
                 await loadMindXagentOllamaConversation();
                 await loadMindXagentThinking();
                 await loadMindXagentActions();
+            });
+        }
+        
+        const refreshStartupBtn = document.getElementById('refresh-mindxagent-startup-btn');
+        if (refreshStartupBtn) {
+            refreshStartupBtn.addEventListener('click', async () => {
+                await loadMindXagentStartup();
             });
         }
         

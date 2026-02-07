@@ -110,6 +110,8 @@ if [[ -z "$TARGET_INSTALL_DIR_ARG" ]]; then
     log_setup_info "No target directory specified. Using current directory: $TARGET_INSTALL_DIR_ARG"
     # Enable interactive setup by default for default installation
     INTERACTIVE_SETUP_FLAG=true
+    # Start web interface by default when running ./mindX.sh from project directory
+    FRONTEND_FLAG=true
     log_setup_info "Default installation mode: Interactive setup enabled for API key configuration."
 fi
 
@@ -936,11 +938,21 @@ function setup_frontend_ui { # pragma: no cover
   log_setup_info "Setting up MindX Frontend UI files in '$MINDX_FRONTEND_UI_DIR_ABS'..."
   mkdir -p "$MINDX_FRONTEND_UI_DIR_ABS"
 
+  # Only copy from mindx_frontend_ui when source and destination differ (e.g. when installing to another dir)
+  FRONTEND_SRC_DIR="$PROJECT_ROOT/mindx_frontend_ui"
+  _src_canon="" _dst_canon=""
+  [ -d "$FRONTEND_SRC_DIR" ] && _src_canon=$(cd "$FRONTEND_SRC_DIR" && pwd -P 2>/dev/null)
+  [ -d "$MINDX_FRONTEND_UI_DIR_ABS" ] && _dst_canon=$(cd "$MINDX_FRONTEND_UI_DIR_ABS" && pwd -P 2>/dev/null)
+  FRONTEND_COPY_FROM_SOURCE=false
+  [ -n "$_src_canon" ] && [ -n "$_dst_canon" ] && [ "$_src_canon" != "$_dst_canon" ] && FRONTEND_COPY_FROM_SOURCE=true
+
   # Copy existing enhanced frontend files instead of generating basic ones
   # Priority: Current UI first, then backup, then fallback
-  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/index.html" ]; then
+  if [ "$FRONTEND_COPY_FROM_SOURCE" = true ] && [ -f "$PROJECT_ROOT/mindx_frontend_ui/index.html" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui/index.html" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied current enhanced index.html from mindx_frontend_ui"
+  elif [ -f "$MINDX_FRONTEND_UI_DIR_ABS/index.html" ]; then
+    log_setup_info "index.html already in place in mindx_frontend_ui"
   elif [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/index.html" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui_backup/index.html" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied enhanced index.html from backup"
@@ -990,9 +1002,11 @@ EOF_INDEX_HTML
 
   # Copy existing enhanced styles3.css if available
   # Priority: Current UI first, then backup, then fallback
-  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" ]; then
+  if [ "$FRONTEND_COPY_FROM_SOURCE" = true ] && [ -f "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui/styles3.css" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied current enhanced styles3.css from mindx_frontend_ui"
+  elif [ -f "$MINDX_FRONTEND_UI_DIR_ABS/styles3.css" ]; then
+    log_setup_info "styles3.css already in place in mindx_frontend_ui"
   elif [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/styles3.css" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui_backup/styles3.css" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied enhanced styles3.css from backup"
@@ -1051,9 +1065,11 @@ EOF_STYLES_CSS
 
   # Copy existing enhanced app.js if available
   # Priority: Current UI first, then backup, then fallback
-  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/app.js" ]; then
+  if [ "$FRONTEND_COPY_FROM_SOURCE" = true ] && [ -f "$PROJECT_ROOT/mindx_frontend_ui/app.js" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui/app.js" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied current enhanced app.js from mindx_frontend_ui with full frontend-backend integration"
+  elif [ -f "$MINDX_FRONTEND_UI_DIR_ABS/app.js" ]; then
+    log_setup_info "app.js already in place in mindx_frontend_ui"
   elif [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/app.js" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui_backup/app.js" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied enhanced app.js from backup"
@@ -1128,9 +1144,11 @@ EOF_APP_JS
 
   # Copy existing package.json if available
   # Priority: Current UI first, then backup, then fallback
-  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/package.json" ]; then
+  if [ "$FRONTEND_COPY_FROM_SOURCE" = true ] && [ -f "$PROJECT_ROOT/mindx_frontend_ui/package.json" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui/package.json" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied current package.json from mindx_frontend_ui"
+  elif [ -f "$MINDX_FRONTEND_UI_DIR_ABS/package.json" ]; then
+    log_setup_info "package.json already in place in mindx_frontend_ui"
   elif [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/package.json" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui_backup/package.json" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied package.json from backup"
@@ -1155,9 +1173,11 @@ EOF_PACKAGE_JSON
 
   # Copy existing server.js if available
   # Priority: Current UI first, then backup, then fallback
-  if [ -f "$PROJECT_ROOT/mindx_frontend_ui/server.js" ]; then
+  if [ "$FRONTEND_COPY_FROM_SOURCE" = true ] && [ -f "$PROJECT_ROOT/mindx_frontend_ui/server.js" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui/server.js" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied current server.js from mindx_frontend_ui"
+  elif [ -f "$MINDX_FRONTEND_UI_DIR_ABS/server.js" ]; then
+    log_setup_info "server.js already in place in mindx_frontend_ui"
   elif [ -f "$PROJECT_ROOT/mindx_frontend_ui_backup/server.js" ]; then
     cp "$PROJECT_ROOT/mindx_frontend_ui_backup/server.js" "$MINDX_FRONTEND_UI_DIR_ABS/"
     log_setup_info "Copied server.js from backup"
@@ -1248,6 +1268,7 @@ function start_web_frontend {
     log_setup_info "Checking for existing processes..."
     kill_port $BACKEND_PORT_EFFECTIVE
     kill_port $FRONTEND_PORT_EFFECTIVE
+    kill_port $AGENTICPLACE_PORT_EFFECTIVE
 
     # Start backend
     log_setup_info "Starting MindX Backend API on port $BACKEND_PORT_EFFECTIVE..."
@@ -1296,14 +1317,61 @@ function start_web_frontend {
 
     log_setup_info "Frontend started successfully (PID: $FRONTEND_PID)"
 
+    # Start AgenticPlace
+    log_setup_info "Starting AgenticPlace UI on port $AGENTICPLACE_PORT_EFFECTIVE..."
+    AGENTICPLACE_DIR_ABS="$PROJECT_ROOT/AgenticPlace"
+    AGENTICPLACE_PID=""
+    
+    if [ ! -d "$AGENTICPLACE_DIR_ABS" ]; then
+        log_setup_warn "AgenticPlace directory not found: $AGENTICPLACE_DIR_ABS"
+        log_setup_warn "Skipping AgenticPlace startup"
+    else
+        cd "$AGENTICPLACE_DIR_ABS"
+        
+        # Install dependencies if needed (standalone, contained)
+        # AgenticPlace is a standalone UI with its own isolated dependencies
+        if [ ! -d "node_modules" ] || [ ! -f "node_modules/.bin/vite" ]; then
+            log_setup_info "Installing AgenticPlace dependencies (standalone)..."
+            npm install > /dev/null 2>&1
+            if [ $? -ne 0 ]; then
+                log_setup_warn "AgenticPlace dependency installation had issues, but continuing..."
+            fi
+        fi
+        
+        # Start AgenticPlace dev server (standalone UI)
+        PORT=$AGENTICPLACE_PORT_EFFECTIVE npm run dev > /dev/null 2>&1 &
+        AGENTICPLACE_PID=$!
+        
+        # Wait for AgenticPlace to start
+        log_setup_info "Waiting for AgenticPlace to initialize..."
+        sleep 5
+        
+        # Check if AgenticPlace is running
+        if ! check_port $AGENTICPLACE_PORT_EFFECTIVE; then
+            log_setup_warn "AgenticPlace may not have started on port $AGENTICPLACE_PORT_EFFECTIVE"
+            AGENTICPLACE_PID=""
+        else
+            log_setup_info "AgenticPlace started successfully (PID: $AGENTICPLACE_PID)"
+        fi
+    fi
+
     # Display access information
     echo ""
-    echo "🎉 MindX Web Interface is now running!"
-    echo "======================================"
-    echo "Frontend: http://localhost:$FRONTEND_PORT_EFFECTIVE"
-    echo "Backend API: http://localhost:$BACKEND_PORT_EFFECTIVE"
+    echo "🎉 MindX Services are now running!"
+    echo "==================================="
     echo ""
-    echo "Press Ctrl+C to stop both services"
+    echo "📊 MindX Web Interface:"
+    echo "   Frontend: http://localhost:$FRONTEND_PORT_EFFECTIVE"
+    echo "   Backend API: http://localhost:$BACKEND_PORT_EFFECTIVE"
+    echo "   API Docs: http://localhost:$BACKEND_PORT_EFFECTIVE/docs"
+    echo ""
+    if [ -n "$AGENTICPLACE_PID" ]; then
+        echo "🚀 AgenticPlace UI:"
+        echo "   Frontend: http://localhost:$AGENTICPLACE_PORT_EFFECTIVE"
+        echo "   (Multi-CEO orchestration with modular tabs)"
+        echo ""
+    fi
+    echo "Press Ctrl+C to stop all services"
     echo ""
 
     # Function to cleanup on exit
@@ -1435,10 +1503,13 @@ function setup_virtual_environment_and_mindx_deps {
 
     if [ ! -d "$MINDX_VENV_PATH_ABS" ]; then
         log_setup_info "No existing venv found. Creating new one with Python 3.11..."
-        if ! python3.11 -m venv "$MINDX_VENV_PATH_ABS"; then
+        # Use --system-site-packages to reuse system-installed packages like torch
+        # This prevents re-downloading large packages that are already available system-wide
+        if ! python3.11 -m venv --system-site-packages "$MINDX_VENV_PATH_ABS"; then
             log_setup_error "Failed to create Python virtual environment with Python 3.11."
             return 1
         fi
+        log_setup_info "Created venv with --system-site-packages to reuse system packages (e.g., torch)."
     else
         log_setup_info "Existing virtual environment found."
     fi
@@ -1461,12 +1532,25 @@ function setup_virtual_environment_and_mindx_deps {
     local requirements_file="$PROJECT_ROOT/requirements.txt"
     if [ -f "$requirements_file" ]; then
         log_setup_info "Installing dependencies from $requirements_file..."
-        if ! python -m pip install -r "$requirements_file"; then
+        
+        # Check if torch is available (system-wide or in venv) before installing sentence-transformers
+        if python -c "import torch" 2>/dev/null; then
+            log_setup_info "✅ System torch detected - will reuse for sentence-transformers if needed"
+        fi
+        
+        # Use pip cache to avoid re-downloading packages
+        if ! python -m pip install --cache-dir "$HOME/.cache/pip" -r "$requirements_file"; then
             log_setup_error "Failed to install dependencies from $requirements_file."
             deactivate
             return 1
         fi
         log_setup_info "Python dependencies installed successfully."
+        
+        # Optional: Install sentence-transformers only if torch is available and it's needed
+        # (sentence-transformers is commented out in requirements.txt to avoid auto-install)
+        if python -c "import torch" 2>/dev/null && ! python -c "import sentence_transformers" 2>/dev/null; then
+            log_setup_info "Torch available but sentence-transformers missing. Install manually if needed: pip install sentence-transformers"
+        fi
     else
         log_setup_warn "requirements.txt not found at $requirements_file. Skipping dependency installation."
     fi

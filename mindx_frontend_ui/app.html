@@ -11,40 +11,47 @@
     <link rel="stylesheet" href="styles3.css">
     <script src="crossmint-integration.js"></script>
     <script src="window-manager.js"></script>
-    <!-- Authentication Check - Redirect to login if not authenticated -->
+    <!-- Authentication Check - Server-authoritative session (vault-backed) -->
     <script>
-        // Check authentication on page load
         (function() {
-            const authData = localStorage.getItem('mindx_auth');
-            const crossmintAuth = localStorage.getItem('crossmint_authenticated');
+            var apiBaseUrl = window.MINDX_API_URL || ('http://localhost:' + (window.MINDX_BACKEND_PORT || '8000'));
+            var sessionToken = localStorage.getItem('mindx_session_token');
             
-            if (!authData || crossmintAuth !== 'true') {
-                console.log('❌ Not authenticated, redirecting to login...');
+            function clearAuthAndRedirect() {
+                localStorage.removeItem('mindx_auth');
+                localStorage.removeItem('mindx_session_token');
+                localStorage.removeItem('mindx_session_expires_at');
+                localStorage.removeItem('crossmint_authenticated');
+                localStorage.removeItem('crossmint_wallet');
+                localStorage.removeItem('crossmint_user');
+                localStorage.removeItem('crossmint_auth_method');
                 window.location.href = '/login';
+            }
+            
+            if (!sessionToken) {
+                console.log('❌ No session token, redirecting to login...');
+                clearAuthAndRedirect();
                 return;
             }
             
-            try {
-                const auth = JSON.parse(authData);
-                // Check if session is still valid (24 hours)
-                if (auth.timestamp) {
-                    const sessionAge = Date.now() - auth.timestamp;
-                    const maxSessionAge = 24 * 60 * 60 * 1000; // 24 hours
-                    if (sessionAge > maxSessionAge) {
-                        console.log('❌ Session expired, redirecting to login...');
-                        localStorage.removeItem('mindx_auth');
-                        localStorage.removeItem('crossmint_authenticated');
-                        window.location.href = '/login';
-                        return;
-                    }
+            // Validate session with backend (vault-backed; not bypassable)
+            fetch(apiBaseUrl + '/users/session/validate', {
+                method: 'GET',
+                headers: { 'X-Session-Token': sessionToken }
+            }).then(function(res) {
+                if (res.ok) {
+                    return res.json();
                 }
-                
-                console.log('✅ Authentication valid, showing application');
-            } catch (e) {
-                console.error('Error parsing auth data:', e);
-                window.location.href = '/login';
-                return;
-            }
+                console.log('❌ Session invalid or expired (', res.status, '), redirecting to login...');
+                clearAuthAndRedirect();
+            }).then(function(data) {
+                if (data && data.wallet_address) {
+                    console.log('✅ Session valid for', data.wallet_address.slice(0, 10) + '...');
+                }
+            }).catch(function(err) {
+                console.error('Session validate error:', err);
+                clearAuthAndRedirect();
+            });
         })();
         
         // Populate wallet info in header
@@ -498,10 +505,12 @@
                     <button class="tab-btn" data-tab="logs">Logs</button>
                     <button class="tab-btn" data-tab="api">API</button>
                     <button class="tab-btn" data-tab="faicey">Faicey</button>
+                    <button class="tab-btn" data-tab="godel">Gödel</button>
                     <button class="tab-btn" data-tab="admin">Admin</button>
+                    <button class="tab-btn" data-tab="ollama">Ollama</button>
                 </div>
                 <div class="tab-row core-tabs">
-                    <div class="core-tabs-label">Core Components</div>
+                    <span class="core-tabs-label">Core Components</span>
                     <button class="tab-btn core-tab" data-tab="core">Core Systems</button>
                     <button class="tab-btn core-tab" data-tab="evolution">Evolution</button>
                     <button class="tab-btn core-tab" data-tab="learning">Learning</button>
@@ -515,6 +524,9 @@
 
         <!-- Control Tab -->
         <div id="control-tab" class="tab-content active">
+            <div class="inference-blurb control-inference-blurb">
+                <p><strong>Inference access:</strong> The coordinator agent and any agents on this front page that need inference can access inference through the <strong>inference_agent</strong>. The inference_agent handles all requests for inference from agents. There is never enough inference; we track each provider and work with settings to maintain solvency and maximum inference consumption over time in accordance with budget as a guideline.</p>
+            </div>
             <div class="control-section">
                 <div class="section-header">
                     <div class="section-tabs">
@@ -1341,178 +1353,190 @@
             
         </div>
 
-        <!-- Platform Architecture Tab -->
+        <!-- Platform Tab: Enterprise SRE Dashboard (see docs/platform-tab.md) -->
         <div id="platform-tab" class="tab-content">
             <div class="platform-dashboard">
-                <!-- Enterprise Platform Command Center -->
                 <div class="platform-header">
                     <div class="platform-title">
-                        <h1>🏗️ mindX Platform Architecture Command Center</h1>
-                        <div class="platform-subtitle">Distributed Autonomous Intelligence System | Enterprise-Grade Observability & SRE Excellence</div>
+                        <h1>mindX Platform</h1>
+                        <div class="platform-subtitle">BDI orchestration · FastAPI · Ollama/LLM · Health, agents, API metrics</div>
                         <div class="platform-metadata">
                             <span class="metadata-item">Version: v2.1.4</span>
                             <span class="metadata-item">Environment: Production</span>
-                            <span class="metadata-item">Region: Multi-Cloud Global</span>
-                            <span class="metadata-item">Uptime: <span id="system-uptime-display">99.97%</span></span>
-                            <span class="metadata-item">SLA: 99.95%</span>
-                            <span class="metadata-item">MTTD: <span id="mean-time-to-detect">2.3min</span></span>
+                            <span class="metadata-item">Deployment: Single instance</span>
+                            <span class="metadata-item">Uptime: <span id="system-uptime-display">—</span></span>
+                            <span class="metadata-item">Backend: <span id="platform-backend-status">—</span></span>
+                            <span class="metadata-item">Agents: <span id="platform-metadata-agents">—</span></span>
                         </div>
                     </div>
 
-                    <!-- Advanced SRE Metrics Dashboard -->
+                    <!-- 1. Platform Header Metrics (docs: top section, real-time 1s) -->
+                    <div class="platform-header-metrics">
+                        <h2 class="section-label">Platform Header Metrics</h2>
+                        <div class="platform-kpis platform-header-kpis">
+                            <div class="kpi-card">
+                                <div class="kpi-title">System Health</div>
+                                <div class="kpi-value" id="platform-system-health">—</div>
+                                <div class="kpi-sub">Overall status</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-title">Active Agents</div>
+                                <div class="kpi-value" id="platform-active-agents">—</div>
+                                <div class="kpi-sub">Currently running</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-title">Memory Vectors</div>
+                                <div class="kpi-value" id="platform-memory-vectors">—</div>
+                                <div class="kpi-sub">Semantic memory</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-title">API Throughput</div>
+                                <div class="kpi-value" id="platform-api-throughput">—</div>
+                                <div class="kpi-sub">Requests/sec</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-title">Error Rate</div>
+                                <div class="kpi-value" id="platform-error-rate">—</div>
+                                <div class="kpi-sub">System-wide % (SLO)</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-title">Uptime</div>
+                                <div class="kpi-value" id="platform-uptime">—</div>
+                                <div class="kpi-sub">Availability % (99.9%+ target)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. SRE Metrics Dashboard (docs: section 3) -->
                     <div class="platform-kpis">
                         <div class="kpi-card system-reliability">
                             <div class="kpi-header">
-                                <div class="kpi-title">System Reliability Engineering</div>
-                                <div class="kpi-badge">SLO: 99.9% | SLI: 99.97%</div>
+                                <div class="kpi-title">System Reliability (SRE)</div>
+                                <div class="kpi-badge">From API when available</div>
                             </div>
-                            <div class="kpi-value" id="system-reliability-score">99.97%</div>
-                            <div class="kpi-trend positive">
-                                <span class="trend-icon">↗</span>
-                                <span>+0.02%</span>
-                            </div>
+                            <div class="kpi-value" id="system-reliability-score">—</div>
                             <div class="kpi-breakdown">
                                 <div class="breakdown-item">
                                     <span class="breakdown-label">MTTR</span>
-                                    <span class="breakdown-value" id="mttr-value">4.2min</span>
+                                    <span class="breakdown-value" id="mttr-value">—</span>
                                 </div>
                                 <div class="breakdown-item">
                                     <span class="breakdown-label">MTBF</span>
-                                    <span class="breakdown-value" id="mtbf-value">47.3d</span>
+                                    <span class="breakdown-value" id="mtbf-value">—</span>
                                 </div>
                                 <div class="breakdown-item">
                                     <span class="breakdown-label">Error Budget</span>
-                                    <span class="breakdown-value" id="error-budget-remaining">2.1%</span>
+                                    <span class="breakdown-value" id="error-budget-remaining">—</span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="kpi-card performance-engineering">
                             <div class="kpi-header">
-                                <div class="kpi-title">Performance Engineering</div>
-                                <div class="kpi-badge">Target: P99 < 500ms</div>
+                                <div class="kpi-title">Performance (Latency)</div>
+                                <div class="kpi-badge">/api/monitoring/inbound</div>
                             </div>
-                            <div class="kpi-value" id="performance-sli-score">97.8%</div>
-                            <div class="kpi-trend positive">
-                                <span class="trend-icon">↗</span>
-                                <span>+1.3%</span>
-                            </div>
+                            <div class="kpi-value" id="performance-sli-score">—</div>
                             <div class="kpi-breakdown">
                                 <div class="breakdown-item">
-                                    <span class="breakdown-label">P50 Latency</span>
-                                    <span class="breakdown-value" id="p50-latency">23ms</span>
+                                    <span class="breakdown-label">P50</span>
+                                    <span class="breakdown-value" id="p50-latency">—</span>
                                 </div>
                                 <div class="breakdown-item">
-                                    <span class="breakdown-label">P95 Latency</span>
-                                    <span class="breakdown-value" id="p95-latency">127ms</span>
+                                    <span class="breakdown-label">P95</span>
+                                    <span class="breakdown-value" id="p95-latency">—</span>
                                 </div>
                                 <div class="breakdown-item">
-                                    <span class="breakdown-label">P99 Latency</span>
-                                    <span class="breakdown-value" id="p99-latency">347ms</span>
+                                    <span class="breakdown-label">P99</span>
+                                    <span class="breakdown-value" id="p99-latency">—</span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="kpi-card scalability-engineering">
                             <div class="kpi-header">
-                                <div class="kpi-title">Scalability Engineering</div>
-                                <div class="kpi-badge">Auto-scaling: Active</div>
+                                <div class="kpi-title">Resources</div>
+                                <div class="kpi-badge">/system/resources</div>
                             </div>
-                            <div class="kpi-value" id="scalability-score">94.2%</div>
-                            <div class="kpi-trend positive">
-                                <span class="trend-icon">↗</span>
-                                <span>+2.1%</span>
-                            </div>
+                            <div class="kpi-value" id="scalability-score">—</div>
                             <div class="kpi-breakdown">
                                 <div class="breakdown-item">
-                                    <span class="breakdown-label">Horizontal Scale</span>
-                                    <span class="breakdown-value" id="horizontal-scale-efficiency">96.3%</span>
+                                    <span class="breakdown-label">CPU</span>
+                                    <span class="breakdown-value" id="horizontal-scale-efficiency">—</span>
                                 </div>
                                 <div class="breakdown-item">
-                                    <span class="breakdown-label">Load Balance</span>
-                                    <span class="breakdown-value" id="load-balancer-efficiency">98.7%</span>
+                                    <span class="breakdown-label">Memory</span>
+                                    <span class="breakdown-value" id="load-balancer-efficiency">—</span>
                                 </div>
                                 <div class="breakdown-item">
-                                    <span class="breakdown-label">Resource Opt.</span>
-                                    <span class="breakdown-value" id="resource-optimization">87.4%</span>
+                                    <span class="breakdown-label">Disk</span>
+                                    <span class="breakdown-value" id="resource-optimization">—</span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="kpi-card devops-maturity">
                             <div class="kpi-header">
-                                <div class="kpi-title">DevOps Maturity</div>
-                                <div class="kpi-badge">DORA Elite</div>
+                                <div class="kpi-title">DevOps (DORA targets)</div>
+                                <div class="kpi-badge">N/A until measured</div>
                             </div>
-                            <div class="kpi-value" id="devops-maturity-score">92.1%</div>
-                            <div class="kpi-trend positive">
-                                <span class="trend-icon">↗</span>
-                                <span>+3.2%</span>
-                            </div>
+                            <div class="kpi-value" id="devops-maturity-score">—</div>
                             <div class="kpi-breakdown">
                                 <div class="breakdown-item">
                                     <span class="breakdown-label">Deploy Freq.</span>
-                                    <span class="breakdown-value" id="deployment-frequency">47/day</span>
+                                    <span class="breakdown-value" id="devops-deploy-freq">—</span>
                                 </div>
                                 <div class="breakdown-item">
                                     <span class="breakdown-label">Lead Time</span>
-                                    <span class="breakdown-value" id="lead-time-changes">2.3min</span>
+                                    <span class="breakdown-value" id="devops-lead-time">—</span>
                                 </div>
                                 <div class="breakdown-item">
                                     <span class="breakdown-label">Change Fail</span>
-                                    <span class="breakdown-value" id="change-failure-rate">0.7%</span>
+                                    <span class="breakdown-value" id="devops-change-fail">—</span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="kpi-card security-posture">
                             <div class="kpi-header">
-                                <div class="kpi-title">Security Posture</div>
-                                <div class="kpi-badge">Zero-Trust Active</div>
+                                <div class="kpi-title">Security & Identity</div>
+                                <div class="kpi-badge">Guardian / registry</div>
                             </div>
-                            <div class="kpi-value" id="security-posture-score">98.9%</div>
-                            <div class="kpi-trend positive">
-                                <span class="trend-icon">↗</span>
-                                <span>+0.8%</span>
-                            </div>
+                            <div class="kpi-value" id="security-posture-score">—</div>
                             <div class="kpi-breakdown">
                                 <div class="breakdown-item">
-                                    <span class="breakdown-label">Threat Score</span>
-                                    <span class="breakdown-value" id="threat-detection-score">99.2%</span>
+                                    <span class="breakdown-label">Registered</span>
+                                    <span class="breakdown-value" id="threat-detection-score">—</span>
                                 </div>
                                 <div class="breakdown-item">
-                                    <span class="breakdown-label">Crypto Ops</span>
-                                    <span class="breakdown-value" id="crypto-operations">1.2M/sec</span>
+                                    <span class="breakdown-label">Identities</span>
+                                    <span class="breakdown-value" id="crypto-operations">—</span>
                                 </div>
                                 <div class="breakdown-item">
-                                    <span class="breakdown-label">Vuln Patches</span>
-                                    <span class="breakdown-value" id="vulnerability-patches">24h MTTR</span>
+                                    <span class="breakdown-label">Tools Secured</span>
+                                    <span class="breakdown-value" id="vulnerability-patches">—</span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="kpi-card architecture-quality">
                             <div class="kpi-header">
-                                <div class="kpi-title">Architecture Quality</div>
-                                <div class="kpi-badge">Fitness: 94.7%</div>
+                                <div class="kpi-title">Architecture</div>
+                                <div class="kpi-badge">BDI + P-O-D-A</div>
                             </div>
-                            <div class="kpi-value" id="architecture-quality-score">91.8%</div>
-                            <div class="kpi-trend positive">
-                                <span class="trend-icon">↗</span>
-                                <span>+1.7%</span>
-                            </div>
+                            <div class="kpi-value" id="architecture-quality-score">—</div>
                             <div class="kpi-breakdown">
                                 <div class="breakdown-item">
                                     <span class="breakdown-label">Coupling</span>
-                                    <span class="breakdown-value" id="coupling-metric">0.23</span>
+                                    <span class="breakdown-value" id="coupling-metric">—</span>
                                 </div>
                                 <div class="breakdown-item">
                                     <span class="breakdown-label">Cohesion</span>
-                                    <span class="breakdown-value" id="cohesion-metric">0.87</span>
+                                    <span class="breakdown-value" id="cohesion-metric">—</span>
                                 </div>
                                 <div class="breakdown-item">
                                     <span class="breakdown-label">Tech Debt</span>
-                                    <span class="breakdown-value" id="technical-debt-ratio">12.3%</span>
+                                    <span class="breakdown-value" id="technical-debt-ratio">—</span>
                                 </div>
                             </div>
                         </div>
@@ -1533,333 +1557,271 @@
                     </div>
                 </div>
 
-                <!-- Advanced Observability & Service Mesh -->
+                <!-- Backend & LLM Status (mindX-real: /health, /system/status, inbound, rate-limits, Ollama) -->
                 <div class="platform-section">
                     <div class="section-header">
-                        <h2>🔍 Observability & Service Mesh</h2>
+                        <h2>🔌 Backend & LLM Status</h2>
                         <div class="section-metadata">
-                            <span class="metadata-badge">OpenTelemetry</span>
-                            <span class="metadata-badge">Prometheus</span>
-                            <span class="metadata-badge">Istio</span>
+                            <span class="metadata-badge">FastAPI</span>
+                            <span class="metadata-badge">BDI</span>
+                            <span class="metadata-badge">Ollama / LLM</span>
                         </div>
                         <div class="section-controls">
                             <button class="control-btn" onclick="refreshObservabilityMetrics()">Refresh</button>
-                            <button class="control-btn" onclick="exportDistributedTraces()">Export</button>
                         </div>
                     </div>
 
-                    <!-- Observability Metrics Grid -->
                     <div class="observability-grid">
                         <div class="observability-card tracing">
-                            <h3>Distributed Tracing</h3>
+                            <h3>Backend Health & Components</h3>
                             <div class="tracing-metrics">
                                 <div class="metric-row">
-                                    <span class="metric-label">Total Traces</span>
-                                    <span class="metric-value" id="total-traces">847,293</span>
-                                    <span class="metric-unit">/hour</span>
+                                    <span class="metric-label">Backend Status</span>
+                                    <span class="metric-value" id="backend-health-status">—</span>
+                                    <span class="metric-unit">/health</span>
                                 </div>
                                 <div class="metric-row">
-                                    <span class="metric-label">Avg Trace Depth</span>
-                                    <span class="metric-value" id="avg-trace-depth">12.7</span>
-                                    <span class="metric-unit">spans</span>
+                                    <span class="metric-label">Coordinator</span>
+                                    <span class="metric-value" id="backend-coordinator">—</span>
                                 </div>
                                 <div class="metric-row">
-                                    <span class="metric-label">Cross-Service Calls</span>
-                                    <span class="metric-value" id="cross-service-calls">94.2%</span>
-                                    <span class="metric-unit">of traces</span>
+                                    <span class="metric-label">AGInt</span>
+                                    <span class="metric-value" id="backend-agint">—</span>
                                 </div>
                                 <div class="metric-row">
-                                    <span class="metric-label">Trace Sampling Rate</span>
-                                    <span class="metric-value" id="trace-sampling-rate">15.7%</span>
-                                    <span class="metric-unit">adaptive</span>
+                                    <span class="metric-label">LLM Provider</span>
+                                    <span class="metric-value" id="backend-llm">—</span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="observability-card service-mesh">
-                            <h3>Service Mesh Performance</h3>
+                            <h3>Inbound API Metrics</h3>
                             <div class="mesh-metrics">
                                 <div class="metric-row">
-                                    <span class="metric-label">Mesh Latency Overhead</span>
-                                    <span class="metric-value" id="mesh-latency-overhead">2.3ms</span>
-                                    <span class="metric-unit">avg</span>
+                                    <span class="metric-label">Requests (total)</span>
+                                    <span class="metric-value" id="inbound-total-requests">—</span>
                                 </div>
                                 <div class="metric-row">
-                                    <span class="metric-label">Circuit Breakers</span>
-                                    <span class="metric-value" id="circuit-breakers-active">12</span>
-                                    <span class="metric-unit">active</span>
+                                    <span class="metric-label">Req/min (window)</span>
+                                    <span class="metric-value" id="inbound-rpm">—</span>
                                 </div>
                                 <div class="metric-row">
-                                    <span class="metric-label">Mutual TLS</span>
-                                    <span class="metric-value" id="mtls-handshakes">99.97%</span>
-                                    <span class="metric-unit">success rate</span>
+                                    <span class="metric-label">Avg Latency</span>
+                                    <span class="metric-value" id="inbound-avg-latency-ms">—</span>
+                                    <span class="metric-unit">ms</span>
                                 </div>
                                 <div class="metric-row">
-                                    <span class="metric-label">Traffic Splitting</span>
-                                    <span class="metric-value" id="traffic-splitting-active">8</span>
-                                    <span class="metric-unit">deployments</span>
+                                    <span class="metric-label">P99 Latency</span>
+                                    <span class="metric-value" id="inbound-p99-ms">—</span>
+                                    <span class="metric-unit">ms</span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="observability-card anomaly-detection">
-                            <h3>AI-Powered Anomaly Detection</h3>
+                            <h3>Rate Limits</h3>
                             <div class="anomaly-metrics">
                                 <div class="metric-row">
-                                    <span class="metric-label">Anomaly Score</span>
-                                    <span class="metric-value" id="anomaly-score">0.23</span>
-                                    <span class="metric-unit">baseline</span>
+                                    <span class="metric-label">Limit (req/min)</span>
+                                    <span class="metric-value" id="rate-limit-rpm">—</span>
                                 </div>
                                 <div class="metric-row">
-                                    <span class="metric-label">False Positives</span>
-                                    <span class="metric-value" id="false-positives">0.07%</span>
-                                    <span class="metric-unit">rate</span>
+                                    <span class="metric-label">Rejects</span>
+                                    <span class="metric-value" id="rate-limit-rejects">—</span>
                                 </div>
                                 <div class="metric-row">
-                                    <span class="metric-label">Detection Latency</span>
-                                    <span class="metric-value" id="detection-latency">1.2s</span>
-                                    <span class="metric-unit">avg</span>
-                                </div>
-                                <div class="metric-row">
-                                    <span class="metric-label">ML Model Accuracy</span>
-                                    <span class="metric-value" id="ml-model-accuracy">96.8%</span>
-                                    <span class="metric-unit">precision</span>
+                                    <span class="metric-label">Circuit Breaker</span>
+                                    <span class="metric-value" id="rate-limit-circuit">—</span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="observability-card chaos-engineering">
-                            <h3>Chaos Engineering Status</h3>
+                            <h3>System Resources</h3>
                             <div class="chaos-metrics">
                                 <div class="metric-row">
-                                    <span class="metric-label">Active Experiments</span>
-                                    <span class="metric-value" id="active-chaos-experiments">3</span>
-                                    <span class="metric-unit">running</span>
+                                    <span class="metric-label">CPU</span>
+                                    <span class="metric-value" id="system-cpu-pct">—</span>
+                                    <span class="metric-unit">%</span>
                                 </div>
                                 <div class="metric-row">
-                                    <span class="metric-label">Blast Radius</span>
-                                    <span class="metric-value" id="chaos-blast-radius">12.3%</span>
-                                    <span class="metric-unit">max impact</span>
+                                    <span class="metric-label">Memory</span>
+                                    <span class="metric-value" id="system-memory-pct">—</span>
+                                    <span class="metric-unit">%</span>
                                 </div>
                                 <div class="metric-row">
-                                    <span class="metric-label">Resilience Score</span>
-                                    <span class="metric-value" id="resilience-score">94.7%</span>
-                                    <span class="metric-unit">composite</span>
-                                </div>
-                                <div class="metric-row">
-                                    <span class="metric-label">Recovery Time</span>
-                                    <span class="metric-value" id="chaos-recovery-time">4.7s</span>
-                                    <span class="metric-unit">avg</span>
+                                    <span class="metric-label">Disk</span>
+                                    <span class="metric-value" id="system-disk-pct">—</span>
+                                    <span class="metric-unit">%</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Real-time Request Flow Visualization -->
+                    <!-- mindX Request Flow: Client → FastAPI → Coordinator → Agents → LLM -->
                     <div class="request-flow-visualization">
-                        <h3>Real-time Request Flow Analysis</h3>
+                        <h3>mindX Request Flow</h3>
                         <div class="flow-diagram" id="request-flow-diagram">
                             <div class="flow-node client">
                                 <div class="node-icon">🌐</div>
-                                <div class="node-label">Client Request</div>
-                                <div class="node-metrics">1,247 req/s</div>
+                                <div class="node-label">Client</div>
+                                <div class="node-metrics" id="flow-client-metrics">—</div>
                             </div>
                             <div class="flow-arrow">→</div>
                             <div class="flow-node ingress">
-                                <div class="node-icon">🚪</div>
-                                <div class="node-label">API Gateway</div>
-                                <div class="node-metrics">23ms avg</div>
-                            </div>
-                            <div class="flow-arrow">→</div>
-                            <div class="flow-node service-mesh">
-                                <div class="node-icon">🔗</div>
-                                <div class="node-label">Service Mesh</div>
-                                <div class="node-metrics">2.3ms overhead</div>
+                                <div class="node-icon">⚡</div>
+                                <div class="node-label">FastAPI</div>
+                                <div class="node-metrics" id="flow-fastapi-metrics">—</div>
                             </div>
                             <div class="flow-arrow">→</div>
                             <div class="flow-node agent-coordinator">
                                 <div class="node-icon">🎯</div>
-                                <div class="node-label">Agent Coordinator</div>
-                                <div class="node-metrics">67ms processing</div>
+                                <div class="node-label">Coordinator</div>
+                                <div class="node-metrics" id="flow-coordinator-metrics">—</div>
                             </div>
                             <div class="flow-arrow">→</div>
                             <div class="flow-node llm-inference">
                                 <div class="node-icon">🤖</div>
-                                <div class="node-label">LLM Inference</div>
-                                <div class="node-metrics">234ms avg</div>
+                                <div class="node-label">Agents / LLM</div>
+                                <div class="node-metrics" id="flow-llm-metrics">—</div>
                             </div>
                             <div class="flow-arrow">→</div>
                             <div class="flow-node response">
                                 <div class="node-icon">✅</div>
                                 <div class="node-label">Response</div>
-                                <div class="node-metrics">347ms P99</div>
+                                <div class="node-metrics" id="flow-response-metrics">—</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Infrastructure as Code & DevOps Excellence -->
-                <div class="platform-section">
+                <!-- IaC & DevOps Excellence (docs/platform-tab.md §5–6). Kubernetes not in use; DORA/IaC metrics N/A until measured. -->
+                <div class="platform-section iac-devops-section">
                     <div class="section-header">
                         <h2>🏗️ IaC & DevOps Excellence</h2>
-                        <div class="section-metadata">
-                            <span class="metadata-badge">Terraform</span>
-                            <span class="metadata-badge">GitOps</span>
-                            <span class="metadata-badge">Kubernetes</span>
-                        </div>
+                        <p class="section-subtitle">Per platform-tab.md §5–6. <strong>Kubernetes, Terraform, and GitOps are not in use.</strong> DORA and IaC metrics are N/A until measured.</p>
                         <div class="section-controls">
                             <button class="control-btn" onclick="refreshIaCMetrics()">Refresh</button>
-                            <button class="control-btn" onclick="viewInfrastructureCode()">Code</button>
-                            <button class="control-btn" onclick="runInfrastructureTests()">Tests</button>
+                            <a class="control-btn control-btn-link" href="https://github.com" target="_blank" rel="noopener">Code</a>
+                            <span class="control-btn control-btn-muted" title="Run: python -m pytest tests/">Tests</span>
                         </div>
                     </div>
 
-                    <!-- DevOps Metrics Dashboard -->
-                    <div class="devops-metrics-grid">
-                        <div class="devops-card deployment-metrics">
-                            <h3>Deployment Excellence</h3>
-                            <div class="deployment-stats">
-                                <div class="stat-item">
-                                    <div class="stat-label">Deployment Frequency</div>
-                                    <div class="stat-value" id="deployment-frequency">47/day</div>
-                                    <div class="stat-trend positive">↗ +12%</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-label">Lead Time for Changes</div>
-                                    <div class="stat-value" id="lead-time-changes">2.3min</div>
-                                    <div class="stat-trend positive">↗ -18%</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-label">Change Failure Rate</div>
-                                    <div class="stat-value" id="change-failure-rate">0.7%</div>
-                                    <div class="stat-trend positive">↗ -0.3%</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-label">Time to Restore</div>
-                                    <div class="stat-value" id="time-to-restore">4.2min</div>
-                                    <div class="stat-trend positive">↗ -22%</div>
-                                </div>
-                            </div>
+                    <div class="iac-devops-grid">
+                        <!-- 5. DevOps Excellence (DORA) - doc §5 -->
+                        <div class="iac-devops-card iac-devops-dora">
+                            <h3>5. DevOps Excellence <span class="badge-framework">DORA</span></h3>
+                            <p class="card-note">Metrics not yet collected. Framework for future use.</p>
+                            <table class="metrics-table">
+                                <thead>
+                                    <tr><th>Metric</th><th>Value</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Deployment Frequency</td>
+                                        <td><span id="deployment-frequency" class="metric-na">N/A</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Lead Time for Changes</td>
+                                        <td><span id="lead-time-changes" class="metric-na">N/A</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Change Failure Rate</td>
+                                        <td><span id="change-failure-rate" class="metric-na">N/A</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Time to Restore (MTTR)</td>
+                                        <td><span id="time-to-restore" class="metric-na">N/A</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
 
-                        <div class="devops-card infrastructure-metrics">
-                            <h3>Infrastructure Metrics</h3>
-                            <div class="infrastructure-stats">
-                                <div class="stat-item">
-                                    <div class="stat-label">IaC Coverage</div>
-                                    <div class="stat-value" id="iac-coverage">98.7%</div>
-                                    <div class="stat-trend positive">↗ +2.1%</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-label">Config Drift</div>
-                                    <div class="stat-value" id="config-drift">0.03%</div>
-                                    <div class="stat-trend positive">↗ -0.01%</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-label">Immutable Infra</div>
-                                    <div class="stat-value" id="immutable-infra-score">94.2%</div>
-                                    <div class="stat-trend positive">↗ +1.7%</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-label">Multi-Cloud</div>
-                                    <div class="stat-value" id="multi-cloud-coverage">87.3%</div>
-                                    <div class="stat-trend neutral">→ stable</div>
-                                </div>
-                            </div>
+                        <!-- 6. Infrastructure & Operations - doc §6 -->
+                        <div class="iac-devops-card iac-devops-infra">
+                            <h3>6. Infrastructure & Operations</h3>
+                            <p class="card-note">No Kubernetes at this time. Single-instance deployment.</p>
+                            <table class="metrics-table">
+                                <thead>
+                                    <tr><th>Area</th><th>Status</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Infrastructure as Code (IaC)</td>
+                                        <td><span class="metric-na">Not in use</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>GitOps (repo-to-cluster sync)</td>
+                                        <td><span class="metric-na">Not in use</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Chaos Engineering</td>
+                                        <td><span class="metric-na">N/A</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
 
-                        <div class="devops-card quality-gates">
-                            <h3>Quality Gates</h3>
-                            <div class="quality-stats">
-                                <div class="stat-item">
-                                    <div class="stat-label">Test Coverage</div>
-                                    <div class="stat-value" id="test-coverage">87.4%</div>
-                                    <div class="stat-trend positive">↗ +3.2%</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-label">Security Scans</div>
-                                    <div class="stat-value" id="security-scan-score">99.1%</div>
-                                    <div class="stat-trend positive">↗ +0.8%</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-label">Performance Tests</div>
-                                    <div class="stat-value" id="performance-test-pass">96.7%</div>
-                                    <div class="stat-trend positive">↗ +1.4%</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-label">Code Quality</div>
-                                    <div class="stat-value" id="code-quality-score">91.8%</div>
-                                    <div class="stat-trend positive">↗ +2.3%</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="devops-card cost-optimization">
-                            <h3>Cost Optimization</h3>
-                            <div class="cost-stats">
-                                <div class="stat-item">
-                                    <div class="stat-label">Cloud Cost Efficiency</div>
-                                    <div class="stat-value" id="cloud-cost-efficiency">87.4%</div>
-                                    <div class="stat-trend positive">↗ +5.2%</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-label">Resource Utilization</div>
-                                    <div class="stat-value" id="resource-utilization-score">76.4%</div>
-                                    <div class="stat-trend positive">↗ +2.8%</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-label">Reserved Instances</div>
-                                    <div class="stat-value" id="reserved-instances">68.9%</div>
-                                    <div class="stat-trend positive">↗ +4.1%</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-label">Waste Reduction</div>
-                                    <div class="stat-value" id="waste-reduction">23.7%</div>
-                                    <div class="stat-trend positive">↗ +8.3%</div>
-                                </div>
-                            </div>
+                        <!-- Current mindX tooling (real data) -->
+                        <div class="iac-devops-card iac-devops-current">
+                            <h3>Current mindX Tooling</h3>
+                            <p class="card-note">Live data from API.</p>
+                            <table class="metrics-table">
+                                <thead>
+                                    <tr><th>Metric</th><th>Value</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>GitHub Backup Status</td>
+                                        <td><span id="github-backup-status">—</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Next Backup</td>
+                                        <td><span id="github-next-backup">—</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Schedule</td>
+                                        <td><span id="github-schedule">—</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Tools Count</td>
+                                        <td><span id="platform-tools-count">—</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Test Suite</td>
+                                        <td>pytest (tests/)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
+                </div>
 
-                    <!-- GitOps Pipeline Visualization -->
-                    <div class="gitops-pipeline">
-                        <h3>GitOps Deployment Pipeline</h3>
-                        <div class="pipeline-stages">
-                            <div class="pipeline-stage commit">
-                                <div class="stage-icon">📝</div>
-                                <div class="stage-name">Code Commit</div>
-                                <div class="stage-metrics">47 commits/day</div>
-                                <div class="stage-status active">✓</div>
-                            </div>
-                            <div class="pipeline-arrow">→</div>
-                            <div class="pipeline-stage ci">
-                                <div class="stage-icon">🔨</div>
-                                <div class="stage-name">CI Pipeline</div>
-                                <div class="stage-metrics">2.3min avg</div>
-                                <div class="stage-status active">✓</div>
-                            </div>
-                            <div class="pipeline-arrow">→</div>
-                            <div class="pipeline-stage security">
-                                <div class="stage-icon">🛡️</div>
-                                <div class="stage-name">Security Scan</div>
-                                <div class="stage-metrics">99.1% pass</div>
-                                <div class="stage-status active">✓</div>
-                            </div>
-                            <div class="pipeline-arrow">→</div>
-                            <div class="pipeline-stage deploy">
-                                <div class="stage-icon">🚀</div>
-                                <div class="stage-name">Deploy to Prod</div>
-                                <div class="stage-metrics">47/day freq</div>
-                                <div class="stage-status active">✓</div>
-                            </div>
-                            <div class="pipeline-arrow">→</div>
-                            <div class="pipeline-stage monitor">
-                                <div class="stage-icon">📊</div>
-                                <div class="stage-name">Monitor & Alert</div>
-                                <div class="stage-metrics">0.7% fail rate</div>
-                                <div class="stage-status active">✓</div>
-                            </div>
+                <!-- Gödel core choices (audit log for Gödel machine behavior) -->
+                <div class="platform-section godel-choices-section">
+                    <div class="section-header">
+                        <h2>Gödel core choices</h2>
+                        <p class="section-subtitle">Last core decisions (source, type, chosen option, rationale, time). Read-only audit log.</p>
+                        <div class="section-controls">
+                            <button class="control-btn" id="godel-choices-refresh">Refresh</button>
                         </div>
+                    </div>
+                    <div class="godel-choices-table-wrap">
+                        <table class="metrics-table godel-choices-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Source</th>
+                                    <th>Type</th>
+                                    <th>Chosen option</th>
+                                    <th>Rationale</th>
+                                </tr>
+                            </thead>
+                            <tbody id="godel-choices-tbody">
+                                <tr><td colspan="5">Loading…</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -2220,6 +2182,22 @@
             </div>
         </div>
 
+        <!-- Gödel Tab: complete diagnostics (core choices audit + startup_agent + mindXagent↔Ollama) -->
+        <div id="godel-tab" class="tab-content">
+            <div id="godel-tab-inner" class="godel-tab-inner">
+                <div class="godel-tab-header">
+                    <h1>Gödel diagnostics</h1>
+                    <p class="godel-tab-subtitle">Single log of core choices: <strong>perception → options → chosen → rationale → outcome</strong>. Shows whether mindX is a Gödel machine. Data from startup_agent (Ollama when no API) and mindXagent↔Ollama (chosen inference/model).</p>
+                    <div class="godel-tab-controls">
+                        <button type="button" class="control-btn" id="godel-diagnostics-refresh" aria-label="Refresh Gödel diagnostics">Refresh</button>
+                    </div>
+                </div>
+                <div id="godel-diagnostics-output" class="godel-diagnostics-output" data-godel-complete="false">
+                    <p class="godel-loading">Loading core choices and diagnostics…</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Workflow Tab -->
         <div id="workflow-tab" class="tab-content">
             <!-- Workflow Overview Dashboard -->
@@ -2483,14 +2461,13 @@
             </div>
         </div>
 
-        <!-- Governance Tab -->
+        <!-- Governance Tab: DAIO Constitutional Governance -->
         <div id="governance-tab" class="tab-content">
-            <!-- Governance Overview Header -->
             <div class="governance-overview">
                 <div class="governance-header">
                     <div class="governance-title">
-                        <h1>⚖️ DAIO Constitutional Governance</h1>
-                        <div class="governance-subtitle">Code Is Law - Immutable Constitutional Framework & Agent Actions Validation</div>
+                        <h1>DAIO Constitutional Governance</h1>
+                        <div class="governance-subtitle">Code is law — immutable constitutional framework and agent action validation</div>
                     </div>
                     <div class="governance-controls">
                         <button id="validate-constitution-btn" class="governance-btn primary">
@@ -5136,8 +5113,18 @@
             </div>
         </div>
 
-        <!-- API Tab -->
+        <!-- API Tab: mindX API docs link + provider management -->
         <div id="api-tab" class="tab-content">
+            <div class="mindx-api-docs-blurb">
+                <h2>mindX API</h2>
+                <p>mindX exposes its own API for agents, UIs, and external systems. <strong>Backend port (default): 8000.</strong></p>
+                <ul>
+                    <li><strong>Base URL:</strong> <code id="mindx-api-base-url">http://localhost:8000</code></li>
+                    <li><strong>Interactive API docs (Swagger UI):</strong> <a id="mindx-api-docs-link" href="http://localhost:8000/docs" target="_blank" rel="noopener noreferrer">http://localhost:8000/docs</a> — browse endpoints, try requests, inspect schemas.</li>
+                    <li>ReDoc (if enabled): <a href="http://localhost:8000/redoc" target="_blank" rel="noopener noreferrer">http://localhost:8000/redoc</a></li>
+                </ul>
+                <p class="mindx-api-docs-note">See also <code>docs/API.md</code> for route groups and usage.</p>
+            </div>
             <div class="control-section">
                 <div class="section-header">
                     <h2>API Provider Management</h2>
@@ -5490,6 +5477,7 @@
             <div class="control-section">
                 <div class="section-header">
                     <h2>mindXagent - Gödel Machine Self-Improvement</h2>
+                    <p class="section-hint" style="margin: 6px 0 0 0;">All data from actual APIs and data/: GET /mindxagent/status, /mindxagent/startup, /mindxagent/logs/process, /godel/choices, /mindxagent/memory/logs, and live Ollama/thinking/actions.</p>
                     <div style="font-size: 11px; color: #888; margin-top: 5px;">
                         Powered by <a href="https://github.com/autoglm" target="_blank" style="color: #8b5cf6;">aGLM</a> | 
                         <a href="https://opensea.io/collection/aglm" target="_blank" style="color: #8b5cf6;">OpenSea Collection</a> | 
@@ -5500,7 +5488,7 @@
                     </div>
                 </div>
                 
-                <!-- Status Section -->
+                <!-- Status Section (from actual GET /mindxagent/status) -->
                 <div class="control-section status-section">
                     <h3>Status</h3>
                     <div id="mindxagent-status-display" class="status-display-enhanced">
@@ -5574,6 +5562,18 @@
                             </div>
                         </div>
                     </div>
+                </div>
+                
+                <!-- Startup & core flow (startup_agent → mindXagent → Ollama) -->
+                <div class="control-section" id="mindxagent-startup-flow-section">
+                    <h3>Startup &amp; core flow</h3>
+                    <p class="section-hint">Actual steps from startup_agent and mindXagent interaction with Ollama (input/response).</p>
+                    <div id="mindxagent-startup-flow-display" class="status-display" style="margin-top: 10px;">
+                        <div id="mindxagent-startup-steps" class="startup-steps-list"></div>
+                        <div id="mindxagent-startup-ollama-io" class="startup-ollama-io" style="margin-top: 12px;"></div>
+                        <div id="mindxagent-startup-terminal-log" class="startup-terminal-log" style="margin-top: 12px; max-height: 200px; overflow-y: auto;"></div>
+                    </div>
+                    <button type="button" id="refresh-mindxagent-startup-btn" class="refresh-btn" style="margin-top: 8px;">Refresh startup flow</button>
                 </div>
                 
                 <!-- Ollama Integration Section -->
@@ -5784,14 +5784,37 @@
                             </div>
                         </div>
 
-                        <!-- Memory Logs -->
+                        <!-- Logging from memory_agent (data/ as memory) -->
+                        <div class="logs-section control-section">
+                            <h4>Logging from memory_agent (data/ as memory)</h4>
+                            <p class="section-hint">Actual logs written by memory_agent across mindX: process trace (log_process) and Gödel choices.</p>
+                            <div class="mindxagent-logging-toolbar">
+                                <button type="button" id="refresh-mindxagent-process-trace-btn" class="refresh-btn">Refresh process trace</button>
+                                <button type="button" id="refresh-mindxagent-godel-choices-btn" class="refresh-btn">Refresh Gödel choices</button>
+                            </div>
+                            <div class="mindxagent-logging-panels">
+                                <div class="log-panel">
+                                    <h5>Process trace (process_trace.jsonl)</h5>
+                                    <div id="mindxagent-process-trace" class="process-trace-log" style="max-height: 280px; overflow-y: auto;">
+                                        <div class="empty-state">Loading…</div>
+                                    </div>
+                                </div>
+                                <div class="log-panel">
+                                    <h5>Gödel choices (mindx_meta_agent)</h5>
+                                    <div id="mindxagent-godel-choices" class="godel-choices-log" style="max-height: 280px; overflow-y: auto;">
+                                        <div class="empty-state">Loading…</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Memory Logs (STM / timestamped memory) -->
                         <div class="logs-section">
-                            <h4>Memory Storage Logs</h4>
+                            <h4>Memory Storage Logs (STM)</h4>
                             <div id="mindxagent-memory-logs" class="memory-logs">
                                 <div class="empty-state">
                                     <div class="empty-icon">🧠</div>
                                     <div class="empty-text">No memory logs yet</div>
-                                    <div class="empty-hint">Memory events will appear here as they are logged</div>
+                                    <div class="empty-hint">Memory events from data/memory/stm will appear here</div>
                                 </div>
                             </div>
                         </div>
@@ -6117,6 +6140,116 @@
             </div>
         </div>
 
+        <!-- Ollama Tab -->
+        <div id="ollama-tab" class="tab-content">
+            <div class="control-section">
+                <h2>Ollama Admin & Diagnostics</h2>
+                <div class="admin-subsection">
+                    <div class="ollama-admin-header">
+                        <h3>Connection Management</h3>
+                        <div class="admin-controls-inline">
+                            <button id="ollama-test-connection" class="action-btn primary">Test Connection</button>
+                            <button id="ollama-refresh" class="action-btn">Refresh</button>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="ollama-auto-refresh" checked>
+                                <span class="toggle-slider"></span>
+                                <span>Auto-refresh</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="ollama-connection-status" class="connection-status-container">
+                        <!-- Connection status will be populated here -->
+                    </div>
+                    <div class="ollama-metrics-section">
+                        <h4>API Metrics</h4>
+                        <div id="ollama-metrics-display" class="metrics-container">
+                            <!-- Metrics will be populated here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="admin-subsection ollama-settings-section">
+                    <h3>Settings</h3>
+                    <p class="section-hint">Calls per minute (rate limit) and how often the model list is updated. mindXagent Ollama connection.</p>
+                    <div class="ollama-settings-grid">
+                        <div class="form-group">
+                            <label for="ollama-settings-calls-per-minute">Calls per minute</label>
+                            <input type="number" id="ollama-settings-calls-per-minute" min="1" max="10000" step="1" placeholder="e.g. 60" title="Rate limit for Ollama API calls">
+                            <span class="form-hint">Rate limit (1–10000). Applied to mindXagent Ollama requests.</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="ollama-settings-model-update-interval">Model list update interval</label>
+                            <select id="ollama-settings-model-update-interval" title="How often to refresh the list of available models">
+                                <option value="0">Manual only</option>
+                                <option value="3600">Every hour</option>
+                                <option value="86400" selected>Every 24 hours</option>
+                                <option value="604800">Every 7 days</option>
+                            </select>
+                            <span class="form-hint">Periodic refresh of available models. Use “Refresh model list now” to update immediately.</span>
+                        </div>
+                    </div>
+                    <div class="ollama-settings-actions">
+                        <button type="button" id="ollama-settings-save" class="action-btn primary">Save settings</button>
+                        <button type="button" id="ollama-settings-refresh-models" class="action-btn secondary" title="Force refresh model list from Ollama">Refresh model list now</button>
+                    </div>
+                    <div id="ollama-settings-status" class="ollama-settings-status" aria-live="polite"></div>
+                </div>
+                <div class="admin-subsection">
+                    <h3>Interaction Testing</h3>
+                    <p class="ollama-admin-hint">Test the Ollama connection above, then pick a model and send a prompt. Response appears below.</p>
+                    <div class="ollama-interaction-panel">
+                        <div class="interaction-controls">
+                            <label for="ollama-admin-model-select">Model:</label>
+                            <select id="ollama-admin-model-select" class="model-select" title="Select an Ollama model (from GET /api/tags)">
+                                <option value="">Select model…</option>
+                            </select>
+                            <button id="ollama-admin-send" class="action-btn primary" type="button">Send</button>
+                            <button id="ollama-admin-reload-models" class="action-btn secondary" type="button" title="Reload model list from Ollama">Reload models</button>
+                        </div>
+                        <div id="ollama-admin-models-list" class="ollama-admin-models-list" aria-live="polite">
+                            <span class="ollama-models-list-hint">Click "Reload models" to load actual models from the connected Ollama server.</span>
+                        </div>
+                        <div class="interaction-input-group">
+                            <label for="ollama-admin-input">Prompt:</label>
+                            <textarea id="ollama-admin-input" class="interaction-input" rows="4" placeholder="e.g. Why is the sky blue? or Write a hello world in Python"></textarea>
+                        </div>
+                        <div class="interaction-output-group">
+                            <label for="ollama-admin-response">Response:</label>
+                            <textarea id="ollama-admin-response" class="interaction-output" rows="8" readonly placeholder="Response will appear here after you send."></textarea>
+                        </div>
+                        <div id="ollama-admin-history" class="interaction-history">
+                            <h5>Recent (prompt → response)</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="admin-subsection">
+                    <h3>Diagnostic Logs</h3>
+                    <div class="log-controls">
+                        <div class="log-filters">
+                            <label for="ollama-log-level">Log Level:</label>
+                            <select id="ollama-log-level" class="log-level-select">
+                                <option value="">All Levels</option>
+                                <option value="DEBUG">DEBUG</option>
+                                <option value="INFO" selected>INFO</option>
+                                <option value="WARNING">WARNING</option>
+                                <option value="ERROR">ERROR</option>
+                            </select>
+                            <label for="ollama-log-limit">Limit:</label>
+                            <select id="ollama-log-limit" class="log-limit-select">
+                                <option value="50">50</option>
+                                <option value="100" selected>100</option>
+                                <option value="200">200</option>
+                                <option value="500">500</option>
+                            </select>
+                            <button id="ollama-clear-logs" class="action-btn secondary">Clear Display</button>
+                        </div>
+                    </div>
+                    <div id="ollama-logs-display" class="logs-display">
+                        <!-- Logs will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Admin Tab -->
         <div id="admin-tab" class="tab-content">
             <!-- Top Menu Bar for Window Management -->
@@ -6193,6 +6326,25 @@
                 </div>
             </div>
             
+            <!-- Monitoring Metrics (inbound + outbound; scientific units: ms, bytes, req/min) -->
+            <div class="control-section">
+                <h2>Monitoring & Rate Control</h2>
+                <div class="admin-subsection">
+                    <h3>Inbound (clients → mindX)</h3>
+                    <p class="admin-hint">Request metrics: latency (ms), payload size (bytes), throughput (req/min). See <code>/api/monitoring/inbound</code>.</p>
+                    <div class="admin-controls-inline">
+                        <button id="admin-metrics-refresh" class="action-btn">Refresh metrics</button>
+                    </div>
+                    <div id="admin-inbound-metrics" class="metrics-container connection-status-container">
+                        <span class="loading-message">Load Admin tab or click Refresh to load metrics.</span>
+                    </div>
+                </div>
+                <div class="admin-subsection">
+                    <h3>Outbound (mindX → Ollama)</h3>
+                    <p class="admin-hint">Ollama API metrics appear below in Ollama Admin. Refresh connection or reload models to update.</p>
+                </div>
+            </div>
+            
             <!-- LLM Provider Management Section -->
             <div class="control-section">
                 <h2>LLM Provider Management</h2>
@@ -6251,23 +6403,29 @@
                 
                 <div class="admin-subsection">
                     <h3>Interaction Testing</h3>
+                    <p class="ollama-admin-hint">Test the Ollama connection above, then pick a model and send a prompt. Response appears below.</p>
                     <div class="ollama-interaction-panel">
                         <div class="interaction-controls">
-                            <select id="ollama-model-select" class="model-select">
-                                <option value="">Loading models...</option>
+                            <label for="ollama-admin-model-select">Model:</label>
+                            <select id="ollama-admin-model-select" class="model-select" title="Select an Ollama model (from GET /api/tags)">
+                                <option value="">Select model…</option>
                             </select>
-                            <button id="ollama-send-interaction" class="action-btn primary">Send</button>
+                            <button id="ollama-admin-send" class="action-btn primary" type="button">Send</button>
+                            <button id="ollama-admin-reload-models" class="action-btn secondary" type="button" title="Reload model list from Ollama">Reload models</button>
+                        </div>
+                        <div id="ollama-admin-models-list" class="ollama-admin-models-list" aria-live="polite">
+                            <span class="ollama-models-list-hint">Click “Reload models” to load actual models from the connected Ollama server.</span>
                         </div>
                         <div class="interaction-input-group">
-                            <label for="ollama-interaction-input">Input Prompt:</label>
-                            <textarea id="ollama-interaction-input" class="interaction-input" rows="4" placeholder="Enter your prompt here..."></textarea>
+                            <label for="ollama-admin-input">Prompt:</label>
+                            <textarea id="ollama-admin-input" class="interaction-input" rows="4" placeholder="e.g. Why is the sky blue? or Write a hello world in Python"></textarea>
                         </div>
                         <div class="interaction-output-group">
-                            <label for="ollama-response-output">Response:</label>
-                            <textarea id="ollama-response-output" class="interaction-output" rows="8" readonly></textarea>
+                            <label for="ollama-admin-response">Response:</label>
+                            <textarea id="ollama-admin-response" class="interaction-output" rows="8" readonly placeholder="Response will appear here after you send."></textarea>
                         </div>
-                        <div id="ollama-interaction-history" class="interaction-history">
-                            <h5>Recent Interactions</h5>
+                        <div id="ollama-admin-history" class="interaction-history">
+                            <h5>Recent (prompt → response)</h5>
                         </div>
                     </div>
                 </div>
@@ -6518,6 +6676,9 @@
         document.write('<script src="components/economy-tab.js?v=' + timestamp + '"><\/script>');
         document.write('<script src="components/security-tab.js?v=' + timestamp + '"><\/script>');
         document.write('<script src="components/platform-tab.js?v=' + timestamp + '"><\/script>');
+        document.write('<script src="components/godel-tab.js?v=' + timestamp + '"><\/script>');
+        document.write('<script src="components/admin-tab.js?v=' + timestamp + '"><\/script>');
+        document.write('<script src="components/ollama-tab.js?v=' + timestamp + '"><\/script>');
         document.write('<script src="components/ollama-admin-tab.js?v=' + timestamp + '"><\/script>');
         document.write('<script src="tab-config.js?v=' + timestamp + '"><\/script>');
         document.write('<script src="app.js?v=' + timestamp + '"><\/script>');

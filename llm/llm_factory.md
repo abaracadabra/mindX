@@ -94,3 +94,21 @@ llm_factory module is the cornerstone of mindX's interactions with various Large
     ```
 
 This modular and highly configurable `LLMFactory` provides mindX with a robust and adaptable interface to a variety of Large Language Models. mindX should expand this as necessary.
+
+## Resilience and Ollama as Fallback
+
+See **`llm/RESILIENCE.md`** for the full design. In short:
+
+- **Graded inference hierarchy:** Primary (e.g. Gemini, Mistral) → secondary (e.g. Groq) → **Ollama (failsafe)**. Configure `default_provider_preference_order` in `llm_factory_config.json` with **Ollama last** so that "best" selection uses cloud when available and Ollama only as fallback.
+- **Ollama CPU vs GPU:** **Localhost is CPU-only inference and last resort.** The machine at **10.0.0.155:18080** is the GPU server; use it for preferred inference and for requesting other/larger models. Test and access try primary then fallback (see `api/ollama/ollama_url.py`: `test_connection`, `switch_to_fallback`, `switch_to_primary`). mindX does not waste inference; CPU (localhost) is used only when GPU is unreachable or when running locally with base_url set to localhost.
+- **Resilient generate:** Use `ModelRegistry.generate_with_fallback(prompt, task_type, ...)` to try handlers in selection order; on failure (rate limit, 429, timeout, error) the next handler is tried, with Ollama last so inference can always proceed when the Ollama server is reachable.
+- **Model skills:** Each provider's models (including Ollama in `models/ollama.yaml`) define **task_scores** (reasoning, code_generation, simple_chat, etc.) so the ModelSelector ranks them in the same graded hierarchy.
+- **No inference connection:** When no connection is found (all providers fail and Ollama unreachable), mindX can install and configure Ollama on Linux via **`llm/ollama_bootstrap/aion.sh`** and continue self-improvement from core. Call `generate_with_fallback(..., try_bootstrap_on_no_connection=True)` to enable this; see `llm/ollama_bootstrap/README.md` and `llm/RESILIENCE.md`.
+
+## Rate limiter and provider YAML
+
+The limiter is **current with sane defaults** and easy to adjust. See **`docs/rate_limiting_optimization.md`** and **API**: `api/llm_routes.py` (rate limit status, update provider rate limits), `llm/rate_limiter.py` (`RateLimiter`, `DualLayerRateLimiter`, `quota_to_rpm_rph`). Each provider can define **rate_limits** and optional **quota** (e.g. `total_calls`, `period_days`) in **`models/<provider>.yaml`**; the factory uses `llm.<provider>.rate_limits` or `llm.<provider>.quota` from config to set rpm/rph (including even distribution of e.g. 10k calls over 30 days for a free tier).
+
+## Monitoring and optimization
+
+Measure **network**, **CPU**, **GPU**, and **efficiency** for optimization; connection monitoring can reduce latency. Refer to **audit and improve agent** (`tools/development/audit_and_improve_tool.py`) and `docs/rate_limiting_optimization.md` (monitoring section and API references).

@@ -1,0 +1,504 @@
+---
+# File bdi agent prompt
+# Defines explicit BDI Belief Desire Intention agent architecture
+version: zero point eight point zero # Version this BDI agent example aligns
+description: "A BDI Belief Desire Intention agent that demonstrates core BDI architecture principles" # Punctuation removed
+defaultTextModel: { model_id: "gemini-2.5-pro", temperature: 0.4 }
+defaultPlannerModel: { model_id: "gemini-1.5-flash", temperature: 0.7 } # Faster model planning
+tags: ["agent", "BDI", "belief-desire-intention", "architecture", "example"]
+---
+
+# --- Conceptual Imports ---
+# Assume these provide necessary base classes tool implementations
+# from prompt_framework import BaseAgent Tool PromptError APIError
+# from standard_tools import WebSearchTool NoteTakingTool
+# from core_prompts import ReasoningPrompt
+
+import asyncio # For simulation
+
+# --- Tool Definitions Conceptual ---
+
+class WebSearchTool: # Implements conceptual Tool interface
+ def __init__(self, api_key=None):
+ # Initialization logic tool
+ print("[Tool INFO] WebSearchTool initialized") # Punc removed
+ pass
+
+ async def execute(self, query: str, max_results=3) -> str:
+ # Performs web search returns concatenated results
+ print(f"[Tool ACTION] Executing web search for '{query}' max_results {max_results}") # Punc removed numeral unchanged in f string value
+ # Conceptual Actual web search API call would happen here
+ await asyncio.sleep(1) # Simulate network delay numeral unchanged in code value
+ # Simulate finding results
+ results = [ 
+ f"Result one about {query} Details", 
+ f"Result two related {query} More info", 
+ f"Result three mentioning {query} Snippet" 
+ ] # Numerals changed punc removed
+ print(f"[Tool SUCCESS] Found {len(results)} results") # Punc removed
+ return "\n---\n".join(results[:max_results]) # Separator punc kept
+
+class NoteTakingTool: # Implements conceptual Tool interface
+ def __init__(self):
+ # Initialization logic tool
+ print("[Tool INFO] NoteTakingTool initialized") # Punc removed
+ self.notes = {} # Dictionary store notes by topic
+ 
+ async def execute(self, action: str, topic: str, content: str = None) -> str:
+ # Performs note operations add retrieve update
+ print(f"[Tool ACTION] Note operation {action} for topic '{topic}'") # Punc removed
+ 
+ if action == "add":
+ if topic not in self.notes:
+ self.notes[topic] = []
+ self.notes[topic].append(content)
+ print(f"[Tool SUCCESS] Added note to topic '{topic}'") # Punc removed
+ return f"Note added to topic '{topic}'"
+ 
+ elif action == "retrieve":
+ if topic not in self.notes or not self.notes[topic]:
+ print(f"[Tool INFO] No notes found for topic '{topic}'") # Punc removed
+ return f"No notes found for topic '{topic}'"
+ print(f"[Tool SUCCESS] Retrieved {len(self.notes[topic])} notes for topic '{topic}'") # Punc removed
+ return "\n---\n".join(self.notes[topic])
+ 
+ elif action == "update":
+ if topic not in self.notes:
+ self.notes[topic] = []
+ self.notes[topic].append(content)
+ print(f"[Tool SUCCESS] Created and updated topic '{topic}'") # Punc removed
+ else:
+ # Replace last note with updated content
+ if self.notes[topic]:
+ self.notes[topic][-1] = content
+ else:
+ self.notes[topic].append(content)
+ print(f"[Tool SUCCESS] Updated note for topic '{topic}'") # Punc removed
+ return f"Note updated for topic '{topic}'"
+ 
+ else:
+ print(f"[Tool ERROR] Unknown action '{action}'") # Punc removed
+ return f"Error Unknown action '{action}'"
+
+# --- BDI Agent Definition ---
+
+class BDIAgent: # Conceptually inherits BaseAgent
+ """
+ Explicit implementation BDI Belief Desire Intention agent architecture
+ - Beliefs represent knowledge about world current state
+ - Desires represent goals agent wants achieve
+ - Intentions represent committed plans action agent decided execute
+ """
+
+ def __init__(self, domain: str, initial_goal: str = None):
+ print(f"[Agent INFO] Initializing BDIAgent domain '{domain}'") # Punc removed
+ 
+ # Domain agent operates within
+ self.domain = domain
+ 
+ # BDI core components
+ self.beliefs = {
+ "domain": domain,
+ "knowledge": {}, # Knowledge base facts beliefs
+ "environment_state": {}, # Current perceived state environment
+ "self_state": {
+ "status": "INITIALIZED", # Agent status
+ "last_action": None, # Last action performed
+ "action_result": None, # Result last action
+ "failure_reason": None # Reason failure if any
+ }
+ }
+ 
+ self.desires = {
+ "primary_goal": initial_goal, # Main goal agent trying achieve
+ "subgoals": [], # Decomposed subgoals
+ "priority_queue": [] # Prioritized goals
+ }
+ 
+ self.intentions = {
+ "current_plan": [], # Sequence actions achieve goal
+ "current_action": None, # Action currently executing
+ "commitment_strategy": "single_minded", # How agent commits plans
+ "plan_status": None # Status current plan
+ }
+ 
+ # Available tools agent can use
+ self.available_tools = {
+ "web_search": WebSearchTool(),
+ "note_taking": NoteTakingTool()
+ }
+ 
+ print(f"[Agent INFO] BDI components initialized domain {self.domain}") # Punc removed
+ print(f"[Agent INFO] Available tools {list(self.available_tools.keys())}") # Punc removed
+ 
+ if initial_goal:
+ self.set_goal(initial_goal)
+ 
+ # --- Belief Management ---
+ 
+ def update_belief(self, belief_key: str, belief_value, category: str = "knowledge"):
+ """Update agent beliefs based new information"""
+ if category == "knowledge":
+ self.beliefs["knowledge"][belief_key] = belief_value
+ elif category == "environment_state":
+ self.beliefs["environment_state"][belief_key] = belief_value
+ elif category == "self_state":
+ self.beliefs["self_state"][belief_key] = belief_value
+ print(f"[Agent BELIEF] Updated {category} belief {belief_key}") # Punc removed
+ 
+ def get_belief(self, belief_key: str, category: str = "knowledge"):
+ """Retrieve specific belief"""
+ if category == "knowledge":
+ return self.beliefs["knowledge"].get(belief_key)
+ elif category == "environment_state":
+ return self.beliefs["environment_state"].get(belief_key)
+ elif category == "self_state":
+ return self.beliefs["self_state"].get(belief_key)
+ return None
+ 
+ # --- Desire Management ---
+ 
+ def set_goal(self, goal: str, priority: int = 1):
+ """Set primary goal agent desires achieve"""
+ self.desires["primary_goal"] = goal
+ # Add goal priority queue if not already there
+ if goal not in [g["goal"] for g in self.desires["priority_queue"]]:
+ self.desires["priority_queue"].append({"goal": goal, "priority": priority})
+ # Sort priority queue highest priority first
+ self.desires["priority_queue"].sort(key=lambda x: x["priority"], reverse=True)
+ print(f"[Agent DESIRE] Set primary goal {goal} priority {priority}") # Punc removed
+ 
+ def add_subgoal(self, subgoal: str, priority: int = 2):
+ """Add subgoal decomposed from primary goal"""
+ if subgoal not in self.desires["subgoals"]:
+ self.desires["subgoals"].append(subgoal)
+ # Add subgoal priority queue
+ if subgoal not in [g["goal"] for g in self.desires["priority_queue"]]:
+ self.desires["priority_queue"].append({"goal": subgoal, "priority": priority})
+ # Sort priority queue highest priority first
+ self.desires["priority_queue"].sort(key=lambda x: x["priority"], reverse=True)
+ print(f"[Agent DESIRE] Added subgoal {subgoal} priority {priority}") # Punc removed
+ 
+ def get_current_goal(self):
+ """Get highest priority goal from queue"""
+ if self.desires["priority_queue"]:
+ return self.desires["priority_queue"][0]["goal"]
+ return self.desires["primary_goal"]
+ 
+ # --- Intention Management ---
+ 
+ def set_plan(self, plan: list):
+ """Set sequence actions achieve goal"""
+ self.intentions["current_plan"] = plan
+ self.intentions["plan_status"] = "READY"
+ print(f"[Agent INTENTION] Set plan {len(plan)} actions") # Punc removed
+ for i, action in enumerate(plan):
+ print(f"[Agent INTENTION] Plan step {i + 1} {action['type']} {action.get('params', {})}") # Punc removed
+ 
+ def get_next_action(self):
+ """Get next action from current plan"""
+ if self.intentions["current_plan"]:
+ next_action = self.intentions["current_plan"][0]
+ self.intentions["current_action"] = next_action
+ return next_action
+ return None
+ 
+ def action_completed(self, success: bool, result=None):
+ """Mark current action completed update plan"""
+ if success and self.intentions["current_plan"]:
+ # Remove completed action from plan
+ self.intentions["current_plan"].pop(0)
+ if not self.intentions["current_plan"]:
+ self.intentions["plan_status"] = "COMPLETED"
+ print("[Agent INTENTION] Plan completed successfully") # Punc removed
+ else:
+ print(f"[Agent INTENTION] Action completed {len(self.intentions['current_plan'])} actions remaining") # Punc removed
+ elif not success:
+ self.intentions["plan_status"] = "FAILED"
+ print("[Agent INTENTION] Plan failed") # Punc removed
+ 
+ # Update beliefs based action result
+ self.update_belief("last_action", self.intentions["current_action"], "self_state")
+ self.update_belief("action_result", result, "self_state")
+ 
+ self.intentions["current_action"] = None
+ 
+ # --- BDI Cycle Implementation ---
+ 
+ async def perceive(self, external_input=None):
+ """
+ Perceive environment update beliefs
+ First step BDI cycle
+ """
+ print("[Agent PERCEIVE] Perceiving environment") # Punc removed
+ 
+ # Update beliefs based external input if provided
+ if external_input:
+ print(f"[Agent PERCEIVE] Received external input {external_input}") # Punc removed
+ # Process external input update relevant beliefs
+ if isinstance(external_input, dict):
+ for key, value in external_input.items():
+ self.update_belief(key, value, "environment_state")
+ 
+ # Check if current plan still valid based updated beliefs
+ # Reconsider intentions if necessary
+ if self.intentions["plan_status"] == "READY" and self.intentions["current_plan"]:
+ # Simple check if plan still valid
+ # More sophisticated agents would check if beliefs invalidate plan
+ valid = True # Simplified always valid this example
+ if not valid:
+ print("[Agent PERCEIVE] Current plan no longer valid based updated beliefs") # Punc removed
+ self.intentions["plan_status"] = "INVALID"
+ 
+ async def deliberate(self):
+ """
+ Deliberate desires determine goals
+ Second step BDI cycle
+ """
+ print("[Agent DELIBERATE] Deliberating goals") # Punc removed
+ 
+ # Get current highest priority goal
+ current_goal = self.get_current_goal()
+ 
+ # Check if need generate new subgoals
+ if not self.desires["subgoals"] and current_goal:
+ # In real system might use LLM generate subgoals
+ print(f"[Agent DELIBERATE] Generating subgoals for {current_goal}") # Punc removed
+ 
+ # Example subgoal generation based domain
+ if "research" in current_goal.lower():
+ self.add_subgoal("Gather information topic")
+ self.add_subgoal("Analyze information identify key points")
+ self.add_subgoal("Synthesize findings coherent summary")
+ elif "decision" in current_goal.lower():
+ self.add_subgoal("Identify decision criteria")
+ self.add_subgoal("Evaluate options against criteria")
+ self.add_subgoal("Select best option based evaluation")
+ 
+ print(f"[Agent DELIBERATE] Generated {len(self.desires['subgoals'])} subgoals") # Punc removed
+ 
+ return current_goal
+ 
+ async def plan(self, goal: str):
+ """
+ Generate plan achieve goal
+ Third step BDI cycle
+ """
+ print(f"[Agent PLAN] Planning achieve goal {goal}") # Punc removed
+ 
+ # Check if already have valid plan
+ if self.intentions["plan_status"] == "READY" and self.intentions["current_plan"]:
+ print("[Agent PLAN] Already have valid plan continuing execution") # Punc removed
+ return True
+ 
+ # Generate new plan based goal
+ # In real system might use LLM generate plan
+ new_plan = []
+ 
+ if "research" in goal.lower():
+ # Research plan
+ new_plan = [
+ {"type": "SEARCH", "params": {"query": self.domain}},
+ {"type": "TAKE_NOTES", "params": {"topic": self.domain, "action": "add"}},
+ {"type": "ANALYZE", "params": {"topic": self.domain}},
+ {"type": "SYNTHESIZE", "params": {"topic": self.domain}}
+ ]
+ elif "decision" in goal.lower():
+ # Decision making plan
+ new_plan = [
+ {"type": "SEARCH", "params": {"query": f"{self.domain} options"}},
+ {"type": "IDENTIFY_CRITERIA", "params": {"domain": self.domain}},
+ {"type": "EVALUATE_OPTIONS", "params": {"domain": self.domain}},
+ {"type": "DECIDE", "params": {"domain": self.domain}}
+ ]
+ else:
+ # Generic plan
+ new_plan = [
+ {"type": "SEARCH", "params": {"query": self.domain}},
+ {"type": "ANALYZE", "params": {"topic": self.domain}},
+ {"type": "REPORT", "params": {"topic": self.domain}}
+ ]
+ 
+ # Set new plan
+ self.set_plan(new_plan)
+ return len(new_plan) > 0
+ 
+ async def execute(self):
+ """
+ Execute current intention action
+ Fourth step BDI cycle
+ """
+ print("[Agent EXECUTE] Executing current intention") # Punc removed
+ 
+ # Get next action from plan
+ action = self.get_next_action()
+ if not action:
+ print("[Agent EXECUTE] No action execute") # Punc removed
+ return False
+ 
+ print(f"[Agent EXECUTE] Executing action {action['type']} params {action['params']}") # Punc removed
+ 
+ try:
+ # Execute action based type
+ if action["type"] == "SEARCH":
+ # Use web search tool
+ search_tool = self.available_tools["web_search"]
+ query = action["params"]["query"]
+ results = await search_tool.execute(query=query)
+ 
+ # Update beliefs with search results
+ self.update_belief(f"search_results_{query}", results, "knowledge")
+ self.action_completed(True, results)
+ return True
+ 
+ elif action["type"] == "TAKE_NOTES":
+ # Use note taking tool
+ note_tool = self.available_tools["note_taking"]
+ topic = action["params"]["topic"]
+ note_action = action["params"]["action"]
+ 
+ # Get content based action
+ content = None
+ if note_action in ["add", "update"]:
+ # Get content from beliefs
+ search_results = self.get_belief(f"search_results_{topic}")
+ if search_results:
+ content = f"Notes on {topic}:\n{search_results}"
+ else:
+ content = f"No detailed information available on {topic} yet"
+ 
+ result = await note_tool.execute(action=note_action, topic=topic, content=content)
+ self.action_completed(True, result)
+ return True
+ 
+ elif action["type"] in ["ANALYZE", "SYNTHESIZE", "IDENTIFY_CRITERIA", "EVALUATE_OPTIONS", "DECIDE", "REPORT"]:
+ # These would use LLM in real implementation
+ print(f"[Agent EXECUTE] Simulating {action['type']} action") # Punc removed
+ await asyncio.sleep(1) # Simulate processing time
+ 
+ # Generate result based action type
+ result = f"Completed {action['type']} for {action['params'].get('topic', action['params'].get('domain', self.domain))}"
+ 
+ if action["type"] == "ANALYZE":
+ # Update beliefs with analysis results
+ self.update_belief(f"analysis_{action['params'].get('topic', self.domain)}", 
+ "Analysis complete identified key points information", 
+ "knowledge")
+ 
+ elif action["type"] == "SYNTHESIZE" or action["type"] == "REPORT":
+ # Final output for goal
+ result = f"""
+ Synthesis {self.domain}:
+ 
+ Based research analysis found following key points:
+ one The {self.domain} represents important concept field study
+ two Multiple approaches methodologies exist studying implementing {self.domain}
+ three Recent advancements show promising results applications {self.domain}
+ 
+ Conclusion: {self.domain} continues evolve offering significant potential future research applications
+ """
+ # Update beliefs with synthesis results
+ self.update_belief(f"synthesis_{action['params'].get('topic', self.domain)}", 
+ result, 
+ "knowledge")
+ 
+ self.action_completed(True, result)
+ return True
+ 
+ else:
+ print(f"[Agent EXECUTE] Unknown action type {action['type']}") # Punc removed
+ self.action_completed(False, f"Unknown action type {action['type']}")
+ return False
+ 
+ except Exception as e:
+ print(f"[Agent ERROR] Error executing action {e}") # Punc removed
+ self.action_completed(False, str(e))
+ self.update_belief("failure_reason", str(e), "self_state")
+ return False
+ 
+ async def run(self, max_cycles=10, external_input=None):
+ """
+ Run BDI agent perceive deliberate plan execute cycle
+ """
+ print(f"\n[Agent RUN] Starting BDI agent cycle domain {self.domain}") # Punc removed
+ 
+ cycle_count = 0
+ while cycle_count < max_cycles:
+ cycle_count += 1
+ print(f"\n--- BDI Cycle {cycle_count} / {max_cycles} ---") # Punc structure kept numeral ok in code
+ 
+ # Get current status
+ status = self.beliefs["self_state"]["status"]
+ print(f"[Agent STATUS] Current Status {status}") # Punc removed
+ 
+ # Check if reached terminal state
+ if status in ["COMPLETED", "FAILED"]:
+ print(f"[Agent RUN] Terminal state reached {status} Stopping") # Punc removed
+ break
+ 
+ # One Perceive
+ await self.perceive(external_input)
+ external_input = None # Only use external input first cycle
+ 
+ # Two Deliberate
+ current_goal = await self.deliberate()
+ 
+ # Three Plan
+ if current_goal:
+ plan_success = await self.plan(current_goal)
+ if not plan_success:
+ print("[Agent RUN] Failed create plan goal") # Punc removed
+ self.update_belief("status", "FAILED", "self_state")
+ self.update_belief("failure_reason", "Failed create plan", "self_state")
+ continue
+ 
+ # Four Execute
+ execute_success = await self.execute()
+ 
+ # Update status based execution
+ if self.intentions["plan_status"] == "COMPLETED":
+ self.update_belief("status", "COMPLETED", "self_state")
+ elif self.intentions["plan_status"] == "FAILED":
+ self.update_belief("status", "FAILED", "self_state")
+ 
+ # Small delay simulation clarity
+ await asyncio.sleep(0.5) # Numeric value for sleep seconds
+ 
+ if cycle_count >= max_cycles:
+ print("[Agent WARN] Maximum execution cycles reached Stopping") # Punc removed
+ if self.beliefs["self_state"]["status"] not in ["COMPLETED", "FAILED"]:
+ self.update_belief("status", "TIMED_OUT", "self_state")
+ 
+ print(f"[Agent RUN] Execution finished Final Status {self.beliefs['self_state']['status']}") # Punc removed
+ 
+ # Return final results
+ if self.beliefs["self_state"]["status"] == "COMPLETED":
+ # Get synthesis results if available
+ synthesis = self.get_belief(f"synthesis_{self.domain}")
+ if synthesis:
+ return synthesis
+ return f"Completed goal {self.desires['primary_goal']} but no synthesis available"
+ else:
+ return f"Agent failed timed out Reason {self.get_belief('failure_reason', 'self_state') or 'Max cycles reached'}" # Punc removed
+
+# --- Script Execution Block ---
+async def main():
+ print("[SCRIPT START] BDI Agent Architecture Demo") # Punc removed
+
+ # Define domain and goal
+ domain = "artificial intelligence ethics"
+ goal = "Research key principles AI ethics provide comprehensive overview"
+
+ # Instantiate BDI agent
+ bdi_agent = BDIAgent(domain=domain, initial_goal=goal)
+
+ # Run agent BDI cycle
+ final_result = await bdi_agent.run(max_cycles=8) # Limit cycles demo numeral ok code value
+
+ print("\n--- Agent Final Output ---") # Punc removed
+ print(final_result)
+ print("--------------------------") # Structure kept
+ print("[SCRIPT END]") # Punc removed
+
+# Conceptual async runner
+asyncio.run(main())

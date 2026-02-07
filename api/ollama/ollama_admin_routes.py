@@ -32,15 +32,11 @@ DIAGNOSTIC_LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def get_ollama_api() -> OllamaAPI:
-    """Get or create shared Ollama API instance"""
+    """Get or create shared Ollama API instance (base_url from models/ollama.yaml, env, or config)."""
     global _ollama_api
     if _ollama_api is None:
         config = Config()
-        _ollama_api = create_ollama_api(
-            host="10.0.0.155",
-            port=18080,
-            config=config
-        )
+        _ollama_api = create_ollama_api(config=config)
     return _ollama_api
 
 
@@ -62,11 +58,11 @@ async def log_diagnostic(
     data: Dict[str, Any],
     log_level: str = "INFO"
 ) -> None:
-    """Log diagnostic information to memory agent and file"""
+    """Log diagnostic information to memory agent (when available) and file."""
     try:
         memory_agent = get_memory_agent()
-        if memory_agent:
-            await memory_agent.save_timestamped_memory_with_embedding(
+        if memory_agent and hasattr(memory_agent, "save_timestamped_memory"):
+            await memory_agent.save_timestamped_memory(
                 agent_id=agent_id,
                 memory_type=MemoryType.PERFORMANCE,
                 content={
@@ -78,8 +74,10 @@ async def log_diagnostic(
                 context={"source": "ollama_admin", "timestamp": datetime.now().isoformat()},
                 tags=["ollama", "diagnostics", log_level.lower()]
             )
-        
-        # Also log to file for admin UI
+    except Exception as e:
+        logger.debug(f"Memory log skipped: {e}")
+
+    try:
         log_file = DIAGNOSTIC_LOG_DIR / f"{datetime.now().strftime('%Y%m%d')}.jsonl"
         log_entry = {
             "timestamp": datetime.now().isoformat(),
@@ -91,7 +89,7 @@ async def log_diagnostic(
         with open(log_file, "a") as f:
             f.write(json.dumps(log_entry) + "\n")
     except Exception as e:
-        logger.error(f"Failed to log diagnostic: {e}")
+        logger.error(f"Failed to write diagnostic log file: {e}")
 
 
 class OllamaTestRequest(BaseModel):
@@ -143,6 +141,7 @@ async def get_ollama_status():
             "success": True,
             "connection": {
                 "base_url": ollama_api.base_url,
+                "primary_url": getattr(ollama_api, "primary_url", None) or ollama_api.base_url,
                 "fallback_url": ollama_api.fallback_url,
                 "using_fallback": ollama_api.using_fallback,
                 "connected": test_result.get("success", False),
@@ -336,29 +335,31 @@ async def get_diagnostics(
         logs.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
         logs = logs[:limit]
         
-        # Also query memory agent if available
+        # Also pull recent Ollama diagnostics from memory agent if available
         memory_logs = []
         memory_agent = get_memory_agent()
-        if memory_agent:
+        if memory_agent and hasattr(memory_agent, "get_recent_memories"):
             try:
-                # Query memory for Ollama diagnostics
-                memory_results = await memory_agent.query_memories_semantic(
-                    query="ollama diagnostics",
-                    agent_id=agent_id,
+                memories = await memory_agent.get_recent_memories(
+                    agent_id=agent_id or "admin",
                     limit=min(limit, 50),
-                    min_similarity=0.5
+                    days_back=7
                 )
-                for memory in memory_results:
+                for mem in memories:
+                    tags = getattr(mem, "tags", []) or []
+                    if "ollama" not in tags and "diagnostics" not in tags:
+                        continue
+                    content = getattr(mem, "content", {}) or {}
                     memory_logs.append({
-                        "timestamp": memory.timestamp_utc.isoformat() if hasattr(memory.timestamp_utc, 'isoformat') else str(memory.timestamp_utc),
-                        "agent_id": memory.metadata.get("agent", "unknown"),
-                        "event_type": memory.content.get("event_type", "unknown"),
-                        "log_level": memory.content.get("log_level", "INFO"),
-                        "data": memory.content,
+                        "timestamp": getattr(mem, "timestamp", ""),
+                        "agent_id": getattr(mem, "agent_id", "unknown"),
+                        "event_type": content.get("event_type", "unknown"),
+                        "log_level": content.get("log_level", "INFO"),
+                        "data": content,
                         "source": "memory_agent"
                     })
             except Exception as e:
-                logger.warning(f"Error querying memory agent: {e}")
+                logger.warning(f"Error loading diagnostics from memory agent: {e}")
         
         # Combine and sort
         all_logs = logs + memory_logs

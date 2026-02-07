@@ -47,6 +47,7 @@ pathspec>=0.11.0
 # pgvectorscale Memory Integration
 psycopg2-binary>=2.9.0
 pgvector>=0.2.0
-sentence-transformers>=2.2.0
+# sentence-transformers>=2.2.0  # Optional: Requires torch (~1GB). Install manually if needed: pip install sentence-transformers
+# Note: Code uses try/except for sentence-transformers, so it's safe to make optional
 asyncpg>=0.28.0
 SQLAlchemy>=2.0.0

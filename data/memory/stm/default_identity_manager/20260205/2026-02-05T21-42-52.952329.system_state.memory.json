@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-02-05T21:42:52.952329",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "default_identity_manager",
+  "content": {
+    "process_name": "id_manager_address_derived",
+    "data": {
+      "entity_id": "automindx_agent_main",
+      "address": "0xa89Ddd6A53C267C966D3bba04e5b76BD9c2Cdf19",
+      "source": "private_key"
+    }
+  },
+  "context": {
+    "agent_id": "default_identity_manager"
+  },
+  "tags": [
+    "id_manager_address_derived",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "f98a79c32c9dc28c"
+}

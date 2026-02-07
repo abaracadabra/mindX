@@ -1,0 +1,95 @@
+/* Dapp template – styled.css
+ * Use for prototypes and hacks. Mirror tokens in production .ts/.tsx theme.
+ */
+:root {
+    --dapp-bg: #0a0a0a;
+    --dapp-panel: rgba(15, 15, 25, 0.95);
+    --dapp-text: #ffffff;
+    --dapp-muted: #b0b0b0;
+    --dapp-accent: #00a8ff;
+    --dapp-border: rgba(0, 168, 255, 0.3);
+    --dapp-radius: 8px;
+    --dapp-font: 'Share Tech Mono', 'Consolas', monospace;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: var(--dapp-font);
+    background: var(--dapp-bg);
+    color: var(--dapp-text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.dapp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: var(--dapp-panel);
+    border-bottom: 1px solid var(--dapp-border);
+}
+
+.dapp-header h1 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--dapp-accent);
+}
+
+#wallet-status {
+    color: var(--dapp-muted);
+    font-size: 0.875rem;
+}
+
+#btn-connect {
+    font-family: inherit;
+    padding: 0.5rem 1rem;
+    background: var(--dapp-accent);
+    color: #000;
+    border: none;
+    border-radius: var(--dapp-radius);
+    cursor: pointer;
+}
+
+#btn-connect:hover {
+    opacity: 0.9;
+}
+
+.dapp-main {
+    flex: 1;
+    padding: 1.5rem;
+}
+
+#content {
+    max-width: 64rem;
+    margin: 0 auto;
+}
+
+#content code {
+    background: var(--dapp-panel);
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.dapp-footer {
+    padding: 0.75rem 1.5rem;
+    border-top: 1px solid var(--dapp-border);
+    color: var(--dapp-muted);
+    font-size: 0.75rem;
+}
+
+.dapp-footer code {
+    color: var(--dapp-accent);
+}

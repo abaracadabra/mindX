@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DAIO Governance – daio.pythai.net</title>
+  <link rel="stylesheet" href="styled.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>DAIO Governance</h1>
+        <a href="https://daio.pythai.net" rel="noopener">daio.pythai.net</a>
+        ·
+        <a href="https://mindx.pythai.net" rel="noopener">mindx.pythai.net</a>
+        ·
+        <a href="https://agenticplace.pythai.net" rel="noopener">agenticplace.pythai.net</a>
+      </div>
+      <div class="wallet-row">
+        <span id="account"></span>
+        <button type="button" class="btn btn-primary" id="connect-btn">Connect wallet</button>
+      </div>
+    </header>
+
+    <div id="message" role="alert"></div>
+    <div id="loading">Connect your wallet and ensure the correct network. Set contract address in dapp.js (DAIO_BRIDGE_ADDRESS).</div>
+
+    <ul id="proposal-list"></ul>
+
+    <section class="create-form" aria-labelledby="create-heading">
+      <h2 id="create-heading">Create proposal</h2>
+      <label for="title">Title</label>
+      <input type="text" id="title" placeholder="Proposal title" />
+      <label for="description">Description</label>
+      <textarea id="description" placeholder="Proposal description"></textarea>
+      <label for="project-id">Project ID</label>
+      <input type="text" id="project-id" placeholder="e.g. mindx" />
+      <p class="hint">Proposal type: 0=Generic, 1=Treasury, 2=AgentRegistry, 3=ProjectExtension, 4=CrossProject. Target and execution data left empty for simple proposals.</p>
+      <button type="button" class="btn btn-primary" id="create-btn">Create proposal</button>
+    </section>
+  </div>
+
+  <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+  <script src="abi.js"></script>
+  <script src="dapp.js"></script>
+</body>
+</html>

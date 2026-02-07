@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-02-05T21:43:08.913273",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "unknown",
+  "content": {
+    "process_name": "system_state_shutdown",
+    "data": {
+      "event_type": "shutdown",
+      "timestamp": 1770352988.9115834,
+      "event_id": "shutdown_1770352988",
+      "resource_snapshot": null,
+      "performance_snapshot": null,
+      "agents_registered": [
+        "coordinator_agent"
+      ],
+      "agents_active": [
+        "coordinator_agent"
+      ],
+      "tools_registered": [],
+      "system_version": null,
+      "improvement_count": 0,
+      "rollback_count": 0,
+      "last_improvement": null,
+      "last_rollback": null,
+      "errors": [],
+      "warnings": [],
+      "metadata": {
+        "phase": "after_shutdown",
+        "duration_seconds": 4.027502775192261,
+        "steps_completed": [
+          "save_state",
+          "create_backup",
+          "archive_proven",
+          "shutdown_agents",
+          "cleanup"
+        ]
+      }
+    }
+  },
+  "context": {
+    "tracker": "system_state_tracker"
+  },
+  "tags": [
+    "system_state_shutdown",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "fe806661b1a811d9"
+}

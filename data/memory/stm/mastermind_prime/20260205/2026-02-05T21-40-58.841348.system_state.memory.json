@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-02-05T21:40:58.841348",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mastermind_prime",
+  "content": {
+    "process_name": "mastermind_agent_deletion_completed",
+    "data": {
+      "success": false,
+      "result": {
+        "status": "FAILURE",
+        "message": "Agent with ID 'test_delete_1770352844' not found in registry",
+        "agent_id": "test_delete_1770352844"
+      },
+      "target_agent_id": "test_delete_1770352844"
+    }
+  },
+  "context": {
+    "agent_id": "mastermind_prime"
+  },
+  "tags": [
+    "mastermind_agent_deletion_completed",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "b4fa764b746d6708"
+}
