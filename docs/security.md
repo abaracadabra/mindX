@@ -39,3 +39,8 @@ This would involve:
 -   Granting the service account running the MindX application the necessary IAM permissions to access these secrets.
 
 This change will provide a more robust, auditable, and scalable security model suitable for production deployments, but is not yet implemented.
+
+## 4. Dependabot / dependency vulnerabilities
+
+- **qs (npm), high – arrayLimit bypass DoS**  
+  Dependabot reported `qs` &lt; 6.14.1 (used transitively by Express/body-parser) as vulnerable to memory-exhaustion DoS via bracket notation. **Remediation:** Added `"overrides": { "qs": ">=6.14.1" }` in `mindx_frontend_ui/package.json` and `mindx_frontend_ui_backup/package.json`, then ran `npm install`. Lockfiles now resolve `qs` to 6.14.1; `npm audit` reports 0 vulnerabilities. (Date: 2026-02-07.)
