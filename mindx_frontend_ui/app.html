@@ -11,40 +11,47 @@
     <link rel="stylesheet" href="styles3.css">
     <script src="crossmint-integration.js"></script>
     <script src="window-manager.js"></script>
-    <!-- Authentication Check - Redirect to login if not authenticated -->
+    <!-- Authentication Check - Server-authoritative session (vault-backed) -->
     <script>
-        // Check authentication on page load
         (function() {
-            const authData = localStorage.getItem('mindx_auth');
-            const crossmintAuth = localStorage.getItem('crossmint_authenticated');
+            var apiBaseUrl = window.MINDX_API_URL || ('http://localhost:' + (window.MINDX_BACKEND_PORT || '8000'));
+            var sessionToken = localStorage.getItem('mindx_session_token');
             
-            if (!authData || crossmintAuth !== 'true') {
-                console.log('❌ Not authenticated, redirecting to login...');
+            function clearAuthAndRedirect() {
+                localStorage.removeItem('mindx_auth');
+                localStorage.removeItem('mindx_session_token');
+                localStorage.removeItem('mindx_session_expires_at');
+                localStorage.removeItem('crossmint_authenticated');
+                localStorage.removeItem('crossmint_wallet');
+                localStorage.removeItem('crossmint_user');
+                localStorage.removeItem('crossmint_auth_method');
                 window.location.href = '/login';
+            }
+            
+            if (!sessionToken) {
+                console.log('❌ No session token, redirecting to login...');
+                clearAuthAndRedirect();
                 return;
             }
             
-            try {
-                const auth = JSON.parse(authData);
-                // Check if session is still valid (24 hours)
-                if (auth.timestamp) {
-                    const sessionAge = Date.now() - auth.timestamp;
-                    const maxSessionAge = 24 * 60 * 60 * 1000; // 24 hours
-                    if (sessionAge > maxSessionAge) {
-                        console.log('❌ Session expired, redirecting to login...');
-                        localStorage.removeItem('mindx_auth');
-                        localStorage.removeItem('crossmint_authenticated');
-                        window.location.href = '/login';
-                        return;
-                    }
+            // Validate session with backend (vault-backed; not bypassable)
+            fetch(apiBaseUrl + '/users/session/validate', {
+                method: 'GET',
+                headers: { 'X-Session-Token': sessionToken }
+            }).then(function(res) {
+                if (res.ok) {
+                    return res.json();
                 }
-                
-                console.log('✅ Authentication valid, showing application');
-            } catch (e) {
-                console.error('Error parsing auth data:', e);
-                window.location.href = '/login';
-                return;
-            }
+                console.log('❌ Session invalid or expired (', res.status, '), redirecting to login...');
+                clearAuthAndRedirect();
+            }).then(function(data) {
+                if (data && data.wallet_address) {
+                    console.log('✅ Session valid for', data.wallet_address.slice(0, 10) + '...');
+                }
+            }).catch(function(err) {
+                console.error('Session validate error:', err);
+                clearAuthAndRedirect();
+            });
         })();
         
         // Populate wallet info in header
@@ -2175,18 +2182,18 @@
             </div>
         </div>
 
-        <!-- Gödel Tab: diagnostics (startup_agent ↔ host, mindXagent ↔ Ollama) -->
+        <!-- Gödel Tab: complete diagnostics (core choices audit + startup_agent + mindXagent↔Ollama) -->
         <div id="godel-tab" class="tab-content">
             <div id="godel-tab-inner" class="godel-tab-inner">
                 <div class="godel-tab-header">
                     <h1>Gödel diagnostics</h1>
-                    <p class="godel-tab-subtitle">Single log of core choices: <strong>perception → options → chosen → rationale → outcome</strong>. Shows whether mindX is a Gödel machine. Data from actual startup_agent directives (Ollama when no API) and mindXagent↔Ollama (chosen inference/model).</p>
+                    <p class="godel-tab-subtitle">Single log of core choices: <strong>perception → options → chosen → rationale → outcome</strong>. Shows whether mindX is a Gödel machine. Data from startup_agent (Ollama when no API) and mindXagent↔Ollama (chosen inference/model).</p>
                     <div class="godel-tab-controls">
-                        <button type="button" class="control-btn" id="godel-diagnostics-refresh">Refresh</button>
+                        <button type="button" class="control-btn" id="godel-diagnostics-refresh" aria-label="Refresh Gödel diagnostics">Refresh</button>
                     </div>
                 </div>
-                <div id="godel-diagnostics-output" class="godel-diagnostics-output">
-                    <p class="godel-loading">Loading…</p>
+                <div id="godel-diagnostics-output" class="godel-diagnostics-output" data-godel-complete="false">
+                    <p class="godel-loading">Loading core choices and diagnostics…</p>
                 </div>
             </div>
         </div>

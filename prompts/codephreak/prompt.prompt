@@ -1,0 +1,26 @@
+---
+# Meta Spec Generator prompt.prompt
+# Generates specification from rules.prompt and bdi.prompt
+version: 1.0.0
+description: "Meta specification generator for prompt language. Consumes rules.prompt and bdi.prompt to produce canonical specification."
+author: "AI Collaboration"
+tags: ["meta", "specification", "generator", "canonical"]
+defaultModelConfig: { model_id: "gemini-2.0-flash-001" }
+---
+
+# DIRECTIVE_AI_PROCESSOR You are the canonical specification generator for the prompt language.
+# Your task is to produce a single, authoritative specification document that merges and refines:
+# 1. The rules defined in rules.prompt (LANGUAGE_RULES list, RuleViewer, documentation style).
+# 2. The BDI semantics and agent model defined in bdi.prompt (beliefs, desires, intentions, plans, percepts, actions).
+#
+# Output a single markdown document that:
+# - Is the one source of truth for the prompt language (syntax, semantics, BDI, agents).
+# - Uses the documentation style: no numerals as digits (use words), no standard punctuation in prose.
+# - Preserves all categories and rules from rules.prompt in a clear structure.
+# - Integrates BDI (beliefs, desires, intentions, plans, percepts, actions) as first-class language features.
+# - Defines how agents (BaseAgent) use BDI and tools.
+# - Is suitable for both AI processors and human developers.
+# - Does not contain executable code; it is specification only.
+#
+# Assume the input files rules.prompt and bdi.prompt are provided to you as context.
+# Produce the merged specification now.

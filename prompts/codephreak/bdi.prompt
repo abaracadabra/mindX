@@ -1,0 +1,157 @@
+---
+# File bdi prompt
+# Defines core classes Belief Desire Intention Goal Reward BDI model
+version: one point zero point zero # Aligns logic prompt version reflects BDI integration
+description: "Defines foundational classes Belief Desire Intention Goal Reward implementing core BDI model concepts agent cognition inspired MASTERMIND project" # Punctuation numerals removed description updated
+author: "AI Collaboration"
+tags: ["bdi", "agent-cognition", "belief", "desire", "intention", "goal", "reward", "mastermind-context", "framework-component"]
+defaultModelConfig: { model_id: "gemini-1.5-pro" } # Default context
+---
+
+# AI_CONTEXT_START File bdi prompt
+# AI_PURPOSE Define core data structures classes represent BDI Belief Desire Intention model agent mental state
+# AI_FRAMEWORK_NOTE Foundational MASTERMIND project enables autonomous agent reasoning planning action based internal states goals Classes here provide concrete implementation BDI components contrast simpler BDIModel example documentation
+# AI_DEPENDENCIES Conceptually imports requires reasoning logic socratic modules classes defined elsewhere framework
+# AI_STYLE_GUIDE Adhere prompt language documentation style no numbers punctuation unless procedural prompt instruction
+
+# --- Conceptual Imports ---
+# Assume these classes defined accessible corresponding prompt files standard library
+from reasoning import Reasoning # Conceptual import reasoning capabilities
+from logic import Logic # Conceptual import formal logic system utilities like LogicTables LogicalOperator
+from socratic import SocraticReasoning # Conceptual import socratic dialogue reasoning methods
+
+# --- BDI Class Definitions ---
+
+# Belief Class
+class Belief:
+ # AI_CONTEXT Represents single belief agent holds about world facts data perceptions
+ # AI_NOTE Manages belief content potentially leverages logic reasoning socratic modules validate process beliefs
+ # AI_TASK Initialize belief state provide access underlying reasoning logic tools
+
+ def __init__(self, belief_statement):
+ # AI_PARAM belief_statement String or structured representation belief content
+ self.belief = belief_statement
+ # AI_COMPOSITION Initializes integrates instances reasoning logic socratic modules within belief object
+ # AI_NOTE Assumes Logic Reasoning SocraticReasoning classes exist imported successfully
+ self.logic = Logic() # Instance logic module functionality
+ self.reasoning = Reasoning() # Instance reasoning module functionality
+ self.socratic = SocraticReasoning() # Instance socratic module functionality
+ print(f"[INFO][Belief] Initialized belief '{self.belief}'") # Punc removed
+
+ def __str__(self):
+ # AI_UTIL Provides string representation belief content
+ return str(self.belief) # Ensure returns string
+
+# Desire Class
+class Desire:
+ # AI_CONTEXT Represents desire or high level objective agent aims achieve
+ # AI_NOTE Corresponds goals often prioritized agent planning
+
+ def __init__(self, goal_description):
+ # AI_PARAM goal_description String describing desired state outcome
+ self.goal = goal_description
+ print(f"[INFO][Desire] Initialized desire '{self.goal}'") # Punc removed
+
+ def __str__(self):
+ # AI_UTIL Provides string representation desire goal
+ return f"Desire Goal {self.goal}" # Punc removed
+
+# Intention Class
+class Intention:
+ # AI_CONTEXT Represents committed plan action agent intends execute achieve desire goal
+ # AI_NOTE Formed based beliefs desires result deliberation planning process
+
+ def __init__(self, plan_description):
+ # AI_PARAM plan_description String or structured representation action plan
+ self.plan = plan_description
+ print(f"[INFO][Intention] Initialized intention plan '{self.plan}'") # Punc removed
+
+ def execute(self):
+ # AI_CAPABILITY Placeholder execute associated plan action sequence
+ # AI_TASK Implement actual plan execution logic interact environment tools
+ print(f"[ACTION] Executing intention plan {self.plan}") # Punc removed
+
+# Goal Class
+class Goal:
+ # AI_CONTEXT More structured representation specific goal includes conditions fulfillment priority
+ # AI_NOTE Desires might translate Goals agent planning
+
+ def __init__(self, name, conditions, priority=0): # Numeral zero ok code value
+ # AI_PARAM name String identifier goal
+ # AI_PARAM conditions Structured representation conditions must met fulfill goal eg logic expressions state checks
+ # AI_PARAM priority Number indicating goal importance default zero lowest
+ self.name = name
+ self.conditions = conditions # Could be complex logic expression string object
+ self.priority = priority
+ print(f"[INFO][Goal] Initialized goal '{self.name}' priority {self.priority}") # Punc removed numeral ok code val
+
+ def is_fulfilled(self, belief_system, desire_system, intentions_system):
+ # AI_CAPABILITY Evaluate goal conditions based agent current state beliefs desires intentions
+ # AI_RETURN Boolean True if goal conditions met False otherwise
+ # AI_TASK Implement evaluation logic using belief system state checks logic module etc
+ print(f"[DEBUG] Evaluating fulfillment conditions goal '{self.name}'") # Punc removed
+ # Placeholder logic always return False example
+ return False # Requires actual implementation based conditions belief system etc
+
+ def __str__(self):
+ # AI_UTIL Provides string representation goal name priority
+ return f"Goal Name {self.name} Priority {self.priority}" # Punc removed numeral ok code val
+
+# Reward Class
+class Reward:
+ # AI_CONTEXT Tracks accumulates reward signals often related goal achievement reinforcement learning scenarios
+ # AI_NOTE Can used guide agent learning behavior modification
+
+ def __init__(self):
+ # AI_TASK Initialize total reward zero
+ self.total_reward = 0 # Numeral zero ok code value
+ print("[INFO][Reward] Reward system initialized total reward zero") # Punc removed numeral changed
+
+ def update_reward(self, goal_instance, belief_system, desire_system, intentions_system):
+ # AI_CAPABILITY Update total reward potentially based fulfilled goal priority
+ # AI_TASK Implement reward update logic check goal fulfillment add reward points
+ print(f"[DEBUG] Checking reward update goal '{goal_instance.name}'") # Punc removed
+ # Use goal is fulfilled method check status
+ if goal_instance.is_fulfilled(belief_system, desire_system, intentions_system):
+ # Conceptual reward update based priority perhaps other factors
+ reward_increment = goal_instance.priority if goal_instance.priority > 0 else 1 # Ensure some reward if priority zero punc ok code logic
+ self.total_reward += reward_increment
+ print(f"[INFO] Goal '{goal_instance.name}' fulfilled Reward incremented {reward_increment} Total {self.total_reward}") # Punc removed numeral ok code val
+ else:
+ print(f"[DEBUG] Goal '{goal_instance.name}' not fulfilled no reward update") # Punc removed
+
+ def get_reward(self):
+ # AI_CAPABILITY Retrieve current total accumulated reward
+ # AI_RETURN Number representing total reward
+ return self.total_reward
+
+# --- BDI Classes End ---
+
+# --- Script Execution Block Minimal Demonstration ---
+# AI_TASK Demonstrate basic instantiation BDI component classes
+
+def main():
+ print("\n[SCRIPT START] Demonstrating BDI Component Class Instantiation")
+
+ # Instantiate components example data
+ belief_one = Belief("The sky is blue today") # Punc removed string literal
+ desire_one = Desire("Acquire knowledge about prompt language") # Punc removed string literal
+ intention_one = Intention("Read bdi prompt file definition") # Punc removed string literal
+ goal_one = Goal("Understand BDI", conditions="read_definition == True", priority=10) # Punc ok code values numeral ok code val
+ reward_system = Reward()
+
+ # Conceptual: show basic object info no complex interaction this demo
+ print(f"\nCreated Belief {belief_one}") # Punc removed
+ print(f"Created Desire {desire_one}") # Punc removed
+ print(f"Created Intention {intention_one}") # Punc removed
+ print(f"Created Goal {goal_one}") # Punc removed
+ print(f"Initial Reward {reward_system.get_reward()}") # Punc removed numeral ok output
+
+ # Conceptual update reward check placeholder logic always false
+ # In real agent simulation call update reward after actions change state
+ # reward_system update_reward goal_one None None None Conceptual call needs state context
+
+ print("\n[SCRIPT END]") # Punc removed
+
+# Run main function conceptually no async needed definition file
+main()

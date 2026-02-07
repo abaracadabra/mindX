@@ -1,9 +1,8 @@
 /**
- * Gödel Tab: Diagnostics for startup_agent ↔ host and mindXagent ↔ Ollama
- *
- * Displays on screen:
- * - Startup Agent ↔ Host: sequence, terminal log, Ollama connection input/response
- * - mindXagent ↔ Ollama: conversation dialogue and inference status
+ * Gödel Tab: Single log of core choices (perception → options → chosen → rationale → outcome).
+ * Shows whether mindX is a Gödel machine. Data from startup_agent (Ollama when no API)
+ * and mindXagent↔Ollama (chosen inference/model). Also shows Startup Agent↔Host and
+ * mindXagent↔Ollama dialogue.
  *
  * @module GodelTab
  */
@@ -50,23 +49,39 @@ class GodelTab extends TabComponent {
         container.innerHTML = '<p class="godel-loading">Loading diagnostics…</p>';
         try {
             const [startupRes, convRes, choicesRes] = await Promise.all([
-                fetch(`${base}/mindxagent/startup`).then(r => r.json()).catch(() => ({})),
-                fetch(`${base}/mindxagent/ollama/conversation?limit=30`).then(r => r.json()).catch(() => ({})),
-                fetch(`${base}/godel/choices?limit=50`).then(r => r.json()).catch(() => ({}))
+                fetch(`${base}/mindxagent/startup`).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                fetch(`${base}/mindxagent/ollama/conversation?limit=30`).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                fetch(`${base}/godel/choices?limit=50`).then(async (r) => {
+                    if (!r.ok) return { choices: [], total: 0, error: r.statusText || 'Request failed' };
+                    try { return await r.json(); } catch (_) { return { choices: [], total: 0, error: 'Invalid response' }; }
+                }).catch((e) => ({ choices: [], total: 0, error: e && e.message ? e.message : 'Network error' }))
             ]);
             this.startupData = startupRes;
             this.conversationData = convRes;
-            this.choicesData = choicesRes;
+            this.choicesData = choicesRes && typeof choicesRes === 'object' ? choicesRes : { choices: [], total: 0 };
             this.renderDiagnostics(container);
+            container.setAttribute('data-godel-complete', 'true');
         } catch (e) {
-            container.innerHTML = '<p class="godel-error">Failed to load diagnostics.</p>';
+            container.innerHTML = '<p class="godel-error">Failed to load diagnostics. <button type="button" class="control-btn godel-inline-refresh">Refresh</button></p>';
+            const btn = container.querySelector('.godel-inline-refresh');
+            if (btn) btn.addEventListener('click', () => this.loadDiagnostics());
         }
     }
 
     renderDiagnostics(container) {
         const frag = document.createDocumentFragment();
 
-        // 1. Startup Agent ↔ Host
+        // 1. Core choices audit first: single log (perception → options → chosen → rationale → outcome)
+        const secChoices = document.createElement('section');
+        secChoices.className = 'godel-section godel-section-choices';
+        secChoices.innerHTML = '<h2 class="godel-section-title">Core choices audit</h2><p class="godel-section-desc">Single log: <strong>perception → options → chosen → rationale → outcome</strong>. Data from startup_agent (Ollama when no API) and mindXagent↔Ollama (chosen inference/model).</p>';
+        const choicesOut = document.createElement('div');
+        choicesOut.className = 'godel-diagnostics-block godel-choices-block';
+        choicesOut.appendChild(this.renderRecentChoices());
+        secChoices.appendChild(choicesOut);
+        frag.appendChild(secChoices);
+
+        // 2. Startup Agent ↔ Host
         const sec1 = document.createElement('section');
         sec1.className = 'godel-section';
         sec1.innerHTML = '<h2 class="godel-section-title">Startup Agent ↔ Host</h2>';
@@ -76,7 +91,7 @@ class GodelTab extends TabComponent {
         sec1.appendChild(hostOut);
         frag.appendChild(sec1);
 
-        // 2. mindXagent ↔ Ollama dialogue
+        // 3. mindXagent ↔ Ollama dialogue
         const sec2 = document.createElement('section');
         sec2.className = 'godel-section';
         sec2.innerHTML = '<h2 class="godel-section-title">mindXagent ↔ Ollama</h2>';
@@ -85,16 +100,6 @@ class GodelTab extends TabComponent {
         ollamaOut.appendChild(this.renderOllamaDialogue());
         sec2.appendChild(ollamaOut);
         frag.appendChild(sec2);
-
-        // 3. Core choices audit log (perception, options, chosen, why, outcome)
-        const sec3 = document.createElement('section');
-        sec3.className = 'godel-section';
-        sec3.innerHTML = '<h2 class="godel-section-title">Core choices audit</h2><p class="godel-section-desc">Single log: what was perceived, options considered, chosen, why, outcome.</p>';
-        const choicesOut = document.createElement('div');
-        choicesOut.className = 'godel-diagnostics-block godel-choices-block';
-        choicesOut.appendChild(this.renderRecentChoices());
-        sec3.appendChild(choicesOut);
-        frag.appendChild(sec3);
 
         container.innerHTML = '';
         container.appendChild(frag);
@@ -170,20 +175,52 @@ class GodelTab extends TabComponent {
         const wrap = document.createElement('div');
         const d = this.choicesData || {};
         const choices = d.choices || [];
-        let html = '<pre class="godel-pre">';
-        if (!choices.length) {
-            html += 'No core choices recorded yet.';
-        } else {
-            choices.forEach(c => {
-                const t = c.timestamp_utc || c.timestamp || '';
-                const src = c.source_agent || '';
-                const typ = c.choice_type || '';
-                const opt = (c.chosen_option != null ? String(c.chosen_option) : '').slice(0, 60);
-                html += `[${t}] ${src} | ${typ} | ${escapeText(opt)}\n`;
-            });
+        const err = d.error;
+
+        if (err) {
+            wrap.innerHTML = '<p class="godel-error">Could not load core choices: ' + escapeText(err) + '. Ensure backend is running and <button type="button" class="control-btn godel-inline-refresh">Refresh</button>.</p>';
+            const btn = wrap.querySelector('.godel-inline-refresh');
+            if (btn) btn.addEventListener('click', () => this.loadDiagnostics());
+            return wrap;
         }
-        html += '</pre>';
-        wrap.innerHTML = html;
+
+        if (!choices.length) {
+            wrap.innerHTML = '<p class="godel-muted godel-empty-desc">No core choices recorded yet. Choices appear when: startup_agent runs (Ollama bootstrap/improvement when no API), and mindXagent selects inference or model (e.g. Ollama). Run a directive or wait for startup to log choices.</p>';
+            return wrap;
+        }
+
+        const list = document.createElement('div');
+        list.className = 'godel-choices-list';
+        choices.forEach((c, i) => {
+            const card = document.createElement('div');
+            card.className = 'godel-choice-card';
+            const t = c.timestamp_utc || c.timestamp || '';
+            const timeLabel = t ? new Date(t).toLocaleString() : '—';
+            const src = escapeText(c.source_agent || '—');
+            const typ = escapeText(c.choice_type || '—');
+            const perception = escapeText((c.perception_summary != null ? String(c.perception_summary) : '').slice(0, 400));
+            const options = c.options_considered;
+            const optionsStr = Array.isArray(options) ? options.map(o => escapeText(String(o).slice(0, 80))).join(', ') : escapeText(String(options || '').slice(0, 200));
+            const chosen = escapeText((c.chosen_option != null ? String(c.chosen_option) : '—').slice(0, 300));
+            const rationale = escapeText((c.rationale != null ? String(c.rationale) : '').slice(0, 400));
+            const outcome = escapeText((c.outcome != null ? String(c.outcome) : '').slice(0, 200));
+            const llm = c.llm_model ? escapeText(String(c.llm_model)) : '';
+
+            card.innerHTML =
+                '<div class="godel-choice-meta">' +
+                    '<span class="godel-choice-time">' + timeLabel + '</span> ' +
+                    '<span class="godel-choice-source">' + src + '</span> ' +
+                    '<span class="godel-choice-type">' + typ + '</span>' +
+                    (llm ? ' <span class="godel-choice-llm">' + llm + '</span>' : '') +
+                '</div>' +
+                (perception ? '<div class="godel-choice-row"><span class="godel-choice-label">Perception</span><div class="godel-choice-value">' + perception + '</div></div>' : '') +
+                (optionsStr ? '<div class="godel-choice-row"><span class="godel-choice-label">Options considered</span><div class="godel-choice-value">' + optionsStr + '</div></div>' : '') +
+                '<div class="godel-choice-row"><span class="godel-choice-label">Chosen</span><div class="godel-choice-value">' + chosen + '</div></div>' +
+                (rationale ? '<div class="godel-choice-row"><span class="godel-choice-label">Rationale</span><div class="godel-choice-value">' + rationale + '</div></div>' : '') +
+                (outcome ? '<div class="godel-choice-row"><span class="godel-choice-label">Outcome</span><div class="godel-choice-value">' + outcome + '</div></div>' : '');
+            list.appendChild(card);
+        });
+        wrap.appendChild(list);
         return wrap;
     }
 }
@@ -196,4 +233,8 @@ function escapeText(s) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+}
+
+if (typeof window !== 'undefined') {
+    window.GodelTab = GodelTab;
 }

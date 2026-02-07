@@ -189,7 +189,7 @@ class CoordinatorAgent:
         self.performance_monitor = await get_performance_monitor_async(config_override=self.config)
         self.resource_monitor = await get_resource_monitor_async(memory_agent=self.memory_agent, config_override=self.config)
         if self.config.get("monitoring.resource.enabled", True):
-            self.resource_monitor.start_monitoring()
+            asyncio.create_task(self.resource_monitor.start_monitoring())
 
         # Initialize GitHub agent for event-driven backups
         try:

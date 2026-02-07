@@ -1,0 +1,227 @@
+---
+# File agent prompt
+# Defines simple autonomous agent researching topics
+version: zero point five point zero # Version this agent example aligns
+description: "A Research Assistant Agent that searches web summarizes findings" # Punctuation removed
+defaultTextModel: { model_id: "gemini-2.5-pro-exp-03-25", temperature: 0.5 }
+defaultPlannerModel: { model_id: "gemini-1.5-flash", temperature: 0.7 } # Faster model planning
+tags: ["agent", "autonomous", "research", "tool-use", "example"]
+---
+
+# --- Conceptual Imports ---
+# Assume these provide necessary base classes tool implementations
+# from prompt_framework import BaseAgent Tool PromptError APIError
+# from standard_tools import WebSearchTool A tool implementation
+# from core_prompts import SummarizationPrompt Using another prompt file as tool
+
+import asyncio # For simulation
+
+# --- Tool Definitions Conceptual ---
+# In real system might be defined elsewhere registered loaded
+
+class WebSearchTool: # Implements conceptual Tool interface
+ def __init__(self, api_key=None):
+ # Initialization logic tool
+ print("[Tool INFO] WebSearchTool initialized") # Punc removed
+ pass
+
+ async def execute(self, query: str, max_results=3) -> str:
+ # Performs web search returns concatenated results
+ print(f"[Tool ACTION] Executing web search for '{query}' max_results {max_results}") # Punc removed numeral unchanged in f string value
+ # Conceptual Actual web search API call would happen here
+ await asyncio.sleep(1) # Simulate network delay numeral unchanged in code value
+ # Simulate finding results
+ results = [ f"Result one about {query} Details", f"Result two related {query} More info", f"Result three mentioning {query} Snippet" ] # Numerals changed punc removed
+ print(f"[Tool SUCCESS] Found {len(results)} results") # Punc removed
+ return "\n---\n".join(results[:max_results]) # Separator punc kept
+
+# Assume SummarizationPrompt defined another prompt file can be instantiated
+# It would have async method like summarize text_to_summarize
+# from SummarizationPrompt import SummarizationPrompt Conceptual import
+
+# --- Agent Definition ---
+
+class ResearchAssistantAgent: # Conceptually inherits BaseAgent
+
+ def __init__(self, topic: str):
+ print(f"[Agent INFO] Initializing ResearchAssistantAgent topic '{topic}'") # Punc removed
+ self.topic = topic
+ self.goal = f"Provide concise summary key findings about '{topic}'" # Punc removed
+ self.state = {
+ "status": "INITIALIZED", # eg INITIALIZED SEARCHING SUMMARIZING ASKING_CLARIFICATION COMPLETE FAILED
+ "search_query": self.topic, # Initial query
+ "raw_findings": None,
+ "summary": None,
+ "last_action": None,
+ "failure_reason": None,
+ "clarification_needed": None
+ }
+ self.available_tools = {
+ "web_search": WebSearchTool(),
+ # Conceptual Instantiate summarization prompt tool
+ "summarizer": self._create_summarizer_tool() # Use helper example clarity
+ }
+ print(f"[Agent INFO] Goal set {self.goal}") # Punc removed
+ print(f"[Agent INFO] Available tools {list(self.available_tools.keys())}") # Punc removed
+
+ # Helper simulate loading summarizer tool
+ def _create_summarizer_tool(self):
+ # Simulates loading creating summarization tool instance
+ print("[Tool INFO] SummarizationTool conceptual initialized") # Punc removed
+ class SummarizerTool:
+ async def execute(self, text_to_summarize, topic_context):
+ print(f"[Tool ACTION] Summarizing text related '{topic_context}'") # Punc removed
+ # Conceptual LLM call summarization
+ # This internal prompt IS procedural retains punctuation etc
+ summary_prompt = f"Summarize the following text concisely (approx 150 words), focusing on '{topic_context}':\n\n{text_to_summarize}"
+ try:
+ summary = await AI_Interaction.generate_text(modelConfig=metadata.defaultTextModel, prompt=summary_prompt)
+ print("[Tool SUCCESS] Summarization complete") # Punc removed
+ return summary
+ except Exception as e:
+ print(f"[Tool ERROR] Summarization failed {e}") # Punc removed
+ return "Error during summarization" # Keep error message structure
+ return SummarizerTool()
+
+
+ def perceive(self, feedback=None):
+ # Updates agent state based new information simple version
+ print("[Agent PERCEIVE] Perceiving environment") # Punc removed
+ if feedback:
+ print(f"[Agent PERCEIVE] Received feedback {feedback}") # Punc removed
+ # Advanced logic could go here update state based feedback
+ if "clarification required" in feedback.lower():
+ self.state['status'] = "ASKING_CLARIFICATION"
+ self.state['clarification_needed'] = feedback # Store feedback
+
+ async def plan(self) -> str:
+ # Decides next action based current state goal
+ print("[Agent PLAN] Planning next action") # Punc removed
+ status = self.state['status']
+ action = "COMPLETE" # Default action
+
+ # Simple state machine logic
+ if status == "INITIALIZED": action = "SEARCH"
+ elif status == "SEARCHING" and self.state['raw_findings'] is None:
+ print("[Agent PLAN] Search failed previously or yielded no results Failing") # Punc removed
+ action = "FAIL"; self.state['failure_reason'] = "Search yielded no results or failed" # Keep error structure
+ elif status == "SEARCHING" and self.state['raw_findings']: action = "SUMMARIZE"
+ elif status == "SUMMARIZING" and self.state['summary'] is None:
+ print("[Agent PLAN] Summarization failed previously Failing") # Punc removed
+ action = "FAIL"; self.state['failure_reason'] = "Summarization failed" # Keep error structure
+ elif status == "SUMMARIZING" and self.state['summary']:
+ # Simple check if summary mentions needing clarification conceptual
+ if "needs clarification" in self.state['summary'].lower() or "ambiguous" in self.state['summary'].lower():
+ action = "ASK_CLARIFICATION"; self.state['clarification_needed'] = "Summary generated but indicates ambiguity or requires clarification" # Punc removed
+ else: action = "COMPLETE"
+ elif status == "ASKING_CLARIFICATION":
+ print("[Agent PLAN] Waiting clarification no input mechanism shown Failing") # Punc removed
+ action = "FAIL"; self.state['failure_reason'] = "Requires clarification cannot receive interactive input this example" # Punc removed
+
+ # Conceptual Advanced Planning block removed brevity kept simple state machine this example
+
+ print(f"[Agent PLAN] Decided Action {action}") # Punc removed
+ return action
+
+ async def act(self, action: str):
+ # Executes planned action using available tools internal logic
+ print(f"[Agent ACT] Executing Action {action}") # Punc removed
+ self.state['last_action'] = action
+ original_status = self.state['status'] # Store status before action
+
+ try:
+ if action == "SEARCH":
+ self.state['status'] = "SEARCHING" # Update status before async call
+ query = self.state['search_query']
+ search_tool = self.available_tools['web_search']
+ findings = await search_tool.execute(query=query)
+ self.state['raw_findings'] = findings
+ # Status remains SEARCHING until planning decides next step
+
+ elif action == "SUMMARIZE":
+ self.state['status'] = "SUMMARIZING"
+ if not self.state['raw_findings']: raise ValueError("Cannot summarize without findings") # Keep error structure
+ summarizer_tool = self.available_tools['summarizer']
+ summary = await summarizer_tool.execute(text_to_summarize=self.state['raw_findings'], topic_context=self.topic)
+ self.state['summary'] = summary
+ # Status remains SUMMARIZING until planning decides next step
+
+ elif action == "ASK_CLARIFICATION":
+ self.state['status'] = "WAITING_FOR_CLARIFICATION"
+ # In real system might output question trigger UI element
+ print(f"[Agent ACT] Clarification required {self.state.get('clarification_needed', 'Please provide more details')}") # Punc removed
+ # Agent waits perceive get feedback
+
+ elif action == "COMPLETE":
+ self.state['status'] = "COMPLETE"
+ print(f"[Agent ACT] Goal achieved Final Summary\n{self.state['summary']}") # Punc removed
+
+ elif action == "FAIL":
+ self.state['status'] = "FAILED"
+ print(f"[Agent ACT] Action resulted failure state Reason {self.state.get('failure_reason', 'Unknown')}") # Punc removed
+
+ else:
+ print(f"[Agent WARN] Unknown action {action} requested") # Punc removed
+ self.state['status'] = original_status # Revert status if action unknown
+
+ except Exception as e:
+ print(f"[Agent ERROR] Error during action {action} {e}") # Punc removed
+ self.state['status'] = "FAILED"; self.state['failure_reason'] = str(e)
+
+
+ async def run(self, max_cycles=10):
+ # Runs agent perceive plan act loop until goal met max cycles reached
+ print(f"\n[Agent RUN] Starting execution cycle goal {self.goal}") # Punc removed
+ cycle_count = 0
+ while cycle_count < max_cycles:
+ cycle_count += 1
+ print(f"\n--- Cycle {cycle_count} / {max_cycles} ---") # Punc structure kept numeral ok in code
+ current_status = self.state['status']
+ print(f"[Agent STATUS] Current Status {current_status}") # Punc removed
+
+ if current_status in ["COMPLETE", "FAILED"]:
+ print(f"[Agent RUN] Terminal state reached {current_status} Stopping") # Punc removed
+ break
+
+ # One Perceive simple version here
+ self.perceive() # In more complex agent might take external input
+
+ # Two Plan
+ next_action = await self.plan()
+
+ # Three Act
+ await self.act(next_action)
+
+ # Small delay simulation clarity
+ await asyncio.sleep(0.5) # Numeric value for sleep seconds
+
+ if cycle_count >= max_cycles:
+ print("[Agent WARN] Maximum execution cycles reached Stopping") # Punc removed
+ if self.state['status'] not in ["COMPLETE", "FAILED"]: self.state['status'] = "TIMED_OUT"
+
+ print(f"[Agent RUN] Execution finished Final Status {self.state['status']}") # Punc removed
+ if self.state['status'] == 'COMPLETE': return self.state['summary']
+ else: return f"Agent failed timed out Reason {self.state.get('failure_reason', 'Max cycles reached')}" # Punc removed
+
+
+# --- Script Execution Block ---
+async def main():
+ print("[SCRIPT START] Research Assistant Agent Demo") # Punc removed
+
+ # Define research topic
+ topic_to_research = "BDI agent architecture" # Punc removed
+
+ # Instantiate agent
+ research_agent = ResearchAssistantAgent(topic=topic_to_research)
+
+ # Run agent main loop
+ final_result = await research_agent.run(max_cycles=5) # Limit cycles demo numeral ok code value
+
+ print("\n--- Agent Final Output ---") # Punc removed
+ print(final_result)
+ print("--------------------------") # Structure kept
+ print("[SCRIPT END]") # Punc removed
+
+# Conceptual async runner
+# import asyncio Standard Python library used conceptual async simulation punctuation removed
+asyncio.run(main())

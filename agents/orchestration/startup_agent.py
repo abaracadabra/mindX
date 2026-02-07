@@ -553,7 +553,7 @@ class StartupAgent:
                         "host": config_host,
                         "port": config_port,
                         "models_count": len(models),
-                        "models": [m.get("name", "unknown") for m in models[:5]]  # First 5 model names
+                        "models": [m.get("name", m) if isinstance(m, str) else m.get("name", "unknown") for m in models[:30]],  # Full list for mindXagent model choice (up to 30)
                     }
                 else:
                     return {
@@ -1691,8 +1691,9 @@ Format as JSON with keys: suggestions (list), priorities, impacts, safe_to_apply
                     logger.debug(f"{self.log_prefix} mindXagent not available: {e}")
                     return
             
-            # Prepare startup information for mindXagent
+            # Prepare startup information for mindXagent (pipe: list models → choice → interaction)
             startup_info = {
+                "startup_command": "begin_ollama_interaction",
                 "ollama_connected": ollama_result.get("connected", False),
                 "ollama_base_url": ollama_result.get("base_url"),
                 "ollama_models": ollama_result.get("models", []),
@@ -1700,7 +1701,7 @@ Format as JSON with keys: suggestions (list), priorities, impacts, safe_to_apply
                 "capabilities_registered": ollama_result.get("capabilities_registered", 0),
                 "startup_timestamp": time.time(),
                 "terminal_log_path": str(self.terminal_log_path),
-                "improvement_opportunities": []
+                "improvement_opportunities": [],
             }
             
             # Get terminal log feedback for mindXagent (full log content)

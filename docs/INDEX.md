@@ -186,7 +186,7 @@ All tool documentation is organized in the `tools/` folder. Tools are now organi
 - **[Belief System](belief_system.md)** - Belief management and confidence scoring
 - **[Memory System](memory.md)** - Memory architecture and persistence
 - **[pgvectorscale Memory Integration](pgvectorscale_memory_integration.md)** - Semantic memory with vector similarity search
-- **[Vault System](vault_system.md)** - Persistent local storage for access credentials and URL/IP access tracking for ML inference
+- **[Vault System](vault_system.md)** - Secure credential storage, URL/IP access tracking, **vault-backed user sessions** (wallet auth), **per-wallet user folders** (signature-scoped), and frontend `vault_manager.js`. Optional **access gate** (NFT/fungible) for session issuance; see [LIT_AND_ACCESS_ISSUANCE](LIT_AND_ACCESS_ISSUANCE.md). DAIO **keyminter** contracts ([VaultKeyDynamic](daio/contracts/docs/keyminter/KEYMINTER_VAULT_ACCESS.md), [VaultKeyIntelligent](daio/contracts/keyminter/README.md)) mint vault access keys.
 - **[Identity Management](IDENTITY.md)** - Identity and authentication systems
 - **[Orchestration](ORCHESTRATION.md)** - System orchestration and coordination
 - **[System Architecture Map](system_architecture_map.md)** - Complete system architecture overview and component organization
@@ -222,6 +222,7 @@ All tool documentation is organized in the `tools/` folder. Tools are now organi
 
 #### Integration Guides
 
+- **[Lit Protocol and Access Issuance](LIT_AND_ACCESS_ISSUANCE.md)** - Wallet signature as identity; optional NFT/fungible gate for session issuance; mapping to Lit Protocol social login and ACCs
 - **[Token Calculator Integration Guide](TokenCalculatorTool_Integration_Guide.md)** - Token calculator integration
 - **[CEO Agent Battle Hardened Guide](CEO_AGENT_BATTLE_HARDENED_GUIDE.md)** - CEO agent production guide
 - **[MindTerm Integration](mindterm_integration.md)** - MindTerm integration guide
@@ -412,6 +413,7 @@ The THOT ecosystem provides comprehensive lifecycle management for neural networ
 - **Learning**: Strategic Evolution Agent, Goal Management, Plan Management
 - **Monitoring**: Performance Monitor, Resource Monitor, Error Recovery
 - **Identity**: Guardian Agent, ID Manager, Coral ID Agent
+- **Vault & Auth**: Wallet sign-in → vault-backed session; `GET /users/session/validate`, `POST /users/logout`; vault user folders `GET/PUT/DELETE /vault/user/keys`; access gate (optional ERC20/ERC721); frontend `vault_manager.js`; [LIT_AND_ACCESS_ISSUANCE](LIT_AND_ACCESS_ISSUANCE.md); DAIO keyminter (VaultKeyDynamic, VaultKeyIntelligent)
 - **Development**: Simple Coder, Enhanced Simple Coder, Code Generation Tools
 
 ---

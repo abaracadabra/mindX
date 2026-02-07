@@ -15654,6 +15654,22 @@ details pre {
 #godel-tab .godel-msg-content { margin: 0.25rem 0 0 0; font-size: 0.75rem; white-space: pre-wrap; word-break: break-word; max-height: 120px; overflow-y: auto; }
 #godel-tab .godel-loading, #godel-tab .godel-muted { color: #64748b; }
 #godel-tab .godel-error { color: #f87171; }
+#godel-tab .godel-section-desc { margin: 0 0 0.75rem 0; font-size: 0.8rem; color: #94a3b8; }
+#godel-tab .godel-empty-desc { max-width: 560px; }
+#godel-tab .godel-inline-refresh { margin-left: 0.5rem; }
+#godel-tab .godel-choices-list { display: flex; flex-direction: column; gap: 1rem; }
+#godel-tab .godel-choice-card {
+    background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(148, 163, 184, 0.15); border-radius: 6px;
+    padding: 0.85rem 1rem; font-size: 0.8rem;
+}
+#godel-tab .godel-choice-meta { margin-bottom: 0.6rem; color: #94a3b8; font-size: 0.75rem; }
+#godel-tab .godel-choice-time { font-weight: 600; color: #cbd5e1; }
+#godel-tab .godel-choice-source { margin-left: 0.5rem; }
+#godel-tab .godel-choice-type { margin-left: 0.35rem; color: #64748b; }
+#godel-tab .godel-choice-llm { margin-left: 0.35rem; color: #818cf8; }
+#godel-tab .godel-choice-row { margin-top: 0.4rem; }
+#godel-tab .godel-choice-label { display: inline-block; min-width: 7rem; font-weight: 600; color: #94a3b8; vertical-align: top; }
+#godel-tab .godel-choice-value { display: inline; color: #e2e8f0; word-break: break-word; }
 
 .control-btn-link {
     text-decoration: none;

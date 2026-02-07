@@ -4,6 +4,8 @@
 **Status:** Ready for deployment  
 **Version:** 1.0.0
 
+**Full technical summary and usage:** **[USAGE.md](USAGE.md)** — complete API, data structures, authorization, deployment, minting, agent interaction, THOT linking, and integration (mindX, keyminter, AgenticPlace).
+
 ---
 
 ## Overview
@@ -37,7 +39,7 @@ Extends DynamicNFT with intelligence.
 Factory contract for easy deployment.
 
 **Functions:**
-- `deployIntelligentNFT(string memory name, string memory symbol)` - Deploy new iNFT contract
+- `deployIntelligentNFT(string memory name, string memory symbol, address agenticPlace)` - Deploy new iNFT contract
 - `getDeployedContracts(address deployer)` - Get contracts by deployer
 - `getTotalContracts()` - Get total deployed contracts
 
@@ -86,4 +88,4 @@ struct IntelligenceConfig {
 
 ---
 
-**Last Updated:** 2025-01-27
+**Last Updated:** 2026-02-05

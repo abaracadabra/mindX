@@ -78,13 +78,10 @@ class Config:
             model_data = load_yaml_file(yaml_file)
             
             if model_data:
-                # Structure the data to be merged into the main config
-                # Expected structure: llm.<provider>.models
+                # Merge full provider YAML under llm.<provider> so llm.grok.models is the list, etc.
                 provider_config = {
                     "llm": {
-                        provider_name: {
-                            "models": model_data
-                        }
+                        provider_name: model_data
                     }
                 }
                 self._deep_merge(self.config_data, provider_config)

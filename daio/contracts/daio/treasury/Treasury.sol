@@ -10,7 +10,9 @@ import "../constitution/DAIO_Constitution.sol";
 /**
  * @title Treasury
  * @notice Multi-project treasury with 15% tithe and allocation management
- * @dev Supports native ETH and ERC20 tokens, enforces constitutional constraints
+ * @dev Can own any and all assets: native ETH (receive), ERC20 (depositERC20 + direct transfer),
+ *      ERC721 and ERC1155 (implements receiver; use recoverERC721/recoverERC1155 to transfer out).
+ *      Supports DAI and other stablecoins; preferred stablecoin configurable per deployment.
  */
 contract Treasury is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -79,6 +81,8 @@ contract Treasury is Ownable, ReentrancyGuard {
     );
     event SignerAdded(address indexed signer);
     event SignerRemoved(address indexed signer);
+    event ERC721Recovered(address indexed token, address indexed to, uint256 tokenId);
+    event ERC1155Recovered(address indexed token, address indexed to, uint256 id, uint256 amount);
 
     modifier onlyGovernance() {
         require(msg.sender == owner(), "Only governance");
@@ -107,50 +111,58 @@ contract Treasury is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Deposit funds to project treasury (15% tithe automatically collected)
+     * @notice Deposit native ETH to project treasury (15% tithe automatically collected)
+     * @param projectId Project identifier
+     * @param token Must be address(0) for native
      */
     function deposit(
         string memory projectId,
         address token
     ) external payable nonReentrant {
         require(bytes(projectId).length > 0, "Invalid project ID");
-        
+        require(token == address(0), "Use depositERC20 for ERC20");
+        require(msg.value > 0, "No value sent");
+
         ProjectTreasury storage treasury = projectTreasuries[projectId];
-        uint256 amount = token == address(0) ? msg.value : msg.value; // For native
-        
-        if (token == address(0)) {
-            // Native token deposit
-            require(msg.value > 0, "No value sent");
-            
-            // Calculate 15% tithe
-            uint256 tithe = (amount * constitution.TREASURY_TITHE()) / 10000;
-            uint256 netAmount = amount - tithe;
-            
-            treasury.nativeBalance += netAmount;
-            treasury.totalDeposited += amount;
-            treasury.titheCollected += tithe;
-            
-            emit Deposit(projectId, msg.sender, amount, address(0));
-            emit TitheCollected(projectId, tithe, address(0));
-        } else {
-            // ERC20 token deposit
-            IERC20 tokenContract = IERC20(token);
-            uint256 balanceBefore = tokenContract.balanceOf(address(this));
-            tokenContract.safeTransferFrom(msg.sender, address(this), amount);
-            uint256 balanceAfter = tokenContract.balanceOf(address(this));
-            uint256 received = balanceAfter - balanceBefore;
-            
-            // Calculate 15% tithe
-            uint256 tithe = (received * constitution.TREASURY_TITHE()) / 10000;
-            uint256 netAmount = received - tithe;
-            
-            treasury.tokenBalances[token] += netAmount;
-            treasury.totalDeposited += received;
-            treasury.titheCollected += tithe;
-            
-            emit Deposit(projectId, msg.sender, received, token);
-            emit TitheCollected(projectId, tithe, token);
-        }
+        uint256 amount = msg.value;
+        uint256 tithe = (amount * constitution.TREASURY_TITHE()) / 10000;
+        uint256 netAmount = amount - tithe;
+
+        treasury.nativeBalance += netAmount;
+        treasury.totalDeposited += amount;
+        treasury.titheCollected += tithe;
+
+        emit Deposit(projectId, msg.sender, amount, address(0));
+        emit TitheCollected(projectId, tithe, address(0));
+    }
+
+    /**
+     * @notice Deposit ERC20 tokens (e.g. DAI) to project treasury (15% tithe automatically collected)
+     * @param projectId Project identifier
+     * @param token ERC20 token address (e.g. DAI on the target chain)
+     * @param amount Amount to deposit; caller must have approved this contract
+     */
+    function depositERC20(
+        string memory projectId,
+        address token,
+        uint256 amount
+    ) external nonReentrant {
+        require(bytes(projectId).length > 0, "Invalid project ID");
+        require(token != address(0), "Use deposit for native");
+        require(amount > 0, "Invalid amount");
+
+        ProjectTreasury storage treasury = projectTreasuries[projectId];
+        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+
+        uint256 tithe = (amount * constitution.TREASURY_TITHE()) / 10000;
+        uint256 netAmount = amount - tithe;
+
+        treasury.tokenBalances[token] += netAmount;
+        treasury.totalDeposited += amount;
+        treasury.titheCollected += tithe;
+
+        emit Deposit(projectId, msg.sender, amount, token);
+        emit TitheCollected(projectId, tithe, token);
     }
 
     /**
@@ -323,9 +335,42 @@ contract Treasury is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Receive native tokens
+     * @notice Receive native tokens (treasury can own any and all assets)
      */
-    receive() external payable {
-        // Can receive native tokens
+    receive() external payable {}
+
+    /// @dev ERC721 safeTransferFrom calls this; return selector to accept.
+    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
+        return 0x150b7a02; // IERC721Receiver.onERC721Received.selector
+    }
+
+    /// @dev ERC1155 safeTransferFrom calls this; return selector to accept.
+    function onERC1155Received(address, address, uint256, uint256, bytes calldata) external pure returns (bytes4) {
+        return 0xf23a6e61; // IERC1155Receiver.onERC1155Received.selector
+    }
+
+    /// @dev ERC1155 safeBatchTransferFrom calls this; return selector to accept.
+    function onERC1155BatchReceived(address, address, uint256[] calldata, uint256[] calldata, bytes calldata) external pure returns (bytes4) {
+        return 0xbc197c81; // IERC1155Receiver.onERC1155BatchReceived.selector
+    }
+
+    /**
+     * @notice Transfer ERC721 out of treasury (owner only); treasury can own any asset
+     */
+    function recoverERC721(address token, address to, uint256 tokenId) external onlyOwner nonReentrant {
+        require(to != address(0), "Invalid recipient");
+        (bool ok,) = token.call(abi.encodeWithSignature("safeTransferFrom(address,address,uint256)", address(this), to, tokenId));
+        require(ok, "ERC721 transfer failed");
+        emit ERC721Recovered(token, to, tokenId);
+    }
+
+    /**
+     * @notice Transfer ERC1155 out of treasury (owner only); treasury can own any asset
+     */
+    function recoverERC1155(address token, address to, uint256 id, uint256 amount, bytes calldata data) external onlyOwner nonReentrant {
+        require(to != address(0), "Invalid recipient");
+        (bool ok,) = token.call(abi.encodeWithSignature("safeTransferFrom(address,address,uint256,uint256,bytes)", address(this), to, id, amount, data));
+        require(ok, "ERC1155 transfer failed");
+        emit ERC1155Recovered(token, to, id, amount);
     }
 }

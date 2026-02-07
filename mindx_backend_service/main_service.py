@@ -8,8 +8,9 @@ import time
 import json
 import uuid
 from datetime import datetime, timedelta
-from fastapi import FastAPI, HTTPException, Request, Body
+from fastapi import FastAPI, HTTPException, Request, Body, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 
@@ -31,7 +32,7 @@ from tools.user_persistence_manager import get_user_persistence_manager
 from llm.model_registry import get_model_registry_async
 from utils.config import Config, PROJECT_ROOT
 from api.command_handler import CommandHandler
-from utils.logging_config import setup_logging, get_logger
+from utils.logging_config import setup_logging, get_logger, LOG_DIR, LOG_FILENAME
 from mindx_backend_service.vault_manager import get_vault_manager
 from agents.monitoring.rate_limit_dashboard import RateLimitDashboard
 
@@ -174,6 +175,10 @@ except Exception as e:
 from mindx_backend_service.mindterm import mindterm_router
 from mindx_backend_service.mindterm.routes import set_coordinator_and_monitors
 app.include_router(mindterm_router)
+# Serve local xterm.js assets for mindterm (mindx_backend_service/mindterm/static/xterm/)
+_mindterm_static = PROJECT_ROOT / "mindx_backend_service" / "mindterm" / "static"
+if _mindterm_static.exists():
+    app.mount("/mindterm/static", StaticFiles(directory=str(_mindterm_static)), name="mindterm_static")
 
 # Include LLM provider management router
 from api.llm_routes import router as llm_router
@@ -190,6 +195,10 @@ app.include_router(ollama_admin_router)
 # Include AgenticPlace router
 from mindx_backend_service.agenticplace_routes import router as agenticplace_router
 app.include_router(agenticplace_router)
+
+# Include bankon ("I do not understand") router
+from mindx_backend_service.bankon import bankon_router
+app.include_router(bankon_router)
 
 command_handler: Optional[CommandHandler] = None
 
@@ -248,6 +257,35 @@ async def startup_event():
             logger.warning(f"Failed to integrate mindterm with coordinator: {e}", exc_info=True)
         
         logger.info("mindX components initialized successfully. API is ready.")
+
+        # Log backend startup transcript to data/ via memory_agent (logs are memories; startup_agent can get a copy)
+        try:
+            transcript_lines = []
+            runtime_log_path = LOG_DIR / LOG_FILENAME
+            if runtime_log_path.exists():
+                with open(runtime_log_path, "r", encoding="utf-8", errors="replace") as f:
+                    lines = f.readlines()
+                    transcript_lines = lines[-500:] if len(lines) > 500 else lines
+            transcript_text = "".join(transcript_lines).strip() or "(no runtime log captured)"
+            terminal_startup_path = PROJECT_ROOT / "data" / "logs" / "terminal_startup.log"
+            terminal_startup_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(terminal_startup_path, "a", encoding="utf-8") as f:
+                f.write(f"\n--- backend_startup {datetime.utcnow().isoformat()}Z ---\n")
+                f.write(transcript_text)
+                f.write("\n")
+            await memory_agent.log_process(
+                "backend_startup_transcript",
+                {
+                    "transcript": transcript_text,
+                    "runtime_log_path": str(runtime_log_path),
+                    "terminal_startup_path": str(terminal_startup_path),
+                    "summary": "Backend startup completed; transcript stored in data/logs and as memory.",
+                },
+                {"agent_id": "main_service", "event": "backend_startup"},
+            )
+        except Exception as log_e:
+            logger.warning(f"Failed to log backend startup transcript to data/memory_agent: {log_e}", exc_info=True)
+
     except Exception as e:
         logger.critical(f"Failed to initialize mindX components during startup: {e}", exc_info=True)
         command_handler = None
@@ -265,6 +303,12 @@ async def handle_user_register_with_signature(wallet_address: str, signature: st
         if not success:
             return {"error": message_result}
         
+        # Optional: gate issuance of access on NFT/fungible (public key must hold token)
+        from mindx_backend_service.access_gate import check_access_gate
+        allowed, gate_message = check_access_gate(wallet_address)
+        if not allowed:
+            return {"error": gate_message, "access_denied": True}
+        
         # Log user registration
         if command_handler and command_handler.mastermind.memory_agent:
             await command_handler.mastermind.memory_agent.log_process(
@@ -276,6 +320,20 @@ async def handle_user_register_with_signature(wallet_address: str, signature: st
                 },
                 metadata={"user_wallet": wallet_address}
             )
+
+        # Issue vault-backed session for authenticated access
+        session_id = str(uuid.uuid4())
+        expires_at = (datetime.utcnow() + timedelta(hours=24)).isoformat() + "Z"
+        vault = get_vault_manager()
+        if vault.store_user_session(session_id, wallet_address, expires_at, metadata=metadata):
+            return {
+                "status": "success",
+                "wallet_address": wallet_address,
+                "message": message_result,
+                "signature_verified": True,
+                "session_token": session_id,
+                "expires_at": expires_at
+            }
         
         return {
             "status": "success",
@@ -986,9 +1044,12 @@ async def register_user(payload: UserRegisterPayload):
 @app.post("/users/register-with-signature", summary="Register a new user with wallet signature verification")
 async def register_user_with_signature(payload: UserRegisterWithSignaturePayload):
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
-    return await handle_user_register_with_signature(
+    result = await handle_user_register_with_signature(
         payload.wallet_address, payload.signature, payload.message, payload.metadata
     )
+    if result.get("access_denied"):
+        raise HTTPException(status_code=403, detail=result.get("error", "Access denied"))
+    return result
 
 @app.post("/users/agents", summary="Create a new agent for a user")
 async def create_user_agent(payload: UserAgentCreatePayload):
@@ -1038,6 +1099,103 @@ async def generate_challenge(payload: ChallengeRequestPayload):
         "action": payload.action,
         "challenge_message": challenge
     }
+
+@app.get("/users/session/validate", summary="Validate session token (vault-backed)")
+async def validate_session(
+    request: Request,
+    session_token: Optional[str] = None
+):
+    """Validate a session token issued after wallet sign-in. Accepts session_token as query param or X-Session-Token header. Returns 401 if missing or invalid."""
+    token = session_token or request.headers.get("X-Session-Token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing session token")
+    vault = get_vault_manager()
+    session = vault.get_user_session(token)
+    if not session:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+    return {"wallet_address": session["wallet_address"], "expires_at": session.get("expires_at")}
+
+@app.post("/users/logout", summary="Invalidate session (logout)")
+async def logout_session(request: Request):
+    """Invalidate the session token. Accepts X-Session-Token header. Returns 200 even if token was already invalid."""
+    token = request.headers.get("X-Session-Token")
+    if not token:
+        return {"logged_out": False, "message": "No session token provided"}
+    vault = get_vault_manager()
+    invalidated = vault.invalidate_user_session(token)
+    return {"logged_out": invalidated}
+
+async def require_session_wallet(request: Request) -> str:
+    """Dependency: validate session and return wallet address. Use for vault user folder access (folder = public key)."""
+    token = request.headers.get("X-Session-Token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing session token")
+    vault = get_vault_manager()
+    session = vault.get_user_session(token)
+    if not session:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+    return session["wallet_address"]
+
+@app.get("/vault/user/keys", summary="List keys in the authenticated user's vault folder")
+async def vault_user_list_keys(wallet_address: str = Depends(require_session_wallet)):
+    """List key names in the vault folder for the wallet that holds the valid session (signature). No access to other folders."""
+    try:
+        vault = get_vault_manager()
+        keys = vault.list_user_folder_keys(wallet_address)
+        return {"keys": keys, "wallet_address": wallet_address}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Vault user list keys: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/vault/user/keys/{key}", summary="Get value for a key in the authenticated user's vault folder")
+async def vault_user_get_key(key: str, wallet_address: str = Depends(require_session_wallet)):
+    """Get value for key. Access only to the folder that corresponds to the public key (wallet) that holds the signature."""
+    try:
+        vault = get_vault_manager()
+        value = vault.get_user_folder_key(wallet_address, key)
+        if value is None:
+            raise HTTPException(status_code=404, detail="Key not found")
+        return {"key": key, "value": value, "wallet_address": wallet_address}
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Vault user get key: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/vault/user/keys/{key}", summary="Set value for a key in the authenticated user's vault folder")
+async def vault_user_set_key(key: str, request: Request, wallet_address: str = Depends(require_session_wallet)):
+    """Set value for key. Access only to the folder that corresponds to the public key (wallet) that holds the signature."""
+    try:
+        value = await request.json()
+        vault = get_vault_manager()
+        success = vault.set_user_folder_key(wallet_address, key, value)
+        if not success:
+            raise HTTPException(status_code=400, detail="Invalid key or write failed")
+        return {"key": key, "success": True, "wallet_address": wallet_address}
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Vault user set key: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/vault/user/keys/{key}", summary="Delete a key in the authenticated user's vault folder")
+async def vault_user_delete_key(key: str, wallet_address: str = Depends(require_session_wallet)):
+    """Delete key. Access only to the folder that corresponds to the public key (wallet) that holds the signature."""
+    try:
+        vault = get_vault_manager()
+        success = vault.delete_user_folder_key(wallet_address, key)
+        return {"key": key, "deleted": success, "wallet_address": wallet_address}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Vault user delete key: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/logs/runtime", summary="Get runtime logs")
 async def get_runtime_logs():

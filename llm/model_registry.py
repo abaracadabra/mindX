@@ -89,8 +89,19 @@ class ModelRegistry:
                 cap_id = f"{provider_name}/{model_id}" if "/" not in model_id else model_id
                 self.capabilities[cap_id] = ModelCapability(cap_id, provider_name, model_data)
         elif isinstance(models_data, dict):
-            for model_id, model_data in models_data.items():
-                self.capabilities[model_id] = ModelCapability(model_id, provider_name, model_data)
+            default_task_scores = {
+                "reasoning": 0.65, "code_generation": 0.65, "simple_chat": 0.75,
+                "data_analysis": 0.60, "writing": 0.70, "speed_sensitive": 0.80,
+            }
+            for model_id, raw in models_data.items():
+                if isinstance(raw, dict):
+                    self.capabilities[model_id] = ModelCapability(model_id, provider_name, raw)
+                else:
+                    # Config passed a non-dict (e.g. string); normalize to minimal capability
+                    self.capabilities[model_id] = ModelCapability(
+                        model_id, provider_name,
+                        {"task_scores": default_task_scores, "max_context_length": 8192}
+                    )
 
     async def _initialize_provider(self, provider_name: str, provider_config: Dict):
         """Creates a handler and registers its models and capabilities."""

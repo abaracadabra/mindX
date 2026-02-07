@@ -2695,7 +2695,22 @@ class MindXAgent:
                             "source": "startup_agent",
                             "details": terminal_log.get("sample_errors", [])[:3]
                         }])
-    
+
+        # Log pipeline to data/ via memory_agent: startup_agent command → list models → choice → ready for interaction
+        if self.memory_agent:
+            await self.memory_agent.log_process(
+                "mindxagent_startup_ollama_ready",
+                {
+                    "startup_command": startup_info.get("startup_command"),
+                    "ollama_connected": ollama_connected,
+                    "models_list": (startup_info.get("ollama_models") or [])[:20],
+                    "models_count": startup_info.get("models_count", 0),
+                    "chosen_model": getattr(self, "llm_model", None),
+                    "ready_for_interaction": bool(self.ollama_chat_manager and ollama_connected),
+                },
+                {"agent_id": self.agent_id, "event": "startup_pipeline", "source": "startup_agent"},
+            )
+
     def update_settings(self, settings: Dict[str, Any]) -> Dict[str, Any]:
         """
         Update mindXagent settings from UI.
@@ -3034,6 +3049,32 @@ class MindXAgent:
                 "metadata": metadata or {}
             }
             self.thinking_process.append(thinking_entry)
+
+            # Apply solution/action to core logging via memory_agent (data/logs, data/memory)
+            response_text = response_result.get("response", "")
+            if self.memory_agent:
+                await self.memory_agent.log_process(
+                    "mindxagent_ollama_interaction",
+                    {
+                        "prompt": prompt[:2000],
+                        "response": response_text[:5000],
+                        "model_used": self.ollama_chat_manager.current_model,
+                        "conversation_id": conversation_result.get("conversation_id"),
+                        "source": source,
+                        "timestamp": time.time(),
+                    },
+                    {"agent_id": self.agent_id, "event": "ollama_interaction", "source": source},
+                )
+                await self.memory_agent.log_godel_choice({
+                    "source_agent": self.agent_id,
+                    "choice_type": "ollama_interaction",
+                    "perception_summary": prompt[:500],
+                    "options_considered": ["generate_response"],
+                    "chosen_option": "generate_response",
+                    "rationale": f"model={self.ollama_chat_manager.current_model}",
+                    "outcome": "success",
+                    "response_preview": (response_text[:300] + "…") if len(response_text) > 300 else response_text,
+                })
 
             # Keep thinking process size manageable
             if len(self.thinking_process) > 1000:

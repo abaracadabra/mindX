@@ -1,19 +1,44 @@
-# xmind/ - mindX Execution Layer
+# xmind/ — mindX Execution Layer
 
-This folder contains the integration contracts for mindX to interact with the DAIO standalone governance system.
+Integration contracts for mindX to interact with the DAIO standalone governance system. DAIO remains **standalone**; mindX talks to DAIO only through this on-chain bridge.
 
 ## Purpose
 
-DAIO is a **standalone governance system**. External systems like mindX interact with DAIO through this execution layer rather than directly modifying DAIO contracts.
+- **Bridge** mindX (Python orchestration, agents) to DAIO governance without modifying DAIO core.
+- **Register** mindX agents with DAIO identity (IDNFT) and agent creation (AgentFactory).
+- **Submit** AI proposals to Marketing / Community / Development groups.
+- **Receive** treasury allocations approved by DAIO (BoardroomExtension → XMindTreasuryReceiver).
 
-## Planned Contracts
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| **[roadmap.md](roadmap.md)** | **Complete DAIO deployment roadmap:** all DAIO components, canonical deployment order, xmind as extension example. |
+| **[TECHNICAL.md](TECHNICAL.md)** | Architecture, contract roles, deployment order, usage summary, and **limitations** (Phase 2 out of scope). |
+
+## Contracts
+
+Source: **[../contracts/xmind/](../contracts/xmind/)** (Solidity).
 
 | Contract | Description |
 |----------|-------------|
-| `DAIOBridge.sol` | Bridge contract connecting mindX agents to DAIO governance |
-| `XMindAgentRegistry.sol` | Registry for mindX agents with IDNFT integration |
+| `DAIOBridge.sol` | Bridge connecting mindX to DAIO governance (single entry; requires DAIOGovernance) |
+| `XMindAgentRegistry.sol` | Registry for mindX agents with IDNFT and AgentFactory integration |
 | `XMindProposer.sol` | AI proposal submission to Marketing/Community/Development groups |
 | `XMindTreasuryReceiver.sol` | Receive treasury allocations from BoardroomExtension |
+
+## Deployment Order
+
+Deploy **after** DAIO core contracts are live. Order and constructor dependencies:
+
+| Order | Contract | Requires |
+|-------|----------|----------|
+| 1 | `DAIOBridge.sol` | DAIOGovernance address |
+| 2 | `XMindAgentRegistry.sol` | IDNFT, AgentFactory addresses |
+| 3 | `XMindProposer.sol` | KnowledgeHierarchyDAIO address |
+| 4 | `XMindTreasuryReceiver.sol` | Treasury, BoardroomExtension addresses |
+
+No circular dependency between these four; deploy in the order above.
 
 ## Integration Flow
 
@@ -38,12 +63,3 @@ AI agents can create proposals to any of the three governance groups:
 - **Development**: Technical changes, architecture, agents
 
 Each group has 3 votes (2 human + 1 AI). Proposals require 2/3 within each group, and overall decisions require 2/3 of groups to approve.
-
-## Deployment Order
-
-Deploy after DAIO core contracts are live:
-
-1. `DAIOBridge.sol` (requires DAIOGovernance address)
-2. `XMindAgentRegistry.sol` (requires IDNFT, AgentFactory addresses)
-3. `XMindProposer.sol` (requires KnowledgeHierarchyDAIO address)
-4. `XMindTreasuryReceiver.sol` (requires Treasury, BoardroomExtension addresses)

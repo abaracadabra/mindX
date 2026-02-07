@@ -453,84 +453,81 @@ class OllamaAPI:
         return result
     
     async def _test_single_connection(self) -> Dict[str, Any]:
-        """Test connection to current URL"""
+        """Test connection to current URL using a one-off session (does not cache session)."""
+        request_sent = f"GET {self.api_url}/tags"
+        timeout = aiohttp.ClientTimeout(total=5)
         try:
-            session = await self._get_session()
-            
-            try:
-                request_sent = f"GET {self.api_url}/tags"
-                async with session.get(f"{self.api_url}/tags", timeout=aiohttp.ClientTimeout(total=5)) as response:
-                    resp_status = response.status
-                    if response.status == 200:
-                        data = await response.json()
-                        models = data.get("models", [])
-                        resp_preview = f"{resp_status} OK, {len(models)} model(s)"
-                        return {
-                            "success": True,
-                            "message": f"Successfully connected to Ollama at {self.base_url}",
-                            "model_count": len(models),
-                            "base_url": self.base_url,
-                            "primary_url": getattr(self, "primary_url", None) or self.base_url,
-                            "fallback_url": getattr(self, "fallback_url", None),
-                            "using_fallback": self.using_fallback,
-                            "status_code": resp_status,
-                            "request_sent": request_sent,
-                            "response_status": resp_status,
-                            "response_preview": resp_preview,
-                        }
-                    else:
-                        error_text = await response.text()
-                        resp_preview = (error_text[:300] + "…") if len(error_text) > 300 else error_text
-                        return {
-                            "success": False,
-                            "error": f"Server returned status {response.status}: {error_text[:200]}",
-                            "base_url": self.base_url,
-                            "primary_url": getattr(self, "primary_url", None) or self.base_url,
-                            "fallback_url": getattr(self, "fallback_url", None),
-                            "status_code": response.status,
-                            "request_sent": request_sent,
-                            "response_status": response.status,
-                            "response_preview": resp_preview or f"HTTP {response.status}",
-                        }
-            except asyncio.TimeoutError:
-                request_sent = f"GET {self.api_url}/tags"
-                return {
-                    "success": False,
-                    "error": f"Connection timeout: Ollama server at {self.base_url} did not respond within 5 seconds",
-                    "base_url": self.base_url,
-                    "primary_url": getattr(self, "primary_url", None) or self.base_url,
-                    "fallback_url": getattr(self, "fallback_url", None),
-                    "timeout": True,
-                    "request_sent": request_sent,
-                    "response_status": 0,
-                    "response_preview": "Timeout (no response in 5s)",
-                }
-            except aiohttp.ClientConnectorError as e:
-                request_sent = f"GET {self.api_url}/tags"
-                return {
-                    "success": False,
-                    "error": f"Cannot connect to Ollama server at {self.base_url}. Error: {str(e)}",
-                    "base_url": self.base_url,
-                    "primary_url": getattr(self, "primary_url", None) or self.base_url,
-                    "fallback_url": getattr(self, "fallback_url", None),
-                    "connection_error": True,
-                    "request_sent": request_sent,
-                    "response_status": 0,
-                    "response_preview": str(e),
-                }
-            except aiohttp.ClientError as e:
-                request_sent = f"GET {self.api_url}/tags"
-                return {
-                    "success": False,
-                    "error": f"Connection error: {str(e)}",
-                    "base_url": self.base_url,
-                    "primary_url": getattr(self, "primary_url", None) or self.base_url,
-                    "fallback_url": getattr(self, "fallback_url", None),
-                    "client_error": True,
-                    "request_sent": request_sent,
-                    "response_status": 0,
-                    "response_preview": str(e),
-                }
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                try:
+                    async with session.get(f"{self.api_url}/tags", timeout=timeout) as response:
+                        resp_status = response.status
+                        if response.status == 200:
+                            data = await response.json()
+                            models = data.get("models", [])
+                            resp_preview = f"{resp_status} OK, {len(models)} model(s)"
+                            return {
+                                "success": True,
+                                "message": f"Successfully connected to Ollama at {self.base_url}",
+                                "model_count": len(models),
+                                "base_url": self.base_url,
+                                "primary_url": getattr(self, "primary_url", None) or self.base_url,
+                                "fallback_url": getattr(self, "fallback_url", None),
+                                "using_fallback": self.using_fallback,
+                                "status_code": resp_status,
+                                "request_sent": request_sent,
+                                "response_status": resp_status,
+                                "response_preview": resp_preview,
+                            }
+                        else:
+                            error_text = await response.text()
+                            resp_preview = (error_text[:300] + "…") if len(error_text) > 300 else error_text
+                            return {
+                                "success": False,
+                                "error": f"Server returned status {response.status}: {error_text[:200]}",
+                                "base_url": self.base_url,
+                                "primary_url": getattr(self, "primary_url", None) or self.base_url,
+                                "fallback_url": getattr(self, "fallback_url", None),
+                                "status_code": response.status,
+                                "request_sent": request_sent,
+                                "response_status": response.status,
+                                "response_preview": resp_preview or f"HTTP {response.status}",
+                            }
+                except asyncio.TimeoutError:
+                    return {
+                        "success": False,
+                        "error": f"Connection timeout: Ollama server at {self.base_url} did not respond within 5 seconds",
+                        "base_url": self.base_url,
+                        "primary_url": getattr(self, "primary_url", None) or self.base_url,
+                        "fallback_url": getattr(self, "fallback_url", None),
+                        "timeout": True,
+                        "request_sent": request_sent,
+                        "response_status": 0,
+                        "response_preview": "Timeout (no response in 5s)",
+                    }
+                except aiohttp.ClientConnectorError as e:
+                    return {
+                        "success": False,
+                        "error": f"Cannot connect to Ollama server at {self.base_url}. Error: {str(e)}",
+                        "base_url": self.base_url,
+                        "primary_url": getattr(self, "primary_url", None) or self.base_url,
+                        "fallback_url": getattr(self, "fallback_url", None),
+                        "connection_error": True,
+                        "request_sent": request_sent,
+                        "response_status": 0,
+                        "response_preview": str(e),
+                    }
+                except aiohttp.ClientError as e:
+                    return {
+                        "success": False,
+                        "error": f"Connection error: {str(e)}",
+                        "base_url": self.base_url,
+                        "primary_url": getattr(self, "primary_url", None) or self.base_url,
+                        "fallback_url": getattr(self, "fallback_url", None),
+                        "client_error": True,
+                        "request_sent": request_sent,
+                        "response_status": 0,
+                        "response_preview": str(e),
+                    }
         except Exception as e:
             logger.error(f"Error testing Ollama connection: {e}", exc_info=True)
             request_sent = f"GET {getattr(self, 'api_url', self.base_url + '/api')}/tags"
@@ -545,10 +542,15 @@ class OllamaAPI:
                 "response_preview": str(e),
             }
     
-    async def shutdown(self):
-        """Close HTTP session"""
-        if self.http_session and not self.http_session.closed:
+    async def close(self) -> None:
+        """Close HTTP session if open and clear reference. Safe to call multiple times."""
+        if self.http_session is not None and not self.http_session.closed:
             await self.http_session.close()
+        self.http_session = None
+
+    async def shutdown(self):
+        """Close HTTP session (legacy alias; prefer close())."""
+        await self.close()
 
 
 def create_ollama_api(

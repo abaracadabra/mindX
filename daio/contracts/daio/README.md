@@ -25,11 +25,15 @@ The DAIO system provides blockchain-native governance and economic operations fo
 ```
 contracts/daio/
 ├── DAIOGovernance.sol          # Core governance hub
+├── DAIORebaseToken.sol         # DAIO inflationary rebase (positive rebase / mint)
+├── DAIODeflateToken.sol        # DAIO deflationary rebase (negative rebase / burn)
 ├── BoardroomExtension.sol       # Treasury extension
 ├── constitution/
 │   └── DAIO_Constitution.sol    # Constitutional constraints
 ├── treasury/
-│   └── Treasury.sol             # Multi-project treasury
+│   ├── Treasury.sol             # Multi-project treasury (owns any/all assets)
+│   ├── CustomERC20Minter.sol     # ERC20 with minter role
+│   └── WETH.sol                 # Wrapped Ether (value-inheritance example)
 ├── governance/
 │   ├── KnowledgeHierarchyDAIO.sol  # Agent governance
 │   ├── AgentFactory.sol            # Agent creation
@@ -317,6 +321,21 @@ Comprehensive documentation available in `docs/solidity/`:
 - **Architecture:** `docs/architecture/THOT-DAIO-ARCHITECTURE.md`
 - **Deployment:** `docs/getting-started/DNFT-DEPLOYMENT-GUIDE.md`
 - **DAIO Spec:** `DDD/DAIO.md`
+
+---
+
+## References and ecosystem
+
+| Link | Description |
+|------|-------------|
+| [interplanetaryfilesystem](https://github.com/interplanetaryfilesystem) | IPFS core and ecosystem. |
+| [ipNFTfs](https://github.com/ipNFTfs) | Interplanetary NFT file system and IPFS utilities; reference for NFT-on-IPFS and DAIO identity/NFT workflows. |
+| [mlodular](https://github.com/mlodular) | Modular ML / tooling reference. |
+| [faicey](https://github.com/faicey), [jaimla](https://github.com/jaimla), [Professor-Codephreak](https://github.com/Professor-Codephreak) | References. |
+| [w3DAIO](https://github.com/w3DAIO) | First public showing of the DAIO code; Decentralized Autonomous Intelligent Organization (scaffold-eth-2, EVM dev stack). |
+| [DAONOW](https://github.com/DAONOW) | Reference for DAO tooling and governance patterns. |
+| [dairef](https://github.com/dairef) | Programmable DAI reference (see [Treasury and DAI](docs/daio/treasury/Treasury.md#dai-and-stablecoin-support)). |
+| **Sites:** [rage.pythai.net](https://rage.pythai.net), [mindx.pythai.net](https://mindx.pythai.net), [agenticplace.pythai.net](https://agenticplace.pythai.net), [daio.pythai.net](https://daio.pythai.net) (voting UI). |
 
 ---
 

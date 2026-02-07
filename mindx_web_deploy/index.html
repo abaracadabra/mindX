@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>mindX — Web UI</title>
+  <link rel="stylesheet" href="css/site.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="site-header">
+      <div class="brand">
+        <span class="logo">mindX</span>
+        <nav class="nav-links">
+          <a href="#dashboard" class="nav-link active">Dashboard</a>
+          <a href="#web3d" class="nav-link">Web3D</a>
+          <a href="#help" class="nav-link">Help</a>
+        </nav>
+      </div>
+      <div class="header-actions">
+        <span id="backend-status" class="status-pill">Checking…</span>
+        <a id="bankon-link" href="#" class="btn btn-ghost">I do not understand</a>
+      </div>
+    </header>
+
+    <main class="site-main">
+      <section id="dashboard" class="panel active">
+        <h1>Dashboard</h1>
+        <p class="lead">mindX web UI — deployable to Apache (Hostinger or VPS).</p>
+        <div class="card-grid">
+          <div class="card">
+            <h3>Backend</h3>
+            <p id="backend-info">Configure <code>API_BASE</code> in <code>js/config.js</code> to point to your mindX API (e.g. your VPS).</p>
+            <p><a href="/docs" target="_blank" rel="noopener">API docs</a> · <a href="/health" target="_blank" rel="noopener">Health</a></p>
+          </div>
+          <div class="card">
+            <h3>Web3D</h3>
+            <p>Use the Web3D tab for 3D content. Tauri desktop app can wrap this UI and deliver full Web3D.</p>
+            <a href="#web3d" class="btn btn-primary">Open Web3D</a>
+          </div>
+          <div class="card">
+            <h3>Help / Bankon</h3>
+            <p>When something is unclear, use “I do not understand” to get guidance from the backend.</p>
+            <button type="button" id="bankon-btn" class="btn btn-secondary">Try bankon</button>
+            <pre id="bankon-output" class="output-box"></pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="web3d" class="panel">
+        <h1>Web3D</h1>
+        <p class="lead">3D view — suitable for Tauri delivery (desktop app with Web3D).</p>
+        <div id="web3d-container" class="web3d-canvas-wrap">
+          <canvas id="web3d-canvas"></canvas>
+          <p id="web3d-placeholder" class="placeholder">Web3D placeholder — replace with Three.js/Babylon or use inside Tauri.</p>
+        </div>
+      </section>
+
+      <section id="help" class="panel">
+        <h1>Help</h1>
+        <p class="lead">Deployment and configuration.</p>
+        <div class="card">
+          <h3>Apache</h3>
+          <p>Upload this folder to your document root (e.g. <code>public_html</code> on Hostinger). Ensure <code>AllowOverride All</code> if using <code>.htaccess</code>.</p>
+        </div>
+        <div class="card">
+          <h3>Hostinger (shared)</h3>
+          <p>Static files only. Set <code>API_BASE</code> in <code>js/config.js</code> to your mindX backend URL (e.g. on a VPS).</p>
+        </div>
+        <div class="card">
+          <h3>VPS</h3>
+          <p>Run the mindX backend (uvicorn) and optionally serve this UI via Apache/Nginx in front. You can run custom services and execute commands on the VPS.</p>
+        </div>
+        <div class="card">
+          <h3>Tauri + Web3D</h3>
+          <p>Tauri builds a desktop app. Use this UI (or a Tauri webview) to deliver Web3D; the Tauri app runs on the user’s machine, not on Hostinger. See <code>DEPLOY.md</code>.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>mindX Web Deploy · Apache-ready · <a href="js/config.js">config</a></p>
+    </footer>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/web3d-placeholder.js"></script>
+</body>
+</html>
