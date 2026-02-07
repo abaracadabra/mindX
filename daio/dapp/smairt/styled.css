@@ -1,0 +1,74 @@
+/* S.M.A.I.R.T Presale UI – DAIO-style */
+:root {
+  --bg: #0f1419;
+  --surface: #1a2332;
+  --border: #2d3a4d;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --accent: #58a6ff;
+  --success: #3fb950;
+  --danger: #f85149;
+  --warn: #d29922;
+  --radius: 8px;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5; }
+
+.container { max-width: 720px; margin: 0 auto; padding: 1.5rem; }
+
+header {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+  margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);
+}
+header h1 { margin: 0; font-size: 1.5rem; font-weight: 600; }
+header a { color: var(--accent); text-decoration: none; }
+header a:hover { text-decoration: underline; }
+.wallet-row { display: flex; align-items: center; gap: 0.75rem; }
+#account { font-size: 0.875rem; color: var(--muted); max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+
+.btn {
+  padding: 0.5rem 1rem; border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font-size: 0.875rem; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn:hover:not(:disabled) { background: var(--border); border-color: var(--accent); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+.btn-success { background: var(--success); border-color: var(--success); color: #fff; }
+.btn-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn-warn { background: var(--warn); border-color: var(--warn); color: #000; }
+
+#message { padding: 0.75rem 1rem; border-radius: var(--radius); margin-bottom: 1rem; font-size: 0.875rem; display: none; }
+#message.show { display: block; }
+#message.error { background: rgba(248, 81, 73, 0.15); border: 1px solid var(--danger); color: #f85149; }
+#message.success { background: rgba(63, 185, 80, 0.15); border: 1px solid var(--success); color: var(--success); }
+
+.panel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.25rem; margin-bottom: 1rem;
+}
+.panel h2 { margin: 0 0 0.75rem 0; font-size: 1.125rem; }
+.panel p { margin: 0.5rem 0; font-size: 0.875rem; color: var(--muted); }
+.panel .stat { display: flex; justify-content: space-between; margin: 0.35rem 0; font-size: 0.875rem; }
+.panel .stat .label { color: var(--muted); }
+.panel .stat .value { font-variant-numeric: tabular-nums; }
+.panel .actions { margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.status-badge {
+  display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500;
+}
+.status-initialized { background: rgba(139, 148, 158, 0.2); color: var(--muted); }
+.status-active { background: rgba(63, 185, 80, 0.2); color: var(--success); }
+.status-finalized { background: rgba(88, 166, 255, 0.2); color: var(--accent); }
+.status-canceled { background: rgba(139, 148, 158, 0.2); color: var(--muted); }
+.status-failed { background: rgba(248, 81, 73, 0.2); color: var(--danger); }
+
+label { display: block; font-size: 0.875rem; color: var(--muted); margin-bottom: 0.25rem; }
+input[type="text"], input[type="number"] {
+  width: 100%; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem;
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 0.875rem;
+}
+.hint { font-size: 0.75rem; color: var(--muted); margin-top: -0.5rem; margin-bottom: 0.5rem; }
+a.external { color: var(--accent); }
