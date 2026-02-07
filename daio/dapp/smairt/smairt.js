@@ -6,6 +6,7 @@
   "use strict";
 
   const PRESALE_ADDRESS = "0x0000000000000000000000000000000000000000"; // Replace with BondingCurvePresaleSMAIRT address
+  const FACTORY_ADDRESS = "0x0000000000000000000000000000000000000000"; // Replace with BondingCurveFactory address
   const CHAIN_ID = null; // e.g. 1 for mainnet, 11155111 for Sepolia; null = no check
 
   const STATE_NAMES = ["", "Initialized", "Active", "Canceled", "Finalized", "Failed"];
@@ -33,6 +34,8 @@
   const cancelBtn = document.getElementById("cancel-btn");
   const lockContent = document.getElementById("lock-content");
   const withdrawLpBtn = document.getElementById("withdraw-lp-btn");
+  const launchBtn = document.getElementById("launch-btn");
+  const launchResult = document.getElementById("launch-result");
 
   function showMessage(text, type) {
     messageEl.textContent = text;
@@ -333,6 +336,114 @@
       showMessage(e.message || "Withdraw LP failed.", "error");
     }
     withdrawLpBtn.disabled = false;
+  });
+
+  function defaultPresaleOptions() {
+    return {
+      hardCapNative: 0,
+      softCapNative: 0,
+      maxContributionPerUserNative: 0,
+      minContributionPerUserNative: 0,
+      startTime: 0,
+      endTime: 0,
+      useLiquidityFreePresale: false,
+      useTeamAllocationFromFunds: false,
+      useTeamAllocationFromSupply: false,
+      teamAllocationFromFundsBps: 0,
+      teamAllocationFromSupplyBps: 0,
+      teamWallet: ethers.constants.AddressZero,
+      nativeForLiquidityBps: 0,
+      presaleNativeForMarketingBps: 0,
+      presaleNativeForDevBps: 0,
+      presaleNativeForDaoBps: 0,
+      presaleMarketingWallet: ethers.constants.AddressZero,
+      presaleDevWallet: ethers.constants.AddressZero,
+      presaleDaoWallet: ethers.constants.AddressZero,
+      liquidityLockDurationDays: 0,
+      liquidityBeneficiaryAddress: ethers.constants.AddressZero,
+      minTokensForLiquidity: 0,
+      minTokensForSale: 0
+    };
+  }
+
+  function defaultLiquidityTemplate() {
+    return {
+      mode: 0,
+      enabled: false,
+      v2: { router: ethers.constants.AddressZero, weth: ethers.constants.AddressZero, enabled: false },
+      v3: { positionManager: ethers.constants.AddressZero, weth: ethers.constants.AddressZero, fee: 0, tickLower: 0, tickUpper: 0, enabled: false },
+      v4: { poolManager: ethers.constants.AddressZero, poolId: "0x0000000000000000000000000000000000000000000000000000000000000000", hook: ethers.constants.AddressZero, enabled: false },
+      token: ethers.constants.AddressZero,
+      tokenAmount: 0,
+      nativeAmount: 0,
+      recipient: ethers.constants.AddressZero,
+      deadline: 0
+    };
+  }
+
+  document.querySelectorAll(".tab").forEach(function (t) {
+    t.addEventListener("click", function () {
+      document.querySelectorAll(".tab").forEach(function (x) { x.classList.remove("active"); });
+      document.getElementById("tab-presale").style.display = t.getAttribute("data-tab") === "presale" ? "block" : "none";
+      document.getElementById("tab-launch").style.display = t.getAttribute("data-tab") === "launch" ? "block" : "none";
+      t.classList.add("active");
+    });
+  });
+
+  document.querySelectorAll("[data-preset]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var p = btn.getAttribute("data-preset");
+      var val = p === "linear" ? "1000000000000000000" : p === "sqrt" ? "500000000000000000" : "1500000000000000000";
+      document.getElementById("launch-p").value = val;
+    });
+  });
+
+  launchBtn.addEventListener("click", async function () {
+    if (!signer || !connected) { showMessage("Connect wallet first.", "error"); return; }
+    if (FACTORY_ADDRESS === "0x0000000000000000000000000000000000000000") { showMessage("Set FACTORY_ADDRESS in smairt.js.", "error"); return; }
+    var name = document.getElementById("launch-name").value.trim();
+    var symbol = document.getElementById("launch-symbol").value.trim();
+    var initialMint = document.getElementById("launch-initial-mint").value.trim() || "0";
+    var k = document.getElementById("launch-k").value.trim() || "1000000000000";
+    var pVal = document.getElementById("launch-p").value.trim() || "1000000000000000000";
+    var protocolFee = document.getElementById("launch-protocol-fee").value.trim() || "0";
+    var feeRecipient = document.getElementById("launch-fee-recipient").value.trim();
+    var enablePresale = document.getElementById("launch-enable-presale").checked;
+    launchResult.style.display = "none";
+    var feeRecipientAddr = feeRecipient ? feeRecipient : ethers.constants.AddressZero;
+    var args = {
+      name: name || "",
+      symbol: symbol || "",
+      initialMintToOwner: ethers.BigNumber.from(initialMint),
+      kUD60x18: ethers.BigNumber.from(k),
+      pUD60x18: ethers.BigNumber.from(pVal),
+      protocolFeeBps: parseInt(protocolFee, 10) || 0,
+      feeRecipient: feeRecipientAddr,
+      enablePresale: enablePresale,
+      presaleOptions: defaultPresaleOptions(),
+      provisioner: ethers.constants.AddressZero,
+      liquidityTemplate: defaultLiquidityTemplate()
+    };
+    if (enablePresale) {
+      showMessage("Presale launch requires provisioner and presale options; use curve-only for now or set in code.", "error");
+      return;
+    }
+    launchBtn.disabled = true;
+    try {
+      var factory = new ethers.Contract(FACTORY_ADDRESS, FactoryABI, signer);
+      var tx = await factory.launchPowerCurveNative(args);
+      showMessage("Transaction sent. Waiting for confirmation…", "");
+      var receipt = await tx.wait();
+      var ev = receipt.events && receipt.events.find(function (e) { return e.event === "LaunchedCurve"; });
+      var token = ev && ev.args ? ev.args[1] : "(see tx logs)";
+      var pool = ev && ev.args ? ev.args[2] : "(see tx logs)";
+      launchResult.style.display = "block";
+      launchResult.textContent = "Launched.\nToken: " + token + "\nPool: " + pool + "\nTx: " + receipt.transactionHash;
+      showMessage("Curve launched.", "success");
+    } catch (e) {
+      showMessage(e.message || "Launch failed.", "error");
+    }
+    launchBtn.disabled = false;
   });
 
   connectBtn.onclick = connect;

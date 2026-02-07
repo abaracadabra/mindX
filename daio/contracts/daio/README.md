@@ -27,6 +27,9 @@ contracts/daio/
 ├── DAIOGovernance.sol          # Core governance hub
 ├── DAIORebaseToken.sol         # DAIO inflationary rebase (positive rebase / mint)
 ├── DAIODeflateToken.sol        # DAIO deflationary rebase (negative rebase / burn)
+├── reflection/
+│   ├── DAIOReflectionToken.sol # Reflection token (fee-on-transfer, holder rewards; DAIO admin hierarchy)
+│   └── README.md               # Auto-swap fixes, slippage, deployment
 ├── BoardroomExtension.sol       # Treasury extension
 ├── constitution/
 │   └── DAIO_Constitution.sol    # Constitutional constraints

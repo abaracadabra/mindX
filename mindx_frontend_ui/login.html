@@ -32,8 +32,8 @@
                     return;
                 }
 
-                // Get API base URL
-                const apiBaseUrl = window.MINDX_API_URL || `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`;
+                // Get API base URL (match app.html so session validate uses same backend)
+                const apiBaseUrl = (typeof API_CONFIG !== 'undefined' && API_CONFIG.baseUrl) ? API_CONFIG.baseUrl : (window.MINDX_API_URL || `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`);
                 
                 // Create viem wallet client
                 const createWalletClient = viem.createWalletClient || viem.default?.createWalletClient;
@@ -246,6 +246,7 @@
                     
                     <h2>Agency Management</h2>
                     <p>Connect your wallet to access the agent management platform</p>
+                    <p class="login-signature-note">MetaMask will ask you to sign a message. This proves you own your address and does not send funds or approve any transaction. You stay in control and safe.</p>
                     
                     <div id="login-error" class="login-error" style="display: none;"></div>
                     
@@ -310,6 +311,13 @@
             border-radius: 4px;
             margin-bottom: 15px;
             text-align: center;
+        }
+        .login-signature-note {
+            font-size: 0.85rem;
+            color: #888;
+            margin: 0.5rem 0 1rem;
+            max-width: 360px;
+            line-height: 1.4;
         }
     </style>
 </body>

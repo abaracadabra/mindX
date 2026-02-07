@@ -22,8 +22,12 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
   display: flex; align-items: center; justify-content: space-between;
   padding: var(--space) 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border);
 }
-.brand { display: flex; align-items: center; gap: 1.5rem; }
+.brand { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
 .logo { font-weight: 700; font-size: 1.25rem; }
+.brand-sub { font-size: 0.9rem; color: var(--text-muted); margin-left: -0.5rem; }
+.card-highlight { border-color: var(--accent); background: rgba(88,166,255,0.06); }
+.env-note { margin: 0; font-size: 0.9rem; }
+.env-note a { color: var(--accent); }
 .nav-links { display: flex; gap: 0.5rem; }
 .nav-link {
   padding: 0.4rem 0.75rem; color: var(--text-muted); text-decoration: none; border-radius: var(--radius);
@@ -70,6 +74,25 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
   margin-top: 0.5rem; padding: 0.75rem; background: #0d1117; border: 1px solid var(--border);
   border-radius: var(--radius); font-size: 0.8rem; white-space: pre-wrap; word-break: break-all; max-height: 120px; overflow: auto;
 }
+
+.persona-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.persona-label { font-size: 0.9rem; color: var(--text-muted); }
+.persona-pills { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.persona-pill {
+  padding: 0.35rem 0.75rem; border-radius: 999px; font-size: 0.85rem; cursor: pointer;
+  background: var(--surface); color: var(--text-muted); border: 1px solid var(--border);
+}
+.persona-pill:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+.persona-pill.active { color: var(--accent); background: rgba(88,166,255,0.12); border-color: var(--accent); }
+
+.custom-request-form {
+  display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;
+}
+.custom-request-form label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+.custom-request-form select,
+.custom-request-form input[type="text"] { padding: 0.4rem 0.5rem; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+.custom-request-form textarea { padding: 0.5rem; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: inherit; resize: vertical; }
+.custom-request-form .btn { align-self: flex-start; }
 
 .web3d-canvas-wrap {
   position: relative; width: 100%; max-width: 800px; aspect-ratio: 16/10;

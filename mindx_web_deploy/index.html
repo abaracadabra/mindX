@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>mindX — Web UI</title>
+  <meta name="description" content="mindX template launcher and environment UI. Launch mindX, DAIO, BaseGen, Tauri dapps; preset personas; interact with mindX backend. Tauri dapps are cross-platform standalone web-enabled dapps." />
+  <title>mindX — Agenticplace · Launcher &amp; Environment UI</title>
   <link rel="stylesheet" href="css/site.css" />
 </head>
 <body>
@@ -11,14 +12,19 @@
     <header class="site-header">
       <div class="brand">
         <span class="logo">mindX</span>
+        <span class="brand-sub">Agenticplace</span>
         <nav class="nav-links">
           <a href="#dashboard" class="nav-link active">Dashboard</a>
+          <a href="#launchers" class="nav-link">Launchers</a>
+          <a href="#interact" class="nav-link">Interact</a>
           <a href="#web3d" class="nav-link">Web3D</a>
           <a href="#help" class="nav-link">Help</a>
         </nav>
       </div>
       <div class="header-actions">
         <span id="backend-status" class="status-pill">Checking…</span>
+        <button type="button" id="refresh-health-btn" class="btn btn-ghost" title="Refresh backend status">Refresh</button>
+        <a id="api-docs-link" href="#" class="btn btn-ghost" target="_blank" rel="noopener">API docs</a>
         <a id="bankon-link" href="#" class="btn btn-ghost">I do not understand</a>
       </div>
     </header>
@@ -26,23 +32,134 @@
     <main class="site-main">
       <section id="dashboard" class="panel active">
         <h1>Dashboard</h1>
-        <p class="lead">mindX web UI — deployable to Apache (Hostinger or VPS).</p>
+        <p class="lead">Public UI for mindX — deployable to Hostinger or VPS. Interact with the backend at <strong>mindx.pythai.net</strong> from here at <strong>agenticplace.pythai.net</strong>.</p>
+        <div class="card card-highlight">
+          <p class="env-note"><span id="api-origin-label">API</span> → <a id="api-origin-link" href="#" target="_blank" rel="noopener">mindx.pythai.net</a> <button type="button" id="copy-api-base-btn" class="btn btn-ghost btn-sm">Copy</button></p>
+        </div>
         <div class="card-grid">
           <div class="card">
             <h3>Backend</h3>
-            <p id="backend-info">Configure <code>API_BASE</code> in <code>js/config.js</code> to point to your mindX API (e.g. your VPS).</p>
-            <p><a href="/docs" target="_blank" rel="noopener">API docs</a> · <a href="/health" target="_blank" rel="noopener">Health</a></p>
+            <p id="backend-info">Configure <code>API_BASE</code> in <code>js/config.js</code> to point to your mindX API (e.g. mindx.pythai.net on a VPS).</p>
+            <p><a id="health-link" href="#" target="_blank" rel="noopener">Health</a> · <a id="api-docs-link2" href="#" target="_blank" rel="noopener">API docs</a></p>
+          </div>
+          <div class="card">
+            <h3>Interact</h3>
+            <p>Use the <strong>Interact</strong> tab to try the API and bankon, or open the full Swagger UI on the backend.</p>
+            <a href="#interact" class="btn btn-primary">Interact</a>
           </div>
           <div class="card">
             <h3>Web3D</h3>
-            <p>Use the Web3D tab for 3D content. Tauri desktop app can wrap this UI and deliver full Web3D.</p>
+            <p>Use the Web3D tab for 3D content. A Tauri desktop app can wrap this UI and deliver full Web3D.</p>
             <a href="#web3d" class="btn btn-primary">Open Web3D</a>
           </div>
+        </div>
+      </section>
+
+      <section id="launchers" class="panel">
+        <h1>Launchers</h1>
+        <p class="lead">Template launcher and environment UI. Open mindX, DAIO, or use as a self-launcher. Tauri dapps are excellent cross-platform standalone web-enabled dapps; BaseGen and the Tauri workflow template are points of departure.</p>
+        <div class="persona-row">
+          <span class="persona-label">Persona:</span>
+          <div class="persona-pills" role="group" aria-label="Select persona">
+            <button type="button" class="persona-pill active" data-persona="all">All</button>
+            <button type="button" class="persona-pill" data-persona="developer">Developer</button>
+            <button type="button" class="persona-pill" data-persona="analyst">Analyst</button>
+            <button type="button" class="persona-pill" data-persona="agenticplace">Agenticplace</button>
+          </div>
+        </div>
+        <div class="card-grid launcher-grid" id="launcher-grid">
+          <div class="card launcher-card" data-persona="agenticplace">
+            <h3>mindX App</h3>
+            <p>Full mindX control panel (login then app).</p>
+            <a id="launcher-mindx-app" href="#" class="btn btn-primary" target="_blank" rel="noopener">Open mindX App</a>
+          </div>
+          <div class="card launcher-card" data-persona="agenticplace">
+            <h3>mindX Login</h3>
+            <p>Direct login page (wallet sign-in).</p>
+            <a id="launcher-mindx-login" href="#" class="btn btn-secondary" target="_blank" rel="noopener">Open Login</a>
+          </div>
+          <div class="card launcher-card" data-persona="agenticplace">
+            <h3>DAIO</h3>
+            <p>DAIO voting and governance UI.</p>
+            <a id="launcher-daio" href="#" class="btn btn-primary" target="_blank" rel="noopener">Open DAIO</a>
+          </div>
+          <div class="card launcher-card" data-persona="developer">
+            <h3>API docs</h3>
+            <p>Swagger UI on the mindX backend.</p>
+            <a id="launcher-docs" href="#" class="btn btn-secondary" target="_blank" rel="noopener">Open API docs</a>
+          </div>
+          <div class="card launcher-card" data-persona="analyst">
+            <h3>Health</h3>
+            <p>Backend health check JSON.</p>
+            <a id="launcher-health" href="#" class="btn btn-ghost" target="_blank" rel="noopener">Open Health</a>
+          </div>
+          <div class="card launcher-card" data-persona="developer">
+            <h3>BaseGen</h3>
+            <p>Python CLI: codebase to Markdown (AI-ready backups). Point of departure: <a href="https://github.com/Web3dGuy/BaseGen" target="_blank" rel="noopener">Web3dGuy/BaseGen</a>.</p>
+            <a id="launcher-basegen" href="https://github.com/Web3dGuy/BaseGen" class="btn btn-primary" target="_blank" rel="noopener">BaseGen repo</a>
+          </div>
+          <div class="card launcher-card" data-persona="developer">
+            <h3>Tauri workflow template</h3>
+            <p>Tauri v2 + React + TypeScript template for cross-platform standalone dapps. Point of departure: <a href="https://github.com/Web3dGuy/tauri-workflow-template" target="_blank" rel="noopener">Web3dGuy/tauri-workflow-template</a>.</p>
+            <a id="launcher-tauri-template" href="https://github.com/Web3dGuy/tauri-workflow-template" class="btn btn-primary" target="_blank" rel="noopener">Tauri template repo</a>
+          </div>
+          <div class="card launcher-card" data-persona="all">
+            <h3>Self launcher</h3>
+            <p>Open this deploy UI in a new window or use as your own template.</p>
+            <button type="button" id="launcher-self" class="btn btn-secondary">Open this UI in new window</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="interact" class="panel">
+        <h1>Interact</h1>
+        <p class="lead">Try the mindX backend: health, agents, system status, registry, bankon, and custom API requests.</p>
+        <div class="card-grid">
           <div class="card">
-            <h3>Help / Bankon</h3>
+            <h3>Health</h3>
+            <p>GET /health — backend status.</p>
+            <button type="button" id="fetch-health-btn" class="btn btn-secondary">Fetch</button>
+            <pre id="health-output" class="output-box">—</pre>
+          </div>
+          <div class="card">
+            <h3>Agents</h3>
+            <p>GET /agents — list registered agents.</p>
+            <button type="button" id="fetch-agents-btn" class="btn btn-secondary">Fetch</button>
+            <pre id="agents-output" class="output-box">—</pre>
+          </div>
+          <div class="card">
+            <h3>System status</h3>
+            <p>GET /system/status — system status.</p>
+            <button type="button" id="fetch-system-btn" class="btn btn-secondary">Fetch</button>
+            <pre id="system-status-output" class="output-box">—</pre>
+          </div>
+          <div class="card">
+            <h3>Registry (tools)</h3>
+            <p>GET /registry/tools — tool registry.</p>
+            <button type="button" id="fetch-registry-btn" class="btn btn-secondary">Fetch</button>
+            <pre id="registry-output" class="output-box">—</pre>
+          </div>
+          <div class="card">
+            <h3>Help (Bankon)</h3>
             <p>When something is unclear, use “I do not understand” to get guidance from the backend.</p>
             <button type="button" id="bankon-btn" class="btn btn-secondary">Try bankon</button>
             <pre id="bankon-output" class="output-box"></pre>
+          </div>
+          <div class="card">
+            <h3>Full API</h3>
+            <p>Open the Swagger UI on the mindX backend to explore and call all endpoints (agents, directives, LLM, etc.).</p>
+            <a id="api-docs-link-interact" href="#" class="btn btn-primary" target="_blank" rel="noopener">Open API docs (mindx)</a>
+          </div>
+          <div class="card">
+            <h3>Custom request</h3>
+            <p>Send a GET or POST request to any path (power users).</p>
+            <div class="custom-request-form">
+              <label>Method <select id="custom-method"><option value="GET">GET</option><option value="POST">POST</option></select></label>
+              <label>Path <input type="text" id="custom-path" placeholder="/health" /></label>
+              <label>Body <textarea id="custom-body" rows="2" placeholder='{"key":"value"}'></textarea></label>
+              <button type="button" id="custom-send-btn" class="btn btn-primary">Send</button>
+            </div>
+            <pre id="custom-output" class="output-box">—</pre>
           </div>
         </div>
       </section>
@@ -58,28 +175,28 @@
 
       <section id="help" class="panel">
         <h1>Help</h1>
-        <p class="lead">Deployment and configuration.</p>
+        <p class="lead">Deployment and configuration for Hostinger and VPS.</p>
         <div class="card">
-          <h3>Apache</h3>
-          <p>Upload this folder to your document root (e.g. <code>public_html</code> on Hostinger). Ensure <code>AllowOverride All</code> if using <code>.htaccess</code>.</p>
+          <h3>agenticplace.pythai.net (UI)</h3>
+          <p>This is the <strong>public UI</strong>. Upload this folder to Hostinger (or serve from VPS). Set <code>API_BASE</code> in <code>js/config.js</code> to <code>https://mindx.pythai.net</code> (or your backend URL). On agenticplace.pythai.net it defaults automatically.</p>
         </div>
         <div class="card">
-          <h3>Hostinger (shared)</h3>
-          <p>Static files only. Set <code>API_BASE</code> in <code>js/config.js</code> to your mindX backend URL (e.g. on a VPS).</p>
+          <h3>mindx.pythai.net (Backend)</h3>
+          <p>Run the mindX backend on a <strong>VPS</strong>: <code>uvicorn mindx_backend_service.main_service:app --host 0.0.0.0 --port 8000</code>. Put Nginx/Apache in front with SSL. See <code>DEPLOY.md</code>.</p>
         </div>
         <div class="card">
-          <h3>VPS</h3>
-          <p>Run the mindX backend (uvicorn) and optionally serve this UI via Apache/Nginx in front. You can run custom services and execute commands on the VPS.</p>
+          <h3>Apache / Hostinger</h3>
+          <p>Upload this folder to document root. Ensure <code>AllowOverride All</code> if using <code>.htaccess</code>. Enable SSL for agenticplace.pythai.net.</p>
         </div>
         <div class="card">
           <h3>Tauri + Web3D</h3>
-          <p>Tauri builds a desktop app. Use this UI (or a Tauri webview) to deliver Web3D; the Tauri app runs on the user’s machine, not on Hostinger. See <code>DEPLOY.md</code>.</p>
+          <p>Tauri builds a desktop app. Use this UI (or a Tauri webview) to deliver Web3D; the app runs on the user’s machine. See <code>DEPLOY.md</code>.</p>
         </div>
       </section>
     </main>
 
     <footer class="site-footer">
-      <p>mindX Web Deploy · Apache-ready · <a href="js/config.js">config</a></p>
+      <p>mindX Web Deploy · <a href="https://agenticplace.pythai.net" rel="noopener">agenticplace.pythai.net</a> (UI) · <a href="https://mindx.pythai.net" rel="noopener">mindx.pythai.net</a> (API) · <a href="js/config.js">config</a></p>
     </footer>
   </div>
 

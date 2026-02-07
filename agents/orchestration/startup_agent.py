@@ -11,7 +11,7 @@ import json
 import time
 import re
 import os
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional, Tuple, Set
 from pathlib import Path
 from dataclasses import asdict
 
@@ -753,30 +753,44 @@ class StartupAgent:
             with mindx_sh_path.open("r", encoding="utf-8") as f:
                 content = f.read()
             
-            # Extract command-line options and their descriptions
+            # Extract command-line options and their descriptions (every option including --replicate)
             commands = {}
             
-            # Parse --help output structure
+            # Parse show_help: each line echo "  --option [<arg>]   Description."
             if "show_help" in content:
-                # Extract options from help function
                 help_start = content.find("function show_help")
                 if help_start != -1:
                     help_end = content.find("}", help_start)
                     help_section = content[help_start:help_end]
-                    
-                    # Extract options and descriptions
-                    option_pattern = r'echo\s+"\s*--([^"]+)"'
-                    desc_pattern = r'echo\s+"\s*([^"]+)"'
-                    
-                    options = re.findall(option_pattern, help_section)
-                    descriptions = re.findall(desc_pattern, help_section)
-                    
-                    for i, option in enumerate(options):
-                        if i < len(descriptions):
-                            commands[option] = {
-                                "description": descriptions[i],
-                                "type": "flag" if "=" not in option else "option"
-                            }
+                    # Match lines like: echo "  --replicate                  Copy source code..."
+                    for line in help_section.split("\n"):
+                        m = re.search(r'echo\s+"(\s*--[^"]+)"', line)
+                        if not m:
+                            continue
+                        full = m.group(1).strip()
+                        # Split on 2+ spaces: option part and description
+                        parts = re.split(r"\s{2,}", full, 1)
+                        opt_part = (parts[0] if parts else full).strip()
+                        desc = (parts[1] if len(parts) > 1 else "").strip()
+                        if not opt_part.startswith("--"):
+                            continue
+                        # Normalize key: --config-file <path> -> config-file; -h, --help -> help
+                        key = opt_part.split()[0].lstrip("-").rstrip(",") if opt_part else ""
+                        if key == "h":
+                            key = "help"
+                        if not key:
+                            continue
+                        commands[key] = {
+                            "option": opt_part,
+                            "description": desc or opt_part,
+                            "type": "flag" if "<" not in opt_part and "=" not in opt_part else "option",
+                        }
+                    # Self-improvement note: --replicate is used by blueprint or authorized agents
+                    if "replicate" in commands:
+                        commands["replicate"]["self_improvement_note"] = (
+                            "Used for self-improvement directive from BlueprintAgent or an authorized agent; "
+                            "copies source code to target directory (use when creating full structure)."
+                        )
             
             # Extract key functions and their purposes
             functions = {
@@ -907,6 +921,60 @@ class StartupAgent:
             }
         
         return self.startup_docs
+
+    async def _get_agent_authority_list(self) -> List[Dict[str, Any]]:
+        """
+        Build agent authority list: agents from registry that have received keys (vault or config).
+        Used so mindXagent and BlueprintAgent know which agents are authorized for self-improvement directives (e.g. mindX.sh --replicate).
+        """
+        authority: List[Dict[str, Any]] = []
+        registry_agent_ids: Set[str] = set()
+        vault_agents_with_keys: Dict[str, bool] = {}
+
+        # 1. Coordinator agent registry (registered agents)
+        if self.coordinator_agent and hasattr(self.coordinator_agent, "agent_registry"):
+            for agent_id in self.coordinator_agent.agent_registry.keys():
+                registry_agent_ids.add(agent_id)
+
+        # 2. Official agents registry file
+        registry_path = PROJECT_ROOT / "data" / "config" / "official_agents_registry.json"
+        if registry_path.exists():
+            try:
+                with registry_path.open("r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    for agent_id in data.get("registered_agents", {}).keys():
+                        registry_agent_ids.add(agent_id)
+            except Exception as e:
+                logger.debug(f"{self.log_prefix} Could not load official_agents_registry: {e}")
+
+        # 3. Vault: agents that have received keys (have_key = True)
+        try:
+            from mindx_backend_service.vault_manager import get_vault_manager
+            vault = get_vault_manager()
+            for entry in vault.list_agent_keys():
+                aid = entry.get("agent_id", "")
+                if aid:
+                    vault_agents_with_keys[aid] = entry.get("has_key", False)
+        except Exception as e:
+            logger.debug(f"{self.log_prefix} Vault not available for authority list: {e}")
+
+        # 4. Config authorized_agents (if set)
+        config_authorized = list(self.config.get("authorized_agents", []) or [])
+
+        # Merge: each agent appears once with in_registry and has_key_in_vault
+        seen: Set[str] = set()
+        for agent_id in registry_agent_ids | set(vault_agents_with_keys.keys()) | set(config_authorized):
+            if not agent_id or agent_id in seen:
+                continue
+            seen.add(agent_id)
+            authority.append({
+                "agent_id": agent_id,
+                "in_registry": agent_id in registry_agent_ids,
+                "has_key_in_vault": vault_agents_with_keys.get(agent_id, False),
+                "in_authorized_config": agent_id in config_authorized,
+                "authorized": agent_id in registry_agent_ids or vault_agents_with_keys.get(agent_id, False) or agent_id in config_authorized,
+            })
+        return authority
     
     async def validate_startup_environment(self) -> Dict[str, Any]:
         """
@@ -1691,6 +1759,13 @@ Format as JSON with keys: suggestions (list), priorities, impacts, safe_to_apply
                     logger.debug(f"{self.log_prefix} mindXagent not available: {e}")
                     return
             
+            # mindX.sh command options (including --replicate for self-improvement/blueprint from authorized agents)
+            if not self.mindx_sh_commands or not self.mindx_sh_commands.get("commands"):
+                await self._load_startup_knowledge()
+            mindx_sh_commands = self.get_mindx_sh_commands()
+            # Agent authority list: agents that have received keys (from registry + vault)
+            agent_authority_list = await self._get_agent_authority_list()
+
             # Prepare startup information for mindXagent (pipe: list models → choice → interaction)
             startup_info = {
                 "startup_command": "begin_ollama_interaction",
@@ -1702,6 +1777,8 @@ Format as JSON with keys: suggestions (list), priorities, impacts, safe_to_apply
                 "startup_timestamp": time.time(),
                 "terminal_log_path": str(self.terminal_log_path),
                 "improvement_opportunities": [],
+                "mindx_sh_commands": mindx_sh_commands,
+                "agent_authority_list": agent_authority_list,
             }
             
             # Get terminal log feedback for mindXagent (full log content)

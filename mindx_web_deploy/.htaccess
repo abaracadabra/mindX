@@ -1,0 +1,24 @@
+# mindX Web Deploy — Apache (Hostinger)
+# Use with AllowOverride All for this directory.
+
+DirectoryIndex index.html
+
+# Disable directory listing
+Options -Indexes
+
+# Optional: cache static assets (adjust as needed)
+<IfModule mod_expires.c>
+  ExpiresByType text/css "access plus 1 day"
+  ExpiresByType application/javascript "access plus 1 day"
+</IfModule>
+
+# Optional: security headers (if mod_headers is available)
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+</IfModule>
+
+# Allow CORS for static assets if you serve from a different subdomain (optional)
+# <IfModule mod_headers.c>
+#   Header set Access-Control-Allow-Origin "*"
+# </IfModule>

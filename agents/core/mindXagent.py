@@ -217,6 +217,10 @@ class MindXAgent:
         
         # Blueprint agent integration
         self.blueprint_agent: Optional[Any] = None
+
+        # mindX.sh command options and agent authority (from startup_agent; used for self-improvement/blueprint directives)
+        self.mindx_sh_command_options: Dict[str, Any] = {}
+        self.agent_authority_list: List[Dict[str, Any]] = []
         
         # Status
         self.initialized = False
@@ -1390,10 +1394,14 @@ class MindXAgent:
             })
             agents_used = selected_agents
             
-            # Use Blueprint Agent first to generate strategic plan
+            # Use Blueprint Agent first to generate strategic plan (pass mindX.sh options and agent authority)
             if self.blueprint_agent:
                 try:
-                    blueprint = await self.blueprint_agent.generate_next_evolution_blueprint()
+                    context_override = {
+                        "mindx_sh_commands": self.get_mindx_sh_command_options(),
+                        "agent_authority_list": self.get_agent_authority_list(),
+                    }
+                    blueprint = await self.blueprint_agent.generate_next_evolution_blueprint(context_override=context_override)
                     if blueprint:
                         improvements_made.append({
                             "type": "blueprint",
@@ -2582,7 +2590,12 @@ class MindXAgent:
             self.startup_info = {}
         
         self.startup_info.update(startup_info)
-        
+        # Persist mindX.sh options and agent authority list for self-improvement and BlueprintAgent
+        if startup_info.get("mindx_sh_commands"):
+            self.mindx_sh_command_options = startup_info["mindx_sh_commands"]
+        if startup_info.get("agent_authority_list") is not None:
+            self.agent_authority_list = startup_info["agent_authority_list"]
+
         # Check connections and default to Ollama if no API keys found
         await self._check_and_default_connection()
         
@@ -2745,6 +2758,20 @@ class MindXAgent:
     def get_action_choices(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Get recent action choices for UI display"""
         return self.action_choices[-limit:] if self.action_choices else []
+
+    def get_mindx_sh_command_options(self) -> Dict[str, Any]:
+        """
+        Return full mindX.sh command options (including --replicate for self-improvement/blueprint from authorized agents).
+        mindXagent is fully aware of all mindX.sh options so it can honor self-improvement directives from BlueprintAgent or authorized agents.
+        """
+        return getattr(self, "mindx_sh_command_options", {}) or self.startup_info.get("mindx_sh_commands", {})
+
+    def get_agent_authority_list(self) -> List[Dict[str, Any]]:
+        """
+        Return agent authority list from registry: agents that have received keys (vault or config).
+        Used to validate that a self-improvement directive (e.g. mindX.sh --replicate) comes from an authorized agent.
+        """
+        return getattr(self, "agent_authority_list", None) or self.startup_info.get("agent_authority_list", [])
     
     def get_status(self) -> Dict[str, Any]:
         """Get current status for UI display with actual choices and events"""

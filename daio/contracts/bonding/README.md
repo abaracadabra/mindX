@@ -140,6 +140,8 @@ Where:
 - `p`: Exponent (can be fractional, e.g., 0.5 for square root, 1.0 for linear)
 - `S`: Current token supply
 
+**POWER settings for flexible custom behavior**: Tune `k` and `p` for different patterns — e.g. `p = 1e18` (linear), `p < 1e18` (decelerating), `p > 1e18` (accelerating). See `CURVE_TYPES.md` for recommended patterns (linear, sub-linear, super-linear, aggressive early, etc.).
+
 ## Uniswap Integration
 
 ### V2 (Production Ready)

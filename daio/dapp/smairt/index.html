@@ -25,6 +25,12 @@
 
     <div id="message" role="alert"></div>
 
+    <nav class="tabs" role="tablist">
+      <button type="button" class="tab active" data-tab="presale">Presale</button>
+      <button type="button" class="tab" data-tab="launch">Launch curve</button>
+    </nav>
+
+    <div id="tab-presale">
     <section class="panel" id="panel-state">
       <h2>Presale state</h2>
       <div id="state-content">
@@ -78,11 +84,67 @@
         <button type="button" class="btn btn-primary" id="withdraw-lp-btn">Withdraw LP (beneficiary)</button>
       </div>
     </section>
+    </div>
+
+    <div id="tab-launch" class="tab-panel" style="display:none">
+    <section class="panel">
+      <h2>Launch bonding curve (POWER)</h2>
+      <p>Set token and <strong>POWER curve</strong> parameters (<code>P(S) = k * S^p</code>). Curve only (no presale) or enable presale with optional presale options.</p>
+      <div class="form-grid">
+        <div class="field">
+          <label for="launch-name">Token name</label>
+          <input type="text" id="launch-name" placeholder="My Token" />
+        </div>
+        <div class="field">
+          <label for="launch-symbol">Token symbol</label>
+          <input type="text" id="launch-symbol" placeholder="MTK" />
+        </div>
+        <div class="field">
+          <label for="launch-initial-mint">Initial mint to owner</label>
+          <input type="text" id="launch-initial-mint" placeholder="0" />
+        </div>
+        <div class="field">
+          <label for="launch-k">POWER k (UD60x18, e.g. 1e12)</label>
+          <input type="text" id="launch-k" placeholder="1000000000000" value="1000000000000" />
+        </div>
+        <div class="field">
+          <label for="launch-p">POWER p (UD60x18)</label>
+          <input type="text" id="launch-p" placeholder="1000000000000000000" value="1000000000000000000" />
+          <p class="hint">1e18 = linear, 0.5e18 = sqrt (decelerating), 1.5e18 = accelerating</p>
+        </div>
+        <div class="field">
+          <label>Preset</label>
+          <div class="preset-btns">
+            <button type="button" class="btn btn-ghost btn-sm" data-preset="linear">Linear (p=1)</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-preset="sqrt">Sub-linear (p=0.5)</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-preset="accelerating">Accelerating (p=1.5)</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="launch-protocol-fee">Protocol fee (bps)</label>
+          <input type="text" id="launch-protocol-fee" placeholder="0" value="0" />
+        </div>
+        <div class="field">
+          <label for="launch-fee-recipient">Fee recipient (optional)</label>
+          <input type="text" id="launch-fee-recipient" placeholder="0x… or leave empty" />
+        </div>
+        <div class="field">
+          <label><input type="checkbox" id="launch-enable-presale" /> Enable presale</label>
+          <p class="hint">If unchecked, launches curve + token only. If checked, set presale options below or leave defaults.</p>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:1rem">
+        <button type="button" class="btn btn-primary" id="launch-btn">Launch curve</button>
+      </div>
+      <div id="launch-result" class="output-box" style="margin-top:1rem;display:none"></div>
+    </section>
+    </div>
   </div>
 
   <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
   <script src="abis/PresaleABI.js"></script>
   <script src="abis/LiquidityLockerABI.js"></script>
+  <script src="abis/FactoryABI.js"></script>
   <script src="smairt.js"></script>
 </body>
 </html>

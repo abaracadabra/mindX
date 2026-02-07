@@ -11,10 +11,10 @@
     <link rel="stylesheet" href="styles3.css">
     <script src="crossmint-integration.js"></script>
     <script src="window-manager.js"></script>
-    <!-- Authentication Check - Server-authoritative session (vault-backed) -->
+    <!-- Authentication Check - Server-authoritative session (vault-backed). Locked until validate succeeds. -->
     <script>
         (function() {
-            var apiBaseUrl = window.MINDX_API_URL || ('http://localhost:' + (window.MINDX_BACKEND_PORT || '8000'));
+            var apiBaseUrl = (typeof API_CONFIG !== 'undefined' && API_CONFIG.baseUrl) ? API_CONFIG.baseUrl : (window.MINDX_API_URL || ('http://localhost:' + (window.MINDX_BACKEND_PORT || '8000')));
             var sessionToken = localStorage.getItem('mindx_session_token');
             
             function clearAuthAndRedirect() {
@@ -28,30 +28,61 @@
                 window.location.href = '/login';
             }
             
+            function unlockControlPanel() {
+                document.body.classList.add('authenticated');
+                var mainApp = document.getElementById('main-application');
+                if (mainApp) {
+                    mainApp.style.display = '';
+                    mainApp.style.visibility = '';
+                }
+                var verifying = document.getElementById('session-verifying');
+                if (verifying) verifying.style.display = 'none';
+            }
+            
             if (!sessionToken) {
                 console.log('❌ No session token, redirecting to login...');
                 clearAuthAndRedirect();
                 return;
             }
             
-            // Validate session with backend (vault-backed; not bypassable)
-            fetch(apiBaseUrl + '/users/session/validate', {
-                method: 'GET',
-                headers: { 'X-Session-Token': sessionToken }
-            }).then(function(res) {
-                if (res.ok) {
-                    return res.json();
+            function runValidation() {
+                // Keep control panel locked until session is validated
+                var mainApp = document.getElementById('main-application');
+                if (mainApp) {
+                    mainApp.style.display = 'none';
+                    mainApp.style.visibility = 'hidden';
                 }
-                console.log('❌ Session invalid or expired (', res.status, '), redirecting to login...');
-                clearAuthAndRedirect();
-            }).then(function(data) {
-                if (data && data.wallet_address) {
-                    console.log('✅ Session valid for', data.wallet_address.slice(0, 10) + '...');
-                }
-            }).catch(function(err) {
-                console.error('Session validate error:', err);
-                clearAuthAndRedirect();
-            });
+                
+                // Validate session with backend (vault-backed; not bypassable)
+                fetch(apiBaseUrl + '/users/session/validate', {
+                    method: 'GET',
+                    headers: { 'X-Session-Token': sessionToken }
+                }).then(function(res) {
+                    if (res.ok) {
+                        return res.json();
+                    }
+                    console.log('❌ Session invalid or expired (', res.status, '), redirecting to login...');
+                    clearAuthAndRedirect();
+                    return Promise.reject(new Error('Session invalid'));
+                }).then(function(data) {
+                    if (data && data.wallet_address) {
+                        console.log('✅ Session valid for', data.wallet_address.slice(0, 10) + '...');
+                        unlockControlPanel();
+                    } else {
+                        clearAuthAndRedirect();
+                    }
+                }).catch(function(err) {
+                    if (err && err.message === 'Session invalid') return;
+                    console.error('Session validate error:', err);
+                    clearAuthAndRedirect();
+                });
+            }
+            
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', runValidation);
+            } else {
+                runValidation();
+            }
         })();
         
         // Populate wallet info in header
@@ -102,8 +133,10 @@
         // Handle logout
         function handleLogout() {
             if (confirm('Are you sure you want to logout?')) {
-                // Clear all auth data
+                // Clear all auth data (including vault-backed session)
                 localStorage.removeItem('mindx_auth');
+                localStorage.removeItem('mindx_session_token');
+                localStorage.removeItem('mindx_session_expires_at');
                 localStorage.removeItem('crossmint_authenticated');
                 localStorage.removeItem('crossmint_wallet');
                 localStorage.removeItem('crossmint_user');
@@ -438,7 +471,12 @@
     </script>
 </head>
 <body>
-    <!-- Main Application -->
+    <!-- Shown while session is being validated (locked state) -->
+    <div id="session-verifying" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0a0a0a 0%,#1a1a1a 100%);color:#b0b0b0;font-family:system-ui,sans-serif;flex-direction:column;gap:1rem;">
+        <p style="margin:0;">Verifying your session…</p>
+        <p style="margin:0;font-size:0.9rem;">You will enter the control panel when verification succeeds.</p>
+    </div>
+    <!-- Main Application (unlocked after session validate succeeds) -->
     <div id="main-application" class="container">
         <header>
             <div class="header-single-line">

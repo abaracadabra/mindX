@@ -5,7 +5,8 @@ import "forge-std/Test.sol";
 
 import { CurveToken } from "../src/token/CurveToken.sol";
 import { BondingCurvePoolNative } from "../src/pool/BondingCurvePoolNative.sol";
-import { CurveMath } from "../src/math/CurveMath.sol";
+import { CurveType } from "../src/math/CurveType.sol";
+import { MultiCurveMath } from "../src/math/MultiCurveMath.sol";
 import { UD60x18, ud } from "prb-math/UD60x18.sol";
 
 contract BondingCurvePoolNativeTest is Test {
@@ -18,12 +19,12 @@ contract BondingCurvePoolNativeTest is Test {
     function setUp() public {
         token = new CurveToken("BOND CURV", "BOND", address(this), 0);
 
-        CurveMath.PowerParams memory pp = CurveMath.PowerParams({
-            k: ud(1e12),   // 1e-6 ETH scaling (cheap for tests)
-            p: ud(1e18)    // p=1 (linear price)
-        });
+        MultiCurveMath.CurveParams memory cp;
+        cp.curveType = CurveType.POWER;
+        cp.k = ud(1e12);   // 1e-6 ETH scaling (cheap for tests)
+        cp.p = ud(1e18);   // p=1 (linear price)
 
-        pool = new BondingCurvePoolNative(token, pp, address(this));
+        pool = new BondingCurvePoolNative(token, cp, address(this));
         token.setPool(address(pool));
 
         pool.setProtocolFee(200, feeRecip); // 2%

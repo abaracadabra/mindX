@@ -5,7 +5,8 @@ import "forge-std/Test.sol";
 
 import { CurveToken } from "../src/token/CurveToken.sol";
 import { BondingCurvePoolNative } from "../src/pool/BondingCurvePoolNative.sol";
-import { CurveMath } from "../src/math/CurveMath.sol";
+import { CurveType } from "../src/math/CurveType.sol";
+import { MultiCurveMath } from "../src/math/MultiCurveMath.sol";
 import { UD60x18, ud } from "prb-math/UD60x18.sol";
 
 import { BondingCurvePresaleSMAIRT } from "../src/extensions/BondingCurvePresaleSMAIRT.sol";
@@ -30,12 +31,12 @@ contract PresaleSMAIRTTest is Test {
     function setUp() public {
         token = new CurveToken("BOND CURV", "BOND", owner, 0);
 
-        CurveMath.PowerParams memory pp = CurveMath.PowerParams({
-            k: ud(1e12),
-            p: ud(1e18)
-        });
+        MultiCurveMath.CurveParams memory cp;
+        cp.curveType = CurveType.POWER;
+        cp.k = ud(1e12);
+        cp.p = ud(1e18);
 
-        pool = new BondingCurvePoolNative(token, pp, owner);
+        pool = new BondingCurvePoolNative(token, cp, owner);
         token.setPool(address(pool));
 
         provisioner = new UniV2Provisioner();

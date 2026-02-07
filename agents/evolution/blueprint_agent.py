@@ -114,14 +114,20 @@ class BlueprintAgent:
 
         return summary
 
-    async def generate_next_evolution_blueprint(self) -> Dict[str, Any]:
-        """Generates a blueprint for the next self-improvement iteration of MindX."""
+    async def generate_next_evolution_blueprint(self, context_override: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Generates a blueprint for the next self-improvement iteration of MindX.
+        context_override may include mindx_sh_commands and agent_authority_list from mindXagent
+        so the blueprint can reference mindX.sh options (e.g. --replicate) and authorized agents.
+        """
         logger.info(f"{self.agent_id}: Generating next evolution blueprint...")
         
         if not self.llm_handler:
             return {"error": "BlueprintAgent has no operational LLM handler."}
 
         system_state = await self._gather_mindx_system_state_summary()
+        if context_override:
+            system_state.update(context_override)
         
         prompt = (
             f"You are a Chief Architect AI for the MindX Self-Improving System (Project Chimaiera).\n"

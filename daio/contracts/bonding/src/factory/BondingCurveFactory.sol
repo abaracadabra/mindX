@@ -6,7 +6,8 @@ import { UD60x18, ud } from "prb-math/UD60x18.sol";
 
 import { CurveToken } from "../token/CurveToken.sol";
 import { BondingCurvePoolNative } from "../pool/BondingCurvePoolNative.sol";
-import { CurveMath } from "../math/CurveMath.sol";
+import { CurveType } from "../math/CurveType.sol";
+import { MultiCurveMath } from "../math/MultiCurveMath.sol";
 import { BondingCurvePresaleSMAIRT } from "../extensions/BondingCurvePresaleSMAIRT.sol";
 import { ILiquidityProvisioner } from "../liquidity/ILiquidityProvisioner.sol";
 
@@ -56,14 +57,14 @@ contract BondingCurveFactory is Ownable {
         // Deploy curve token with configurable name, symbol, and initial mint
         CurveToken token = new CurveToken(nm, sym, msg.sender, a.initialMintToOwner);
 
-        // Set up curve parameters
-        CurveMath.PowerParams memory pp = CurveMath.PowerParams({
-            k: ud(a.kUD60x18),
-            p: ud(a.pUD60x18)
-        });
+        // Set up curve parameters (POWER curve: P(S) = k * S^p)
+        MultiCurveMath.CurveParams memory cp;
+        cp.curveType = CurveType.POWER;
+        cp.k = ud(a.kUD60x18);
+        cp.p = ud(a.pUD60x18);
 
         // Deploy bonding curve pool
-        BondingCurvePoolNative pool = new BondingCurvePoolNative(token, pp, msg.sender);
+        BondingCurvePoolNative pool = new BondingCurvePoolNative(token, cp, msg.sender);
         token.setPool(address(pool));
 
         // Configure protocol fee

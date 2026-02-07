@@ -365,10 +365,16 @@ class UserPersistenceManager:
         return self.signatures.get(wallet_address, [])
     
     def generate_challenge_message(self, wallet_address: str, action: str) -> str:
-        """Generate a challenge message for signature"""
+        """Generate a challenge message for signature. Safe for MetaMask: explains intent, no funds, user in control."""
         timestamp = int(time.time())
         nonce = hashlib.sha256(f"{wallet_address}_{action}_{timestamp}".encode()).hexdigest()[:8]
-        return f"mindX Challenge: {action} for {wallet_address} at {timestamp} (nonce: {nonce})"
+        return (
+            "mindX would like you to sign in with your wallet.\n\n"
+            "This signature proves you own this address. It does not authorize any transaction, "
+            "transfer of funds, or approval of tokens. You are in full control and remain safe.\n\n"
+            "Only sign if you requested access to mindX right now.\n\n"
+            f"Login · {wallet_address} · {timestamp} · {nonce}"
+        )
 
 # Global instance
 _user_persistence_manager = None

@@ -25,7 +25,7 @@ The S.M.A.I.R.T bonding system is built from three core layers.
 ### 1. Bonding Curve (Service Token & Pool)
 
 - **CurveToken** (`CurveToken.sol`): ERC20 whose mint/burn are restricted to the bonding curve pool. Name and symbol are configurable at deployment (defaults: “REFLECT REWARD” / “REWARD”).
-- **BondingCurvePoolNative** (`BondingCurvePoolNative.sol`): Native-reserve (ETH) pool with power-curve pricing `P(S) = k * S^p` (UD60x18). It exposes:
+- **BondingCurvePoolNative** (`BondingCurvePoolNative.sol`): Native-reserve (ETH) pool supporting multiple curve types (POWER, LINEAR, EXPONENTIAL, DECELERATING, TIERED). When using **POWER** (e.g. via the factory), pricing is `P(S) = k * S^p` (UD60x18). **POWER settings** allow flexible custom behavior: `p = 1e18` for linear, `p < 1e18` for decelerating (e.g. sqrt with `p = 0.5e18`), `p > 1e18` for accelerating; `k` scales the price level. See `CURVE_TYPES.md` for recommended POWER patterns (linear, sub-linear, super-linear, aggressive early, etc.). The pool exposes:
   - `buy(minTokensOut, to)`: pay ETH, receive newly minted tokens.
   - `sell(tokensIn, minEthOut, to)`: burn tokens, receive ETH.
   - Optional protocol fee (bps) on buy/sell.

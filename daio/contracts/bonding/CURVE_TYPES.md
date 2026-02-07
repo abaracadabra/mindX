@@ -7,15 +7,32 @@ The DAIO Bonding Curve Protocol supports multiple curve types, each providing di
 ### 1. POWER Curve (Default)
 **Formula**: `P(S) = k * S^p`
 
-- **Description**: Configurable power curve with adjustable exponent
-- **Behavior**: 
-  - `p = 1`: Linear pricing
-  - `p > 1`: Accelerating (price increases faster as supply grows)
-  - `p < 1`: Decelerating (price increases slower as supply grows)
-- **Use Cases**: Flexible pricing for various tokenomics models
+- **Description**: Configurable power curve with adjustable exponent; supports flexible custom behavior patterns via `k` and `p`.
+- **Behavior**:
+  - `p = 1e18` (1.0): Linear pricing — constant marginal cost per token.
+  - `p > 1e18`: Accelerating — price increases faster as supply grows; rewards very early participants.
+  - `p < 1e18`: Decelerating — price increases slower as supply grows; more stability at higher supply.
+- **Use Cases**: Flexible pricing for various tokenomics models, custom presale shapes, and tunable early/late participant incentives.
 - **Parameters**:
-  - `k`: Base coefficient
-  - `p`: Exponent (UD60x18, can be fractional)
+  - `k`: Base coefficient (reserve per token^(p+1)); scales overall price level.
+  - `p`: Exponent (UD60x18, can be fractional); defines curve shape.
+
+#### POWER settings for flexible custom behavior patterns
+
+Use these patterns when launching with `CurveType.POWER` (e.g. via `BondingCurveFactory.launchPowerCurveNative` with `curveType` implied as POWER and args `kUD60x18`, `pUD60x18`).
+
+| Pattern | p (UD60x18) | k (example) | Behavior |
+|--------|-------------|-------------|----------|
+| **Linear** | `1e18` | e.g. `1e12` | Constant slope; simple, predictable. |
+| **Sub-linear (gentle)** | `0.5e18` (sqrt) | e.g. `1e12` | Price grows slower as S increases; early spike then flatter. |
+| **Sub-linear (mild)** | e.g. `0.8e18` | e.g. `1e12` | Between linear and sqrt; moderate deceleration. |
+| **Super-linear (mild)** | e.g. `1.2e18` | e.g. `1e12` | Price grows faster with S; slight FOMO. |
+| **Super-linear (aggressive)** | e.g. `1.5e18`–`2e18` | e.g. `1e11` | Strong early advantage; later buys much more expensive. |
+| **Near-flat then rise** | e.g. `0.3e18` | e.g. `1e13` | Very flat at first, then gradual rise. |
+
+- **k**: Increase `k` to raise the whole curve (higher cost per token at a given supply); decrease for cheaper entry. Scale with desired total reserve and supply (e.g. `1e12` for small units, `1e10` for larger).
+- **p**: Fixed-point; `1e18` = 1.0. Use `0.5e18` for sqrt-like, `1e18` for linear, `1.5e18` for accelerating. Fractional values (e.g. `0.7e18`) give fine-grained behavior.
+- **Combining**: Lower `k` + higher `p` = cheap start, steep later. Higher `k` + lower `p` = higher floor, gentler growth. Tune to match presale or DEX transition goals.
 
 ### 2. LINEAR Curve
 **Formula**: `P(S) = k * S`
@@ -43,6 +60,19 @@ The DAIO Bonding Curve Protocol supports multiple curve types, each providing di
   - `a`: Exponential growth rate
 
 ### 4. DECELERATING Curve (Stable)
+**Formula**: `P(S) = k * sqrt(S)`
+
+- **Description**: Starts fast, becomes more stable over time
+- **Behavior**:
+  - Price increases quickly at low supply
+  - Price growth slows as supply increases
+  - More price stability at higher supply levels
+- **Use Cases**:
+  - Long-term price stability
+  - Reducing volatility
+  - Sustainable growth models
+- **Parameters**:
+  - `k`: Base coefficient
 
 ### 5. TIERED Curve
 **Formula**: Piecewise function with three phases:
@@ -64,20 +94,6 @@ The DAIO Bonding Curve Protocol supports multiple curve types, each providing di
   - `threshold1`: Start of flatline (supply threshold)
   - `threshold2`: End of flatline (supply threshold)
   - `k2`: Second slope coefficient (after flatline)
-
-**Formula**: `P(S) = k * sqrt(S)`
-
-- **Description**: Starts fast, becomes more stable over time
-- **Behavior**:
-  - Price increases quickly at low supply
-  - Price growth slows as supply increases
-  - More price stability at higher supply levels
-- **Use Cases**:
-  - Long-term price stability
-  - Reducing volatility
-  - Sustainable growth models
-- **Parameters**:
-  - `k`: Base coefficient
 
 ## Price Comparison with DEX Pairs
 
@@ -140,7 +156,13 @@ uint256 equivalentPrice = oracle.calculateEquivalentPrice(
 
 ## Implementation
 
-All curve types are implemented in `MultiCurveMath.sol` and can be selected via `CurveType` enum when deploying a bonding curve pool.
+All five curve types are implemented in `MultiCurveMath.sol` in a fixed order: **POWER, LINEAR, EXPONENTIAL, DECELERATING, TIERED**. Select via `CurveType` enum when deploying a bonding curve pool.
+
+- **POWER**: uses `k`, `p` (and delegates to `CurveMath`).
+- **LINEAR**: uses `k` only (constant slope).
+- **EXPONENTIAL**: uses `k`, `a`; spot price `P(S) = k * (e^(a*S) - 1)`; cost/mint use integral and iterative inverse.
+- **DECELERATING**: uses `k`; implemented as power curve with `p = 0.5` (sqrt) for spot and matching integral.
+- **TIERED**: uses `k`, `threshold1`, `threshold2`, `k2`; piecewise linear/flat/linear with phase helpers.
 
 ```solidity
 MultiCurveMath.CurveParams memory params;

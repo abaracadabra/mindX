@@ -5,5 +5,6 @@ pragma solidity ^0.8.24;
 /// @dev Allows selection of different token implementations
 enum TokenType {
     CURVE_TOKEN,        // Standard bonding curve token (default)
-    REFLECTION_REWARD    // Reflection token with reward distribution
+    REFLECTION_REWARD,  // Reflection token with reward distribution
+    REBASE_TOKEN       // Rebase token (DeltaV-style)
 }

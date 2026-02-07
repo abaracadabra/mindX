@@ -81,6 +81,27 @@ mindX is a **tiered orchestration system** built from cryptographically authenti
 
 All agents sign actions with their **Ethereum-compatible wallets**, ensuring cryptographic accountability and permissioned behavior.
 
+### Identity, Wallets, and the Vault
+
+Every agent in mindX has a **public-key crypto wallet** (Ethereum-compatible address). The **IDManagerAgent** is responsible for the identity registry and for how private keys are held:
+
+- **Vault-held keys:** By default, mindX holds agent **private keys in a secure vault**. The IDManagerAgent provisions and protects these keys so that agents can sign actions and transact within the system without exposing keys to the rest of the stack.
+- **Externally owned agents:** When an agent is **externally owned**, the **owner** holds the private key (e.g. a human or external system controls the wallet). mindX does not store that key; the agent operates by arrangement with the owner (e.g. signing via connected wallet or delegated access).
+- **Agent-arranged access:** An agent may instead **make arrangements to access** a key (e.g. HSM, KMS, or delegated signing service). In that case the key is not stored in the mindX vault, but the agent still obtains the ability to sign under its identity through that arrangement.
+
+In all cases, each agent is identified by a public address; only the key-holding model (vault, owner, or agent-arranged) differs.
+
+### Core and orchestration
+
+The codebase is organized into **core** (reasoning and identity) and **orchestration** (hierarchy and command flow):
+
+- **Core (`agents/core/`):** Hosts the **reasoning** substrate: **BDIAgent** (Belief–Desire–Intention tactical execution), **AGInt** (general cognitive strategist, P-O-D-A loop), **BeliefSystem**, and **IDManagerAgent**. Core provides the cognitive and identity primitives that every agent relies on.
+- **Orchestration (`agents/orchestration/`):** Implements the **command hierarchy**. A user or higher intelligence issues a **wish** (strategic intent). That wish becomes a **directive**—a mind command. The flow is: **Higher Intelligence → CEO Agent → MastermindAgent → CoordinatorAgent → Specialized Agents**. The **CEO Agent** persona acts as the **director** of mindX: it receives strategic directives, validates them, and directs the **MastermindAgent**, which in turn sets BDI goals and orchestrates deployment and execution across the swarm. Hence the phrase: *Your wish is mind command*—the user’s wish is translated into a command executed by the mind (Mastermind) and the rest of the hierarchy.
+
+### Startup and inference
+
+On **startup**, mindX initializes always-on agents (Coordinator, mindXagent, Memory), loads the agent registry, and establishes an **inference** connection for LLM-backed reasoning. If **no API inference** is found (e.g. no configured provider keys or no reachable endpoint), mindX will **connect to or install Ollama** as a local inference backend. The StartupAgent coordinates this: it attempts to auto-connect to Ollama; if that fails, it can invoke the **Ollama bootstrap** (e.g. `llm/ollama_bootstrap`: install and configure Ollama on Linux, pull a model, and serve it) so that the system gains local inference and can continue self-improvement and agentic operation without external API keys. Once Ollama is available, mindXagent and other agents use it as the default or fallback provider.
+
 ---
 
 ## 5. Capabilities and Systems at RC3

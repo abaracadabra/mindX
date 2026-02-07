@@ -161,7 +161,6 @@ contract TokenFactory {
     /// @param initialMint Initial mint amount (for CurveToken) or total supply (for ReflectionRewardToken) or initial supply (for RebaseToken)
     /// @param reflectionParams Additional parameters for ReflectionRewardToken (ignored for other types)
     /// @param rebaseParams Additional parameters for RebaseToken (ignored for other types)
-}
     function createToken(
         TokenType tokenType,
         string memory name,
@@ -172,20 +171,21 @@ contract TokenFactory {
         RebaseTokenParams memory rebaseParams
     ) external returns (address) {
         if (tokenType == TokenType.CURVE_TOKEN) {
-            return createCurveToken(name, symbol, owner, initialMint);
+            return this.createCurveToken(name, symbol, owner, initialMint);
         } else if (tokenType == TokenType.REFLECTION_REWARD) {
             // Use provided params or defaults
             reflectionParams.name = bytes(reflectionParams.name).length == 0 ? name : reflectionParams.name;
             reflectionParams.symbol = bytes(reflectionParams.symbol).length == 0 ? symbol : reflectionParams.symbol;
             reflectionParams.totalSupply = initialMint == 0 ? 0 : initialMint;
-            return createReflectionRewardToken(reflectionParams);
+            return this.createReflectionRewardToken(reflectionParams);
         } else if (tokenType == TokenType.REBASE_TOKEN) {
             // Use provided params or defaults
             rebaseParams.name = bytes(rebaseParams.name).length == 0 ? name : rebaseParams.name;
             rebaseParams.symbol = bytes(rebaseParams.symbol).length == 0 ? symbol : rebaseParams.symbol;
             rebaseParams.initialSupply = initialMint == 0 ? 0 : initialMint;
-            return createRebaseToken(rebaseParams);
+            return this.createRebaseToken(rebaseParams);
         } else {
             revert("Unknown token type");
         }
     }
+}
