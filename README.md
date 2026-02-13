@@ -440,10 +440,8 @@ MIT License - See [LICENSE](LICENSE) for details.
 
 ## 🔗 Links
 
-- **Repository**: [GitHub - abaracadabra/mindX](https://github.com/abaracadabra/mindX)
-- **Documentation**: [Complete Documentation](https://github.com/abaracadabra/mindX/tree/main/docs)
-- **Hackathon Entry**: [Internet of Agents Submission](https://github.com/abaracadabra/mindX/blob/main/docs/hackathon.md)
-
+- **Repository**: [GitHub - abaracadabra/mindX](https://github.com/AgenticPlace/mindX/))
+- **Documentation**: [Complete Documentation](https://github.com/AgenticPlace/mindX/docs))
 ---
 
 ## 🎉 **mindX: The First Autonomous Digital Civilization**
