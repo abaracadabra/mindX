@@ -249,8 +249,6 @@ mindX/
 - **[Blueprint Agent](https://github.com/abaracadabra/mindX/blob/main/docs/blueprint_agent.md)** - System design automation
 - **[Guardian Agent](https://github.com/abaracadabra/mindX/blob/main/docs/guardian_agent.md)** - Security and validation
 
-### **Hackathon & Competition**
-- **[Hackathon Submission](https://github.com/abaracadabra/mindX/blob/main/docs/hackathon.md)** - Internet of Agents competition entry
 - **[Technical Architecture](https://github.com/abaracadabra/mindX/blob/main/docs/TECHNICAL.md)** - Complete system design
 
 ## 🧪 Testing
