@@ -439,11 +439,7 @@ This is the evolution of mindX - a production-ready godel-machine. The system is
 MIT License - See [LICENSE](LICENSE) for details.
 
 ## 🔗 Links
-
-- **Repository**: [GitHub - abaracadabra/mindX](https://github.com/AgenticPlace/mindX/))
-- **Documentation**: [Complete Documentation](https://github.com/AgenticPlace/mindX/docs))
----
-
+mindx.pythai.net
 ## 🎉 **mindX: The First Autonomous Digital Civilization**
 
 **Status**: ✅ **EXPERIMENTAL** - Fully Deployed & Operational  
