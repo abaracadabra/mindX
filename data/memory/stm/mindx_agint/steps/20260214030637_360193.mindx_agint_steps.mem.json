@@ -1,0 +1,19 @@
+{
+  "timestamp_utc": "2026-02-14T10:06:37.360437",
+  "memory_type": "STM",
+  "category": "mindx_agint/steps",
+  "metadata": {
+    "agent": "mindx_agint",
+    "component": "cognitive_loop",
+    "timestamp": 1771063597.3595865
+  },
+  "data": {
+    "cycle": 1,
+    "step_phase": "DECISION",
+    "step_message": "Strategy selection",
+    "directive": "who are you?",
+    "timestamp": 1771063597.359564,
+    "code_changes": [],
+    "code_changes_count": 0
+  }
+}

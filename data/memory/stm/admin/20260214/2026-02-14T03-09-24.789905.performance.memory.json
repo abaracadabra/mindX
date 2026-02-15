@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-02-14T03:09:24.789905",
+  "memory_type": "performance",
+  "importance": 3,
+  "agent_id": "admin",
+  "content": {
+    "event_type": "models_listed",
+    "log_level": "INFO",
+    "model_count": 0
+  },
+  "context": {
+    "source": "ollama_admin",
+    "timestamp": "2026-02-14T03:09:24.789894"
+  },
+  "tags": [
+    "ollama",
+    "diagnostics",
+    "info"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "b4083b35cc41d3b9"
+}

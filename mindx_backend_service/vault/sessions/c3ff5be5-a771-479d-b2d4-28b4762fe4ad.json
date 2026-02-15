@@ -1,0 +1,11 @@
+{
+  "session_id": "c3ff5be5-a771-479d-b2d4-28b4762fe4ad",
+  "wallet_address": "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169",
+  "expires_at": "2026-02-11T02:19:11.563987Z",
+  "created_at": "2026-02-09T19:19:11.566044",
+  "metadata": {
+    "chainId": "0x89",
+    "provider": "metamask",
+    "authMethod": "wallet"
+  }
+}

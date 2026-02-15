@@ -1,0 +1,41 @@
+{
+  "timestamp": "2026-02-14T03:09:21.801770",
+  "memory_type": "performance",
+  "importance": 3,
+  "agent_id": "admin",
+  "content": {
+    "event_type": "connection_test",
+    "log_level": "INFO",
+    "base_url": "http://localhost:11434",
+    "success": true,
+    "result": {
+      "success": true,
+      "message": "Successfully connected to Ollama at http://localhost:11434",
+      "model_count": 2,
+      "base_url": "http://localhost:11434",
+      "primary_url": "http://10.0.0.155:18080",
+      "fallback_url": "http://localhost:11434",
+      "using_fallback": true,
+      "status_code": 200,
+      "request_sent": "GET http://localhost:11434/api/tags",
+      "response_status": 200,
+      "response_preview": "200 OK, 2 model(s)",
+      "primary_request_sent": "GET http://10.0.0.155:18080/api/tags",
+      "primary_response_preview": "Timeout (no response in 5s)",
+      "primary_response_status": 0,
+      "switched_to_fallback": true,
+      "primary_error": "Connection timeout: Ollama server at http://10.0.0.155:18080 did not respond within 5 seconds"
+    }
+  },
+  "context": {
+    "source": "ollama_admin",
+    "timestamp": "2026-02-14T03:09:21.801747"
+  },
+  "tags": [
+    "ollama",
+    "diagnostics",
+    "info"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "c643039e6e28f8be"
+}

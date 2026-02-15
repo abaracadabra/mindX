@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-02-14T03:10:44.760287",
+  "memory_type": "performance",
+  "importance": 3,
+  "agent_id": "admin",
+  "content": {
+    "event_type": "interaction_complete",
+    "log_level": "INFO",
+    "model": "deepseek-coder:latest",
+    "response_length": 345,
+    "duration_ms": 40471.173,
+    "success": true
+  },
+  "context": {
+    "source": "ollama_admin",
+    "timestamp": "2026-02-14T03:10:44.760277"
+  },
+  "tags": [
+    "ollama",
+    "diagnostics",
+    "info"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "dd067ec0f2570c89"
+}

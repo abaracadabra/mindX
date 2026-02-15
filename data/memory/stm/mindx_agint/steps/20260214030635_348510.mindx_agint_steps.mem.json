@@ -1,0 +1,19 @@
+{
+  "timestamp_utc": "2026-02-14T10:06:35.348578",
+  "memory_type": "STM",
+  "category": "mindx_agint/steps",
+  "metadata": {
+    "agent": "mindx_agint",
+    "component": "cognitive_loop",
+    "timestamp": 1771063595.3463697
+  },
+  "data": {
+    "cycle": 1,
+    "step_phase": "PERCEPTION",
+    "step_message": "System state analysis",
+    "directive": "who are you?",
+    "timestamp": 1771063595.3463523,
+    "code_changes": [],
+    "code_changes_count": 0
+  }
+}

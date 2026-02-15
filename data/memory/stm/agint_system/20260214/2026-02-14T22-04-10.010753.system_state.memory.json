@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-02-14T22:04:10.010753",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "agint_system",
+  "content": {
+    "process_name": "agint_cycle_log",
+    "data": {
+      "cycle_id": 3,
+      "message_type": "directive",
+      "message": "who are you?"
+    }
+  },
+  "context": {
+    "agent_id": "agint_system"
+  },
+  "tags": [
+    "agint_cycle_log",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "132340c2140fefff"
+}

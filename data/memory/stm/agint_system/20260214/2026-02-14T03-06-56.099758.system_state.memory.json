@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-02-14T03:06:56.099758",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "agint_system",
+  "content": {
+    "process_name": "agint_cycle_log",
+    "data": {
+      "cycle_id": 4,
+      "message_type": "bdi_reasoning",
+      "message": "BDI Reasoning: Directive 'who are you?' -> Belief: Task requires simple_coder -> Desire: Use best suited agent -> Intention: Execute with simple_coder"
+    }
+  },
+  "context": {
+    "agent_id": "agint_system"
+  },
+  "tags": [
+    "agint_cycle_log",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "a94b6e16017e9547"
+}

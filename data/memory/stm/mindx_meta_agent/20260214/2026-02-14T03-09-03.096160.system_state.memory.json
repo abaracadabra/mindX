@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-02-14T03:09:03.096160",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "process_name": "mindxagent_identity_loaded",
+    "data": {
+      "source": "docs/INDEX.md",
+      "content": "# MindX Documentation Index\n\n## Comprehensive Documentation Index\n\nThis document provides a complete index of all documentation in the mindX system, organized by category and component type.\n\n**Last Updated**: 2026-02-05  \n**Total Documentation Files**: 170+  \n**Agent Documentation**: 34+  \n**Tool Documentation**: 29+  \n\n---\n\n## \ud83c\udf10 mindX API (read the docs)\n\nmindX provides an API for agents, UIs, and external systems. When the backend is running (default port 8000):\n\n- **Interactive docs (Swagger UI):** [http://localhost:8000/docs](http://localhost:8000/docs)\n- **API reference:** **[API.md](API.md)** \u2014 base URL, route groups, AgenticPlace connection, connecting mindX to Ollama\n\nAgenticPlace uses mindX as its provider; see [AgenticPlace_Deep_Dive.md](AgenticPlace_Deep_Dive.md) and [API.md](API.md).\n\n---\n\n## \ud83d\udcca Monitoring and Rate Control (both directions)\n\nWhether mindX is **ingesting**, **providing inference**, or **services**, monitoring and rate control are essential in **both directions** (inbound and outbound). Actual network and data metrics are in scientific units (ms, bytes, req/min).\n\n- **Doc:** **[monitoring_rate_control.md](monitoring_rate_control.md)** \u2014 bidirectional monitoring, scientific metrics (latency ms, payload bytes, throughput req/s and req/min), where they are collected (inbound middleware, outbound limiters, PerformanceMonitor)\n- **Inbound API:** `GET /api/monitoring/inbound` \u2014 inbound request metrics (latency_ms, request/response bytes, requests_per_minute, rate_limit_rejects)\n- **Outbound:** `llm/rate_limiter.py`, `api/ollama/ollama_url.py` and other provider APIs expose `get_metrics()`; see [rate_limiting_optimization.md](rate_limiting_optimization.md)\n\n---\n\n## \ud83d\udcda Documentation Categories\n\n### \ud83e\udd16 Agent Documentation\n\nAll agent documentation is organized in the `agents/` folder structure. See [agents/index.md](../agents/index.md) for the complete agent registry.\n\n#### Core Components (agents/core/)\n\n- **[BDI Agent](agents/bdi_agent.md)** - Foundational cognitive architecture implementing Belief-Desire-Intention model\n- **[Belief System](belief_system.md)** - Singleton belief management system with confidence scores\n- **[ID Manager Agent](agents/id_manager_agent.md)** - Central secure ledger for cryptographic identity management\n- **[AGInt Agent](agint.md)** - High-level cognitive orchestrator with P-O-D-A loop\n\n#### Agent Implementations (agents/)\n\n- **[Guardian Agent](agents/guardian_agent.md)** - Security backbone with identity validation and access control\n- **[Memory Agent](agents/memory_agent.md)** - Infrastructure layer for persistent memory\n- **[AutoMINDX Agent](agents/automindx_agent.md)** - Persona manager with iNFT export and marketplace integration\n- **[Persona Agent](agents/persona_agent.md)** - Persona adoption and management with BDI integration\n- **[Avatar Agent](agents/avatar_agent.md)** - Avatar generation for agents and participants\n- **[Coral ID Agent](agents/coral_id_agent.md)** - CrossMint-integrated identity management with multi-chain support\n- **[Enhanced Simple Coder](enhanced_simple_coder.md)** - Advanced coding agent with multi-model intelligence\n- **[Simple Coder Agent](agents/SimpleCoder_agent.md)** - BDI-integrated coding assistant with unified sandbox (Complete reference documentation)\n- **[Simple Coder](simple_coder.md)** - Enhanced coding agent with sandbox and autonomous mode\n- **[SimpleCoder Memory Integration](simplecodermemory.md)** - Comprehensive memory integration with update requests stored in `simple_coder_sandbox/update_requests.json`\n- **[Simple Coder Agent Sandbox Fix](simple_coder_agent_sandbox_fix.md)** - Sandbox integration fix and verification\n- **[Simple Coder Sandbox Analysis](simple_coder_sandbox_analysis.md)** - Analysis of sandbox system and patterns\n- **[Test Results: mindX with Simple Coder](test_results_mindx_simple_coder.md)** - Integration test results and memory logs\n\n#### Dynamic Agents (agents/)\n\n- **[Analyzer Agent](analyzer.md)** - Dynamic code analysis agent\n- **[Benchmark Agent](benchmark.md)** - Performance benchmarking agent\n- **[Checker Agent](checker.md)** - Quality assurance agent\n- **[Processor Agent](processor.md)** - Data processing agent\n- **[Reporter Agent](reporter.md)** - Test reporting agent\n- **[Validator Agent](validator.md)** - Test data validation and integrity verification\n\n#### Evolution Components (agents/evolution/)\n\n- **[Blueprint Agent](agents/blueprint_agent.md)** - Strategic planning agent generating blueprints for self-improvement iterations\n- **[Blueprint to Action Converter](blueprint_to_action_converter.md)** - Converts strategic blueprints into executable BDI actions\n- **[Blueprint: mindX Framework](Blueprint.md)** - G\u00f6del Machine\u2013inspired blueprint: blockchain + PGVectorScale for THOTs (Higher Order Thoughts) and thlnks (links); directive for building mindX as self-referential, attestable memory system\n- **[Directives](DIRECTIVES.md)** - Canonical mindX directives (e.g. Blueprint directive) ",
+      "loaded_at": 1771063743.0961268,
+      "key_points": [
+        "MindX Agent is the meta-agent that understands all agents",
+        "Serves as execution mind of the G\u00f6del machine",
+        "Orchestrates self-improvement through SEA, BDI, Mastermind",
+        "Subservient to higher intelligence",
+        "Maintains comprehensive knowledge of all agents"
+      ]
+    }
+  },
+  "context": {
+    "agent_id": "mindx_meta_agent",
+    "source": "INDEX.md"
+  },
+  "tags": [
+    "mindxagent_identity_loaded",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "47a4c24a8494c982"
+}

@@ -1,0 +1,33 @@
+{
+  "timestamp": "2026-02-14T03:06:50.239307",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_directive_handler",
+  "content": {
+    "process_name": "godel_core_choice",
+    "data": {
+      "source_agent": "bdi_directive_handler",
+      "cycle_id": 3,
+      "choice_type": "bdi_agent_selection",
+      "perception_summary": "who are you?",
+      "options_considered": [
+        "simple_coder",
+        "base_gen_agent",
+        "system_analyzer",
+        "audit_and_improve_tool"
+      ],
+      "chosen_option": "simple_coder",
+      "rationale": "BDI Reasoning: Directive 'who are you?' -> Belief: Task requires simple_coder -> Desire: Use best suited agent -> Intention: Execute with simple_coder",
+      "timestamp_utc": "2026-02-14T10:06:50.238664Z"
+    }
+  },
+  "context": {
+    "agent_id": "bdi_directive_handler"
+  },
+  "tags": [
+    "godel_core_choice",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "acc1ad47ca77c3d8"
+}

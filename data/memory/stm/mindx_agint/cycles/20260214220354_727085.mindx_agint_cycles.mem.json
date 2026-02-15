@@ -1,0 +1,19 @@
+{
+  "timestamp_utc": "2026-02-15T05:03:54.727198",
+  "memory_type": "STM",
+  "category": "mindx_agint/cycles",
+  "metadata": {
+    "agent": "mindx_agint",
+    "component": "cognitive_loop",
+    "timestamp": 1771131834.6974823
+  },
+  "data": {
+    "cycle": 1,
+    "max_cycles": 8,
+    "directive": "who are you?",
+    "autonomous_mode": false,
+    "timestamp": 1771131834.6649754,
+    "status": "started",
+    "phase": "cycle_start"
+  }
+}
