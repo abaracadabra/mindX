@@ -2410,7 +2410,10 @@ class MindXAgent:
                 has_file_changes = False
                 error_message = None
                 success = False
-                
+                prioritized = []
+                top_priority = None
+                result = None
+
                 if improvement_opportunities:
                     logger.info(f"{self.log_prefix} Found {len(improvement_opportunities)} improvement opportunities")
                     
@@ -2469,7 +2472,7 @@ class MindXAgent:
                     self.session_manager.update_session_activity(
                         self.current_session.session_id,
                         cycle_count=cycle_count,
-                        metadata={"last_improvement": top_priority['goal'] if prioritized else None}
+                        metadata={"last_improvement": top_priority['goal'] if (prioritized and top_priority) else None}
                     )
                 
                 # Record cycle in stuck loop detector

@@ -1,0 +1,15 @@
+{
+  "mindx_meta_agent_e99b9751": {
+    "session_id": "mindx_meta_agent_e99b9751",
+    "agent_id": "mindx_meta_agent",
+    "created_at": 1771975688.3859901,
+    "last_activity": 1771975688.3859901,
+    "expires_at": 1772062088.3859901,
+    "cycle_count": 0,
+    "circuit_breaker_trips": 1,
+    "last_reset_reason": "circuit_breaker_trip",
+    "metadata": {
+      "autonomous_mode": true
+    }
+  }
+}
