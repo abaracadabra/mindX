@@ -1,0 +1,42 @@
+{
+  "timestamp": "2026-02-24T19:02:42.836105",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "unknown",
+  "content": {
+    "process_name": "system_state_startup",
+    "data": {
+      "event_type": "startup",
+      "timestamp": 1771984962.8330102,
+      "event_id": "startup_1771984962",
+      "resource_snapshot": null,
+      "performance_snapshot": null,
+      "agents_registered": [
+        "coordinator_agent"
+      ],
+      "agents_active": [
+        "coordinator_agent"
+      ],
+      "tools_registered": [],
+      "system_version": null,
+      "improvement_count": 0,
+      "rollback_count": 0,
+      "last_improvement": null,
+      "last_rollback": null,
+      "errors": [],
+      "warnings": [],
+      "metadata": {
+        "phase": "before_startup"
+      }
+    }
+  },
+  "context": {
+    "tracker": "system_state_tracker"
+  },
+  "tags": [
+    "system_state_startup",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "0b22f59793254c9b"
+}

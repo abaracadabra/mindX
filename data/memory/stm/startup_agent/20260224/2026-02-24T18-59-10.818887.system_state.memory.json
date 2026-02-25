@@ -1,0 +1,152 @@
+{
+  "timestamp": "2026-02-24T18:59:10.818887",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "startup_agent",
+  "content": {
+    "process_name": "mindxagent_startup_review",
+    "data": {
+      "startup_record": {
+        "timestamp": 1771984750.81648,
+        "duration": 28.475056886672974,
+        "steps": [
+          "load_registry",
+          "initialize_always_on",
+          "coordinate_sequence"
+        ],
+        "agents_initialized": [
+          "coordinator_agent",
+          "mindxagent",
+          "memory_agent"
+        ],
+        "sequence": [
+          {
+            "step": 1,
+            "name": "load_registry",
+            "status": "completed"
+          },
+          {
+            "step": 2,
+            "name": "initialize_core_agents",
+            "status": "completed"
+          },
+          {
+            "step": 3,
+            "name": "initialize_coordinator",
+            "status": "completed"
+          },
+          {
+            "step": 4,
+            "name": "initialize_memory",
+            "status": "completed"
+          },
+          {
+            "step": 5,
+            "name": "connect_ollama",
+            "status": "skipped"
+          },
+          {
+            "step": 6,
+            "name": "ready",
+            "status": "completed"
+          }
+        ],
+        "ollama_connection": {
+          "connected": false,
+          "reason": "Error: 'MemoryAgent' object has no attribute 'query_memory'"
+        },
+        "all_completed": true,
+        "before_state": {
+          "resource_snapshot": null,
+          "performance_snapshot": null
+        },
+        "after_state": {
+          "resource_snapshot": null,
+          "performance_snapshot": null,
+          "agents_registered": [
+            "coordinator_agent"
+          ],
+          "agents_active": [
+            "coordinator_agent"
+          ],
+          "tools_registered": []
+        },
+        "improvement_count": 0,
+        "rollback_count": 0,
+        "previous_state": {
+          "event_id": "shutdown_1770353076",
+          "timestamp": 1770353076.72756,
+          "improvement_count": 0,
+          "rollback_count": 0
+        }
+      },
+      "before_state": {
+        "event_type": "startup",
+        "timestamp": 1771984722.381553,
+        "event_id": "startup_1771984722",
+        "resource_snapshot": null,
+        "performance_snapshot": null,
+        "agents_registered": [
+          "coordinator_agent"
+        ],
+        "agents_active": [
+          "coordinator_agent"
+        ],
+        "tools_registered": [],
+        "system_version": null,
+        "improvement_count": 0,
+        "rollback_count": 0,
+        "last_improvement": null,
+        "last_rollback": null,
+        "errors": [],
+        "warnings": [],
+        "metadata": {
+          "phase": "before_startup"
+        }
+      },
+      "after_state": {
+        "event_type": "startup",
+        "timestamp": 1771984750.8115072,
+        "event_id": "startup_1771984750",
+        "resource_snapshot": null,
+        "performance_snapshot": null,
+        "agents_registered": [
+          "coordinator_agent"
+        ],
+        "agents_active": [
+          "coordinator_agent"
+        ],
+        "tools_registered": [],
+        "system_version": null,
+        "improvement_count": 0,
+        "rollback_count": 0,
+        "last_improvement": null,
+        "last_rollback": null,
+        "errors": [],
+        "warnings": [],
+        "metadata": {
+          "phase": "after_startup",
+          "duration_seconds": 28.475056886672974,
+          "steps_completed": [
+            "load_registry",
+            "initialize_always_on",
+            "coordinate_sequence"
+          ]
+        }
+      },
+      "improvement_opportunities": [],
+      "performance_analysis": {},
+      "resource_analysis": {}
+    }
+  },
+  "context": {
+    "agent_id": "startup_agent",
+    "reviewer": "mindxagent"
+  },
+  "tags": [
+    "mindxagent_startup_review",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "08d0a61c57dafa12"
+}

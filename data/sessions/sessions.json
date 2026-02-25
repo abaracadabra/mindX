@@ -6,10 +6,38 @@
     "last_activity": 1771975688.3859901,
     "expires_at": 1772062088.3859901,
     "cycle_count": 0,
-    "circuit_breaker_trips": 1,
+    "circuit_breaker_trips": 2,
     "last_reset_reason": "circuit_breaker_trip",
     "metadata": {
       "autonomous_mode": true
+    }
+  },
+  "mindx_meta_agent_a855e9f6": {
+    "session_id": "mindx_meta_agent_a855e9f6",
+    "agent_id": "mindx_meta_agent",
+    "created_at": 1771976328.8040676,
+    "last_activity": 1771976328.8057365,
+    "expires_at": 1772062728.8040676,
+    "cycle_count": 1,
+    "circuit_breaker_trips": 0,
+    "last_reset_reason": null,
+    "metadata": {
+      "autonomous_mode": true,
+      "last_improvement": null
+    }
+  },
+  "mindx_meta_agent_4b8bf735": {
+    "session_id": "mindx_meta_agent_4b8bf735",
+    "agent_id": "mindx_meta_agent",
+    "created_at": 1771976651.8409266,
+    "last_activity": 1771978074.2308002,
+    "expires_at": 1772063051.8409266,
+    "cycle_count": 5,
+    "circuit_breaker_trips": 0,
+    "last_reset_reason": null,
+    "metadata": {
+      "autonomous_mode": true,
+      "last_improvement": "Improve improvement success rate - recent improvements failing"
     }
   }
 }

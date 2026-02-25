@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-02-24T18:59:10.821489",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "process_name": "mindxagent_system_state_review_startup",
+    "data": {
+      "event_type": "startup",
+      "timestamp": 1771984750.8214784,
+      "insights": [],
+      "improvement_opportunities": [],
+      "recommendations": []
+    }
+  },
+  "context": {
+    "agent_id": "mindx_meta_agent",
+    "reviewer": "mindxagent",
+    "event_type": "startup"
+  },
+  "tags": [
+    "mindxagent_system_state_review_startup",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "da2f0b1176b34c9b"
+}

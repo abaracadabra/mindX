@@ -2767,14 +2767,14 @@ class MindXAgent:
         Return full mindX.sh command options (including --replicate for self-improvement/blueprint from authorized agents).
         mindXagent is fully aware of all mindX.sh options so it can honor self-improvement directives from BlueprintAgent or authorized agents.
         """
-        return getattr(self, "mindx_sh_command_options", {}) or self.startup_info.get("mindx_sh_commands", {})
+        return getattr(self, "mindx_sh_command_options", {}) or getattr(self, "startup_info", {}).get("mindx_sh_commands", {})
 
     def get_agent_authority_list(self) -> List[Dict[str, Any]]:
         """
         Return agent authority list from registry: agents that have received keys (vault or config).
         Used to validate that a self-improvement directive (e.g. mindX.sh --replicate) comes from an authorized agent.
         """
-        return getattr(self, "agent_authority_list", None) or self.startup_info.get("agent_authority_list", [])
+        return getattr(self, "agent_authority_list", None) or getattr(self, "startup_info", {}).get("agent_authority_list", [])
     
     def get_status(self) -> Dict[str, Any]:
         """Get current status for UI display with actual choices and events"""

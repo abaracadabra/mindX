@@ -172,5 +172,23 @@
     "event_type": "shutdown",
     "timestamp": 1770353076.72756,
     "state_file": "states/shutdown_1770353076.json"
+  },
+  {
+    "event_id": "startup_1771984722",
+    "event_type": "startup",
+    "timestamp": 1771984722.381553,
+    "state_file": "states/startup_1771984722.json"
+  },
+  {
+    "event_id": "startup_1771984750",
+    "event_type": "startup",
+    "timestamp": 1771984750.8115072,
+    "state_file": "states/startup_1771984750.json"
+  },
+  {
+    "event_id": "startup_1771984967",
+    "event_type": "startup",
+    "timestamp": 1771984967.8246837,
+    "state_file": "states/startup_1771984967.json"
   }
 ]

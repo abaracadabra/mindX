@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-02-24T19:02:37.410574",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "automindx_agent_main",
+  "content": {
+    "process_name": "automindx_get_persona",
+    "data": {
+      "agent_type": "MASTERMIND",
+      "persona_found": true
+    }
+  },
+  "context": {
+    "agent_id": "automindx_agent_main"
+  },
+  "tags": [
+    "automindx_get_persona",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "ee2ed6f73bc8d298"
+}

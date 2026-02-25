@@ -258,6 +258,18 @@ async def startup_event():
         
         logger.info("mindX components initialized successfully. API is ready.")
 
+        # Run startup_agent.initialize_system() as a background task so it can
+        # coordinate the full startup sequence and notify mindXagent (Ollama models, terminal log, etc.)
+        try:
+            startup_agent = mastermind_instance.lifecycle_agents.get("startup") if hasattr(mastermind_instance, "lifecycle_agents") else None
+            if startup_agent:
+                asyncio.create_task(startup_agent.initialize_system())
+                logger.info("startup_agent.initialize_system() scheduled as background task")
+            else:
+                logger.warning("startup_agent not found in mastermind lifecycle_agents — skipping initialize_system()")
+        except Exception as startup_e:
+            logger.warning(f"Failed to schedule startup_agent initialization: {startup_e}", exc_info=True)
+
         # Log backend startup transcript to data/ via memory_agent (logs are memories; startup_agent can get a copy)
         try:
             transcript_lines = []
