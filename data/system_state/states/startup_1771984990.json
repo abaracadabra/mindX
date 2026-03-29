@@ -1,0 +1,30 @@
+{
+  "event_type": "startup",
+  "timestamp": 1771984990.8113897,
+  "event_id": "startup_1771984990",
+  "resource_snapshot": null,
+  "performance_snapshot": null,
+  "agents_registered": [
+    "coordinator_agent"
+  ],
+  "agents_active": [
+    "coordinator_agent"
+  ],
+  "tools_registered": [],
+  "system_version": null,
+  "improvement_count": 0,
+  "rollback_count": 0,
+  "last_improvement": null,
+  "last_rollback": null,
+  "errors": [],
+  "warnings": [],
+  "metadata": {
+    "phase": "after_startup",
+    "duration_seconds": 27.9874165058136,
+    "steps_completed": [
+      "load_registry",
+      "initialize_always_on",
+      "coordinate_sequence"
+    ]
+  }
+}
