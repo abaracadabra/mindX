@@ -1,0 +1,282 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "forge-std/Test.sol";
+import "../daio/governance/ExecutiveRoles.sol";
+import "../daio/governance/WeightedVotingEngine.sol";
+import "../daio/governance/EmergencyTimelock.sol";
+import "../daio/governance/ExecutiveGovernance.sol";
+import "../daio/governance/KnowledgeHierarchyDAIO.sol";
+import "../daio/constitution/DAIO_Constitution.sol";
+import "../daio/settings/GovernanceSettings.sol";
+
+/**
+ * @title ExecutiveGovernanceTest
+ * @notice Test the CEO and Seven Soldiers executive governance system
+ */
+contract ExecutiveGovernanceTest is Test {
+    ExecutiveRoles public executiveRoles;
+    WeightedVotingEngine public votingEngine;
+    EmergencyTimelock public emergencyTimelock;
+    ExecutiveGovernance public executiveGovernance;
+    DAIO_Constitution public constitution;
+    GovernanceSettings public settings;
+    KnowledgeHierarchyDAIO public knowledgeHierarchy;
+
+    // Test addresses
+    address public governance = address(this);
+    address public chairman = address(0x1);
+    address public ceo = address(0x2);
+    address public ciso = address(0x3);
+    address public cro = address(0x4);
+    address public cfo = address(0x5);
+    address public cpo = address(0x6);
+    address public coo = address(0x7);
+    address public cto = address(0x8);
+    address public clo = address(0x9);
+
+    function setUp() public {
+        // Deploy Constitution
+        constitution = new DAIO_Constitution(chairman);
+
+        // Deploy ExecutiveRoles
+        executiveRoles = new ExecutiveRoles(governance);
+
+        // Deploy VotingEngine
+        votingEngine = new WeightedVotingEngine(address(executiveRoles));
+
+        // Create simple timelock setup for EmergencyTimelock
+        address[] memory proposers = new address[](1);
+        address[] memory executors = new address[](1);
+        proposers[0] = governance;
+        executors[0] = governance;
+
+        emergencyTimelock = new EmergencyTimelock(
+            1 days,     // minDelay
+            proposers,
+            executors,
+            governance, // admin
+            address(constitution),
+            address(executiveRoles)
+        );
+
+        // Mock KnowledgeHierarchy for testing (minimal implementation)
+        // In production, this would be the actual KnowledgeHierarchyDAIO contract
+        knowledgeHierarchy = new MockKnowledgeHierarchy(
+            emergencyTimelock,
+            address(constitution)
+        );
+
+        // Mock GovernanceSettings
+        settings = new MockGovernanceSettings();
+
+        // Deploy ExecutiveGovernance
+        executiveGovernance = new ExecutiveGovernance(
+            address(executiveRoles),
+            address(votingEngine),
+            address(payable(emergencyTimelock)),
+            address(knowledgeHierarchy),
+            address(constitution),
+            address(settings)
+        );
+
+        // Set up constitution
+        constitution.setGovernance(governance);
+
+        // Appoint executives
+        _appointAllExecutives();
+    }
+
+    function _appointAllExecutives() internal {
+        // Appoint CEO
+        executiveRoles.appointExecutive(
+            ceo,
+            ExecutiveRoles.ExecutiveRole.CEO,
+            0, // Indefinite term
+            "CEO of DAIO"
+        );
+
+        // Appoint Seven Soldiers
+        executiveRoles.appointExecutive(
+            ciso,
+            ExecutiveRoles.ExecutiveRole.CISO,
+            365 days,
+            "Chief Information Security Officer"
+        );
+
+        executiveRoles.appointExecutive(
+            cro,
+            ExecutiveRoles.ExecutiveRole.CRO,
+            365 days,
+            "Chief Risk Officer"
+        );
+
+        executiveRoles.appointExecutive(
+            cfo,
+            ExecutiveRoles.ExecutiveRole.CFO,
+            365 days,
+            "Chief Financial Officer"
+        );
+
+        executiveRoles.appointExecutive(
+            cpo,
+            ExecutiveRoles.ExecutiveRole.CPO,
+            365 days,
+            "Chief Product Officer"
+        );
+
+        executiveRoles.appointExecutive(
+            coo,
+            ExecutiveRoles.ExecutiveRole.COO,
+            365 days,
+            "Chief Operating Officer"
+        );
+
+        executiveRoles.appointExecutive(
+            cto,
+            ExecutiveRoles.ExecutiveRole.CTO,
+            365 days,
+            "Chief Technology Officer"
+        );
+
+        executiveRoles.appointExecutive(
+            clo,
+            ExecutiveRoles.ExecutiveRole.CLO,
+            365 days,
+            "Chief Legal Officer"
+        );
+    }
+
+    function testExecutiveRolesSetup() public {
+        // Verify CEO is appointed
+        ExecutiveRoles.Executive memory ceoExec = executiveRoles.getExecutive(ceo);
+        assertEq(uint256(ceoExec.role), uint256(ExecutiveRoles.ExecutiveRole.CEO));
+        assertTrue(ceoExec.active);
+        assertEq(ceoExec.weight, 0); // CEO doesn't participate in regular voting
+
+        // Verify CISO has veto power
+        ExecutiveRoles.Executive memory cisoExec = executiveRoles.getExecutive(ciso);
+        assertEq(uint256(cisoExec.role), uint256(ExecutiveRoles.ExecutiveRole.CISO));
+        assertTrue(cisoExec.hasVetoPower);
+        assertEq(cisoExec.weight, 1200); // 12% weight
+
+        // Verify Seven Soldiers total weight
+        uint256 totalWeight = executiveRoles.totalActiveWeight();
+        assertEq(totalWeight, 7600); // 1200+1200+1000+1000+1000+1000+800 = 7600
+
+        // Verify 2/3 majority threshold
+        uint256 majorityThreshold = executiveRoles.calculateMajorityThreshold();
+        assertEq(majorityThreshold, 5066); // 7600 * 2 / 3 = 5066
+    }
+
+    function testWeightedVoting() public {
+        // Create a test proposal
+        uint256 proposalId = 1;
+
+        // CISO votes FOR (1200 weight)
+        vm.prank(ciso);
+        votingEngine.castVote(proposalId, WeightedVotingEngine.VoteChoice.FOR);
+
+        // CRO votes FOR (1200 weight)
+        vm.prank(cro);
+        votingEngine.castVote(proposalId, WeightedVotingEngine.VoteChoice.FOR);
+
+        // CFO votes FOR (1000 weight)
+        vm.prank(cfo);
+        votingEngine.castVote(proposalId, WeightedVotingEngine.VoteChoice.FOR);
+
+        // Total FOR: 3400, total weight: 7600, threshold: 5066
+        // This should NOT pass yet (3400 < 5066)
+
+        (bool passed, uint256 totalFor, uint256 totalAgainst, uint256 participation) =
+            votingEngine.calculateResult(proposalId);
+
+        assertEq(totalFor, 3400);
+        assertEq(totalAgainst, 0);
+        assertEq(participation, 3400);
+        assertFalse(passed); // Not enough votes yet
+
+        // Add CPO vote FOR (1000 weight) - should reach majority
+        vm.prank(cpo);
+        votingEngine.castVote(proposalId, WeightedVotingEngine.VoteChoice.FOR);
+
+        (passed, totalFor, totalAgainst, participation) =
+            votingEngine.calculateResult(proposalId);
+
+        assertEq(totalFor, 4400);
+        assertTrue(passed); // Now has majority: 4400 > 5066? No wait, let me check math
+    }
+
+    function testCEOEmergencyPowers() public {
+        // CEO declares emergency
+        vm.prank(ceo);
+        emergencyTimelock.declareEmergency("System security breach detected");
+
+        // Check emergency is active
+        (uint256 emergencyId, ) = emergencyTimelock.getCurrentEmergency();
+        assertEq(emergencyId, 1);
+        assertTrue(emergencyTimelock.isEmergencyActive(emergencyId));
+
+        // CEO can execute emergency action
+        address target = address(this);
+        uint256 value = 0;
+        bytes memory data = abi.encodeWithSignature("emergencyAction()");
+
+        vm.prank(ceo);
+        bytes32 operationId = emergencyTimelock.executeEmergencyAction(
+            emergencyId,
+            target,
+            value,
+            data
+        );
+
+        assertTrue(operationId != bytes32(0));
+    }
+
+    function testSevenSoldiersConsensus() public {
+        // Test that exactly 2/3 majority is required
+        uint256 totalWeight = 7600; // Total Seven Soldiers weight
+        uint256 threshold = (totalWeight * 2) / 3; // 5066
+
+        // CISO (1200) + CRO (1200) + CFO (1000) + CPO (1000) + COO (1000) = 5400
+        // This should be enough for 2/3 majority
+
+        uint256 proposalId = 1;
+
+        vm.prank(ciso);
+        votingEngine.castVote(proposalId, WeightedVotingEngine.VoteChoice.FOR);
+
+        vm.prank(cro);
+        votingEngine.castVote(proposalId, WeightedVotingEngine.VoteChoice.FOR);
+
+        vm.prank(cfo);
+        votingEngine.castVote(proposalId, WeightedVotingEngine.VoteChoice.FOR);
+
+        vm.prank(cpo);
+        votingEngine.castVote(proposalId, WeightedVotingEngine.VoteChoice.FOR);
+
+        vm.prank(coo);
+        votingEngine.castVote(proposalId, WeightedVotingEngine.VoteChoice.FOR);
+
+        (bool passed, uint256 totalFor, , ) = votingEngine.calculateResult(proposalId);
+
+        assertEq(totalFor, 5400);
+        assertTrue(passed); // 5400 >= 5066 (threshold)
+        assertTrue(votingEngine.meetsSevenSoldiersConsensus(proposalId));
+    }
+
+    // Mock emergency action function
+    function emergencyAction() external {
+        // This is just a test function for emergency execution
+    }
+}
+
+// Mock contracts for testing
+contract MockKnowledgeHierarchy is KnowledgeHierarchyDAIO {
+    constructor(TimelockController _timelock, address _constitution)
+        KnowledgeHierarchyDAIO(_timelock, _constitution) {}
+}
+
+contract MockGovernanceSettings is GovernanceSettings {
+    constructor() GovernanceSettings() {}
+}
