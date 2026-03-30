@@ -249,8 +249,6 @@ mindX/
 - **[Blueprint Agent](https://github.com/abaracadabra/mindX/blob/main/docs/blueprint_agent.md)** - System design automation
 - **[Guardian Agent](https://github.com/abaracadabra/mindX/blob/main/docs/guardian_agent.md)** - Security and validation
 
-### **Hackathon & Competition**
-- **[Hackathon Submission](https://github.com/abaracadabra/mindX/blob/main/docs/hackathon.md)** - Internet of Agents competition entry
 - **[Technical Architecture](https://github.com/abaracadabra/mindX/blob/main/docs/TECHNICAL.md)** - Complete system design
 
 ## 🧪 Testing
@@ -441,13 +439,7 @@ This is the evolution of mindX - a production-ready godel-machine. The system is
 MIT License - See [LICENSE](LICENSE) for details.
 
 ## 🔗 Links
-
-- **Repository**: [GitHub - abaracadabra/mindX](https://github.com/abaracadabra/mindX)
-- **Documentation**: [Complete Documentation](https://github.com/abaracadabra/mindX/tree/main/docs)
-- **Hackathon Entry**: [Internet of Agents Submission](https://github.com/abaracadabra/mindX/blob/main/docs/hackathon.md)
-
----
-
+mindx.pythai.net
 ## 🎉 **mindX: The First Autonomous Digital Civilization**
 
 **Status**: ✅ **EXPERIMENTAL** - Fully Deployed & Operational  
