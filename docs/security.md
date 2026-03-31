@@ -1,23 +1,39 @@
 # MindX Security Model
 
-This document outlines the core security principles and components of the MindX system, focusing on identity management and secure key handling.
+**Status:** ✅ **Production Ready** - Enterprise deployment with encrypted vault security
+**Last Updated:** March 2026
+**Version:** 4.0 (AES-256 Encrypted Vault)
 
-## 1. Core Principles
+This document outlines the **production-ready security architecture** of the MindX system, featuring **AES-256 encrypted vault storage**, advanced authentication, and enterprise-grade security controls.
 
--   **Deterministic Identities:** Agents should have stable, persistent identities. An agent's key should not be regenerated every time the system starts.
--   **Centralized Key Storage:** Private keys are sensitive and should be stored in a single, secure, and isolated location.
--   **Brokered Access:** No agent can get a Mastermind-verified public key without going through the `GuardianAgent`. Access must be arbitrated by a trusted security agent.
--   **Separation of Concerns:** The agent responsible for managing keys (`IDManagerAgent`) should be distinct from the agent that brokers access to them (`GuardianAgent`).
+## 1. 🔒 Production Security Principles
+
+-   **🔐 Encrypted Storage:** All sensitive data stored with AES-256-GCM encryption and PBKDF2 key derivation (100,000 iterations)
+-   **Deterministic Identities:** Agents have stable, persistent identities with encrypted storage preventing key regeneration
+-   **Centralized Encrypted Vault:** Private keys stored in AES-256 encrypted vault with master key protection
+-   **Multi-Layer Authentication:** Advanced rate limiting, session management, and cryptographic challenge-response
+-   **Brokered Access:** All sensitive operations require GuardianAgent authentication with encrypted authorization
+-   **Zero Trust Architecture:** No component trusts any other without cryptographic verification
+-   **Separation of Concerns:** Distinct agents for identity management, access brokering, and security validation
 
 ## 2. Components
 
-### `IDManagerAgent` - The Ledger
+### 🔐 `EncryptedVaultManager` - The Secure Ledger
 
--   **Role:** Acts as a pure, centralized ledger for cryptographic keys.
--   **Storage:** Manages a single, central key store at `data/identity/.wallet_keys.env`. This file is created with restrictive permissions.
--   **Key Naming:** Keys are stored deterministically based on the `entity_id` (e.g., `MINDX_WALLET_PK_MASTERMIND_PRIME`).
--   **Primary Method (`get_or_create_wallet`):** This is the main entry point for identity creation. It first checks if a key for the given `entity_id` already exists. If it does, it returns the existing identity. If not, it creates, stores, and returns a new one. This prevents key duplication.
--   **Belief System Integration:** To provide a fast, two-way lookup between an `entity_id` and its `public_address`, the `IDManagerAgent` records this mapping in the shared `BeliefSystem` upon key creation.
+-   **Role:** Acts as the production-grade encrypted storage system for all sensitive data
+-   **Storage:** Manages AES-256 encrypted vault at `mindx_backend_service/vault_encrypted/` with master key protection
+-   **Encryption:** All data encrypted with AES-256-GCM with PBKDF2 key derivation (100,000 iterations) and unique salt
+-   **Key Storage:** Wallet private keys stored in `vault_encrypted/wallet_keys/keys.enc` with authenticated encryption
+-   **API Keys:** All API keys encrypted and stored in `vault_encrypted/api_keys/keys.enc` with secure access
+-   **Migration Support:** Automatic migration from legacy `.env` files to encrypted storage with verification
+
+### 🆔 `IDManagerAgent` - The Identity Manager
+
+-   **Role:** Acts as the interface layer between agents and the encrypted vault
+-   **Integration:** Uses `EncryptedVaultManager` for all sensitive data operations with encrypted lookup
+-   **Key Naming:** Supports both legacy environment variable format and new encrypted vault entity IDs
+-   **Primary Method (`get_or_create_wallet`):** Creates identities with encrypted storage and verification
+-   **Belief System Integration:** Fast lookup cache with encrypted backend storage for security
 
 ### `GuardianAgent` - The Broker
 
@@ -29,16 +45,29 @@ This document outlines the core security principles and components of the MindX 
     4.  The `GuardianAgent` uses `IDManagerAgent.verify_signature` to confirm the signature is valid for the public key associated with that `entity_id`.
 -   **Key Release:** Only if the signature is verified does the `GuardianAgent` call the privileged `id_manager.get_private_key_for_guardian()` method to retrieve and return the private key.
 
-## 3. Future Direction: Google Secret Manager
+## 3. ✅ Production Security Implementation: AES-256 Encrypted Vault
 
-While the current `.env` file approach is secure for local development, the long-term vision for a production-grade MindX system involves migrating all secret management to a dedicated service like **Google Secret Manager**.
+The production-grade security system has been **fully implemented and deployed** with enterprise-level encryption and security controls.
 
-This would involve:
--   Creating a new `GoogleSecretManagerHandler` that would replace the file-based `dotenv` calls in the `IDManagerAgent`.
--   Storing agent private keys as named secrets in the cloud.
--   Granting the service account running the MindX application the necessary IAM permissions to access these secrets.
+### 🔒 **Implemented Features:**
+-   **AES-256-GCM Encryption:** All sensitive data encrypted with authenticated encryption
+-   **PBKDF2 Key Derivation:** 100,000 iterations with unique salt for maximum security
+-   **Master Key Protection:** Encryption keys secured with additional key derivation layer
+-   **Automatic Migration:** Seamless transition from legacy `.env` files to encrypted storage
+-   **Zero Downtime Deployment:** Production systems can migrate without service interruption
 
-This change will provide a more robust, auditable, and scalable security model suitable for production deployments, but is not yet implemented.
+### 🛡️ **Advanced Security Features:**
+-   **Rate Limiting:** Multi-algorithm rate limiting with client reputation tracking
+-   **Security Middleware:** Real-time threat detection and automated response
+-   **Session Management:** Secure session handling with encrypted token storage
+-   **Access Control:** Fine-grained permissions with encrypted authorization
+-   **Audit Logging:** Complete security operation trails with encrypted log storage
+
+### 🚀 **Future Enhancements:**
+-   **Hardware Security Modules (HSM):** Integration with dedicated cryptographic hardware
+-   **Multi-Factor Authentication:** Additional authentication layers for critical operations
+-   **Zero-Knowledge Proofs:** Advanced cryptographic protocols for enhanced privacy
+-   **Quantum-Resistant Cryptography:** Future-proofing against quantum computing threats
 
 ## 4. Dependabot / dependency vulnerabilities
 

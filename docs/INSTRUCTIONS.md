@@ -1,10 +1,14 @@
 # mindX Augmentic Intelligence System - Instructions & Overview
 
+**Status:** ✅ **Production Ready** - Enterprise deployment with encrypted vault security
+**Last Updated:** March 2026
+**Version:** 4.0
+
 ##  Introduction
 
-Welcome to the mindX system, an Augmentic Intelligence platform designed for autonomous operation, self-improvement, and strategic evolution. This document provides an overview of its architecture, how to run it, and key ways to interact with it.
+Welcome to the mindX system, a **production-ready Augmentic Intelligence platform** designed for autonomous operation, self-improvement, and strategic evolution with enterprise-grade security. This document provides an overview of its architecture, deployment options, and key ways to interact with it.
 
-The core principle of mindX is to create an AI system that can not only perform tasks but also understand its own structure, identify areas for improvement, and even modify or extend its own codebase and capabilities over time.
+The core principle of mindX is to create an AI system that can not only perform tasks but also understand its own structure, identify areas for improvement, and even modify or extend its own codebase and capabilities over time—all while maintaining enterprise security standards with encrypted storage and advanced authentication systems.
 
 ##  Core Architecture Overview
 
@@ -24,71 +28,212 @@ mindX is built as a multi-agent system with a hierarchical control structure:
 *   **Identity Management (`core.id_manager_agent`):**
     *   Provides capabilities for creating and managing cryptographic identities, paving the way for secure inter-agent communication and potential blockchain integrations.
 
-##  Setup and Prerequisites
+##  🚀 Setup and Prerequisites
 
-  **Python Environment:** Ensure you have Python 3.9+ installed. It's highly recommended to use a virtual environment.
+### Production Deployment (Recommended)
+
+For production use with enterprise security and automated deployment:
+
+```bash
+# One-command production deployment with security hardening
+./deploy/production_deploy.sh
+
+# Follow the prompts to configure:
+# ✅ Security hardening (UFW firewall, fail2ban)
+# ✅ nginx load balancer with SSL certificates
+# ✅ PostgreSQL and Redis optimization
+# ✅ AES-256 encrypted vault migration
+# ✅ systemd services with health monitoring
+# ✅ Automated backup and log rotation
+```
+
+**Production Features:**
+- **Encrypted Vault**: AES-256 encryption for all sensitive data
+- **Advanced Security**: Multi-algorithm rate limiting, authentication middleware
+- **Performance Optimization**: Connection pooling, async/await architecture
+- **Monitoring**: Real-time health checks and performance tracking
+- **Deployment**: Automated VPS deployment with security hardening
+
+**Production Documentation:**
+- **[Production Deployment Guide](production_deployment.md)** - Complete deployment automation
+- **[Security Configuration Guide](security_configuration.md)** - Enterprise security setup
+- **[API Documentation](api_documentation.md)** - Complete API reference
+
+### Development Setup
+
+  **Python Environment:** Ensure you have Python 3.11+ installed (3.9+ minimum). It's highly recommended to use a virtual environment.
     ```bash
-    python3 -m venv mindX_venv # Or your venv dir, e.g., simply 'venv' or the 'mindX' subdir if that's your venv
+    python3 -m venv mindX_venv
     source mindX_venv/bin/activate # Or .\mindX_venv\Scripts\activate on Windows
     ```
   **Install Dependencies:**
     ```bash
     pip install -r requirements.txt
     ```
-    Ensure `requirements.txt` includes:
-    *   `python-dotenv`
-    *   `httpx`
-    *   `psutil`
-    *   `google-generativeai` (for Gemini)
-    *   `groq` (if using Groq)
-    *   `ollama` (if using Ollama Python library)
-    *   `pathspec` (for BaseGenAgent)
-    *   `eth-account` (for IDManagerAgent)
+    Key dependencies include:
+    *   `python-dotenv` - Environment configuration
+    *   `httpx` - HTTP client
+    *   `psutil` - System monitoring
+    *   `cryptography` - Encrypted vault security
+    *   `fastapi` - Production API server
+    *   `asyncpg` - PostgreSQL async driver
+    *   `redis` - Caching and session management
+    *   `eth-account` - Cryptographic identity management
 
-  **Configuration Files:**
-    *   **`.env` File:** Create a `.env` file in the project root (`/home/luvai/mindX/.env`). Add your API keys here:
+  **Configuration:**
+
+### 🔒 Production Configuration (Encrypted Vault)
+
+For production deployment, sensitive data is automatically stored in the AES-256 encrypted vault:
+
+```python
+# Store API keys in encrypted vault
+from mindx_backend_service.encrypted_vault_manager import get_encrypted_vault_manager
+vault = get_encrypted_vault_manager()
+
+# Store encrypted API keys
+vault.store_api_key("openai", "your-openai-key")
+vault.store_api_key("anthropic", "your-anthropic-key")
+vault.store_api_key("gemini", "your-gemini-key")
+
+# Verify stored keys
+providers = vault.list_api_providers()
+print(f"Stored providers: {providers}")
+```
+
+**Encrypted Vault Features:**
+- **AES-256-GCM Encryption**: All sensitive data encrypted at rest
+- **PBKDF2 Key Derivation**: 100,000 iterations for key security
+- **Automatic Migration**: Migrate from plaintext `.env` files
+- **Secure Access**: Process-level encryption key management
+
+### 🛠️ Development Configuration
+
+    *   **`.env` File:** For development, create a `.env` file in the project root. Add your API keys here:
         ```env
-        GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
-        # GOOGLE_SEARCH_API_KEY="YOUR_GOOGLE_SEARCH_API_KEY"
-        # GOOGLE_SEARCH_ENGINE_ID="YOUR_GOOGLE_CSE_ID"
-        # GROQ_API_KEY="YOUR_GROQ_API_KEY"
-        # OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
-        # ANTHROPIC_API_KEY="YOUR_ANTHROPIC_API_KEY"
+        # Production Environment
+        MINDX_ENVIRONMENT="production"
+        MINDX_SECURITY_ENCRYPTION_ENABLED="true"
+
+        # API Keys (for development - use encrypted vault in production)
+        OPENAI_API_KEY="your-openai-key"
+        ANTHROPIC_API_KEY="your-anthropic-key"
+        GEMINI_API_KEY="your-gemini-key"
+        MISTRAL_API_KEY="your-mistral-key"
+
+        # Security Configuration
+        MINDX_SECURITY_CORS_ORIGINS="https://agenticplace.pythai.net"
+        MINDX_SECURITY_RATE_LIMITING_ENABLED="true"
         ```
-    *   **`data/config/basegen_config.json`:** This is the main JSON configuration file. Review and customize settings for logging, LLM providers, agent-specific parameters, and tool enablement. Ensure it is valid JSON.
-    *   **`data/config/llm_factory_config.json`:** Fine-tunes LLM provider selection and default models for the factory.
-    *   **`data/config/official_tools_registry.json`:** Managed by `MastermindAgent`, defines available tools. You can pre-populate this or let Mastermind build it.
+    *   **Configuration Files:**
+        - **`data/config/basegen_config.json`:** Main system configuration
+        - **`data/config/llm_factory_config.json`:** LLM provider settings
+        - **`data/config/official_tools_registry.json`:** Tool registry managed by MastermindAgent
 
   **Directory Structure:** Ensure your project follows the expected Python package structure, with `__init__.py` files in each package directory (`utils/`, `core/`, `llm/`, `orchestration/`, `learning/`, `monitoring/`, `tools/`).
 
-##  Running the System
+##  🚀 Running the System
 
-The primary entry point for interactive use with `MastermindAgent` is `scripts/run_mindx.py`.
+### Production Deployment
 
-  **Activate your virtual environment.**
+For production deployment with enterprise features:
+
+```bash
+# Start production services
+sudo systemctl start mindx
+sudo systemctl start mindx-health.timer
+
+# Check service status
+sudo systemctl status mindx
+sudo systemctl status nginx
+sudo systemctl status postgresql
+sudo systemctl status redis
+
+# Monitor logs
+sudo journalctl -u mindx -f
+```
+
+**Production URLs:**
+- **API Server**: `https://your-domain.com` (or `http://localhost:8000`)
+- **Interactive API Docs**: `https://your-domain.com/docs`
+- **Health Status**: `https://your-domain.com/health`
+
+### Development Mode
+
+The primary entry point for interactive development is `scripts/run_mindx.py`:
+
+  **Activate your virtual environment:**
+    ```bash
+    source mindX_venv/bin/activate
+    ```
   **Navigate to the project root directory:**
     ```bash
-    cd /home/luvai/mindX
+    cd /path/to/mindX
     ```
-  **Run the script:**
+  **Run the development system:**
     ```bash
     python3 scripts/run_mindx.py
     ```
     You should see initialization logs and then the `mindX (Mastermind) >` prompt.
 
+### Alternative Launch Methods
+
+```bash
+# Direct autonomous system launch
+python3 augmentic.py
+
+# Web interface with enhanced UI
+./mindX.sh --frontend
+
+# API server only
+python3 mindx_backend_service/main_service_production.py
+```
+
 ##  Command-Line Interface (CLI) Commands
 
 Once the system is running, you can interact with it via the CLI. Type `help` at the prompt to see available commands.
 
-**Key Mastermind-Level Commands:**
+**Key Commands:**
+
+### 🎯 **Strategic Commands**
 
 *   **`evolve <directive>`**
     *   Tasks the `MastermindAgent` with a high-level strategic goal or directive.
-    *   Mastermind's internal BDIAgent will then attempt to decompose this directive into subgoals, create plans, and execute actions (which might involve using tools, analyzing code, or tasking the `CoordinatorAgent`).
-    *   Examples:
-        *   `evolve Enhance system-wide logging for better debuggability.`
-        *   `evolve Assess the current tool suite and propose a new tool for automated code refactoring.`
-        *   `evolve Analyze the 'core.bdi_agent' module for potential performance optimizations.`
+    *   Mastermind's internal BDIAgent will decompose the directive into subgoals, create plans, and execute actions.
+    *   Production Examples:
+        *   `evolve Optimize database connection pooling for better performance.`
+        *   `evolve Enhance security monitoring with real-time threat detection.`
+        *   `evolve Analyze the encrypted vault system for optimization opportunities.`
+        *   `evolve Implement advanced rate limiting with client reputation tracking.`
+
+### 🔒 **Production Commands**
+
+*   **Encrypted Vault Management:**
+    ```bash
+    # Migrate to encrypted vault
+    python3 scripts/migrate_to_encrypted_vault.py
+
+    # Verify encryption status
+    python3 scripts/migrate_to_encrypted_vault.py --verify-only
+    ```
+
+*   **Security Operations:**
+    ```bash
+    # Check security status
+    curl https://your-domain.com/health/detailed
+
+    # Monitor rate limiting
+    curl https://your-domain.com/api/monitoring/inbound
+    ```
+
+*   **Service Management:**
+    ```bash
+    # Restart production services
+    sudo systemctl restart mindx nginx
+
+    # View service logs
+    sudo journalctl -u mindx --since "1 hour ago"
+    ```
 
 *   **`mastermind_status`**
     *   Displays Mastermind's current high-level objectives and a history of its strategic campaigns (the outcomes of `evolve` commands).

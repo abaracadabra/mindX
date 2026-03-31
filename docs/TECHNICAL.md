@@ -1,10 +1,18 @@
 # mindX Orchestration Environment - Technical Architecture Documentation
 
+**Status:** ✅ **Production Ready** - Enterprise deployment with encrypted vault security
+**Last Updated:** March 2026
+**Version:** 4.0
+
 ## Executive Summary
 
-mindX is an enterprise-grade, autonomous multi-agent orchestration environment designed for intelligent task execution, self-improvement, and scalable agent coordination. Built on a foundation of **Belief-Desire-Intention (BDI) cognitive architecture**, **cryptographic identity management**, and **tool-based execution patterns**, mindX represents a sophisticated approach to autonomous agent systems with production-ready security, monitoring, and orchestration capabilities.
+mindX is a **production-ready, enterprise-grade autonomous multi-agent orchestration environment** designed for intelligent task execution, self-improvement, and scalable agent coordination with advanced security infrastructure. Built on a foundation of **Belief-Desire-Intention (BDI) cognitive architecture**, **AES-256 encrypted vault management**, **advanced rate limiting**, and **tool-based execution patterns**, mindX represents a sophisticated approach to autonomous agent systems with **production-grade security, performance optimization, and enterprise monitoring capabilities**.
 
 **Core Technical Foundations:**
+- **🔒 Enterprise Security**: AES-256 encrypted vault with PBKDF2 key derivation for all sensitive data
+- **⚡ Performance Optimization**: Connection pooling, async/await architecture, circuit breaker patterns
+- **🛡️ Advanced Authentication**: Multi-algorithm rate limiting with client reputation tracking
+- **🚀 Production Deployment**: Automated VPS deployment with security hardening and monitoring
 - **Augmentic Intelligence**: Evolutionary synthesis of human expertise and AI capabilities
 - **Self-Improving AI Systems**: Autonomous codebase analysis and improvement using LLMs
 - **Hierarchical Agent Architecture**: Multi-layered orchestration from strategic to tactical execution
@@ -35,6 +43,7 @@ This symphonic approach enables:
 
 ## Table of Contents
 
+- [Complete CORE System Architecture](#complete-core-system-architecture)
 - [Core Architecture Overview](#core-architecture-overview)
 - [Symphonic Orchestration & Mastermind Coordination](#symphonic-orchestration--mastermind-coordination)
 - [AGInt Cognitive Engine & BDI Communication Framework](#agint-cognitive-engine--bdi-communication-framework)
@@ -90,6 +99,141 @@ The symphonic architecture operates across multiple intelligence levels:
 │              (Tools, Memory, Processing Units)                │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Complete CORE System Architecture
+
+### CORE System Definition & Scope
+
+The **mindX CORE system** represents the foundational cognitive and orchestration infrastructure that enables autonomous Augmented Intelligence. CORE comprises **15 essential components** across three critical architectural layers that provide the foundation upon which all specialized agents operate.
+
+**CORE = Cognitive Foundation + Infrastructure Services + Orchestration Layer**
+
+### CORE Components Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                🌟 META-ORCHESTRATION LAYER                     │
+│  ┌─────────────────────────────────────────────────────────┐  │
+│  │  MindXAgent (Meta-Orchestrator)                         │  │
+│  │  • Complete system understanding (agent_knowledge)      │  │
+│  │  • Self-improvement orchestration                       │  │
+│  │  • ~149KB, ~3,800 lines                                 │  │
+│  └─────────────────────────────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────┤
+│                🧠 COGNITIVE ARCHITECTURE LAYER                 │
+│  ┌─────────────────────────────────────────────────────────┐  │
+│  │  BDIAgent (Reasoning Core)    AGInt (P-O-D-A Loop)      │  │
+│  │  • BDI cognitive architecture  • Cognitive orchestration │  │
+│  │  • Tool execution & planning   • Stuck loop detection   │  │
+│  │  • ~64KB, ~1,900 lines        • ~32KB, ~950 lines      │  │
+│  │                                                          │  │
+│  │  BeliefSystem (Singleton)     ReasoningAgent             │  │
+│  │  • Shared belief store        • Deductive/inductive     │  │
+│  │  • Confidence scoring         • ~12KB, ~300 lines      │  │
+│  │  • ~8KB, ~210 lines                                     │  │
+│  └─────────────────────────────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────┤
+│                🔧 INFRASTRUCTURE SERVICES LAYER                │
+│  ┌─────────────────────────────────────────────────────────┐  │
+│  │  CoordinatorAgent (Service Bus)  MemoryAgent (Persistence) │
+│  │  • Event pub/sub system         • STM/LTM memory mgmt   │  │
+│  │  • Health monitoring            • Pattern analysis      │  │
+│  │  • ~56KB, ~1,600 lines         • ~53KB, ~1,300 lines   │  │
+│  │                                                          │  │
+│  │  IDManagerAgent (Identity)      GuardianAgent (Security) │  │
+│  │  • Cryptographic wallets        • Access control        │  │
+│  │  • Entity mapping               • Challenge-response     │  │
+│  │  • ~16KB, ~500 lines           • ~16KB, ~500 lines     │  │
+│  └─────────────────────────────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────┤
+│                🎼 ORCHESTRATION LAYER                          │
+│  ┌─────────────────────────────────────────────────────────┐  │
+│  │  MastermindAgent (Strategic)    StartupAgent (Bootstrap) │  │
+│  │  • Strategic directives         • System initialization │  │
+│  │  • AION agent management        • Dependency resolution │  │
+│  │  • ~41KB, ~1,200 lines         • ~83KB, ~2,400 lines   │  │
+│  │                                                          │  │
+│  │  ┌─────────────────────────────────────────────────┐    │  │
+│  │  │           AION AUTONOMOUS AGENT                 │    │  │
+│  │  │    CORE-contained • MASTERMIND-directed         │    │  │
+│  │  │    Decision autonomy • Chroot management        │    │  │
+│  │  └─────────────────────────────────────────────────┘    │  │
+│  └─────────────────────────────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────┤
+│                🛠️ CORE UTILITY SERVICES                        │
+│  EpistemicAgent • NonMonotonicAgent • SessionManager        │
+│  StuckLoopDetector • ExitDetector • InferenceOptimizer      │
+│  Config • LoggingConfig • SystemStateTracker                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### CORE Component Classification
+
+#### ✅ **Tier 1: Critical CORE (Cannot be removed)**
+- **MindXAgent**: Meta-orchestrator (~149KB) - System understanding
+- **BDIAgent**: Reasoning engine (~64KB) - Cognitive processing
+- **CoordinatorAgent**: Service bus (~56KB) - System coordination
+- **MemoryAgent**: Persistence (~53KB) - Memory infrastructure
+- **StartupAgent**: Bootstrap (~83KB) - System initialization
+- **BeliefSystem**: Shared knowledge (~8KB) - Singleton beliefs
+
+#### ✅ **Tier 2: High-Priority CORE (Essential for production)**
+- **MastermindAgent**: Strategic control (~41KB) - Strategic coordination
+- **AGInt**: Cognitive loop (~32KB) - P-O-D-A orchestration
+- **IDManagerAgent**: Identity management (~16KB) - Cryptographic operations
+- **GuardianAgent**: Security (~16KB) - Access control
+
+#### ✅ **Tier 3: Supporting CORE (Important utilities)**
+- **ReasoningAgent**, **EpistemicAgent**, **NonMonotonicAgent**: Specialized reasoning
+- **SessionManager**: Session lifecycle management
+- **StuckLoopDetector** & **ExitDetector**: Loop prevention
+- **Config** & **LoggingConfig**: System foundation
+
+**Total CORE**: ~582KB of foundational code enabling all system functionality
+
+### CORE Data Flow Architecture
+
+```
+Input/Directive
+    ↓
+MindXAgent (Meta-orchestration)
+    ↓ [Agent knowledge & capability analysis]
+BDIAgent (Core reasoning)
+    ↓ [Belief-Desire-Intention processing]
+BeliefSystem (Shared knowledge)
+    ↓ [Confidence-scored beliefs]
+Tool Execution via tools_registry
+    ↓ [Context-aware execution]
+MemoryAgent (Persistent storage)
+    ↓ [STM/LTM promotion]
+CoordinatorAgent (Event propagation)
+    ↓ [Pub/sub event system]
+System State Update
+    ↓
+Output/Action/Learning
+```
+
+### CORE vs Specialized Dependencies
+
+**CORE Internal Dependencies**:
+```
+MindXAgent → BeliefSystem, BDIAgent, MemoryAgent, IDManagerAgent
+BDIAgent → BeliefSystem, MemoryAgent, LLMHandler, tools_registry
+CoordinatorAgent → PerformanceMonitor, ResourceMonitor, MemoryAgent
+IDManagerAgent → BeliefSystem, VaultManager, MemoryAgent
+```
+
+**Specialized Agent Dependencies on CORE**:
+```
+StrategicEvolutionAgent → CORE (MindXAgent, BDIAgent, MemoryAgent)
+AION Agent → CORE (MastermindAgent, CoordinatorAgent, BeliefSystem)
+EnhancedSimpleCoder → CORE (BDIAgent for tool execution)
+PerformanceMonitor → CORE (CoordinatorAgent for integration)
+```
+
+---
 
 #### Symphonic Communication Protocols
 
@@ -768,80 +912,91 @@ class InteractionType(Enum):
 
 ---
 
-## Identity Management & Security Infrastructure
+## 🔒 Production Identity Management & Security Infrastructure
 
-### Cryptographic Identity Architecture
+### Enterprise-Grade Cryptographic Identity Architecture
 
-mindX implements **enterprise-grade cryptographic identity management** with complete coverage for all agents and tools.
+mindX implements **production-ready enterprise cryptographic identity management** with **AES-256 encrypted vault storage** and complete coverage for all agents and tools.
 
-#### **Identity Creation Process**
+#### **🚀 Production Identity Creation Process**
 ```
-Entity Deployment → Key Generation → Signature Creation → Registry Integration → Validation → Production Ready
+Entity Deployment → Key Generation → AES-256 Encryption → Vault Storage → Registry Integration → Validation → Production Ready
 ```
 
-#### **IDManagerAgent Architecture**
+#### **🔐 Enhanced IDManagerAgent Architecture**
 ```python
 class IDManagerAgent:
     """
-    Foundational identity service with enhanced capabilities:
+    Production-grade identity service with encrypted vault:
     - Ethereum-compatible key pair generation
-    - Secure key storage with restrictive permissions
+    - AES-256 encrypted storage with PBKDF2 key derivation
     - Belief system integration for fast lookups
     - Registry synchronization and validation
     - Comprehensive audit logging
+    - Automatic migration from plaintext to encrypted storage
     """
 ```
 
-**Core Capabilities:**
+**🔒 Production Security Capabilities:**
 - **Cryptographic Key Management**: secp256k1 elliptic curve cryptography
-- **Secure Storage**: Owner-only file permissions on POSIX systems
-- **Belief System Integration**: Cached identity lookups and mappings
-- **Registry Synchronization**: Automatic registry updates
-- **Audit Trails**: Complete identity operation logging
+- **AES-256 Encrypted Storage**: All sensitive data encrypted at rest with 100,000 PBKDF2 iterations
+- **Secure Key Derivation**: Unique salt per encryption session with master key protection
+- **Belief System Integration**: Cached identity lookups with encrypted backend storage
+- **Registry Synchronization**: Automatic registry updates with encrypted credential management
+- **Migration Support**: Seamless transition from plaintext to encrypted storage
 
-#### **Security Features**
-- **Deterministic Naming**: `MINDX_WALLET_PK_{ENTITY_ID}` format
-- **Bidirectional Mapping**: Entity ↔ address relationship tracking
-- **Idempotent Operations**: Safe repeated identity operations
-- **Backup and Recovery**: Secure key backup mechanisms
-- **Privileged Access Control**: Guardian-only sensitive operations
+#### **🛡️ Enhanced Security Features**
+- **AES-256-GCM Encryption**: Authenticated encryption for all sensitive data
+- **PBKDF2 Key Derivation**: 100,000 iterations with unique salt for maximum security
+- **Encrypted Vault Architecture**: `vault_encrypted/wallet_keys/keys.enc` secure storage
+- **Legacy Migration**: Automatic migration from `MINDX_WALLET_PK_{ENTITY_ID}` environment variables
+- **Bidirectional Mapping**: Entity ↔ address relationship tracking with encrypted lookup
+- **Idempotent Operations**: Safe repeated identity operations with encryption verification
+- **Secure Backup**: Encrypted backup mechanisms with key rotation support
+- **Zero-Knowledge Access**: Guardian-only sensitive operations with encrypted authorization
 
-### Guardian Agent Security Framework
+### 🛡️ Production Guardian Agent Security Framework
 
-#### **Multi-Layered Validation Workflow**
+#### **🔒 Enhanced Multi-Layered Validation Workflow**
 ```
 Agent Validation Request
         ↓
-1. Identity Validation → Verify cryptographic identity exists
+1. Encrypted Identity Validation → Verify AES-256 encrypted identity exists in vault
         ↓
-2. Registry Validation → Check official registration status  
+2. Registry Validation → Check official registration status with encrypted lookup
         ↓
-3. Challenge-Response → Cryptographic proof of ownership
+3. Challenge-Response → Cryptographic proof of ownership with vault key retrieval
         ↓
-4. Workspace Validation → Verify operational environment
+4. Workspace Validation → Verify operational environment with encrypted configuration
         ↓
-Production Approval → Guardian cryptographic signature
+5. Vault Access Verification → Ensure secure access to encrypted credentials
+        ↓
+Production Approval → Guardian cryptographic signature with encrypted audit trail
 ```
 
-#### **Challenge-Response Authentication**
+#### **🔐 Enhanced Challenge-Response Authentication**
 ```python
 class GuardianAgent:
     """
-    Security backbone with enhanced validation:
-    - Multi-phase identity validation
-    - Registry integration and consistency checking
-    - Challenge-response cryptographic authentication
-    - Privileged access management
-    - Comprehensive security auditing
+    Production security backbone with encrypted vault integration:
+    - Multi-phase identity validation with AES-256 encryption
+    - Registry integration with encrypted credential management
+    - Challenge-response authentication with vault key retrieval
+    - Privileged access management with encrypted authorization
+    - Comprehensive security auditing with encrypted logs
+    - Rate limiting integration with client reputation tracking
+    - Security middleware integration for threat detection
     """
 ```
 
-**Security Mechanisms:**
-- **Cryptographic Challenges**: 32-byte secure random challenges
-- **Temporal Security**: Time-bound challenges with automatic expiry
-- **Signature Verification**: EIP-191 compatible signature validation
-- **Replay Protection**: Single-use challenge invalidation
-- **Audit Logging**: Complete security operation trails
+**🔒 Production Security Mechanisms:**
+- **Encrypted Cryptographic Challenges**: 32-byte secure random challenges with AES-256 storage
+- **Temporal Security**: Time-bound challenges with automatic expiry and encrypted state management
+- **Vault-Integrated Signature Verification**: EIP-191 compatible validation with encrypted key retrieval
+- **Replay Protection**: Single-use challenge invalidation with encrypted challenge storage
+- **Rate Limiting Integration**: Advanced rate limiting with client reputation and burst protection
+- **Security Middleware**: Real-time threat detection and automated response
+- **Encrypted Audit Logging**: Complete security operation trails with AES-256 encrypted storage
 
 ### Identity Sync Tool
 

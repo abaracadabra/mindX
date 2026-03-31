@@ -1,18 +1,40 @@
 # mindX API
 
-mindX provides an API for agents, UIs, and external systems. **Read the docs** at the interactive Swagger UI when the backend is running.
+mindX provides a **production-ready API** for agents, UIs, and external systems with enterprise security, authentication, and monitoring. **Read the docs** at the interactive Swagger UI when the backend is running.
 
 **Port:** The mindX backend runs by default on **port 8000**. In the UI, the **API** tab (main menu) includes a direct link to the API information mindX provides: the interactive Swagger UI at that base URL.
+
+**📚 Complete Documentation:** See **[API Documentation](api_documentation.md)** for comprehensive API reference with authentication, endpoints, examples, and SDK usage patterns.
+
+---
+
+## 🔐 Production API Features
+
+### Enterprise Security
+- **Wallet-Based Authentication:** Ethereum signature-based authentication with session tokens
+- **Advanced Rate Limiting:** Multi-algorithm rate limiting with client reputation tracking
+- **CORS Protection:** Strict CORS configuration for production security
+- **Input Validation:** Comprehensive request validation and sanitization
+- **Security Middleware:** Real-time threat detection and monitoring
+
+### Production Endpoints
+- **Health Monitoring:** `/health` and `/health/detailed` for system monitoring
+- **Agent Management:** `/agents` for agent registry and lifecycle management
+- **Authentication:** `/users/register-with-signature` and session validation
+- **Vault Operations:** Encrypted storage for user data and API keys
 
 ---
 
 ## Base URL and interactive docs
 
 - **Base URL (default):** `http://localhost:8000`
+- **Production Base URL:** `https://agenticplace.pythai.net` (when deployed)
 - **Interactive API docs (Swagger UI):** **http://localhost:8000/docs**
 - **ReDoc:** http://localhost:8000/redoc (if enabled)
 
 Use **http://localhost:8000/docs** to browse all endpoints, try requests, and inspect request/response schemas.
+
+**📖 Complete API Reference:** [API Documentation](api_documentation.md) - Comprehensive guide with authentication flows, endpoint reference, examples, and SDK usage
 
 ---
 

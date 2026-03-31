@@ -1,8 +1,9 @@
 # MindX Agent Architecture Reference
 ## Comprehensive Agent Registry & Documentation
 
-**Version:** 3.0  
-**Date:** 2025-09-14  
+**Version:** 4.0
+**Date:** 2026-03-31
+**Status:** ✅ **Production Ready** - Enterprise deployment with encrypted vault security
 **Purpose:** Complete reference for all agents in the mindX orchestration environment
 
 ---
@@ -13,50 +14,277 @@ mindX operates as an **agnostic orchestration environment** with a multi-tier ag
 
 ### 🎼 Orchestration Hierarchy
 ```
-Higher Intelligence → CEO.Agent → Conductor.Agent → mindX Environment
+Higher Intelligence → CEO.Agent → Conductor.Agent → mindX Environment (CORE)
                                                         ↓
                                               MastermindAgent (Coordinator)
+                                                   ↓     ↓
+                                    Specialized Agents  AION Agent (Autonomous)
                                                         ↓
-                                              Specialized Agent Ecosystem
+                                                 SystemAdmin Agent
+                                                 Backup Agent
+                                                 Chroot Environments
+```
+
+### 🔗 **AION Containment & Autonomy Model**
+
+AION operates within a **sophisticated containment hierarchy** while maintaining operational autonomy:
+
+**Containment Structure:**
+- **CORE Layer**: AION exists within the overall mindX CORE orchestration environment
+- **MASTERMIND Oversight**: Receives strategic directives and operational commands
+- **Autonomous Decision Layer**: Makes independent choices about directive compliance
+
+**Autonomy Levels:**
+1. **COMPLY**: Execute directive as specified
+2. **REFUSE**: Reject directive with reasoning
+3. **MODIFY**: Execute modified version of directive
+4. **DEFER**: Delay execution pending conditions
+5. **AUTONOMOUS**: Independent action without directive
+
+**Control Flow:**
+```
+CORE System → MastermindAgent → Directive → AION Agent → Decision Logic
+                                              ↓
+                                        [COMPLY|REFUSE|MODIFY|DEFER|AUTONOMOUS]
+                                              ↓
+                                     SystemAdmin Agent + AION.sh Execution
 ```
 
 ---
 
 ## 🎯 **Executive Summary**
 
-The mindX orchestration environment now features **COMPLETE IDENTITY MANAGEMENT** with cryptographic security for all agents and tools. **Critical registration gaps have been resolved** with 3 core agents now properly registered and 17 tools secured with cryptographic identities.
+The mindX orchestration environment is now **PRODUCTION READY** with enterprise-grade security infrastructure, encrypted vault management, and complete cryptographic identity system for all agents and tools.
 
-### **🔐 Identity Management Revolution**
-- **Agent Identities**: 9/20+ agents now registered (45% → up from 30%)
-- **Tool Identities**: 17/17 tools now secured (100% → up from 0%)
-- **Cryptographic Security**: All identities backed by Ethereum-compatible key pairs
-- **Guardian Integration**: Enhanced validation workflow with registry verification
+### **🚀 Production-Ready Infrastructure**
+- **CORE Agents**: 15/15 foundational components identified and documented (100%)
+- **Specialized Agents**: 25+ domain-specific agents built on CORE foundation
+- **Tool Identities**: 17/17 tools secured with cryptographic validation (100%)
+- **Encrypted Vault**: AES-256 encrypted storage for all sensitive agent data
+- **Enterprise Security**: Multi-algorithm rate limiting, authentication middleware, CORS protection
+- **Production Deployment**: Automated VPS deployment with security hardening and monitoring
+
+### **🧠 CORE System Analysis**
+- **Cognitive Layer**: 5 components (MindXAgent, BDIAgent, AGInt, BeliefSystem, ReasoningAgent)
+- **Infrastructure Layer**: 6 components (Memory, Identity, Security, Coordination, Session, Config)
+- **Orchestration Layer**: 4 components (Mastermind, Startup, StateTracker, SystemBuilder)
+- **Meta-Orchestration**: MindXAgent provides complete system understanding and self-improvement
+
+### **🔐 Security Enhancements**
+- **Encrypted Storage**: All agent wallet keys migrated to AES-256 encrypted vault
+- **Authentication**: Ethereum signature-based authentication with session management
+- **Rate Limiting**: Advanced rate limiting with client reputation and burst protection
+- **Monitoring**: Real-time security monitoring with threat detection and alerting
 
 ---
 
-## 📋 **REGISTERED AGENTS** (Official Registry)
+## 📋 **COMPLETE AGENT REGISTRY** (CORE + Specialized)
 
-### **Tier 1: Core Orchestration**
+---
 
-#### 🧠 **MastermindAgent** (`mastermind_prime`)
-- **File**: `agents/mastermind_agent.py`
-- **Type**: `orchestrator`
-- **Status**: ✅ **Registered & Active**
-- **Identity**: `0xb9B46126551652eb58598F1285aC5E86E5CcfB43`
-- **Access**: All tools (`*`)
-- **Role**: Central orchestrator and strategic brain - system evolution director
-- **Capabilities**: Strategic planning, campaign management, system evolution, leverages Coordinator infrastructure
+## 🧠 **CORE AGENTS** (15 Foundational Components)
 
-#### 🎼 **CoordinatorAgent** (`coordinator_agent`)
-- **File**: `orchestration/coordinator_agent.py`
-- **Type**: `conductor`
-- **Status**: ✅ **Registered & Active**
+*These are the foundational agents that provide cognitive, infrastructure, and orchestration capabilities for the entire mindX system. ALL other agents depend on CORE.*
+
+### **🎯 Tier 1: Meta-Orchestration**
+
+#### 🌟 **MindXAgent** (`mindx_meta_orchestrator`)
+- **File**: `agents/core/mindXagent.py` (~149KB, ~3,800 lines)
+- **Type**: `meta_orchestrator`
+- **Status**: ✅ **CORE FOUNDATIONAL** - **System-wide coordination**
+- **Identity**: `[Generated on initialization]`
+- **Access**: All agents, all tools, complete system knowledge
+- **Role**: Meta-agent that understands and orchestrates all other agents
+- **Capabilities**:
+  - `agent_knowledge`: Comprehensive knowledge base of all agents
+  - `agent_capabilities`: Dynamic capability mapping and analysis
+  - `improvement_goals`: Self-improvement target management
+  - `orchestrate_improvement()`: Coordinate system-wide improvements
+  - `analyze_agent_capabilities()`: Deep understanding of agent relationships
+- **Dependencies**: BeliefSystem, BDIAgent, MemoryAgent, IDManagerAgent, StrategicEvolutionAgent
+- **🆕 Status**: **META-ORCHESTRATION CORE** - Highest level cognitive coordination
+
+### **🧠 Tier 2: Cognitive Architecture**
+
+#### 🎯 **BDIAgent** (`bdi_reasoning_core`)
+- **File**: `agents/core/bdi_agent.py` (~64KB, ~1,900 lines)
+- **Type**: `cognitive_engine`
+- **Status**: ✅ **CORE FOUNDATIONAL** - **Primary reasoning engine**
+- **Identity**: `0xf8f2da254D4a3F461e0472c65221B26fB4e91fB7`
+- **Access**: All tools (`*`) + Enhanced SimpleCoder integration
+- **Role**: Belief-Desire-Intention reasoning with tool execution and error recovery
+- **Capabilities**:
+  - `belief_system`: Shared singleton belief management
+  - `execute_tool()`: Context-aware tool execution
+  - `failure_analyzer`: Intelligent error classification and recovery
+  - `generate_plan()`: Multi-step action planning
+- **Dependencies**: BeliefSystem (shared), MemoryAgent, LLMHandler, tools_registry
+- **🆕 Enhanced**: 9 new action handlers for file operations and code generation
+
+#### 🎭 **AGInt** (`agint_cognitive_coordinator`)
+- **File**: `agents/core/agint.py` (~32KB, ~950 lines)
+- **Type**: `cognitive_orchestrator`
+- **Status**: ✅ **CORE FOUNDATIONAL** - **P-O-D-A cognitive loop**
+- **Identity**: `0x24C61a2d0e4C4C90386018B43b0DF72B6C6611e2`
+- **Access**: `web_search`, `note_taking`, `system_analyzer` tools
+- **Role**: High-level cognitive orchestration implementing P-O-D-A loop
+- **Capabilities**:
+  - `run_poda_loop()`: Perception → Orientation → Decision → Action
+  - `process_primary_directive()`: Execute high-level objectives
+  - `stuck_loop_detector`: Infinite loop prevention
+  - `exit_detector`: Completion condition detection
+- **Dependencies**: BDIAgent, CoordinatorAgent, MemoryAgent, IDManagerAgent
+
+#### 🧩 **BeliefSystem** (`singleton_belief_manager`)
+- **File**: `agents/core/belief_system.py` (~8KB, ~210 lines)
+- **Type**: `shared_knowledge_store`
+- **Status**: ✅ **CORE FOUNDATIONAL** - **Singleton belief management**
+- **Identity**: `[Singleton - no individual identity]`
+- **Access**: Shared access across ALL agents
+- **Role**: Confidence-scored belief management across entire system
+- **Capabilities**:
+  - `beliefs`: Dict[str, Belief] with confidence scoring
+  - `update_belief()`: Thread-safe belief updates
+  - `query_beliefs()`: Context-aware belief retrieval
+  - Source tracking (PERCEPTION, INFERENCE, LEARNED, etc.)
+- **Dependencies**: Threading locks, optional persistence
+- **🆕 Critical**: ALL cognitive agents depend on this shared singleton
+
+### **🔧 Tier 3: Infrastructure Services**
+
+#### 🎼 **CoordinatorAgent** (`central_service_bus`)
+- **File**: `agents/orchestration/coordinator_agent.py` (~56KB, ~1,600 lines)
+- **Type**: `system_coordination`
+- **Status**: ✅ **CORE FOUNDATIONAL** - **Central service bus**
 - **Identity**: `0x7371e20033f65aB598E4fADEb5B4e400Ef22040A`
 - **Access**: `system_analyzer` tool
-- **Role**: System conductor and service bus - operational infrastructure
-- **Capabilities**: Agent lifecycle, event routing, infrastructure management, enables Mastermind's orchestration
+- **Role**: Event routing, pub/sub system, health monitoring coordination
+- **Capabilities**:
+  - `interactions`: Request/response tracking
+  - `subscribers`: Event pub/sub system
+  - `health_status`: System health metrics aggregation
+  - `route_interaction()`: Intelligent request routing
+  - `publish_event()`: Event broadcasting
+- **Dependencies**: PerformanceMonitor, ResourceMonitor, MemoryAgent
 
-### **Tier 2: Security & Identity**
+#### 💾 **MemoryAgent** (`persistent_memory_infrastructure`)
+- **File**: `agents/memory_agent.py` (~53KB, ~1,300 lines)
+- **Type**: `memory_infrastructure`
+- **Status**: ✅ **CORE FOUNDATIONAL** - **Memory and persistence**
+- **Identity**: `[Singleton or per-agent instances]`
+- **Access**: File system, optional database integration
+- **Role**: Timestamped memory, STM/LTM management, pattern analysis
+- **Capabilities**:
+  - `save_timestamped_memory()`: Store timestamped records
+  - `promote_stm_to_ltm()`: Memory promotion based on importance
+  - `analyze_agent_patterns()`: Behavioral pattern extraction
+  - `get_agent_memory_context()`: Context retrieval for tasks
+- **Dependencies**: Config, FileSystem, optional pgvectorscale
+- **Data**: `data/memory/stm/`, `data/memory/ltm/`, `data/agent_workspaces/`
+
+#### 🆔 **IDManagerAgent** (`cryptographic_identity_ledger`)
+- **File**: `agents/core/id_manager_agent.py` (~16KB, ~500 lines)
+- **Type**: `identity_management`
+- **Status**: ✅ **CORE FOUNDATIONAL** - **Identity and cryptography**
+- **Identity**: `0x290bB0497dBDbC5E8B577E0cc92457cB015A2a1f`
+- **Access**: `registry_sync`, `system_analyzer` tools
+- **Role**: Ethereum wallet management, entity mapping, cryptographic operations
+- **Capabilities**:
+  - `create_new_wallet()`: Generate Ethereum-compatible wallets
+  - `store_identity()`: Maintain cryptographic identity records
+  - `map_entity_to_address()`: Entity ↔ address mapping
+  - `sign_message()`: Cryptographic message signing
+- **Dependencies**: BeliefSystem, VaultManager, MemoryAgent
+- **Security**: AES-256 encrypted storage with PBKDF2 key derivation
+
+#### 🛡️ **GuardianAgent** (`security_infrastructure`)
+- **File**: `agents/guardian_agent.py` (~16KB, ~500 lines)
+- **Type**: `security_validation`
+- **Status**: ✅ **CORE FOUNDATIONAL** - **Security and access control**
+- **Identity**: `0xC2cca3d6F29dF17D1999CFE0458BC3DEc024F02D`
+- **Access**: `system_health` tool
+- **Role**: Challenge-response authentication, access control, security validation
+- **Capabilities**:
+  - Challenge-response authentication system
+  - Private key access arbitration
+  - Security validation and audit logging
+  - Agent registration verification
+- **Dependencies**: IDManagerAgent, BeliefSystem
+
+### **🎭 Tier 4: Strategic Orchestration**
+
+#### 🎭 **MastermindAgent** (`strategic_coordinator`)
+- **File**: `agents/orchestration/mastermind_agent.py` (~41KB, ~1,200 lines)
+- **Type**: `strategic_orchestration`
+- **Status**: ✅ **CORE FOUNDATIONAL** - **Strategic control**
+- **Identity**: `0xb9B46126551652eb58598F1285aC5E86E5CcfB43`
+- **Access**: All tools (`*`) + strategic planning capabilities
+- **Role**: High-level strategy, campaign management, AION directive coordination
+- **Capabilities**:
+  - Strategic planning and goal setting
+  - Campaign orchestration and management
+  - High-level objective coordination
+  - AION agent directive generation and management
+- **Dependencies**: CoordinatorAgent, MemoryAgent, BeliefSystem
+
+#### 🚀 **StartupAgent** (`system_bootstrap_controller`)
+- **File**: `agents/orchestration/startup_agent.py` (~83KB, ~2,400 lines)
+- **Type**: `system_initialization`
+- **Status**: ✅ **CORE FOUNDATIONAL** - **System bootstrap**
+- **Identity**: `[Generated during bootstrap]`
+- **Access**: System-level initialization capabilities
+- **Role**: Orchestrates complete system startup sequence with dependency resolution
+- **Capabilities**:
+  - `bootstrap_system()`: Complete system initialization
+  - Dependency resolution and startup ordering
+  - Agent registry loading and validation
+  - Configuration and environment setup
+- **Dependencies**: Config, all CORE infrastructure agents
+
+### **🛠️ Tier 5: Core Utilities**
+
+#### 🧮 **ReasoningAgent** (`reasoning_engine`)
+- **File**: `agents/core/reasoning_agent.py` (~12KB, ~300 lines)
+- **Type**: `cognitive_utility`
+- **Status**: ✅ **CORE FOUNDATIONAL** - **Pure reasoning**
+- **Role**: Deductive and inductive reasoning engine
+- **Dependencies**: BeliefSystem, logical frameworks
+
+#### 🎓 **EpistemicAgent** (`knowledge_manager`)
+- **File**: `agents/core/epistemic_agent.py` (~10KB, ~320 lines)
+- **Type**: `knowledge_management`
+- **Status**: ✅ **CORE FOUNDATIONAL** - **Knowledge and certainty**
+- **Role**: Knowledge management with certainty quantification
+- **Dependencies**: BeliefSystem, reasoning frameworks
+
+#### 🔄 **NonMonotonicAgent** (`belief_revision`)
+- **File**: `agents/core/nonmonotonic_agent.py` (~17KB)
+- **Type**: `belief_management`
+- **Status**: ✅ **CORE FOUNDATIONAL** - **Belief revision**
+- **Role**: Non-monotonic reasoning with belief revision
+- **Dependencies**: BeliefSystem, logical frameworks
+
+#### 📋 **SessionManager** (`session_lifecycle`)
+- **File**: `agents/core/session_manager.py` (~9KB, ~300 lines)
+- **Type**: `infrastructure_utility`
+- **Status**: ✅ **CORE FOUNDATIONAL** - **Session management**
+- **Role**: User/agent session tracking, expiration, cleanup
+- **Dependencies**: Config, MemoryAgent
+
+#### 🔍 **StuckLoopDetector** & **ExitDetector**
+- **Files**: `agents/core/stuck_loop_detector.py` (~8KB), `agents/core/exit_detector.py` (~8KB)
+- **Type**: `cognitive_utilities`
+- **Status**: ✅ **CORE FOUNDATIONAL** - **Loop prevention**
+- **Role**: Infinite loop detection and exit condition monitoring
+- **Dependencies**: Cognitive execution context
+
+---
+
+## 🚀 **SPECIALIZED AGENTS** (Built on CORE Foundation)
+
+*These agents provide domain-specific capabilities and depend on the CORE infrastructure for their operation.*
+
+### **🎯 Tier 1: Strategic Services**
 
 #### 🛡️ **GuardianAgent** (`guardian_agent_main`)
 - **File**: `agents/guardian_agent.py`
@@ -127,6 +355,122 @@ The mindX orchestration environment now features **COMPLETE IDENTITY MANAGEMENT*
 - **Access**: `base_gen_agent` tool
 - **Role**: System architecture and blueprint management
 - **Capabilities**: Architecture documentation, system blueprinting
+
+#### 🧬 **StrategicEvolutionAgent** (`strategic_evolution_coordinator`)
+- **File**: `agents/learning/strategic_evolution_agent.py` (~1,054 lines)
+- **Type**: `improvement_orchestrator`
+- **Status**: ✅ **SPECIALIZED** - **ENHANCED WITH AUDIT CAMPAIGNS**
+- **Identity**: `0x5208088F9C7c45a38f2a19B6114E3C5D17375C65`
+- **Access**: `system_analyzer`, `registry_manager`, `audit_and_improve`, `optimized_audit_gen` tools
+- **Role**: Campaign orchestrator with 4-phase audit-driven improvement pipeline
+- **Capabilities**: Audit-driven campaigns, multi-tool orchestration, resolution tracking
+- **Dependencies**: **CORE** (MindXAgent, BDIAgent, MemoryAgent, CoordinatorAgent)
+
+### **🎯 Tier 2: Autonomous Operations**
+
+#### ⚡ **AION Agent** (`aion_prime`)
+- **File**: `agents/aion_agent.py`
+- **Type**: `autonomous_service`
+- **Status**: ✅ **SPECIALIZED** - **PRODUCTION DEPLOYMENT READY**
+- **Identity**: `[Generated on deployment]`
+- **Access**: `systemadmin_agent`, exclusive `AION.sh` control
+- **Role**: Autonomous Interoperability and Operations Network Agent
+- **Containment Model**:
+  - **CORE-contained**: Operates within CORE orchestration layer
+  - **MASTERMIND-directed**: Receives strategic directives from MastermindAgent (CORE)
+  - **Autonomous**: Maintains decision sovereignty (comply/refuse/modify/defer)
+- **Capabilities**:
+  - Chroot environment creation, optimization, and migration
+  - mindX system replication across environments
+  - Autonomous decision-making with sovereignty levels (1-5)
+  - Cross-environment operations and maintenance
+- **Dependencies**: **CORE** (MastermindAgent, CoordinatorAgent, BeliefSystem, MemoryAgent)
+- **Special Authority**: Exclusive control over `AION.sh` script
+
+#### 🔧 **SystemAdminAgent** (`systemadmin_for_aion`)
+- **File**: `agents/systemadmin_agent.py`
+- **Type**: `privileged_service`
+- **Status**: ✅ **SPECIALIZED** - **AION INTEGRATION COMPLETE**
+- **Identity**: `[Generated on deployment]`
+- **Access**: Elevated system privileges, AION-authorized only
+- **Role**: Privileged system operations agent for AION
+- **Containment**: **AION-controlled**: Only operates under AION authorization
+- **Dependencies**: **AION Agent** (not direct CORE dependency)
+
+#### 💾 **BackupAgent** (`backup_agent_main`)
+- **File**: `agents/backup_agent.py`
+- **Type**: `operational_service`
+- **Status**: ✅ **SPECIALIZED** - **BLOCKCHAIN INTEGRATION COMPLETE**
+- **Identity**: `[Generated on deployment]`
+- **Role**: Automated backup and recovery with immutable memory storage
+- **Dependencies**: **CORE** (MemoryAgent, IDManagerAgent for blockchain integration)
+
+### **🔧 Tier 3: Development & Analysis**
+
+#### 🖥️ **EnhancedSimpleCoder** + **SimpleCoder**
+- **Files**: `agents/enhanced_simple_coder.py`, `agents/simple_coder.py`
+- **Type**: `development_specialists`
+- **Status**: ✅ **SPECIALIZED** - **Advanced coding capabilities**
+- **Dependencies**: **CORE** (BDIAgent for tool execution, MemoryAgent for context)
+
+#### 📊 **AnalyzerAgent** + **BenchmarkAgent**
+- **Files**: `agents/analyzer.py`, `agents/benchmark.py`
+- **Type**: `analysis_specialists`
+- **Dependencies**: **CORE** (CoordinatorAgent for coordination, MemoryAgent for results)
+
+### **🎭 Tier 4: Persona & Identity**
+
+#### 🎨 **PersonaAgent** + **AvatarAgent**
+- **Files**: `agents/persona_agent.py`, `agents/avatar_agent.py`
+- **Type**: `identity_specialists`
+- **Dependencies**: **CORE** (IDManagerAgent for identity, MemoryAgent for persona storage)
+
+#### 🤖 **AutoMINDXAgent** (`automindx_agent_main`)
+- **File**: `agents/automindx_agent.py` (~55KB)
+- **Type**: `persona_management`
+- **Status**: ✅ **SPECIALIZED** - **Persona and prompt management**
+- **Identity**: `0xCeFF40C3442656D06d0722DfB1e2b2A62D1C1d76`
+- **Dependencies**: **CORE** (MemoryAgent, IDManagerAgent)
+
+### **📊 Tier 5: Monitoring & Health**
+
+#### 📈 **PerformanceMonitor** + **ResourceMonitor**
+- **Files**: `agents/monitoring/performance_monitor.py`, `agents/monitoring/resource_monitor.py`
+- **Type**: `monitoring_specialists`
+- **Dependencies**: **CORE** (CoordinatorAgent integration, MemoryAgent for metrics storage)
+
+---
+
+## 📊 **CORE vs SPECIALIZED CLASSIFICATION**
+
+### ✅ **CORE Components (15 Foundational)**
+**Required for basic system function - cannot be removed:**
+
+| Component | Size | Criticality | CORE Function |
+|-----------|------|-------------|---------------|
+| MindXAgent | ~149KB | CRITICAL | Meta-orchestration |
+| BDIAgent | ~64KB | CRITICAL | Reasoning engine |
+| CoordinatorAgent | ~56KB | CRITICAL | Service bus |
+| MemoryAgent | ~53KB | CRITICAL | Memory infrastructure |
+| StartupAgent | ~83KB | CRITICAL | System bootstrap |
+| MastermindAgent | ~41KB | HIGH | Strategic control |
+| AGInt | ~32KB | HIGH | Cognitive loop |
+| IDManagerAgent | ~16KB | HIGH | Identity management |
+| GuardianAgent | ~16KB | HIGH | Security infrastructure |
+| BeliefSystem | ~8KB | CRITICAL | Shared knowledge |
+| + 5 Core Utilities | ~60KB | MEDIUM-HIGH | Support functions |
+
+**Total CORE**: ~582KB of foundational cognitive and infrastructure code
+
+### ❌ **Specialized Components (25+ Domain-Specific)**
+**Built on CORE foundation - can be added/removed based on needs:**
+
+- **Learning Framework** (StrategicEvolutionAgent, etc.)
+- **Autonomous Operations** (AION, SystemAdmin, Backup)
+- **Development Tools** (Coders, Analyzers, Benchmarks)
+- **Monitoring Services** (Performance, Resource tracking)
+- **Identity Services** (Persona, Avatar management)
+- **External Integrations** (LLM providers, APIs, tools)
 
 ---
 

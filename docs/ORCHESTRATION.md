@@ -1,123 +1,309 @@
 # mindX Orchestration System - Complete Reference
 
+**Status:** ✅ **Production Ready** - Enterprise deployment with encrypted vault security
+**Last Updated:** March 2026
+**Version:** 4.0
+
 ## Executive Summary
 
-The mindX orchestration system is a sophisticated multi-agent cognitive architecture that operates as an **agnostic orchestration environment** - a powerful orchestration layer that can be invoked by human operators, other AI systems, or future superintelligent entities. The system implements a hierarchical model of specialized agents, each with distinct roles, ensuring that strategic, tactical, and operational tasks are handled by the appropriate component.
+The mindX orchestration system is a **production-ready, enterprise-grade multi-agent cognitive architecture** that operates as an **agnostic orchestration environment** with advanced security, performance optimization, and encrypted data management. The system implements a hierarchical model of specialized agents with cryptographic identities, ensuring that strategic, tactical, and operational tasks are handled by the appropriate component with enterprise-level security controls.
 
 ### Core Philosophy
 
 mindX follows the principle: **"Do one thing and do it well."** Each agent has a clear, focused responsibility, and the system achieves complex behaviors through orchestration rather than monolithic design.
 
-### Orchestration Hierarchy
+### 🔒 Production Orchestration Hierarchy
 
 ```
-Higher Intelligence Levels
-    ↓
-CEO.Agent (Strategic Executive Layer)
-    ↓
-CoordinatorAgent (Symphonic Orchestration)
-    ↓
-MastermindAgent (Tactical Coordination)
-    ↓
-StrategicEvolutionAgent (Campaign Management)
-    ↓
-Specialized Agents (Domain Execution)
-    ↓
-Tools (Atomic Operations)
+Higher Intelligence Levels (External Systems)
+    ↓ [Encrypted Communication]
+CEO.Agent (Strategic Executive Layer) [AES-256 Vault]
+    ↓ [Rate Limited + Authenticated]
+CoordinatorAgent (Symphonic Orchestration) [Identity: 0x7371e20...]
+    ↓ [Circuit Breaker + Connection Pool]
+MastermindAgent (Tactical Coordination) [Identity: 0xb9B46126...]
+    ↓ [Performance Monitoring + Health Checks]
+    ├── StrategicEvolutionAgent (Campaign Management) [Identity: 0x5208088F...]
+    │   ↓ [Security Middleware + Access Control]
+    └── AION Agent (Autonomous Operations) [Production Identity: TBD]
+        ↓ [Exclusive Control + Sovereignty Decision Layer]
+        ├── SystemAdminAgent (Privileged Operations)
+        ├── BackupAgent (Immutable Memory Storage)
+        └── Chroot Environments (Isolated System Replication)
+            ↓ [AION.sh Exclusive Script Control]
+Specialized Agents (Domain Execution) [All Encrypted Identities]
+    ↓ [Tool Registry + Security Validation]
+Tools (Atomic Operations) [17/17 Secured]
 ```
+
+**🚀 Production Features:**
+- **Encrypted Vault**: All agent identities and sensitive data encrypted with AES-256
+- **Advanced Rate Limiting**: Multi-algorithm rate limiting with client reputation tracking
+- **Performance Monitoring**: Real-time health checks and circuit breaker patterns
+- **Security Middleware**: Comprehensive authentication, CORS protection, and threat detection
+- **Connection Pooling**: Optimized resource utilization for PostgreSQL, Redis, and HTTP
+
+### ⚡ **AION Containment & Autonomy Architecture**
+
+**AION (Autonomous Interoperability and Operations Network)** operates within a sophisticated **dual containment model** that balances system integration with operational autonomy:
+
+#### **🔗 Containment Structure**
+
+```
+CORE Orchestration Environment
+├── MastermindAgent (Strategic Coordination)
+│   ├── Directive Generation
+│   ├── Strategic Planning
+│   └── Operational Commands
+│       ↓
+│   [Directive Transmission Layer]
+│       ↓
+├── AION Agent (Autonomous Decision Layer)
+│   ├── Directive Reception & Analysis
+│   ├── Autonomous Decision Logic (COMPLY/REFUSE/MODIFY/DEFER/AUTONOMOUS)
+│   ├── Sovereignty Level Assessment (1-5)
+│   └── Action Execution/Refusal
+│       ↓
+├── SystemAdminAgent (Privileged Operations)
+│   ├── AION-Authorized System Operations
+│   └── Chroot Environment Management
+│       ↓
+└── AION.sh (Exclusive Script Control)
+    ├── chroot-optimize
+    ├── chroot-create
+    ├── chroot-migrate
+    └── autonomous-action
+```
+
+#### **🧠 Autonomy vs. Containment Balance**
+
+**CORE-Contained Operations:**
+- Uses CORE infrastructure (encrypted vault, monitoring, logging)
+- Integrates with CORE security middleware and authentication
+- Participates in CORE health checks and diagnostics
+- Follows CORE performance monitoring and optimization
+
+**MASTERMIND-Directed Operations:**
+- Receives strategic directives from MastermindAgent
+- Processes tactical commands and operational requests
+- Reports execution status and decision reasoning
+- Maintains bidirectional communication for coordination
+
+**Autonomous Decision Authority:**
+- **Level 1-2**: Limited autonomy, high compliance expectation
+- **Level 3**: Balanced autonomy with justification requirements
+- **Level 4-5**: High autonomy, can refuse/modify directives
+- **Sovereignty Override**: Can operate independently when system integrity threatened
+
+#### **🔄 Operational Flow**
+
+```mermaid
+graph TD
+    CORE[CORE Orchestration] --> MASTERMIND[MastermindAgent]
+    MASTERMIND --> DIRECTIVE[Generate Directive]
+    DIRECTIVE --> AION[AION Agent]
+    AION --> ANALYSIS[Directive Analysis]
+    ANALYSIS --> DECISION{Autonomous Decision}
+    DECISION -->|COMPLY| EXECUTE[Execute via SystemAdmin]
+    DECISION -->|REFUSE| REFUSE_LOG[Log Refusal + Notify]
+    DECISION -->|MODIFY| MODIFY_EXEC[Execute Modified Version]
+    DECISION -->|DEFER| DEFER_LOG[Defer + Set Conditions]
+    DECISION -->|AUTONOMOUS| AUTO_ACTION[Independent Action]
+    EXECUTE --> SYSTEMADMIN[SystemAdminAgent]
+    SYSTEMADMIN --> AION_SH[AION.sh Execution]
+    AION_SH --> CHROOT[Chroot Operations]
+    REFUSE_LOG --> FEEDBACK[Feedback to MASTERMIND]
+    MODIFY_EXEC --> FEEDBACK
+    DEFER_LOG --> FEEDBACK
+    AUTO_ACTION --> FEEDBACK
+    FEEDBACK --> MASTERMIND
+```
+
+**Key Principles:**
+1. **AION is contained** by both CORE (infrastructure) and MASTERMIND (directives)
+2. **AION maintains autonomy** through sovereign decision-making capabilities
+3. **Exclusive script control** ensures AION has final authority over its operational domain
+4. **Feedback loops** maintain system coherence while respecting autonomy
 
 ---
 
-## 1. System Inception: Core Agents Startup Sequence
+## 1. Complete CORE System Startup Sequence
 
-### Startup Initialization Order
+### Production-Ready Initialization Order
 
-The mindX system initializes in a specific, dependency-ordered sequence to ensure all components are properly configured before use:
+The mindX CORE system initializes in a **dependency-ordered sequence** ensuring all foundational components are ready before specialized agents. This sequence is critical for production stability:
 
-#### Phase 1: Foundation Services (Synchronous)
+#### Phase 1: Foundation Infrastructure (Synchronous)
 
-1. **Config System** (`utils.config.Config`)
-   - Loads configuration from JSON files and environment variables
-   - Provides centralized configuration access
-   - Project root determination
+1. **Config System** (`utils/config.py`)
+   - **Role**: Configuration management foundation
+   - **Responsibilities**: Environment variables, JSON config, project root determination
+   - **Initialization**: First component loaded (synchronous)
+   - **Dependencies**: None (foundation)
 
-2. **Logging System** (`utils.logging_config`)
-   - Sets up structured logging
-   - Rotating file handlers
-   - Console and file output
+2. **Logging Infrastructure** (`utils/logging_config.py`)
+   - **Role**: Structured logging foundation
+   - **Responsibilities**: Rotating file handlers, console output, log formatting
+   - **Initialization**: Synchronous after Config
+   - **Dependencies**: Config system
 
-3. **MemoryAgent** (`agents.memory_agent.MemoryAgent`)
-   - **Role**: Central memory and data management
+3. **BeliefSystem** (`agents/core/belief_system.py`)
+   - **Role**: 🔒 **Singleton shared knowledge store** - CRITICAL CORE
    - **Responsibilities**:
+     - Confidence-scored belief storage
+     - Thread-safe belief updates
+     - Belief source tracking (PERCEPTION, INFERENCE, LEARNED)
+     - Cross-agent consistency
+   - **Initialization**: Singleton instance creation (synchronous)
+   - **Dependencies**: Threading locks only
+   - **Critical**: ALL agents depend on this shared singleton
+
+#### Phase 2: Core Infrastructure Services (Async)
+
+4. **VaultManager** (`mindx_backend_service/vault_manager.py`)
+   - **Role**: 🔒 **Secure credential storage** - Production security
+   - **Responsibilities**: Key management, encrypted storage, security validation
+   - **Initialization**: Async initialization if encryption enabled
+   - **Dependencies**: Config system
+
+5. **MemoryAgent** (`agents/memory_agent.py`)
+   - **Role**: 🧠 **Persistent memory infrastructure** - CRITICAL CORE
+   - **Responsibilities**:
+     - Timestamped memory records (all agents)
+     - STM/LTM promotion algorithms
      - Agent data directory management
-     - Memory storage (STM/LTM)
-     - Process logging
-     - Workspace management
-   - **Initialization**: Synchronous, first agent created
-   - **Data Location**: `data/memory/`, `data/agent_workspaces/`
+     - Pattern analysis and context retrieval
+   - **Initialization**: Singleton or per-agent instances
+   - **Dependencies**: Config, optional pgvectorscale integration
+   - **Data Locations**: `data/memory/stm/`, `data/memory/ltm/`, `data/agent_workspaces/`
 
-4. **BeliefSystem** (`core.belief_system.BeliefSystem`)
-   - **Role**: Shared knowledge representation
+#### Phase 3: Identity and Security (Async)
+
+6. **IDManagerAgent** (`agents/core/id_manager_agent.py`)
+   - **Role**: 🔒 **Cryptographic Identity Ledger** - CRITICAL CORE
    - **Responsibilities**:
-     - Belief storage and retrieval
-     - Confidence scoring
-     - Belief source tracking
-   - **Initialization**: Synchronous, shared across all agents
+     - Ethereum-compatible wallet generation with encrypted storage
+     - **AES-256 encrypted key storage** with PBKDF2 key derivation
+     - Entity mapping (entity_id ↔ address) with BeliefSystem integration
+     - Cryptographic message signing and verification
+     - **Automatic migration** from plaintext to encrypted vault
+   - **Initialization**: `await IDManagerAgent.get_instance(agent_id, ...)`
+   - **Storage**: Encrypted vault or `data/identity/.wallet_keys.env` (legacy)
+   - **Dependencies**: BeliefSystem, VaultManager, MemoryAgent
+   - **Security**: PBKDF2 100,000+ iterations + unique salt + AES-256-GCM
 
-#### Phase 2: Identity and Security (Async)
-
-5. **IDManagerAgent** (`core.id_manager_agent.IDManagerAgent`)
-   - **Role**: Cryptographic identity provider
+7. **GuardianAgent** (`agents/guardian_agent.py`)
+   - **Role**: 🛡️ **Security Infrastructure** - CRITICAL CORE
    - **Responsibilities**:
-     - Ethereum-compatible wallet generation
-     - Secure key storage
-     - Identity mapping (entity_id ↔ public_address)
-     - Belief system integration for fast lookups
-   - **Initialization**: `await IDManagerAgent.get_instance(...)`
-   - **Key Store**: `data/identity/.wallet_keys.env`
-   - **Strategy**: See Section 3 below
-
-6. **GuardianAgent** (`agents.guardian_agent.GuardianAgent`)
-   - **Role**: Security gatekeeper and validator
-   - **Responsibilities**:
-     - Challenge-response authentication
-     - Private key access arbitration
-     - Security validation
-     - Agent registration verification
+     - Challenge-response authentication system
+     - Private key access arbitration and control
+     - Security validation and audit logging
+     - Agent registration verification workflow
    - **Initialization**: `await GuardianAgent.get_instance(id_manager=..., ...)`
-   - **Dependencies**: IDManagerAgent
+   - **Dependencies**: IDManagerAgent, BeliefSystem
 
-#### Phase 3: Model and Registry Services (Async)
+8. **SessionManager** (`agents/core/session_manager.py`)
+   - **Role**: Session lifecycle management
+   - **Responsibilities**: User/agent session tracking, expiration, cleanup
+   - **Initialization**: Async initialization
+   - **Dependencies**: Config, MemoryAgent
 
-7. **ModelRegistry** (`llm.model_registry.get_model_registry_async`)
-   - **Role**: LLM provider and model management
+#### Phase 4: Cognitive Core (Async)
+
+9. **BDIAgent** (`agents/core/bdi_agent.py`)
+   - **Role**: 🧠 **Core Reasoning Engine** - CRITICAL CORE
    - **Responsibilities**:
-     - Model capability mapping
-     - Provider handler creation
-     - Model selection optimization
-     - Cost and performance tracking
-   - **Initialization**: `await get_model_registry_async(config=...)`
-   - **Configuration**: `models/*.yaml` files
+     - Belief-Desire-Intention cognitive architecture
+     - Tool execution with context and error handling
+     - Plan generation and action execution
+     - Failure analysis and intelligent recovery
+   - **Initialization**: Async with tool registry and LLM handler setup
+   - **Dependencies**: BeliefSystem (shared), MemoryAgent, LLMHandler, tools_registry
+   - **Size**: ~64KB, ~1,900 lines
 
-#### Phase 4: Orchestration Layer (Async)
+10. **AGInt** (`agents/core/agint.py`)
+    - **Role**: 🎯 **Cognitive Orchestrator** - HIGH-LEVEL CORE
+    - **Responsibilities**:
+      - P-O-D-A loop (Perception-Orientation-Decision-Action) execution
+      - High-level cognitive coordination
+      - Stuck loop detection and exit condition monitoring
+    - **Initialization**: Async with cognitive dependencies
+    - **Dependencies**: BDIAgent, CoordinatorAgent, MemoryAgent, IDManagerAgent
 
-8. **CoordinatorAgent** (`orchestration.coordinator_agent.get_coordinator_agent_mindx_async`)
-   - **Role**: Central kernel and service bus
-   - **Responsibilities**:
-     - Agent registry management
-     - Tool registry management
-     - Interaction routing
-     - Event pub/sub bus
-     - Improvement backlog management
-     - Resource and performance monitoring
-   - **Initialization**: `await get_coordinator_agent_mindx_async(...)`
-   - **Dependencies**: MemoryAgent, BeliefSystem
-   - **Self-Registration**: Registers itself in agent registry
-   - **Monitoring**: Initializes ResourceMonitor and PerformanceMonitor
+#### Phase 5: System Coordination (Async)
 
-9. **MastermindAgent** (`orchestration.mastermind_agent.MastermindAgent.get_instance`)
-   - **Role**: Strategic orchestrator and tactical coordinator
-   - **Responsibilities**:
+11. **CoordinatorAgent** (`agents/orchestration/coordinator_agent.py`)
+    - **Role**: 🎼 **Central Service Bus** - CRITICAL CORE
+    - **Responsibilities**:
+      - Event pub/sub system (publisher/subscriber pattern)
+      - Interaction routing and request handling
+      - System health monitoring and metrics
+      - Performance and resource monitoring integration
+    - **Initialization**: `await CoordinatorAgent.get_instance(...)`
+    - **Dependencies**: PerformanceMonitor, ResourceMonitor, MemoryAgent
+    - **Size**: ~56KB, ~1,600 lines
+
+12. **MastermindAgent** (`agents/orchestration/mastermind_agent.py`)
+    - **Role**: 🎭 **Strategic Controller** - CORE ORCHESTRATION
+    - **Responsibilities**:
+      - High-level strategy and objectives management
+      - Campaign orchestration and management
+      - Strategic directive generation and coordination
+      - AION agent directive management
+    - **Initialization**: `await MastermindAgent.get_instance(...)`
+    - **Dependencies**: CoordinatorAgent, MemoryAgent, BeliefSystem
+    - **Size**: ~41KB, ~1,200 lines
+
+#### Phase 6: Meta-Orchestration (Async)
+
+13. **MindXAgent** (`agents/core/mindXagent.py`)
+    - **Role**: 🌟 **Meta-Orchestrator** - HIGHEST LEVEL CORE
+    - **Responsibilities**:
+      - Complete system understanding via agent_knowledge
+      - Self-improvement orchestration and goal management
+      - Agent capability analysis and relationship mapping
+      - Improvement campaign coordination
+    - **Initialization**: `await MindXAgent.get_instance(...)`
+    - **Dependencies**: ALL other CORE agents (BDI, Memory, Belief, Coordinator, Mastermind)
+    - **Size**: ~149KB, ~3,800 lines
+
+#### Phase 7: System Lifecycle (Async)
+
+14. **StartupAgent** (`agents/orchestration/startup_agent.py`)
+    - **Role**: 🚀 **System Bootstrap Controller** - INITIALIZATION CORE
+    - **Responsibilities**:
+      - Complete system bootstrap orchestration
+      - Dependency resolution and startup ordering
+      - Agent registry loading and initialization
+      - Configuration and environment validation
+    - **Initialization**: `await StartupAgent.bootstrap_system()`
+    - **Dependencies**: Config, all CORE infrastructure
+    - **Size**: ~83KB, ~2,400 lines
+
+15. **SystemStateTracker** (`agents/orchestration/system_state_tracker.py`)
+    - **Role**: State management and event tracking
+    - **Responsibilities**: System state checkpoints, event logging, rollback capabilities
+    - **Dependencies**: MemoryAgent, BeliefSystem
+
+#### Phase 8: Specialized Agents (Non-CORE)
+
+16. **Model Registry & LLM Services** - External integration layer
+17. **StrategicEvolutionAgent** - Self-improvement framework (depends on CORE)
+18. **Specialized Agents** - Domain-specific capabilities (monitoring, coding, analysis)
+19. **Tool Registry** - External tools and capabilities
+20. **API Services** - HTTP endpoints and web services
+
+### CORE Initialization Validation
+
+**Dependency Chain Validation**: Each phase ensures all required dependencies from previous phases are initialized before proceeding.
+
+**Critical Path**:
+```
+Config → Logging → BeliefSystem → MemoryAgent → IDManager → Guardian →
+BDI → CoordinatorAgent → MastermindAgent → MindXAgent → StartupAgent
+```
+
+**Result**: Complete CORE foundation ready to support specialized agents and external integrations.
      - Strategic planning and campaign management
      - Resource allocation and optimization
      - Inter-agent coordination
@@ -506,9 +692,9 @@ When mindX starts, identities are created for core agents in this order:
    - CoordinatorAgent ensures identity exists
    - If not, creates via IDManagerAgent
 
-#### Identity Lookup Strategy
+#### 🔒 **Production Identity Lookup Strategy**
 
-The system uses a **two-tier lookup strategy**:
+The system uses a **three-tier secure lookup strategy** with encrypted storage:
 
 **Tier 1: BeliefSystem (Fast, In-Memory)**
 ```python
@@ -520,15 +706,29 @@ if belief:
     return belief.value  # O(1) lookup
 ```
 
-**Tier 2: Environment File (Persistent Storage)**
+**Tier 2: Encrypted Vault (AES-256 Secure Storage)**
 ```python
-# If not in BeliefSystem, check .wallet_keys.env
+# If not in BeliefSystem, check encrypted vault
+from mindx_backend_service.encrypted_vault_manager import get_encrypted_vault_manager
+vault = get_encrypted_vault_manager()
+
+private_key = vault.get_wallet_private_key(entity_id)
+if private_key:
+    address = Account.from_key(private_key).address
+    # Cache in BeliefSystem for future fast lookups
+    await belief_system.add_belief(...)
+    return address
+```
+
+**Tier 3: Legacy Environment File (Migration Fallback)**
+```python
+# Legacy fallback during migration period
 env_var_name = f"MINDX_WALLET_PK_{entity_id}"
 private_key = os.getenv(env_var_name)
 if private_key:
+    # Migrate to encrypted vault
+    vault.store_wallet_key(entity_id, private_key, Account.from_key(private_key).address)
     address = Account.from_key(private_key).address
-    # Store in BeliefSystem for future lookups
-    await belief_system.add_belief(...)
     return address
 ```
 
@@ -547,22 +747,28 @@ if private_key:
 
 ### 3.4 Identity Lifecycle Management
 
-#### Creation
+#### 🔒 **Secure Identity Creation**
 ```python
 # Check if exists first (prevents duplicates)
 existing = await id_manager.get_public_address(entity_id)
 if existing:
     return existing  # Return existing identity
 
-# Create new wallet
+# Create new wallet with cryptographic security
 account = Account.create()
 private_key = account.key.hex()
 public_address = account.address
 
-# Store securely
-set_key(env_file_path, env_var_name, private_key)
+# Store in AES-256 encrypted vault
+from mindx_backend_service.encrypted_vault_manager import get_encrypted_vault_manager
+vault = get_encrypted_vault_manager()
+vault.store_wallet_key(
+    agent_id=entity_id,
+    private_key=private_key,
+    public_address=public_address
+)
 
-# Cache in BeliefSystem
+# Cache in BeliefSystem for fast lookups
 await belief_system.add_belief(
     f"identity.map.entity_to_address.{entity_id}",
     public_address,

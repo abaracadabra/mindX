@@ -1,0 +1,125 @@
+{
+  "name": "VoicePrint-731b07fef0ce029b",
+  "description": "High-precision voice analysis with 18-decimal blockchain compatibility",
+  "attributes": [
+    {
+      "trait_type": "Voice Type",
+      "value": "bass"
+    },
+    {
+      "trait_type": "Emotional State",
+      "value": "tense"
+    },
+    {
+      "trait_type": "Energy Level",
+      "value": "high"
+    },
+    {
+      "trait_type": "Uniqueness Score",
+      "value": "44"
+    },
+    {
+      "trait_type": "Precision",
+      "value": "18 Decimal Places"
+    },
+    {
+      "trait_type": "Hash Algorithm",
+      "value": "SHA-256"
+    },
+    {
+      "trait_type": "Analysis Method",
+      "value": "FFT-BlockchainPrecision"
+    }
+  ],
+  "blockchain_data": {
+    "voiceprint_hash": "f0ce74f3918a8b863175b853c9839f44c7c0303d714888acaa5d725ac2c2d6f7",
+    "precision": 18,
+    "mathematical_precision": "18 decimal places",
+    "hash_algorithm": "SHA-256",
+    "blockchain_compatible": true,
+    "export_timestamp": "2026-03-31T23:48:35.820Z"
+  },
+  "raw_voiceprint": {
+    "voicePrintHash": "f0ce74f3918a8b863175b853c9839f44c7c0303d714888acaa5d725ac2c2d6f7",
+    "voicePrintHashSecondary": "964b3992a26062a1bdb6d496810ceba6e420916f588fa485e4fee34e2bd40749902b5e74e05da937b11860fd8eda1a4fa68c023c0016866ecb8d774bb6bf5460",
+    "voicePrintShortHash": "731b07fef0ce029b",
+    "voicePrintData": {
+      "version": "2.0.0",
+      "timestamp": "1775000910894000000",
+      "precision": 18,
+      "acousticFingerprint": {
+        "rms": "0.141270322434878352",
+        "dominantFrequency": "0.000000000000000000",
+        "spectralCentroid": "4064.405174057811574784",
+        "spectralRolloff": "7708.886718750000152576",
+        "spectralBandwidth": "3805.857386091922325504",
+        "spectralFlux": "1.190782231217686784",
+        "zeroCrossingRate": "0.000000000000000000",
+        "harmonicNoiseRatio": "6.276233752509726720"
+      },
+      "characteristics": {
+        "voiceType": "bass",
+        "emotionalState": "tense",
+        "energyLevel": "high",
+        "uniquenessScore": "44"
+      },
+      "metadata": {
+        "agentId": "jaimla",
+        "sessionId": "demo-1775000910894",
+        "sampleRate": 44100,
+        "bufferSize": 2048,
+        "analysisMethod": "FFT-BlockchainPrecision-18decimal",
+        "source": "simulation"
+      }
+    },
+    "blockchainMetadata": {
+      "hashAlgorithm": "SHA-256",
+      "precision": 18,
+      "version": "2.0.0",
+      "generatedAt": "2026-03-31T23:48:30.894Z",
+      "compatibleChains": [
+        "Ethereum",
+        "Polygon",
+        "BSC",
+        "Arbitrum",
+        "Algorand"
+      ],
+      "storageFormat": "JSON",
+      "compressionRatio": 3.33
+    },
+    "nftMetadata": {
+      "name": "VoicePrint-731b07fef0ce029b",
+      "description": "High-precision voice analysis with 18-decimal blockchain compatibility",
+      "attributes": [
+        {
+          "trait_type": "Voice Type",
+          "value": "bass"
+        },
+        {
+          "trait_type": "Emotional State",
+          "value": "tense"
+        },
+        {
+          "trait_type": "Energy Level",
+          "value": "high"
+        },
+        {
+          "trait_type": "Uniqueness Score",
+          "value": "44"
+        },
+        {
+          "trait_type": "Precision",
+          "value": "18 Decimal Places"
+        },
+        {
+          "trait_type": "Hash Algorithm",
+          "value": "SHA-256"
+        },
+        {
+          "trait_type": "Analysis Method",
+          "value": "FFT-BlockchainPrecision"
+        }
+      ]
+    }
+  }
+}

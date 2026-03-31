@@ -2,40 +2,65 @@
 
 ## Overview
 
-The Vault System provides persistent local storage for access credentials and tracks URL/IP access points for ML inference ingestion. The vault is located at `mindx_backend_service/vault/` and provides secure, encrypted storage for sensitive data.
+The Vault System provides **enterprise-grade encrypted storage** for sensitive data including API keys, wallet private keys, and access credentials. The system has been upgraded to **AES-256 encryption** with PBKDF2 key derivation for production security. The encrypted vault is located at `mindx_backend_service/vault_encrypted/` and all sensitive data is encrypted at rest.
+
+**🔒 Production Security Features:**
+- **AES-256 Encryption**: All sensitive data encrypted with industry-standard encryption
+- **PBKDF2 Key Derivation**: 100,000 iterations for strong key security
+- **Automatic Migration**: Seamless migration from plaintext to encrypted storage
+- **Secure File Permissions**: Restrictive file permissions for additional security
 
 ## Architecture
 
 ### Directory Structure
 
 ```
-mindx_backend_service/vault/
-├── agents/              # Agent private keys
-│   └── .agent_keys.env
-├── postgresql/          # Database credentials
-│   ├── config.json
-│   └── .credentials.env
-├── secrets/             # General secrets
-├── credentials/         # Access credentials (API keys, tokens)
-│   ├── .credentials.env
-│   └── {credential_id}.json
-├── sessions/            # User login sessions (wallet auth); one file per session
-│   └── {session_id}.json
-├── user_folders/        # One folder per wallet (0x...); access only with valid session
-│   └── 0x{40 hex}/      # Per-wallet key-value store (*.json)
-└── access_log/          # URL and IP access tracking
+mindx_backend_service/vault_encrypted/         # 🔒 AES-256 Encrypted Vault
+├── .salt                                       # Key derivation salt (random)
+├── .master.key                                # Master encryption key (encrypted)
+├── api_keys/                                  # Encrypted API keys
+│   └── keys.enc                              # AES-256 encrypted API keys
+├── wallet_keys/                              # Encrypted wallet private keys
+│   └── keys.enc                              # AES-256 encrypted agent wallets
+├── sessions/                                  # User login sessions (wallet auth)
+│   └── {session_id}.json                     # Session metadata (encrypted)
+├── user_folders/                             # Per-wallet encrypted folders
+│   └── 0x{40 hex}/                          # Per-wallet encrypted key-value store
+│       └── {key}.enc                        # Individual encrypted user data
+└── access_log/                              # URL and IP access tracking
     ├── url_access_{YYYYMMDD}.jsonl
     ├── ip_access_{YYYYMMDD}.jsonl
     ├── url_index.json
     └── ip_index.json
 ```
 
+### Legacy Structure (Migrated)
+```
+mindx_backend_service/vault/                   # 📜 Legacy plaintext vault (migrated)
+├── agents/                                   # ❌ Migrated to encrypted storage
+├── credentials/                              # ❌ Migrated to encrypted storage
+└── [other legacy directories]                # ❌ Migrated or deprecated
+```
+
 ### Security
 
-- **File Permissions**: All vault files are created with restrictive permissions (owner read/write only)
-- **Environment Variables**: Sensitive values stored in `.env` files, not in JSON
-- **Hashing**: Credentials are hashed for verification
+#### 🔒 Enterprise-Grade Encryption
+- **AES-256-GCM Encryption**: All sensitive data encrypted with authenticated encryption
+- **PBKDF2 Key Derivation**: 100,000 iterations with unique salt for key security
+- **Automatic Key Management**: Secure generation and storage of encryption keys
+- **Forward Security**: Encrypted data is secure even if the system is compromised
+
+#### 🛡️ Access Control
+- **File Permissions**: All vault files created with restrictive permissions (600/700)
+- **Process Isolation**: Vault accessible only to mindX backend process
+- **Memory Security**: Encryption keys cleared from memory after use
 - **No Value Exposure**: API endpoints never return actual credential values
+
+#### 🔄 Migration Security
+- **Automatic Migration**: Seamless migration from plaintext to encrypted storage
+- **Verification**: Migration integrity verification with rollback capability
+- **Key Rotation**: Support for encryption key rotation in emergency scenarios
+- **Audit Trail**: Complete migration and access logging
 
 ## Features
 
@@ -43,39 +68,63 @@ mindx_backend_service/vault/
 
 Store and retrieve access credentials (API keys, OAuth tokens, etc.) securely.
 
-#### Store Credential
+#### Store Encrypted API Key
 
 ```python
-from mindx_backend_service.vault_manager import get_vault_manager
+from mindx_backend_service.encrypted_vault_manager import get_encrypted_vault_manager
 
-vault_manager = get_vault_manager()
+vault = get_encrypted_vault_manager()
 
-vault_manager.store_access_credential(
-    credential_id="github_api_key",
-    credential_type="api_key",
-    credential_value="ghp_xxxxxxxxxxxx",
-    metadata={
-        "provider": "github",
-        "scope": "repo,user",
-        "expires_at": "2026-12-31T23:59:59"
-    }
+# Store encrypted API key
+vault.store_api_key(
+    provider="github",
+    api_key="ghp_xxxxxxxxxxxx"
+)
+
+# Store encrypted wallet private key
+vault.store_wallet_key(
+    agent_id="mastermind_agent",
+    private_key="0x1234567890abcdef...",
+    public_address="0x742d35Cc6d244a9e3d5C5fF60b..."
 )
 ```
 
-#### Retrieve Credential
+#### Retrieve Encrypted Credentials
 
 ```python
-credential_value = vault_manager.get_access_credential(
-    credential_id="github_api_key",
-    mark_used=True  # Update last_used timestamp
-)
+# Get encrypted API key
+api_key = vault.get_api_key("github")
+
+# Get encrypted wallet private key
+private_key = vault.get_wallet_private_key("mastermind_agent")
+
+# Get wallet public address
+public_address = vault.get_wallet_address("mastermind_agent")
 ```
 
-#### List Credentials
+#### List Available Credentials
 
 ```python
-credentials = vault_manager.list_access_credentials()
-# Returns metadata only (no actual values)
+# List available API providers
+providers = vault.list_api_providers()
+# Returns: ['openai', 'anthropic', 'github', etc.]
+
+# List available wallet agents
+agents = vault.list_wallet_agents()
+# Returns: ['mastermind_agent', 'coordinator_agent', etc.]
+```
+
+#### Migration from Plaintext
+
+```python
+# Migrate existing plaintext vault to encrypted storage
+from scripts.migrate_to_encrypted_vault import migrate_to_encrypted_vault
+
+success = migrate_to_encrypted_vault()
+if success:
+    print("✅ Migration completed successfully")
+else:
+    print("❌ Migration failed")
 ```
 
 ### 2. URL Access Tracking

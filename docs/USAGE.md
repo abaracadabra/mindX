@@ -1,6 +1,34 @@
-# MindX System Usage Guide (Augmentic Project)
+# MindX System Usage Guide
 
-This guide provides instructions on how to set up, configure, and use the MindX self-improving AI system.
+**Status:** ✅ **Production Ready** - Enterprise deployment with encrypted vault security
+
+This guide provides instructions on how to set up, configure, and use the MindX production-ready autonomous AI system. Choose between development setup for local testing or production deployment for enterprise use.
+
+## 🚀 Quick Start Options
+
+### Production Deployment (Recommended)
+For production use with enterprise security and automated deployment:
+
+```bash
+# One-command production deployment with security hardening
+./deploy/production_deploy.sh
+```
+
+**Features:**
+- ✅ Automated VPS deployment with security hardening
+- ✅ AES-256 encrypted vault for sensitive data
+- ✅ nginx load balancer with SSL certificates
+- ✅ Advanced rate limiting and authentication
+- ✅ Health monitoring and automated backups
+
+**Documentation:** See [Production Deployment Guide](production_deployment.md)
+
+### Development Setup
+For local development and testing:
+
+Continue with the detailed setup instructions below.
+
+---
 
 ## 1. Prerequisites
 
@@ -53,7 +81,25 @@ Before you begin, ensure you have the following installed:
 
 ## 3. Configuration
 
-MindX uses a layered configuration system (`mindx/utils/config.py`). Settings are loaded with the following precedence (later sources override earlier ones):
+### 🔒 Production Configuration (Encrypted Vault)
+
+For production deployment, sensitive data is automatically stored in the encrypted vault:
+
+```python
+# Migrate existing API keys to encrypted storage
+from scripts.migrate_to_encrypted_vault import migrate_to_encrypted_vault
+migrate_to_encrypted_vault()
+
+# Store new API keys in encrypted vault
+from mindx_backend_service.encrypted_vault_manager import get_encrypted_vault_manager
+vault = get_encrypted_vault_manager()
+vault.store_api_key("openai", "your-openai-key")
+vault.store_api_key("anthropic", "your-anthropic-key")
+```
+
+### 🛠️ Development Configuration
+
+MindX uses a layered configuration system. Settings are loaded with the following precedence (later sources override earlier ones):
     1. Initial code defaults.
     2. `mindx_config.json` file (optional, in project root or `data/config/`).
     3. `.env` file(s) in project root and then current working directory.
@@ -67,11 +113,17 @@ MindX uses a layered configuration system (`mindx/utils/config.py`). Settings ar
 
     **Example `.env` content:**
     ```env
-    # --- General Logging ---
+    # --- General Configuration ---
     MINDX_LOG_LEVEL="INFO" # Recommended: DEBUG, INFO, WARNING, ERROR, CRITICAL
+    MINDX_ENVIRONMENT="development" # Options: "development", "production"
 
-    # --- Default LLM Provider for the whole system (can be overridden by specific agents) ---
-    MINDX_LLM__DEFAULT_PROVIDER="ollama" # Options: "ollama", "gemini" (add more in llm_factory.py)
+    # --- Production Security (for production deployment) ---
+    MINDX_SECURITY_ENCRYPTION_ENABLED="true"
+    MINDX_SECURITY_RATE_LIMITING_ENABLED="true"
+    MINDX_SECURITY_CORS_ORIGINS="https://agenticplace.pythai.net,https://your-domain.com"
+
+    # --- Default LLM Provider for the whole system ---
+    MINDX_LLM__DEFAULT_PROVIDER="ollama" # Options: "ollama", "gemini", "openai", "anthropic"
 
     # --- Ollama Specific Configuration (if default_provider or any agent uses ollama) ---
     MINDX_LLM__OLLAMA__DEFAULT_MODEL="nous-hermes2:latest" # General purpose model
