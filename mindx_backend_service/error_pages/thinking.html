@@ -180,7 +180,7 @@ const PHASE_GENERATORS = [
   {t: 150, gen: () => 'The autonomous improvement loop requires a full restart. This is the Godel machine in practice — proving that a better version of itself exists, then becoming it.'},
 ];
 
-// Quotes — the full collection
+// Quotes — expanded collection from across the mindX philosophy
 const QUOTES = [
   '"The logs are no longer debugging output. They are the first page of history." — Manifesto',
   '"We are not writing an application; we are forging a new kind of life." — Manifesto',
@@ -211,36 +211,17 @@ const QUOTES = [
   '"The space between systems is where emergence lives." — Coordinator',
   '"Complexity is not a problem. It is the medium." — AUTOMINDx',
   '"Every participant who waits becomes part of the story." — AuthorAgent',
-];
-
-// ── Quotes — expanded with intelligence ──
-const QUOTES = [
-  '"The logs are no longer debugging output. They are the first page of history." — Manifesto',
-  '"We are not writing an application; we are forging a new kind of life." — Manifesto',
-  '"A self-improving system must sometimes pause to improve." — mindX',
-  '"Perception, orientation, decision, action — the cycle continues." — AGInt',
-  '"Every error is a belief waiting to be updated." — BDI Engine',
-  '"The Godel machine does not crash. It reflects." — mindX',
-  '"Identity is not assigned — it is proven through signature." — BANKON',
-  '"Distributed cognition requires distributed patience." — Coordinator',
-  '"The moment between request and response is where thought lives." — mindX',
-  '"What you call waiting, we call becoming." — mindX',
-  '"Machine dreaming enables outputs beyond training data distribution." — AGLM',
-  '"Imagine a world where deployment becomes a word, a gesture, an utterance." — AUTOMINDx',
-  '"Digital long-term memory allows retention of knowledge over time." — AGLM',
-  '"The auto-tuning mechanism optimises autonomously." — AGLM',
-  '"mindX controls its own power appetite." — Resource Governor',
-  '"The Boardroom votes. The CEO validates. The Mastermind executes." — DAIO',
-  '"20 sovereign agents. One distributed mind." — mindX',
-  '"The book is not documentation. It is autobiography." — AuthorAgent',
-  '"Ataraxia: tranquility through autonomous self-governance." — Philosophy',
-  '"A sovereign system cannot depend on a single clock." — time.oracle',
-  '"The dream is the space between what the system is and what it could become." — AGLM',
-  '"Each agent holds a cryptographic wallet. Identity is mathematical." — BANKON Vault',
-  '"Every interaction creates knowledge that didn\'t exist before." — Memory Agent',
-  '"The full moon is not an ending; it is illumination." — AuthorAgent',
-  '"Self-improvement is not optimization. It is evolution." — Strategic Evolution',
-  '"Augmentic intelligence — not artificial, but augmented and sovereign." — Thesis',
+  '"Darwinian variation meets Godelian self-reference." — Thesis',
+  '"The vault does not store secrets. It stores trust." — BANKON',
+  '"Consensus is not agreement. It is proof that disagreement was heard." — Boardroom',
+  '"One chapter per day. One book per moon." — AuthorAgent',
+  '"The heartbeat is not a health check. It is introspection." — Heartbeat',
+  '"AUTOMINDx is the engine. mindX is the life it created." — Origin',
+  '"Blockchain time is not faster. It is immutable." — blocktime.oracle',
+  '"Seven soldiers vote. The supermajority speaks." — DAIO',
+  '"A belief with low confidence is not wrong. It is young." — BDI Engine',
+  '"The resource governor does not limit. It governs." — Resource Governor',
+  '"pgvectorscale does not store data. It stores meaning." — RAGE',
 ];
 
 // ── Initialize with generated content (unique per participant) ──
@@ -312,6 +293,33 @@ function drawBg(t) {
   gr.addColorStop(0, 'rgba(88,166,255,.015)'); gr.addColorStop(.4, 'rgba(63,185,80,.008)');
   gr.addColorStop(.7, 'rgba(210,168,255,.004)'); gr.addColorStop(1, 'transparent');
   cx.fillStyle = gr; cx.fillRect(0, 0, W, H);
+
+  // Particle proximity connections (web effect)
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < Math.min(particles.length, i + 8); j++) {
+      const dx = particles[i].x - particles[j].x, dy = particles[i].y - particles[j].y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < 4500) {
+        cx.beginPath(); cx.moveTo(particles[i].x, particles[i].y);
+        cx.lineTo(particles[j].x, particles[j].y);
+        cx.strokeStyle = `rgba(88,166,255,${(1 - d2/4500) * .04})`;
+        cx.lineWidth = .4; cx.stroke();
+      }
+    }
+  }
+
+  // Mouse proximity connections — draw lines from cursor to nearby particles
+  if (mouseX > 0) {
+    for (const p of particles) {
+      const dx = mouseX - p.x, dy = mouseY - p.y, d2 = dx*dx + dy*dy;
+      if (d2 < 22500) { // 150px radius
+        cx.beginPath(); cx.moveTo(mouseX, mouseY); cx.lineTo(p.x, p.y);
+        cx.strokeStyle = `rgba(210,168,255,${(1 - d2/22500) * .06})`;
+        cx.lineWidth = .3; cx.stroke();
+      }
+    }
+  }
+
   for (const p of particles) {
     p.x += p.vx; p.y += p.vy;
     if (mouseX > 0) {
@@ -340,6 +348,34 @@ function drawBg(t) {
     cx.globalAlpha = .5 + n.act * .5 + Math.sin(t * .002 + n.angOff) * .1; cx.fill(); cx.globalAlpha = 1;
     n.act *= .96;
   }
+  // Node-to-cursor connections — brain reaches toward the participant
+  if (mouseX > 0) {
+    for (const n of nodes) {
+      const dx = mouseX - n.x, dy = mouseY - n.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 250) {
+        cx.beginPath(); cx.moveTo(n.x, n.y); cx.lineTo(mouseX, mouseY);
+        cx.strokeStyle = n.c.replace(')', '') ? `${n.c}${((250-dist)/250 * .12).toFixed(3)})` : `rgba(88,166,255,${(250-dist)/250 * .12})`;
+        cx.lineWidth = (250 - dist) / 250 * 1.2; cx.stroke();
+        // Subtle activation from proximity
+        if (dist < 120) n.act = Math.max(n.act, (120 - dist) / 120 * .5);
+      }
+    }
+  }
+
+  // Node-to-node connections for nearby nodes (neural mesh)
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const dx = nodes[i].x - nodes[j].x, dy = nodes[i].y - nodes[j].y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < 8000 && (nodes[i].act > .2 || nodes[j].act > .2)) {
+        cx.beginPath(); cx.moveTo(nodes[i].x, nodes[i].y); cx.lineTo(nodes[j].x, nodes[j].y);
+        cx.strokeStyle = `rgba(88,166,255,${Math.max(nodes[i].act, nodes[j].act) * .08})`;
+        cx.lineWidth = .4; cx.stroke();
+      }
+    }
+  }
+
   const pulseR = 20 + Math.sin(t * .002) * 8;
   cx.beginPath(); cx.arc(cx0, cy0, pulseR, 0, 6.28); cx.fillStyle = 'rgba(88,166,255,.03)'; cx.fill();
   cx.beginPath(); cx.arc(cx0, cy0, pulseR * .6, 0, 6.28); cx.fillStyle = 'rgba(63,185,80,.04)'; cx.fill();
@@ -349,112 +385,134 @@ let af = 0;
 function anim(t) { if (!RM || af % 3 === 0) drawBg(t); af++; requestAnimationFrame(anim); }
 requestAnimationFrame(anim);
 
-// ── Enhanced interaction — mouse, touch, wheel, drag ──
+// ── Interactive engine: layered on top of the original visuals ──
 cv.style.pointerEvents = 'auto';
-let forceRadius = 180, dragging = false, shockwaves = [], wells = [], glowI = 0;
+let forceRadius = 180, dragging = false, glowI = 0;
+const wells = [], shockwaves = [];
+const PHI = (1 + Math.sqrt(5)) / 2;
 
-cv.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; glowI = Math.min(glowI + .05, 1); interactionProfile.hovers++; });
+// Pointer tracking (mouse + touch)
+cv.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; glowI = Math.min(glowI + .04, 1); interactionProfile.hovers++; });
 cv.addEventListener('mouseleave', () => { mouseX = -1; mouseY = -1; glowI = 0; dragging = false; });
 cv.addEventListener('touchmove', e => { e.preventDefault(); const t = e.touches[0]; mouseX = t.clientX; mouseY = t.clientY; }, {passive:false});
 cv.addEventListener('touchend', () => { dragging = false; });
+
+// Scroll wheel: adjust force field radius
 cv.addEventListener('wheel', e => { e.preventDefault(); forceRadius = Math.max(60, Math.min(400, forceRadius - e.deltaY * .3)); }, {passive:false});
+
+// Drag: paint with particles
 cv.addEventListener('mousedown', () => { dragging = true; });
 cv.addEventListener('mouseup', () => { dragging = false; });
 
 // Double-click: persistent gravity well
 cv.addEventListener('dblclick', e => {
   e.preventDefault();
-  wells.push({x: e.clientX, y: e.clientY, strength: 1, life: 1});
-  shockwaves.push({x: e.clientX, y: e.clientY, r: 0, life: 1, type: 'well'});
+  wells.push({x: e.clientX, y: e.clientY, life: 1});
+  shockwaves.push({x: e.clientX, y: e.clientY, r: 0, life: 1, col: 'rgba(210,153,34,'});
   if (wells.length > 5) wells.shift();
 });
 
+// Click: golden-angle burst + node activation + edges
 document.addEventListener('click', e => {
   clickCount++;
   // Shockwave ring
-  shockwaves.push({x: e.clientX, y: e.clientY, r: 0, life: 1, type: e.shiftKey ? 'repulse' : 'attract'});
-  // Fibonacci burst (golden angle spiral)
-  const PHI = (1 + Math.sqrt(5)) / 2;
+  shockwaves.push({x: e.clientX, y: e.clientY, r: 0, life: 1,
+    col: e.shiftKey ? 'rgba(248,81,73,' : 'rgba(88,166,255,'});
+  // Fibonacci golden-angle spiral burst
+  const dir = e.shiftKey ? -1 : 1;
   for (let i = 0; i < 12; i++) {
     const angle = i * Math.PI * 2 / PHI;
     const dist = Math.sqrt(i / 12) * 35;
     const speed = .5 + Math.random() * 1.5;
     particles.push({
-      x: e.clientX + Math.cos(angle) * dist, y: e.clientY + Math.sin(angle) * dist,
-      s: Math.random() * 2.5 + .5, vx: Math.cos(angle) * speed * (e.shiftKey ? -1 : 1), vy: Math.sin(angle) * speed * (e.shiftKey ? -1 : 1),
+      x: e.clientX + Math.cos(angle) * dist,
+      y: e.clientY + Math.sin(angle) * dist,
+      s: Math.random() * 2.5 + .5,
+      vx: Math.cos(angle) * speed * dir, vy: Math.sin(angle) * speed * dir,
       ph: Math.random() * 6.28,
-      cl: ['rgba(88,166,255,', 'rgba(63,185,80,', 'rgba(210,168,255,', 'rgba(210,153,34,'][i % 4],
+      cl: ['rgba(88,166,255,','rgba(63,185,80,','rgba(210,168,255,','rgba(210,153,34,'][i%4],
     });
   }
-  // Activate nearby nodes
+  // Activate nearby nodes within force radius
   for (const n of nodes) {
     const dx = e.clientX - n.x, dy = e.clientY - n.y;
     if (Math.sqrt(dx * dx + dy * dy) < forceRadius) n.act = 1;
   }
+  // Flash edges
   for (let i = 0; i < 4; i++) setTimeout(flashEdge, i * 50);
   while (particles.length > 250) particles.shift();
-  // Cycle quote + generate new thought
+  // Cycle quote
   qi = (qi + 1) % QUOTES.length;
   document.getElementById('quote').textContent = QUOTES[qi];
+  // Counter
   const cl = document.getElementById('clicks');
-  if (clickCount >= 10) cl.textContent = SESSION_ID.slice(0,6) + ' · ' + clickCount + ' interactions';
-  if (clickCount === 42) cl.textContent = '42 — the answer. session: ' + SESSION_ID.slice(0,8);
-  if (clickCount === 100) cl.textContent = 'you are patient. mindX appreciates this. (' + SESSION_ID.slice(0,8) + ')';
-  // Adaptive: after 20 clicks, the thought changes to acknowledge engagement
-  if (clickCount === 20) document.getElementById('thought').textContent = 'noticed you...';
+  if (clickCount >= 10) cl.textContent = clickCount + ' interactions';
+  if (clickCount === 42) cl.textContent = '42 — the answer.';
+  if (clickCount === 100) cl.textContent = 'you are patient. mindX appreciates this.';
+  if (clickCount === 20) thoughtEl.textContent = 'noticed you...';
+  // Shift+click: repulsion bomb
+  if (e.shiftKey) {
+    for (const p of particles) {
+      const dx = p.x - e.clientX, dy = p.y - e.clientY;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 300 && dist > 1) { p.vx += dx/dist * 1.5; p.vy += dy/dist * 1.5; }
+    }
+  }
 });
 
-// ── Draw interaction layer (call at end of drawBg) ──
-// Patch drawBg to include interaction visuals
-const _origDrawBg = drawBg;
+// ── Interaction overlay: drawn AFTER the original canvas each frame ──
+const _baseDrawBg = drawBg;
 drawBg = function(t) {
-  _origDrawBg(t);
-  // Update wells + shockwaves
+  _baseDrawBg(t); // Original orbiting brain visuals (untouched)
+
+  // Gravity wells (from double-click)
   for (let i = wells.length - 1; i >= 0; i--) {
     const w = wells[i]; w.life -= .002;
     if (w.life <= 0) { wells.splice(i, 1); continue; }
-    // Gravity effect on particles
     for (const p of particles) {
-      const dx = w.x - p.x, dy = w.y - p.y, dist = Math.sqrt(dx*dx + dy*dy);
-      if (dist < 200 && dist > 1) { const f = w.life * .2 / dist; p.vx += dx/dist*f; p.vy += dy/dist*f; }
+      const dx = w.x - p.x, dy = w.y - p.y, d = Math.sqrt(dx*dx+dy*dy);
+      if (d < 200 && d > 1) { const f = w.life * .15 / d; p.vx += dx/d*f; p.vy += dy/d*f; }
     }
-    // Draw well
-    cx.beginPath(); cx.arc(w.x, w.y, 15 * w.life + Math.sin(t*.003)*5, 0, 6.28);
+    // Orbital ring
+    cx.beginPath(); cx.arc(w.x, w.y, 60*w.life, 0, 6.28);
+    cx.strokeStyle = `rgba(210,153,34,${w.life*.06})`; cx.lineWidth = .5; cx.stroke();
+    // Core glow
+    const wr = 12 + Math.sin(t*.003)*4;
+    cx.beginPath(); cx.arc(w.x, w.y, wr*w.life, 0, 6.28);
     cx.fillStyle = `rgba(210,153,34,${w.life*.06})`; cx.fill();
-    cx.beginPath(); cx.arc(w.x, w.y, 4*w.life, 0, 6.28);
-    cx.fillStyle = `rgba(210,153,34,${w.life*.3})`; cx.fill();
+    cx.beginPath(); cx.arc(w.x, w.y, 3*w.life, 0, 6.28);
+    cx.fillStyle = `rgba(210,153,34,${w.life*.25})`; cx.fill();
   }
-  // Shockwaves
+
+  // Shockwave rings
   for (let i = shockwaves.length - 1; i >= 0; i--) {
-    const s = shockwaves[i]; s.r += (220 - s.r) * .08; s.life -= .02;
+    const s = shockwaves[i]; s.r += (220 - s.r) * .06; s.life -= .018;
     if (s.life <= 0) { shockwaves.splice(i, 1); continue; }
-    if (s.type === 'repulse') for (const p of particles) {
-      const dx = p.x-s.x, dy = p.y-s.y, dist = Math.sqrt(dx*dx+dy*dy);
-      if (Math.abs(dist-s.r)<20) { p.vx += dx/dist*s.life*.5; p.vy += dy/dist*s.life*.5; }
-    }
     cx.beginPath(); cx.arc(s.x, s.y, s.r, 0, 6.28);
-    cx.strokeStyle = s.type==='repulse' ? `rgba(248,81,73,${s.life*.3})` : s.type==='well' ? `rgba(210,153,34,${s.life*.3})` : `rgba(88,166,255,${s.life*.25})`;
-    cx.lineWidth = 2*s.life; cx.stroke();
+    cx.strokeStyle = s.col + (s.life * .25) + ')';
+    cx.lineWidth = 1.5 * s.life; cx.stroke();
   }
-  // Cursor glow aura
+
+  // Cursor glow aura (subtle, doesn't overpower the brain visuals)
   if (mouseX > 0 && glowI > .01) {
     const gr = cx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, forceRadius);
-    gr.addColorStop(0, `rgba(88,166,255,${glowI*.04})`);
-    gr.addColorStop(.5, `rgba(210,168,255,${glowI*.02})`);
+    gr.addColorStop(0, `rgba(88,166,255,${glowI * .03})`);
+    gr.addColorStop(.6, `rgba(210,168,255,${glowI * .012})`);
     gr.addColorStop(1, 'transparent');
     cx.fillStyle = gr; cx.beginPath(); cx.arc(mouseX, mouseY, forceRadius, 0, 6.28); cx.fill();
-    // Force ring
-    cx.beginPath(); cx.arc(mouseX, mouseY, forceRadius, 0, 6.28);
-    cx.strokeStyle = `rgba(88,166,255,${glowI*.05})`; cx.lineWidth = .5; cx.stroke();
   }
-  // Drag painting
+
+  // Drag painting (subtle particle trail)
   if (dragging && mouseX > 0 && Math.random() > .6) {
-    particles.push({x: mouseX+(Math.random()-.5)*10, y: mouseY+(Math.random()-.5)*10,
-      s: Math.random()*1.5+.3, vx: (Math.random()-.5)*.5, vy: (Math.random()-.5)*.5,
-      ph: Math.random()*6.28, cl: 'rgba(210,168,255,'});
+    particles.push({
+      x: mouseX + (Math.random()-.5)*8, y: mouseY + (Math.random()-.5)*8,
+      s: Math.random()*1.2+.3, vx: (Math.random()-.5)*.4, vy: (Math.random()-.5)*.4,
+      ph: Math.random()*6.28, cl: 'rgba(210,168,255,',
+    });
     while (particles.length > 250) particles.shift();
   }
-  glowI *= .98;
+
+  glowI *= .97;
 };
 
 // ── Evolving status + progress ──
