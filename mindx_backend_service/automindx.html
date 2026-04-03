@@ -16,7 +16,7 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
 .nav .brand{color:#e6edf3;font-weight:700;font-family:'SF Mono',monospace;font-size:22px;margin-right:20px;letter-spacing:1.5px;text-shadow:0 0 24px rgba(210,168,255,.3)}.nav .brand b{color:#d2a8ff}
 .nav a{color:#8b949e;text-decoration:none;transition:all .2s;padding:6px 14px;border-radius:4px;border:1px solid transparent;font-size:13px}.nav a:hover{color:#d2a8ff;background:rgba(210,168,255,.08);border-color:rgba(210,168,255,.2);text-shadow:0 0 10px rgba(210,168,255,.3)}
 .hero{display:flex;flex-direction:column;align-items:center;padding:60px 20px 40px;text-align:center}
-.brain-wrap{position:relative;margin-bottom:24px;filter:drop-shadow(0 0 40px rgba(210,168,255,.15)) drop-shadow(0 0 80px rgba(88,166,255,.08))}
+.brain-wrap{position:relative;margin-bottom:24px;filter:drop-shadow(0 0 40px rgba(210,168,255,.15)) drop-shadow(0 0 80px rgba(88,166,255,.08));transition:transform .1s ease-out;transform-style:preserve-3d;perspective:800px}
 canvas#brain{display:block}
 .hero h1{font-size:52px;font-weight:700;letter-spacing:3px;font-family:'SF Mono','Fira Code',monospace;margin-bottom:8px;text-shadow:0 0 30px rgba(210,168,255,.2),0 0 60px rgba(88,166,255,.1)}
 .hero h1 .auto{color:#d2a8ff}.hero h1 .mind{color:#e6edf3}.hero h1 .x{color:#58a6ff}
@@ -225,80 +225,104 @@ let baf=0;function bloop(t){if(baf%3===0||!window.matchMedia('(prefers-reduced-m
 requestAnimationFrame(bloop);
 })();
 
-// ── Canvas ──
+// ── Canvas + 3D perspective engine ──
 const cv = document.getElementById('bg'), c = cv.getContext('2d');
-let W, H, particles = [], spiralNodes = [], edges = [], hexGrid = [], dataDrops = [];
+let W, H, CX, CY; // center
+let particles = [], spiralNodes = [], edges = [], hexGrid = [], dataDrops = [];
 let mouseX = -1, mouseY = -1, pmouseX = -1, pmouseY = -1;
 let dragging = false, forceRadius = 200, glowI = 0;
 const wells = [], shockwaves = [], trails = [];
 const RM = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
 
-// ── Hex grid (cyberpunk floor) ──
+// ── 3D Perspective projection ──
+// z: 0 = deepest (behind screen), 127 = screen plane, 254 = emerging toward viewer
+// Mouse position shifts the virtual camera — creating parallax that reveals depth
+const FOV = 600; // field of view (lower = more dramatic perspective)
+let camX = 0, camY = 0; // camera offset from mouse (smoothed)
+
+function project(x3d, y3d, z3d) {
+  // z3d: 0-254, mapped to depth. 127 = screen plane.
+  // Objects at z>127 come TOWARD the viewer (larger, brighter)
+  // Objects at z<127 recede (smaller, dimmer)
+  const depth = (254 - z3d) / 127; // 2 (far) to 0 (at viewer) — 1 = screen plane
+  const scale = FOV / (FOV + (depth - 1) * 300);
+
+  // Parallax: camera offset shifts objects based on their depth
+  // Near objects shift MORE than far objects (real parallax)
+  const parallaxFactor = (z3d - 127) / 127; // -1 (far) to +1 (near)
+  const px = (x3d - CX + camX * parallaxFactor) * scale + CX;
+  const py = (y3d - CY + camY * parallaxFactor * .6) * scale + CY;
+
+  return {
+    x: px, y: py,
+    scale: scale,
+    opacity: Math.max(0, Math.min(1, .15 + (z3d / 254) * .85)), // far=dim, near=bright
+    z: z3d,
+  };
+}
+
+// ── Hex grid (cyberpunk floor, at z=30 — deep behind screen) ──
 function mkHexGrid() {
   hexGrid = [];
-  const s = 40; // hex size
-  const h = s * Math.sqrt(3);
+  const s = 40, h = s * Math.sqrt(3);
   for (let row = 0; row * h * .5 < H + h; row++) {
     for (let col = 0; col * s * 1.5 < W + s * 2; col++) {
       const x = col * s * 1.5;
       const y = row * h * .5 + (col % 2 ? h * .25 : 0);
-      hexGrid.push({x, y, s: s * .5, glow: 0});
+      hexGrid.push({x3d: x, y3d: y, z3d: 25 + Math.random() * 15, s: s * .5, glow: 0});
     }
   }
 }
 
-// ── Fibonacci spiral nodes (3D depth) ──
+// ── Fibonacci spiral nodes (full z range: 40-220) ──
 function mkSpiralNodes() {
   spiralNodes = [];
-  const cx0 = W / 2, cy0 = H * .35;
   for (let i = 0; i < 55; i++) {
-    const angle = i * TAU / (PHI * PHI);
+    const angle = i * GOLDEN_ANGLE;
     const r = Math.sqrt(i) * 24;
-    const z = Math.sin(i * .3) * .5 + .5;
-    const scale = .4 + z * .6;
+    // Z depth: inner nodes emerge toward viewer, outer recede
+    const zBase = 127 + Math.cos(i * .4) * 80; // 47 to 207
     spiralNodes.push({
-      x: cx0 + Math.cos(angle) * r, y: cy0 + Math.sin(angle) * r * .7,
-      z, scale, angle, baseR: r,
-      r: (1 + (FIB[i % FIB.length] % 5)) * scale,
-      vx: 0, vy: 0, ph: i * PHI,
-      c: z > .7 ? '#d2a8ff' : z > .4 ? '#58a6ff' : z > .2 ? '#3fb950' : '#d29922',
+      x3d: CX + Math.cos(angle) * r,
+      y3d: CY * .7 + Math.sin(angle) * r * .7,
+      z3d: zBase, zBase,
+      angle, baseR: r,
+      r: 1.5 + (FIB[i % FIB.length] % 5),
+      ph: i * PHI,
+      c: zBase > 170 ? '#d2a8ff' : zBase > 127 ? '#58a6ff' : zBase > 80 ? '#3fb950' : '#d29922',
       act: 0, idx: i,
     });
   }
 }
 
-// ── Particles with depth ──
+// ── Particles across full z-depth (0-254) ──
 function mkParticles() {
   particles = [];
-  const n = Math.min(180, Math.floor(W * H / 5000));
+  const n = Math.min(200, Math.floor(W * H / 4500));
   for (let i = 0; i < n; i++) {
-    const z = Math.random();
+    const z = Math.floor(Math.random() * 255); // full 0-254 range
     particles.push({
-      x: Math.random() * W, y: Math.random() * H, z,
-      s: (.3 + Math.random() * 1.3) * (.4 + z * .6),
+      x3d: Math.random() * W, y3d: Math.random() * H, z3d: z,
+      s: .4 + Math.random() * 1.5,
       vx: (Math.random() - .5) * .2, vy: (Math.random() - .5) * .15,
+      vz: (Math.random() - .5) * .3, // z-velocity: particles drift in depth
       ph: Math.random() * TAU,
-      cl: [
-        'rgba(210,168,255,', 'rgba(88,166,255,', 'rgba(63,185,80,',
-        'rgba(210,153,34,', 'rgba(0,212,255,',
-      ][Math.floor(Math.random() * 5)],
-      baseOp: .04 + z * .1,
+      cl: ['rgba(210,168,255,','rgba(88,166,255,','rgba(63,185,80,','rgba(210,153,34,','rgba(0,212,255,'][Math.floor(Math.random()*5)],
     });
   }
 }
 
-// ── Data rain (cyberpunk falling characters) ──
+// ── Data rain at various depths ──
 function mkDataDrops() {
   dataDrops = [];
   const cols = Math.floor(W / 18);
   for (let i = 0; i < Math.min(cols, 50); i++) {
     dataDrops.push({
-      x: Math.random() * W,
-      y: Math.random() * H,
+      x3d: Math.random() * W, y3d: Math.random() * H,
+      z3d: 10 + Math.random() * 100, // behind screen
       speed: .3 + Math.random() * .8,
       chars: '01アイウエオカキクケコ'.split(''),
       charIdx: Math.floor(Math.random() * 11),
-      opacity: .02 + Math.random() * .03,
       size: 8 + Math.random() * 4,
     });
   }
@@ -314,6 +338,7 @@ function flashEdge() {
 
 function rsz() {
   W = cv.width = innerWidth; H = cv.height = innerHeight;
+  CX = W / 2; CY = H / 2;
   mkParticles(); mkSpiralNodes(); mkHexGrid(); mkDataDrops();
 }
 addEventListener('resize', rsz); rsz();
@@ -465,168 +490,179 @@ function drawHex(x, y, r) {
 function draw(t) {
   c.fillStyle = 'rgba(3,6,8,.09)'; c.fillRect(0, 0, W, H);
 
-  // Radial glow (golden ratio proportioned)
-  const gr = c.createRadialGradient(W/2, H*.3, 0, W/2, H*.3, H/PHI);
-  gr.addColorStop(0, 'rgba(210,168,255,.01)');
-  gr.addColorStop(1/PHI, 'rgba(88,166,255,.005)');
+  // Smooth camera from mouse (parallax viewpoint)
+  if (mouseX > 0) {
+    const targetCamX = (mouseX - CX) * .15;
+    const targetCamY = (mouseY - CY) * .1;
+    camX += (targetCamX - camX) * .04;
+    camY += (targetCamY - camY) * .04;
+  } else {
+    camX *= .98; camY *= .98;
+  }
+
+  // Radial glow (golden ratio proportioned, parallax-shifted)
+  const glowX = CX - camX * .1, glowY = CY * .7 - camY * .1;
+  const gr = c.createRadialGradient(glowX, glowY, 0, glowX, glowY, H/PHI);
+  gr.addColorStop(0, 'rgba(210,168,255,.012)');
+  gr.addColorStop(1/PHI, 'rgba(88,166,255,.006)');
   gr.addColorStop(1, 'transparent');
   c.fillStyle = gr; c.fillRect(0, 0, W, H);
 
-  // ── Hex grid floor ──
+  // ── Hex grid floor (projected from z=25-40, deep behind screen) ──
   for (const h of hexGrid) {
     h.glow *= .97;
-    // Light up hexes near cursor
+    const hp = project(h.x3d, h.y3d, h.z3d);
     if (mouseX > 0) {
-      const dx = h.x - mouseX, dy = h.y - mouseY, d2 = dx*dx+dy*dy;
-      if (d2 < forceRadius*forceRadius) h.glow = Math.max(h.glow, .3 * (1-d2/(forceRadius*forceRadius)));
+      const dx = hp.x - mouseX, dy = hp.y - mouseY, d2 = dx*dx+dy*dy;
+      if (d2 < forceRadius*forceRadius) h.glow = Math.max(h.glow, .3*(1-d2/(forceRadius*forceRadius)));
     }
     if (h.glow > .005) {
-      drawHex(h.x, h.y, h.s);
-      c.strokeStyle = `rgba(210,168,255,${h.glow * .15})`;
-      c.lineWidth = .6 + h.glow * .5; c.stroke();
-      // Fill on strong glow
-      if (h.glow > .15) {
-        c.fillStyle = `rgba(210,168,255,${h.glow * .02})`; c.fill();
-      }
+      drawHex(hp.x, hp.y, h.s * hp.scale);
+      c.strokeStyle = `rgba(210,168,255,${h.glow * hp.opacity * .15})`;
+      c.lineWidth = (.6 + h.glow*.5) * hp.scale; c.stroke();
+      if (h.glow > .15) { c.fillStyle = `rgba(210,168,255,${h.glow*.02})`; c.fill(); }
     }
   }
 
-  // ── Data rain ──
-  c.font = '10px SF Mono, Fira Code, monospace';
+  // ── Data rain (projected — deeper drops are smaller/dimmer) ──
   for (const d of dataDrops) {
-    d.y += d.speed;
-    if (d.y > H + 20) { d.y = -20; d.x = Math.random() * W; }
+    d.y3d += d.speed;
+    if (d.y3d > H + 20) { d.y3d = -20; d.x3d = Math.random() * W; }
     if (Math.random() > .95) d.charIdx = Math.floor(Math.random() * d.chars.length);
-    c.fillStyle = `rgba(210,168,255,${d.opacity})`;
-    c.font = `${d.size}px SF Mono, monospace`;
-    c.fillText(d.chars[d.charIdx], d.x, d.y);
-    // Trail
-    c.fillStyle = `rgba(210,168,255,${d.opacity * .3})`;
-    c.fillText(d.chars[(d.charIdx+1)%d.chars.length], d.x, d.y - d.size);
+    const dp = project(d.x3d, d.y3d, d.z3d);
+    const dOp = dp.opacity * .04;
+    c.font = `${Math.max(6, d.size * dp.scale)}px SF Mono, monospace`;
+    c.fillStyle = `rgba(210,168,255,${dOp})`;
+    c.fillText(d.chars[d.charIdx], dp.x, dp.y);
+    c.fillStyle = `rgba(210,168,255,${dOp * .3})`;
+    c.fillText(d.chars[(d.charIdx+1)%d.chars.length], dp.x, dp.y - d.size*dp.scale);
   }
 
-  // ── Golden spiral guide ──
+  // ── Golden spiral guide (projected at z=127 — screen plane) ──
   c.beginPath();
-  const scx = W/2, scy = H*.35;
   for (let a = 0; a < TAU * 5; a += .04) {
     const r = Math.pow(PHI, a / (TAU/4)) * 2.5;
-    const x = scx + Math.cos(a + t*.00008) * r;
-    const y = scy + Math.sin(a + t*.00008) * r * .7;
-    if (a === 0) c.moveTo(x,y); else c.lineTo(x,y);
+    const sz = 127 + Math.sin(a * .2) * 30; // spiral undulates in z
+    const sp = project(CX + Math.cos(a+t*.00008)*r, CY*.7 + Math.sin(a+t*.00008)*r*.7, sz);
+    if (a === 0) c.moveTo(sp.x, sp.y); else c.lineTo(sp.x, sp.y);
     if (r > Math.max(W,H)*.7) break;
   }
-  c.strokeStyle = `rgba(210,168,255,${.01 + Math.sin(t*.0005)*.005})`; c.lineWidth = .5; c.stroke();
+  c.strokeStyle = `rgba(210,168,255,${.012 + Math.sin(t*.0005)*.006})`; c.lineWidth = .5; c.stroke();
 
-  // ── Particle web (depth-aware) ──
-  for (let i = 0; i < particles.length; i++) {
-    const pi = particles[i];
-    for (let j = i+1; j < Math.min(particles.length, i+8); j++) {
-      const pj = particles[j];
-      const dx = pi.x-pj.x, dy = pi.y-pj.y, d2 = dx*dx+dy*dy;
-      const thresh = 3000 + ((pi.z+pj.z)/2) * 3000;
-      if (d2 < thresh) {
-        c.beginPath(); c.moveTo(pi.x,pi.y); c.lineTo(pj.x,pj.y);
-        c.strokeStyle = `rgba(210,168,255,${(1-d2/thresh)*.04*((pi.z+pj.z)/2)})`;
-        c.lineWidth = .3 + ((pi.z+pj.z)/2)*.3; c.stroke();
-      }
-    }
-  }
+  // ── Particle web + cursor connections drawn during particle pass above ──
+  // (moved into the sorted particle loop for correct depth ordering)
 
-  // ── Cursor connections (visible, responsive) ──
-  if (mouseX > 0) {
-    for (const p of particles) {
-      const dx = mouseX-p.x, dy = mouseY-p.y, d2 = dx*dx+dy*dy;
-      if (d2 < forceRadius*forceRadius) {
-        c.beginPath(); c.moveTo(mouseX,mouseY); c.lineTo(p.x,p.y);
-        c.strokeStyle = `rgba(210,168,255,${(1-d2/(forceRadius*forceRadius))*.12})`;
-        c.lineWidth = .5; c.stroke();
-      }
-    }
-  }
-
-  // ── Particles with zone-aware force ──
+  // ── Particles: 3D projected, zone-aware force ──
   const curZone = mouseX > 0 ? getZone(mouseX, mouseY) : 'none';
+  // Sort by z for proper depth ordering (far first)
+  particles.sort((a, b) => a.z3d - b.z3d);
   for (const p of particles) {
-    // Zone-aware force field: brain=attract, grid=repulse near floor, spiral=orbit
+    // Project to screen
+    const pp = project(p.x3d, p.y3d, p.z3d);
+
+    // Zone-aware force (applied in screen space)
     if (mouseX > 0) {
-      const dx = mouseX-p.x, dy = mouseY-p.y, dist = Math.sqrt(dx*dx+dy*dy);
+      const dx = mouseX-pp.x, dy = mouseY-pp.y, dist = Math.sqrt(dx*dx+dy*dy);
       if (dist < forceRadius && dist > 1) {
         let f = (forceRadius-dist)/forceRadius * .045;
-        if (curZone === 'grid') {
-          // Grid zone: repulsion (particles flee, creating space around cursor)
-          f *= -0.6;
-        } else if (curZone === 'spiral') {
-          // Spiral zone: orbital (perpendicular force creates swirl)
-          const px = -dy/dist * f * .8, py = dx/dist * f * .8;
-          p.vx += px; p.vy += py;
-          f *= .3; // weaker radial pull
+        if (curZone === 'grid') f *= -0.6;
+        else if (curZone === 'spiral') {
+          p.vx += -dy/dist * f * .8; p.vy += dx/dist * f * .8;
+          f *= .3;
         }
         p.vx += dx/dist*f; p.vy += dy/dist*f;
+        // Interaction pushes particles TOWARD the viewer (z increases)
+        p.vz += f * .5;
       }
     }
     // Gravity wells
     for (const w of wells) {
-      const dx = w.x-p.x, dy = w.y-p.y, d = Math.sqrt(dx*dx+dy*dy);
+      const dx = w.x-pp.x, dy = w.y-pp.y, d = Math.sqrt(dx*dx+dy*dy);
       if (d < 250 && d > 1) { const f = w.life*.2/d; p.vx += dx/d*f; p.vy += dy/d*f; }
     }
-    p.vx *= .997; p.vy *= .997;
-    p.x += p.vx; p.y += p.vy;
-    if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
-    if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
-    const ds = .4 + p.z * .6;
-    c.beginPath(); c.arc(p.x, p.y, p.s*ds, 0, TAU);
-    c.fillStyle = p.cl + (p.baseOp + Math.sin(t*.0008+p.ph)*.05) + ')'; c.fill();
+    p.vx *= .997; p.vy *= .997; p.vz *= .99;
+    p.x3d += p.vx; p.y3d += p.vy; p.z3d += p.vz;
+    // Wrap in x/y, bounce in z
+    if (p.x3d < 0) p.x3d = W; if (p.x3d > W) p.x3d = 0;
+    if (p.y3d < 0) p.y3d = H; if (p.y3d > H) p.y3d = 0;
+    if (p.z3d < 0) { p.z3d = 0; p.vz = Math.abs(p.vz) * .5; }
+    if (p.z3d > 254) { p.z3d = 254; p.vz = -Math.abs(p.vz) * .5; }
+
+    // Draw: size and opacity from projection
+    const size = p.s * pp.scale * (1 + pp.opacity);
+    c.beginPath(); c.arc(pp.x, pp.y, Math.max(.3, size), 0, TAU);
+    const op = pp.opacity * (.08 + Math.sin(t*.0008+p.ph)*.04);
+    c.fillStyle = p.cl + op.toFixed(3) + ')'; c.fill();
+    // Near particles (z>200) get a glow halo — emerging from screen
+    if (p.z3d > 190) {
+      const nearGlow = (p.z3d - 190) / 64;
+      c.beginPath(); c.arc(pp.x, pp.y, size * 3, 0, TAU);
+      c.fillStyle = p.cl + (nearGlow * .03).toFixed(3) + ')'; c.fill();
+    }
   }
 
-  // ── Fibonacci edges ──
+  // ── Fibonacci edges (projected) ──
   for (let i = edges.length-1; i >= 0; i--) {
     const e = edges[i]; e.l -= .005;
     if (e.l <= 0) { edges.splice(i,1); continue; }
     const na = spiralNodes[e.a], nb = spiralNodes[e.b];
     if (!na||!nb) { edges.splice(i,1); continue; }
-    const mx = (na.x+nb.x)/2 + Math.sin(e.l*4)*25;
-    const my = (na.y+nb.y)/2 + Math.cos(e.l*4)*18;
-    c.beginPath(); c.moveTo(na.x,na.y); c.quadraticCurveTo(mx,my,nb.x,nb.y);
-    c.globalAlpha = e.l * .3 * ((na.z+nb.z)/2);
+    const pa = project(na.x3d, na.y3d, na.z3d);
+    const pb = project(nb.x3d, nb.y3d, nb.z3d);
+    const avgOp = (pa.opacity + pb.opacity) / 2;
+    const mx = (pa.x+pb.x)/2 + Math.sin(e.l*4)*25*pa.scale;
+    const my = (pa.y+pb.y)/2 + Math.cos(e.l*4)*18*pa.scale;
+    c.beginPath(); c.moveTo(pa.x,pa.y); c.quadraticCurveTo(mx,my,pb.x,pb.y);
+    c.globalAlpha = e.l * .3 * avgOp;
     c.strokeStyle = e.l>.6 ? '#d2a8ff' : e.l>.3 ? '#58a6ff' : '#3fb950';
-    c.lineWidth = e.l*2; c.stroke();
-    // Neon bloom on bright edges
-    if (e.l > .7) {
-      c.lineWidth = e.l*6; c.globalAlpha = e.l*.04;
-      c.stroke();
-    }
+    c.lineWidth = e.l*2*((pa.scale+pb.scale)/2); c.stroke();
+    if (e.l > .7) { c.lineWidth = e.l*6*pa.scale; c.globalAlpha = e.l*.04; c.stroke(); }
     c.globalAlpha = 1;
   }
 
-  // ── Spiral nodes ──
-  const cx0 = W/2, cy0 = H*.35;
+  // ── Spiral nodes (3D projected, sorted by depth) ──
+  spiralNodes.sort((a, b) => a.z3d - b.z3d);
   for (const n of spiralNodes) {
-    const drift = Math.sin(t*.0002+n.ph)*2;
-    n.x = cx0 + Math.cos(n.angle+t*.00005)*n.baseR + drift;
-    n.y = cy0 + Math.sin(n.angle+t*.00005)*n.baseR*.7 + drift*.5;
-    n.z = Math.sin(t*.0003+n.ph)*.3+.5;
-    const scale = .4+n.z*.6;
-    const pr = n.r*scale + Math.sin(t*.003+n.ph)*.5 + (n.act>.3 ? 3*scale : 0);
-    // Neon glow layers
-    c.beginPath(); c.arc(n.x,n.y, pr*6*scale, 0, TAU);
-    c.fillStyle = n.c+'04'; c.fill();
-    c.beginPath(); c.arc(n.x,n.y, pr*3*scale, 0, TAU);
-    c.fillStyle = n.c+'08'; c.fill();
-    c.beginPath(); c.arc(n.x,n.y, pr, 0, TAU);
+    // Animate position in 3D
+    const drift = Math.sin(t*.0002+n.ph)*3;
+    n.x3d = CX + Math.cos(n.angle+t*.00005)*n.baseR + drift;
+    n.y3d = CY*.7 + Math.sin(n.angle+t*.00005)*n.baseR*.7 + drift*.5;
+    // Z breathing: nodes pulse in and out of the screen
+    n.z3d = n.zBase + Math.sin(t*.0003+n.ph) * 30;
+
+    const np = project(n.x3d, n.y3d, n.z3d);
+    const pr = n.r * np.scale + Math.sin(t*.003+n.ph)*.5 + (n.act>.3 ? 3*np.scale : 0);
+
+    // Outer glow (larger for near nodes — emerging from screen)
+    c.beginPath(); c.arc(np.x, np.y, pr*6*np.scale, 0, TAU);
+    c.fillStyle = n.c + '04'; c.fill();
+    // Mid glow
+    c.beginPath(); c.arc(np.x, np.y, pr*3*np.scale, 0, TAU);
+    c.fillStyle = n.c + '08'; c.fill();
+    // Core
+    c.beginPath(); c.arc(np.x, np.y, Math.max(.5, pr), 0, TAU);
     c.fillStyle = n.c;
-    c.globalAlpha = .3+n.z*.4+n.act*.4; c.fill(); c.globalAlpha = 1;
-    // Node-to-cursor connection (strong, visible)
+    c.globalAlpha = np.opacity * (.5 + n.act*.4); c.fill(); c.globalAlpha = 1;
+
+    // Emergent halo for nodes coming toward viewer (z > 170)
+    if (n.z3d > 170) {
+      const emerge = (n.z3d - 170) / 84;
+      c.beginPath(); c.arc(np.x, np.y, pr * 8 * np.scale, 0, TAU);
+      c.fillStyle = n.c.replace(')', '') ? `rgba(210,168,255,${(emerge*.015).toFixed(3)})` : 'rgba(210,168,255,.01)';
+      c.fillStyle = `rgba(210,168,255,${(emerge*.015).toFixed(3)})`; c.fill();
+    }
+
+    // Node-to-cursor connection (projected)
     if (mouseX > 0) {
-      const dx = mouseX-n.x, dy = mouseY-n.y, dist = Math.sqrt(dx*dx+dy*dy);
+      const dx = mouseX-np.x, dy = mouseY-np.y, dist = Math.sqrt(dx*dx+dy*dy);
       if (dist < 280) {
         const strength = (280-dist)/280;
-        c.beginPath(); c.moveTo(n.x,n.y); c.lineTo(mouseX,mouseY);
-        c.strokeStyle = `rgba(210,168,255,${(strength*.15).toFixed(3)})`;
-        c.lineWidth = strength*2; c.stroke();
-        // Neon bloom on close connections
+        c.beginPath(); c.moveTo(np.x,np.y); c.lineTo(mouseX,mouseY);
+        c.strokeStyle = `rgba(210,168,255,${(strength*np.opacity*.2).toFixed(3)})`;
+        c.lineWidth = strength*2*np.scale; c.stroke();
         if (dist < 120) {
-          c.strokeStyle = `rgba(210,168,255,${(strength*.04).toFixed(3)})`;
-          c.lineWidth = strength*6; c.stroke();
+          c.strokeStyle = `rgba(210,168,255,${(strength*.05).toFixed(3)})`;
+          c.lineWidth = strength*6*np.scale; c.stroke();
           n.act = Math.max(n.act, (120-dist)/120*.7);
         }
       }
@@ -634,14 +670,15 @@ function draw(t) {
     n.act *= .95;
   }
 
-  // ── Central golden ratio pulse (triple nested) ──
-  const pr = 28 + Math.sin(t*.002)*12;
-  c.beginPath(); c.arc(cx0,cy0, pr, 0, TAU);
-  c.fillStyle = 'rgba(210,168,255,.02)'; c.fill();
-  c.beginPath(); c.arc(cx0,cy0, pr/PHI, 0, TAU);
-  c.fillStyle = 'rgba(88,166,255,.025)'; c.fill();
-  c.beginPath(); c.arc(cx0,cy0, pr/(PHI*PHI), 0, TAU);
-  c.fillStyle = 'rgba(63,185,80,.03)'; c.fill();
+  // ── Central golden ratio pulse (projected at z=180 — emerging) ──
+  const cp = project(CX, CY*.7, 180 + Math.sin(t*.001)*20);
+  const pr2 = (28 + Math.sin(t*.002)*12) * cp.scale;
+  c.beginPath(); c.arc(cp.x, cp.y, pr2, 0, TAU);
+  c.fillStyle = 'rgba(210,168,255,.025)'; c.fill();
+  c.beginPath(); c.arc(cp.x, cp.y, pr2/PHI, 0, TAU);
+  c.fillStyle = 'rgba(88,166,255,.03)'; c.fill();
+  c.beginPath(); c.arc(cp.x, cp.y, pr2/(PHI*PHI), 0, TAU);
+  c.fillStyle = 'rgba(63,185,80,.035)'; c.fill();
 
   // ── Gravity wells ──
   for (let i = wells.length-1; i >= 0; i--) {
@@ -723,7 +760,20 @@ requestAnimationFrame(draw);
 
 // Hide hint
 let hh = false;
-cv.addEventListener('click', () => { if (!hh) { document.getElementById('hint').style.opacity='0'; hh=true; }});
+document.addEventListener('click', () => { if (!hh) { document.getElementById('hint').style.opacity='0'; hh=true; }});
+
+// ── Brain parallax tilt — follows mouse to create 3D depth illusion ──
+const brainWrap = document.querySelector('.brain-wrap');
+if (brainWrap) {
+  document.addEventListener('mousemove', e => {
+    const rx = (e.clientY - CY) / CY * 8;  // tilt up/down (max 8deg)
+    const ry = -(e.clientX - CX) / CX * 12; // tilt left/right (max 12deg)
+    brainWrap.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
+  });
+  document.addEventListener('mouseleave', () => {
+    brainWrap.style.transform = 'rotateX(0) rotateY(0)';
+  });
+}
 </script>
 </body>
 </html>
