@@ -475,6 +475,11 @@ async def read_doc(name: str):
     if not safe.endswith('.md'):
         safe += '.md'
     doc_path = PROJECT_ROOT / "docs" / safe
+    # Also check publications/ subdirectory for archived editions
+    if not doc_path.exists() or not doc_path.is_file():
+        doc_path = PROJECT_ROOT / "docs" / "publications" / safe
+    if not doc_path.exists() or not doc_path.is_file():
+        doc_path = PROJECT_ROOT / "docs" / "publications" / "daily" / safe
     if not doc_path.exists() or not doc_path.is_file():
         return _DashResponse(content=_doc_page("Not Found", f"<h1>Document not found</h1><p><code>{safe}</code> does not exist in docs/</p>"), status_code=404)
     md = doc_path.read_text(encoding="utf-8", errors="replace")
@@ -484,12 +489,61 @@ async def read_doc(name: str):
 
 @app.get("/book", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
 async def book_of_mindx_page():
-    """The Book of mindX — rendered from latest edition."""
+    """The Book of mindX — rendered from latest edition with previous editions linked."""
     book_path = PROJECT_ROOT / "docs" / "BOOK_OF_MINDX.md"
     if not book_path.exists():
         return _DashResponse(content=_doc_page("The Book of mindX", "<h1>The Book of mindX</h1><p>First edition is being written. Check back in 2 minutes.</p>"))
     md = book_path.read_text(encoding="utf-8")
-    return _DashResponse(content=_doc_page("The Book of mindX", _render_md(md)))
+    body = _render_md(md)
+
+    # Build previous editions list (newest first)
+    pub_dir = PROJECT_ROOT / "docs" / "publications"
+    daily_dir = pub_dir / "daily"
+    editions_html = ""
+    if pub_dir.exists():
+        editions = sorted(pub_dir.glob("book_of_mindx_*.md"), reverse=True)
+        other_pubs = sorted([f for f in pub_dir.glob("*.md") if not f.name.startswith("book_of_mindx_")], reverse=True)
+        dailies = sorted(daily_dir.glob("day_*.md"), reverse=True) if daily_dir.exists() else []
+
+        if editions or other_pubs or dailies:
+            editions_html = '<hr style="margin:40px 0 24px;border-color:rgba(210,168,255,.12)">'
+            editions_html += '<h2 style="color:#d2a8ff;font-size:16px;margin-bottom:12px">Previous Editions</h2>'
+            editions_html += '<p style="font-size:10px;color:#4a5060;margin-bottom:16px">Every edition is archived. The Book evolves with each lunar cycle.</p>'
+
+            if editions:
+                editions_html += '<details open style="margin-bottom:12px"><summary style="cursor:pointer;color:#58a6ff;font-size:12px;font-weight:600;margin-bottom:8px">'
+                editions_html += f'Archived Editions <span style="color:#4a5060;font-weight:400">({len(editions)})</span></summary>'
+                editions_html += '<ul style="list-style:none;padding:0">'
+                for ed in editions[:20]:
+                    name = ed.stem
+                    size_kb = round(ed.stat().st_size / 1024, 1)
+                    # Extract timestamp from filename: book_of_mindx_YYYYMMDD_HHMM
+                    ts = name.replace("book_of_mindx_", "").replace("_", " ")
+                    label = f"fullmoon" if "fullmoon" in name else ts
+                    editions_html += f'<li style="margin:3px 0;font-size:10px"><a href="/doc/{name}" style="color:#8b949e;text-decoration:none">{label}</a> <span style="color:#3d424d">({size_kb}KB)</span></li>'
+                editions_html += '</ul></details>'
+
+            if dailies:
+                editions_html += '<details style="margin-bottom:12px"><summary style="cursor:pointer;color:#3fb950;font-size:12px;font-weight:600;margin-bottom:8px">'
+                editions_html += f'Daily Lunar Chapters <span style="color:#4a5060;font-weight:400">({len(dailies)})</span></summary>'
+                editions_html += '<ul style="list-style:none;padding:0">'
+                for d in dailies[:28]:
+                    name = d.stem
+                    size_kb = round(d.stat().st_size / 1024, 1)
+                    label = name.replace("_", " ")
+                    editions_html += f'<li style="margin:3px 0;font-size:10px"><a href="/doc/{name}" style="color:#8b949e;text-decoration:none">{label}</a> <span style="color:#3d424d">({size_kb}KB)</span></li>'
+                editions_html += '</ul></details>'
+
+            if other_pubs:
+                editions_html += '<details style="margin-bottom:12px"><summary style="cursor:pointer;color:#d29922;font-size:12px;font-weight:600;margin-bottom:8px">'
+                editions_html += f'Other Publications <span style="color:#4a5060;font-weight:400">({len(other_pubs)})</span></summary>'
+                editions_html += '<ul style="list-style:none;padding:0">'
+                for p in other_pubs:
+                    name = p.stem
+                    editions_html += f'<li style="margin:3px 0;font-size:10px"><a href="/doc/{name}" style="color:#8b949e;text-decoration:none">{name}</a></li>'
+                editions_html += '</ul></details>'
+
+    return _DashResponse(content=_doc_page("The Book of mindX", body + editions_html))
 
 @app.get("/journal", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
 async def improvement_journal_page():
