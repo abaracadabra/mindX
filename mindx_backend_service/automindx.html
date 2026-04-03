@@ -10,7 +10,8 @@
 body{font-family:'Inter','SF Pro Text','Segoe UI',system-ui,-apple-system,sans-serif;background:#030608;color:#b0b8c4;min-height:100vh;overflow-x:hidden}
 canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
 .scanlines{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);mix-blend-mode:multiply}
-.page{position:relative;z-index:2}
+.page{position:relative;z-index:2;pointer-events:none}
+.page .nav,.page .section,.page .hero,.page .links,.page .footer,.page .nft-badge,.page a,.page button,.page .card,.page .nft-card{pointer-events:auto}
 .nav{display:flex;align-items:center;justify-content:center;gap:14px;padding:14px 24px;font-size:12px;border-bottom:1px solid rgba(210,168,255,.08);background:rgba(3,6,8,.94);position:sticky;top:0;z-index:10;backdrop-filter:blur(16px);flex-wrap:wrap}
 .nav .brand{color:#e6edf3;font-weight:700;font-family:'SF Mono',monospace;font-size:18px;margin-right:16px;letter-spacing:1px;text-shadow:0 0 20px rgba(210,168,255,.3)}.nav .brand b{color:#d2a8ff}
 .nav a{color:#6e7681;text-decoration:none;transition:all .2s;padding:4px 10px;border-radius:3px;border:1px solid transparent}.nav a:hover{color:#d2a8ff;background:rgba(210,168,255,.06);border-color:rgba(210,168,255,.15);text-shadow:0 0 8px rgba(210,168,255,.3)}
@@ -337,21 +338,21 @@ function getZone(x, y) {
 }
 function isEdge(x, y) { return x < 50 || x > W-50 || y < 50 || y > H-50; }
 
-cv.addEventListener('mousemove', e => {
+// Event listeners on DOCUMENT so interactions work even over page content
+document.addEventListener('mousemove', e => {
   pmouseX = mouseX; pmouseY = mouseY; mouseX = e.clientX; mouseY = e.clientY;
   glowI = Math.min(glowI + .04, 1);
   if (dragging) addTrail();
 });
-cv.addEventListener('mouseleave', () => { mouseX=-1; mouseY=-1; glowI=0; dragging=false; });
-cv.addEventListener('touchmove', e => { e.preventDefault(); mouseX=e.touches[0].clientX; mouseY=e.touches[0].clientY; if(dragging)addTrail(); }, {passive:false});
-cv.addEventListener('touchstart', e => { dragging=true; mouseX=e.touches[0].clientX; mouseY=e.touches[0].clientY; });
-cv.addEventListener('touchend', () => { dragging=false; });
-cv.addEventListener('mousedown', () => { dragging=true; });
-cv.addEventListener('mouseup', () => { dragging=false; });
-cv.addEventListener('wheel', e => { e.preventDefault(); forceRadius=Math.max(60,Math.min(500,forceRadius-e.deltaY*.4)); }, {passive:false});
+document.addEventListener('mouseleave', () => { mouseX=-1; mouseY=-1; glowI=0; dragging=false; });
+document.addEventListener('touchmove', e => { mouseX=e.touches[0].clientX; mouseY=e.touches[0].clientY; if(dragging)addTrail(); }, {passive:true});
+document.addEventListener('touchstart', e => { dragging=true; mouseX=e.touches[0].clientX; mouseY=e.touches[0].clientY; }, {passive:true});
+document.addEventListener('touchend', () => { dragging=false; });
+document.addEventListener('mousedown', () => { dragging=true; });
+document.addEventListener('mouseup', () => { dragging=false; });
+document.addEventListener('wheel', e => { forceRadius=Math.max(60,Math.min(500,forceRadius-e.deltaY*.4)); }, {passive:true});
 
-cv.addEventListener('dblclick', e => {
-  e.preventDefault();
+document.addEventListener('dblclick', e => {
   const zone = getZone(e.clientX, e.clientY);
   if (zone === 'brain') {
     // Brain zone: burst of thinking edges
