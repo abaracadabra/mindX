@@ -78,7 +78,7 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 <div class="main">
 <div class="left"><div class="g" id="grid"></div></div>
 <div class="right">
-<div class="tabs"><div class="tab active" onclick="T(0)" id="t0">dialogue</div><div class="tab" onclick="T(1)" id="t1">dojo</div><div class="tab" onclick="T(2)" id="t2">boardroom</div></div>
+<div class="tabs"><div class="tab active" onclick="T(0)" id="t0">dialogue</div><div class="tab" onclick="T(1)" id="t1">actions</div><div class="tab" onclick="T(2)" id="t2">dojo</div><div class="tab" onclick="T(3)" id="t3">boardroom</div></div>
 <div class="conv" id="pnl"></div>
 <div class="ft">mindx.pythai.net <span id="ts"></span> <a href="/docs.html">docs</a> <a href="/book" class="dm">book</a> <a href="/journal" class="dm">journal</a> <a href="/docs" class="dm">api</a></div>
 </div>
@@ -261,6 +261,15 @@ function rpnl(d){
     // Auto-scroll to bottom for newest
     p.scrollTop=p.scrollHeight;
   } else if(curT===1){
+    // Actions
+    const acts=d.actions||[];
+    if(!acts.length){p.innerHTML='<div style="padding:8px;color:#3d424d">No actions yet. Autonomous loop will generate actions from backlog and model intelligence.</div>';return}
+    let h='';acts.forEach(a=>{
+      const sc=a.status==='completed'?'#3fb950':a.status==='failed'?'#f85149':'#d29922';
+      const ts=(a.created_at||'').slice(11,19);
+      h+=`<div style="padding:5px 0;border-bottom:1px solid rgba(8,11,16,.4)"><div class="r"><span style="color:${sc};font-weight:600;font-size:8px">${a.status.toUpperCase()}</span><span style="color:#3d424d;font-size:8px">${a.source||''} ${ts}</span></div><div style="font-size:10px;color:#b0b8c4;margin:2px 0;line-height:1.4">${a.description}</div><div style="font-size:8px;color:#4a5060">${a.agent_id} &middot; ${a.action_type}${a.result?' &middot; '+a.result:''}</div></div>`;
+    });p.innerHTML=h;
+  } else if(curT===2){
     const st=d.dojo||[];
     if(!st.length){p.innerHTML='<div style="padding:8px;color:#3d424d">no standings</div>';return}
     let h='';st.forEach(s=>{h+=`<div style="padding:2px 0;border-bottom:1px solid rgba(8,11,16,.4)"><div class="r"><span>${rk(s.tier)} ${s.agent_id}</span><span style="color:#4a5060">${s.rank} ${s.score}</span></div>${bar(Math.min(100,s.score/100))}</div>`});

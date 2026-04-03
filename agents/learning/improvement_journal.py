@@ -165,7 +165,21 @@ class ImprovementJournal:
         except Exception:
             pass
 
-        # 6. Inference status
+        # 6. Recent actions from pgvector
+        recent_actions = []
+        try:
+            from agents import memory_pgvector as _mpg
+            actions = await _mpg.get_recent_actions(limit=5)
+            for a in actions:
+                status = a.get("status", "?")
+                desc = a.get("description", "")[:100]
+                src = a.get("source", "")
+                agent = a.get("agent_id", "?")
+                recent_actions.append(f"  - **{status}** ({agent}, {src}): {desc}")
+        except Exception:
+            pass
+
+        # 7. Inference status
         inference_info = ""
         try:
             from llm.inference_discovery import InferenceDiscovery
@@ -182,6 +196,10 @@ class ImprovementJournal:
         entry = f"## {ts}\n\n"
         entry += f"**System snapshot**: {stats.get('stm_records', '?')} memories, "
         entry += f"{belief_count} beliefs, {backlog_count} backlog items, {inference_info}\n\n"
+
+        if recent_actions:
+            entry += "### Actions\n\n"
+            entry += "\n".join(recent_actions) + "\n\n"
 
         if recent_decisions:
             entry += "### Autonomous Decisions\n\n"

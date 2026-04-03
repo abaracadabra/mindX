@@ -294,6 +294,65 @@ async def sync_agent_registry(agents: Dict[str, Dict[str, Any]]) -> int:
         return count
 
 
+async def store_action(agent_id: str, action_type: str, description: str, source: str = "", status: str = "pending") -> bool:
+    """Log an action taken by an agent."""
+    pool = await get_pool()
+    if not pool:
+        return False
+    try:
+        await pool.execute(
+            "INSERT INTO actions (agent_id, action_type, description, source, status) VALUES ($1,$2,$3,$4,$5)",
+            agent_id, action_type, description, source, status,
+        )
+        return True
+    except Exception as e:
+        logger.debug(f"pgvector store_action failed: {e}")
+        return False
+
+
+async def complete_action(action_id: int, result: str, status: str = "completed") -> bool:
+    """Mark an action as completed."""
+    pool = await get_pool()
+    if not pool:
+        return False
+    try:
+        await pool.execute(
+            "UPDATE actions SET status=$1, result=$2, completed_at=NOW() WHERE id=$3",
+            status, result, action_id,
+        )
+        return True
+    except Exception:
+        return False
+
+
+async def get_recent_actions(limit: int = 20) -> List[Dict[str, Any]]:
+    """Get recent actions for dashboard display."""
+    pool = await get_pool()
+    if not pool:
+        return []
+    try:
+        rows = await pool.fetch(
+            "SELECT id, agent_id, action_type, description, source, status, result, created_at, completed_at FROM actions ORDER BY created_at DESC LIMIT $1",
+            limit,
+        )
+        return [
+            {
+                "id": r["id"],
+                "agent_id": r["agent_id"],
+                "action_type": r["action_type"],
+                "description": r["description"][:150],
+                "source": r["source"],
+                "status": r["status"],
+                "result": r["result"][:100] if r["result"] else None,
+                "created_at": r["created_at"].isoformat() if r["created_at"] else "",
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        logger.debug(f"pgvector get_recent_actions failed: {e}")
+        return []
+
+
 async def health_check() -> Dict[str, Any]:
     """Check database health."""
     pool = await get_pool()
@@ -306,6 +365,7 @@ async def health_check() -> Dict[str, Any]:
                 (SELECT COUNT(*) FROM beliefs) as beliefs,
                 (SELECT COUNT(*) FROM agents) as agents,
                 (SELECT COUNT(*) FROM godel_choices) as godel_choices,
+                (SELECT COUNT(*) FROM actions) as actions,
                 (SELECT pg_size_pretty(pg_database_size('mindx'))) as db_size"""
         )
         return {
@@ -314,6 +374,7 @@ async def health_check() -> Dict[str, Any]:
             "beliefs": row["beliefs"],
             "agents": row["agents"],
             "godel_choices": row["godel_choices"],
+            "actions": row["actions"],
             "db_size": row["db_size"],
         }
     except Exception as e:

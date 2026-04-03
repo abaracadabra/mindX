@@ -2974,45 +2974,90 @@ class MindXAgent:
         return state
     
     async def _identify_improvement_opportunities(self, system_state: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Identify improvement opportunities from system state"""
+        """Identify improvement opportunities from system state, backlog, and model intelligence."""
         opportunities = []
-        
-        # Check knowledge base completeness
+
+        # 1. Pull from improvement backlog (real queued items)
+        try:
+            backlog_path = Path(__file__).parent.parent.parent / "data" / "improvement_backlog.json"
+            if backlog_path.exists():
+                import json as _json
+                backlog = _json.loads(backlog_path.read_text())
+                for item in sorted(backlog, key=lambda x: x.get("priority", 0), reverse=True)[:2]:
+                    opportunities.append({
+                        "goal": f"{item.get('target_component_path', '?')}: {item.get('suggestion', '')}",
+                        "priority": item.get("priority", 5),
+                        "reason": item.get("justification", "From improvement backlog"),
+                        "source": "backlog",
+                    })
+        except Exception:
+            pass
+
+        # 2. Ask the local model for improvement ideas (if available)
+        try:
+            if self.ollama_chat_manager and hasattr(self.ollama_chat_manager, 'ollama_api'):
+                prompt = (
+                    "You are mindX, a self-improving AI system. Based on these system metrics, "
+                    "suggest ONE specific, actionable improvement in under 50 words.\n\n"
+                    f"Agents: {system_state.get('agent_count', 0)}, "
+                    f"Memories: {system_state.get('knowledge_base_size', 0)}, "
+                    f"Improvement history: {system_state.get('improvement_history_count', 0)}\n\n"
+                    "Respond with just the improvement suggestion."
+                )
+                api = self.ollama_chat_manager.ollama_api
+                if api:
+                    response = await api.generate_text(prompt, model="qwen3:0.6b", use_chat=True, max_tokens=100)
+                    if response and len(response) > 10:
+                        opportunities.append({
+                            "goal": response[:200],
+                            "priority": 5,
+                            "reason": "LLM-generated improvement from system state analysis",
+                            "source": "local_model",
+                        })
+        except Exception as e:
+            logger.debug(f"{self.log_prefix} LLM opportunity identification failed: {e}")
+
+        # 3. Threshold-based checks (existing logic)
         if system_state.get("agent_count", 0) < 10:
-            opportunities.append({
-                "goal": "Expand agent knowledge base - discover more agents",
-                "priority": 1,
-                "reason": "Low agent count in knowledge base"
-            })
-        
-        # Check for performance issues
+            opportunities.append({"goal": "Expand agent knowledge base", "priority": 1, "reason": "Low agent count", "source": "threshold"})
+
         perf_metrics = system_state.get("performance_metrics", {})
         if perf_metrics.get("error_rate", 0) > 0.1:
-            opportunities.append({
-                "goal": "Reduce error rate in system operations",
-                "priority": 2,
-                "reason": f"Error rate is {perf_metrics.get('error_rate', 0):.2%}"
-            })
-        
-        # Check for resource constraints
+            opportunities.append({"goal": "Reduce error rate", "priority": 2, "reason": f"Error rate {perf_metrics.get('error_rate', 0):.2%}", "source": "threshold"})
+
         resource_metrics = system_state.get("resource_metrics", {})
         if resource_metrics.get("cpu_percent", 0) > 80:
-            opportunities.append({
-                "goal": "Optimize CPU usage - system under high load",
-                "priority": 2,
-                "reason": f"CPU usage at {resource_metrics.get('cpu_percent', 0):.1f}%"
-            })
-        
-        # Check improvement history for patterns
+            opportunities.append({"goal": "Optimize CPU usage", "priority": 2, "reason": f"CPU {resource_metrics.get('cpu_percent', 0):.1f}%", "source": "threshold"})
+
         if len(self.improvement_history) > 0:
-            recent_improvements = self.improvement_history[-5:]
-            failed_count = sum(1 for imp in recent_improvements if not imp.get("success", False))
-            if failed_count > 2:
-                opportunities.append({
-                    "goal": "Improve improvement success rate - recent improvements failing",
-                    "priority": 1,
-                    "reason": f"{failed_count} of last 5 improvements failed"
-                })
+            recent = self.improvement_history[-5:]
+            failed = sum(1 for i in recent if not i.get("success", False))
+            if failed > 2:
+                opportunities.append({"goal": "Improve improvement success rate", "priority": 1, "reason": f"{failed}/5 failed", "source": "threshold"})
+
+        # Log action for dashboard visibility
+        if opportunities:
+            try:
+                from agents import memory_pgvector as _mpg
+                for opp in opportunities:
+                    await _mpg.store_memory(
+                        memory_id=f"action_{int(time.time())}_{hash(opp['goal'])%10000}",
+                        agent_id="mindx_meta_agent",
+                        memory_type="action",
+                        importance=opp.get("priority", 5),
+                        content={"action": "identify_opportunity", "goal": opp["goal"], "reason": opp.get("reason", ""), "source": opp.get("source", "")},
+                        context={"system_state": {k: v for k, v in system_state.items() if not isinstance(v, dict)}},
+                        tags=["action", "improvement_opportunity", opp.get("source", "")],
+                    )
+                    await _mpg.store_action(
+                        agent_id="mindx_meta_agent",
+                        action_type="improvement_opportunity",
+                        description=opp["goal"][:200],
+                        source=opp.get("source", "autonomous_loop"),
+                        status="identified",
+                    )
+            except Exception:
+                pass
         
         return opportunities
     

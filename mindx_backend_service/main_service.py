@@ -787,6 +787,14 @@ async def diagnostics_live_endpoint():
     except Exception:
         pass
 
+    # Actions
+    actions_data = []
+    try:
+        from agents import memory_pgvector as _mpg2
+        actions_data = await _mpg2.get_recent_actions(limit=10)
+    except Exception:
+        pass
+
     return {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "uptime": uptime, "uptime_seconds": up_s,
@@ -797,6 +805,7 @@ async def diagnostics_live_endpoint():
         "interactions": list(_diag_interactions),
         "godel_choices": godel, "inference": inf, "vault": vault,
         "dojo": dojo_data, "boardroom": br_data,
+        "actions": actions_data,
         "model_perf": list(_diag_model_perf),
         "disk_detail": disk_detail,
         "database": db_health,
