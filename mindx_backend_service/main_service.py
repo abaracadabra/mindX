@@ -426,6 +426,63 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# ── API Access Gate: all non-public routes require auth ──
+# Uses @app.middleware("http") which always fires regardless of import order.
+
+_PUBLIC_EXACT = frozenset({
+    "/", "/health", "/docs.html", "/book", "/journal",
+    "/openapi.json", "/docs", "/redoc",
+    "/diagnostics/live", "/vault/credentials/status",
+    "/vault/credentials/providers", "/dojo/standings",
+    "/inference/status", "/boardroom/sessions",
+})
+_PUBLIC_PREFIXES = (
+    "/doc/", "/docs", "/redoc", "/mindterm/static/",
+    "/dojo/agent/", "/bankon", "/agenticplace/",
+    "/users/challenge", "/users/register",
+)
+
+@app.middleware("http")
+async def api_access_gate(request: Request, call_next):
+    path = request.url.path
+
+    # OPTIONS always pass (CORS preflight)
+    if request.method == "OPTIONS":
+        return await call_next(request)
+
+    # Public routes
+    if path in _PUBLIC_EXACT:
+        return await call_next(request)
+    for pfx in _PUBLIC_PREFIXES:
+        if path.startswith(pfx):
+            return await call_next(request)
+
+    # Auth: X-Session-Token OR Authorization: Bearer <key>
+    session_token = request.headers.get("X-Session-Token")
+    auth_header = request.headers.get("Authorization", "")
+    bearer_key = auth_header[7:].strip() if auth_header.startswith("Bearer ") else None
+
+    if session_token:
+        try:
+            vm = get_vault_manager()
+            session = vm.get_user_session(session_token)
+            if session:
+                return await call_next(request)
+        except Exception:
+            pass
+
+    if bearer_key:
+        valid_keys = set(os.getenv("MINDX_SECURITY_API_KEYS", "").split(","))
+        valid_keys.discard("")
+        if bearer_key in valid_keys:
+            return await call_next(request)
+
+    from starlette.responses import JSONResponse as _GR
+    return _GR(status_code=401, content={
+        "detail": "Authentication required. Provide X-Session-Token or Authorization: Bearer <api_key>",
+        "docs": "https://mindx.pythai.net/docs.html",
+    })
+
 # Inbound metrics and optional rate control (both directions: see docs/monitoring_rate_control.md)
 try:
     from mindx_backend_service.inbound_metrics import InboundMetricsMiddleware, get_inbound_metrics, set_inbound_rate_limit
