@@ -137,21 +137,92 @@ code{background:rgba(22,27,34,.85);padding:2px 6px;border-radius:3px;color:#7ee7
   <a href="/">dashboard</a><a href="/docs.html">documentation</a><a href="/book" class="cyan">the book</a><a href="/doc/AUTOMINDX_ORIGIN">origin story</a>
   <a href="https://agenticplace.pythai.net" target="_blank" class="green">AgenticPlace</a><a href="/redoc">API reference</a>
   <a href="https://opensea.io/item/polygon/0x2953399124f0cbb46d2cbacd8a89cf0599974963/7675060345879017836756807061815685501584179421371855056758523065871282208769" target="_blank">OpenSea NFT</a>
+  <a href="https://github.com/cypherpunk2048" target="_blank">cypherpunk2048</a>
 </div>
-<div class="footer"><a href="/">mind<b>X</b></a> &middot; <a href="/automindx">AUTOMINDx</a> &middot; mindx.pythai.net &middot; &copy; Professor Codephreak</div>
+<div class="footer"><a href="/">mind<b>X</b></a> &middot; <a href="/automindx">AUTOMINDx</a> &middot; <a href="https://github.com/cypherpunk2048" target="_blank">cypherpunk2048</a> &middot; mindx.pythai.net &middot; &copy; Professor Codephreak</div>
 </div>
 <div class="interact-hint" id="hint">click &middot; drag &middot; scroll &middot; double-click &middot; shift+click</div>
 
-<script src="/static/mindx-brain.js"></script>
 <script>
 // ── Constants ──
 const PHI = (1 + Math.sqrt(5)) / 2;
 const TAU = Math.PI * 2;
 const FIB = [1,1,2,3,5,8,13,21,34,55,89,144,233,377];
+const GOLDEN_ANGLE = TAU / (PHI * PHI); // ~137.5 degrees
 
-// ── Brain ──
-if (document.getElementById('brain') && typeof mindxBrain === 'function')
-  mindxBrain(document.getElementById('brain'), {size: 380, animate: true});
+// ── Inline brain renderer (no external dependency) ──
+(function(){
+const bc = document.getElementById('brain');
+if (!bc) return;
+const BW = 380, BH = 475;
+bc.width = BW; bc.height = BH;
+const b = bc.getContext('2d'), sc = BW / 256;
+const bCenter = {x: BW/2, y: BH*.36}, bRX = 90*sc, bRY = 65*sc;
+const sulci = [
+  [{x:0,y:-55},{x:-5,y:-30},{x:5,y:-5},{x:-3,y:20},{x:0,y:45}],
+  [{x:-70,y:0},{x:-50,y:-15},{x:-25,y:-10},{x:-10,y:5},{x:5,y:15}],
+  [{x:70,y:0},{x:50,y:-15},{x:25,y:-10},{x:10,y:5},{x:-5,y:15}],
+  [{x:-60,y:-30},{x:-40,y:-40},{x:-15,y:-45},{x:0,y:-40}],
+  [{x:60,y:-30},{x:40,y:-40},{x:15,y:-45},{x:0,y:-40}],
+  [{x:-55,y:20},{x:-35,y:10},{x:-20,y:25},{x:-5,y:35}],
+  [{x:55,y:20},{x:35,y:10},{x:20,y:25},{x:5,y:35}],
+  [{x:-40,y:35},{x:-15,y:45},{x:15,y:45},{x:40,y:35}],
+].map(p=>p.map(v=>({x:v.x*sc,y:v.y*sc})));
+const circuits = [
+  [{x:-10,y:-50},{x:-20,y:-30},{x:-35,y:-15},{x:-55,y:-5},{x:-65,y:10},{x:-50,y:25},{x:-30,y:35}],
+  [{x:10,y:-50},{x:25,y:-25},{x:40,y:-10},{x:55,y:5},{x:45,y:20},{x:25,y:30}],
+  [{x:-30,y:0},{x:-10,y:5},{x:10,y:5},{x:30,y:0}],
+  [{x:-45,y:-25},{x:-30,y:-20},{x:-20,y:-5},{x:-25,y:15}],
+  [{x:45,y:-25},{x:30,y:-20},{x:20,y:-5},{x:25,y:15}],
+  [{x:0,y:-55},{x:0,y:-30},{x:0,y:0},{x:0,y:30},{x:0,y:50}],
+].map(p=>p.map(v=>({x:v.x*sc,y:v.y*sc})));
+const cNodes = [{x:-35,y:-15},{x:35,y:-15},{x:0,y:-30},{x:-55,y:5},{x:55,y:5},{x:0,y:0},{x:-25,y:25},{x:25,y:25},{x:0,y:45},{x:-45,y:-30},{x:45,y:-30}].map(p=>({x:p.x*sc,y:p.y*sc,ph:Math.random()*TAU}));
+function brainFrame(t){
+  b.clearRect(0,0,BW,BH);
+  const bx=bCenter.x,by=bCenter.y;
+  // Neck
+  b.beginPath();b.moveTo(bx-28*sc,by+65*sc);b.quadraticCurveTo(bx-30*sc,BH*.85,bx-22*sc,BH*.95);
+  b.lineTo(bx+22*sc,BH*.95);b.quadraticCurveTo(bx+30*sc,BH*.85,bx+28*sc,by+65*sc);b.closePath();
+  const ng=b.createLinearGradient(bx,by+65*sc,bx,BH);ng.addColorStop(0,'rgba(180,195,215,.25)');ng.addColorStop(1,'rgba(140,155,175,.08)');
+  b.fillStyle=ng;b.fill();
+  // Face
+  b.beginPath();b.ellipse(bx,by+35*sc,38*sc,42*sc,0,0,TAU);
+  const fg=b.createRadialGradient(bx,by+25*sc,0,bx,by+35*sc,42*sc);fg.addColorStop(0,'rgba(195,210,230,.2)');fg.addColorStop(.7,'rgba(170,185,205,.12)');fg.addColorStop(1,'rgba(140,155,175,.04)');
+  b.fillStyle=fg;b.fill();
+  // Eyes
+  b.globalAlpha=.15;b.beginPath();b.ellipse(bx-14*sc,by+28*sc,6*sc,2.5*sc,0,0,TAU);b.fillStyle='#58a6ff';b.fill();
+  b.beginPath();b.ellipse(bx+14*sc,by+28*sc,6*sc,2.5*sc,0,0,TAU);b.fill();b.globalAlpha=1;
+  // Nose+lips
+  b.beginPath();b.moveTo(bx,by+35*sc);b.lineTo(bx-2*sc,by+45*sc);b.strokeStyle='rgba(170,185,205,.08)';b.lineWidth=sc;b.stroke();
+  b.beginPath();b.moveTo(bx-10*sc,by+52*sc);b.quadraticCurveTo(bx,by+49*sc,bx+10*sc,by+52*sc);b.strokeStyle='rgba(180,195,215,.1)';b.lineWidth=1.2*sc;b.stroke();
+  // Brain glow
+  const glR=bRX*1.4+Math.sin(t*.002)*4*sc;
+  const bg=b.createRadialGradient(bx,by,bRX*.3,bx,by,glR);bg.addColorStop(0,'rgba(88,166,255,.06)');bg.addColorStop(.5,'rgba(100,220,230,.03)');bg.addColorStop(1,'transparent');
+  b.fillStyle=bg;b.beginPath();b.ellipse(bx,by,glR,glR*.75,0,0,TAU);b.fill();
+  // Brain body
+  b.beginPath();b.ellipse(bx,by,bRX,bRY,0,0,TAU);
+  const brg=b.createRadialGradient(bx-10*sc,by-15*sc,0,bx,by,bRX);brg.addColorStop(0,'rgba(140,210,220,.35)');brg.addColorStop(.4,'rgba(120,190,210,.25)');brg.addColorStop(.7,'rgba(100,170,200,.18)');brg.addColorStop(1,'rgba(80,140,180,.1)');
+  b.fillStyle=brg;b.fill();b.strokeStyle='rgba(100,200,220,.2)';b.lineWidth=1.5*sc;b.stroke();
+  // Sulci
+  b.lineCap='round';b.lineJoin='round';
+  for(const p of sulci){b.beginPath();b.moveTo(bx+p[0].x,by+p[0].y);for(let i=1;i<p.length-1;i++){const xm=(p[i].x+p[i+1].x)/2,ym=(p[i].y+p[i+1].y)/2;b.quadraticCurveTo(bx+p[i].x,by+p[i].y,bx+xm,by+ym)}b.lineTo(bx+p[p.length-1].x,by+p[p.length-1].y);b.strokeStyle='rgba(80,160,190,.2)';b.lineWidth=2*sc;b.stroke();b.strokeStyle='rgba(120,210,230,.08)';b.lineWidth=4*sc;b.stroke()}
+  // Circuits
+  for(let ci=0;ci<circuits.length;ci++){const p=circuits[ci];const pp=((t*.001+ci*1.2)%3)/3;
+  b.beginPath();b.moveTo(bx+p[0].x,by+p[0].y);for(let i=1;i<p.length-1;i++){const xm=(p[i].x+p[i+1].x)/2,ym=(p[i].y+p[i+1].y)/2;b.quadraticCurveTo(bx+p[i].x,by+p[i].y,bx+xm,by+ym)}b.lineTo(bx+p[p.length-1].x,by+p[p.length-1].y);
+  b.strokeStyle='rgba(0,255,120,.15)';b.lineWidth=1.5*sc;b.stroke();b.strokeStyle='rgba(50,255,140,.08)';b.lineWidth=4*sc;b.stroke();
+  const idx=Math.floor(pp*(p.length-1)),fr=pp*(p.length-1)-idx;
+  if(idx<p.length-1){const px=bx+p[idx].x+(p[idx+1].x-p[idx].x)*fr,py=by+p[idx].y+(p[idx+1].y-p[idx].y)*fr;
+  const pg=b.createRadialGradient(px,py,0,px,py,12*sc);pg.addColorStop(0,'rgba(0,255,120,.4)');pg.addColorStop(.5,'rgba(0,255,120,.1)');pg.addColorStop(1,'transparent');
+  b.fillStyle=pg;b.beginPath();b.arc(px,py,12*sc,0,TAU);b.fill();b.beginPath();b.arc(px,py,2*sc,0,TAU);b.fillStyle='rgba(150,255,200,.6)';b.fill()}}
+  // Junction nodes
+  for(const n of cNodes){const nx=bx+n.x,ny=by+n.y,pl=.4+Math.sin(t*.003+n.ph)*.2;b.beginPath();b.arc(nx,ny,6*sc,0,TAU);b.fillStyle=`rgba(0,255,120,${pl*.15})`;b.fill();b.beginPath();b.arc(nx,ny,2.5*sc,0,TAU);b.fillStyle=`rgba(100,255,180,${pl})`;b.fill()}
+  // Top glow
+  const tg=b.createRadialGradient(bx,by-bRY*.5,0,bx,by-bRY,bRX*.8);tg.addColorStop(0,`rgba(88,166,255,${.03+Math.sin(t*.0015)*.015})`);tg.addColorStop(1,'transparent');
+  b.fillStyle=tg;b.beginPath();b.ellipse(bx,by-bRY*.5,bRX*.8,bRY*.5,0,0,TAU);b.fill();
+}
+let baf=0;function bloop(t){if(baf%3===0||!window.matchMedia('(prefers-reduced-motion:reduce)').matches)brainFrame(t);baf++;requestAnimationFrame(bloop)}
+requestAnimationFrame(bloop);
+})();
 
 // ── Canvas ──
 const cv = document.getElementById('bg'), c = cv.getContext('2d');
@@ -246,68 +317,132 @@ function rsz() {
 }
 addEventListener('resize', rsz); rsz();
 
-// ── Interaction ──
+// ── Zone-based interaction engine ──
+// Different screen zones produce different effects:
+//   Top zone (brain area): attraction + node connections, gentle
+//   Middle zone: Fibonacci spiral burst, golden ratio force
+//   Bottom zone: hex grid lighting, repulsion, gravity wells
+//   Edges: vortex pull toward center
+// The zone blending uses golden ratio proportions.
+
 cv.style.pointerEvents = 'auto';
-cv.addEventListener('mousemove', e => { pmouseX = mouseX; pmouseY = mouseY; mouseX = e.clientX; mouseY = e.clientY; glowI = Math.min(glowI + .04, 1); });
-cv.addEventListener('mouseleave', () => { mouseX = -1; mouseY = -1; glowI = 0; dragging = false; });
-cv.addEventListener('touchmove', e => { e.preventDefault(); mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY; if (dragging) addTrail(); }, {passive:false});
-cv.addEventListener('touchstart', e => { dragging = true; mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY; });
-cv.addEventListener('touchend', () => { dragging = false; });
-cv.addEventListener('mousedown', e => { dragging = true; });
-cv.addEventListener('mouseup', () => { dragging = false; });
-cv.addEventListener('wheel', e => { e.preventDefault(); forceRadius = Math.max(60, Math.min(500, forceRadius - e.deltaY * .4)); }, {passive:false});
+
+function getZone(x, y) {
+  // Zones divided at golden ratio proportions of screen height
+  const yPct = y / H;
+  if (yPct < 1/PHI/PHI) return 'brain';    // top ~38%
+  if (yPct < 1/PHI) return 'spiral';        // middle ~24%
+  return 'grid';                             // bottom ~38%
+  // Edge detection
+}
+function isEdge(x, y) { return x < 50 || x > W-50 || y < 50 || y > H-50; }
+
+cv.addEventListener('mousemove', e => {
+  pmouseX = mouseX; pmouseY = mouseY; mouseX = e.clientX; mouseY = e.clientY;
+  glowI = Math.min(glowI + .04, 1);
+  if (dragging) addTrail();
+});
+cv.addEventListener('mouseleave', () => { mouseX=-1; mouseY=-1; glowI=0; dragging=false; });
+cv.addEventListener('touchmove', e => { e.preventDefault(); mouseX=e.touches[0].clientX; mouseY=e.touches[0].clientY; if(dragging)addTrail(); }, {passive:false});
+cv.addEventListener('touchstart', e => { dragging=true; mouseX=e.touches[0].clientX; mouseY=e.touches[0].clientY; });
+cv.addEventListener('touchend', () => { dragging=false; });
+cv.addEventListener('mousedown', () => { dragging=true; });
+cv.addEventListener('mouseup', () => { dragging=false; });
+cv.addEventListener('wheel', e => { e.preventDefault(); forceRadius=Math.max(60,Math.min(500,forceRadius-e.deltaY*.4)); }, {passive:false});
+
 cv.addEventListener('dblclick', e => {
   e.preventDefault();
-  wells.push({x: e.clientX, y: e.clientY, life: 1, born: Date.now()});
-  shockwaves.push({x: e.clientX, y: e.clientY, r: 0, life: 1, col: 'rgba(210,153,34,'});
-  // Light up nearby hex grid
-  for (const h of hexGrid) {
-    const dx = h.x - e.clientX, dy = h.y - e.clientY;
-    if (dx*dx+dy*dy < 40000) h.glow = 1;
+  const zone = getZone(e.clientX, e.clientY);
+  if (zone === 'brain') {
+    // Brain zone: burst of thinking edges
+    for (let i = 0; i < 12; i++) setTimeout(flashEdge, i*30);
+    for (const n of spiralNodes) n.act = Math.max(n.act, .8);
+  } else {
+    // Other zones: gravity well
+    wells.push({x:e.clientX, y:e.clientY, life:1});
   }
-  if (wells.length > 6) wells.shift();
+  shockwaves.push({x:e.clientX, y:e.clientY, r:0, life:1, col:zone==='grid'?'rgba(210,153,34,':'rgba(210,168,255,'});
+  for (const h of hexGrid) {
+    const dx=h.x-e.clientX, dy=h.y-e.clientY;
+    if(dx*dx+dy*dy<40000) h.glow=1;
+  }
+  if(wells.length>6)wells.shift();
 });
 
 function addTrail() {
-  if (mouseX > 0) trails.push({x: mouseX, y: mouseY, life: 1});
-  if (trails.length > 60) trails.shift();
+  if(mouseX>0)trails.push({x:mouseX,y:mouseY,life:1});
+  if(trails.length>60)trails.shift();
 }
 
-cv.addEventListener('mousemove', () => { if (dragging) addTrail(); });
-
 document.addEventListener('click', e => {
-  shockwaves.push({x: e.clientX, y: e.clientY, r: 0, life: 1,
-    col: e.shiftKey ? 'rgba(248,81,73,' : 'rgba(210,168,255,'});
+  const zone = getZone(e.clientX, e.clientY);
+  const edge = isEdge(e.clientX, e.clientY);
+
+  // Zone-specific shockwave color
+  const cols = {brain:'rgba(88,166,255,', spiral:'rgba(210,168,255,', grid:'rgba(63,185,80,'};
+  shockwaves.push({x:e.clientX, y:e.clientY, r:0, life:1,
+    col: e.shiftKey ? 'rgba(248,81,73,' : (cols[zone]||'rgba(210,168,255,')});
+
+  // Zone-specific particle burst pattern
   const dir = e.shiftKey ? -1 : 1;
-  // Golden spiral burst
-  for (let i = 0; i < 16; i++) {
-    const angle = i * TAU / PHI;
-    const dist = Math.sqrt(i / 16) * 45;
-    const speed = .8 + Math.random() * 2;
-    particles.push({
-      x: e.clientX + Math.cos(angle) * dist, y: e.clientY + Math.sin(angle) * dist,
-      z: .5 + Math.random() * .5,
-      s: Math.random() * 3 + .5, vx: Math.cos(angle) * speed * dir, vy: Math.sin(angle) * speed * dir,
-      ph: Math.random() * TAU,
-      cl: ['rgba(210,168,255,','rgba(88,166,255,','rgba(63,185,80,','rgba(0,212,255,'][i%4],
-      baseOp: .15,
-    });
+  if (zone === 'brain') {
+    // Brain zone: circular burst (8 particles, gentle)
+    for (let i = 0; i < 8; i++) {
+      const a = i/8*TAU;
+      particles.push({x:e.clientX+Math.cos(a)*15, y:e.clientY+Math.sin(a)*15, z:.7,
+        s:Math.random()*2+.5, vx:Math.cos(a)*.8*dir, vy:Math.sin(a)*.8*dir,
+        ph:Math.random()*TAU, cl:'rgba(88,166,255,', baseOp:.12});
+    }
+  } else if (zone === 'spiral') {
+    // Spiral zone: golden-angle Fibonacci burst (16 particles, structured)
+    for (let i = 0; i < 16; i++) {
+      const angle = i * GOLDEN_ANGLE;
+      const dist = Math.sqrt(i/16) * 50;
+      const speed = .8 + Math.random()*2;
+      particles.push({x:e.clientX+Math.cos(angle)*dist, y:e.clientY+Math.sin(angle)*dist,
+        z:.5+Math.random()*.5, s:Math.random()*3+.5,
+        vx:Math.cos(angle)*speed*dir, vy:Math.sin(angle)*speed*dir,
+        ph:Math.random()*TAU,
+        cl:['rgba(210,168,255,','rgba(88,166,255,','rgba(63,185,80,','rgba(0,212,255,'][i%4], baseOp:.15});
+    }
+  } else {
+    // Grid zone: hex-pattern burst (Fibonacci count, outward)
+    const count = FIB[6]; // 13 particles
+    for (let i = 0; i < count; i++) {
+      const a = i/count*TAU;
+      const speed = 1 + Math.random()*1.5;
+      particles.push({x:e.clientX, y:e.clientY, z:.3+Math.random()*.4,
+        s:Math.random()*2+.3, vx:Math.cos(a)*speed*dir, vy:Math.sin(a)*speed*dir,
+        ph:Math.random()*TAU, cl:i%2?'rgba(63,185,80,':'rgba(210,153,34,', baseOp:.12});
+    }
   }
+
+  // Edge vortex: if clicking near edges, pull toward center
+  if (edge) {
+    for (const p of particles) {
+      const dx=W/2-p.x, dy=H/2-p.y, d=Math.sqrt(dx*dx+dy*dy);
+      if(d>1) { p.vx += dx/d*.3; p.vy += dy/d*.3; }
+    }
+  }
+
+  // Activate nodes within zone-scaled radius
+  const zoneRadius = zone==='brain' ? forceRadius*1.5 : zone==='spiral' ? forceRadius : forceRadius*.7;
   for (const n of spiralNodes) {
-    const dx = e.clientX - n.x, dy = e.clientY - n.y;
-    if (Math.sqrt(dx*dx+dy*dy) < forceRadius) n.act = 1;
+    const dx=e.clientX-n.x, dy=e.clientY-n.y;
+    if(Math.sqrt(dx*dx+dy*dy)<zoneRadius) n.act=1;
   }
-  for (let i = 0; i < 5; i++) setTimeout(flashEdge, i * 40);
-  // Light hex grid near click
+  for (let i = 0; i < 5; i++) setTimeout(flashEdge, i*40);
   for (const h of hexGrid) {
-    const dx = h.x - e.clientX, dy = h.y - e.clientY;
-    if (dx*dx+dy*dy < 25000) h.glow = Math.max(h.glow, .6);
+    const dx=h.x-e.clientX, dy=h.y-e.clientY;
+    if(dx*dx+dy*dy<25000) h.glow=Math.max(h.glow,.6);
   }
-  while (particles.length > 350) particles.shift();
+  while(particles.length>350)particles.shift();
+
+  // Shift+click repulsion in any zone
   if (e.shiftKey) {
     for (const p of particles) {
-      const dx = p.x-e.clientX, dy = p.y-e.clientY, d = Math.sqrt(dx*dx+dy*dy);
-      if (d < 350 && d > 1) { p.vx += dx/d*2; p.vy += dy/d*2; }
+      const dx=p.x-e.clientX, dy=p.y-e.clientY, d=Math.sqrt(dx*dx+dy*dy);
+      if(d<350&&d>1){p.vx+=dx/d*2;p.vy+=dy/d*2}
     }
   }
 });
@@ -404,13 +539,23 @@ function draw(t) {
     }
   }
 
-  // ── Particles ──
+  // ── Particles with zone-aware force ──
+  const curZone = mouseX > 0 ? getZone(mouseX, mouseY) : 'none';
   for (const p of particles) {
-    // Force field
+    // Zone-aware force field: brain=attract, grid=repulse near floor, spiral=orbit
     if (mouseX > 0) {
       const dx = mouseX-p.x, dy = mouseY-p.y, dist = Math.sqrt(dx*dx+dy*dy);
       if (dist < forceRadius && dist > 1) {
-        const f = (forceRadius-dist)/forceRadius * .025;
+        let f = (forceRadius-dist)/forceRadius * .025;
+        if (curZone === 'grid') {
+          // Grid zone: repulsion (particles flee, creating space around cursor)
+          f *= -0.6;
+        } else if (curZone === 'spiral') {
+          // Spiral zone: orbital (perpendicular force creates swirl)
+          const px = -dy/dist * f * .8, py = dx/dist * f * .8;
+          p.vx += px; p.vy += py;
+          f *= .3; // weaker radial pull
+        }
         p.vx += dx/dist*f; p.vy += dy/dist*f;
       }
     }
