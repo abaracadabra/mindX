@@ -582,7 +582,7 @@ async def _heartbeat_query_local_model():
         t0 = time.time()
         timeout = _aio.ClientTimeout(total=30)
         async with _aio.ClientSession(timeout=timeout) as sess:
-            payload = {"model": "qwen3:1.7b", "messages": [{"role": "user", "content": prompt}], "stream": False}
+            payload = {"model": "qwen3:0.6b", "messages": [{"role": "user", "content": prompt}], "stream": False}
             async with sess.post("http://localhost:11434/api/chat", json=payload) as resp:
                 if resp.status == 200:
                     data = await resp.json()
@@ -593,7 +593,7 @@ async def _heartbeat_query_local_model():
                     entry = {
                         "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
                         "agent": "mindx_heartbeat",
-                        "model": "qwen3:1.7b",
+                        "model": "qwen3:0.6b",
                         "prompt": prompt,
                         "response": response_text[:500],
                         "latency_ms": latency,
@@ -605,7 +605,7 @@ async def _heartbeat_query_local_model():
                     cpu_at = _ps.cpu_percent(interval=None)
                     _diag_model_perf.append({
                         "ts": datetime.utcnow().strftime("%H:%M:%S"),
-                        "model": "qwen3:1.7b",
+                        "model": "qwen3:0.6b",
                         "latency_ms": latency,
                         "tokens_est": tokens_est,
                         "tps": tps,
@@ -616,7 +616,7 @@ async def _heartbeat_query_local_model():
                     # Persist to pgvector
                     try:
                         from agents import memory_pgvector as _mpf
-                        await _mpf.store_model_perf("qwen3:1.7b", latency, tokens_est, tps, cpu_at)
+                        await _mpf.store_model_perf("qwen3:0.6b", latency, tokens_est, tps, cpu_at)
                     except Exception:
                         pass
 

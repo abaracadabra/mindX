@@ -68,6 +68,21 @@ SOLDIER_WEIGHTS = {
 
 SUPERMAJORITY_THRESHOLD = 0.666
 
+# Local model assignments — best model for each Soldier's role
+# qwen3:1.7b = complex reasoning (CTO, CISO, CRO)
+# qwen3:0.6b = fast decisions (COO, CFO, CLO, CPO)
+SOLDIER_MODELS = {
+    "coo_operations": "qwen3:0.6b",    # Fast operational decisions
+    "cfo_finance": "qwen3:0.6b",       # Quick financial assessment
+    "cto_technology": "qwen3:1.7b",    # Deep technical evaluation
+    "ciso_security": "qwen3:1.7b",     # Security analysis needs reasoning
+    "clo_legal": "qwen3:0.6b",         # Compliance check (fast)
+    "cpo_product": "qwen3:0.6b",       # Product perspective (fast)
+    "cro_risk": "qwen3:1.7b",          # Risk modeling needs depth
+}
+
+OLLAMA_URL = "http://localhost:11434"
+
 
 class Boardroom:
     """CEO + Seven Soldiers weighted consensus engine."""
@@ -155,7 +170,8 @@ class Boardroom:
         weight: float,
         context: Optional[Dict[str, Any]],
     ) -> SoldierVote:
-        """Query a single Soldier using their assigned inference provider."""
+        """Query a Soldier using the best local model for their role."""
+        model = SOLDIER_MODELS.get(soldier_id, "qwen3:1.7b")
         prompt = (
             f"You are {soldier_id} in the mindX executive board. "
             f"Evaluate this directive and vote approve, reject, or abstain.\n\n"
@@ -168,16 +184,21 @@ class Boardroom:
 
         t0 = time.time()
         try:
-            # Try to use the assigned provider via LLM factory
-            from llm.llm_factory import create_llm_handler
-            handler = await create_llm_handler(provider_name=provider)
-            response = await handler.generate_text(
-                prompt=prompt,
-                model=handler.model_name_for_api or "default",
-                max_tokens=256,
-                temperature=0.7,
-                json_mode=True,
-            )
+            # Query local Ollama directly with assigned model
+            import aiohttp
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60)) as sess:
+                payload = {
+                    "model": model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "stream": False,
+                    "format": "json",
+                }
+                async with sess.post(f"{OLLAMA_URL}/api/chat", json=payload) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        response = data.get("message", {}).get("content", "")
+                    else:
+                        response = None
             latency = int((time.time() - t0) * 1000)
 
             # Parse response
@@ -196,7 +217,7 @@ class Boardroom:
 
             return SoldierVote(
                 soldier_id=soldier_id,
-                provider=provider,
+                provider=f"ollama/{model}",
                 vote=vote_data.get("vote", "abstain"),
                 reasoning=vote_data.get("reasoning", "")[:300],
                 confidence=float(vote_data.get("confidence", 0.5)),
@@ -207,9 +228,9 @@ class Boardroom:
             latency = int((time.time() - t0) * 1000)
             return SoldierVote(
                 soldier_id=soldier_id,
-                provider=provider,
+                provider=f"ollama/{model}",
                 vote="abstain",
-                reasoning=f"Provider unavailable: {str(e)[:100]}",
+                reasoning=f"Model unavailable: {str(e)[:100]}",
                 confidence=0.0,
                 latency_ms=latency,
                 weight=weight,
