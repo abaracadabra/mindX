@@ -109,10 +109,19 @@ class MemoryAgent:
             "memories_by_agent": defaultdict(int),
         }
 
+        # pgvector backend (DB primary, file backup)
+        self._pg_available = False
+        try:
+            from agents import memory_pgvector as _mpg
+            self._pg = _mpg
+            self._pg_available = True
+        except Exception:
+            self._pg = None
+
         self._initialize_storage()
         if UJSON_AVAILABLE:
             logger.info("ujson library detected, will be used for faster JSON operations.")
-        logger.info(f"MemoryAgent initialized (identity: {self.wallet_address or 'unverified'}).")
+        logger.info(f"MemoryAgent initialized (identity: {self.wallet_address or 'unverified'}, pgvector: {self._pg_available}).")
 
     def _verify_identity(self):
         """
@@ -213,7 +222,23 @@ class MemoryAgent:
             self.memory_stats["total_memories"] += 1
             self.memory_stats["memories_by_type"][memory_type.value] += 1
             self.memory_stats["memories_by_agent"][agent_id] += 1
-            
+
+            # pgvector: store in PostgreSQL (non-blocking, file is already saved)
+            if self._pg_available and self._pg and memory_record.memory_id:
+                try:
+                    await self._pg.store_memory(
+                        memory_id=memory_record.memory_id,
+                        agent_id=agent_id,
+                        memory_type=memory_type.value,
+                        importance=importance.value,
+                        content=content,
+                        context=context or {},
+                        tags=tags or [],
+                        parent_memory_id=parent_memory_id,
+                    )
+                except Exception:
+                    pass  # File already saved — DB is best-effort
+
             logger.debug(f"Timestamped memory saved: {filepath}")
             return memory_record.memory_id
             

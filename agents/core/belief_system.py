@@ -113,6 +113,12 @@ class BeliefSystem:
             else:
                 self.beliefs[key] = Belief(value, confidence, source)
             self._save_beliefs_if_path()
+        # pgvector: store in PostgreSQL (non-blocking)
+        try:
+            from agents import memory_pgvector as _mpg
+            await _mpg.store_belief(key, value, confidence, source.value if hasattr(source, 'value') else str(source))
+        except Exception:
+            pass
 
     async def add_belief(self, key: str, value: Any, confidence: float = 1.0, source: BeliefSource = BeliefSource.PERCEPTION, metadata: Optional[Dict] = None, ttl_seconds: Optional[float] = None):
         await self.update_belief(key, value, confidence, source, metadata, ttl_seconds)

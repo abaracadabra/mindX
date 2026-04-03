@@ -581,22 +581,32 @@ async def diagnostics_live_endpoint():
                 if isinstance(val, str) and len(val) > 50: val = val[:50] + "..."
                 bs.append({"key": k, "value": val})
     except Exception: pass
-    # stm count with per-agent breakdown
-    stm_path = PROJECT_ROOT / "data" / "memory" / "stm"
+    # stm count — try pgvector first, fall back to filesystem
     stm = 0
     stm_by_agent = {}
+    db_health = {}
     try:
-        if stm_path.exists():
-            from collections import defaultdict as _ddict
-            _counts = _ddict(int)
-            for f in stm_path.rglob("*.memory.json"):
-                parts = f.relative_to(stm_path).parts
-                if parts:
-                    _counts[parts[0]] += 1
-                    stm += 1
-            stm_by_agent = dict(sorted(_counts.items(), key=lambda x: -x[1]))
+        from agents import memory_pgvector as _mpg
+        stm_by_agent = await _mpg.count_memories_by_agent()
+        stm = await _mpg.count_memories_total()
+        db_health = await _mpg.health_check()
     except Exception:
         pass
+    # Filesystem fallback if DB returned nothing
+    if stm == 0:
+        try:
+            stm_path = PROJECT_ROOT / "data" / "memory" / "stm"
+            if stm_path.exists():
+                from collections import defaultdict as _ddict
+                _counts = _ddict(int)
+                for f in stm_path.rglob("*.memory.json"):
+                    parts = f.relative_to(stm_path).parts
+                    if parts:
+                        _counts[parts[0]] += 1
+                        stm += 1
+                stm_by_agent = dict(sorted(_counts.items(), key=lambda x: -x[1]))
+        except Exception:
+            pass
     wsp = sum(1 for d_ in (PROJECT_ROOT / "data" / "memory" / "agent_workspaces").iterdir() if d_.is_dir()) if (PROJECT_ROOT / "data" / "memory" / "agent_workspaces").exists() else 0
     # godel
     gp = PROJECT_ROOT / "data" / "logs" / "godel_choices.jsonl"
@@ -695,6 +705,7 @@ async def diagnostics_live_endpoint():
         "dojo": dojo_data, "boardroom": br_data,
         "model_perf": list(_diag_model_perf),
         "disk_detail": disk_detail,
+        "database": db_health,
         "recent_logs": logs,
     }
 
