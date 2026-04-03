@@ -159,7 +159,130 @@ app = FastAPI(
 # ── Public diagnostics dashboard + journal ──
 from fastapi.responses import HTMLResponse as _DashResponse
 
-@app.get("/journal", response_class=_DashResponse, tags=["diagnostics"], include_in_schema=False)
+@app.get("/docs.html", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
+async def docs_html_page():
+    """Documentation hub — The Book of mindX, Journal, API docs, core references."""
+    book_path = PROJECT_ROOT / "docs" / "BOOK_OF_MINDX.md"
+    journal_path = PROJECT_ROOT / "docs" / "IMPROVEMENT_JOURNAL.md"
+    book_exists = book_path.exists()
+    journal_exists = journal_path.exists()
+    # Count publications
+    pub_dir = PROJECT_ROOT / "docs" / "publications"
+    editions = sorted(pub_dir.glob("book_of_mindx_*.md"), reverse=True) if pub_dir.exists() else []
+    edition_count = len(editions)
+    return _DashResponse(content=f"""<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mindX Documentation</title>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{font-family:'SF Mono','Fira Code',monospace;background:#050810;color:#b0b8c4;min-height:100vh}}
+.top{{max-width:720px;margin:0 auto;padding:32px 20px}}
+h1{{font-size:22px;color:#e6edf3;margin-bottom:4px;letter-spacing:1px}}
+h1 b{{color:#58a6ff}}
+.sub{{font-size:10px;color:#4a5060;margin-bottom:24px}}
+.card{{background:rgba(13,17,23,.8);border:1px solid rgba(26,31,46,.6);border-radius:6px;padding:16px;margin-bottom:12px;transition:border-color .2s}}
+.card:hover{{border-color:rgba(88,166,255,.3)}}
+.card h2{{font-size:13px;color:#e6edf3;margin-bottom:4px}}
+.card h2 a{{color:#58a6ff;text-decoration:none}}.card h2 a:hover{{text-decoration:underline}}
+.card p{{font-size:10px;color:#6e7681;line-height:1.5;margin-bottom:6px}}
+.card .meta{{font-size:8px;color:#3d424d}}
+.tag{{display:inline-block;padding:1px 5px;border-radius:3px;font-size:7px;font-weight:700;margin-right:4px}}
+.tag-live{{background:rgba(13,51,33,.8);color:#3fb950}}.tag-auto{{background:rgba(26,42,58,.8);color:#58a6ff}}
+.tag-ref{{background:rgba(42,42,26,.8);color:#d29922}}.tag-api{{background:rgba(36,20,50,.8);color:#d2a8ff}}
+.sep{{border:none;border-top:1px solid rgba(26,31,46,.5);margin:20px 0}}
+.ft{{font-size:8px;color:#3d424d;text-align:center;margin-top:24px}}
+.ft a{{color:#58a6ff;text-decoration:none}}
+</style></head><body><div class="top">
+<h1>mind<b>X</b> docs</h1>
+<div class="sub">living documentation from an evolving system</div>
+
+<div class="card">
+<h2><a href="/book">The Book of mindX</a></h2>
+<p>The evolving chronicle of a self-improving system — architecture, identities, decisions, philosophy. Written by mindX itself via AuthorAgent. Republished every 2 hours.</p>
+<div class="meta"><span class="tag tag-live">LIVE</span><span class="tag tag-auto">AUTO-GENERATED</span> {'Published' if book_exists else 'First edition pending'} &middot; {edition_count} edition{'s' if edition_count!=1 else ''} archived</div>
+</div>
+
+<div class="card">
+<h2><a href="/journal">Improvement Journal</a></h2>
+<p>Timestamped log of autonomous decisions, campaign results, belief changes, and system snapshots. Updated every 30 minutes by the improvement loop.</p>
+<div class="meta"><span class="tag tag-live">LIVE</span><span class="tag tag-auto">AUTO-GENERATED</span> {'Active' if journal_exists else 'Waiting for first entry'}</div>
+</div>
+
+<hr class="sep">
+
+<div class="card">
+<h2><a href="/docs">API Reference</a> <span style="color:#4a5060;font-size:10px">(Swagger)</span></h2>
+<p>Interactive API documentation. All endpoints: agents, inference, governance, vault, diagnostics.</p>
+<div class="meta"><span class="tag tag-api">API</span> FastAPI auto-generated &middot; <a href="/redoc" style="color:#4a5060">ReDoc</a></div>
+</div>
+
+<div class="card">
+<h2><a href="/dojo/standings">Dojo Standings</a></h2>
+<p>Agent reputation rankings — scores, ranks, BONA FIDE verification status.</p>
+<div class="meta"><span class="tag tag-live">LIVE</span> 12 agents tracked</div>
+</div>
+
+<div class="card">
+<h2><a href="/inference/status">Inference Status</a></h2>
+<p>Live inference source availability — Ollama, vLLM, cloud providers. Auto-probed every 60s.</p>
+<div class="meta"><span class="tag tag-live">LIVE</span></div>
+</div>
+
+<hr class="sep">
+
+<div class="card">
+<h2>Core References</h2>
+<p>Foundational documents that define what mindX is.</p>
+<div class="meta">
+<span class="tag tag-ref">REF</span>
+<a href="https://github.com/AgenticPlace/mindX" style="color:#58a6ff;font-size:9px">GitHub</a> &middot;
+THESIS.md &middot; MANIFESTO.md &middot; AGENTS.md &middot; DEPLOYMENT_MINDX_PYTHAI_NET.md
+</div>
+</div>
+
+<div class="ft"><a href="/">dashboard</a> &middot; mindx.pythai.net &middot; &copy; Professor Codephreak</div>
+</div></body></html>""")
+
+@app.get("/book", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
+async def book_of_mindx_page():
+    """The Book of mindX — rendered from latest edition."""
+    book_path = PROJECT_ROOT / "docs" / "BOOK_OF_MINDX.md"
+    if not book_path.exists():
+        return _DashResponse(content="<html><body style='background:#050810;color:#b0b8c4;font-family:monospace;padding:40px'><h1>The Book of mindX</h1><p>First edition is being written. Check back in 2 minutes.</p><p><a href='/docs.html' style='color:#58a6ff'>Back to docs</a></p></body></html>")
+    md = book_path.read_text(encoding="utf-8")
+    import re
+    h = md
+    h = re.sub(r'^### (.+)$', r'<h3>\1</h3>', h, flags=re.MULTILINE)
+    h = re.sub(r'^## (.+)$', r'<h2>\1</h2>', h, flags=re.MULTILINE)
+    h = re.sub(r'^# (.+)$', r'<h1>\1</h1>', h, flags=re.MULTILINE)
+    h = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', h)
+    h = re.sub(r'\*(.+?)\*', r'<em>\1</em>', h)
+    h = re.sub(r'`([^`]+)`', r'<code>\1</code>', h)
+    h = re.sub(r'^- (.+)$', r'<li>\1</li>', h, flags=re.MULTILINE)
+    h = re.sub(r'^> (.+)$', r'<blockquote>\1</blockquote>', h, flags=re.MULTILINE)
+    h = re.sub(r'^---$', r'<hr>', h, flags=re.MULTILINE)
+    h = re.sub(r'```([\s\S]*?)```', r'<pre>\1</pre>', h)
+    h = re.sub(r'\|(.+)\|', lambda m: '<tr>' + ''.join(f'<td>{c.strip()}</td>' for c in m.group(1).split('|')) + '</tr>', h)
+    h = h.replace('\n\n', '</p><p>').replace('\n', '<br>')
+    return _DashResponse(content=f"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Book of mindX</title>
+<style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'SF Mono','Fira Code',monospace;background:#050810;color:#b0b8c4;padding:24px;max-width:800px;margin:0 auto;line-height:1.6}}
+h1{{color:#e6edf3;font-size:22px;margin:20px 0 8px;letter-spacing:1px}}h1 b{{color:#58a6ff}}
+h2{{color:#58a6ff;font-size:15px;margin:24px 0 8px;padding-top:16px;border-top:1px solid rgba(26,31,46,.5)}}
+h3{{color:#d2a8ff;font-size:12px;margin:14px 0 4px}}
+p{{margin:6px 0;font-size:11px}}strong{{color:#e6edf3}}em{{color:#6e7681}}
+code{{background:rgba(22,27,34,.8);padding:1px 4px;border-radius:3px;color:#7ee787;font-size:10px}}
+pre{{background:rgba(22,27,34,.8);padding:10px;border-radius:4px;font-size:9px;overflow-x:auto;margin:8px 0;color:#8b949e}}
+li{{margin:2px 0 2px 16px;font-size:11px}}blockquote{{border-left:2px solid rgba(88,166,255,.3);padding:4px 12px;color:#6e7681;margin:8px 0;font-size:10px;font-style:italic}}
+hr{{border:none;border-top:1px solid rgba(26,31,46,.4);margin:20px 0}}
+table{{width:100%;border-collapse:collapse;margin:8px 0;font-size:9px}}td{{padding:2px 6px;border-bottom:1px solid rgba(26,31,46,.3)}}
+.nav{{font-size:9px;color:#3d424d;margin-bottom:16px}}.nav a{{color:#58a6ff;text-decoration:none}}
+</style></head><body>
+<div class="nav"><a href="/docs.html">&larr; docs</a> &middot; <a href="/">dashboard</a> &middot; <a href="/journal">journal</a></div>
+{h}
+</body></html>""")
+
+@app.get("/journal", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
 async def improvement_journal_page():
     """Serve the auto-generated improvement journal as styled HTML."""
     journal_path = PROJECT_ROOT / "docs" / "IMPROVEMENT_JOURNAL.md"
@@ -628,10 +751,23 @@ async def startup_event():
             except Exception as je:
                 logger.warning(f"ImprovementJournal failed: {je}")
 
+        # AuthorAgent — The Book of mindX, published every 2 hours
+        async def _periodic_author():
+            await asyncio.sleep(120)  # Let journal write first
+            try:
+                from agents.author_agent import AuthorAgent
+                author = await AuthorAgent.get_instance()
+                await author.publish()  # First edition immediately
+                logger.info("AuthorAgent: first edition of The Book of mindX published")
+                await author.run_periodic(interval_seconds=7200)  # Then every 2h
+            except Exception as ae:
+                logger.warning(f"AuthorAgent failed: {ae}")
+
         asyncio.create_task(_auto_start_autonomous())
         asyncio.create_task(_periodic_memory_promotion())
         asyncio.create_task(_periodic_journal())
-        logger.info("Autonomous mode + STM→LTM promotion + Improvement Journal scheduled")
+        asyncio.create_task(_periodic_author())
+        logger.info("Autonomous mode + STM→LTM + Journal + AuthorAgent scheduled")
 
         # Log backend startup transcript to data/ via memory_agent (logs are memories; startup_agent can get a copy)
         try:
