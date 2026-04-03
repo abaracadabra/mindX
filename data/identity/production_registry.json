@@ -1,0 +1,129 @@
+{
+  "genesis_timestamp": "2026-04-02T23:05:05.914436+00:00",
+  "deployment": "production",
+  "domain": "mindx.pythai.net",
+  "vault_cipher": "aes-256-gcm",
+  "vault_kdf": "hkdf-sha512",
+  "agents": [
+    {
+      "entity_id": "guardian_agent_main",
+      "role": "Security Infrastructure \u2014 access control, threat detection, identity verification",
+      "address": "0x9F730F6873102ee648E39b4543dEf776cD8eA182",
+      "vault_id": "agent_pk_guardian_agent_main"
+    },
+    {
+      "entity_id": "coordinator_agent_main",
+      "role": "Service Bus Kernel \u2014 pub/sub routing, task queues, rate limiting",
+      "address": "0xF95b2D53254fdC88C0f763C105f1200a9b5Cc050",
+      "vault_id": "agent_pk_coordinator_agent_main"
+    },
+    {
+      "entity_id": "mastermind_prime",
+      "role": "Strategic Executive \u2014 orchestration center, directive management",
+      "address": "0xFF9E596B6E24449eBaaB7AeC112c111808078765",
+      "vault_id": "agent_pk_mastermind_prime"
+    },
+    {
+      "entity_id": "mindx_agint",
+      "role": "Cognitive Core \u2014 P-O-D-A loop, perception-orientation-decision-action",
+      "address": "0x66eB85135F75110dc2E87171995951785d5E8e9E",
+      "vault_id": "agent_pk_mindx_agint"
+    },
+    {
+      "entity_id": "automindx_agent_main",
+      "role": "Autonomous Operations \u2014 self-directed task execution",
+      "address": "0x19D8237AEe13FcD468f1be3F7816Dd583c6775b5",
+      "vault_id": "agent_pk_automindx_agent_main"
+    },
+    {
+      "entity_id": "sea_for_mastermind",
+      "role": "Strategic Evolution \u2014 4-phase audit-driven self-improvement campaigns",
+      "address": "0x0DaFCf794Af784446086167a07A5976F793f1e3F",
+      "vault_id": "agent_pk_sea_for_mastermind"
+    },
+    {
+      "entity_id": "blueprint_agent_mindx_v2",
+      "role": "Architecture Planning \u2014 system design, blueprint generation",
+      "address": "0x27675Ebf793309BD0caF0B0e31E4095b1A0Bb2Bb",
+      "vault_id": "agent_pk_blueprint_agent_mindx_v2"
+    },
+    {
+      "entity_id": "ceo_agent_main",
+      "role": "Board-Level Governance \u2014 strategic planning, resource allocation, shutdown authority",
+      "address": "0x0e114A0daE2F4074B6D320a8AA52fFD429Bb6f19",
+      "vault_id": "agent_pk_ceo_agent_main"
+    },
+    {
+      "entity_id": "inference_agent_main",
+      "role": "Inference Optimization \u2014 model selection, provider routing, performance tuning",
+      "address": "0x18835630435EdDD0fE2ecE787D11C797E32d5ed8",
+      "vault_id": "agent_pk_inference_agent_main"
+    },
+    {
+      "entity_id": "memory_agent_main",
+      "role": "Persistent Memory \u2014 STM/LTM promotion, belief system integration",
+      "address": "0x7CC588CA19C433D50BE41544BdDA30863EFD27Ca",
+      "vault_id": "agent_pk_memory_agent_main"
+    },
+    {
+      "entity_id": "validator_agent_main",
+      "role": "Validation Authority \u2014 output verification, quality assurance",
+      "address": "0x01767C5E46c375Cd3Ee156Bd4070CBb8E7364C91",
+      "vault_id": "agent_pk_validator_agent_main"
+    },
+    {
+      "entity_id": "system_state_tracker",
+      "role": "State Observer \u2014 system snapshots, health monitoring, metrics",
+      "address": "0x4FE20450AEd8cc5997E30d38792575Cb0087E093",
+      "vault_id": "agent_pk_system_state_tracker"
+    },
+    {
+      "entity_id": "startup_agent",
+      "address": "0x3E3E1E611D6Ff48942213Dc2c11E8dac87349609",
+      "role": "System Bootstrap \u2014 initialization, agent registry, Ollama auto-connect",
+      "vault_id": "agent_pk_startup_agent"
+    },
+    {
+      "entity_id": "replication_agent",
+      "address": "0x22CDB03340E4C9779a5086466d87264a10aF702e",
+      "role": "GitHub Backup \u2014 code replication, identity sync",
+      "vault_id": "agent_pk_replication_agent"
+    },
+    {
+      "entity_id": "shutdown_agent",
+      "address": "0x9D1A6Cf6a9FeEf09CBC6565D8953F07c5D3b38Ba",
+      "role": "Graceful Shutdown \u2014 state persistence, key zeroization",
+      "vault_id": "agent_pk_shutdown_agent"
+    },
+    {
+      "entity_id": "author_agent",
+      "address": "0x5277D156E7cD71ebF22c8f81812A65493D1ce534",
+      "role": "AuthorAgent \u2014 Book of mindX, improvement journal, doc audit",
+      "vault_id": "agent_pk_author_agent"
+    },
+    {
+      "entity_id": "vllm_agent",
+      "address": "0xee5c88F6e721B05240f14da792CD293202555591",
+      "role": "vLLM Management \u2014 build, serve, monitor inference server",
+      "vault_id": "agent_pk_vllm_agent"
+    },
+    {
+      "entity_id": "resource_governor",
+      "address": "0xFf4662c8eF4FEC1c2d8A20A2Cb52A7Ad7BB13063",
+      "role": "Resource Governor \u2014 power appetite control, VPS coexistence",
+      "vault_id": "agent_pk_resource_governor"
+    },
+    {
+      "entity_id": "prediction_agent",
+      "address": "0x4c9b75E9a206589c21f817989eF6c9B290Adb4E5",
+      "role": "Prediction \u2014 outcome forecasting, trend analysis",
+      "vault_id": "agent_pk_prediction_agent"
+    },
+    {
+      "entity_id": "socratic_agent",
+      "address": "0xB5C54F36eDC2656DF588b69Ce29F07aaF34fE036",
+      "role": "Socratic Reasoning \u2014 dialectical analysis, question-driven improvement",
+      "vault_id": "agent_pk_socratic_agent"
+    }
+  ]
+}
