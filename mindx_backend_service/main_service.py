@@ -263,9 +263,9 @@ ul{{padding:0}}li{{margin:4px 0;font-size:10px;line-height:1.5}}
 <hr class="sep">
 
 <div class="card">
-<h2><a href="/docs">API Reference</a> <span style="color:#4a5060;font-size:10px">(Swagger)</span></h2>
-<p>Interactive API documentation. All endpoints: agents, inference, governance, vault, diagnostics.</p>
-<div class="meta"><span class="tag tag-api">API</span> FastAPI auto-generated &middot; <a href="/redoc" style="color:#4a5060">ReDoc</a></div>
+<h2><a href="/redoc">API Reference</a> <span style="color:#4a5060;font-size:10px">(185 endpoints)</span></h2>
+<p>Complete API documentation. All endpoints: agents, inference, governance, vault, diagnostics, chat, actions, RAGE embed.</p>
+<div class="meta"><span class="tag tag-api">API</span> <a href="/redoc" style="color:#58a6ff">ReDoc</a> (fast) &middot; <a href="/docs" style="color:#4a5060">Swagger UI</a> &middot; <a href="/openapi.json" style="color:#4a5060">OpenAPI JSON</a></div>
 </div>
 
 <div class="card">
