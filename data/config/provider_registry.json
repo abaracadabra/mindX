@@ -74,9 +74,28 @@
     "enabled": false,
     "metadata": {}
   },
+  "vllm": {
+    "name": "vllm",
+    "display_name": "vLLM (Production Inference)",
+    "module_path": "llm.vllm_handler",
+    "factory_function": "VLLMHandler",
+    "api_key_env_var": "VLLM_API_KEY",
+    "base_url_env_var": "VLLM_BASE_URL",
+    "requires_api_key": false,
+    "requires_base_url": true,
+    "default_rate_limit_rpm": 1000,
+    "default_rate_limit_tpm": 10000000,
+    "status": "enabled",
+    "enabled": true,
+    "metadata": {
+      "engine": "vllm",
+      "api_compat": "openai",
+      "features": ["paged_attention", "continuous_batching", "speculative_decoding"]
+    }
+  },
   "ollama": {
     "name": "ollama",
-    "display_name": "Ollama (Local)",
+    "display_name": "Ollama (Local/Fallback)",
     "module_path": "api.ollama.ollama_url",
     "factory_function": "create_ollama_api",
     "api_key_env_var": null,

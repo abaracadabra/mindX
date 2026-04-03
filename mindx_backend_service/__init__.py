@@ -11,9 +11,7 @@ Key Components:
 - Data management
 """
 
-from .main_service import *
+# Lazy import — avoid circular imports that break module-level route registration
+# Access main_service via: from mindx_backend_service.main_service import app
 
-__all__ = [
-    "MainService",
-    "ServiceOrchestrator",
-]
+__all__ = []

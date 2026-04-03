@@ -346,12 +346,25 @@ class BDIAgent:
                 handler = self._internal_action_handlers[action_type]
                 success, result = await handler(action)
             elif action_type in self.available_tools:
-                tool = self.available_tools[action_type]
-                params = action.get("params", {})
-                if inspect.iscoroutinefunction(tool.execute):
-                    success, result = await tool.execute(**params)
+                # Verify caller is authorized to use this tool
+                tool_config = self.tools_registry.get("registered_tools", {}).get(action_type, {})
+                allowed = tool_config.get("access_control", {}).get("allowed_agents", ["*"])
+                if "*" not in allowed and self.agent_id not in allowed:
+                    deny_msg = f"ACCESS DENIED: agent '{self.agent_id}' not authorized for tool '{action_type}' (allowed: {allowed})"
+                    self.logger.warning(deny_msg)
+                    await self.memory_agent.log_process(
+                        process_name="tool_access_denied",
+                        data={"tool": action_type, "agent": self.agent_id, "allowed": allowed},
+                        metadata={"agent_id": self.agent_id, "security": True},
+                    )
+                    success, result = False, deny_msg
                 else:
-                    success, result = tool.execute(**params)
+                    tool = self.available_tools[action_type]
+                    params = action.get("params", {})
+                    if inspect.iscoroutinefunction(tool.execute):
+                        success, result = await tool.execute(**params)
+                    else:
+                        success, result = tool.execute(**params)
             else:
                 error_msg = f"Action '{action_type}' is not a valid internal action or a registered tool."
                 self.logger.error(error_msg)

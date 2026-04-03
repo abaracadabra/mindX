@@ -1,0 +1,111 @@
+# vLLM Model Configuration
+# Production inference server with PagedAttention, continuous batching.
+# Serves OpenAI-compatible API at /v1/chat/completions, /v1/completions.
+#
+# Start vLLM:
+#   vllm serve Qwen/Qwen3-0.6B --host 0.0.0.0 --port 8000
+#   vllm serve meta-llama/Llama-3.1-8B-Instruct --host 0.0.0.0 --port 8000 --dtype auto
+#
+# Override: VLLM_BASE_URL env var or llm.vllm.base_url in data/config.
+
+provider: vllm
+display_name: vLLM (Production Inference)
+enabled: true
+base_url: http://localhost:8000
+
+# Connection settings
+timeout: 300.0
+connect_timeout: 10.0
+
+# Rate limits (local server, high limits)
+rate_limits:
+  requests_per_minute: 1000
+  requests_per_day: 1000000
+  tokens_per_minute: 10000000
+  tokens_per_day: 1000000000
+
+# Default model (whatever is loaded in vLLM)
+default_model: Qwen/Qwen3-0.6B
+
+# Common models to serve via vLLM (HuggingFace model IDs)
+models:
+  - name: Qwen/Qwen3-0.6B
+    display_name: Qwen 3 0.6B
+    context_size: 32768
+    recommended: true
+    notes: "Lightweight reasoning model, fast inference"
+    task_scores:
+      reasoning: 0.70
+      code_generation: 0.65
+      simple_chat: 0.80
+      data_analysis: 0.65
+      writing: 0.72
+      speed_sensitive: 0.95
+  - name: Qwen/Qwen3-1.7B
+    display_name: Qwen 3 1.7B
+    context_size: 32768
+    recommended: true
+    notes: "Good balance of capability and speed"
+    task_scores:
+      reasoning: 0.78
+      code_generation: 0.75
+      simple_chat: 0.85
+      data_analysis: 0.75
+      writing: 0.80
+      speed_sensitive: 0.90
+  - name: Qwen/Qwen3-8B
+    display_name: Qwen 3 8B
+    context_size: 32768
+    recommended: true
+    notes: "Strong reasoning with thinking mode"
+    task_scores:
+      reasoning: 0.88
+      code_generation: 0.85
+      simple_chat: 0.90
+      data_analysis: 0.85
+      writing: 0.88
+      speed_sensitive: 0.75
+  - name: meta-llama/Llama-3.1-8B-Instruct
+    display_name: Llama 3.1 8B Instruct
+    context_size: 131072
+    recommended: true
+    task_scores:
+      reasoning: 0.82
+      code_generation: 0.80
+      simple_chat: 0.90
+      data_analysis: 0.80
+      writing: 0.85
+      speed_sensitive: 0.78
+  - name: mistralai/Mistral-Nemo-Instruct-2407
+    display_name: Mistral Nemo 12B
+    context_size: 128000
+    recommended: false
+    task_scores:
+      reasoning: 0.85
+      code_generation: 0.83
+      simple_chat: 0.88
+      data_analysis: 0.82
+      writing: 0.86
+      speed_sensitive: 0.70
+
+# Model selection preferences
+model_selection:
+  default_temperature: 0.7
+  default_max_tokens: 2048
+
+# Features
+features:
+  streaming: true
+  embeddings: true
+  function_calling: true
+  vision: false
+  structured_output: true
+  speculative_decoding: true
+  prefix_caching: true
+
+# Health check
+health_check:
+  enabled: true
+  interval_seconds: 30
+  endpoint: /health
+  fallback_endpoint: /v1/models

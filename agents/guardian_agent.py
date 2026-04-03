@@ -223,14 +223,39 @@ class GuardianAgent:
             return False
 
     async def _perform_challenge_response_test(self, agent_id: str, public_key: str) -> bool:
-        """Perform challenge-response test."""
+        """
+        Real challenge-response: sign a nonce with the agent's wallet key
+        and verify the recovered address matches the claimed public_key.
+        """
         try:
-            # Generate challenge
             challenge = secrets.token_hex(32)
-            
-            # In a real implementation, this would involve the agent signing the challenge
-            # For now, we'll simulate a successful challenge-response
-            return True
+
+            if not self.id_manager:
+                logger.warning(f"{self.log_prefix} No ID manager — challenge-response cannot proceed")
+                return False
+
+            # Sign the challenge with the agent's private key from vault
+            signature = await self.id_manager.sign_message(agent_id, challenge)
+            if not signature:
+                logger.warning(f"{self.log_prefix} Agent '{agent_id}' could not sign challenge — no private key")
+                return False
+
+            # Verify: recovered address must match the claimed public_key
+            try:
+                from eth_account.messages import encode_defunct
+                from eth_account import Account as _Acct
+                msg = encode_defunct(text=challenge)
+                recovered = _Acct.recover_message(msg, signature=signature)
+                if recovered.lower() == public_key.lower():
+                    logger.info(f"{self.log_prefix} Challenge-response PASSED for '{agent_id}'")
+                    return True
+                else:
+                    logger.warning(f"{self.log_prefix} Challenge-response FAILED: recovered={recovered} != claimed={public_key}")
+                    return False
+            except Exception as verify_err:
+                logger.error(f"{self.log_prefix} Signature verification error: {verify_err}")
+                return False
+
         except Exception as e:
             logger.error(f"{self.log_prefix} Challenge-response test error: {e}")
             return False

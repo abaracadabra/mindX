@@ -382,10 +382,22 @@ class A2ATool(BaseTool):
                 metadata=kwargs.get("metadata", {})
             )
             
-            # Generate signature if public key provided
+            # Generate cryptographic signature using agent's wallet key (ECDSA)
             if public_key:
-                signature_data = f"{agent_id}:{name}:{endpoint}:{time.time()}"
-                agent_card.signature = hashlib.sha256(signature_data.encode()).hexdigest()
+                try:
+                    from agents.core.id_manager_agent import IDManagerAgent
+                    id_mgr = await IDManagerAgent.get_instance()
+                    sig_data = f"a2a:register:{agent_id}:{name}:{endpoint}"
+                    sig = await id_mgr.sign_message(agent_id, sig_data)
+                    if sig:
+                        agent_card.signature = sig
+                    else:
+                        # Fallback to hash if signing unavailable
+                        agent_card.signature = hashlib.sha256(sig_data.encode()).hexdigest()
+                except Exception:
+                    agent_card.signature = hashlib.sha256(
+                        f"{agent_id}:{name}:{endpoint}:{time.time()}".encode()
+                    ).hexdigest()
             
             # Save agent card
             self.agent_cards[agent_id] = agent_card
@@ -459,7 +471,7 @@ class A2ATool(BaseTool):
                            payload: Dict[str, Any],
                            signature: Optional[str] = None,
                            **kwargs) -> Dict[str, Any]:
-        """Send a message to another agent."""
+        """Send a message to another agent. Auto-signs if no signature provided."""
         try:
             # Verify from_agent is registered
             if from_agent not in self.agent_cards:
@@ -467,6 +479,16 @@ class A2ATool(BaseTool):
                     "success": False,
                     "error": f"From agent not registered: {from_agent}"
                 }
+
+            # Auto-sign message with sender's wallet if no signature provided
+            if not signature:
+                try:
+                    from agents.core.id_manager_agent import IDManagerAgent
+                    id_mgr = await IDManagerAgent.get_instance()
+                    sig_content = f"a2a:msg:{from_agent}:{to_agent}:{message_type}:{json.dumps(payload, sort_keys=True)[:256]}"
+                    signature = await id_mgr.sign_message(from_agent, sig_content)
+                except Exception:
+                    pass  # Signature is best-effort for backward compatibility
             
             # Create message
             message_id = hashlib.sha256(

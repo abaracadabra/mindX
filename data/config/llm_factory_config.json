@@ -58,5 +58,13 @@
     "max_repeated_errors": 5,
     "circuit_breaker_threshold": 3
   },
-  "default_provider_preference_order": ["gemini", "mistral", "grok", "ollama"]
+  "llm": {
+    "vllm": {
+      "base_url": "http://localhost:8000",
+      "default_model": "Qwen/Qwen3-0.6B",
+      "timeout": 300,
+      "inference_timeout": 300
+    }
+  },
+  "default_provider_preference_order": ["gemini", "vllm", "mistral", "grok", "ollama"]
 }

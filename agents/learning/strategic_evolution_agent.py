@@ -208,6 +208,16 @@ class StrategicEvolutionAgent:
         self._initialized = True
         logger.info(f"StrategicEvolutionAgent '{self.agent_id}' fully initialized. Using {self.llm_handler.provider_name} for core reasoning.")
     
+    async def create_improvement_campaign(self, goal_description: str, priority: str = "medium", **kwargs) -> Dict[str, Any]:
+        """
+        Bridge method — called by mindXagent's autonomous improvement loop.
+        Routes to run_audit_driven_campaign for audit-first improvements,
+        or run_evolution_campaign for goal-directed evolution.
+        """
+        if priority == "high":
+            return await self.run_audit_driven_campaign(audit_scope="system")
+        return await self.run_evolution_campaign(campaign_goal_description=goal_description)
+
     async def run_evolution_campaign(self, campaign_goal_description: str) -> Dict[str, Any]:
         """Manages a self-improvement campaign for a given high-level goal."""
         if not self._initialized: await self._async_init()

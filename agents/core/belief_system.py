@@ -88,8 +88,19 @@ class BeliefSystem:
         self.persistence_file_path: Optional[Path] = None
         if persistence_file_path:
             self.persistence_file_path = Path(persistence_file_path)
-            self._load_beliefs() 
-        
+        else:
+            # Default persistence: beliefs survive restarts
+            try:
+                from utils.config import PROJECT_ROOT
+                default_path = PROJECT_ROOT / "data" / "memory" / "beliefs.json"
+                default_path.parent.mkdir(parents=True, exist_ok=True)
+                self.persistence_file_path = default_path
+            except Exception:
+                pass  # No persistence if project root not available
+
+        if self.persistence_file_path:
+            self._load_beliefs()
+
         self._initialized = True
         if test_mode:
             self._initialized = False

@@ -117,13 +117,37 @@ Key routes:
 
 API docs at `http://localhost:8000/docs`
 
+## Production Deployment
+
+**Live at:** https://mindx.pythai.net (Hostinger VPS `168.231.126.58`)
+
+- systemd service: `mindx.service`, User=mindx, `/home/mindx/mindX/`
+- Apache2 reverse proxy with Let's Encrypt SSL
+- BANKON Vault for encrypted credential storage (AES-256-GCM + HKDF-SHA512)
+- See `docs/DEPLOYMENT_MINDX_PYTHAI_NET.md` for full guide
+
+### Credential Management (BANKON Vault)
+
+API keys are NOT stored in `.env` — they live encrypted in `mindx_backend_service/vault_bankon/`:
+```bash
+python manage_credentials.py store gemini_api_key "KEY"    # Store
+python manage_credentials.py list                          # List IDs
+python manage_credentials.py providers                     # Show all provider IDs
+```
+
+Per-provider config templates: `config/providers/*.env` (13 providers)
+
+Vault routes: `/vault/credentials/status`, `/vault/credentials/list`, `/vault/credentials/providers`
+
 ## Configuration
 
-Priority: Environment variables (`MINDX_` prefix) > JSON configs (`data/config/`) > YAML model files (`models/`) > `.env` file
+Priority: Environment variables (`MINDX_` prefix) > BANKON Vault > JSON configs (`data/config/`) > YAML model files (`models/`) > `.env` file
 
-Key environment variables:
-- `MISTRAL_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY` - LLM providers
+Key environment variables (set via vault or `.env`):
+- `GEMINI_API_KEY`, `GROQ_API_KEY`, `MISTRAL_API_KEY` - LLM providers
 - `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `TOGETHER_API_KEY` - Additional LLM providers
+- `DEEPSEEK_API_KEY`, `COHERE_API_KEY`, `PERPLEXITY_API_KEY` - Extended providers
+- `REPLICATE_API_TOKEN`, `STABILITY_API_KEY`, `FIREWORKS_API_KEY` - Media/inference
 - `MINDX_LOGGING_LEVEL` - DEBUG/INFO/WARNING/ERROR
 - `MINDX_COORDINATOR_AUTONOMOUS_IMPROVEMENT_ENABLED` - Enable autonomous loops
 

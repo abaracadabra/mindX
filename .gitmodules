@@ -19,3 +19,6 @@
 [submodule "daio/contracts/lib/openzeppelin-contracts"]
 	path = daio/contracts/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "faicey/contracts/lib/forge-std"]
+	path = faicey/contracts/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std

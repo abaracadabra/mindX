@@ -156,13 +156,66 @@ app = FastAPI(
     version="1.3.4",
 )
 
-# Add CORS middleware
+# ── Public diagnostics dashboard + journal ──
+from fastapi.responses import HTMLResponse as _DashResponse
+
+@app.get("/journal", response_class=_DashResponse, tags=["diagnostics"], include_in_schema=False)
+async def improvement_journal_page():
+    """Serve the auto-generated improvement journal as styled HTML."""
+    journal_path = PROJECT_ROOT / "docs" / "IMPROVEMENT_JOURNAL.md"
+    if not journal_path.exists():
+        return _DashResponse(content="<h1>No journal entries yet</h1>", status_code=200)
+    md_content = journal_path.read_text(encoding="utf-8")
+    # Simple markdown-to-html conversion (headings, bold, code, lists)
+    import re
+    html_body = md_content
+    html_body = re.sub(r'^### (.+)$', r'<h3>\1</h3>', html_body, flags=re.MULTILINE)
+    html_body = re.sub(r'^## (.+)$', r'<h2>\1</h2>', html_body, flags=re.MULTILINE)
+    html_body = re.sub(r'^# (.+)$', r'<h1>\1</h1>', html_body, flags=re.MULTILINE)
+    html_body = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html_body)
+    html_body = re.sub(r'\*(.+?)\*', r'<em>\1</em>', html_body)
+    html_body = re.sub(r'`(.+?)`', r'<code>\1</code>', html_body)
+    html_body = re.sub(r'^  - (.+)$', r'<li>\1</li>', html_body, flags=re.MULTILINE)
+    html_body = re.sub(r'^> (.+)$', r'<blockquote>\1</blockquote>', html_body, flags=re.MULTILINE)
+    html_body = re.sub(r'^---$', r'<hr>', html_body, flags=re.MULTILINE)
+    html_body = html_body.replace('\n\n', '</p><p>').replace('\n', '<br>')
+    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mindX Improvement Journal</title>
+<style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'SF Mono','Fira Code',monospace;background:#0a0e14;color:#c5cdd9;padding:24px;max-width:900px;margin:0 auto}}
+h1{{color:#e6edf3;font-size:20px;margin:16px 0 8px}}h2{{color:#58a6ff;font-size:16px;margin:20px 0 8px;padding-top:12px;border-top:1px solid #1a1f2e}}
+h3{{color:#d2a8ff;font-size:13px;margin:12px 0 4px}}p{{margin:6px 0;line-height:1.6;font-size:12px}}
+strong{{color:#e6edf3}}em{{color:#6e7681}}code{{background:#161b22;padding:1px 4px;border-radius:3px;color:#7ee787;font-size:11px}}
+li{{margin:2px 0 2px 20px;font-size:12px;line-height:1.5}}blockquote{{border-left:2px solid #1a1f2e;padding:4px 12px;color:#6e7681;margin:8px 0;font-size:11px}}
+hr{{border:none;border-top:1px solid #1a1f2e;margin:16px 0}}a{{color:#58a6ff;text-decoration:none}}
+.back{{font-size:10px;color:#484f58;margin-bottom:16px}}</style></head>
+<body><div class="back"><a href="/">← dashboard</a> · <a href="/docs">api docs</a></div>{html_body}</body></html>"""
+    return _DashResponse(content=html, status_code=200)
+
+_DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
+
+@app.get("/", response_class=_DashResponse, include_in_schema=False)
+async def public_dashboard():
+    """mindX live diagnostics — public, non-interactive, 24/7."""
+    if _DASH_HTML_PATH.exists():
+        return _DashResponse(content=_DASH_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX</h1><p>Dashboard loading...</p>")
+
+# Add CORS middleware — production origins + development fallback
+_cors_origins = [
+    "https://mindx.pythai.net",
+    "https://agenticplace.pythai.net",
+    "https://www.agenticplace.pythai.net",
+    "http://localhost:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:8000",
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development
+    allow_origins=_cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all methods
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 # Inbound metrics and optional rate control (both directions: see docs/monitoring_rate_control.md)
 try:
@@ -192,13 +245,260 @@ app.include_router(rage_router)
 from api.ollama.ollama_admin_routes import router as ollama_admin_router
 app.include_router(ollama_admin_router)
 
+# Include Inference Discovery router
+try:
+    from api.inference_routes import router as inference_router
+    app.include_router(inference_router)
+except Exception as _inf_import_err:
+    logger.warning(f"Inference Discovery routes not loaded: {_inf_import_err}")
+
 # Include AgenticPlace router
 from mindx_backend_service.agenticplace_routes import router as agenticplace_router
 app.include_router(agenticplace_router)
 
+# /diagnostics/live — inline to avoid circular import issues
+import psutil as _ps
+import aiohttp as _aio
+
+_diag_start = time.time()
+_diag_interactions: list = []  # In-memory cache, loaded from disk on startup
+_diag_heartbeat_count = 0
+_diag_last_probe = 0.0
+_INTERACTIONS_LOG = PROJECT_ROOT / "data" / "logs" / "heartbeat_dialogues.jsonl"
+
+# Load existing dialogues from disk (all logs are memories in data)
+try:
+    if _INTERACTIONS_LOG.exists():
+        for line in _INTERACTIONS_LOG.read_text().strip().split("\n"):
+            if line.strip():
+                try:
+                    _diag_interactions.append(json.loads(line))
+                except Exception:
+                    pass
+        _diag_interactions = _diag_interactions[-20:]  # Keep last 20 in memory
+except Exception:
+    pass
+_diag_cpu_samples: list = []  # Rolling CPU % samples
+_ps.cpu_percent()  # Prime the counter (first call always returns 0)
+
+# Heartbeat prompts — mindX queries the local model for self-reflection
+_HEARTBEAT_PROMPTS = [
+    "You are mindX, an autonomous multi-agent system. In one sentence, describe your current operational state.",
+    "As a self-improving AI system, what is one thing you would optimize about your current architecture?",
+    "You are the cognitive core of mindX. What patterns do you observe in the system logs?",
+    "mindX runs 12 sovereign agents with cryptographic identities. What does agent sovereignty mean to you?",
+    "You are part of a Godel machine. In one sentence, describe what self-improvement means for an autonomous system.",
+    "mindX uses a Belief-Desire-Intention architecture. What belief would you add to improve system resilience?",
+    "As inference_agent_main, evaluate the current inference source availability. What would you recommend?",
+    "You are memory_agent_main with wallet 0x7CC5...27Ca. Why is verified identity important for a memory keeper?",
+    "mindX serves at mindx.pythai.net. What does it mean for an AI system to have a public presence?",
+    "The Strategic Evolution Agent runs 4-phase audit campaigns. Describe the ideal self-improvement cycle in one sentence.",
+]
+
+async def _heartbeat_query_local_model():
+    """Query local Ollama with a self-reflection prompt. Captures dialogue."""
+    global _diag_heartbeat_count
+    import random
+    prompt = _HEARTBEAT_PROMPTS[_diag_heartbeat_count % len(_HEARTBEAT_PROMPTS)]
+    _diag_heartbeat_count += 1
+    try:
+        t0 = time.time()
+        timeout = _aio.ClientTimeout(total=30)
+        async with _aio.ClientSession(timeout=timeout) as sess:
+            payload = {"model": "qwen3:0.6b", "messages": [{"role": "user", "content": prompt}], "stream": False}
+            async with sess.post("http://localhost:11434/api/chat", json=payload) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    response_text = data.get("message", {}).get("content", "")
+                    latency = int((time.time() - t0) * 1000)
+                    entry = {
+                        "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        "agent": "mindx_heartbeat",
+                        "model": "qwen3:0.6b",
+                        "prompt": prompt,
+                        "response": response_text[:500],
+                        "latency_ms": latency,
+                    }
+                    # In-memory cache (last 20)
+                    _diag_interactions.append(entry)
+                    if len(_diag_interactions) > 20:
+                        _diag_interactions.pop(0)
+
+                    # Persist to disk — all logs are memories in data
+                    try:
+                        _INTERACTIONS_LOG.parent.mkdir(parents=True, exist_ok=True)
+                        with open(_INTERACTIONS_LOG, "a", encoding="utf-8") as f:
+                            f.write(json.dumps(entry) + "\n")
+                    except Exception:
+                        pass
+
+                    # Log through MemoryAgent — the canonical memory path
+                    try:
+                        from agents.memory_agent import MemoryAgent
+                        ma = MemoryAgent()
+                        await ma.log_process(
+                            process_name="heartbeat_dialogue",
+                            data=entry,
+                            metadata={"agent_id": "mindx_heartbeat", "model": "qwen3:0.6b", "type": "self_reflection"},
+                        )
+                    except Exception:
+                        pass
+    except Exception:
+        pass
+
+
+@app.get("/diagnostics/live", tags=["diagnostics"])
+async def diagnostics_live_endpoint():
+    global _diag_last_probe
+    now = time.time()
+    up_s = int(now - _diag_start)
+    d, r = divmod(up_s, 86400); h, r = divmod(r, 3600); m, _ = divmod(r, 60)
+    uptime = f"{d}d {h}h {m}m" if d else f"{h}h {m}m"
+    cpu_now = _ps.cpu_percent(interval=None)  # Non-blocking, uses delta since last call
+    _diag_cpu_samples.append(cpu_now)
+    if len(_diag_cpu_samples) > 60:
+        _diag_cpu_samples.pop(0)
+    cpu_avg = round(sum(_diag_cpu_samples) / len(_diag_cpu_samples), 1) if _diag_cpu_samples else 0
+    mem = _ps.virtual_memory()
+    disk = _ps.disk_usage("/")
+    proc = _ps.Process()
+    proc_mem = round(proc.memory_info().rss / (1024**2), 1)
+    load_1, load_5, load_15 = os.getloadavg()
+
+    # Auto-probe inference + heartbeat every 60s
+    if now - _diag_last_probe > 60:
+        _diag_last_probe = now
+        try:
+            from llm.inference_discovery import InferenceDiscovery
+            disc = await InferenceDiscovery.get_instance()
+            await disc.probe_all()
+        except Exception: pass
+        # Fire heartbeat to local model
+        asyncio.create_task(_heartbeat_query_local_model())
+
+    # beliefs
+    bp = PROJECT_ROOT / "data" / "memory" / "beliefs.json"
+    bc, bs = 0, []
+    try:
+        if bp.exists():
+            bd = json.loads(bp.read_text())
+            bc = len(bd)
+            for k, v in list(bd.items())[:8]:
+                val = v.get("value", "")
+                if isinstance(val, str) and len(val) > 50: val = val[:50] + "..."
+                bs.append({"key": k, "value": val})
+    except Exception: pass
+    # stm count with per-agent breakdown
+    stm_path = PROJECT_ROOT / "data" / "memory" / "stm"
+    stm = 0
+    stm_by_agent = {}
+    try:
+        if stm_path.exists():
+            from collections import defaultdict as _ddict
+            _counts = _ddict(int)
+            for f in stm_path.rglob("*.memory.json"):
+                parts = f.relative_to(stm_path).parts
+                if parts:
+                    _counts[parts[0]] += 1
+                    stm += 1
+            stm_by_agent = dict(sorted(_counts.items(), key=lambda x: -x[1]))
+    except Exception:
+        pass
+    wsp = sum(1 for d_ in (PROJECT_ROOT / "data" / "memory" / "agent_workspaces").iterdir() if d_.is_dir()) if (PROJECT_ROOT / "data" / "memory" / "agent_workspaces").exists() else 0
+    # godel
+    gp = PROJECT_ROOT / "data" / "logs" / "godel_choices.jsonl"
+    godel = []
+    try:
+        if gp.exists():
+            lines = [l for l in gp.read_text().strip().split("\n") if l.strip()]
+            for l in lines[-10:]:
+                try:
+                    g = json.loads(l)
+                    godel.append({"timestamp": g.get("timestamp",""), "agent": g.get("source_agent","?"), "type": g.get("choice_type",""), "chosen": str(g.get("chosen",""))[:100]})
+                except Exception: pass
+            godel.reverse()
+    except Exception: pass
+    # registry
+    rp = PROJECT_ROOT / "data" / "identity" / "production_registry.json"
+    amp = PROJECT_ROOT / "daio" / "agents" / "agent_map.json"
+    agents = []
+    agent_tiers = {}
+    try:
+        if amp.exists():
+            am = json.loads(amp.read_text())
+            for aid, ad in am.get("agents", {}).items():
+                agent_tiers[aid] = ad.get("verification_tier", 0)
+    except Exception: pass
+    try:
+        if rp.exists():
+            for a in json.loads(rp.read_text()).get("agents", []):
+                eid = a["entity_id"]
+                agents.append({"entity_id": eid, "address": a["address"], "role": a.get("role",""), "verification_tier": agent_tiers.get(eid, 1)})
+    except Exception: pass
+    # inference (use cached summary — probe runs async above)
+    inf = {"total": 0, "available": 0, "sources": {}}
+    try:
+        from llm.inference_discovery import InferenceDiscovery
+        disc = await InferenceDiscovery.get_instance()
+        s = disc.status_summary()
+        inf = {"total": s.get("total_sources",0), "available": s.get("available",0), "local_inference": s.get("local_inference",False), "cloud_inference": s.get("cloud_inference",False), "sources": s.get("sources",{})}
+    except Exception: pass
+    # vault
+    vault = {}
+    try:
+        from mindx_backend_service.bankon_vault.vault import BankonVault
+        v = BankonVault(); vault = v.info(); vault.pop("vault_dir", None)
+    except Exception: pass
+    # logs
+    lp = PROJECT_ROOT / "data" / "logs" / "mindx_runtime.log"
+    logs = []
+    try:
+        if lp.exists():
+            all_lines = lp.read_text().strip().split("\n")
+            for l in all_lines[-20:]:
+                if "API_KEY" in l or "private_key" in l.lower() or "WALLET_PK" in l: continue
+                logs.append(l[:250])
+            logs.reverse()
+    except Exception: pass
+    # Load dojo and boardroom data
+    dojo_data = []
+    try:
+        from daio.governance.dojo import Dojo
+        dojo = await Dojo.get_instance()
+        dojo_data = dojo.get_all_standings()[:12]
+    except Exception: pass
+
+    br_data = []
+    try:
+        from daio.governance.boardroom import Boardroom
+        br = await Boardroom.get_instance()
+        br_data = br.get_recent_sessions(5)
+    except Exception: pass
+
+    # Rebuild return with governance data
+    return {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "uptime": uptime, "uptime_seconds": up_s,
+        "pid": proc.pid, "process_memory_mb": proc_mem,
+        "system": {"cpu_percent": cpu_now, "cpu_avg": cpu_avg, "load": [round(load_1,2), round(load_5,2), round(load_15,2)], "memory_used_gb": round(mem.used/(1024**3),2), "memory_total_gb": round(mem.total/(1024**3),2), "memory_percent": mem.percent, "disk_used_gb": round(disk.used/(1024**3),1), "disk_total_gb": round(disk.total/(1024**3),1), "disk_percent": round(disk.percent,1)},
+        "agents": agents, "beliefs": {"count": bc, "sample": bs},
+        "memory": {"stm_records": stm, "agent_workspaces": wsp, "stm_by_agent": stm_by_agent},
+        "interactions": list(_diag_interactions),
+        "godel_choices": godel, "inference": inf, "vault": vault,
+        "dojo": dojo_data, "boardroom": br_data,
+        "recent_logs": logs,
+    }
+
 # Include bankon ("I do not understand") router
 from mindx_backend_service.bankon import bankon_router
 app.include_router(bankon_router)
+
+# Include BANKON Vault credential management router
+try:
+    from mindx_backend_service.bankon_vault import bankon_vault_router
+    app.include_router(bankon_vault_router)
+except Exception as _vault_import_err:
+    logger.warning(f"BANKON Vault routes not loaded: {_vault_import_err}")
 
 command_handler: Optional[CommandHandler] = None
 
@@ -207,6 +507,19 @@ async def startup_event():
     """Initializes all necessary mindX components on application startup."""
     global command_handler
     logger.info("FastAPI server starting up... Initializing mindX agents.")
+
+    # Load provider credentials from BANKON Vault into environment
+    try:
+        from mindx_backend_service.bankon_vault.credential_provider import CredentialProvider
+        cred_provider = CredentialProvider()
+        results = cred_provider.load_from_vault()
+        loaded = [k for k, v in results.items() if v]
+        if loaded:
+            logger.info(f"BANKON Vault: loaded {len(loaded)} provider credentials: {', '.join(loaded)}")
+        else:
+            logger.info("BANKON Vault: no credentials stored yet — use manage_credentials.py to add API keys")
+    except Exception as vault_err:
+        logger.warning(f"BANKON Vault credential loading skipped: {vault_err}")
     try:
         app_config = Config()
         memory_agent = MemoryAgent(config=app_config)
@@ -269,6 +582,56 @@ async def startup_event():
                 logger.warning("startup_agent not found in mastermind lifecycle_agents — skipping initialize_system()")
         except Exception as startup_e:
             logger.warning(f"Failed to schedule startup_agent initialization: {startup_e}", exc_info=True)
+
+        # Start autonomous improvement loop — mindX thinks, decides, evolves
+        async def _auto_start_autonomous():
+            """Delayed start of autonomous mode so all agents are ready."""
+            await asyncio.sleep(30)  # Wait for full initialization
+            try:
+                from agents.core.mindXagent import MindXAgent
+                mindxagent = await MindXAgent.get_instance(
+                    agent_id="mindx_meta_agent",
+                    memory_agent=memory_agent,
+                    config=app_config,
+                    test_mode=False,
+                )
+                if hasattr(mindxagent, 'start_autonomous_mode'):
+                    await mindxagent.start_autonomous_mode(model="qwen3:0.6b", provider="ollama")
+                    logger.info("mindXagent autonomous mode STARTED (qwen3:0.6b)")
+                else:
+                    logger.warning("mindXagent has no start_autonomous_mode method")
+            except Exception as auto_e:
+                logger.warning(f"Autonomous mode auto-start failed: {auto_e}")
+
+        # STM→LTM memory promotion — periodic knowledge consolidation
+        async def _periodic_memory_promotion():
+            """Promote significant STM patterns to LTM every hour."""
+            await asyncio.sleep(300)  # Wait 5 min for initial data
+            while True:
+                try:
+                    for agent_id in ["mindx_meta_agent", "coordinator_agent_main", "mastermind_prime"]:
+                        await memory_agent.promote_stm_to_ltm(agent_id, pattern_threshold=3, days_back=7)
+                    logger.info("STM→LTM promotion cycle completed")
+                except Exception as promo_e:
+                    logger.debug(f"STM→LTM promotion: {promo_e}")
+                await asyncio.sleep(3600)  # Every hour
+
+        # Improvement Journal — mindX documents its own evolution
+        async def _periodic_journal():
+            await asyncio.sleep(60)  # Let system settle
+            try:
+                from agents.learning.improvement_journal import ImprovementJournal
+                journal = ImprovementJournal()
+                await journal.write_entry()  # First entry immediately
+                logger.info("ImprovementJournal: first entry written")
+                await journal.run_periodic(interval_seconds=1800)  # Then every 30 min
+            except Exception as je:
+                logger.warning(f"ImprovementJournal failed: {je}")
+
+        asyncio.create_task(_auto_start_autonomous())
+        asyncio.create_task(_periodic_memory_promotion())
+        asyncio.create_task(_periodic_journal())
+        logger.info("Autonomous mode + STM→LTM promotion + Improvement Journal scheduled")
 
         # Log backend startup transcript to data/ via memory_agent (logs are memories; startup_agent can get a copy)
         try:
@@ -1214,9 +1577,96 @@ async def get_runtime_logs():
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
     return await command_handler.handle_get_runtime_logs()
 
-@app.get("/", summary="Root endpoint")
-async def root():
-    return {"message": "Welcome to the mindX API. See /docs for details."}
+# ══════════════════════════════════════════════════════════════════
+#  PUBLIC DIAGNOSTICS DASHBOARD — non-interactive, read-only, 24/7
+#  Served at / for public view. Admin UI reserved for /admin (future).
+# ══════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════
+#  DAIO GOVERNANCE API — Boardroom, Dojo, Multi-Stream
+# ══════════════════════════════════════════════════════════════════
+
+@app.post("/boardroom/convene", tags=["governance"], summary="Convene boardroom — CEO + Seven Soldiers evaluate directive")
+async def boardroom_convene(directive: str, importance: str = "standard"):
+    try:
+        from daio.governance.boardroom import Boardroom
+        br = await Boardroom.get_instance()
+        session = await br.convene(directive=directive, importance=importance)
+        return {
+            "session_id": session.session_id,
+            "outcome": session.outcome,
+            "weighted_score": round(session.weighted_score, 3),
+            "votes": [{"soldier": v.soldier_id, "vote": v.vote, "provider": v.provider, "confidence": v.confidence, "latency_ms": v.latency_ms} for v in session.votes],
+            "dissent_branches": session.dissent_branches,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/boardroom/sessions", tags=["governance"], summary="Recent boardroom sessions")
+async def boardroom_sessions(limit: int = 10):
+    try:
+        from daio.governance.boardroom import Boardroom
+        br = await Boardroom.get_instance()
+        return {"sessions": br.get_recent_sessions(limit)}
+    except Exception as e:
+        return {"sessions": [], "error": str(e)}
+
+@app.get("/dojo/standings", tags=["governance"], summary="Agent reputation standings")
+async def dojo_standings():
+    try:
+        from daio.governance.dojo import Dojo
+        dojo = await Dojo.get_instance()
+        return {"standings": dojo.get_all_standings()}
+    except Exception as e:
+        return {"standings": [], "error": str(e)}
+
+@app.get("/dojo/agent/{agent_id}", tags=["governance"], summary="Agent reputation detail")
+async def dojo_agent(agent_id: str):
+    try:
+        from daio.governance.dojo import Dojo
+        dojo = await Dojo.get_instance()
+        return dojo.get_agent_reputation(agent_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/dojo/reputation", tags=["governance"], summary="Update agent reputation")
+async def dojo_update(agent_id: str, delta: int, event_type: str = "manual", reason: str = ""):
+    try:
+        from daio.governance.dojo import Dojo
+        dojo = await Dojo.get_instance()
+        return dojo.update_reputation(agent_id, delta, event_type, reason)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/inference/multi-stream", tags=["inference"], summary="Multi-stream parallel inference query")
+async def multi_stream_query(prompt: str, strategy: str = "fastest_wins", level: int = 2):
+    try:
+        from llm.multi_stream import MultiStreamInference, StreamStrategy, DecisionLevel
+        msi = await MultiStreamInference.get_instance()
+        result = await msi.query(
+            prompt=prompt,
+            strategy=StreamStrategy(strategy),
+            level=DecisionLevel(level),
+        )
+        return {
+            "strategy": result.strategy,
+            "level": result.level,
+            "chosen": {"provider": result.chosen.provider, "response": result.chosen.response[:500], "latency_ms": result.chosen.latency_ms} if result.chosen else None,
+            "consensus_score": round(result.consensus_score, 3),
+            "providers_queried": [r.provider for r in result.results],
+            "total_latency_ms": result.total_latency_ms,
+            "dissent": result.dissent,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/inference/multi-stream/history", tags=["inference"], summary="Multi-stream query history")
+async def multi_stream_history():
+    try:
+        from llm.multi_stream import MultiStreamInference
+        msi = await MultiStreamInference.get_instance()
+        return {"history": msi.get_history()}
+    except Exception as e:
+        return {"history": [], "error": str(e)}
 
 # Simple Coder endpoints (moved to later in file to avoid duplicates)
 # Global BDI state for real-time updates

@@ -47,6 +47,14 @@ except ImportError:
     VAULT_AVAILABLE = False
     get_vault_manager = None
 
+# BANKON Vault — primary encrypted key storage for production
+try:
+    from mindx_backend_service.bankon_vault.vault import BankonVault
+    BANKON_VAULT_AVAILABLE = True
+except ImportError:
+    BANKON_VAULT_AVAILABLE = False
+    BankonVault = None
+
 logger = get_logger(__name__)
 
 class IDManagerAgent:
@@ -73,7 +81,18 @@ class IDManagerAgent:
         self.key_store_dir: Path = PROJECT_ROOT / key_store_dir_rel_str
         self.env_file_path: Path = self.key_store_dir / ".wallet_keys.env"
         
-        # Try to use vault if available, otherwise use legacy location
+        # BANKON Vault — primary encrypted key storage (AES-256-GCM + HKDF-SHA512)
+        self.bankon_vault = None
+        if BANKON_VAULT_AVAILABLE and BankonVault:
+            try:
+                self.bankon_vault = BankonVault()
+                self.bankon_vault.unlock_with_key_file()
+                logger.info(f"{self.log_prefix} BANKON Vault available for encrypted key storage")
+            except Exception as e:
+                logger.warning(f"{self.log_prefix} BANKON Vault init failed: {e}")
+                self.bankon_vault = None
+
+        # Legacy vault manager (fallback)
         self.use_vault = VAULT_AVAILABLE and self.config.get("id_manager.use_vault", True)
         if self.use_vault and get_vault_manager:
             try:
@@ -120,13 +139,23 @@ class IDManagerAgent:
             )
             return belief.value
         
-        # Try vault first if available, then fall back to legacy
+        # Key retrieval chain: BANKON Vault → legacy vault → .env file
         private_key_hex = None
-        if self.use_vault and self.vault_manager:
+
+        # 1. BANKON Vault (AES-256-GCM encrypted — production primary)
+        if not private_key_hex and self.bankon_vault:
+            vault_id = f"agent_pk_{entity_id}"
+            try:
+                private_key_hex = self.bankon_vault.retrieve(vault_id)
+            except Exception:
+                pass
+
+        # 2. Legacy vault manager
+        if not private_key_hex and self.use_vault and self.vault_manager:
             private_key_hex = self.vault_manager.get_agent_private_key(entity_id)
-        
+
+        # 3. Legacy .env file (last resort)
         if not private_key_hex:
-            # Fall back to legacy storage
             env_var_name = self._generate_env_var_name(entity_id)
             load_dotenv(dotenv_path=self.env_file_path, override=True)
             private_key_hex = os.getenv(env_var_name)
@@ -206,16 +235,30 @@ class IDManagerAgent:
             public_address = account.address
             env_var_name = self._generate_env_var_name(entity_id)
             
-            # Store in vault if available, otherwise use legacy location
+            # Store in vault: BANKON Vault → legacy vault → .env file
             stored = False
-            if self.use_vault and self.vault_manager:
+
+            # 1. BANKON Vault (production primary — AES-256-GCM encrypted)
+            if not stored and self.bankon_vault:
+                try:
+                    vault_id = f"agent_pk_{entity_id}"
+                    stored = self.bankon_vault.store(vault_id, private_key_hex, context="agent_identity")
+                    if stored:
+                        logger.info(f"{self.log_prefix} Stored private key for '{entity_id}' in BANKON Vault (AES-256-GCM)")
+                except Exception as e:
+                    logger.warning(f"{self.log_prefix} BANKON Vault store failed for '{entity_id}': {e}")
+
+            # 2. Legacy vault manager
+            if not stored and self.use_vault and self.vault_manager:
                 stored = self.vault_manager.store_agent_private_key(entity_id, private_key_hex)
                 if stored:
-                    logger.info(f"{self.log_prefix} Stored new private key for '{entity_id}' in vault.")
-            else:
+                    logger.info(f"{self.log_prefix} Stored private key for '{entity_id}' in legacy vault.")
+
+            # 3. Legacy .env file (last resort)
+            if not stored:
                 stored = set_key(self.env_file_path, env_var_name, private_key_hex, quote_mode='never')
                 if stored:
-                    logger.info(f"{self.log_prefix} Stored new private key for '{entity_id}' in {self.env_file_path}.")
+                    logger.info(f"{self.log_prefix} Stored private key for '{entity_id}' in {self.env_file_path} (plaintext — migrate to vault).")
             
             if stored:
                 await self.belief_system.add_belief(f"identity.map.entity_to_address.{entity_id}", public_address, 1.0, BeliefSource.DERIVED)
@@ -248,17 +291,27 @@ class IDManagerAgent:
             raise
 
     def get_private_key_for_guardian(self, entity_id: str) -> Optional[str]:
-        # Try vault first if available, then fall back to legacy
+        # Key retrieval chain: BANKON Vault → legacy vault → .env file
         private_key = None
-        if self.use_vault and self.vault_manager:
+
+        # 1. BANKON Vault (production primary)
+        if not private_key and self.bankon_vault:
+            vault_id = f"agent_pk_{entity_id}"
+            try:
+                private_key = self.bankon_vault.retrieve(vault_id)
+            except Exception:
+                pass
+
+        # 2. Legacy vault manager
+        if not private_key and self.use_vault and self.vault_manager:
             private_key = self.vault_manager.get_agent_private_key(entity_id)
-        
+
+        # 3. Legacy .env file
         if not private_key:
-            # Fall back to legacy storage
             env_var_name = self._generate_env_var_name(entity_id)
             load_dotenv(dotenv_path=self.env_file_path, override=True)
             private_key = os.getenv(env_var_name)
-        
+
         if not private_key:
             logger.warning(f"{self.log_prefix} Private key not found for entity '{entity_id}' with Guardian authorization.")
         return private_key

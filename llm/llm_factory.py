@@ -38,6 +38,11 @@ try:
 except ImportError as e:
     MistralHandler = None
     logger.warning(f"Could not import MistralHandler: {e}. Mistral provider will be unavailable.")
+try:
+    from .vllm_handler import VLLMHandler
+except ImportError as e:
+    VLLMHandler = None
+    logger.warning(f"Could not import VLLMHandler: {e}. vLLM provider will be unavailable.")
 from .mock_llm_handler import MockLLMHandler
 
 
@@ -136,24 +141,34 @@ async def create_llm_handler(
         eff_model_name_for_api = global_config.get(f"llm.{eff_provider_name}.default_model", f"default_model_for_{eff_provider_name}")
 
     eff_api_key = api_key
-    if not eff_api_key and eff_provider_name in ["gemini", "openai", "anthropic", "groq", "mistral"]:
+    _keyed_providers = ["gemini", "openai", "anthropic", "groq", "mistral", "together", "deepseek",
+                        "cohere", "perplexity", "fireworks", "replicate", "stability"]
+    if not eff_api_key and eff_provider_name in _keyed_providers:
         eff_api_key = factory_config.get(f"{eff_provider_name}_settings_for_factory", {}).get("api_key_override")
-    if not eff_api_key and eff_provider_name in ["gemini", "openai", "anthropic", "groq", "mistral"]:
+    if not eff_api_key and eff_provider_name in _keyed_providers:
         eff_api_key = global_config.get(f"llm.{eff_provider_name}.api_key")
-    if not eff_api_key and eff_provider_name in ["gemini", "openai", "anthropic", "groq", "mistral"]:
-        env_var_name = ""
-        if eff_provider_name == "gemini": env_var_name = "GEMINI_API_KEY"
-        elif eff_provider_name == "openai": env_var_name = "OPENAI_API_KEY"
-        elif eff_provider_name == "anthropic": env_var_name = "ANTHROPIC_API_KEY"
-        elif eff_provider_name == "groq": env_var_name = "GROQ_API_KEY"
-        elif eff_provider_name == "mistral": env_var_name = "MISTRAL_API_KEY"
+    if not eff_api_key and eff_provider_name in _keyed_providers:
+        _env_map = {
+            "gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY",
+            "anthropic": "ANTHROPIC_API_KEY", "groq": "GROQ_API_KEY",
+            "mistral": "MISTRAL_API_KEY", "together": "TOGETHER_API_KEY",
+            "deepseek": "DEEPSEEK_API_KEY", "cohere": "COHERE_API_KEY",
+            "perplexity": "PERPLEXITY_API_KEY", "fireworks": "FIREWORKS_API_KEY",
+            "replicate": "REPLICATE_API_TOKEN", "stability": "STABILITY_API_KEY",
+        }
+        env_var_name = _env_map.get(eff_provider_name, "")
         if env_var_name: eff_api_key = os.getenv(env_var_name)
+    # vLLM optional API key
+    if not eff_api_key and eff_provider_name == "vllm":
+        eff_api_key = os.getenv("VLLM_API_KEY")
 
     eff_base_url = base_url
-    if not eff_base_url and eff_provider_name == "ollama":
+    if not eff_base_url and eff_provider_name in ("ollama", "vllm"):
         eff_base_url = factory_config.get(f"{eff_provider_name}_settings_for_factory", {}).get("base_url_override")
     if not eff_base_url and eff_provider_name == "ollama":
         eff_base_url = global_config.get(f"llm.ollama.base_url")
+    if not eff_base_url and eff_provider_name == "vllm":
+        eff_base_url = global_config.get(f"llm.vllm.base_url") or os.getenv("VLLM_BASE_URL")
 
     final_model_name_for_handler_constructor = factory_config.get("provider_specific_handler_config", {}).get(eff_provider_name, {}).get("default_model_for_api_call", eff_model_name_for_api)
     cache_key_model_name = final_model_name_for_handler_constructor or f"implicit_default_for_{eff_provider_name}"
@@ -232,18 +247,29 @@ async def create_llm_handler(
             )
             else: logger.error("LLMFactory (mindX): GroqHandler not imported."); handler_instance = MockLLMHandler(model_name=model_arg_for_handler)
         elif eff_provider_name == "mistral":
-            if MistralHandler: 
+            if MistralHandler:
                 handler_instance = MistralHandler(
-                    model_name_for_api=model_arg_for_handler, 
-                    api_key=eff_api_key, 
-                    rate_limiter=rate_limiter, 
+                    model_name_for_api=model_arg_for_handler,
+                    api_key=eff_api_key,
+                    rate_limiter=rate_limiter,
                     config=global_config,
                     execution_timeout_minutes=execution_timeout_minutes
                 )
                 if not eff_api_key:
                     logger.warning("LLMFactory (mindX): Mistral API key not provided. Handler will operate in degraded mode.")
-            else: 
-                logger.error("LLMFactory (mindX): MistralHandler not imported."); 
+            else:
+                logger.error("LLMFactory (mindX): MistralHandler not imported.");
+                handler_instance = MockLLMHandler(model_name=model_arg_for_handler)
+        elif eff_provider_name == "vllm":
+            if VLLMHandler:
+                handler_instance = VLLMHandler(
+                    model_name_for_api=model_arg_for_handler,
+                    api_key=eff_api_key,
+                    base_url=eff_base_url,
+                    execution_timeout_minutes=execution_timeout_minutes
+                )
+            else:
+                logger.error("LLMFactory (mindX): VLLMHandler not imported.")
                 handler_instance = MockLLMHandler(model_name=model_arg_for_handler)
         else: # pragma: no cover
             logger.warning(f"LLMFactory (mindX): Unknown provider '{eff_provider_name}'. Using MockLLMHandler for model '{model_arg_for_handler}'.")

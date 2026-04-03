@@ -346,7 +346,22 @@ The enhanced web interface provides a comprehensive control panel with:
 
 ## 🚀 Deployment
 
-### **Production Deployment**
+### **Live Production**
+
+mindX is live at **https://mindx.pythai.net** — Hostinger VPS with SSL, BANKON Vault credential management, and systemd auto-restart.
+
+- **API Docs:** https://mindx.pythai.net/docs
+- **Health:** https://mindx.pythai.net/health
+- **Deployment Guide:** [docs/DEPLOYMENT_MINDX_PYTHAI_NET.md](docs/DEPLOYMENT_MINDX_PYTHAI_NET.md)
+
+API keys are stored encrypted in BANKON Vault (AES-256-GCM + HKDF-SHA512). Manage credentials:
+```bash
+python manage_credentials.py store gemini_api_key "YOUR_KEY"
+python manage_credentials.py list
+python manage_credentials.py providers   # Show all supported providers
+```
+
+### **Local Development**
 ```bash
 # Enhanced web interface (recommended)
 ./mindX.sh --frontend

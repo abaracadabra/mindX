@@ -81,10 +81,15 @@ class MemoryAgent:
 
     def __init__(self, config: Optional[Config] = None, log_level: str = "INFO"):
         self.config = config or Config()
-        
+
         # Setup logging
         log_file_enabled = self.config.get("logging.file.enabled", True)
         setup_logging(log_level=log_level, console=True, log_file=log_file_enabled)
+
+        # Verified identity — MemoryAgent is a sovereign entity in the mindX civilization
+        self.agent_id = "memory_agent_main"
+        self.wallet_address: Optional[str] = None
+        self._verify_identity()
 
         # Define base paths (all logs and memories live under data/ via memory_agent)
         self.data_path = PROJECT_ROOT / self.config.get("system.data_path", "data")
@@ -107,7 +112,28 @@ class MemoryAgent:
         self._initialize_storage()
         if UJSON_AVAILABLE:
             logger.info("ujson library detected, will be used for faster JSON operations.")
-        logger.info("Enhanced MemoryAgent initialized with timestamped memory capabilities.")
+        logger.info(f"MemoryAgent initialized (identity: {self.wallet_address or 'unverified'}).")
+
+    def _verify_identity(self):
+        """
+        Verify MemoryAgent's cryptographic identity from BANKON Vault.
+        The memory keeper must be a verified sovereign entity —
+        every memory stored is attributable to a known identity.
+        """
+        try:
+            from mindx_backend_service.bankon_vault.vault import BankonVault
+            vault = BankonVault()
+            vault.unlock_with_key_file()
+            pk_hex = vault.retrieve(f"agent_pk_{self.agent_id}")
+            vault.lock()
+            if pk_hex:
+                from eth_account import Account
+                self.wallet_address = Account.from_key(pk_hex).address
+                logger.info(f"MemoryAgent identity verified: {self.wallet_address}")
+            else:
+                logger.warning("MemoryAgent: no identity in BANKON Vault — operating without verified identity")
+        except Exception as e:
+            logger.warning(f"MemoryAgent: identity verification skipped ({e})")
 
     def _initialize_storage(self):
         """Initialize the memory storage structure."""
