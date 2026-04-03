@@ -12,9 +12,9 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
 .scanlines{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);mix-blend-mode:multiply}
 .page{position:relative;z-index:2;pointer-events:none}
 .page .nav,.page .section,.page .hero,.page .links,.page .footer,.page .nft-badge,.page a,.page button,.page .card,.page .nft-card{pointer-events:auto}
-.nav{display:flex;align-items:center;justify-content:center;gap:14px;padding:14px 24px;font-size:12px;border-bottom:1px solid rgba(210,168,255,.08);background:rgba(3,6,8,.94);position:sticky;top:0;z-index:10;backdrop-filter:blur(16px);flex-wrap:wrap}
-.nav .brand{color:#e6edf3;font-weight:700;font-family:'SF Mono',monospace;font-size:18px;margin-right:16px;letter-spacing:1px;text-shadow:0 0 20px rgba(210,168,255,.3)}.nav .brand b{color:#d2a8ff}
-.nav a{color:#6e7681;text-decoration:none;transition:all .2s;padding:4px 10px;border-radius:3px;border:1px solid transparent}.nav a:hover{color:#d2a8ff;background:rgba(210,168,255,.06);border-color:rgba(210,168,255,.15);text-shadow:0 0 8px rgba(210,168,255,.3)}
+.nav{display:flex;align-items:center;justify-content:center;gap:16px;padding:16px 28px;font-size:14px;border-bottom:1px solid rgba(210,168,255,.12);background:rgba(3,6,8,.94);position:sticky;top:0;z-index:10;backdrop-filter:blur(16px);flex-wrap:wrap}
+.nav .brand{color:#e6edf3;font-weight:700;font-family:'SF Mono',monospace;font-size:22px;margin-right:20px;letter-spacing:1.5px;text-shadow:0 0 24px rgba(210,168,255,.3)}.nav .brand b{color:#d2a8ff}
+.nav a{color:#8b949e;text-decoration:none;transition:all .2s;padding:6px 14px;border-radius:4px;border:1px solid transparent;font-size:13px}.nav a:hover{color:#d2a8ff;background:rgba(210,168,255,.08);border-color:rgba(210,168,255,.2);text-shadow:0 0 10px rgba(210,168,255,.3)}
 .hero{display:flex;flex-direction:column;align-items:center;padding:60px 20px 40px;text-align:center}
 .brain-wrap{position:relative;margin-bottom:24px;filter:drop-shadow(0 0 40px rgba(210,168,255,.15)) drop-shadow(0 0 80px rgba(88,166,255,.08))}
 canvas#brain{display:block}
@@ -477,13 +477,17 @@ function draw(t) {
     h.glow *= .97;
     // Light up hexes near cursor
     if (mouseX > 0) {
-      const dx = h.x - mouseX, dy = h.y - mouseY;
-      if (dx*dx+dy*dy < forceRadius*forceRadius) h.glow = Math.max(h.glow, .15);
+      const dx = h.x - mouseX, dy = h.y - mouseY, d2 = dx*dx+dy*dy;
+      if (d2 < forceRadius*forceRadius) h.glow = Math.max(h.glow, .3 * (1-d2/(forceRadius*forceRadius)));
     }
     if (h.glow > .005) {
       drawHex(h.x, h.y, h.s);
-      c.strokeStyle = `rgba(210,168,255,${h.glow * .08})`;
-      c.lineWidth = .5; c.stroke();
+      c.strokeStyle = `rgba(210,168,255,${h.glow * .15})`;
+      c.lineWidth = .6 + h.glow * .5; c.stroke();
+      // Fill on strong glow
+      if (h.glow > .15) {
+        c.fillStyle = `rgba(210,168,255,${h.glow * .02})`; c.fill();
+      }
     }
   }
 
@@ -528,14 +532,14 @@ function draw(t) {
     }
   }
 
-  // ── Cursor connections ──
+  // ── Cursor connections (visible, responsive) ──
   if (mouseX > 0) {
     for (const p of particles) {
       const dx = mouseX-p.x, dy = mouseY-p.y, d2 = dx*dx+dy*dy;
       if (d2 < forceRadius*forceRadius) {
         c.beginPath(); c.moveTo(mouseX,mouseY); c.lineTo(p.x,p.y);
-        c.strokeStyle = `rgba(210,168,255,${(1-d2/(forceRadius*forceRadius))*.06})`;
-        c.lineWidth = .3; c.stroke();
+        c.strokeStyle = `rgba(210,168,255,${(1-d2/(forceRadius*forceRadius))*.12})`;
+        c.lineWidth = .5; c.stroke();
       }
     }
   }
@@ -547,7 +551,7 @@ function draw(t) {
     if (mouseX > 0) {
       const dx = mouseX-p.x, dy = mouseY-p.y, dist = Math.sqrt(dx*dx+dy*dy);
       if (dist < forceRadius && dist > 1) {
-        let f = (forceRadius-dist)/forceRadius * .025;
+        let f = (forceRadius-dist)/forceRadius * .045;
         if (curZone === 'grid') {
           // Grid zone: repulsion (particles flee, creating space around cursor)
           f *= -0.6;
@@ -611,14 +615,20 @@ function draw(t) {
     c.beginPath(); c.arc(n.x,n.y, pr, 0, TAU);
     c.fillStyle = n.c;
     c.globalAlpha = .3+n.z*.4+n.act*.4; c.fill(); c.globalAlpha = 1;
-    // Node-to-cursor connection
+    // Node-to-cursor connection (strong, visible)
     if (mouseX > 0) {
       const dx = mouseX-n.x, dy = mouseY-n.y, dist = Math.sqrt(dx*dx+dy*dy);
-      if (dist < 200) {
+      if (dist < 280) {
+        const strength = (280-dist)/280;
         c.beginPath(); c.moveTo(n.x,n.y); c.lineTo(mouseX,mouseY);
-        c.strokeStyle = n.c.replace(/[^,]+\)/, ((200-dist)/200*.1).toFixed(3)+')');
-        c.lineWidth = (200-dist)/200*1.5; c.stroke();
-        if (dist < 100) n.act = Math.max(n.act, (100-dist)/100*.5);
+        c.strokeStyle = `rgba(210,168,255,${(strength*.15).toFixed(3)})`;
+        c.lineWidth = strength*2; c.stroke();
+        // Neon bloom on close connections
+        if (dist < 120) {
+          c.strokeStyle = `rgba(210,168,255,${(strength*.04).toFixed(3)})`;
+          c.lineWidth = strength*6; c.stroke();
+          n.act = Math.max(n.act, (120-dist)/120*.7);
+        }
       }
     }
     n.act *= .95;
@@ -682,13 +692,20 @@ function draw(t) {
     while (particles.length > 350) particles.shift();
   }
 
-  // ── Cursor aura ──
+  // ── Cursor aura (clearly visible) ──
   if (mouseX > 0 && glowI > .01) {
     const cg = c.createRadialGradient(mouseX,mouseY, 0, mouseX,mouseY, forceRadius);
-    cg.addColorStop(0, `rgba(210,168,255,${glowI*.035})`);
-    cg.addColorStop(.4, `rgba(88,166,255,${glowI*.015})`);
+    cg.addColorStop(0, `rgba(210,168,255,${glowI*.06})`);
+    cg.addColorStop(.3, `rgba(88,166,255,${glowI*.03})`);
+    cg.addColorStop(.7, `rgba(63,185,80,${glowI*.01})`);
     cg.addColorStop(1, 'transparent');
     c.fillStyle = cg; c.beginPath(); c.arc(mouseX,mouseY, forceRadius, 0, TAU); c.fill();
+    // Force ring border
+    c.beginPath(); c.arc(mouseX,mouseY, forceRadius, 0, TAU);
+    c.strokeStyle = `rgba(210,168,255,${glowI*.06})`; c.lineWidth = .8; c.stroke();
+    // Inner core dot
+    c.beginPath(); c.arc(mouseX,mouseY, 3, 0, TAU);
+    c.fillStyle = `rgba(210,168,255,${glowI*.2})`; c.fill();
   }
   glowI *= .97;
 

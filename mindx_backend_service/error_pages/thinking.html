@@ -14,7 +14,7 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
 .overlay.fade{opacity:0;pointer-events:none}
 .logo{font-size:42px;font-weight:700;color:#e6edf3;letter-spacing:1px;font-family:'SF Mono','Fira Code',monospace;margin-bottom:6px;user-select:none}
 .logo b{color:#58a6ff}
-.thought{font-size:14px;color:#6e7681;margin-bottom:24px;max-width:400px;line-height:1.6;transition:all .5s}
+.thought{font-size:18px;color:#8b949e;margin-bottom:24px;max-width:480px;line-height:1.6;transition:all .5s;text-shadow:0 0 12px rgba(88,166,255,.1)}
 .status-ring{position:relative;width:120px;height:120px;margin:0 auto 28px}
 .status-ring svg{animation:spin 8s linear infinite}
 .status-ring.ready svg{animation:spin 1s linear infinite}
@@ -26,12 +26,12 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
 .thought-bubbles .dot:nth-child(2){animation-delay:.3s;background:#3fb950}
 .thought-bubbles .dot:nth-child(3){animation-delay:.6s;background:#d29922}
 @keyframes think{0%,80%,100%{opacity:.15;transform:scale(.7) translateY(0)}40%{opacity:1;transform:scale(1.2) translateY(-10px)}}
-.msg{font-size:11px;color:#4a5060;margin-top:16px;max-width:420px;line-height:1.6}
+.msg{font-size:13px;color:#6e7681;margin-top:16px;max-width:500px;line-height:1.7}
 .msg a{color:#58a6ff;text-decoration:none}
 .msg a:hover{text-decoration:underline}
 .progress{width:200px;height:2px;background:rgba(88,166,255,.1);border-radius:1px;margin:16px auto 0;overflow:hidden}
 .progress-bar{height:100%;width:0%;background:linear-gradient(90deg,#58a6ff,#3fb950);border-radius:1px;transition:width .3s}
-.quote{position:fixed;bottom:20px;left:0;right:0;text-align:center;font-size:9px;color:#3d424d;font-style:italic;z-index:2;padding:0 20px;transition:opacity .5s}
+.quote{position:fixed;bottom:20px;left:0;right:0;text-align:center;font-size:10px;color:#4a5060;font-style:italic;z-index:2;padding:0 20px;transition:opacity .5s}
 .click-count{position:fixed;top:12px;right:12px;font-size:8px;color:#3d424d;z-index:2;font-family:'SF Mono',monospace}
 #content-frame{position:fixed;top:0;left:0;width:100%;height:100%;border:none;z-index:10;opacity:0;transition:opacity .6s ease-in;pointer-events:none}
 #content-frame.show{opacity:1;pointer-events:auto}
@@ -560,13 +560,16 @@ function updatePhase() {
 setInterval(updatePhase, 1000);
 
 // ── Poll the ACTUAL destination, seamlessly load when ready ──
+// Interaction speeds up polling — clicking makes mindX "think faster"
 let resolved = false;
 let pollCount = 0;
+let interactionBoost = 0; // clicks reduce poll delay
+
 async function pollDestination() {
   if (resolved) return;
   try {
     const r = await fetch(DEST, {
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(6000),
       headers: {'Accept': 'text/html'},
       redirect: 'follow',
     });
@@ -593,11 +596,30 @@ async function pollDestination() {
       return;
     }
   } catch {}
-  const delay = Math.min(3000 + pollCount * 1000, 10000);
+  // Faster polling: base 2s, interaction reduces delay, max 8s backoff
+  const boost = Math.min(interactionBoost * 200, 1500); // up to 1.5s faster
+  const delay = Math.max(1000, Math.min(2000 + pollCount * 500, 8000) - boost);
   pollCount++;
   setTimeout(pollDestination, delay);
 }
-setTimeout(pollDestination, 2000);
+// Start polling immediately
+setTimeout(pollDestination, 1500);
+
+// Interaction accelerates polling + visual speedup
+document.addEventListener('click', () => {
+  interactionBoost++;
+  // Visual feedback: spin ring faster briefly
+  const ring = document.getElementById('ring');
+  if (ring && !resolved) {
+    ring.querySelector('svg').style.animationDuration = '2s';
+    setTimeout(() => { if (!resolved) ring.querySelector('svg').style.animationDuration = '8s'; }, 2000);
+  }
+  // Jump progress bar forward slightly
+  if (!resolved) {
+    const cur = parseFloat(pbar.style.width) || 0;
+    pbar.style.width = Math.min(cur + 2, 90) + '%';
+  }
+});
 </script>
 </body>
 </html>
