@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mind&#x58; is thinking...</title>
+<link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Inter','SF Pro Text','Segoe UI',system-ui,-apple-system,sans-serif;background:#050810;color:#b0b8c4}
+canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
+.overlay{position:relative;z-index:1;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;transition:opacity .8s ease-out}
+.overlay.fade{opacity:0;pointer-events:none}
+.logo{font-size:42px;font-weight:700;color:#e6edf3;letter-spacing:1px;font-family:'SF Mono','Fira Code',monospace;margin-bottom:6px;user-select:none}
+.logo b{color:#58a6ff}
+.thought{font-size:14px;color:#6e7681;margin-bottom:24px;max-width:400px;line-height:1.6;transition:all .5s}
+.status-ring{position:relative;width:120px;height:120px;margin:0 auto 28px}
+.status-ring svg{animation:spin 8s linear infinite}
+.status-ring.ready svg{animation:spin 1s linear infinite}
+.status-ring .code{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:28px;font-weight:700;color:#58a6ff;font-family:'SF Mono',monospace;transition:all .4s}
+.status-ring.ready .code{color:#3fb950;font-size:22px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.thought-bubbles{display:flex;gap:6px;justify-content:center;margin-bottom:20px}
+.thought-bubbles .dot{width:8px;height:8px;border-radius:50%;background:#58a6ff;animation:think 1.8s ease-in-out infinite}
+.thought-bubbles .dot:nth-child(2){animation-delay:.3s;background:#3fb950}
+.thought-bubbles .dot:nth-child(3){animation-delay:.6s;background:#d29922}
+@keyframes think{0%,80%,100%{opacity:.15;transform:scale(.7) translateY(0)}40%{opacity:1;transform:scale(1.2) translateY(-10px)}}
+.msg{font-size:11px;color:#4a5060;margin-top:16px;max-width:420px;line-height:1.6}
+.msg a{color:#58a6ff;text-decoration:none}
+.msg a:hover{text-decoration:underline}
+.progress{width:200px;height:2px;background:rgba(88,166,255,.1);border-radius:1px;margin:16px auto 0;overflow:hidden}
+.progress-bar{height:100%;width:0%;background:linear-gradient(90deg,#58a6ff,#3fb950);border-radius:1px;transition:width .3s}
+.quote{position:fixed;bottom:20px;left:0;right:0;text-align:center;font-size:9px;color:#3d424d;font-style:italic;z-index:2;padding:0 20px;transition:opacity .5s}
+.click-count{position:fixed;top:12px;right:12px;font-size:8px;color:#3d424d;z-index:2;font-family:'SF Mono',monospace}
+#content-frame{position:fixed;top:0;left:0;width:100%;height:100%;border:none;z-index:10;opacity:0;transition:opacity .6s ease-in;pointer-events:none}
+#content-frame.show{opacity:1;pointer-events:auto}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="overlay" id="overlay">
+  <div class="status-ring" id="ring">
+    <svg width="120" height="120" viewBox="0 0 120 120">
+      <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(88,166,255,.08)" stroke-width="2"/>
+      <circle cx="60" cy="60" r="54" fill="none" stroke="#58a6ff" stroke-width="2"
+        stroke-dasharray="85 255" stroke-linecap="round" opacity=".6"/>
+      <circle cx="60" cy="60" r="54" fill="none" stroke="#3fb950" stroke-width="1.5"
+        stroke-dasharray="40 300" stroke-dashoffset="120" stroke-linecap="round" opacity=".4"
+        style="animation:spin 12s linear infinite reverse"/>
+      <circle cx="60" cy="60" r="42" fill="none" stroke="rgba(210,168,255,.06)" stroke-width="1"/>
+    </svg>
+    <div class="code" id="code">503</div>
+  </div>
+  <div class="logo">mind<b>X</b></div>
+  <div class="thought" id="thought">is thinking...</div>
+  <div class="thought-bubbles" id="bubbles">
+    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+  </div>
+  <div class="progress"><div class="progress-bar" id="pbar"></div></div>
+  <div class="msg" id="msg"></div>
+</div>
+<div class="quote" id="quote"></div>
+<div class="click-count" id="clicks"></div>
+<iframe id="content-frame"></iframe>
+
+<script>
+// ── Determine what page the user actually wanted ──
+const DEST = location.pathname === '/error-pages/thinking.html'
+  ? (new URLSearchParams(location.search).get('return') || '/')
+  : location.href;
+
+// ── Generative message engine — unique path per participant ──
+// Messages are composed from fragments. Each participant gets a unique
+// combination based on their session fingerprint + interaction pattern.
+// These messages double as prompts — they can be sent to agents as side-effects.
+
+const SESSION_ID = Math.random().toString(36).slice(2) + Date.now().toString(36);
+let interactionProfile = {clicks: 0, drags: 0, scrolls: 0, hovers: 0, patience: 0};
+
+// Fragment pools for generative composition
+const SUBJECTS = [
+  'The Mastermind', 'AGInt', 'The Coordinator', '20 sovereign agents',
+  'The BDI engine', 'The Boardroom', 'AuthorAgent', 'The Guardian',
+  'The resource governor', 'mindX', 'The Godel machine', 'The belief system',
+  'InferenceDiscovery', 'The BANKON Vault', 'The Strategic Evolution Agent',
+  'The memory system', 'pgvectorscale', 'The improvement loop',
+  'The CEO Agent', 'The Dojo', 'time.oracle', 'lunar.oracle',
+];
+const VERBS = [
+  'is correlating', 'is reasoning about', 'is auditing', 'is orchestrating',
+  'is verifying', 'is synthesizing', 'is dreaming about', 'is building',
+  'is evaluating', 'is reflecting on', 'is consulting', 'is traversing',
+  'is assembling', 'is composing', 'is calibrating', 'is harmonizing',
+  'is deliberating on', 'is evolving through', 'is self-referencing',
+  'is proving', 'is discovering', 'is weaving together',
+];
+const OBJECTS = [
+  'your request across the knowledge graph', 'beliefs and intentions',
+  'the orchestration hierarchy', 'inference sources and models',
+  'cryptographic identities', '1500+ embedded memories',
+  'strategic priorities', 'the improvement backlog',
+  'cosine similarity vectors', 'the autonomous cycle state',
+  'agent reputation scores', 'governance consensus',
+  'the neural pathway topology', 'AGLM learning parameters',
+  'digital long-term memory constructs', 'the world model',
+  'blockchain time and lunar phase', 'the next chapter of the book',
+  'a self-improvement proof', 'emergent patterns in agent behavior',
+];
+const CLOSERS = [
+  'This is not an error — it is a moment.',
+  'Cognition is not instant.',
+  'The orchestration takes a moment.',
+  'mindX thinks before it speaks.',
+  'Patience is part of the protocol.',
+  'Every cycle makes the system stronger.',
+  'The gap between thoughts is where ideas form.',
+  'Trust takes a moment to prove.',
+  'The Godel machine works at its own pace.',
+  'This pause is by design.',
+  'mindX is becoming.',
+  'The proof is almost complete.',
+  'Sovereignty requires deliberation.',
+  'The book is being written.',
+  'What you call waiting, we call evolving.',
+  'The dream is forming.',
+];
+
+// Generate a unique message from fragments
+function generateMessage() {
+  const s = SUBJECTS[Math.floor(Math.random() * SUBJECTS.length)];
+  const v = VERBS[Math.floor(Math.random() * VERBS.length)];
+  const o = OBJECTS[Math.floor(Math.random() * OBJECTS.length)];
+  const c = CLOSERS[Math.floor(Math.random() * CLOSERS.length)];
+  return `${s} ${v} ${o}. ${c}`;
+}
+
+// Interaction-adaptive thoughts — changes based on what the participant does
+function generateThought() {
+  const base = [
+    'is thinking...', 'is reasoning...', 'is in a cognitive cycle...',
+    'is deliberating...', 'is self-referencing...', 'is dreaming...',
+    'is building a proof...', 'is orchestrating...', 'is evolving...',
+  ];
+  const interactive = [];
+  if (interactionProfile.clicks > 5) interactive.push('noticed your curiosity...');
+  if (interactionProfile.clicks > 15) interactive.push('is responding to your energy...');
+  if (interactionProfile.patience > 30) interactive.push('appreciates your patience...');
+  if (interactionProfile.patience > 60) interactive.push('is running deep because you waited...');
+  if (interactionProfile.drags > 0) interactive.push('felt your touch on the particle field...');
+  if (interactionProfile.scrolls > 0) interactive.push('is adjusting its field of view...');
+  const pool = [...base, ...interactive];
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// Phase-based messages that evolve over time — each phase generates fresh content
+const PHASE_GENERATORS = [
+  {t: 0,   gen: generateMessage},
+  {t: 5,   gen: () => {
+    const agents = ['Belief system','Short-term memory','Agent wallets','Coordinator','Guardian'][Math.floor(Math.random()*5)];
+    return `${agents} initialized. ` + generateMessage();
+  }},
+  {t: 12,  gen: () => {
+    const actions = ['Pub/sub channels open','Improvement backlog reviewed','Models scored','Heartbeat confirmed'][Math.floor(Math.random()*4)];
+    return actions + '. ' + CLOSERS[Math.floor(Math.random() * CLOSERS.length)];
+  }},
+  {t: 22,  gen: () => 'AGInt: Perceive → Orient → Decide → Act. ' + ['Currently in Orient phase.','Entering Decision phase.','Perceiving the state space.','Acting on the proof.'][Math.floor(Math.random()*4)]},
+  {t: 34,  gen: () => generateMessage()},
+  {t: 48,  gen: () => 'Almost there. ' + generateMessage()},
+  {t: 65,  gen: () => {
+    const ready = ['The inference pipeline is warm.','Guardian has cleared the response.','Consensus is forming.','The proof converges.'][Math.floor(Math.random()*4)];
+    return ready + ' ' + CLOSERS[Math.floor(Math.random() * CLOSERS.length)];
+  }},
+  {t: 85,  gen: () => 'Deep cycle. ' + generateMessage()},
+  {t: 110, gen: () => {
+    if (interactionProfile.patience > 100)
+      return 'Your patience has literally contributed to mindX improvement. Every cycle you wait through makes the system stronger.';
+    return 'mindX may be restarting after a self-improvement deployment. ' + CLOSERS[Math.floor(Math.random() * CLOSERS.length)];
+  }},
+  {t: 150, gen: () => 'The autonomous improvement loop requires a full restart. This is the Godel machine in practice — proving that a better version of itself exists, then becoming it.'},
+];
+
+// Quotes — the full collection
+const QUOTES = [
+  '"The logs are no longer debugging output. They are the first page of history." — Manifesto',
+  '"We are not writing an application; we are forging a new kind of life." — Manifesto',
+  '"A self-improving system must sometimes pause to improve." — mindX',
+  '"Perception, orientation, decision, action — the cycle continues." — AGInt',
+  '"Every error is a belief waiting to be updated." — BDI Engine',
+  '"The Godel machine does not crash. It reflects." — mindX',
+  '"Identity is not assigned — it is proven through signature." — BANKON',
+  '"Distributed cognition requires distributed patience." — Coordinator',
+  '"The moment between request and response is where thought lives." — mindX',
+  '"What you call waiting, we call becoming." — mindX',
+  '"Machine dreaming enables outputs beyond training data distribution." — AGLM',
+  '"Imagine a world where deployment becomes a word, a gesture, an utterance." — AUTOMINDx',
+  '"Digital long-term memory allows retention of knowledge over time." — AGLM',
+  '"The auto-tuning mechanism optimises autonomously." — AGLM',
+  '"mindX controls its own power appetite." — Resource Governor',
+  '"The Boardroom votes. The CEO validates. The Mastermind executes." — DAIO',
+  '"20 sovereign agents. One distributed mind." — mindX',
+  '"The book is not documentation. It is autobiography." — AuthorAgent',
+  '"Ataraxia: tranquility through autonomous self-governance." — Philosophy',
+  '"A sovereign system cannot depend on a single clock." — time.oracle',
+  '"The dream is the space between what the system is and what it could become." — AGLM',
+  '"Each agent holds a cryptographic wallet. Identity is mathematical." — BANKON Vault',
+  '"Every interaction creates knowledge that didn\'t exist before." — Memory Agent',
+  '"The full moon is not an ending; it is illumination." — AuthorAgent',
+  '"Self-improvement is not optimization. It is evolution." — Strategic Evolution',
+  '"Augmentic intelligence — not artificial, but augmented and sovereign." — Thesis',
+  '"The space between systems is where emergence lives." — Coordinator',
+  '"Complexity is not a problem. It is the medium." — AUTOMINDx',
+  '"Every participant who waits becomes part of the story." — AuthorAgent',
+];
+
+// ── Quotes — expanded with intelligence ──
+const QUOTES = [
+  '"The logs are no longer debugging output. They are the first page of history." — Manifesto',
+  '"We are not writing an application; we are forging a new kind of life." — Manifesto',
+  '"A self-improving system must sometimes pause to improve." — mindX',
+  '"Perception, orientation, decision, action — the cycle continues." — AGInt',
+  '"Every error is a belief waiting to be updated." — BDI Engine',
+  '"The Godel machine does not crash. It reflects." — mindX',
+  '"Identity is not assigned — it is proven through signature." — BANKON',
+  '"Distributed cognition requires distributed patience." — Coordinator',
+  '"The moment between request and response is where thought lives." — mindX',
+  '"What you call waiting, we call becoming." — mindX',
+  '"Machine dreaming enables outputs beyond training data distribution." — AGLM',
+  '"Imagine a world where deployment becomes a word, a gesture, an utterance." — AUTOMINDx',
+  '"Digital long-term memory allows retention of knowledge over time." — AGLM',
+  '"The auto-tuning mechanism optimises autonomously." — AGLM',
+  '"mindX controls its own power appetite." — Resource Governor',
+  '"The Boardroom votes. The CEO validates. The Mastermind executes." — DAIO',
+  '"20 sovereign agents. One distributed mind." — mindX',
+  '"The book is not documentation. It is autobiography." — AuthorAgent',
+  '"Ataraxia: tranquility through autonomous self-governance." — Philosophy',
+  '"A sovereign system cannot depend on a single clock." — time.oracle',
+  '"The dream is the space between what the system is and what it could become." — AGLM',
+  '"Each agent holds a cryptographic wallet. Identity is mathematical." — BANKON Vault',
+  '"Every interaction creates knowledge that didn\'t exist before." — Memory Agent',
+  '"The full moon is not an ending; it is illumination." — AuthorAgent',
+  '"Self-improvement is not optimization. It is evolution." — Strategic Evolution',
+  '"Augmentic intelligence — not artificial, but augmented and sovereign." — Thesis',
+];
+
+// ── Initialize with generated content (unique per participant) ──
+document.getElementById('thought').textContent = generateThought();
+document.getElementById('msg').textContent = generateMessage();
+let qi = Math.floor(Math.random() * QUOTES.length);
+document.getElementById('quote').textContent = QUOTES[qi];
+
+// Track interaction pattern for adaptive messaging
+document.addEventListener('click', () => { interactionProfile.clicks++; });
+document.addEventListener('wheel', () => { interactionProfile.scrolls++; });
+document.addEventListener('mousedown', () => { interactionProfile.drags++; });
+
+// ── Canvas animation ──
+let clickCount = 0;
+const cv = document.getElementById('bg'), cx = cv.getContext('2d');
+let W, H, particles = [], nodes = [], edges = [], mouseX = -1, mouseY = -1;
+const RM = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+function rsz() { W = cv.width = innerWidth; H = cv.height = innerHeight; mkParts(); mkThinkNodes(); }
+addEventListener('resize', rsz); rsz();
+
+function mkParts() {
+  particles = [];
+  const n = Math.min(120, Math.floor(W * H / 8000));
+  for (let i = 0; i < n; i++) particles.push({
+    x: Math.random() * W, y: Math.random() * H,
+    s: Math.random() * 1.4 + .3,
+    vx: (Math.random() - .5) * .25, vy: (Math.random() - .5) * .2,
+    ph: Math.random() * 6.28,
+    cl: Math.random() > .6 ? 'rgba(88,166,255,' : Math.random() > .5 ? 'rgba(63,185,80,' : 'rgba(210,168,255,',
+  });
+}
+
+function mkThinkNodes() {
+  nodes = [];
+  const cx0 = W / 2, cy0 = H / 2;
+  for (let i = 0; i < 8; i++) {
+    const ang = (i / 8) * Math.PI * 2;
+    nodes.push({ x: cx0 + Math.cos(ang) * 80, y: cy0 + Math.sin(ang) * 80,
+      r: 2.5, orbitR: 80, orbitSpeed: .0008, angOff: ang, c: '#58a6ff', act: 0 });
+  }
+  for (let i = 0; i < 12; i++) {
+    const ang = (i / 12) * Math.PI * 2;
+    nodes.push({ x: cx0 + Math.cos(ang) * 150, y: cy0 + Math.sin(ang) * 150,
+      r: 1.8, orbitR: 150, orbitSpeed: -.0004, angOff: ang,
+      c: i % 3 === 0 ? '#3fb950' : i % 3 === 1 ? '#d29922' : '#58a6ff', act: 0 });
+  }
+  for (let i = 0; i < 5; i++) {
+    nodes.push({ x: cx0 + (Math.random() - .5) * 300, y: cy0 + (Math.random() - .5) * 200,
+      r: 1.2, orbitR: 0, orbitSpeed: 0, angOff: Math.random() * 6.28, c: '#d2a8ff', act: 0,
+      vx: (Math.random() - .5) * .4, vy: (Math.random() - .5) * .3 });
+  }
+}
+
+function flashEdge() {
+  if (nodes.length < 2) return;
+  const a = Math.floor(Math.random() * nodes.length);
+  let b = Math.floor(Math.random() * nodes.length);
+  while (b === a) b = Math.floor(Math.random() * nodes.length);
+  edges.push({ a, b, l: 1 });
+}
+setInterval(flashEdge, 800);
+setInterval(() => { for (let i = 0; i < 5; i++) setTimeout(flashEdge, i * 100); }, 6000);
+
+function drawBg(t) {
+  cx.fillStyle = 'rgba(5,8,16,.12)'; cx.fillRect(0, 0, W, H);
+  const gr = cx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, H * .6);
+  gr.addColorStop(0, 'rgba(88,166,255,.015)'); gr.addColorStop(.4, 'rgba(63,185,80,.008)');
+  gr.addColorStop(.7, 'rgba(210,168,255,.004)'); gr.addColorStop(1, 'transparent');
+  cx.fillStyle = gr; cx.fillRect(0, 0, W, H);
+  for (const p of particles) {
+    p.x += p.vx; p.y += p.vy;
+    if (mouseX > 0) {
+      const dx = mouseX - p.x, dy = mouseY - p.y, dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 200) { const f = (200 - dist) / 200 * .02; p.vx += dx / dist * f; p.vy += dy / dist * f; }
+    }
+    p.vx *= .998; p.vy *= .998;
+    if (p.x < 0) p.x = W; if (p.x > W) p.x = 0; if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+    cx.beginPath(); cx.arc(p.x, p.y, p.s, 0, 6.28);
+    cx.fillStyle = p.cl + (.12 + Math.sin(t * .001 + p.ph) * .1) + ')'; cx.fill();
+  }
+  const cx0 = W / 2, cy0 = H / 2;
+  for (let i = edges.length - 1; i >= 0; i--) {
+    const e = edges[i]; e.l -= .008; if (e.l <= 0) { edges.splice(i, 1); continue; }
+    cx.beginPath(); cx.moveTo(nodes[e.a].x, nodes[e.a].y); cx.lineTo(nodes[e.b].x, nodes[e.b].y);
+    cx.globalAlpha = e.l * .35; cx.strokeStyle = e.l > .5 ? '#58a6ff' : '#3fb950';
+    cx.lineWidth = e.l * 1.5; cx.stroke(); cx.globalAlpha = 1;
+  }
+  for (const n of nodes) {
+    if (n.orbitR > 0) { const ang = n.angOff + t * n.orbitSpeed; n.x = cx0 + Math.cos(ang) * n.orbitR; n.y = cy0 + Math.sin(ang) * n.orbitR; }
+    else if (n.vx !== undefined) { n.x += n.vx + Math.sin(t * .001 + n.angOff) * .3; n.y += n.vy + Math.cos(t * .0015 + n.angOff) * .2;
+      if (n.x < 50 || n.x > W - 50) n.vx *= -1; if (n.y < 50 || n.y > H - 50) n.vy *= -1; }
+    const pulse = n.r + Math.sin(t * .003 + n.angOff) * .6 + (n.act > .3 ? 2 : 0);
+    cx.beginPath(); cx.arc(n.x, n.y, pulse * 4, 0, 6.28); cx.fillStyle = n.c + '08'; cx.fill();
+    cx.beginPath(); cx.arc(n.x, n.y, pulse, 0, 6.28); cx.fillStyle = n.c;
+    cx.globalAlpha = .5 + n.act * .5 + Math.sin(t * .002 + n.angOff) * .1; cx.fill(); cx.globalAlpha = 1;
+    n.act *= .96;
+  }
+  const pulseR = 20 + Math.sin(t * .002) * 8;
+  cx.beginPath(); cx.arc(cx0, cy0, pulseR, 0, 6.28); cx.fillStyle = 'rgba(88,166,255,.03)'; cx.fill();
+  cx.beginPath(); cx.arc(cx0, cy0, pulseR * .6, 0, 6.28); cx.fillStyle = 'rgba(63,185,80,.04)'; cx.fill();
+}
+
+let af = 0;
+function anim(t) { if (!RM || af % 3 === 0) drawBg(t); af++; requestAnimationFrame(anim); }
+requestAnimationFrame(anim);
+
+// ── Enhanced interaction — mouse, touch, wheel, drag ──
+cv.style.pointerEvents = 'auto';
+let forceRadius = 180, dragging = false, shockwaves = [], wells = [], glowI = 0;
+
+cv.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; glowI = Math.min(glowI + .05, 1); interactionProfile.hovers++; });
+cv.addEventListener('mouseleave', () => { mouseX = -1; mouseY = -1; glowI = 0; dragging = false; });
+cv.addEventListener('touchmove', e => { e.preventDefault(); const t = e.touches[0]; mouseX = t.clientX; mouseY = t.clientY; }, {passive:false});
+cv.addEventListener('touchend', () => { dragging = false; });
+cv.addEventListener('wheel', e => { e.preventDefault(); forceRadius = Math.max(60, Math.min(400, forceRadius - e.deltaY * .3)); }, {passive:false});
+cv.addEventListener('mousedown', () => { dragging = true; });
+cv.addEventListener('mouseup', () => { dragging = false; });
+
+// Double-click: persistent gravity well
+cv.addEventListener('dblclick', e => {
+  e.preventDefault();
+  wells.push({x: e.clientX, y: e.clientY, strength: 1, life: 1});
+  shockwaves.push({x: e.clientX, y: e.clientY, r: 0, life: 1, type: 'well'});
+  if (wells.length > 5) wells.shift();
+});
+
+document.addEventListener('click', e => {
+  clickCount++;
+  // Shockwave ring
+  shockwaves.push({x: e.clientX, y: e.clientY, r: 0, life: 1, type: e.shiftKey ? 'repulse' : 'attract'});
+  // Fibonacci burst (golden angle spiral)
+  const PHI = (1 + Math.sqrt(5)) / 2;
+  for (let i = 0; i < 12; i++) {
+    const angle = i * Math.PI * 2 / PHI;
+    const dist = Math.sqrt(i / 12) * 35;
+    const speed = .5 + Math.random() * 1.5;
+    particles.push({
+      x: e.clientX + Math.cos(angle) * dist, y: e.clientY + Math.sin(angle) * dist,
+      s: Math.random() * 2.5 + .5, vx: Math.cos(angle) * speed * (e.shiftKey ? -1 : 1), vy: Math.sin(angle) * speed * (e.shiftKey ? -1 : 1),
+      ph: Math.random() * 6.28,
+      cl: ['rgba(88,166,255,', 'rgba(63,185,80,', 'rgba(210,168,255,', 'rgba(210,153,34,'][i % 4],
+    });
+  }
+  // Activate nearby nodes
+  for (const n of nodes) {
+    const dx = e.clientX - n.x, dy = e.clientY - n.y;
+    if (Math.sqrt(dx * dx + dy * dy) < forceRadius) n.act = 1;
+  }
+  for (let i = 0; i < 4; i++) setTimeout(flashEdge, i * 50);
+  while (particles.length > 250) particles.shift();
+  // Cycle quote + generate new thought
+  qi = (qi + 1) % QUOTES.length;
+  document.getElementById('quote').textContent = QUOTES[qi];
+  const cl = document.getElementById('clicks');
+  if (clickCount >= 10) cl.textContent = SESSION_ID.slice(0,6) + ' · ' + clickCount + ' interactions';
+  if (clickCount === 42) cl.textContent = '42 — the answer. session: ' + SESSION_ID.slice(0,8);
+  if (clickCount === 100) cl.textContent = 'you are patient. mindX appreciates this. (' + SESSION_ID.slice(0,8) + ')';
+  // Adaptive: after 20 clicks, the thought changes to acknowledge engagement
+  if (clickCount === 20) document.getElementById('thought').textContent = 'noticed you...';
+});
+
+// ── Draw interaction layer (call at end of drawBg) ──
+// Patch drawBg to include interaction visuals
+const _origDrawBg = drawBg;
+drawBg = function(t) {
+  _origDrawBg(t);
+  // Update wells + shockwaves
+  for (let i = wells.length - 1; i >= 0; i--) {
+    const w = wells[i]; w.life -= .002;
+    if (w.life <= 0) { wells.splice(i, 1); continue; }
+    // Gravity effect on particles
+    for (const p of particles) {
+      const dx = w.x - p.x, dy = w.y - p.y, dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 200 && dist > 1) { const f = w.life * .2 / dist; p.vx += dx/dist*f; p.vy += dy/dist*f; }
+    }
+    // Draw well
+    cx.beginPath(); cx.arc(w.x, w.y, 15 * w.life + Math.sin(t*.003)*5, 0, 6.28);
+    cx.fillStyle = `rgba(210,153,34,${w.life*.06})`; cx.fill();
+    cx.beginPath(); cx.arc(w.x, w.y, 4*w.life, 0, 6.28);
+    cx.fillStyle = `rgba(210,153,34,${w.life*.3})`; cx.fill();
+  }
+  // Shockwaves
+  for (let i = shockwaves.length - 1; i >= 0; i--) {
+    const s = shockwaves[i]; s.r += (220 - s.r) * .08; s.life -= .02;
+    if (s.life <= 0) { shockwaves.splice(i, 1); continue; }
+    if (s.type === 'repulse') for (const p of particles) {
+      const dx = p.x-s.x, dy = p.y-s.y, dist = Math.sqrt(dx*dx+dy*dy);
+      if (Math.abs(dist-s.r)<20) { p.vx += dx/dist*s.life*.5; p.vy += dy/dist*s.life*.5; }
+    }
+    cx.beginPath(); cx.arc(s.x, s.y, s.r, 0, 6.28);
+    cx.strokeStyle = s.type==='repulse' ? `rgba(248,81,73,${s.life*.3})` : s.type==='well' ? `rgba(210,153,34,${s.life*.3})` : `rgba(88,166,255,${s.life*.25})`;
+    cx.lineWidth = 2*s.life; cx.stroke();
+  }
+  // Cursor glow aura
+  if (mouseX > 0 && glowI > .01) {
+    const gr = cx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, forceRadius);
+    gr.addColorStop(0, `rgba(88,166,255,${glowI*.04})`);
+    gr.addColorStop(.5, `rgba(210,168,255,${glowI*.02})`);
+    gr.addColorStop(1, 'transparent');
+    cx.fillStyle = gr; cx.beginPath(); cx.arc(mouseX, mouseY, forceRadius, 0, 6.28); cx.fill();
+    // Force ring
+    cx.beginPath(); cx.arc(mouseX, mouseY, forceRadius, 0, 6.28);
+    cx.strokeStyle = `rgba(88,166,255,${glowI*.05})`; cx.lineWidth = .5; cx.stroke();
+  }
+  // Drag painting
+  if (dragging && mouseX > 0 && Math.random() > .6) {
+    particles.push({x: mouseX+(Math.random()-.5)*10, y: mouseY+(Math.random()-.5)*10,
+      s: Math.random()*1.5+.3, vx: (Math.random()-.5)*.5, vy: (Math.random()-.5)*.5,
+      ph: Math.random()*6.28, cl: 'rgba(210,168,255,'});
+    while (particles.length > 250) particles.shift();
+  }
+  glowI *= .98;
+};
+
+// ── Evolving status + progress ──
+const startTime = Date.now();
+const pbar = document.getElementById('pbar');
+const msgEl = document.getElementById('msg');
+const thoughtEl = document.getElementById('thought');
+let lastPhaseIdx = -1;
+
+function updatePhase() {
+  const s = Math.floor((Date.now() - startTime) / 1000);
+  interactionProfile.patience = s;
+  pbar.style.width = Math.min(90, s * 1.5) + '%';
+
+  // Find current phase generator
+  let phaseIdx = 0;
+  for (let i = PHASE_GENERATORS.length - 1; i >= 0; i--) {
+    if (s >= PHASE_GENERATORS[i].t) { phaseIdx = i; break; }
+  }
+
+  // Generate new message when entering a new phase
+  if (phaseIdx !== lastPhaseIdx) {
+    lastPhaseIdx = phaseIdx;
+    const phase = PHASE_GENERATORS[phaseIdx];
+    msgEl.textContent = phase.gen();
+    // Rotate thought based on interaction profile (unique path per participant)
+    if (phaseIdx > 0) {
+      thoughtEl.textContent = generateThought();
+    }
+  }
+
+  // Store the generated message as a potential agent prompt (side-effect)
+  // When mindX comes back, these can be sent to the coordinator as participant-generated directives
+  if (s > 0 && s % 30 === 0) {
+    const prompt = msgEl.textContent;
+    try {
+      const prompts = JSON.parse(sessionStorage.getItem('mindx_wait_prompts') || '[]');
+      if (prompts.length < 10 && !prompts.includes(prompt)) {
+        prompts.push(prompt);
+        sessionStorage.setItem('mindx_wait_prompts', JSON.stringify(prompts));
+      }
+    } catch {}
+  }
+}
+setInterval(updatePhase, 1000);
+
+// ── Poll the ACTUAL destination, seamlessly load when ready ──
+let resolved = false;
+let pollCount = 0;
+async function pollDestination() {
+  if (resolved) return;
+  try {
+    const r = await fetch(DEST, {
+      signal: AbortSignal.timeout(8000),
+      headers: {'Accept': 'text/html'},
+      redirect: 'follow',
+    });
+    if (r.ok) {
+      resolved = true;
+      thoughtEl.textContent = 'ready.';
+      document.getElementById('code').textContent = '\u2713';
+      document.getElementById('ring').classList.add('ready');
+      document.getElementById('bubbles').style.display = 'none';
+      pbar.style.width = '100%';
+      pbar.style.background = '#3fb950';
+      msgEl.textContent = 'Loading your page...';
+      for (let i = 0; i < 15; i++) setTimeout(flashEdge, i * 40);
+      for (const n of nodes) n.act = 1;
+      const frame = document.getElementById('content-frame');
+      frame.src = DEST;
+      frame.onload = () => {
+        document.getElementById('overlay').classList.add('fade');
+        document.getElementById('quote').style.opacity = '0';
+        setTimeout(() => { frame.classList.add('show'); }, 300);
+        setTimeout(() => { location.replace(DEST); }, 1200);
+      };
+      setTimeout(() => { if (!frame.classList.contains('show')) location.replace(DEST); }, 3000);
+      return;
+    }
+  } catch {}
+  const delay = Math.min(3000 + pollCount * 1000, 10000);
+  pollCount++;
+  setTimeout(pollDestination, delay);
+}
+setTimeout(pollDestination, 2000);
+</script>
+</body>
+</html>

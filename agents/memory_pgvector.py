@@ -619,6 +619,30 @@ async def get_action_efficiency() -> Dict[str, Any]:
         return {"error": str(e)}
 
 
+async def get_indexed_docs() -> List[Dict[str, Any]]:
+    """List all documents indexed in doc_embeddings with chunk counts."""
+    pool = await get_pool()
+    if not pool:
+        return []
+    try:
+        rows = await pool.fetch(
+            """SELECT doc_name, COUNT(*) as chunks,
+                      SUM(LENGTH(text_content)) as total_chars
+               FROM doc_embeddings
+               WHERE embedding IS NOT NULL
+               GROUP BY doc_name
+               ORDER BY doc_name"""
+        )
+        return [
+            {"doc_name": r["doc_name"], "chunks": r["chunks"],
+             "size_kb": round(r["total_chars"] / 1024, 1)}
+            for r in rows
+        ]
+    except Exception as e:
+        logger.debug(f"get_indexed_docs failed: {e}")
+        return []
+
+
 async def count_embeddings() -> Dict[str, int]:
     """Count embeddings in doc and memory tables."""
     pool = await get_pool()

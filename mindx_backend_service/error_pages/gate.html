@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mind&#x58; — identity required</title>
+<link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Inter','SF Pro Text','Segoe UI',system-ui,-apple-system,sans-serif;background:#050810;color:#b0b8c4}
+canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;cursor:crosshair}
+.overlay{position:relative;z-index:1;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px}
+.lock-ring{position:relative;width:100px;height:100px;margin:0 auto 24px}
+.lock-ring svg{transition:all .6s}
+.lock-ring.unlocked svg{animation:none}
+.lock-ring .icon{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:24px;transition:all .4s}
+.lock-ring.unlocked .icon{color:#3fb950 !important}
+.logo{font-size:36px;font-weight:700;color:#e6edf3;letter-spacing:1px;font-family:'SF Mono','Fira Code',monospace;margin-bottom:4px;user-select:none}
+.logo b{color:#58a6ff}
+.thought{font-size:14px;color:#6e7681;margin-bottom:20px;max-width:420px;line-height:1.6}
+.auth-cards{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:16px 0}
+.auth-card{background:rgba(13,17,23,.7);border:1px solid rgba(26,31,46,.5);border-radius:6px;padding:16px 20px;width:200px;text-align:left;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
+.auth-card:hover{border-color:rgba(88,166,255,.4);transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.3)}
+.auth-card:active{transform:translateY(0)}
+.auth-card h3{font-size:12px;color:#e6edf3;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.auth-card h3 .ic{font-size:14px}
+.auth-card p{font-size:9px;color:#4a5060;line-height:1.5}
+.auth-card .shimmer{position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(88,166,255,.04),transparent);animation:shimmer 3s ease-in-out infinite}
+@keyframes shimmer{0%{left:-100%}50%{left:100%}100%{left:100%}}
+.nav-links{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:20px}
+.nav-links a{padding:5px 14px;background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.15);border-radius:3px;color:#58a6ff;font-size:9px;text-decoration:none;transition:all .3s}
+.nav-links a:hover{background:rgba(88,166,255,.14);border-color:#58a6ff}
+.endpoint-display{font-family:'SF Mono','Fira Code',monospace;font-size:10px;color:#4a5060;margin-bottom:16px;background:rgba(22,27,34,.5);padding:4px 12px;border-radius:3px;display:inline-block}
+.endpoint-display span{color:#d29922}
+.hexgrid{position:fixed;bottom:0;left:0;right:0;height:80px;z-index:1;pointer-events:none;opacity:.3}
+.quote{position:fixed;bottom:14px;left:0;right:0;text-align:center;font-size:9px;color:#3d424d;font-style:italic;z-index:2;padding:0 20px}
+.unlock-count{position:fixed;top:12px;right:12px;font-size:8px;color:#3d424d;z-index:2;font-family:'SF Mono',monospace}
+/* Key collection game */
+.key-float{position:fixed;z-index:3;font-size:16px;pointer-events:auto;cursor:pointer;animation:keyFloat 4s ease-in-out infinite;filter:drop-shadow(0 0 8px rgba(88,166,255,.4));user-select:none}
+@keyframes keyFloat{0%,100%{transform:translateY(0) rotate(0deg)}25%{transform:translateY(-8px) rotate(5deg)}75%{transform:translateY(4px) rotate(-3deg)}}
+.key-float:hover{filter:drop-shadow(0 0 16px rgba(63,185,80,.6));transform:scale(1.3)}
+.collected{animation:keyCollect .5s ease-out forwards !important}
+@keyframes keyCollect{to{transform:scale(0) rotate(180deg);opacity:0}}
+.key-counter{position:fixed;top:12px;left:12px;font-size:9px;color:#3d424d;z-index:3;font-family:'SF Mono',monospace}
+.key-counter span{color:#d29922}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="overlay">
+  <div class="lock-ring" id="lockRing">
+    <svg width="100" height="100" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(210,168,255,.08)" stroke-width="1.5"/>
+      <circle cx="50" cy="50" r="44" fill="none" stroke="#d2a8ff" stroke-width="1.5"
+        stroke-dasharray="70 207" stroke-linecap="round" opacity=".5"
+        style="animation:spin 6s linear infinite"/>
+      <circle cx="50" cy="50" r="34" fill="none" stroke="rgba(88,166,255,.06)" stroke-width="1"/>
+    </svg>
+    <div class="icon" id="lockIcon" style="color:#d2a8ff">&#x1f512;</div>
+  </div>
+  <div class="logo">mind<b>X</b></div>
+  <div class="thought">identity is not assigned — it is proven.</div>
+  <div class="endpoint-display">requesting <span id="epPath"></span></div>
+
+  <div class="auth-cards">
+    <div class="auth-card" onclick="connectWallet()">
+      <div class="shimmer"></div>
+      <h3><span class="ic">&#x1f98a;</span> Wallet</h3>
+      <p>Connect MetaMask or any Web3 wallet. Your cryptographic signature proves identity without passwords.</p>
+    </div>
+    <div class="auth-card" onclick="showApiInfo()">
+      <div class="shimmer" style="animation-delay:1.5s"></div>
+      <h3><span class="ic">&#x1f511;</span> API Key</h3>
+      <p>Use <code style="color:#7ee787;font-size:8px">Authorization: Bearer &lt;key&gt;</code> for programmatic access from agents and services.</p>
+    </div>
+    <div class="auth-card" onclick="window.open('/docs.html','_self')">
+      <div class="shimmer" style="animation-delay:3s"></div>
+      <h3><span class="ic">&#x1f4d6;</span> Explore</h3>
+      <p>Browse the public documentation, the living book, agent standings, and API reference — no auth needed.</p>
+    </div>
+  </div>
+
+  <div class="nav-links">
+    <a href="/">dashboard</a>
+    <a href="/docs.html">docs</a>
+    <a href="/book">the book</a>
+    <a href="/redoc">api reference</a>
+    <a href="/dojo/standings">dojo</a>
+  </div>
+</div>
+
+<div class="key-counter" id="keyCounter"></div>
+<div class="unlock-count" id="unlockCount"></div>
+<div class="quote" id="quote"></div>
+
+<script>
+@keyframes spin{to{transform:rotate(360deg)}}
+</script>
+<script>
+// ── Show the endpoint they were trying to reach ──
+document.getElementById('epPath').textContent = location.pathname;
+
+// ── Wallet connection ──
+async function connectWallet() {
+  if (!window.ethereum) {
+    alert('No Web3 wallet detected. Install MetaMask to authenticate with mindX.');
+    return;
+  }
+  try {
+    const accounts = await ethereum.request({method: 'eth_requestAccounts'});
+    if (accounts[0]) {
+      // Get challenge
+      const cr = await fetch('/users/challenge', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({wallet_address: accounts[0], action: 'login'}),
+      });
+      if (cr.ok) {
+        const challenge = await cr.json();
+        const sig = await ethereum.request({
+          method: 'personal_sign',
+          params: [challenge.message || challenge.challenge, accounts[0]],
+        });
+        const reg = await fetch('/users/register-with-signature', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({wallet_address: accounts[0], message: challenge.message || challenge.challenge, signature: sig}),
+        });
+        if (reg.ok) {
+          const session = await reg.json();
+          // Store session and reload the original page
+          document.getElementById('lockIcon').textContent = '\u{1f513}';
+          document.getElementById('lockRing').classList.add('unlocked');
+          document.querySelector('.thought').textContent = 'identity proven. welcome.';
+          setTimeout(() => { location.reload(); }, 800);
+        }
+      }
+    }
+  } catch (e) {
+    if (e.code === 4001) document.querySelector('.thought').textContent = 'signature declined. try again when ready.';
+  }
+}
+
+function showApiInfo() {
+  document.querySelector('.thought').innerHTML = 'add this header to your requests:<br><code style="color:#7ee787;font-size:11px">Authorization: Bearer YOUR_API_KEY</code>';
+}
+
+// ── Canvas: identity-themed particle field ──
+const cv = document.getElementById('bg'), c = cv.getContext('2d');
+let W, H, particles = [], locks = [], unlockAnim = [];
+let mouseX = -1, mouseY = -1;
+
+function rsz() { W = cv.width = innerWidth; H = cv.height = innerHeight; mkParts(); }
+addEventListener('resize', rsz); rsz();
+
+function mkParts() {
+  particles = [];
+  const n = Math.min(150, Math.floor(W * H / 6000));
+  for (let i = 0; i < n; i++) particles.push({
+    x: Math.random() * W, y: Math.random() * H,
+    s: Math.random() * 1.5 + .2,
+    vx: (Math.random() - .5) * .3, vy: (Math.random() - .5) * .25,
+    ph: Math.random() * 6.28,
+    cl: Math.random() > .5 ? 'rgba(210,168,255,' : Math.random() > .5 ? 'rgba(88,166,255,' : 'rgba(63,185,80,',
+  });
+}
+
+// ── Floating hexagonal "identity nodes" ──
+const HEX_NODES = [];
+for (let i = 0; i < 6; i++) {
+  HEX_NODES.push({
+    x: W * (.15 + Math.random() * .7), y: H * (.15 + Math.random() * .7),
+    r: 15 + Math.random() * 10, vx: (Math.random() - .5) * .3, vy: (Math.random() - .5) * .2,
+    ph: Math.random() * 6.28, verified: false, hue: i,
+  });
+}
+
+function drawHex(cx0, cy0, r, rot) {
+  c.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const ang = (i / 6) * Math.PI * 2 + rot;
+    const method = i === 0 ? 'moveTo' : 'lineTo';
+    c[method](cx0 + Math.cos(ang) * r, cy0 + Math.sin(ang) * r);
+  }
+  c.closePath();
+}
+
+function draw(t) {
+  c.fillStyle = 'rgba(5,8,16,.1)'; c.fillRect(0, 0, W, H);
+
+  // Radial glow (purple-tinted for identity theme)
+  const gr = c.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, H * .5);
+  gr.addColorStop(0, 'rgba(210,168,255,.01)');
+  gr.addColorStop(.5, 'rgba(88,166,255,.006)');
+  gr.addColorStop(1, 'transparent');
+  c.fillStyle = gr; c.fillRect(0, 0, W, H);
+
+  // Connections between nearby particles
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < Math.min(particles.length, i + 10); j++) {
+      const dx = particles[i].x - particles[j].x, dy = particles[i].y - particles[j].y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < 4000) {
+        c.beginPath(); c.moveTo(particles[i].x, particles[i].y); c.lineTo(particles[j].x, particles[j].y);
+        c.strokeStyle = `rgba(210,168,255,${(1 - d2 / 4000) * .06})`; c.lineWidth = .4; c.stroke();
+      }
+    }
+  }
+
+  // Particles
+  for (const p of particles) {
+    if (mouseX > 0) {
+      const dx = mouseX - p.x, dy = mouseY - p.y, dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 150) {
+        const f = (150 - dist) / 150 * .015;
+        p.vx += dx / dist * f; p.vy += dy / dist * f;
+      }
+    }
+    p.vx *= .997; p.vy *= .997;
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0) p.x = W; if (p.x > W) p.x = 0; if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+    c.beginPath(); c.arc(p.x, p.y, p.s, 0, 6.28);
+    c.fillStyle = p.cl + (.1 + Math.sin(t * .0008 + p.ph) * .08) + ')'; c.fill();
+  }
+
+  // Hex identity nodes
+  for (const h of HEX_NODES) {
+    h.x += h.vx + Math.sin(t * .0003 + h.ph) * .2;
+    h.y += h.vy + Math.cos(t * .0004 + h.ph) * .15;
+    if (h.x < 30 || h.x > W - 30) h.vx *= -1;
+    if (h.y < 30 || h.y > H - 30) h.vy *= -1;
+    const rot = t * .0003 + h.ph;
+    const pr = h.r + Math.sin(t * .002 + h.ph) * 2;
+    // Glow
+    drawHex(h.x, h.y, pr * 1.8, rot);
+    c.fillStyle = h.verified ? 'rgba(63,185,80,.04)' : 'rgba(210,168,255,.03)'; c.fill();
+    // Border
+    drawHex(h.x, h.y, pr, rot);
+    c.strokeStyle = h.verified ? 'rgba(63,185,80,.3)' : 'rgba(210,168,255,.15)';
+    c.lineWidth = h.verified ? 1.5 : .8; c.stroke();
+  }
+
+  // Unlock animations
+  for (let i = unlockAnim.length - 1; i >= 0; i--) {
+    const u = unlockAnim[i]; u.life -= .015;
+    if (u.life <= 0) { unlockAnim.splice(i, 1); continue; }
+    c.beginPath(); c.arc(u.x, u.y, (1 - u.life) * 60, 0, 6.28);
+    c.strokeStyle = `rgba(63,185,80,${u.life * .3})`; c.lineWidth = 2 * u.life; c.stroke();
+  }
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+
+cv.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+cv.addEventListener('mouseleave', () => { mouseX = -1; mouseY = -1; });
+
+// ── Click to "verify" hex nodes ──
+let verifiedCount = 0;
+cv.addEventListener('click', e => {
+  for (const h of HEX_NODES) {
+    const dx = e.clientX - h.x, dy = e.clientY - h.y;
+    if (Math.sqrt(dx * dx + dy * dy) < h.r * 2 && !h.verified) {
+      h.verified = true; verifiedCount++;
+      unlockAnim.push({x: h.x, y: h.y, life: 1});
+      // Spawn particles
+      for (let i = 0; i < 8; i++) particles.push({
+        x: h.x, y: h.y, s: Math.random() * 2 + .5,
+        vx: (Math.random() - .5) * 2, vy: (Math.random() - .5) * 2,
+        ph: Math.random() * 6.28, cl: 'rgba(63,185,80,',
+      });
+      while (particles.length > 300) particles.shift();
+      document.getElementById('unlockCount').textContent = verifiedCount + '/' + HEX_NODES.length + ' nodes verified';
+      if (verifiedCount === HEX_NODES.length) {
+        document.getElementById('unlockCount').textContent = 'all nodes verified. you understand identity.';
+        document.getElementById('lockIcon').textContent = '\u{1f513}';
+      }
+      break;
+    }
+  }
+});
+
+// ── Floating key collection game ──
+const KEY_SYMBOLS = ['\u{1f511}', '\u{1f5dd}', '\u{2747}', '\u{1f4a0}', '\u{1f300}', '\u{269b}'];
+let keysCollected = 0, keysSpawned = 0;
+
+function spawnKey() {
+  if (keysSpawned >= 12) return;
+  const el = document.createElement('div');
+  el.className = 'key-float';
+  el.textContent = KEY_SYMBOLS[Math.floor(Math.random() * KEY_SYMBOLS.length)];
+  el.style.left = (10 + Math.random() * 80) + 'vw';
+  el.style.top = (10 + Math.random() * 70) + 'vh';
+  el.style.animationDelay = Math.random() * 2 + 's';
+  el.onclick = function() {
+    el.classList.add('collected');
+    keysCollected++; keysSpawned--;
+    document.getElementById('keyCounter').innerHTML = '<span>' + keysCollected + '</span> keys collected';
+    setTimeout(() => el.remove(), 500);
+    if (keysCollected === 7) document.getElementById('keyCounter').innerHTML = '<span>7</span> keys — a sovereign set.';
+    if (keysCollected === 12) document.getElementById('keyCounter').innerHTML = '<span>12</span> keys — you have collected all the keys. but the real key is identity.';
+  };
+  document.body.appendChild(el);
+  keysSpawned++;
+}
+// Spawn keys over time
+setTimeout(spawnKey, 3000);
+setInterval(() => { if (keysSpawned < 4) spawnKey(); }, 5000);
+
+// ── Quotes ──
+const QUOTES = [
+  '"Identity is not assigned — it is proven through signature." — BANKON',
+  '"A wallet is not just an address. It is a declaration of sovereignty."',
+  '"The gate is not a wall. It is a handshake."',
+  '"Cryptographic proof replaces trust. Math replaces authority."',
+  '"Every agent holds a key. Every key holds a story."',
+  '"You are the private key. The system is the lock."',
+];
+let qi = Math.floor(Math.random() * QUOTES.length);
+document.getElementById('quote').textContent = QUOTES[qi];
+setInterval(() => { qi = (qi + 1) % QUOTES.length; document.getElementById('quote').textContent = QUOTES[qi]; }, 12000);
+</script>
+</body>
+</html>

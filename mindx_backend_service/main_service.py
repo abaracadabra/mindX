@@ -156,12 +156,37 @@ app = FastAPI(
     version="1.3.4",
 )
 
-# ── Public diagnostics dashboard + journal ──
+# ── Branded error pages (served by FastAPI and Apache) ──
 from fastapi.responses import HTMLResponse as _DashResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+_ERR_PAGES_PATH = Path(__file__).parent / "error_pages"
+
+@app.exception_handler(StarletteHTTPException)
+async def mindx_error_handler(request, exc):
+    """Serve branded error pages for HTTP errors. API clients get JSON; browsers get the canvas page."""
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept:
+        if exc.status_code == 404:
+            page = _ERR_PAGES_PATH / "lost.html"
+        else:
+            page = _ERR_PAGES_PATH / "thinking.html"
+        if page.exists():
+            html = page.read_text(encoding="utf-8")
+            return _DashResponse(content=html, status_code=exc.status_code)
+    # JSON fallback for API clients
+    from starlette.responses import JSONResponse
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail or "mindX encountered an issue.", "status": exc.status_code},
+    )
+
+
+# ── Public diagnostics dashboard + journal ──
 
 @app.get("/docs.html", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
 async def docs_html_page():
-    """Documentation hub with auto-generated TOC from all docs."""
+    """Documentation hub with auto-generated TOC, endpoint map, and pgvectorscale index."""
     import re as _re
     book_path = PROJECT_ROOT / "docs" / "BOOK_OF_MINDX.md"
     journal_path = PROJECT_ROOT / "docs" / "IMPROVEMENT_JOURNAL.md"
@@ -171,7 +196,56 @@ async def docs_html_page():
     editions = sorted(pub_dir.glob("book_of_mindx_*.md"), reverse=True) if pub_dir.exists() else []
     edition_count = len(editions)
 
-    # Auto-generate TOC from all docs
+    # ── Dynamic endpoint count + map from OpenAPI schema ──
+    endpoint_count = 0
+    endpoint_map_html = ""
+    try:
+        schema = app.openapi()
+        paths = schema.get("paths", {})
+        endpoint_count = sum(len(methods) for methods in paths.values())
+        # Group endpoints by tag
+        tag_groups: dict = {}
+        for path, methods in sorted(paths.items()):
+            for method, detail in methods.items():
+                tags = detail.get("tags", ["other"])
+                tag = tags[0] if tags else "other"
+                summary = detail.get("summary", "")
+                if tag not in tag_groups:
+                    tag_groups[tag] = []
+                tag_groups[tag].append(f'<li><code style="color:#7ee787;font-size:9px">{method.upper()}</code> '
+                    f'<span style="color:#e6edf3;font-size:10px">{path}</span>'
+                    f'{" <span style=color:#4a5060;font-size:8px>— " + summary[:60] + "</span>" if summary else ""}</li>')
+        for tag in sorted(tag_groups.keys()):
+            items = tag_groups[tag]
+            endpoint_map_html += (f'<details style="margin:4px 0"><summary style="cursor:pointer;color:#58a6ff;font-size:11px;font-weight:600">'
+                f'{tag} <span style="color:#4a5060;font-weight:400">({len(items)})</span></summary>'
+                f'<ul style="list-style:none;padding:4px 0 4px 12px;margin:0">{"".join(items)}</ul></details>')
+    except Exception:
+        pass
+
+    # ── pgvectorscale-indexed docs from database ──
+    db_docs_html = ""
+    db_doc_count = 0
+    try:
+        from agents import memory_pgvector as _mpg_docs
+        indexed_docs = await _safe_await(_mpg_docs.get_indexed_docs(), timeout_s=3.0, default=[])
+        db_doc_count = len(indexed_docs)
+        if indexed_docs:
+            db_items = []
+            for d in indexed_docs:
+                name = d["doc_name"]
+                chunks = d["chunks"]
+                size = d["size_kb"]
+                db_items.append(
+                    f'<li><a href="/doc/{name}" style="color:#e6edf3;text-decoration:none">'
+                    f'<strong>{name}.md</strong></a> '
+                    f'<span style="color:#4a5060">({size}KB, {chunks} chunks)</span> '
+                    f'<span class="tag tag-ref">EMBEDDED</span></li>')
+            db_docs_html = '<ul style="list-style:none;padding:0">' + "".join(db_items) + "</ul>"
+    except Exception:
+        pass
+
+    # ── Auto-generate TOC from filesystem docs ──
     categories = {
         "Core Architecture": [], "Agents": [], "Tools": [], "Governance & DAIO": [],
         "Memory & Knowledge": [], "Deployment & Operations": [], "API & Integration": [],
@@ -182,7 +256,6 @@ async def docs_html_page():
         for f in sorted(docs_dir.glob("*.md")):
             name = f.stem
             size_kb = round(f.stat().st_size / 1024, 1)
-            # Extract first heading
             heading = name
             try:
                 for line in f.read_text(encoding="utf-8", errors="replace").split("\n")[:5]:
@@ -224,6 +297,7 @@ async def docs_html_page():
     return _DashResponse(content=f"""<!DOCTYPE html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>mindX Documentation</title>
+<link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
 body{{font-family:'Inter','SF Pro Text',system-ui,sans-serif;background:#050810;color:#b0b8c4;min-height:100vh}}
@@ -240,8 +314,10 @@ h1 b{{color:#58a6ff}}
 .tag{{display:inline-block;padding:1px 5px;border-radius:3px;font-size:7px;font-weight:700;margin-right:3px}}
 .tag-live{{background:rgba(13,51,33,.8);color:#3fb950}}.tag-auto{{background:rgba(26,42,58,.8);color:#58a6ff}}
 .tag-ref{{background:rgba(42,42,26,.8);color:#d29922}}.tag-api{{background:rgba(36,20,50,.8);color:#d2a8ff}}
+.tag-db{{background:rgba(20,36,50,.8);color:#79c0ff}}
 .sep{{border:none;border-top:1px solid rgba(26,31,46,.4);margin:16px 0}}
 ul{{padding:0}}li{{margin:4px 0;font-size:10px;line-height:1.5}}
+details summary::-webkit-details-marker{{color:#4a5060}}
 .ft{{font-size:9px;color:#4a5060;text-align:center;margin-top:20px}}
 .ft a{{color:#58a6ff;text-decoration:none}}
 </style></head><body><div class="top">
@@ -250,7 +326,7 @@ ul{{padding:0}}li{{margin:4px 0;font-size:10px;line-height:1.5}}
 
 <div class="card">
 <h2><a href="/book">The Book of mindX</a></h2>
-<p>The evolving chronicle of a self-improving system — architecture, identities, decisions, philosophy. Written by mindX itself via AuthorAgent. Republished every 2 hours.</p>
+<p>The evolving chronicle of a self-improving system — architecture, identities, decisions, philosophy. Written by mindX itself via AuthorAgent.</p>
 <div class="meta"><span class="tag tag-live">LIVE</span><span class="tag tag-auto">AUTO-GENERATED</span> {'Published' if book_exists else 'First edition pending'} &middot; {edition_count} edition{'s' if edition_count!=1 else ''} archived</div>
 </div>
 
@@ -263,15 +339,21 @@ ul{{padding:0}}li{{margin:4px 0;font-size:10px;line-height:1.5}}
 <hr class="sep">
 
 <div class="card">
-<h2><a href="/redoc">API Reference</a> <span style="color:#4a5060;font-size:10px">(185 endpoints)</span></h2>
+<h2><a href="/redoc">API Reference</a> <span style="color:#4a5060;font-size:10px">({endpoint_count} endpoints)</span></h2>
 <p>Complete API documentation. All endpoints: agents, inference, governance, vault, diagnostics, chat, actions, RAGE embed.</p>
 <div class="meta"><span class="tag tag-api">API</span> <a href="/redoc" style="color:#58a6ff">ReDoc</a> (fast) &middot; <a href="/docs" style="color:#4a5060">Swagger UI</a> &middot; <a href="/openapi.json" style="color:#4a5060">OpenAPI JSON</a></div>
 </div>
 
 <div class="card">
+<h2>Endpoint Map <span style="color:#4a5060;font-size:10px">({endpoint_count} routes)</span></h2>
+<p style="margin-bottom:8px">All API routes grouped by tag. Click to expand.</p>
+{endpoint_map_html}
+</div>
+
+<div class="card">
 <h2><a href="/dojo/standings">Dojo Standings</a></h2>
 <p>Agent reputation rankings — scores, ranks, BONA FIDE verification status.</p>
-<div class="meta"><span class="tag tag-live">LIVE</span> 12 agents tracked</div>
+<div class="meta"><span class="tag tag-live">LIVE</span></div>
 </div>
 
 <div class="card">
@@ -282,10 +364,10 @@ ul{{padding:0}}li{{margin:4px 0;font-size:10px;line-height:1.5}}
 
 <hr class="sep">
 
-<hr class="sep">
+{'<h2 style="font-size:14px;color:#e6edf3;margin-bottom:6px">pgvectorscale Index <span style="color:#4a5060;font-weight:400;font-size:10px">(' + str(db_doc_count) + ' docs embedded)</span></h2><p style="font-size:9px;color:#5a6070;margin-bottom:12px">Documents indexed in PostgreSQL with semantic embeddings — searchable via <a href="/chat/docs" style="color:#58a6ff">RAG</a></p>' + db_docs_html + '<hr class="sep">' if db_doc_count else ''}
 
 <h2 style="font-size:14px;color:#e6edf3;margin-bottom:6px">Table of Contents <span style="color:#4a5060;font-weight:400;font-size:10px">({total_docs} documents)</span></h2>
-<p style="font-size:9px;color:#5a6070;margin-bottom:12px">Auto-indexed from docs/ — <a href="https://github.com/AgenticPlace/mindX" style="color:#58a6ff">GitHub</a></p>
+<p style="font-size:9px;color:#5a6070;margin-bottom:12px">Auto-indexed from docs/ — all documents link to <code>/doc/{{name}}</code> for online reading</p>
 
 {toc_html}
 
@@ -295,8 +377,15 @@ ul{{padding:0}}li{{margin:4px 0;font-size:10px;line-height:1.5}}
 _DOC_STYLE = """*{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter','SF Pro Text',system-ui,sans-serif;background:#050810;color:#b8c0cc;padding:0;margin:0;line-height:1.7}
 .page{max-width:780px;margin:0 auto;padding:28px 24px 40px}
-.nav{font-size:10px;color:#4a5060;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid rgba(26,31,46,.4)}
-.nav a{color:#58a6ff;text-decoration:none;margin-right:8px}.nav a:hover{text-decoration:underline}
+.nav{font-size:10px;color:#4a5060;margin-bottom:20px;padding-bottom:0;border-bottom:none;display:flex;flex-direction:column;gap:0;position:sticky;top:0;z-index:10;background:#050810}
+.nav-row{display:flex;align-items:center;flex-wrap:wrap;gap:0;padding:6px 0;border-bottom:1px solid rgba(26,31,46,.4)}
+.nav-row:last-child{margin-bottom:12px}
+.nav a{color:#58a6ff;text-decoration:none;margin-right:8px;white-space:nowrap}.nav a:hover{text-decoration:underline;color:#79c0ff}
+.nav .sep{color:rgba(26,31,46,.6);margin:0 2px;user-select:none}
+.nav .brand{color:#e6edf3;font-weight:700;font-family:'SF Mono',monospace;margin-right:10px;font-size:11px;letter-spacing:.3px}
+.nav .brand b{color:#58a6ff}
+.nav .dim{color:#3d424d}.nav .dim:hover{color:#58a6ff}
+.nav .grp{color:#4a5060;font-size:8px;text-transform:uppercase;letter-spacing:.8px;margin-right:6px;font-weight:600}
 h1{color:#e6edf3;font-size:21px;margin:24px 0 10px;letter-spacing:.3px;font-weight:700}
 h2{color:#58a6ff;font-size:16px;margin:28px 0 10px;padding-top:18px;border-top:1px solid rgba(26,31,46,.4);font-weight:600}
 h3{color:#d2a8ff;font-size:13px;margin:18px 0 6px;font-weight:600}
@@ -318,7 +407,7 @@ img{max-width:100%;border-radius:4px;margin:8px 0}
 .title-meta{font-size:10px;color:#4a5060;margin-bottom:20px}"""
 
 def _render_md(md_text: str) -> str:
-    """Convert markdown to HTML with good fidelity."""
+    """Convert markdown to HTML with good fidelity and self-linking docs."""
     import re
     h = md_text
     # Code blocks first (preserve content)
@@ -351,8 +440,15 @@ def _render_md(md_text: str) -> str:
     if hasattr(_table_row, '_seen'):
         del _table_row._seen
     h = re.sub(r'^\|(.+)\|$', _table_row, h, flags=re.MULTILINE)
-    # Links
+    # Links (explicit markdown links first)
     h = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', h)
+    # Self-linking: bare .md references become clickable links to /doc/{name}
+    # Match WORD.md or WORD_WORD.md patterns not already inside an href or <a> tag
+    h = re.sub(
+        r'(?<!href=")(?<!/)(?<!</a>)(?<!</code>)\b([A-Za-z][A-Za-z0-9_\-]+)\.md\b',
+        r'<a href="/doc/\1">\1.md</a>',
+        h,
+    )
     # Paragraphs
     h = h.replace('\n\n', '</p>\n<p>')
     h = '<p>' + h + '</p>'
@@ -362,9 +458,13 @@ def _render_md(md_text: str) -> str:
     return h
 
 def _doc_page(title: str, body_html: str, meta: str = "") -> str:
-    nav = '<div class="nav"><a href="/docs.html">&larr; docs</a><a href="/">dashboard</a><a href="/book">book</a><a href="/journal">journal</a></div>'
+    nav = '''<div class="nav">
+<div class="nav-row"><span class="brand">mind<b>X</b></span><a href="/">dashboard</a><span class="sep">/</span><a href="/docs.html">docs</a><span class="sep">/</span><a href="/book">book</a><span class="sep">/</span><a href="/journal">journal</a><span class="sep">/</span><a href="/dojo/standings" class="dim">dojo</a><span class="sep">/</span><a href="/inference/status" class="dim">inference</a><span class="sep">/</span><a href="/governance/status" class="dim">governance</a></div>
+<div class="nav-row"><span class="grp">philosophy</span><a href="/doc/manifesto" class="dim">manifesto</a><a href="/doc/thesis" class="dim">thesis</a><a href="/doc/AUTOMINDX_ORIGIN" class="dim">origin</a><a href="/doc/whitepaper" class="dim">whitepaper</a><a href="/doc/ataraxia" class="dim">ataraxia</a><a href="/doc/roadmap" class="dim">roadmap</a><span class="sep">|</span><span class="grp">arch</span><a href="/doc/TECHNICAL" class="dim">overview</a><a href="/doc/ORCHESTRATION" class="dim">orchestration</a><a href="/doc/codebase_map" class="dim">codebase</a><a href="/doc/hierarchy" class="dim">hierarchy</a><span class="sep">|</span><span class="grp">agents</span><a href="/doc/mindXagent" class="dim">mindXagent</a><a href="/doc/ceo_agent" class="dim">ceo</a><a href="/doc/mastermind_agent" class="dim">mastermind</a><a href="/doc/bdi_agent" class="dim">bdi</a><a href="/doc/strategic_evolution_agent" class="dim">evolution</a></div>
+<div class="nav-row"><span class="grp">gov</span><a href="/doc/DAIO" class="dim">daio</a><a href="/doc/DAIO_CIVILIZATION_GOVERNANCE" class="dim">civilization</a><a href="/doc/IDENTITY" class="dim">identity</a><span class="sep">|</span><span class="grp">memory</span><a href="/doc/pgvectorscale_memory_integration" class="dim">pgvector</a><a href="/doc/EMBEDDING_SYSTEM" class="dim">embed</a><a href="/doc/aglm" class="dim">aglm</a><a href="/doc/memory" class="dim">memory</a><span class="sep">|</span><span class="grp">inference</span><a href="/doc/VLLM_INTEGRATION" class="dim">vllm</a><a href="/doc/ollama_api_integration" class="dim">ollama</a><span class="sep">|</span><span class="grp">time</span><a href="/doc/TIME_ORACLE" class="dim">oracle</a><a href="/automindx" class="dim" style="color:#d2a8ff">automindx</a><span class="sep">|</span><span class="grp">tools</span><a href="/doc/TOOLS_INDEX" class="dim">index</a><a href="/doc/a2a_tool" class="dim">a2a</a><a href="/doc/mcp_tool" class="dim">mcp</a><span class="sep">|</span><span class="grp">publish</span><a href="/doc/AUTHOR_AGENT" class="dim">authoragent</a><a href="/book" class="dim">book</a><a href="/journal" class="dim">journal</a><span class="sep">|</span><span class="grp">deploy</span><a href="/doc/DEPLOYMENT_MINDX_PYTHAI_NET" class="dim">production</a><a href="/doc/security" class="dim">security</a><span class="sep">|</span><span class="grp">api</span><a href="/redoc" class="dim">reference</a><a href="/doc/mistral_api" class="dim">mistral</a></div>
+</div>'''
     meta_html = f'<div class="title-meta">{meta}</div>' if meta else ''
-    return f'<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title} — mindX</title><style>{_DOC_STYLE}</style></head><body><div class="page">{nav}{meta_html}{body_html}</div></body></html>'
+    return f'<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title} — mindX</title><link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><style>{_DOC_STYLE}</style></head><body><div class="page">{nav}{meta_html}{body_html}</div></body></html>'
 
 @app.get("/doc/{name}", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
 async def read_doc(name: str):
@@ -401,6 +501,75 @@ async def improvement_journal_page():
     return _DashResponse(content=_doc_page("Improvement Journal", _render_md(md)))
 
 _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
+_ERROR_PAGES_DIR = Path(__file__).parent / "error_pages"
+_FAVICON_DIR = Path(__file__).parent
+
+
+@app.get("/static/{filepath:path}", include_in_schema=False)
+async def serve_static(filepath: str):
+    """Serve static assets (JS, CSS, images)."""
+    from starlette.responses import FileResponse
+    import re as _re_static
+    safe = _re_static.sub(r'[^a-zA-Z0-9_\-./]', '', filepath)
+    path = _FAVICON_DIR / "static" / safe
+    if path.exists() and path.is_file():
+        mt = {"js": "application/javascript", "css": "text/css", "png": "image/png",
+              "svg": "image/svg+xml", "json": "application/json"}.get(path.suffix.lstrip('.'), "application/octet-stream")
+        return FileResponse(path, media_type=mt)
+    return _DashResponse(content="", status_code=404)
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    from starlette.responses import FileResponse
+    ico = _FAVICON_DIR / "favicon.ico"
+    if ico.exists():
+        return FileResponse(ico, media_type="image/x-icon")
+    return _DashResponse(content="", status_code=404)
+
+
+@app.get("/favicon-32.png", include_in_schema=False)
+async def favicon_png():
+    from starlette.responses import FileResponse
+    png = _FAVICON_DIR / "favicon-32.png"
+    if png.exists():
+        return FileResponse(png, media_type="image/png")
+    return _DashResponse(content="", status_code=404)
+
+
+@app.get("/apple-touch-icon.png", include_in_schema=False)
+async def apple_touch_icon():
+    from starlette.responses import FileResponse
+    png = _FAVICON_DIR / "apple-touch-icon.png"
+    if png.exists():
+        return FileResponse(png, media_type="image/png")
+    return _DashResponse(content="", status_code=404)
+
+
+@app.get("/error-pages/{page}", response_class=_DashResponse, include_in_schema=False)
+async def serve_error_page(page: str):
+    """Serve branded error pages (also served directly by Apache when backend is down)."""
+    import re as _re3
+    safe = _re3.sub(r'[^a-zA-Z0-9_\-.]', '', page)
+    if not safe.endswith('.html'):
+        safe += '.html'
+    path = _ERROR_PAGES_DIR / safe
+    if path.exists() and path.is_file():
+        return _DashResponse(content=path.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX</h1>", status_code=404)
+
+
+_AUTOMINDX_HTML_PATH = Path(__file__).parent / "automindx.html"
+
+
+@app.get("/automindx", response_class=_DashResponse, include_in_schema=False)
+@app.get("/automindx.html", response_class=_DashResponse, include_in_schema=False)
+async def automindx_page():
+    """AUTOMINDx — The Origin of mindX."""
+    if _AUTOMINDX_HTML_PATH.exists():
+        return _DashResponse(content=_AUTOMINDX_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>AUTOMINDx</h1><p>Loading...</p>")
+
 
 @app.get("/", response_class=_DashResponse, include_in_schema=False)
 async def public_dashboard():
@@ -430,8 +599,8 @@ app.add_middleware(
 # Uses @app.middleware("http") which always fires regardless of import order.
 
 _PUBLIC_EXACT = frozenset({
-    "/", "/health", "/docs.html", "/book", "/journal",
-    "/openapi.json", "/docs", "/redoc",
+    "/", "/health", "/docs.html", "/book", "/journal", "/automindx", "/automindx.html",
+    "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/diagnostics/live", "/vault/credentials/status",
     "/vault/credentials/providers", "/dojo/standings",
     "/inference/status", "/boardroom/sessions",
@@ -443,7 +612,7 @@ _PUBLIC_PREFIXES = (
     "/doc/", "/docs", "/redoc", "/mindterm/static/",
     "/dojo/agent/", "/bankon", "/agenticplace/", "/chat/docs",
     "/actions/export", "/diagnostics/export", "/api/rage/embed",
-    "/users/challenge", "/users/register",
+    "/users/challenge", "/users/register", "/error-pages/", "/static/",
 )
 
 @app.middleware("http")
@@ -481,6 +650,13 @@ async def api_access_gate(request: Request, call_next):
         if bearer_key in valid_keys:
             return await call_next(request)
 
+    # Browsers get the interactive identity gate; API clients get JSON
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept:
+        gate_page = _ERR_PAGES_PATH / "gate.html"
+        if gate_page.exists():
+            from starlette.responses import HTMLResponse as _GateR
+            return _GateR(content=gate_page.read_text(encoding="utf-8"), status_code=401)
     from starlette.responses import JSONResponse as _GR
     return _GR(status_code=401, content={
         "detail": "Authentication required. Provide X-Session-Token or Authorization: Bearer <api_key>",
@@ -534,6 +710,9 @@ _diag_start = time.time()
 _diag_interactions: list = []  # In-memory cache, loaded from disk on startup
 _diag_heartbeat_count = 0
 _diag_last_probe = 0.0
+_diag_cache: dict = {}        # Cached /diagnostics/live response
+_diag_cache_ts: float = 0.0   # When the cache was last populated
+_DIAG_CACHE_TTL: float = 5.0  # Seconds to serve cached diagnostics
 _INTERACTIONS_LOG = PROJECT_ROOT / "data" / "logs" / "heartbeat_dialogues.jsonl"
 
 # Load existing dialogues from disk (all logs are memories in data)
@@ -647,10 +826,44 @@ async def _heartbeat_query_local_model():
         pass
 
 
+async def _safe_await(coro, timeout_s: float = 3.0, default=None):
+    """Await a coroutine with a timeout; return default on failure."""
+    try:
+        return await asyncio.wait_for(coro, timeout=timeout_s)
+    except Exception:
+        return default
+
+
+async def _disk_usage_detail() -> dict:
+    """Run 'du' in a thread so it never blocks the event loop."""
+    def _run():
+        import subprocess
+        try:
+            r = subprocess.run(
+                ["du", "-sh", str(PROJECT_ROOT / "data"), str(PROJECT_ROOT / ".mindx_env"),
+                 str(PROJECT_ROOT / "mindx_backend_service" / "vault_bankon")],
+                capture_output=True, text=True, timeout=5,
+            )
+            detail = {}
+            for line in r.stdout.strip().split("\n"):
+                parts = line.split("\t")
+                if len(parts) == 2:
+                    detail[parts[1].split("/")[-1]] = parts[0]
+            return detail
+        except Exception:
+            return {}
+    return await asyncio.to_thread(_run)
+
+
 @app.get("/diagnostics/live", tags=["diagnostics"])
 async def diagnostics_live_endpoint():
-    global _diag_last_probe
+    global _diag_last_probe, _diag_cache, _diag_cache_ts
     now = time.time()
+
+    # Serve cached response if fresh (prevents worker exhaustion from 6s polling)
+    if _diag_cache and (now - _diag_cache_ts) < _DIAG_CACHE_TTL:
+        return _diag_cache
+
     up_s = int(now - _diag_start)
     d, r = divmod(up_s, 86400); h, r = divmod(r, 3600); m, _ = divmod(r, 60)
     uptime = f"{d}d {h}h {m}m" if d else f"{h}h {m}m"
@@ -665,30 +878,30 @@ async def diagnostics_live_endpoint():
     proc_mem = round(proc.memory_info().rss / (1024**2), 1)
     load_1, load_5, load_15 = os.getloadavg()
 
-    # Auto-probe inference + heartbeat every 60s
+    # Auto-probe inference + heartbeat every 60s (fire-and-forget, don't block response)
     if now - _diag_last_probe > 60:
         _diag_last_probe = now
-        try:
-            from llm.inference_discovery import InferenceDiscovery
-            disc = await InferenceDiscovery.get_instance()
-            await disc.probe_all()
-        except Exception: pass
-        # Fire heartbeat to local model
+        async def _bg_probe():
+            try:
+                from llm.inference_discovery import InferenceDiscovery
+                disc = await InferenceDiscovery.get_instance()
+                await disc.probe_all()
+            except Exception: pass
+            try:
+                from agents import memory_pgvector as _mpr
+                await _mpr.store_memory(
+                    memory_id=f"resource_{int(now)}",
+                    agent_id="system_state_tracker",
+                    memory_type="resource_metrics",
+                    importance=2,
+                    content={"cpu_percent": cpu_now, "cpu_avg": cpu_avg, "load": [round(load_1,2), round(load_5,2), round(load_15,2)],
+                             "memory_percent": mem.percent, "memory_used_gb": round(mem.used/(1024**3),2),
+                             "disk_percent": round(disk.percent,1), "process_memory_mb": proc_mem},
+                    context={}, tags=["resource", "metrics", "periodic"],
+                )
+            except Exception: pass
+        asyncio.create_task(_bg_probe())
         asyncio.create_task(_heartbeat_query_local_model())
-        # Store resource snapshot as memory (logs are memories)
-        try:
-            from agents import memory_pgvector as _mpr
-            await _mpr.store_memory(
-                memory_id=f"resource_{int(now)}",
-                agent_id="system_state_tracker",
-                memory_type="resource_metrics",
-                importance=2,
-                content={"cpu_percent": cpu_now, "cpu_avg": cpu_avg, "load": [round(load_1,2), round(load_5,2), round(load_15,2)],
-                         "memory_percent": mem.percent, "memory_used_gb": round(mem.used/(1024**3),2),
-                         "disk_percent": round(disk.percent,1), "process_memory_mb": proc_mem},
-                context={}, tags=["resource", "metrics", "periodic"],
-            )
-        except Exception: pass
 
     # beliefs
     bp = PROJECT_ROOT / "data" / "memory" / "beliefs.json"
@@ -708,9 +921,9 @@ async def diagnostics_live_endpoint():
     db_health = {}
     try:
         from agents import memory_pgvector as _mpg
-        stm_by_agent = await _mpg.count_memories_by_agent()
-        stm = await _mpg.count_memories_total()
-        db_health = await _mpg.health_check()
+        stm_by_agent = await _safe_await(_mpg.count_memories_by_agent(), default={})
+        stm = await _safe_await(_mpg.count_memories_total(), default=0)
+        db_health = await _safe_await(_mpg.health_check(), default={})
     except Exception:
         pass
     # Filesystem fallback if DB returned nothing
@@ -788,37 +1001,27 @@ async def diagnostics_live_endpoint():
     dojo_data = []
     try:
         from daio.governance.dojo import Dojo
-        dojo = await Dojo.get_instance()
-        dojo_data = dojo.get_all_standings()[:12]
+        dojo = await _safe_await(Dojo.get_instance(), default=None)
+        if dojo:
+            dojo_data = dojo.get_all_standings()[:12]
     except Exception: pass
 
     br_data = []
     try:
         from daio.governance.boardroom import Boardroom
-        br = await Boardroom.get_instance()
-        br_data = br.get_recent_sessions(5)
+        br = await _safe_await(Boardroom.get_instance(), default=None)
+        if br:
+            br_data = br.get_recent_sessions(5)
     except Exception: pass
 
-    # Rebuild return with governance data
-    # Disk usage breakdown
-    disk_detail = {}
-    try:
-        import subprocess
-        r = subprocess.run(["du", "-sh", str(PROJECT_ROOT / "data"), str(PROJECT_ROOT / ".mindx_env"),
-                           str(PROJECT_ROOT / "mindx_backend_service" / "vault_bankon")],
-                          capture_output=True, text=True, timeout=5)
-        for line in r.stdout.strip().split("\n"):
-            parts = line.split("\t")
-            if len(parts) == 2:
-                disk_detail[parts[1].split("/")[-1]] = parts[0]
-    except Exception:
-        pass
+    # Disk usage breakdown (async — never blocks event loop)
+    disk_detail = await _safe_await(_disk_usage_detail(), timeout_s=6.0, default={})
 
     # Actions
     actions_data = []
     try:
         from agents import memory_pgvector as _mpg2
-        actions_data = await _mpg2.get_recent_actions(limit=10)
+        actions_data = await _safe_await(_mpg2.get_recent_actions(limit=10), default=[])
     except Exception:
         pass
 
@@ -826,7 +1029,7 @@ async def diagnostics_live_endpoint():
     rage_stats = {"docs": 0, "memories": 0}
     try:
         from agents import memory_pgvector as _mprs
-        rage_stats = await _mprs.count_embeddings()
+        rage_stats = await _safe_await(_mprs.count_embeddings(), default={"docs": 0, "memories": 0})
     except Exception:
         pass
 
@@ -834,8 +1037,9 @@ async def diagnostics_live_endpoint():
     vllm_data = {}
     try:
         from agents.vllm_agent import VLLMAgent
-        va = await VLLMAgent.get_instance()
-        vllm_data = va.get_status()
+        va = await _safe_await(VLLMAgent.get_instance(), default=None)
+        if va:
+            vllm_data = va.get_status()
     except Exception:
         pass
 
@@ -843,7 +1047,7 @@ async def diagnostics_live_endpoint():
     agent_interactions_data = []
     try:
         from agents import memory_pgvector as _mpii
-        agent_interactions_data = await _mpii.get_recent_interactions(limit=15)
+        agent_interactions_data = await _safe_await(_mpii.get_recent_interactions(limit=15), default=[])
     except Exception:
         pass
 
@@ -851,12 +1055,13 @@ async def diagnostics_live_endpoint():
     governor_data = {}
     try:
         from agents.resource_governor import ResourceGovernor
-        gov = await ResourceGovernor.get_instance()
-        governor_data = gov.get_status()
+        gov = await _safe_await(ResourceGovernor.get_instance(), default=None)
+        if gov:
+            governor_data = gov.get_status()
     except Exception:
         pass
 
-    return {
+    response = {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "uptime": uptime, "uptime_seconds": up_s,
         "pid": proc.pid, "process_memory_mb": proc_mem,
@@ -876,6 +1081,12 @@ async def diagnostics_live_endpoint():
         "agent_interactions": agent_interactions_data,
         "recent_logs": logs,
     }
+
+    # Cache response for subsequent polls
+    _diag_cache = response
+    _diag_cache_ts = time.time()
+
+    return response
 
 # Include bankon ("I do not understand") router
 from mindx_backend_service.bankon import bankon_router
@@ -1096,9 +1307,10 @@ async def startup_event():
             try:
                 from agents.author_agent import AuthorAgent
                 author = await AuthorAgent.get_instance()
-                await author.publish()  # First edition immediately
-                logger.info("AuthorAgent: first edition of The Book of mindX published")
-                await author.run_periodic(interval_seconds=2592000)  # Monthly
+                await author.publish()  # On-demand edition on startup
+                logger.info("AuthorAgent: startup edition published")
+                # Daily lunar cycle: 1 chapter/day, full moon compilation on day 28
+                await author.run_periodic(interval_seconds=86400)  # Daily
             except Exception as ae:
                 logger.warning(f"AuthorAgent failed: {ae}")
 
@@ -4210,6 +4422,18 @@ async def health_check():
         "service": "mindx_backend",
         "version": "1.0.0"
     }
+
+@app.post("/admin/publish-book", summary="Publish a new edition of The Book of mindX", tags=["admin"])
+async def trigger_book_publish():
+    """Force AuthorAgent to compile and publish a new book edition immediately."""
+    try:
+        from agents.author_agent import AuthorAgent
+        author = await AuthorAgent.get_instance()
+        result = await author.publish()
+        return {"status": "published", "edition": result["edition"], "bytes": result["bytes"], "path": result["path"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Book publish failed: {str(e)}")
+
 
 @app.get("/core/agent-activity", summary="Get agent activity")
 async def get_agent_activity():

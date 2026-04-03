@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AUTOMINDx — The Origin of mindX</title>
+<link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter','SF Pro Text','Segoe UI',system-ui,-apple-system,sans-serif;background:#050810;color:#b0b8c4;min-height:100vh;overflow-x:hidden}
+canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
+.page{position:relative;z-index:1}
+.nav{display:flex;align-items:center;gap:5px;padding:8px 16px;font-size:8px;border-bottom:1px solid rgba(26,31,46,.5);background:rgba(5,8,16,.92);position:sticky;top:0;z-index:10;backdrop-filter:blur(12px)}
+.nav .brand{color:#e6edf3;font-weight:700;font-family:'SF Mono',monospace;font-size:11px;margin-right:8px;letter-spacing:.3px}.nav .brand b{color:#d2a8ff}
+.nav a{color:#4a5060;text-decoration:none;transition:color .2s}.nav a:hover{color:#d2a8ff}
+.nav .sep{color:rgba(26,31,46,.6)}
+.hero{display:flex;flex-direction:column;align-items:center;padding:60px 20px 40px;text-align:center}
+.brain-wrap{position:relative;margin-bottom:24px}
+canvas#brain{display:block}
+.hero h1{font-size:48px;font-weight:700;letter-spacing:2px;font-family:'SF Mono','Fira Code',monospace;margin-bottom:8px}
+.hero h1 .auto{color:#d2a8ff}.hero h1 .mind{color:#e6edf3}.hero h1 .x{color:#58a6ff}
+.hero .tagline{font-size:14px;color:#6e7681;max-width:600px;line-height:1.7;margin-bottom:8px}
+.hero .nft-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(210,168,255,.06);border:1px solid rgba(210,168,255,.2);border-radius:12px;font-size:8px;color:#d2a8ff;margin-top:8px}
+.hero .nft-badge a{color:#d2a8ff}
+.section{max-width:800px;margin:0 auto;padding:32px 20px}
+.section h2{font-size:18px;color:#e6edf3;margin-bottom:12px;font-weight:700}.section h2 .accent{color:#d2a8ff}
+.section p{font-size:12px;line-height:1.8;margin-bottom:12px;color:#8b949e}
+.section p strong{color:#e6edf3}
+.divider{border:none;border-top:1px solid rgba(26,31,46,.4);margin:32px auto;max-width:800px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}
+@media(max-width:700px){.cards{grid-template-columns:1fr}}
+.card{background:rgba(13,17,23,.7);border:1px solid rgba(26,31,46,.5);border-radius:6px;padding:20px;position:relative;overflow:hidden;transition:border-color .3s,transform .2s}
+.card:hover{border-color:rgba(210,168,255,.3);transform:translateY(-2px)}
+.card h3{font-size:13px;color:#e6edf3;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.card h3 .ic{font-size:16px}
+.card p{font-size:10px;color:#6e7681;line-height:1.6}
+.card .shimmer{position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(210,168,255,.03),transparent);animation:shimmer 4s ease-in-out infinite}
+@keyframes shimmer{0%{left:-100%}50%{left:100%}100%{left:100%}}
+.card:nth-child(2) .shimmer{animation-delay:1.5s}
+.card:nth-child(3) .shimmer{animation-delay:3s}
+.nft-card{background:rgba(13,17,23,.7);border:1px solid rgba(210,153,34,.25);border-radius:6px;padding:20px;margin:20px 0}
+.nft-card:hover{border-color:rgba(210,153,34,.5)}
+.nft-card h3{color:#d29922;font-size:13px;margin-bottom:8px}
+.nft-card .field{font-size:9px;color:#4a5060;margin:4px 0;font-family:'SF Mono',monospace;word-break:break-all}
+.nft-card .field span{color:#8b949e}
+.nft-card a{color:#d29922;text-decoration:none;font-size:10px}.nft-card a:hover{text-decoration:underline}
+.nft-card .badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:7px;font-weight:700;background:rgba(210,153,34,.1);color:#d29922;border:1px solid rgba(210,153,34,.2);margin-top:8px}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:10px}
+th{text-align:left;padding:6px 8px;border-bottom:2px solid rgba(210,168,255,.15);color:#d2a8ff;font-size:9px;text-transform:uppercase;letter-spacing:.5px}
+td{padding:5px 8px;border-bottom:1px solid rgba(26,31,46,.25);color:#8b949e}
+tr:hover td{background:rgba(22,27,34,.3)}
+td:first-child{color:#6e7681}td:last-child{color:#e6edf3}
+.links{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding:32px 20px 60px}
+.links a{padding:8px 20px;background:rgba(210,168,255,.06);border:1px solid rgba(210,168,255,.2);border-radius:4px;color:#d2a8ff;font-size:10px;text-decoration:none;transition:all .3s}
+.links a:hover{background:rgba(210,168,255,.15);border-color:#d2a8ff;box-shadow:0 0 20px rgba(210,168,255,.1)}
+.links a.green{color:#3fb950;border-color:rgba(63,185,80,.2);background:rgba(63,185,80,.06)}
+.links a.green:hover{border-color:#3fb950}
+.links a.cyan{color:#58a6ff;border-color:rgba(88,166,255,.2);background:rgba(88,166,255,.06)}
+.links a.cyan:hover{border-color:#58a6ff}
+.footer{text-align:center;padding:20px;font-size:8px;color:#3d424d;border-top:1px solid rgba(26,31,46,.3)}
+.footer a{color:#d2a8ff;text-decoration:none}
+.interact-hint{position:fixed;bottom:50px;left:0;right:0;text-align:center;font-size:8px;color:#3d424d;z-index:2;transition:opacity 2s}
+code{background:rgba(22,27,34,.85);padding:2px 5px;border-radius:3px;color:#7ee787;font-size:10px;font-family:'SF Mono','Fira Code',monospace}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="page">
+
+<div class="nav">
+  <span class="brand">AUTO<b>MIND</b>x</span>
+  <a href="/">dashboard</a><span class="sep">/</span><a href="/docs.html">docs</a><span class="sep">/</span><a href="/book">book</a><span class="sep">/</span><a href="/journal">journal</a><span class="sep">/</span><a href="/redoc">api</a><span class="sep">/</span><a href="/dojo/standings">dojo</a><span class="sep">/</span><a href="/inference/status">inference</a>
+</div>
+
+<div class="hero">
+  <div class="brain-wrap"><canvas id="brain" width="360" height="450"></canvas></div>
+  <h1><span class="auto">AUTO</span><span class="mind">MIND</span><span class="x">x</span></h1>
+  <div class="tagline">Executable autonomy. On-chain verified. The origin of mindX.</div>
+  <div class="nft-badge">
+    <span>&#x2b22;</span> Minted on Polygon
+    <a href="https://opensea.io/item/polygon/0x2953399124f0cbb46d2cbacd8a89cf0599974963/7675060345879017836756807061815685501584179421371855056758523065871282208769" target="_blank">view on OpenSea &rarr;</a>
+  </div>
+</div>
+<hr class="divider">
+<div class="section">
+  <h2>The <span class="accent">Vision</span></h2>
+  <p>Imagine a world where complex deployment procedures become a word, a gesture or an utterance. Where intricate systems are effortlessly deployed as a singular event instance. <strong>AUTOMINDx</strong> integrates Automated Intelligent Machine Learning (AIML) technology with Automated Intelligent Machine Learning (AIMLx) deployment workflow. Embrace the future of software deployment unlocking new levels of productivity, scalability, integrity, and reliability.</p>
+  <p>Powered by cutting-edge machine learning models, AUTOMINDx optimizes the deployment process autonomously adapting to diverse environments ensuring efficiency at scale. Gone are tedious tasks replaced by custom configurations provided by the <strong>AUTOMINDx UIUX AIML interop technology stack</strong>. Empower yourself with a team of machine learning agents focusing your innovation while driving your project forward.</p>
+</div>
+<hr class="divider">
+<div class="section">
+  <h2>AGLM — <span class="accent">A General Learning Model</span></h2>
+  <p>A comprehensive framework addressing various machine learning tasks; including supervised, unsupervised, and reinforcement learning.</p>
+  <div class="cards">
+    <div class="card"><div class="shimmer"></div><h3><span class="ic">&#x2728;</span> Machine Dreaming</h3><p>Enables AI systems to generate imaginative and creative outputs beyond their training data distribution. Applications in art, music, design, and autonomous architecture.</p></div>
+    <div class="card"><div class="shimmer"></div><h3><span class="ic">&#x2699;</span> Auto-Tuning</h3><p>Optimises hyper-parameters and model architectures autonomously, leading to enhanced performance without manual tuning. The system tunes itself.</p></div>
+    <div class="card"><div class="shimmer"></div><h3><span class="ic">&#x1f9e0;</span> Digital Long-Term Memory</h3><p>AI systems store and retrieve learned knowledge, enabling continual learning and retention over time. Powered by pgvectorscale and blockchain trust.</p></div>
+  </div>
+</div>
+<hr class="divider">
+<div class="section">
+  <h2>NFT <span class="accent">Provenance</span></h2>
+  <div class="nft-card">
+    <h3>&#x2b22; AUTOMINDx — Original Visual Identity</h3>
+    <div class="field">Contract: <span>0x2953399124f0cbb46d2cbacd8a89cf0599974963</span></div>
+    <div class="field">Token ID: <span>76750603458790178367568...282208769</span></div>
+    <div class="field">Network: <span>Polygon (PoS)</span></div>
+    <a href="https://opensea.io/item/polygon/0x2953399124f0cbb46d2cbacd8a89cf0599974963/7675060345879017836756807061815685501584179421371855056758523065871282208769" target="_blank">View on OpenSea &rarr;</a>&ensp;
+    <a href="https://polygonscan.com/token/0x2953399124f0cbb46d2cbacd8a89cf0599974963" target="_blank">PolygonScan &rarr;</a>
+    <div class="badge">POLYGON NFT</div>
+  </div>
+</div>
+<hr class="divider">
+<div class="section">
+  <h2>From AUTOMINDx <span class="accent">to mindX</span></h2>
+  <table>
+    <tr><th>AUTOMINDx Concept</th><th>mindX Implementation</th></tr>
+    <tr><td>Automated deployment as utterance</td><td>BDI cognitive architecture — directive &rarr; execution</td></tr>
+    <tr><td>Machine learning agent teams</td><td>20 sovereign agents with BANKON vault identities</td></tr>
+    <tr><td>AGLM general learning</td><td>Strategic Evolution Agent + Improvement Journal</td></tr>
+    <tr><td>Machine dreaming</td><td>Autonomous improvement loop — mindX imagines its own future</td></tr>
+    <tr><td>Auto-tuning</td><td>Resource Governor + vLLM/Ollama inference optimization</td></tr>
+    <tr><td>Digital long-term memory</td><td>pgvectorscale + RAGE semantic search (1500+ memories)</td></tr>
+    <tr><td>Blockchain trust</td><td>Ethereum-compatible wallets, ECDSA challenge-response</td></tr>
+    <tr><td>UIUX interop</td><td>DAIO governance — Boardroom, Dojo, CEO Agent consensus</td></tr>
+    <tr><td>Deployment workflow</td><td>AuthorAgent — The Book of mindX, lunar publishing cycle</td></tr>
+  </table>
+</div>
+<hr class="divider">
+<div class="section">
+  <h2>time.<span class="accent">oracle</span></h2>
+  <div class="cards">
+    <div class="card"><div class="shimmer"></div><h3><span class="ic">&#x1f319;</span> lunar.oracle</h3><p>Moon phase from astronomical calculation, verified against timeanddate.com. Drives the 28-day Book publishing cycle.</p></div>
+    <div class="card"><div class="shimmer"></div><h3><span class="ic">&#x26d3;</span> blocktime.oracle</h3><p>Blockchain block timestamps via JSON-RPC. Immutable, decentralized, correlated against CPU time.</p></div>
+    <div class="card"><div class="shimmer"></div><h3><span class="ic">&#x2600;</span> solar + cpu</h3><p>Solar position for the server location. CPU monotonic clock as the heartbeat baseline.</p></div>
+  </div>
+</div>
+<div class="links">
+  <a href="/">dashboard</a><a href="/docs.html">documentation</a><a href="/book" class="cyan">the book</a><a href="/doc/AUTOMINDX_ORIGIN">origin story</a>
+  <a href="https://agenticplace.pythai.net" target="_blank" class="green">AgenticPlace</a><a href="/redoc">API reference</a>
+  <a href="https://opensea.io/item/polygon/0x2953399124f0cbb46d2cbacd8a89cf0599974963/7675060345879017836756807061815685501584179421371855056758523065871282208769" target="_blank">OpenSea NFT</a>
+</div>
+<div class="footer"><a href="/">mind<b>X</b></a> &middot; <a href="/automindx">AUTOMINDx</a> &middot; mindx.pythai.net &middot; &copy; Professor Codephreak</div>
+</div>
+<div class="interact-hint" id="hint">click &middot; drag &middot; scroll wheel &middot; double-click &middot; shift+click</div>
+
+<script src="/static/mindx-brain.js"></script>
+<script src="/static/mindx-interact.js"></script>
+<script>
+// ── Constants ──
+const PHI = (1 + Math.sqrt(5)) / 2;  // Golden ratio
+const TAU = Math.PI * 2;
+const FIB = [1,1,2,3,5,8,13,21,34,55,89,144,233];
+
+// ── Initialize brain ──
+if (document.getElementById('brain') && typeof mindxBrain === 'function')
+  mindxBrain(document.getElementById('brain'), {size: 360, animate: true});
+
+// ── Canvas setup ──
+const cv = document.getElementById('bg'), c = cv.getContext('2d');
+let W, H;
+let particles = [], spiralNodes = [], edges = [];
+const RM = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+// ── Fibonacci spiral nodes (3D depth via z-coordinate) ──
+function mkSpiralNodes() {
+  spiralNodes = [];
+  const cx0 = W / 2, cy0 = H * .4;
+  // Golden spiral: each node at golden angle, Fibonacci distance
+  for (let i = 0; i < 55; i++) {
+    const angle = i * TAU / (PHI * PHI); // golden angle ~137.5°
+    const r = Math.sqrt(i) * 22;
+    const z = Math.sin(i * .3) * .5 + .5; // depth 0-1 (fake 3D)
+    const scale = .4 + z * .6; // size by depth
+    const fibIdx = i % FIB.length;
+    spiralNodes.push({
+      x: cx0 + Math.cos(angle) * r,
+      y: cy0 + Math.sin(angle) * r * .7, // vertical compression for perspective
+      z, scale, angle, baseR: r,
+      r: (1 + (FIB[fibIdx] % 5)) * scale,
+      vx: 0, vy: 0,
+      ph: i * PHI,
+      c: z > .7 ? '#d2a8ff' : z > .4 ? '#58a6ff' : '#3fb950',
+      opacity: .2 + z * .5,
+      act: 0,
+      idx: i,
+    });
+  }
+}
+
+function mkParticles() {
+  particles = [];
+  const n = Math.min(160, Math.floor(W * H / 6000));
+  for (let i = 0; i < n; i++) {
+    const z = Math.random(); // depth
+    particles.push({
+      x: Math.random() * W, y: Math.random() * H,
+      z,
+      s: (.3 + Math.random() * 1.2) * (.4 + z * .6),
+      vx: (Math.random() - .5) * .2, vy: (Math.random() - .5) * .15,
+      ph: Math.random() * TAU,
+      cl: Math.random() > .5 ? 'rgba(210,168,255,' : Math.random() > .4 ? 'rgba(88,166,255,' : 'rgba(63,185,80,',
+      baseOpacity: .05 + z * .1,
+    });
+  }
+}
+
+function flashEdge() {
+  if (spiralNodes.length < 2) {
+    const a = Math.floor(Math.random() * spiralNodes.length);
+    return;
+  }
+  // Connect Fibonacci-adjacent nodes (not random — structured)
+  const a = Math.floor(Math.random() * spiralNodes.length);
+  const fibStep = FIB[Math.floor(Math.random() * 6)]; // 1,1,2,3,5,8
+  const b = (a + fibStep) % spiralNodes.length;
+  edges.push({a, b, l: 1});
+}
+
+function rsz() {
+  W = cv.width = innerWidth; H = cv.height = innerHeight;
+  mkParticles(); mkSpiralNodes();
+}
+addEventListener('resize', rsz); rsz();
+
+// ── Initialize interaction engine ──
+const interact = typeof mindxInteract === 'function'
+  ? mindxInteract(cv, {particles, nodes: spiralNodes, edges, flashEdge})
+  : null;
+
+// Fibonacci-timed edge flashes
+setInterval(flashEdge, 800);
+setInterval(() => { for (let i = 0; i < FIB[5]; i++) setTimeout(flashEdge, i * FIB[4] * 10); }, 8000);
+
+// ── Draw ──
+function draw(t) {
+  c.fillStyle = 'rgba(5,8,16,.07)'; c.fillRect(0, 0, W, H);
+
+  // Radial glow — golden ratio proportioned
+  const gr = c.createRadialGradient(W / 2, H * .35, 0, W / 2, H * .35, H / PHI);
+  gr.addColorStop(0, 'rgba(210,168,255,.012)');
+  gr.addColorStop(1 / PHI, 'rgba(88,166,255,.006)');
+  gr.addColorStop(1, 'transparent');
+  c.fillStyle = gr; c.fillRect(0, 0, W, H);
+
+  // Golden spiral guide (very faint)
+  c.beginPath();
+  const scx = W / 2, scy = H * .4;
+  for (let a = 0; a < TAU * 4; a += .05) {
+    const r = Math.pow(PHI, a / (TAU / 4)) * 3;
+    const x = scx + Math.cos(a + t * .0001) * r;
+    const y = scy + Math.sin(a + t * .0001) * r * .7;
+    if (a === 0) c.moveTo(x, y); else c.lineTo(x, y);
+    if (r > Math.max(W, H) * .6) break;
+  }
+  c.strokeStyle = 'rgba(210,168,255,.015)'; c.lineWidth = .5; c.stroke();
+
+  // Connections between particles (depth-aware — closer particles connect more)
+  for (let i = 0; i < particles.length; i++) {
+    const pi = particles[i];
+    for (let j = i + 1; j < Math.min(particles.length, i + 10); j++) {
+      const pj = particles[j];
+      const dx = pi.x - pj.x, dy = pi.y - pj.y;
+      const d2 = dx * dx + dy * dy;
+      const zAvg = (pi.z + pj.z) / 2;
+      const threshold = 3000 + zAvg * 3000; // deeper particles connect further
+      if (d2 < threshold) {
+        c.beginPath(); c.moveTo(pi.x, pi.y); c.lineTo(pj.x, pj.y);
+        c.strokeStyle = `rgba(210,168,255,${(1 - d2 / threshold) * .05 * zAvg})`;
+        c.lineWidth = .3 + zAvg * .3; c.stroke();
+      }
+    }
+  }
+
+  // Update + draw particles with 3D depth
+  for (const p of particles) {
+    p.vx *= .997; p.vy *= .997;
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+    if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+    const depthScale = .4 + p.z * .6;
+    const size = p.s * depthScale;
+    c.beginPath(); c.arc(p.x, p.y, size, 0, TAU);
+    c.fillStyle = p.cl + (p.baseOpacity + Math.sin(t * .0008 + p.ph) * .06) + ')';
+    c.fill();
+  }
+
+  // Fibonacci spiral edges (structured connections)
+  for (let i = edges.length - 1; i >= 0; i--) {
+    const e = edges[i]; e.l -= .006;
+    if (e.l <= 0) { edges.splice(i, 1); continue; }
+    const na = spiralNodes[e.a], nb = spiralNodes[e.b];
+    if (!na || !nb) { edges.splice(i, 1); continue; }
+    // Curved connection (bezier through center for golden arc feel)
+    const mx = (na.x + nb.x) / 2 + Math.sin(e.l * 3) * 20;
+    const my = (na.y + nb.y) / 2 + Math.cos(e.l * 3) * 15;
+    c.beginPath(); c.moveTo(na.x, na.y);
+    c.quadraticCurveTo(mx, my, nb.x, nb.y);
+    c.globalAlpha = e.l * .25 * ((na.z + nb.z) / 2);
+    c.strokeStyle = e.l > .6 ? '#d2a8ff' : e.l > .3 ? '#58a6ff' : '#3fb950';
+    c.lineWidth = e.l * 1.5; c.stroke(); c.globalAlpha = 1;
+  }
+
+  // Spiral nodes (3D depth: z controls size, opacity, glow radius)
+  const cx0 = W / 2, cy0 = H * .4;
+  for (const n of spiralNodes) {
+    // Gentle orbital drift
+    const drift = Math.sin(t * .0002 + n.ph) * 2;
+    n.x = cx0 + Math.cos(n.angle + t * .00005) * n.baseR + drift;
+    n.y = cy0 + Math.sin(n.angle + t * .00005) * n.baseR * .7 + drift * .5;
+    // Z oscillation (depth breathing)
+    n.z = Math.sin(t * .0003 + n.ph) * .3 + .5;
+    const scale = .4 + n.z * .6;
+    const pr = n.r * scale + Math.sin(t * .003 + n.ph) * .4 + (n.act > .3 ? 2.5 * scale : 0);
+    // Deep glow (bigger for closer nodes)
+    c.beginPath(); c.arc(n.x, n.y, pr * 5 * scale, 0, TAU);
+    c.fillStyle = n.c + '05'; c.fill();
+    // Mid glow
+    c.beginPath(); c.arc(n.x, n.y, pr * 2.5 * scale, 0, TAU);
+    c.fillStyle = n.c + '0a'; c.fill();
+    // Core
+    c.beginPath(); c.arc(n.x, n.y, pr, 0, TAU);
+    c.fillStyle = n.c;
+    c.globalAlpha = (.3 + n.z * .4 + n.act * .3);
+    c.fill(); c.globalAlpha = 1;
+    n.act *= .95;
+  }
+
+  // Central golden ratio pulse
+  const pulseR = 25 + Math.sin(t * .002) * 10;
+  c.beginPath(); c.arc(cx0, cy0, pulseR, 0, TAU);
+  c.fillStyle = 'rgba(210,168,255,.025)'; c.fill();
+  c.beginPath(); c.arc(cx0, cy0, pulseR / PHI, 0, TAU);
+  c.fillStyle = 'rgba(88,166,255,.03)'; c.fill();
+  c.beginPath(); c.arc(cx0, cy0, pulseR / (PHI * PHI), 0, TAU);
+  c.fillStyle = 'rgba(63,185,80,.035)'; c.fill();
+
+  // Interaction layer
+  if (interact) { interact.update(); interact.draw(c, t); }
+
+  if (!RM || (af % 3 === 0)) requestAnimationFrame(draw);
+  af++;
+}
+let af = 0;
+requestAnimationFrame(draw);
+
+// Hide hint after first interaction
+let hintHidden = false;
+cv.addEventListener('click', () => { if (!hintHidden) { document.getElementById('hint').style.opacity = '0'; hintHidden = true; } });
+</script>
+</body>
+</html>

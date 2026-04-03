@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mind&#x58; — lost in the graph</title>
+<link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Inter','SF Pro Text','Segoe UI',system-ui,-apple-system,sans-serif;background:#050810;color:#b0b8c4}
+canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;cursor:crosshair}
+.overlay{position:relative;z-index:1;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;pointer-events:none}
+.overlay *{pointer-events:auto}
+.code{font-size:72px;font-weight:700;font-family:'SF Mono','Fira Code',monospace;background:linear-gradient(135deg,#58a6ff 0%,#d2a8ff 50%,#3fb950 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;margin-bottom:8px;user-select:none}
+.logo{font-size:28px;font-weight:700;color:#e6edf3;letter-spacing:.5px;font-family:'SF Mono','Fira Code',monospace;margin-bottom:8px}
+.logo b{color:#58a6ff}
+.thought{font-size:13px;color:#6e7681;margin-bottom:20px;max-width:380px;line-height:1.6}
+.nav-links{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:16px}
+.nav-links a{padding:6px 16px;background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.2);border-radius:4px;color:#58a6ff;font-size:10px;text-decoration:none;transition:all .3s}
+.nav-links a:hover{background:rgba(88,166,255,.18);border-color:#58a6ff;box-shadow:0 0 16px rgba(88,166,255,.12)}
+.nav-links a.green{color:#3fb950;border-color:rgba(63,185,80,.2);background:rgba(63,185,80,.08)}
+.nav-links a.green:hover{border-color:#3fb950;box-shadow:0 0 16px rgba(63,185,80,.12)}
+.hint{font-size:9px;color:#3d424d;margin-top:24px;font-style:italic}
+.found-count{position:fixed;bottom:16px;right:16px;font-size:9px;color:#3d424d;z-index:2;font-family:'SF Mono',monospace}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="overlay">
+  <div class="code">404</div>
+  <div class="logo">mind<b>X</b></div>
+  <div class="thought">searched the knowledge graph but this node doesn't exist. Maybe it was moved, renamed, or hasn't been created yet.</div>
+  <div class="nav-links">
+    <a href="/">dashboard</a>
+    <a href="/docs.html">docs</a>
+    <a href="/book">the book</a>
+    <a href="/redoc" class="green">api reference</a>
+    <a href="/journal">journal</a>
+  </div>
+  <div class="hint">click anywhere to explore the particle field</div>
+</div>
+<div class="found-count" id="found"></div>
+
+<script>
+const cv = document.getElementById('bg'), c = cv.getContext('2d');
+let W, H, particles = [], attractors = [], foundCount = 0;
+
+function rsz() {
+  W = cv.width = innerWidth; H = cv.height = innerHeight;
+  mkParts();
+}
+addEventListener('resize', rsz); rsz();
+
+function mkParts() {
+  particles = [];
+  const n = Math.min(200, Math.floor(W * H / 5000));
+  for (let i = 0; i < n; i++) particles.push({
+    x: Math.random() * W, y: Math.random() * H,
+    s: Math.random() * 1.8 + .3,
+    vx: (Math.random() - .5) * .6, vy: (Math.random() - .5) * .6,
+    ph: Math.random() * 6.28,
+    cl: ['rgba(88,166,255,','rgba(63,185,80,','rgba(210,168,255,','rgba(210,153,34,'][Math.floor(Math.random()*4)],
+    home: {x: Math.random() * W, y: Math.random() * H},
+    searching: false,
+  });
+}
+
+// Click to create gravity wells that particles orbit
+cv.addEventListener('click', e => {
+  foundCount++;
+  attractors.push({
+    x: e.clientX, y: e.clientY,
+    strength: 1, life: 1, hue: Math.random(),
+  });
+  // Spawn new particles at click
+  for (let i = 0; i < 12; i++) {
+    const ang = (i / 12) * Math.PI * 2;
+    particles.push({
+      x: e.clientX, y: e.clientY,
+      s: Math.random() * 2 + .5,
+      vx: Math.cos(ang) * (1 + Math.random()), vy: Math.sin(ang) * (1 + Math.random()),
+      ph: Math.random() * 6.28,
+      cl: ['rgba(88,166,255,','rgba(63,185,80,','rgba(210,168,255,'][Math.floor(Math.random()*3)],
+      home: {x: e.clientX, y: e.clientY},
+    });
+  }
+  while (particles.length > 400) particles.shift();
+  const fc = document.getElementById('found');
+  if (foundCount >= 5) fc.textContent = foundCount + ' nodes discovered';
+  if (foundCount === 20) fc.textContent = 'you found 20 nodes. the graph grows.';
+  if (foundCount === 42) fc.textContent = '42 nodes. meaning found.';
+});
+
+let mouseX = -1, mouseY = -1;
+cv.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+cv.addEventListener('mouseleave', () => { mouseX = -1; mouseY = -1; });
+
+function draw(t) {
+  c.fillStyle = 'rgba(5,8,16,.1)'; c.fillRect(0, 0, W, H);
+
+  // Decay attractors
+  for (let i = attractors.length - 1; i >= 0; i--) {
+    attractors[i].life -= .003;
+    if (attractors[i].life <= 0) { attractors.splice(i, 1); continue; }
+    const a = attractors[i];
+    c.beginPath(); c.arc(a.x, a.y, 30 * a.life, 0, 6.28);
+    c.fillStyle = `rgba(88,166,255,${a.life * .04})`; c.fill();
+  }
+
+  // Draw connections between nearby particles
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < Math.min(particles.length, i + 15); j++) {
+      const dx = particles[i].x - particles[j].x, dy = particles[i].y - particles[j].y;
+      const dist = dx * dx + dy * dy;
+      if (dist < 6000) {
+        c.beginPath();
+        c.moveTo(particles[i].x, particles[i].y);
+        c.lineTo(particles[j].x, particles[j].y);
+        c.strokeStyle = `rgba(88,166,255,${(1 - dist / 6000) * .08})`;
+        c.lineWidth = .5; c.stroke();
+      }
+    }
+  }
+
+  // Update particles
+  for (const p of particles) {
+    // Attractor gravity
+    for (const a of attractors) {
+      const dx = a.x - p.x, dy = a.y - p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+      if (dist < 200) {
+        const f = a.life * a.strength * .3 / dist;
+        p.vx += dx / dist * f; p.vy += dy / dist * f;
+      }
+    }
+    // Mouse repulsion (searching — particles flee the cursor)
+    if (mouseX > 0) {
+      const dx = p.x - mouseX, dy = p.y - mouseY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 120) {
+        const f = (120 - dist) / 120 * .15;
+        p.vx += dx / dist * f; p.vy += dy / dist * f;
+      }
+    }
+    p.vx *= .99; p.vy *= .99;
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+    if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+
+    c.beginPath(); c.arc(p.x, p.y, p.s, 0, 6.28);
+    c.fillStyle = p.cl + (.15 + Math.sin(t * .0008 + p.ph) * .1) + ')';
+    c.fill();
+  }
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
