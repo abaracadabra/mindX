@@ -1,3 +1,7 @@
+> **[ARCHIVED]** Production Candidate v3.x. See `agents/learning/self_improve_agent.py` for the deployed implementation.
+
+---
+
 # Self-Improvement Agent (SIA) (`self_improve_agent.py`) - Production Candidate v3.x (Finalized Core)
 
 ## Introduction

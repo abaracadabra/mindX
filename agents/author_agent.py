@@ -83,6 +83,9 @@ class AuthorAgent:
         # ── Chapter VII: The Living State ──
         sections.append(await self._chapter_living_state())
 
+        # ── Chapter VIII: Documentation Health ──
+        sections.append(self._chapter_doc_health())
+
         # ── Colophon ──
         sections.append(self._colophon(ts))
 
@@ -328,6 +331,86 @@ As of this edition:
 - **Autonomous loop**: Running — analyze, decide, improve, validate
 
 The system is not idle. It is thinking."""
+
+    def _chapter_doc_health(self) -> str:
+        """Audit documentation health and report in the book."""
+        docs_dir = PROJECT_ROOT / "docs"
+        total = 0
+        archived = 0
+        deprecated = 0
+        recent = []  # modified in last 7 days
+        conflicts = []
+
+        # Known conflict terms to check
+        conflict_checks = [
+            ("MindXAgent.*Meta-Orchestrator", "MindXAgent is meta-agent, not orchestrator"),
+            ("vault_encrypted", "Should reference vault_bankon / BANKON Vault"),
+            ("nginx.*reverse.proxy", "Production uses Apache2, not nginx"),
+            ("venv/", "Should be .mindx_env/"),
+        ]
+
+        try:
+            import re
+            now = time.time()
+            seven_days = 7 * 86400
+            for f in sorted(docs_dir.glob("*.md")):
+                total += 1
+                try:
+                    text = f.read_text(encoding="utf-8", errors="replace")[:500]
+                    if "[ARCHIVED]" in text:
+                        archived += 1
+                    if "[DEPRECATED]" in text:
+                        deprecated += 1
+                except Exception:
+                    pass
+                try:
+                    if now - f.stat().st_mtime < seven_days:
+                        recent.append(f.stem)
+                except Exception:
+                    pass
+
+            # Scan for conflicts
+            for f in docs_dir.glob("*.md"):
+                try:
+                    text = f.read_text(encoding="utf-8", errors="replace")
+                    for pattern, issue in conflict_checks:
+                        if re.search(pattern, text, re.IGNORECASE):
+                            conflicts.append(f"{f.stem}: {issue}")
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # Save audit to data
+        audit_path = PROJECT_ROOT / "data" / "governance" / "doc_audit.json"
+        try:
+            audit_path.parent.mkdir(parents=True, exist_ok=True)
+            audit_data = {
+                "timestamp": time.time(),
+                "total_docs": total,
+                "archived": archived,
+                "deprecated": deprecated,
+                "recently_modified": recent[:10],
+                "conflicts": conflicts[:10],
+            }
+            audit_path.write_text(json.dumps(audit_data, indent=2))
+        except Exception:
+            pass
+
+        health_pct = max(0, 100 - len(conflicts) * 5 - (total - archived - deprecated) * 0)
+        conflict_text = "\n".join(f"  - {c}" for c in conflicts[:8]) if conflicts else "  - No known conflicts detected"
+        recent_text = ", ".join(recent[:8]) if recent else "none in last 7 days"
+
+        return f"""## VIII. Documentation Health
+
+{total} documents in docs/, {archived} archived, {deprecated} deprecated.
+Recently modified: {recent_text}
+
+### Consistency Check
+
+{conflict_text}
+
+*Audit runs every 12 hours via AuthorAgent. Results saved to data/governance/doc_audit.json.*"""
 
     def _colophon(self, ts: str) -> str:
         return f"""---

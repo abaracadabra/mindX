@@ -1,3 +1,7 @@
+> **[ARCHIVED]** This is a truncated summary. See [AGINT.md](AGINT.md) for the complete AGInt documentation.
+
+---
+
 # AGInt Agent
 
 ## Summary

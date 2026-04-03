@@ -1,5 +1,9 @@
 # Production Deployment Guide
 
+> **Note**: This is a **generic deployment template**. For the actual live production setup at
+> mindx.pythai.net, see [DEPLOYMENT_MINDX_PYTHAI_NET.md](DEPLOYMENT_MINDX_PYTHAI_NET.md)
+> which uses Apache2 (not nginx), BANKON Vault, pgvector, and Ollama qwen3:0.6b.
+
 This guide covers the complete production deployment of mindX on a VPS with security hardening, monitoring, and backup systems.
 
 ## Prerequisites

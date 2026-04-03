@@ -1,5 +1,9 @@
 # MindX Memory, Logging, and Identity Sanity
 
+> **Update (April 2026)**: Memory now uses **pgvector (PostgreSQL)** as primary backend with file fallback.
+> Tables: memories, beliefs, agents, godel_choices, actions, model_perf.
+> MemoryAgent dual-writes to both DB and data/memory/ JSON files.
+
 This document outlines the corrected and simplified architecture for data persistence, logging, and identity management in the MindX system. The goal of this architecture is to be simple, robust, and easy to audit, with a clear separation of concerns.
 
 ---

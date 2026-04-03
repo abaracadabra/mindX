@@ -39,9 +39,9 @@ The CORE system includes **15 foundational components** across three critical la
 ├─────────────────────────────────────────────────────────────────┤
 │              🧠 COGNITIVE ARCHITECTURE LAYER                   │
 │  ┌─────────────────────────────────────────────────────────┐  │
-│  │  MindXAgent (Meta-Orchestrator)                         │  │
-│  │  ├─ Understands all agents                              │  │
-│  │  ├─ Orchestrates self-improvement                       │  │
+│  │  MindXAgent (Meta-Agent for Self-Improvement)            │  │
+│  │  ├─ Understands all agents (meta-knowledge)             │  │
+│  │  ├─ Drives autonomous improvement loop                  │  │
 │  │  └─ Tracks improvement goals & history                  │  │
 │  │                         ↓                               │  │
 │  │  BDIAgent (Reasoning Core) ←→ AGInt (P-O-D-A Loop)      │  │
@@ -129,8 +129,9 @@ CORE System → MASTERMIND → Directive → AION → Autonomous Decision → Ac
 
 ### **🧠 Cognitive Architecture (Tier 1)**
 
-#### **MindXAgent** - Meta-Orchestrator
+#### **MindXAgent** - Meta-Agent (Self-Improvement & System Understanding)
 - **File**: `agents/core/mindXagent.py` (~149KB, ~3,800 lines)
+- **Note**: MindXAgent is NOT the same as MastermindAgent. MastermindAgent (`agents/orchestration/mastermind_agent.py`) is the strategic orchestrator. MindXAgent is the meta-agent that understands all agents and drives autonomous self-improvement.
 - **Type**: Meta-agent
 - **Role**: Understands and orchestrates all agents, manages self-improvement
 - **Key Capabilities**:

@@ -1,3 +1,7 @@
+> **[ARCHIVED]** v2 variant. See `agents/learning/strategic_evolution_agent.py` for the deployed implementation.
+
+---
+
 StrategicEvolutionAgent (SEA)
 1. High-Level Purpose
 The StrategicEvolutionAgent (SEA) is a specialized, high-level agent within the MindX framework. Its primary function is to act as a "special projects" or "campaign manager" for complex, strategic self-improvement tasks.

@@ -1,3 +1,7 @@
+> **[DEPRECATED]** This is RC1 (Sept 2025). See [INSTRUCTIONS.md](INSTRUCTIONS.md) for the current production instructions (v4.0).
+
+---
+
 # mindX Augmentic Intelligence System - Instructions & Overview (RC1)
 
 ## 1. Introduction

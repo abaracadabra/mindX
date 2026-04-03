@@ -1,5 +1,12 @@
 # Memory Agent Storage and Data Folder Log Review
 
+> **Update (April 2026)**: Storage architecture has evolved:
+> - **Primary**: PostgreSQL 16 + pgvector 0.6.0 (indexed queries, vector search ready)
+> - **Fallback**: File-based JSON in data/memory/stm/ and data/memory/ltm/
+> - **Dual-write**: Every save_timestamped_memory() writes to both DB and file
+> - **Schema**: memories, beliefs, agents, godel_choices, actions, model_perf tables
+> - **Migration**: scripts/migrate_to_pgvector.py ingested 361 existing memories
+
 ## Executive Summary
 
 The `memory_agent` serves as the central persistence layer for mindX, storing all agent interactions, system states, and operational data in a structured, timestamped format. The `data/` folder functions as a comprehensive log system where every operation is recorded as a series of timestamped JSON files, making it both a storage system and an audit trail.

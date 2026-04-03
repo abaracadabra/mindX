@@ -1,5 +1,10 @@
 # `memory_agent.py`
 
+> **Update (April 2026)**: mindX now uses **PostgreSQL 16 + pgvector 0.6.0** as the primary memory backend.
+> File-based JSON storage (data/memory/stm/, ltm/) remains as a fallback.
+> Dual-write mode: every memory is stored in both pgvector and file.
+> See `agents/memory_pgvector.py` for the database backend.
+
 ## 1. Overview
 
 The `MemoryAgent` is a foundational component of the MindX system, designed to function as its central persistence layer. It provides a unified, robust, and asynchronous service for all other agents and tools to record their history and to acquire dedicated, managed storage space for their own operational data.

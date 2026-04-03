@@ -4,8 +4,8 @@
 
 This document provides a complete index of all documentation in the mindX system, organized by category and component type.
 
-**Last Updated**: 2026-03-31
-**Total Documentation Files**: 190+
+**Last Updated**: 2026-04-03
+**Total Documentation Files**: 194+
 **CORE Documentation**: Complete 15-component analysis ✅
 **Agent Documentation**: 34+
 **Tool Documentation**: 29+
@@ -654,9 +654,62 @@ See [System Architecture Map](system_architecture_map.md) for complete architect
 
 ---
 
-**Last Updated**: 2026-03-31 (Production Audit Complete)
-**Maintained By**: mindX Documentation System
-**Production Status**: ✅ Enterprise-ready deployment and security documentation
+---
+
+## 🆕 Production Systems (April 2026)
+
+### BANKON Vault
+- **Credential Storage**: AES-256-GCM + HKDF-SHA512 encrypted vault
+- **Files**: `mindx_backend_service/bankon_vault/vault.py`, `credential_provider.py`, `routes.py`
+- **CLI**: `manage_credentials.py` — store, list, delete, providers
+- **13 provider templates**: `config/providers/*.env`
+
+### pgvector Memory Backend
+- **Database**: PostgreSQL 16 + pgvector 0.6.0
+- **Tables**: memories, beliefs, agents, godel_choices, actions, model_perf
+- **Backend**: `agents/memory_pgvector.py` — async connection pool, dual-write with file fallback
+- **Migration**: `scripts/migrate_to_pgvector.py`
+
+### Inference Discovery & Multi-Stream
+- **Discovery**: `llm/inference_discovery.py` — probes all sources, auto-selects best provider
+- **Multi-Stream**: `llm/multi_stream.py` — parallel queries with consensus strategies
+- **vLLM Handler**: `llm/vllm_handler.py` — OpenAI-compatible API integration
+- **Endpoints**: `/inference/status`, `/inference/probe`, `/inference/multi-stream`
+
+### DAIO Governance (Algorand + EVM)
+- **BONA FIDE ASA**: `daio/contracts/algorand/bona_fide.algo.ts` — Algorand verification token with clawback
+- **Agent Map**: `daio/agents/agent_map.json` — canonical registry with reputation, groups, verification tiers
+- **Boardroom**: `daio/governance/boardroom.py` — CEO + Seven Soldiers weighted consensus
+- **Dojo**: `daio/governance/dojo.py` — reputation ranks (Novice→Sovereign), BONA FIDE privilege system
+- **Endpoints**: `/boardroom/convene`, `/dojo/standings`, `/dojo/agent/{id}`
+
+### Live Diagnostics Dashboard
+- **Dashboard**: `mindx_backend_service/dashboard.html` — animated agent network, real-time metrics
+- **Heartbeat**: Local model (qwen3:0.6b) self-reflection every 60s, CPU-aware throttling
+- **Toast Notifications**: New interactions popup, hang 12s, settle into dialogue panel
+- **Endpoints**: `/` (dashboard), `/diagnostics/live` (JSON), `/docs.html` (documentation hub)
+
+### AuthorAgent & Documentation
+- **AuthorAgent**: `agents/author_agent.py` — publishes The Book of mindX every 2 hours
+- **Improvement Journal**: `agents/learning/improvement_journal.py` — auto-updates every 30 min
+- **Doc Reader**: `/doc/{name}` — renders any of 194 docs as styled HTML
+- **Endpoints**: `/book`, `/journal`, `/docs.html` (TOC)
+
+### API Access Gate
+- **Middleware**: All non-public routes require `X-Session-Token` or `Authorization: Bearer <api_key>`
+- **Public**: `/`, `/health`, `/docs.html`, `/doc/*`, `/book`, `/journal`, `/diagnostics/live`, `/dojo/standings`
+- **Gated**: Everything else returns 401 without valid auth
+
+### Agent Identity Genesis
+- **Script**: `scripts/genesis_production_identities.py` — generates fresh wallets, stores in BANKON Vault
+- **12 sovereign agents** with verified Ethereum-compatible identities
+- **Registry**: `data/identity/production_registry.json` (public addresses only)
+
+---
+
+**Last Updated**: 2026-04-03 (Documentation Audit & pgvector Migration)
+**Maintained By**: mindX Documentation System + AuthorAgent
+**Production Status**: ✅ Enterprise-ready with pgvector, BANKON Vault, live diagnostics
 **For Issues**: See project repository
 
 

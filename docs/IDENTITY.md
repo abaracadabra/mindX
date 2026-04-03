@@ -1,4 +1,11 @@
 🔐 mindX Augmentic Intelligence: The Identity & Security Layer (IDManagerAgent)
+
+> **Update (April 2026)**: Agent identities are now stored in **BANKON Vault** (AES-256-GCM encrypted).
+> 12 production agents generated via `scripts/genesis_production_identities.py`.
+> IDManagerAgent reads from BANKON Vault → legacy vault → .env file (fallback chain).
+> Guardian challenge-response now uses real ECDSA wallet signing.
+> See `data/identity/production_registry.json` for public addresses (no private keys).
+
 This document details the purpose, architecture, and strategic implications of the IDManagerAgent, a foundational service for establishing a secure and trusted multi-agent ecosystem.
 <br />
 1. Introduction

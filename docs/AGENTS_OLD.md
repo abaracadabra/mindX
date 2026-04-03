@@ -1,3 +1,7 @@
+> **[ARCHIVED]** This document is outdated. See [AGENTS.md](AGENTS.md) for the current agent architecture reference.
+
+---
+
 # MindX Agent Architecture Reference
 ## Comprehensive Agent Registry & Documentation
 

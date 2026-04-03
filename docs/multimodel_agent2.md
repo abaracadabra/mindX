@@ -1,3 +1,7 @@
+> **[ARCHIVED]** Production Candidate v2. See `llm/multimodel_agent.py` for the current implementation.
+
+---
+
 # Multi-Model Agent (MMA) (`multimodel_agent.py`) - Production Candidate Stub v2
 
 ## Introduction

@@ -1,3 +1,7 @@
+> **[REDIRECT]** For the current documentation index, see [INDEX.md](INDEX.md) (41KB, component-focused, updated 2026).
+
+---
+
 # mindX Documentation Index
 
 This document provides a comprehensive, categorized index of all documentation files in the `docs/` directory. Each entry includes a link to the document and a detailed summary of its contents, based on a complete review of the system's architecture and capabilities.

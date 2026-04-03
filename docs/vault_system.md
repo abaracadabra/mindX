@@ -1,5 +1,11 @@
 # Vault System Documentation
 
+> **Update (April 2026)**: The production vault system is now **BANKON Vault** (AES-256-GCM + HKDF-SHA512).
+> Located at `mindx_backend_service/vault_bankon/`. The older `vault_encrypted/` (Fernet/PBKDF2) is superseded.
+> 12 agent identity keys + 3 provider credentials stored encrypted.
+> CLI: `python manage_credentials.py store|list|delete|providers`
+> See `mindx_backend_service/bankon_vault/vault.py` for implementation.
+
 ## Overview
 
 The Vault System provides **enterprise-grade encrypted storage** for sensitive data including API keys, wallet private keys, and access credentials. The system has been upgraded to **AES-256 encryption** with PBKDF2 key derivation for production security. The encrypted vault is located at `mindx_backend_service/vault_encrypted/` and all sensitive data is encrypted at rest.
