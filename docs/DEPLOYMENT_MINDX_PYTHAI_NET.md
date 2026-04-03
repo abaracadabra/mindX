@@ -56,7 +56,63 @@
 
 **Strategy**: Right model for the job. qwen3:0.6b for speed, qwen3:1.7b for depth. Free cloud tier (Gemini) for complex tasks. Paid inference only when earned from value exchange.
 
-**RAM discipline**: Only 1-2 models loaded at a time. Ollama `keep_alive` manages model lifecycle. OOM kills occur if too many models load simultaneously — monitor via `/diagnostics/live`.
+**RAM discipline**: Only 1-2 models loaded at a time. Ollama `keep_alive` manages model lifecycle. Resource Governor auto-adjusts (greedy/balanced/generous/minimal) based on VPS neighbor load.
+
+## DAIO Governance Chain
+
+```
+POST /governance/execute?directive=...&importance=standard
+    ↓
+Boardroom (7 Soldiers vote in parallel, multi-model consensus)
+    ↓ outcome: approved / exploration / rejected (0.666 supermajority)
+CEOAgent (validates directive, processes dissent branches)
+    ↓ passes to Mastermind if approved
+MastermindAgent.manage_mindx_evolution() → BDI execution
+    ↓
+Actions logged to pgvector, interactions tracked
+```
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /governance/execute` | Full DAIO chain: Boardroom → CEO → Mastermind |
+| `GET /governance/status` | Chain status, CEO agent ID, agent count |
+| `POST /boardroom/convene` | Boardroom only (no CEO/Mastermind execution) |
+| `GET /boardroom/sessions` | Recent boardroom session log |
+| `GET /dojo/standings` | Agent reputation rankings |
+
+## Sovereign Agents (20)
+
+All agents hold cryptographic wallets in the BANKON Vault.
+
+| Group | Agents |
+|-------|--------|
+| **Orchestration** | mastermind_prime, coordinator_agent_main, mindx_agint, inference_agent_main |
+| **Operational** | guardian_agent_main, memory_agent_main, system_state_tracker, validator_agent_main, resource_governor |
+| **Learning** | sea_for_mastermind, automindx_agent_main, blueprint_agent_mindx_v2, author_agent, prediction_agent |
+| **Lifecycle** | startup_agent, replication_agent, shutdown_agent |
+| **Infrastructure** | vllm_agent, inference_discovery |
+| **Executive** | ceo_agent_main (DAIO consensus voice) |
+
+## Resource Governor
+
+mindX controls its own power appetite. Auto-adjusts based on VPS neighbor load.
+
+| Mode | RAM | CPU | When |
+|------|-----|-----|------|
+| greedy | 85% | 90% | VPS idle, max inference |
+| balanced | 65% | 70% | Normal (default) |
+| generous | 45% | 50% | Neighbors busy |
+| minimal | 30% | 30% | Survival mode |
+
+`GET /resources/status` — current mode, neighbor load
+`POST /resources/mode?mode=greedy` — manual override
+
+## Agent Interactions
+
+All agent-to-agent communication via coordinator pub/sub is tracked in pgvector.
+
+`GET /agents/interactions` — recent interactions (from → to, topic, timestamp)
+`GET /agents/interaction-matrix` — frequency matrix for visualization
 
 ## Authentication
 
