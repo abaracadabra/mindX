@@ -380,24 +380,27 @@ body{font-family:'Inter','SF Pro Text',system-ui,sans-serif;background:#050810;c
 .nav{font-size:10px;color:#4a5060;margin-bottom:20px;padding-bottom:0;border-bottom:none;display:flex;flex-direction:column;gap:0;position:sticky;top:0;z-index:10;background:#050810}
 .nav-row{display:flex;align-items:center;flex-wrap:wrap;gap:0;padding:6px 0;border-bottom:1px solid rgba(26,31,46,.4)}
 .nav-row:last-child{margin-bottom:12px}
-.nav a{color:#58a6ff;text-decoration:none;margin-right:8px;white-space:nowrap}.nav a:hover{text-decoration:underline;color:#79c0ff}
-.nav .sep{color:rgba(26,31,46,.6);margin:0 2px;user-select:none}
-.nav .brand{color:#e6edf3;font-weight:700;font-family:'SF Mono',monospace;margin-right:10px;font-size:11px;letter-spacing:.3px}
+.nav a{color:#79c0ff;text-decoration:none;margin-right:8px;white-space:nowrap;transition:color .2s}.nav a:hover{text-decoration:underline;color:#a5d6ff}
+.nav .sep{color:rgba(88,166,255,.15);margin:0 3px;user-select:none}
+.nav .brand{color:#e6edf3;font-weight:700;font-family:'SF Mono',monospace;margin-right:12px;font-size:13px;letter-spacing:.5px}
 .nav .brand b{color:#58a6ff}
-.nav .dim{color:#3d424d}.nav .dim:hover{color:#58a6ff}
-.nav .grp{color:#4a5060;font-size:8px;text-transform:uppercase;letter-spacing:.8px;margin-right:6px;font-weight:600}
-h1{color:#e6edf3;font-size:21px;margin:24px 0 10px;letter-spacing:.3px;font-weight:700}
-h2{color:#58a6ff;font-size:16px;margin:28px 0 10px;padding-top:18px;border-top:1px solid rgba(26,31,46,.4);font-weight:600}
-h3{color:#d2a8ff;font-size:13px;margin:18px 0 6px;font-weight:600}
+.nav .dim{color:#6e7681;transition:color .2s}.nav .dim:hover{color:#79c0ff}
+.nav .grp{color:#8b949e;font-size:9px;text-transform:uppercase;letter-spacing:.8px;margin-right:6px;font-weight:600}
+.font-ctrl{position:fixed;right:12px;top:50%;transform:translateY(-50%);z-index:20;display:flex;flex-direction:column;gap:4px}
+.font-ctrl button{width:28px;height:28px;border-radius:4px;border:1px solid rgba(88,166,255,.2);background:rgba(5,8,16,.9);color:#58a6ff;font-size:14px;cursor:pointer;font-family:'SF Mono',monospace;transition:all .2s;backdrop-filter:blur(8px)}
+.font-ctrl button:hover{border-color:#58a6ff;background:rgba(88,166,255,.08)}
+h1{color:#e6edf3;font-size:22px;margin:24px 0 12px;letter-spacing:.3px;font-weight:700}
+h2{color:#58a6ff;font-size:17px;margin:28px 0 12px;padding-top:18px;border-top:1px solid rgba(26,31,46,.4);font-weight:600}
+h3{color:#d2a8ff;font-size:14px;margin:18px 0 8px;font-weight:600}
 h4{color:#8b949e;font-size:12px;margin:14px 0 4px;font-weight:600}
-p{margin:8px 0;font-size:12px}
-strong{color:#e6edf3}em{color:#7a8290}
-a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}
+p{margin:8px 0;font-size:13px;color:#b0b8c4;line-height:1.7}
+strong{color:#e6edf3}em{color:#8b949e}
+a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline;color:#79c0ff}
 code{background:rgba(22,27,34,.85);padding:2px 5px;border-radius:3px;color:#7ee787;font-size:11px;font-family:'SF Mono','Fira Code',monospace}
-pre{background:rgba(22,27,34,.85);padding:14px;border-radius:5px;font-size:11px;overflow-x:auto;margin:12px 0;color:#8b949e;font-family:'SF Mono','Fira Code',monospace;line-height:1.5;border:1px solid rgba(26,31,46,.3)}
-li{margin:3px 0 3px 20px;font-size:12px;line-height:1.6}
-ul,ol{margin:6px 0}
-blockquote{border-left:3px solid rgba(88,166,255,.25);padding:8px 16px;color:#7a8290;margin:12px 0;font-size:11px;font-style:italic;background:rgba(13,17,23,.4);border-radius:0 4px 4px 0}
+pre{background:rgba(22,27,34,.85);padding:14px;border-radius:5px;font-size:11px;overflow-x:auto;margin:12px 0;color:#b0b8c4;font-family:'SF Mono','Fira Code',monospace;line-height:1.5;border:1px solid rgba(26,31,46,.3)}
+li{margin:4px 0 4px 20px;font-size:13px;line-height:1.7;color:#b0b8c4}
+ul,ol{margin:8px 0}
+blockquote{border-left:3px solid rgba(88,166,255,.3);padding:10px 18px;color:#8b949e;margin:14px 0;font-size:12px;font-style:italic;background:rgba(13,17,23,.5);border-radius:0 4px 4px 0}
 hr{border:none;border-top:1px solid rgba(26,31,46,.35);margin:24px 0}
 table{width:100%;border-collapse:collapse;margin:12px 0;font-size:11px}
 th{text-align:left;padding:6px 8px;border-bottom:2px solid rgba(26,31,46,.5);color:#e6edf3;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
@@ -464,7 +467,10 @@ def _doc_page(title: str, body_html: str, meta: str = "") -> str:
 <div class="nav-row"><span class="grp">gov</span><a href="/doc/DAIO" class="dim">daio</a><a href="/doc/DAIO_CIVILIZATION_GOVERNANCE" class="dim">civilization</a><a href="/doc/IDENTITY" class="dim">identity</a><span class="sep">|</span><span class="grp">memory</span><a href="/doc/pgvectorscale_memory_integration" class="dim">pgvector</a><a href="/doc/EMBEDDING_SYSTEM" class="dim">embed</a><a href="/doc/aglm" class="dim">aglm</a><a href="/doc/memory" class="dim">memory</a><span class="sep">|</span><span class="grp">inference</span><a href="/doc/VLLM_INTEGRATION" class="dim">vllm</a><a href="/doc/ollama_api_integration" class="dim">ollama</a><span class="sep">|</span><span class="grp">time</span><a href="/doc/TIME_ORACLE" class="dim">oracle</a><a href="/automindx" class="dim" style="color:#d2a8ff">automindx</a><span class="sep">|</span><span class="grp">tools</span><a href="/doc/TOOLS_INDEX" class="dim">index</a><a href="/doc/a2a_tool" class="dim">a2a</a><a href="/doc/mcp_tool" class="dim">mcp</a><span class="sep">|</span><span class="grp">publish</span><a href="/doc/AUTHOR_AGENT" class="dim">authoragent</a><a href="/book" class="dim">book</a><a href="/journal" class="dim">journal</a><span class="sep">|</span><span class="grp">deploy</span><a href="/doc/DEPLOYMENT_MINDX_PYTHAI_NET" class="dim">production</a><a href="/doc/security" class="dim">security</a><span class="sep">|</span><span class="grp">api</span><a href="/redoc" class="dim">reference</a><a href="/doc/mistral_api" class="dim">mistral</a></div>
 </div>'''
     meta_html = f'<div class="title-meta">{meta}</div>' if meta else ''
-    return f'<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title} — mindX</title><link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><style>{_DOC_STYLE}</style></head><body><div class="page">{nav}{meta_html}{body_html}</div></body></html>'
+    font_ctrl = '''<div class="font-ctrl"><button onclick="adjFont(1)" title="Increase font size">+</button><button onclick="adjFont(-1)" title="Decrease font size">−</button></div>
+<script>function adjFont(d){const p=document.querySelector('.page');const s=parseFloat(getComputedStyle(p).fontSize)||14;p.style.fontSize=Math.max(10,Math.min(22,s+d))+'px';try{localStorage.setItem('mindx_fs',p.style.fontSize)}catch{}}
+try{const fs=localStorage.getItem('mindx_fs');if(fs)document.addEventListener('DOMContentLoaded',()=>{document.querySelector('.page').style.fontSize=fs})}catch{}</script>'''
+    return f'<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title} — mindX</title><link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><style>{_DOC_STYLE}</style></head><body><div class="page">{nav}{meta_html}{body_html}</div>{font_ctrl}</body></html>'
 
 @app.get("/doc/{name}", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
 async def read_doc(name: str):
@@ -1312,9 +1318,24 @@ async def startup_event():
 
         # Start autonomous improvement loop — mindX thinks, decides, evolves
         async def _auto_start_autonomous():
-            """Delayed start of autonomous mode so all agents are ready."""
-            await asyncio.sleep(30)  # Wait for full initialization
+            """Delayed start of autonomous mode with self-aware resource limits.
+            mindX monitors its own CPU and memory before and during autonomous cycles.
+            """
+            await asyncio.sleep(45)  # Wait for full initialization
             try:
+                import psutil as _ps_auto
+                mem = _ps_auto.virtual_memory()
+                cpu = _ps_auto.cpu_percent(interval=1)
+                logger.info(f"Autonomous pre-flight: memory={mem.percent}% cpu={cpu}%")
+                # Self-aware resource check — stay within VPS parameters
+                if mem.percent > 78:
+                    logger.warning(f"Autonomous mode deferred: memory={mem.percent}% (>78%)")
+                    # Retry after 5 min when memory may have settled
+                    await asyncio.sleep(300)
+                    mem = _ps_auto.virtual_memory()
+                    if mem.percent > 78:
+                        logger.warning(f"Autonomous mode skipped: memory still at {mem.percent}%")
+                        return
                 from agents.core.mindXagent import MindXAgent
                 mindxagent = await MindXAgent.get_instance(
                     agent_id="mindx_meta_agent",
@@ -1323,8 +1344,9 @@ async def startup_event():
                     test_mode=False,
                 )
                 if hasattr(mindxagent, 'start_autonomous_mode'):
+                    # Use qwen3:1.7b for depth, with resource governor managing model lifecycle
                     await mindxagent.start_autonomous_mode(model="qwen3:1.7b", provider="ollama")
-                    logger.info("mindXagent autonomous mode STARTED (qwen3:1.7b)")
+                    logger.info("mindXagent autonomous mode STARTED (qwen3:1.7b, resource-governed)")
                 else:
                     logger.warning("mindXagent has no start_autonomous_mode method")
             except Exception as auto_e:
