@@ -1,8 +1,10 @@
-# mindX Embedding System — Semantic Search over Documentation and Memory
+# RAGE Embed — Semantic Search over Documentation and Memory
 
 ## Overview
 
-mindX embeds all documentation (194 files) and agent memories into pgvector using mxbai-embed-large (1024 dimensions). This enables semantic search — asking questions in natural language and retrieving the most relevant content by meaning, not just keywords.
+**RAGE** (Retrieval Augmented Generative Engine) **embed** is the embedding layer of mindX. It bridges LLM inference with pgvector database storage, enabling semantic search over all documentation and agent memories.
+
+mindX embeds all documentation (194 files) and agent memories into pgvector using mxbai-embed-large (1024 dimensions). RAGE facilitates the interaction between LLM and pgvectorscale, providing the semantic retrieval layer for RAG (Retrieval Augmented Generation) queries.
 
 ## Architecture
 
@@ -39,6 +41,19 @@ memories.embedding vector(1024)
 Documents are split into ~500-word chunks. Each chunk is embedded independently. A 10KB doc typically produces 3-5 chunks. This ensures that search results return specific, relevant passages rather than entire documents.
 
 ## API Endpoints
+
+### RAGE Embed Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/rage/embed?query=...` | GET | Semantic search over docs + memories |
+| `/api/rage/embed/stats` | GET | Embedding counts + action efficiency |
+| `/actions/export` | GET | Export all actions as JSON |
+| `/actions/export/csv` | GET | Export actions as CSV download |
+| `/actions/efficiency` | GET | Action pipeline efficiency metrics |
+| `/diagnostics/export` | GET | Full diagnostics snapshot download |
+
+### Chat Endpoints
 
 ### POST /chat/docs — RAG Q&A
 

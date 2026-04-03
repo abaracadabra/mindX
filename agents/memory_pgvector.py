@@ -295,6 +295,24 @@ async def sync_agent_registry(agents: Dict[str, Dict[str, Any]]) -> int:
         return count
 
 
+async def store_action_if_new(agent_id: str, action_type: str, description: str, source: str = "", status: str = "identified") -> bool:
+    """Store action only if no existing action with same description in active status."""
+    pool = await get_pool()
+    if not pool:
+        return False
+    try:
+        existing = await pool.fetchval(
+            "SELECT COUNT(*) FROM actions WHERE LEFT(description, 200) = $1 AND status NOT IN ('completed', 'failed')",
+            description[:200],
+        )
+        if existing and existing > 0:
+            return False
+        return await store_action(agent_id, action_type, description, source, status)
+    except Exception as e:
+        logger.debug(f"pgvector store_action_if_new failed: {e}")
+        return await store_action(agent_id, action_type, description, source, status)
+
+
 async def store_action(agent_id: str, action_type: str, description: str, source: str = "", status: str = "pending") -> bool:
     """Log an action taken by an agent."""
     pool = await get_pool()
@@ -501,6 +519,41 @@ async def semantic_search_memories(query: str, top_k: int = 5) -> List[Dict[str,
     except Exception as e:
         logger.debug(f"Memory semantic search failed: {e}")
         return []
+
+
+async def get_action_efficiency() -> Dict[str, Any]:
+    """Measure action pipeline efficiency metrics."""
+    pool = await get_pool()
+    if not pool:
+        return {}
+    try:
+        row = await pool.fetchrow("""
+            SELECT
+                COUNT(*) as total,
+                COUNT(*) FILTER (WHERE status='identified') as identified,
+                COUNT(*) FILTER (WHERE status='completed') as completed,
+                COUNT(*) FILTER (WHERE status='failed') as failed,
+                COUNT(*) FILTER (WHERE status='pending') as pending,
+                COUNT(DISTINCT LEFT(description,100)) as unique_descriptions,
+                EXTRACT(EPOCH FROM AVG(completed_at - created_at)) FILTER (WHERE completed_at IS NOT NULL) as avg_completion_secs
+            FROM actions
+        """)
+        total = row["total"] or 0
+        unique = row["unique_descriptions"] or 0
+        return {
+            "total": total,
+            "identified": row["identified"] or 0,
+            "completed": row["completed"] or 0,
+            "failed": row["failed"] or 0,
+            "pending": row["pending"] or 0,
+            "completion_rate": round((row["completed"] or 0) / max(total, 1), 3),
+            "duplicate_rate": round(1 - (unique / max(total, 1)), 3),
+            "avg_completion_seconds": round(row["avg_completion_secs"] or 0, 1),
+            "unique_actions": unique,
+        }
+    except Exception as e:
+        logger.warning(f"pgvector get_action_efficiency failed: {e}")
+        return {"error": str(e)}
 
 
 async def count_embeddings() -> Dict[str, int]:

@@ -2036,10 +2036,10 @@ class MindXAgent:
                 # Fall back to config or environment
                 if not base_url:
                     base_url = self.config.get("llm.ollama.base_url") or os.getenv("MINDX_LLM__OLLAMA__BASE_URL")
-                    # Primary: 10.0.0.155:18080 (GPU server), Fallback: localhost:11434 (CPU)
+                    # Use env var (set from BANKON vault) or localhost fallback
                     if not base_url:
-                        base_url = "http://10.0.0.155:18080"
-                        logger.info(f"{self.log_prefix} Using primary GPU Ollama server: {base_url}")
+                        base_url = "http://localhost:11434"
+                        logger.info(f"{self.log_prefix} Using local Ollama server: {base_url}")
             
             logger.info(f"{self.log_prefix} Initializing Ollama Chat Manager with base_url: {base_url}")
             conversation_history_path = self.data_dir / "ollama_chat_history.json"
@@ -3040,22 +3040,25 @@ class MindXAgent:
             try:
                 from agents import memory_pgvector as _mpg
                 for opp in opportunities:
-                    await _mpg.store_memory(
-                        memory_id=f"action_{int(time.time())}_{hash(opp['goal'])%10000}",
-                        agent_id="mindx_meta_agent",
-                        memory_type="action",
-                        importance=opp.get("priority", 5),
-                        content={"action": "identify_opportunity", "goal": opp["goal"], "reason": opp.get("reason", ""), "source": opp.get("source", "")},
-                        context={"system_state": {k: v for k, v in system_state.items() if not isinstance(v, dict)}},
-                        tags=["action", "improvement_opportunity", opp.get("source", "")],
-                    )
-                    await _mpg.store_action(
+                    # Dedup: only store if not already tracked
+                    stored = await _mpg.store_action_if_new(
                         agent_id="mindx_meta_agent",
                         action_type="improvement_opportunity",
                         description=opp["goal"][:200],
                         source=opp.get("source", "autonomous_loop"),
                         status="identified",
                     )
+                    if stored:
+                        # Also store as memory (actions are memories)
+                        await _mpg.store_memory(
+                            memory_id=f"action_{int(time.time())}_{hash(opp['goal'])%10000}",
+                            agent_id="mindx_meta_agent",
+                            memory_type="action",
+                            importance=opp.get("priority", 5),
+                            content={"action": "identify_opportunity", "goal": opp["goal"], "reason": opp.get("reason", ""), "source": opp.get("source", "")},
+                            context={"system_state": {k: v for k, v in system_state.items() if not isinstance(v, dict)}},
+                            tags=["action", "improvement_opportunity", opp.get("source", "")],
+                        )
             except Exception:
                 pass
         

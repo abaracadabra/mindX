@@ -435,11 +435,12 @@ _PUBLIC_EXACT = frozenset({
     "/diagnostics/live", "/vault/credentials/status",
     "/vault/credentials/providers", "/dojo/standings",
     "/inference/status", "/boardroom/sessions",
-    "/chat/docs/stats",
+    "/chat/docs/stats", "/actions/efficiency",
 })
 _PUBLIC_PREFIXES = (
     "/doc/", "/docs", "/redoc", "/mindterm/static/",
     "/dojo/agent/", "/bankon", "/agenticplace/", "/chat/docs",
+    "/actions/export", "/diagnostics/export", "/api/rage/embed",
     "/users/challenge", "/users/register",
 )
 
@@ -1978,6 +1979,78 @@ async def get_runtime_logs():
 # ══════════════════════════════════════════════════════════════════
 #  CHAT WITH DOCS — RAG over embedded documentation
 # ══════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════
+#  ACTIONS EXPORT + EFFICIENCY + RAGE EMBED
+# ══════════════════════════════════════════════════════════════════
+
+@app.get("/actions/export", tags=["actions"], summary="Export all actions as JSON")
+async def export_actions(status: Optional[str] = None, limit: int = 500):
+    try:
+        from agents import memory_pgvector as _mpx
+        pool = await _mpx.get_pool()
+        if not pool:
+            return {"actions": []}
+        if status:
+            rows = await pool.fetch("SELECT * FROM actions WHERE status=$1 ORDER BY created_at DESC LIMIT $2", status, limit)
+        else:
+            rows = await pool.fetch("SELECT * FROM actions ORDER BY created_at DESC LIMIT $1", limit)
+        return {"actions": [dict(r) | {"created_at": str(r["created_at"]), "completed_at": str(r["completed_at"]) if r["completed_at"] else None} for r in rows], "count": len(rows)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/actions/export/csv", tags=["actions"], summary="Export actions as CSV")
+async def export_actions_csv(limit: int = 500):
+    from starlette.responses import Response
+    try:
+        from agents import memory_pgvector as _mpx
+        pool = await _mpx.get_pool()
+        if not pool:
+            return Response("no data", media_type="text/csv")
+        rows = await pool.fetch("SELECT id,agent_id,action_type,description,source,status,result,created_at,completed_at FROM actions ORDER BY created_at DESC LIMIT $1", limit)
+        lines = ["id,agent_id,action_type,description,source,status,result,created_at,completed_at"]
+        for r in rows:
+            desc = str(r["description"]).replace('"', '""')[:200]
+            res = str(r["result"] or "").replace('"', '""')[:100]
+            lines.append(f'{r["id"]},{r["agent_id"]},"{r["action_type"]}","{desc}",{r["source"]},{r["status"]},"{res}",{r["created_at"]},{r["completed_at"] or ""}')
+        return Response("\n".join(lines), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=mindx_actions.csv"})
+    except Exception as e:
+        return Response(f"error: {e}", media_type="text/plain")
+
+@app.get("/actions/efficiency", tags=["actions"], summary="Action pipeline efficiency metrics")
+async def action_efficiency():
+    try:
+        from agents import memory_pgvector as _mpx
+        return await _mpx.get_action_efficiency()
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/diagnostics/export", tags=["diagnostics"], summary="Full diagnostics snapshot as JSON download")
+async def diagnostics_export():
+    from starlette.responses import Response
+    data = await diagnostics_live_endpoint()
+    return Response(json.dumps(data, indent=2, default=str), media_type="application/json", headers={"Content-Disposition": "attachment; filename=mindx_diagnostics.json"})
+
+# RAGE Embed — pgvector-backed semantic search (branded as RAGE)
+@app.get("/api/rage/embed", tags=["rage-embed"], summary="RAGE embed: semantic search over docs via pgvector")
+async def rage_embed_search(query: str, top_k: int = 5):
+    try:
+        from agents import memory_pgvector as _mpx
+        docs = await _mpx.semantic_search_docs(query, top_k=top_k)
+        mems = await _mpx.semantic_search_memories(query, top_k=top_k)
+        return {"query": query, "docs": docs, "memories": mems}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/rage/embed/stats", tags=["rage-embed"], summary="RAGE embed: embedding statistics")
+async def rage_embed_stats():
+    try:
+        from agents import memory_pgvector as _mpx
+        counts = await _mpx.count_embeddings()
+        efficiency = await _mpx.get_action_efficiency()
+        return {"embeddings": counts, "action_efficiency": efficiency}
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.post("/chat/docs", tags=["chat"], summary="Ask a question about mindX documentation (RAG)")
 async def chat_with_docs(question: str):
