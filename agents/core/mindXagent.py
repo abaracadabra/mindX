@@ -3006,7 +3006,7 @@ class MindXAgent:
                 )
                 api = self.ollama_chat_manager.ollama_api
                 if api:
-                    response = await api.generate_text(prompt, model="qwen3:0.6b", use_chat=True, max_tokens=100)
+                    response = await api.generate_text(prompt, model="qwen3:1.7b", use_chat=True, max_tokens=100)
                     if response and len(response) > 10:
                         opportunities.append({
                             "goal": response[:200],

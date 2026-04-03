@@ -582,7 +582,7 @@ async def _heartbeat_query_local_model():
         t0 = time.time()
         timeout = _aio.ClientTimeout(total=30)
         async with _aio.ClientSession(timeout=timeout) as sess:
-            payload = {"model": "qwen3:0.6b", "messages": [{"role": "user", "content": prompt}], "stream": False}
+            payload = {"model": "qwen3:1.7b", "messages": [{"role": "user", "content": prompt}], "stream": False}
             async with sess.post("http://localhost:11434/api/chat", json=payload) as resp:
                 if resp.status == 200:
                     data = await resp.json()
@@ -593,7 +593,7 @@ async def _heartbeat_query_local_model():
                     entry = {
                         "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
                         "agent": "mindx_heartbeat",
-                        "model": "qwen3:0.6b",
+                        "model": "qwen3:1.7b",
                         "prompt": prompt,
                         "response": response_text[:500],
                         "latency_ms": latency,
@@ -605,7 +605,7 @@ async def _heartbeat_query_local_model():
                     cpu_at = _ps.cpu_percent(interval=None)
                     _diag_model_perf.append({
                         "ts": datetime.utcnow().strftime("%H:%M:%S"),
-                        "model": "qwen3:0.6b",
+                        "model": "qwen3:1.7b",
                         "latency_ms": latency,
                         "tokens_est": tokens_est,
                         "tps": tps,
@@ -616,7 +616,7 @@ async def _heartbeat_query_local_model():
                     # Persist to pgvector
                     try:
                         from agents import memory_pgvector as _mpf
-                        await _mpf.store_model_perf("qwen3:0.6b", latency, tokens_est, tps, cpu_at)
+                        await _mpf.store_model_perf("qwen3:1.7b", latency, tokens_est, tps, cpu_at)
                     except Exception:
                         pass
 
@@ -635,7 +635,7 @@ async def _heartbeat_query_local_model():
                         await ma.log_process(
                             process_name="heartbeat_dialogue",
                             data=entry,
-                            metadata={"agent_id": "mindx_heartbeat", "model": "qwen3:0.6b", "type": "self_reflection"},
+                            metadata={"agent_id": "mindx_heartbeat", "model": "qwen3:1.7b", "type": "self_reflection"},
                         )
                     except Exception:
                         pass
@@ -826,25 +826,6 @@ async def diagnostics_live_endpoint():
     except Exception:
         pass
 
-    return {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
-        "uptime": uptime, "uptime_seconds": up_s,
-        "pid": proc.pid, "process_memory_mb": proc_mem,
-        "system": {"cpu_percent": cpu_now, "cpu_avg": cpu_avg, "load": [round(load_1,2), round(load_5,2), round(load_15,2)], "memory_used_gb": round(mem.used/(1024**3),2), "memory_total_gb": round(mem.total/(1024**3),2), "memory_percent": mem.percent, "disk_used_gb": round(disk.used/(1024**3),1), "disk_total_gb": round(disk.total/(1024**3),1), "disk_percent": round(disk.percent,1)},
-        "agents": agents, "beliefs": {"count": bc, "sample": bs},
-        "memory": {"stm_records": stm, "agent_workspaces": wsp, "stm_by_agent": stm_by_agent},
-        "interactions": list(_diag_interactions),
-        "godel_choices": godel, "inference": inf, "vault": vault,
-        "dojo": dojo_data, "boardroom": br_data,
-        "actions": actions_data,
-        "model_perf": list(_diag_model_perf),
-        "disk_detail": disk_detail,
-        "database": db_health,
-        "rage_embed": rage_stats,
-        "vllm": vllm_data,
-        "recent_logs": logs,
-    }
-
     # vLLM status
     vllm_data = {}
     try:
@@ -980,8 +961,8 @@ async def startup_event():
                     test_mode=False,
                 )
                 if hasattr(mindxagent, 'start_autonomous_mode'):
-                    await mindxagent.start_autonomous_mode(model="qwen3:0.6b", provider="ollama")
-                    logger.info("mindXagent autonomous mode STARTED (qwen3:0.6b)")
+                    await mindxagent.start_autonomous_mode(model="qwen3:1.7b", provider="ollama")
+                    logger.info("mindXagent autonomous mode STARTED (qwen3:1.7b)")
                 else:
                     logger.warning("mindXagent has no start_autonomous_mode method")
             except Exception as auto_e:
@@ -2118,7 +2099,7 @@ async def chat_with_docs(question: str):
         try:
             timeout = _cha.ClientTimeout(total=30)
             async with _cha.ClientSession(timeout=timeout) as sess:
-                payload = {"model": "qwen3:0.6b", "messages": [{"role": "user", "content": prompt}], "stream": False}
+                payload = {"model": "qwen3:1.7b", "messages": [{"role": "user", "content": prompt}], "stream": False}
                 async with sess.post("http://localhost:11434/api/chat", json=payload) as resp:
                     if resp.status == 200:
                         data = await resp.json()

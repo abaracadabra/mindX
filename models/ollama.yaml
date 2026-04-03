@@ -24,7 +24,7 @@ rate_limits:
   tokens_per_day: 1000000000
 
 # Default model settings
-default_model: llama3:8b
+default_model: qwen3:1.7b
 keep_alive: 10m  # Keep models loaded in memory
 
 # Available models (discovered dynamically). task_scores align with ModelSelector TaskType for graded inference hierarchy.
