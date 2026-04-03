@@ -52,15 +52,16 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 .rk-u{background:rgba(20,20,20,.7);color:#3d424d}
 .pulse{animation:p 2s ease-in-out infinite}@keyframes p{0%,100%{opacity:.3}50%{opacity:1}}
 .toast{position:fixed;top:36px;right:12px;z-index:10;width:340px;pointer-events:none}
-.toast-item{background:rgba(10,32,18,.92);border:1px solid rgba(63,185,80,.3);border-radius:5px;padding:8px 10px;margin-bottom:6px;backdrop-filter:blur(12px);animation:slideIn .4s ease-out,fadeOut .6s ease-in 6s forwards;pointer-events:auto;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.toast-item{background:rgba(10,32,18,.92);border:1px solid rgba(63,185,80,.3);border-radius:5px;padding:8px 10px;margin-bottom:6px;backdrop-filter:blur(12px);animation:slideIn .5s ease-out,toastPulse 2s ease-in-out 1s 2,fadeOut .8s ease-in 12s forwards;pointer-events:auto;box-shadow:0 4px 24px rgba(63,185,80,.15),0 2px 12px rgba(0,0,0,.4)}
 .toast-item .t-hdr{font-size:8px;color:#4a5060;display:flex;justify-content:space-between;margin-bottom:3px}
 .toast-item .t-q{font-size:9px;color:#d2a8ff;margin-bottom:4px;line-height:1.3}
 .toast-item .t-a{font-size:10px;color:#c5d0dc;line-height:1.4}
 .toast-item .t-model{color:#3fb950;font-size:8px}
-@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
-@keyframes fadeOut{from{opacity:1}to{opacity:0}}
-.msg-new{animation:msgGlow .8s ease-out}
-@keyframes msgGlow{0%{background:rgba(63,185,80,.15);box-shadow:0 0 12px rgba(63,185,80,.2)}100%{background:inherit;box-shadow:none}}
+@keyframes slideIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes toastPulse{0%,100%{border-color:rgba(63,185,80,.3)}50%{border-color:rgba(63,185,80,.6);box-shadow:0 4px 28px rgba(63,185,80,.2),0 2px 12px rgba(0,0,0,.4)}}
+@keyframes fadeOut{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateY(-8px) scale(.97)}}
+@keyframes settleIn{0%{transform:translateX(40px) scale(1.03);opacity:0;background:rgba(63,185,80,.2);box-shadow:0 0 20px rgba(63,185,80,.25)}30%{opacity:1;background:rgba(63,185,80,.12);box-shadow:0 0 14px rgba(63,185,80,.15)}100%{transform:translateX(0) scale(1);background:inherit;box-shadow:none}}
+.msg-new{animation:settleIn 1.4s ease-out}
 .ft{padding:3px 8px;border-top:1px solid rgba(26,31,46,.5);font-size:7px;color:#3d424d;text-align:center;flex-shrink:0;background:rgba(10,14,20,.9)}
 .ft a{color:#58a6ff;text-decoration:none}.ft a.dm{color:#3d424d}
 .sp rect{fill:#3fb950;opacity:.7}
@@ -157,8 +158,8 @@ function showToast(m){
   el.className='toast-item';
   el.innerHTML=`<div class="t-hdr"><span class="t-model">${m.model||'local'} ${m.latency_ms?m.latency_ms+'ms':''}</span><span>${td}</span></div><div class="t-q">${(m.prompt||'').replace(/</g,'&lt;').slice(0,120)}</div><div class="t-a">${(m.response||'').replace(/</g,'&lt;').slice(0,200)}</div>`;
   tc.prepend(el);
-  // Auto-remove after animation completes (6.6s = 6s visible + 0.6s fade)
-  setTimeout(()=>{if(el.parentNode)el.remove()},6800);
+  // Auto-remove after animation completes (12s visible + 0.8s fade)
+  setTimeout(()=>{if(el.parentNode)el.remove()},13000);
   // Keep max 3 toasts
   while(tc.children.length>3)tc.lastChild.remove();
 }
@@ -185,10 +186,10 @@ function render(d){
         nodes[i].act=1;flashE(i,(i+3)%nodes.length);
       });
     }
-    // Settle pending into panel after 6.5s
+    // Settle pending into panel after 13s (matches toast duration)
     const now=Date.now();
     pendingNew=pendingNew.filter(p=>{
-      if(now-p.shownAt>6500){return false} // expired, already in panel via full render
+      if(now-p.shownAt>13000){return false}
       return true;
     });
   }
