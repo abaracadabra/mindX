@@ -233,6 +233,8 @@ function render(d){
   if(db.status==='connected'){dh+=`<div class="r"><span>pgvector</span><span style="color:#3fb950">${db.db_size} (${db.memories} mem, ${db.beliefs} bel)</span></div>`}
   else if(db.status){dh+=`<div class="r"><span>pgvector</span><span style="color:#f85149">${db.status}</span></div>`}
   if(re.docs||re.memories){dh+=`<div class="r"><span>RAGE embed</span><span style="color:#d2a8ff">${re.docs} doc chunks, ${re.memories} mem vectors</span></div>`}
+  const vl=d.vllm||{};
+  if(vl.installed!==undefined){const vc=vl.serving?'#3fb950':vl.installed?'#d29922':'#f85149';dh+=`<div class="r"><span>vLLM</span><span style="color:${vc}">${vl.version||'?'} ${vl.backend||''} ${vl.serving?'serving '+vl.model:''}</span></div>`}
   if(dh)h+=`<div class="c"><div class="ct">storage</div>${dh}</div>`;
   // logs full width
   let ll='';(d.recent_logs||[]).slice(0,10).forEach(l=>ll+=`<div class="ll">${l.replace(/</g,'&lt;')}</div>`);

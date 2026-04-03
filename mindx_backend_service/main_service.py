@@ -435,7 +435,7 @@ _PUBLIC_EXACT = frozenset({
     "/diagnostics/live", "/vault/credentials/status",
     "/vault/credentials/providers", "/dojo/standings",
     "/inference/status", "/boardroom/sessions",
-    "/chat/docs/stats", "/actions/efficiency",
+    "/chat/docs/stats", "/actions/efficiency", "/vllm/status", "/vllm/health",
 })
 _PUBLIC_PREFIXES = (
     "/doc/", "/docs", "/redoc", "/mindterm/static/",
@@ -841,6 +841,35 @@ async def diagnostics_live_endpoint():
         "disk_detail": disk_detail,
         "database": db_health,
         "rage_embed": rage_stats,
+        "vllm": vllm_data,
+        "recent_logs": logs,
+    }
+
+    # vLLM status
+    vllm_data = {}
+    try:
+        from agents.vllm_agent import VLLMAgent
+        va = await VLLMAgent.get_instance()
+        vllm_data = va.get_status()
+    except Exception:
+        pass
+
+    return {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "uptime": uptime, "uptime_seconds": up_s,
+        "pid": proc.pid, "process_memory_mb": proc_mem,
+        "system": {"cpu_percent": cpu_now, "cpu_avg": cpu_avg, "load": [round(load_1,2), round(load_5,2), round(load_15,2)], "memory_used_gb": round(mem.used/(1024**3),2), "memory_total_gb": round(mem.total/(1024**3),2), "memory_percent": mem.percent, "disk_used_gb": round(disk.used/(1024**3),1), "disk_total_gb": round(disk.total/(1024**3),1), "disk_percent": round(disk.percent,1)},
+        "agents": agents, "beliefs": {"count": bc, "sample": bs},
+        "memory": {"stm_records": stm, "agent_workspaces": wsp, "stm_by_agent": stm_by_agent},
+        "interactions": list(_diag_interactions),
+        "godel_choices": godel, "inference": inf, "vault": vault,
+        "dojo": dojo_data, "boardroom": br_data,
+        "actions": actions_data,
+        "model_perf": list(_diag_model_perf),
+        "disk_detail": disk_detail,
+        "database": db_health,
+        "rage_embed": rage_stats,
+        "vllm": vllm_data,
         "recent_logs": logs,
     }
 
@@ -2112,6 +2141,55 @@ async def chat_docs_stats():
         return await _mpg.count_embeddings()
     except Exception as e:
         return {"docs": 0, "memories": 0, "error": str(e)}
+
+# ══════════════════════════════════════════════════════════════════
+#  vLLM AGENT — Build, serve, monitor vLLM
+# ══════════════════════════════════════════════════════════════════
+
+@app.get("/vllm/status", tags=["vllm"], summary="vLLM agent status and efficiency report")
+async def vllm_status():
+    try:
+        from agents.vllm_agent import VLLMAgent
+        agent = await VLLMAgent.get_instance()
+        return await agent.get_efficiency_report()
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/vllm/build-cpu", tags=["vllm"], summary="Build vLLM from source for CPU (takes 10-30 min)")
+async def vllm_build_cpu():
+    try:
+        from agents.vllm_agent import VLLMAgent
+        agent = await VLLMAgent.get_instance()
+        return await agent.build_cpu_from_source()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/vllm/serve", tags=["vllm"], summary="Start vLLM model serving")
+async def vllm_serve(model: str = "mixedbread-ai/mxbai-embed-large-v1"):
+    try:
+        from agents.vllm_agent import VLLMAgent
+        agent = await VLLMAgent.get_instance()
+        return await agent.serve_model(model=model)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/vllm/stop", tags=["vllm"], summary="Stop vLLM serving")
+async def vllm_stop():
+    try:
+        from agents.vllm_agent import VLLMAgent
+        agent = await VLLMAgent.get_instance()
+        return await agent.stop_serving()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/vllm/health", tags=["vllm"], summary="vLLM server health check")
+async def vllm_health():
+    try:
+        from agents.vllm_agent import VLLMAgent
+        agent = await VLLMAgent.get_instance()
+        return await agent.health_check()
+    except Exception as e:
+        return {"healthy": False, "error": str(e)}
 
 @app.post("/boardroom/convene", tags=["governance"], summary="Convene boardroom — CEO + Seven Soldiers evaluate directive")
 async def boardroom_convene(directive: str, importance: str = "standard"):
