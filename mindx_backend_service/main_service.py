@@ -600,17 +600,24 @@ async def _heartbeat_query_local_model():
                     _diag_interactions.append(entry)
                     if len(_diag_interactions) > 20:
                         _diag_interactions.pop(0)
-                    # Track model performance
+                    # Track model performance (memory + DB)
+                    cpu_at = _ps.cpu_percent(interval=None)
                     _diag_model_perf.append({
                         "ts": datetime.utcnow().strftime("%H:%M:%S"),
                         "model": "qwen3:0.6b",
                         "latency_ms": latency,
                         "tokens_est": tokens_est,
                         "tps": tps,
-                        "cpu_at_query": _ps.cpu_percent(interval=None),
+                        "cpu_at_query": cpu_at,
                     })
                     if len(_diag_model_perf) > 30:
                         _diag_model_perf.pop(0)
+                    # Persist to pgvector
+                    try:
+                        from agents import memory_pgvector as _mpf
+                        await _mpf.store_model_perf("qwen3:0.6b", latency, tokens_est, tps, cpu_at)
+                    except Exception:
+                        pass
 
                     # Persist to disk — all logs are memories in data
                     try:
@@ -663,6 +670,20 @@ async def diagnostics_live_endpoint():
         except Exception: pass
         # Fire heartbeat to local model
         asyncio.create_task(_heartbeat_query_local_model())
+        # Store resource snapshot as memory (logs are memories)
+        try:
+            from agents import memory_pgvector as _mpr
+            await _mpr.store_memory(
+                memory_id=f"resource_{int(now)}",
+                agent_id="system_state_tracker",
+                memory_type="resource_metrics",
+                importance=2,
+                content={"cpu_percent": cpu_now, "cpu_avg": cpu_avg, "load": [round(load_1,2), round(load_5,2), round(load_15,2)],
+                         "memory_percent": mem.percent, "memory_used_gb": round(mem.used/(1024**3),2),
+                         "disk_percent": round(disk.percent,1), "process_memory_mb": proc_mem},
+                context={}, tags=["resource", "metrics", "periodic"],
+            )
+        except Exception: pass
 
     # beliefs
     bp = PROJECT_ROOT / "data" / "memory" / "beliefs.json"
