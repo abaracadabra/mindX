@@ -359,6 +359,41 @@ class ResourceMonitor:
             "uptime": str(timedelta(seconds=int(metrics.uptime)))
         }
 
+    async def get_current_metrics(self) -> Dict[str, Any]:
+        """Get current metrics — async interface used by SystemStateTracker, mindXagent, etc."""
+        try:
+            metrics = await self.collect_metrics()
+            return {
+                "cpu_percent": round(metrics.cpu_percent, 1),
+                "cpu_count": metrics.cpu_count_logical,
+                "load_average": list(metrics.load_average),
+                "memory_percent": round(metrics.memory_percent, 1),
+                "memory_used_gb": round(metrics.memory_used / (1024**3), 2),
+                "memory_total_gb": round(metrics.memory_total / (1024**3), 2),
+                "disk_percent": metrics.disk_usage.get("/", 0.0),
+                "process_count": metrics.process_count,
+                "uptime_seconds": int(metrics.uptime),
+                "network_bytes_sent": metrics.network_bytes_sent,
+                "network_bytes_recv": metrics.network_bytes_recv,
+                "alerts": len(self.active_alerts),
+            }
+        except Exception as e:
+            # Minimal fallback using psutil directly
+            try:
+                return {
+                    "cpu_percent": psutil.cpu_percent(interval=None),
+                    "memory_percent": psutil.virtual_memory().percent,
+                    "disk_percent": psutil.disk_usage("/").percent,
+                    "load_average": list(os.getloadavg()),
+                    "alerts": 0,
+                }
+            except Exception:
+                return {"error": str(e)}
+
+    async def get_current_resources(self) -> Dict[str, Any]:
+        """Alias for get_current_metrics (used by mindXagent._analyze_system_state)."""
+        return await self.get_current_metrics()
+
     def get_resource_limits(self) -> Dict[str, Any]:
         """Get current resource limits and thresholds."""
         return {
