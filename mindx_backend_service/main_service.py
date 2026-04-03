@@ -436,6 +436,7 @@ _PUBLIC_EXACT = frozenset({
     "/vault/credentials/providers", "/dojo/standings",
     "/inference/status", "/boardroom/sessions",
     "/chat/docs/stats", "/actions/efficiency", "/vllm/status", "/vllm/health",
+    "/resources/status",
 })
 _PUBLIC_PREFIXES = (
     "/doc/", "/docs", "/redoc", "/mindterm/static/",
@@ -566,13 +567,15 @@ _HEARTBEAT_PROMPTS = [
 _diag_model_perf: list = []  # Model task performance log (last 30)
 
 async def _heartbeat_query_local_model():
-    """Query local Ollama with a self-reflection prompt. CPU-aware throttling."""
+    """Query local Ollama with a self-reflection prompt. Resource-governor-aware."""
     global _diag_heartbeat_count
-    # CPU throttle: skip heartbeat if system is busy (>70% avg)
+    # Resource governor: skip if system is under pressure
     try:
-        cpu = _ps.cpu_percent(interval=None)
-        if cpu > 70:
-            logger.debug(f"Heartbeat skipped: CPU {cpu}% > 70% threshold")
+        from agents.resource_governor import ResourceGovernor
+        gov = await ResourceGovernor.get_instance()
+        await gov.check_and_adjust()
+        if gov.should_skip_heartbeat():
+            logger.debug(f"Heartbeat skipped: resource governor mode={gov.mode}")
             return
     except Exception:
         pass
@@ -835,6 +838,15 @@ async def diagnostics_live_endpoint():
     except Exception:
         pass
 
+    # Resource governor
+    governor_data = {}
+    try:
+        from agents.resource_governor import ResourceGovernor
+        gov = await ResourceGovernor.get_instance()
+        governor_data = gov.get_status()
+    except Exception:
+        pass
+
     return {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "uptime": uptime, "uptime_seconds": up_s,
@@ -851,6 +863,7 @@ async def diagnostics_live_endpoint():
         "database": db_health,
         "rage_embed": rage_stats,
         "vllm": vllm_data,
+        "governor": governor_data,
         "recent_logs": logs,
     }
 
@@ -2126,6 +2139,38 @@ async def chat_docs_stats():
 # ══════════════════════════════════════════════════════════════════
 #  vLLM AGENT — Build, serve, monitor vLLM
 # ══════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════
+#  RESOURCE GOVERNOR — mindX controls its own power consumption
+# ══════════════════════════════════════════════════════════════════
+
+@app.get("/resources/status", tags=["resources"], summary="Resource governor status — mode, limits, neighbor load")
+async def resource_status():
+    try:
+        from agents.resource_governor import ResourceGovernor
+        gov = await ResourceGovernor.get_instance()
+        return await gov.check_and_adjust()
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/resources/mode", tags=["resources"], summary="Set resource mode: greedy, balanced, generous, minimal")
+async def resource_set_mode(mode: str):
+    try:
+        from agents.resource_governor import ResourceGovernor
+        gov = await ResourceGovernor.get_instance()
+        return gov.set_mode(mode)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/resources/auto", tags=["resources"], summary="Toggle auto-adjust on/off")
+async def resource_auto_toggle(enabled: bool = True):
+    try:
+        from agents.resource_governor import ResourceGovernor
+        gov = await ResourceGovernor.get_instance()
+        gov.auto_adjust = enabled
+        return {"auto_adjust": enabled, "mode": gov.mode}
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.get("/vllm/status", tags=["vllm"], summary="vLLM agent status and efficiency report")
 async def vllm_status():

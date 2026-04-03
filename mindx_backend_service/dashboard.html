@@ -235,6 +235,8 @@ function render(d){
   if(re.docs||re.memories){dh+=`<div class="r"><span>RAGE embed</span><span style="color:#d2a8ff">${re.docs} doc chunks, ${re.memories} mem vectors</span></div>`}
   const vl=d.vllm||{};
   if(vl.installed!==undefined){const vc=vl.serving?'#3fb950':vl.installed?'#d29922':'#f85149';dh+=`<div class="r"><span>vLLM</span><span style="color:${vc}">${vl.version||'?'} ${vl.backend||''} ${vl.serving?'serving '+vl.model:''}</span></div>`}
+  const gv=d.governor||{};
+  if(gv.mode){const gc=gv.mode==='greedy'?'#f85149':gv.mode==='generous'?'#3fb950':gv.mode==='minimal'?'#484f58':'#58a6ff';dh+=`<div class="r"><span>governor</span><span style="color:${gc}">${gv.mode} ${gv.auto_adjust?'(auto)':'(manual)'}</span></div>`}
   if(dh)h+=`<div class="c"><div class="ct">storage</div>${dh}</div>`;
   // logs full width
   let ll='';(d.recent_logs||[]).slice(0,10).forEach(l=>ll+=`<div class="ll">${l.replace(/</g,'&lt;')}</div>`);
