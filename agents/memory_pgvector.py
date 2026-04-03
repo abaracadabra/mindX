@@ -353,6 +353,152 @@ async def get_recent_actions(limit: int = 20) -> List[Dict[str, Any]]:
         return []
 
 
+# ═══════════════════════════════════════════════════════════════
+#  EMBEDDING ENGINE — Local Ollama → pgvector semantic search
+# ═══════════════════════════════════════════════════════════════
+
+EMBED_MODEL = "nomic-embed-text"
+EMBED_URL = "http://localhost:11434"
+
+
+async def generate_embedding(text: str, model: str = EMBED_MODEL) -> Optional[List[float]]:
+    """Generate embedding via local Ollama /api/embeddings."""
+    try:
+        import aiohttp
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as sess:
+            async with sess.post(f"{EMBED_URL}/api/embeddings", json={"model": model, "prompt": text[:8000]}) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return data.get("embedding")
+        return None
+    except Exception as e:
+        logger.debug(f"Embedding generation failed: {e}")
+        return None
+
+
+async def embed_and_store_doc(doc_name: str, text_content: str, chunk_size: int = 500) -> int:
+    """Chunk a document and store embeddings in doc_embeddings table."""
+    pool = await get_pool()
+    if not pool:
+        return 0
+
+    # Chunk by words
+    words = text_content.split()
+    chunks = []
+    for i in range(0, len(words), chunk_size):
+        chunk = " ".join(words[i:i + chunk_size])
+        if len(chunk.strip()) > 50:  # Skip tiny chunks
+            chunks.append(chunk)
+
+    stored = 0
+    for idx, chunk in enumerate(chunks):
+        emb = await generate_embedding(chunk)
+        if emb:
+            try:
+                await pool.execute(
+                    """INSERT INTO doc_embeddings (doc_name, chunk_idx, text_content, embedding)
+                       VALUES ($1, $2, $3, $4::vector)
+                       ON CONFLICT (doc_name, chunk_idx) DO UPDATE SET text_content=$3, embedding=$4::vector""",
+                    doc_name, idx, chunk, str(emb),
+                )
+                stored += 1
+            except Exception as e:
+                logger.debug(f"Doc embedding store failed: {e}")
+    return stored
+
+
+async def embed_memory(memory_id: str, text: str) -> bool:
+    """Generate embedding for a memory and store in the memories.embedding column."""
+    pool = await get_pool()
+    if not pool:
+        return False
+    emb = await generate_embedding(text[:4000])
+    if not emb:
+        return False
+    try:
+        await pool.execute(
+            "UPDATE memories SET embedding = $1::vector WHERE memory_id = $2",
+            str(emb), memory_id,
+        )
+        return True
+    except Exception as e:
+        logger.debug(f"Memory embedding failed: {e}")
+        return False
+
+
+async def semantic_search_docs(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+    """Semantic search over doc_embeddings using cosine similarity."""
+    pool = await get_pool()
+    if not pool:
+        return []
+    emb = await generate_embedding(query)
+    if not emb:
+        return []
+    try:
+        rows = await pool.fetch(
+            """SELECT doc_name, chunk_idx, text_content,
+                      1 - (embedding <=> $1::vector) as similarity
+               FROM doc_embeddings
+               WHERE embedding IS NOT NULL
+               ORDER BY embedding <=> $1::vector
+               LIMIT $2""",
+            str(emb), top_k,
+        )
+        return [
+            {"doc": r["doc_name"], "chunk": r["chunk_idx"],
+             "text": r["text_content"][:500], "similarity": round(float(r["similarity"]), 4)}
+            for r in rows
+        ]
+    except Exception as e:
+        logger.debug(f"Doc semantic search failed: {e}")
+        return []
+
+
+async def semantic_search_memories(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+    """Semantic search over memories with embeddings."""
+    pool = await get_pool()
+    if not pool:
+        return []
+    emb = await generate_embedding(query)
+    if not emb:
+        return []
+    try:
+        rows = await pool.fetch(
+            """SELECT memory_id, agent_id, memory_type, content,
+                      1 - (embedding <=> $1::vector) as similarity
+               FROM memories
+               WHERE embedding IS NOT NULL
+               ORDER BY embedding <=> $1::vector
+               LIMIT $2""",
+            str(emb), top_k,
+        )
+        return [
+            {"memory_id": r["memory_id"], "agent_id": r["agent_id"],
+             "content": json.loads(r["content"]) if isinstance(r["content"], str) else r["content"],
+             "similarity": round(float(r["similarity"]), 4)}
+            for r in rows
+        ]
+    except Exception as e:
+        logger.debug(f"Memory semantic search failed: {e}")
+        return []
+
+
+async def count_embeddings() -> Dict[str, int]:
+    """Count embeddings in doc and memory tables."""
+    pool = await get_pool()
+    if not pool:
+        return {"docs": 0, "memories": 0}
+    try:
+        row = await pool.fetchrow(
+            """SELECT
+                (SELECT COUNT(*) FROM doc_embeddings WHERE embedding IS NOT NULL) as docs,
+                (SELECT COUNT(*) FROM memories WHERE embedding IS NOT NULL) as memories"""
+        )
+        return {"docs": row["docs"], "memories": row["memories"]}
+    except Exception:
+        return {"docs": 0, "memories": 0}
+
+
 async def health_check() -> Dict[str, Any]:
     """Check database health."""
     pool = await get_pool()
@@ -366,6 +512,8 @@ async def health_check() -> Dict[str, Any]:
                 (SELECT COUNT(*) FROM agents) as agents,
                 (SELECT COUNT(*) FROM godel_choices) as godel_choices,
                 (SELECT COUNT(*) FROM actions) as actions,
+                (SELECT COUNT(*) FROM doc_embeddings WHERE embedding IS NOT NULL) as doc_embeddings,
+                (SELECT COUNT(*) FROM memories WHERE embedding IS NOT NULL) as mem_embeddings,
                 (SELECT pg_size_pretty(pg_database_size('mindx'))) as db_size"""
         )
         return {
@@ -375,6 +523,8 @@ async def health_check() -> Dict[str, Any]:
             "agents": row["agents"],
             "godel_choices": row["godel_choices"],
             "actions": row["actions"],
+            "doc_embeddings": row["doc_embeddings"],
+            "mem_embeddings": row["mem_embeddings"],
             "db_size": row["db_size"],
         }
     except Exception as e:

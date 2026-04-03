@@ -435,10 +435,11 @@ _PUBLIC_EXACT = frozenset({
     "/diagnostics/live", "/vault/credentials/status",
     "/vault/credentials/providers", "/dojo/standings",
     "/inference/status", "/boardroom/sessions",
+    "/chat/docs/stats",
 })
 _PUBLIC_PREFIXES = (
     "/doc/", "/docs", "/redoc", "/mindterm/static/",
-    "/dojo/agent/", "/bankon", "/agenticplace/",
+    "/dojo/agent/", "/bankon", "/agenticplace/", "/chat/docs",
     "/users/challenge", "/users/register",
 )
 
@@ -959,15 +960,47 @@ async def startup_event():
                 author = await AuthorAgent.get_instance()
                 await author.publish()  # First edition immediately
                 logger.info("AuthorAgent: first edition of The Book of mindX published")
-                await author.run_periodic(interval_seconds=7200)  # Then every 2h
+                await author.run_periodic(interval_seconds=2592000)  # Monthly
             except Exception as ae:
                 logger.warning(f"AuthorAgent failed: {ae}")
+
+        # Periodic re-embedding of new docs and memories
+        async def _periodic_embedding():
+            await asyncio.sleep(300)  # Wait 5 min for system to settle
+            while True:
+                try:
+                    from agents import memory_pgvector as _mpge
+                    from utils.config import PROJECT_ROOT as _PR
+                    # Embed new docs not yet in doc_embeddings
+                    pool = await _mpge.get_pool()
+                    if pool:
+                        existing = set(r["doc_name"] for r in await pool.fetch("SELECT DISTINCT doc_name FROM doc_embeddings"))
+                        for f in (_PR / "docs").glob("*.md"):
+                            if f.stem not in existing:
+                                text = f.read_text(encoding="utf-8", errors="replace")
+                                stored = await _mpge.embed_and_store_doc(f.stem, text)
+                                if stored:
+                                    logger.info(f"Auto-embedded new doc: {f.stem} ({stored} chunks)")
+                        # Embed memories without embeddings (batch of 20)
+                        rows = await pool.fetch("SELECT memory_id, content FROM memories WHERE embedding IS NULL LIMIT 20")
+                        for row in rows:
+                            content = row["content"]
+                            if isinstance(content, str):
+                                import json as _j2
+                                content = _j2.loads(content)
+                            text = str(content)[:2000]
+                            if len(text) > 50:
+                                await _mpge.embed_memory(row["memory_id"], text)
+                except Exception as emb_e:
+                    logger.debug(f"Periodic embedding: {emb_e}")
+                await asyncio.sleep(21600)  # Every 6 hours
 
         asyncio.create_task(_auto_start_autonomous())
         asyncio.create_task(_periodic_memory_promotion())
         asyncio.create_task(_periodic_journal())
         asyncio.create_task(_periodic_author())
-        logger.info("Autonomous mode + STM→LTM + Journal + AuthorAgent scheduled")
+        asyncio.create_task(_periodic_embedding())
+        logger.info("Autonomous mode + STM→LTM + Journal + AuthorAgent + Embedding scheduled")
 
         # Log backend startup transcript to data/ via memory_agent (logs are memories; startup_agent can get a copy)
         try:
@@ -1920,6 +1953,62 @@ async def get_runtime_logs():
 # ══════════════════════════════════════════════════════════════════
 #  DAIO GOVERNANCE API — Boardroom, Dojo, Multi-Stream
 # ══════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════
+#  CHAT WITH DOCS — RAG over embedded documentation
+# ══════════════════════════════════════════════════════════════════
+
+@app.post("/chat/docs", tags=["chat"], summary="Ask a question about mindX documentation (RAG)")
+async def chat_with_docs(question: str):
+    """Semantic search over embedded docs, then answer with local model."""
+    try:
+        from agents import memory_pgvector as _mpg
+        import aiohttp as _cha
+
+        # 1. Retrieve relevant doc chunks
+        chunks = await _mpg.semantic_search_docs(question, top_k=5)
+        if not chunks:
+            return {"answer": "No relevant documentation found. Docs may not be embedded yet.", "sources": []}
+
+        # 2. Build context from chunks
+        context = "\n\n".join(f"[{c['doc']}.md] {c['text']}" for c in chunks)
+
+        # 3. Generate answer with local model
+        prompt = (
+            f"You are mindX, an autonomous multi-agent system. "
+            f"Answer the question using ONLY the documentation context below. "
+            f"Be concise and accurate. Cite the source document names.\n\n"
+            f"Context:\n{context}\n\n"
+            f"Question: {question}\n\nAnswer:"
+        )
+
+        answer = "Could not generate answer — local model unavailable."
+        try:
+            timeout = _cha.ClientTimeout(total=30)
+            async with _cha.ClientSession(timeout=timeout) as sess:
+                payload = {"model": "qwen3:0.6b", "messages": [{"role": "user", "content": prompt}], "stream": False}
+                async with sess.post("http://localhost:11434/api/chat", json=payload) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        answer = data.get("message", {}).get("content", answer)
+        except Exception:
+            pass
+
+        return {
+            "question": question,
+            "answer": answer[:2000],
+            "sources": [{"doc": c["doc"], "similarity": c["similarity"]} for c in chunks],
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/chat/docs/stats", tags=["chat"], summary="Embedding statistics")
+async def chat_docs_stats():
+    try:
+        from agents import memory_pgvector as _mpg
+        return await _mpg.count_embeddings()
+    except Exception as e:
+        return {"docs": 0, "memories": 0, "error": str(e)}
 
 @app.post("/boardroom/convene", tags=["governance"], summary="Convene boardroom — CEO + Seven Soldiers evaluate directive")
 async def boardroom_convene(directive: str, importance: str = "standard"):

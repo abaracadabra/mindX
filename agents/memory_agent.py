@@ -236,6 +236,13 @@ class MemoryAgent:
                         tags=tags or [],
                         parent_memory_id=parent_memory_id,
                     )
+                    # Also embed the memory (best-effort, non-blocking)
+                    try:
+                        text = str(content)[:2000]
+                        if len(text) > 50:
+                            await self._pg.embed_memory(memory_record.memory_id, text)
+                    except Exception:
+                        pass
                 except Exception:
                     pass  # File already saved — DB is best-effort
 
