@@ -78,7 +78,7 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 <div class="main">
 <div class="left"><div class="g" id="grid"></div></div>
 <div class="right">
-<div class="tabs"><div class="tab active" onclick="T(0)" id="t0">dialogue</div><div class="tab" onclick="T(1)" id="t1">actions</div><div class="tab" onclick="T(2)" id="t2">dojo</div><div class="tab" onclick="T(3)" id="t3">boardroom</div></div>
+<div class="tabs"><div class="tab active" onclick="T(0)" id="t0">dialogue</div><div class="tab" onclick="T(1)" id="t1">actions</div><div class="tab" onclick="T(2)" id="t2">agents</div><div class="tab" onclick="T(3)" id="t3">dojo</div></div>
 <div class="conv" id="pnl"></div>
 <div class="ft">mindx.pythai.net <span id="ts"></span> <a href="/docs.html">docs</a> <a href="/book" class="dm">book</a> <a href="/journal" class="dm">journal</a> <a href="/docs" class="dm">api</a></div>
 </div>
@@ -275,15 +275,27 @@ function rpnl(d){
       h+=`<div style="padding:5px 0;border-bottom:1px solid rgba(8,11,16,.4)"><div class="r"><span style="color:${sc};font-weight:600;font-size:8px">${a.status.toUpperCase()}</span><span style="color:#3d424d;font-size:8px">${a.source||''} ${ts}</span></div><div style="font-size:10px;color:#b0b8c4;margin:2px 0;line-height:1.4">${a.description}</div><div style="font-size:8px;color:#4a5060">${a.agent_id} &middot; ${a.action_type}${a.result?' &middot; '+a.result:''}</div></div>`;
     });p.innerHTML=h;
   } else if(curT===2){
+    // Agent interactions
+    const ai=d.agent_interactions||[];
+    const st=d.dojo||[];
+    let h='';
+    if(ai.length){
+      h+='<div style="font-size:8px;color:#4a5060;padding:4px 0;border-bottom:1px solid rgba(8,11,16,.4)">RECENT INTERACTIONS</div>';
+      ai.slice(0,12).forEach(i=>{
+        h+=`<div style="padding:3px 0;border-bottom:1px solid rgba(8,11,16,.3)"><div class="r"><span style="color:#58a6ff">${i.from}</span><span style="color:#3d424d">${i.ts}</span></div><div style="font-size:9px;color:#6e7681">→ ${i.to} <span style="color:#d2a8ff">${i.type}</span> ${i.topic?'['+i.topic+']':''}</div></div>`;
+      });
+    }
+    if(st.length){
+      h+='<div style="font-size:8px;color:#4a5060;padding:6px 0 4px;border-bottom:1px solid rgba(8,11,16,.4)">STANDINGS</div>';
+      st.forEach(s=>{h+=`<div style="padding:2px 0;border-bottom:1px solid rgba(8,11,16,.3)"><div class="r"><span>${rk(s.tier)} ${s.agent_id}</span><span style="color:#4a5060">${s.rank} ${s.score}</span></div></div>`});
+    }
+    if(!h)h='<div style="padding:8px;color:#3d424d">no interactions yet</div>';
+    p.innerHTML=h;
+  } else {
+    // Dojo full view
     const st=d.dojo||[];
     if(!st.length){p.innerHTML='<div style="padding:8px;color:#3d424d">no standings</div>';return}
     let h='';st.forEach(s=>{h+=`<div style="padding:2px 0;border-bottom:1px solid rgba(8,11,16,.4)"><div class="r"><span>${rk(s.tier)} ${s.agent_id}</span><span style="color:#4a5060">${s.rank} ${s.score}</span></div>${bar(Math.min(100,s.score/100))}</div>`});
-    p.innerHTML=h;
-  } else {
-    const ss=d.boardroom||[];
-    if(!ss.length){p.innerHTML='<div style="padding:8px;color:#3d424d">no sessions<br><span style="color:#4a5060">POST /boardroom/convene</span></div>';return}
-    let h='';ss.forEach(s=>{const oc=s.outcome==='approved'?'#3fb950':s.outcome==='rejected'?'#f85149':'#d29922';
-    h+=`<div style="padding:4px 0;border-bottom:1px solid rgba(8,11,16,.4)"><div class="r"><span style="color:${oc};font-weight:700">${s.outcome.toUpperCase()}</span><span style="color:#3d424d">${s.timestamp?.slice(11,19)||''}</span></div><div style="font-size:8px;color:#6e7681;margin:1px 0">${s.directive}</div></div>`});
     p.innerHTML=h;
   }
 }

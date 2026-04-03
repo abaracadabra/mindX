@@ -521,6 +521,69 @@ async def semantic_search_memories(query: str, top_k: int = 5) -> List[Dict[str,
         return []
 
 
+async def log_interaction(from_agent: str, to_agent: str, interaction_type: str,
+                          topic: str = "", summary: str = "") -> bool:
+    """Log an agent-to-agent interaction."""
+    pool = await get_pool()
+    if not pool:
+        return False
+    try:
+        await pool.execute(
+            "INSERT INTO agent_interactions (from_agent, to_agent, interaction_type, topic, summary) VALUES ($1,$2,$3,$4,$5)",
+            from_agent, to_agent, interaction_type, topic, summary[:500],
+        )
+        return True
+    except Exception as e:
+        logger.debug(f"pgvector log_interaction failed: {e}")
+        return False
+
+
+async def get_recent_interactions(limit: int = 30) -> List[Dict[str, Any]]:
+    """Get recent agent-to-agent interactions for diagnostics."""
+    pool = await get_pool()
+    if not pool:
+        return []
+    try:
+        rows = await pool.fetch(
+            "SELECT from_agent, to_agent, interaction_type, topic, summary, created_at FROM agent_interactions ORDER BY created_at DESC LIMIT $1",
+            limit,
+        )
+        return [
+            {"from": r["from_agent"], "to": r["to_agent"], "type": r["interaction_type"],
+             "topic": r["topic"], "summary": r["summary"][:100] if r["summary"] else "",
+             "ts": r["created_at"].strftime("%H:%M:%S") if r["created_at"] else ""}
+            for r in rows
+        ]
+    except Exception as e:
+        logger.debug(f"pgvector get_recent_interactions failed: {e}")
+        return []
+
+
+async def get_interaction_matrix() -> Dict[str, Any]:
+    """Get agent interaction frequency matrix for visualization."""
+    pool = await get_pool()
+    if not pool:
+        return {"edges": [], "agents": []}
+    try:
+        rows = await pool.fetch(
+            """SELECT from_agent, to_agent, interaction_type, COUNT(*) as count
+               FROM agent_interactions
+               GROUP BY from_agent, to_agent, interaction_type
+               ORDER BY count DESC LIMIT 50"""
+        )
+        agents = set()
+        edges = []
+        for r in rows:
+            agents.add(r["from_agent"])
+            agents.add(r["to_agent"])
+            edges.append({"from": r["from_agent"], "to": r["to_agent"],
+                         "type": r["interaction_type"], "count": r["count"]})
+        return {"edges": edges, "agents": sorted(agents)}
+    except Exception as e:
+        logger.debug(f"pgvector get_interaction_matrix failed: {e}")
+        return {"edges": [], "agents": []}
+
+
 async def get_action_efficiency() -> Dict[str, Any]:
     """Measure action pipeline efficiency metrics."""
     pool = await get_pool()

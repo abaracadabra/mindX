@@ -411,6 +411,15 @@ class CoordinatorAgent:
     async def publish_event(self, topic: str, data: Dict[str, Any]):
         """Publishes an event, triggering all subscribed callbacks concurrently."""
         self.logger.info(f"Publishing event on topic '{topic}' with data keys: {list(data.keys())}")
+        # Track interactions in pgvector
+        try:
+            from agents import memory_pgvector as _mpgi
+            src = data.get("agent_id", data.get("source", "coordinator"))
+            subs = [getattr(cb, '__qualname__', '?').split('.')[0] for cb in self.event_listeners.get(topic, [])]
+            for sub in subs[:5]:
+                await _mpgi.log_interaction(src, sub, "pub_sub", topic, str(list(data.keys()))[:200])
+        except Exception:
+            pass
         if topic in self.event_listeners:
             tasks = [callback(data) for callback in self.event_listeners[topic]]
             # Gather and log exceptions without stopping other listeners

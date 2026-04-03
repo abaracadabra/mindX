@@ -436,7 +436,7 @@ _PUBLIC_EXACT = frozenset({
     "/vault/credentials/providers", "/dojo/standings",
     "/inference/status", "/boardroom/sessions",
     "/chat/docs/stats", "/actions/efficiency", "/vllm/status", "/vllm/health",
-    "/resources/status",
+    "/resources/status", "/agents/interactions", "/agents/interaction-matrix",
 })
 _PUBLIC_PREFIXES = (
     "/doc/", "/docs", "/redoc", "/mindterm/static/",
@@ -838,6 +838,14 @@ async def diagnostics_live_endpoint():
     except Exception:
         pass
 
+    # Agent interactions
+    agent_interactions_data = []
+    try:
+        from agents import memory_pgvector as _mpii
+        agent_interactions_data = await _mpii.get_recent_interactions(limit=15)
+    except Exception:
+        pass
+
     # Resource governor
     governor_data = {}
     try:
@@ -864,6 +872,7 @@ async def diagnostics_live_endpoint():
         "rage_embed": rage_stats,
         "vllm": vllm_data,
         "governor": governor_data,
+        "agent_interactions": agent_interactions_data,
         "recent_logs": logs,
     }
 
@@ -2143,6 +2152,26 @@ async def chat_docs_stats():
 # ══════════════════════════════════════════════════════════════════
 #  RESOURCE GOVERNOR — mindX controls its own power consumption
 # ══════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════
+#  AGENT INTERACTIONS — who talks to who
+# ══════════════════════════════════════════════════════════════════
+
+@app.get("/agents/interactions", tags=["agents"], summary="Recent agent-to-agent interactions")
+async def agent_interactions(limit: int = 30):
+    try:
+        from agents import memory_pgvector as _mpi
+        return {"interactions": await _mpi.get_recent_interactions(limit)}
+    except Exception as e:
+        return {"interactions": [], "error": str(e)}
+
+@app.get("/agents/interaction-matrix", tags=["agents"], summary="Agent interaction frequency matrix")
+async def agent_interaction_matrix():
+    try:
+        from agents import memory_pgvector as _mpi
+        return await _mpi.get_interaction_matrix()
+    except Exception as e:
+        return {"edges": [], "agents": [], "error": str(e)}
 
 @app.get("/resources/status", tags=["resources"], summary="Resource governor status — mode, limits, neighbor load")
 async def resource_status():

@@ -38,11 +38,19 @@
     },
     "operational": {
       "description": "Day-to-day system operations",
-      "members": ["guardian_agent_main", "memory_agent_main", "system_state_tracker", "validator_agent_main"]
+      "members": ["guardian_agent_main", "memory_agent_main", "system_state_tracker", "validator_agent_main", "resource_governor"]
     },
     "learning": {
       "description": "Self-improvement and evolution",
-      "members": ["sea_for_mastermind", "automindx_agent_main", "blueprint_agent_mindx_v2"]
+      "members": ["sea_for_mastermind", "automindx_agent_main", "blueprint_agent_mindx_v2", "author_agent", "prediction_agent"]
+    },
+    "lifecycle": {
+      "description": "System boot, replication, and shutdown",
+      "members": ["startup_agent", "replication_agent", "shutdown_agent"]
+    },
+    "infrastructure": {
+      "description": "Inference and resource management",
+      "members": ["vllm_agent", "inference_discovery"]
     }
   },
   "agents": {
