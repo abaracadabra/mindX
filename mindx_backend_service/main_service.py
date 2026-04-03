@@ -818,6 +818,14 @@ async def diagnostics_live_endpoint():
     except Exception:
         pass
 
+    # RAGE embed stats
+    rage_stats = {"docs": 0, "memories": 0}
+    try:
+        from agents import memory_pgvector as _mprs
+        rage_stats = await _mprs.count_embeddings()
+    except Exception:
+        pass
+
     return {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "uptime": uptime, "uptime_seconds": up_s,
@@ -832,6 +840,7 @@ async def diagnostics_live_endpoint():
         "model_perf": list(_diag_model_perf),
         "disk_detail": disk_detail,
         "database": db_health,
+        "rage_embed": rage_stats,
         "recent_logs": logs,
     }
 

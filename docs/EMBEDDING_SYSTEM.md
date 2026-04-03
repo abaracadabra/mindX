@@ -15,8 +15,8 @@ Question → Embed (mxbai-embed-large) → pgvector cosine similarity → Top-K 
 ### Embedding Pipeline
 
 1. **Model**: mxbai-embed-large via Ollama (1024-dimensional vectors)
-2. **Primary**: vLLM `/v1/embeddings` on port 8001 (when available — faster, batched)
-3. **Fallback**: Ollama `/api/embeddings` on port 11434 (always available, CPU)
+2. **Production (VPS)**: Ollama `/api/embeddings` on port 11434 — CPU-native, always running
+3. **GPU path**: vLLM `/v1/embeddings` on port 8001 — auto-activates when GPU hardware available
 4. **Storage**: PostgreSQL pgvector — `doc_embeddings` and `memories.embedding` columns
 5. **Indexing**: IVFFlat cosine similarity index for fast nearest-neighbor search
 
