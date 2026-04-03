@@ -115,14 +115,43 @@ New memories are auto-embedded on save via `MemoryAgent.save_timestamped_memory(
 - vLLM startup: `scripts/start_vllm_embed.sh`
 - RAG endpoint: `mindx_backend_service/main_service.py` (/chat/docs)
 
+## vLLMAgent
+
+`agents/vllm_agent.py` manages the vLLM lifecycle for mindX:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /vllm/status` | Installation status, hardware, recommendations |
+| `POST /vllm/build-cpu` | Build vLLM from source for CPU (AVX2) |
+| `POST /vllm/serve` | Start serving a model on port 8001 |
+| `POST /vllm/stop` | Stop serving |
+| `GET /vllm/health` | Server health check |
+
+### Current VPS Status
+
+- **vLLM 0.19.0** installed, backend=ready
+- **AMD EPYC 7543P** (2 vCPUs, AVX2 supported)
+- **7.8GB RAM** — sufficient for mxbai-embed-large
+- **Ollama** handles chat (qwen3:0.6b) and embeddings (mxbai-embed-large) on CPU
+- **vLLM** can serve embeddings when started (`POST /vllm/serve`)
+
+### Efficiency Strategy
+
+1. **Embeddings**: vLLM on port 8001 (when serving) → Ollama fallback on port 11434
+2. **Chat/Generation**: Ollama qwen3:0.6b (always available, CPU-native)
+3. **Cloud LLM**: Gemini, Groq, etc. for complex reasoning
+4. **Multi-stream**: Parallel queries across providers for critical decisions
+
 ## Configuration
 
 ```bash
 # Environment variables
 VLLM_EMBED_URL=http://localhost:8001  # vLLM embedding server
-EMBED_MODEL=mxbai-embed-large         # Default model
+VLLM_PORT=8001                        # vLLM serving port
+EMBED_MODEL=mxbai-embed-large         # Default embedding model
 
 # Ollama models (pull if not present)
 ollama pull mxbai-embed-large
 ollama pull nomic-embed-text
+ollama pull qwen3:0.6b
 ```
