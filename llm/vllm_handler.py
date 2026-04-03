@@ -274,6 +274,33 @@ class VLLMHandler(LLMHandlerInterface):
             except Exception:
                 return False
 
+    async def generate_embeddings(
+        self, text: str, model: Optional[str] = None
+    ) -> Optional[List[float]]:
+        """Generate embeddings via vLLM /v1/embeddings endpoint."""
+        if not aiohttp:
+            return None
+        session = await self._get_session()
+        try:
+            payload = {
+                "model": model or self.model_name_for_api or "default",
+                "input": text[:8000],
+            }
+            async with session.post(
+                f"{self.api_base_url}/v1/embeddings",
+                json=payload,
+                headers=self._headers(),
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json(loads=json.loads)
+                    emb_data = data.get("data", [])
+                    if emb_data and "embedding" in emb_data[0]:
+                        return emb_data[0]["embedding"]
+                return None
+        except Exception as e:
+            logger.debug(f"vLLM embeddings failed: {e}")
+            return None
+
     async def close(self):
         if self._session and not self._session.closed:
             await self._session.close()

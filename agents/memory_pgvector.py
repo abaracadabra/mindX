@@ -12,6 +12,7 @@ Connection: postgresql://mindx:mindx_secure_2026@localhost:5432/mindx
 """
 
 import json
+import os
 import asyncio
 from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime, timezone
@@ -354,26 +355,45 @@ async def get_recent_actions(limit: int = 20) -> List[Dict[str, Any]]:
 
 
 # ═══════════════════════════════════════════════════════════════
-#  EMBEDDING ENGINE — Local Ollama → pgvector semantic search
+#  EMBEDDING ENGINE — vLLM primary, Ollama fallback → pgvector
 # ═══════════════════════════════════════════════════════════════
 
 EMBED_MODEL = "mxbai-embed-large"
-EMBED_URL = "http://localhost:11434"
+VLLM_EMBED_URL = os.getenv("VLLM_EMBED_URL", "http://localhost:8001")  # vLLM serving embeddings
+OLLAMA_EMBED_URL = "http://localhost:11434"  # Ollama fallback
 
 
 async def generate_embedding(text: str, model: str = EMBED_MODEL) -> Optional[List[float]]:
-    """Generate embedding via local Ollama /api/embeddings."""
+    """
+    Generate embedding. Tries vLLM first (OpenAI-compatible /v1/embeddings),
+    falls back to Ollama /api/embeddings.
+    """
+    import aiohttp
+
+    # 1. Try vLLM (fast, batched, production)
     try:
-        import aiohttp
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=15)) as sess:
+            payload = {"model": model, "input": text[:8000]}
+            async with sess.post(f"{VLLM_EMBED_URL}/v1/embeddings", json=payload) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    emb_data = data.get("data", [])
+                    if emb_data and "embedding" in emb_data[0]:
+                        return emb_data[0]["embedding"]
+    except Exception:
+        pass  # vLLM not available, fall through to Ollama
+
+    # 2. Fallback to Ollama (reliable, CPU)
+    try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as sess:
-            async with sess.post(f"{EMBED_URL}/api/embeddings", json={"model": model, "prompt": text[:8000]}) as resp:
+            async with sess.post(f"{OLLAMA_EMBED_URL}/api/embeddings", json={"model": model, "prompt": text[:8000]}) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     return data.get("embedding")
-        return None
     except Exception as e:
-        logger.debug(f"Embedding generation failed: {e}")
-        return None
+        logger.debug(f"Embedding generation failed (both vLLM and Ollama): {e}")
+
+    return None
 
 
 async def embed_and_store_doc(doc_name: str, text_content: str, chunk_size: int = 500) -> int:
