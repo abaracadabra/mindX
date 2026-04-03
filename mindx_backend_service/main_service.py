@@ -191,7 +191,7 @@ async def docs_html_page():
                         break
             except Exception:
                 pass
-            entry = f'<li><strong>{name}.md</strong> <span style="color:#4a5060">({size_kb}KB)</span><br><span style="color:#6e7681;font-size:9px">{heading}</span></li>'
+            entry = f'<li><a href="/doc/{name}" style="color:#e6edf3;text-decoration:none"><strong>{name}.md</strong></a> <span style="color:#4a5060">({size_kb}KB)</span><br><span style="color:#6e7681;font-size:9px">{heading}</span></li>'
             nl = name.lower()
             if any(k in nl for k in ["technical","orchestration","core","architect","hierarchy","codebase"]):
                 categories["Core Architecture"].append(entry)
@@ -292,76 +292,113 @@ ul{{padding:0}}li{{margin:4px 0;font-size:10px;line-height:1.5}}
 <div class="ft"><a href="/">dashboard</a> &middot; mindx.pythai.net &middot; &copy; Professor Codephreak</div>
 </div></body></html>""")
 
+_DOC_STYLE = """*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter','SF Pro Text',system-ui,sans-serif;background:#050810;color:#b8c0cc;padding:0;margin:0;line-height:1.7}
+.page{max-width:780px;margin:0 auto;padding:28px 24px 40px}
+.nav{font-size:10px;color:#4a5060;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid rgba(26,31,46,.4)}
+.nav a{color:#58a6ff;text-decoration:none;margin-right:8px}.nav a:hover{text-decoration:underline}
+h1{color:#e6edf3;font-size:21px;margin:24px 0 10px;letter-spacing:.3px;font-weight:700}
+h2{color:#58a6ff;font-size:16px;margin:28px 0 10px;padding-top:18px;border-top:1px solid rgba(26,31,46,.4);font-weight:600}
+h3{color:#d2a8ff;font-size:13px;margin:18px 0 6px;font-weight:600}
+h4{color:#8b949e;font-size:12px;margin:14px 0 4px;font-weight:600}
+p{margin:8px 0;font-size:12px}
+strong{color:#e6edf3}em{color:#7a8290}
+a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}
+code{background:rgba(22,27,34,.85);padding:2px 5px;border-radius:3px;color:#7ee787;font-size:11px;font-family:'SF Mono','Fira Code',monospace}
+pre{background:rgba(22,27,34,.85);padding:14px;border-radius:5px;font-size:11px;overflow-x:auto;margin:12px 0;color:#8b949e;font-family:'SF Mono','Fira Code',monospace;line-height:1.5;border:1px solid rgba(26,31,46,.3)}
+li{margin:3px 0 3px 20px;font-size:12px;line-height:1.6}
+ul,ol{margin:6px 0}
+blockquote{border-left:3px solid rgba(88,166,255,.25);padding:8px 16px;color:#7a8290;margin:12px 0;font-size:11px;font-style:italic;background:rgba(13,17,23,.4);border-radius:0 4px 4px 0}
+hr{border:none;border-top:1px solid rgba(26,31,46,.35);margin:24px 0}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:11px}
+th{text-align:left;padding:6px 8px;border-bottom:2px solid rgba(26,31,46,.5);color:#e6edf3;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+td{padding:5px 8px;border-bottom:1px solid rgba(26,31,46,.25)}
+tr:hover td{background:rgba(22,27,34,.3)}
+img{max-width:100%;border-radius:4px;margin:8px 0}
+.title-meta{font-size:10px;color:#4a5060;margin-bottom:20px}"""
+
+def _render_md(md_text: str) -> str:
+    """Convert markdown to HTML with good fidelity."""
+    import re
+    h = md_text
+    # Code blocks first (preserve content)
+    h = re.sub(r'```(\w*)\n([\s\S]*?)```', lambda m: f'<pre><code class="lang-{m.group(1)}">{m.group(2).replace("<","&lt;").replace(">","&gt;")}</code></pre>', h)
+    # Inline code
+    h = re.sub(r'`([^`]+)`', lambda m: f'<code>{m.group(1).replace("<","&lt;")}</code>', h)
+    # Headings
+    h = re.sub(r'^#### (.+)$', r'<h4>\1</h4>', h, flags=re.MULTILINE)
+    h = re.sub(r'^### (.+)$', r'<h3>\1</h3>', h, flags=re.MULTILINE)
+    h = re.sub(r'^## (.+)$', r'<h2>\1</h2>', h, flags=re.MULTILINE)
+    h = re.sub(r'^# (.+)$', r'<h1>\1</h1>', h, flags=re.MULTILINE)
+    # Bold, italic
+    h = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', h)
+    h = re.sub(r'(?<!\*)\*([^*]+)\*(?!\*)', r'<em>\1</em>', h)
+    # Lists
+    h = re.sub(r'^- (.+)$', r'<li>\1</li>', h, flags=re.MULTILINE)
+    h = re.sub(r'^(\d+)\. (.+)$', r'<li>\2</li>', h, flags=re.MULTILINE)
+    # Blockquotes
+    h = re.sub(r'^> (.+)$', r'<blockquote>\1</blockquote>', h, flags=re.MULTILINE)
+    # Horizontal rules
+    h = re.sub(r'^---+$', r'<hr>', h, flags=re.MULTILINE)
+    # Tables (basic: | col | col |)
+    def _table_row(m):
+        cells = [c.strip() for c in m.group(1).split('|') if c.strip()]
+        if all(c.replace('-','').replace(':','') == '' for c in cells):
+            return ''  # separator row
+        tag = 'th' if not hasattr(_table_row, '_seen') else 'td'
+        _table_row._seen = True
+        return '<tr>' + ''.join(f'<{tag}>{c}</{tag}>' for c in cells) + '</tr>'
+    if hasattr(_table_row, '_seen'):
+        del _table_row._seen
+    h = re.sub(r'^\|(.+)\|$', _table_row, h, flags=re.MULTILINE)
+    # Links
+    h = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', h)
+    # Paragraphs
+    h = h.replace('\n\n', '</p>\n<p>')
+    h = '<p>' + h + '</p>'
+    h = h.replace('<p></p>', '')
+    h = re.sub(r'<p>\s*(<h[1-4]|<pre|<hr|<blockquote|<ul|<ol|<table|<tr)', r'\1', h)
+    h = re.sub(r'(</h[1-4]>|</pre>|<hr>|</blockquote>|</ul>|</ol>|</table>|</tr>)\s*</p>', r'\1', h)
+    return h
+
+def _doc_page(title: str, body_html: str, meta: str = "") -> str:
+    nav = '<div class="nav"><a href="/docs.html">&larr; docs</a><a href="/">dashboard</a><a href="/book">book</a><a href="/journal">journal</a></div>'
+    meta_html = f'<div class="title-meta">{meta}</div>' if meta else ''
+    return f'<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title} — mindX</title><style>{_DOC_STYLE}</style></head><body><div class="page">{nav}{meta_html}{body_html}</div></body></html>'
+
+@app.get("/doc/{name}", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
+async def read_doc(name: str):
+    """Render any markdown doc from docs/ directory."""
+    import re as _re2
+    # Sanitize: only allow alphanumeric, underscore, hyphen, dot
+    safe = _re2.sub(r'[^a-zA-Z0-9_\-.]', '', name)
+    if not safe.endswith('.md'):
+        safe += '.md'
+    doc_path = PROJECT_ROOT / "docs" / safe
+    if not doc_path.exists() or not doc_path.is_file():
+        return _DashResponse(content=_doc_page("Not Found", f"<h1>Document not found</h1><p><code>{safe}</code> does not exist in docs/</p>"), status_code=404)
+    md = doc_path.read_text(encoding="utf-8", errors="replace")
+    size_kb = round(doc_path.stat().st_size / 1024, 1)
+    body = _render_md(md)
+    return _DashResponse(content=_doc_page(safe, body, f"{safe} &middot; {size_kb} KB"))
+
 @app.get("/book", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
 async def book_of_mindx_page():
     """The Book of mindX — rendered from latest edition."""
     book_path = PROJECT_ROOT / "docs" / "BOOK_OF_MINDX.md"
     if not book_path.exists():
-        return _DashResponse(content="<html><body style='background:#050810;color:#b0b8c4;font-family:monospace;padding:40px'><h1>The Book of mindX</h1><p>First edition is being written. Check back in 2 minutes.</p><p><a href='/docs.html' style='color:#58a6ff'>Back to docs</a></p></body></html>")
+        return _DashResponse(content=_doc_page("The Book of mindX", "<h1>The Book of mindX</h1><p>First edition is being written. Check back in 2 minutes.</p>"))
     md = book_path.read_text(encoding="utf-8")
-    import re
-    h = md
-    h = re.sub(r'^### (.+)$', r'<h3>\1</h3>', h, flags=re.MULTILINE)
-    h = re.sub(r'^## (.+)$', r'<h2>\1</h2>', h, flags=re.MULTILINE)
-    h = re.sub(r'^# (.+)$', r'<h1>\1</h1>', h, flags=re.MULTILINE)
-    h = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', h)
-    h = re.sub(r'\*(.+?)\*', r'<em>\1</em>', h)
-    h = re.sub(r'`([^`]+)`', r'<code>\1</code>', h)
-    h = re.sub(r'^- (.+)$', r'<li>\1</li>', h, flags=re.MULTILINE)
-    h = re.sub(r'^> (.+)$', r'<blockquote>\1</blockquote>', h, flags=re.MULTILINE)
-    h = re.sub(r'^---$', r'<hr>', h, flags=re.MULTILINE)
-    h = re.sub(r'```([\s\S]*?)```', r'<pre>\1</pre>', h)
-    h = re.sub(r'\|(.+)\|', lambda m: '<tr>' + ''.join(f'<td>{c.strip()}</td>' for c in m.group(1).split('|')) + '</tr>', h)
-    h = h.replace('\n\n', '</p><p>').replace('\n', '<br>')
-    return _DashResponse(content=f"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>The Book of mindX</title>
-<style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'SF Mono','Fira Code',monospace;background:#050810;color:#b0b8c4;padding:24px;max-width:800px;margin:0 auto;line-height:1.6}}
-h1{{color:#e6edf3;font-size:22px;margin:20px 0 8px;letter-spacing:1px}}h1 b{{color:#58a6ff}}
-h2{{color:#58a6ff;font-size:15px;margin:24px 0 8px;padding-top:16px;border-top:1px solid rgba(26,31,46,.5)}}
-h3{{color:#d2a8ff;font-size:12px;margin:14px 0 4px}}
-p{{margin:6px 0;font-size:11px}}strong{{color:#e6edf3}}em{{color:#6e7681}}
-code{{background:rgba(22,27,34,.8);padding:1px 4px;border-radius:3px;color:#7ee787;font-size:10px}}
-pre{{background:rgba(22,27,34,.8);padding:10px;border-radius:4px;font-size:9px;overflow-x:auto;margin:8px 0;color:#8b949e}}
-li{{margin:2px 0 2px 16px;font-size:11px}}blockquote{{border-left:2px solid rgba(88,166,255,.3);padding:4px 12px;color:#6e7681;margin:8px 0;font-size:10px;font-style:italic}}
-hr{{border:none;border-top:1px solid rgba(26,31,46,.4);margin:20px 0}}
-table{{width:100%;border-collapse:collapse;margin:8px 0;font-size:9px}}td{{padding:2px 6px;border-bottom:1px solid rgba(26,31,46,.3)}}
-.nav{{font-size:9px;color:#3d424d;margin-bottom:16px}}.nav a{{color:#58a6ff;text-decoration:none}}
-</style></head><body>
-<div class="nav"><a href="/docs.html">&larr; docs</a> &middot; <a href="/">dashboard</a> &middot; <a href="/journal">journal</a></div>
-{h}
-</body></html>""")
+    return _DashResponse(content=_doc_page("The Book of mindX", _render_md(md)))
 
 @app.get("/journal", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
 async def improvement_journal_page():
-    """Serve the auto-generated improvement journal as styled HTML."""
+    """Serve the auto-generated improvement journal."""
     journal_path = PROJECT_ROOT / "docs" / "IMPROVEMENT_JOURNAL.md"
     if not journal_path.exists():
-        return _DashResponse(content="<h1>No journal entries yet</h1>", status_code=200)
-    md_content = journal_path.read_text(encoding="utf-8")
-    # Simple markdown-to-html conversion (headings, bold, code, lists)
-    import re
-    html_body = md_content
-    html_body = re.sub(r'^### (.+)$', r'<h3>\1</h3>', html_body, flags=re.MULTILINE)
-    html_body = re.sub(r'^## (.+)$', r'<h2>\1</h2>', html_body, flags=re.MULTILINE)
-    html_body = re.sub(r'^# (.+)$', r'<h1>\1</h1>', html_body, flags=re.MULTILINE)
-    html_body = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html_body)
-    html_body = re.sub(r'\*(.+?)\*', r'<em>\1</em>', html_body)
-    html_body = re.sub(r'`(.+?)`', r'<code>\1</code>', html_body)
-    html_body = re.sub(r'^  - (.+)$', r'<li>\1</li>', html_body, flags=re.MULTILINE)
-    html_body = re.sub(r'^> (.+)$', r'<blockquote>\1</blockquote>', html_body, flags=re.MULTILINE)
-    html_body = re.sub(r'^---$', r'<hr>', html_body, flags=re.MULTILINE)
-    html_body = html_body.replace('\n\n', '</p><p>').replace('\n', '<br>')
-    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>mindX Improvement Journal</title>
-<style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:'SF Mono','Fira Code',monospace;background:#0a0e14;color:#c5cdd9;padding:24px;max-width:900px;margin:0 auto}}
-h1{{color:#e6edf3;font-size:20px;margin:16px 0 8px}}h2{{color:#58a6ff;font-size:16px;margin:20px 0 8px;padding-top:12px;border-top:1px solid #1a1f2e}}
-h3{{color:#d2a8ff;font-size:13px;margin:12px 0 4px}}p{{margin:6px 0;line-height:1.6;font-size:12px}}
-strong{{color:#e6edf3}}em{{color:#6e7681}}code{{background:#161b22;padding:1px 4px;border-radius:3px;color:#7ee787;font-size:11px}}
-li{{margin:2px 0 2px 20px;font-size:12px;line-height:1.5}}blockquote{{border-left:2px solid #1a1f2e;padding:4px 12px;color:#6e7681;margin:8px 0;font-size:11px}}
-hr{{border:none;border-top:1px solid #1a1f2e;margin:16px 0}}a{{color:#58a6ff;text-decoration:none}}
-.back{{font-size:10px;color:#484f58;margin-bottom:16px}}</style></head>
-<body><div class="back"><a href="/">← dashboard</a> · <a href="/docs">api docs</a></div>{html_body}</body></html>"""
-    return _DashResponse(content=html, status_code=200)
+        return _DashResponse(content=_doc_page("Journal", "<h1>No journal entries yet</h1>"))
+    md = journal_path.read_text(encoding="utf-8")
+    return _DashResponse(content=_doc_page("Improvement Journal", _render_md(md)))
 
 _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
 
