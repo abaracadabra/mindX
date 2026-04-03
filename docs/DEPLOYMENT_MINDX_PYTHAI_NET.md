@@ -1,7 +1,9 @@
 # mindX Production Deployment — mindx.pythai.net
 
 **Live at:** https://mindx.pythai.net  
-**API Docs:** https://mindx.pythai.net/docs  
+**Dashboard:** https://mindx.pythai.net/ (animated diagnostics, auto-refresh 6s)  
+**API Docs:** https://mindx.pythai.net/redoc (185 endpoints)  
+**Book:** https://mindx.pythai.net/book (The Book of mindX)  
 **VPS:** Hostinger KVM, `168.231.126.58`  
 
 ## Architecture
@@ -16,21 +18,45 @@
   uvicorn → FastAPI (mindx_backend_service)
       │
       ├── BANKON Vault (AES-256-GCM credentials)
-      ├── LLM Providers (Gemini, Groq, OpenAI, Anthropic, ...)
-      ├── Agent Orchestration (BDI, Mastermind, Coordinator)
+      ├── PostgreSQL 16 + pgvector 0.6.0 (memories, beliefs, agents, embeddings)
+      ├── Ollama (qwen3:1.7b reasoning, qwen3:0.6b fast tasks, mxbai-embed-large embeddings)
+      ├── RAGE Embed (semantic search over 194 docs + 1500+ memories)
+      ├── 12 Sovereign Agents (BANKON vault identities, ECDSA challenge-response)
+      ├── Boardroom (CEO + Seven Soldiers, multi-model weighted consensus)
+      ├── Dojo (agent reputation ranks, BONA FIDE verification)
+      ├── Autonomous Improvement Loop (5-min cycles, backlog-driven)
+      ├── vLLMAgent (build/serve/monitor vLLM, ready for GPU upgrade)
       └── mindterm (WebSocket terminal)
 ```
 
 | Layer | Detail |
 |-------|--------|
-| **Domain** | `mindx.pythai.net` → `168.231.126.58` (A record) |
-| **SSL** | Let's Encrypt, auto-renew via certbot |
+| **Domain** | `mindx.pythai.net` → `168.231.126.58` (A record + AAAA) |
+| **SSL** | Let's Encrypt, auto-renew via certbot (expires ~June 2026) |
 | **Proxy** | Apache2 reverse proxy, WebSocket for `/mindterm` |
 | **Service** | systemd `mindx.service`, User=mindx |
 | **Code** | `/home/mindx/mindX/` |
 | **Venv** | `/home/mindx/mindX/.mindx_env/` |
+| **Database** | PostgreSQL 16 + pgvector 0.6.0 (`mindx` database, ~23MB) |
 | **Credentials** | BANKON Vault at `mindx_backend_service/vault_bankon/` |
 | **Logs** | `data/logs/mindx_runtime.log` + journalctl -u mindx |
+| **Disk** | 96GB total, ~40GB used (data: 3.8GB, models: 5.2GB, venv: 344MB) |
+| **RAM** | 7.8GB (mindX: ~150MB, Ollama models: ~2-3GB when loaded) |
+| **CPU** | AMD EPYC 7543P, 2 vCPUs, AVX2 |
+
+## Local Inference Models
+
+| Model | Size | Role | Speed (warm) |
+|-------|------|------|-------------|
+| **qwen3:1.7b** | 1.4GB | Complex reasoning, boardroom CTO/CISO/CRO, /chat/docs RAG, autonomous improvement | ~15s |
+| **qwen3:0.6b** | 522MB | Heartbeat, fast decisions, boardroom COO/CFO/CLO/CPO | ~3-6s |
+| **mxbai-embed-large** | 669MB | RAGE embed — semantic search (1024-dim vectors) | ~100ms |
+| **qwen3.5:2b** | 2.7GB | Reserved for hardware upgrade (too large for 2-core VPS) | — |
+| **nomic-embed-text** | 274MB | Backup embedding model | ~80ms |
+
+**Strategy**: Right model for the job. qwen3:0.6b for speed, qwen3:1.7b for depth. Free cloud tier (Gemini) for complex tasks. Paid inference only when earned from value exchange.
+
+**RAM discipline**: Only 1-2 models loaded at a time. Ollama `keep_alive` manages model lifecycle. OOM kills occur if too many models load simultaneously — monitor via `/diagnostics/live`.
 
 ## Authentication
 
