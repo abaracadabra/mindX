@@ -161,36 +161,88 @@ from fastapi.responses import HTMLResponse as _DashResponse
 
 @app.get("/docs.html", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
 async def docs_html_page():
-    """Documentation hub — The Book of mindX, Journal, API docs, core references."""
+    """Documentation hub with auto-generated TOC from all docs."""
+    import re as _re
     book_path = PROJECT_ROOT / "docs" / "BOOK_OF_MINDX.md"
     journal_path = PROJECT_ROOT / "docs" / "IMPROVEMENT_JOURNAL.md"
     book_exists = book_path.exists()
     journal_exists = journal_path.exists()
-    # Count publications
     pub_dir = PROJECT_ROOT / "docs" / "publications"
     editions = sorted(pub_dir.glob("book_of_mindx_*.md"), reverse=True) if pub_dir.exists() else []
     edition_count = len(editions)
+
+    # Auto-generate TOC from all docs
+    categories = {
+        "Core Architecture": [], "Agents": [], "Tools": [], "Governance & DAIO": [],
+        "Memory & Knowledge": [], "Deployment & Operations": [], "API & Integration": [],
+        "Philosophy & Vision": [], "Tutorials & Guides": [], "Other": [],
+    }
+    docs_dir = PROJECT_ROOT / "docs"
+    try:
+        for f in sorted(docs_dir.glob("*.md")):
+            name = f.stem
+            size_kb = round(f.stat().st_size / 1024, 1)
+            # Extract first heading
+            heading = name
+            try:
+                for line in f.read_text(encoding="utf-8", errors="replace").split("\n")[:5]:
+                    if line.startswith("# "):
+                        heading = line[2:].strip()[:80]
+                        break
+            except Exception:
+                pass
+            entry = f'<li><strong>{name}.md</strong> <span style="color:#4a5060">({size_kb}KB)</span><br><span style="color:#6e7681;font-size:9px">{heading}</span></li>'
+            nl = name.lower()
+            if any(k in nl for k in ["technical","orchestration","core","architect","hierarchy","codebase"]):
+                categories["Core Architecture"].append(entry)
+            elif any(k in nl for k in ["agent","agint","mindx","automindx","ceo","mastermind","persona","coordinator"]):
+                categories["Agents"].append(entry)
+            elif any(k in nl for k in ["tool","shell","registry","factory","calculator"]):
+                categories["Tools"].append(entry)
+            elif any(k in nl for k in ["daio","governance","constitution","boardroom","dojo","voting"]):
+                categories["Governance & DAIO"].append(entry)
+            elif any(k in nl for k in ["memory","belief","knowledge","pgvector"]):
+                categories["Memory & Knowledge"].append(entry)
+            elif any(k in nl for k in ["deploy","production","monitor","performance","security","resource"]):
+                categories["Deployment & Operations"].append(entry)
+            elif any(k in nl for k in ["api","mistral","gemini","ollama","model","inference","llm"]):
+                categories["API & Integration"].append(entry)
+            elif any(k in nl for k in ["manifesto","thesis","whitepaper","press","philosophy","ataraxia","civilization","roadmap","todo"]):
+                categories["Philosophy & Vision"].append(entry)
+            elif any(k in nl for k in ["guide","usage","instruction","quickref","tutorial","hackathon"]):
+                categories["Tutorials & Guides"].append(entry)
+            else:
+                categories["Other"].append(entry)
+    except Exception:
+        pass
+
+    toc_html = ""
+    for cat, entries in categories.items():
+        if entries:
+            toc_html += f'<h3 style="color:#58a6ff;font-size:12px;margin:16px 0 6px;border-top:1px solid rgba(26,31,46,.4);padding-top:12px">{cat} <span style="color:#4a5060;font-weight:400">({len(entries)})</span></h3><ul style="list-style:none;padding:0">' + "".join(entries) + "</ul>"
+    total_docs = sum(len(v) for v in categories.values())
     return _DashResponse(content=f"""<!DOCTYPE html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>mindX Documentation</title>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:'SF Mono','Fira Code',monospace;background:#050810;color:#b0b8c4;min-height:100vh}}
-.top{{max-width:720px;margin:0 auto;padding:32px 20px}}
-h1{{font-size:22px;color:#e6edf3;margin-bottom:4px;letter-spacing:1px}}
+body{{font-family:'Inter','SF Pro Text',system-ui,sans-serif;background:#050810;color:#b0b8c4;min-height:100vh}}
+.top{{max-width:760px;margin:0 auto;padding:28px 20px}}
+h1{{font-size:20px;color:#e6edf3;margin-bottom:4px;letter-spacing:.5px;font-family:'SF Mono',monospace}}
 h1 b{{color:#58a6ff}}
-.sub{{font-size:10px;color:#4a5060;margin-bottom:24px}}
-.card{{background:rgba(13,17,23,.8);border:1px solid rgba(26,31,46,.6);border-radius:6px;padding:16px;margin-bottom:12px;transition:border-color .2s}}
-.card:hover{{border-color:rgba(88,166,255,.3)}}
-.card h2{{font-size:13px;color:#e6edf3;margin-bottom:4px}}
+.sub{{font-size:10px;color:#5a6070;margin-bottom:20px}}
+.card{{background:rgba(13,17,23,.8);border:1px solid rgba(26,31,46,.5);border-radius:5px;padding:14px;margin-bottom:10px;transition:border-color .2s}}
+.card:hover{{border-color:rgba(88,166,255,.25)}}
+.card h2{{font-size:13px;color:#e6edf3;margin-bottom:3px}}
 .card h2 a{{color:#58a6ff;text-decoration:none}}.card h2 a:hover{{text-decoration:underline}}
-.card p{{font-size:10px;color:#6e7681;line-height:1.5;margin-bottom:6px}}
-.card .meta{{font-size:8px;color:#3d424d}}
-.tag{{display:inline-block;padding:1px 5px;border-radius:3px;font-size:7px;font-weight:700;margin-right:4px}}
+.card p{{font-size:10px;color:#6e7681;line-height:1.5;margin-bottom:4px}}
+.card .meta{{font-size:8px;color:#4a5060}}
+.tag{{display:inline-block;padding:1px 5px;border-radius:3px;font-size:7px;font-weight:700;margin-right:3px}}
 .tag-live{{background:rgba(13,51,33,.8);color:#3fb950}}.tag-auto{{background:rgba(26,42,58,.8);color:#58a6ff}}
 .tag-ref{{background:rgba(42,42,26,.8);color:#d29922}}.tag-api{{background:rgba(36,20,50,.8);color:#d2a8ff}}
-.sep{{border:none;border-top:1px solid rgba(26,31,46,.5);margin:20px 0}}
-.ft{{font-size:8px;color:#3d424d;text-align:center;margin-top:24px}}
+.sep{{border:none;border-top:1px solid rgba(26,31,46,.4);margin:16px 0}}
+ul{{padding:0}}li{{margin:4px 0;font-size:10px;line-height:1.5}}
+.ft{{font-size:9px;color:#4a5060;text-align:center;margin-top:20px}}
 .ft a{{color:#58a6ff;text-decoration:none}}
 </style></head><body><div class="top">
 <h1>mind<b>X</b> docs</h1>
@@ -230,15 +282,12 @@ h1 b{{color:#58a6ff}}
 
 <hr class="sep">
 
-<div class="card">
-<h2>Core References</h2>
-<p>Foundational documents that define what mindX is.</p>
-<div class="meta">
-<span class="tag tag-ref">REF</span>
-<a href="https://github.com/AgenticPlace/mindX" style="color:#58a6ff;font-size:9px">GitHub</a> &middot;
-THESIS.md &middot; MANIFESTO.md &middot; AGENTS.md &middot; DEPLOYMENT_MINDX_PYTHAI_NET.md
-</div>
-</div>
+<hr class="sep">
+
+<h2 style="font-size:14px;color:#e6edf3;margin-bottom:6px">Table of Contents <span style="color:#4a5060;font-weight:400;font-size:10px">({total_docs} documents)</span></h2>
+<p style="font-size:9px;color:#5a6070;margin-bottom:12px">Auto-indexed from docs/ — <a href="https://github.com/AgenticPlace/mindX" style="color:#58a6ff">GitHub</a></p>
+
+{toc_html}
 
 <div class="ft"><a href="/">dashboard</a> &middot; mindx.pythai.net &middot; &copy; Professor Codephreak</div>
 </div></body></html>""")
@@ -418,10 +467,19 @@ _HEARTBEAT_PROMPTS = [
     "The Strategic Evolution Agent runs 4-phase audit campaigns. Describe the ideal self-improvement cycle in one sentence.",
 ]
 
+_diag_model_perf: list = []  # Model task performance log (last 30)
+
 async def _heartbeat_query_local_model():
-    """Query local Ollama with a self-reflection prompt. Captures dialogue."""
+    """Query local Ollama with a self-reflection prompt. CPU-aware throttling."""
     global _diag_heartbeat_count
-    import random
+    # CPU throttle: skip heartbeat if system is busy (>70% avg)
+    try:
+        cpu = _ps.cpu_percent(interval=None)
+        if cpu > 70:
+            logger.debug(f"Heartbeat skipped: CPU {cpu}% > 70% threshold")
+            return
+    except Exception:
+        pass
     prompt = _HEARTBEAT_PROMPTS[_diag_heartbeat_count % len(_HEARTBEAT_PROMPTS)]
     _diag_heartbeat_count += 1
     try:
@@ -434,6 +492,8 @@ async def _heartbeat_query_local_model():
                     data = await resp.json()
                     response_text = data.get("message", {}).get("content", "")
                     latency = int((time.time() - t0) * 1000)
+                    tokens_est = len(response_text.split())  # rough estimate
+                    tps = round(tokens_est / max(latency / 1000, 0.1), 1)
                     entry = {
                         "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
                         "agent": "mindx_heartbeat",
@@ -442,10 +502,20 @@ async def _heartbeat_query_local_model():
                         "response": response_text[:500],
                         "latency_ms": latency,
                     }
-                    # In-memory cache (last 20)
                     _diag_interactions.append(entry)
                     if len(_diag_interactions) > 20:
                         _diag_interactions.pop(0)
+                    # Track model performance
+                    _diag_model_perf.append({
+                        "ts": datetime.utcnow().strftime("%H:%M:%S"),
+                        "model": "qwen3:0.6b",
+                        "latency_ms": latency,
+                        "tokens_est": tokens_est,
+                        "tps": tps,
+                        "cpu_at_query": _ps.cpu_percent(interval=None),
+                    })
+                    if len(_diag_model_perf) > 30:
+                        _diag_model_perf.pop(0)
 
                     # Persist to disk — all logs are memories in data
                     try:
@@ -599,6 +669,20 @@ async def diagnostics_live_endpoint():
     except Exception: pass
 
     # Rebuild return with governance data
+    # Disk usage breakdown
+    disk_detail = {}
+    try:
+        import subprocess
+        r = subprocess.run(["du", "-sh", str(PROJECT_ROOT / "data"), str(PROJECT_ROOT / ".mindx_env"),
+                           str(PROJECT_ROOT / "mindx_backend_service" / "vault_bankon")],
+                          capture_output=True, text=True, timeout=5)
+        for line in r.stdout.strip().split("\n"):
+            parts = line.split("\t")
+            if len(parts) == 2:
+                disk_detail[parts[1].split("/")[-1]] = parts[0]
+    except Exception:
+        pass
+
     return {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "uptime": uptime, "uptime_seconds": up_s,
@@ -609,6 +693,8 @@ async def diagnostics_live_endpoint():
         "interactions": list(_diag_interactions),
         "godel_choices": godel, "inference": inf, "vault": vault,
         "dojo": dojo_data, "boardroom": br_data,
+        "model_perf": list(_diag_model_perf),
+        "disk_detail": disk_detail,
         "recent_logs": logs,
     }
 
