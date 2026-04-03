@@ -357,7 +357,7 @@ async def get_recent_actions(limit: int = 20) -> List[Dict[str, Any]]:
 #  EMBEDDING ENGINE — Local Ollama → pgvector semantic search
 # ═══════════════════════════════════════════════════════════════
 
-EMBED_MODEL = "nomic-embed-text"
+EMBED_MODEL = "mxbai-embed-large"
 EMBED_URL = "http://localhost:11434"
 
 
