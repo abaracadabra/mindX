@@ -2510,9 +2510,24 @@ class MindXAgent:
                                     has_file_changes = len(result.file_changes) > 0
                                 elif hasattr(result, 'changes_made') and result.changes_made:
                                     has_file_changes = True
+                                # Journal moment: record the improvement (kairos)
+                                try:
+                                    from agents.learning.improvement_journal import ImprovementJournal
+                                    _journal = ImprovementJournal()
+                                    await _journal.write_moment(
+                                        f"Improvement cycle {cycle_count} succeeded",
+                                        f"goal: {top_priority['goal'][:120]}, agents: {', '.join(result.agents_used[:3])}"
+                                    )
+                                except Exception:
+                                    pass
                                 # Handle restart signal from code promotion
                                 if getattr(result, 'restart_required', False):
                                     logger.warning(f"{self.log_prefix} RESTART REQUIRED — code promoted to main")
+                                    try:
+                                        _journal = ImprovementJournal()
+                                        await _journal.write_moment("RESTART REQUIRED", "code promoted to main — Godel machine becoming")
+                                    except Exception:
+                                        pass
                                     await self._graceful_restart(reason="code_promoted_to_main")
                             else:
                                 logger.warning(f"{self.log_prefix} Improvement cycle {cycle_count} had issues")

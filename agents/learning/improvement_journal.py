@@ -232,11 +232,41 @@ class ImprovementJournal:
             "backlog": backlog_count,
         }
 
+    async def write_moment(self, event: str, detail: str = ""):
+        """Write a brief journal entry for a significant moment (kairos, not chronos).
+        Called by agents when something meaningful happens — not on a timer."""
+        now = datetime.now(timezone.utc)
+        ts = now.strftime("%Y-%m-%d %H:%M UTC")
+        entry = f"## {ts}\n\n**{event}**"
+        if detail:
+            entry += f" — {detail}"
+        entry += "\n\n"
+        self._append_entry(entry)
+        logger.info(f"ImprovementJournal: moment recorded — {event}")
+        return {"timestamp": ts, "event": event}
+
     async def run_periodic(self, interval_seconds: int = 3600):
-        """Write a journal entry every interval_seconds."""
+        """Write a journal entry when meaningful state changes occur.
+        Checks on an interval but only writes if something changed (kairos over chronos)."""
+        _last_belief_count = 0
+        _last_action_count = 0
+        _last_decision_count = 0
         while True:
             try:
-                await self.write_entry()
+                # Gather current state
+                result = await self.write_entry()
+                current_beliefs = result.get("beliefs", 0)
+                current_decisions = result.get("decisions", 0)
+                current_campaigns = result.get("campaigns", 0)
+                # Only write if something meaningful changed
+                has_change = (current_beliefs != _last_belief_count or
+                              current_decisions > 0 or current_campaigns > 0)
+                if has_change:
+                    _last_belief_count = current_beliefs
+                    _last_decision_count = current_decisions
+                    logger.info(f"ImprovementJournal: state changed, entry written")
+                else:
+                    logger.debug(f"ImprovementJournal: no meaningful change, skipping")
             except Exception as e:
                 logger.warning(f"ImprovementJournal periodic write failed: {e}")
             await asyncio.sleep(interval_seconds)
