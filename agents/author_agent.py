@@ -237,7 +237,28 @@ class AuthorAgent:
         # Keep only last 56 entries (2 cycles)
         self._lunar_state["chapters_written"] = self._lunar_state["chapters_written"][-56:]
         self._lunar_state["current_day"] = day_num
+        self._current_lunar_day = day_num
+        self._last_chapter_title = title
         self._save_lunar_state()
+
+        # Log as action in pgvector for dashboard visibility
+        try:
+            from agents.memory_pgvector import store_action
+            await store_action(
+                "author_agent", "chapter_published",
+                f"Lunar day {day_num}/28 — {title} ({phase['phase']})",
+                "lunar_cycle", "completed",
+            )
+        except Exception:
+            pass
+
+        # Journal moment (kairos)
+        try:
+            from agents.learning.improvement_journal import ImprovementJournal
+            journal = ImprovementJournal()
+            await journal.write_moment(f"Chapter published: day {day_num}/28 — {title}", phase['phase'])
+        except Exception:
+            pass
 
         return result
 
@@ -537,6 +558,19 @@ A Sovereign Intelligent Organization.*
         archive.write_text(book, encoding="utf-8")
 
         logger.info(f"AuthorAgent: published edition {edition} ({len(book)} bytes)")
+        self._editions_published = getattr(self, '_editions_published', 0) + 1
+
+        # Log as action
+        try:
+            from agents.memory_pgvector import store_action
+            await store_action(
+                "author_agent", "book_published",
+                f"Book edition {edition} published ({round(len(book)/1024,1)}KB)",
+                "publish", "completed",
+            )
+        except Exception:
+            pass
+
         return {"edition": edition, "bytes": len(book), "path": str(BOOK_PATH)}
 
     # ── Original chapter methods (reused by daily cycle) ──
