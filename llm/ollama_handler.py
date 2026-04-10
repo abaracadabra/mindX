@@ -39,7 +39,10 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
         # base_url is like "http://localhost:11434"
         super().__init__("ollama", model_name_for_api, api_key, base_url)
         
-        self.api_base_url = self.base_url if self.base_url else "http://localhost:11434"
+        # Respect environment override, then passed base_url, then localhost default
+        import os
+        env_url = os.getenv("MINDX_LLM__OLLAMA__BASE_URL")
+        self.api_base_url = env_url or self.base_url or "http://localhost:11434"
         if not self.api_base_url.endswith("/api"):
             self.api_url = f"{self.api_base_url.rstrip('/')}/api"
         else: # pragma: no cover # Should not happen if base_url is clean
