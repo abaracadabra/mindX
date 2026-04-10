@@ -705,9 +705,24 @@ async def improvement_journal_page():
     journal_path = PROJECT_ROOT / "docs" / "IMPROVEMENT_JOURNAL.md"
     if not journal_path.exists():
         return _DashResponse(content=_doc_page("Journal", "<h1>No journal entries yet</h1><p>The improvement journal is written automatically every 30 minutes. <a href='/book'>Read The Book of mindX</a> or <a href='/docs.html'>browse all docs</a>.</p>"))
-    md = journal_path.read_text(encoding="utf-8")
-    back = '<hr style="margin:32px 0 16px;border-color:rgba(88,166,255,.12)"><div style="font-size:12px;color:#4a5060;display:flex;gap:16px;flex-wrap:wrap"><a href="/docs.html" style="color:#58a6ff">All Documents</a><a href="/book" style="color:#d2a8ff">The Book of mindX</a><a href="/redoc" style="color:#d29922">API Reference</a></div>'
-    return _DashResponse(content=_doc_page("Improvement Journal", _render_md(md) + back, "", description="mindX Improvement Journal — timestamped log of autonomous decisions, self-improvement campaigns, belief changes, and system snapshots.", canonical_path="/journal"))
+    md = journal_path.read_text(encoding="utf-8", errors="replace")
+    # For large journals, only render the most recent entries (top of file = newest)
+    md_lines = md.split('\n')
+    if len(md_lines) > 2000:
+        md_truncated = '\n'.join(md_lines[:2000]) + '\n\n---\n\n*Showing most recent 2000 lines. Full journal: ' + f'{round(journal_path.stat().st_size/1024,1)}KB, {len(md_lines)} lines.*'
+    else:
+        md_truncated = md
+    body = _render_md(md_truncated)
+    # Find related docs from recent journal content
+    related = _find_related_docs('\n'.join(md_lines[:500]), "IMPROVEMENT_JOURNAL")
+    related_html = ""
+    if related:
+        related_html = '<hr style="margin:24px 0 12px;border-color:rgba(88,166,255,.12)"><div style="font-size:11px;color:#4a5060;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Referenced in journal</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">'
+        for r in related:
+            related_html += f'<a href="/doc/{r}" style="color:#79c0ff;text-decoration:none;padding:2px 8px;background:rgba(22,27,34,.6);border:1px solid rgba(26,31,46,.4);border-radius:3px;font-size:11px">{r}</a>'
+        related_html += '</div>'
+    back = f'{related_html}<hr style="margin:16px 0 12px;border-color:rgba(88,166,255,.12)"><div style="font-size:12px;color:#4a5060;display:flex;gap:16px;flex-wrap:wrap"><a href="/docs.html" style="color:#58a6ff">All Documents</a><a href="/doc/INDEX" style="color:#79c0ff">Document Index</a><a href="/book" style="color:#d2a8ff">The Book of mindX</a><a href="/redoc" style="color:#d29922">API Reference</a></div>'
+    return _DashResponse(content=_doc_page("Improvement Journal", body + back, "", description="mindX Improvement Journal — timestamped log of autonomous decisions, self-improvement campaigns, belief changes, and system snapshots.", canonical_path="/journal"))
 
 _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
 _ERROR_PAGES_DIR = Path(__file__).parent / "error_pages"
