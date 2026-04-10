@@ -27,9 +27,9 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
 .status-ring{position:relative;width:120px;height:120px;margin:0 auto 28px}
 .status-ring svg{animation:spin 8s linear infinite}
 .status-ring.ready svg{animation:spin 1s linear infinite}
-.status-ring .code{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:24px;font-weight:700;color:#58a6ff;font-family:'SF Mono',monospace;transition:all .4s}
+.status-ring .code{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;font-weight:600;color:#58a6ff;font-family:'SF Mono',monospace;transition:all .4s;text-align:center;line-height:1.3;max-width:90px;word-break:break-word}
 .status-ring.ready .code{color:#3fb950;font-size:22px}
-.status-label{font-size:11px;color:#4a5060;text-align:center;margin-top:4px;letter-spacing:.5px;text-transform:uppercase}
+.status-label{font-size:12px;color:#6e7681;text-align:center;margin-top:4px;letter-spacing:.5px;text-transform:uppercase}
 @keyframes spin{to{transform:rotate(360deg)}}
 .thought-bubbles{display:flex;gap:6px;justify-content:center;margin-bottom:20px}
 .thought-bubbles .dot{width:8px;height:8px;border-radius:50%;background:#58a6ff;animation:think 1.8s ease-in-out infinite}
@@ -41,7 +41,7 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
 .msg a:hover{text-decoration:underline}
 .progress{width:200px;height:2px;background:rgba(88,166,255,.1);border-radius:1px;margin:16px auto 0;overflow:hidden}
 .progress-bar{height:100%;width:0%;background:linear-gradient(90deg,#58a6ff,#3fb950);border-radius:1px;transition:width .3s}
-.quote{position:fixed;bottom:14px;left:0;right:0;text-align:center;font-size:18px;color:#b0b8c4;font-style:italic;z-index:2;padding:0 30px;transition:opacity .5s;line-height:1.6;text-shadow:0 0 20px rgba(88,166,255,.12)}
+.quote{position:fixed;bottom:16px;left:0;right:0;text-align:center;font-size:22px;color:#d0d8e4;font-style:italic;z-index:2;padding:0 40px;transition:opacity .5s;line-height:1.6;text-shadow:0 0 24px rgba(88,166,255,.15);max-width:800px;margin:0 auto}
 .click-count{position:fixed;top:12px;right:12px;font-size:11px;color:#4a5060;z-index:2;font-family:'SF Mono',monospace}
 .info-panels{position:fixed;bottom:50px;left:0;right:0;z-index:2;display:flex;justify-content:center;gap:12px;flex-wrap:wrap;padding:0 20px;pointer-events:none;transition:opacity .5s}
 .info-panel{background:rgba(13,17,23,.85);border:1px solid rgba(88,166,255,.12);border-radius:6px;padding:10px 14px;max-width:220px;pointer-events:auto;backdrop-filter:blur(8px);transition:border-color .3s,opacity .5s}
@@ -671,6 +671,32 @@ function updatePhase() {
   let phaseIdx = 0;
   for (let i = PHASE_GENERATORS.length - 1; i >= 0; i--) {
     if (s >= PHASE_GENERATORS[i].t) { phaseIdx = i; break; }
+  }
+
+  // Rotate mindX outputs inside the status ring sphere — linked to docs
+  const codeEl = document.getElementById('code');
+  if (codeEl && !resolved && s % 4 === 0) {
+    const sphereLinks = [
+      {text:'mX',href:'/'},
+      {text:'BDI',href:'/doc/bdi_parameter_processing'},
+      {text:'AGInt',href:'/doc/AGINT'},
+      {text:'DAIO',href:'/doc/DAIO'},
+      {text:'RAGE',href:'/doc/pgvectorscale_memory_integration'},
+      {text:'vLLM',href:'/doc/VLLM_INTEGRATION'},
+      {text:'BANKON',href:'/doc/IDENTITY'},
+      {text:'AGLM',href:'/doc/aglm'},
+      {text:'Dojo',href:'/dojo/standings'},
+      {text:'Book',href:'/book'},
+      {text:Math.floor(Math.random()*20+1)+' agents',href:'/doc/AGENTS'},
+      {text:(interactionProfile.clicks||0)+' inp',href:'/docs.html'},
+      {text:Math.floor(s)+'s',href:null},
+    ];
+    const pick = sphereLinks[Math.floor(Math.random()*sphereLinks.length)];
+    if (pick.href) {
+      codeEl.innerHTML = '<a href="'+pick.href+'" style="color:#58a6ff;text-decoration:none;font-size:inherit">'+pick.text+'</a>';
+    } else {
+      codeEl.textContent = pick.text;
+    }
   }
 
   // Generate new message when entering a new phase
