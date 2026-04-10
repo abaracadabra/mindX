@@ -83,17 +83,16 @@ class OllamaAPI:
             except:
                 pass
             
-            # Fall back to environment/config if settings didn't provide it
-            if not hasattr(self, 'base_url') or not self.base_url:
-                env_url = os.getenv("MINDX_LLM__OLLAMA__BASE_URL")
+            # Environment variable ALWAYS takes precedence (set in systemd for production)
+            env_url = os.getenv("MINDX_LLM__OLLAMA__BASE_URL")
+            if env_url:
+                self.base_url = env_url
+            elif not hasattr(self, 'base_url') or not self.base_url:
                 config_url = self.config.get("llm.ollama.base_url")
-                # Primary: 10.0.0.155:18080 (GPU server), Fallback: localhost:11434 (CPU)
-                config_host = self.config.get("llm.ollama.host", "10.0.0.155")
-                config_port = self.config.get("llm.ollama.port", 18080)
-                
-                if env_url:
-                    self.base_url = env_url
-                elif config_url:
+                config_host = self.config.get("llm.ollama.host", "localhost")
+                config_port = self.config.get("llm.ollama.port", 11434)
+
+                if config_url:
                     self.base_url = config_url
                 else:
                     self.base_url = f"http://{config_host}:{config_port}"
