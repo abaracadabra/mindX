@@ -54,8 +54,8 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 .ll{font-size:10px;color:#4a5060;padding:2px 0;word-break:break-all;line-height:1.4;border-bottom:1px solid rgba(5,8,16,.3);font-family:'SF Mono','Fira Code',monospace}
 .ll:hover{color:#6e7681}
 .tabs{display:flex;gap:1px;background:rgba(20,24,32,.4);flex-shrink:0}
-.tab{flex:1;padding:4px;text-align:center;font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#3d424d;background:rgba(10,14,20,.9);cursor:pointer;transition:color .15s}
-.tab:hover{color:#6e7681}.tab.active{color:#58a6ff;border-bottom:1px solid #58a6ff}
+.tab{flex:1;padding:5px;text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:#6e7681;background:rgba(10,14,20,.9);cursor:pointer;transition:color .15s}
+.tab:hover{color:#b0b8c4}.tab.active{color:#58a6ff;border-bottom:2px solid #58a6ff}
 .conv{flex:1;overflow-y:auto;padding:4px 8px;background:rgba(5,8,12,.5);scrollbar-width:none}
 .conv::-webkit-scrollbar{display:none}
 .msg{margin-bottom:6px;padding:6px 8px;border-radius:3px;font-size:12px;line-height:1.5}
@@ -80,7 +80,7 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 @keyframes settleIn{0%{transform:translateX(40px) scale(1.03);opacity:0;background:rgba(63,185,80,.2);box-shadow:0 0 20px rgba(63,185,80,.25)}30%{opacity:1;background:rgba(63,185,80,.12);box-shadow:0 0 14px rgba(63,185,80,.15)}100%{transform:translateX(0) scale(1);background:inherit;box-shadow:none}}
 .msg-new{animation:settleIn 1.4s ease-out}
 .ft{padding:5px 8px;border-top:1px solid rgba(26,31,46,.5);font-size:10px;color:#3d424d;text-align:center;flex-shrink:0;background:rgba(10,14,20,.9)}
-.ft a{color:#58a6ff;text-decoration:none}.ft a.dm{color:#3d424d}
+.ft a{color:#58a6ff;text-decoration:none}.ft a.dm{color:#6e7681}
 .sp rect{fill:#3fb950;opacity:.7}
 </style>
 </head>
@@ -90,7 +90,7 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 <div class="wrap">
 <div class="hdr">
 <div style="display:flex;align-items:center;gap:8px"><h1>mind<b>X</b></h1><div class="sub" id="sub">...</div></div>
-<div style="display:flex;align-items:center;gap:6px;font-size:11px"><a href="/docs.html" style="color:#58a6ff;text-decoration:none">docs</a><span style="color:#3d424d">/</span><a href="/book" style="color:#4a5060;text-decoration:none">book</a><span style="color:#3d424d">/</span><a href="/journal" style="color:#4a5060;text-decoration:none">journal</a><span style="color:#3d424d">/</span><a href="/redoc" style="color:#4a5060;text-decoration:none">api</a><span style="color:#3d424d">/</span><a href="/dojo/standings" style="color:#4a5060;text-decoration:none">dojo</a><span style="color:#3d424d">/</span><a href="/inference/status" style="color:#4a5060;text-decoration:none">inference</a><span style="color:#3d424d">/</span><a href="/automindx" style="color:#d2a8ff;text-decoration:none">origin</a><span style="color:#3d424d">&middot;</span><span class="badge" id="bge">...</span><span class="pulse" style="color:#3fb950;font-size:5px">&#9679;</span></div>
+<div style="display:flex;align-items:center;gap:6px;font-size:11px"><a href="/docs.html" style="color:#58a6ff;text-decoration:none">docs</a><span style="color:#4a5060">/</span><a href="/book" style="color:#8b949e;text-decoration:none">book</a><span style="color:#4a5060">/</span><a href="/journal" style="color:#8b949e;text-decoration:none">journal</a><span style="color:#4a5060">/</span><a href="/redoc" style="color:#8b949e;text-decoration:none">api</a><span style="color:#4a5060">/</span><a href="/dojo/standings" style="color:#8b949e;text-decoration:none">dojo</a><span style="color:#4a5060">/</span><a href="/inference/status" style="color:#8b949e;text-decoration:none">inference</a><span style="color:#4a5060">/</span><a href="/automindx" style="color:#d2a8ff;text-decoration:none">origin</a><span style="color:#4a5060">&middot;</span><span class="badge" id="bge">...</span><span class="pulse" style="color:#3fb950;font-size:5px">&#9679;</span></div>
 </div>
 <div class="main">
 <div class="left"><div class="g" id="grid"></div></div>
