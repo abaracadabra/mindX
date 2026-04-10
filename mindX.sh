@@ -68,6 +68,8 @@ function show_help { # pragma: no cover
     echo "  --frontend                   Start MindX web interface (backend + frontend with web UI)."
     echo "  --interactive                Prompt for API keys (Gemini, Mistral AI) during setup."
     echo "  --replicate                  Copy source code to target directory (default: use existing code)."
+    echo "  --replicate-from-github      Clone from GitHub, verify integrity, restore source (preserves data/)."
+    echo "                               Can create a new supporting node or a full new instance at mindX discretion."
     echo "  --venv-name <name>           Override default virtual environment name (Default: ${DEFAULT_VENV_NAME})."
     echo "  --frontend-port <port>       Override default frontend port (Default: ${DEFAULT_FRONTEND_PORT})."
     echo "  --backend-port <port>        Override default backend port (Default: ${DEFAULT_BACKEND_PORT})."
@@ -85,6 +87,7 @@ while [[ $# -gt 0 ]]; do
         --run) RUN_SERVICES_FLAG=true; shift 1;;
         --interactive) INTERACTIVE_SETUP_FLAG=true; shift 1;;
         --replicate) REPLICATE_SOURCE_FLAG=true; shift 1;;
+        --replicate-from-github) REPLICATE_GITHUB_FLAG=true; shift 1;;
         --frontend) FRONTEND_FLAG=true; shift 1;;
         --venv-name) MINDX_VENV_NAME_OVERRIDE="$2"; shift 2;;
         --frontend-port) FRONTEND_PORT_OVERRIDE="$2"; shift 2;;
@@ -267,10 +270,87 @@ function copy_mindx_source_code {
     log_setup_info "Source code copy complete."
 }
 
+# --- GitHub Replication for Catastrophic Recovery or New Node ---
+GITHUB_REPO_URL="${MINDX_GITHUB_REPO:-https://github.com/codephreak/mindX.git}"
+REPLICATE_GITHUB_FLAG="${REPLICATE_GITHUB_FLAG:-false}"
+
+function replicate_from_github {
+    log_setup_info "Replicating mindX from GitHub: $GITHUB_REPO_URL"
+
+    # 1. Create rollback point of current state
+    local rollback_dir="${MINDX_DATA_DIR_ABS:-$PROJECT_ROOT/data}/rollbacks/pre_github_$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "$rollback_dir"
+    if [ -d "$PROJECT_ROOT/agents" ]; then
+        cp -r "$PROJECT_ROOT/agents" "$rollback_dir/" 2>/dev/null || true
+        cp -r "$PROJECT_ROOT/tools" "$rollback_dir/" 2>/dev/null || true
+        cp -r "$PROJECT_ROOT/llm" "$rollback_dir/" 2>/dev/null || true
+        cp -r "$PROJECT_ROOT/mindx_backend_service" "$rollback_dir/" 2>/dev/null || true
+        log_setup_info "Current state backed up to $rollback_dir"
+    fi
+
+    # 2. Clone from GitHub (shallow for speed)
+    local temp_clone="/tmp/mindx_github_clone_$$"
+    if ! git clone --depth 1 "$GITHUB_REPO_URL" "$temp_clone" 2>/dev/null; then
+        log_setup_error "GitHub clone failed. Rollback preserved at $rollback_dir"
+        return 1
+    fi
+
+    # 3. Verify integrity (critical files must exist)
+    local critical_files=("agents/core/mindXagent.py" "mindx_backend_service/main_service.py" "agents/orchestration/coordinator_agent.py")
+    for cf in "${critical_files[@]}"; do
+        if [ ! -f "$temp_clone/$cf" ]; then
+            log_setup_error "Cloned repo missing critical file: $cf"
+            rm -rf "$temp_clone"
+            return 1
+        fi
+    done
+
+    # 4. Record commit hash
+    local clone_commit
+    clone_commit=$(cd "$temp_clone" && git rev-parse HEAD)
+    log_setup_info "GitHub clone at commit: $clone_commit"
+
+    # 5. Copy source files (preserve data/ docs/ and vault)
+    local source_dirs=("agents" "api" "llm" "scripts" "tools" "utils" "mindx_backend_service" "orchestration")
+    for item in "${source_dirs[@]}"; do
+        if [ -e "$temp_clone/$item" ]; then
+            # Preserve error_pages, dashboard.html etc. in backend
+            if [ "$item" = "mindx_backend_service" ]; then
+                # Only replace .py files, keep HTML/static
+                find "$temp_clone/$item" -name "*.py" -exec cp --parents {} "$PROJECT_ROOT/" \; 2>/dev/null || true
+            else
+                rm -rf "$PROJECT_ROOT/$item"
+                cp -r "$temp_clone/$item" "$PROJECT_ROOT/"
+            fi
+            log_setup_info "Restored from GitHub: $item"
+        fi
+    done
+    # Copy requirements.txt if newer
+    if [ -f "$temp_clone/requirements.txt" ]; then
+        cp "$temp_clone/requirements.txt" "$PROJECT_ROOT/"
+    fi
+
+    # 6. Save restore record
+    local restore_record="${MINDX_DATA_DIR_ABS:-$PROJECT_ROOT/data}/last_github_restore.json"
+    mkdir -p "$(dirname "$restore_record")"
+    cat > "$restore_record" <<EOFR
+{"restored_from":"github","repo":"$GITHUB_REPO_URL","commit":"$clone_commit","timestamp":"$(date -Iseconds)","rollback_path":"$rollback_dir","mode":"${REPLICATE_MODE:-recovery}"}
+EOFR
+
+    # 7. Clean up
+    rm -rf "$temp_clone"
+    log_setup_info "GitHub replication complete. Commit: $clone_commit. Rollback: $rollback_dir"
+}
+
 # --- Create Base Project Structure if not exists ---
 function ensure_mindx_structure {
     log_setup_info "Ensuring MindX base directory structure exists at $PROJECT_ROOT..."
     
+    # GitHub-based replication (catastrophic recovery or new node)
+    if [[ "$REPLICATE_GITHUB_FLAG" == true ]]; then
+        replicate_from_github
+    fi
+
     # Only create mindx package structure if --replicate flag is used
     if [[ "$REPLICATE_SOURCE_FLAG" == true ]]; then
         mkdir -p "$PROJECT_ROOT/mindx/core"

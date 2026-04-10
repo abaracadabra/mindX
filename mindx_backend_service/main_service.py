@@ -296,7 +296,22 @@ async def docs_html_page():
     total_docs = sum(len(v) for v in categories.values())
     return _DashResponse(content=f"""<!DOCTYPE html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>mindX Documentation</title>
+<title>mindX Documentation — Autonomous Multi-Agent Intelligence</title>
+<meta name="description" content="Complete documentation for mindX: {total_docs} documents covering autonomous multi-agent orchestration, BDI cognitive architecture, BANKON vault identity, DAIO governance, augmentic intelligence, and the Godel machine self-improvement loop.">
+<meta name="keywords" content="mindX documentation, augmentic, agenticplace, BANKON, pythai, autonomous AI, Godel machine, multi-agent, BDI, DAIO governance, self-improving AI, sovereign agents, machine learning">
+<meta name="author" content="Professor Codephreak">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://mindx.pythai.net/docs.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="mindX Documentation — {total_docs} Documents">
+<meta property="og:description" content="Living documentation from an evolving autonomous AI system: architecture, agents, governance, identity, philosophy, and API reference.">
+<meta property="og:url" content="https://mindx.pythai.net/docs.html">
+<meta property="og:site_name" content="mindX">
+<meta property="og:image" content="https://mindx.pythai.net/favicon-32.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="mindX Documentation — {total_docs} Documents">
+<meta name="twitter:description" content="Living documentation from mindX: autonomous multi-agent orchestration, BANKON vault, DAIO governance, augmentic intelligence. {endpoint_count} API endpoints.">
+<meta name="twitter:image" content="https://mindx.pythai.net/favicon-32.png">
 <link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
@@ -371,7 +386,7 @@ details summary::-webkit-details-marker{{color:#4a5060}}
 
 {toc_html}
 
-<div class="ft"><a href="/">dashboard</a> &middot; mindx.pythai.net &middot; &copy; Professor Codephreak</div>
+<div class="ft"><a href="/">dashboard</a> &middot; <a href="/docs.html">docs</a> &middot; <a href="/book">book</a> &middot; <a href="/journal">journal</a> &middot; <a href="/redoc">api</a> &middot; <a href="/dojo/standings">dojo</a> &middot; <a href="/inference/status">inference</a> &middot; <a href="/automindx">origin</a> &middot; mindx.pythai.net &middot; &copy; Professor Codephreak</div>
 </div></body></html>""")
 
 _DOC_STYLE = """*{margin:0;padding:0;box-sizing:border-box}
@@ -444,11 +459,20 @@ def _render_md(md_text: str) -> str:
         del _table_row._seen
     h = re.sub(r'^\|(.+)\|$', _table_row, h, flags=re.MULTILINE)
     # Links (explicit markdown links first)
-    h = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', h)
+    # Convert .md references in markdown link targets to /doc/ paths
+    def _fix_md_link(m):
+        text, url = m.group(1), m.group(2)
+        # Convert relative .md links to /doc/ paths (e.g., TECHNICAL.md -> /doc/TECHNICAL)
+        if url.endswith('.md') and not url.startswith('http') and '/' not in url:
+            url = '/doc/' + url[:-3]
+        elif url.endswith('.md') and not url.startswith('http') and url.startswith('./'):
+            url = '/doc/' + url[2:-3]
+        return f'<a href="{url}">{text}</a>'
+    h = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', _fix_md_link, h)
     # Self-linking: bare .md references become clickable links to /doc/{name}
     # Match WORD.md or WORD_WORD.md patterns not already inside an href or <a> tag
     h = re.sub(
-        r'(?<!href=")(?<!/)(?<!</a>)(?<!</code>)\b([A-Za-z][A-Za-z0-9_\-]+)\.md\b',
+        r'(?<!href=")(?<!href="/doc/)(?<!/)(?<!</a>)(?<!</code>)\b([A-Za-z][A-Za-z0-9_\-]+)\.md\b',
         r'<a href="/doc/\1">\1.md</a>',
         h,
     )
@@ -460,17 +484,41 @@ def _render_md(md_text: str) -> str:
     h = re.sub(r'(</h[1-4]>|</pre>|<hr>|</blockquote>|</ul>|</ol>|</table>|</tr>)\s*</p>', r'\1', h)
     return h
 
-def _doc_page(title: str, body_html: str, meta: str = "") -> str:
+def _doc_page(title: str, body_html: str, meta: str = "", description: str = "", canonical_path: str = "") -> str:
+    import html as _html_mod
+    seo_desc = _html_mod.escape(description or f"{title} — documentation for mindX, the autonomous multi-agent orchestration system implementing BDI cognitive architecture with BANKON vault identity and DAIO governance.")
+    title = _html_mod.escape(title)
+    canon = f'https://mindx.pythai.net{canonical_path}' if canonical_path else ''
+    canon_tag = f'<link rel="canonical" href="{canon}">' if canon else ''
     nav = '''<div class="nav">
-<div class="nav-row"><span class="brand">mind<b>X</b></span><a href="/">dashboard</a><span class="sep">/</span><a href="/docs.html">docs</a><span class="sep">/</span><a href="/book">book</a><span class="sep">/</span><a href="/journal">journal</a><span class="sep">/</span><a href="/dojo/standings" class="dim">dojo</a><span class="sep">/</span><a href="/inference/status" class="dim">inference</a><span class="sep">/</span><a href="/governance/status" class="dim">governance</a></div>
-<div class="nav-row"><span class="grp">philosophy</span><a href="/doc/manifesto" class="dim">manifesto</a><a href="/doc/thesis" class="dim">thesis</a><a href="/doc/AUTOMINDX_ORIGIN" class="dim">origin</a><a href="/doc/whitepaper" class="dim">whitepaper</a><a href="/doc/ataraxia" class="dim">ataraxia</a><a href="/doc/roadmap" class="dim">roadmap</a><span class="sep">|</span><span class="grp">arch</span><a href="/doc/TECHNICAL" class="dim">overview</a><a href="/doc/ORCHESTRATION" class="dim">orchestration</a><a href="/doc/codebase_map" class="dim">codebase</a><a href="/doc/hierarchy" class="dim">hierarchy</a><span class="sep">|</span><span class="grp">agents</span><a href="/doc/mindXagent" class="dim">mindXagent</a><a href="/doc/ceo_agent" class="dim">ceo</a><a href="/doc/mastermind_agent" class="dim">mastermind</a><a href="/doc/bdi_agent" class="dim">bdi</a><a href="/doc/strategic_evolution_agent" class="dim">evolution</a></div>
-<div class="nav-row"><span class="grp">gov</span><a href="/doc/DAIO" class="dim">daio</a><a href="/doc/DAIO_CIVILIZATION_GOVERNANCE" class="dim">civilization</a><a href="/doc/IDENTITY" class="dim">identity</a><span class="sep">|</span><span class="grp">memory</span><a href="/doc/pgvectorscale_memory_integration" class="dim">pgvector</a><a href="/doc/EMBEDDING_SYSTEM" class="dim">embed</a><a href="/doc/aglm" class="dim">aglm</a><a href="/doc/memory" class="dim">memory</a><span class="sep">|</span><span class="grp">inference</span><a href="/doc/VLLM_INTEGRATION" class="dim">vllm</a><a href="/doc/ollama_api_integration" class="dim">ollama</a><span class="sep">|</span><span class="grp">time</span><a href="/doc/TIME_ORACLE" class="dim">oracle</a><a href="/automindx" class="dim" style="color:#d2a8ff">automindx</a><span class="sep">|</span><span class="grp">tools</span><a href="/doc/TOOLS_INDEX" class="dim">index</a><a href="/doc/a2a_tool" class="dim">a2a</a><a href="/doc/mcp_tool" class="dim">mcp</a><span class="sep">|</span><span class="grp">publish</span><a href="/doc/AUTHOR_AGENT" class="dim">authoragent</a><a href="/book" class="dim">book</a><a href="/journal" class="dim">journal</a><span class="sep">|</span><span class="grp">deploy</span><a href="/doc/DEPLOYMENT_MINDX_PYTHAI_NET" class="dim">production</a><a href="/doc/security" class="dim">security</a><span class="sep">|</span><span class="grp">api</span><a href="/redoc" class="dim">reference</a><a href="/doc/mistral_api" class="dim">mistral</a></div>
+<div class="nav-row"><span class="brand">mind<b>X</b></span><a href="/">dashboard</a><span class="sep">/</span><a href="/docs.html">docs</a><span class="sep">/</span><a href="/book">book</a><span class="sep">/</span><a href="/journal">journal</a><span class="sep">/</span><a href="/redoc" class="dim">api</a><span class="sep">/</span><a href="/dojo/standings" class="dim">dojo</a><span class="sep">/</span><a href="/inference/status" class="dim">inference</a><span class="sep">/</span><a href="/governance/status" class="dim">governance</a><span class="sep">/</span><a href="/automindx" class="dim" style="color:#d2a8ff">origin</a></div>
+<div class="nav-row"><span class="grp">philosophy</span><a href="/doc/manifesto" class="dim">manifesto</a><a href="/doc/thesis" class="dim">thesis</a><a href="/doc/AUTOMINDX_ORIGIN" class="dim">origin</a><a href="/doc/whitepaper" class="dim">whitepaper</a><a href="/doc/ataraxia" class="dim">ataraxia</a><a href="/doc/roadmap" class="dim">roadmap</a><a href="/doc/PRESS_RELEASE" class="dim">press</a><span class="sep">|</span><span class="grp">arch</span><a href="/doc/TECHNICAL" class="dim">overview</a><a href="/doc/ORCHESTRATION" class="dim">orchestration</a><a href="/doc/codebase_map" class="dim">codebase</a><a href="/doc/hierarchy" class="dim">hierarchy</a><a href="/doc/CORE" class="dim">core</a><span class="sep">|</span><span class="grp">agents</span><a href="/doc/mindXagent" class="dim">mindXagent</a><a href="/doc/ceo_agent" class="dim">ceo</a><a href="/doc/mastermind_agent" class="dim">mastermind</a><a href="/doc/bdi_agent" class="dim">bdi</a><a href="/doc/strategic_evolution_agent" class="dim">evolution</a><a href="/doc/AUTHOR_AGENT" class="dim">author</a><a href="/doc/AGENTS" class="dim">all</a></div>
+<div class="nav-row"><span class="grp">gov</span><a href="/doc/DAIO" class="dim">daio</a><a href="/doc/DAIO_CIVILIZATION_GOVERNANCE" class="dim">civilization</a><a href="/doc/IDENTITY" class="dim">identity</a><a href="/doc/SECURITY_VULNERABILITIES" class="dim">security</a><span class="sep">|</span><span class="grp">memory</span><a href="/doc/pgvectorscale_memory_integration" class="dim">pgvector</a><a href="/doc/EMBEDDING_SYSTEM" class="dim">embed</a><a href="/doc/aglm" class="dim">aglm</a><a href="/doc/memory" class="dim">memory</a><span class="sep">|</span><span class="grp">inference</span><a href="/doc/VLLM_INTEGRATION" class="dim">vllm</a><a href="/doc/ollama_api_integration" class="dim">ollama</a><a href="/doc/mistral_api" class="dim">mistral</a><a href="/doc/gemini_api" class="dim">gemini</a><span class="sep">|</span><span class="grp">time</span><a href="/doc/TIME_ORACLE" class="dim">oracle</a></div>
+<div class="nav-row"><span class="grp">tools</span><a href="/doc/TOOLS_INDEX" class="dim">index</a><a href="/doc/TOOLS" class="dim">tools</a><a href="/doc/a2a_tool" class="dim">a2a</a><a href="/doc/mcp_tool" class="dim">mcp</a><a href="/doc/shell_tool" class="dim">shell</a><span class="sep">|</span><span class="grp">publish</span><a href="/doc/AUTHOR_AGENT" class="dim">authoragent</a><a href="/book" class="dim">book</a><a href="/journal" class="dim">journal</a><span class="sep">|</span><span class="grp">deploy</span><a href="/doc/DEPLOYMENT_MINDX_PYTHAI_NET" class="dim">production</a><a href="/doc/security" class="dim">security</a><a href="/doc/monitoring" class="dim">monitoring</a><span class="sep">|</span><span class="grp">api</span><a href="/redoc" class="dim">reference</a><a href="/docs" class="dim">swagger</a><span class="sep">|</span><span class="grp">learn</span><a href="/doc/USAGE" class="dim">usage</a><a href="/doc/INSTRUCTIONS" class="dim">guide</a><a href="/doc/hackathon" class="dim">hackathon</a></div>
 </div>'''
     meta_html = f'<div class="title-meta">{meta}</div>' if meta else ''
     font_ctrl = '''<div class="font-ctrl"><button onclick="adjFont(1)" title="Increase font size">+</button><button onclick="adjFont(-1)" title="Decrease font size">−</button></div>
 <script>function adjFont(d){const p=document.querySelector('.page');const s=parseFloat(getComputedStyle(p).fontSize)||14;p.style.fontSize=Math.max(10,Math.min(22,s+d))+'px';try{localStorage.setItem('mindx_fs',p.style.fontSize)}catch{}}
 try{const fs=localStorage.getItem('mindx_fs');if(fs)document.addEventListener('DOMContentLoaded',()=>{document.querySelector('.page').style.fontSize=fs})}catch{}</script>'''
-    return f'<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title} — mindX</title><link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><style>{_DOC_STYLE}</style></head><body><div class="page">{nav}{meta_html}{body_html}</div>{font_ctrl}</body></html>'
+    return f'''<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{title} — mindX</title>
+<meta name="description" content="{seo_desc[:160]}">
+<meta name="keywords" content="mindX, augmentic, agenticplace, BANKON, pythai, autonomous AI, Godel machine, {title}">
+<meta name="author" content="Professor Codephreak">
+<meta name="robots" content="index, follow">
+{canon_tag}
+<meta property="og:type" content="article">
+<meta property="og:title" content="{title} — mindX">
+<meta property="og:description" content="{seo_desc[:200]}">
+<meta property="og:url" content="https://mindx.pythai.net{canonical_path}">
+<meta property="og:site_name" content="mindX">
+<meta property="og:image" content="https://mindx.pythai.net/favicon-32.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{title} — mindX">
+<meta name="twitter:description" content="{seo_desc[:200]}">
+<meta name="twitter:image" content="https://mindx.pythai.net/favicon-32.png">
+<link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>{_DOC_STYLE}</style></head><body><div class="page">{nav}{meta_html}{body_html}</div>{font_ctrl}</body></html>'''
 
 @app.get("/doc/{name}", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
 async def read_doc(name: str):
@@ -487,11 +535,19 @@ async def read_doc(name: str):
     if not doc_path.exists() or not doc_path.is_file():
         doc_path = PROJECT_ROOT / "docs" / "publications" / "daily" / safe
     if not doc_path.exists() or not doc_path.is_file():
-        return _DashResponse(content=_doc_page("Not Found", f"<h1>Document not found</h1><p><code>{safe}</code> does not exist in docs/</p>"), status_code=404)
+        return _DashResponse(content=_doc_page("Not Found", f"<h1>Document not found</h1><p><code>{safe}</code> does not exist in docs/</p><p>Browse all documents at <a href='/docs.html'>docs</a> or read <a href='/book'>The Book of mindX</a>.</p>"), status_code=404)
     md = doc_path.read_text(encoding="utf-8", errors="replace")
     size_kb = round(doc_path.stat().st_size / 1024, 1)
+    # Extract first heading for SEO description
+    _first_heading = ""
+    for _line in md.split("\n")[:10]:
+        if _line.startswith("# "):
+            _first_heading = _line[2:].strip()[:120]
+            break
     body = _render_md(md)
-    return _DashResponse(content=_doc_page(safe, body, f"{safe} &middot; {size_kb} KB"))
+    # Add back-links footer
+    back_links = f'<hr style="margin:32px 0 16px;border-color:rgba(88,166,255,.12)"><div style="font-size:12px;color:#4a5060;display:flex;gap:16px;flex-wrap:wrap"><a href="/docs.html" style="color:#58a6ff">All Documents</a><a href="/book" style="color:#d2a8ff">The Book of mindX</a><a href="/journal" style="color:#3fb950">Improvement Journal</a><a href="/redoc" style="color:#d29922">API Reference</a></div>'
+    return _DashResponse(content=_doc_page(safe, body + back_links, f"{safe} &middot; {size_kb} KB", description=_first_heading or f"mindX documentation: {safe}", canonical_path=f"/doc/{name}"))
 
 @app.get("/book", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
 async def book_of_mindx_page():
@@ -549,16 +605,43 @@ async def book_of_mindx_page():
                     editions_html += f'<li style="margin:3px 0;font-size:10px"><a href="/doc/{name}" style="color:#8b949e;text-decoration:none">{name}</a></li>'
                 editions_html += '</ul></details>'
 
-    return _DashResponse(content=_doc_page("The Book of mindX", body + editions_html))
+    # Add cross-links to related docs after the editions
+    cross_links = '<hr style="margin:32px 0 16px;border-color:rgba(88,166,255,.12)">'
+    cross_links += '<h2 style="color:#58a6ff;font-size:16px;margin-bottom:12px">Related Documentation</h2>'
+    cross_links += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:20px">'
+    _related = [
+        ("/doc/TECHNICAL", "Technical Overview", "Architecture and design"),
+        ("/doc/ORCHESTRATION", "Orchestration", "Agent hierarchy and coordination"),
+        ("/doc/DAIO", "DAIO Governance", "Decentralized autonomous intelligence"),
+        ("/doc/IDENTITY", "Identity System", "BANKON vault and wallets"),
+        ("/doc/AUTOMINDX_ORIGIN", "AUTOMINDx Origin", "Where mindX began"),
+        ("/doc/ataraxia", "Ataraxia", "Philosophy of sovereign calm"),
+        ("/doc/manifesto", "Manifesto", "The founding vision"),
+        ("/doc/thesis", "Thesis", "Academic foundation"),
+        ("/doc/aglm", "AGLM", "Augmentic General Language Model"),
+        ("/doc/TIME_ORACLE", "time.oracle", "Sovereign system clock"),
+        ("/doc/VLLM_INTEGRATION", "vLLM", "Inference pipeline"),
+        ("/doc/AUTHOR_AGENT", "AuthorAgent", "How the book writes itself"),
+    ]
+    for href, name, desc in _related:
+        cross_links += f'<a href="{href}" style="display:block;padding:8px 10px;background:rgba(13,17,23,.6);border:1px solid rgba(26,31,46,.4);border-radius:4px;text-decoration:none;transition:border-color .2s"><span style="color:#58a6ff;font-size:11px;font-weight:600">{name}</span><br><span style="color:#4a5060;font-size:10px">{desc}</span></a>'
+    cross_links += '</div>'
+    cross_links += '<div style="font-size:11px;color:#4a5060;text-align:center;margin-top:16px"><a href="/docs.html" style="color:#58a6ff">Browse all documents</a> &middot; <a href="/journal" style="color:#3fb950">Improvement Journal</a> &middot; <a href="/redoc" style="color:#d29922">API Reference ({} endpoints)</a></div>'.format("206")
+    return _DashResponse(content=_doc_page(
+        "The Book of mindX", body + editions_html + cross_links, "",
+        description="The Book of mindX — the evolving chronicle of an autonomous self-improving Godel machine. Written by AuthorAgent on a 28-day lunar cycle. Architecture, philosophy, governance, BANKON vault, DAIO, augmentic intelligence.",
+        canonical_path="/book",
+    ))
 
 @app.get("/journal", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
 async def improvement_journal_page():
     """Serve the auto-generated improvement journal."""
     journal_path = PROJECT_ROOT / "docs" / "IMPROVEMENT_JOURNAL.md"
     if not journal_path.exists():
-        return _DashResponse(content=_doc_page("Journal", "<h1>No journal entries yet</h1>"))
+        return _DashResponse(content=_doc_page("Journal", "<h1>No journal entries yet</h1><p>The improvement journal is written automatically every 30 minutes. <a href='/book'>Read The Book of mindX</a> or <a href='/docs.html'>browse all docs</a>.</p>"))
     md = journal_path.read_text(encoding="utf-8")
-    return _DashResponse(content=_doc_page("Improvement Journal", _render_md(md)))
+    back = '<hr style="margin:32px 0 16px;border-color:rgba(88,166,255,.12)"><div style="font-size:12px;color:#4a5060;display:flex;gap:16px;flex-wrap:wrap"><a href="/docs.html" style="color:#58a6ff">All Documents</a><a href="/book" style="color:#d2a8ff">The Book of mindX</a><a href="/redoc" style="color:#d29922">API Reference</a></div>'
+    return _DashResponse(content=_doc_page("Improvement Journal", _render_md(md) + back, "", description="mindX Improvement Journal — timestamped log of autonomous decisions, self-improvement campaigns, belief changes, and system snapshots.", canonical_path="/journal"))
 
 _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
 _ERROR_PAGES_DIR = Path(__file__).parent / "error_pages"
@@ -1121,6 +1204,35 @@ async def diagnostics_live_endpoint():
     except Exception:
         pass
 
+    # Autonomous loop + Author agent diagnostics
+    autonomous_data = {}
+    try:
+        from agents.core.mindXagent import MindXAgent
+        mx = await _safe_await(MindXAgent.get_instance(), default=None)
+        if mx:
+            autonomous_data = {
+                "loop_running": getattr(mx, '_autonomous_running', False),
+                "last_cycle": getattr(mx, '_last_cycle_time', None),
+                "stuck_cycles": getattr(mx, '_stuck_cycle_count', 0) if hasattr(mx, '_stuck_cycle_count') else (getattr(mx, 'stuck_loop_detector', None) and getattr(mx.stuck_loop_detector, 'no_progress_count', 0)) or 0,
+                "circuit_breaker_open": getattr(mx, '_circuit_breaker_open', False) if hasattr(mx, '_circuit_breaker_open') else (getattr(mx, 'stuck_loop_detector', None) and getattr(mx.stuck_loop_detector, 'circuit_open', False)) or False,
+                "restart_pending": getattr(mx, '_restart_pending', False),
+            }
+    except Exception:
+        pass
+    author_data = {}
+    try:
+        from agents.author_agent import AuthorAgent
+        aa = await _safe_await(AuthorAgent.get_instance(), default=None)
+        if aa:
+            author_data = {
+                "periodic_active": getattr(aa, '_periodic_running', False),
+                "last_chapter": getattr(aa, '_last_chapter_title', None),
+                "lunar_day": getattr(aa, '_current_lunar_day', None),
+                "editions_published": getattr(aa, '_editions_published', 0),
+            }
+    except Exception:
+        pass
+
     response = {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "uptime": uptime, "uptime_seconds": up_s,
@@ -1139,6 +1251,8 @@ async def diagnostics_live_endpoint():
         "vllm": vllm_data,
         "governor": governor_data,
         "agent_interactions": agent_interactions_data,
+        "autonomous": autonomous_data,
+        "author": author_data,
         "recent_logs": logs,
     }
 
@@ -1421,12 +1535,51 @@ async def startup_event():
                     logger.debug(f"Periodic embedding: {emb_e}")
                 await asyncio.sleep(21600)  # Every 6 hours
 
+        # HealthAuditorTool — monitors vital signs, triggers recovery
+        async def _periodic_health_audit():
+            await asyncio.sleep(180)  # Wait 3 min for full startup
+            try:
+                from tools.core.health_auditor_tool import HealthAuditorTool
+                auditor = HealthAuditorTool(memory_agent=memory_agent, config=app_config)
+                _author_last_restart = [0.0]
+                _loop_last_restart = [0.0]
+
+                async def _recovery_callback(audit_results):
+                    now = time.time()
+                    # Restart improvement loop if dead (max once/hour)
+                    loop_check = audit_results.get("improvement_loop", {})
+                    if not loop_check.get("healthy") and now - _loop_last_restart[0] > 3600:
+                        _loop_last_restart[0] = now
+                        logger.warning("HealthAuditor: improvement loop dead, restarting autonomous mode")
+                        try:
+                            from agents.core.mindXagent import MindXAgent
+                            instance = MindXAgent._instance
+                            if instance:
+                                if hasattr(instance, 'stuck_loop_detector') and hasattr(instance.stuck_loop_detector, 'reset'):
+                                    instance.stuck_loop_detector.reset()
+                                instance.autonomous_mode = False
+                                await asyncio.sleep(2)
+                                await instance.start_autonomous_mode(model="qwen3:1.7b", provider="ollama")
+                        except Exception as e:
+                            logger.error(f"HealthAuditor: failed to restart autonomous mode: {e}")
+                    # Restart AuthorAgent if stale (max once/hour)
+                    author_check = audit_results.get("author_agent", {})
+                    if not author_check.get("healthy") and now - _author_last_restart[0] > 3600:
+                        _author_last_restart[0] = now
+                        logger.warning("HealthAuditor: AuthorAgent stale, restarting periodic task")
+                        asyncio.create_task(_periodic_author())
+
+                await auditor.start_periodic_audit(recovery_callback=_recovery_callback)
+            except Exception as he:
+                logger.warning(f"HealthAuditor failed to start: {he}")
+
         asyncio.create_task(_auto_start_autonomous())
         asyncio.create_task(_periodic_memory_promotion())
         asyncio.create_task(_periodic_journal())
         asyncio.create_task(_periodic_author())
         asyncio.create_task(_periodic_embedding())
-        logger.info("Autonomous mode + STM→LTM + Journal + AuthorAgent + Embedding scheduled")
+        asyncio.create_task(_periodic_health_audit())
+        logger.info("Autonomous mode + STM→LTM + Journal + AuthorAgent + Embedding + HealthAuditor scheduled")
 
         # Log backend startup transcript to data/ via memory_agent (logs are memories; startup_agent can get a copy)
         try:

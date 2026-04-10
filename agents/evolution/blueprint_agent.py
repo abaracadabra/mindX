@@ -145,6 +145,9 @@ class BlueprintAgent:
 
         try:
             response_str = await self.llm_handler.generate_text(prompt, model=self.llm_handler.model_name_for_api, max_tokens=4000, temperature=0.2, json_mode=True)
+            if not response_str:
+                logger.warning(f"{self.agent_id}: LLM returned empty/None response for blueprint")
+                return {"error": "LLM returned no response", "blueprint_title": "N/A", "focus_areas": [], "bdi_todo_list": []}
             blueprint = json.loads(response_str)
             
             if not all(k in blueprint for k in ["blueprint_title", "focus_areas", "bdi_todo_list"]):

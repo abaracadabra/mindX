@@ -112,6 +112,7 @@ class ImprovementResult:
     metrics: Dict[str, Any]
     feedback: Dict[str, Any]
     next_steps: List[str]
+    restart_required: bool = False
 
 class MindXAgent:
     """
@@ -376,11 +377,22 @@ class MindXAgent:
                 
                 # Initialize StrategicEvolutionAgent
                 if self.coordinator_agent and self.mastermind_agent:
-                    self.strategic_evolution_agent = StrategicEvolutionAgent(
-                        coordinator_agent=self.coordinator_agent,
-                        mastermind_agent=self.mastermind_agent,
-                        config=self.config
-                    )
+                    try:
+                        from llm.model_registry import ModelRegistry
+                        _model_registry = ModelRegistry()
+                        self.strategic_evolution_agent = StrategicEvolutionAgent(
+                            agent_id="strategic_evolution_agent",
+                            belief_system=self.belief_system,
+                            coordinator_agent=self.coordinator_agent,
+                            model_registry=_model_registry,
+                            memory_agent=self.memory_agent,
+                            config_override=self.config,
+                            test_mode=self.test_mode,
+                        )
+                        if hasattr(self.strategic_evolution_agent, '_async_init'):
+                            await self.strategic_evolution_agent._async_init()
+                    except Exception as _sea_err:
+                        logger.warning(f"{self.log_prefix} StrategicEvolutionAgent init: {_sea_err}")
                 
                 # Subscribe to coordinator events - mindXagent coordinates agents that handle events
                 if self.coordinator_agent:
@@ -1465,6 +1477,11 @@ class MindXAgent:
             # Get next steps from analysis
             next_steps = result_analysis.improvement_opportunities.copy()
             
+            # Check if any improvement requires a restart (code promoted to main)
+            _restart_needed = any(
+                imp.get("code_updated_requires_restart") or imp.get("promoted_to_main")
+                for imp in improvements_made if isinstance(imp, dict)
+            )
             result = ImprovementResult(
                 goal=improvement_goal,
                 success=success,
@@ -1475,7 +1492,8 @@ class MindXAgent:
                     "memory_context": asdict(memory_context),
                     "result_analysis": asdict(result_analysis)
                 },
-                next_steps=next_steps
+                next_steps=next_steps,
+                restart_required=_restart_needed,
             )
             
             # Save to improvement history
@@ -2289,6 +2307,47 @@ class MindXAgent:
             logger.error(f"{self.log_prefix} Error in GitHub backup: {e}", exc_info=True)
             return False
     
+    async def _graceful_restart(self, reason: str = "unknown"):
+        """Gracefully restart the mindX process after code promotion or critical update."""
+        logger.warning(f"{self.log_prefix} Initiating graceful restart: {reason}")
+        try:
+            # Create rollback point before restart
+            try:
+                from agents.orchestration.system_state_tracker import SystemStateTracker
+                tracker = SystemStateTracker(memory_agent=self.memory_agent)
+                await tracker.create_rollback_point(reason=f"pre_restart_{reason}")
+                logger.info(f"{self.log_prefix} Rollback point created before restart")
+            except Exception as rp_err:
+                logger.warning(f"{self.log_prefix} Could not create rollback point: {rp_err}")
+
+            # Log restart event
+            if self.memory_agent:
+                await self.memory_agent.log_process(
+                    "graceful_restart",
+                    {"reason": reason, "timestamp": time.time()},
+                    {"agent_id": self.agent_id}
+                )
+
+            # Stop autonomous mode cleanly
+            self.autonomous_mode = False
+            self._autonomous_running = False
+
+            # Determine restart method
+            import shutil
+            if shutil.which("systemctl"):
+                # Production: use systemd restart (non-blocking)
+                logger.warning(f"{self.log_prefix} Requesting systemd restart...")
+                import subprocess
+                subprocess.Popen(["systemctl", "restart", "mindx.service"],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                # Development: re-exec the process
+                logger.warning(f"{self.log_prefix} Re-executing process via os.execv...")
+                import os, sys
+                os.execv(sys.executable, [sys.executable] + sys.argv)
+        except Exception as e:
+            logger.error(f"{self.log_prefix} Graceful restart failed: {e}", exc_info=True)
+
     async def start_autonomous_mode(self, model: str = "mistral-nemo:latest", provider: str = "ollama") -> Dict[str, Any]:
         """
         Start mindXagent in autonomous mode for continuous self-improvement.
@@ -2451,6 +2510,10 @@ class MindXAgent:
                                     has_file_changes = len(result.file_changes) > 0
                                 elif hasattr(result, 'changes_made') and result.changes_made:
                                     has_file_changes = True
+                                # Handle restart signal from code promotion
+                                if getattr(result, 'restart_required', False):
+                                    logger.warning(f"{self.log_prefix} RESTART REQUIRED — code promoted to main")
+                                    await self._graceful_restart(reason="code_promoted_to_main")
                             else:
                                 logger.warning(f"{self.log_prefix} Improvement cycle {cycle_count} had issues")
                                 error_message = getattr(result, 'error', 'Improvement cycle had issues')

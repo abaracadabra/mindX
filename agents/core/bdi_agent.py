@@ -899,7 +899,7 @@ class BDIAgent:
     def set_goal(self, goal_description: str, priority: int = 1, **kwargs):
         goal_id = kwargs.get("goal_id", str(uuid.uuid4())[:8])
         new_goal_entry = {"id": goal_id, "goal": goal_description, "priority": int(priority), "status": "pending", "added_at": time.time(), **kwargs}
-        
+
         if self.memory_agent and asyncio.get_event_loop().is_running():
              asyncio.create_task(self.memory_agent.log_process(
                 'bdi_goal_set',
@@ -911,6 +911,10 @@ class BDIAgent:
         self.logger.info(f"Added goal ID '{goal_id}': '{goal_description}' (Prio: {priority})")
         if kwargs.get("is_primary"): self.desires.update({"primary_goal_description": goal_description, "primary_goal_id": goal_id})
         self.desires["priority_queue"].sort(key=lambda x: (-x["priority"], x["added_at"]))
+
+    async def add_goal(self, goal_description: str, priority: int = 1, **kwargs):
+        """Async alias for set_goal — used by mindXagent orchestration."""
+        return self.set_goal(goal_description=goal_description, priority=priority, **kwargs)
     
     def get_current_goal_entry(self) -> Optional[Dict[str, Any]]:
         for goal_entry in self.desires["priority_queue"]:
