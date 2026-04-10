@@ -66,36 +66,23 @@ class OllamaAPI:
         config: Optional[Config] = None
     ):
         self.config = config or Config()
-        
-        # Support both base_url and host/port configuration
-        if base_url:
+
+        # Environment variable ALWAYS wins — set in systemd for production deployments
+        env_url = os.getenv("MINDX_LLM__OLLAMA__BASE_URL")
+        if env_url:
+            self.base_url = env_url
+        elif base_url:
             self.base_url = base_url
         elif host and port:
             self.base_url = f"http://{host}:{port}"
         else:
-            # Try to load from settings if available (matching chatter.py pattern)
-            try:
-                from webmind.settings import SettingsManager
-                settings = SettingsManager()
-                base_url = settings.get('ollama_base_url', None)
-                if base_url:
-                    self.base_url = base_url
-            except:
-                pass
-            
-            # Environment variable ALWAYS takes precedence (set in systemd for production)
-            env_url = os.getenv("MINDX_LLM__OLLAMA__BASE_URL")
-            if env_url:
-                self.base_url = env_url
-            elif not hasattr(self, 'base_url') or not self.base_url:
-                config_url = self.config.get("llm.ollama.base_url")
-                config_host = self.config.get("llm.ollama.host", "localhost")
-                config_port = self.config.get("llm.ollama.port", 11434)
-
-                if config_url:
-                    self.base_url = config_url
-                else:
-                    self.base_url = f"http://{config_host}:{config_port}"
+            config_url = self.config.get("llm.ollama.base_url")
+            config_host = self.config.get("llm.ollama.host", "localhost")
+            config_port = self.config.get("llm.ollama.port", 11434)
+            if config_url:
+                self.base_url = config_url
+            else:
+                self.base_url = f"http://{config_host}:{config_port}"
         
         # Store fallback URL for connection failures (localhost is good policy)
         self.fallback_url = self.config.get("llm.ollama.fallback_url", "http://localhost:11434")
@@ -411,7 +398,7 @@ class OllamaAPI:
     def switch_to_primary(self):
         """Switch back to primary URL (GPU server)"""
         if self.using_fallback:
-            primary_url = self.config.get("llm.ollama.base_url", "http://10.0.0.155:18080")
+            primary_url = os.getenv("MINDX_LLM__OLLAMA__BASE_URL") or self.config.get("llm.ollama.base_url", "http://localhost:11434")
             old_url = self.base_url
             self.base_url = primary_url.rstrip('/').replace('/api', '')
             self.api_url = f"{self.base_url}/api"
