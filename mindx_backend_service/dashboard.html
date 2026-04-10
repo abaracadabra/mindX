@@ -56,19 +56,19 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 .tabs{display:flex;gap:1px;background:rgba(20,24,32,.4);flex-shrink:0}
 .tab{flex:1;padding:5px;text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:#6e7681;background:rgba(10,14,20,.9);cursor:pointer;transition:color .15s}
 .tab:hover{color:#b0b8c4}.tab.active{color:#58a6ff;border-bottom:2px solid #58a6ff}
-.conv{flex:1;overflow-y:auto;padding:4px 8px;background:rgba(5,8,12,.5);scrollbar-width:none}
-.conv::-webkit-scrollbar{display:none}
+.conv{flex:1;overflow-y:auto;padding:6px 10px;background:rgba(5,8,12,.5);scrollbar-width:thin;scrollbar-color:rgba(88,166,255,.2) transparent}
+.conv::-webkit-scrollbar{width:6px}.conv::-webkit-scrollbar-track{background:transparent}.conv::-webkit-scrollbar-thumb{background:rgba(88,166,255,.2);border-radius:3px}.conv::-webkit-scrollbar-thumb:hover{background:rgba(88,166,255,.35)}
 .msg{margin-bottom:6px;padding:6px 8px;border-radius:3px;font-size:12px;line-height:1.5}
 .msg-usr{background:rgba(22,16,32,.5);border-left:2px solid #d2a8ff}
 .msg-ai{background:rgba(10,32,18,.5);border-left:2px solid #3fb950}
-.msg-hdr{font-size:9px;color:#3d424d;margin-bottom:2px;display:flex;justify-content:space-between}
+.msg-hdr{font-size:10px;color:#6e7681;margin-bottom:3px;display:flex;justify-content:space-between}
 .msg-txt{color:#a0a8b4;white-space:pre-wrap;word-break:break-word}
 .rk{display:inline-block;padding:1px 4px;border-radius:2px;font-size:9px;font-weight:700;margin-right:3px}
 .rk-s{background:rgba(20,50,20,.7);color:#3fb950}.rk-b{background:rgba(20,36,50,.7);color:#58a6ff}
 .rk-v{background:rgba(36,36,20,.7);color:#d29922}.rk-p{background:rgba(20,20,36,.7);color:#6e7681}
 .rk-u{background:rgba(20,20,20,.7);color:#3d424d}
 .pulse{animation:p 2s ease-in-out infinite}@keyframes p{0%,100%{opacity:.3}50%{opacity:1}}
-.toast{position:fixed;top:36px;right:12px;z-index:10;width:340px;pointer-events:none}
+.toast{position:fixed;top:48px;right:12px;z-index:10;width:340px;pointer-events:none}
 .toast-item{background:rgba(10,32,18,.92);border:1px solid rgba(63,185,80,.3);border-radius:5px;padding:8px 10px;margin-bottom:6px;backdrop-filter:blur(12px);animation:slideIn .5s ease-out,toastPulse 2s ease-in-out 1s 2,fadeOut .8s ease-in 12s forwards;pointer-events:auto;box-shadow:0 4px 24px rgba(63,185,80,.15),0 2px 12px rgba(0,0,0,.4)}
 .toast-item .t-hdr{font-size:10px;color:#4a5060;display:flex;justify-content:space-between;margin-bottom:3px}
 .toast-item .t-q{font-size:11px;color:#d2a8ff;margin-bottom:4px;line-height:1.4}
@@ -279,26 +279,26 @@ function rpnl(d){
   const p=document.getElementById('pnl');
   if(curT===0){
     const ms=d.interactions||[];
-    if(!ms.length){p.innerHTML='<div class="msg msg-ai"><div class="msg-txt" style="color:#3d424d">waiting...</div></div>';return}
+    if(!ms.length){p.innerHTML='<div class="msg msg-ai"><div class="msg-txt" style="color:#6e7681;font-size:12px">mindX is initializing. Dialogues will appear as agents communicate.</div></div>';return}
     const recentKeys=new Set(pendingNew.map(pn=>pn.m.timestamp+'_'+(pn.m.prompt||'').slice(0,20)));
     let h='';ms.forEach(m=>{
-      const ts=m.timestamp||'',td=ts.length>10?ts.slice(5,10)+' '+ts.slice(11,19):ts;
+      const ts=m.timestamp||'',td=ts.length>10?ts.slice(5,19).replace('T',' '):ts;
       const key=ts+'_'+(m.prompt||'').slice(0,20);
       const isNew=recentKeys.has(key);
       const cls=isNew?' msg-new':'';
-      h+=`<div class="msg msg-usr${cls}"><div class="msg-hdr"><span style="color:#d2a8ff">${m.agent||'mindX'}</span><span>${td}</span></div><div class="msg-txt">${(m.prompt||'').replace(/</g,'&lt;').slice(0,180)}</div></div>`;
-      h+=`<div class="msg msg-ai${cls}"><div class="msg-hdr"><span style="color:#3fb950">${m.model||'?'}</span><span>${m.latency_ms?m.latency_ms+'ms':''}</span></div><div class="msg-txt">${(m.response||'').replace(/</g,'&lt;').slice(0,280)}</div></div>`;
+      h+=`<div class="msg msg-usr${cls}"><div class="msg-hdr"><span style="color:#d2a8ff;font-weight:600">${m.agent||'mindX'}</span><span>${td}</span></div><div class="msg-txt">${(m.prompt||'').replace(/</g,'&lt;').slice(0,300)}</div></div>`;
+      h+=`<div class="msg msg-ai${cls}"><div class="msg-hdr"><span style="color:#3fb950;font-weight:600">${m.model||'?'}</span><span>${m.latency_ms?m.latency_ms+'ms':''}</span></div><div class="msg-txt">${(m.response||'').replace(/</g,'&lt;').slice(0,500)}</div></div>`;
     });p.innerHTML=h;
     // Auto-scroll to bottom for newest
     p.scrollTop=p.scrollHeight;
   } else if(curT===1){
     // Actions
     const acts=d.actions||[];
-    if(!acts.length){p.innerHTML='<div style="padding:8px;color:#3d424d">No actions yet. Autonomous loop will generate actions from backlog and model intelligence.</div>';return}
+    if(!acts.length){p.innerHTML='<div style="padding:12px;color:#6e7681;font-size:12px">No actions yet. The autonomous loop will generate actions from the improvement backlog.</div>';return}
     let h='';acts.forEach(a=>{
       const sc=a.status==='completed'?'#3fb950':a.status==='failed'?'#f85149':'#d29922';
-      const ts=(a.created_at||'').slice(11,19);
-      h+=`<div style="padding:5px 0;border-bottom:1px solid rgba(8,11,16,.4)"><div class="r"><span style="color:${sc};font-weight:600;font-size:8px">${a.status.toUpperCase()}</span><span style="color:#3d424d;font-size:8px">${a.source||''} ${ts}</span></div><div style="font-size:10px;color:#b0b8c4;margin:2px 0;line-height:1.4">${a.description}</div><div style="font-size:8px;color:#4a5060">${a.agent_id} &middot; ${a.action_type}${a.result?' &middot; '+a.result:''}</div></div>`;
+      const ts=(a.created_at||'').slice(5,19).replace('T',' ');
+      h+=`<div style="padding:8px 6px;border-bottom:1px solid rgba(8,11,16,.4)"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="color:${sc};font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px">${a.status}</span><span style="color:#6e7681;font-size:10px">${a.source||''} ${ts}</span></div><div style="font-size:12px;color:#c5d0dc;margin:4px 0;line-height:1.5">${(a.description||'').slice(0,200)}</div><div style="font-size:10px;color:#6e7681">${a.agent_id||'?'} &middot; <span style="color:#58a6ff">${a.action_type||'?'}</span>${a.result?' &middot; '+a.result:''}</div></div>`;
     });p.innerHTML=h;
   } else if(curT===2){
     // Agent interactions
@@ -306,16 +306,16 @@ function rpnl(d){
     const st=d.dojo||[];
     let h='';
     if(ai.length){
-      h+='<div style="font-size:8px;color:#4a5060;padding:4px 0;border-bottom:1px solid rgba(8,11,16,.4)">RECENT INTERACTIONS</div>';
+      h+='<div style="font-size:10px;color:#6e7681;padding:6px 0;border-bottom:1px solid rgba(8,11,16,.4);text-transform:uppercase;letter-spacing:.5px">RECENT INTERACTIONS</div>';
       ai.slice(0,12).forEach(i=>{
-        h+=`<div style="padding:3px 0;border-bottom:1px solid rgba(8,11,16,.3)"><div class="r"><span style="color:#58a6ff">${i.from}</span><span style="color:#3d424d">${i.ts}</span></div><div style="font-size:9px;color:#6e7681">→ ${i.to} <span style="color:#d2a8ff">${i.type}</span> ${i.topic?'['+i.topic+']':''}</div></div>`;
+        h+=`<div style="padding:5px 0;border-bottom:1px solid rgba(8,11,16,.3)"><div class="r"><span style="color:#58a6ff;font-weight:600">${i.from}</span><span style="color:#6e7681;font-size:10px">${i.ts}</span></div><div style="font-size:11px;color:#8b949e;margin-top:2px">&rarr; ${i.to} <span style="color:#d2a8ff">${i.type}</span> ${i.topic?'['+i.topic+']':''}</div></div>`;
       });
     }
     if(st.length){
       h+='<div style="font-size:8px;color:#4a5060;padding:6px 0 4px;border-bottom:1px solid rgba(8,11,16,.4)">STANDINGS</div>';
       st.forEach(s=>{h+=`<div style="padding:2px 0;border-bottom:1px solid rgba(8,11,16,.3)"><div class="r"><span>${rk(s.tier)} ${s.agent_id}</span><span style="color:#4a5060">${s.rank} ${s.score}</span></div></div>`});
     }
-    if(!h)h='<div style="padding:8px;color:#3d424d">no interactions yet</div>';
+    if(!h)h='<div style="padding:12px;color:#6e7681;font-size:12px">No agent interactions yet. The orchestration hierarchy will populate as agents communicate.</div>';
     p.innerHTML=h;
   } else {
     // Dojo full view
