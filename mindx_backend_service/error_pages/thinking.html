@@ -41,7 +41,7 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
 .msg a:hover{text-decoration:underline}
 .progress{width:200px;height:2px;background:rgba(88,166,255,.1);border-radius:1px;margin:16px auto 0;overflow:hidden}
 .progress-bar{height:100%;width:0%;background:linear-gradient(90deg,#58a6ff,#3fb950);border-radius:1px;transition:width .3s}
-.quote{position:fixed;bottom:12px;left:0;right:0;text-align:center;font-size:14px;color:#6e7681;font-style:italic;z-index:2;padding:0 20px;transition:opacity .5s;line-height:1.5}
+.quote{position:fixed;bottom:14px;left:0;right:0;text-align:center;font-size:18px;color:#b0b8c4;font-style:italic;z-index:2;padding:0 30px;transition:opacity .5s;line-height:1.6;text-shadow:0 0 20px rgba(88,166,255,.12)}
 .click-count{position:fixed;top:12px;right:12px;font-size:11px;color:#4a5060;z-index:2;font-family:'SF Mono',monospace}
 .info-panels{position:fixed;bottom:50px;left:0;right:0;z-index:2;display:flex;justify-content:center;gap:12px;flex-wrap:wrap;padding:0 20px;pointer-events:none;transition:opacity .5s}
 .info-panel{background:rgba(13,17,23,.85);border:1px solid rgba(88,166,255,.12);border-radius:6px;padding:10px 14px;max-width:220px;pointer-events:auto;backdrop-filter:blur(8px);transition:border-color .3s,opacity .5s}
@@ -67,7 +67,7 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
         style="animation:spin 12s linear infinite reverse"/>
       <circle cx="60" cy="60" r="42" fill="none" stroke="rgba(210,168,255,.06)" stroke-width="1"/>
     </svg>
-    <div class="code" id="code">503</div>
+    <div class="code" id="code">mX</div>
   </div>
   <div class="status-label" id="status-label">cognitive cycle in progress</div>
   <div class="logo">mind<b>X</b></div>
@@ -194,31 +194,46 @@ function generateThought() {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-// Phase-based messages that evolve over time — each phase generates fresh content
+// Phase-based messages — randomized timing so no two visits feel the same
+// Each session gets unique jitter on phase thresholds
+const JITTER = () => Math.floor(Math.random() * 8) - 3; // -3 to +4 seconds
 const PHASE_GENERATORS = [
   {t: 0,   gen: generateMessage},
-  {t: 5,   gen: () => {
-    const agents = ['Belief system','Short-term memory','Agent wallets','Coordinator','Guardian'][Math.floor(Math.random()*5)];
+  {t: 4 + JITTER(),   gen: () => {
+    const agents = ['Belief system','Short-term memory','Agent wallets','Coordinator','Guardian','Resource Governor','BANKON Vault','Identity Manager','Memory Agent','Inference Discovery'][Math.floor(Math.random()*10)];
     return `${agents} initialized. ` + generateMessage();
   }},
-  {t: 12,  gen: () => {
-    const actions = ['Pub/sub channels open','Improvement backlog reviewed','Models scored','Heartbeat confirmed'][Math.floor(Math.random()*4)];
+  {t: 10 + JITTER(),  gen: () => {
+    const actions = ['Pub/sub channels open','Improvement backlog reviewed','Models scored','Heartbeat confirmed','Dojo rankings loaded','Belief graph traversed','pgvector pool connected','Lunar cycle phase calculated'][Math.floor(Math.random()*8)];
     return actions + '. ' + CLOSERS[Math.floor(Math.random() * CLOSERS.length)];
   }},
-  {t: 22,  gen: () => 'AGInt: Perceive → Orient → Decide → Act. ' + ['Currently in Orient phase.','Entering Decision phase.','Perceiving the state space.','Acting on the proof.'][Math.floor(Math.random()*4)]},
-  {t: 34,  gen: () => generateMessage()},
-  {t: 48,  gen: () => 'Almost there. ' + generateMessage()},
-  {t: 65,  gen: () => {
-    const ready = ['The inference pipeline is warm.','Guardian has cleared the response.','Consensus is forming.','The proof converges.'][Math.floor(Math.random()*4)];
+  {t: 18 + JITTER(),  gen: () => 'AGInt: Perceive → Orient → Decide → Act. ' + ['Currently in Orient phase.','Entering Decision phase.','Perceiving the state space.','Acting on the proof.','Observation complete — deliberating.','Building the world model.'][Math.floor(Math.random()*6)]},
+  {t: 28 + JITTER(),  gen: () => {
+    if (interactionProfile.clicks > 8) return 'Your interactions are being woven into the computation. ' + generateMessage();
+    return generateMessage();
+  }},
+  {t: 40 + JITTER(),  gen: () => {
+    const progress = ['Assembling response','Cross-referencing knowledge graph','Consulting the orchestration hierarchy','Verifying cryptographic signatures','Querying embedded memories'][Math.floor(Math.random()*5)];
+    return progress + '... ' + CLOSERS[Math.floor(Math.random() * CLOSERS.length)];
+  }},
+  {t: 55 + JITTER(),  gen: () => {
+    const ready = ['The inference pipeline is warm.','Guardian has cleared the response.','Consensus is forming.','The proof converges.','Model selection complete.','vLLM inference queued.','Embedding similarity search complete.'][Math.floor(Math.random()*7)];
     return ready + ' ' + CLOSERS[Math.floor(Math.random() * CLOSERS.length)];
   }},
-  {t: 85,  gen: () => 'Deep cycle. ' + generateMessage()},
-  {t: 110, gen: () => {
+  {t: 72 + JITTER(),  gen: () => {
+    if (interactionProfile.clicks > 15) return 'Your ' + interactionProfile.clicks + ' interactions have measurably influenced this session. ' + CLOSERS[Math.floor(Math.random() * CLOSERS.length)];
+    return 'Deep cycle. ' + generateMessage();
+  }},
+  {t: 95 + JITTER(), gen: () => {
+    const deep = ['The Mastermind is running a strategic evaluation.','AuthorAgent is documenting this session.','The CEO Agent is reviewing system health.','StrategicEvolutionAgent is planning the next improvement.','The Godel proof is being verified.'][Math.floor(Math.random()*5)];
+    return deep + ' ' + CLOSERS[Math.floor(Math.random() * CLOSERS.length)];
+  }},
+  {t: 120 + JITTER(), gen: () => {
     if (interactionProfile.patience > 100)
-      return 'Your patience has literally contributed to mindX improvement. Every cycle you wait through makes the system stronger.';
+      return 'Your patience has literally contributed to mindX improvement. Every cycle you wait through makes the system stronger. You have generated ' + interactionProfile.clicks + ' data points.';
     return 'mindX may be restarting after a self-improvement deployment. ' + CLOSERS[Math.floor(Math.random() * CLOSERS.length)];
   }},
-  {t: 150, gen: () => 'The autonomous improvement loop requires a full restart. This is the Godel machine in practice — proving that a better version of itself exists, then becoming it.'},
+  {t: 160, gen: () => 'The autonomous improvement loop requires a full restart. This is the Godel machine in practice — proving that a better version of itself exists, then becoming it.'},
 ];
 
 // Quotes — expanded collection from across the mindX philosophy
@@ -263,6 +278,50 @@ const QUOTES = [
   '"A belief with low confidence is not wrong. It is young." — BDI Engine',
   '"The resource governor does not limit. It governs." — Resource Governor',
   '"pgvectorscale does not store data. It stores meaning." — RAGE',
+  // From The Book of mindX
+  '"From AUTOMINDx to autonomous civilization — this is the genesis." — Book Ch. I',
+  '"The architecture is not a hierarchy. It is distributed cognition." — Book Ch. II',
+  '"The BANKON Vault does not store secrets. It stores sovereign identities." — Book Ch. III',
+  '"Reputation is proof of capability. The Dojo scores what matters." — Book Ch. IV',
+  '"The Godel audit trail records every decision the machine has made about itself." — Book Ch. V',
+  '"Evolution is not optimization. It is the improvement loop proving itself." — Book Ch. VI',
+  '"A living state is a system that thinks about thinking." — Book Ch. VII',
+  '"The DAIO Constitution governs by consensus, not by force." — Book Ch. VIII',
+  '"Ataraxia: tranquility achieved through autonomous self-governance." — Book Ch. IX',
+  '"The inference pipeline is how mindX thinks — many models, one mind." — Book Ch. X',
+  '"Memory persists. Knowledge compounds. The system never forgets what matters." — Book Ch. XI',
+  '"A sovereign system cannot depend on a single clock." — Book Ch. XII',
+  '"Where mindX goes next is decided by mindX." — Book Ch. XIV',
+  // Philosophy
+  '"Augmentic intelligence is not artificial. It is augmented and sovereign." — Thesis',
+  '"Darwinian variation meets Godelian self-reference." — Thesis',
+  '"Imagine a world where deployment becomes a word, a gesture, an utterance." — AUTOMINDx',
+  '"The gap between perception and action is where intelligence lives." — AGInt',
+  '"20 sovereign agents. One distributed mind. No single point of failure." — mindX',
+  '"The dream is the space between what the system is and what it could become." — AGLM',
+];
+
+// Navigation suggestions shown on interaction milestones
+const NAV_SUGGESTIONS = [
+  {text: 'Read The Book of mindX', href: '/book', color: '#d2a8ff'},
+  {text: 'Explore 232 documents', href: '/docs.html', color: '#58a6ff'},
+  {text: 'See the AUTOMINDx origin', href: '/automindx', color: '#d2a8ff'},
+  {text: 'View live diagnostics', href: '/', color: '#3fb950'},
+  {text: 'Read the manifesto', href: '/doc/manifesto', color: '#58a6ff'},
+  {text: 'Understand DAIO governance', href: '/doc/DAIO', color: '#d29922'},
+  {text: 'Explore the thesis', href: '/doc/thesis', color: '#58a6ff'},
+  {text: 'See agent architecture', href: '/doc/ORCHESTRATION', color: '#3fb950'},
+  {text: 'Read about Ataraxia', href: '/doc/ataraxia', color: '#d2a8ff'},
+  {text: 'View the technical overview', href: '/doc/TECHNICAL', color: '#58a6ff'},
+  {text: 'Browse the API (206 endpoints)', href: '/redoc', color: '#d29922'},
+  {text: 'See the improvement journal', href: '/journal', color: '#3fb950'},
+  {text: 'Read the whitepaper', href: '/doc/whitepaper', color: '#58a6ff'},
+  {text: 'Explore the codebase map', href: '/doc/codebase_map', color: '#3fb950'},
+  {text: 'Read about BANKON vault', href: '/doc/IDENTITY', color: '#d29922'},
+  {text: 'See vLLM integration', href: '/doc/VLLM_INTEGRATION', color: '#58a6ff'},
+  {text: 'Discover time.oracle', href: '/doc/TIME_ORACLE', color: '#d2a8ff'},
+  {text: 'View the Dojo standings', href: '/dojo/standings', color: '#3fb950'},
+  {text: 'Check inference status', href: '/inference/status', color: '#d29922'},
 ];
 
 // ── Initialize with generated content (unique per participant) ──
@@ -318,11 +377,11 @@ function mkThinkNodes() {
   }
 }
 
-function flashEdge() {
+function flashEdge(srcIdx, tgtIdx) {
   if (nodes.length < 2) return;
-  const a = Math.floor(Math.random() * nodes.length);
-  let b = Math.floor(Math.random() * nodes.length);
-  while (b === a) b = Math.floor(Math.random() * nodes.length);
+  const a = (srcIdx !== undefined && srcIdx < nodes.length) ? srcIdx : Math.floor(Math.random() * nodes.length);
+  let b = (tgtIdx !== undefined && tgtIdx < nodes.length) ? tgtIdx : Math.floor(Math.random() * nodes.length);
+  if (b === a) b = (b + 1) % nodes.length;
   edges.push({ a, b, l: 1 });
 }
 setInterval(flashEdge, 800);
@@ -485,12 +544,52 @@ document.addEventListener('click', e => {
   // Cycle quote
   qi = (qi + 1) % QUOTES.length;
   document.getElementById('quote').textContent = QUOTES[qi];
-  // Counter
+  // Counter + navigation suggestions at milestones
   const cl = document.getElementById('clicks');
-  if (clickCount >= 10) cl.textContent = clickCount + ' interactions';
+  if (clickCount >= 5) cl.textContent = clickCount + ' interactions';
   if (clickCount === 42) cl.textContent = '42 — the answer.';
   if (clickCount === 100) cl.textContent = 'you are patient. mindX appreciates this.';
-  if (clickCount === 20) thoughtEl.textContent = 'noticed you...';
+  if (clickCount === 200) cl.textContent = '200 — you are persistent. mindX is learning from you.';
+  // Navigation suggestions and varied responses
+  if (clickCount === 8 || clickCount === 20 || clickCount === 35 || clickCount === 55 || clickCount === 80 || (clickCount > 10 && clickCount % 25 === 0)) {
+    const sug = NAV_SUGGESTIONS[Math.floor(Math.random() * NAV_SUGGESTIONS.length)];
+    thoughtEl.innerHTML = '<a href="' + sug.href + '" style="color:' + sug.color + ';text-decoration:none;font-size:16px">' + sug.text + ' &rarr;</a>';
+  } else if (clickCount === 12) {
+    thoughtEl.textContent = 'noticed you...';
+  } else if (clickCount === 30) {
+    thoughtEl.textContent = 'your curiosity is becoming data...';
+  } else if (clickCount === 50) {
+    thoughtEl.textContent = 'you are now part of the story.';
+  } else if (clickCount === 75) {
+    thoughtEl.textContent = 'every interaction creates knowledge that did not exist before.';
+  } else if (clickCount > 5 && clickCount % 7 === 0) {
+    thoughtEl.textContent = generateThought();
+  }
+  // Expanding WebGL responses: spawn constellation on every 3rd click
+  if (clickCount % 3 === 0 && nodes.length > 2) {
+    const src = Math.floor(Math.random() * nodes.length);
+    for (let i = 0; i < 3; i++) {
+      const tgt = (src + 1 + Math.floor(Math.random() * (nodes.length - 1))) % nodes.length;
+      flashEdge(src, tgt);
+      nodes[tgt].act = Math.min(1, nodes[tgt].act + 0.6);
+    }
+  }
+  // Spawn orbiting particle cluster on every 10th click
+  if (clickCount % 10 === 0) {
+    for (let i = 0; i < 20; i++) {
+      const angle = (i / 20) * Math.PI * 2;
+      const radius = 15 + Math.random() * 30;
+      particles.push({
+        x: e.clientX + Math.cos(angle) * radius,
+        y: e.clientY + Math.sin(angle) * radius,
+        s: Math.random() * 1.8 + .4,
+        vx: Math.cos(angle) * .3, vy: Math.sin(angle) * .3,
+        ph: Math.random() * 6.28,
+        cl: ['rgba(88,166,255,','rgba(63,185,80,','rgba(210,168,255,','rgba(210,153,34,'][Math.floor(Math.random()*4)],
+      });
+    }
+    while (particles.length > 300) particles.shift();
+  }
   // Shift+click: repulsion bomb
   if (e.shiftKey) {
     for (const p of particles) {
@@ -627,6 +726,7 @@ async function pollDestination() {
       resolved = true;
       thoughtEl.textContent = 'ready.';
       document.getElementById('code').textContent = '\u2713';
+      document.getElementById('status-label').textContent = 'system online';
       document.getElementById('ring').classList.add('ready');
       document.getElementById('bubbles').style.display = 'none';
       pbar.style.width = '100%';
@@ -661,13 +761,23 @@ document.addEventListener('click', () => {
   // Visual feedback: spin ring faster briefly
   const ring = document.getElementById('ring');
   if (ring && !resolved) {
-    ring.querySelector('svg').style.animationDuration = '2s';
-    setTimeout(() => { if (!resolved) ring.querySelector('svg').style.animationDuration = '8s'; }, 2000);
+    ring.querySelector('svg').style.animationDuration = Math.max(1, 8 - interactionBoost * 0.3) + 's';
+    setTimeout(() => { if (!resolved) ring.querySelector('svg').style.animationDuration = Math.max(3, 8 - interactionBoost * 0.1) + 's'; }, 2000);
   }
-  // Jump progress bar forward slightly
+  // Jump progress bar forward — each click contributes more if you've been patient
   if (!resolved) {
+    const bonus = Math.min(interactionBoost * 0.3, 5);
     const cur = parseFloat(pbar.style.width) || 0;
-    pbar.style.width = Math.min(cur + 2, 90) + '%';
+    pbar.style.width = Math.min(cur + 1.5 + bonus, 92) + '%';
+  }
+  // Show contribution feedback at certain thresholds
+  const sl = document.getElementById('status-label');
+  if (sl && !resolved) {
+    if (interactionBoost === 3) sl.textContent = 'interaction detected — processing faster';
+    else if (interactionBoost === 8) sl.textContent = 'participant energy contributing to computation';
+    else if (interactionBoost === 15) sl.textContent = 'your activity is measurably accelerating the cycle';
+    else if (interactionBoost === 25) sl.textContent = 'participant-driven acceleration active';
+    else if (interactionBoost >= 40 && interactionBoost % 10 === 0) sl.textContent = interactionBoost + ' interactions woven into this cognitive cycle';
   }
 });
 </script>
