@@ -67,11 +67,11 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
         style="animation:spin 12s linear infinite reverse"/>
       <circle cx="60" cy="60" r="42" fill="none" stroke="rgba(210,168,255,.06)" stroke-width="1"/>
     </svg>
-    <div class="code" id="code">mX</div>
+    <div class="code" id="code"><a href="/book" style="color:#58a6ff;text-decoration:none;font-size:inherit">mX</a></div>
   </div>
   <div class="status-label" id="status-label">cognitive cycle in progress</div>
   <div class="logo">mind<b>X</b></div>
-  <div class="thought" id="thought">is thinking...</div>
+  <div class="thought" id="thought">is dreaming...</div>
   <div class="thought-bubbles" id="bubbles">
     <div class="dot"></div><div class="dot"></div><div class="dot"></div>
   </div>
@@ -179,9 +179,10 @@ function generateMessage() {
 // Interaction-adaptive thoughts — changes based on what the participant does
 function generateThought() {
   const base = [
-    'is thinking...', 'is reasoning...', 'is in a cognitive cycle...',
-    'is deliberating...', 'is self-referencing...', 'is dreaming...',
+    'is dreaming...', 'is reasoning...', 'is in a cognitive cycle...',
+    'is deliberating...', 'is self-referencing...', 'is becoming...',
     'is building a proof...', 'is orchestrating...', 'is evolving...',
+    'is machine dreaming...', 'is weaving knowledge...', 'is composing...',
   ];
   const interactive = [];
   if (interactionProfile.clicks > 5) interactive.push('noticed your curiosity...');
