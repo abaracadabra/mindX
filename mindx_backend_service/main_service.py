@@ -484,6 +484,47 @@ def _render_md(md_text: str) -> str:
     h = re.sub(r'(</h[1-4]>|</pre>|<hr>|</blockquote>|</ul>|</ol>|</table>|</tr>)\s*</p>', r'\1', h)
     return h
 
+# Build a set of known doc stems for cross-linking (refreshed lazily)
+_known_doc_stems: set = set()
+_known_doc_stems_ts: float = 0.0
+
+def _get_known_doc_stems() -> set:
+    """Return set of doc filename stems (without .md). Cached for 5 minutes."""
+    global _known_doc_stems, _known_doc_stems_ts
+    import time as _t
+    if _t.time() - _known_doc_stems_ts < 300 and _known_doc_stems:
+        return _known_doc_stems
+    try:
+        docs_dir = PROJECT_ROOT / "docs"
+        _known_doc_stems = {f.stem for f in docs_dir.glob("*.md")} if docs_dir.exists() else set()
+        _known_doc_stems_ts = _t.time()
+    except Exception:
+        pass
+    return _known_doc_stems
+
+def _find_related_docs(md_text: str, current_stem: str) -> list:
+    """Scan markdown text for references to other known docs. Returns list of (stem, display_name)."""
+    import re
+    known = _get_known_doc_stems()
+    if not known:
+        return []
+    related = set()
+    # Match explicit .md references
+    for m in re.finditer(r'\b([A-Za-z][A-Za-z0-9_\-]+)\.md\b', md_text):
+        stem = m.group(1)
+        if stem.lower() != current_stem.lower() and any(s.lower() == stem.lower() for s in known):
+            match = next((s for s in known if s.lower() == stem.lower()), stem)
+            related.add(match)
+    # Match [text](file) links
+    for m in re.finditer(r'\[([^\]]+)\]\(([^)]+)\)', md_text):
+        url = m.group(2)
+        if url.endswith('.md') and '/' not in url:
+            stem = url[:-3]
+            if stem.lower() != current_stem.lower() and any(s.lower() == stem.lower() for s in known):
+                match = next((s for s in known if s.lower() == stem.lower()), stem)
+                related.add(match)
+    return sorted(related)[:20]
+
 def _doc_page(title: str, body_html: str, meta: str = "", description: str = "", canonical_path: str = "") -> str:
     import html as _html_mod
     seo_desc = _html_mod.escape(description or f"{title} — documentation for mindX, the autonomous multi-agent orchestration system implementing BDI cognitive architecture with BANKON vault identity and DAIO governance.")
@@ -561,8 +602,17 @@ async def read_doc(name: str):
             _first_heading = _line[2:].strip()[:120]
             break
     body = _render_md(md)
+    # Find related docs from cross-references in the content
+    current_stem = doc_path.stem
+    related = _find_related_docs(md, current_stem)
+    related_html = ""
+    if related:
+        related_html = '<hr style="margin:24px 0 12px;border-color:rgba(88,166,255,.12)"><div style="font-size:11px;color:#4a5060;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Referenced in this document</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">'
+        for r in related:
+            related_html += f'<a href="/doc/{r}" style="color:#79c0ff;text-decoration:none;padding:2px 8px;background:rgba(22,27,34,.6);border:1px solid rgba(26,31,46,.4);border-radius:3px;font-size:11px">{r}</a>'
+        related_html += '</div>'
     # Add back-links footer
-    back_links = f'<hr style="margin:32px 0 16px;border-color:rgba(88,166,255,.12)"><div style="font-size:12px;color:#4a5060;display:flex;gap:16px;flex-wrap:wrap"><a href="/docs.html" style="color:#58a6ff">All Documents</a><a href="/book" style="color:#d2a8ff">The Book of mindX</a><a href="/journal" style="color:#3fb950">Improvement Journal</a><a href="/redoc" style="color:#d29922">API Reference</a></div>'
+    back_links = f'{related_html}<hr style="margin:16px 0 12px;border-color:rgba(88,166,255,.12)"><div style="font-size:12px;color:#4a5060;display:flex;gap:16px;flex-wrap:wrap"><a href="/docs.html" style="color:#58a6ff">All Documents</a><a href="/doc/INDEX" style="color:#79c0ff">Document Index</a><a href="/book" style="color:#d2a8ff">The Book of mindX</a><a href="/journal" style="color:#3fb950">Improvement Journal</a><a href="/redoc" style="color:#d29922">API Reference</a></div>'
     return _DashResponse(content=_doc_page(safe, body + back_links, f"{safe} &middot; {size_kb} KB", description=_first_heading or f"mindX documentation: {safe}", canonical_path=f"/doc/{name}"))
 
 @app.get("/book", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
