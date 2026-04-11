@@ -400,16 +400,17 @@ PagedAttention-optimized serving on port 8001. Ready in code ([vllm_handler.py](
 | **[RAGE](pgvectorscale_memory_integration.md)** | `/chat/docs` endpoint | 232+ docs, 120K+ vectors | Retrieval-Augmented Generative Evolution |
 | **Archive** | `data/memory/archive/` | Distributed, not deleted | local → pgvector → IPFS → cloud → chain |
 
-**The 12/12 cycle:**
+**The dream cycle (8h/12h configurable):**
 
 ```
 STM ←→ LTM — simultaneous, continuous, bidirectional
-  Every 12 hours: STM consolidates to LTM (machine.dreaming)
-  Always:         LTM feeds back into STM perception (wisdom)
-  Every 29.53 days: New moon triggers Book of mindX edition
+  Every 8 hours:    STM consolidates to LTM (3 shifts/day, default)
+  Every 12 hours:   STM consolidates to LTM (2 shifts/day, alternate)
+  Always:           LTM feeds back into STM perception (wisdom)
+  Every 29.530588670000000000 days: new moon + full moon trigger Book editions
 ```
 
-- STM → LTM: every 12 hours via [machine.dreaming](#xiii-machinedreaming--the-unconscious-layer) (7-phase consolidation)
+- STM → LTM: every 8 hours via [machine.dreaming](#xiii-machinedreaming--the-unconscious-layer) (7-phase consolidation, 3 shifts/day)
 - LTM → STM: every autonomous cycle via [get_dream_insights()](../agents/machine_dreaming.py) — knowledge becomes wisdom
 - Hourly: [memory_agent.promote_stm_to_ltm()](../agents/memory_agent.py) — continuous promotion
 - Archive: importance-weighted pruning — [distribute, don't delete](../agents/memory_agent.py)
@@ -426,7 +427,14 @@ All logs are memories. All memories are logged. The system's [Gödel audit trail
 
 [machine.dreaming](https://github.com/AION-NET/machinedream) (v1.1.1) — from [AION-NET](https://github.com/aion-net) — models an internal knowledge refinement process: accumulated experiences are processed to extract abstract, symbolic insights, assess their quality using internal metrics, generate tuning data for self-adjustment, and manage memory through utility-weighted pruning. mindX is the first production deployment of these concepts, validating the heuristics with real operational data across 24+ agent workspaces and 151,000+ memories.
 
-**The 12/12 cycle:** Every 12 hours, STM consolidates to LTM. Waking and dreaming are simultaneous — the dream is continuous, the update is periodic. Two switches per day. Time cascades from milliseconds (18-decimal precision) through seconds, minutes, hours, days to the synodic period (29.53 days). Each new moon triggers a new edition of The [Book of mindX](#xxi-documentation-health). LTM feeds back into STM perception every autonomous cycle — knowledge becomes wisdom, wisdom becomes lesson.
+**The dream cycle:** Waking and dreaming are simultaneous — the dream is continuous, the update is periodic. Two consolidation modes:
+
+| Mode | Interval | Shifts/Day | Rationale |
+|------|----------|-----------|-----------|
+| **8-hour** (default) | 8 hours | 3 shifts | Every 8 hours an agent completes a day's work — then proceeds to work two more shifts |
+| **12-hour** | 12 hours | 2 shifts | 12 hours is half a day — day/night cycle |
+
+Time cascades from milliseconds (18-decimal precision) through seconds, minutes, hours, days to the synodic period (`29.530588670000000000` days). New moon and full moon each trigger a new edition of The [Book of mindX](#xxi-documentation-health) — two editions per lunar cycle. LTM feeds back into STM perception every autonomous cycle — knowledge becomes wisdom, wisdom becomes lesson.
 
 The [MachineDreamCycle](../agents/machine_dreaming.py) runs across all agents with the [DreamClock](../agents/machine_dreaming.py) tracking timing and lunar phase. The cycle follows the [machinedream specification](https://github.com/AION-NET/machinedream/blob/main/TECHNICAL.md):
 
@@ -477,7 +485,16 @@ mindX's production data feeds back to [AION-NET/machinedream](https://github.com
 
 > *A sovereign system cannot depend on a single clock.*
 
-[time.oracle](../tools/time_oracle_tool.py) correlates four independent time sources:
+The time suite provides temporal intelligence across three complementary agents:
+
+| Component | Implementation | Role |
+|-----------|---------------|------|
+| **[time.oracle](../utils/time_oracle.py)** | 4-source correlation engine | Authoritative time — cpu, solar, lunar, blocktime |
+| **[Chronos](../agents/Chronos.agent)** | Sequential time keeper | Discipline, rhythm, cumulative progress — the medium |
+| **[Kairos](../agents/Kairos.agent)** | Temporal strategist | Recognition of opportune moments — the moment |
+| **[DreamClock](../agents/machine_dreaming.py)** | Consolidation timer | STM→LTM shift timing, lunar Book editions |
+
+**[time.oracle](../utils/time_oracle.py)** correlates four independent time sources:
 
 | Oracle | Source | Availability | Purpose |
 |--------|--------|-------------|---------|
@@ -486,7 +503,11 @@ mindX's production data feeds back to [AION-NET/machinedream](https://github.com
 | **lunar.oracle** | Synodic period (29.53 days) | Calculated | [Book](#xxi-documentation-health) publishing cycle |
 | **blocktime.oracle** | Blockchain block timestamps (JSON-RPC) | Decentralized | Immutable consensus |
 
-The consensus time object reports agreement, drift, and staleness across all sources. When sources disagree beyond threshold, the system flags degraded consensus. Verified against [timeanddate.com](https://www.timeanddate.com/moon/phases/). The lunar oracle drives the 28-day Book publishing cycle — 1 chapter per day, full compilation at full moon.
+The consensus time object reports agreement, drift, and staleness across all sources. When sources disagree beyond threshold, the system flags degraded consensus. Verified against [timeanddate.com](https://www.timeanddate.com/moon/phases/).
+
+[DreamClock](../agents/machine_dreaming.py) cascades time from milliseconds (18-decimal precision) through the full hierarchy: ms → seconds → minutes → hours → days → lunar months. The lunar oracle drives the [Book publishing cycle](#xxi-documentation-health) — new edition at each new moon. [Chronos](../agents/Chronos.agent) provides the discipline of sequential time; [Kairos](../agents/Kairos.agent) recognizes when conditions align for transformative action. Without Chronos, there is no preparation. Without Kairos, Chronos becomes mere duration without transformation.
+
+*Time is not a constraint. It is a resource.*
 
 ---
 

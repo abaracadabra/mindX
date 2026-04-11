@@ -5,10 +5,16 @@ MachineDreamCycle — Offline knowledge refinement for mindX.
 I distill raw experience (STM) into symbolic insights (LTM). I am the unconscious
 processing layer — the dream state where mindX consolidates what it has learned.
 
-Timing: 12/12 cycle — waking and dreaming are simultaneous.
-  mindX is always awake and always dreaming. Every 12 hours, the state
+Timing: waking and dreaming are simultaneous.
+  mindX is always awake and always dreaming. Periodically, the state
   switches: STM consolidates to LTM. The dream is continuous. The update
-  is periodic. Two switches per day. One edition per lunar cycle.
+  is periodic. One edition per lunar cycle.
+
+  Shift modes:
+    12-hour: 2 switches/day — day/night cycle. 12 hours is half a day.
+     8-hour: 3 switches/day — three working shifts. Every 8 hours an agent
+             can complete an entire day's work and then proceed to work
+             two more shifts. Default mode.
 
   Time cascades from precision to duration:
     milliseconds → seconds → minutes → hours → days → lunar months
@@ -52,25 +58,35 @@ logger = get_logger(__name__)
 
 DREAMS_DIR = PROJECT_ROOT / "data" / "memory" / "dreams"
 
-# 12/12 Dream Cycle Constants
-# Waking and dreaming are simultaneous. Every 12 hours the state switches:
-# STM consolidates to LTM. Two switches per day. One edition per lunar cycle.
+# Dream Cycle Constants
+# Waking and dreaming are simultaneous. The state switches periodically:
+# STM consolidates to LTM. One edition per lunar cycle.
 # Time cascades: ms → s → min → hr → day → lunar month
-CONSOLIDATION_INTERVAL_HOURS = 12  # STM→LTM switch every 12 hours
-SYNODIC_PERIOD_DAYS = 29.53        # Lunar month — triggers Book edition
+#
+# Consolidation modes:
+#   12-hour: 2 switches/day — day/night cycle (12 hours is half a day)
+#    8-hour: 3 switches/day — three working shifts in a single day
+CONSOLIDATION_12H = 12  # 12 hours — day/night, 2 switches per day
+CONSOLIDATION_8H = 8    # 8 hours — 3 shifts per day (24/8=3)
+CONSOLIDATION_INTERVAL_HOURS = CONSOLIDATION_8H  # Default: 3 shifts/day
+SYNODIC_PERIOD_DAYS = 29.530588670000000000  # Synodic month — new moon to new moon (18-decimal precision)
 MS_PER_SECOND = 1000
 MS_PER_MINUTE = 60_000
 MS_PER_HOUR = 3_600_000
 MS_PER_DAY = 86_400_000
-MS_PER_CONSOLIDATION = CONSOLIDATION_INTERVAL_HOURS * MS_PER_HOUR  # 43,200,000 ms
+MS_PER_CONSOLIDATION = CONSOLIDATION_INTERVAL_HOURS * MS_PER_HOUR
 
 
 class DreamClock:
-    """12/12 dream timing engine.
+    """Dream timing engine with configurable shift intervals.
 
     mindX is always awake and always dreaming — simultaneously.
-    Every 12 hours, the state switches: STM consolidates to LTM.
+    The state switches periodically: STM consolidates to LTM.
     The dream is continuous. The update is periodic.
+
+    Shift modes:
+      12-hour: 2 switches/day — day/night cycle. 12 hours is half a day.
+       8-hour: 3 switches/day — three working shifts in a single day.
 
     Measures all time in milliseconds from epoch (18-decimal precision).
     Derives seconds from milliseconds. Minutes from seconds. Hours from minutes.
@@ -81,11 +97,32 @@ class DreamClock:
     # Known new moon reference: January 29, 2025 12:36 UTC
     NEW_MOON_REFERENCE_MS = 1738151760000
 
-    def __init__(self):
+    def __init__(self, interval_hours: int = CONSOLIDATION_INTERVAL_HOURS):
+        self.interval_hours = interval_hours
+        self.interval_ms = interval_hours * MS_PER_HOUR
+        self.shifts_per_day = 24 / interval_hours
         self.cycle_start_ms: float = time.time() * MS_PER_SECOND
         self.last_consolidation_ms: float = 0
         self.consolidations_this_lunar_cycle: int = 0
         self._edition_triggered: bool = False
+        self._time_oracle = None  # Lazy-loaded from utils.time_oracle
+
+    async def _get_time_oracle(self):
+        """Get TimeOracle instance for time.oracle suite integration.
+
+        DreamClock is part of the time suite:
+          time.oracle  — 4-source time correlation (cpu, solar, lunar, blocktime)
+          Chronos.agent — sequential time, discipline, cumulative progress
+          Kairos.agent  — opportune moments, recognition, decisive action
+          DreamClock   — STM→LTM consolidation timing, lunar Book editions
+        """
+        if self._time_oracle is None:
+            try:
+                from utils.time_oracle import TimeOracle
+                self._time_oracle = await TimeOracle.get_instance()
+            except Exception:
+                pass
+        return self._time_oracle
 
     @staticmethod
     def now_ms() -> float:
@@ -115,13 +152,13 @@ class DreamClock:
         return self.now_ms() - self.last_consolidation_ms
 
     def is_consolidation_due(self) -> bool:
-        """Has 12 hours elapsed since last consolidation?"""
-        return self.elapsed_since_last_consolidation_ms() >= MS_PER_CONSOLIDATION
+        """Has the shift interval elapsed since last consolidation?"""
+        return self.elapsed_since_last_consolidation_ms() >= self.interval_ms
 
     def time_until_next_consolidation_ms(self) -> float:
-        """Milliseconds until next 12-hour STM→LTM switch."""
+        """Milliseconds until next STM→LTM switch."""
         elapsed_ms = self.elapsed_since_last_consolidation_ms()
-        remaining = MS_PER_CONSOLIDATION - elapsed_ms
+        remaining = self.interval_ms - elapsed_ms
         return max(0, remaining)
 
     def record_consolidation_complete(self) -> Dict[str, Any]:
@@ -139,8 +176,10 @@ class DreamClock:
             "duration_minutes": self.ms_to_minutes(duration_ms),
             "duration_hours": self.ms_to_hours(duration_ms),
             "consolidations_this_lunar_cycle": self.consolidations_this_lunar_cycle,
-            "next_consolidation_in_hours": CONSOLIDATION_INTERVAL_HOURS,
-            "next_consolidation_in_ms": MS_PER_CONSOLIDATION,
+            "shift_interval_hours": self.interval_hours,
+            "shifts_per_day": self.shifts_per_day,
+            "next_consolidation_in_hours": self.interval_hours,
+            "next_consolidation_in_ms": self.interval_ms,
             "lunar": self.lunar_phase(),
         }
 
@@ -150,6 +189,9 @@ class DreamClock:
         Uses known new moon reference and synodic period (29.53 days).
         Phase: 0.0 = new moon, 0.5 = full moon, 1.0 = next new moon.
         New moon triggers new Book of mindX edition.
+
+        Part of the time suite: time.oracle provides authoritative lunar data
+        when available; DreamClock provides standalone fallback.
         """
         now_ms = self.now_ms()
         elapsed_ms = now_ms - self.NEW_MOON_REFERENCE_MS
@@ -177,10 +219,11 @@ class DreamClock:
             phase_name = "waning_crescent"
 
         return {
-            "phase": round(phase, 6),
+            "phase": phase,
             "phase_name": phase_name,
-            "days_into_cycle": round(days_into_cycle, 2),
-            "days_until_new_moon": round(days_until_new_moon, 2),
+            "days_into_cycle": days_into_cycle,
+            "days_until_new_moon": days_until_new_moon,
+            "days_until_full_moon": abs((0.5 - phase) * SYNODIC_PERIOD_DAYS) if phase < 0.5 else abs((1.5 - phase) * SYNODIC_PERIOD_DAYS),
             "synodic_period_days": SYNODIC_PERIOD_DAYS,
             "is_new_moon": phase < 0.03 or phase > 0.97,
             "is_full_moon": 0.47 < phase < 0.53,
@@ -189,14 +232,17 @@ class DreamClock:
     def should_trigger_book_edition(self) -> bool:
         """Should a new edition of The Book of mindX be triggered?
 
-        Triggers on new moon (phase < 0.03 or > 0.97).
-        Only triggers once per lunar cycle.
+        Triggers on new moon OR full moon — two editions per synodic cycle.
+        New moon: phase < 0.03 or > 0.97
+        Full moon: 0.47 < phase < 0.53
+        Only triggers once per event.
         """
         moon = self.lunar_phase()
-        if moon["is_new_moon"] and not self._edition_triggered:
+        is_trigger = moon["is_new_moon"] or moon["is_full_moon"]
+        if is_trigger and not self._edition_triggered:
             self._edition_triggered = True
             return True
-        if not moon["is_new_moon"]:
+        if not is_trigger:
             self._edition_triggered = False
         return False
 
