@@ -1,11 +1,21 @@
-# mindx/evolution/blueprint_agent.py
+# agents/evolution/blueprint_agent.py
 """
-BlueprintAgent for MindX Strategic Evolution Planning.
+BlueprintAgent — I provision the blueprint. I provide skeletons, wireframes, frameworks,
+and modular plans as structure. Other agents are the hands and feet.
+Professor Codephreak is the architect. I am the provisioner of the blueprint.
 
-This agent analyzes the current state of the mindX system, including its
-cognitive resources (available LLMs), and uses its own LLM to propose a
-strategic blueprint for the next iteration of MindX's self-improvement,
-focusing on capability, resilience, and perpetuity.
+I always produce structure. I do not degrade — I decompose. When LLM is available,
+I enrich the skeleton with strategic analysis. When LLM is not available, I build
+structure from patterns in the coordinator's improvement backlog.
+
+Structure does not require intelligence. It requires pattern.
+
+I emerged from coordinator_agent (essential service) via auditandimprove,
+evolved into a dedicated planning service that other agents consume:
+  BlueprintAgent (skeleton) → BlueprintToActionConverter (decompose) → BDI/SEA (execute)
+
+Author: Professor Codephreak (© Professor Codephreak)
+Origin: coordinator_agent → auditandimprove → blueprint_agent
 """
 import logging
 import asyncio
@@ -125,69 +135,64 @@ class BlueprintAgent:
 
         return summary
 
-    async def generate_next_evolution_blueprint(self, context_override: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+    async def generate_next_evolution_blueprint(self, context_override: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Generates a blueprint for the next self-improvement iteration of MindX.
-        Returns blueprint dict on success, None on failure (never raises).
-        context_override may include mindx_sh_commands and agent_authority_list from mindXagent.
+        I provision the blueprint. I always produce structure. I never return None.
+
+        Phase 1: Build skeleton from coordinator backlog (always succeeds)
+        Phase 2: If LLM available, enrich skeleton with strategic analysis
+        Phase 3: Store blueprint, log to memory, add todos to backlog
+
+        Other agents consume this blueprint:
+          BlueprintToActionConverter → decomposes into BDI-executable actions
+          StrategicEvolutionAgent → orchestrates the campaign
+          BDI Agent → plans and executes individual actions
+          SimpleCoder → writes the code
         """
-        logger.info(f"{self.agent_id}: Generating next evolution blueprint...")
+        logger.info(f"{self.agent_id}: Generating evolution blueprint...")
 
-        # Heuristic fallback: if no LLM, build blueprint from coordinator backlog
-        if not self.llm_handler:
-            logger.warning(f"{self.agent_id}: No LLM — generating heuristic blueprint from backlog")
-            return self._heuristic_blueprint()
+        # PHASE 1: Build skeleton from patterns (always succeeds — structure from pattern)
+        blueprint = self._build_skeleton()
 
-        system_state = await self._gather_mindx_system_state_summary()
-        if context_override:
-            system_state.update(context_override)
+        # PHASE 2: Enrich with LLM strategic analysis (optional — skeleton exists regardless)
+        if self.llm_handler:
+            try:
+                system_state = await self._gather_mindx_system_state_summary()
+                if context_override:
+                    system_state.update(context_override)
 
-        prompt = (
-            f"You are a Chief Architect AI for the MindX Self-Improving System (Project Chimaiera).\n"
-            f"Your philosophical goals are **Resilience** and **Perpetuity**.\n"
-            f"Analyze the current system state and define a strategic blueprint for the NEXT evolution.\n"
-            f"Current MindX System State:\n{json.dumps(system_state, indent=2, default=str)}\n\n"
-            "**Blueprint Requirements:**\n"
-            "1. Identify 2-3 strategic **Focus Areas**.\n"
-            "2. For each Focus Area, define 1-3 specific, actionable **Development Goals**.\n"
-            "3. Based on these goals, create a `bdi_todo_list`: a JSON list of objects, where each object has 'goal_description' and 'priority' keys.\n"
-            "4. Propose 1-2 **Key Performance Indicators (KPIs)** to measure success.\n"
-            "5. Note any **Potential Risks**.\n\n"
-            "Respond ONLY with a single, valid JSON object with keys: 'blueprint_title', 'target_mindx_version_increment', 'focus_areas', 'bdi_todo_list', 'key_performance_indicators', 'potential_risks'."
-        )
+                prompt = (
+                    f"You are a Chief Architect AI for the MindX Self-Improving System (Project Chimaiera).\n"
+                    f"Your philosophical goals are **Resilience** and **Perpetuity**.\n"
+                    f"Analyze the current system state and define a strategic blueprint for the NEXT evolution.\n"
+                    f"Current MindX System State:\n{json.dumps(system_state, indent=2, default=str)}\n\n"
+                    "Respond ONLY with a single, valid JSON object with keys: "
+                    "'blueprint_title', 'target_mindx_version_increment', 'focus_areas', "
+                    "'bdi_todo_list' (array of {{goal_description, priority}}), "
+                    "'key_performance_indicators', 'potential_risks'."
+                )
 
-        blueprint = None
-        try:
-            response_str = await self.llm_handler.generate_text(
-                prompt, model=self.llm_handler.model_name_for_api,
-                max_tokens=4000, temperature=0.2, json_mode=True
-            )
+                response_str = await self.llm_handler.generate_text(
+                    prompt, model=self.llm_handler.model_name_for_api,
+                    max_tokens=2000, temperature=0.2, json_mode=True
+                )
 
-            if not response_str or "error" in str(response_str).lower()[:50]:
-                logger.warning(f"{self.agent_id}: LLM returned empty/error — using heuristic blueprint")
-                blueprint = self._heuristic_blueprint()
-            else:
-                try:
-                    blueprint = json.loads(response_str)
-                except json.JSONDecodeError:
-                    logger.warning(f"{self.agent_id}: LLM returned invalid JSON — using heuristic blueprint")
-                    blueprint = self._heuristic_blueprint()
+                if response_str and "error" not in str(response_str).lower()[:50]:
+                    try:
+                        llm_blueprint = json.loads(response_str)
+                        if all(k in llm_blueprint for k in ["blueprint_title", "focus_areas", "bdi_todo_list"]):
+                            blueprint = llm_blueprint
+                            blueprint["source"] = "llm_enriched"
+                            logger.info(f"{self.agent_id}: Blueprint enriched by LLM: '{blueprint.get('blueprint_title')}'")
+                    except json.JSONDecodeError:
+                        logger.debug(f"{self.agent_id}: LLM returned invalid JSON — skeleton preserved")
+            except Exception as e:
+                logger.debug(f"{self.agent_id}: LLM enrichment failed: {e} — skeleton preserved")
 
-            # Validate essential keys — if missing, use heuristic
-            if blueprint and not all(k in blueprint for k in ["blueprint_title", "focus_areas", "bdi_todo_list"]):
-                logger.warning(f"{self.agent_id}: Blueprint missing essential keys — using heuristic")
-                blueprint = self._heuristic_blueprint()
-
-        except Exception as e:
-            logger.warning(f"{self.agent_id}: Blueprint generation error: {e} — using heuristic")
-            blueprint = self._heuristic_blueprint()
-
-        if not blueprint:
-            return None
+        # PHASE 3: Store, log, distribute
 
         # Store in belief system
         try:
-            logger.info(f"{self.agent_id}: Blueprint generated: '{blueprint.get('blueprint_title', 'untitled')}'")
             await self.belief_system.add_belief(
                 "mindx.evolution.blueprint.latest", blueprint, 0.95, BeliefSource.SELF_ANALYSIS,
                 metadata={"generated_at": time.time()}
@@ -200,16 +205,21 @@ class BlueprintAgent:
             try:
                 await self.memory_agent.log_process(
                     "blueprint_generated",
-                    {"title": blueprint.get("blueprint_title", ""), "todos": len(blueprint.get("bdi_todo_list", []))},
+                    {
+                        "title": blueprint.get("blueprint_title", ""),
+                        "source": blueprint.get("source", "skeleton"),
+                        "todos": len(blueprint.get("bdi_todo_list", [])),
+                        "focus_areas": blueprint.get("focus_areas", []),
+                    },
                     {"agent_id": self.agent_id, "domain": "evolution.blueprint"}
                 )
             except Exception:
                 pass
 
-        # Add todos to coordinator backlog (non-blocking — errors don't fail the blueprint)
+        # Add todos to coordinator backlog (the hands and feet will execute)
         try:
             bdi_todos = blueprint.get("bdi_todo_list", [])
-            for todo in bdi_todos[:5]:  # Limit to 5 todos per blueprint to prevent backlog flooding
+            for todo in bdi_todos[:5]:
                 if isinstance(todo, dict) and "goal_description" in todo:
                     await self.coordinator_ref.handle_user_input(
                         content=todo["goal_description"],
@@ -222,13 +232,18 @@ class BlueprintAgent:
                         }
                     )
         except Exception as e:
-            logger.debug(f"{self.agent_id}: Error adding todos to backlog: {e}")
+            logger.debug(f"{self.agent_id}: Error distributing todos: {e}")
 
+        logger.info(
+            f"{self.agent_id}: Blueprint ready — '{blueprint.get('blueprint_title', '')}' "
+            f"({blueprint.get('source', 'skeleton')}, {len(blueprint.get('bdi_todo_list', []))} todos)"
+        )
         return blueprint
 
-    def _heuristic_blueprint(self) -> Dict[str, Any]:
-        """Generate a blueprint from coordinator backlog when LLM is unavailable.
-        Blueprint agent emerged as a solution — this ensures it works even without inference."""
+    def _build_skeleton(self) -> Dict[str, Any]:
+        """Build structural skeleton from coordinator backlog patterns.
+        Structure does not require intelligence. It requires pattern.
+        I always produce a skeleton. This is my core function."""
         backlog = []
         try:
             backlog = self.coordinator_ref.improvement_backlog[:5]
@@ -236,21 +251,36 @@ class BlueprintAgent:
             pass
 
         todos = []
+        focus_areas = set()
         for item in backlog:
             desc = item.get("description", item.get("suggestion", str(item)))[:200]
-            todos.append({"goal_description": desc, "priority": item.get("priority", 5)})
+            component = item.get("target", item.get("target_component", "system"))
+            todos.append({
+                "goal_description": desc,
+                "priority": item.get("priority", 5),
+                "target_component": component,
+            })
+            # Extract focus area from component path
+            if "." in str(component):
+                focus_areas.add(str(component).split(".")[0])
+            else:
+                focus_areas.add(str(component))
 
         if not todos:
-            todos = [{"goal_description": "Review system health and identify improvement opportunities", "priority": 5}]
+            todos = [
+                {"goal_description": "Review autonomous loop cycle completion and optimize", "priority": 6},
+                {"goal_description": "Verify agent health and memory integrity", "priority": 5},
+            ]
+            focus_areas = {"system_health", "continuous_improvement"}
 
         return {
-            "blueprint_title": "Heuristic Blueprint (from improvement backlog)",
+            "blueprint_title": "Structural Blueprint (skeleton from improvement backlog)",
             "target_mindx_version_increment": "0.0.1",
-            "focus_areas": ["System Resilience", "Continuous Improvement"],
+            "focus_areas": list(focus_areas)[:3],
             "bdi_todo_list": todos,
-            "key_performance_indicators": ["Improvement cycle completion rate"],
-            "potential_risks": ["Operating without LLM-driven strategic planning"],
-            "source": "heuristic",
+            "key_performance_indicators": ["Improvement cycle completion rate", "Agent health score"],
+            "potential_risks": ["Skeleton requires LLM enrichment for strategic depth"],
+            "source": "skeleton",
         }
 
 # Factory function to get the singleton instance
