@@ -14,18 +14,34 @@ docs/publications/book_*.md    (timestamped archive)
 https://mindx.pythai.net/book
 ```
 
-## The Book — 8 Chapters
+## The Book — 17 Chapters
 
-| Chapter | Title | Data Source | Dynamic? |
-|---------|-------|------------|----------|
-| I | Genesis | THESIS.md, MANIFESTO.md | Semi-static |
-| II | The Architecture | Orchestration hierarchy diagram | Static (code edit to change) |
-| III | Sovereign Identities | `data/identity/production_registry.json`, `daio/agents/agent_map.json` | Live — grows as agents register |
-| IV | The Dojo | Agent reputation scores from agent_map.json | Live — updates with reputation changes |
-| V | Decisions | `data/logs/godel_choices.jsonl` (last 15 entries) | Live — every autonomous decision logged |
-| VI | Evolution | `docs/IMPROVEMENT_JOURNAL.md` (last 3 entries) | Live — updated every 30 minutes |
-| VII | The Living State | pgvectorscale health check: beliefs, memories, embeddings, DB size | Live — real-time system snapshot |
-| VIII | Documentation Health | `docs/` directory scan, pgvectorscale embedding coverage, conflict audit | Live — reports unembedded docs |
+The [Book of mindX](BOOK_OF_MINDX.md) has expanded from 8 to 17 chapters as of April 2026. Each chapter draws from live data sources — the book writes itself from the system's own state.
+
+**Foundation chapters** (from docs):
+- **[I. Genesis](BOOK_OF_MINDX.md)** — From [AUTOMINDx](AUTOMINDX_ORIGIN.md) to autonomous civilization. Sources: [THESIS.md](THESIS.md), [MANIFESTO.md](MANIFESTO.md)
+- **[II. The Architecture](BOOK_OF_MINDX.md)** — Orchestration hierarchy: [CEO](../agents/orchestration/ceo_agent.py) → [Mastermind](../agents/orchestration/mastermind_agent.py) → [Coordinator](../agents/orchestration/coordinator_agent.py) → Specialized agents
+
+**Live chapters** (from system state):
+- **[III. Sovereign Identities](BOOK_OF_MINDX.md)** — 20 agents with [BANKON Vault](../mindx_backend_service/vault_bankon/) wallets. Source: `data/identity/production_registry.json`
+- **[IV. The Dojo](BOOK_OF_MINDX.md)** — Agent reputation. [JudgeDread](../agents/judgedread.agent) enforces [BONA FIDE](../daio/contracts/agenticplace/evm/BonaFide.sol). Source: [Dojo standings](../daio/governance/dojo.py)
+- **[V. Decisions](BOOK_OF_MINDX.md)** — [Gödel audit trail](../data/logs/godel_choices.jsonl). Every autonomous decision logged with rationale and outcome.
+- **[VI. Evolution](BOOK_OF_MINDX.md)** — [Strategic Evolution Agent](../agents/learning/strategic_evolution_agent.py) 4-phase pipeline. Source: [Improvement Journal](/journal)
+
+**System state chapters:**
+- **[VII. The Living State](BOOK_OF_MINDX.md)** — Real-time: pgvectorscale health, agent count, inference status, memory vectors
+- **[VIII. Governance](BOOK_OF_MINDX.md)** — [DAIO Constitution](../daio/contracts/daio/constitution/DAIO_Constitution.sol), 2/3 consensus, Boardroom
+- **[IX. Philosophy](BOOK_OF_MINDX.md)** — Ataraxia, three pillars, cypherpunk tradition
+
+**New chapters** (from this session):
+- **[X. Intelligence Is Intelligence](BOOK_OF_MINDX.md)** — AI = Augmented Intelligence. Machine learning = knowledge extraction. Substrate-independent cognition.
+- **[XI. Inference Pipeline](BOOK_OF_MINDX.md)** — Task-to-model correlation: local micro → cloud macro via [InferenceDiscovery](../llm/inference_discovery.py)
+- **[XII. Memory](BOOK_OF_MINDX.md)** — STM/LTM/archive tiers, [RAGE](../agents/memory_pgvector.py) semantic search, 120,000+ vectors
+- **[XIII. machine.dreaming](BOOK_OF_MINDX.md)** — 7-phase [offline knowledge refinement](https://github.com/AION-NET/machinedream). STM → LTM consolidation.
+- **[XIV. time.oracle](BOOK_OF_MINDX.md)** — Sovereign clock: cpu + solar + lunar + blockchain time correlation
+- **[XV. Services](BOOK_OF_MINDX.md)** — [mindx.pythai.net](https://mindx.pythai.net), [AgenticPlace](https://agenticplace.pythai.net), inference, governance, RAGE, the Book itself
+- **[XVI. Roadmap](BOOK_OF_MINDX.md)** — Phase 1 Constitutional Stability → Phase 4 Birth of Chimaiera
+- **[XVII. Documentation Health](BOOK_OF_MINDX.md)** — 232+ documents, [RAGE](../agents/memory_pgvector.py) semantic search, embedding coverage audit
 
 ## Publishing Lifecycle
 
