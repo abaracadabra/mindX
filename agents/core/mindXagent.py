@@ -2666,6 +2666,18 @@ class MindXAgent:
                                 "rationale": "autonomous_improvement_loop",
                                 "outcome": "success" if success else ("error: " + (error_message or "unknown")[:200]),
                             })
+                        # Record as action so it appears on the dashboard
+                        try:
+                            from agents.memory_pgvector import store_action
+                            await store_action(
+                                agent_id=self.agent_id,
+                                action_type="improvement_cycle",
+                                description=f"Cycle {cycle_count}: {top_priority['goal'][:150]}",
+                                source="autonomous_loop",
+                                status="completed" if success else "failed",
+                            )
+                        except Exception:
+                            pass
                 # Update session activity
                 if self.current_session:
                     self.session_manager.update_session_activity(

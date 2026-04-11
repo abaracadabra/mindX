@@ -88,38 +88,46 @@ class SystemAnalyzerTool:
 
         # 3. Use the LLM to generate insights
         try:
-            response_str = await self.llm_handler.generate_text(
-                prompt,
-                model=self.llm_handler.model_name_for_api,
-                max_tokens=2000,
-                temperature=0.2,
-                json_mode=True
-            )
-            if not response_str:
-                logger.warning(f"{self.log_prefix} LLM returned None (likely Ollama not available). Falling back to basic analysis.")
-                # Fallback: return basic analysis without LLM
-                return {
-                    "improvement_suggestions": [
-                        {
-                            "target_component_path": "llm.ollama_handler",
-                            "suggestion": "Install Ollama and pull required models for local AI inference",
-                            "justification": "Ollama provides failsafe AI inference when API keys are exhausted or unavailable",
-                            "priority": 8
-                        },
-                        {
-                            "target_component_path": "llm.model_registry",
-                            "suggestion": "Implement fallback provider selection when primary LLM fails",
-                            "justification": "System should gracefully degrade when primary LLM provider is unavailable",
-                            "priority": 7
-                        }
-                    ]
-                }
+            response_str = None
+            try:
+                response_str = await self.llm_handler.generate_text(
+                    prompt,
+                    model=self.llm_handler.model_name_for_api,
+                    max_tokens=2000,
+                    temperature=0.2,
+                    json_mode=True
+                )
+            except Exception as llm_err:
+                logger.warning(f"{self.log_prefix} LLM generate_text failed: {llm_err}")
+
+            if not response_str or "error" in str(response_str).lower()[:50]:
+                logger.warning(f"{self.log_prefix} LLM unavailable or returned error. Using heuristic analysis.")
+                # Heuristic: analyze system_state directly without LLM
+                suggestions = []
+                backlog = system_state.get("improvement_backlog", [])
+                if backlog:
+                    for item in backlog[:3]:
+                        desc = item.get("description", item.get("suggestion", str(item)))[:200]
+                        suggestions.append({
+                            "target_component_path": item.get("target", "system"),
+                            "suggestion": desc,
+                            "justification": "From improvement backlog",
+                            "priority": item.get("priority", 5)
+                        })
+                if not suggestions:
+                    suggestions = [{
+                        "target_component_path": "agents.core.mindXagent",
+                        "suggestion": "Review autonomous loop cycle results and optimize improvement selection",
+                        "justification": "Continuous self-improvement is the core function",
+                        "priority": 6
+                    }]
+                return {"improvement_suggestions": suggestions}
 
             analysis_result = json.loads(response_str)
-            
-            # Check if the result has the expected structure
+
             if "improvement_suggestions" not in analysis_result:
-                raise ValueError(f"Analysis LLM response missing 'improvement_suggestions': {response_str}")
+                logger.warning(f"{self.log_prefix} LLM response missing 'improvement_suggestions', using as-is")
+                return {"improvement_suggestions": [{"target_component_path": "system", "suggestion": str(analysis_result)[:200], "justification": "LLM analysis", "priority": 5}]}
             logger.info(f"{self.log_prefix} Successfully generated {len(analysis_result.get('improvement_suggestions', []))} improvement suggestions.")
             return analysis_result
 
