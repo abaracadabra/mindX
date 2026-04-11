@@ -294,22 +294,68 @@ async def docs_html_page():
             toc_html += f'<h3 class="cat">{cat} <span>({len(entries)})</span></h3><ul>' + "".join(entries) + "</ul>"
     total_docs = sum(len(v) for v in categories.values())
 
-    # ── Build sidebar NAV from docs/NAV.md section headings ──
+    # ── Build sidebar + main content from docs/NAV.md ──
+    # Both share the same anchor IDs so sidebar clicks scroll to content sections
     sidebar_items = []
+    nav_content_html = ""
     nav_path = PROJECT_ROOT / "docs" / "NAV.md"
     if nav_path.exists():
         import re as _re_nav
-        for line in nav_path.read_text(encoding="utf-8", errors="replace").split("\n"):
+        nav_text = nav_path.read_text(encoding="utf-8", errors="replace")
+        for line in nav_text.split("\n"):
             m2 = _re_nav.match(r'^## (.+)', line)
             m3 = _re_nav.match(r'^### (.+)', line)
+            m_link = _re_nav.match(r'^- \[(.+?)\]\((.+?)\)(.*)', line)
+            m_bold_link = _re_nav.match(r'^- \*\*\[(.+?)\]\((.+?)\)\*\*(.*)', line)
+            m_pipe = _re_nav.match(r'^\|(.+)\|(.+)\|(.+)\|(.+)\|', line)
+            m_code = _re_nav.match(r'^```', line)
+            m_blockquote = _re_nav.match(r'^> (.+)', line)
+            m_plain = _re_nav.match(r'^- (.+)', line)
             if m2:
                 sec = m2.group(1).strip()
                 anchor = _re_nav.sub(r'[^a-z0-9]+', '-', sec.lower()).strip('-')
                 sidebar_items.append(f'<a href="#s-{anchor}" class="s2">{sec}</a>')
+                nav_content_html += f'<h2 class="nav-sec" id="s-{anchor}">{sec}</h2>\n'
             elif m3:
                 sec = m3.group(1).strip()
                 anchor = _re_nav.sub(r'[^a-z0-9]+', '-', sec.lower()).strip('-')
                 sidebar_items.append(f'<a href="#s-{anchor}" class="s3">{sec}</a>')
+                nav_content_html += f'<h3 class="nav-sub" id="s-{anchor}">{sec}</h3>\n'
+            elif m_bold_link:
+                name, href, rest = m_bold_link.group(1), m_bold_link.group(2), m_bold_link.group(3)
+                doc_href = _re_nav.sub(r'\.\.\/', '/doc/', href).replace('.md', '').replace('.py', '.py')
+                if doc_href.startswith('/doc/docs/'):
+                    doc_href = '/doc/' + doc_href[10:]
+                rest_html = _re_nav.sub(r'\[([^\]]+)\]\(([^)]+)\)', lambda m: f'<a href="/doc/{m.group(2).replace("../","").replace(".md","")}">{m.group(1)}</a>', rest)
+                nav_content_html += f'<div class="nav-item"><a href="{doc_href}" class="nav-link bold">{name}</a>{rest_html}</div>\n'
+            elif m_link:
+                name, href, rest = m_link.group(1), m_link.group(2), m_link.group(3)
+                if href.startswith('http'):
+                    doc_href = href
+                elif href.startswith('../'):
+                    doc_href = '/doc/' + href.replace('../', '').replace('.md', '').replace('.py', '.py')
+                else:
+                    doc_href = '/doc/' + href.replace('.md', '').replace('.py', '.py')
+                rest_clean = _re_nav.sub(r' — ', '', rest, count=1) if rest.startswith(' — ') else rest
+                rest_html = _re_nav.sub(r'\[([^\]]+)\]\(([^)]+)\)', lambda m: f'<a href="/doc/{m.group(2).replace("../","").replace(".md","")}">{m.group(1)}</a>', rest_clean)
+                nav_content_html += f'<div class="nav-item"><a href="{doc_href}" class="nav-link">{name}</a><span class="nav-desc">{rest_html}</span></div>\n'
+            elif m_pipe and not line.strip().startswith('|--') and not line.strip().startswith('| -'):
+                cells = [c.strip() for c in line.split('|')[1:-1]]
+                is_header = all('**' in c or c.isupper() or len(c) < 3 for c in cells)
+                if is_header:
+                    nav_content_html += '<table class="nav-tbl"><tr>' + ''.join(f'<th>{c.replace("**","")}</th>' for c in cells) + '</tr>\n'
+                else:
+                    cell_html = ''
+                    for c in cells:
+                        c_linked = _re_nav.sub(r'\[([^\]]+)\]\(([^)]+)\)', lambda m: f'<a href="/doc/{m.group(2).replace("../","").replace(".md","")}">{m.group(1)}</a>', c)
+                        cell_html += f'<td>{c_linked}</td>'
+                    nav_content_html += f'<tr>{cell_html}</tr>\n'
+            elif line.strip() == '---':
+                nav_content_html += '<hr class="sep">\n'
+            elif m_blockquote:
+                nav_content_html += f'<blockquote>{m_blockquote.group(1)}</blockquote>\n'
+            elif m_code:
+                pass  # Skip code fences in nav
     sidebar_html = "\n".join(sidebar_items)
 
     return _DashResponse(content=f"""<!DOCTYPE html><html lang="en"><head>
@@ -394,6 +440,24 @@ li a:hover{{color:#58a6ff}}
 details summary{{cursor:pointer;color:#58a6ff;font-size:11px;font-weight:600}}
 details summary::-webkit-details-marker{{color:#484f58}}
 
+/* ── NAV content sections ── */
+.nav-sec{{color:#e6edf3;font-size:15px;margin:28px 0 8px;padding-top:20px;border-top:1px solid rgba(48,54,61,.4);font-weight:700;scroll-margin-top:20px}}
+.nav-sec:first-of-type{{border-top:none;margin-top:0;padding-top:0}}
+.nav-sub{{color:#d2a8ff;font-size:12px;margin:18px 0 6px;font-weight:600;scroll-margin-top:20px}}
+.nav-item{{padding:3px 0;font-size:11px;line-height:1.6;display:flex;gap:6px;flex-wrap:wrap}}
+.nav-link{{color:#58a6ff;text-decoration:none;font-weight:500;transition:color .15s}}
+.nav-link:hover{{color:#79c0ff;text-decoration:underline}}
+.nav-link.bold{{font-weight:700;color:#e6edf3}}
+.nav-link.bold:hover{{color:#58a6ff}}
+.nav-desc{{color:#8b949e;font-size:10px}}
+.nav-desc a{{color:#79c0ff;text-decoration:none}}.nav-desc a:hover{{text-decoration:underline}}
+.nav-tbl{{width:100%;border-collapse:collapse;margin:8px 0;font-size:10px}}
+.nav-tbl th{{text-align:left;padding:4px 8px;border-bottom:1px solid rgba(48,54,61,.4);color:#8b949e;font-size:9px;text-transform:uppercase}}
+.nav-tbl td{{padding:3px 8px;border-bottom:1px solid rgba(48,54,61,.15)}}
+.nav-tbl td a{{color:#58a6ff;text-decoration:none}}.nav-tbl td a:hover{{text-decoration:underline}}
+.nav-tbl tr:hover td{{background:rgba(22,27,34,.3)}}
+blockquote{{border-left:3px solid rgba(88,166,255,.2);padding:8px 14px;color:#8b949e;margin:10px 0;font-size:10px;font-style:italic;background:rgba(13,17,23,.4);border-radius:0 4px 4px 0}}
+
 /* ── Mobile: collapse sidebar ── */
 .sb-toggle{{display:none;position:fixed;top:10px;left:10px;z-index:60;width:36px;height:36px;
   border-radius:6px;border:1px solid rgba(48,54,61,.6);background:rgba(13,17,23,.95);
@@ -433,60 +497,55 @@ details summary::-webkit-details-marker{{color:#484f58}}
 <!-- Main Content -->
 <div class="main">
 
-<h1 class="title" id="s-getting-started">mind<b>X</b> docs</h1>
+<h1 class="title">mind<b>X</b> docs</h1>
 <div class="subtitle">{total_docs} documents &middot; {endpoint_count} API endpoints &middot; living documentation from an evolving system</div>
 
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
 <div class="card">
-<h2><a href="/book">The Book of mindX</a></h2>
-<p>The evolving chronicle of a self-improving system — architecture, identities, decisions, philosophy. Written by mindX itself.</p>
-<div class="meta"><span class="tag tag-live">LIVE</span><span class="tag tag-auto">AUTO-GENERATED</span> {'Published' if book_exists else 'Pending'} &middot; {edition_count} edition{'s' if edition_count!=1 else ''}</div>
+<h2><a href="/book">Book of mindX</a></h2>
+<p>Written by mindX itself via AuthorAgent.</p>
+<div class="meta"><span class="tag tag-live">LIVE</span><span class="tag tag-auto">AUTO</span> {edition_count} editions</div>
 </div>
-
 <div class="card">
 <h2><a href="/journal">Improvement Journal</a></h2>
-<p>Timestamped log of autonomous decisions, belief changes, and system snapshots.</p>
-<div class="meta"><span class="tag tag-live">LIVE</span><span class="tag tag-auto">AUTO-GENERATED</span> {'Active' if journal_exists else 'Waiting for first entry'}</div>
+<p>Autonomous decisions and system snapshots.</p>
+<div class="meta"><span class="tag tag-live">LIVE</span><span class="tag tag-auto">AUTO</span></div>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+<div class="card">
+<h2><a href="/redoc">API</a> <span style="color:#484f58;font-size:9px">({endpoint_count})</span></h2>
+<div class="meta"><span class="tag tag-api">API</span></div>
+</div>
+<div class="card">
+<h2><a href="/dojo/standings">Dojo</a></h2>
+<div class="meta"><span class="tag tag-live">LIVE</span></div>
+</div>
+<div class="card">
+<h2><a href="/inference/status">Inference</a></h2>
+<div class="meta"><span class="tag tag-live">LIVE</span></div>
+</div>
 </div>
 
 <hr class="sep">
 
-<h2 style="font-size:14px;color:#e6edf3;margin-bottom:4px" id="s-operational-standards">Operational Standards</h2>
-<p style="font-size:10px;color:#8b949e;margin-bottom:12px">Two inference pillars — CPU (always, offline) + Cloud (24/7/365, free tier). <a href="/doc/ollama/INDEX" style="color:#58a6ff">Full Ollama reference</a></p>
-<table style="width:100%;font-size:10px;border-collapse:collapse;margin-bottom:16px">
-<tr style="border-bottom:1px solid rgba(48,54,61,.4)"><th style="padding:4px 8px;text-align:left;color:#8b949e;font-size:9px">PILLAR</th><th style="padding:4px 8px;text-align:left;color:#8b949e;font-size:9px">SOURCE</th><th style="padding:4px 8px;text-align:left;color:#8b949e;font-size:9px">SPEED</th><th style="padding:4px 8px;text-align:left;color:#8b949e;font-size:9px">SCALE</th></tr>
-<tr><td style="padding:4px 8px;color:#3fb950;font-weight:600">CPU</td><td style="padding:4px 8px">localhost:11434</td><td style="padding:4px 8px">~8 tok/s</td><td style="padding:4px 8px">0.6B–1.7B</td></tr>
-<tr><td style="padding:4px 8px;color:#58a6ff;font-weight:600">Cloud</td><td style="padding:4px 8px">ollama.com</td><td style="padding:4px 8px">~65 tok/s</td><td style="padding:4px 8px">3B–1T</td></tr>
-</table>
+<!-- NAV.md rendered as main content — sidebar links scroll here -->
+{nav_content_html}
 
-<div class="card" id="s-inference-providers">
-<h2><a href="/redoc">API Reference</a> <span style="color:#484f58;font-size:10px">({endpoint_count} endpoints)</span></h2>
-<p>All endpoints: agents, inference, governance, vault, diagnostics, chat, RAGE. <a href="/redoc" style="color:#58a6ff">ReDoc</a> &middot; <a href="/docs" style="color:#484f58">Swagger</a> &middot; <a href="/openapi.json" style="color:#484f58">OpenAPI</a></p>
-</div>
+<hr class="sep">
 
-<div class="card">
-<h2>Endpoint Map <span style="color:#484f58;font-size:10px">({endpoint_count} routes)</span></h2>
+<details>
+<summary style="font-size:13px;color:#e6edf3;cursor:pointer;margin-bottom:8px">Endpoint Map <span style="color:#484f58;font-size:10px">({endpoint_count} routes)</span></summary>
 {endpoint_map_html}
-</div>
+</details>
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-<div class="card" id="s-governance---autonomy">
-<h2><a href="/dojo/standings">Dojo Standings</a></h2>
-<p>Agent reputation rankings</p><div class="meta"><span class="tag tag-live">LIVE</span></div>
-</div>
-<div class="card">
-<h2><a href="/inference/status">Inference Status</a></h2>
-<p>Provider availability</p><div class="meta"><span class="tag tag-live">LIVE</span></div>
-</div>
-</div>
+{'<details><summary style="font-size:13px;color:#e6edf3;cursor:pointer;margin-bottom:8px">pgvectorscale Index <span style="color:#484f58;font-size:10px">(' + str(db_doc_count) + ' embedded)</span></summary>' + db_docs_html + '</details>' if db_doc_count else ''}
 
-<hr class="sep">
-
-{'<h2 style="font-size:13px;color:#e6edf3;margin-bottom:6px" id="s-memory---knowledge">pgvectorscale Index <span style="color:#484f58;font-weight:400;font-size:10px">(' + str(db_doc_count) + ' embedded)</span></h2><p style="font-size:9px;color:#484f58;margin-bottom:10px">Semantic embeddings in PostgreSQL — searchable via RAGE</p>' + db_docs_html + '<hr class="sep">' if db_doc_count else ''}
-
-<h2 style="font-size:14px;color:#e6edf3;margin-bottom:4px" id="s-agents">All Documents <span style="color:#484f58;font-weight:400;font-size:10px">({total_docs})</span></h2>
-<p style="font-size:9px;color:#484f58;margin-bottom:12px">Auto-indexed from docs/ &mdash; click any document to read online</p>
-
+<details>
+<summary style="font-size:13px;color:#e6edf3;cursor:pointer;margin-bottom:8px">All Documents by Category <span style="color:#484f58;font-size:10px">({total_docs})</span></summary>
 {toc_html}
+</details>
 
 <div class="ft"><a href="/">dashboard</a> &middot; <a href="/docs.html">docs</a> &middot; <a href="/book">book</a> &middot; <a href="/journal">journal</a> &middot; <a href="/redoc">api</a> &middot; <a href="/dojo/standings">dojo</a> &middot; <a href="/inference/status">inference</a> &middot; <a href="/automindx">origin</a> &middot; mindx.pythai.net &middot; &copy; Professor Codephreak</div>
 </div>
