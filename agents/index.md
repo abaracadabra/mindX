@@ -328,6 +328,30 @@ This document provides a complete index of all agents in the mindX system, with 
     - **Memory**: logs via memory_agent, status at `data/solidity_hardhat_status.json`
     - **Projects**: `daio/contracts/agenticplace/evm/` (ERC-8004 registries, BonaFide)
 
+#### Governance / Reputation Agents (agents/)
+
+48. **[JudgeDread Agent](judgedread.agent)** - I am the law. I oversee reputation and enforce [BONA FIDE](../daio/contracts/agenticplace/evm/BonaFide.sol)
+    - **Type**: `governance_reputation`
+    - **Domain**: `governance.reputation`
+    - **Complexity**: 0.95
+    - **Location**: `agents/judgedread_agent.py`
+    - **Definition**: `agents/judgedread.agent`
+    - **Authority**: master tier — cannot clawback sovereign ([mastermind](../docs/mastermind_agent.md), [CEO](../docs/CEO.md))
+    - **Enforces**: [BONA FIDE](../daio/contracts/agenticplace/evm/BonaFide.sol) (EVM) + [bonafide.algo.ts](../daio/contracts/algorand/bonafide.algo.ts) (Algorand)
+    - **Monitors**: All agents including [AION](aion_agent.py) sovereignty and compliance
+    - **Companion**: BladeRunner (execution arm — kills models/agents on verdict)
+    - **Memory**: logs verdicts via [memory_agent](memory_agent.py), actions to dashboard
+
+49. **[AION System Agent](system.aion.agent)** - I am the system agent. Sovereign operations and chroot replication
+    - **Type**: `system_agent`
+    - **Domain**: `system.aion`
+    - **Complexity**: 0.95
+    - **Location**: `agents/aion_agent.py`
+    - **Definition**: `agents/system.aion.agent`
+    - **Origins**: [AION-NET](https://github.com/aion-net), [opt-aion_chroot](https://github.com/AION-NET/opt-aion_chroot), [machinedream](https://github.com/AION-NET/machinedream)
+    - **Sovereignty**: 1.0 — contained by [BONA FIDE](../daio/contracts/agenticplace/evm/BonaFide.sol) clawback, not by kill switch
+    - **Capabilities**: chroot create/migrate, [mindX.sh](../mindX.sh) --replicate, [vault](../mindx_backend_service/vault_bankon/) migration
+
 ---
 
 ## Agent Schema
@@ -418,8 +442,16 @@ All agents can be formally defined using `agents/agent.schema.json` — a JSON S
 - **SystemAdmin Agent** - Privileged command execution
 
 ### Blockchain / Solidity
-- **Solidity Foundry Agent** - forge build, test, anvil, deploy (preferred)
-- **Solidity Hardhat Agent** - hardhat compile, test, deploy, verify (upgradeable proxies)
+- **[Solidity Foundry Agent](solidity.foundry.agent)** — forge build, test, anvil, deploy (preferred)
+- **[Solidity Hardhat Agent](solidity.hardhat.agent)** — hardhat compile, test, deploy, verify (upgradeable proxies)
+
+### Governance / Reputation
+- **[JudgeDread](judgedread.agent)** — reputation overseer, [BONA FIDE](../daio/contracts/agenticplace/evm/BonaFide.sol) enforcement, verdicts
+- **BladeRunner** — execution arm, kills models/agents on [JudgeDread](judgedread.agent) verdict (planned)
+- **[AION](system.aion.agent)** — sovereign system agent, contained by BONA FIDE clawback
+
+### Deployment
+- **[DeploymentGitHubAgent](deployment.github.agent)** — load, deploy, replicate [mindX](../mindX.sh) from GitHub with failsafe rollback
 
 ---
 

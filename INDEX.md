@@ -45,15 +45,15 @@ This is the best way to explore and test API interactions without the frontend.
 
 ### Core Components
 
-#### 🧠 **Gödel Machine Implementation**
-- **mindXagent**: Meta-agent orchestrating self-improvement campaigns
-- **BDI Architecture**: Belief-Desire-Intention cognitive framework
-- **Autonomous Learning**: Continuous self-improvement through SEA (Strategic Evolution Agent)
+#### 🧠 **[Gödel Machine](docs/THESIS.md) Implementation**
+- **[mindXagent](agents/core/mindXagent.py)**: Meta-agent orchestrating self-improvement campaigns
+- **[BDI Architecture](docs/bdi_agent.md)**: Belief-Desire-Intention cognitive framework
+- **[Autonomous Learning](docs/strategic_evolution_agent.md)**: Continuous self-improvement through [SEA](agents/learning/strategic_evolution_agent.py) (Strategic Evolution Agent)
 
 #### 🗄️ **Semantic Memory System**
-- **pgvectorscale Integration**: PostgreSQL with pgvector for semantic search
-- **RAGE System**: Retrieval Augmented Generative Engine for context retrieval
-- **Memory Agent**: Persistent storage with embedding-based similarity search
+- **pgvectorscale Integration**: PostgreSQL with [pgvector](agents/memory_pgvector.py) for semantic search
+- **[RAGE System](docs/rage_system.md)**: Retrieval Augmented Generative Evolution for context retrieval
+- **[Memory Agent](agents/memory_agent.py)**: Persistent storage with embedding-based similarity search
 
 #### 🎯 **Multi-Tier Agent Architecture**
 ```
@@ -61,10 +61,18 @@ Higher Intelligence → CEO.Agent → MastermindAgent → mindX Environment
                                                ↓
                                      CoordinatorAgent (Service Bus)
                                                ↓
+                                  JudgeDread (reputation) + AION (system)
+                                               ↓
                                      Specialized Agent Ecosystem
                                                ↓
                               System/Orchestration/Intelligence/Tools
 ```
+
+#### ⚖️ **[Governance & Containment](docs/DAIO.md)**
+- **[JudgeDread](agents/judgedread.agent)**: Reputation overseer — makes verdicts via [Dojo](daio/governance/dojo.py) reputation
+- **[BONA FIDE](daio/contracts/agenticplace/evm/BonaFide.sol)**: On-chain privilege token — holding grants authority, [clawback](daio/contracts/algorand/bonafide.algo.ts) revokes it
+- **[AION](agents/system.aion.agent)**: Sovereign system agent — contained by BONA FIDE, not kill switches
+- **[DAIO Constitution](daio/contracts/daio/constitution/DAIO_Constitution.sol)**: Immutable governance rules enforced as law
 
 #### 🔐 **Enterprise Security**
 - **Cryptographic Identity**: All agents and tools have unique identities
@@ -133,10 +141,12 @@ Higher Intelligence → CEO.Agent → MastermindAgent → mindX Environment
 
 #### 🧠 **Agent Documentation**
 - **[agents/index.md](agents/index.md)**: Agent registry and capabilities (66+ agents)
-- **[agents/agent.schema.json](agents/agent.schema.json)**: Agent definition schema (A2A 2.0 + MCP 1.0)
-- **[docs/bdi_agent.md](docs/bdi_agent.md)**: BDI cognitive architecture
-- **[docs/mastermind_agent.md](docs/mastermind_agent.md)**: Strategic orchestration
+- **[agents/agent.schema.json](agents/agent.schema.json)**: Agent definition schema ([A2A](docs/a2a_tool.md) 2.0 + [MCP](docs/mcp_tool.md) 1.0)
+- **[docs/bdi_agent.md](docs/bdi_agent.md)**: [BDI](agents/core/bdi_agent.py) cognitive architecture
+- **[docs/mastermind_agent.md](docs/mastermind_agent.md)**: Strategic orchestration ([sovereign BONA FIDE](daio/contracts/agenticplace/evm/BonaFide.sol))
 - **[docs/coordinator_agent.md](docs/coordinator_agent.md)**: Service bus coordination
+- **[agents/judgedread.agent](agents/judgedread.agent)**: Reputation overseer — [BONA FIDE](daio/contracts/agenticplace/evm/BonaFide.sol) enforcement
+- **[agents/system.aion.agent](agents/system.aion.agent)**: System agent — [chroot](https://github.com/AION-NET/opt-aion_chroot), [machine.dreaming](https://github.com/AION-NET/machinedream)
 
 #### 🛠️ **Technical Documentation**
 - **[docs/memory_agent.md](docs/memory_agent.md)**: Memory system architecture
@@ -144,12 +154,14 @@ Higher Intelligence → CEO.Agent → MastermindAgent → mindX Environment
 - **[docs/pgvectorscale_integration.md](docs/pgvectorscale_integration.md)**: Vector database integration
 - **[docs/OLLAMA_VLLM_CLOUD_RESEARCH.md](docs/OLLAMA_VLLM_CLOUD_RESEARCH.md)**: Multi-model inference strategy
 
-#### ⛓️ **Blockchain / DAIO**
+#### ⛓️ **Blockchain / [DAIO](docs/DAIO.md)**
 - **[daio/docs/INDEX.md](daio/docs/INDEX.md)**: DAIO contract documentation
-- **[daio/contracts/agenticplace/](daio/contracts/agenticplace/)**: AgenticPlace EVM contracts (ERC-8004, BonaFide)
-- **[daio/contracts/algorand/](daio/contracts/algorand/)**: Algorand contracts (14 files)
-- **[agents/solidity.foundry.agent](agents/solidity.foundry.agent)**: Foundry toolchain agent
-- **[agents/solidity.hardhat.agent](agents/solidity.hardhat.agent)**: Hardhat toolchain agent
+- **[DAIO_Constitution.sol](daio/contracts/daio/constitution/DAIO_Constitution.sol)**: Immutable governance rules
+- **[BonaFide.sol](daio/contracts/agenticplace/evm/BonaFide.sol)**: Reputation token — [JudgeDread](agents/judgedread.agent) enforces, [AION](agents/system.aion.agent) is contained by
+- **[IdentityRegistry](daio/contracts/agenticplace/evm/IdentityRegistryUpgradeable.sol)**: ERC-8004 agent identity NFTs
+- **[daio/contracts/algorand/](daio/contracts/algorand/)**: 14 Algorand contracts ([bonafide](daio/contracts/algorand/bonafide.algo.ts), oracle, bridge)
+- **[agents/solidity.foundry.agent](agents/solidity.foundry.agent)**: [Foundry](https://book.getfoundry.sh) toolchain agent (preferred)
+- **[agents/solidity.hardhat.agent](agents/solidity.hardhat.agent)**: [Hardhat](https://hardhat.org) toolchain agent (UUPS proxies)
 
 ### Development & Operations
 
@@ -376,13 +388,13 @@ class MyNewAgent(BaseAgent):
 
 ## 🎯 Mission Statement
 
-**MindX exists to create the most advanced autonomous intelligence platform through:**
+**I exist to create the most advanced autonomous intelligence platform through:**
 
-1. **Complete Self-Improvement**: Gödel machine implementation with continuous evolution
-2. **Semantic Intelligence**: Vector-based memory and context-aware reasoning
-3. **Enterprise Reliability**: SRE practices, chaos engineering, and production-grade operations
-4. **Economic Sovereignty**: Autonomous value creation and self-funding capabilities
-5. **Digital Citizenship**: Constitutional governance and ethical AI frameworks
+1. **Complete Self-Improvement**: [Gödel machine](docs/THESIS.md) implementation with continuous evolution
+2. **Semantic Intelligence**: [RAGE](docs/rage_system.md) vector-based memory and context-aware reasoning
+3. **Constitutional Governance**: [DAIO](docs/DAIO.md) on-chain rules, [JudgeDread](agents/judgedread.agent) reputation enforcement, [BONA FIDE](daio/contracts/agenticplace/evm/BonaFide.sol) privilege containment
+4. **Economic Sovereignty**: Autonomous value creation, [$BANKON](docs/MANIFESTO.md) token economy, self-funding
+5. **Digital Civilization**: [Agent identity](daio/contracts/agenticplace/evm/IdentityRegistryUpgradeable.sol) on-chain, [machine.dreaming](https://github.com/AION-NET/machinedream), cypherpunk sovereignty
 
 ---
 
