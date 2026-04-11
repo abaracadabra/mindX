@@ -1,0 +1,36 @@
+{
+  "network": "localhost",
+  "chainId": 1337,
+  "contracts": {
+    "SingletonFactory": {
+      "address": "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318",
+      "transactionHash": "0x543d64c8d6f932e2ac3f1fb26f936b461a0c7549a27718062344bbb6ab3e0994",
+      "blockNumber": 0
+    },
+    "IdentityRegistry": {
+      "address": "0x610178dA211FEF7D417bC0e6FeD39F05609AD788",
+      "implementation": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+      "transactionHash": "0x6d45c57e35adfdf329b7ac761fc8a8a1628fa1a7615e63e12879635a3dcc88e6",
+      "blockNumber": 0
+    },
+    "ReputationRegistry": {
+      "address": "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
+      "implementation": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+      "transactionHash": "0xa662a584d9894cde7abf01c20bc31c36545b11b77095fe5efe3c8f390734cca0",
+      "blockNumber": 0
+    },
+    "ValidationRegistry": {
+      "address": "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
+      "implementation": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+      "transactionHash": "0xe698c403908a305f05cf604df6fd689358cef35d76bebaac68bf95ab039996ae",
+      "blockNumber": 0
+    },
+    "BonaFide": {
+      "address": "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
+      "transactionHash": "0x11ab0044d5f3a4163180e2298974fda4acfc607b323ba20c88c0044a011dfed0",
+      "blockNumber": 0
+    }
+  },
+  "deployedAt": "2026-03-30T10:43:38.643Z",
+  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+}

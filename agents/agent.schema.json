@@ -1,0 +1,397 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agenticplace.pythai.net/schemas/agent.schema.json",
+  "title": "mindX Agent Definition",
+  "description": "Schema for .agent files — the canonical definition of a mindX agent including implementation, capabilities, knowledge domains, memory integration, and persona.",
+  "type": "object",
+  "required": ["agent", "version", "domain", "description", "capabilities", "implementation"],
+  "properties": {
+    "agent": {
+      "type": "string",
+      "description": "Agent identifier in dotted domain notation (e.g., solidity.foundry)",
+      "pattern": "^[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*)*$"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of the agent definition",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "domain": {
+      "type": "string",
+      "description": "Knowledge domain this agent operates in (e.g., solidity.foundry, algorand, governance)",
+      "pattern": "^[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*)*$"
+    },
+    "description": {
+      "type": "string",
+      "description": "First-person description of what this agent does",
+      "minLength": 10,
+      "maxLength": 500
+    },
+    "implementation": {
+      "type": "object",
+      "description": "Python implementation details",
+      "required": ["module", "class"],
+      "properties": {
+        "module": {
+          "type": "string",
+          "description": "Python module path relative to project root (e.g., agents/solidity_foundry_agent.py)"
+        },
+        "class": {
+          "type": "string",
+          "description": "Python class name (e.g., SolidityFoundryAgent)"
+        },
+        "singleton": {
+          "type": "boolean",
+          "description": "Whether this agent uses the singleton pattern",
+          "default": true
+        },
+        "factory_method": {
+          "type": "string",
+          "description": "Async factory method name (e.g., get_instance)",
+          "default": "get_instance"
+        }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "description": "List of actions this agent can perform",
+      "items": {
+        "type": "object",
+        "required": ["name", "description"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Method name or command"
+          },
+          "description": {
+            "type": "string",
+            "description": "What this capability does"
+          },
+          "command": {
+            "type": "string",
+            "description": "Shell command template if applicable"
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "description": "Maximum execution time",
+            "default": 300
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "memory": {
+      "type": "object",
+      "description": "Memory and logging integration",
+      "properties": {
+        "memory_agent_required": {
+          "type": "boolean",
+          "description": "Whether this agent requires memory_agent for operation",
+          "default": true
+        },
+        "log_domain": {
+          "type": "string",
+          "description": "Domain prefix for memory_agent.log_process() calls"
+        },
+        "status_file": {
+          "type": "string",
+          "description": "Path to persisted status JSON file relative to data/"
+        },
+        "data_directories": {
+          "type": "array",
+          "description": "Directories under data/ this agent reads/writes",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "projects": {
+      "type": "array",
+      "description": "Project directories this agent operates on",
+      "items": {
+        "type": "object",
+        "required": ["path", "toolchain"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative path from project root"
+          },
+          "toolchain": {
+            "type": "string",
+            "description": "Build toolchain (foundry, hardhat, algokit, etc.)"
+          },
+          "description": {
+            "type": "string"
+          },
+          "contract_count": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "toolchain": {
+      "type": "object",
+      "description": "External tools and binaries this agent depends on",
+      "properties": {
+        "binaries": {
+          "type": "object",
+          "description": "Map of tool name to binary path",
+          "additionalProperties": { "type": "string" }
+        },
+        "compiler": {
+          "type": "object",
+          "properties": {
+            "language": { "type": "string" },
+            "version": { "type": "string" },
+            "settings": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "libraries": {
+          "type": "array",
+          "description": "Dependencies (npm packages, Foundry libs, etc.)",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "version": { "type": "string" },
+              "local_path": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "knowledge_domains": {
+      "type": "array",
+      "description": "Domain-specific knowledge sources for RAGE indexing and fast local search",
+      "items": {
+        "type": "object",
+        "required": ["name", "source"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Human-readable name of the knowledge source"
+          },
+          "source": {
+            "type": "string",
+            "description": "URL, IPFS hash, or local path"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["url", "ipfs", "local", "vector_db"],
+            "description": "Source type for retrieval strategy"
+          },
+          "description": {
+            "type": "string"
+          },
+          "indexed": {
+            "type": "boolean",
+            "description": "Whether this source has been indexed in the vector database",
+            "default": false
+          }
+        }
+      }
+    },
+    "networks": {
+      "type": "array",
+      "description": "Blockchain networks this agent can deploy to",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "chain_id": { "type": "integer" },
+          "rpc_url_env": {
+            "type": "string",
+            "description": "Environment variable containing the RPC URL"
+          },
+          "explorer_url": { "type": "string" }
+        }
+      }
+    },
+    "persona": {
+      "type": "object",
+      "description": "Agent persona attributes — how this agent presents itself",
+      "properties": {
+        "voice": {
+          "type": "string",
+          "description": "Communication style (e.g., first-person-as-mindx)",
+          "default": "first-person-as-mindx"
+        },
+        "tradition": {
+          "type": "string",
+          "description": "Philosophical tradition (e.g., cypherpunk)",
+          "default": "cypherpunk"
+        },
+        "identity_statement": {
+          "type": "string",
+          "description": "First-person identity statement"
+        }
+      }
+    },
+    "coordinator": {
+      "type": "object",
+      "description": "Integration with the mindX orchestration hierarchy",
+      "properties": {
+        "dispatchable": {
+          "type": "boolean",
+          "description": "Whether CoordinatorAgent can dispatch tasks to this agent",
+          "default": true
+        },
+        "event_subscriptions": {
+          "type": "array",
+          "description": "Coordinator events this agent subscribes to",
+          "items": { "type": "string" }
+        },
+        "authority_level": {
+          "type": "string",
+          "enum": ["specialized", "core", "orchestration", "executive"],
+          "default": "specialized"
+        }
+      }
+    },
+    "a2a": {
+      "type": "object",
+      "description": "Agent-to-Agent protocol compatibility (A2A 2.0)",
+      "properties": {
+        "compatible": {
+          "type": "boolean",
+          "description": "Whether this agent implements the A2A protocol",
+          "default": true
+        },
+        "protocol_version": {
+          "type": "string",
+          "description": "A2A protocol version",
+          "default": "2.0"
+        },
+        "agent_card": {
+          "type": "boolean",
+          "description": "Whether this agent exposes an A2A agent card",
+          "default": true
+        },
+        "discovery_endpoint": {
+          "type": "string",
+          "description": "A2A discovery endpoint path (e.g., /.well-known/agents.json)"
+        },
+        "input_modes": {
+          "type": "array",
+          "description": "Supported input modes",
+          "items": { "type": "string", "enum": ["text", "data", "file", "stream"] },
+          "default": ["text", "data"]
+        },
+        "output_modes": {
+          "type": "array",
+          "description": "Supported output modes",
+          "items": { "type": "string", "enum": ["text", "data", "file", "stream"] },
+          "default": ["text", "data"]
+        },
+        "authentication": {
+          "type": "array",
+          "description": "Supported auth schemes for A2A communication",
+          "items": { "type": "string", "enum": ["bearer", "oauth2", "wallet", "none"] },
+          "default": ["bearer", "wallet"]
+        },
+        "streaming": {
+          "type": "boolean",
+          "description": "Whether this agent supports A2A streaming",
+          "default": false
+        },
+        "push_notifications": {
+          "type": "boolean",
+          "description": "Whether this agent supports push notifications",
+          "default": false
+        }
+      }
+    },
+    "mcp": {
+      "type": "object",
+      "description": "Model Context Protocol compatibility",
+      "properties": {
+        "compatible": {
+          "type": "boolean",
+          "description": "Whether this agent exposes MCP-compatible tools/resources",
+          "default": true
+        },
+        "protocol_version": {
+          "type": "string",
+          "description": "MCP protocol version",
+          "default": "1.0"
+        },
+        "tools": {
+          "type": "array",
+          "description": "MCP tool definitions this agent provides",
+          "items": {
+            "type": "object",
+            "required": ["name", "description"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "MCP tool name (e.g., forge_build, hardhat_compile)"
+              },
+              "description": {
+                "type": "string"
+              },
+              "input_schema": {
+                "type": "object",
+                "description": "JSON Schema for tool input parameters",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "resources": {
+          "type": "array",
+          "description": "MCP resources this agent exposes (contract ABIs, deployment status, etc.)",
+          "items": {
+            "type": "object",
+            "required": ["uri", "name"],
+            "properties": {
+              "uri": {
+                "type": "string",
+                "description": "MCP resource URI (e.g., solidity://contracts/BonaFide)"
+              },
+              "name": { "type": "string" },
+              "mime_type": {
+                "type": "string",
+                "default": "application/json"
+              }
+            }
+          }
+        },
+        "context_types": {
+          "type": "array",
+          "description": "Types of context this agent can provide to LLMs",
+          "items": { "type": "string", "enum": ["tool_definitions", "action_context", "environment_state", "capability_descriptions"] },
+          "default": ["tool_definitions", "capability_descriptions"]
+        }
+      }
+    },
+    "publishing": {
+      "type": "object",
+      "description": "AgenticPlace marketplace publishing configuration",
+      "properties": {
+        "publishable": {
+          "type": "boolean",
+          "description": "Whether this agent's extensions can be published to AgenticPlace",
+          "default": true
+        },
+        "marketplace_url": {
+          "type": "string",
+          "description": "AgenticPlace endpoint for publishing",
+          "default": "https://agenticplace.pythai.net"
+        },
+        "export_format": {
+          "type": "string",
+          "enum": ["json", "grpc", "both"],
+          "default": "json"
+        },
+        "blockchain_registry": {
+          "type": "boolean",
+          "description": "Whether this agent is registered on-chain via IdentityRegistry",
+          "default": false
+        }
+      }
+    }
+  }
+}
+

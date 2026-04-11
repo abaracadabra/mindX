@@ -1042,7 +1042,7 @@ async def _heartbeat_query_local_model():
                         await ma.log_process(
                             process_name="heartbeat_dialogue",
                             data=entry,
-                            metadata={"agent_id": "mindx_heartbeat", "model": "qwen3:1.7b", "type": "self_reflection"},
+                            metadata={"agent_id": "mindx_heartbeat", "model": "auto", "type": "self_reflection"},
                         )
                     except Exception:
                         pass
@@ -1513,24 +1513,11 @@ async def startup_event():
 
         # Start autonomous improvement loop — mindX thinks, decides, evolves
         async def _auto_start_autonomous():
-            """Delayed start of autonomous mode with self-aware resource limits.
-            mindX monitors its own CPU and memory before and during autonomous cycles.
+            """Event-driven start of autonomous mode.
+            Waits for startup_agent to deliver inference info, then discovers the best model.
             """
-            await asyncio.sleep(45)  # Wait for full initialization
+            await asyncio.sleep(5)  # Brief delay for FastAPI to finish mounting
             try:
-                import psutil as _ps_auto
-                mem = _ps_auto.virtual_memory()
-                cpu = _ps_auto.cpu_percent(interval=1)
-                logger.info(f"Autonomous pre-flight: memory={mem.percent}% cpu={cpu}%")
-                # Self-aware resource check — stay within VPS parameters
-                if mem.percent > 78:
-                    logger.warning(f"Autonomous mode deferred: memory={mem.percent}% (>78%)")
-                    # Retry after 5 min when memory may have settled
-                    await asyncio.sleep(300)
-                    mem = _ps_auto.virtual_memory()
-                    if mem.percent > 78:
-                        logger.warning(f"Autonomous mode skipped: memory still at {mem.percent}%")
-                        return
                 from agents.core.mindXagent import MindXAgent
                 mindxagent = await MindXAgent.get_instance(
                     agent_id="mindx_meta_agent",
@@ -1538,10 +1525,31 @@ async def startup_event():
                     config=app_config,
                     test_mode=False,
                 )
+                # Wait for startup_agent to deliver inference info (or timeout)
+                try:
+                    await asyncio.wait_for(mindxagent._startup_info_received.wait(), timeout=120)
+                    logger.info("Autonomous pre-flight: startup_info received from startup_agent")
+                except asyncio.TimeoutError:
+                    logger.warning("Autonomous pre-flight: startup_info not received within 120s, proceeding with discovery")
+                # Self-aware resource check — stay within VPS parameters
+                import psutil as _ps_auto
+                mem = _ps_auto.virtual_memory()
+                cpu = _ps_auto.cpu_percent(interval=1)
+                logger.info(f"Autonomous pre-flight: memory={mem.percent}% cpu={cpu}%")
+                if mem.percent > 78:
+                    logger.warning(f"Autonomous mode deferred: memory={mem.percent}% (>78%)")
+                    await asyncio.sleep(300)
+                    mem = _ps_auto.virtual_memory()
+                    if mem.percent > 78:
+                        logger.warning(f"Autonomous mode skipped: memory still at {mem.percent}%")
+                        return
                 if hasattr(mindxagent, 'start_autonomous_mode'):
-                    # Use qwen3:1.7b for depth, with resource governor managing model lifecycle
-                    await mindxagent.start_autonomous_mode(model="qwen3:1.7b", provider="ollama")
-                    logger.info("mindXagent autonomous mode STARTED (qwen3:1.7b, resource-governed)")
+                    # Model discovered automatically via _resolve_inference_model()
+                    result = await mindxagent.start_autonomous_mode()
+                    if result.get("status") == "started":
+                        logger.info(f"mindXagent autonomous mode STARTED (model={result.get('model')}, discovered)")
+                    else:
+                        logger.warning(f"mindXagent autonomous mode failed: {result.get('error', result.get('message', 'unknown'))}")
                 else:
                     logger.warning("mindXagent has no start_autonomous_mode method")
             except Exception as auto_e:
@@ -1640,7 +1648,7 @@ async def startup_event():
                                     instance.stuck_loop_detector.reset()
                                 instance.autonomous_mode = False
                                 await asyncio.sleep(2)
-                                await instance.start_autonomous_mode(model="qwen3:1.7b", provider="ollama")
+                                await instance.start_autonomous_mode()  # model discovered via _resolve_inference_model()
                         except Exception as e:
                             logger.error(f"HealthAuditor: failed to restart autonomous mode: {e}")
                     # Restart AuthorAgent if stale (max once/hour)
@@ -2716,9 +2724,19 @@ async def chat_with_docs(question: str):
 
         answer = "Could not generate answer — local model unavailable."
         try:
+            # Resolve model dynamically from mindXagent or fall back to first available
+            _rag_model = None
+            try:
+                from agents.core.mindXagent import MindXAgent as _RagMX
+                if _RagMX._instance and _RagMX._instance.llm_model:
+                    _rag_model = _RagMX._instance.llm_model
+            except Exception:
+                pass
+            if not _rag_model:
+                _rag_model = "qwen3:1.7b"  # last-resort default
             timeout = _cha.ClientTimeout(total=30)
             async with _cha.ClientSession(timeout=timeout) as sess:
-                payload = {"model": "qwen3:1.7b", "messages": [{"role": "user", "content": prompt}], "stream": False}
+                payload = {"model": _rag_model, "messages": [{"role": "user", "content": prompt}], "stream": False}
                 async with sess.post("http://localhost:11434/api/chat", json=payload) as resp:
                     if resp.status == 200:
                         data = await resp.json()
@@ -5464,7 +5482,7 @@ async def stop_speech():
 # --- MindX Agent Endpoints ---
 
 class MindXAgentAutonomousPayload(BaseModel):
-    model: Optional[str] = "mistral-nemo:latest"
+    model: Optional[str] = None  # None = auto-discover best available model
     provider: Optional[str] = "ollama"
 
 
@@ -5472,9 +5490,9 @@ class MindXAgentAutonomousPayload(BaseModel):
 async def start_mindxagent_autonomous(payload: MindXAgentAutonomousPayload = MindXAgentAutonomousPayload()):
     """
     Start mindXagent in autonomous mode for continuous self-improvement.
-    
-    Uses the specified model (default: mistral-nemo:latest from Ollama) to continuously
-    analyze the system, identify improvement opportunities, and execute improvements
+
+    Auto-discovers the best available inference model if none specified.
+    Analyzes the system, identifies improvement opportunities, and executes improvements
     using Blueprint Agent and Strategic Evolution Agent.
     """
     try:

@@ -1,0 +1,39 @@
+{
+  "network": "testnet",
+  "deployedAt": "2026-03-28T23:01:00Z",
+  "deployer": "7NF4QRTG5QNFVLBKMQXM7TQZPNTB24CTTMJ2YEV2AUJY3AQ6KZOUT4ZE7I",
+  "provider": "vibekit-keyring",
+  "contracts": {
+    "minter": {
+      "appId": 757891101,
+      "appAddress": "C5BVA53KRQGJAYL4MWTNFDZVDH7QA74NPZVB5KNFID5K3RCZMHZIXFND74",
+      "deployTx": "3POD5XXRA34WKUVRM5MVIC76BQNVXCVDKV6RMR52IL3DYME4RXHA",
+      "fundTx": "4LSEQS4NPKZ36V6WAGEAVG2FCK4HW4QHTKL3GCTKWLL7QPI3XMLA",
+      "fundAmount": 1000000,
+      "name": "aORC Minter (AgenticMinter)",
+      "status": "live",
+      "verified": {
+        "totalMinted": 1,
+        "testMintTx": "PUAU75LT24AD7N27LAH44QV5U7CFV2IBE34RV73BPPOY2VYWVDGQ"
+      }
+    },
+    "registry": {
+      "appId": 757891112,
+      "appAddress": "2P2MX7VWBCSJ3BN5AYJRTVPTBJPXAX7FIZYHZDK4ERQASJPSLVLUNQPP6M",
+      "deployTx": "NDRHUORBGSKCUYKIL76FDBX6LS3AJ7TGDTOHGJZMI4GEF7TIQVBQ",
+      "fundTx": "UV55LDMW4XU3DYXR2EJQ45S3JR7MACMTECKJFEDEGHQ2GLIGRRRA",
+      "fundAmount": 5000000,
+      "name": "aORC Registry (AgenticRegistry)",
+      "status": "live",
+      "verified": {
+        "totalChains": 1,
+        "testListTx": "QKPFI3ZM2VY5UKJ5HVNQC5AOSZZMNV4UWWZO453F67FHL3ESX2GQ"
+      }
+    }
+  },
+  "explorer": {
+    "minter": "https://testnet.explorer.perawallet.app/application/757891101",
+    "registry": "https://testnet.explorer.perawallet.app/application/757891112"
+  },
+  "nextStep": "mainnet deployment requires funded mainnet account (min 3 ALGO)"
+}

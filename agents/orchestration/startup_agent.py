@@ -1723,24 +1723,23 @@ Format as JSON with keys: suggestions (list), priorities, impacts, safe_to_apply
         asyncio.create_task(self._improvement_loop())
     
     async def _improvement_loop(self):
-        """Background loop for continuous improvement"""
-        try:
-            # Wait for initial startup to complete
-            await asyncio.sleep(30)  # Wait 30 seconds after startup
-            
-            while self.improvement_loop_active:
-                # Run improvement analysis
+        """Background loop for continuous improvement.
+        Individual cycle failures do not kill the loop — only setting
+        improvement_loop_active = False (via stop) terminates it.
+        """
+        await asyncio.sleep(30)  # Wait for initial startup to complete
+
+        while self.improvement_loop_active:
+            try:
                 improvement_result = await self.autonomous_startup_improvement()
-                
+
                 if improvement_result.get("success"):
                     logger.info(f"{self.log_prefix} Improvement cycle complete: {len(improvement_result.get('improvements_made', []))} improvements applied")
-                
-                # Wait before next check (1 hour)
-                await asyncio.sleep(3600)
-                
-        except Exception as e:
-            logger.error(f"{self.log_prefix} Error in improvement loop: {e}", exc_info=True)
-            self.improvement_loop_active = False
+            except Exception as e:
+                logger.error(f"{self.log_prefix} Error in improvement cycle: {e}", exc_info=True)
+
+            # Wait before next check (1 hour)
+            await asyncio.sleep(3600)
     
     async def _notify_mindxagent_startup(self, ollama_result: Dict[str, Any]):
         """

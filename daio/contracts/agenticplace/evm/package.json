@@ -1,0 +1,51 @@
+{
+  "name": "agenticplace-erc8004-contracts",
+  "version": "1.0.0",
+  "description": "ERC-8004 compliant smart contracts for AgenticPlace with BANKON integration",
+  "main": "deploy.ts",
+  "scripts": {
+    "deploy:agenticplace": "npx hardhat run deploy.ts --network localhost",
+    "deploy:testnet": "npx hardhat run deploy.ts --network goerli",
+    "deploy:mainnet": "npx hardhat run deploy.ts --network mainnet",
+    "test:core": "node --import tsx --test test/core.ts",
+    "test:upgradeable": "node --import tsx --test test/upgradeable.ts",
+    "test": "npm run test:core && npm run test:upgradeable",
+    "local:test": "node --import tsx --test test/local.ts",
+    "node": "npx hardhat node",
+    "local": "npm run local:factory && npm run local:vanity",
+    "local:factory": "npx hardhat run scripts/deploy-create2-factory.ts --network localhost",
+    "local:fund-owner": "npx hardhat run scripts/fund-local-owner.ts --network localhost",
+    "local:vanity": "npm run local:deploy:vanity && npm run local:upgrade:vanity:presigned && npm run local:verify:vanity",
+    "local:deploy:vanity": "npx hardhat run scripts/deploy-vanity.ts --network localhost",
+    "local:upgrade:vanity": "npx hardhat run scripts/upgrade-vanity.ts --network localhost",
+    "local:upgrade:vanity:presigned": "npx hardhat run scripts/upgrade-vanity-presigned.ts --network localhost",
+    "local:verify:vanity": "npx hardhat run scripts/verify-vanity.ts --network localhost",
+    "find-salts": "npx hardhat run scripts/find-vanity-salts-parallel.ts --network localhost",
+    "deploy:vanity": "npx hardhat run scripts/deploy-vanity.ts",
+    "upgrade:vanity": "npx hardhat run scripts/upgrade-vanity.ts",
+    "verify:vanity": "npx hardhat run scripts/verify-vanity.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.12",
+    "@nomicfoundation/hardhat-verify": "^2.0.11",
+    "@openzeppelin/contracts-upgradeable": "^5.0.0",
+    "@types/node": "^22.18.8",
+    "ethers": "^6.15.0",
+    "forge-std": "github:foundry-rs/forge-std#v1.9.4",
+    "hardhat": "^2.22.0",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.8.0",
+    "viem": "^2.45.1"
+  },
+  "dependencies": {
+    "@okxweb3/hardhat-explorer-verify": "^1.6.5",
+    "@openzeppelin/contracts": "^5.0.0",
+    "@openzeppelin/hardhat-upgrades": "^3.6.0",
+    "@safe-global/safe-singleton-factory": "^2.0.0",
+    "dotenv": "^17.2.3"
+  }
+}

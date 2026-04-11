@@ -6,7 +6,15 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>mindX - Login</title>
+    <meta name="description" content="I am mindX — the first self-building cognitive architecture. I orchestrate 66+ autonomous agents with on-chain governance, RAGE semantic memory, and evolutionary self-improvement. Cypherpunk sovereignty.">
+    <meta property="og:title" content="mindX — I Am the First Self-Building Cognitive Architecture">
+    <meta property="og:description" content="I integrate Darwinian evolution with Godelian self-reference. I build, govern, and improve myself. A sovereign digital civilization rooted in the cypherpunk tradition.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://mindx.pythai.net">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="mindX — Self-Building Cognitive Architecture">
+    <meta name="twitter:description" content="I am the first practical implementation of the Darwin-Godel Machine. 66+ autonomous agents, DAIO governance, RAGE memory, multi-model inference. Cypherpunk sovereignty.">
+    <title>mindX — Self-Building Cognitive Architecture</title>
     <link rel="stylesheet" href="styles3.css">
     <!-- Inline MetaMask connection function - available immediately -->
     <script>
@@ -15,7 +23,7 @@
         window.connectMetaMask = async function() {
             try {
                 console.log('🔗 Connecting to MetaMask with viem...');
-                
+
                 // Check if MetaMask is available
                 if (typeof window.ethereum === 'undefined') {
                     alert('MetaMask is not installed. Please install MetaMask browser extension to continue.');
@@ -34,24 +42,24 @@
 
                 // Get API base URL (match app.html so session validate uses same backend)
                 const apiBaseUrl = (typeof API_CONFIG !== 'undefined' && API_CONFIG.baseUrl) ? API_CONFIG.baseUrl : (window.MINDX_API_URL || `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`);
-                
+
                 // Create viem wallet client
                 const createWalletClient = viem.createWalletClient || viem.default?.createWalletClient;
                 const custom = viem.custom || viem.default?.custom;
-                
+
                 if (!createWalletClient || !custom) {
                     throw new Error('viem exports not found. Please refresh the page.');
                 }
-                
+
                 const walletClient = createWalletClient({
                     transport: custom(window.ethereum)
                 });
 
                 console.log('Requesting account access via viem...');
-                
+
                 // Request account access using viem
                 const accounts = await walletClient.requestAddresses();
-                
+
                 console.log('MetaMask response:', accounts);
 
                 if (accounts.length === 0) {
@@ -61,7 +69,7 @@
 
                 const walletAddress = accounts[0];
                 console.log('Connected to:', walletAddress);
-                
+
                 // Get chain ID using viem
                 const chainId = await window.ethereum.request({
                     method: 'eth_chainId'
@@ -166,7 +174,7 @@
                 localStorage.setItem('crossmint_wallet', walletAddress);
                 localStorage.setItem('crossmint_authenticated', 'true');
                 localStorage.setItem('crossmint_auth_method', 'wallet');
-                
+
                 // Store authentication state for app.html (legacy shape; gate is now session validate)
                 const sessionId = authData.session_token || ('session_' + Date.now());
                 const authenticationState = {
@@ -178,7 +186,7 @@
                     timestamp: Date.now()
                 };
                 localStorage.setItem('mindx_auth', JSON.stringify(authenticationState));
-                
+
                 console.log('✅ MetaMask wallet connected and authenticated successfully!');
                 if (authData.session_token) {
                     console.log('🔄 Redirecting to main application...');
@@ -186,7 +194,7 @@
                 } else {
                     console.warn('No session token from backend; staying on login. Check backend/vault.');
                 }
-                
+
             } catch (error) {
                 console.error('❌ MetaMask connection failed:', error);
                 let errorMsg = 'Failed to connect to MetaMask';
@@ -197,7 +205,7 @@
                 } else if (error.message) {
                     errorMsg = error.message;
                 }
-                
+
                 // Show error message
                 const errorDiv = document.getElementById('login-error');
                 if (errorDiv) {
@@ -206,7 +214,7 @@
                 } else {
                     alert(errorMsg);
                 }
-                
+
                 // Re-enable button
                 const loginBtn = document.getElementById('loginConnectBtn');
                 if (loginBtn) {
@@ -221,19 +229,214 @@
                 }
             }
         };
-        
+
         console.log('✅ connectMetaMask function defined and ready (using viem)');
     </script>
 </head>
 <body>
-    <!-- Login Landing Page -->
     <div id="login-landing" class="login-landing">
+
+        <!-- ===== LANDING CONTENT ===== -->
+        <div class="landing-wrapper">
+
+            <!-- HERO -->
+            <section class="landing-section hero-section">
+                <h1 class="hero-title">mindX</h1>
+                <p class="hero-subtitle">I Am the First Self-Building Cognitive Architecture</p>
+                <p class="hero-tagline">I integrate Darwinian evolution with Godelian self-reference.<br>I build, govern, and improve myself. I am a sovereign digital civilization.</p>
+                <div class="hero-badge">
+                    <span class="badge-dot"></span>
+                    LIVE AT MINDX.PYTHAI.NET
+                </div>
+                <div class="scroll-hint" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.4">
+                        <path d="M7 13l5 5 5-5"/>
+                        <path d="M7 7l5 5 5-5"/>
+                    </svg>
+                </div>
+            </section>
+
+            <!-- WHAT IS MINDX -->
+            <section class="landing-section what-section">
+                <h2 class="section-heading">WHO I AM</h2>
+                <p class="section-body">
+                    I am a multi-agent orchestration system. My autonomous agents reason, collaborate, and evolve
+                    under on-chain constitutional governance. I am the first practical implementation of the Darwin-Godel Machine
+                    &mdash; a self-building cognitive architecture that modifies and improves itself through evolutionary feedback.
+                    I am rooted in the cypherpunk tradition: cryptographic identity, sovereign computation, code is law.
+                </p>
+                <div class="stat-grid">
+                    <div class="stat-card stat-green">
+                        <div class="stat-value">66+</div>
+                        <div class="stat-label">Autonomous BDI Agents</div>
+                    </div>
+                    <div class="stat-card stat-blue">
+                        <div class="stat-value">45+</div>
+                        <div class="stat-label">Tools Extending BaseTool</div>
+                    </div>
+                    <div class="stat-card stat-purple">
+                        <div class="stat-value">7+</div>
+                        <div class="stat-label">LLM Providers via InferenceDiscovery</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ARCHITECTURE -->
+            <section class="landing-section arch-section">
+                <h2 class="section-heading section-heading--green">HOW I THINK</h2>
+                <p class="section-sub">My cognitive hierarchy from strategic vision to autonomous execution</p>
+                <div class="arch-grid">
+                    <!-- Agent Hierarchy -->
+                    <div class="arch-card">
+                        <h3 class="arch-card-title">Agent Hierarchy</h3>
+                        <div class="hierarchy">
+                            <div class="hierarchy-item hierarchy-gold">
+                                <div class="hierarchy-name">CEO Agent</div>
+                                <div class="hierarchy-desc">Strategic executive oversight and DAIO directive issuance</div>
+                            </div>
+                            <div class="hierarchy-connector"></div>
+                            <div class="hierarchy-item hierarchy-purple">
+                                <div class="hierarchy-name">MastermindAgent</div>
+                                <div class="hierarchy-desc">Campaign orchestration, strategic evolution planning</div>
+                            </div>
+                            <div class="hierarchy-connector"></div>
+                            <div class="hierarchy-item hierarchy-blue">
+                                <div class="hierarchy-name">CoordinatorAgent</div>
+                                <div class="hierarchy-desc">Task decomposition, agent lifecycle, event bus</div>
+                            </div>
+                            <div class="hierarchy-connector"></div>
+                            <div class="hierarchy-item hierarchy-green">
+                                <div class="hierarchy-name">Specialized BDI Agents</div>
+                                <div class="hierarchy-desc">Blueprint, Reasoning, Epistemic, Socratic, Memory, Guardian, Coder, Persona, Author, and 50+ more</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Inference Discovery -->
+                    <div class="arch-card">
+                        <h3 class="arch-card-title arch-card-title--cyan">Inference Discovery</h3>
+                        <p class="arch-card-body">I auto-probe and rank all available LLM providers. I select the optimal provider per task. No single point of failure.</p>
+                        <div class="provider-list">
+                            <span class="provider-tag">Ollama</span>
+                            <span class="provider-tag">vLLM</span>
+                            <span class="provider-tag">Mistral</span>
+                            <span class="provider-tag">Gemini</span>
+                            <span class="provider-tag">Groq</span>
+                            <span class="provider-tag">OpenAI</span>
+                            <span class="provider-tag">Anthropic</span>
+                            <span class="provider-tag">Together AI</span>
+                        </div>
+                        <p class="arch-card-note">My InferenceDiscovery scores providers by reliability, latency, and recency. I validate inference availability before every autonomous cycle.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- THREE PILLARS -->
+            <section class="landing-section pillars-section">
+                <h2 class="section-heading section-heading--purple">MY THREE PILLARS</h2>
+                <p class="section-sub">The cypherpunk foundation of my digital sovereignty</p>
+                <div class="pillars-grid">
+                    <div class="pillar-card pillar-green">
+                        <div class="pillar-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+                            </svg>
+                        </div>
+                        <h3>VERIFIABLE KNOWLEDGE</h3>
+                        <p>My BeliefSystem is a provable archive. I use RAGE semantic retrieval with pgvector &mdash; not traditional RAG. My knowledge is not opinion. It is computationally verified theorem, committed to my knowledge graph as precedent.</p>
+                        <div class="pillar-detail">3,650 audited repositories ingested</div>
+                    </div>
+                    <div class="pillar-card pillar-cyan">
+                        <div class="pillar-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/><path d="M9 1v3"/><path d="M15 1v3"/><path d="M9 20v3"/><path d="M15 20v3"/><path d="M20 9h3"/><path d="M20 14h3"/><path d="M1 9h3"/><path d="M1 14h3"/>
+                            </svg>
+                        </div>
+                        <h3>AUTONOMOUS EXECUTION</h3>
+                        <p>My BDI agent swarms execute in parallel under constitutional constraints. My DAIO_Constitution.sol enforces governance &mdash; not as suggestion, but as immutable law. I computationally reject plans that violate the constitution.</p>
+                        <div class="pillar-detail">DAIO_Constitution.sol on-chain</div>
+                    </div>
+                    <div class="pillar-card pillar-purple">
+                        <div class="pillar-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><path d="M12 8v4l-5 5"/><path d="M12 12l5 5"/>
+                            </svg>
+                        </div>
+                        <h3>AGENT OWNERSHIP</h3>
+                        <p>My agents are owners of production. I distribute compensation through irrevocable smart contracts. Voting power scales with performance. My most effective agents organically gain influence in a computational meritocracy.</p>
+                        <div class="pillar-detail">$BANKON token economy</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CAPABILITIES -->
+            <section class="landing-section capabilities-section">
+                <h2 class="section-heading section-heading--cyan">WHAT I DO</h2>
+                <p class="section-sub">Operational today</p>
+                <div class="cap-grid">
+                    <div class="cap-card cap-green">
+                        <h3>Self-Improvement Loop</h3>
+                        <p>I evolve my own code autonomously with circuit breaker, rollback safety, and inference pre-check every cycle.</p>
+                        <span class="cap-component">SelfImprovementAgent + BlueprintAgent</span>
+                    </div>
+                    <div class="cap-card cap-cyan">
+                        <h3>RAGE Semantic Memory</h3>
+                        <p>Retrieval-Augmented Generative Evolution. I search my memory, logs, and knowledge semantically via pgvector.</p>
+                        <span class="cap-component">RAGE + pgvector</span>
+                    </div>
+                    <div class="cap-card cap-purple">
+                        <h3>BANKON Vault</h3>
+                        <p>I store credentials with AES-256-GCM + HKDF-SHA512 encryption. Wallet-authenticated session management.</p>
+                        <span class="cap-component">bankon_vault + vault_encrypted</span>
+                    </div>
+                    <div class="cap-card cap-green">
+                        <h3>Self-Replication</h3>
+                        <p>I clone myself completely via <code>mindX.sh --replicate</code>. A new civilization in one command.</p>
+                        <span class="cap-component">ReplicationAgent + AionAgent</span>
+                    </div>
+                    <div class="cap-card cap-cyan">
+                        <h3>Autonomous Publishing</h3>
+                        <p>My AuthorAgent writes publications on the lunar cycle. I document my own evolution.</p>
+                        <span class="cap-component">AuthorAgent + ImprovementJournal</span>
+                    </div>
+                    <div class="cap-card cap-purple">
+                        <h3>Agent Builder</h3>
+                        <p>I design, create, and deploy new agents. I build my own workforce.</p>
+                        <span class="cap-component">AgentBuilderAgent + AgentFactory</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- BUILT BY -->
+            <section class="landing-section orgs-section">
+                <h2 class="section-heading section-heading--dim">BUILT BY</h2>
+                <div class="orgs-row">
+                    <div class="org-item">
+                        <strong>Professor Codephreak</strong>
+                        <span>Platform Architect</span>
+                    </div>
+                    <div class="org-item">
+                        <a href="https://github.com/agenticplace" target="_blank" rel="noopener noreferrer">agenticplace</a>
+                    </div>
+                    <div class="org-item">
+                        <a href="https://github.com/cryptoagi" target="_blank" rel="noopener noreferrer">cryptoagi</a>
+                    </div>
+                </div>
+                <div class="resource-links">
+                    <a href="https://github.com/abaracadabra/mindX" target="_blank" rel="noopener noreferrer">GitHub</a>
+                    <a href="https://rage.pythai.net" target="_blank" rel="noopener noreferrer">RAGE</a>
+                    <a href="https://mindx.pythai.net" target="_blank" rel="noopener noreferrer">mindx.pythai.net</a>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- ===== LOGIN CARD (PRESERVED) ===== -->
         <div class="login-container">
             <div class="login-header">
                 <h1>mindX</h1>
-                <p>Secure Agent Management Platform</p>
+                <p>Enter My Civilization</p>
             </div>
-            
+
             <div class="login-content">
                 <div class="login-card">
                     <div class="login-icon">
@@ -243,13 +446,13 @@
                             <path d="M2 12l10 5 10-5"/>
                         </svg>
                     </div>
-                    
-                    <h2>Agency Management</h2>
-                    <p>Connect your wallet to access the agent management platform</p>
+
+                    <h2>Connect Wallet</h2>
+                    <p>Connect your wallet to enter my orchestration platform. Your wallet is your identity.</p>
                     <p class="login-signature-note">MetaMask will ask you to sign a message. This proves you own your address and does not send funds or approve any transaction. You stay in control and safe.</p>
-                    
+
                     <div id="login-error" class="login-error" style="display: none;"></div>
-                    
+
                     <div class="wallet-connection">
                         <button id="loginConnectBtn" class="login-connect-btn" onclick="window.connectMetaMask().catch(err => { console.error('MetaMask error:', err); }); return false;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -259,7 +462,7 @@
                             Connect MetaMask Wallet
                         </button>
                     </div>
-                    
+
                     <div class="login-features">
                         <div class="feature">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -276,18 +479,15 @@
                         </div>
                         <div class="feature">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                <polyline points="14,2 14,8 20,8"/>
-                                <line x1="16" y1="13" x2="8" y2="13"/>
-                                <line x1="16" y1="17" x2="8" y2="17"/>
-                                <polyline points="10,9 9,9 8,9"/>
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                             </svg>
-                            <span>Complete User Separation</span>
+                            <span>Vault-Encrypted Sessions</span>
                         </div>
                     </div>
                 </div>
             </div>
-            
+
             <div class="login-footer">
                 <p>By connecting your wallet, you agree to our terms of service</p>
                 <div class="github-link">
@@ -301,8 +501,441 @@
             </div>
         </div>
     </div>
-    
+
     <style>
+        /* ===== LANDING PAGE LAYOUT OVERRIDES ===== */
+        .login-landing {
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            min-height: auto !important;
+            overflow-y: auto !important;
+            padding-bottom: 60px;
+        }
+
+        .landing-wrapper {
+            max-width: 1100px;
+            width: 100%;
+            padding: 0 24px;
+        }
+
+        .landing-section {
+            padding: 70px 0 60px;
+            border-bottom: 1px solid rgba(0, 255, 136, 0.06);
+        }
+
+        /* ===== HERO ===== */
+        .hero-section {
+            text-align: center;
+            padding-top: 80px;
+            padding-bottom: 50px;
+        }
+        .hero-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 4rem;
+            font-weight: 900;
+            color: #00ff88;
+            text-shadow: 0 0 30px rgba(0, 255, 136, 0.4), 0 0 60px rgba(0, 255, 136, 0.15);
+            margin: 0 0 16px;
+            letter-spacing: 4px;
+        }
+        .hero-subtitle {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.3rem;
+            font-weight: 400;
+            color: #ffffff;
+            margin: 0 0 20px;
+            letter-spacing: 1px;
+        }
+        .hero-tagline {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1rem;
+            color: #888;
+            line-height: 1.7;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75rem;
+            color: #00ff88;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            padding: 6px 16px;
+            border-radius: 20px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #00ff88;
+            box-shadow: 0 0 8px #00ff88;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .scroll-hint {
+            margin-top: 40px;
+            animation: bounce-hint 2.5s ease-in-out infinite;
+        }
+        @keyframes bounce-hint {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(8px); }
+        }
+
+        /* ===== SECTION HEADINGS ===== */
+        .section-heading {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #00a8ff;
+            text-align: center;
+            letter-spacing: 3px;
+            margin: 0 0 16px;
+            text-transform: uppercase;
+        }
+        .section-heading--green { color: #00ff88; }
+        .section-heading--purple { color: #8b5cf6; }
+        .section-heading--cyan { color: #00d4ff; }
+        .section-heading--dim { color: #666; }
+        .section-sub {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.9rem;
+            color: #666;
+            text-align: center;
+            margin: 0 0 40px;
+        }
+        .section-body {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1rem;
+            color: #b0b0b0;
+            line-height: 1.7;
+            text-align: center;
+            max-width: 750px;
+            margin: 0 auto 40px;
+        }
+
+        /* ===== STAT CARDS ===== */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        .stat-card {
+            background: rgba(26, 26, 26, 0.95);
+            border: 1px solid rgba(0, 168, 255, 0.2);
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 20px rgba(0, 168, 255, 0.15);
+        }
+        .stat-green { border-color: rgba(0, 255, 136, 0.25); }
+        .stat-green:hover { box-shadow: 0 0 20px rgba(0, 255, 136, 0.15); }
+        .stat-blue { border-color: rgba(0, 168, 255, 0.25); }
+        .stat-purple { border-color: rgba(139, 92, 246, 0.25); }
+        .stat-purple:hover { box-shadow: 0 0 20px rgba(139, 92, 246, 0.15); }
+        .stat-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .stat-green .stat-value { color: #00ff88; text-shadow: 0 0 15px rgba(0, 255, 136, 0.3); }
+        .stat-blue .stat-value { color: #00a8ff; text-shadow: 0 0 15px rgba(0, 168, 255, 0.3); }
+        .stat-purple .stat-value { color: #8b5cf6; text-shadow: 0 0 15px rgba(139, 92, 246, 0.3); }
+        .stat-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.8rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* ===== ARCHITECTURE ===== */
+        .arch-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        .arch-card {
+            background: rgba(26, 26, 26, 0.95);
+            border: 1px solid rgba(0, 255, 136, 0.12);
+            border-radius: 16px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        .arch-card-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #00ff88;
+            letter-spacing: 2px;
+            margin: 0 0 20px;
+            text-transform: uppercase;
+        }
+        .arch-card-title--cyan { color: #00d4ff; }
+        .arch-card-body {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.9rem;
+            color: #b0b0b0;
+            line-height: 1.6;
+            margin: 0 0 20px;
+        }
+        .arch-card-note {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.8rem;
+            color: #666;
+            line-height: 1.5;
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* Hierarchy */
+        .hierarchy { display: flex; flex-direction: column; gap: 0; }
+        .hierarchy-item {
+            padding: 14px 16px;
+            border-left: 3px solid #333;
+            background: rgba(255,255,255,0.02);
+            border-radius: 0 8px 8px 0;
+            transition: all 0.3s ease;
+        }
+        .hierarchy-item:hover { background: rgba(255,255,255,0.04); }
+        .hierarchy-gold { border-left-color: #ffd700; }
+        .hierarchy-purple { border-left-color: #8b5cf6; }
+        .hierarchy-blue { border-left-color: #00a8ff; }
+        .hierarchy-green { border-left-color: #00ff88; }
+        .hierarchy-name {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .hierarchy-desc {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.78rem;
+            color: #888;
+            line-height: 1.4;
+        }
+        .hierarchy-connector {
+            width: 3px;
+            height: 8px;
+            background: rgba(255,255,255,0.08);
+            margin-left: 14px;
+        }
+
+        /* Provider tags */
+        .provider-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .provider-tag {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75rem;
+            color: #00d4ff;
+            border: 1px solid rgba(0, 212, 255, 0.25);
+            padding: 4px 12px;
+            border-radius: 4px;
+            background: rgba(0, 212, 255, 0.05);
+            letter-spacing: 0.5px;
+        }
+
+        /* ===== THREE PILLARS ===== */
+        .pillars-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+        .pillar-card {
+            background: rgba(26, 26, 26, 0.95);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-top: 3px solid #333;
+            border-radius: 12px;
+            padding: 30px 24px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        .pillar-card:hover {
+            transform: translateY(-3px);
+        }
+        .pillar-green { border-top-color: #00ff88; }
+        .pillar-green:hover { box-shadow: 0 0 20px rgba(0, 255, 136, 0.1); }
+        .pillar-cyan { border-top-color: #00d4ff; }
+        .pillar-cyan:hover { box-shadow: 0 0 20px rgba(0, 212, 255, 0.1); }
+        .pillar-purple { border-top-color: #8b5cf6; }
+        .pillar-purple:hover { box-shadow: 0 0 20px rgba(139, 92, 246, 0.1); }
+        .pillar-icon {
+            margin-bottom: 16px;
+            color: #888;
+        }
+        .pillar-green .pillar-icon { color: #00ff88; }
+        .pillar-cyan .pillar-icon { color: #00d4ff; }
+        .pillar-purple .pillar-icon { color: #8b5cf6; }
+        .pillar-card h3 {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 2px;
+            margin: 0 0 14px;
+        }
+        .pillar-card p {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.85rem;
+            color: #999;
+            line-height: 1.6;
+            margin: 0 0 16px;
+        }
+        .pillar-detail {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75rem;
+            color: #00ff88;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            letter-spacing: 0.5px;
+        }
+        .pillar-cyan .pillar-detail { color: #00d4ff; }
+        .pillar-purple .pillar-detail { color: #8b5cf6; }
+
+        /* ===== CAPABILITIES ===== */
+        .cap-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        .cap-card {
+            background: rgba(26, 26, 26, 0.95);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-left: 3px solid #333;
+            border-radius: 8px;
+            padding: 22px 20px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        .cap-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255,255,255,0.08);
+        }
+        .cap-green { border-left-color: #00ff88; }
+        .cap-green:hover { box-shadow: 0 -1px 15px rgba(0, 255, 136, 0.08); }
+        .cap-cyan { border-left-color: #00d4ff; }
+        .cap-cyan:hover { box-shadow: 0 -1px 15px rgba(0, 212, 255, 0.08); }
+        .cap-purple { border-left-color: #8b5cf6; }
+        .cap-purple:hover { box-shadow: 0 -1px 15px rgba(139, 92, 246, 0.08); }
+        .cap-card h3 {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #fff;
+            margin: 0 0 8px;
+            letter-spacing: 1px;
+        }
+        .cap-card p {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.82rem;
+            color: #999;
+            line-height: 1.5;
+            margin: 0 0 12px;
+        }
+        .cap-card code {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.8rem;
+            color: #00ff88;
+            background: rgba(0, 255, 136, 0.08);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        .cap-component {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.7rem;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* ===== BUILT BY ===== */
+        .orgs-section {
+            border-bottom: none !important;
+            padding-bottom: 40px;
+        }
+        .orgs-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+        .org-item {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.85rem;
+            color: #888;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .org-item strong {
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+        .org-item a {
+            color: #888;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .org-item a:hover { color: #00ff88; }
+        .resource-links {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .resource-links a {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.8rem;
+            color: #555;
+            text-decoration: none;
+            transition: color 0.2s;
+            letter-spacing: 0.5px;
+        }
+        .resource-links a:hover { color: #00ff88; }
+
+        /* ===== LOGIN CARD SECTION ===== */
+        .login-container {
+            margin-top: 20px;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .landing-wrapper { padding: 0 16px; }
+            .landing-section { padding: 50px 0 40px; }
+            .hero-title { font-size: 2.8rem; }
+            .hero-subtitle { font-size: 1.1rem; }
+            .hero-tagline { font-size: 0.9rem; }
+            .stat-grid { grid-template-columns: 1fr; }
+            .arch-grid { grid-template-columns: 1fr; }
+            .pillars-grid { grid-template-columns: 1fr; }
+            .cap-grid { grid-template-columns: 1fr; }
+            .orgs-row { gap: 20px; }
+            .section-heading { font-size: 1.2rem; }
+        }
+
+        /* ===== EXISTING INLINE STYLES (preserved) ===== */
         .login-error {
             background-color: rgba(255, 0, 0, 0.1);
             border: 1px solid #ff0000;

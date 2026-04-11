@@ -228,16 +228,17 @@ class MindXAgent:
         self.running = False
         self.autonomous_mode = False
         self.autonomous_task: Optional[asyncio.Task] = None
-        
-        # LLM configuration for autonomous mode
+
+        # LLM configuration for autonomous mode — model discovered at startup, not hardcoded
         self.llm_provider = "ollama"
-        self.llm_model = "mistral-nemo:latest"
-        self.autonomous_task: Optional[asyncio.Task] = None
-        
-        # LLM configuration for autonomous mode
-        self.llm_provider = "ollama"
-        self.llm_model = "mistral-nemo:latest"
-        
+        self.llm_model = None  # Resolved via _resolve_inference_model() at startup
+
+        # Startup coordination — event set by receive_startup_information()
+        self._startup_info_received = asyncio.Event()
+
+        # Inference discovery for provider probing and fallback
+        self._inference_discovery = None
+
         # Ollama chat manager for persistent connections and chat
         self.ollama_chat_manager: Optional[Any] = None
         
@@ -323,7 +324,19 @@ class MindXAgent:
             
             # Initialize Ollama Chat Manager for persistent connections
             await self._init_ollama_chat_manager()
-            
+
+            # Initialize InferenceDiscovery — probe all available inference sources
+            try:
+                from llm.inference_discovery import InferenceDiscovery
+                self._inference_discovery = await InferenceDiscovery.get_instance()
+                await self._inference_discovery.probe_all()
+                summary = self._inference_discovery.status_summary()
+                available = [k for k, v in summary.get("sources", {}).items() if "AVAILABLE" in str(v)]
+                logger.info(f"{self.log_prefix} InferenceDiscovery: {len(available)} providers available: {available}")
+            except Exception as e:
+                logger.warning(f"{self.log_prefix} InferenceDiscovery initialization failed: {e}")
+                self._inference_discovery = None
+
             # Start self-improvement cycle from terminal logs
             asyncio.create_task(self._self_improvement_from_logs())
             
@@ -2100,7 +2113,72 @@ class MindXAgent:
         except Exception as e:
             logger.warning(f"{self.log_prefix} Could not initialize Ollama Chat Manager: {e}")
             self.ollama_chat_manager = None
-    
+
+    async def _resolve_inference_model(self) -> Optional[str]:
+        """
+        Discover the best available inference model.
+        Uses InferenceDiscovery for provider-level discovery, then OllamaChatManager for model selection.
+        Returns model name string or None if no inference is available.
+        """
+        # Step 1: InferenceDiscovery — probe all sources, find best provider
+        try:
+            if not self._inference_discovery:
+                from llm.inference_discovery import InferenceDiscovery
+                self._inference_discovery = await InferenceDiscovery.get_instance()
+            await self._inference_discovery.probe_all()
+            best = await self._inference_discovery.get_best_provider()
+            if best:
+                provider_name, source = best
+                logger.info(
+                    f"{self.log_prefix} InferenceDiscovery found: {provider_name} "
+                    f"at {source.base_url} (score={source.score:.3f})"
+                )
+                # If best provider is Ollama, ensure our chat manager points to it
+                if source.provider_type == "ollama" and source.base_url:
+                    current_url = getattr(self.ollama_chat_manager, 'base_url', None)
+                    if not self.ollama_chat_manager or current_url != source.base_url:
+                        await self._init_ollama_chat_manager(base_url=source.base_url)
+        except Exception as e:
+            logger.debug(f"{self.log_prefix} InferenceDiscovery probe failed: {e}")
+
+        # Step 2: OllamaChatManager model selection (hierarchical scorer)
+        if self.ollama_chat_manager:
+            try:
+                model = await self.ollama_chat_manager.select_best_model("reasoning")
+                if model:
+                    logger.info(f"{self.log_prefix} Resolved inference model: {model}")
+                    return model
+            except Exception as e:
+                logger.debug(f"{self.log_prefix} OllamaChatManager model selection failed: {e}")
+
+        # Step 3: Re-initialize OllamaChatManager and retry (handles stale connections)
+        try:
+            await self._init_ollama_chat_manager()
+            if self.ollama_chat_manager:
+                model = await self.ollama_chat_manager.select_best_model("reasoning")
+                if model:
+                    logger.info(f"{self.log_prefix} Resolved inference model (re-init): {model}")
+                    return model
+        except Exception as e:
+            logger.debug(f"{self.log_prefix} OllamaChatManager re-init failed: {e}")
+
+        # Step 4: Direct HTTP fallback — try localhost:11434/api/tags with no dependencies
+        try:
+            import aiohttp
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
+                async with session.get("http://localhost:11434/api/tags") as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        models = [m.get("name") for m in data.get("models", []) if m.get("name")]
+                        if models:
+                            logger.info(f"{self.log_prefix} Direct Ollama fallback found: {models}")
+                            return models[0]
+        except Exception:
+            pass
+
+        logger.error(f"{self.log_prefix} No inference model available from any source")
+        return None
+
     async def chat_with_ollama(self, message: str, model: Optional[str] = None, conversation_id: Optional[str] = None, system_prompt: Optional[str] = None, temperature: float = 0.7, max_tokens: int = 2000, **kwargs) -> Dict[str, Any]:
         """Chat with Ollama model using persistent connection"""
         if not self.ollama_chat_manager:
@@ -2348,14 +2426,14 @@ class MindXAgent:
         except Exception as e:
             logger.error(f"{self.log_prefix} Graceful restart failed: {e}", exc_info=True)
 
-    async def start_autonomous_mode(self, model: str = "mistral-nemo:latest", provider: str = "ollama") -> Dict[str, Any]:
+    async def start_autonomous_mode(self, model: Optional[str] = None, provider: str = "ollama") -> Dict[str, Any]:
         """
         Start mindXagent in autonomous mode for continuous self-improvement.
-        
+
         Args:
-            model: LLM model to use (default: mistral-nemo:latest)
+            model: LLM model to use (None = auto-discover best available)
             provider: LLM provider (default: ollama)
-        
+
         Returns:
             Dictionary with status and configuration
         """
@@ -2366,14 +2444,26 @@ class MindXAgent:
                 "model": self.llm_model,
                 "provider": self.llm_provider
             }
-        
+
+        # Resolve model: use provided model or discover the best available
+        resolved_model = model
+        if not resolved_model:
+            resolved_model = await self._resolve_inference_model()
+        if not resolved_model:
+            logger.error(f"{self.log_prefix} Cannot start autonomous mode: no inference model available")
+            return {
+                "status": "failed",
+                "error": "no_inference_available",
+                "message": "No inference model could be discovered. Ensure Ollama is running with at least one model."
+            }
+
         self.autonomous_mode = True
-        self.llm_model = model
+        self.llm_model = resolved_model
         self.llm_provider = provider
         self.running = True
-        
-        logger.info(f"{self.log_prefix} Starting autonomous mode with {provider}/{model}")
-        
+
+        logger.info(f"{self.log_prefix} Starting autonomous mode with {provider}/{resolved_model}")
+
         # Start autonomous improvement loop
         self.autonomous_task = asyncio.create_task(self._autonomous_improvement_loop())
         
@@ -2427,27 +2517,58 @@ class MindXAgent:
             try:
                 cycle_count += 1
                 logger.info(f"{self.log_prefix} === AUTONOMOUS CYCLE {cycle_count} ===")
-                
+
+                # PREREQUISITE: Verify inference is available before this cycle
+                cycle_model = await self._resolve_inference_model()
+                if not cycle_model:
+                    logger.warning(f"{self.log_prefix} Cycle {cycle_count}: No inference available, attempting recovery...")
+                    try:
+                        if self._inference_discovery:
+                            report = await self._inference_discovery.self_improve()
+                            actions = report.get("actions", [])
+                            if actions:
+                                logger.warning(f"{self.log_prefix} InferenceDiscovery: {[a.get('recommendation', '')[:80] for a in actions]}")
+                        if self.memory_agent:
+                            await self.memory_agent.log_process(
+                                "autonomous_inference_gap",
+                                {"cycle": cycle_count, "timestamp": time.time()},
+                                {"agent_id": self.agent_id, "event": "inference_unavailable"}
+                            )
+                    except Exception as disc_err:
+                        logger.debug(f"{self.log_prefix} InferenceDiscovery diagnostics failed: {disc_err}")
+                    await asyncio.sleep(120)  # 2 min backoff, not 10 min zombie
+                    continue
+                if cycle_model != self.llm_model:
+                    logger.info(f"{self.log_prefix} Model updated: {self.llm_model} -> {cycle_model}")
+                    self.llm_model = cycle_model
+
                 # Check for stuck loop
                 stuck_status = self.stuck_loop_detector.check_stuck()
                 if stuck_status["is_stuck"] and stuck_status["circuit_breaker_open"]:
+                    reasons = stuck_status.get('reasons', [])
                     logger.error(
                         f"{self.log_prefix} Loop is stuck! Circuit breaker OPEN. "
-                        f"Reasons: {', '.join(stuck_status.get('reasons', []))}"
+                        f"Reasons: {', '.join(reasons)}"
                     )
+                    # Diagnose: is inference the cause? (already checked above — if we're here, inference IS available)
+                    # Attempt network discovery for additional providers
+                    try:
+                        if self._inference_discovery:
+                            await self._inference_discovery.discover_network()
+                    except Exception:
+                        pass
                     # Record circuit breaker trip
                     if self.current_session:
                         self.session_manager.record_circuit_breaker_trip(self.current_session.session_id)
-                        # Auto-reset if too many trips
                         new_session = self.session_manager.auto_reset_on_circuit_breaker(
                             self.current_session.session_id,
                             max_trips=3
                         )
                         if new_session:
                             self.current_session = new_session
-                            logger.info(f"{self.log_prefix} Session auto-reset due to circuit breaker trips")
-                    # Wait longer before retrying when stuck
-                    await asyncio.sleep(600)  # 10 minutes
+                            self.stuck_loop_detector.reset()
+                            logger.info(f"{self.log_prefix} Session and detector reset after circuit breaker trips")
+                    await asyncio.sleep(120)  # 2 min, not 10 min zombie
                     continue
                 
                 # Check for identity crisis
@@ -2553,33 +2674,33 @@ class MindXAgent:
                         metadata={"last_improvement": top_priority['goal'] if (prioritized and top_priority) else None}
                     )
                 
-                # Record cycle in stuck loop detector
-                self.stuck_loop_detector.record_cycle(
-                    cycle_number=cycle_count,
-                    has_file_changes=has_file_changes,
-                    error_message=error_message,
-                    success=success,
-                    done_signal=False  # TODO: Add done signal detection
-                )
-                
-                # Check for exit signal in result
+                # Parse exit signal from result BEFORE recording cycle
                 exit_signal = False
                 if result and hasattr(result, 'exit_signal'):
                     exit_signal = result.exit_signal
                 elif result and isinstance(result, dict):
                     exit_signal = self.exit_detector.parse_exit_signal_from_response(result)
-                
+
                 if exit_signal:
                     self.exit_detector.record_explicit_signal(True, "improvement_result")
-                
+
+                # Record cycle in stuck loop detector (with real done_signal)
+                self.stuck_loop_detector.record_cycle(
+                    cycle_number=cycle_count,
+                    has_file_changes=has_file_changes,
+                    error_message=error_message,
+                    success=success,
+                    done_signal=exit_signal
+                )
+
                 # Record heuristic indicators
                 self.exit_detector.record_heuristic(
                     file_changes=has_file_changes,
                     tests_passed=False,  # TODO: Add test result checking
                     completion_indicators={"improvement_success": success}
                 )
-                
-                # Check exit conditions (only in non-autonomous mode)
+
+                # Check exit conditions
                 exit_check = self.exit_detector.check_exit_conditions()
                 if exit_check["should_exit"]:
                     logger.info(
@@ -2587,10 +2708,18 @@ class MindXAgent:
                         f"Heuristic: {exit_check['heuristic_met']}, "
                         f"Explicit signal: {exit_check['explicit_signal_met']}"
                     )
-                    # In autonomous mode, we don't exit, but log the condition
                     if not self.autonomous_mode:
                         self.running = False
                         break
+                    else:
+                        # In autonomous mode, log milestone but continue
+                        logger.info(f"{self.log_prefix} Exit milestone logged in autonomous mode (cycle {cycle_count})")
+                        if self.memory_agent:
+                            await self.memory_agent.log_process(
+                                "autonomous_exit_milestone",
+                                {"cycle": cycle_count, "exit_check": exit_check},
+                                {"agent_id": self.agent_id, "event": "exit_conditions_met"}
+                            )
                 
                 # Wait before next cycle (configurable interval)
                 await asyncio.sleep(300)  # 5 minutes between cycles
@@ -2804,6 +2933,9 @@ class MindXAgent:
                 },
                 {"agent_id": self.agent_id, "event": "startup_pipeline", "source": "startup_agent"},
             )
+
+        # Signal that startup_info has been received — unblocks _auto_start_autonomous()
+        self._startup_info_received.set()
 
     def update_settings(self, settings: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -3084,7 +3216,7 @@ class MindXAgent:
                 )
                 api = self.ollama_chat_manager.ollama_api
                 if api:
-                    response = await api.generate_text(prompt, model="qwen3:1.7b", use_chat=True, max_tokens=100)
+                    response = await api.generate_text(prompt, model=self.llm_model, use_chat=True, max_tokens=100)
                     if response and len(response) > 10:
                         opportunities.append({
                             "goal": response[:200],
