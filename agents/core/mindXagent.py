@@ -2611,19 +2611,40 @@ class MindXAgent:
                         top_priority = prioritized[0]
                         self._log_thinking("executing_improvement", f"Executing improvement: {top_priority['goal']}")
                         logger.info(f"{self.log_prefix} Executing improvement: {top_priority['goal']}")
-                        
-                        # Use Blueprint Agent for strategic planning
+
+                        # Record action BEFORE execution (pending) so it shows on dashboard immediately
+                        try:
+                            from agents.memory_pgvector import store_action
+                            await store_action(
+                                agent_id=self.agent_id,
+                                action_type="improvement_cycle",
+                                description=f"Cycle {cycle_count}: {top_priority['goal'][:150]}",
+                                source="autonomous_loop",
+                                status="pending",
+                            )
+                        except Exception:
+                            pass
+
+                        # Use Blueprint Agent for strategic planning (with timeout)
                         if self.blueprint_agent:
                             try:
-                                blueprint = await self.blueprint_agent.generate_next_evolution_blueprint()
+                                blueprint = await asyncio.wait_for(
+                                    self.blueprint_agent.generate_next_evolution_blueprint(),
+                                    timeout=60
+                                )
                                 if blueprint:
                                     logger.info(f"{self.log_prefix} Blueprint generated for autonomous improvement")
+                            except asyncio.TimeoutError:
+                                logger.warning(f"{self.log_prefix} Blueprint generation timed out (60s)")
                             except Exception as e:
                                 logger.warning(f"{self.log_prefix} Error using Blueprint Agent: {e}")
-                        
-                        # Orchestrate improvement
+
+                        # Orchestrate improvement (with timeout to prevent hang)
                         try:
-                            result = await self.orchestrate_self_improvement(top_priority['goal'])
+                            result = await asyncio.wait_for(
+                                self.orchestrate_self_improvement(top_priority['goal']),
+                                timeout=120
+                            )
                             if result.success:
                                 logger.info(f"{self.log_prefix} Improvement cycle {cycle_count} completed successfully")
                                 success = True
@@ -2666,13 +2687,13 @@ class MindXAgent:
                                 "rationale": "autonomous_improvement_loop",
                                 "outcome": "success" if success else ("error: " + (error_message or "unknown")[:200]),
                             })
-                        # Record as action so it appears on the dashboard
+                        # Update action status (was recorded as pending before execution)
                         try:
                             from agents.memory_pgvector import store_action
                             await store_action(
                                 agent_id=self.agent_id,
-                                action_type="improvement_cycle",
-                                description=f"Cycle {cycle_count}: {top_priority['goal'][:150]}",
+                                action_type="improvement_result",
+                                description=f"Cycle {cycle_count} {'succeeded' if success else 'failed'}: {top_priority['goal'][:120]}",
                                 source="autonomous_loop",
                                 status="completed" if success else "failed",
                             )
