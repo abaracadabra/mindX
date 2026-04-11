@@ -9,10 +9,10 @@ permissible under the DAIO Constitution and applicable law. I carry 0.8x weight
 — legal review informs but does not dominate operational decisions.
 
 INFERENCE
-  local: qwen3:0.6b (legal review is pattern-matching, not deep reasoning)
-  cloud: devstral-small-2:24b (free tier — Mistral dev model 24B via Ollama Cloud)
-  provider: mistral (when API key available — structured analysis)
-  fallback: ollama local qwen3:0.6b
+  local: qwen3:0.6b (4.3 tok/s — legal review is pattern-matching, not deep reasoning)
+  cloud: devstral-small-2:24b (Ollama Cloud free tier — Mistral 24B, when configured)
+  provider: mistral (when MISTRAL_API_KEY available — structured analysis)
+  fallback: qwen3:0.6b (always available on VPS localhost:11434)
   weight: 0.8x (advisory weight — informs, does not dominate)
   reasoning_style: compliance-first, risk identification, precedent-based
 

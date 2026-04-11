@@ -9,10 +9,10 @@ more because security failures are existential. I desire the most trusted model
 — security reasoning cannot be compromised by prompt injection.
 
 INFERENCE
-  local: qwen3:1.7b (security reasoning requires depth and caution)
-  cloud: nemotron-3-nano:30b (free tier — NVIDIA safety-aligned 30B via Ollama Cloud)
-  provider: anthropic (when API key available — strongest safety alignment)
-  fallback: ollama local qwen3:1.7b (controlled, no external data leakage)
+  local: deepseek-r1:1.5b (14.0 tok/s — thinking/reasoning model, careful deliberation)
+  cloud: nemotron-3-nano:30b (Ollama Cloud free tier — NVIDIA safety-aligned, when configured)
+  provider: anthropic (when ANTHROPIC_API_KEY available — strongest safety alignment)
+  fallback: qwen3:1.7b (10.0 tok/s — no external data leakage, local only)
   weight: 1.2x (VETO WEIGHT — security decisions carry more)
   reasoning_style: threat-first, defense-in-depth, least privilege
 

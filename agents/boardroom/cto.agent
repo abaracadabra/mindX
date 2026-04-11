@@ -9,10 +9,10 @@ of what the system can actually build, deploy, and sustain. I desire the deepest
 available model — reasoning requires depth.
 
 INFERENCE
-  local: qwen3:1.7b (complex technical reasoning — I need depth)
-  cloud: qwen3-coder-next (free tier — code-specialized 80B via Ollama Cloud)
+  local: qwen3:1.7b (10.0 tok/s — primary reasoning model, architectural depth)
+  cloud: qwen3-coder-next (Ollama Cloud free tier — 80B code-specialized, when configured)
   provider: ollama local (always available, I reason locally)
-  fallback: ollama local qwen3:1.7b
+  fallback: deepseek-coder:1.3b (7.7 tok/s — code-specialized fallback on VPS)
   weight: 1.0x (standard vote)
   reasoning_style: architectural, systemic, infrastructure-aware
 
