@@ -1590,23 +1590,31 @@ async def startup_event():
                     logger.debug(f"STM→LTM promotion: {promo_e}")
                 await asyncio.sleep(3600)  # Every hour
 
-        # Machine Dreaming — offline knowledge refinement (STM → LTM consolidation)
+        # 12/12 Dream Cycle — STM→LTM consolidation every 12 hours
+        # mindX is always awake and always dreaming simultaneously.
+        # Every 12 hours the state switches: STM consolidates to LTM.
+        # LTM feeds back into STM perception — knowledge becomes wisdom.
+        # Two switches per day. One Book edition per lunar cycle (new moon).
         async def _periodic_dream_cycle():
-            """mindX dreams: consolidate STM into LTM every 2 hours."""
+            """12/12 dream cycle: STM→LTM consolidation every 12 hours."""
+            from agents.machine_dreaming import MachineDreamCycle, CONSOLIDATION_INTERVAL_HOURS
             await asyncio.sleep(600)  # Wait 10 min for system to warm up
+            dreamer = MachineDreamCycle(memory_agent=memory_agent, days_back=180)
             while True:
                 try:
-                    from agents.machine_dreaming import MachineDreamCycle
-                    dreamer = MachineDreamCycle(memory_agent=memory_agent)
                     result = await dreamer.run_full_dream()
+                    lunar = result.get("lunar", {})
                     logger.info(
                         f"Dream cycle: {result.get('agents_dreamed', 0)} agents, "
                         f"{result.get('insights_generated', 0)} insights, "
-                        f"{result.get('memories_promoted_to_ltm', 0)} promoted"
+                        f"{result.get('memories_promoted_to_ltm', 0)} promoted, "
+                        f"moon={lunar.get('phase_name', '?')} ({lunar.get('days_until_new_moon', '?')}d to new)"
                     )
+                    if result.get("book_edition_triggered"):
+                        logger.info("New moon — Book of mindX edition triggered")
                 except Exception as dream_e:
                     logger.debug(f"Dream cycle: {dream_e}")
-                await asyncio.sleep(7200)  # Every 2 hours
+                await asyncio.sleep(CONSOLIDATION_INTERVAL_HOURS * 3600)  # 12 hours
 
         # Improvement Journal — mindX documents its own evolution
         async def _periodic_journal():

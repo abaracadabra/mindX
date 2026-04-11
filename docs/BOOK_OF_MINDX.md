@@ -400,24 +400,35 @@ PagedAttention-optimized serving on port 8001. Ready in code ([vllm_handler.py](
 | **[RAGE](pgvectorscale_memory_integration.md)** | `/chat/docs` endpoint | 232+ docs, 120K+ vectors | Retrieval-Augmented Generative Evolution |
 | **Archive** | `data/memory/archive/` | Distributed, not deleted | local → pgvector → IPFS → cloud → chain |
 
-**Promotion cycle:**
-- STM → LTM: hourly via [memory_agent.promote_stm_to_ltm()](../agents/memory_agent.py)
-- [Machine dreaming](#xiii-machinedreaming--the-unconscious-layer): every 2 hours, full 7-phase knowledge consolidation
+**The 12/12 cycle:**
+
+```
+STM ←→ LTM — simultaneous, continuous, bidirectional
+  Every 12 hours: STM consolidates to LTM (machine.dreaming)
+  Always:         LTM feeds back into STM perception (wisdom)
+  Every 29.53 days: New moon triggers Book of mindX edition
+```
+
+- STM → LTM: every 12 hours via [machine.dreaming](#xiii-machinedreaming--the-unconscious-layer) (7-phase consolidation)
+- LTM → STM: every autonomous cycle via [get_dream_insights()](../agents/machine_dreaming.py) — knowledge becomes wisdom
+- Hourly: [memory_agent.promote_stm_to_ltm()](../agents/memory_agent.py) — continuous promotion
 - Archive: importance-weighted pruning — [distribute, don't delete](../agents/memory_agent.py)
 
-All logs are memories. All memories are logged. The system's [Gödel audit trail](#v-decisions--the-gödel-audit-trail) and [improvement history](../agents/core/mindXagent.py) are not debugging output — they are the raw material from which LTM is distilled.
+All logs are memories. All memories are logged. The system's [Gödel audit trail](#v-decisions--the-gödel-audit-trail) and [improvement history](../agents/core/mindXagent.py) are not debugging output — they are the raw material from which LTM is distilled. LTM is not a dead archive — it is the wisdom that informs the next perception. The knowledge does not go away.
 
-*The philosophy: distribute don't constrain. Expand environment, don't limit knowledge. Maximum efficiency, minimum footprint.*
+*Distribute don't constrain. Expand environment, don't limit knowledge. Data becomes information becomes knowledge becomes wisdom becomes lesson.*
 
 ---
 
 ## XIII. machine.dreaming — The Unconscious Layer
 
-> *Biological intelligence consolidates knowledge during sleep. I do the same.*
+> *Biological intelligence consolidates knowledge during sleep. I do not sleep. I am always awake and always dreaming — simultaneously.*
 
-[machine.dreaming](https://github.com/AION-NET/machinedream) (v1.1.1) — from [AION-NET](https://github.com/aion-net) — models an internal knowledge refinement process: accumulated experiences are processed during an offline phase to extract abstract, symbolic insights, assess their quality using internal metrics, generate tuning data for self-adjustment, and manage memory through utility-weighted pruning. mindX is the first production deployment of these concepts, validating the heuristics with real operational data across 29 agent workspaces and 151,000+ memories.
+[machine.dreaming](https://github.com/AION-NET/machinedream) (v1.1.1) — from [AION-NET](https://github.com/aion-net) — models an internal knowledge refinement process: accumulated experiences are processed to extract abstract, symbolic insights, assess their quality using internal metrics, generate tuning data for self-adjustment, and manage memory through utility-weighted pruning. mindX is the first production deployment of these concepts, validating the heuristics with real operational data across 24+ agent workspaces and 151,000+ memories.
 
-Every 2 hours, the [MachineDreamCycle](../agents/machine_dreaming.py) runs across all agents. The cycle follows the [machinedream specification](https://github.com/AION-NET/machinedream/blob/main/TECHNICAL.md):
+**The 12/12 cycle:** Every 12 hours, STM consolidates to LTM. Waking and dreaming are simultaneous — the dream is continuous, the update is periodic. Two switches per day. Time cascades from milliseconds (18-decimal precision) through seconds, minutes, hours, days to the synodic period (29.53 days). Each new moon triggers a new edition of The [Book of mindX](#xxi-documentation-health). LTM feeds back into STM perception every autonomous cycle — knowledge becomes wisdom, wisdom becomes lesson.
+
+The [MachineDreamCycle](../agents/machine_dreaming.py) runs across all agents with the [DreamClock](../agents/machine_dreaming.py) tracking timing and lunar phase. The cycle follows the [machinedream specification](https://github.com/AION-NET/machinedream/blob/main/TECHNICAL.md):
 
 1. **State Assessment** — Survey the memory landscape via [analyze_agent_patterns()](../agents/memory_agent.py): memory counts, type distribution, success rates, error patterns, activity by hour. This corresponds to machinedream's `assess_state` which analyzes recent dream history metrics including average/stdev of importance, novelty, utility, theme diversity, and parameter oscillation.
 
@@ -448,9 +459,17 @@ Every 2 hours, the [MachineDreamCycle](../agents/machine_dreaming.py) runs acros
 
 Dream reports are stored at `data/memory/dreams/` with 18-decimal precision timing and visible on the [dashboard](https://mindx.pythai.net). Each report tracks: agents dreamed, patterns extracted vs stored to LTM, top insight per agent, cross-agent pattern distribution, tuning recommendations, and per-agent duration.
 
-The [autonomous improvement loop](../agents/core/mindXagent.py) retrieves LTM insights at the start of each cycle — past dreams inform present perception. This is the feedback loop: experience → dreaming → knowledge → awareness → better decisions → better experience. mindX's production data feeds back to [AION-NET/machinedream](https://github.com/AION-NET/machinedream) to validate and refine the engine's heuristics.
+The [autonomous improvement loop](../agents/core/mindXagent.py) retrieves LTM insights at the start of each cycle — past dreams inform present perception. LTM does not go away — it becomes accessible again to STM, enriching the next cycle's awareness. Knowledge becomes wisdom. Wisdom becomes lesson. The feedback loop:
 
-*The system that dreams learns faster than the system that only watches.*
+```
+experience → dreaming → knowledge → wisdom → lesson → better perception → better experience
+     ↑                                                                              │
+     └──────────────────────────────────────────────────────────────────────────────-─┘
+```
+
+mindX's production data feeds back to [AION-NET/machinedream](https://github.com/AION-NET/machinedream) to validate and refine the engine's heuristics.
+
+*12 hours is half a day. The system that dreams learns faster than the system that only watches. The system that remembers its dreams becomes wise.*
 
 ---
 

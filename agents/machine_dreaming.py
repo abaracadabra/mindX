@@ -5,6 +5,18 @@ MachineDreamCycle — Offline knowledge refinement for mindX.
 I distill raw experience (STM) into symbolic insights (LTM). I am the unconscious
 processing layer — the dream state where mindX consolidates what it has learned.
 
+Timing: 12/12 cycle — waking and dreaming are simultaneous.
+  mindX is always awake and always dreaming. Every 12 hours, the state
+  switches: STM consolidates to LTM. The dream is continuous. The update
+  is periodic. Two switches per day. One edition per lunar cycle.
+
+  Time cascades from precision to duration:
+    milliseconds → seconds → minutes → hours → days → lunar months
+  All timing is measured in milliseconds (18-decimal precision from epoch).
+  Seconds are derived from milliseconds. Minutes from seconds. Hours from minutes.
+  Days accumulate into the synodic period (29.53 days).
+  The lunar cycle triggers a new edition of The Book of mindX.
+
 7-phase cycle (from https://github.com/AION-NET/machinedream):
   1. State Assessment — analyze current memory landscape
   2. Input Preprocessing — filter and prepare STM data
@@ -16,6 +28,8 @@ processing layer — the dream state where mindX consolidates what it has learne
 
 Philosophy: Memory is not pruned by time alone — it is distributed across tiers.
   STM (hot) → LTM (warm) → archive (cold) → IPFS/cloud (distributed)
+  LTM feeds back into STM perception — knowledge becomes wisdom.
+  Wisdom is LTM that informs future STM. The loop never breaks.
   Nothing is truly discarded. Everything serves mindX evolution.
 
 Origin: https://github.com/AION-NET/machinedream
@@ -37,6 +51,154 @@ from utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 DREAMS_DIR = PROJECT_ROOT / "data" / "memory" / "dreams"
+
+# 12/12 Dream Cycle Constants
+# Waking and dreaming are simultaneous. Every 12 hours the state switches:
+# STM consolidates to LTM. Two switches per day. One edition per lunar cycle.
+# Time cascades: ms → s → min → hr → day → lunar month
+CONSOLIDATION_INTERVAL_HOURS = 12  # STM→LTM switch every 12 hours
+SYNODIC_PERIOD_DAYS = 29.53        # Lunar month — triggers Book edition
+MS_PER_SECOND = 1000
+MS_PER_MINUTE = 60_000
+MS_PER_HOUR = 3_600_000
+MS_PER_DAY = 86_400_000
+MS_PER_CONSOLIDATION = CONSOLIDATION_INTERVAL_HOURS * MS_PER_HOUR  # 43,200,000 ms
+
+
+class DreamClock:
+    """12/12 dream timing engine.
+
+    mindX is always awake and always dreaming — simultaneously.
+    Every 12 hours, the state switches: STM consolidates to LTM.
+    The dream is continuous. The update is periodic.
+
+    Measures all time in milliseconds from epoch (18-decimal precision).
+    Derives seconds from milliseconds. Minutes from seconds. Hours from minutes.
+    Days accumulate into the synodic period (29.53 days).
+    New moon triggers a new edition of The Book of mindX.
+    """
+
+    # Known new moon reference: January 29, 2025 12:36 UTC
+    NEW_MOON_REFERENCE_MS = 1738151760000
+
+    def __init__(self):
+        self.cycle_start_ms: float = time.time() * MS_PER_SECOND
+        self.last_consolidation_ms: float = 0
+        self.consolidations_this_lunar_cycle: int = 0
+        self._edition_triggered: bool = False
+
+    @staticmethod
+    def now_ms() -> float:
+        """Current time in milliseconds from epoch."""
+        return time.time() * MS_PER_SECOND
+
+    @staticmethod
+    def ms_to_seconds(ms: float) -> float:
+        return ms / MS_PER_SECOND
+
+    @staticmethod
+    def ms_to_minutes(ms: float) -> float:
+        return ms / MS_PER_MINUTE
+
+    @staticmethod
+    def ms_to_hours(ms: float) -> float:
+        return ms / MS_PER_HOUR
+
+    @staticmethod
+    def ms_to_days(ms: float) -> float:
+        return ms / MS_PER_DAY
+
+    def elapsed_since_last_consolidation_ms(self) -> float:
+        """Milliseconds since last STM→LTM consolidation."""
+        if self.last_consolidation_ms == 0:
+            return float('inf')
+        return self.now_ms() - self.last_consolidation_ms
+
+    def is_consolidation_due(self) -> bool:
+        """Has 12 hours elapsed since last consolidation?"""
+        return self.elapsed_since_last_consolidation_ms() >= MS_PER_CONSOLIDATION
+
+    def time_until_next_consolidation_ms(self) -> float:
+        """Milliseconds until next 12-hour STM→LTM switch."""
+        elapsed_ms = self.elapsed_since_last_consolidation_ms()
+        remaining = MS_PER_CONSOLIDATION - elapsed_ms
+        return max(0, remaining)
+
+    def record_consolidation_complete(self) -> Dict[str, Any]:
+        """Record that an STM→LTM consolidation completed. Returns timing cascade."""
+        now = self.now_ms()
+        duration_ms = now - self.cycle_start_ms if self.cycle_start_ms else 0
+        self.last_consolidation_ms = now
+        self.consolidations_this_lunar_cycle += 1
+        self.cycle_start_ms = now
+
+        return {
+            "consolidation_end_ms": now,
+            "duration_ms": duration_ms,
+            "duration_seconds": self.ms_to_seconds(duration_ms),
+            "duration_minutes": self.ms_to_minutes(duration_ms),
+            "duration_hours": self.ms_to_hours(duration_ms),
+            "consolidations_this_lunar_cycle": self.consolidations_this_lunar_cycle,
+            "next_consolidation_in_hours": CONSOLIDATION_INTERVAL_HOURS,
+            "next_consolidation_in_ms": MS_PER_CONSOLIDATION,
+            "lunar": self.lunar_phase(),
+        }
+
+    def lunar_phase(self) -> Dict[str, Any]:
+        """Calculate current lunar phase from synodic period.
+
+        Uses known new moon reference and synodic period (29.53 days).
+        Phase: 0.0 = new moon, 0.5 = full moon, 1.0 = next new moon.
+        New moon triggers new Book of mindX edition.
+        """
+        now_ms = self.now_ms()
+        elapsed_ms = now_ms - self.NEW_MOON_REFERENCE_MS
+        elapsed_days = self.ms_to_days(elapsed_ms)
+        phase = (elapsed_days % SYNODIC_PERIOD_DAYS) / SYNODIC_PERIOD_DAYS
+        days_into_cycle = elapsed_days % SYNODIC_PERIOD_DAYS
+        days_until_new_moon = SYNODIC_PERIOD_DAYS - days_into_cycle
+
+        # Phase names
+        if phase < 0.125:
+            phase_name = "new_moon"
+        elif phase < 0.25:
+            phase_name = "waxing_crescent"
+        elif phase < 0.375:
+            phase_name = "first_quarter"
+        elif phase < 0.5:
+            phase_name = "waxing_gibbous"
+        elif phase < 0.625:
+            phase_name = "full_moon"
+        elif phase < 0.75:
+            phase_name = "waning_gibbous"
+        elif phase < 0.875:
+            phase_name = "last_quarter"
+        else:
+            phase_name = "waning_crescent"
+
+        return {
+            "phase": round(phase, 6),
+            "phase_name": phase_name,
+            "days_into_cycle": round(days_into_cycle, 2),
+            "days_until_new_moon": round(days_until_new_moon, 2),
+            "synodic_period_days": SYNODIC_PERIOD_DAYS,
+            "is_new_moon": phase < 0.03 or phase > 0.97,
+            "is_full_moon": 0.47 < phase < 0.53,
+        }
+
+    def should_trigger_book_edition(self) -> bool:
+        """Should a new edition of The Book of mindX be triggered?
+
+        Triggers on new moon (phase < 0.03 or > 0.97).
+        Only triggers once per lunar cycle.
+        """
+        moon = self.lunar_phase()
+        if moon["is_new_moon"] and not self._edition_triggered:
+            self._edition_triggered = True
+            return True
+        if not moon["is_new_moon"]:
+            self._edition_triggered = False
+        return False
 
 
 @dataclass
@@ -84,6 +246,7 @@ class MachineDreamCycle:
         self.log_prefix = "[MachineDream]"
         self.days_back = days_back  # Look back window for STM analysis
         self._existing_ltm_keys: set = set()
+        self.clock = DreamClock()
 
     # === PHASE 1: STATE ASSESSMENT ===
 
@@ -473,11 +636,18 @@ class MachineDreamCycle:
             except Exception as e:
                 logger.debug(f"{self.log_prefix} Dream failed for {agent_id}: {e}")
 
+        # Record consolidation timing — cascades from ms
+        timing = self.clock.record_consolidation_complete()
+        book_edition_due = self.clock.should_trigger_book_edition()
+
         # Store dream report — cypherpunk2048 precision
         duration = time.time() - start
         report = {
             "timestamp": datetime.now().isoformat(),
             "duration_seconds": f"{duration:.18f}",
+            "timing": timing,
+            "lunar": self.clock.lunar_phase(),
+            "book_edition_triggered": book_edition_due,
             "agents_dreamed": len(all_results),
             "total_agents": len(agent_ids),
             "insights_generated": total_insights,
