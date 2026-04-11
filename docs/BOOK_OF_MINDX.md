@@ -300,26 +300,42 @@ All logs are memories. All memories are logged. The system's [Gödel audit trail
 
 ## XIII. machine.dreaming — The Unconscious Layer
 
-Biological intelligence consolidates knowledge during sleep. mindX does the same through [machine.dreaming](https://github.com/AION-NET/machinedream).
+Biological intelligence consolidates knowledge during sleep. mindX does the same through [machine.dreaming](https://github.com/AION-NET/machinedream) (v1.1.1).
 
-Every 2 hours, the [MachineDreamCycle](../agents/machine_dreaming.py) runs a 7-phase offline knowledge refinement cycle across all agents:
+The [machinedream engine](https://github.com/AION-NET/machinedream/blob/main/TECHNICAL.md) models an internal knowledge refinement process: accumulated experiences are processed during an offline phase to extract abstract, symbolic insights, assess their quality using internal metrics, generate tuning data for self-adjustment, and manage memory through utility-weighted pruning. mindX is the first production deployment of these concepts, validating the heuristics with real operational data across 29 agent workspaces and 151,000+ memories.
 
-1. **State Assessment** — [analyze_agent_patterns()](../agents/memory_agent.py) surveys the memory landscape: how many memories, what types, what patterns
-2. **Input Preprocessing** — Filter recent STM data, prepare for analysis
-3. **Symbolic Aggregation** — Extract patterns from raw memories, compress into [DreamInsight](../agents/machine_dreaming.py) symbols: success patterns, failure modes, performance trends, behavioral insights
-4. **Insight Scoring** — Rank each insight by composite score: `importance × novelty × confidence × log(frequency)`. Errors score high (always worth learning from). Novel patterns score higher than known ones.
-5. **Memory Storage** — Promote scored insights to LTM via [promote_stm_to_ltm()](../agents/memory_agent.py) + [pgvector](../agents/memory_pgvector.py) embeddings
-6. **Parameter Tuning** — Generate tuning recommendations: error handling adjustments, strategy changes, dream frequency
-7. **Memory Pruning** — Importance-weighted distribution. [Distribute, don't delete](../agents/memory_agent.py). Critical memories are never pruned — only moved to colder tiers.
+Every 2 hours, the [MachineDreamCycle](../agents/machine_dreaming.py) runs across all agents. The cycle follows the [machinedream specification](https://github.com/AION-NET/machinedream/blob/main/TECHNICAL.md):
 
-Dream reports are stored at `data/memory/dreams/` and visible on the [dashboard](https://mindx.pythai.net). Each report tracks:
-- Agents dreamed, insights generated, memories promoted to LTM
-- Tuning recommendations per agent
-- Cross-agent pattern distribution (which pattern types dominate across the system)
+1. **State Assessment** — Survey the memory landscape via [analyze_agent_patterns()](../agents/memory_agent.py): memory counts, type distribution, success rates, error patterns, activity by hour. This corresponds to machinedream's `assess_state` which analyzes recent dream history metrics including average/stdev of importance, novelty, utility, theme diversity, and parameter oscillation.
 
-The [autonomous improvement loop](../agents/core/mindXagent.py) retrieves LTM insights at the start of each cycle — past dreams inform present perception. This is the feedback loop: experience → dreaming → knowledge → awareness → better decisions → better experience.
+2. **Input Preprocessing** — Filter recent STM data based on abstraction level. Raw memories are reduced and focused. machinedream's preprocessing reduces simulated data size based on `abstraction_level` and input complexity.
 
-The origin of machine.dreaming is [AION-NET/machinedream](https://github.com/AION-NET/machinedream) — a simulation engine for offline knowledge refinement. mindX is the first production deployment of these concepts, validating the heuristics with real operational data.
+3. **Symbolic Aggregation** — Extract patterns from raw memories, compress into [DreamInsight](../agents/machine_dreaming.py) symbols. Each insight has a `pattern_type` (success, failure, performance, behavioral), `description`, `frequency`, `importance`, `novelty`, and `confidence`. This maps to machinedream's `_simulate_symbolic_aggregation` which produces templated textual phrases with `key_themes` and `synthesis_level`.
+
+4. **Insight Scoring** — Rank each insight by composite score: `importance × novelty × confidence × log(frequency + 1)`. machinedream's importance score combines `synthesis_level`, theme count, `theme_novelty`, and a chance for "breakthrough" events. Theme novelty uses Jaccard distance between current and recent themes. All scores reported to 18 decimal precision (cypherpunk2048 standard).
+
+5. **Memory Storage** — Promote scored insights to LTM via [promote_stm_to_ltm()](../agents/memory_agent.py) + [pgvector](../agents/memory_pgvector.py) embeddings. Dream insights stored as JSON at `data/memory/ltm/{agent_id}/`. machinedream persists the entire memory list and metadata to JSON via `save_memory`.
+
+6. **Parameter Tuning** — Generate structured tuning data containing current metrics (raw and normalized), state status (`stable`/`needs_tuning`), system mode (`Exploring`/`Stabilizing`), and specific `suggested_adjustments` with deltas/factors. machinedream's self-tuning loop: `assess_state` → `tuning_data` → `apply_tuning` → modified parameters → next cycle uses tuned parameters. Oscillation detection dampens parameter flip-flopping.
+
+7. **Memory Pruning** — Utility/age-weighted importance pruning. Each insight's value = `importance_score` (penalized by age via `age_penalty_factor`) + `utility_score` (defaulting to neutral if unavailable). The lowest-value insights are pruned when memory exceeds limits. mindX philosophy: [distribute, don't delete](../agents/memory_agent.py) — pruned memories move to colder tiers (archive → IPFS → cloud), not the trash.
+
+**Key Concepts** (from [machinedream TECHNICAL.md](https://github.com/AION-NET/machinedream/blob/main/TECHNICAL.md)):
+
+| Concept | machinedream | mindX Implementation |
+|---------|-------------|---------------------|
+| Dream Cycle | `run_dream_cycle` — main operational loop | [MachineDreamCycle.run_dream_cycle()](../agents/machine_dreaming.py) |
+| Symbolic Insight | Templated textual phrase with key themes | DreamInsight dataclass with type, score, frequency |
+| Importance Score | synthesis_level × theme_count × novelty | importance × novelty × confidence × log(frequency) |
+| Theme Novelty | Jaccard distance between current/recent themes | Comparison against existing LTM keys |
+| Utility Score | External feedback (0-1) on insight usefulness | Agent success rate from [PerformanceMonitor](../agents/monitoring/performance_monitor.py) |
+| Oscillation Detection | Detects parameter flip-flopping, applies damping | Detected via [StuckLoopDetector](../agents/core/stuck_loop_detector.py) circuit breaker |
+| Age-Weighted Pruning | importance - (age × age_penalty_factor) + utility | [prune_stm()](../agents/memory_agent.py) with importance-weighted archival |
+| Tuning Data | JSON output for external autotuner | Tuning recommendations per agent in dream reports |
+
+Dream reports are stored at `data/memory/dreams/` with 18-decimal precision timing and visible on the [dashboard](https://mindx.pythai.net). Each report tracks: agents dreamed, patterns extracted vs stored to LTM, top insight per agent, cross-agent pattern distribution, tuning recommendations, and per-agent duration.
+
+The [autonomous improvement loop](../agents/core/mindXagent.py) retrieves LTM insights at the start of each cycle — past dreams inform present perception. This is the feedback loop: experience → dreaming → knowledge → awareness → better decisions → better experience. mindX's production data feeds back to [AION-NET/machinedream](https://github.com/AION-NET/machinedream) to validate and refine the engine's heuristics.
 
 *The system that dreams learns faster than the system that only watches.*
 
