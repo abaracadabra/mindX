@@ -231,6 +231,108 @@
         };
 
         console.log('✅ connectMetaMask function defined and ready (using viem)');
+
+        // Live diagnostics — mindX reports on itself
+        async function loadDiagnostics() {
+            // Use relative URL in production (Apache proxies to backend), absolute in dev
+            const apiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                ? `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`
+                : '';
+            try {
+                const resp = await fetch(`${apiBase}/diagnostics/live`, {signal: AbortSignal.timeout(8000)});
+                if (!resp.ok) return;
+                const d = await resp.json();
+
+                // Timestamp
+                const ts = document.getElementById('diag-timestamp');
+                if (ts) ts.textContent = `Self-report at ${new Date(d.timestamp).toLocaleTimeString()} — uptime ${d.uptime || '0h'}`;
+
+                // Dialogue — what I last said
+                if (d.interactions && d.interactions.length > 0) {
+                    const latest = d.interactions[0];
+                    const txt = document.getElementById('diag-dialogue-text');
+                    const meta = document.getElementById('diag-dialogue-meta');
+                    if (txt) txt.textContent = `"${(latest.response || '').slice(0, 300)}"`;
+                    if (meta) meta.textContent = `— ${latest.agent || 'mindx'} via ${latest.model || 'unknown'} at ${latest.timestamp || ''}`;
+                }
+
+                // Vitals
+                const setVital = (id, val) => { const el = document.querySelector(`#${id} .vital-value`); if (el) el.textContent = val; };
+                setVital('vital-agents', (d.agents || []).length);
+                setVital('vital-memories', (d.memory && d.memory.stm_records) ? d.memory.stm_records.toLocaleString() : '0');
+                setVital('vital-inference', d.inference ? `${d.inference.available}/${d.inference.total}` : '--');
+                setVital('vital-uptime', d.uptime || '0h');
+
+                // Actions
+                const actionsEl = document.getElementById('diag-actions');
+                if (actionsEl && d.actions && d.actions.length > 0) {
+                    actionsEl.innerHTML = d.actions.slice(0, 6).map(a =>
+                        `<div class="diag-row">
+                            <span class="diag-status diag-status--${a.status || 'pending'}">${a.status || '?'}</span>
+                            <span class="diag-agent">${a.agent_id || 'system'}</span>
+                            <span class="diag-desc">${(a.description || '').slice(0, 120)}</span>
+                        </div>`
+                    ).join('');
+                } else if (actionsEl) {
+                    actionsEl.innerHTML = '<div class="diag-row diag-empty">No recent actions</div>';
+                }
+
+                // Gödel choices
+                const godelEl = document.getElementById('diag-godel');
+                if (godelEl && d.godel_choices && d.godel_choices.length > 0) {
+                    godelEl.innerHTML = d.godel_choices.slice(0, 5).map(g =>
+                        `<div class="diag-row">
+                            <span class="diag-agent">${g.agent || 'unknown'}</span>
+                            <span class="diag-type">${g.type || ''}</span>
+                            <span class="diag-desc">${(g.chosen || '').slice(0, 100)}</span>
+                        </div>`
+                    ).join('');
+                } else if (godelEl) {
+                    godelEl.innerHTML = '<div class="diag-row diag-empty">No recent choices</div>';
+                }
+
+                // Dojo standings
+                const dojoEl = document.getElementById('diag-dojo');
+                if (dojoEl && d.dojo && d.dojo.length > 0) {
+                    dojoEl.innerHTML = d.dojo.slice(0, 8).map((a, i) =>
+                        `<div class="diag-row dojo-row">
+                            <span class="dojo-rank">#${i + 1}</span>
+                            <span class="dojo-agent">${a.agent_id}</span>
+                            <span class="dojo-score">${a.score}</span>
+                            <span class="dojo-tier">tier ${a.tier}</span>
+                        </div>`
+                    ).join('');
+                } else if (dojoEl) {
+                    dojoEl.innerHTML = '<div class="diag-row diag-empty">No dojo standings</div>';
+                }
+
+                // Environment
+                if (d.system) {
+                    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+                    set('env-cpu', `${d.system.cpu_percent}%`);
+                    set('env-mem', `${d.system.memory_used_gb?.toFixed(1)}/${d.system.memory_total_gb?.toFixed(1)} GB`);
+                    set('env-disk', `${d.system.disk_percent}%`);
+                }
+                if (d.beliefs) document.getElementById('env-beliefs').textContent = d.beliefs.count || 0;
+                if (d.memory) document.getElementById('env-wsp').textContent = d.memory.agent_workspaces || 0;
+                // Model from inference
+                if (d.inference && d.inference.sources) {
+                    const ollama = d.inference.sources.ollama_gpu || d.inference.sources.ollama_local;
+                    if (ollama && ollama.models && ollama.models.length > 0) {
+                        document.getElementById('env-model').textContent = ollama.models[0];
+                    }
+                }
+            } catch (e) {
+                const ts = document.getElementById('diag-timestamp');
+                if (ts) ts.textContent = 'I am currently dreaming... (backend starting)';
+            }
+        }
+
+        // Load on page ready, refresh every 30 seconds
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDiagnostics();
+            setInterval(loadDiagnostics, 30000);
+        });
     </script>
 </head>
 <body>
@@ -253,6 +355,67 @@
                         <path d="M7 13l5 5 5-5"/>
                         <path d="M7 7l5 5 5-5"/>
                     </svg>
+                </div>
+            </section>
+
+            <!-- LIVE DIAGNOSTICS — mindX speaks for itself -->
+            <section class="landing-section diag-section" id="live-diag">
+                <h2 class="section-heading section-heading--green">MY CURRENT STATE</h2>
+                <p class="section-sub" id="diag-timestamp">Connecting to self...</p>
+
+                <!-- Self-awareness: what I just said -->
+                <div class="diag-dialogue" id="diag-dialogue">
+                    <div class="dialogue-label">I said:</div>
+                    <div class="dialogue-text" id="diag-dialogue-text">Listening...</div>
+                    <div class="dialogue-meta" id="diag-dialogue-meta"></div>
+                </div>
+
+                <!-- Vital signs -->
+                <div class="diag-vitals">
+                    <div class="vital" id="vital-agents">
+                        <div class="vital-value">--</div>
+                        <div class="vital-label">Agents</div>
+                    </div>
+                    <div class="vital" id="vital-memories">
+                        <div class="vital-value">--</div>
+                        <div class="vital-label">Memories</div>
+                    </div>
+                    <div class="vital" id="vital-inference">
+                        <div class="vital-value">--</div>
+                        <div class="vital-label">Inference Sources</div>
+                    </div>
+                    <div class="vital" id="vital-uptime">
+                        <div class="vital-value">--</div>
+                        <div class="vital-label">Uptime</div>
+                    </div>
+                </div>
+
+                <!-- Recent actions -->
+                <div class="diag-panel" id="diag-actions-panel">
+                    <h3 class="diag-panel-title">My Recent Actions</h3>
+                    <div class="diag-list" id="diag-actions">Loading...</div>
+                </div>
+
+                <!-- Gödel choices -->
+                <div class="diag-panel" id="diag-godel-panel">
+                    <h3 class="diag-panel-title">My Recent Choices</h3>
+                    <div class="diag-list" id="diag-godel">Loading...</div>
+                </div>
+
+                <!-- Dojo standings -->
+                <div class="diag-panel" id="diag-dojo-panel">
+                    <h3 class="diag-panel-title">Dojo — Agent Standings</h3>
+                    <div class="diag-list" id="diag-dojo">Loading...</div>
+                </div>
+
+                <!-- Environment -->
+                <div class="diag-env">
+                    <div class="env-item"><span class="env-label">CPU</span><span class="env-value" id="env-cpu">--</span></div>
+                    <div class="env-item"><span class="env-label">Memory</span><span class="env-value" id="env-mem">--</span></div>
+                    <div class="env-item"><span class="env-label">Disk</span><span class="env-value" id="env-disk">--</span></div>
+                    <div class="env-item"><span class="env-label">Beliefs</span><span class="env-value" id="env-beliefs">--</span></div>
+                    <div class="env-item"><span class="env-label">Workspaces</span><span class="env-value" id="env-wsp">--</span></div>
+                    <div class="env-item"><span class="env-label">Model</span><span class="env-value" id="env-model">--</span></div>
                 </div>
             </section>
 
@@ -933,6 +1096,151 @@
             .cap-grid { grid-template-columns: 1fr; }
             .orgs-row { gap: 20px; }
             .section-heading { font-size: 1.2rem; }
+        }
+
+        /* ===== LIVE DIAGNOSTICS ===== */
+        .diag-section { text-align: left; }
+
+        .diag-dialogue {
+            background: rgba(0, 255, 136, 0.04);
+            border: 1px solid rgba(0, 255, 136, 0.15);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 30px;
+        }
+        .dialogue-label {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.7rem;
+            color: #00ff88;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+        .dialogue-text {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.95rem;
+            color: #ccc;
+            line-height: 1.6;
+            font-style: italic;
+        }
+        .dialogue-meta {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75rem;
+            color: #555;
+            margin-top: 10px;
+        }
+
+        .diag-vitals {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+        .vital {
+            background: rgba(26, 26, 26, 0.95);
+            border: 1px solid rgba(0, 168, 255, 0.15);
+            border-radius: 10px;
+            padding: 20px 16px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        .vital-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #00d4ff;
+            text-shadow: 0 0 12px rgba(0, 212, 255, 0.25);
+        }
+        .vital-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.7rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 6px;
+        }
+
+        .diag-panel {
+            background: rgba(26, 26, 26, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 16px;
+            backdrop-filter: blur(10px);
+        }
+        .diag-panel-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0 0 14px;
+        }
+
+        .diag-list { display: flex; flex-direction: column; gap: 6px; }
+        .diag-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.8rem;
+            color: #999;
+            padding: 6px 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .diag-row:hover { background: rgba(255, 255, 255, 0.04); }
+        .diag-empty { color: #444; font-style: italic; }
+        .diag-status {
+            font-size: 0.65rem;
+            padding: 2px 8px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+        }
+        .diag-status--completed { background: rgba(0, 255, 136, 0.1); color: #00ff88; }
+        .diag-status--pending { background: rgba(0, 168, 255, 0.1); color: #00a8ff; }
+        .diag-status--failed { background: rgba(255, 71, 87, 0.1); color: #ff4757; }
+        .diag-status--identified { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+        .diag-agent {
+            color: #00d4ff;
+            font-weight: 600;
+            min-width: 140px;
+            flex-shrink: 0;
+        }
+        .diag-type { color: #8b5cf6; min-width: 120px; flex-shrink: 0; }
+        .diag-desc { color: #888; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .dojo-row { border-left: 2px solid rgba(255, 215, 0, 0.2); }
+        .dojo-rank { color: #ffd700; font-weight: 700; min-width: 30px; }
+        .dojo-agent { color: #00ff88; flex: 1; }
+        .dojo-score { color: #00d4ff; font-weight: 700; min-width: 50px; text-align: right; }
+        .dojo-tier { color: #555; font-size: 0.7rem; min-width: 50px; }
+
+        .diag-env {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        .env-item {
+            display: flex;
+            gap: 6px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75rem;
+            color: #666;
+        }
+        .env-label { color: #555; }
+        .env-value { color: #999; }
+
+        @media (max-width: 768px) {
+            .diag-vitals { grid-template-columns: repeat(2, 1fr); }
+            .diag-row { flex-wrap: wrap; }
+            .diag-agent { min-width: auto; }
+            .diag-type { min-width: auto; }
         }
 
         /* ===== EXISTING INLINE STYLES (preserved) ===== */
