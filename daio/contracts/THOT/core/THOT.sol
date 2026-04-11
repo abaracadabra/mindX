@@ -9,18 +9,19 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 /**
  * @title THOT - Transferable Hyper-Optimized Tensor
  * @dev Core contract for creating and managing THOT artifacts
- * @notice THOTs are standardized 512-dimension f32 vectors with metadata
+ * @notice THOTs are standardized tensor vectors (64, 512, 768, 1024, 2048 dimensions)
+ * @dev cypherpunk2048 standard: 1024 (embedding-native) and 2048 (high-capacity) added
  */
 contract THOT is ERC721, ERC721URIStorage, Ownable {
     using Strings for uint256;
 
     struct THOTData {
-        bytes32 dataCID;      // IPFS CID hash for THOT tensor data
-        uint8 dimensions;     // THOT dimensions: 64, 512, or 768
-        uint8 parallelUnits;  // Processing units
-        uint40 timestamp;     // Creation time
-        bool verified;        // Verification status
-        string metadataURI;   // Additional metadata URI
+        bytes32 dataCID;       // IPFS CID hash for THOT tensor data
+        uint16 dimensions;     // THOT dimensions: 64, 512, 768, 1024, or 2048
+        uint8 parallelUnits;   // Processing units
+        uint40 timestamp;      // Creation time
+        bool verified;         // Verification status
+        string metadataURI;    // Additional metadata URI
     }
 
     mapping(uint256 => THOTData) private _thotData;
@@ -31,7 +32,7 @@ contract THOT is ERC721, ERC721URIStorage, Ownable {
     event THOTMinted(
         uint256 indexed tokenId,
         bytes32 indexed dataCID,
-        uint8 dimensions,
+        uint16 dimensions,
         uint40 timestamp
     );
 
@@ -45,7 +46,7 @@ contract THOT is ERC721, ERC721URIStorage, Ownable {
      * @dev Mint a new THOT
      * @param recipient Address to receive the THOT
      * @param dataCID IPFS CID for THOT tensor data
-     * @param dimensions THOT dimensions (64, 512, or 768)
+     * @param dimensions THOT dimensions (64, 512, 768, 1024, or 2048)
      * @param parallelUnits Processing units
      * @param metadataURI Additional metadata URI
      * @return tokenId The ID of the newly minted THOT
@@ -53,15 +54,12 @@ contract THOT is ERC721, ERC721URIStorage, Ownable {
     function mintTHOT(
         address recipient,
         bytes32 dataCID,
-        uint8 dimensions,
+        uint16 dimensions,
         uint8 parallelUnits,
         string memory metadataURI
     ) external onlyOwner returns (uint256) {
         require(!_cidExists[dataCID], "THOT already exists");
-        require(
-            dimensions == 64 || dimensions == 512 || dimensions == 768,
-            "Invalid dimensions"
-        );
+        require(_isValidDimension(dimensions), "Invalid dimensions");
         require(recipient != address(0), "Invalid recipient");
 
         uint256 tokenId = _tokenIdCounter++;
@@ -98,7 +96,7 @@ contract THOT is ERC721, ERC721URIStorage, Ownable {
         
         _thotData[tokenId] = THOTData({
             dataCID: dataCID,
-            dimensions: uint8(255), // Standard 512-dim, but uint8 max is 255, using 255 as placeholder
+            dimensions: 512, // Default THOT512 standard
             parallelUnits: 1,
             timestamp: uint40(block.timestamp),
             verified: true,
@@ -109,7 +107,7 @@ contract THOT is ERC721, ERC721URIStorage, Ownable {
         _cidToTokenId[dataCID] = tokenId;
         _safeMint(msg.sender, tokenId);
 
-        emit THOTMinted(tokenId, dataCID, uint8(255), uint40(block.timestamp));
+        emit THOTMinted(tokenId, dataCID, 512, uint40(block.timestamp));
         return tokenId;
     }
 
@@ -155,6 +153,26 @@ contract THOT is ERC721, ERC721URIStorage, Ownable {
      */
     function cidExists(bytes32 dataCID) external view returns (bool) {
         return _cidExists[dataCID];
+    }
+
+    /**
+     * @dev Modular dimension validation — extend without modifying mint logic
+     * Original: THOT64, THOT512, THOT768
+     * cypherpunk2048: THOT1024 (embedding-native), THOT2048 (high-capacity)
+     * @param dims Dimension value to validate
+     * @return valid Whether the dimension is in the supported set
+     */
+    function _isValidDimension(uint16 dims) internal pure returns (bool) {
+        return (
+            dims == 8    ||  // THOT8    — root of THOT, the seed dimension
+            dims == 64   ||  // THOT64   — lightweight vectors
+            dims == 512  ||  // THOT512  — standard 8x8x8 3D knowledge clusters
+            dims == 768  ||  // THOT768  — high-fidelity optimized tensors
+            dims == 1024 ||  // THOT1024 — embedding-native (mxbai-embed-large)
+            dims == 2048 ||  // THOT2048 — cypherpunk2048 high-capacity
+            dims == 4096 ||  // THOT4096 — quantum-aware tensor space
+            dims == 8192     // THOT8192 — quantum-aware high-dimensional
+        );
     }
 
     // Override required functions

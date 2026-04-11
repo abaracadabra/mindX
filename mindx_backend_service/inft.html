@@ -109,7 +109,7 @@ body{font-family:'Inter','SF Pro Text',system-ui,sans-serif;background:#050810;c
     <div class="struct-display">
       <span class="kw">struct</span> <span class="ty">ThotData</span> {<br>
       &nbsp;&nbsp;bytes32 <span class="fn">dataCID</span>;      <span style="color:#484f58">// IPFS CID hash</span><br>
-      &nbsp;&nbsp;uint8   <span class="fn">dimensions</span>;   <span style="color:#484f58">// 64, 512, or 768</span><br>
+      &nbsp;&nbsp;uint16  <span class="fn">dimensions</span>;   <span style="color:#484f58">// 8, 64, 512, 768, 1024, 2048, 4096, 8192</span><br>
       &nbsp;&nbsp;uint8   <span class="fn">parallelUnits</span>;<span style="color:#484f58">// Processing units</span><br>
       &nbsp;&nbsp;uint40  <span class="fn">timestamp</span>;    <span style="color:#484f58">// Creation time</span><br>
       &nbsp;&nbsp;bool    <span class="fn">verified</span>;     <span style="color:#484f58">// Always true on mint</span><br>
@@ -118,7 +118,7 @@ body{font-family:'Inter','SF Pro Text',system-ui,sans-serif;background:#050810;c
     <div class="form-group"><label>Recipient Address</label><input id="thot_recipient" placeholder="0x..."></div>
     <div class="form-group"><label>Data CID (bytes32)</label><input id="thot_cid" placeholder="0x... (keccak256 of IPFS CID)"><div class="hint">bytes32 hash of the IPFS CID containing the tensor data</div></div>
     <div class="form-group"><label>Dimensions</label>
-      <select id="thot_dims"><option value="64">THOT64 — Lightweight</option><option value="512" selected>THOT512 — Standard (8x8x8)</option><option value="768">THOT768 — High-Fidelity</option></select>
+      <select id="thot_dims"><option value="8">THOT8 — Root (seed dimension)</option><option value="64">THOT64 — Lightweight</option><option value="512">THOT512 — Standard (8x8x8)</option><option value="768">THOT768 — High-Fidelity</option><option value="1024" selected>THOT1024 — Embedding-Native</option><option value="2048">THOT2048 — cypherpunk2048</option><option value="4096">THOT4096 — Quantum-Aware</option><option value="8192">THOT8192 — Quantum High-Dimensional</option></select>
     </div>
     <div class="form-group"><label>Parallel Units</label><input id="thot_units" type="number" value="1" min="1" max="255"></div>
     <div class="btn-row">
