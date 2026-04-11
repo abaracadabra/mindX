@@ -275,7 +275,7 @@ mindX memory is not a database. It is a living knowledge system organized across
 - **Short-Term Memory (STM)**: Per-session, per-agent working memory. Fast, ephemeral. 26 agents, 109MB+. Stored at `data/memory/stm/{agent_id}/{date}/`.
 - **Long-Term Memory (LTM)**: Consolidated knowledge from [machine.dreaming](#xiii-machinedreaming--the-unconscious-layer). Symbolic insights scored by importance × novelty × confidence. Stored at `data/memory/ltm/{agent_id}/`.
 - **Semantic Memory**: 1024-dimensional vector embeddings in [pgvectorscale](../agents/memory_pgvector.py). Every document, every memory, every belief is searchable by meaning — not just by keyword.
-- **[RAGE](rage_system.md)** (Retrieval-Augmented Generative Evolution): The semantic search system that powers `/chat/docs`. Ask a question in natural language, get answers drawn from 232+ documents and 120,000+ memory vectors.
+- **[RAGE](pgvectorscale_memory_integration.md)** (Retrieval-Augmented Generative Evolution): The semantic search system that powers `/chat/docs`. Ask a question in natural language, get answers drawn from 232+ documents and 120,000+ memory vectors.
 - **Archive**: Distributed memories that have been consolidated into LTM. Not deleted — [distributed across tiers](../agents/memory_agent.py): local → pgvector → IPFS → cloud → blockchain.
 
 STM→LTM promotion runs hourly via [memory_agent.promote_stm_to_ltm()](../agents/memory_agent.py). [Machine dreaming](#xiii-machinedreaming--the-unconscious-layer) runs every 2 hours, performing full 7-phase knowledge consolidation. This is how mindX learns from its own experience.

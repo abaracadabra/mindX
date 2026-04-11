@@ -23,25 +23,25 @@ This document provides a complete index of all agents in the mindX system, with 
 
 #### Core Components (agents/core/)
 
-1. **[BDI Agent](docs/bdi_agent.md)** - Foundational cognitive architecture implementing Belief-Desire-Intention model
+1. **[BDI Agent](core/bdi_agent.py)** - Foundational cognitive architecture implementing Belief-Desire-Intention model
    - **Type**: `cognitive_agent`
    - **Complexity**: 0.98
    - **Location**: `agents/core/bdi_agent.py`
    - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-2. **[Belief System](docs/belief_system.md)** - Singleton belief management system with confidence scores
+2. **[Belief System](core/belief_system.py)** - Singleton belief management system with confidence scores
    - **Type**: `belief_system`
    - **Complexity**: 0.85
    - **Location**: `agents/core/belief_system.py`
    - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-3. **[ID Manager Agent](docs/id_manager_agent.md)** - Central secure ledger for cryptographic identity management
+3. **[ID Manager Agent](core/id_manager_agent.py)** - Central secure ledger for cryptographic identity management
    - **Type**: `identity_manager`
    - **Complexity**: 0.90
    - **Location**: `agents/core/id_manager_agent.py`
    - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-4. **[AGInt Agent](docs/agint.md)** - High-level cognitive orchestrator with P-O-D-A loop
+4. **[AGInt Agent](core/agint.py)** - High-level cognitive orchestrator with P-O-D-A loop
    - **Type**: `cognitive_orchestrator`
    - **Complexity**: 0.95
    - **Location**: `agents/core/agint.py`
@@ -49,55 +49,55 @@ This document provides a complete index of all agents in the mindX system, with 
 
 #### Agent Implementations (agents/)
 
-5. **[Guardian Agent](docs/guardian_agent.md)** - Security backbone with identity validation and access control
+5. **[Guardian Agent](guardian_agent.py)** - Security backbone with identity validation and access control
    - **Type**: `security_agent`
    - **Complexity**: 0.95
    - **Location**: `agents/guardian_agent.py`
    - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-6. **[Memory Agent](docs/memory_agent.md)** - Infrastructure layer for persistent memory
+6. **[Memory Agent](memory_agent.py)** - Infrastructure layer for persistent memory
    - **Type**: `memory_agent`
    - **Complexity**: 0.92
    - **Location**: `agents/memory_agent.py`
    - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-7. **[AutoMINDX Agent](docs/automindx_agent.md)** - Persona manager with iNFT export and marketplace integration
+7. **[AutoMINDX Agent](automindx_agent.py)** - Persona manager with iNFT export and marketplace integration
    - **Type**: `persona_manager`
    - **Complexity**: 0.95
    - **Location**: `agents/automindx_agent.py`
    - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-8. **[Persona Agent](docs/persona_agent.md)** - Persona adoption and management with BDI integration
+8. **[Persona Agent](persona_agent.py)** - Persona adoption and management with BDI integration
    - **Type**: `persona_manager`
    - **Complexity**: 0.88
    - **Location**: `agents/persona_agent.py`
    - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-9. **[Avatar Agent](docs/avatar_agent.md)** - Avatar generation for agents and participants
+9. **[Avatar Agent](avatar_agent.py)** - Avatar generation for agents and participants
    - **Type**: `avatar_generator`
    - **Complexity**: 0.85
    - **Location**: `agents/avatar_agent.py`
    - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-10. **[Coral ID Agent](docs/coral_id_agent.md)** - CrossMint-integrated identity management with multi-chain support
+10. **[Coral ID Agent](coral_id_agent.py)** - CrossMint-integrated identity management with multi-chain support
     - **Type**: `identity_manager`
     - **Complexity**: 0.85
     - **Location**: `agents/coral_id_agent.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-11. **[Enhanced Simple Coder](docs/enhanced_simple_coder.md)** - Advanced coding agent with multi-model intelligence
+11. **[Enhanced Simple Coder](enhanced_simple_coder.py)** - Advanced coding agent with multi-model intelligence
     - **Type**: `coding_tool`
     - **Complexity**: 0.90
     - **Location**: `agents/enhanced_simple_coder.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-12. **[Simple Coder Agent](docs/simple_coder_agent.md)** - BDI-integrated coding assistant
+12. **[Simple Coder Agent](simple_coder_agent.py)** - BDI-integrated coding assistant
     - **Type**: `coding_tool`
     - **Complexity**: 0.88
     - **Location**: `agents/simple_coder_agent.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-13. **[Simple Coder](docs/simple_coder.md)** - Enhanced coding agent with sandbox and autonomous mode
+13. **[Simple Coder](simple_coder.py)** - Enhanced coding agent with sandbox and autonomous mode
     - **Type**: `coding_agent`
     - **Complexity**: 0.82
     - **Location**: `agents/simple_coder.py`
@@ -105,37 +105,37 @@ This document provides a complete index of all agents in the mindX system, with 
 
 #### Dynamic Agents (agents/)
 
-14. **[Analyzer Agent](docs/analyzer.md)** - Code analysis and quality improvement
+14. **[Analyzer Agent](analyzer.py)** - Code analysis and quality improvement
     - **Type**: `code_analyzer`
     - **Complexity**: 0.60
     - **Location**: `agents/analyzer.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-15. **[Benchmark Agent](docs/benchmark.md)** - Performance benchmarking and analysis
+15. **[Benchmark Agent](benchmark.py)** - Performance benchmarking and analysis
     - **Type**: `benchmark_tool`
     - **Complexity**: 0.70
     - **Location**: `agents/benchmark.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-16. **[Checker Agent](docs/checker.md)** - Quality assurance and validation
+16. **[Checker Agent](checker.py)** - Quality assurance and validation
     - **Type**: `quality_checker`
     - **Complexity**: 0.65
     - **Location**: `agents/checker.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-17. **[Processor Agent](docs/processor.md)** - Data processing and transformation
+17. **[Processor Agent](processor.py)** - Data processing and transformation
     - **Type**: `data_processor`
     - **Complexity**: 0.75
     - **Location**: `agents/processor.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-18. **[Reporter Agent](docs/reporter.md)** - Test reporting and documentation generation
+18. **[Reporter Agent](reporter.py)** - Test reporting and documentation generation
     - **Type**: `test_reporter`
     - **Complexity**: 0.70
     - **Location**: `agents/reporter.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-19. **[Validator Agent](docs/validator.md)** - Test data validation and integrity verification
+19. **[Validator Agent](validator.py)** - Test data validation and integrity verification
     - **Type**: `test_validator`
     - **Complexity**: 0.68
     - **Location**: `agents/validator.py`
@@ -143,13 +143,13 @@ This document provides a complete index of all agents in the mindX system, with 
 
 #### Evolution Components (agents/evolution/)
 
-20. **[Blueprint Agent](docs/blueprint_agent.md)** - Strategic planning agent generating blueprints for self-improvement iterations
+20. **[Blueprint Agent](evolution/blueprint_agent.py)** - Strategic planning agent generating blueprints for self-improvement iterations
     - **Type**: `strategic_planner`
     - **Complexity**: 0.92
     - **Location**: `agents/evolution/blueprint_agent.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-21. **[Blueprint to Action Converter](docs/blueprint_to_action_converter.md)** - Converts strategic blueprints into executable BDI actions
+21. **[Blueprint to Action Converter](evolution/blueprint_to_action_converter.py)** - Converts strategic blueprints into executable BDI actions
     - **Type**: `action_converter`
     - **Complexity**: 0.88
     - **Location**: `agents/evolution/blueprint_to_action_converter.py`
@@ -157,25 +157,25 @@ This document provides a complete index of all agents in the mindX system, with 
 
 #### Learning Components (agents/learning/)
 
-22. **[Strategic Evolution Agent](docs/strategic_evolution_agent.md)** - Comprehensive campaign orchestrator with audit-driven self-improvement pipeline
+22. **[Strategic Evolution Agent](learning/strategic_evolution_agent.py)** - Comprehensive campaign orchestrator with audit-driven self-improvement pipeline
     - **Type**: `strategic_evolution`
     - **Complexity**: 0.98
     - **Location**: `agents/learning/strategic_evolution_agent.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-23. **[Goal Management System](docs/goal_management.md)** - Comprehensive goal management with priority queue and dependency tracking
+23. **[Goal Management System](learning/goal_management.py)** - Comprehensive goal management with priority queue and dependency tracking
     - **Type**: `goal_management`
     - **Complexity**: 0.82
     - **Location**: `agents/learning/goal_management.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-24. **[Plan Management System](docs/plan_management.md)** - Multi-step plan management with action execution and dependency tracking
+24. **[Plan Management System](learning/plan_management.py)** - Multi-step plan management with action execution and dependency tracking
     - **Type**: `plan_management`
     - **Complexity**: 0.85
     - **Location**: `agents/learning/plan_management.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-25. **[Self Improvement Agent](docs/self_improve_agent.md)** - Self-modifying agent for code analysis, implementation, and evaluation
+25. **[Self Improvement Agent](learning/self_improve_agent.py)** - Self-modifying agent for code analysis, implementation, and evaluation
     - **Type**: `self_improvement_agent`
     - **Complexity**: 0.93
     - **Location**: `agents/learning/self_improve_agent.py`
@@ -183,31 +183,31 @@ This document provides a complete index of all agents in the mindX system, with 
 
 #### Monitoring Components (agents/monitoring/)
 
-26. **[Performance Monitor](docs/performance_monitor.md)** - Singleton performance monitoring system tracking LLM call metrics
+26. **[Performance Monitor](monitoring/performance_monitor.py)** - Singleton performance monitoring system tracking LLM call metrics
     - **Type**: `performance_monitor`
     - **Complexity**: 0.80
     - **Location**: `agents/monitoring/performance_monitor.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-27. **[Resource Monitor](docs/resource_monitor.md)** - Comprehensive real-time system resource monitoring
+27. **[Resource Monitor](monitoring/resource_monitor.py)** - Comprehensive real-time system resource monitoring
     - **Type**: `resource_monitor`
     - **Complexity**: 0.85
     - **Location**: `agents/monitoring/resource_monitor.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-28. **[Error Recovery Coordinator](docs/error_recovery_coordinator.md)** - Centralized error recovery coordinator for system-wide reliability
+28. **[Error Recovery Coordinator](monitoring/error_recovery_coordinator.py)** - Centralized error recovery coordinator for system-wide reliability
     - **Type**: `error_recovery_coordinator`
     - **Complexity**: 0.92
     - **Location**: `agents/monitoring/error_recovery_coordinator.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-29. **[Monitoring Integration](docs/monitoring_integration.md)** - Unified monitoring integration layer coordinating all monitoring components
+29. **[Monitoring Integration](monitoring/monitoring_integration.py)** - Unified monitoring integration layer coordinating all monitoring components
     - **Type**: `monitoring_integration`
     - **Complexity**: 0.82
     - **Location**: `agents/monitoring/monitoring_integration.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-30. **[Token Calculator Tool](docs/token_calculator_tool_robust.md)** - Production-grade token cost calculation and usage tracking (see tools documentation)
+30. **[Token Calculator Tool](monitoring/token_calculator_tool.py)** - Production-grade token cost calculation and usage tracking (see tools documentation)
     - **Type**: `monitoring_tool`
     - **Complexity**: 0.88
     - **Location**: `agents/monitoring/token_calculator_tool.py`
@@ -215,25 +215,25 @@ This document provides a complete index of all agents in the mindX system, with 
 
 #### Orchestration Components (agents/orchestration/)
 
-31. **[Coordinator Agent](docs/coordinator_agent.md)** - Central kernel and service bus orchestrating all system interactions
+31. **[Coordinator Agent](orchestration/coordinator_agent.py)** - Central kernel and service bus orchestrating all system interactions
     - **Type**: `orchestration_coordinator`
     - **Complexity**: 0.98
     - **Location**: `agents/orchestration/coordinator_agent.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-32. **[Mastermind Agent](docs/mastermind_agent.md)** - Strategic intelligence layer orchestrating high-level objectives and campaigns
+32. **[Mastermind Agent](orchestration/mastermind_agent.py)** - Strategic intelligence layer orchestrating high-level objectives and campaigns
     - **Type**: `strategic_orchestrator`
     - **Complexity**: 0.98
     - **Location**: `agents/orchestration/mastermind_agent.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-33. **[CEO Agent](docs/ceo_agent.md)** - Highest-level strategic executive coordinator with business planning
+33. **[CEO Agent](orchestration/ceo_agent.py)** - Highest-level strategic executive coordinator with business planning
     - **Type**: `executive_coordinator`
     - **Complexity**: 0.99
     - **Location**: `agents/orchestration/ceo_agent.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-34. **[Autonomous Audit Coordinator](docs/autonomous_audit_coordinator.md)** - Autonomous audit coordinator scheduling systematic audit campaigns
+34. **[Autonomous Audit Coordinator](orchestration/autonomous_audit_coordinator.py)** - Autonomous audit coordinator scheduling systematic audit campaigns
     - **Type**: `audit_coordinator`
     - **Complexity**: 0.88
     - **Location**: `agents/orchestration/autonomous_audit_coordinator.py`
@@ -336,7 +336,7 @@ This document provides a complete index of all agents in the mindX system, with 
     - **Complexity**: 0.95
     - **Location**: `agents/judgedread_agent.py`
     - **Definition**: `agents/judgedread.agent`
-    - **Authority**: master tier — cannot clawback sovereign ([mastermind](../docs/mastermind_agent.md), [CEO](../docs/CEO.md))
+    - **Authority**: master tier — cannot clawback sovereign ([mastermind](orchestration/mastermind_agent.py), [CEO](../docs/CEO.md))
     - **Enforces**: [BONA FIDE](../daio/contracts/agenticplace/evm/BonaFide.sol) (EVM) + [bonafide.algo.ts](../daio/contracts/algorand/bonafide.algo.ts) (Algorand)
     - **Monitors**: All agents including [AION](aion_agent.py) sovereignty and compliance
     - **Companion**: BladeRunner (execution arm — kills models/agents on verdict)
@@ -606,52 +606,52 @@ All agents are registered in the mindX system through:
 ## 🔗 Documentation Links
 
 ### Core Components
-- [BDI Agent Documentation](docs/bdi_agent.md)
-- [Belief System Documentation](docs/belief_system.md)
-- [ID Manager Agent Documentation](docs/id_manager_agent.md)
-- [AGInt Agent Documentation](docs/agint.md)
+- [BDI Agent Documentation](core/bdi_agent.py)
+- [Belief System Documentation](core/belief_system.py)
+- [ID Manager Agent Documentation](core/id_manager_agent.py)
+- [AGInt Agent Documentation](core/agint.py)
 
 ### Agent Implementations
-- [Guardian Agent Documentation](docs/guardian_agent.md)
-- [Memory Agent Documentation](docs/memory_agent.md)
-- [AutoMINDX Agent Documentation](docs/automindx_agent.md)
-- [Persona Agent Documentation](docs/persona_agent.md)
-- [Avatar Agent Documentation](docs/avatar_agent.md)
-- [Coral ID Agent Documentation](docs/coral_id_agent.md)
-- [Enhanced Simple Coder Documentation](docs/enhanced_simple_coder.md)
-- [Simple Coder Agent Documentation](docs/simple_coder_agent.md)
-- [Simple Coder Documentation](docs/simple_coder.md)
+- [Guardian Agent Documentation](guardian_agent.py)
+- [Memory Agent Documentation](memory_agent.py)
+- [AutoMINDX Agent Documentation](automindx_agent.py)
+- [Persona Agent Documentation](persona_agent.py)
+- [Avatar Agent Documentation](avatar_agent.py)
+- [Coral ID Agent Documentation](coral_id_agent.py)
+- [Enhanced Simple Coder Documentation](enhanced_simple_coder.py)
+- [Simple Coder Agent Documentation](simple_coder_agent.py)
+- [Simple Coder Documentation](simple_coder.py)
 
 ### Dynamic Agents
-- [Analyzer Agent Documentation](docs/analyzer.md)
-- [Benchmark Agent Documentation](docs/benchmark.md)
-- [Checker Agent Documentation](docs/checker.md)
-- [Processor Agent Documentation](docs/processor.md)
-- [Reporter Agent Documentation](docs/reporter.md)
-- [Validator Agent Documentation](docs/validator.md)
+- [Analyzer Agent Documentation](analyzer.py)
+- [Benchmark Agent Documentation](benchmark.py)
+- [Checker Agent Documentation](checker.py)
+- [Processor Agent Documentation](processor.py)
+- [Reporter Agent Documentation](reporter.py)
+- [Validator Agent Documentation](validator.py)
 
 ### Evolution Components
-- [Blueprint Agent Documentation](docs/blueprint_agent.md)
-- [Blueprint to Action Converter Documentation](docs/blueprint_to_action_converter.md)
+- [Blueprint Agent Documentation](evolution/blueprint_agent.py)
+- [Blueprint to Action Converter Documentation](evolution/blueprint_to_action_converter.py)
 
 ### Learning Components
-- [Strategic Evolution Agent Documentation](docs/strategic_evolution_agent.md)
-- [Goal Management System Documentation](docs/goal_management.md)
-- [Plan Management System Documentation](docs/plan_management.md)
-- [Self Improvement Agent Documentation](docs/self_improve_agent.md)
+- [Strategic Evolution Agent Documentation](learning/strategic_evolution_agent.py)
+- [Goal Management System Documentation](learning/goal_management.py)
+- [Plan Management System Documentation](learning/plan_management.py)
+- [Self Improvement Agent Documentation](learning/self_improve_agent.py)
 
 ### Monitoring Components
-- [Performance Monitor Documentation](docs/performance_monitor.md)
-- [Resource Monitor Documentation](docs/resource_monitor.md)
-- [Error Recovery Coordinator Documentation](docs/error_recovery_coordinator.md)
-- [Monitoring Integration Documentation](docs/monitoring_integration.md)
-- [Token Calculator Tool Documentation](docs/token_calculator_tool_robust.md)
+- [Performance Monitor Documentation](monitoring/performance_monitor.py)
+- [Resource Monitor Documentation](monitoring/resource_monitor.py)
+- [Error Recovery Coordinator Documentation](monitoring/error_recovery_coordinator.py)
+- [Monitoring Integration Documentation](monitoring/monitoring_integration.py)
+- [Token Calculator Tool Documentation](monitoring/token_calculator_tool.py)
 
 ### Orchestration Components
-- [Coordinator Agent Documentation](docs/coordinator_agent.md)
-- [Mastermind Agent Documentation](docs/mastermind_agent.md)
-- [CEO Agent Documentation](docs/ceo_agent.md)
-- [Autonomous Audit Coordinator Documentation](docs/autonomous_audit_coordinator.md)
+- [Coordinator Agent Documentation](orchestration/coordinator_agent.py)
+- [Mastermind Agent Documentation](orchestration/mastermind_agent.py)
+- [CEO Agent Documentation](orchestration/ceo_agent.py)
+- [Autonomous Audit Coordinator Documentation](orchestration/autonomous_audit_coordinator.py)
 
 ---
 
