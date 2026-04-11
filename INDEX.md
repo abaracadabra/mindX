@@ -4,9 +4,11 @@
 
 **MindX** is a comprehensive autonomous intelligence platform implementing a Gödel machine architecture with complete self-improvement capabilities, semantic memory integration, and enterprise-grade platform architecture.
 
-**Version**: 3.0 (2026)  
-**Status**: ✅ **PHASE I COMPLETE** - Autonomous Self-Improving AI System  
-**Architecture**: Multi-tier Agent Orchestration with pgvectorscale Memory Integration
+**Version**: 3.1 (2026-04-10)  
+**Status**: ✅ **PHASE II ACTIVE** — Inference-First Autonomous Loop, AgenticPlace Contracts Imported  
+**Architecture**: Multi-tier Agent Orchestration with pgvectorscale Memory, InferenceDiscovery, DAIO Governance  
+**Agents**: 66+ | **Tools**: 45+ | **Contracts**: DAIO (30+ Foundry) + AgenticPlace (9 EVM + 14 Algorand)  
+**Live**: [mindx.pythai.net](https://mindx.pythai.net)
 
 ---
 
@@ -122,21 +124,32 @@ Higher Intelligence → CEO.Agent → MastermindAgent → mindX Environment
 ### Core Documentation
 
 #### 🏗️ **Platform Architecture**
-- **[docs/INDEX.md](docs/INDEX.md)**: Complete documentation index (170+ files)
+- **[docs/INDEX.md](docs/INDEX.md)**: Complete documentation index (200+ files)
 - **[docs/roadmap.md](docs/roadmap.md)**: Strategic roadmap and milestones
 - **[docs/MINDX.md](docs/MINDX.md)**: Platform overview and architecture
-- **[docs/AGENTS.md](docs/AGENTS.md)**: Complete agent registry (30+ agents)
+- **[docs/AGENTS.md](docs/AGENTS.md)**: Complete agent registry (66+ agents)
+- **[docs/THESIS.md](docs/THESIS.md)**: Darwin-Godel Machine dissertation
+- **[docs/MANIFESTO.md](docs/MANIFESTO.md)**: Three Pillars + Project Chimaiera
 
 #### 🧠 **Agent Documentation**
-- **[agents/index.md](agents/index.md)**: Agent registry and capabilities
+- **[agents/index.md](agents/index.md)**: Agent registry and capabilities (66+ agents)
+- **[agents/agent.schema.json](agents/agent.schema.json)**: Agent definition schema (A2A 2.0 + MCP 1.0)
 - **[docs/bdi_agent.md](docs/bdi_agent.md)**: BDI cognitive architecture
 - **[docs/mastermind_agent.md](docs/mastermind_agent.md)**: Strategic orchestration
 - **[docs/coordinator_agent.md](docs/coordinator_agent.md)**: Service bus coordination
 
 #### 🛠️ **Technical Documentation**
 - **[docs/memory_agent.md](docs/memory_agent.md)**: Memory system architecture
-- **[docs/rage_system.md](docs/rage_system.md)**: Retrieval augmented generation
+- **[docs/rage_system.md](docs/rage_system.md)**: RAGE — Retrieval Augmented Generative Evolution
 - **[docs/pgvectorscale_integration.md](docs/pgvectorscale_integration.md)**: Vector database integration
+- **[docs/OLLAMA_VLLM_CLOUD_RESEARCH.md](docs/OLLAMA_VLLM_CLOUD_RESEARCH.md)**: Multi-model inference strategy
+
+#### ⛓️ **Blockchain / DAIO**
+- **[daio/docs/INDEX.md](daio/docs/INDEX.md)**: DAIO contract documentation
+- **[daio/contracts/agenticplace/](daio/contracts/agenticplace/)**: AgenticPlace EVM contracts (ERC-8004, BonaFide)
+- **[daio/contracts/algorand/](daio/contracts/algorand/)**: Algorand contracts (14 files)
+- **[agents/solidity.foundry.agent](agents/solidity.foundry.agent)**: Foundry toolchain agent
+- **[agents/solidity.hardhat.agent](agents/solidity.hardhat.agent)**: Hardhat toolchain agent
 
 ### Development & Operations
 
@@ -146,7 +159,7 @@ Higher Intelligence → CEO.Agent → MastermindAgent → mindX Environment
 - **[scripts/migrate_memories_to_postgres.py](scripts/migrate_memories_to_postgres.py)**: Memory migration utility
 
 #### 🔧 **Tools & Utilities**
-- **[tools/](tools/)**: Complete tool ecosystem (17 cryptographically secured tools)
+- **[tools/](tools/)**: Complete tool ecosystem (45+ tools extending BaseTool)
 - **[docs/TOOLS_INDEX.md](docs/TOOLS_INDEX.md)**: Tool registry and capabilities
 - **[docs/TOOLS.md](docs/TOOLS.md)**: Tool architecture and integration
 
@@ -323,9 +336,12 @@ class MyNewAgent(BaseAgent):
 
 ### Documentation Links
 - **[Complete API Reference](http://localhost:8000/docs)**: FastAPI auto-generated docs
-- **[Agent Registry](docs/AGENTS.md)**: All 30+ agents with capabilities
-- **[Tool Ecosystem](docs/TOOLS_INDEX.md)**: 17 cryptographically secured tools
+- **[Agent Registry](agents/index.md)**: All 66+ agents with capabilities
+- **[Agent Schema](agents/agent.schema.json)**: Formal agent definition (A2A + MCP)
+- **[Tool Ecosystem](docs/TOOLS_INDEX.md)**: 45+ tools extending BaseTool
 - **[Architecture Guide](docs/MINDX.md)**: Platform architecture deep-dive
+- **[Thesis](docs/THESIS.md)**: Darwin-Godel Machine academic dissertation
+- **[Manifesto](docs/MANIFESTO.md)**: Three Pillars + Project Chimaiera roadmap
 
 ### Community Resources
 - **GitHub Issues**: Bug reports and feature requests
@@ -342,11 +358,12 @@ class MyNewAgent(BaseAgent):
 ## 📈 Performance Metrics
 
 ### Current Achievements
-- **Autonomous Cycles**: 1-hour improvement cycles operational
-- **Strategic Planning**: 4-hour planning cycles active
-- **Security Coverage**: 100% tool cryptographic security
-- **Memory Capacity**: pgvectorscale semantic search enabled
-- **Agent Registration**: 9/30+ agents registered (30% complete)
+- **Autonomous Cycles**: 5-minute improvement cycles with inference-first pre-check
+- **Inference Discovery**: Auto-probes 7+ LLM providers, ranks by reliability/latency
+- **Agent Ecosystem**: 66+ agents across core, orchestration, evolution, monitoring, blockchain
+- **Contract Suite**: 30+ DAIO governance + 9 AgenticPlace EVM + 14 Algorand contracts
+- **Security Coverage**: BANKON Vault (AES-256-GCM), Guardian Agent, wallet authentication
+- **Memory Capacity**: pgvectorscale RAGE semantic search across all agent memory
 
 ### Key Metrics Tracked
 - **SLO Compliance**: Service Level Objectives tracking
@@ -369,4 +386,4 @@ class MyNewAgent(BaseAgent):
 
 ---
 
-*Built with ❤️ by the AgenticPlace community. Autonomous since January 27, 2025.*
+*Built by Professor Codephreak and the AgenticPlace community. Autonomous since January 27, 2025. Cypherpunk tradition.*

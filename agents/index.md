@@ -4,13 +4,16 @@
 
 This document provides a complete index of all agents in the mindX system, with links to detailed documentation, NFT metadata, and registry information.
 
-**Last Updated**: 2026-01-11  
-**Total Agents**: 34+  
+**Last Updated**: 2026-04-10  
+**Total Agents**: 66+  
 **Core Components**: 4  
 **Evolution Components**: 2  
 **Learning Components**: 4  
 **Monitoring Components**: 5  
-**Orchestration Components**: 4
+**Orchestration Components**: 7  
+**Specialized Agents**: 20+  
+**Blockchain/Solidity Agents**: 2  
+**Agent Schema**: agents/agent.schema.json (A2A 2.0, MCP 1.0)
 
 ---
 
@@ -236,6 +239,94 @@ This document provides a complete index of all agents in the mindX system, with 
     - **Location**: `agents/orchestration/autonomous_audit_coordinator.py`
     - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
+#### Orchestration — Lifecycle (agents/orchestration/)
+
+35. **StartupAgent** - System initialization, Ollama auto-connect, improvement monitoring
+    - **Type**: `lifecycle_agent`
+    - **Complexity**: 0.90
+    - **Location**: `agents/orchestration/startup_agent.py`
+
+36. **ShutdownAgent** - Graceful shutdown with state persistence and GitHub backup
+    - **Type**: `lifecycle_agent`
+    - **Complexity**: 0.85
+    - **Location**: `agents/orchestration/shutdown_agent.py`
+
+37. **ReplicationAgent** - Multi-target replication (local, GitHub, blockchain)
+    - **Type**: `lifecycle_agent`
+    - **Complexity**: 0.88
+    - **Location**: `agents/orchestration/replication_agent.py`
+
+#### Specialized Agents (agents/)
+
+38. **[mindXagent](docs/MINDX.md)** - Meta-orchestrator for autonomous self-improvement with inference-first loop
+    - **Type**: `meta_orchestrator`
+    - **Complexity**: 0.99
+    - **Location**: `agents/core/mindXagent.py`
+
+39. **vLLM Agent** - Manages vLLM build, deployment, model serving lifecycle
+    - **Type**: `inference_manager`
+    - **Complexity**: 0.85
+    - **Location**: `agents/vllm_agent.py`
+
+40. **Author Agent** - Autonomous publication writing on lunar cycle
+    - **Type**: `content_generator`
+    - **Complexity**: 0.88
+    - **Location**: `agents/author_agent.py`
+
+41. **AION Agent** - Autonomous operations, chroot replication, directive sovereignty
+    - **Type**: `operations_agent`
+    - **Complexity**: 0.90
+    - **Location**: `agents/aion_agent.py`
+
+42. **Backup Agent** - Git-based backup with blockchain immutable memory
+    - **Type**: `backup_agent`
+    - **Complexity**: 0.82
+    - **Location**: `agents/backup_agent.py`
+
+43. **SystemAdmin Agent** - Privileged command execution with audit logging
+    - **Type**: `system_admin`
+    - **Complexity**: 0.80
+    - **Location**: `agents/systemadmin_agent.py`
+
+44. **FAICEY Agent** - Marketplace integration, multi-agent coordination, iNFT generation
+    - **Type**: `marketplace_agent`
+    - **Complexity**: 0.92
+    - **Location**: `agents/faicey_agent.py`
+
+#### Blockchain / Solidity Agents (agents/)
+
+45. **Solidity Foundry Agent** - I compile, test, and deploy contracts using Foundry (forge + anvil)
+    - **Type**: `solidity_toolchain`
+    - **Domain**: `solidity.foundry`
+    - **Complexity**: 0.85
+    - **Location**: `agents/solidity_foundry_agent.py`
+    - **Definition**: `agents/solidity.foundry.agent`
+    - **Schema**: `agents/agent.schema.json`
+    - **Memory**: logs via memory_agent, status at `data/solidity_foundry_status.json`
+    - **Projects**: `daio/contracts/` (Foundry, 30+ DAIO contracts), `daio/contracts/xmind/`, `daio/contracts/THOT/`
+
+46. **Solidity Hardhat Agent** - I compile, test, and deploy contracts using Hardhat (upgradeable proxies)
+    - **Type**: `solidity_toolchain`
+    - **Domain**: `solidity.hardhat`
+    - **Complexity**: 0.85
+    - **Location**: `agents/solidity_hardhat_agent.py`
+    - **Definition**: `agents/solidity.hardhat.agent`
+    - **Schema**: `agents/agent.schema.json`
+    - **Memory**: logs via memory_agent, status at `data/solidity_hardhat_status.json`
+    - **Projects**: `daio/contracts/agenticplace/evm/` (ERC-8004 registries, BonaFide)
+
+---
+
+## Agent Schema
+
+All agents can be formally defined using `agents/agent.schema.json` — a JSON Schema with 16 properties:
+
+`agent`, `version`, `domain`, `description`, `implementation`, `capabilities`, `memory`, `projects`, `toolchain`, `knowledge_domains`, `networks`, `persona`, `coordinator`, `a2a`, `mcp`, `publishing`
+
+**Protocol Compatibility**: A2A 2.0 (agent cards, discovery, streaming) + MCP 1.0 (tool definitions, resources, context)
+
+**Publishing**: Extensions publishable as .json to agenticplace.pythai.net (gRPC under study)
+
 ---
 
 ## 🗂️ Agent Categories
@@ -295,6 +386,27 @@ This document provides a complete index of all agents in the mindX system, with 
 - **Mastermind Agent** - Strategic intelligence layer
 - **CEO Agent** - Executive strategic coordinator
 - **Autonomous Audit Coordinator** - Autonomous audit management
+- **StartupAgent** - System initialization and Ollama auto-connect
+- **ShutdownAgent** - Graceful shutdown with backup
+- **ReplicationAgent** - Multi-target replication
+
+### Meta & Inference
+- **mindXagent** - Meta-orchestrator with inference-first autonomous loop
+- **vLLM Agent** - vLLM build, serve, and lifecycle management
+- **InferenceDiscovery** - Multi-provider inference probing and ranking
+
+### Content & Publishing
+- **Author Agent** - Autonomous publication on lunar cycle
+- **FAICEY Agent** - Marketplace integration and iNFT generation
+
+### System & Operations
+- **AION Agent** - Autonomous operations and chroot replication
+- **Backup Agent** - Git backup with blockchain memory
+- **SystemAdmin Agent** - Privileged command execution
+
+### Blockchain / Solidity
+- **Solidity Foundry Agent** - forge build, test, anvil, deploy (preferred)
+- **Solidity Hardhat Agent** - hardhat compile, test, deploy, verify (upgradeable proxies)
 
 ---
 

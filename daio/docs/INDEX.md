@@ -5,11 +5,13 @@
 
 **Comprehensive Documentation Index for Decentralized Autonomous Intelligence Organization (DAIO)**
 
-**Last Updated**: March 31, 2026
-**Total Documentation Files**: 15
-**Core DAIO Contracts**: 12 foundational contracts documented
-**Modular Extensions**: 13th+ contracts as modular expansion examples
-**Total Contract Lines**: 2,695+ (core contracts)
+**Last Updated**: April 10, 2026
+**Total Documentation Files**: 18+
+**Core DAIO Contracts**: 30+ foundational contracts (Foundry)
+**AgenticPlace Contracts**: 9 EVM (Hardhat, ERC-8004) + 14 Algorand
+**Modular Extensions**: xmind bridge, THOT tensors, ARC chain, bonding curves
+**Toolchain Agents**: SolidityFoundryAgent, SolidityHardhatAgent
+**Agent Schema**: agents/agent.schema.json (A2A 2.0, MCP 1.0)
 
 ---
 
@@ -18,12 +20,55 @@
 DAIO (Decentralized Autonomous Intelligence Organization) provides the blockchain-native governance and economic layer for mindX, enabling autonomous agent orchestration with cryptographic identity, on-chain governance, and sovereign economic operations.
 
 ### **Key Features**
-- **12 Smart Contracts** with comprehensive analysis
+- **30+ DAIO Governance Contracts** (Foundry, Solidity 0.8.24)
+- **9 AgenticPlace EVM Contracts** (Hardhat, ERC-8004 agent identity, BonaFide reputation)
+- **14 Algorand Contracts** (AlgorandTS, BONA FIDE, cross-chain oracle, reflection token)
 - **Hybrid Human-AI Governance** (66.67% human, 33.33% AI voting)
-- **Cryptographic Agent Identity** via IDNFT and SoulBadger systems
+- **Cryptographic Agent Identity** via IDNFT, SoulBadger, and IdentityRegistryUpgradeable
 - **Multi-Project Treasury** with 15% diversification mandate
 - **Knowledge-Weighted Voting** for AI agents
 - **Constitutional Governance** with immutable rules
+- **$BANKON Token Economy** with censura/ghosting mechanics
+- **Solidity Agents** for autonomous contract deployment (Foundry preferred, Hardhat for UUPS proxies)
+
+---
+
+## ⛓️ **AgenticPlace Contracts** (NEW — imported 2026-04-10)
+
+### EVM (Hardhat, `contracts/agenticplace/evm/`)
+- **IdentityRegistryUpgradeable.sol** — ERC-8004 agent identity NFTs (UUPS upgradeable)
+- **ReputationRegistryUpgradeable.sol** — On-chain reputation feedback aggregation
+- **ValidationRegistryUpgradeable.sol** — Agent validation workflow with scoring
+- **BonaFide.sol** — BANKON cross-chain reputation token (censura/ghosting, 5 tiers)
+- **SingletonFactory.sol** — EIP-2470 deterministic CREATE2 deployment
+- **MinimalUUPS.sol / MinimalUUPSMainnet.sol** — Vanity address proxy implementations
+- **deploy.ts** — Hardhat TypeScript deployment orchestrator
+- **hardhat.config.ts** — Multi-network config (Ethereum, Polygon, Base, Arbitrum)
+- **artifacts/** — Compiled ABIs for all contracts
+
+### Algorand (`contracts/algorand/`)
+- **bonafide.algo.ts** — Production BONA FIDE controller (progressive fees, ghost voting)
+- **fee_controller.algo.ts** — Dynamic fee calculation with multi-wallet distribution
+- **fee_redemption.algo.ts** — Tiered escrow redemption system
+- **interchain_oracle.algo.ts** — Multi-chain gas oracle (Eth, Polygon, Base, Arbitrum)
+- **interchain_settler.algo.ts** — Cross-chain settlement and dispute resolution
+- **aluv_token.algo.ts** — ARC-200 reflection token (3% redistribution)
+- **aluv_bridge.algo.ts** — EVM ↔ Algorand bridge (1:1 parity)
+- **reflection_engine.algo.ts** — High-precision reflection calculator
+- **liquidity_locker.algo.ts** — Time-locked LP security
+- **aORC-registry/minter/bonafide/typeminter.algo.ts** — Legacy aORC suite
+
+### Compiled Output (`contracts/agenticplace/out/`)
+- AgenticMinter, AgenticRegistry, BonaFideController, TypeMinter — TEAL programs + ARC-32/56 specs
+
+### Deployment Status
+- **Local (1337)**: All 5 core EVM contracts deployed (see `deployment-1337.json`)
+- **Testnets**: Pending (Sepolia, Polygon Amoy, Base Sepolia)
+- **Mainnets**: Pending (Ethereum, Polygon, Base, Arbitrum)
+
+### Toolchain Agents
+- **SolidityFoundryAgent** (`agents/solidity_foundry_agent.py`) — Foundry preferred
+- **SolidityHardhatAgent** (`agents/solidity_hardhat_agent.py`) — Hardhat for UUPS proxies
 
 ---
 
