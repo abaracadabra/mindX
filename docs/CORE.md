@@ -3,7 +3,7 @@
 **Status:** ✅ **Production Ready** - Enterprise deployment with [BANKON vault](../mindx_backend_service/vault_bankon/) security
 **Author:** [Professor Codephreak](https://github.com/Professor-Codephreak) (© Professor Codephreak)
 **Organizations:** [AgenticPlace](https://github.com/agenticplace), [cryptoAGI](https://github.com/cryptoagi), [AION-NET](https://github.com/aion-net), [augml](https://github.com/augml)
-**Resources:** [rage.pythai.net](https://rage.pythai.net) | [mindx.pythai.net](https://mindx.pythai.net) | [Thesis](THESIS.md) | [Manifesto](MANIFESTO.md)
+**Resources:** [rage.pythai.net](https://rage.pythai.net) | [mindx.pythai.net](https://mindx.pythai.net) | [Thesis](THESIS.md) | [Manifesto](MANIFESTO.md) | [THOT](../daio/contracts/THOT/core/THOT.sol) | [iNFT](AUTOMINDX_INFT_SUMMARY.md)
 **Architecture:** Self-Aware [Augmentic Intelligence](AGINT.md) with [Machine Learning](https://github.com/jaimla) Integration
 **Last Updated:** April 2026
 

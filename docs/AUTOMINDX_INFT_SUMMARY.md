@@ -48,10 +48,23 @@ struct ThotData {
 **Events:**
 - `ThotMinted(uint256 indexed tokenId, bytes32 indexed dataCID, uint8 dimensions, uint40 timestamp)`
 
-**Dimension Constraints:** Only 64, 512, or 768 are valid — matching the [THOT standard](../daio/contracts/THOT/core/THOT.sol):
-- **THOT64**: Lightweight 64-dimension vectors
-- **THOT512**: Standard 8×8×8 3D knowledge clusters
-- **THOT768**: High-fidelity optimized tensors
+**THOT Dimension Standard** — modular via `_isValidDimension()` in [THOT.sol](../daio/contracts/THOT/core/THOT.sol):
+
+| Dimension | Name | Purpose |
+|-----------|------|---------|
+| 8 | THOT8 | Root of THOT — the seed dimension |
+| 64 | THOT64 | Lightweight vectors |
+| 256 | THOT256 | Wallet key dimension (32-byte key × 8 bits) |
+| 512 | THOT512 | Standard 8×8×8 3D knowledge clusters |
+| 768 | THOT768 | High-fidelity optimized tensors |
+| 1024 | THOT1024 | Embedding-native ([mxbai-embed-large](../agents/memory_pgvector.py), 1024-dim) |
+| 2048 | THOT2048 | [cypherpunk2048](https://github.com/cypherpunk2048) high-capacity |
+| 4096 | THOT4096 | Quantum-aware tensor space |
+| 8192 | THOT8192 | Quantum-aware high-dimensional |
+| 65536 | THOT65536 | Theoretical quantum-resistant (2^16) |
+| 1048576 | THOT1048576 | Theoretical post-quantum (2^20) |
+
+`uint32 dimensions` — supports up to 4,294,967,295. New dimensions added by extending `_isValidDimension()` only.
 
 ---
 

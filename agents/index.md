@@ -445,6 +445,8 @@ All agents can be formally defined using `agents/agent.schema.json` — a JSON S
 ### Blockchain / Solidity
 - **[Solidity Foundry Agent](solidity.foundry.agent)** — forge build, test, anvil, deploy (preferred)
 - **[Solidity Hardhat Agent](solidity.hardhat.agent)** — hardhat compile, test, deploy, verify (upgradeable proxies)
+- **[THOT Contracts](../daio/contracts/THOT/)** — [THOT.sol](../daio/contracts/THOT/core/THOT.sol) (ERC-721), [THINK.sol](../daio/contracts/THOT/core/THINK.sol) (ERC-1155), [tNFT.sol](../daio/contracts/THOT/core/tNFT.sol) (decision), [THOTTensorNFT](../daio/contracts/THOT/enhanced/THOTTensorNFT.sol) (lifecycle) — dimensions: THOT8→THOT1048576
+- **[iNFT](../daio/contracts/inft/)** — [iNFT.sol](../daio/contracts/inft/iNFT.sol) (immutable THOT), [IntelligentNFT.sol](../daio/contracts/inft/IntelligentNFT.sol) (agent NFT), [Factory](../daio/contracts/inft/IntelligentNFTFactory.sol) — [UI at /inft](https://mindx.pythai.net/inft)
 
 ### Governance / Reputation
 - **[JudgeDread](judgedread.agent)** — reputation overseer, [BONA FIDE](../daio/contracts/agenticplace/evm/BonaFide.sol) enforcement, verdicts

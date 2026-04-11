@@ -272,12 +272,25 @@ class DAIOEventListener:
 
 ### 3.1 THOT Architecture Overview
 
-**THOT** (Temporal Hierarchical Optimization Technology) is a sophisticated temporal reasoning system implemented in Rust, providing:
+**[THOT](../daio/contracts/THOT/core/THOT.sol)** (Transferable Hyper-Optimized Tensor) — on-chain tensor artifacts with modular dimension scaling. Smart contracts: [THOT.sol](../daio/contracts/THOT/core/THOT.sol) (ERC-721), [THINK.sol](../daio/contracts/THOT/core/THINK.sol) (ERC-1155 batch), [tNFT.sol](../daio/contracts/THOT/core/tNFT.sol) (decision-making), [THOTTensorNFT.sol](../daio/contracts/THOT/enhanced/THOTTensorNFT.sol) (enhanced lifecycle), [AgenticPlace.sol](../daio/contracts/THOT/marketplace/AgenticPlace.sol) (marketplace).
 
-- **THOT512**: 8x8x8 3D knowledge cluster (512 data points)
-- **THOT8**: Individual 8x8x8 sub-clusters for parallel processing
-- **Temporal State Management**: Time-series data optimization
-- **Knowledge Graph Integration**: IPFS-based knowledge storage
+**Dimension Standard** (`uint32`, modular via `_isValidDimension()`):
+
+| Dim | Name | Purpose |
+|-----|------|---------|
+| 8 | [THOT8](../daio/contracts/THOT/core/THOT.sol) | Root — the seed of THOT |
+| 64 | THOT64 | Lightweight vectors |
+| 256 | THOT256 | Wallet key dimension (32 bytes × 8 bits) |
+| 512 | THOT512 | Standard 8×8×8 3D knowledge clusters |
+| 768 | THOT768 | High-fidelity optimized tensors |
+| 1024 | THOT1024 | Embedding-native ([mxbai-embed-large](../agents/memory_pgvector.py)) |
+| 2048 | THOT2048 | [cypherpunk2048](https://github.com/cypherpunk2048) high-capacity |
+| 4096 | THOT4096 | Quantum-aware tensor space |
+| 8192 | THOT8192 | Quantum-aware high-dimensional |
+| 65536 | THOT65536 | Theoretical quantum-resistant (2^16) |
+| 1048576 | THOT1048576 | Theoretical post-quantum (2^20) |
+
+Supporting NFT types: [iNFT](../daio/contracts/inft/iNFT.sol) (immutable THOT), [IntelligentNFT](../daio/contracts/inft/IntelligentNFT.sol) (dynamic agent NFT), [gNFT](../daio/contracts/THOT/nft/gNFT.sol) (visualization), [NFPrompT](../daio/contracts/THOT/nft/NFPrompT.sol) (agent prompts), [NFRLT](../daio/contracts/THOT/nft/NFRLT.sol) (royalty + soulbound). Interactive UI: [mindx.pythai.net/inft](https://mindx.pythai.net/inft).
 
 ### 3.2 THOT → mindX Integration Strategy
 

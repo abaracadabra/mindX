@@ -159,6 +159,8 @@ Higher Intelligence → CEO.Agent → MastermindAgent → mindX Environment
 #### ⛓️ **Blockchain / [DAIO](docs/DAIO.md)**
 - **[daio/docs/INDEX.md](daio/docs/INDEX.md)**: DAIO contract documentation
 - **[DAIO_Constitution.sol](daio/contracts/daio/constitution/DAIO_Constitution.sol)**: Immutable governance rules
+- **[THOT](daio/contracts/THOT/core/THOT.sol)**: Transferable Hyper-Optimized Tensors — 11 dimensions from [THOT8](daio/contracts/THOT/core/THOT.sol) root to [THOT1048576](daio/contracts/THOT/core/THOT.sol) post-quantum
+- **[iNFT](daio/contracts/inft/iNFT.sol)**: Immutable THOT as ERC-721 | **[IntelligentNFT](daio/contracts/inft/IntelligentNFT.sol)**: Dynamic agent NFT + [AgenticPlace](https://agenticplace.pythai.net) | **[UI](/inft)**
 - **[BonaFide.sol](daio/contracts/agenticplace/evm/BonaFide.sol)**: Reputation token — [JudgeDread](agents/judgedread.agent) enforces, [AION](agents/system.aion.agent) is contained by
 - **[IdentityRegistry](daio/contracts/agenticplace/evm/IdentityRegistryUpgradeable.sol)**: ERC-8004 agent identity NFTs
 - **[daio/contracts/algorand/](daio/contracts/algorand/)**: 14 Algorand contracts ([bonafide](daio/contracts/algorand/bonafide.algo.ts), oracle, bridge)

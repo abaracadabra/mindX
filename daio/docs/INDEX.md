@@ -29,6 +29,8 @@ DAIO (Decentralized Autonomous Intelligence Organization) provides the blockchai
 - **Knowledge-Weighted Voting** for AI agents
 - **Constitutional Governance** with immutable rules
 - **$BANKON Token Economy** with censura/ghosting mechanics
+- **[THOT Tensor Standard](../contracts/THOT/core/THOT.sol)** — 11 dimensions from THOT8 root to THOT1048576 post-quantum (`uint32`, modular `_isValidDimension()`)
+- **[iNFT](../contracts/inft/iNFT.sol)** (immutable THOT) + **[IntelligentNFT](../contracts/inft/IntelligentNFT.sol)** (agent NFT) + **[Factory](../contracts/inft/IntelligentNFTFactory.sol)** — [UI at /inft](https://mindx.pythai.net/inft)
 - **Solidity Agents** for autonomous contract deployment (Foundry preferred, Hardhat for UUPS proxies)
 
 ---

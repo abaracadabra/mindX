@@ -4,7 +4,7 @@
 **Organizations:** [AgenticPlace](https://github.com/agenticplace) | [cryptoAGI](https://github.com/cryptoagi) | [AION-NET](https://github.com/aion-net) | [augml](https://github.com/augml) | [jaimla](https://github.com/jaimla)
 **Implementation:** [CORE Architecture](CORE.md) | [Manifesto](MANIFESTO.md) | [DAIO Governance](DAIO.md) | [Agent Registry](AGENTS.md) | [Book of mindX](BOOK_OF_MINDX.md)
 **Live:** [mindx.pythai.net](https://mindx.pythai.net) | **Origins:** [rage.pythai.net](https://rage.pythai.net) | [gpt.pythai.net](https://gpt.pythai.net)
-**Contracts:** [iNFT](../daio/contracts/inft/iNFT.sol) | [BONA FIDE](../daio/contracts/agenticplace/evm/BonaFide.sol) | [DAIO Constitution](../daio/contracts/daio/constitution/DAIO_Constitution.sol) | [IdentityRegistry](../daio/contracts/agenticplace/evm/IdentityRegistryUpgradeable.sol)
+**Contracts:** [iNFT](../daio/contracts/inft/iNFT.sol) | [THOT](../daio/contracts/THOT/core/THOT.sol) (8→1048576 dims) | [BONA FIDE](../daio/contracts/agenticplace/evm/BonaFide.sol) | [DAIO Constitution](../daio/contracts/daio/constitution/DAIO_Constitution.sol) | [IdentityRegistry](../daio/contracts/agenticplace/evm/IdentityRegistryUpgradeable.sol)
 
 ---
 
