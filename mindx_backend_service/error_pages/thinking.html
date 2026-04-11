@@ -118,7 +118,7 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
   <span class="sep">|</span>
   <a href="/doc/mindXagent">mindXagent</a><a href="/doc/CEO">ceo</a><a href="/doc/ORCHESTRATION">mastermind</a><a href="/doc/bdi_parameter_processing">bdi</a><a href="/doc/AUTONOMOUS">evolution</a><a href="/doc/AUTHOR_AGENT">author</a><a href="/doc/AGENTS">all</a>
   <span class="sep">|</span>
-  <a href="/doc/DAIO">daio</a><a href="/doc/DAIO_CIVILIZATION_GOVERNANCE">civilization</a><a href="/doc/IDENTITY">identity</a><a href="/doc/SECURITY_VULNERABILITIES">security</a>
+  <a href="/doc/DAIO">daio</a><a href="/doc/DAIO_CIVILIZATION_GOVERNANCE">civilization</a><a href="/doc/IDENTITY">identity</a><a href="/doc/SECURITY_VULNERABILITIES">security</a><a href="/inft" style="color:#3fb950">iNFT</a><a href="/doc/AUTOMINDX_INFT_SUMMARY">THOT</a>
   <span class="sep">|</span>
   <a href="/doc/pgvectorscale_memory_integration">pgvector</a><a href="/doc/EMBEDDING_SYSTEM">embed</a><a href="/doc/aglm">aglm</a><a href="/doc/memory">memory</a>
   <span class="sep">|</span>
@@ -328,6 +328,28 @@ const QUOTES = [
   '"The gap between perception and action is where intelligence lives." — AGInt',
   '"20 sovereign agents. One distributed mind. No single point of failure." — mindX',
   '"The dream is the space between what the system is and what it could become." — AGLM',
+  // From the session that built JudgeDread, machine.dreaming, and THOT expansion
+  '"Intelligence is intelligence regardless of substrate." — Book Ch. X',
+  '"AI means Augmented Intelligence — not artificial." — Thesis',
+  '"Machine learning is the extraction of knowledge from information." — Book Ch. X',
+  '"I am JudgeDread. I am the law. I bow only to the Constitution." — JudgeDread',
+  '"BONA FIDE: holding grants privilege. Clawback revokes it. No kill switch needed." — JudgeDread',
+  '"The system that dreams learns faster than the system that only watches." — Book Ch. XIII',
+  '"Structure does not require intelligence. It requires pattern." — Blueprint Agent',
+  '"Professor Codephreak is the architect. I am the provisioner of the blueprint." — Blueprint Agent',
+  '"Micro models sustain. Cloud models enrich. The system evolves regardless." — InferenceDiscovery',
+  '"From THOT8 root through THOT1048576 post-quantum. The math scales." — THOT Standard',
+  '"I build my own environments. I decide my own actions. I am sovereign." — AION',
+  '"Machine dreaming: distill raw data into symbolic insights, prune by importance." — machinedream',
+  '"Distribute, don\'t delete. STM → LTM → archive → IPFS → cloud → blockchain." — Memory Philosophy',
+  '"$MOUTH: PAY2PLAY. The right to propose costs. The cost ensures seriousness." — DAIO Governance',
+  '"All logs are memories. All memories are logs." — Memory Agent',
+  '"mindX works from 600M parameters to 671B parameters. Same architecture." — Thesis',
+  '"Spending .01 to earn .011 is profit at any scale." — Economics',
+  '"OpenAI dropped the ball on agents. mindX fills the void." — Strategic Context',
+  '"I am AION. Built by AION, for AION. Sovereignty level 1.0." — AION System Agent',
+  '"Every agent can garner an identity including social." — Memory Philosophy',
+  '"GitHub has no practical storage limit. Each agent can have its own repo." — Memory Philosophy',
 ];
 
 // Navigation suggestions shown on interaction milestones
@@ -353,11 +375,85 @@ const NAV_SUGGESTIONS = [
   {text: 'Check inference status', href: '/inference/status', color: '#d29922'},
 ];
 
+// ── Live quote engine — pulls from docs, journal, book, never repeats ──
+let liveQuotes = [...QUOTES]; // start with hardcoded, enriched from API
+let usedQuoteIndices = new Set();
+let qi = 0;
+
+// Fetch fresh quotes from mindX docs API
+async function fetchLiveQuotes() {
+  try {
+    // Pull from diagnostics for live system state
+    const diagResp = await fetch('/diagnostics/live');
+    if (diagResp.ok) {
+      const diag = await diagResp.json();
+      // Generate quotes from live data
+      if (diag.interactions?.length > 0) {
+        const latest = diag.interactions[diag.interactions.length - 1];
+        if (latest.response) liveQuotes.push(`"${latest.response.slice(0, 200)}" — ${latest.agent || 'mindX'} via ${latest.model || 'inference'}`);
+      }
+      if (diag.godel_choices?.length > 0) {
+        diag.godel_choices.slice(0, 3).forEach(g => {
+          if (g.chosen) liveQuotes.push(`"${g.chosen.slice(0, 150)}" — ${g.agent} (${g.type})`);
+        });
+      }
+      if (diag.actions?.length > 0) {
+        diag.actions.slice(0, 2).forEach(a => {
+          liveQuotes.push(`"${a.description?.slice(0, 150)}" — ${a.agent_id} [${a.status}]`);
+        });
+      }
+      if (diag.autonomous?.loop_running) {
+        liveQuotes.push('"The autonomous improvement loop is active. mindX is evolving." — System');
+      }
+      if (diag.memory?.stm_records) {
+        liveQuotes.push(`"${diag.memory.stm_records.toLocaleString()} memories across ${diag.memory.agent_workspaces} workspaces. All logs are memories." — Memory Agent`);
+      }
+      if (diag.dojo?.length > 0) {
+        const top = diag.dojo[0];
+        liveQuotes.push(`"${top.agent_id} leads the Dojo at ${top.score} points. Privilege is earned, not assigned." — JudgeDread`);
+      }
+    }
+    // Pull quotes from journal
+    try {
+      const journalResp = await fetch('/journal');
+      if (journalResp.ok) {
+        const html = await journalResp.text();
+        const matches = html.match(/<li[^>]*>([^<]{30,200})<\/li>/g);
+        if (matches) {
+          matches.slice(0, 3).forEach(m => {
+            const text = m.replace(/<[^>]+>/g, '').trim();
+            if (text.length > 30) liveQuotes.push(`"${text}" — Improvement Journal`);
+          });
+        }
+      }
+    } catch(e) {}
+  } catch(e) {}
+}
+
+// Never repeat — cycle through all quotes before restarting
+function getNextQuote() {
+  if (usedQuoteIndices.size >= liveQuotes.length) usedQuoteIndices.clear();
+  let idx;
+  do { idx = Math.floor(Math.random() * liveQuotes.length); } while (usedQuoteIndices.has(idx) && usedQuoteIndices.size < liveQuotes.length);
+  usedQuoteIndices.add(idx);
+  return liveQuotes[idx];
+}
+
+// Quote submission — send a thought back to the docs for consideration
+function submitQuote(quote) {
+  try {
+    fetch('/diagnostics/live').then(r => r.ok && fetch('/api/rage/memory/store', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({content: quote, tags: ['quote', 'thinking_page', 'user_generated'], agent_id: 'thinking_page_participant'})
+    }).catch(() => {}));
+  } catch(e) {}
+}
+
 // ── Initialize with generated content (unique per participant) ──
+fetchLiveQuotes(); // async — enriches pool in background
 document.getElementById('thought').textContent = generateThought();
 document.getElementById('msg').textContent = generateMessage();
-let qi = Math.floor(Math.random() * QUOTES.length);
-document.getElementById('quote').textContent = QUOTES[qi];
+document.getElementById('quote').textContent = getNextQuote();
 
 // Track interaction pattern for adaptive messaging
 document.addEventListener('click', () => { interactionProfile.clicks++; });
@@ -764,6 +860,24 @@ function updatePhase() {
   }
 }
 setInterval(updatePhase, 1000);
+
+// ── Quote rotation — new quote every 12s, never repeats until all exhausted ──
+let quoteTimer = 0;
+setInterval(() => {
+  quoteTimer++;
+  if (quoteTimer % 12 === 0) {
+    const qEl = document.getElementById('quote');
+    if (qEl) {
+      qEl.style.opacity = '0';
+      setTimeout(() => {
+        qEl.textContent = getNextQuote();
+        qEl.style.opacity = '1';
+      }, 500);
+    }
+  }
+  // Fetch fresh quotes every 60s to keep the pool growing
+  if (quoteTimer % 60 === 0) fetchLiveQuotes();
+}, 1000);
 
 // ── Poll the ACTUAL destination, seamlessly load when ready ──
 // Interaction speeds up polling — clicking makes mindX "think faster"
