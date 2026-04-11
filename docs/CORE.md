@@ -3,7 +3,8 @@
 **Status:** ✅ **Production Ready** - Enterprise deployment with [BANKON vault](../mindx_backend_service/vault_bankon/) security
 **Author:** [Professor Codephreak](https://github.com/Professor-Codephreak) (© Professor Codephreak)
 **Organizations:** [AgenticPlace](https://github.com/agenticplace), [cryptoAGI](https://github.com/cryptoagi), [AION-NET](https://github.com/aion-net), [augml](https://github.com/augml)
-**Resources:** [rage.pythai.net](https://rage.pythai.net) | [mindx.pythai.net](https://mindx.pythai.net) | [Thesis](THESIS.md) | [Manifesto](MANIFESTO.md) | [THOT](../daio/contracts/THOT/core/THOT.sol) | [iNFT](AUTOMINDX_INFT_SUMMARY.md)
+**Resources:** [rage.pythai.net](https://rage.pythai.net) | [mindx.pythai.net](https://mindx.pythai.net) | [Thesis](THESIS.md) | [Manifesto](MANIFESTO.md) | [THOT](../daio/contracts/THOT/core/THOT.sol) | [iNFT](AUTOMINDX_INFT_SUMMARY.md) | [Ollama Cloud](https://ollama.com/library)
+**Inference:** Local [qwen3:0.6b→1.7b](../llm/inference_discovery.py) (CPU) | [Ollama Cloud](https://ollama.com/library) free tier (36+ GPU models) | Task-to-model [correlation](../llm/inference_discovery.py)
 **Architecture:** Self-Aware [Augmentic Intelligence](AGINT.md) with [Machine Learning](https://github.com/jaimla) Integration
 **Last Updated:** April 2026
 

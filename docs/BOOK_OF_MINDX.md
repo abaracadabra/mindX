@@ -256,15 +256,29 @@ Intelligence is intelligence. The rest is implementation.
 
 ## XI. The Inference Pipeline — How mindX Thinks
 
-Thinking in mindX is not a single model generating text. It is a tiered, multi-provider inference pipeline:
+Thinking in mindX is not a single model generating text. It is a tiered, multi-provider inference pipeline where task-to-model correlation routes each agent skill to its optimal provider. [Intelligence is intelligence](#x-intelligence-is-intelligence) — micro models sustain, cloud models enrich. The system works at both ends because the cognitive architecture is substrate-independent.
 
-**vLLM** (primary): PagedAttention-optimized serving. OpenAI-compatible API on port 8001. Continuous batching for throughput. Built for the 2-core VPS with CPU-only AVX2 optimization.
+**Ollama Local** (always-on, CPU-native): The foundation. qwen3:0.6b for heartbeats and fast decisions, qwen3:1.7b for reasoning and improvement cycles, mxbai-embed-large for 1024-dimensional [RAGE](../agents/memory_pgvector.py) semantic embeddings. No GPU, no API key, no rate limits. This is what proves the thesis — mindX reasons from 600M parameters on a 4GB VPS.
 
-**Ollama** (fallback): Always-on CPU-native inference. Models: qwen3:0.6b for fast decisions, qwen3:1.7b for complex reasoning, mxbai-embed-large for 1024-dimensional semantic embeddings.
+**[Ollama Cloud](https://ollama.com/library)** (free tier, GPU-hosted): 36+ models on NVIDIA GPU infrastructure. deepseek-v3.2 (671B) for heavy reasoning, qwen3-coder-next for code generation, qwen3.5 (397B) for [blueprint](../agents/evolution/blueprint_agent.py) strategic planning, gemma4 (31B) for analysis. Free tier with session limits (5-hour reset, 7-day weekly reset). No API key required. mindX routes heavy tasks here when within rate limits, falls back to local when limits are reached.
 
-**Cloud** (escalation): Gemini, Groq, Anthropic, Mistral, Together, DeepSeek — each Boardroom Soldier uses a different provider, ensuring that no single model's biases dominate governance decisions.
+**vLLM** (GPU server): PagedAttention-optimized serving on port 8001. Ready in code ([vllm_handler.py](../llm/vllm_handler.py), [vllm_agent.py](../agents/vllm_agent.py)) but not viable on the 4GB VPS. Activates automatically when a GPU server is available via [InferenceDiscovery](../llm/inference_discovery.py).
 
-**InferenceDiscovery** probes all sources, scores them on reliability × speed × recency, and routes each request to the best available provider. The system never depends on a single source of intelligence.
+**Cloud APIs** (with keys): [Gemini](https://ai.google.dev), [Groq](https://groq.com), [Anthropic](https://anthropic.com), [Mistral](https://mistral.ai), [OpenAI](https://openai.com), [Together](https://together.ai), [DeepSeek](https://deepseek.com) — each Boardroom Soldier can use a different provider. Activate by storing API keys in the [BANKON Vault](../mindx_backend_service/vault_bankon/).
+
+**[InferenceDiscovery](../llm/inference_discovery.py)** orchestrates all sources. `get_provider_for_task(task_type)` maps agent skills to optimal providers:
+
+| Task | Local Model | Cloud Model | Fallback |
+|------|------------|-------------|----------|
+| heartbeat | qwen3:0.6b | — | always local |
+| embedding | mxbai-embed-large | — | always local |
+| simple_chat | qwen3:1.7b | — | always local |
+| reasoning | qwen3:1.7b | deepseek-v3.2 (671B) | local if rate-limited |
+| coding | qwen3:1.7b | qwen3-coder-next | local if rate-limited |
+| blueprint | qwen3:1.7b | qwen3.5 (397B) | local if rate-limited |
+| analysis | qwen3:1.7b | gemma4 (31B) | local if rate-limited |
+
+Rate limits are tracked per provider. When cloud limits are reached, the system falls back to local — never stops, never waits. Structure sustains what raw power cannot.
 
 ---
 

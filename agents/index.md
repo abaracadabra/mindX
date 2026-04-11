@@ -430,8 +430,8 @@ All agents can be formally defined using `agents/agent.schema.json` — a JSON S
 ### Meta & Inference
 - **[mindXagent](../agents/core/mindXagent.py)** — Meta-orchestrator with inference-first autonomous loop + [LTM awareness](machine_dreaming.py)
 - **[machine.dreaming](machine_dreaming.py)** — 7-phase STM→LTM consolidation ([AION-NET/machinedream](https://github.com/AION-NET/machinedream))
-- **vLLM Agent** — vLLM build, serve, and lifecycle management
-- **InferenceDiscovery** — Multi-provider inference probing and ranking
+- **[InferenceDiscovery](../llm/inference_discovery.py)** — Task-to-model correlation: routes agent skills to optimal providers. Local micro (qwen3:0.6b) → [Ollama Cloud](https://ollama.com/library) macro (deepseek-v3.2 671B) with rate limits. Intelligence is intelligence.
+- **vLLM Agent** — vLLM build, serve, lifecycle (activates when GPU available)
 
 ### Content & Publishing
 - **Author Agent** - Autonomous publication on lunar cycle

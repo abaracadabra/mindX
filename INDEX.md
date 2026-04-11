@@ -153,6 +153,7 @@ Higher Intelligence → CEO.Agent → MastermindAgent → mindX Environment
 - **[RAGE](agents/memory_pgvector.py)**: Retrieval Augmented Generative Evolution — [pgvectorscale](docs/pgvectorscale_memory_integration.md) semantic search
 - **[pgvectorscale](docs/pgvectorscale_memory_integration.md)**: Vector database integration
 - **[docs/OLLAMA_VLLM_CLOUD_RESEARCH.md](docs/OLLAMA_VLLM_CLOUD_RESEARCH.md)**: Multi-model inference strategy
+- **[InferenceDiscovery](llm/inference_discovery.py)**: Task-to-model correlation — routes agent skills to optimal providers (local micro → cloud macro) with rate limits. [Ollama Cloud](https://ollama.com/library) free tier: 36+ GPU models
 - **[agents/machine_dreaming.py](agents/machine_dreaming.py)**: [machine.dreaming](https://github.com/AION-NET/machinedream) — 7-phase STM→LTM consolidation cycle
 - **[docs/BOOK_OF_MINDX.md](docs/BOOK_OF_MINDX.md)**: The Book of mindX — 17 chapters, living chronicle
 
