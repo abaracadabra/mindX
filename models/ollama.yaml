@@ -80,13 +80,43 @@ model_selection:
   default_max_tokens: 2048
   use_chat_endpoint: true  # Prefer /api/chat over /api/generate
 
-# Features
+# Features (per Ollama docs 2026-04-11)
+# Detection: use /api/show capabilities array for dynamic detection
+# These are defaults for local models; cloud models may have more
 features:
   streaming: true
   embeddings: true
-  function_calling: false
-  vision: false
-  tool_use: false
+  function_calling: true   # qwen3 supports tool calling
+  vision: false            # requires gemma3/llava locally
+  tool_use: true           # same as function_calling
+  thinking: true           # deepseek-r1, qwen3 support think parameter
+  structured_outputs: true # format parameter with JSON schema
+  web_search: false        # requires OLLAMA_API_KEY (cloud feature)
+
+# Cloud configuration (Ollama cloud free tier)
+cloud:
+  enabled: false  # Set to true when OLLAMA_API_KEY is configured
+  host: https://ollama.com
+  api_key_env: OLLAMA_API_KEY
+  rate_limits:
+    requests_per_minute: 10
+    requests_per_hour: 150
+  # Cloud models for heavy tasks (discovered dynamically)
+  # See docs/ollama/cloud/model_search.md for programmatic discovery
+  preferred_models:
+    reasoning: deepseek-v3.2
+    coding: qwen3-coder-next
+    general: qwen3.5:27b
+    multimodal: gemma4:31b
+
+# Modelfile schema alignment
+# The Ollama Modelfile is the canonical schema for model collection.
+# /api/show returns capabilities, template, parameters — this feeds
+# HierarchicalModelScorer and agent-model alignment toward Chimaiera.
+# See docs/ollama/setup/modelfile.md for full reference.
+modelfile_schema:
+  detect_capabilities: true  # Auto-detect via /api/show on discovery
+  score_from_feedback: true  # HierarchicalModelScorer updates task_scores
 
 # GPU configuration
 gpu:

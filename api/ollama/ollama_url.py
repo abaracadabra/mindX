@@ -23,6 +23,12 @@ from utils.logging_config import get_logger
 from utils.config import Config
 from llm.rate_limiter import RateLimiter
 
+try:
+    from llm.precision_metrics import PrecisionMetricsTracker, OllamaResponseMetrics
+    PRECISION_METRICS_AVAILABLE = True
+except ImportError:
+    PRECISION_METRICS_AVAILABLE = False
+
 logger = get_logger(__name__)
 
 
@@ -97,7 +103,16 @@ class OllamaAPI:
         
         self.rate_limits = rate_limits or OllamaRateLimits()
         self.metrics = OllamaAPIMetrics()
-        
+
+        # Precision metrics tracker — 18 decimal place scientific tracking
+        self.precision_tracker = None
+        if PRECISION_METRICS_AVAILABLE:
+            try:
+                self.precision_tracker = PrecisionMetricsTracker()
+                logger.info("Precision metrics tracker initialized (18dp, actual token counts)")
+            except Exception as e:
+                logger.debug(f"Precision metrics not available: {e}")
+
         self.rate_limiter = RateLimiter(
             requests_per_minute=self.rate_limits.requests_per_minute,
             max_retries=5,
@@ -261,11 +276,11 @@ class OllamaAPI:
                         # Generate endpoint returns: {"response": "..."}
                         content = data.get("response", "")
                     
-                    # Extract performance metrics if available (per Ollama API docs)
+                    # Extract ACTUAL performance metrics from Ollama API response
                     eval_count = data.get("eval_count", 0)
                     prompt_eval_count = data.get("prompt_eval_count", 0)
                     total_duration = data.get("total_duration", 0)  # nanoseconds
-                    
+
                     latency_ms = (asyncio.get_event_loop().time() - start_time) * 1000
                     self.metrics.total_requests += 1
                     self.metrics.successful_requests += 1
@@ -274,16 +289,37 @@ class OllamaAPI:
                         (self.metrics.average_latency_ms * (self.metrics.total_requests - 1) + latency_ms) /
                         self.metrics.total_requests
                     )
-                    
-                    # Use actual token counts if available, otherwise estimate
-                    if eval_count > 0 or prompt_eval_count > 0:
-                        total_tokens = eval_count + prompt_eval_count
-                        self.metrics.total_tokens += total_tokens
-                    else:
-                        # Fallback estimation
-                        estimated_tokens = len(prompt.split()) * 1.3 + len(content.split()) * 1.3
-                        self.metrics.total_tokens += int(estimated_tokens)
-                    
+
+                    # Token counting: ACTUAL values only, zero if unavailable
+                    # Never estimate — record 0 (unknown) rather than fabricate
+                    total_tokens = eval_count + prompt_eval_count
+                    self.metrics.total_tokens += total_tokens
+
+                    # Precision metrics — 18 decimal place scientific tracking
+                    if self.precision_tracker:
+                        try:
+                            precision_response = OllamaResponseMetrics.from_api_response(
+                                data, model=model
+                            )
+                            self.precision_tracker.record(precision_response)
+                        except Exception:
+                            pass  # Never let metrics tracking break inference
+
+                    # Store last response data for callers that need full metrics
+                    self._last_response_data = {
+                        "eval_count": eval_count,
+                        "prompt_eval_count": prompt_eval_count,
+                        "total_duration_ns": total_duration,
+                        "load_duration_ns": data.get("load_duration", 0),
+                        "prompt_eval_duration_ns": data.get("prompt_eval_duration", 0),
+                        "eval_duration_ns": data.get("eval_duration", 0),
+                        "model": model,
+                        "tokens_per_second": (
+                            eval_count / (data.get("eval_duration", 1) / 1e9)
+                            if data.get("eval_duration", 0) > 0 else 0
+                        ),
+                    }
+
                     return content
                 else:
                     error_text = await response.text()

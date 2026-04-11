@@ -5,7 +5,7 @@
 This document provides a complete index of all tools in the mindX system, with links to detailed documentation for each tool.
 
 **Last Updated**: 2026-01-11  
-**Total Tools**: 29+
+**Total Tools**: 30+
 
 ---
 
@@ -42,6 +42,7 @@ This document provides a complete index of all tools in the mindX system, with l
 27. **[Avatar Agent](avatar_agent.md)** - Generates avatars for agents and participants using image/video generation APIs, integrated with PromptTool and PersonaAgent
 28. **[A2A Tool](a2a_tool.md)** - Enables standardized agent-to-agent communication following the A2A protocol
 29. **[MCP Tool](mcp_tool.md)** - Provides Model Context Protocol support for structured context provision to agents
+30. **[Ollama Cloud Tool](ollama/INDEX.md)** - Cloud inference via Ollama (chat, generate, embed, model discovery). Gives any agent access to 120B+ parameter models via Ollama cloud with adaptive rate limiting, 18dp precision metrics, and branch-ready design for peripheral agents. Source: `tools/cloud/ollama_cloud_tool.py`
 
 ### 📝 Partially Documented Tools
 

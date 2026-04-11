@@ -186,7 +186,7 @@ async def mindx_error_handler(request, exc):
 
 @app.get("/docs.html", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
 async def docs_html_page():
-    """Documentation hub with auto-generated TOC, endpoint map, and pgvectorscale index."""
+    """Documentation hub with sidebar navigation, endpoint map, and pgvectorscale index."""
     import re as _re
     book_path = PROJECT_ROOT / "docs" / "BOOK_OF_MINDX.md"
     journal_path = PROJECT_ROOT / "docs" / "IMPROVEMENT_JOURNAL.md"
@@ -203,7 +203,6 @@ async def docs_html_page():
         schema = app.openapi()
         paths = schema.get("paths", {})
         endpoint_count = sum(len(methods) for methods in paths.values())
-        # Group endpoints by tag
         tag_groups: dict = {}
         for path, methods in sorted(paths.items()):
             for method, detail in methods.items():
@@ -264,7 +263,7 @@ async def docs_html_page():
                         break
             except Exception:
                 pass
-            entry = f'<li><a href="/doc/{name}" style="color:#e6edf3;text-decoration:none"><strong>{name}.md</strong></a> <span style="color:#4a5060">({size_kb}KB)</span><br><span style="color:#6e7681;font-size:9px">{heading}</span></li>'
+            entry = f'<li><a href="/doc/{name}">{name}.md</a> <span class="sz">({size_kb}KB)</span></li>'
             nl = name.lower()
             if any(k in nl for k in ["technical","orchestration","core","architect","hierarchy","codebase"]):
                 categories["Core Architecture"].append(entry)
@@ -292,102 +291,228 @@ async def docs_html_page():
     toc_html = ""
     for cat, entries in categories.items():
         if entries:
-            toc_html += f'<h3 style="color:#58a6ff;font-size:12px;margin:16px 0 6px;border-top:1px solid rgba(26,31,46,.4);padding-top:12px">{cat} <span style="color:#4a5060;font-weight:400">({len(entries)})</span></h3><ul style="list-style:none;padding:0">' + "".join(entries) + "</ul>"
+            toc_html += f'<h3 class="cat">{cat} <span>({len(entries)})</span></h3><ul>' + "".join(entries) + "</ul>"
     total_docs = sum(len(v) for v in categories.values())
+
+    # ── Build sidebar NAV from docs/NAV.md section headings ──
+    sidebar_items = []
+    nav_path = PROJECT_ROOT / "docs" / "NAV.md"
+    if nav_path.exists():
+        import re as _re_nav
+        for line in nav_path.read_text(encoding="utf-8", errors="replace").split("\n"):
+            m2 = _re_nav.match(r'^## (.+)', line)
+            m3 = _re_nav.match(r'^### (.+)', line)
+            if m2:
+                sec = m2.group(1).strip()
+                anchor = _re_nav.sub(r'[^a-z0-9]+', '-', sec.lower()).strip('-')
+                sidebar_items.append(f'<a href="#s-{anchor}" class="s2">{sec}</a>')
+            elif m3:
+                sec = m3.group(1).strip()
+                anchor = _re_nav.sub(r'[^a-z0-9]+', '-', sec.lower()).strip('-')
+                sidebar_items.append(f'<a href="#s-{anchor}" class="s3">{sec}</a>')
+    sidebar_html = "\n".join(sidebar_items)
+
     return _DashResponse(content=f"""<!DOCTYPE html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>mindX Documentation — Autonomous Multi-Agent Intelligence</title>
 <meta name="description" content="Complete documentation for mindX: {total_docs} documents covering autonomous multi-agent orchestration, BDI cognitive architecture, BANKON vault identity, DAIO governance, augmentic intelligence, and the Godel machine self-improvement loop.">
-<meta name="keywords" content="mindX documentation, augmentic, agenticplace, BANKON, pythai, autonomous AI, Godel machine, multi-agent, BDI, DAIO governance, self-improving AI, sovereign agents, machine learning">
+<meta name="keywords" content="mindX documentation, augmentic, agenticplace, BANKON, pythai, autonomous AI, Godel machine, multi-agent, BDI, DAIO governance, self-improving AI, sovereign agents">
 <meta name="author" content="Professor Codephreak">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://mindx.pythai.net/docs.html">
-<meta property="og:type" content="website">
-<meta property="og:title" content="mindX Documentation — {total_docs} Documents">
-<meta property="og:description" content="Living documentation from an evolving autonomous AI system: architecture, agents, governance, identity, philosophy, and API reference.">
-<meta property="og:url" content="https://mindx.pythai.net/docs.html">
-<meta property="og:site_name" content="mindX">
-<meta property="og:image" content="https://mindx.pythai.net/favicon-32.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="mindX Documentation — {total_docs} Documents">
-<meta name="twitter:description" content="Living documentation from mindX: autonomous multi-agent orchestration, BANKON vault, DAIO governance, augmentic intelligence. {endpoint_count} API endpoints.">
-<meta name="twitter:image" content="https://mindx.pythai.net/favicon-32.png">
-<link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta property="og:type" content="website"><meta property="og:title" content="mindX Documentation — {total_docs} Documents">
+<meta property="og:description" content="Living documentation from an evolving autonomous AI system.">
+<meta property="og:url" content="https://mindx.pythai.net/docs.html"><meta property="og:site_name" content="mindX">
+<link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:'Inter','SF Pro Text',system-ui,sans-serif;background:#050810;color:#b0b8c4;min-height:100vh}}
-.top{{max-width:760px;margin:0 auto;padding:28px 20px}}
-h1{{font-size:20px;color:#e6edf3;margin-bottom:4px;letter-spacing:.5px;font-family:'SF Mono',monospace}}
-h1 b{{color:#58a6ff}}
-.sub{{font-size:10px;color:#5a6070;margin-bottom:20px}}
-.card{{background:rgba(13,17,23,.8);border:1px solid rgba(26,31,46,.5);border-radius:5px;padding:14px;margin-bottom:10px;transition:border-color .2s}}
-.card:hover{{border-color:rgba(88,166,255,.25)}}
-.card h2{{font-size:13px;color:#e6edf3;margin-bottom:3px}}
+body{{font-family:'JetBrains Mono','SF Mono','Fira Code',monospace;background:#0a0a0a;color:#b0b8c4;min-height:100vh;display:flex}}
+
+/* ── Sidebar ── */
+.sidebar{{
+  position:fixed;top:0;left:0;bottom:0;width:260px;
+  background:#0d1117;border-right:1px solid rgba(48,54,61,.6);
+  overflow-y:auto;padding:20px 0;z-index:50;
+  scrollbar-width:thin;scrollbar-color:rgba(88,166,255,.15) transparent;
+  transition:transform .3s ease;
+}}
+.sidebar::-webkit-scrollbar{{width:4px}}
+.sidebar::-webkit-scrollbar-thumb{{background:rgba(88,166,255,.15);border-radius:2px}}
+.sb-brand{{
+  padding:0 16px 16px;font-size:16px;color:#e6edf3;font-weight:700;letter-spacing:.5px;
+  border-bottom:1px solid rgba(48,54,61,.6);margin-bottom:12px;
+}}
+.sb-brand b{{color:#58a6ff}}
+.sb-brand .sub{{font-size:9px;color:#484f58;font-weight:400;display:block;margin-top:2px}}
+.sidebar .s2{{
+  display:block;padding:6px 16px;font-size:11px;color:#c9d1d9;text-decoration:none;
+  border-left:2px solid transparent;transition:all .15s;font-weight:600;
+}}
+.sidebar .s2:hover{{color:#58a6ff;background:rgba(88,166,255,.04);border-left-color:#58a6ff}}
+.sidebar .s2.active{{color:#58a6ff;border-left-color:#58a6ff;background:rgba(88,166,255,.06)}}
+.sidebar .s3{{
+  display:block;padding:4px 16px 4px 28px;font-size:10px;color:#8b949e;text-decoration:none;
+  border-left:2px solid transparent;transition:all .15s;
+}}
+.sidebar .s3:hover{{color:#c9d1d9;border-left-color:rgba(88,166,255,.3)}}
+.sidebar .live-links{{padding:12px 16px;border-top:1px solid rgba(48,54,61,.6);margin-top:8px}}
+.sidebar .live-links a{{
+  display:block;padding:3px 0;font-size:10px;color:#58a6ff;text-decoration:none;transition:color .15s
+}}
+.sidebar .live-links a:hover{{color:#79c0ff}}
+.sidebar .live-links .dim{{color:#484f58}}
+
+/* ── Main Content ── */
+.main{{margin-left:260px;flex:1;min-height:100vh;padding:28px 32px 40px;max-width:900px}}
+.card{{
+  background:rgba(13,17,23,.7);border:1px solid rgba(48,54,61,.5);border-radius:6px;
+  padding:14px 16px;margin-bottom:10px;transition:border-color .2s
+}}
+.card:hover{{border-color:rgba(88,166,255,.2)}}
+.card h2{{font-size:14px;color:#e6edf3;margin-bottom:4px}}
 .card h2 a{{color:#58a6ff;text-decoration:none}}.card h2 a:hover{{text-decoration:underline}}
-.card p{{font-size:10px;color:#6e7681;line-height:1.5;margin-bottom:4px}}
-.card .meta{{font-size:8px;color:#4a5060}}
+.card p{{font-size:10px;color:#8b949e;line-height:1.6;margin-bottom:4px}}
+.card .meta{{font-size:8px;color:#484f58}}
 .tag{{display:inline-block;padding:1px 5px;border-radius:3px;font-size:7px;font-weight:700;margin-right:3px}}
-.tag-live{{background:rgba(13,51,33,.8);color:#3fb950}}.tag-auto{{background:rgba(26,42,58,.8);color:#58a6ff}}
-.tag-ref{{background:rgba(42,42,26,.8);color:#d29922}}.tag-api{{background:rgba(36,20,50,.8);color:#d2a8ff}}
-.tag-db{{background:rgba(20,36,50,.8);color:#79c0ff}}
-.sep{{border:none;border-top:1px solid rgba(26,31,46,.4);margin:16px 0}}
-ul{{padding:0}}li{{margin:4px 0;font-size:10px;line-height:1.5}}
-details summary::-webkit-details-marker{{color:#4a5060}}
-.ft{{font-size:9px;color:#4a5060;text-align:center;margin-top:20px}}
+.tag-live{{background:rgba(13,51,33,.8);color:#3fb950}}
+.tag-auto{{background:rgba(26,42,58,.8);color:#58a6ff}}
+.tag-ref{{background:rgba(42,42,26,.8);color:#d29922}}
+.tag-api{{background:rgba(36,20,50,.8);color:#d2a8ff}}
+.sep{{border:none;border-top:1px solid rgba(48,54,61,.4);margin:20px 0}}
+h1.title{{font-size:22px;color:#e6edf3;margin-bottom:2px;font-weight:700}}
+h1.title b{{color:#58a6ff}}
+.subtitle{{font-size:10px;color:#484f58;margin-bottom:24px}}
+.cat{{color:#58a6ff;font-size:11px;margin:18px 0 6px;padding-top:14px;border-top:1px solid rgba(48,54,61,.3);font-weight:600}}
+.cat span{{color:#484f58;font-weight:400}}
+ul{{list-style:none;padding:0}}
+li{{margin:3px 0;font-size:10px;line-height:1.6}}
+li a{{color:#c9d1d9;text-decoration:none;transition:color .15s}}
+li a:hover{{color:#58a6ff}}
+.sz{{color:#484f58;font-size:9px}}
+.ft{{font-size:9px;color:#484f58;text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid rgba(48,54,61,.3)}}
 .ft a{{color:#58a6ff;text-decoration:none}}
-</style></head><body><div class="top">
-<h1>mind<b>X</b> docs</h1>
-<div class="sub">living documentation from an evolving system</div>
+details summary{{cursor:pointer;color:#58a6ff;font-size:11px;font-weight:600}}
+details summary::-webkit-details-marker{{color:#484f58}}
+
+/* ── Mobile: collapse sidebar ── */
+.sb-toggle{{display:none;position:fixed;top:10px;left:10px;z-index:60;width:36px;height:36px;
+  border-radius:6px;border:1px solid rgba(48,54,61,.6);background:rgba(13,17,23,.95);
+  color:#58a6ff;font-size:18px;cursor:pointer;backdrop-filter:blur(8px)}}
+@media(max-width:768px){{
+  .sidebar{{transform:translateX(-100%)}}
+  .sidebar.open{{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.5)}}
+  .main{{margin-left:0;padding:20px 16px}}
+  .sb-toggle{{display:flex;align-items:center;justify-content:center}}
+}}
+
+/* ── Scroll spy highlight ── */
+@media(min-width:769px){{
+  html{{scroll-behavior:smooth}}
+}}
+</style></head><body>
+
+<!-- Sidebar Toggle (mobile) -->
+<button class="sb-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Toggle navigation">&#9776;</button>
+
+<!-- Sidebar Navigation -->
+<nav class="sidebar" id="sidebar">
+  <div class="sb-brand">mind<b>X</b><span class="sub">living documentation</span></div>
+  {sidebar_html}
+  <div class="live-links">
+    <span class="dim" style="font-size:8px;text-transform:uppercase;letter-spacing:.5px">Live System</span>
+    <a href="/">Dashboard</a>
+    <a href="/book">Book of mindX</a>
+    <a href="/journal">Improvement Journal</a>
+    <a href="/redoc">API Reference ({endpoint_count})</a>
+    <a href="/dojo/standings">Dojo Standings</a>
+    <a href="/inference/status">Inference Status</a>
+    <a href="/automindx">Origin Story</a>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<div class="main">
+
+<h1 class="title" id="s-getting-started">mind<b>X</b> docs</h1>
+<div class="subtitle">{total_docs} documents &middot; {endpoint_count} API endpoints &middot; living documentation from an evolving system</div>
 
 <div class="card">
 <h2><a href="/book">The Book of mindX</a></h2>
-<p>The evolving chronicle of a self-improving system — architecture, identities, decisions, philosophy. Written by mindX itself via AuthorAgent.</p>
-<div class="meta"><span class="tag tag-live">LIVE</span><span class="tag tag-auto">AUTO-GENERATED</span> {'Published' if book_exists else 'First edition pending'} &middot; {edition_count} edition{'s' if edition_count!=1 else ''} archived</div>
+<p>The evolving chronicle of a self-improving system — architecture, identities, decisions, philosophy. Written by mindX itself.</p>
+<div class="meta"><span class="tag tag-live">LIVE</span><span class="tag tag-auto">AUTO-GENERATED</span> {'Published' if book_exists else 'Pending'} &middot; {edition_count} edition{'s' if edition_count!=1 else ''}</div>
 </div>
 
 <div class="card">
 <h2><a href="/journal">Improvement Journal</a></h2>
-<p>Timestamped log of autonomous decisions, campaign results, belief changes, and system snapshots. Updated every 30 minutes by the improvement loop.</p>
+<p>Timestamped log of autonomous decisions, belief changes, and system snapshots.</p>
 <div class="meta"><span class="tag tag-live">LIVE</span><span class="tag tag-auto">AUTO-GENERATED</span> {'Active' if journal_exists else 'Waiting for first entry'}</div>
 </div>
 
 <hr class="sep">
 
-<div class="card">
-<h2><a href="/redoc">API Reference</a> <span style="color:#4a5060;font-size:10px">({endpoint_count} endpoints)</span></h2>
-<p>Complete API documentation. All endpoints: agents, inference, governance, vault, diagnostics, chat, actions, RAGE embed.</p>
-<div class="meta"><span class="tag tag-api">API</span> <a href="/redoc" style="color:#58a6ff">ReDoc</a> (fast) &middot; <a href="/docs" style="color:#4a5060">Swagger UI</a> &middot; <a href="/openapi.json" style="color:#4a5060">OpenAPI JSON</a></div>
+<h2 style="font-size:14px;color:#e6edf3;margin-bottom:4px" id="s-operational-standards">Operational Standards</h2>
+<p style="font-size:10px;color:#8b949e;margin-bottom:12px">Two inference pillars — CPU (always, offline) + Cloud (24/7/365, free tier). <a href="/doc/ollama/INDEX" style="color:#58a6ff">Full Ollama reference</a></p>
+<table style="width:100%;font-size:10px;border-collapse:collapse;margin-bottom:16px">
+<tr style="border-bottom:1px solid rgba(48,54,61,.4)"><th style="padding:4px 8px;text-align:left;color:#8b949e;font-size:9px">PILLAR</th><th style="padding:4px 8px;text-align:left;color:#8b949e;font-size:9px">SOURCE</th><th style="padding:4px 8px;text-align:left;color:#8b949e;font-size:9px">SPEED</th><th style="padding:4px 8px;text-align:left;color:#8b949e;font-size:9px">SCALE</th></tr>
+<tr><td style="padding:4px 8px;color:#3fb950;font-weight:600">CPU</td><td style="padding:4px 8px">localhost:11434</td><td style="padding:4px 8px">~8 tok/s</td><td style="padding:4px 8px">0.6B–1.7B</td></tr>
+<tr><td style="padding:4px 8px;color:#58a6ff;font-weight:600">Cloud</td><td style="padding:4px 8px">ollama.com</td><td style="padding:4px 8px">~65 tok/s</td><td style="padding:4px 8px">3B–1T</td></tr>
+</table>
+
+<div class="card" id="s-inference-providers">
+<h2><a href="/redoc">API Reference</a> <span style="color:#484f58;font-size:10px">({endpoint_count} endpoints)</span></h2>
+<p>All endpoints: agents, inference, governance, vault, diagnostics, chat, RAGE. <a href="/redoc" style="color:#58a6ff">ReDoc</a> &middot; <a href="/docs" style="color:#484f58">Swagger</a> &middot; <a href="/openapi.json" style="color:#484f58">OpenAPI</a></p>
 </div>
 
 <div class="card">
-<h2>Endpoint Map <span style="color:#4a5060;font-size:10px">({endpoint_count} routes)</span></h2>
-<p style="margin-bottom:8px">All API routes grouped by tag. Click to expand.</p>
+<h2>Endpoint Map <span style="color:#484f58;font-size:10px">({endpoint_count} routes)</span></h2>
 {endpoint_map_html}
 </div>
 
-<div class="card">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+<div class="card" id="s-governance---autonomy">
 <h2><a href="/dojo/standings">Dojo Standings</a></h2>
-<p>Agent reputation rankings — scores, ranks, BONA FIDE verification status.</p>
-<div class="meta"><span class="tag tag-live">LIVE</span></div>
+<p>Agent reputation rankings</p><div class="meta"><span class="tag tag-live">LIVE</span></div>
 </div>
-
 <div class="card">
 <h2><a href="/inference/status">Inference Status</a></h2>
-<p>Live inference source availability — Ollama, vLLM, cloud providers. Auto-probed every 60s.</p>
-<div class="meta"><span class="tag tag-live">LIVE</span></div>
+<p>Provider availability</p><div class="meta"><span class="tag tag-live">LIVE</span></div>
+</div>
 </div>
 
 <hr class="sep">
 
-{'<h2 style="font-size:14px;color:#e6edf3;margin-bottom:6px">pgvectorscale Index <span style="color:#4a5060;font-weight:400;font-size:10px">(' + str(db_doc_count) + ' docs embedded)</span></h2><p style="font-size:9px;color:#5a6070;margin-bottom:12px">Documents indexed in PostgreSQL with semantic embeddings — searchable via <a href="/chat/docs" style="color:#58a6ff">RAG</a></p>' + db_docs_html + '<hr class="sep">' if db_doc_count else ''}
+{'<h2 style="font-size:13px;color:#e6edf3;margin-bottom:6px" id="s-memory---knowledge">pgvectorscale Index <span style="color:#484f58;font-weight:400;font-size:10px">(' + str(db_doc_count) + ' embedded)</span></h2><p style="font-size:9px;color:#484f58;margin-bottom:10px">Semantic embeddings in PostgreSQL — searchable via RAGE</p>' + db_docs_html + '<hr class="sep">' if db_doc_count else ''}
 
-<h2 style="font-size:14px;color:#e6edf3;margin-bottom:6px">Table of Contents <span style="color:#4a5060;font-weight:400;font-size:10px">({total_docs} documents)</span></h2>
-<p style="font-size:9px;color:#5a6070;margin-bottom:12px">Auto-indexed from docs/ — all documents link to <code>/doc/{{name}}</code> for online reading</p>
+<h2 style="font-size:14px;color:#e6edf3;margin-bottom:4px" id="s-agents">All Documents <span style="color:#484f58;font-weight:400;font-size:10px">({total_docs})</span></h2>
+<p style="font-size:9px;color:#484f58;margin-bottom:12px">Auto-indexed from docs/ &mdash; click any document to read online</p>
 
 {toc_html}
 
 <div class="ft"><a href="/">dashboard</a> &middot; <a href="/docs.html">docs</a> &middot; <a href="/book">book</a> &middot; <a href="/journal">journal</a> &middot; <a href="/redoc">api</a> &middot; <a href="/dojo/standings">dojo</a> &middot; <a href="/inference/status">inference</a> &middot; <a href="/automindx">origin</a> &middot; mindx.pythai.net &middot; &copy; Professor Codephreak</div>
-</div></body></html>""")
+</div>
+
+<script>
+// Close sidebar on mobile when a link is clicked
+document.querySelectorAll('.sidebar a').forEach(a=>{{
+  a.addEventListener('click',()=>{{
+    if(window.innerWidth<=768) document.getElementById('sidebar').classList.remove('open');
+  }});
+}});
+// Scroll spy: highlight active sidebar link
+if(window.innerWidth>768){{
+  const obs=new IntersectionObserver(entries=>{{
+    entries.forEach(e=>{{
+      if(e.isIntersecting){{
+        document.querySelectorAll('.sidebar a.active').forEach(a=>a.classList.remove('active'));
+        const link=document.querySelector('.sidebar a[href="#'+e.target.id+'"]');
+        if(link) link.classList.add('active');
+      }}
+    }});
+  }},{{rootMargin:'-20% 0px -70% 0px'}});
+  document.querySelectorAll('[id^="s-"]').forEach(el=>obs.observe(el));
+}}
+</script>
+</body></html>""")
 
 _DOC_STYLE = """*{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter','SF Pro Text',system-ui,sans-serif;background:#050810;color:#b8c0cc;padding:0;margin:0;line-height:1.7}

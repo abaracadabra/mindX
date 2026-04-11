@@ -444,6 +444,22 @@ class InferenceDiscovery:
             model = local_model_map.get(task_type, "qwen3:1.7b")
             return "ollama_local", local, model
 
+        # Cloud guarantee: Ollama cloud is 24/7/365 GPU inference
+        # When local is down, cloud is still reachable (free tier, no API key via local proxy)
+        cloud = self.sources.get("ollama_cloud")
+        if cloud and cloud.status == ProviderStatus.AVAILABLE:
+            cloud_model_map = {
+                "heartbeat": "ministral-3:3b",
+                "embedding": "mxbai-embed-large",
+                "simple_chat": "ministral-3:3b",
+                "reasoning": "deepseek-v3.2",
+                "coding": "qwen3-coder-next",
+                "blueprint": "qwen3.5:397b",
+                "analysis": "gemma4:31b",
+            }
+            model = cloud_model_map.get(task_type, "deepseek-v3.2")
+            return "ollama_cloud", cloud, model
+
         # Last resort: any available provider
         best = await self.get_best_provider()
         if best:

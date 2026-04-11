@@ -377,6 +377,17 @@
       "access_control": {
         "allowed_agents": ["mastermind_prime", "coordinator_agent", "guardian_agent"]
       }
+    },
+    "ollama_cloud_tool": {
+      "enabled": true,
+      "class_name": "OllamaCloudTool",
+      "module_path": "tools.cloud.ollama_cloud_tool",
+      "description": "Cloud inference via Ollama — chat, generate, embed, model discovery with adaptive rate limiting and 18dp precision metrics. Branch-ready for peripheral agents.",
+      "priority": 9,
+      "category": "cloud",
+      "access_control": {
+        "allowed_agents": ["*"]
+      }
     }
   },
   "tool_categories": {
@@ -415,6 +426,10 @@
     "external": {
       "description": "External service integration tools",
       "priority": 5
+    },
+    "cloud": {
+      "description": "Cloud inference and distributed compute tools",
+      "priority": 9
     }
   },
   "cfo_priority_tools": [
@@ -446,7 +461,7 @@
   "metadata": {
     "last_updated": "2026-01-31",
     "version": "2.0",
-    "total_tools": 22,
+    "total_tools": 26,
     "organized_folders": true,
     "cfo_priority_enabled": true
   }

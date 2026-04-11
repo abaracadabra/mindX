@@ -13,13 +13,16 @@ This document defines how mindX achieves **resilience** and **perpetuity** in LL
 
 ## Graded inference hierarchy
 
-Inference is ordered by **tier**: primary (best capability) → secondary (speed/cost) → **failsafe (Ollama)**.
+Inference is ordered by **tier**: primary (best capability) → secondary (speed/cost) → **failsafe (Ollama local)** → **guarantee (Ollama cloud)**.
 
-| Tier       | Role        | Typical providers        | When used |
-|-----------|-------------|---------------------------|-----------|
-| Primary   | Best quality| Gemini, Mistral          | First choice for task type (reasoning, code, chat). |
-| Secondary | Speed/cost  | Groq, etc.               | When preferred for latency or cost. |
-| Failsafe  | Fallback    | **Ollama (local)**       | When primary/secondary fail (rate limit, 429, 500, timeout, no API key) or when explicitly chosen. |
+| Tier       | Role           | Typical providers            | When used |
+|-----------|----------------|------------------------------|-----------|
+| Primary   | Best quality   | Gemini, Mistral              | First choice for task type (reasoning, code, chat). |
+| Secondary | Speed/cost     | Groq, etc.                   | When preferred for latency or cost. |
+| Failsafe  | Local fallback | **Ollama (local CPU)**       | When primary/secondary fail (rate limit, 429, 500, timeout, no API key). |
+| Guarantee | Cloud fallback | **Ollama Cloud (GPU)**       | When local is also down — 24/7/365 GPU inference. Wired via `OllamaCloudTool` (`tools/cloud/ollama_cloud_tool.py`). |
+
+The **guarantee tier** ensures mindX never has an inference gap when `ollama.com` is reachable. It is activated in `_resolve_inference_model()` (Step 5) after all local methods fail. The `_cloud_inference_active` flag routes the next chat through `OllamaCloudTool`, then resets so the following cycle re-evaluates local first. Cloud is the guarantee, not the default.
 
 - **Provider preference order** is configurable (`llm_factory_config.json`: `default_provider_preference_order`). For resilience, put cloud providers first and **Ollama last** so that "best" selection uses cloud when available and Ollama is only used as fallback or when selected.
 - **ModelSelector** ranks models by capability match, success rate, latency, cost, and provider preference. Ollama models are included in the catalog with **task_scores** (reasoning, code_generation, simple_chat, etc.) so they participate in the same graded ranking; typically they rank below well-provisioned cloud models but above "no model."

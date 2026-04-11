@@ -2190,11 +2190,53 @@ class MindXAgent:
         except Exception:
             pass
 
+        # Step 5: Ollama Cloud Tool — 24/7/365 GPU inference GUARANTEE
+        # When local is completely down, cloud is still reachable.
+        # This is the last tier before "no inference" — mindX should never
+        # have an inference gap when ollama.com is reachable.
+        try:
+            if not hasattr(self, '_cloud_tool') or self._cloud_tool is None:
+                from tools.cloud.ollama_cloud_tool import OllamaCloudTool
+                self._cloud_tool = OllamaCloudTool(config=self.config)
+
+            # Test cloud connectivity via list_models (no rate limit cost)
+            result = await self._cloud_tool.execute(operation="list_models")
+            if result.get("success") and result.get("count", 0) > 0:
+                cloud_model = "gpt-oss:120b-cloud"
+                logger.info(
+                    f"{self.log_prefix} Cloud guarantee: {result['count']} models available, "
+                    f"using {cloud_model}"
+                )
+                self._cloud_inference_active = True
+                return cloud_model
+        except Exception as e:
+            logger.debug(f"{self.log_prefix} Cloud tool guarantee failed: {e}")
+
         logger.error(f"{self.log_prefix} No inference model available from any source")
         return None
 
     async def chat_with_ollama(self, message: str, model: Optional[str] = None, conversation_id: Optional[str] = None, system_prompt: Optional[str] = None, temperature: float = 0.7, max_tokens: int = 2000, **kwargs) -> Dict[str, Any]:
-        """Chat with Ollama model using persistent connection"""
+        """Chat with Ollama model using persistent connection.
+        Routes through OllamaCloudTool when cloud guarantee is active."""
+        # Cloud guarantee: route through OllamaCloudTool when local is unavailable
+        if getattr(self, '_cloud_inference_active', False) and hasattr(self, '_cloud_tool') and self._cloud_tool:
+            try:
+                result = await self._cloud_tool.execute(
+                    operation="chat",
+                    model=model or self.llm_model,
+                    message=message,
+                    system_prompt=system_prompt,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+                if result.get("success"):
+                    self._cloud_inference_active = False  # Reset: try local next cycle
+                    logger.info(f"{self.log_prefix} Cloud guarantee chat: {result.get('eval_count', 0)} tokens")
+                    return result
+            except Exception as e:
+                logger.debug(f"{self.log_prefix} Cloud guarantee chat failed, trying local: {e}")
+            self._cloud_inference_active = False  # Reset on failure too
+
         if not self.ollama_chat_manager:
             await self._init_ollama_chat_manager()
         if not self.ollama_chat_manager:

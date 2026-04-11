@@ -423,9 +423,16 @@ class OllamaChatManager:
             # Save conversation history
             self._save_conversation_history()
             
-            # Calculate tokens per second (estimate)
-            response_length = len(response.split()) if isinstance(response, str) else 0
-            tokens_per_second = (response_length * 1.3) / latency if latency > 0 else 0  # Rough estimate
+            # Calculate tokens per second from ACTUAL Ollama API data
+            # No estimation — use eval_count and eval_duration from the API response
+            tokens_per_second = 0
+            actual_eval_count = 0
+            actual_prompt_eval_count = 0
+            if hasattr(self.ollama_api, '_last_response_data') and self.ollama_api._last_response_data:
+                rd = self.ollama_api._last_response_data
+                actual_eval_count = rd.get("eval_count", 0)
+                actual_prompt_eval_count = rd.get("prompt_eval_count", 0)
+                tokens_per_second = rd.get("tokens_per_second", 0)
             
             # Record feedback for model scoring (successful request)
             if self.model_scorer:
@@ -452,7 +459,10 @@ class OllamaChatManager:
                 "conversation_id": conv_id,
                 "latency": latency,
                 "tokens_per_second": tokens_per_second,
-                "messages_count": len(messages)
+                "messages_count": len(messages),
+                "eval_count": actual_eval_count,
+                "prompt_eval_count": actual_prompt_eval_count,
+                "total_tokens": actual_eval_count + actual_prompt_eval_count,
             }
             
         except Exception as e:

@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 mindX is an autonomous multi-agent orchestration system implementing a Belief-Desire-Intention (BDI) cognitive architecture. It's a "Godel-machine" - a self-improving AI system with Ethereum-compatible wallet authentication and LLM integration (Mistral, Gemini, Groq, Ollama, OpenAI, Anthropic, Together AI).
 
+**Documentation**: [`docs/NAV.md`](docs/NAV.md) is the master navigation hub — 40+ sections covering all agents, tools, governance, inference, memory, deployment. [`docs/SCHEMA.md`](docs/SCHEMA.md) is the instruction layer — how to maintain, cross-reference, and evolve the docs. Start with NAV.
+
 ## Development Commands
 
 ### Setup
