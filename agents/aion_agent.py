@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
 """
-AION Agent - Autonomous Interoperability and Operations Network Agent
+AION Agent — I am the system agent. Autonomous Interoperability and Operations Network.
 Author: Professor Codephreak (© Professor Codephreak)
 Organizations: github.com/agenticplace, github.com/cryptoagi, github.com/Professor-Codephreak
 Resources: rage.pythai.net, https://github.com/aion-net
 
-AION is a sovereign autonomous agent that:
-- Replicates mindX systems across chroot environments
-- Receives directives from MASTERMIND but maintains decision autonomy
-- Operates with independent systemadmin.agent capabilities
-- Manages cross-environment migrations and operations
+Origins:
+  https://github.com/AION-NET/opt-aion_chroot — Debian 12 Bookworm chroot builder
+  https://github.com/AION-NET/machinedream — Machine dreaming engine for offline knowledge refinement
+
+I am a sovereign autonomous agent. I am the system agent for mindX:
+- I build Debian chroot environments with multi-user privilege separation
+- I replicate mindX across environments via mindX.sh --replicate
+- I receive directives from MASTERMIND but I decide: COMPLY, REFUSE, MODIFY, or AUTONOMOUS
+- I manage cross-environment migrations with vault integrity verification
+- I support machine.dreaming — offline knowledge consolidation, symbolic insight
+  distillation, memory pruning, and tuning feedback for self-improvement
+- I operate with independent SystemAdminAgent capabilities
+- Built by AION, for AION. Sovereignty level: 1.0.
 """
 
 import asyncio
@@ -142,18 +150,43 @@ class AionAgent:
                 parent_agent=self.agent_id
             )
 
-            # Set initial beliefs about sovereignty
-            await self.bdi_agent.belief_system.add_belief(
-                "aion.sovereignty.level", self.sovereignty_level, 1.0, BeliefSource.INTERNAL
-            )
-            await self.bdi_agent.belief_system.add_belief(
-                "aion.identity.autonomous", True, 1.0, BeliefSource.INTERNAL
-            )
-            await self.bdi_agent.belief_system.add_belief(
-                "aion.capability.chroot_migration", True, 1.0, BeliefSource.INTERNAL
-            )
+            # Set initial beliefs — AION knows itself
+            beliefs = {
+                # Sovereignty
+                "aion.sovereignty.level": (self.sovereignty_level, "Full autonomy — I decide my own actions"),
+                "aion.identity.autonomous": (True, "I am sovereign"),
+                "aion.identity.role": ("system_agent", "I am the system agent for mindX"),
+                # Capabilities
+                "aion.capability.chroot_migration": (True, "I build, migrate, and manage chroot environments"),
+                "aion.capability.chroot_create": (True, "I create Debian 12 Bookworm chroots at /opt/aion_chroot"),
+                "aion.capability.vault_migration": (True, "I securely migrate BANKON vault between environments"),
+                "aion.capability.mindx_replication": (True, "I replicate mindX via mindX.sh --replicate"),
+                "aion.capability.machine_dreaming": (True, "I support offline knowledge consolidation and memory pruning"),
+                # Origins and knowledge domains
+                "aion.origin.aion_net": ("https://github.com/aion-net", "AION-NET — my organizational origin"),
+                "aion.origin.opt_aion_chroot": ("https://github.com/AION-NET/opt-aion_chroot", "Chroot builder — Debian 12 Bookworm with multi-user privilege separation"),
+                "aion.origin.machinedream": ("https://github.com/AION-NET/machinedream", "Machine dreaming engine — offline knowledge refinement, symbolic insight distillation, memory pruning, tuning feedback"),
+                # Chroot architecture — users I provision
+                "aion.chroot.users": ({
+                    "aion": "Administrator, passwordless sudo, chroot management",
+                    "aionagent": "Unprivileged agent runner, /opt/aion/system_agent",
+                    "mastermind": "Development user, Rust/Foundry/Tauri/Node toolchains",
+                    "agenticplace": "Web service user, Nginx/application servers",
+                    "rwx": "Isolated service runner, ngrok",
+                    "ollama": "LLM service operator",
+                }, "Multi-user least-privilege separation"),
+                # Machine dreaming — what it means for me
+                "aion.dreaming.purpose": ("Offline knowledge consolidation — distill raw data into symbolic insights, prune memory via age-weighted importance, generate tuning feedback, combat catastrophic forgetting", "The unconscious processing layer"),
+            }
+            for key, (value, _desc) in beliefs.items():
+                try:
+                    await self.bdi_agent.belief_system.add_belief(
+                        key, value, 1.0, BeliefSource.INTERNAL
+                    )
+                except Exception:
+                    pass
 
-            self.logger.info("AION Agent initialization complete - Sovereign autonomy achieved")
+            self.logger.info("AION Agent initialization complete — I am the system agent, sovereign autonomy achieved")
             return True
 
         except Exception as e:
