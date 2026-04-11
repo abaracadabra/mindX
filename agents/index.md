@@ -293,6 +293,19 @@ This document provides a complete index of all agents in the mindX system, with 
     - **Complexity**: 0.92
     - **Location**: `agents/faicey_agent.py`
 
+#### Deployment Agents (agents/)
+
+47. **Deployment GitHub Agent** - I load, deploy, and replicate mindX from GitHub with failsafe rollback
+    - **Type**: `deployment_agent`
+    - **Domain**: `deployment.github`
+    - **Complexity**: 0.92
+    - **Location**: `agents/deployment_github_agent.py`
+    - **Definition**: `agents/deployment.github.agent`
+    - **Memory**: logs via memory_agent, status at `data/deployment_github_status.json`
+    - **Failsafe**: BackupAgent → GitHubAgentTool → rollback point → integrity verify → auto-rollback on failure
+    - **Modes**: pull (fast), github (--replicate-from-github), replicate (--replicate), clone (fresh)
+    - **Dependencies**: GitHubAgentTool, BackupAgent, ReplicationAgent, mindX.sh
+
 #### Blockchain / Solidity Agents (agents/)
 
 45. **Solidity Foundry Agent** - I compile, test, and deploy contracts using Foundry (forge + anvil)
