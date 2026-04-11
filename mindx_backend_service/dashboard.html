@@ -37,20 +37,21 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 .left::-webkit-scrollbar{display:none}
 .right{width:320px;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;border-left:1px solid rgba(26,31,46,.5)}
 @media(max-width:960px){.main{flex-direction:column}.right{width:100%;height:40vh}}
-.g{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(20,24,32,.2)}
+.g{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:rgba(20,24,32,.15)}
 @media(max-width:1300px){.g{grid-template-columns:repeat(3,1fr)}}
-.c{background:rgba(10,14,20,.8);padding:5px 7px}
-.ct{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:#4a5060;margin-bottom:3px;font-family:'SF Mono','Fira Code',monospace}
-.mv{font-size:22px;font-weight:700;color:#e6edf3;line-height:1;font-family:'SF Mono','Fira Code',monospace}
-.ms{font-size:10px;color:#5a6070;margin-top:2px}
-.bc{height:2px;background:rgba(30,34,42,.5);border-radius:1px;margin-top:3px;overflow:hidden}
-.b{height:100%;border-radius:1px;transition:width .5s}
+.c{background:rgba(10,14,20,.85);padding:8px 10px;border-left:2px solid rgba(88,166,255,.06);transition:border-color .3s}
+.c:hover{border-left-color:rgba(88,166,255,.2)}
+.ct{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:#58a6ff;margin-bottom:5px;font-family:'SF Mono','Fira Code',monospace;opacity:.7}
+.mv{font-size:24px;font-weight:700;color:#e6edf3;line-height:1;font-family:'SF Mono','Fira Code',monospace}
+.ms{font-size:10px;color:#5a6070;margin-top:3px}
+.bc{height:3px;background:rgba(30,34,42,.5);border-radius:2px;margin-top:4px;overflow:hidden}
+.b{height:100%;border-radius:2px;transition:width .5s}
 .bg{background:#3fb950}.by{background:#d29922}.br{background:#f85149}
 .w2{grid-column:span 2}.w4{grid-column:1/-1}
-.r{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:11px;border-bottom:1px solid rgba(8,11,16,.4)}
+.r{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:11px;border-bottom:1px solid rgba(8,11,16,.3);gap:6px}
 .r:last-child{border:none}
-.d{display:inline-block;width:4px;height:4px;border-radius:50%;margin-right:3px;vertical-align:middle}
-.dg{background:#3fb950}.dr{background:#f85149}.dy{background:#d29922}.dx{background:#3d424d}
+.d{display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:4px;vertical-align:middle;box-shadow:0 0 4px currentColor}
+.dg{background:#3fb950;color:#3fb950}.dr{background:#f85149;color:#f85149}.dy{background:#d29922;color:#d29922}.dx{background:#3d424d;color:#3d424d}
 .ll{font-size:10px;color:#4a5060;padding:2px 0;word-break:break-all;line-height:1.4;border-bottom:1px solid rgba(5,8,16,.3);font-family:'SF Mono','Fira Code',monospace}
 .ll:hover{color:#6e7681}
 .tabs{display:flex;gap:1px;background:rgba(20,24,32,.4);flex-shrink:0}
@@ -226,9 +227,31 @@ function render(d){
   const sa2=d.memory?.stm_by_agent||{};const sk=Object.keys(sa2);
   if(sk.length){let st='';sk.forEach(k=>st+=`<div class="r"><span>${k}</span><span style="color:#4a5060">${sa2[k]}</span></div>`);
   h+=`<div class="c w2"><div class="ct">stm by agent</div>${st}</div>`}
-  // inference
-  let sr='';for(const[n,i]of Object.entries(inf.sources||{})){sr+=`<div class="r"><span><span class="d ${i.status==='available'?'dg':i.status==='unknown'?'dx':'dr'}"></span>${n}</span><span style="color:#3d424d">${(i.models||[]).join(',')|| i.type}</span></div>`}
-  h+=`<div class="c w2"><div class="ct">inference ${inf.available||0}/${inf.total||0}</div>${sr}</div>`;
+  // inference — models in use with status
+  let sr='';
+  const localSrc=inf.sources?.ollama_local||inf.sources?.ollama_gpu||{};
+  const localModels=localSrc.models||[];
+  if(localModels.length){
+    sr+='<div style="font-size:9px;color:#4a5060;text-transform:uppercase;letter-spacing:.5px;padding:2px 0;border-bottom:1px solid rgba(8,11,16,.3)">LOCAL MODELS</div>';
+    localModels.forEach(m=>{
+      const isEmbed=m.includes('embed');
+      const clr=isEmbed?'#d2a8ff':'#3fb950';
+      const tag=isEmbed?'EMB':'LLM';
+      sr+=`<div class="r"><span><span class="d dg"></span><span style="color:${clr};font-weight:600">${m}</span></span><span style="color:#3d424d;font-size:9px">${tag}</span></div>`;
+    });
+  }
+  // Cloud + API providers
+  const cloudSrcs=Object.entries(inf.sources||{}).filter(([n])=>n.startsWith('cloud_')||n==='ollama_cloud');
+  if(cloudSrcs.length){
+    sr+='<div style="font-size:9px;color:#4a5060;text-transform:uppercase;letter-spacing:.5px;padding:4px 0 2px;border-bottom:1px solid rgba(8,11,16,.3);margin-top:4px">CLOUD PROVIDERS</div>';
+    cloudSrcs.forEach(([n,i])=>{
+      const label=n.replace('cloud_','').replace('ollama_cloud','ollama cloud');
+      const sc=i.status==='available'?'dg':i.status==='degraded'?'dy':'dr';
+      const scl=i.score?` (${i.score.toFixed(2)})`:'';
+      sr+=`<div class="r"><span><span class="d ${sc}"></span>${label}</span><span style="color:#3d424d;font-size:9px">${i.status}${scl}</span></div>`;
+    });
+  }
+  h+=`<div class="c w2"><div class="ct">inference ${inf.available||0}/${inf.total||0} sources &middot; ${localModels.length} models</div>${sr}</div>`;
   // agents
   let ag='';for(const a of(d.agents||[]))ag+=`<div class="r"><span>${rk(a.verification_tier??1)} ${a.entity_id}</span><span style="color:#58a6ff;font-size:8px">${sa(a.address)}</span></div>`;
   h+=`<div class="c w2"><div class="ct">agents ${(d.agents||[]).length}</div>${ag}</div>`;
@@ -242,11 +265,19 @@ function render(d){
   h+=`<div class="c w2"><div class="ct">g&ouml;del choices</div>${gl||'<span style="color:#3d424d">-</span>'}</div>`;
   let bl='';(d.beliefs?.sample||[]).slice(0,4).forEach(b=>bl+=`<div class="r"><span style="color:#7ee787;font-size:8px">${b.key.replace('identity.map.','')}</span></div>`);
   h+=`<div class="c"><div class="ct">beliefs</div>${bl||'<span style="color:#3d424d">-</span>'}</div>`;
-  // model performance
+  // model performance — tok/s, latency, token counts
   const mp=d.model_perf||[];
   if(mp.length){
-    let mh='';mp.slice(-8).forEach(m=>mh+=`<div class="r"><span>${m.ts} ${m.model}</span><span style="color:#4a5060">${m.latency_ms}ms ${m.tps}t/s cpu:${m.cpu_at_query}%</span></div>`);
-    h+=`<div class="c w2"><div class="ct">model performance (${mp.length} queries)</div>${mh}</div>`;
+    let mh='';
+    let totalTokens=0;
+    mp.slice(-8).forEach(m=>{
+      totalTokens+=(m.tokens_est||0);
+      const tpsClr=m.tps>50?'#3fb950':m.tps>10?'#d29922':'#f85149';
+      const latClr=m.latency_ms<5000?'#3fb950':m.latency_ms<20000?'#d29922':'#f85149';
+      mh+=`<div class="r"><span style="color:#58a6ff;font-weight:600;min-width:100px">${m.model||'?'}</span><span style="color:${latClr}">${(m.latency_ms/1000).toFixed(1)}s</span><span style="color:${tpsClr};font-weight:700">${m.tps}t/s</span><span style="color:#4a5060">cpu:${m.cpu_at_query}%</span></div>`;
+    });
+    const avgTps=mp.length>0?mp.reduce((s,m)=>s+(m.tps||0),0)/mp.length:0;
+    h+=`<div class="c w2"><div class="ct">model performance &middot; ${mp.length} queries &middot; avg ${avgTps.toFixed(1)} t/s &middot; ~${totalTokens} tokens</div>${mh}</div>`;
   }
   // disk + database + RAGE embed
   const dd=d.disk_detail||{};const db=d.database||{};const re=d.rage_embed||{};

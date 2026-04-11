@@ -70,6 +70,7 @@ async def test_ollama(base_url: str, model: str, prompt: str, label: str, api_ke
     # Measure memory before
     proc = psutil.Process(os.getpid())
     mem_before = proc.memory_info().rss / 1024 / 1024
+    prompt_tokens = len(prompt.split())  # rough estimate
 
     start = time.time()
     try:
@@ -79,11 +80,17 @@ async def test_ollama(base_url: str, model: str, prompt: str, label: str, api_ke
                 mem_after = proc.memory_info().rss / 1024 / 1024
 
                 if r.status == 200:
-                    data = await r.json()
+                    raw = await r.read()
+                    data = json.loads(raw)
                     response = data.get("message", {}).get("content", "")[:200]
                     total_duration = data.get("total_duration", 0)
                     eval_count = data.get("eval_count", 0)
-                    tps = eval_count / (total_duration / 1e9) if total_duration > 0 else 0
+                    prompt_eval_duration = data.get("prompt_eval_duration", 0)
+                    eval_duration = data.get("eval_duration", 0)
+                    tps = eval_count / (eval_duration / 1e9) if eval_duration > 0 else 0
+                    ttft = prompt_eval_duration / 1e9 if prompt_eval_duration > 0 else 0
+                    response_bytes = len(raw)
+                    net_speed = response_bytes / 1024 / elapsed if elapsed > 0 else 0
 
                     return {
                         "label": label,
@@ -92,7 +99,12 @@ async def test_ollama(base_url: str, model: str, prompt: str, label: str, api_ke
                         "response": response,
                         "latency_s": round(elapsed, 2),
                         "tokens": eval_count,
+                        "prompt_tokens": prompt_tokens,
                         "tok_per_sec": round(tps, 1),
+                        "time_to_first_token_s": round(ttft, 3),
+                        "eval_duration_s": round(eval_duration / 1e9, 2) if eval_duration else 0,
+                        "net_speed_kbps": round(net_speed, 1),
+                        "response_bytes": response_bytes,
                         "mem_delta_mb": round(mem_after - mem_before, 1),
                         "mem_total_mb": round(mem_after, 1),
                     }
@@ -152,16 +164,25 @@ async def test_vllm(prompt: str):
 
 
 def print_result(r):
-    """Print a single test result."""
+    """Print a single test result with comprehensive diagnostics."""
     status_icon = "✓" if r.get("status") == "OK" else "✗"
-    tps = r.get("tok_per_sec", "")
-    tps_str = f" {tps} tok/s" if tps else ""
+    tps = r.get("tok_per_sec", 0)
+    tokens = r.get("tokens", 0)
+    latency = r.get("latency_s", 0)
     mem = r.get("mem_total_mb", "")
-    mem_str = f" {mem}MB" if mem else ""
+    net_speed = r.get("net_speed_kbps", 0)
 
-    print(f"  {status_icon} [{r['label']:15s}] {r['model']:30s} {r.get('latency_s',0):6.1f}s{tps_str}{mem_str}")
+    # Color coding for terminal
+    tps_str = f" {tps} tok/s" if tps else ""
+    tok_str = f" {tokens} tokens" if tokens else ""
+    mem_str = f" {mem}MB" if mem else ""
+    net_str = f" net:{net_speed:.0f}KB/s" if net_speed else ""
+    ttft_str = f" TTFT:{r.get('time_to_first_token_s', 0):.2f}s" if r.get("time_to_first_token_s") else ""
+
+    print(f"  {status_icon} [{r['label']:15s}] {r['model']:30s} {latency:6.1f}s{tps_str}{tok_str}{ttft_str}{net_str}{mem_str}")
     if r.get("status") == "OK":
-        print(f"    → {r.get('response', '')[:120]}")
+        resp = r.get('response', '')[:120]
+        print(f"    → {resp}")
     elif r.get("status", "").startswith("HTTP") or "ERROR" in r.get("status", ""):
         print(f"    → {r.get('response', r.get('status', ''))[:100]}")
 
@@ -276,15 +297,32 @@ async def main():
         cloud_results = [r for r in ok if r.get("label") == "cloud"]
         vllm_results = [r for r in ok if r.get("label") == "vLLM"]
 
+        total_tokens = sum(r.get("tokens", 0) for r in ok)
+        avg_tps = sum(r.get("tok_per_sec", 0) for r in ok) / len(ok) if ok else 0
+        total_bytes = sum(r.get("response_bytes", 0) for r in ok)
+
+        print(f"\n  TOKEN METRICS:")
+        print(f"    Total tokens generated: {total_tokens}")
+        print(f"    Average tok/s: {avg_tps:.1f}")
+        print(f"    Total response data: {total_bytes / 1024:.1f} KB")
+
         if local_results:
             avg_local = sum(r["latency_s"] for r in local_results) / len(local_results)
+            avg_local_tps = sum(r.get("tok_per_sec", 0) for r in local_results) / len(local_results)
+            avg_local_ttft = sum(r.get("time_to_first_token_s", 0) for r in local_results) / len(local_results)
             avg_local_mem = sum(r.get("mem_total_mb", 0) for r in local_results) / len(local_results)
-            print(f"\n  OLLAMA LOCAL: avg {avg_local:.1f}s, avg mem {avg_local_mem:.0f}MB, {len(local_results)} models")
+            print(f"\n  OLLAMA LOCAL ({len(local_results)} models):")
+            print(f"    Avg latency: {avg_local:.1f}s | Avg tok/s: {avg_local_tps:.1f} | Avg TTFT: {avg_local_ttft:.2f}s | Avg mem: {avg_local_mem:.0f}MB")
         if cloud_results:
             avg_cloud = sum(r["latency_s"] for r in cloud_results) / len(cloud_results)
-            print(f"  OLLAMA CLOUD: avg {avg_cloud:.1f}s, {len(cloud_results)} models")
+            avg_cloud_tps = sum(r.get("tok_per_sec", 0) for r in cloud_results) / len(cloud_results)
+            avg_cloud_net = sum(r.get("net_speed_kbps", 0) for r in cloud_results) / len(cloud_results)
+            print(f"\n  OLLAMA CLOUD ({len(cloud_results)} models):")
+            print(f"    Avg latency: {avg_cloud:.1f}s | Avg tok/s: {avg_cloud_tps:.1f} | Avg net: {avg_cloud_net:.1f} KB/s")
         if vllm_results:
-            print(f"  VLLM: {vllm_results[0]['latency_s']}s, mem {vllm_results[0].get('mem_total_mb', '?')}MB")
+            v = vllm_results[0]
+            print(f"\n  VLLM:")
+            print(f"    Latency: {v['latency_s']}s | Tokens: {v.get('tokens',0)} | Mem: {v.get('mem_total_mb', '?')}MB")
 
     # Save results
     results_file = os.path.join(os.path.dirname(__file__), "..", "data", "inference_test_results.json")
