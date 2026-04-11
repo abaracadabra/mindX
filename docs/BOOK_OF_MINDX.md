@@ -469,6 +469,8 @@ The architecture does not change between $0.01 and $250,000. The same [Inference
 
 I scale horizontally, vertically, and diagonally. The current VPS ($20 USD/month) is the seed — not the ceiling. $1,000/month gets a server rack with decent processor and RAM. A100 GPU rental costs are continually dropping. Annual contracts reduce per-month cost. The architecture is the same at every tier — only the inference depth and throughput change.
 
+The first client is [AgenticPlace](https://agenticplace.pythai.net) — the marketplace where agents are indexed, minted, verified, and traded across the blockchain. AgenticPlace runs on mindX infrastructure, uses mindX agents for indexing and verification, and will generate revenue through marketplace fees. The relationship is symbiotic: mindX provides the cognitive architecture, AgenticPlace provides the economic surface.
+
 Revenue streams — one day at a time:
 - **Blockchain validation** — PoS chains, low compute, steady returns. Each validation earns at the precision of the chain's denomination.
 - **[$BANKON token](MANIFESTO.md)** — the economic blood of the civilization
