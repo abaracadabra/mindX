@@ -294,9 +294,48 @@ function render(d){
   ah+=`<div class="r"><span><span class="d ${au.loop_running?'dg':'dr'}"></span>improvement loop</span><span style="color:#4a5060">${au.loop_running?'active':'stopped'}${au.last_cycle?' &middot; '+au.last_cycle:''}</span></div>`;
   ah+=`<div class="r"><span><span class="d ${auth.periodic_active?'dg':'dx'}"></span>author agent</span><span style="color:#4a5060">${auth.last_chapter||'no chapters yet'}${auth.lunar_day?' &middot; day '+auth.lunar_day:''}</span></div>`;
   ah+=`<div class="r"><span><span class="d ${au.restart_pending?'dy':'dx'}"></span>restart signal</span><span style="color:#4a5060">${au.restart_pending?'PENDING':'none'}</span></div>`;
-  if(au.stuck_cycles>0)ah+=`<div class="r"><span style="color:#f85149">stuck cycles</span><span style="color:#f85149">${au.stuck_cycles}</span></div>`;
-  if(au.circuit_breaker_open)ah+=`<div class="r"><span style="color:#f85149">circuit breaker</span><span style="color:#f85149">OPEN</span></div>`;
-  h+=`<div class="c w2"><div class="ct">autonomous</div>${ah}</div>`;
+  if(au.stuck_cycles>0)ah+=`<div class="r"><span>stuck cycles</span><span>${au.stuck_cycles}</span></div>`;
+  if(au.circuit_breaker_open)ah+=`<div class="r"><span>circuit breaker</span><span>OPEN</span></div>`;
+  // machine dreaming status
+  const dreamActions=(d.actions||[]).filter(a=>a.agent_id==='machine_dreaming');
+  if(dreamActions.length){
+    ah+=`<div class="r"><span><span class="d dg"></span>machine.dreaming</span><span style="color:#4a5060">${dreamActions.length} cycles</span></div>`;
+  }
+  // health auditor
+  const healthActions=(d.memory?.stm_by_agent||{})['health_auditor_tool']||0;
+  if(healthActions>0){
+    ah+=`<div class="r"><span><span class="d dg"></span>health auditor</span><span style="color:#4a5060">${healthActions} checks</span></div>`;
+  }
+  h+=`<div class="c w2"><div class="ct">autonomous systems</div>${ah}</div>`;
+  // live agent interactions — the pulse of mindX
+  const ai=d.agent_interactions||[];
+  if(ai.length){
+    let ih='';
+    ai.slice(0,8).forEach(i=>{
+      ih+=`<div class="r"><span style="color:#58a6ff">${i.from}</span><span style="color:#4a5060">&rarr; ${i.to}</span><span style="color:#d2a8ff;font-size:9px">${i.type}</span><span style="color:#3d424d;font-size:9px">${i.ts}</span></div>`;
+    });
+    h+=`<div class="c w2"><div class="ct">agent interactions (${ai.length} events)</div>${ih}</div>`;
+  }
+  // active endpoints — show what's responding
+  let ep='';
+  ep+=`<div class="r"><span><span class="d dg"></span>/diagnostics/live</span><span style="color:#4a5060">6s poll</span></div>`;
+  ep+=`<div class="r"><span><span class="d dg"></span>/health</span><span style="color:#4a5060">200 OK</span></div>`;
+  if(inf.available>0)ep+=`<div class="r"><span><span class="d dg"></span>/inference/status</span><span style="color:#4a5060">${inf.available} sources</span></div>`;
+  ep+=`<div class="r"><span><span class="d ${(d.database||{}).status==='connected'?'dg':'dr'}"></span>pgvector</span><span style="color:#4a5060">${(d.database||{}).status||'?'}</span></div>`;
+  if(d.dojo?.length)ep+=`<div class="r"><span><span class="d dg"></span>/dojo/standings</span><span style="color:#4a5060">${d.dojo.length} agents</span></div>`;
+  ep+=`<div class="r"><span><span class="d ${(d.actions||[]).length>0?'dg':'dx'}"></span>/actions</span><span style="color:#4a5060">${(d.database||{}).actions||0} total</span></div>`;
+  ep+=`<div class="r"><span><span class="d dg"></span>RAGE</span><span style="color:#4a5060">${(d.rage_embed||{}).docs||0} docs, ${(d.rage_embed||{}).memories||0} vectors</span></div>`;
+  h+=`<div class="c"><div class="ct">endpoints</div>${ep}</div>`;
+  // memory activity — which agents are actively creating memories
+  const stmAgents=Object.entries(d.memory?.stm_by_agent||{}).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  if(stmAgents.length){
+    let mah='';
+    stmAgents.forEach(([agent, count])=>{
+      const pct=Math.round(count/(d.memory?.stm_records||1)*100);
+      mah+=`<div class="r"><span>${agent}</span><span style="color:#4a5060">${count.toLocaleString()} (${pct}%)</span></div>`;
+    });
+    h+=`<div class="c"><div class="ct">memory activity (top 8)</div>${mah}</div>`;
+  }
   // recent actions summary in grid (visible without clicking tab)
   const acts=d.actions||[];
   if(acts.length){

@@ -2712,13 +2712,19 @@ class MindXAgent:
                                 "rationale": "autonomous_improvement_loop",
                                 "outcome": "success" if success else ("error: " + (error_message or "unknown")[:200]),
                             })
-                        # Update action status (was recorded as pending before execution)
+                        # Update action status — descriptive result with test outcome
                         try:
                             from agents.memory_pgvector import store_action
+                            agents_str = ', '.join(agents_used[:3]) if agents_used else 'none'
+                            changes_str = f", {len(result.improvements_made)} changes" if hasattr(result, 'improvements_made') and result.improvements_made else ""
                             await store_action(
                                 agent_id=self.agent_id,
                                 action_type="improvement_result",
-                                description=f"Cycle {cycle_count} {'succeeded' if success else 'failed'}: {top_priority['goal'][:120]}",
+                                description=(
+                                    f"Cycle {cycle_count} {'succeeded' if success else 'failed'}: "
+                                    f"{top_priority['goal'][:80]}. "
+                                    f"Agents: {agents_str}{changes_str}"
+                                ),
                                 source="autonomous_loop",
                                 status="completed" if success else "failed",
                             )

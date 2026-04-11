@@ -276,15 +276,21 @@ class MachineDreamCycle:
 
             ltm_file = ltm_path / f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_dream_insights.json"
             ltm_file.write_text(json.dumps(dream_ltm, indent=2))
-            promoted += len(insights[:20])
+            insights_stored = min(len(insights), 20)
+            promoted += insights_stored
 
-            # Store to pgvector if available
+            # Store to pgvector — descriptive, accurate action record
             try:
                 from agents.memory_pgvector import store_action
+                top_insight = insights[0].description[:80] if insights else "none"
                 await store_action(
                     agent_id="machine_dreaming",
                     action_type="dream_cycle",
-                    description=f"Dream cycle for {agent_id}: {len(insights)} insights, {promoted} promoted to LTM",
+                    description=(
+                        f"Dream: {agent_id} — {len(insights)} patterns extracted, "
+                        f"{insights_stored} stored to LTM. "
+                        f"Top insight: {top_insight}"
+                    ),
                     source="machine_dreaming",
                     status="completed",
                 )
@@ -440,10 +446,11 @@ class MachineDreamCycle:
             except Exception as e:
                 logger.debug(f"{self.log_prefix} Dream failed for {agent_id}: {e}")
 
-        # Store dream report
+        # Store dream report — cypherpunk2048 precision
+        duration = time.time() - start
         report = {
             "timestamp": datetime.now().isoformat(),
-            "duration_seconds": round(time.time() - start, 2),
+            "duration_seconds": f"{duration:.18f}",
             "agents_dreamed": len(all_results),
             "total_agents": len(agent_ids),
             "insights_generated": total_insights,
@@ -457,7 +464,9 @@ class MachineDreamCycle:
                     "memories_analyzed": r.memories_analyzed,
                     "patterns_extracted": r.patterns_extracted,
                     "promoted_to_ltm": r.promoted_to_ltm,
+                    "duration_seconds": f"{r.duration_seconds:.18f}",
                     "top_insight": r.insights[0].description[:100] if r.insights else None,
+                    "top_score": f"{r.insights[0].score:.18f}" if r.insights else None,
                 }
                 for r in all_results if r.memories_analyzed > 0
             ],
