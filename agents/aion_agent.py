@@ -177,6 +177,9 @@ class AionAgent:
                 }, "Multi-user least-privilege separation"),
                 # Machine dreaming — what it means for me
                 "aion.dreaming.purpose": ("Offline knowledge consolidation — distill raw data into symbolic insights, prune memory via age-weighted importance, generate tuning feedback, combat catastrophic forgetting", "The unconscious processing layer"),
+                # augml — augmentation machine learning resources
+                "aion.resource.augml": ("https://github.com/augml", "Augmentation Machine Learning — MCP SDK, Ollama, LangChain, IPFS deploy, Prolog agents, function calling, DSPy"),
+                "aion.resource.augml_mcp_sdk": ("https://github.com/augml/mcp-python-sdk", "Model Context Protocol Python SDK — FastMCP server for tool/resource/prompt exposure to LLMs"),
             }
             for key, (value, _desc) in beliefs.items():
                 try:

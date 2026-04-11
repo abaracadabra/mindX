@@ -83,6 +83,16 @@ KNOWLEDGE DOMAINS
   type: local
   description: AGLM capability — creative generation beyond training data distribution, autonomous improvement loops, blueprint generation
 
+- name: augml MCP Python SDK
+  source: https://github.com/augml/mcp-python-sdk
+  type: url
+  description: Model Context Protocol SDK — FastMCP server for exposing tools, resources, and prompts to LLMs. Core MCP integration for mindX agent interoperability.
+
+- name: augml Organization
+  source: https://github.com/augml
+  type: url
+  description: Augmentation Machine Learning — curated toolkit including Ollama, LangChain, private GPT, agent frameworks, IPFS deployment (sns-deploy), Prolog deliberative agents, function calling, DSPy, and MCP infrastructure
+
 - name: AION.sh Operations
   source: AION.sh
   type: local
