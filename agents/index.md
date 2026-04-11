@@ -428,9 +428,10 @@ All agents can be formally defined using `agents/agent.schema.json` — a JSON S
 - **ReplicationAgent** - Multi-target replication
 
 ### Meta & Inference
-- **mindXagent** - Meta-orchestrator with inference-first autonomous loop
-- **vLLM Agent** - vLLM build, serve, and lifecycle management
-- **InferenceDiscovery** - Multi-provider inference probing and ranking
+- **[mindXagent](../agents/core/mindXagent.py)** — Meta-orchestrator with inference-first autonomous loop + [LTM awareness](machine_dreaming.py)
+- **[machine.dreaming](machine_dreaming.py)** — 7-phase STM→LTM consolidation ([AION-NET/machinedream](https://github.com/AION-NET/machinedream))
+- **vLLM Agent** — vLLM build, serve, and lifecycle management
+- **InferenceDiscovery** — Multi-provider inference probing and ranking
 
 ### Content & Publishing
 - **Author Agent** - Autonomous publication on lunar cycle

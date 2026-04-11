@@ -149,10 +149,12 @@ Higher Intelligence → CEO.Agent → MastermindAgent → mindX Environment
 - **[agents/system.aion.agent](agents/system.aion.agent)**: System agent — [chroot](https://github.com/AION-NET/opt-aion_chroot), [machine.dreaming](https://github.com/AION-NET/machinedream)
 
 #### 🛠️ **Technical Documentation**
-- **[docs/memory_agent.md](docs/memory_agent.md)**: Memory system architecture
-- **[docs/rage_system.md](docs/rage_system.md)**: RAGE — Retrieval Augmented Generative Evolution
+- **[docs/memory_agent.md](docs/memory_agent.md)**: [Memory system](agents/memory_agent.py) architecture
+- **[docs/rage_system.md](docs/rage_system.md)**: [RAGE](agents/memory_pgvector.py) — Retrieval Augmented Generative Evolution
 - **[docs/pgvectorscale_integration.md](docs/pgvectorscale_integration.md)**: Vector database integration
 - **[docs/OLLAMA_VLLM_CLOUD_RESEARCH.md](docs/OLLAMA_VLLM_CLOUD_RESEARCH.md)**: Multi-model inference strategy
+- **[agents/machine_dreaming.py](agents/machine_dreaming.py)**: [machine.dreaming](https://github.com/AION-NET/machinedream) — 7-phase STM→LTM consolidation cycle
+- **[docs/BOOK_OF_MINDX.md](docs/BOOK_OF_MINDX.md)**: The Book of mindX — 17 chapters, living chronicle
 
 #### ⛓️ **Blockchain / [DAIO](docs/DAIO.md)**
 - **[daio/docs/INDEX.md](daio/docs/INDEX.md)**: DAIO contract documentation

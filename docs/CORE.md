@@ -63,10 +63,10 @@ The CORE system includes **15 foundational components** across three critical la
 │  │  └─ Health monitoring                                   │  │
 │  │                         ↓                               │  │
 │  │  MemoryAgent (Persistence) ←→ IDManagerAgent (Identity) │  │
-│  │  ├─ Timestamped records                                 │  │
-│  │  ├─ STM/LTM promotion                                   │  │
-│  │  ├─ Pattern analysis                                    │  │
-│  │  └─ Context retrieval                                   │  │
+│  │  ├─ Timestamped records (STM → LTM → archive)          │  │
+│  │  ├─ machine.dreaming (7-phase consolidation cycle)      │  │
+│  │  ├─ Pattern analysis + pgvector semantic search         │  │
+│  │  └─ Context retrieval + LTM awareness for perception    │  │
 │  │                         ↓                               │  │
 │  │  GuardianAgent (Security) ←→ SessionManager             │  │
 │  │  ├─ Access control                                      │  │

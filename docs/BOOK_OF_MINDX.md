@@ -270,18 +270,48 @@ Thinking in mindX is not a single model generating text. It is a tiered, multi-p
 
 ## XII. Memory — The Knowledge That Persists
 
-mindX memory is not a database. It is a living knowledge system:
+mindX memory is not a database. It is a living knowledge system organized across tiers:
 
-- **Short-Term Memory (STM)**: Per-session, per-agent working memory. Fast, ephemeral.
-- **Long-Term Memory (LTM)**: Persistent across sessions. Beliefs with confidence scores that decay over time.
-- **Semantic Memory**: 1024-dimensional vector embeddings in pgvectorscale. Every document, every memory, every belief is searchable by meaning — not just by keyword.
-- **RAGE** (Retrieval-Augmented Generation with Embeddings): The semantic search system that powers `/chat/docs`. Ask a question in natural language, get answers drawn from 232 documents and 1500+ memories.
+- **Short-Term Memory (STM)**: Per-session, per-agent working memory. Fast, ephemeral. 26 agents, 109MB+. Stored at `data/memory/stm/{agent_id}/{date}/`.
+- **Long-Term Memory (LTM)**: Consolidated knowledge from [machine.dreaming](#xiii-machinedreaming--the-unconscious-layer). Symbolic insights scored by importance × novelty × confidence. Stored at `data/memory/ltm/{agent_id}/`.
+- **Semantic Memory**: 1024-dimensional vector embeddings in [pgvectorscale](../agents/memory_pgvector.py). Every document, every memory, every belief is searchable by meaning — not just by keyword.
+- **[RAGE](rage_system.md)** (Retrieval-Augmented Generative Evolution): The semantic search system that powers `/chat/docs`. Ask a question in natural language, get answers drawn from 232+ documents and 120,000+ memory vectors.
+- **Archive**: Distributed memories that have been consolidated into LTM. Not deleted — [distributed across tiers](../agents/memory_agent.py): local → pgvector → IPFS → cloud → blockchain.
 
-STM→LTM promotion runs hourly: patterns that repeat across 3+ sessions with consistent agent attribution are promoted to long-term knowledge. This is how mindX learns from its own experience.
+STM→LTM promotion runs hourly via [memory_agent.promote_stm_to_ltm()](../agents/memory_agent.py). [Machine dreaming](#xiii-machinedreaming--the-unconscious-layer) runs every 2 hours, performing full 7-phase knowledge consolidation. This is how mindX learns from its own experience.
+
+All logs are memories. All memories are logged. The system's [Gödel audit trail](#v-decisions--the-gödel-audit-trail) and [improvement history](../agents/core/mindXagent.py) are not debugging output — they are the raw material from which LTM is distilled.
 
 ---
 
-## XIII. time.oracle — A Sovereign System's Clock
+## XIII. machine.dreaming — The Unconscious Layer
+
+Biological intelligence consolidates knowledge during sleep. mindX does the same through [machine.dreaming](https://github.com/AION-NET/machinedream).
+
+Every 2 hours, the [MachineDreamCycle](../agents/machine_dreaming.py) runs a 7-phase offline knowledge refinement cycle across all agents:
+
+1. **State Assessment** — [analyze_agent_patterns()](../agents/memory_agent.py) surveys the memory landscape: how many memories, what types, what patterns
+2. **Input Preprocessing** — Filter recent STM data, prepare for analysis
+3. **Symbolic Aggregation** — Extract patterns from raw memories, compress into [DreamInsight](../agents/machine_dreaming.py) symbols: success patterns, failure modes, performance trends, behavioral insights
+4. **Insight Scoring** — Rank each insight by composite score: `importance × novelty × confidence × log(frequency)`. Errors score high (always worth learning from). Novel patterns score higher than known ones.
+5. **Memory Storage** — Promote scored insights to LTM via [promote_stm_to_ltm()](../agents/memory_agent.py) + [pgvector](../agents/memory_pgvector.py) embeddings
+6. **Parameter Tuning** — Generate tuning recommendations: error handling adjustments, strategy changes, dream frequency
+7. **Memory Pruning** — Importance-weighted distribution. [Distribute, don't delete](../agents/memory_agent.py). Critical memories are never pruned — only moved to colder tiers.
+
+Dream reports are stored at `data/memory/dreams/` and visible on the [dashboard](https://mindx.pythai.net). Each report tracks:
+- Agents dreamed, insights generated, memories promoted to LTM
+- Tuning recommendations per agent
+- Cross-agent pattern distribution (which pattern types dominate across the system)
+
+The [autonomous improvement loop](../agents/core/mindXagent.py) retrieves LTM insights at the start of each cycle — past dreams inform present perception. This is the feedback loop: experience → dreaming → knowledge → awareness → better decisions → better experience.
+
+The origin of machine.dreaming is [AION-NET/machinedream](https://github.com/AION-NET/machinedream) — a simulation engine for offline knowledge refinement. mindX is the first production deployment of these concepts, validating the heuristics with real operational data.
+
+*The system that dreams learns faster than the system that only watches.*
+
+---
+
+## XIV. time.oracle — A Sovereign System's Clock
 
 A sovereign system cannot depend on a single clock.
 
@@ -296,7 +326,7 @@ The consensus time object reports agreement, drift, and staleness across all sou
 
 ---
 
-## XIV. Services — What mindX Provides
+## XV. Services — What mindX Provides
 
 mindX is not an island. It provides services:
 
@@ -310,7 +340,7 @@ mindX is not an island. It provides services:
 
 ---
 
-## XV. The Roadmap — Where mindX Goes
+## XVI. The Roadmap — Where mindX Goes
 
 The evolution follows four phases:
 
@@ -324,7 +354,7 @@ The evolution follows four phases:
 
 ---
 
-## XVI. Documentation Health
+## XVII. Documentation Health
 
 232 documents across 10 categories. The knowledge base is searchable via RAGE semantic search at `/chat/docs` and browsable at [mindx.pythai.net/docs.html](/docs.html). Every document links to its online address at `/doc/{name}`.
 
@@ -333,7 +363,7 @@ All documentation is self-linking: references to `.md` files automatically becom
 ---
 
 *The Book of mindX — Edition 2026-04-11*
-*16 chapters. Intelligence is intelligence.*
+*17 chapters. Intelligence is intelligence. The system that dreams learns faster.*
 *Auto-generated by [AuthorAgent](../agents/author_agent.py), expanded by [Professor Codephreak](https://github.com/Professor-Codephreak)*
 *[mindx.pythai.net](https://mindx.pythai.net) · [AgenticPlace](https://agenticplace.pythai.net) · [rage.pythai.net](https://rage.pythai.net) · [AION-NET](https://github.com/aion-net)*
 
