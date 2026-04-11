@@ -1,6 +1,6 @@
 AGENT: hostinger.vps
 VERSION: 1.0.0
-IMPLEMENTATION: pending
+IMPLEMENTATION: agents/hostinger_vps_agent.py
 CLASS: HostingerVPSAgent
 DOMAIN: infrastructure.hosting
 
