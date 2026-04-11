@@ -55,10 +55,21 @@ class BlueprintAgent:
         self.memory_agent = memory_agent
         self.base_gen_agent = base_gen_agent
         
-        self.llm_handler: Optional[LLMHandlerInterface] = self.model_registry.get_handler_for_purpose("reasoning")
+        self.llm_handler: Optional[LLMHandlerInterface] = None
+        try:
+            self.llm_handler = self.model_registry.get_handler_for_purpose("reasoning")
+        except Exception as e:
+            logger.warning(f"BlueprintAgent '{self.agent_id}' model_registry handler failed: {e}")
+
+        # Fallback: try Ollama handler directly if registry selection failed
+        if not self.llm_handler:
+            try:
+                self.llm_handler = self.model_registry.get_handler("ollama")
+            except Exception:
+                pass
 
         if not self.llm_handler:
-            logger.critical(f"BlueprintAgent '{self.agent_id}' could not acquire a reasoning LLM. Blueprint generation will be disabled.")
+            logger.warning(f"BlueprintAgent '{self.agent_id}' could not acquire a reasoning LLM. Will retry on first use.")
         else:
             logger.info(f"BlueprintAgent '{self.agent_id}' initialized. Using LLM: {self.llm_handler.provider_name}/{self.llm_handler.model_name_for_api}")
         

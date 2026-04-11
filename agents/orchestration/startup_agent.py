@@ -479,22 +479,25 @@ class StartupAgent:
             Dictionary with connection results
         """
         try:
-            # Check memory for previous Ollama connection
-            ollama_memory = await self.memory_agent.query_memory(
-                query="ollama connection configuration",
-                memory_type="ltm",
-                limit=5
-            )
-            
-            # Default to remembered connection: 10.0.0.155:18080
-            default_host = "10.0.0.155"
-            default_port = 18080
-            
-            # Try to find previous connection in memory
-            for memory_item in ollama_memory:
-                if "ollama" in memory_item.get("content", "").lower():
-                    # Try to extract host and port from memory
-                    content = str(memory_item.get("content", ""))
+            # Resolve Ollama connection from environment/config (memory_agent.query_memory does not exist)
+            import os as _os_startup
+            ollama_env = _os_startup.getenv("MINDX_LLM__OLLAMA__BASE_URL", "")
+
+            # Default connection — env var takes priority, then localhost
+            default_host = "localhost"
+            default_port = 11434
+            if ollama_env:
+                try:
+                    from urllib.parse import urlparse
+                    parsed = urlparse(ollama_env)
+                    default_host = parsed.hostname or default_host
+                    default_port = parsed.port or default_port
+                except Exception:
+                    pass
+
+            # Skip memory lookup (query_memory not available on MemoryAgent)
+            content = ""
+            if False:  # placeholder for future memory-based lookup
                     if "10.0.0.155" in content:
                         default_host = "10.0.0.155"
                     # Check for both 18080 and 108080 (legacy)
@@ -1216,17 +1219,15 @@ class StartupAgent:
         }
 
         try:
-            # Query memory for previous local model connections
-            local_model_memory = await self.memory_agent.query_memory(
-                query="local model connection ollama llama",
-                memory_type="ltm",
-                limit=20
-            )
-
+            # Discover local model endpoints from environment (query_memory not available)
+            import os as _os_local
             known_endpoints = set()
-            for memory_item in local_model_memory:
-                content = str(memory_item.get("content", ""))
-                # Extract endpoints
+            ollama_url = _os_local.getenv("MINDX_LLM__OLLAMA__BASE_URL", "http://localhost:11434")
+            known_endpoints.add(ollama_url)
+            known_endpoints.add("http://localhost:11434")
+            # Skip memory lookup — extract endpoints from known config
+            content = ""
+            if False:  # placeholder for future memory-based lookup
                 if "10.0.0.155" in content:
                     known_endpoints.add("http://10.0.0.155:108080")
                 if "localhost" in content or "127.0.0.1" in content:
@@ -1761,7 +1762,7 @@ Format as JSON with keys: suggestions (list), priorities, impacts, safe_to_apply
             # mindX.sh command options (including --replicate for self-improvement/blueprint from authorized agents)
             if not self.mindx_sh_commands or not self.mindx_sh_commands.get("commands"):
                 await self._load_startup_knowledge()
-            mindx_sh_commands = self.get_mindx_sh_commands()
+            mindx_sh_commands = self.mindx_sh_commands
             # Agent authority list: agents that have received keys (from registry + vault)
             agent_authority_list = await self._get_agent_authority_list()
 

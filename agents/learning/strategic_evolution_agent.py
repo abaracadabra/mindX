@@ -126,13 +126,23 @@ class StrategicEvolutionAgent:
         if self._initialized:
             return
 
-        # Select the best model for reasoning
-        self.llm_handler = self.model_registry.get_handler_for_purpose(
-            task_type=TaskType.REASONING,
-        )
+        # Select the best model for reasoning (with Ollama fallback)
+        try:
+            self.llm_handler = self.model_registry.get_handler_for_purpose(
+                task_type=TaskType.REASONING,
+            )
+        except Exception as e:
+            logger.warning(f"{self.log_prefix} model_registry handler failed: {e}")
+            self.llm_handler = None
 
         if not self.llm_handler:
-            logger.critical(f"{self.log_prefix} Could not acquire a reasoning LLM. SEA will be non-operational.")
+            try:
+                self.llm_handler = self.model_registry.get_handler("ollama")
+            except Exception:
+                pass
+
+        if not self.llm_handler:
+            logger.warning(f"{self.log_prefix} Could not acquire a reasoning LLM. SEA will retry on demand.")
             return
 
         # The SystemAnalyzerTool gets its monitor refs from the coordinator.
