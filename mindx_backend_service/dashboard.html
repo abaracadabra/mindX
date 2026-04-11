@@ -233,8 +233,13 @@ function render(d){
   let ag='';for(const a of(d.agents||[]))ag+=`<div class="r"><span>${rk(a.verification_tier??1)} ${a.entity_id}</span><span style="color:#58a6ff;font-size:8px">${sa(a.address)}</span></div>`;
   h+=`<div class="c w2"><div class="ct">agents ${(d.agents||[]).length}</div>${ag}</div>`;
   // godel + beliefs side by side
-  let gl='';(d.godel_choices||[]).forEach(g=>gl+=`<div class="r"><span style="color:#58a6ff">${g.agent}</span><span style="color:#3d424d">${g.type}</span></div>`);
-  h+=`<div class="c"><div class="ct">g&ouml;del</div>${gl||'<span style="color:#3d424d">-</span>'}</div>`;
+  let gl='';(d.godel_choices||[]).forEach(g=>{
+    const ts=g.timestamp?g.timestamp.slice(11,19):'';
+    const oc=g.outcome?` [${g.outcome}]`:'';
+    gl+=`<div class="r"><span style="color:#58a6ff">${g.agent}</span><span style="color:#3d424d">${g.type}${oc}</span></div>`;
+    if(g.chosen)gl+=`<div class="r"><span style="color:#7ee787;font-size:9px;padding-left:6px">&rarr; ${g.chosen}</span><span style="color:#3d424d;font-size:9px">${ts}</span></div>`;
+  });
+  h+=`<div class="c w2"><div class="ct">g&ouml;del choices</div>${gl||'<span style="color:#3d424d">-</span>'}</div>`;
   let bl='';(d.beliefs?.sample||[]).slice(0,4).forEach(b=>bl+=`<div class="r"><span style="color:#7ee787;font-size:8px">${b.key.replace('identity.map.','')}</span></div>`);
   h+=`<div class="c"><div class="ct">beliefs</div>${bl||'<span style="color:#3d424d">-</span>'}</div>`;
   // model performance

@@ -1175,7 +1175,7 @@ async def diagnostics_live_endpoint():
             for l in lines[-10:]:
                 try:
                     g = json.loads(l)
-                    godel.append({"timestamp": g.get("timestamp",""), "agent": g.get("source_agent","?"), "type": g.get("choice_type",""), "chosen": str(g.get("chosen",""))[:100]})
+                    godel.append({"timestamp": g.get("timestamp_utc", g.get("timestamp","")), "agent": g.get("source_agent","?"), "type": g.get("choice_type",""), "chosen": str(g.get("chosen_option", g.get("chosen","")))[:100], "rationale": str(g.get("rationale",""))[:80], "outcome": str(g.get("outcome",""))[:40]})
                 except Exception: pass
             godel.reverse()
     except Exception: pass
