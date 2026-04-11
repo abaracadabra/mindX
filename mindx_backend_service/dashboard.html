@@ -265,19 +265,16 @@ function render(d){
   h+=`<div class="c w2"><div class="ct">g&ouml;del choices</div>${gl||'<span style="color:#3d424d">-</span>'}</div>`;
   let bl='';(d.beliefs?.sample||[]).slice(0,4).forEach(b=>bl+=`<div class="r"><span style="color:#7ee787;font-size:8px">${b.key.replace('identity.map.','')}</span></div>`);
   h+=`<div class="c"><div class="ct">beliefs</div>${bl||'<span style="color:#3d424d">-</span>'}</div>`;
-  // model performance — tok/s, latency, token counts
+  // model performance — raw scientific values, no bias
   const mp=d.model_perf||[];
   if(mp.length){
     let mh='';
     let totalTokens=0;
     mp.slice(-8).forEach(m=>{
       totalTokens+=(m.tokens_est||0);
-      const tpsClr=m.tps>50?'#3fb950':m.tps>10?'#d29922':'#f85149';
-      const latClr=m.latency_ms<5000?'#3fb950':m.latency_ms<20000?'#d29922':'#f85149';
-      mh+=`<div class="r"><span style="color:#58a6ff;font-weight:600;min-width:100px">${m.model||'?'}</span><span style="color:${latClr}">${(m.latency_ms/1000).toFixed(1)}s</span><span style="color:${tpsClr};font-weight:700">${m.tps}t/s</span><span style="color:#4a5060">cpu:${m.cpu_at_query}%</span></div>`;
+      mh+=`<div class="r"><span style="color:#b0b8c4;font-weight:600;min-width:100px">${m.model||'?'}</span><span style="color:#8b949e">${m.latency_ms}ms</span><span style="color:#8b949e">${m.tps}t/s</span><span style="color:#6e7681">cpu:${m.cpu_at_query}%</span></div>`;
     });
-    const avgTps=mp.length>0?mp.reduce((s,m)=>s+(m.tps||0),0)/mp.length:0;
-    h+=`<div class="c w2"><div class="ct">model performance &middot; ${mp.length} queries &middot; avg ${avgTps.toFixed(1)} t/s &middot; ~${totalTokens} tokens</div>${mh}</div>`;
+    h+=`<div class="c w2"><div class="ct">model performance &middot; ${mp.length} queries &middot; ${totalTokens} tokens</div>${mh}</div>`;
   }
   // disk + database + RAGE embed
   const dd=d.disk_detail||{};const db=d.database||{};const re=d.rage_embed||{};

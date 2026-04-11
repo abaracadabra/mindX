@@ -164,27 +164,37 @@ async def test_vllm(prompt: str):
 
 
 def print_result(r):
-    """Print a single test result with comprehensive diagnostics."""
-    status_icon = "✓" if r.get("status") == "OK" else "✗"
-    tps = r.get("tok_per_sec", 0)
-    tokens = r.get("tokens", 0)
-    latency = r.get("latency_s", 0)
-    mem = r.get("mem_total_mb", "")
-    net_speed = r.get("net_speed_kbps", 0)
+    """Print raw scientific diagnostics — no bias, actual measurements.
+    cypherpunk2048 standard: precision to 18 decimal places where available."""
+    status = r.get("status", "?")
+    model = r.get("model", "?")
+    label = r.get("label", "?")
 
-    # Color coding for terminal
-    tps_str = f" {tps} tok/s" if tps else ""
-    tok_str = f" {tokens} tokens" if tokens else ""
-    mem_str = f" {mem}MB" if mem else ""
-    net_str = f" net:{net_speed:.0f}KB/s" if net_speed else ""
-    ttft_str = f" TTFT:{r.get('time_to_first_token_s', 0):.2f}s" if r.get("time_to_first_token_s") else ""
+    print(f"  [{label:15s}] {model}")
+    print(f"    status:           {status}")
 
-    print(f"  {status_icon} [{r['label']:15s}] {r['model']:30s} {latency:6.1f}s{tps_str}{tok_str}{ttft_str}{net_str}{mem_str}")
-    if r.get("status") == "OK":
-        resp = r.get('response', '')[:120]
-        print(f"    → {resp}")
-    elif r.get("status", "").startswith("HTTP") or "ERROR" in r.get("status", ""):
-        print(f"    → {r.get('response', r.get('status', ''))[:100]}")
+    if status == "OK":
+        print(f"    latency:          {r.get('latency_s', 0):.18f} s")
+        print(f"    tokens_generated: {r.get('tokens', 0)}")
+        print(f"    tokens_prompt:    {r.get('prompt_tokens', 0)}")
+        print(f"    tok_per_sec:      {r.get('tok_per_sec', 0):.18f}")
+        if r.get("time_to_first_token_s"):
+            print(f"    ttft:             {r.get('time_to_first_token_s', 0):.18f} s")
+        if r.get("eval_duration_s"):
+            print(f"    eval_duration:    {r.get('eval_duration_s', 0):.18f} s")
+        if r.get("net_speed_kbps"):
+            print(f"    net_speed:        {r.get('net_speed_kbps', 0):.18f} KB/s")
+        if r.get("response_bytes"):
+            print(f"    response_bytes:   {r.get('response_bytes', 0)}")
+        if r.get("mem_total_mb"):
+            print(f"    mem_rss:          {r.get('mem_total_mb', 0):.6f} MB")
+            print(f"    mem_delta:        {r.get('mem_delta_mb', 0):.6f} MB")
+        print(f"    response:         {r.get('response', '')[:150]}")
+    else:
+        if r.get("response"):
+            print(f"    detail:           {r.get('response', '')[:150]}")
+        print(f"    latency:          {r.get('latency_s', 0):.18f} s")
+    print()
 
 
 async def main():
@@ -297,32 +307,34 @@ async def main():
         cloud_results = [r for r in ok if r.get("label") == "cloud"]
         vllm_results = [r for r in ok if r.get("label") == "vLLM"]
 
+        # Objective aggregate metrics — raw measurements, no bias
         total_tokens = sum(r.get("tokens", 0) for r in ok)
-        avg_tps = sum(r.get("tok_per_sec", 0) for r in ok) / len(ok) if ok else 0
         total_bytes = sum(r.get("response_bytes", 0) for r in ok)
+        total_latency = sum(r.get("latency_s", 0) for r in ok)
 
-        print(f"\n  TOKEN METRICS:")
-        print(f"    Total tokens generated: {total_tokens}")
-        print(f"    Average tok/s: {avg_tps:.1f}")
-        print(f"    Total response data: {total_bytes / 1024:.1f} KB")
+        print(f"\n  AGGREGATE METRICS (objective)")
+        print(f"    models_tested:    {len(ok)}")
+        print(f"    total_tokens:     {total_tokens}")
+        print(f"    total_bytes:      {total_bytes}")
+        print(f"    total_latency:    {total_latency:.18f} s")
+        if ok:
+            print(f"    mean_latency:     {total_latency / len(ok):.18f} s")
+            print(f"    mean_tok_per_sec: {sum(r.get('tok_per_sec', 0) for r in ok) / len(ok):.18f}")
+            print(f"    min_latency:      {min(r.get('latency_s', 999) for r in ok):.18f} s ({fastest['model']})")
+            print(f"    max_latency:      {max(r.get('latency_s', 0) for r in ok):.18f} s ({slowest['model']})")
 
-        if local_results:
-            avg_local = sum(r["latency_s"] for r in local_results) / len(local_results)
-            avg_local_tps = sum(r.get("tok_per_sec", 0) for r in local_results) / len(local_results)
-            avg_local_ttft = sum(r.get("time_to_first_token_s", 0) for r in local_results) / len(local_results)
-            avg_local_mem = sum(r.get("mem_total_mb", 0) for r in local_results) / len(local_results)
-            print(f"\n  OLLAMA LOCAL ({len(local_results)} models):")
-            print(f"    Avg latency: {avg_local:.1f}s | Avg tok/s: {avg_local_tps:.1f} | Avg TTFT: {avg_local_ttft:.2f}s | Avg mem: {avg_local_mem:.0f}MB")
-        if cloud_results:
-            avg_cloud = sum(r["latency_s"] for r in cloud_results) / len(cloud_results)
-            avg_cloud_tps = sum(r.get("tok_per_sec", 0) for r in cloud_results) / len(cloud_results)
-            avg_cloud_net = sum(r.get("net_speed_kbps", 0) for r in cloud_results) / len(cloud_results)
-            print(f"\n  OLLAMA CLOUD ({len(cloud_results)} models):")
-            print(f"    Avg latency: {avg_cloud:.1f}s | Avg tok/s: {avg_cloud_tps:.1f} | Avg net: {avg_cloud_net:.1f} KB/s")
-        if vllm_results:
-            v = vllm_results[0]
-            print(f"\n  VLLM:")
-            print(f"    Latency: {v['latency_s']}s | Tokens: {v.get('tokens',0)} | Mem: {v.get('mem_total_mb', '?')}MB")
+        for group_label, group_results in [("OLLAMA_LOCAL", local_results), ("OLLAMA_CLOUD", cloud_results), ("VLLM", vllm_results)]:
+            if group_results:
+                n = len(group_results)
+                print(f"\n  {group_label} ({n} model{'s' if n > 1 else ''}):")
+                print(f"    mean_latency:     {sum(r['latency_s'] for r in group_results) / n:.18f} s")
+                print(f"    mean_tok_per_sec: {sum(r.get('tok_per_sec', 0) for r in group_results) / n:.18f}")
+                if any(r.get("time_to_first_token_s") for r in group_results):
+                    print(f"    mean_ttft:        {sum(r.get('time_to_first_token_s', 0) for r in group_results) / n:.18f} s")
+                if any(r.get("net_speed_kbps") for r in group_results):
+                    print(f"    mean_net_speed:   {sum(r.get('net_speed_kbps', 0) for r in group_results) / n:.18f} KB/s")
+                if any(r.get("mem_total_mb") for r in group_results):
+                    print(f"    mean_mem_rss:     {sum(r.get('mem_total_mb', 0) for r in group_results) / n:.6f} MB")
 
     # Save results
     results_file = os.path.join(os.path.dirname(__file__), "..", "data", "inference_test_results.json")
