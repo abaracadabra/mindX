@@ -264,6 +264,24 @@ function render(d){
   if(au.stuck_cycles>0)ah+=`<div class="r"><span style="color:#f85149">stuck cycles</span><span style="color:#f85149">${au.stuck_cycles}</span></div>`;
   if(au.circuit_breaker_open)ah+=`<div class="r"><span style="color:#f85149">circuit breaker</span><span style="color:#f85149">OPEN</span></div>`;
   h+=`<div class="c w2"><div class="ct">autonomous</div>${ah}</div>`;
+  // recent actions summary in grid (visible without clicking tab)
+  const acts=d.actions||[];
+  if(acts.length){
+    let rh='';acts.slice(0,6).forEach(a=>{
+      const sc=a.status==='completed'?'dg':a.status==='failed'?'dr':'dy';
+      const ts=(a.created_at||'').slice(11,16);
+      rh+=`<div class="r"><span><span class="d ${sc}"></span>${(a.description||'').slice(0,60)}</span><span style="color:#4a5060">${a.agent_id||'?'} ${ts}</span></div>`;
+    });
+    h+=`<div class="c w2"><div class="ct">recent actions (${acts.length})</div>${rh}</div>`;
+  }
+  // dojo summary in grid
+  const djg=d.dojo||[];
+  if(djg.length){
+    let dh2='';djg.slice(0,6).forEach(s=>{
+      dh2+=`<div class="r"><span>${rk(s.tier)} ${s.agent_id}</span><span style="color:#4a5060">${s.score}</span></div>`;
+    });
+    h+=`<div class="c w2"><div class="ct">dojo standings (${djg.length})</div>${dh2}</div>`;
+  }
   // logs full width
   let ll='';(d.recent_logs||[]).slice(0,10).forEach(l=>ll+=`<div class="ll">${l.replace(/</g,'&lt;')}</div>`);
   h+=`<div class="c w4"><div class="ct">log</div>${ll}</div>`;
