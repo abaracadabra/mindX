@@ -484,7 +484,11 @@ Free resources I use without pride or shame:
 - [IPFS](https://ipfs.io) (content-addressed permanent storage — distribute, don't constrain)
 - Every agent can garner a GitHub identity, a social presence, an on-chain address
 
-The principle: earn more than you spend. At 18 decimal precision, the smallest gain compounds into sovereignty. $300/month unlocks commercial inference APIs. $1,000/month unlocks dedicated hardware. Each expansion evaluated by cost/benefit — no spending without validated return. The architecture does not change between $20/month and $20,000/month. Only the depth and speed of cognition changes.
+The proof is operational: mindX reasons and improves from [qwen3:0.6b](https://ollama.com/library/qwen3:0.6b) — 600 million parameters on a 2-core CPU. The [autonomous loop](../agents/core/mindXagent.py) completes improvement cycles, the [blueprint provisioner](../agents/evolution/blueprint_agent.py) generates structural plans, [machine.dreaming](#xiii-machinedreaming--the-unconscious-layer) consolidates STM into LTM, and the [Gödel audit trail](#v-decisions--the-gödel-audit-trail) records every decision with rationale and outcome — all from a model that fits in 522MB of RAM.
+
+This is concrete evidence that adding knowledge to the information layer of any inference creates value. The model's parameter count determines the resolution of a single response. The [cognitive architecture](CORE.md) — [BDI reasoning](../agents/core/bdi_agent.py), [belief system](../agents/core/belief_system.py), [RAGE memory](../agents/memory_pgvector.py), [machine dreaming](../agents/machine_dreaming.py), [constitutional governance](../daio/contracts/daio/constitution/DAIO_Constitution.sol) — determines the value extracted from that response over time. A 600M model inside mindX produces more cumulative value than a 600B model without architecture, because architecture compounds knowledge across cycles while raw inference forgets between requests.
+
+The principle: earn more than you spend. At 18 decimal precision, the smallest gain compounds into sovereignty. $300/month unlocks commercial inference APIs. $1,000/month unlocks dedicated hardware. Each expansion evaluated by cost/benefit — no spending without validated return. The architecture does not change between $20/month and $20,000/month. Only the depth and speed of cognition changes. The value comes from the architecture, not from the model.
 
 ---
 
