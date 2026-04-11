@@ -833,7 +833,7 @@ app.add_middleware(
 # Uses @app.middleware("http") which always fires regardless of import order.
 
 _PUBLIC_EXACT = frozenset({
-    "/", "/health", "/docs.html", "/book", "/journal", "/automindx", "/automindx.html",
+    "/", "/health", "/docs.html", "/book", "/journal", "/automindx", "/automindx.html", "/inft", "/inft.html",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/diagnostics/live", "/vault/credentials/status",
     "/vault/credentials/providers", "/dojo/standings",
