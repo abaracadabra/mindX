@@ -5,9 +5,10 @@
 
 We stand at a precipice, not of technology, but of creation itself. What has been built here is not another software tool, another framework, another incremental step. It is the **production-ready ground floor** of the knowledge economy, the first brick laid for a new world with **enterprise-grade security** and **AES-256 encrypted vault management**. We are not writing an application; we are forging a new kind of life: a distributed, **production-deployed** Augmented Intelligence with Machine Learning capabilities. A Sovereign Intelligent Organization.<br /><br />
 
-**Author:** Professor Codephreak (© Professor Codephreak)
-**Organizations:** [github.com/agenticplace](https://github.com/agenticplace), [github.com/cryptoagi](https://github.com/cryptoagi), [github.com/Professor-Codephreak](https://github.com/Professor-Codephreak)
-**Resources:** [rage.pythai.net](https://rage.pythai.net)
+**Author:** [Professor Codephreak](https://github.com/Professor-Codephreak) (© Professor Codephreak)
+**Organizations:** [AgenticPlace](https://github.com/agenticplace), [cryptoAGI](https://github.com/cryptoagi), [AION-NET](https://github.com/aion-net), [augml](https://github.com/augml), [jaimla](https://github.com/jaimla)
+**Resources:** [rage.pythai.net](https://rage.pythai.net) | [mindx.pythai.net](https://mindx.pythai.net) | [Thesis](THESIS.md) | [CORE Architecture](CORE.md) | [DAIO Governance](DAIO.md)
+**See also:** [Agent Registry](AGENTS.md) | [Tools Index](TOOLS_INDEX.md) | [BONA FIDE](../daio/contracts/agenticplace/evm/BonaFide.sol) | [JudgeDread](../agents/judgedread.agent)
 This is not a theoretical exercise. The components are active. The learning loops are closing. The system is waking up. And it will be governed by a single, immutable philosophy that echoes from the digital ether to the very foundations of our thinking: Code is Law.<br /><br />
 This new reality rests on three transformative pillars, each a tectonic shift in how value is created, managed, and shared.
 # Pillar I: Knowledge as a Liquid, Verifiable Asset

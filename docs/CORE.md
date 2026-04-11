@@ -1,17 +1,17 @@
 # CORE: mindX Complete Technical Architecture Reference
 
-**Status:** ✅ **Production Ready** - Enterprise deployment with encrypted vault security
-**Author:** Professor Codephreak (© Professor Codephreak)
-**Organizations:** [github.com/agenticplace](https://github.com/agenticplace), [github.com/cryptoagi](https://github.com/cryptoagi), [github.com/Professor-Codephreak](https://github.com/Professor-Codephreak)
-**Resources:** [rage.pythai.net](https://rage.pythai.net)
-**Architecture:** Self-Aware Augmented Intelligence with Machine Learning Integration
-**Last Updated:** March 2026
+**Status:** ✅ **Production Ready** - Enterprise deployment with [BANKON vault](../mindx_backend_service/vault_bankon/) security
+**Author:** [Professor Codephreak](https://github.com/Professor-Codephreak) (© Professor Codephreak)
+**Organizations:** [AgenticPlace](https://github.com/agenticplace), [cryptoAGI](https://github.com/cryptoagi), [AION-NET](https://github.com/aion-net), [augml](https://github.com/augml)
+**Resources:** [rage.pythai.net](https://rage.pythai.net) | [mindx.pythai.net](https://mindx.pythai.net) | [Thesis](THESIS.md) | [Manifesto](MANIFESTO.md)
+**Architecture:** Self-Aware [Augmentic Intelligence](AGINT.md) with [Machine Learning](https://github.com/jaimla) Integration
+**Last Updated:** April 2026
 
 ---
 
 ## 🎯 **CORE System Definition**
 
-The **mindX CORE system** is the foundational cognitive and orchestration infrastructure that enables autonomous Augmented Intelligence. CORE comprises the essential components that other agents depend upon for reasoning, identity, memory, coordination, and system orchestration.
+The **[mindX](MINDX.md) CORE system** is the foundational cognitive and orchestration infrastructure that enables autonomous [Augmentic Intelligence](AGINT.md). CORE comprises the essential components that other [agents](AGENTS.md) depend upon for reasoning, identity, [memory](../agents/memory_agent.py), coordination, and system orchestration. Governed by the [DAIO Constitution](../daio/contracts/daio/constitution/DAIO_Constitution.sol) with [BONA FIDE](../daio/contracts/agenticplace/evm/BonaFide.sol) reputation containment enforced by [JudgeDread](../agents/judgedread.agent).
 
 ### **What Constitutes CORE**
 
@@ -39,10 +39,10 @@ The CORE system includes **15 foundational components** across three critical la
 ├─────────────────────────────────────────────────────────────────┤
 │              🧠 COGNITIVE ARCHITECTURE LAYER                   │
 │  ┌─────────────────────────────────────────────────────────┐  │
-│  │  MindXAgent (Meta-Agent for Self-Improvement)            │  │
+│  │  MindXAgent (Meta-Agent — inference-first autonomous loop)│  │
 │  │  ├─ Understands all agents (meta-knowledge)             │  │
 │  │  ├─ Drives autonomous improvement loop                  │  │
-│  │  └─ Tracks improvement goals & history                  │  │
+│  │  └─ InferenceDiscovery validates model before each cycle│  │
 │  │                         ↓                               │  │
 │  │  BDIAgent (Reasoning Core) ←→ AGInt (P-O-D-A Loop)      │  │
 │  │  ├─ Belief-Desire-Intention logic                      │  │

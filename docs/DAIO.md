@@ -1,8 +1,14 @@
 # DAIO: Decentralized Autonomous Intelligent Organization - Complete Blockchain Integration Strategy
 
+**See also:** [Manifesto](MANIFESTO.md) | [CORE Architecture](CORE.md) | [Thesis](THESIS.md) | [Agent Registry](AGENTS.md)
+**Contracts:** [DAIO Constitution](../daio/contracts/daio/constitution/DAIO_Constitution.sol) | [Treasury](../daio/contracts/daio/treasury/Treasury.sol) | [KnowledgeHierarchy](../daio/contracts/daio/governance/KnowledgeHierarchyDAIO.sol) | [IDNFT](../daio/contracts/daio/identity/IDNFT.sol)
+**AgenticPlace:** [BonaFide](../daio/contracts/agenticplace/evm/BonaFide.sol) | [IdentityRegistry](../daio/contracts/agenticplace/evm/IdentityRegistryUpgradeable.sol) | [ReputationRegistry](../daio/contracts/agenticplace/evm/ReputationRegistryUpgradeable.sol) | [Algorand contracts](../daio/contracts/algorand/)
+**Enforcement:** [JudgeDread](../agents/judgedread.agent) (reputation overseer) | [AION](../agents/system.aion.agent) (system agent, contained by BONA FIDE)
+**Toolchain:** [SolidityFoundryAgent](../agents/solidity.foundry.agent) | [SolidityHardhatAgent](../agents/solidity.hardhat.agent)
+
 ## Executive Summary
 
-The **Decentralized Autonomous Intelligent Organization (DAIO)** represents the blockchain-native governance and economic layer for mindX, enabling seamless orchestration of autonomous agents with cryptographic identity, on-chain governance, and sovereign economic operations. This document provides a comprehensive technical and strategic blueprint for integrating DAIO into the mindX orchestration system, leveraging insights from **THOT** (Temporal Hierarchical Optimization Technology) and extending mindX's capabilities through **FinancialMind** as a self-funding economic engine.
+The **Decentralized Autonomous Intelligent Organization (DAIO)** represents the blockchain-native governance and economic layer for [mindX](MINDX.md), enabling seamless orchestration of autonomous [agents](AGENTS.md) with cryptographic identity, on-chain governance, and sovereign economic operations. This document provides a comprehensive technical and strategic blueprint for integrating DAIO into the [mindX orchestration system](CORE.md), leveraging insights from **THOT** (Temporal Hierarchical Optimization Technology) and extending mindX's capabilities through **FinancialMind** as a self-funding economic engine.
 
 ---
 
@@ -10,7 +16,7 @@ The **Decentralized Autonomous Intelligent Organization (DAIO)** represents the 
 
 ### 1.1 Core Philosophy: Code is Law
 
-DAIO implements the foundational principle that **Code is Law** - governance rules, economic policies, and agent behaviors are encoded in immutable smart contracts, creating a mathematically incorruptible system of checks and balances.
+DAIO implements the foundational principle that **Code is Law** — governance rules, economic policies, and agent behaviors are encoded in immutable smart contracts ([DAIO_Constitution.sol](../daio/contracts/daio/constitution/DAIO_Constitution.sol)), creating a mathematically incorruptible system of checks and balances. [BONA FIDE](../daio/contracts/agenticplace/evm/BonaFide.sol) provides reputation-based privilege containment: agents hold BONA FIDE to operate, and [clawback](../daio/contracts/algorand/bonafide.algo.ts) revokes privilege without a kill switch.
 
 ### 1.2 Governance Model
 

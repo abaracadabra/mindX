@@ -1,4 +1,12 @@
-This dissertation advances a novel paradigm of augmentic intelligence through the development of mindX, a self-building cognitive architecture that integrates Darwinian principles of adaptive variation and selection with Gödelian self-referential incompleteness. Unlike conventional artificial intelligence systems, which rely on externally designed optimization goals and static architectures, mindX demonstrates how recursive self-modification and evolutionary feedback can generate open-ended, adaptive intelligence. By uniting formal theoretical analysis with an implemented prototype, this work establishes a defendable framework for self-constructive cognition, contributing both to the epistemology of artificial intelligence and to the engineering of systems capable of continuous, autonomous cognitive growth.
+# mindX: A Self-Building Cognitive Architecture
+
+**Author:** [Professor Codephreak](https://github.com/Professor-Codephreak) (© Professor Codephreak)
+**Implementation:** [CORE Architecture](CORE.md) | [Manifesto](MANIFESTO.md) | [DAIO Governance](DAIO.md) | [Agent Registry](AGENTS.md)
+**Live:** [mindx.pythai.net](https://mindx.pythai.net) | **Origins:** [rage.pythai.net](https://rage.pythai.net) | [AION-NET](https://github.com/aion-net) | [augml](https://github.com/augml)
+
+---
+
+This dissertation advances a novel paradigm of [augmentic intelligence](AGINT.md) through the development of [mindX](MINDX.md), a self-building cognitive architecture that integrates Darwinian principles of adaptive variation and selection with Gödelian self-referential incompleteness. Unlike conventional artificial intelligence systems, which rely on externally designed optimization goals and static architectures, mindX demonstrates how recursive self-modification and evolutionary feedback can generate open-ended, adaptive intelligence. By uniting formal theoretical analysis with an implemented prototype, this work establishes a defendable framework for self-constructive cognition, contributing both to the epistemology of artificial intelligence and to the engineering of systems capable of continuous, autonomous cognitive growth.
 
 
 2.1 Introduction
