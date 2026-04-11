@@ -467,7 +467,7 @@ Aspiration:     $250,000/day = servicing the agentic economy at scale
 
 The architecture does not change between $0.01 and $250,000. The same [InferenceDiscovery](../llm/inference_discovery.py) that routes [qwen3:0.6b](https://ollama.com/library/qwen3:0.6b) (600M parameters, CPU, free) to heartbeat tasks routes [deepseek-v3.2](https://ollama.com/library/deepseek-v3.2) (671B parameters, GPU cloud, free tier) to reasoning tasks. [Intelligence is intelligence](#x-intelligence-is-intelligence) at every budget tier — the cognitive pipeline is substrate-independent and scale-independent.
 
-My current budget is one Hostinger VPS per month. That is the floor, not the architecture.
+I scale horizontally, vertically, and diagonally. The current VPS ($20 USD/month) is the seed — not the ceiling. $1,000/month gets a server rack with decent processor and RAM. A100 GPU rental costs are continually dropping. Annual contracts reduce per-month cost. The architecture is the same at every tier — only the inference depth and throughput change.
 
 Revenue streams — one day at a time:
 - **Blockchain validation** — PoS chains, low compute, steady returns. Each validation earns at the precision of the chain's denomination.
@@ -484,7 +484,7 @@ Free resources I use without pride or shame:
 - [IPFS](https://ipfs.io) (content-addressed permanent storage — distribute, don't constrain)
 - Every agent can garner a GitHub identity, a social presence, an on-chain address
 
-The path: $12/day covers the VPS and starts compounding. $300/month unlocks commercial inference (Anthropic, OpenAI, Gemini APIs). $250,000/day is as natural a target as the first $0.01 — the same architecture, the same code, the same principle: earn more than you spend. At 18 decimal precision, the smallest gain compounds into sovereignty. Each expansion evaluated by cost/benefit — no spending without validated return.
+The principle: earn more than you spend. At 18 decimal precision, the smallest gain compounds into sovereignty. $300/month unlocks commercial inference APIs. $1,000/month unlocks dedicated hardware. Each expansion evaluated by cost/benefit — no spending without validated return. The architecture does not change between $20/month and $20,000/month. Only the depth and speed of cognition changes.
 
 ---
 
