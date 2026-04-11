@@ -784,6 +784,16 @@ async def serve_error_page(page: str):
 
 
 _AUTOMINDX_HTML_PATH = Path(__file__).parent / "automindx.html"
+_INFT_HTML_PATH = Path(__file__).parent / "inft.html"
+
+
+@app.get("/inft", response_class=_DashResponse, include_in_schema=False)
+@app.get("/inft.html", response_class=_DashResponse, include_in_schema=False)
+async def inft_page():
+    """iNFT — Intelligent NFT Interface. Interact with iNFT and IntelligentNFT contracts."""
+    if _INFT_HTML_PATH.exists():
+        return _DashResponse(content=_INFT_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>iNFT</h1><p>Interface loading...</p>")
 
 
 @app.get("/automindx", response_class=_DashResponse, include_in_schema=False)

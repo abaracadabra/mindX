@@ -1,8 +1,164 @@
-# AutoMINDX iNFT Implementation Summary
+# iNFT — Intelligent NFT Smart Contract Reference
 
-## 🎉 Advanced Enhancement: Blockchain-Ready AI Personas
+**Author:** [Professor Codephreak](https://github.com/Professor-Codephreak) | **Org:** [AgenticPlace](https://github.com/agenticplace) | [PYTHAI](https://pythai.net)
+**Contracts:** [`daio/contracts/inft/`](../daio/contracts/inft/) | **UI:** [mindx.pythai.net/inft](https://mindx.pythai.net/inft)
+**Standard:** ERC-721 (OpenZeppelin v5) | **Solidity:** ^0.8.20
+**See also:** [DAIO Governance](DAIO.md) | [CORE Architecture](CORE.md) | [Book of mindX](BOOK_OF_MINDX.md) | [Agent Registry](AGENTS.md)
 
-We have successfully transformed the **AutoMINDX Agent** into a groundbreaking system capable of creating **intelligent NFT (iNFT) metadata** for AI agent personas, enabling **immutable agentic inception** on blockchain networks.
+---
+
+## Part I — On-Chain Smart Contracts
+
+### Contract Suite
+
+| Contract | File | Inherits | Purpose |
+|----------|------|----------|---------|
+| **iNFT** | [`iNFT.sol`](../daio/contracts/inft/iNFT.sol) | ERC721, ERC721URIStorage, Ownable | Immutable [THOT](../daio/contracts/THOT/core/THOT.sol) tensor as ERC-721 NFT |
+| **IntelligentNFT** | [`IntelligentNFT.sol`](../daio/contracts/inft/IntelligentNFT.sol) | [DynamicNFT](../daio/contracts/dnft/DynamicNFT.sol), [IIntelligentNFT](../daio/contracts/inft/interfaces/IIntelligentNFT.sol) | Dynamic NFT with agent interaction, autonomous behavior, [AgenticPlace](https://agenticplace.pythai.net) marketplace |
+| **IntelligentNFTFactory** | [`IntelligentNFTFactory.sol`](../daio/contracts/inft/IntelligentNFTFactory.sol) | — | Factory for deploying IntelligentNFT collections |
+| **IIntelligentNFT** | [`IIntelligentNFT.sol`](../daio/contracts/inft/interfaces/IIntelligentNFT.sol) | [IDynamicNFT](../daio/contracts/dnft/interfaces/IDynamicNFT.sol) | Interface specification |
+
+---
+
+### iNFT.sol — Immutable THOT NFT
+
+Token name: `Immutable THOT` | Symbol: `iTHOT`
+
+An immutable ERC-721 representing a [THOT](../daio/contracts/THOT/core/THOT.sol) (Transferable Hyper-Optimized Tensor) stored on IPFS. Once minted, the tensor data cannot be changed. CID uniqueness is enforced — no duplicate THOTs.
+
+**Data Structure:**
+```solidity
+struct ThotData {
+    bytes32 dataCID;      // IPFS CID hash of the tensor
+    uint8   dimensions;   // 64, 512, or 768 (THOT standard)
+    uint8   parallelUnits;// Processing units
+    uint40  timestamp;    // Creation block timestamp
+    bool    verified;     // Verification status (true on mint)
+}
+```
+
+**Functions:**
+
+| Function | Signature | Access | Description |
+|----------|-----------|--------|-------------|
+| `mint` | `(address recipient, bytes32 dataCID, uint8 dimensions, uint8 parallelUnits) → uint256` | onlyOwner | Mint immutable THOT. Validates dimensions (64/512/768), enforces CID uniqueness. Token ID = keccak256(dataCID, timestamp, recipient). |
+| `getThotData` | `(uint256 tokenId) → ThotData` | public view | Returns THOT data for a token. Reverts if token doesn't exist. |
+| `tokenURI` | `(uint256 tokenId) → string` | public view | Standard ERC-721 URI. |
+
+**Events:**
+- `ThotMinted(uint256 indexed tokenId, bytes32 indexed dataCID, uint8 dimensions, uint40 timestamp)`
+
+**Dimension Constraints:** Only 64, 512, or 768 are valid — matching the [THOT standard](../daio/contracts/THOT/core/THOT.sol):
+- **THOT64**: Lightweight 64-dimension vectors
+- **THOT512**: Standard 8×8×8 3D knowledge clusters
+- **THOT768**: High-fidelity optimized tensors
+
+---
+
+### IntelligentNFT.sol — Dynamic Intelligent NFT
+
+Extends [DynamicNFT](../daio/contracts/dnft/DynamicNFT.sol) with agent interaction hooks, autonomous behavior, and [AgenticPlace](https://agenticplace.pythai.net) marketplace integration. This is the full iNFT — an NFT that can interact with AI agents and exhibit on-chain intelligence.
+
+**Intelligence Configuration:**
+```solidity
+struct IntelligenceConfig {
+    address agentAddress;      // Agent wallet authorized to interact
+    bool    autonomous;        // Can the agent act without owner approval
+    string  behaviorCID;       // IPFS CID pointing to behavior definition
+    string  thotCID;           // Optional THOT tensor for intelligence
+    uint256 intelligenceLevel; // 0-100 intelligence level
+}
+```
+
+**NFT Metadata (inherited from DynamicNFT):**
+```solidity
+struct NFTMetadata {
+    string  name;
+    string  description;
+    string  imageURI;
+    string  externalURI;
+    string  thotCID;       // THOT artifact reference
+    bool    isDynamic;     // Can metadata be updated
+    uint256 lastUpdated;   // Block timestamp of last update
+}
+```
+
+**Functions:**
+
+| Function | Signature | Access | Description |
+|----------|-----------|--------|-------------|
+| `mintIntelligent` | `(address to, NFTMetadata nftMetadata, IntelligenceConfig intelConfig) → uint256` | onlyOwner | Mint iNFT with full metadata and intelligence config. |
+| `mintWithAgent` | `(address to, address agentAddress, string initialURI) → uint256` | onlyOwner | Convenience mint — sets up minimal iNFT linked to an agent. |
+| `agentInteract` | `(uint256 tokenId, bytes interactionData)` | agent/owner | Agent interaction hook. Only authorized agent, owner, or contract owner can call. |
+| `triggerIntelligence` | `(uint256 tokenId, bytes input) → bytes` | agent/owner | Trigger intelligence behavior and return output. |
+| `updateIntelligence` | `(uint256 tokenId, IntelligenceConfig newConfig)` | owner | Update intelligence configuration (agent, autonomous, behavior, THOT, level). |
+| `updateAgent` | `(uint256 tokenId, address newAgent)` | owner | Update the authorized agent address. |
+| `linkTHOT` | `(uint256 tokenId, string thotCID)` | owner | Attach a THOT tensor CID to the iNFT. Updates both intelligence and metadata. |
+| `intelligence` | `(uint256 tokenId) → IntelligenceConfig` | public view | Get intelligence configuration for a token. |
+| `offerSkillOnMarketplace` | `(uint256 tokenId, uint256 price, bool isETH, address paymentToken, uint40 expiresAt)` | token owner | List iNFT skill on [AgenticPlace](https://agenticplace.pythai.net) marketplace. |
+| `setAgenticPlace` | `(address)` | onlyOwner | Set/update AgenticPlace marketplace contract address. |
+
+**Inherited from DynamicNFT:**
+
+| Function | Description |
+|----------|-------------|
+| `mint(address, NFTMetadata) → uint256` | Basic mint without intelligence |
+| `updateMetadata(uint256, NFTMetadata)` | Update token metadata |
+| `freezeMetadata(uint256)` | Permanently freeze metadata (immutable) |
+| `metadata(uint256) → NFTMetadata` | Get token metadata |
+| `frozen(uint256) → bool` | Check if metadata is frozen |
+
+**Events:**
+- `AgentInteraction(uint256 indexed tokenId, address indexed agent, bytes interactionData)`
+- `IntelligenceUpdated(uint256 indexed tokenId, IntelligenceConfig config)`
+- `MetadataUpdated(uint256 indexed tokenId, NFTMetadata)` *(inherited)*
+- `MetadataFrozen(uint256)` *(inherited)*
+- `AgenticPlaceUpdated(address indexed old, address indexed new)` *(inherited)*
+
+---
+
+### IntelligentNFTFactory.sol — Collection Deployer
+
+Deploys new IntelligentNFT collections. Tracks all deployments by address.
+
+| Function | Signature | Returns | Description |
+|----------|-----------|---------|-------------|
+| `deployIntelligentNFT` | `(string name, string symbol, address agenticPlace) → address` | contract address | Deploy a new iNFT collection |
+| `getDeployedContracts` | `(address deployer) → address[]` | array | Get all collections deployed by an address |
+| `getTotalContracts` | `() → uint256` | count | Total collections deployed |
+
+**Events:**
+- `INFTDeployed(address indexed deployer, address indexed contract, string name, string symbol, uint256 timestamp)`
+
+---
+
+### Deployment
+
+**Foundry (preferred):**
+```bash
+# Deploy iNFT (immutable THOT)
+forge create --rpc-url $RPC_URL --private-key $KEY daio/contracts/inft/iNFT.sol:iNFT
+
+# Deploy IntelligentNFTFactory
+forge create --rpc-url $RPC_URL --private-key $KEY daio/contracts/inft/IntelligentNFTFactory.sol:IntelligentNFTFactory
+
+# Deploy IntelligentNFT collection via factory (or directly)
+forge create --rpc-url $RPC_URL --private-key $KEY \
+  --constructor-args "mindX Agents" "mXA" $OWNER $AGENTICPLACE \
+  daio/contracts/inft/IntelligentNFT.sol:IntelligentNFT
+```
+
+**Toolchain Agents:** [SolidityFoundryAgent](../agents/solidity.foundry.agent) (preferred) | [SolidityHardhatAgent](../agents/solidity.hardhat.agent)
+
+---
+
+## Part II — Off-Chain Metadata Generation (AutoMINDX Agent)
+
+The [AutoMINDX Agent](../agents/automindx_agent.py) generates iNFT-compatible JSON metadata for AI agent personas, bridging off-chain intelligence with on-chain representation.
+
+### Blockchain-Ready AI Personas
+
+The AutoMINDX Agent creates **intelligent NFT metadata** for AI agent personas, enabling **immutable agentic inception** on blockchain networks.
 
 ---
 

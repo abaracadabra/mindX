@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iNFT — Intelligent NFT Interface | mindX</title>
+<meta name="description" content="Interact with iNFT and IntelligentNFT smart contracts. Mint immutable THOTs, deploy intelligent agent NFTs, manage intelligence configurations. Powered by mindX.">
+<meta property="og:title" content="iNFT — Intelligent NFT Interface | mindX">
+<meta property="og:url" content="https://mindx.pythai.net/inft">
+<meta property="og:type" content="website">
+<link rel="icon" href="/favicon.ico">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter','SF Pro Text',system-ui,sans-serif;background:#050810;color:#b0b8c4;font-size:13px;min-height:100vh}
+.wrap{max-width:1000px;margin:0 auto;padding:20px}
+.hdr{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid rgba(26,31,46,.6);margin-bottom:24px}
+.hdr h1{font-size:18px;color:#e6edf3;letter-spacing:.5px}.hdr h1 b{color:#58a6ff}
+.hdr .nav{display:flex;gap:12px;font-size:11px}
+.hdr .nav a{color:#6e7681;text-decoration:none;transition:color .2s}.hdr .nav a:hover{color:#58a6ff}
+.badge{font-size:10px;padding:2px 8px;border-radius:6px;background:rgba(13,51,33,.9);color:#3fb950;border:1px solid #238636}
+
+.tabs{display:flex;gap:1px;margin-bottom:20px;background:rgba(20,24,32,.4);border-radius:8px;overflow:hidden}
+.tab{flex:1;padding:10px;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#6e7681;background:rgba(10,14,20,.9);cursor:pointer;transition:all .15s}
+.tab:hover{color:#b0b8c4}.tab.active{color:#58a6ff;border-bottom:2px solid #58a6ff}
+
+.panel{display:none}.panel.active{display:block}
+
+.card{background:rgba(10,14,20,.8);border:1px solid rgba(26,31,46,.6);border-radius:10px;padding:20px;margin-bottom:16px}
+.card h3{font-size:13px;color:#e6edf3;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
+.card p.desc{font-size:12px;color:#6e7681;margin-bottom:16px;line-height:1.5}
+
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:11px;color:#8b949e;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:8px 12px;background:rgba(5,8,16,.8);border:1px solid rgba(48,54,61,.6);border-radius:6px;color:#e6edf3;font-size:13px;font-family:inherit}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:#58a6ff}
+.form-group textarea{resize:vertical;min-height:60px}
+.form-group .hint{font-size:10px;color:#484f58;margin-top:3px}
+
+.btn{padding:10px 20px;border-radius:6px;border:1px solid;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:.5px}
+.btn-primary{background:rgba(13,51,33,.9);color:#3fb950;border-color:#238636}
+.btn-primary:hover{background:rgba(13,51,33,1);box-shadow:0 0 12px rgba(63,185,80,.2)}
+.btn-secondary{background:rgba(20,30,50,.9);color:#58a6ff;border-color:#1f6feb}
+.btn-secondary:hover{background:rgba(20,30,50,1)}
+.btn-row{display:flex;gap:8px;margin-top:16px}
+
+.result{margin-top:12px;padding:12px;background:rgba(0,20,10,.4);border:1px solid rgba(63,185,80,.2);border-radius:6px;font-family:'Fira Code','SF Mono',monospace;font-size:11px;color:#7ee787;white-space:pre-wrap;word-break:break-all;display:none}
+.result.error{border-color:rgba(248,81,73,.3);color:#f85149;background:rgba(20,0,0,.4)}
+
+.contract-info{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.ci-item{padding:12px;background:rgba(10,14,20,.6);border:1px solid rgba(26,31,46,.4);border-radius:6px}
+.ci-label{font-size:10px;color:#484f58;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.ci-value{font-size:12px;color:#e6edf3;font-family:'Fira Code',monospace;word-break:break-all}
+
+.struct-display{font-family:'Fira Code',monospace;font-size:11px;padding:12px;background:rgba(5,8,16,.6);border-radius:6px;border:1px solid rgba(26,31,46,.3);color:#8b949e;line-height:1.6}
+.struct-display .kw{color:#ff7b72}.struct-display .ty{color:#79c0ff}.struct-display .fn{color:#d2a8ff}
+
+.status-bar{padding:8px 12px;background:rgba(5,8,16,.6);border:1px solid rgba(26,31,46,.4);border-radius:6px;font-size:11px;color:#6e7681;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.status-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:6px}
+.status-dot.connected{background:#3fb950}.status-dot.disconnected{background:#f85149}
+
+.doc-link{font-size:11px;color:#58a6ff;text-decoration:none;margin-top:8px;display:inline-block}
+.doc-link:hover{text-decoration:underline}
+
+.ft{padding:16px 0;border-top:1px solid rgba(26,31,46,.4);margin-top:24px;font-size:11px;color:#484f58;text-align:center}
+.ft a{color:#58a6ff;text-decoration:none}
+
+@media(max-width:768px){.contract-info{grid-template-columns:1fr}.tabs{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hdr">
+  <h1>i<b>NFT</b> <span style="font-size:11px;color:#6e7681">Intelligent NFT Interface</span></h1>
+  <div class="nav">
+    <a href="/">dashboard</a>
+    <a href="/book">book</a>
+    <a href="/doc/AUTOMINDX_INFT_SUMMARY">docs</a>
+    <a href="/docs">api</a>
+    <a href="/login">login</a>
+    <span class="badge" id="walletBadge">not connected</span>
+  </div>
+</div>
+
+<div class="status-bar" id="statusBar">
+  <span><span class="status-dot disconnected" id="statusDot"></span> <span id="statusText">Connect MetaMask to interact with contracts</span></span>
+  <span id="networkName">—</span>
+</div>
+
+<div class="contract-info" id="contractInfo" style="display:none">
+  <div class="ci-item"><div class="ci-label">Wallet</div><div class="ci-value" id="ciWallet">—</div></div>
+  <div class="ci-item"><div class="ci-label">Network</div><div class="ci-value" id="ciNetwork">—</div></div>
+  <div class="ci-item"><div class="ci-label">iNFT Contract</div><div class="ci-value" id="ciINFT">Not deployed</div></div>
+  <div class="ci-item"><div class="ci-label">IntelligentNFT Contract</div><div class="ci-value" id="ciIntNFT">Not deployed</div></div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab(0)">iNFT (THOT)</div>
+  <div class="tab" onclick="switchTab(1)">IntelligentNFT</div>
+  <div class="tab" onclick="switchTab(2)">Factory</div>
+  <div class="tab" onclick="switchTab(3)">Read</div>
+</div>
+
+<!-- TAB 0: iNFT (Immutable THOT) -->
+<div class="panel active" id="panel0">
+  <div class="card">
+    <h3>Mint Immutable THOT</h3>
+    <p class="desc">Mint an immutable THOT tensor as an ERC-721 NFT. Once minted, the tensor data cannot be changed. CID uniqueness enforced — no duplicates.</p>
+    <div class="struct-display">
+      <span class="kw">struct</span> <span class="ty">ThotData</span> {<br>
+      &nbsp;&nbsp;bytes32 <span class="fn">dataCID</span>;      <span style="color:#484f58">// IPFS CID hash</span><br>
+      &nbsp;&nbsp;uint8   <span class="fn">dimensions</span>;   <span style="color:#484f58">// 64, 512, or 768</span><br>
+      &nbsp;&nbsp;uint8   <span class="fn">parallelUnits</span>;<span style="color:#484f58">// Processing units</span><br>
+      &nbsp;&nbsp;uint40  <span class="fn">timestamp</span>;    <span style="color:#484f58">// Creation time</span><br>
+      &nbsp;&nbsp;bool    <span class="fn">verified</span>;     <span style="color:#484f58">// Always true on mint</span><br>
+      }
+    </div>
+    <div class="form-group"><label>Recipient Address</label><input id="thot_recipient" placeholder="0x..."></div>
+    <div class="form-group"><label>Data CID (bytes32)</label><input id="thot_cid" placeholder="0x... (keccak256 of IPFS CID)"><div class="hint">bytes32 hash of the IPFS CID containing the tensor data</div></div>
+    <div class="form-group"><label>Dimensions</label>
+      <select id="thot_dims"><option value="64">THOT64 — Lightweight</option><option value="512" selected>THOT512 — Standard (8x8x8)</option><option value="768">THOT768 — High-Fidelity</option></select>
+    </div>
+    <div class="form-group"><label>Parallel Units</label><input id="thot_units" type="number" value="1" min="1" max="255"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="mintTHOT()">Mint THOT</button>
+    </div>
+    <div class="result" id="thot_result"></div>
+  </div>
+
+  <div class="card">
+    <h3>Query THOT Data</h3>
+    <div class="form-group"><label>Token ID</label><input id="thot_query_id" placeholder="Token ID (uint256)"></div>
+    <div class="btn-row"><button class="btn btn-secondary" onclick="queryTHOT()">Get THOT Data</button></div>
+    <div class="result" id="thot_query_result"></div>
+  </div>
+</div>
+
+<!-- TAB 1: IntelligentNFT -->
+<div class="panel" id="panel1">
+  <div class="card">
+    <h3>Mint Intelligent NFT</h3>
+    <p class="desc">Mint an iNFT with full metadata and intelligence configuration. The iNFT can interact with AI agents and exhibit autonomous behavior via AgenticPlace.</p>
+    <div class="struct-display">
+      <span class="kw">struct</span> <span class="ty">IntelligenceConfig</span> {<br>
+      &nbsp;&nbsp;address <span class="fn">agentAddress</span>;      <span style="color:#484f58">// Agent that can interact</span><br>
+      &nbsp;&nbsp;bool    <span class="fn">autonomous</span>;        <span style="color:#484f58">// Can act without owner</span><br>
+      &nbsp;&nbsp;string  <span class="fn">behaviorCID</span>;       <span style="color:#484f58">// IPFS CID for behavior</span><br>
+      &nbsp;&nbsp;string  <span class="fn">thotCID</span>;           <span style="color:#484f58">// Optional THOT tensor</span><br>
+      &nbsp;&nbsp;uint256 <span class="fn">intelligenceLevel</span>; <span style="color:#484f58">// 0-100</span><br>
+      }
+    </div>
+    <div class="form-group"><label>Recipient</label><input id="inft_to" placeholder="0x..."></div>
+    <div class="form-group"><label>Name</label><input id="inft_name" placeholder="Agent name"></div>
+    <div class="form-group"><label>Description</label><textarea id="inft_desc" placeholder="Agent description"></textarea></div>
+    <div class="form-group"><label>Image URI</label><input id="inft_image" placeholder="ipfs://... or https://..."></div>
+    <div class="form-group"><label>Agent Address</label><input id="inft_agent" placeholder="0x... (wallet of the AI agent)"></div>
+    <div class="form-group"><label>Autonomous</label><select id="inft_auto"><option value="false">No — requires owner approval</option><option value="true">Yes — agent can act independently</option></select></div>
+    <div class="form-group"><label>Behavior CID</label><input id="inft_behavior" placeholder="IPFS CID for behavior definition (optional)"></div>
+    <div class="form-group"><label>THOT CID</label><input id="inft_thot" placeholder="IPFS CID for THOT tensor (optional)"></div>
+    <div class="form-group"><label>Intelligence Level (0-100)</label><input id="inft_level" type="number" value="50" min="0" max="100"></div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="mintIntelligent()">Mint Intelligent NFT</button></div>
+    <div class="result" id="inft_result"></div>
+  </div>
+
+  <div class="card">
+    <h3>Agent Interaction</h3>
+    <p class="desc">Allow an authorized agent to interact with an iNFT. Only the configured agent, token owner, or contract owner can call.</p>
+    <div class="form-group"><label>Token ID</label><input id="interact_id" placeholder="Token ID"></div>
+    <div class="form-group"><label>Interaction Data (hex)</label><input id="interact_data" placeholder="0x... (encoded interaction data)"></div>
+    <div class="btn-row"><button class="btn btn-secondary" onclick="agentInteract()">Send Interaction</button></div>
+    <div class="result" id="interact_result"></div>
+  </div>
+
+  <div class="card">
+    <h3>Update Intelligence</h3>
+    <div class="form-group"><label>Token ID</label><input id="upd_id" placeholder="Token ID"></div>
+    <div class="form-group"><label>New Agent Address</label><input id="upd_agent" placeholder="0x..."></div>
+    <div class="form-group"><label>Autonomous</label><select id="upd_auto"><option value="false">No</option><option value="true">Yes</option></select></div>
+    <div class="form-group"><label>Behavior CID</label><input id="upd_behavior" placeholder="IPFS CID"></div>
+    <div class="form-group"><label>THOT CID</label><input id="upd_thot" placeholder="IPFS CID"></div>
+    <div class="form-group"><label>Intelligence Level</label><input id="upd_level" type="number" value="50" min="0" max="100"></div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="updateIntelligence()">Update</button></div>
+    <div class="result" id="upd_result"></div>
+  </div>
+
+  <div class="card">
+    <h3>Link THOT to iNFT</h3>
+    <div class="form-group"><label>Token ID</label><input id="link_id" placeholder="Token ID"></div>
+    <div class="form-group"><label>THOT CID</label><input id="link_cid" placeholder="IPFS CID of THOT tensor"></div>
+    <div class="btn-row"><button class="btn btn-secondary" onclick="linkTHOT()">Link THOT</button></div>
+    <div class="result" id="link_result"></div>
+  </div>
+
+  <div class="card">
+    <h3>Offer Skill on AgenticPlace</h3>
+    <div class="form-group"><label>Token ID</label><input id="offer_id" placeholder="Token ID"></div>
+    <div class="form-group"><label>Price (wei)</label><input id="offer_price" placeholder="Price in wei"></div>
+    <div class="form-group"><label>Payment</label><select id="offer_eth"><option value="true">ETH</option><option value="false">ERC-20 Token</option></select></div>
+    <div class="form-group"><label>Payment Token (if ERC-20)</label><input id="offer_token" placeholder="0x... (ERC-20 address)"></div>
+    <div class="form-group"><label>Expires At (unix timestamp, 0 = never)</label><input id="offer_expires" type="number" value="0"></div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="offerSkill()">List on AgenticPlace</button></div>
+    <div class="result" id="offer_result"></div>
+  </div>
+</div>
+
+<!-- TAB 2: Factory -->
+<div class="panel" id="panel2">
+  <div class="card">
+    <h3>Deploy IntelligentNFT Collection</h3>
+    <p class="desc">Deploy a new IntelligentNFT contract via the factory. You become the owner of the deployed collection.</p>
+    <div class="form-group"><label>Collection Name</label><input id="fac_name" placeholder="e.g. mindX Agents"></div>
+    <div class="form-group"><label>Symbol</label><input id="fac_symbol" placeholder="e.g. mXA"></div>
+    <div class="form-group"><label>AgenticPlace Address</label><input id="fac_aplace" placeholder="0x... (AgenticPlace marketplace contract)"></div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="deployCollection()">Deploy Collection</button></div>
+    <div class="result" id="fac_result"></div>
+  </div>
+
+  <div class="card">
+    <h3>Query Factory</h3>
+    <div class="form-group"><label>Deployer Address</label><input id="fac_deployer" placeholder="0x... (or leave empty for total count)"></div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="queryFactory('contracts')">Get Deployed Contracts</button>
+      <button class="btn btn-secondary" onclick="queryFactory('total')">Total Count</button>
+    </div>
+    <div class="result" id="fac_query_result"></div>
+  </div>
+</div>
+
+<!-- TAB 3: Read -->
+<div class="panel" id="panel3">
+  <div class="card">
+    <h3>Read Token Data</h3>
+    <p class="desc">Query any iNFT or IntelligentNFT token. Read intelligence config, metadata, ownership, and THOT data.</p>
+    <div class="form-group"><label>Contract Address</label><input id="read_contract" placeholder="0x... (iNFT or IntelligentNFT address)"></div>
+    <div class="form-group"><label>Token ID</label><input id="read_id" placeholder="Token ID"></div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="readToken('owner')">Owner</button>
+      <button class="btn btn-secondary" onclick="readToken('uri')">Token URI</button>
+      <button class="btn btn-secondary" onclick="readToken('intelligence')">Intelligence</button>
+      <button class="btn btn-secondary" onclick="readToken('metadata')">Metadata</button>
+      <button class="btn btn-secondary" onclick="readToken('thot')">THOT Data</button>
+    </div>
+    <div class="result" id="read_result"></div>
+  </div>
+</div>
+
+<a class="doc-link" href="/doc/AUTOMINDX_INFT_SUMMARY">Full iNFT Documentation</a>
+
+<div class="ft">
+  <a href="https://mindx.pythai.net">mindx.pythai.net</a> |
+  <a href="https://agenticplace.pythai.net">AgenticPlace</a> |
+  <a href="https://github.com/AgenticPlace/mindX">GitHub</a> |
+  <a href="/doc/DAIO">DAIO</a> |
+  <a href="/doc/BOOK_OF_MINDX">Book of mindX</a>
+  <div style="margin-top:8px;font-size:10px">
+    iNFT contracts: <a href="https://github.com/AgenticPlace/mindX/tree/main/daio/contracts/inft">daio/contracts/inft/</a> |
+    Solidity ^0.8.20 | OpenZeppelin v5 | ERC-721
+  </div>
+</div>
+
+</div>
+
+<script>
+// Tab switching
+function switchTab(n) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.className = 'tab' + (i===n?' active':''));
+  document.querySelectorAll('.panel').forEach((p,i) => p.className = 'panel' + (i===n?' active':''));
+}
+
+// Wallet connection
+let provider, signer, walletAddress;
+
+async function connectWallet() {
+  if (typeof window.ethereum === 'undefined') {
+    alert('MetaMask not installed');
+    return;
+  }
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    walletAddress = accounts[0];
+    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+    const networks = {'0x1':'Ethereum','0x89':'Polygon','0x2105':'Base','0xa4b1':'Arbitrum','0x539':'Localhost','0x7a69':'Hardhat'};
+    const netName = networks[chainId] || 'Chain ' + parseInt(chainId, 16);
+
+    document.getElementById('statusDot').className = 'status-dot connected';
+    document.getElementById('statusText').textContent = 'Connected';
+    document.getElementById('walletBadge').textContent = walletAddress.slice(0,6) + '..' + walletAddress.slice(-4);
+    document.getElementById('walletBadge').className = 'badge';
+    document.getElementById('networkName').textContent = netName;
+    document.getElementById('contractInfo').style.display = 'grid';
+    document.getElementById('ciWallet').textContent = walletAddress;
+    document.getElementById('ciNetwork').textContent = netName + ' (' + chainId + ')';
+
+    // Auto-fill recipient fields
+    document.getElementById('thot_recipient').value = walletAddress;
+    document.getElementById('inft_to').value = walletAddress;
+  } catch (e) {
+    showResult('thot_result', 'Connection failed: ' + e.message, true);
+  }
+}
+
+function showResult(id, text, isError) {
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  el.className = 'result' + (isError ? ' error' : '');
+  el.textContent = typeof text === 'object' ? JSON.stringify(text, null, 2) : text;
+}
+
+// Placeholder functions — these need contract ABIs and addresses to be functional
+// For now they show the transaction data that WOULD be sent
+function mintTHOT() {
+  const recipient = document.getElementById('thot_recipient').value;
+  const cid = document.getElementById('thot_cid').value;
+  const dims = document.getElementById('thot_dims').value;
+  const units = document.getElementById('thot_units').value;
+  if (!recipient || !cid) { showResult('thot_result', 'Fill recipient and CID', true); return; }
+  showResult('thot_result', JSON.stringify({
+    function: 'mint(address,bytes32,uint8,uint8)',
+    params: { recipient, dataCID: cid, dimensions: parseInt(dims), parallelUnits: parseInt(units) },
+    note: 'Deploy iNFT contract first, then set contract address above to execute on-chain'
+  }, null, 2));
+}
+
+function queryTHOT() {
+  const id = document.getElementById('thot_query_id').value;
+  if (!id) { showResult('thot_query_result', 'Enter token ID', true); return; }
+  showResult('thot_query_result', JSON.stringify({
+    function: 'getThotData(uint256)',
+    params: { tokenId: id },
+    returns: 'ThotData { dataCID, dimensions, parallelUnits, timestamp, verified }',
+    note: 'Set iNFT contract address to query on-chain'
+  }, null, 2));
+}
+
+function mintIntelligent() {
+  const data = {
+    function: 'mintIntelligent(address,NFTMetadata,IntelligenceConfig)',
+    params: {
+      to: document.getElementById('inft_to').value,
+      nftMetadata: {
+        name: document.getElementById('inft_name').value,
+        description: document.getElementById('inft_desc').value,
+        imageURI: document.getElementById('inft_image').value,
+        externalURI: '', thotCID: document.getElementById('inft_thot').value,
+        isDynamic: true, lastUpdated: 0
+      },
+      intelConfig: {
+        agentAddress: document.getElementById('inft_agent').value,
+        autonomous: document.getElementById('inft_auto').value === 'true',
+        behaviorCID: document.getElementById('inft_behavior').value,
+        thotCID: document.getElementById('inft_thot').value,
+        intelligenceLevel: parseInt(document.getElementById('inft_level').value)
+      }
+    }
+  };
+  showResult('inft_result', JSON.stringify(data, null, 2));
+}
+
+function agentInteract() {
+  showResult('interact_result', JSON.stringify({
+    function: 'agentInteract(uint256,bytes)',
+    params: { tokenId: document.getElementById('interact_id').value, interactionData: document.getElementById('interact_data').value }
+  }, null, 2));
+}
+
+function updateIntelligence() {
+  showResult('upd_result', JSON.stringify({
+    function: 'updateIntelligence(uint256,IntelligenceConfig)',
+    params: {
+      tokenId: document.getElementById('upd_id').value,
+      newConfig: {
+        agentAddress: document.getElementById('upd_agent').value,
+        autonomous: document.getElementById('upd_auto').value === 'true',
+        behaviorCID: document.getElementById('upd_behavior').value,
+        thotCID: document.getElementById('upd_thot').value,
+        intelligenceLevel: parseInt(document.getElementById('upd_level').value)
+      }
+    }
+  }, null, 2));
+}
+
+function linkTHOT() {
+  showResult('link_result', JSON.stringify({
+    function: 'linkTHOT(uint256,string)',
+    params: { tokenId: document.getElementById('link_id').value, thotCID: document.getElementById('link_cid').value }
+  }, null, 2));
+}
+
+function offerSkill() {
+  showResult('offer_result', JSON.stringify({
+    function: 'offerSkillOnMarketplace(uint256,uint256,bool,address,uint40)',
+    params: {
+      tokenId: document.getElementById('offer_id').value,
+      price: document.getElementById('offer_price').value,
+      isETH: document.getElementById('offer_eth').value === 'true',
+      paymentToken: document.getElementById('offer_token').value,
+      expiresAt: parseInt(document.getElementById('offer_expires').value)
+    }
+  }, null, 2));
+}
+
+function deployCollection() {
+  showResult('fac_result', JSON.stringify({
+    function: 'deployIntelligentNFT(string,string,address)',
+    params: {
+      name: document.getElementById('fac_name').value,
+      symbol: document.getElementById('fac_symbol').value,
+      agenticPlace: document.getElementById('fac_aplace').value
+    }
+  }, null, 2));
+}
+
+function queryFactory(type) {
+  const deployer = document.getElementById('fac_deployer').value;
+  if (type === 'total') {
+    showResult('fac_query_result', JSON.stringify({ function: 'getTotalContracts()', returns: 'uint256' }, null, 2));
+  } else {
+    showResult('fac_query_result', JSON.stringify({
+      function: 'getDeployedContracts(address)',
+      params: { deployer: deployer || walletAddress || '0x...' },
+      returns: 'address[]'
+    }, null, 2));
+  }
+}
+
+function readToken(type) {
+  const contract = document.getElementById('read_contract').value;
+  const id = document.getElementById('read_id').value;
+  if (!contract || !id) { showResult('read_result', 'Enter contract address and token ID', true); return; }
+  const fns = {
+    owner: 'ownerOf(uint256)',
+    uri: 'tokenURI(uint256)',
+    intelligence: 'intelligence(uint256) → IntelligenceConfig',
+    metadata: 'metadata(uint256) → NFTMetadata',
+    thot: 'getThotData(uint256) → ThotData'
+  };
+  showResult('read_result', JSON.stringify({
+    contract, tokenId: id, function: fns[type],
+    note: 'Connect wallet and set contract address for live on-chain queries'
+  }, null, 2));
+}
+
+// Auto-connect on load
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.ethereum) connectWallet();
+});
+window.ethereum?.on('accountsChanged', () => connectWallet());
+window.ethereum?.on('chainChanged', () => location.reload());
+</script>
+</body>
+</html>
