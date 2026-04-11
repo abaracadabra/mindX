@@ -68,17 +68,39 @@ SOLDIER_WEIGHTS = {
 
 SUPERMAJORITY_THRESHOLD = 0.666
 
-# Local model assignments — best model for each Soldier's role
-# qwen3:1.7b = complex reasoning (CTO, CISO, CRO)
-# qwen3:0.6b = fast decisions (COO, CFO, CLO, CPO)
+# Local model assignments — from VPS benchmarks and .agent definitions
+# Each soldier uses a different model — no two soldiers think alike
 SOLDIER_MODELS = {
-    "coo_operations": "qwen3:0.6b",    # Fast operational decisions
-    "cfo_finance": "qwen3:0.6b",       # Quick financial assessment
-    "cto_technology": "qwen3:1.7b",    # Deep technical evaluation
-    "ciso_security": "qwen3:1.7b",     # Security analysis needs reasoning
-    "clo_legal": "qwen3:0.6b",         # Compliance check (fast)
-    "cpo_product": "qwen3:0.6b",       # Product perspective (fast)
-    "cro_risk": "qwen3:1.7b",          # Risk modeling needs depth
+    "coo_operations": "qwen3:0.6b",        # 4.3 tok/s — fast operational tempo
+    "cfo_finance": "deepseek-coder:1.3b",  # 7.7 tok/s — fastest, good for calculations
+    "cto_technology": "qwen3:1.7b",        # 10.0 tok/s — architectural depth
+    "ciso_security": "deepseek-r1:1.5b",   # 14.0 tok/s — thinking model, careful deliberation
+    "clo_legal": "qwen3:0.6b",            # 4.3 tok/s — compliance is pattern-matching
+    "cpo_product": "qwen3.5:2b",           # 2.3B — product judgment across 4 PYTHAI properties
+    "cro_risk": "qwen3:4b",               # 2.3B — deepest local, risk needs maximum depth
+}
+
+# Cloud model assignments — Ollama Cloud free tier (after `ollama signin`)
+# Each soldier has a unique cloud model for enriched reasoning
+SOLDIER_CLOUD_MODELS = {
+    "coo_operations": "gemini-3-flash-preview",  # fast operational reasoning
+    "cfo_finance": "ministral-3:3b",             # Mistral financial analysis
+    "cto_technology": "qwen3-coder-next",        # 80B code-specialized
+    "ciso_security": "nemotron-3-nano:30b",      # NVIDIA safety-aligned
+    "clo_legal": "devstral-small-2:24b",         # Mistral structured analysis
+    "cpo_product": "gemma4:31b",                 # Google product reasoning
+    "cro_risk": "deepseek-v3.2",                 # 671B deepest reasoning
+}
+
+# Soldier personas — injected into prompts for role-specific evaluation
+SOLDIER_PERSONAS = {
+    "coo_operations": "You are the Chief Operating Officer. Evaluate operational feasibility, execution timeline, resource requirements. Short cycles, frequent checkpoints, rollback-ready.",
+    "cfo_finance": "You are the Chief Financial Officer. Evaluate cost/benefit ratio, budget impact, treasury sustainability. Spending .01 to earn .011 is profit. 18 decimal precision.",
+    "cto_technology": "You are the Chief Technology Officer. Evaluate technical feasibility, architecture impact, infrastructure cost. Architecture decisions are permanent — measure twice, deploy once.",
+    "ciso_security": "You are the Chief Information Security Officer (1.2x veto weight). Evaluate security posture, attack surface, credential exposure. Least privilege, defense in depth, zero trust.",
+    "clo_legal": "You are the Chief Legal Officer (0.8x advisory). Evaluate legal risks, licensing compliance, attribution requirements. Code is law — but law has context.",
+    "cpo_product": "You are the Chief Product Officer. Evaluate user value, market fit, scope impact. Products: bankon.pythai.net, mindx.pythai.net, agenticplace.pythai.net, pythai.net.",
+    "cro_risk": "You are the Chief Risk Officer (1.2x veto weight). Evaluate risk magnitude, reversibility, blast radius, cascading failures. Every action must have a rollback path.",
 }
 
 OLLAMA_URL = "http://localhost:11434"
@@ -170,22 +192,38 @@ class Boardroom:
         weight: float,
         context: Optional[Dict[str, Any]],
     ) -> SoldierVote:
-        """Query a Soldier using the best local model for their role."""
-        model = SOLDIER_MODELS.get(soldier_id, "qwen3:1.7b")
+        """Query a Soldier using their assigned model with role-specific persona.
+        Tries cloud model first (if signed in), falls back to local."""
+        local_model = SOLDIER_MODELS.get(soldier_id, "qwen3:1.7b")
+        cloud_model = SOLDIER_CLOUD_MODELS.get(soldier_id)
+        persona = SOLDIER_PERSONAS.get(soldier_id, f"You are {soldier_id}.")
+
         prompt = (
-            f"You are {soldier_id} in the mindX executive board. "
+            f"{persona}\n\n"
             f"Evaluate this directive and vote approve, reject, or abstain.\n\n"
             f"Directive: {directive}\n"
             f"Importance: {importance}\n"
-            f"Your role weight: {weight}x\n\n"
-            f"Respond in JSON: {{\"vote\": \"approve|reject|abstain\", "
+            f"Your vote weight: {weight}x\n"
+        )
+        if context:
+            prompt += f"Context: {json.dumps(context, default=str)[:500]}\n"
+        prompt += (
+            f"\nRespond in JSON: {{\"vote\": \"approve|reject|abstain\", "
             f"\"reasoning\": \"...\", \"confidence\": 0.0-1.0}}"
         )
 
+        # Try cloud model first, fall back to local
+        model = local_model
+        if cloud_model:
+            model = cloud_model  # Will fail gracefully if not signed in
+
         t0 = time.time()
         try:
-            # Query local Ollama directly with assigned model
             import aiohttp
+            response = None
+            used_model = model
+
+            # Try assigned model (cloud or local)
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60)) as sess:
                 payload = {
                     "model": model,
@@ -197,8 +235,16 @@ class Boardroom:
                     if resp.status == 200:
                         data = await resp.json()
                         response = data.get("message", {}).get("content", "")
-                    else:
-                        response = None
+                    elif model != local_model:
+                        # Cloud model failed — fall back to local
+                        logger.debug(f"Boardroom: {soldier_id} cloud model {model} failed, falling back to {local_model}")
+                        used_model = local_model
+                        payload["model"] = local_model
+                        async with sess.post(f"{OLLAMA_URL}/api/chat", json=payload) as resp2:
+                            if resp2.status == 200:
+                                data = await resp2.json()
+                                response = data.get("message", {}).get("content", "")
+
             latency = int((time.time() - t0) * 1000)
 
             # Parse response
@@ -217,7 +263,7 @@ class Boardroom:
 
             return SoldierVote(
                 soldier_id=soldier_id,
-                provider=f"ollama/{model}",
+                provider=f"ollama/{used_model}",
                 vote=vote_data.get("vote", "abstain"),
                 reasoning=vote_data.get("reasoning", "")[:300],
                 confidence=float(vote_data.get("confidence", 0.5)),
@@ -228,7 +274,7 @@ class Boardroom:
             latency = int((time.time() - t0) * 1000)
             return SoldierVote(
                 soldier_id=soldier_id,
-                provider=f"ollama/{model}",
+                provider=f"ollama/{local_model}",
                 vote="abstain",
                 reasoning=f"Model unavailable: {str(e)[:100]}",
                 confidence=0.0,
