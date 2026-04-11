@@ -78,10 +78,11 @@ class MachineDreamCycle:
     I distill experience into knowledge. I distribute, I do not delete.
     """
 
-    def __init__(self, memory_agent=None, config=None):
+    def __init__(self, memory_agent=None, config=None, days_back: int = 90):
         self.memory_agent = memory_agent
         self.config = config or Config()
         self.log_prefix = "[MachineDream]"
+        self.days_back = days_back  # Look back window for STM analysis
         self._existing_ltm_keys: set = set()
 
     # === PHASE 1: STATE ASSESSMENT ===
@@ -100,8 +101,8 @@ class MachineDreamCycle:
             return state
 
         try:
-            # Analyze STM patterns
-            patterns = await self.memory_agent.analyze_agent_patterns(agent_id, days_back=7)
+            # Analyze STM patterns across the configured window
+            patterns = await self.memory_agent.analyze_agent_patterns(agent_id, days_back=self.days_back)
             state["patterns"] = patterns
             state["stm_count"] = patterns.get("total_memories", 0)
 
@@ -126,14 +127,14 @@ class MachineDreamCycle:
 
     # === PHASE 2: INPUT PREPROCESSING ===
 
-    async def _preprocess_memories(self, agent_id: str, days_back: int = 7) -> List[Dict[str, Any]]:
+    async def _preprocess_memories(self, agent_id: str, days_back: int = None) -> List[Dict[str, Any]]:
         """Filter and prepare STM data for analysis."""
         if not self.memory_agent:
             return []
 
         try:
             memories = await self.memory_agent.get_recent_memories(
-                agent_id=agent_id, memory_type=None, limit=500, days_back=days_back
+                agent_id=agent_id, memory_type=None, limit=500, days_back=days_back or self.days_back
             )
             # Convert MemoryRecord objects to dicts if needed
             processed = []
@@ -170,17 +171,43 @@ class MachineDreamCycle:
                 timestamp=time.time(),
             ))
 
-        # Error patterns → insights
-        for error in patterns.get("error_patterns", []):
-            error_desc = str(error.get("error", error) if isinstance(error, dict) else error)[:200]
+        # Failure patterns → insights (from analyze_agent_patterns)
+        failure_patterns = patterns.get("failure_patterns", [])
+        error_patterns = patterns.get("error_patterns", [])
+        seen_failures = set()
+        for error in (failure_patterns or error_patterns):
+            if isinstance(error, dict):
+                process = error.get("process", "")
+                reason = error.get("reason", error.get("content", ""))
+                error_desc = f"{process}: {reason}"[:200] if process else str(reason)[:200]
+            else:
+                error_desc = str(error)[:200]
+            if error_desc in seen_failures:
+                continue
+            seen_failures.add(error_desc)
             is_novel = error_desc not in self._existing_ltm_keys
             insights.append(DreamInsight(
                 pattern_type="failure",
                 description=error_desc,
-                frequency=error.get("count", 1) if isinstance(error, dict) else 1,
-                importance=0.8,  # errors are always important
+                frequency=1,
+                importance=0.8,
                 novelty=1.0 if is_novel else 0.2,
                 confidence=0.9,
+                timestamp=time.time(),
+            ))
+
+        # Process type distribution → behavioral insight
+        process_types = patterns.get("process_types", {})
+        if process_types:
+            top_processes = sorted(process_types.items(), key=lambda x: x[1], reverse=True)[:5]
+            desc = ", ".join(f"{name}({count})" for name, count in top_processes)
+            insights.append(DreamInsight(
+                pattern_type="behavioral",
+                description=f"Top processes: {desc}",
+                frequency=sum(count for _, count in top_processes),
+                importance=0.5,
+                novelty=0.4,
+                confidence=0.8,
                 timestamp=time.time(),
             ))
 

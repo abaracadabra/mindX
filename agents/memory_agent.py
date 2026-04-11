@@ -289,105 +289,167 @@ class MemoryAgent:
         limit: int = 50,
         days_back: int = 7
     ) -> List[MemoryRecord]:
-        """Retrieve recent memories for an agent with optional filtering."""
+        """Retrieve recent memories for an agent with optional filtering.
+
+        Searches STM first, then falls back to archive if STM is empty.
+        Memory philosophy: distribute don't constrain — archived data is still accessible.
+        """
         try:
             memories = []
-            agent_dir = self.stm_path / agent_id
-            if not agent_dir.exists():
-                return []
-            
-            # Get files from the last N days
-            for day_offset in range(days_back):
-                date_str = (datetime.now() - timedelta(days=day_offset)).strftime("%Y%m%d")
-                day_dir = agent_dir / date_str
-                
-                if not day_dir.exists():
+            # Search STM first, fall back to archive
+            search_dirs = [self.stm_path / agent_id]
+            archive_dir = self.memory_base_path / "archive" / agent_id
+            if archive_dir.exists():
+                search_dirs.append(archive_dir)
+
+            for agent_dir in search_dirs:
+                if not agent_dir.exists():
                     continue
-                
-                # Get all memory files for this day
-                pattern = f"*.{memory_type.value}.memory.json" if memory_type else "*.memory.json"
-                files = sorted(day_dir.glob(pattern), reverse=True)
-                
-                for file_path in files:
+
+                # Get files from the last N days
+                for day_offset in range(days_back):
+                    date_str = (datetime.now() - timedelta(days=day_offset)).strftime("%Y%m%d")
+                    day_dir = agent_dir / date_str
+
+                    if not day_dir.exists():
+                        continue
+
+                    # Get all memory files for this day
+                    pattern = f"*.{memory_type.value}.memory.json" if memory_type else "*.memory.json"
+                    files = sorted(day_dir.glob(pattern), reverse=True)
+
+                    for file_path in files:
+                        if len(memories) >= limit:
+                            break
+
+                        try:
+                            async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
+                                content = await f.read()
+                                record_data = json_lib.loads(content)
+
+                            # Convert back to MemoryRecord
+                            record_data["memory_type"] = MemoryType(record_data["memory_type"])
+                            record_data["importance"] = MemoryImportance(record_data["importance"])
+                            memory_record = MemoryRecord(**record_data)
+
+                            memories.append(memory_record)
+                        except Exception as e:
+                            logger.warning(f"Failed to load memory file {file_path}: {e}")
+                            continue
+
                     if len(memories) >= limit:
                         break
-                    
-                    try:
-                        async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
-                            content = await f.read()
-                            record_data = json_lib.loads(content)
-                            
-                        # Convert back to MemoryRecord
-                        record_data["memory_type"] = MemoryType(record_data["memory_type"])
-                        record_data["importance"] = MemoryImportance(record_data["importance"])
-                        memory_record = MemoryRecord(**record_data)
-                        
-                        memories.append(memory_record)
-                    except Exception as e:
-                        logger.warning(f"Failed to load memory file {file_path}: {e}")
-                        continue
-                
+
                 if len(memories) >= limit:
                     break
-            
+
             return memories[:limit]
-            
+
         except Exception as e:
             logger.error(f"Failed to retrieve recent memories for {agent_id}: {e}", exc_info=True)
             return []
 
     async def analyze_agent_patterns(self, agent_id: str, days_back: int = 7) -> Dict[str, Any]:
-        """Analyze patterns in an agent's memory for self-awareness."""
+        """Analyze patterns in an agent's memory for self-awareness.
+
+        Actual memory format: MemoryRecord with memory_type (mostly system_state),
+        content = {process_name: str, data: {..., success: bool, ...}}, tags = [process_name, ...].
+        Success/failure is extracted from content.data.success and process_name suffixes.
+        """
         try:
             memories = await self.get_recent_memories(agent_id, days_back=days_back, limit=1000)
-            
+
             if not memories:
                 return {"error": "No memories found for analysis"}
-            
-            # Analyze patterns
+
             analysis = {
                 "total_memories": len(memories),
                 "memory_types": defaultdict(int),
+                "process_types": defaultdict(int),
                 "activity_by_hour": defaultdict(int),
                 "error_patterns": [],
                 "success_patterns": [],
+                "failure_patterns": [],
+                "success_rate": 0.0,
                 "insights": []
             }
-            
+
+            success_count = 0
+            failure_count = 0
+
             for memory in memories:
-                # Count by type
+                # Count by memory_type
                 analysis["memory_types"][memory.memory_type.value] += 1
-                
+
                 # Activity by hour
-                hour = datetime.fromisoformat(memory.timestamp).hour
-                analysis["activity_by_hour"][hour] += 1
-                
-                # Error analysis
-                if memory.memory_type == MemoryType.ERROR:
+                try:
+                    hour = datetime.fromisoformat(memory.timestamp).hour
+                    analysis["activity_by_hour"][hour] += 1
+                except (ValueError, TypeError):
+                    pass
+
+                # Extract process_name from content
+                process_name = memory.content.get("process_name", "") if isinstance(memory.content, dict) else ""
+                if process_name:
+                    analysis["process_types"][process_name] += 1
+
+                # Extract success/failure from actual data structure
+                data = memory.content.get("data", {}) if isinstance(memory.content, dict) else {}
+                has_success_field = isinstance(data, dict) and "success" in data
+
+                # Error patterns: explicit ERROR type OR process names ending in _error/_failed
+                is_error = (
+                    memory.memory_type == MemoryType.ERROR
+                    or process_name.endswith("_error")
+                    or process_name.endswith("_failed")
+                    or (has_success_field and data.get("success") is False)
+                )
+
+                # Success patterns: explicit success=True OR process names ending in _completed/_success
+                is_success = (
+                    (has_success_field and data.get("success") is True)
+                    or process_name.endswith("_completed")
+                    or process_name.endswith("_success")
+                )
+
+                if is_error:
+                    failure_count += 1
                     analysis["error_patterns"].append({
                         "timestamp": memory.timestamp,
-                        "content": memory.content,
+                        "process": process_name,
+                        "content": str(data)[:200] if data else str(memory.content)[:200],
                         "tags": memory.tags
                     })
-                
-                # Success patterns
-                if (memory.memory_type == MemoryType.INTERACTION and 
-                    memory.content.get("success", False)):
+                    analysis["failure_patterns"].append({
+                        "timestamp": memory.timestamp,
+                        "process": process_name,
+                        "reason": data.get("message", data.get("result", {}).get("message", "")) if isinstance(data, dict) else ""
+                    })
+                elif is_success:
+                    success_count += 1
                     analysis["success_patterns"].append({
                         "timestamp": memory.timestamp,
-                        "input": memory.content.get("input", ""),
+                        "process": process_name,
                         "tags": memory.tags
                     })
-            
+
+            # Calculate success rate from events that have a clear outcome
+            outcome_count = success_count + failure_count
+            if outcome_count > 0:
+                analysis["success_rate"] = success_count / outcome_count
+            else:
+                analysis["success_rate"] = 0.0  # No measurable outcomes
+
             # Convert defaultdicts to regular dicts
             analysis["memory_types"] = dict(analysis["memory_types"])
+            analysis["process_types"] = dict(analysis["process_types"])
             analysis["activity_by_hour"] = dict(analysis["activity_by_hour"])
-            
+
             # Generate insights
             analysis["insights"] = await self._generate_insights(analysis, agent_id)
-            
+
             return analysis
-            
+
         except Exception as e:
             logger.error(f"Failed to analyze patterns for {agent_id}: {e}", exc_info=True)
             return {"error": str(e)}
@@ -395,29 +457,48 @@ class MemoryAgent:
     async def _generate_insights(self, analysis: Dict[str, Any], agent_id: str) -> List[str]:
         """Generate insights from memory analysis."""
         insights = []
-        
-        # Activity patterns
-        if analysis["total_memories"] == 0:
+        total = analysis["total_memories"]
+
+        # Activity volume
+        if total == 0:
             insights.append("Agent has no recent memory activity")
-        elif analysis["total_memories"] > 100:
-            insights.append("Agent shows high activity levels")
-        
+            return insights
+        elif total > 500:
+            insights.append(f"High activity: {total} memories")
+        elif total > 100:
+            insights.append(f"Active: {total} memories")
+
+        # Success/failure analysis
+        success_rate = analysis.get("success_rate", 0.0)
+        success_count = len(analysis.get("success_patterns", []))
+        failure_count = len(analysis.get("failure_patterns", []))
+        if success_count + failure_count > 0:
+            insights.append(f"Success rate: {success_rate:.1%} ({success_count} success, {failure_count} failure)")
+            if success_rate < 0.5 and failure_count > 3:
+                insights.append("Low success rate — review failure patterns for recurring issues")
+
         # Error analysis
-        error_count = len(analysis["error_patterns"])
-        total_memories = analysis["total_memories"]
-        if error_count > 0 and total_memories > 0:
-            error_rate = error_count / total_memories
+        error_count = len(analysis.get("error_patterns", []))
+        if error_count > 0:
+            error_rate = error_count / total
             if error_rate > 0.1:
-                insights.append(f"High error rate detected: {error_rate:.1%}")
+                insights.append(f"High error rate: {error_rate:.1%} ({error_count} errors)")
             elif error_rate > 0.05:
                 insights.append(f"Moderate error rate: {error_rate:.1%}")
-        
+
+        # Process diversity
+        process_types = analysis.get("process_types", {})
+        if process_types:
+            top_processes = sorted(process_types.items(), key=lambda x: x[1], reverse=True)[:5]
+            top_names = [f"{name}({count})" for name, count in top_processes]
+            insights.append(f"Top processes: {', '.join(top_names)}")
+
         # Activity timing
-        activity_hours = analysis["activity_by_hour"]
+        activity_hours = analysis.get("activity_by_hour", {})
         if activity_hours:
             peak_hour = max(activity_hours, key=activity_hours.get)
             insights.append(f"Peak activity hour: {peak_hour}:00")
-        
+
         return insights
 
     async def get_system_health_summary(self) -> Dict[str, Any]:
@@ -1040,26 +1121,33 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                 "performance_trends": []
             }
             
-            # Analyze success patterns — any measurable success rate is worth recording
+            # Success patterns — any measurable success rate is worth recording
             success_rate = stm_analysis.get("success_rate", 0)
-            if success_rate > 0:
+            success_list = stm_analysis.get("success_patterns", [])
+            if success_rate > 0 or success_list:
                 significant_patterns["success_patterns"].append({
                     "pattern": "success_rate_observed",
                     "success_rate": success_rate,
-                    "context": stm_analysis.get("common_contexts", {}),
+                    "success_count": len(success_list),
+                    "top_processes": [s.get("process", "") for s in success_list[:10]],
                     "timestamp": datetime.now().isoformat()
                 })
 
-            # Analyze failure patterns — errors are always worth learning from
+            # Failure patterns — errors are always worth learning from
+            failure_list = stm_analysis.get("failure_patterns", [])
             error_patterns = stm_analysis.get("error_patterns", [])
-            if error_patterns:
-                significant_patterns["failure_patterns"] = error_patterns
+            if failure_list:
+                significant_patterns["failure_patterns"] = failure_list[:20]
+            elif error_patterns:
+                significant_patterns["failure_patterns"] = error_patterns[:20]
 
-            # Performance trends from memory type distribution
+            # Performance trends from memory type and process distribution
             memory_types = stm_analysis.get("memory_types", {})
-            if memory_types:
+            process_types = stm_analysis.get("process_types", {})
+            if memory_types or process_types:
                 significant_patterns["performance_trends"].append({
                     "memory_distribution": memory_types,
+                    "process_distribution": dict(sorted(process_types.items(), key=lambda x: x[1], reverse=True)[:20]),
                     "total_memories": stm_analysis.get("total_memories", 0),
                     "timestamp": datetime.now().isoformat()
                 })
