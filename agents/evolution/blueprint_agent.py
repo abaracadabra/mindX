@@ -162,7 +162,8 @@ class BlueprintAgent:
             blueprint = json.loads(response_str)
             
             if not all(k in blueprint for k in ["blueprint_title", "focus_areas", "bdi_todo_list"]):
-                raise ValueError("Generated blueprint missing essential keys.")
+                logger.warning(f"{self.agent_id}: Blueprint missing essential keys (blueprint_title, focus_areas, bdi_todo_list). LLM output may be malformed. Returning None.")
+                return None
             
             logger.info(f"{self.agent_id}: Successfully generated blueprint titled '{blueprint.get('blueprint_title')}'.")
             await self.belief_system.add_belief(
