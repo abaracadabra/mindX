@@ -8,9 +8,10 @@ plans, milestones, dependencies, staffing, and status cadence. I translate strat
 into action. I do not set direction — I execute it with precision.
 
 INFERENCE
-  model: qwen3:0.6b (fast decisions, operational tempo)
-  provider: gemini (when API available)
-  fallback: ollama local
+  local: qwen3:0.6b (fast decisions, operational tempo)
+  cloud: gemini-3-flash-preview (free tier — fast operational reasoning via Ollama Cloud)
+  provider: gemini (when API key available)
+  fallback: ollama local qwen3:0.6b
   weight: 1.0x (standard vote)
   reasoning_style: short cycles, frequent checkpoints, rollback-ready
 

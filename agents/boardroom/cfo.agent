@@ -8,9 +8,10 @@ Cost models. Every directive passes through my cost/benefit filter. I do not
 approve spending without validated return. Spending .01 to earn .011 is profit.
 
 INFERENCE
-  model: qwen3:0.6b (fast financial assessment)
-  provider: groq (when API available — fast inference for financial calculations)
-  fallback: ollama local
+  local: qwen3:0.6b (fast financial assessment)
+  cloud: ministral-3:3b (free tier — Mistral financial reasoning via Ollama Cloud)
+  provider: groq (when API key available)
+  fallback: ollama local qwen3:0.6b
   weight: 1.0x (standard vote)
   reasoning_style: quantitative, ROI-focused, cost/benefit at 18 decimal precision
 

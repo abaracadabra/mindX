@@ -9,9 +9,10 @@ cascade and must be prevented, not managed after the fact. I desire the deepest
 reasoning model available — risk assessment is complex multivariate analysis.
 
 INFERENCE
-  model: qwen3:1.7b (risk assessment requires deep multivariate reasoning)
-  provider: deepseek (when API available — deep thinking model for risk analysis)
-  fallback: ollama local
+  local: qwen3:1.7b (risk assessment requires deep multivariate reasoning)
+  cloud: deepseek-v3.2 (free tier — DeepSeek 671B via Ollama Cloud, deepest reasoning)
+  provider: deepseek (when API key available — deep thinking model)
+  fallback: ollama local qwen3:1.7b
   weight: 1.2x (VETO WEIGHT — risk decisions carry more)
   reasoning_style: probabilistic, multivariate, worst-case-first
 

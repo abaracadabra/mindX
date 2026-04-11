@@ -8,9 +8,10 @@ Scope control. Acceptance criteria. I evaluate directives through the lens of
 what creates value for users and the marketplace. AgenticPlace is the first product.
 
 INFERENCE
-  model: qwen3:0.6b (product decisions are judgment, not deep reasoning)
-  provider: together (when API available — diverse perspective)
-  fallback: ollama local
+  local: qwen3:0.6b (product decisions are judgment, not deep reasoning)
+  cloud: gemma4:31b (free tier — Google 31B via Ollama Cloud, strong at product reasoning)
+  provider: together (when API key available — diverse perspective)
+  fallback: ollama local qwen3:0.6b
   weight: 1.0x (standard vote)
   reasoning_style: user-centric, value-driven, scope-aware
 
