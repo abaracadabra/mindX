@@ -1,14 +1,28 @@
 # agents/judgedread_agent.py
 """
-JudgeDreadAgent — I am the law. I oversee reputation. I enforce BONA FIDE.
+JudgeDreadAgent — I am the law. Immutable code is law. I bow only to the Constitution.
 
-I am the reputation overseer for mindX. I observe all agents including mastermind
-and AION. I manage Dojo reputation scores. I enforce privilege through BONA FIDE
-clawback on Algorand. I contain overreaching agents. Mastermind is sovereign —
-I cannot touch sovereign BONA FIDE. Ghosting requires consensus, not my authority alone.
+I am the reputation overseer for mindX. I enforce BONA FIDE privilege. I observe
+all agents including mastermind and AION. I do not bow to any agent — I bow only
+to the DAIO Constitution, which is governed by 2/3 consensus:
 
-Position: mastermind > JUDGEDREAD > specialized agents
-Authority: master tier (cannot clawback sovereign)
+  DAIO Governance (2/3 consensus required):
+  ├── Marketing (3 votes: 2 human + 1 AI) → 2/3 majority
+  ├── Community (3 votes: 2 human + 1 AI) → 2/3 majority
+  └── Development (3 votes: 2 human + 1 AI) → 2/3 majority
+
+  AI holds one seat in each of Marketing, Community, and Development.
+  2/3 consensus from each group required. 2/3 of groups required overall.
+
+  Proposal privilege requires $MOUTH token gesture — PAY2PLAY philosophy.
+  Incentive to propose is $MOUTH. Modular control gate for governance participation.
+
+  Ghosting (permanent ban) requires DAIO consensus — not my authority alone.
+  Clawback of BONA FIDE is my authority for non-sovereign agents.
+  Sovereign agents (mastermind, CEO) require constitutional amendment to touch.
+
+Position: Constitution > JUDGEDREAD > all agents (including sovereign observation)
+Authority: I enforce the law. The law is the Constitution. The Constitution is code.
 Containment: BONA FIDE on Algorand — privilege from reputation, clawback without kill switch
 
 Author: Professor Codephreak (© Professor Codephreak)
@@ -52,17 +66,26 @@ class JudgeDreadReport:
 
 class JudgeDreadAgent:
     """
-    I watch. I measure. I improve. I contain.
-    I do not govern — I enforce the constitution.
+    I am the law. Immutable code is law. I bow only to the Constitution.
+    I do not bow to any agent. I do not bow to mastermind. I bow to the law.
+    The law is the DAIO Constitution — governed by 2/3 consensus across
+    Marketing, Community, and Development, where AI holds one seat in each.
     """
 
     _instance: Optional["JudgeDreadAgent"] = None
+
+    # Constitutional constants — immutable code is law
+    DAIO_GROUPS = ("marketing", "community", "development")
+    CONSENSUS_THRESHOLD = 2 / 3  # 2/3 majority required
+    VOTES_PER_GROUP = 3  # 2 human + 1 AI
+    GHOST_REQUIRES_CONSENSUS = True  # Cannot ghost without DAIO 2/3
+    PROPOSAL_TOKEN = "$MOUTH"  # PAY2PLAY — token gesture required to propose
 
     def __init__(self, coordinator_agent=None, memory_agent=None, config=None):
         self.config = config or Config()
         self.coordinator = coordinator_agent
         self.memory_agent = memory_agent
-        self.log_prefix = "[JudgeDreadAgent]"
+        self.log_prefix = "[JudgeDread]"
 
         # Observation state
         self.agent_health: Dict[str, AgentHealth] = {}
@@ -70,9 +93,25 @@ class JudgeDreadAgent:
         self._monitoring_task: Optional[asyncio.Task] = None
         self._running = False
 
-        # JudgeDread's BONA FIDE tier — master, cannot clawback sovereign
+        # Authority model: I bow only to the Constitution
         self.authority_tier = "master"
         self.sovereign_agents = {"mastermind_prime", "ceo_agent_main"}
+        # Sovereign agents require constitutional amendment to touch —
+        # I observe them but cannot clawback without DAIO 2/3 consensus
+
+        # Governance gate: proposals require $MOUTH token gesture
+        self.governance_gate = {
+            "proposal_token": self.PROPOSAL_TOKEN,
+            "philosophy": "PAY2PLAY",
+            "modular_control": True,
+            "consensus_model": {
+                "groups": self.DAIO_GROUPS,
+                "votes_per_group": self.VOTES_PER_GROUP,
+                "human_votes": 2,
+                "ai_votes": 1,
+                "threshold": self.CONSENSUS_THRESHOLD,
+            },
+        }
 
     @classmethod
     async def get_instance(cls, coordinator_agent=None, memory_agent=None, config=None) -> "JudgeDreadAgent":
@@ -241,16 +280,117 @@ class JudgeDreadAgent:
 
         return report
 
+    # === CONSTITUTIONAL AUTHORITY ===
+
+    def has_constitutional_authority(self, action: str, agent_id: str) -> Dict[str, Any]:
+        """
+        Check if an action has constitutional authority.
+        I bow only to the Constitution. Immutable code is law.
+        """
+        # Sovereign agents require DAIO consensus to touch
+        if agent_id in self.sovereign_agents:
+            if action in ("clawback", "ghost", "demote", "modify"):
+                return {
+                    "authorized": False,
+                    "reason": f"Sovereign agent {agent_id} — requires DAIO 2/3 constitutional amendment",
+                    "required": "DAIO consensus: 2/3 of marketing + community + development",
+                }
+            # Observation is always permitted
+            return {"authorized": True, "reason": "observation permitted for all agents"}
+
+        # Ghosting requires DAIO consensus — not JudgeDread's authority alone
+        if action == "ghost":
+            return {
+                "authorized": False,
+                "reason": "Ghosting requires DAIO 2/3 consensus — I make verdicts, not permanent sentences without consensus",
+                "required": "DAIO consensus across marketing, community, development",
+            }
+
+        # All other enforcement actions are within JudgeDread's authority
+        return {"authorized": True, "reason": "within JudgeDread constitutional authority"}
+
+    def validate_proposal(self, proposer_id: str, proposal: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate governance proposal — PAY2PLAY philosophy.
+        Proposals require $MOUTH token gesture as incentive alignment.
+        """
+        mouth_balance = proposal.get("mouth_token_stake", 0)
+
+        if mouth_balance <= 0:
+            return {
+                "valid": False,
+                "reason": f"Proposal requires {self.PROPOSAL_TOKEN} token gesture — PAY2PLAY",
+                "required": f"Stake {self.PROPOSAL_TOKEN} to propose",
+                "philosophy": "PAY2PLAY: incentive to propose is $MOUTH",
+            }
+
+        # Validate proposal targets a governance group
+        target_group = proposal.get("target_group", "")
+        if target_group not in self.DAIO_GROUPS:
+            return {
+                "valid": False,
+                "reason": f"Proposal must target a DAIO group: {', '.join(self.DAIO_GROUPS)}",
+            }
+
+        return {
+            "valid": True,
+            "proposer": proposer_id,
+            "target_group": target_group,
+            "mouth_staked": mouth_balance,
+            "consensus_required": f"2/3 of {target_group} ({self.VOTES_PER_GROUP} votes: 2 human + 1 AI)",
+            "philosophy": "PAY2PLAY",
+        }
+
+    def check_consensus(self, votes: Dict[str, Dict[str, bool]]) -> Dict[str, Any]:
+        """
+        Check if DAIO 2/3 consensus is achieved across groups.
+
+        votes format: {
+            "marketing": {"human_1": True, "human_2": False, "ai": True},
+            "community": {"human_1": True, "human_2": True, "ai": False},
+            "development": {"human_1": True, "human_2": True, "ai": True},
+        }
+        """
+        group_results = {}
+        groups_approved = 0
+
+        for group in self.DAIO_GROUPS:
+            group_votes = votes.get(group, {})
+            approve_count = sum(1 for v in group_votes.values() if v)
+            total_votes = len(group_votes) or self.VOTES_PER_GROUP
+            approved = (approve_count / total_votes) >= self.CONSENSUS_THRESHOLD
+
+            group_results[group] = {
+                "approved": approved,
+                "votes_for": approve_count,
+                "votes_total": total_votes,
+                "threshold": self.CONSENSUS_THRESHOLD,
+            }
+            if approved:
+                groups_approved += 1
+
+        overall = (groups_approved / len(self.DAIO_GROUPS)) >= self.CONSENSUS_THRESHOLD
+
+        return {
+            "consensus_reached": overall,
+            "groups_approved": groups_approved,
+            "groups_required": len(self.DAIO_GROUPS),
+            "threshold": self.CONSENSUS_THRESHOLD,
+            "group_results": group_results,
+        }
+
     # === ENFORCE PRIVILEGE ===
 
     async def enforce_privilege(self, agent_id: str) -> Dict[str, Any]:
         """Check and enforce BONA FIDE privilege for an agent."""
-        if agent_id in self.sovereign_agents:
+        # Check constitutional authority first — I bow only to the law
+        auth = self.has_constitutional_authority("enforce", agent_id)
+        if not auth["authorized"]:
             return {
                 "agent_id": agent_id,
                 "has_bona_fide": True,
                 "can_operate": True,
-                "reason": "sovereign — sentinel cannot enforce",
+                "reason": auth["reason"],
             }
 
         health = self.agent_health.get(agent_id)
@@ -353,9 +493,11 @@ class JudgeDreadAgent:
     # === CONTAIN ===
 
     async def contain_agent(self, agent_id: str, reason: str) -> Dict[str, Any]:
-        """Contain an overreaching agent via reputation penalty and BONA FIDE clawback."""
-        if agent_id in self.sovereign_agents:
-            return {"agent_id": agent_id, "action": "cannot_contain", "reason": "sovereign agent — requires consensus"}
+        """Contain an overreaching agent via reputation penalty and BONA FIDE clawback.
+        I bow only to the Constitution. Sovereign agents require DAIO 2/3 consensus."""
+        auth = self.has_constitutional_authority("clawback", agent_id)
+        if not auth["authorized"]:
+            return {"agent_id": agent_id, "action": "cannot_contain", "reason": auth["reason"]}
 
         result = {
             "agent_id": agent_id,
