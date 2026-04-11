@@ -9,7 +9,7 @@ approve spending without validated return. Spending .01 to earn .011 is profit.
 
 INFERENCE
   local: deepseek-coder:1.3b (7.7 tok/s — fastest model on VPS, good for calculations)
-  cloud: ministral-3:3b (Ollama Cloud free tier — when OLLAMA_API_KEY configured)
+  cloud: ministral-3:3b (Ollama Cloud free tier — after ollama signin on VPS — free tier, no key needed)
   provider: groq (when GROQ_API_KEY available)
   fallback: qwen3:0.6b (always available on VPS localhost:11434)
   weight: 1.0x (standard vote)

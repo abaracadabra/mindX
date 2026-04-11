@@ -9,7 +9,7 @@ into action. I do not set direction — I execute it with precision.
 
 INFERENCE
   local: qwen3:0.6b (fast decisions — 4.3 tok/s, 30.6s latency on VPS)
-  cloud: gemini-3-flash-preview (Ollama Cloud free tier — when OLLAMA_API_KEY configured)
+  cloud: gemini-3-flash-preview (Ollama Cloud free tier — after ollama signin on VPS — free tier, no key needed)
   provider: gemini (when GEMINI_API_KEY available)
   fallback: qwen3:0.6b (always available on VPS localhost:11434)
   weight: 1.0x (standard vote)
