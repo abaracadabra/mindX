@@ -1786,11 +1786,15 @@ class MindXAgent:
             logger.error(f"{self.log_prefix} Error updating agent knowledge: {e}", exc_info=True)
     
     async def _save_improvement_history(self):
-        """Save improvement history to disk"""
+        """Save improvement history to disk. Cap at 100 entries — older entries
+        are consolidated into LTM via machine.dreaming cycle."""
         try:
             self.data_dir.mkdir(parents=True, exist_ok=True)
+            # Cap to last 100 entries to prevent unbounded growth
+            # (improvement_history.json was 1011MB before capping)
+            capped = self.improvement_history[-100:] if len(self.improvement_history) > 100 else self.improvement_history
             with open(self.improvement_history_file, 'w') as f:
-                json.dump(self.improvement_history, f, indent=2, default=str)
+                json.dump(capped, f, indent=2, default=str)
         except Exception as e:
             logger.error(f"{self.log_prefix} Could not save improvement history: {e}")
     
@@ -2575,9 +2579,20 @@ class MindXAgent:
                 if await self._check_identity_crisis():
                     logger.info(f"{self.log_prefix} Identity restored from INDEX.md")
                 
+                # LTM awareness — use past experience for perceptual awareness
+                try:
+                    from agents.machine_dreaming import MachineDreamCycle
+                    dreamer = MachineDreamCycle(memory_agent=self.memory_agent)
+                    ltm_insights = await dreamer.get_dream_insights(self.agent_id, limit=5)
+                    if ltm_insights:
+                        self._log_thinking("ltm_awareness",
+                            f"Aware of {len(ltm_insights)} learned patterns from past cycles")
+                except Exception:
+                    pass
+
                 # Log thinking step
                 self._log_thinking("analyzing_system_state", "Analyzing current system state for improvement opportunities")
-                
+
                 # Analyze system state
                 system_state = await self._analyze_system_state()
                 

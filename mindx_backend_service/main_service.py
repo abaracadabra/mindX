@@ -1580,6 +1580,24 @@ async def startup_event():
                     logger.debug(f"STM→LTM promotion: {promo_e}")
                 await asyncio.sleep(3600)  # Every hour
 
+        # Machine Dreaming — offline knowledge refinement (STM → LTM consolidation)
+        async def _periodic_dream_cycle():
+            """mindX dreams: consolidate STM into LTM every 2 hours."""
+            await asyncio.sleep(600)  # Wait 10 min for system to warm up
+            while True:
+                try:
+                    from agents.machine_dreaming import MachineDreamCycle
+                    dreamer = MachineDreamCycle(memory_agent=memory_agent)
+                    result = await dreamer.run_full_dream()
+                    logger.info(
+                        f"Dream cycle: {result.get('agents_dreamed', 0)} agents, "
+                        f"{result.get('insights_generated', 0)} insights, "
+                        f"{result.get('memories_promoted_to_ltm', 0)} promoted"
+                    )
+                except Exception as dream_e:
+                    logger.debug(f"Dream cycle: {dream_e}")
+                await asyncio.sleep(7200)  # Every 2 hours
+
         # Improvement Journal — mindX documents its own evolution
         async def _periodic_journal():
             await asyncio.sleep(60)  # Let system settle
@@ -1676,6 +1694,7 @@ async def startup_event():
 
         asyncio.create_task(_auto_start_autonomous())
         asyncio.create_task(_periodic_memory_promotion())
+        asyncio.create_task(_periodic_dream_cycle())
         asyncio.create_task(_periodic_journal())
         asyncio.create_task(_periodic_author())
         asyncio.create_task(_periodic_embedding())
