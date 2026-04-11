@@ -17,7 +17,7 @@ contract THINK is ERC1155, Ownable {
         string agentPrompt;
         uint40 lastUpdate;
         bool active;
-        uint8 dimensions;
+        uint32 dimensions;
         uint16 batchSize;
     }
 
@@ -27,7 +27,7 @@ contract THINK is ERC1155, Ownable {
     event ThinkCreated(
         uint256 indexed thinkId,
         string prompt,
-        uint8 dimensions,
+        uint32 dimensions,
         uint16 batchSize
     );
 
@@ -45,7 +45,7 @@ contract THINK is ERC1155, Ownable {
         address recipient,
         string memory prompt,
         string memory agentPrompt,
-        uint8 dimensions,
+        uint32 dimensions,
         uint16 batchSize,
         uint256 amount
     ) external onlyOwner returns (uint256) {

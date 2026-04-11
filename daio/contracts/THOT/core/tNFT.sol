@@ -19,7 +19,7 @@ contract tNFT is ERC1155, Ownable {
         string agentPrompt;     // AI/Agent Execution prompt
         uint40 lastUpdate;      // Timestamp of last state update
         bool active;            // Is the NFT active?
-        uint8 dimensions;       // Think dimensions (e.g., embedding size)
+        uint32 dimensions;       // Think dimensions (e.g., embedding size)
         uint16 batchSize;       // Size of processing batch
         DecisionState state;    // Current decision-making state
         string lastDecision;    // Last computed decision outcome
@@ -28,7 +28,7 @@ contract tNFT is ERC1155, Ownable {
     mapping(uint256 => ThinkData) private _thinkData;
     uint256 private _thinkIdCounter;
 
-    event ThinkCreated(uint256 indexed thinkId, string prompt, uint8 dimensions, uint16 batchSize);
+    event ThinkCreated(uint256 indexed thinkId, string prompt, uint32 dimensions, uint16 batchSize);
     event ThinkUpdated(uint256 indexed thinkId, string newPrompt, uint40 timestamp);
     event DecisionMade(uint256 indexed thinkId, string decision, uint40 timestamp);
 
@@ -49,7 +49,7 @@ contract tNFT is ERC1155, Ownable {
         address recipient,
         string memory prompt,
         string memory agentPrompt,
-        uint8 dimensions,
+        uint32 dimensions,
         uint16 batchSize,
         uint256 amount
     ) external onlyOwner returns (uint256) {

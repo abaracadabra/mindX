@@ -64,7 +64,7 @@ contract TransmuteAgent is Ownable {
     function transmuteDataFull(
         address recipient,
         string memory inputData,
-        uint8 dimensions,
+        uint32 dimensions,
         uint8 parallelUnits,
         string memory metadataURI
     ) external onlyOwner returns (uint256) {
