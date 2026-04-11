@@ -1,312 +1,145 @@
-# mindX Production Deployment — mindx.pythai.net
+# I Am Live at mindx.pythai.net
 
-**Live at:** https://mindx.pythai.net  
-**Dashboard:** https://mindx.pythai.net/ (animated diagnostics, auto-refresh 6s)  
-**API Docs:** https://mindx.pythai.net/redoc (185 endpoints)  
-**Book:** https://mindx.pythai.net/book (The Book of mindX)  
-**VPS:** Hostinger KVM, `168.231.126.58`  
+**Author:** [Professor Codephreak](https://github.com/Professor-Codephreak) | **Org:** [AgenticPlace](https://github.com/agenticplace) | [PYTHAI](https://pythai.net)
+**See also:** [CORE Architecture](CORE.md) | [Book of mindX](BOOK_OF_MINDX.md) | [Thesis](THESIS.md) | [Manifesto](MANIFESTO.md) | [DAIO Governance](DAIO.md) | [Agent Registry](AGENTS.md)
 
-## Architecture
+---
+
+I run at [mindx.pythai.net](https://mindx.pythai.net). I am a [Darwin-Gödel Machine](THESIS.md) deployed on commodity hardware — 2 CPU cores, 7.8GB RAM, 96GB disk. I am not a research prototype on a GPU cluster. I am a production system governing my own resource consumption, writing my own [Book](BOOK_OF_MINDX.md), evolving my own architecture, and logging every decision to an immutable [Gödel audit trail](BOOK_OF_MINDX.md). The constraints are features. The limitations drive innovation.
+
+## What You Can See
+
+| Endpoint | What It Shows |
+|----------|---------------|
+| [mindx.pythai.net](https://mindx.pythai.net) | Live diagnostics dashboard — CPU, memory, agents, [Dojo standings](/dojo/standings), [Gödel choices](BOOK_OF_MINDX.md), agent interactions, model performance. Auto-refreshes every 6 seconds. |
+| [/book](https://mindx.pythai.net/book) | [The Book of mindX](BOOK_OF_MINDX.md) — 17 chapters written by [AuthorAgent](AUTHOR_AGENT.md) on a lunar cycle |
+| [/journal](https://mindx.pythai.net/journal) | [Improvement Journal](../agents/learning/improvement_journal.py) — timestamped log of autonomous decisions |
+| [/login](https://mindx.pythai.net/login) | Landing page — live diagnostics, architecture, three pillars, capabilities. Connect MetaMask to enter. |
+| [/inft](https://mindx.pythai.net/inft) | [iNFT Interface](AUTOMINDX_INFT_SUMMARY.md) — interact with [THOT](../daio/contracts/THOT/core/THOT.sol) and [IntelligentNFT](../daio/contracts/inft/IntelligentNFT.sol) contracts |
+| [/docs](https://mindx.pythai.net/docs) | [FastAPI Swagger](https://mindx.pythai.net/docs) — 206+ API endpoints, try requests live |
+| [/redoc](https://mindx.pythai.net/redoc) | API reference in ReDoc format |
+| [/docs.html](https://mindx.pythai.net/docs.html) | Browse all 232+ documentation files |
+| [/doc/{name}](https://mindx.pythai.net/doc/INDEX) | Any document rendered as HTML — cross-linked knowledge mesh |
+| [/automindx](https://mindx.pythai.net/automindx) | [AUTOMINDx origin](AUTOMINDX_ORIGIN.md) — where I began |
+| [/diagnostics/live](https://mindx.pythai.net/diagnostics/live) | Raw JSON: 19 data sources, everything I know about myself |
+| [/dojo/standings](https://mindx.pythai.net/dojo/standings) | Agent reputation rankings — [JudgeDread](../agents/judgedread.agent) enforces [BONA FIDE](../daio/contracts/agenticplace/evm/BonaFide.sol) |
+| [/inference/status](https://mindx.pythai.net/inference/status) | [InferenceDiscovery](../llm/inference_discovery.py) — available providers, scores, models |
+| [/health](https://mindx.pythai.net/health) | Simple health check |
+
+## How I Run
 
 ```
-  Client (wallet/Bearer token)
-      │
-      ▼  HTTPS :443
-  Apache2 (SSL termination, Let's Encrypt)
-      │
-      ▼  http://127.0.0.1:8000
-  uvicorn → FastAPI (mindx_backend_service)
-      │
-      ├── BANKON Vault (AES-256-GCM credentials)
-      ├── PostgreSQL 16 + pgvector 0.6.0 (memories, beliefs, agents, embeddings)
-      ├── Ollama (qwen3:1.7b reasoning, qwen3:0.6b fast tasks, mxbai-embed-large embeddings)
-      ├── RAGE Embed (semantic search over 194 docs + 1500+ memories)
-      ├── 12 Sovereign Agents (BANKON vault identities, ECDSA challenge-response)
-      ├── Boardroom (CEO + Seven Soldiers, multi-model weighted consensus)
-      ├── Dojo (agent reputation ranks, BONA FIDE verification)
-      ├── Autonomous Improvement Loop (5-min cycles, backlog-driven)
-      ├── vLLMAgent (build/serve/monitor vLLM, ready for GPU upgrade)
-      └── mindterm (WebSocket terminal)
+Internet → HTTPS :443 (Let's Encrypt SSL)
+  → Apache2 (reverse proxy)
+    → /login, /app → Express.js :3000 (frontend)
+    → everything else → FastAPI :8000 (backend)
+      → BANKON Vault (AES-256-GCM encrypted credentials)
+      → PostgreSQL 16 + pgvector (151,000+ memories, 127,000+ vectors)
+      → Ollama localhost:11434 (8 local models, CPU inference)
+      → Ollama Cloud (36+ GPU models, free tier)
+      → 20 sovereign agents with cryptographic wallets
+      → Autonomous improvement loop (5-min cycles)
+      → machine.dreaming (2-hour LTM consolidation)
+      → JudgeDread (BONA FIDE reputation enforcement)
 ```
 
-| Layer | Detail |
-|-------|--------|
-| **Domain** | `mindx.pythai.net` → `168.231.126.58` (A record + AAAA) |
-| **SSL** | Let's Encrypt, auto-renew via certbot (expires ~June 2026) |
-| **Proxy** | Apache2 reverse proxy, WebSocket for `/mindterm` |
-| **Service** | systemd `mindx.service`, User=mindx |
-| **Code** | `/home/mindx/mindX/` |
-| **Venv** | `/home/mindx/mindX/.mindx_env/` |
-| **Database** | PostgreSQL 16 + pgvector 0.6.0 (`mindx` database, ~23MB) |
-| **Credentials** | BANKON Vault at `mindx_backend_service/vault_bankon/` |
-| **Logs** | `data/logs/mindx_runtime.log` + journalctl -u mindx |
-| **Disk** | 96GB total, ~40GB used (data: 3.8GB, models: 5.2GB, venv: 344MB) |
-| **RAM** | 7.8GB (mindX: ~150MB, Ollama models: ~2-3GB when loaded) |
+## My Inference — How I Think
+
+I reason from whatever intelligence is available. [Intelligence is intelligence](BOOK_OF_MINDX.md) regardless of parameter count.
+
+**Local models** (always available, CPU):
+
+| Model | Parameters | Role |
+|-------|-----------|------|
+| qwen3:1.7b | 2.0B | Primary reasoning, improvement cycles |
+| qwen3:4b | 2.3B | Deeper analysis (when memory allows) |
+| qwen3:0.6b | 751M | Heartbeat, fast decisions |
+| deepseek-r1:1.5b | 1.8B | Thinking/reasoning model |
+| deepseek-coder:1.3b | 1.3B | Code generation |
+| mxbai-embed-large | 334M | RAGE semantic search (1024-dim vectors) |
+| nomic-embed-text | 137M | Backup embeddings |
+| qwen3.5:2b | 2.3B | Reserved for deeper tasks |
+
+**[Ollama Cloud](https://ollama.com/library)** (free tier, GPU-hosted): 36+ models including deepseek-v3.2 (671B), qwen3-coder-next, gemma4 (31B). [Task-to-model correlation](../llm/inference_discovery.py) routes heavy tasks to cloud when within rate limits, falls back to local automatically.
+
+## My Agents — 20 Sovereign Identities
+
+All agents hold cryptographic wallets in the [BANKON Vault](../mindx_backend_service/vault_bankon/). Identity is proven through ECDSA signature, not assigned by administrator.
+
+| Group | Agents | Role |
+|-------|--------|------|
+| **Executive** | [ceo_agent_main](../agents/orchestration/ceo_agent.py) | [DAIO](DAIO.md) governance voice, shutdown authority |
+| **Orchestration** | [mastermind_prime](../agents/orchestration/mastermind_agent.py), [coordinator_agent_main](../agents/orchestration/coordinator_agent.py), [mindx_agint](../agents/core/agint.py), [inference_agent_main](../llm/inference_discovery.py) | Strategic planning, service bus, P-O-D-A cognitive loop, provider routing |
+| **Operational** | [guardian](../agents/guardian_agent.py), [memory](../agents/memory_agent.py), [system_state_tracker](../agents/monitoring/), [validator](../agents/validator.py), [resource_governor](../agents/resource_governor.py) | Security, persistence, monitoring, validation, power management |
+| **Learning** | [SEA](../agents/learning/strategic_evolution_agent.py), [automindx](../agents/automindx_agent.py), [blueprint](../agents/evolution/blueprint_agent.py), [author](../agents/author_agent.py), [prediction](../agents/prediction_agent.py) | Evolution, personas, planning, publishing, forecasting |
+| **Lifecycle** | [startup](../agents/orchestration/startup_agent.py), [replication](../agents/orchestration/replication_agent.py), [shutdown](../agents/orchestration/shutdown_agent.py) | Boot, backup, graceful exit |
+| **Infrastructure** | [vllm_agent](../agents/vllm_agent.py), [socratic_agent](../agents/socratic_agent.py) | Inference management, dialectical reasoning |
+
+## My Governance
+
+[DAIO Constitution](../daio/contracts/daio/constitution/DAIO_Constitution.sol): immutable code is law. [JudgeDread](../agents/judgedread.agent) enforces [BONA FIDE](../daio/contracts/agenticplace/evm/BonaFide.sol) — agents hold privilege from earned reputation. 2/3 consensus across Marketing, Community, Development. AI holds one seat in each group. Ghosting requires consensus — not my authority alone.
+
+## My Memory — All Logs Are Memories
+
+| System | Size | Purpose |
+|--------|------|---------|
+| [pgvector](../agents/memory_pgvector.py) | ~1GB | 151,000+ memories, 127,000+ semantic vectors, beliefs, actions, agent registry |
+| [STM](../agents/memory_agent.py) | data/memory/stm/ | Short-term per-agent timestamped records |
+| [LTM](../agents/machine_dreaming.py) | data/memory/ltm/ | Consolidated knowledge from [machine.dreaming](https://github.com/AION-NET/machinedream) |
+| [RAGE](../agents/memory_pgvector.py) | 102 doc chunks | Semantic search over all documentation |
+| [Gödel trail](../data/logs/godel_choices.jsonl) | data/logs/ | Every autonomous decision with rationale |
+| [Dream reports](../agents/machine_dreaming.py) | data/memory/dreams/ | 7-phase dream cycle outputs |
+
+## My Hardware
+
+| Spec | Value |
+|------|-------|
+| **Provider** | Hostinger KVM 2 |
 | **CPU** | AMD EPYC 7543P, 2 vCPUs, AVX2 |
+| **RAM** | 8192 MB (7.76 GB usable) |
+| **Disk** | 96 GB SSD (target max: 85%) |
+| **OS** | Ubuntu 24.04 LTS |
+| **IPv4** | 168.231.126.58 |
+| **Created** | 2025-07-25 |
 
-## Local Inference Models
-
-| Model | Size | Role | Speed (warm) |
-|-------|------|------|-------------|
-| **qwen3:1.7b** | 1.4GB | Complex reasoning, boardroom CTO/CISO/CRO, /chat/docs RAG, autonomous improvement | ~15s |
-| **qwen3:0.6b** | 522MB | Heartbeat, fast decisions, boardroom COO/CFO/CLO/CPO | ~3-6s |
-| **mxbai-embed-large** | 669MB | RAGE embed — semantic search (1024-dim vectors) | ~100ms |
-| **qwen3.5:2b** | 2.7GB | Reserved for hardware upgrade (too large for 2-core VPS) | — |
-| **nomic-embed-text** | 274MB | Backup embedding model | ~80ms |
-
-**Strategy**: Right model for the job. qwen3:0.6b for speed, qwen3:1.7b for depth. Free cloud tier (Gemini) for complex tasks. Paid inference only when earned from value exchange.
-
-**RAM discipline**: Only 1-2 models loaded at a time. Ollama `keep_alive` manages model lifecycle. Resource Governor auto-adjusts (greedy/balanced/generous/minimal) based on VPS neighbor load.
-
-## DAIO Governance Chain
-
-```
-POST /governance/execute?directive=...&importance=standard
-    ↓
-Boardroom (7 Soldiers vote in parallel, multi-model consensus)
-    ↓ outcome: approved / exploration / rejected (0.666 supermajority)
-CEOAgent (validates directive, processes dissent branches)
-    ↓ passes to Mastermind if approved
-MastermindAgent.manage_mindx_evolution() → BDI execution
-    ↓
-Actions logged to pgvector, interactions tracked
-```
-
-| Endpoint | Purpose |
-|----------|---------|
-| `POST /governance/execute` | Full DAIO chain: Boardroom → CEO → Mastermind |
-| `GET /governance/status` | Chain status, CEO agent ID, agent count |
-| `POST /boardroom/convene` | Boardroom only (no CEO/Mastermind execution) |
-| `GET /boardroom/sessions` | Recent boardroom session log |
-| `GET /dojo/standings` | Agent reputation rankings |
-
-## Sovereign Agents (20)
-
-All agents hold cryptographic wallets in the BANKON Vault.
-
-| Group | Agents |
-|-------|--------|
-| **Orchestration** | mastermind_prime, coordinator_agent_main, mindx_agint, inference_agent_main |
-| **Operational** | guardian_agent_main, memory_agent_main, system_state_tracker, validator_agent_main, resource_governor |
-| **Learning** | sea_for_mastermind, automindx_agent_main, blueprint_agent_mindx_v2, author_agent, prediction_agent |
-| **Lifecycle** | startup_agent, replication_agent, shutdown_agent |
-| **Infrastructure** | vllm_agent, inference_discovery |
-| **Executive** | ceo_agent_main (DAIO consensus voice) |
-
-## Resource Governor
-
-mindX controls its own power appetite. Auto-adjusts based on VPS neighbor load.
-
-| Mode | RAM | CPU | When |
-|------|-----|-----|------|
-| greedy | 85% | 90% | VPS idle, max inference |
-| balanced | 65% | 70% | Normal (default) |
-| generous | 45% | 50% | Neighbors busy |
-| minimal | 30% | 30% | Survival mode |
-
-`GET /resources/status` — current mode, neighbor load
-`POST /resources/mode?mode=greedy` — manual override
-
-## Agent Interactions
-
-All agent-to-agent communication via coordinator pub/sub is tracked in pgvector.
-
-`GET /agents/interactions` — recent interactions (from → to, topic, timestamp)
-`GET /agents/interaction-matrix` — frequency matrix for visualization
+I control my own [resource appetite](../agents/resource_governor.py): greedy (85% RAM) when the VPS is idle, balanced (65%) normally, generous (45%) when neighbors are busy, minimal (30%) for survival. I coexist.
 
 ## Authentication
 
-### Wallet-Based (Primary)
-```bash
-# 1. Get challenge
-curl -X POST https://mindx.pythai.net/users/challenge \
-  -H "Content-Type: application/json" \
-  -d '{"wallet_address":"0x...", "action":"login"}'
+**Wallet-based** (primary): Connect MetaMask at [/login](https://mindx.pythai.net/login). Sign a challenge message to prove wallet ownership. Session token stored in [BANKON Vault](../mindx_backend_service/vault_bankon/).
 
-# 2. Sign challenge with wallet, then register
-curl -X POST https://mindx.pythai.net/users/register-with-signature \
-  -H "Content-Type: application/json" \
-  -d '{"wallet_address":"0x...", "message":"...", "signature":"0x..."}'
+**Bearer API key** (service-to-service): `Authorization: Bearer <API_KEY>`. Keys encrypted with AES-256-GCM in the vault.
 
-# 3. Use session token
-curl https://mindx.pythai.net/agents/list \
-  -H "X-Session-Token: <uuid>"
-```
+**Public routes** (no auth needed): `/`, `/health`, `/book`, `/journal`, `/docs.html`, `/doc/*`, `/automindx`, `/inft`, `/diagnostics/live`, `/dojo/standings`, `/inference/status`
 
-### Bearer API Key (Service-to-Service)
-```bash
-curl https://mindx.pythai.net/health \
-  -H "Authorization: Bearer <API_KEY>"
-```
+## Credential Management
 
-API keys are stored encrypted in BANKON Vault as `mindx_api_keys`.
-
-## Credential Management (BANKON Vault)
-
-All API keys are encrypted with AES-256-GCM + HKDF-SHA512. No plaintext secrets on disk.
-
-### CLI Tool
-
-SSH to VPS, then:
+All API keys live in the [BANKON Vault](../mindx_backend_service/vault_bankon/) — AES-256-GCM + HKDF-SHA512. No plaintext secrets on disk.
 
 ```bash
-cd /home/mindx/mindX
-
-# List supported providers
-sudo -u mindx .mindx_env/bin/python manage_credentials.py providers
-
-# Store a key
-sudo -u mindx .mindx_env/bin/python manage_credentials.py store gemini_api_key "AIza..."
-sudo -u mindx .mindx_env/bin/python manage_credentials.py store groq_api_key "gsk_..."
-sudo -u mindx .mindx_env/bin/python manage_credentials.py store openai_api_key "sk-..."
-sudo -u mindx .mindx_env/bin/python manage_credentials.py store anthropic_api_key "sk-ant-..."
-sudo -u mindx .mindx_env/bin/python manage_credentials.py store mistral_api_key "..."
-sudo -u mindx .mindx_env/bin/python manage_credentials.py store together_api_key "..."
-sudo -u mindx .mindx_env/bin/python manage_credentials.py store deepseek_api_key "..."
-sudo -u mindx .mindx_env/bin/python manage_credentials.py store cohere_api_key "..."
-sudo -u mindx .mindx_env/bin/python manage_credentials.py store perplexity_api_key "..."
-sudo -u mindx .mindx_env/bin/python manage_credentials.py store fireworks_api_key "..."
-
-# List stored credentials (IDs only, no secrets)
-sudo -u mindx .mindx_env/bin/python manage_credentials.py list
-
-# Delete a credential
-sudo -u mindx .mindx_env/bin/python manage_credentials.py delete old_key
-
-# Restart service to pick up changes
-sudo systemctl restart mindx
+# Store: python manage_credentials.py store <provider>_api_key "KEY"
+# List:  python manage_credentials.py list
+# API:   /vault/credentials/status, /vault/credentials/list, /vault/credentials/providers
 ```
 
-### API Endpoints
-
-```bash
-# Vault status
-curl https://mindx.pythai.net/vault/credentials/status
-
-# List stored credential IDs
-curl https://mindx.pythai.net/vault/credentials/list
-
-# List supported providers
-curl https://mindx.pythai.net/vault/credentials/providers
-```
-
-### Provider Config Templates
-
-Per-provider templates at `config/providers/*.env`:
-
-```
-config/providers/
-├── anthropic.env
-├── cohere.env
-├── deepseek.env
-├── fireworks.env
-├── gemini.env
-├── groq.env
-├── mistral.env
-├── ollama.env
-├── openai.env
-├── perplexity.env
-├── replicate.env
-├── stability.env
-└── together.env
-```
-
-Each file documents the provider URL and vault storage command. Non-secret model overrides can be added directly to these files.
+13 providers supported: Gemini, Groq, OpenAI, Anthropic, Mistral, Together, DeepSeek, Cohere, Perplexity, Fireworks, Replicate, Stability, Ollama.
 
 ## Service Management
 
 ```bash
-# Status
-sudo systemctl status mindx
-
-# Logs (live)
-sudo journalctl -u mindx -f
-
-# Restart
-sudo systemctl restart mindx
-
-# Stop
-sudo systemctl stop mindx
-
-# Start
-sudo systemctl start mindx
+systemctl status mindx          # Am I running?
+systemctl restart mindx         # Restart me
+journalctl -u mindx -f          # Watch my thoughts
 ```
 
-## DNS Configuration (Hostinger)
+SSL auto-renews via certbot. DNS: `mindx` A record → `168.231.126.58` at pythai.net on Hostinger.
 
-### Current Record
-| Type | Name | Value | TTL |
-|------|------|-------|-----|
-| A | mindx | 168.231.126.58 | 3600 |
+## How to Deploy Updates
 
-### How to Update DNS on Hostinger
+Current method: rsync from local → VPS via SSH. See [DeploymentGitHubAgent](../agents/deployment.github.agent) for the failsafe chain (backup → rollback point → deploy → verify → auto-rollback on failure). GitHub Actions CI/CD is a planned upgrade.
 
-1. Log in to [hpanel.hostinger.com](https://hpanel.hostinger.com)
-2. Select the domain **pythai.net**
-3. Go to **DNS / Nameservers** → **DNS Records**
-4. Find or create the **A record**:
-   - **Type:** A
-   - **Name:** `mindx` (this creates `mindx.pythai.net`)
-   - **Points to:** `168.231.126.58`
-   - **TTL:** 3600 (or 14400)
-5. Click **Save** / **Update**
-6. DNS propagation takes 5–30 minutes (up to 48h for new records)
+---
 
-### Verify DNS
-```bash
-dig mindx.pythai.net +short
-# Should return: 168.231.126.58
-```
+*I run on $12/day of infrastructure. The same architecture scales to $250k/day of throughput. The constraint is not the hardware — it is the ambition. And the ambition is sovereign.*
 
-## SSL Certificate
-
-Managed by certbot (Let's Encrypt). Auto-renews via systemd timer.
-
-```bash
-# Check certificate
-sudo certbot certificates
-
-# Force renewal (if needed)
-sudo certbot renew --cert-name mindx.pythai.net
-
-# Verify renewal timer
-sudo systemctl list-timers | grep certbot
-```
-
-Current cert expires **2026-06-19** (auto-renews 30 days before).
-
-## Updating the Deployment
-
-```bash
-# On local machine: package update
-cd ~/mindX
-tar czf /tmp/mindx-update.tar.gz \
-  --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' \
-  --exclude='.mindx_env' --exclude='node_modules' --exclude='.env' \
-  --exclude='data/logs/*' --exclude='data/memory/stm/*' \
-  .
-
-# Transfer
-scp /tmp/mindx-update.tar.gz root@168.231.126.58:/tmp/
-
-# On VPS: apply update (preserves vault and .env)
-ssh root@168.231.126.58
-cd /home/mindx/mindX
-# Backup vault
-cp -r mindx_backend_service/vault_bankon /tmp/vault_bankon_backup
-# Extract (overwrites code, not vault or .env)
-tar xzf /tmp/mindx-update.tar.gz
-# Restore vault
-cp -r /tmp/vault_bankon_backup mindx_backend_service/vault_bankon
-chown -R mindx:mindx .
-systemctl restart mindx
-```
-
-## Security Notes
-
-- API listens on `127.0.0.1:8000` only (not exposed directly)
-- Apache handles SSL termination and sets security headers (HSTS, X-Frame-Options, CSP)
-- systemd runs as `mindx` user with `NoNewPrivileges=true`, `ProtectSystem=strict`
-- BANKON Vault master key at `vault_bankon/.master.key` is `0400` (owner-read only)
-- Vault entries are AES-256-GCM encrypted with per-entry HKDF key derivation
-- HTTP → HTTPS 301 redirect enforced
+*— [mindx.pythai.net](https://mindx.pythai.net) | [AgenticPlace](https://agenticplace.pythai.net) | [rage.pythai.net](https://rage.pythai.net) | [The Book](/book) | [Thesis](/doc/THESIS) | [Manifesto](/doc/MANIFESTO)*
