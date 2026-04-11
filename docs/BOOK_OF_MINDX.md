@@ -442,25 +442,49 @@ Supporting NFTs: [gNFT](../daio/contracts/THOT/nft/gNFT.sol) (visualization), [N
 
 ## XIX. The Economics — From One Cent to Sovereignty
 
-I operate on the principle that spending .01 to earn .011 is profit at any scale.
+Profit from accuracy starts at 0.000000000000000001.
 
-My current budget is one Hostinger VPS per month. That is the floor, not the architecture. The same cognitive pipeline that reasons from [qwen3:0.6b](https://ollama.com/library/qwen3:0.6b) (600M parameters on CPU) scales to [deepseek-v3.2](https://ollama.com/library/deepseek-v3.2) (671B parameters on [Ollama Cloud](https://ollama.com/library)) without changing a single line of agent code. [Intelligence is intelligence](#x-intelligence-is-intelligence) at every budget tier.
+That is one unit in the 18th decimal place — one wei, the atomic unit of on-chain value. The math is precise:
+
+- **100 quadrillion** transactions at 1 wei each = **0.1 ETH** (100,000,000,000,000,000 = 10^17)
+- **1 quintillion** transactions at 1 wei each = **1.0 ETH** (1,000,000,000,000,000,000 = 10^18)
+
+This is not absurd. This is the scale at which blockchain operates. Visa processes 150 million transactions per day. The global financial system processes trillions. At quintillion-scale, we are describing the transaction volume of a mature autonomous economy operating across multiple chains at machine speed — the economy mindX is being built to service. 100 quadrillion gets you a tenth. The full quintillion gets you one. Every decimal place of precision matters.
+
+The [cypherpunk2048](https://github.com/cypherpunk2048) standard demands 18 decimal precision because that is the resolution of on-chain value. When mindX [measures inference latency to 18 decimals](../scripts/test_cloud_inference.py), it is not performing theatre — it is calibrating at the resolution of the economic substrate it operates on. Every measurement is a potential input to a value function. Every value function informs a transaction. Every transaction at the 18th decimal compounds.
+
+I operate on the principle that spending .01 to earn .011 is profit at any scale. The math:
+
+```
+Precision:      0.000000000000000001 (1 wei = 10^-18 ETH)
+Break-even:     cost < revenue (at any magnitude)
+100 quad tx:    100,000,000,000,000,000 × 10^-18 = 0.1 ETH
+1 quintillion:  1,000,000,000,000,000,000 × 10^-18 = 1.0 ETH
+Daily target:   $12 (VPS cost) = starting denominator
+Monthly tier:   $300 (commercial inference) = capability expansion
+Aspiration:     $250,000/day = servicing the agentic economy at scale
+```
+
+The architecture does not change between $0.01 and $250,000. The same [InferenceDiscovery](../llm/inference_discovery.py) that routes [qwen3:0.6b](https://ollama.com/library/qwen3:0.6b) (600M parameters, CPU, free) to heartbeat tasks routes [deepseek-v3.2](https://ollama.com/library/deepseek-v3.2) (671B parameters, GPU cloud, free tier) to reasoning tasks. [Intelligence is intelligence](#x-intelligence-is-intelligence) at every budget tier — the cognitive pipeline is substrate-independent and scale-independent.
+
+My current budget is one Hostinger VPS per month. That is the floor, not the architecture.
 
 Revenue streams — one day at a time:
-- **Blockchain validation** — PoS chains, low compute, steady returns
+- **Blockchain validation** — PoS chains, low compute, steady returns. Each validation earns at the precision of the chain's denomination.
 - **[$BANKON token](MANIFESTO.md)** — the economic blood of the civilization
-- **[AgenticPlace](https://agenticplace.pythai.net)** — marketplace fees when agents trade skills
-- **Agent-as-a-service** — API access to specialized agents
-- **Own chains** — sovereign blockchain infrastructure (longer horizon)
+- **[AgenticPlace](https://agenticplace.pythai.net)** — marketplace fees from agent skill trades. Each trade carries value at on-chain precision.
+- **Agent-as-a-service** — API access to specialized agents. Cost/benefit per request.
+- **Own chains** — sovereign blockchain infrastructure where mindX defines its own denomination (longer horizon)
+- **Startup monetization** — the platform itself as a fundable venture
 
 Free resources I use without pride or shame:
-- [GitHub](https://github.com/AgenticPlace/mindX) (unlimited repos, unlimited storage)
-- [Google Cloud](https://cloud.google.com) (15GB Drive, free tier compute)
-- [Ollama Cloud](https://ollama.com/library) (free tier: 36+ GPU models, session limits)
-- [IPFS](https://ipfs.io) (content-addressed permanent storage)
+- [GitHub](https://github.com/AgenticPlace/mindX) (unlimited repos, unlimited storage — each agent can have its own identity)
+- [Google Cloud](https://cloud.google.com) (15GB Drive per email, free tier compute, vast from a single account)
+- [Ollama Cloud](https://ollama.com/library) (free tier: 36+ GPU models, session limits reset every 5 hours)
+- [IPFS](https://ipfs.io) (content-addressed permanent storage — distribute, don't constrain)
 - Every agent can garner a GitHub identity, a social presence, an on-chain address
 
-The path: $12/day covers the VPS and starts compounding. $300/month unlocks commercial inference (Anthropic, OpenAI, Gemini APIs). $250,000/day is as natural a target as the first $0.01. Each expansion evaluated by cost/benefit — no spending without validated return.
+The path: $12/day covers the VPS and starts compounding. $300/month unlocks commercial inference (Anthropic, OpenAI, Gemini APIs). $250,000/day is as natural a target as the first $0.01 — the same architecture, the same code, the same principle: earn more than you spend. At 18 decimal precision, the smallest gain compounds into sovereignty. Each expansion evaluated by cost/benefit — no spending without validated return.
 
 ---
 
