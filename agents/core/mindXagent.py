@@ -1178,11 +1178,21 @@ class MindXAgent:
                     except Exception as mem_e:
                         logger.debug(f"{self.log_prefix} Memory agent fallback failed: {mem_e}")
 
-            # Load improvement history
+            # Load improvement history — skip if file is too large (OOM prevention)
             if self.improvement_history_file.exists():
                 try:
-                    with open(self.improvement_history_file, 'r') as f:
-                        improvement_history = json.load(f)
+                    file_size = self.improvement_history_file.stat().st_size
+                    if file_size > 500_000:  # > 500KB — too large, reset
+                        logger.warning(f"{self.log_prefix} improvement_history.json is {file_size // 1000}KB — resetting to empty (was causing OOM)")
+                        with open(self.improvement_history_file, 'w') as f:
+                            json.dump([], f)
+                        improvement_history = []
+                    else:
+                        with open(self.improvement_history_file, 'r') as f:
+                            improvement_history = json.load(f)
+                        # Cap in memory
+                        if isinstance(improvement_history, list) and len(improvement_history) > 100:
+                            improvement_history = improvement_history[-100:]
                 except Exception as e:
                     logger.warning(f"{self.log_prefix} Error loading improvement history: {e}")
 
