@@ -125,7 +125,18 @@ class InferenceDiscovery:
             base_url="http://localhost:11434",
         )
 
-        # Cloud providers (checked via simple health/key presence)
+        # Ollama Cloud — free tier, GPU-hosted models via ollama.com
+        # No API key required for free tier (session limits: reset every 5h, weekly reset 7d)
+        # API key (OLLAMA_API_KEY) upgrades to Pro tier with 50x usage
+        ollama_cloud_key = os.getenv("OLLAMA_API_KEY", "")
+        self.sources["ollama_cloud"] = InferenceSource(
+            name="ollama_cloud",
+            provider_type="ollama_cloud",
+            base_url="https://ollama.com",
+            status=ProviderStatus.AVAILABLE,  # always available (free tier)
+        )
+
+        # Cloud providers (checked via API key presence)
         cloud_providers = {
             "gemini": ("GEMINI_API_KEY", "https://generativelanguage.googleapis.com"),
             "groq": ("GROQ_API_KEY", "https://api.groq.com"),
@@ -143,6 +154,32 @@ class InferenceDiscovery:
                 base_url=url,
                 status=ProviderStatus.AVAILABLE if key else ProviderStatus.UNREACHABLE,
             )
+
+        # Task-to-model correlation: which models suit which agent skills
+        # Efficiency optimization — route heavy tasks to cloud, light to local
+        self.task_model_map = {
+            # Local models (fast, always available, light tasks)
+            "heartbeat": {"provider": "ollama_local", "model": "qwen3:0.6b", "reason": "fast, low resource"},
+            "embedding": {"provider": "ollama_local", "model": "mxbai-embed-large", "reason": "embedding-native"},
+            "simple_chat": {"provider": "ollama_local", "model": "qwen3:1.7b", "reason": "balanced speed/quality"},
+            # Cloud models (heavy reasoning, free tier with limits)
+            "reasoning": {"provider": "ollama_cloud", "model": "deepseek-v3.2", "reason": "671B reasoning, free tier"},
+            "coding": {"provider": "ollama_cloud", "model": "qwen3-coder-next", "reason": "code-specialized, free tier"},
+            "blueprint": {"provider": "ollama_cloud", "model": "qwen3.5:397b", "reason": "strategic planning, free tier"},
+            "analysis": {"provider": "ollama_cloud", "model": "gemma4:31b", "reason": "analytical, free tier"},
+        }
+
+        # Rate limits: realistic free tier constraints
+        self.rate_limits = {
+            "ollama_local": {"rpm": 60, "daily": None, "note": "no limit, local"},
+            "ollama_cloud": {"rpm": 5, "daily": 100, "note": "free tier, 5h session reset, 7d weekly reset"},
+            "cloud_gemini": {"rpm": 15, "daily": 1500, "note": "free tier Google AI Studio"},
+            "cloud_groq": {"rpm": 30, "daily": 14400, "note": "free tier"},
+            "cloud_openai": {"rpm": 3, "daily": 200, "note": "free tier"},
+            "cloud_anthropic": {"rpm": 5, "daily": 1000, "note": "with API key"},
+        }
+        self._cloud_call_count = 0
+        self._cloud_last_reset = time.time()
 
     async def probe_all(self) -> Dict[str, ProviderStatus]:
         """Probe all inference sources concurrently. Returns status map."""
@@ -363,6 +400,55 @@ class InferenceDiscovery:
             f"reliability={best_src.reliability:.2f})"
         )
         return best_name, best_src
+
+    async def get_provider_for_task(self, task_type: str) -> Optional[Tuple[str, InferenceSource, str]]:
+        """
+        Get the best provider for a specific task type.
+        Returns (provider_name, source, recommended_model) or None.
+
+        Task routing: micro models prove intelligence is intelligence —
+        mindX works from substandard inference because structure > raw power.
+        Cloud models are used for heavy tasks when free tier is available.
+
+        Efficiency: local for speed, cloud for depth, always within rate limits.
+        """
+        # Check task-to-model map
+        mapping = self.task_model_map.get(task_type)
+        if mapping:
+            provider_name = mapping["provider"]
+            source = self.sources.get(provider_name)
+            if source and source.status == ProviderStatus.AVAILABLE:
+                # Check cloud rate limits
+                if "cloud" in provider_name:
+                    limits = self.rate_limits.get(provider_name, {})
+                    daily_limit = limits.get("daily")
+                    if daily_limit and self._cloud_call_count >= daily_limit:
+                        logger.debug(f"InferenceDiscovery: {provider_name} daily limit ({daily_limit}) reached, falling back to local")
+                    else:
+                        self._cloud_call_count += 1
+                        return provider_name, source, mapping["model"]
+
+        # Fallback: local ollama for any task (intelligence is intelligence)
+        local = self.sources.get("ollama_local")
+        if local and local.status == ProviderStatus.AVAILABLE:
+            # Route to appropriate local model by task
+            local_model_map = {
+                "heartbeat": "qwen3:0.6b",
+                "embedding": "mxbai-embed-large",
+                "simple_chat": "qwen3:1.7b",
+                "reasoning": "qwen3:1.7b",  # small model, still reasons
+                "coding": "qwen3:1.7b",
+                "blueprint": "qwen3:1.7b",
+                "analysis": "qwen3:1.7b",
+            }
+            model = local_model_map.get(task_type, "qwen3:1.7b")
+            return "ollama_local", local, model
+
+        # Last resort: any available provider
+        best = await self.get_best_provider()
+        if best:
+            return best[0], best[1], ""
+        return None
 
     def fallback_decide(
         self, context: str, options: List[str], criteria: Optional[str] = None
