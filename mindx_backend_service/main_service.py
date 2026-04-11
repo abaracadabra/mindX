@@ -1557,13 +1557,25 @@ async def startup_event():
 
         # STM→LTM memory promotion — periodic knowledge consolidation
         async def _periodic_memory_promotion():
-            """Promote significant STM patterns to LTM every hour."""
+            """Promote STM patterns to LTM every hour for all active agents."""
             await asyncio.sleep(300)  # Wait 5 min for initial data
             while True:
                 try:
-                    for agent_id in ["mindx_meta_agent", "coordinator_agent_main", "mastermind_prime"]:
-                        await memory_agent.promote_stm_to_ltm(agent_id, pattern_threshold=3, days_back=7)
-                    logger.info("STM→LTM promotion cycle completed")
+                    # Discover all agents with STM data
+                    stm_path = PROJECT_ROOT / "data" / "memory" / "stm"
+                    if stm_path.is_dir():
+                        agent_ids = [d.name for d in stm_path.iterdir() if d.is_dir() and d.name != "unknown"]
+                    else:
+                        agent_ids = ["mindx_meta_agent", "coordinator_agent_main", "mastermind_prime"]
+                    promoted = 0
+                    for agent_id in agent_ids:
+                        try:
+                            result = await memory_agent.promote_stm_to_ltm(agent_id, pattern_threshold=3, days_back=7)
+                            if result.get("status") == "success":
+                                promoted += 1
+                        except Exception:
+                            pass
+                    logger.info(f"STM→LTM promotion: {promoted}/{len(agent_ids)} agents promoted")
                 except Exception as promo_e:
                     logger.debug(f"STM→LTM promotion: {promo_e}")
                 await asyncio.sleep(3600)  # Every hour

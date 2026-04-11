@@ -15,6 +15,7 @@ import aiofiles.os
 import re
 import json
 import hashlib
+import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple
@@ -1012,7 +1013,7 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     # SELF-LEARNING AND LTM METHODS
     # ================================
 
-    async def promote_stm_to_ltm(self, agent_id: str, pattern_threshold: int = 5, days_back: int = 7) -> Dict[str, Any]:
+    async def promote_stm_to_ltm(self, agent_id: str, pattern_threshold: int = 3, days_back: int = 7) -> Dict[str, Any]:
         """
         Analyze STM patterns and promote significant learnings to LTM.
         
@@ -1039,20 +1040,30 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                 "performance_trends": []
             }
             
-            # Analyze success patterns
-            if stm_analysis.get("success_rate", 0) > 0.8:
+            # Analyze success patterns — any measurable success rate is worth recording
+            success_rate = stm_analysis.get("success_rate", 0)
+            if success_rate > 0:
                 significant_patterns["success_patterns"].append({
-                    "pattern": "high_success_rate",
-                    "success_rate": stm_analysis["success_rate"],
+                    "pattern": "success_rate_observed",
+                    "success_rate": success_rate,
                     "context": stm_analysis.get("common_contexts", {}),
                     "timestamp": datetime.now().isoformat()
                 })
-            
-            # Analyze failure patterns
+
+            # Analyze failure patterns — errors are always worth learning from
             error_patterns = stm_analysis.get("error_patterns", [])
-            if len(error_patterns) > 0:
+            if error_patterns:
                 significant_patterns["failure_patterns"] = error_patterns
-            
+
+            # Performance trends from memory type distribution
+            memory_types = stm_analysis.get("memory_types", {})
+            if memory_types:
+                significant_patterns["performance_trends"].append({
+                    "memory_distribution": memory_types,
+                    "total_memories": stm_analysis.get("total_memories", 0),
+                    "timestamp": datetime.now().isoformat()
+                })
+
             # Generate behavioral insights
             insights = stm_analysis.get("insights", [])
             if insights:
@@ -1326,7 +1337,59 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             
             logger.info(f"Auto-learning enabled for {agent_id}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to enable auto-learning for {agent_id}: {e}", exc_info=True)
-            return False 
+            return False
+
+    async def prune_stm(self, max_age_days: int = 30) -> Dict[str, Any]:
+        """
+        Archive STM memories older than max_age_days.
+        Moves old files to data/memory/archive/{agent_id}/{date}/ to keep STM lean.
+        machine.dreaming will inevitably prune — this keeps the data/ structure sane.
+        """
+        cutoff = datetime.now() - timedelta(days=max_age_days)
+        archive_base = self.memory_base_path / "archive"
+        pruned = 0
+        errors = 0
+        agents_pruned = set()
+
+        try:
+            if not self.stm_path.is_dir():
+                return {"pruned": 0, "status": "no_stm_directory"}
+
+            for agent_dir in self.stm_path.iterdir():
+                if not agent_dir.is_dir():
+                    continue
+                for date_dir in agent_dir.iterdir():
+                    if not date_dir.is_dir():
+                        continue
+                    try:
+                        dir_date = datetime.strptime(date_dir.name, "%Y%m%d")
+                        if dir_date < cutoff:
+                            # Move to archive
+                            archive_dest = archive_base / agent_dir.name / date_dir.name
+                            archive_dest.parent.mkdir(parents=True, exist_ok=True)
+                            shutil.move(str(date_dir), str(archive_dest))
+                            file_count = len(list(archive_dest.glob("*.json")))
+                            pruned += file_count
+                            agents_pruned.add(agent_dir.name)
+                    except (ValueError, OSError) as e:
+                        errors += 1
+                        logger.debug(f"Prune skip {date_dir}: {e}")
+
+            result = {
+                "pruned": pruned,
+                "agents_affected": list(agents_pruned),
+                "max_age_days": max_age_days,
+                "cutoff_date": cutoff.isoformat(),
+                "errors": errors,
+                "archive_path": str(archive_base),
+            }
+            if pruned > 0:
+                logger.info(f"STM pruned: {pruned} memories archived from {len(agents_pruned)} agents (>{max_age_days} days)")
+            return result
+
+        except Exception as e:
+            logger.error(f"STM pruning failed: {e}", exc_info=True)
+            return {"pruned": 0, "error": str(e)}
