@@ -78,6 +78,11 @@ td:first-child{color:#6e7681}td:last-child{color:#e6edf3}
 .footer a{color:#d2a8ff;text-decoration:none}
 .interact-hint{position:fixed;bottom:50px;left:0;right:0;text-align:center;font-size:9px;color:#3d424d;z-index:3;transition:opacity 2s;letter-spacing:.5px}
 code{background:rgba(22,27,34,.85);padding:2px 6px;border-radius:3px;color:#7ee787;font-size:10px;font-family:'SF Mono','Fira Code',monospace}
+.dv-hud{position:fixed;bottom:12px;right:12px;z-index:20;text-align:right;pointer-events:none}
+.dv-msg{font-size:9px;color:#58a6ff;font-family:'SF Mono',monospace;opacity:.6;max-width:340px;transition:opacity .8s,color .4s;line-height:1.5;text-shadow:0 0 8px rgba(88,166,255,.15)}
+.dv-rank{font-size:8px;color:#484f58;font-family:'SF Mono',monospace;margin-top:4px;letter-spacing:.5px;transition:color .4s}
+.dv-achievement{position:fixed;top:60px;right:20px;z-index:25;background:rgba(8,12,18,.92);border:1px solid rgba(210,168,255,.25);border-radius:6px;padding:10px 16px;font-size:10px;color:#d2a8ff;font-family:'SF Mono',monospace;backdrop-filter:blur(12px);transform:translateX(120%);transition:transform .4s ease-out,opacity .4s;opacity:0;pointer-events:none;text-shadow:0 0 10px rgba(210,168,255,.2)}
+.dv-achievement.show{transform:translateX(0);opacity:1}
 </style>
 </head>
 <body>
@@ -143,11 +148,11 @@ code{background:rgba(22,27,34,.85);padding:2px 6px;border-radius:3px;color:#7ee7
 </div>
 <hr class="divider">
 <div class="section">
-  <h2>time.<span class="accent">oracle</span></h2>
+  <h2><a href="/doc/TIME_ORACLE" style="color:inherit;text-decoration:none;border-bottom:1px solid rgba(210,168,255,.2);transition:all .3s" onmouseover="this.style.borderColor='rgba(210,168,255,.6)';this.style.textShadow='0 0 20px rgba(210,168,255,.3)'" onmouseout="this.style.borderColor='rgba(210,168,255,.2)';this.style.textShadow='none'">time.<span class="accent">oracle</span></a></h2>
   <div class="cards">
-    <div class="card"><div class="shimmer"></div><div class="circuit"></div><h3><span class="ic">&#x1f319;</span> lunar.oracle</h3><p>Moon phase from astronomical calculation, verified against timeanddate.com. Drives the 28-day Book publishing cycle.</p></div>
-    <div class="card"><div class="shimmer"></div><div class="circuit"></div><h3><span class="ic">&#x26d3;</span> blocktime.oracle</h3><p>Blockchain block timestamps via JSON-RPC. Immutable, decentralized, correlated against CPU time.</p></div>
-    <div class="card"><div class="shimmer"></div><div class="circuit"></div><h3><span class="ic">&#x2600;</span> solar + cpu</h3><p>Solar position for the server location. CPU monotonic clock as the heartbeat baseline.</p></div>
+    <a href="/doc/TIME_ORACLE" class="card" style="text-decoration:none;color:inherit;display:block"><div class="shimmer"></div><div class="circuit"></div><h3><span class="ic">&#x1f319;</span> lunar.oracle</h3><p>Moon phase from astronomical calculation, verified against timeanddate.com. Drives the 28-day Book publishing cycle.</p></a></div>
+    <a href="/doc/agents/chronos" class="card" style="text-decoration:none;color:inherit;display:block"><div class="shimmer"></div><div class="circuit"></div><h3><span class="ic">&#x26d3;</span> blocktime.oracle</h3><p>Blockchain block timestamps via JSON-RPC. Immutable, decentralized, correlated against CPU time.</p></a></div>
+    <a href="/doc/TIME_ORACLE" class="card" style="text-decoration:none;color:inherit;display:block"><div class="shimmer"></div><div class="circuit"></div><h3><span class="ic">&#x2600;</span> solar + cpu</h3><p>Solar position for the server location. CPU monotonic clock as the heartbeat baseline.</p></a></div>
   </div>
 </div>
 <div class="links">
@@ -158,6 +163,8 @@ code{background:rgba(22,27,34,.85);padding:2px 6px;border-radius:3px;color:#7ee7
 </div>
 <div class="footer"><a href="/">mind<b>X</b></a> &middot; <a href="/automindx">AUTOMINDx</a> &middot; <a href="https://github.com/cypherpunk2048" target="_blank">cypherpunk2048</a> &middot; mindx.pythai.net &middot; &copy; Professor Codephreak</div>
 </div>
+<div class="dv-hud"><div class="dv-msg" id="dv-msg"></div><div class="dv-rank" id="dv-rank"></div></div>
+<div class="dv-achievement" id="dv-ach"></div>
 <div class="interact-hint" id="hint">click &middot; drag &middot; scroll &middot; double-click &middot; shift+click</div>
 
 <script>
@@ -782,14 +789,321 @@ document.addEventListener('click', () => { if (!hh) { document.getElementById('h
 const brainWrap = document.querySelector('.brain-wrap');
 if (brainWrap) {
   document.addEventListener('mousemove', e => {
-    const rx = (e.clientY - CY) / CY * 8;  // tilt up/down (max 8deg)
-    const ry = -(e.clientX - CX) / CX * 12; // tilt left/right (max 12deg)
+    const rx = (e.clientY - CY) / CY * 8;
+    const ry = -(e.clientX - CX) / CX * 12;
     brainWrap.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
   });
   document.addEventListener('mouseleave', () => {
     brainWrap.style.transform = 'rotateX(0) rotateY(0)';
   });
 }
+</script>
+<script src="/static/deltaverse.js"></script>
+<script>
+// ── DeltaVerse v4.0 Participant Interaction Engine ──
+// Wires the automindx canvas effects into DeltaVerse perception,
+// and feeds DeltaVerse responses back as visual events.
+// Expanded: rhythm, attention, momentum, pressure, resonance,
+// archetype, ambient phase shifts, advanced gestures.
+(function(){
+  if (typeof DeltaVerse === 'undefined') return;
+
+  var dvMsg = document.getElementById('dv-msg');
+  var dvRank = document.getElementById('dv-rank');
+  var dvAch = document.getElementById('dv-ach');
+  var achTimer = null;
+
+  var dv = new DeltaVerse({target: '#dv-msg'});
+  dv.start();
+
+  // Expose for canvas access and telemetry
+  window._dv = dv;
+
+  // ── Show rank + archetype in HUD ──
+  function updateRank() {
+    var r = dv.getRank();
+    var next = dv.getNextRank();
+    var txt = r.name + ' [' + Math.floor(dv.profile.xp) + ' xp]';
+    if (next) txt += ' \u2192 ' + next.name;
+    if (dv.profile.archetype) txt += ' \u00b7 ' + dv.profile.archetype;
+    dvRank.textContent = txt;
+    dvRank.style.color = r.color;
+  }
+  updateRank();
+
+  // ── Achievement toast ──
+  function showAchievement(data) {
+    dvAch.textContent = '\u2728 ' + data.name + ' \u2014 ' + data.desc + ' (+' + data.xp + 'xp)';
+    dvAch.classList.add('show');
+    if (achTimer) clearTimeout(achTimer);
+    achTimer = setTimeout(function(){ dvAch.classList.remove('show'); }, 3200);
+    updateRank();
+  }
+
+  // ── DeltaVerse events \u2192 automindx canvas responses ──
+
+  dv.on('achievement', function(data) {
+    showAchievement(data);
+    if (typeof shockwaves !== 'undefined') {
+      shockwaves.push({x: innerWidth/2, y: innerHeight/2, r:0, life:1, col:'rgba(210,168,255,'});
+    }
+  });
+
+  dv.on('rank_up', function(data) {
+    if (typeof shockwaves !== 'undefined') {
+      shockwaves.push({x: innerWidth/2, y: innerHeight*.35, r:0, life:1, col:'rgba(63,185,80,'});
+      shockwaves.push({x: innerWidth/2, y: innerHeight*.35, r:0, life:1, col:'rgba(210,168,255,'});
+    }
+    if (typeof spiralNodes !== 'undefined') {
+      for (var i = 0; i < spiralNodes.length; i++) spiralNodes[i].act = 1;
+    }
+    if (typeof flashEdge === 'function') {
+      for (var j = 0; j < 20; j++) setTimeout(flashEdge, j * 25);
+    }
+    updateRank();
+  });
+
+  dv.on('gesture', function(data) {
+    if (data.type === 'circle' && typeof spiralNodes !== 'undefined') {
+      for (var i = 0; i < spiralNodes.length; i++) {
+        spiralNodes[i].act = Math.max(spiralNodes[i].act, 0.6 - i * 0.01);
+      }
+    }
+    if (data.type === 'zigzag' && typeof hexGrid !== 'undefined') {
+      for (var j = 0; j < hexGrid.length; j++) {
+        if (Math.random() > 0.7) hexGrid[j].glow = 0.8;
+      }
+    }
+    // v4.0: swipe — directional particle wave
+    if (data.type === 'swipe' && typeof particles !== 'undefined') {
+      var dirs = {right:{x:1,y:0}, left:{x:-1,y:0}, up:{x:0,y:-1}, down:{x:0,y:1}};
+      var d = dirs[data.direction] || {x:0,y:0};
+      var force = Math.min(data.speed || 500, 2000) / 500;
+      for (var s = 0; s < particles.length; s++) {
+        particles[s].vx += d.x * force * 0.5;
+        particles[s].vy += d.y * force * 0.5;
+      }
+      if (typeof shockwaves !== 'undefined') {
+        shockwaves.push({x: innerWidth/2, y: innerHeight/2, r:0, life:0.6, col:'rgba(88,166,255,'});
+      }
+    }
+    // v4.0: shake — scatter all particles outward
+    if (data.type === 'shake' && typeof particles !== 'undefined') {
+      for (var sh = 0; sh < particles.length; sh++) {
+        var angle = Math.random() * Math.PI * 2;
+        var mag = 0.5 + Math.random() * 1.5;
+        particles[sh].vx += Math.cos(angle) * mag;
+        particles[sh].vy += Math.sin(angle) * mag;
+      }
+    }
+    // v4.0: spiral gesture — spiral nodes glow outward in sequence
+    if (data.type === 'spiral' && typeof spiralNodes !== 'undefined') {
+      for (var sp = 0; sp < spiralNodes.length; sp++) {
+        setTimeout((function(idx){ return function(){ spiralNodes[idx].act = 0.9; }; })(sp), sp * 30);
+      }
+    }
+    // v4.0: figure-eight — dual shockwave
+    if (data.type === 'figure_eight' && typeof shockwaves !== 'undefined') {
+      shockwaves.push({x: innerWidth/2 - 80, y: innerHeight/2, r:0, life:1, col:'rgba(210,168,255,'});
+      shockwaves.push({x: innerWidth/2 + 80, y: innerHeight/2, r:0, life:1, col:'rgba(88,166,255,'});
+      if (typeof flashEdge === 'function') {
+        for (var fe = 0; fe < 15; fe++) setTimeout(flashEdge, fe * 30);
+      }
+    }
+  });
+
+  dv.on('konami', function() {
+    if (typeof shockwaves !== 'undefined') {
+      for (var i = 0; i < 5; i++) {
+        shockwaves.push({
+          x: Math.random() * innerWidth,
+          y: Math.random() * innerHeight,
+          r: 0, life: 1,
+          col: ['rgba(210,168,255,','rgba(88,166,255,','rgba(63,185,80,','rgba(210,153,34,','rgba(0,212,255,'][i]
+        });
+      }
+    }
+    if (typeof spiralNodes !== 'undefined') {
+      for (var j = 0; j < spiralNodes.length; j++) spiralNodes[j].act = 1;
+    }
+    if (typeof flashEdge === 'function') {
+      for (var k = 0; k < 30; k++) setTimeout(flashEdge, k * 20);
+    }
+  });
+
+  dv.on('easter_egg', function() {
+    if (typeof hexGrid !== 'undefined') {
+      for (var i = 0; i < hexGrid.length; i += 3) hexGrid[i].glow = 0.5;
+    }
+  });
+
+  dv.on('idle', function(data) {
+    if (data.seconds >= 15 && typeof spiralNodes !== 'undefined') {
+      for (var i = 0; i < spiralNodes.length; i += 2) {
+        spiralNodes[i].act = Math.max(spiralNodes[i].act, 0.3);
+      }
+    }
+  });
+
+  dv.on('tap', function(data) {
+    if (data.count >= 2 && typeof wells !== 'undefined') {
+      wells.push({x: data.x, y: data.y, life: 1});
+      if (wells.length > 6) wells.shift();
+    }
+    if (data.count >= 3 && typeof shockwaves !== 'undefined') {
+      for (var i = 0; i < data.count; i++) {
+        setTimeout(function(x,y){
+          shockwaves.push({x:x,y:y,r:0,life:1,col:'rgba(210,153,34,'});
+        }.bind(null, data.x, data.y), i * 120);
+      }
+    }
+    // v4.0: quad-tap — massive singularity
+    if (data.count >= 4) {
+      if (typeof wells !== 'undefined') {
+        wells.push({x: data.x, y: data.y, life: 1.5});
+      }
+      if (typeof shockwaves !== 'undefined') {
+        shockwaves.push({x: data.x, y: data.y, r:0, life:1, col:'rgba(255,123,114,'});
+        shockwaves.push({x: data.x, y: data.y, r:0, life:1, col:'rgba(210,168,255,'});
+      }
+      if (typeof spiralNodes !== 'undefined') {
+        for (var q = 0; q < spiralNodes.length; q++) spiralNodes[q].act = 0.8;
+      }
+    }
+  });
+
+  // v4.0: rhythm event — pulse edges to the beat
+  dv.on('rhythm', function(data) {
+    if (data.regularity > 0.5 && typeof flashEdge === 'function') {
+      var pulseCount = Math.min(Math.floor(data.bpm / 30), 8);
+      for (var r = 0; r < pulseCount; r++) setTimeout(flashEdge, r * 50);
+    }
+  });
+
+  // v4.0: momentum stop — implosion effect
+  dv.on('momentum_stop', function(data) {
+    if (typeof particles !== 'undefined') {
+      var cx = innerWidth / 2, cy = innerHeight / 2;
+      for (var m = 0; m < particles.length; m++) {
+        var dx = cx - particles[m].x3d, dy = cy - particles[m].y3d;
+        var d = Math.sqrt(dx*dx + dy*dy);
+        if (d > 1) {
+          particles[m].vx += dx / d * 0.8;
+          particles[m].vy += dy / d * 0.8;
+        }
+      }
+    }
+    if (typeof shockwaves !== 'undefined') {
+      shockwaves.push({x: innerWidth/2, y: innerHeight/2, r:300, life:0.8, col:'rgba(240,136,62,'});
+    }
+  });
+
+  // v4.0: archetype formed — color shift on spiral nodes
+  dv.on('archetype', function(data) {
+    if (typeof spiralNodes !== 'undefined') {
+      for (var a = 0; a < spiralNodes.length; a++) {
+        spiralNodes[a].act = 0.7;
+        if (a % 3 === 0) spiralNodes[a].c = data.color;
+      }
+    }
+    updateRank();
+  });
+
+  // v4.0: ambient phase shift — alter background tone
+  dv.on('ambient_shift', function(data) {
+    if (typeof shockwaves !== 'undefined') {
+      shockwaves.push({x: innerWidth/2, y: 0, r:0, life:0.5, col: data.color.replace('#', 'rgba(') ? 'rgba(210,168,255,' : 'rgba(210,168,255,'});
+    }
+    if (typeof flashEdge === 'function') {
+      for (var p = 0; p < 8; p++) setTimeout(flashEdge, p * 60);
+    }
+  });
+
+  dv.on('message', function(data) {
+    updateRank();
+  });
+
+  // ── DeltaVerse physics loop → automindx canvas ──
+  if (typeof requestAnimationFrame !== 'undefined') {
+    (function dvPhysicsLoop() {
+      dv.update();
+
+      // Wind → particle drift
+      if (typeof particles !== 'undefined' && dv.wind) {
+        var wx = dv.wind.x * 0.15, wy = dv.wind.y * 0.15;
+        if (Math.abs(wx) > 0.01 || Math.abs(wy) > 0.01) {
+          for (var i = 0; i < particles.length; i++) {
+            particles[i].vx += wx * 0.02;
+            particles[i].vy += wy * 0.02;
+          }
+        }
+      }
+
+      // Depth → force radius
+      if (typeof forceRadius !== 'undefined' && dv.depth > 0) {
+        window.forceRadius = Math.max(60, Math.min(500, 200 + dv.depth * 30));
+      }
+
+      // Hotspots → hex grid glow
+      if (typeof hexGrid !== 'undefined' && dv.hotspots.length > 0) {
+        for (var h = 0; h < dv.hotspots.length; h++) {
+          var hs = dv.hotspots[h];
+          var sp = dv.worldToScreen(hs.wx, hs.wy);
+          for (var g = 0; g < hexGrid.length; g++) {
+            var hx = hexGrid[g];
+            var dx = hx.x3d - sp.x, dy = hx.y3d - sp.y;
+            if (dx*dx + dy*dy < 3600) {
+              hx.glow = Math.max(hx.glow, hs.energy * 0.08);
+            }
+          }
+        }
+      }
+
+      // v4.0: Pressure → particle opacity modulation
+      if (typeof particles !== 'undefined' && dv.pressure.intensity > 0.3) {
+        var pressureBoost = dv.pressure.intensity * 0.02;
+        for (var pi = 0; pi < particles.length; pi += 4) {
+          if (particles[pi].vz !== undefined) {
+            particles[pi].vz += pressureBoost * (Math.random() - 0.3);
+          }
+        }
+      }
+
+      // v4.0: Momentum → directional particle drift
+      if (typeof particles !== 'undefined' && dv.momentum.sustained > 1) {
+        var mdirs = {right:{x:1,y:0},left:{x:-1,y:0},up:{x:0,y:-1},down:{x:0,y:1},
+          'up-right':{x:0.7,y:-0.7},'up-left':{x:-0.7,y:-0.7},
+          'down-right':{x:0.7,y:0.7},'down-left':{x:-0.7,y:0.7},none:{x:0,y:0}};
+        var md = mdirs[dv.momentum.direction] || {x:0,y:0};
+        var mf = Math.min(dv.momentum.sustained, 5) * 0.003;
+        for (var mi = 0; mi < particles.length; mi++) {
+          particles[mi].vx += md.x * mf;
+          particles[mi].vy += md.y * mf;
+        }
+      }
+
+      // v4.0: Resonance → spiral node pulse when aligned
+      if (typeof spiralNodes !== 'undefined' && dv.resonance.alignment > 0.5) {
+        var resBoost = dv.resonance.alignment * 0.05;
+        for (var ri = 0; ri < spiralNodes.length; ri += 3) {
+          spiralNodes[ri].act = Math.max(spiralNodes[ri].act, resBoost);
+        }
+      }
+
+      // v4.0: Rhythm → periodic edge flash synced to BPM
+      if (dv.rhythm.bpm > 10 && typeof flashEdge === 'function') {
+        var beatInterval = 60000 / dv.rhythm.bpm;
+        var timeSinceBeat = Date.now() - dv.rhythm.lastBeat;
+        // Flash on the beat (within 30ms window)
+        if (timeSinceBeat > 0 && timeSinceBeat < 30 && dv.rhythm.regularity > 0.4) {
+          flashEdge();
+        }
+      }
+
+      requestAnimationFrame(dvPhysicsLoop);
+    })();
+  }
+})();
 </script>
 </body>
 </html>
