@@ -921,6 +921,7 @@ async def improvement_journal_page():
 _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
 _BOARDROOM_HTML_PATH = Path(__file__).parent / "boardroom.html"
 _DOJO_HTML_PATH = Path(__file__).parent / "dojo.html"
+_ALLCHAINZ_HTML_PATH = Path(__file__).parent / "allchainz.html"
 _ERROR_PAGES_DIR = Path(__file__).parent / "error_pages"
 _FAVICON_DIR = Path(__file__).parent
 
@@ -992,6 +993,15 @@ async def inft_page():
     return _DashResponse(content="<h1>iNFT</h1><p>Interface loading...</p>")
 
 
+@app.get("/allchainz", response_class=_DashResponse, include_in_schema=False)
+@app.get("/allchain", response_class=_DashResponse, include_in_schema=False)
+async def allchainz_page():
+    """ALLCHAIN — 2500+ EVM chain discovery. Chain as a Service for agents and public."""
+    if _ALLCHAINZ_HTML_PATH.exists():
+        return _DashResponse(content=_ALLCHAINZ_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>ALLCHAIN</h1><p>Loading...</p>")
+
+
 @app.get("/boardroom", response_class=_DashResponse, include_in_schema=False)
 async def boardroom_page():
     """The Boardroom — CEO + Seven Soldiers interactive governance."""
@@ -1045,7 +1055,7 @@ app.add_middleware(
 # Uses @app.middleware("http") which always fires regardless of import order.
 
 _PUBLIC_EXACT = frozenset({
-    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/automindx", "/automindx.html", "/inft", "/inft.html",
+    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/diagnostics/live", "/activity/stream", "/activity/recent", "/activity/stats",
     "/thesis/evidence", "/thesis/summary",

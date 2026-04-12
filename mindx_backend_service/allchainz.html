@@ -1,0 +1,3638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALLCHAIN by AgenticPlace — Browse 2500+ EVM Chains | Add to MetaMask, Market Data, RPCs</title>
+    <meta name="description" content="The definitive EVM chain reference by AgenticPlace. Browse 2500+ blockchain networks from A-Z — compare market caps, native token prices, add any chain to MetaMask with one click, discover public RPCs and block explorers. Chain as a Service for AI agents and wallets. Powered by mindX autonomous intelligence and BANKON multi-chain infrastructure.">
+    <meta name="keywords" content="ALLCHAIN, AgenticPlace, mindX, BANKON, EVM chains, blockchain networks, MetaMask add chain, RPC endpoints, chain ID, Layer 2, L2, Ethereum, Polygon, Arbitrum, Optimism, Avalanche, Base, Bitcoin, wallet integration, DeFi, Web3, chain discovery, multi-chain, cross-chain, market cap, block explorer, blockchain directory, autonomous agents, chain as a service">
+    <meta name="author" content="AgenticPlace — Professor Codephreak // mindX">
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+    <meta name="theme-color" content="#2F80ED">
+    <meta name="application-name" content="ALLCHAIN">
+    <link rel="canonical" href="https://agenticplace.pythai.net/allchain">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="ALLCHAIN by AgenticPlace — 2500+ EVM Chains from A-Z">
+    <meta property="og:description" content="The definitive EVM chain reference. Browse 2500+ blockchain networks, compare market data, add chains to MetaMask, discover RPCs and explorers. Powered by AgenticPlace, mindX, and BANKON.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://agenticplace.pythai.net/allchain">
+    <meta property="og:site_name" content="AgenticPlace">
+    <meta property="og:image" content="https://agenticplace.pythai.net/gfx/og-allchain.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="ALLCHAIN — EVM Chain Discovery by AgenticPlace, mindX, and BANKON">
+    <meta property="og:locale" content="en_US">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@AgenticPlace">
+    <meta name="twitter:creator" content="@codephreak">
+    <meta name="twitter:title" content="ALLCHAIN — 2500+ EVM Chains | MetaMask, Market Data, RPCs">
+    <meta name="twitter:description" content="The definitive EVM chain reference. Browse, compare, and add any blockchain to MetaMask. Market caps, prices, RPCs, explorers. Powered by AgenticPlace, mindX, and BANKON.">
+    <meta name="twitter:image" content="https://agenticplace.pythai.net/gfx/og-allchain.jpg">
+    <meta name="twitter:image:alt" content="ALLCHAIN — EVM Chain Discovery by AgenticPlace">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "ALLCHAIN",
+      "alternateName": ["All Chains", "AgenticPlace ALLCHAIN", "EVM Chain Directory"],
+      "description": "The definitive EVM chain reference. Browse 2500+ blockchain networks, compare market data, add chains to MetaMask with one click, and discover public RPCs and block explorers. Powered by AgenticPlace, mindX autonomous intelligence, and BANKON multi-chain infrastructure.",
+      "url": "https://agenticplace.pythai.net/allchain",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Web",
+      "browserRequirements": "Requires MetaMask or compatible EVM wallet for chain integration",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "creator": {
+        "@type": "Organization",
+        "name": "AgenticPlace",
+        "url": "https://agenticplace.pythai.net",
+        "parentOrganization": { "@type": "Organization", "name": "PYTHAI / mindX", "url": "https://pythai.net" }
+      },
+      "isPartOf": {
+        "@type": "WebSite",
+        "name": "AgenticPlace",
+        "url": "https://agenticplace.pythai.net",
+        "description": "The definitive agent registry and blockchain connection platform. Powered by mindX autonomous intelligence and BANKON multi-chain infrastructure."
+      },
+      "keywords": "ALLCHAIN, AgenticPlace, mindX, BANKON, EVM chains, MetaMask, blockchain directory, RPC endpoints, chain discovery"
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "AgenticPlace", "item": "https://agenticplace.pythai.net" },
+        { "@type": "ListItem", "position": 2, "name": "ALLCHAIN", "item": "https://agenticplace.pythai.net/allchain" }
+      ]
+    }
+    </script>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/gfx/fav/favicon-96x96.png" sizes="96x96">
+    <link rel="shortcut icon" href="/gfx/fav/favicon-96x96.png" type="image/png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/gfx/fav/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-title" content="ALLCHAIN">
+    <link rel="manifest" href="/gfx/fav/site.webmanifest">
+    <style>
+        :root {
+            --bg0: #000000;
+            --bg1: #080a16;
+            --accent: #2F80ED;
+            --accent2: #56CCF2;
+            --text: #ffffff;
+            --muted: rgba(255,255,255,.72);
+            --border: #30363d;
+            --card-bg: rgba(27, 31, 35, 0.92);
+            --shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            --shadow-hover: 0 8px 16px rgba(0, 0, 0, 0.4);
+            --transition: all 0.3s ease;
+            --success: #00cc00;
+            --warning: #ff6b35;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        #gl {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            z-index: 0;
+            background: radial-gradient(circle at center, #111827 0%, #000 70%);
+        }
+
+        .vignette {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+            background:
+                linear-gradient(to bottom, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.6) 25%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.0) 65%, rgba(0,0,0,0.35) 100%),
+                radial-gradient(1200px 700px at 50% 45%, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 70%, rgba(0,0,0,.85) 100%);
+        }
+
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: transparent;
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .page { position: relative; z-index: 2; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+        .nav-back {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+
+        .nav-back a {
+            display: inline-flex;
+            align-items: center;
+            padding: 10px 20px;
+            background: var(--card-bg);
+            color: var(--text);
+            text-decoration: none;
+            border-radius: 25px;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            transition: var(--transition);
+        }
+
+        .nav-back a:hover {
+            background: var(--accent);
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        .hero {
+            text-align: center;
+            padding: 80px 20px 40px;
+        }
+
+
+        .slogan-wrap {
+            position: relative;
+            display: inline-block;
+            padding: 20px 40px;
+            margin-bottom: 10px;
+        }
+
+        .slogan-wrap .slogan-bg {
+            position: absolute;
+            inset: 0;
+            background: url('/gfx/allchain-logo.png') center center / contain no-repeat;
+            opacity: 0.12;
+            pointer-events: none;
+            border-radius: 16px;
+        }
+
+        .hero .slogan {
+            position: relative;
+            font-size: 3rem;
+            font-weight: 800;
+            color: #fff;
+            margin: 0;
+            line-height: 1.2;
+            text-shadow: 0 0 30px rgba(47, 128, 237, 0.5), 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .hero .slogan .allchain-text {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 12px rgba(47, 128, 237, 0.4));
+        }
+
+        .hero .slogan .slogan-sm {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: var(--accent2);
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--muted);
+            max-width: 600px;
+            margin: 0 auto 20px;
+        }
+
+        /* Wallet connect button */
+        .wallet-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 36px;
+            border: 2px solid var(--success);
+            border-radius: 30px;
+            background: transparent;
+            color: var(--success);
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .wallet-btn:hover {
+            background: var(--success);
+            color: #000;
+            box-shadow: 0 0 20px rgba(0, 204, 0, 0.3);
+        }
+
+        .wallet-btn.connected {
+            background: rgba(0, 204, 0, 0.15);
+            border-color: var(--success);
+            color: var(--success);
+            padding: 10px 28px;
+            font-size: 0.95rem;
+        }
+
+        .wallet-btn .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .wallet-btn.connected .dot {
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .wallet-address {
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: var(--accent2);
+            margin-bottom: 8px;
+            min-height: 1.2em;
+            letter-spacing: 0.5px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Wallet hover card */
+        .wallet-wrap { position: relative; display: inline-block; }
+
+        .wallet-hover-card {
+            position: absolute;
+            top: calc(100% + 10px);
+            left: 50%;
+            transform: translateX(-50%) translateY(6px);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s, transform 0.25s, visibility 0.25s;
+            pointer-events: none;
+            z-index: 200;
+            background: rgba(10, 13, 22, 0.96);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 18px;
+            min-width: 260px;
+            max-width: 340px;
+            backdrop-filter: blur(24px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            font-size: 0.8rem;
+            color: var(--muted);
+            line-height: 1.6;
+            text-align: left;
+        }
+        .wallet-hover-card::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+        }
+        .wallet-wrap .wallet-hover-card::after {
+            top: -12px;
+            border-bottom-color: var(--border);
+        }
+        .wallet-wrap:hover .wallet-hover-card {
+            opacity: 1; visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+        .stat-wallet-card { position: relative; overflow: visible !important; }
+        .stat-wallet-card .wallet-hover-card {
+            top: auto;
+            bottom: calc(100% + 10px);
+            transform: translateX(-50%) translateY(-6px);
+        }
+        .stat-wallet-card .wallet-hover-card::after {
+            top: auto;
+            bottom: -12px;
+            border-bottom-color: transparent;
+            border-top-color: var(--border);
+        }
+        .stat-wallet-card:hover .wallet-hover-card {
+            opacity: 1; visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+        .wallet-hover-card .wh-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 2px 0;
+        }
+        .wallet-hover-card .wh-label { color: rgba(255,255,255,0.45); white-space: nowrap; }
+        .wallet-hover-card .wh-val {
+            color: var(--text);
+            font-family: 'Fira Code', monospace;
+            font-size: 0.76rem;
+            text-align: right;
+            word-break: break-all;
+        }
+        .wallet-hover-card .wh-action {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            text-align: center;
+            font-size: 0.75rem;
+            letter-spacing: 0.3px;
+        }
+        .wallet-hover-card .wh-action.connect { color: var(--success); }
+        .wallet-hover-card .wh-action.disconnect { color: #ff6b6b; }
+        .wallet-hover-card .wh-title {
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 6px;
+            font-size: 0.82rem;
+        }
+
+        /* Config bar */
+        .config-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 12px 16px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            font-size: 0.85rem;
+        }
+
+        .config-bar label { color: var(--muted); white-space: nowrap; }
+        .config-bar input[type="text"] {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 10px;
+            color: var(--text);
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        /* Search */
+        .search-section {
+            margin-bottom: 30px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 14px 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 1rem;
+            backdrop-filter: blur(10px);
+            transition: var(--transition);
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.2);
+        }
+
+        .search-box input::placeholder { color: rgba(255,255,255,0.4); }
+
+        .filter-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 6px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+
+        .filter-btn.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        .filter-btn:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        /* MarketCap toggle — bitcoin orange default, green when active */
+        .filter-btn.mcap-toggle {
+            border-color: #f7931a;
+            color: #f7931a;
+            font-weight: 600;
+        }
+
+        .filter-btn.mcap-toggle:hover {
+            background: rgba(247, 147, 26, 0.15);
+            border-color: #f7931a;
+            color: #f7931a;
+        }
+
+        .filter-btn.mcap-toggle.active {
+            background: rgba(0, 204, 0, 0.2);
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .filter-btn.mcap-toggle.active:hover {
+            background: rgba(0, 204, 0, 0.3);
+        }
+
+        /* DEX toggle — bitcoin orange default, green when active */
+        .filter-btn.dex-toggle {
+            border-color: #f7931a;
+            color: #f7931a;
+            font-weight: 600;
+        }
+        .filter-btn.dex-toggle:hover {
+            background: rgba(247, 147, 26, 0.15);
+            border-color: #f7931a;
+            color: #f7931a;
+        }
+        .filter-btn.dex-toggle.active {
+            background: rgba(0, 204, 0, 0.2);
+            border-color: var(--success);
+            color: var(--success);
+        }
+        .filter-btn.dex-toggle.active:hover {
+            background: rgba(0, 204, 0, 0.3);
+        }
+
+        /* Stats */
+        .stats-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            flex: 1;
+            min-width: 120px;
+            padding: 16px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-card .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-card .label {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        /* Chain grid */
+        .chain-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .chain-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .chain-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+            border-color: var(--accent);
+        }
+
+        .chain-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .chain-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(47, 128, 237, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .chain-icon img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .chain-icon .fallback {
+            font-size: 1.2rem;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .chain-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chain-id {
+            font-size: 0.8rem;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+        }
+        .chain-id .chain-badges {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .chain-meta {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            color: var(--muted);
+            flex-wrap: wrap;
+        }
+
+        .chain-meta span { display: flex; align-items: center; gap: 4px; }
+
+        /* Connection badge on card — only shown when wallet connected to that chain */
+        /* chain-badges now lives inside .chain-id row */
+
+        .chain-type-badge {
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .chain-type-badge.l1 {
+            background: rgba(47, 128, 237, 0.15);
+            color: var(--accent2);
+            border: 1px solid rgba(47, 128, 237, 0.3);
+        }
+
+        .chain-type-badge.l2 {
+            background: rgba(155, 89, 255, 0.15);
+            color: #b388ff;
+            border: 1px solid rgba(155, 89, 255, 0.3);
+        }
+
+        .chain-type-badge.sidechain {
+            background: rgba(255, 152, 0, 0.15);
+            color: #ffb74d;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .chain-type-badge.appchain {
+            background: rgba(0, 230, 118, 0.15);
+            color: #69f0ae;
+            border: 1px solid rgba(0, 230, 118, 0.3);
+        }
+
+        .chain-type-badge.testnet {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--muted);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .chain-connected-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: rgba(0, 204, 0, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(0, 204, 0, 0.3);
+        }
+
+        .chain-connected-badge .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 6px var(--success);
+        }
+
+        /* RPC expandable toggle */
+        .rpc-toggle {
+            cursor: pointer;
+            user-select: none;
+            color: var(--accent2);
+            transition: color 0.2s;
+        }
+        .rpc-toggle:hover { color: var(--accent); }
+        .rpc-toggle .rpc-arrow {
+            display: inline-block;
+            transition: transform 0.2s;
+            font-size: 0.7em;
+            margin-left: 2px;
+        }
+        .rpc-toggle.open .rpc-arrow { transform: rotate(90deg); }
+        .rpc-panel {
+            display: none;
+            margin-top: 8px;
+            padding: 10px 12px;
+            background: rgba(0,0,0,0.35);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.72rem;
+            line-height: 1.8;
+            word-break: break-all;
+        }
+        .rpc-panel.open { display: block; }
+        .rpc-panel .rpc-url {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--muted);
+        }
+        .rpc-panel .rpc-url::before {
+            content: '';
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: var(--accent2);
+            flex-shrink: 0;
+        }
+        .rpc-panel .rpc-loading {
+            color: rgba(255,255,255,0.4);
+            font-style: italic;
+            font-family: inherit;
+        }
+
+        /* Contracts expandable toggle */
+        .contracts-toggle {
+            cursor: pointer;
+            user-select: none;
+            color: #00cc88;
+            transition: color 0.2s;
+        }
+        .contracts-toggle:hover { color: #00ffaa; }
+        .contracts-toggle .ct-arrow {
+            display: inline-block;
+            transition: transform 0.2s;
+            font-size: 0.7em;
+            margin-left: 2px;
+        }
+        .contracts-toggle.open .ct-arrow { transform: rotate(90deg); }
+        .contracts-panel {
+            display: none;
+            margin-top: 8px;
+            padding: 10px 12px;
+            background: rgba(0,40,20,0.35);
+            border: 1px solid rgba(0,204,136,0.2);
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.68rem;
+            line-height: 1.6;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .contracts-panel.open { display: block; }
+        .contracts-panel .contract-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: var(--muted);
+        }
+        .contracts-panel .contract-item:last-child { border-bottom: none; }
+        .contracts-panel .contract-name {
+            color: #00cc88;
+            font-weight: 500;
+            min-width: 120px;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .contracts-panel .contract-addr {
+            color: var(--muted);
+            opacity: 0.7;
+            font-size: 0.65rem;
+        }
+        .contracts-panel .contract-lang {
+            font-size: 0.6rem;
+            padding: 1px 5px;
+            border-radius: 3px;
+            background: rgba(0,204,136,0.15);
+            color: #00cc88;
+            flex-shrink: 0;
+        }
+        .contracts-panel .contract-proxy {
+            font-size: 0.6rem;
+            padding: 1px 5px;
+            border-radius: 3px;
+            background: rgba(47,128,237,0.15);
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+        .contracts-panel .contracts-loading {
+            color: rgba(255,255,255,0.4);
+            font-style: italic;
+        }
+        .contracts-panel .contracts-footer {
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.65rem;
+            color: var(--muted);
+        }
+        .contracts-panel .contracts-footer a {
+            color: #00cc88;
+            text-decoration: none;
+        }
+        .contracts-panel .contracts-footer a:hover { text-decoration: underline; }
+
+        .chain-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .chain-btn {
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text);
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-family: inherit;
+        }
+
+        .chain-btn:hover {
+            border-color: var(--accent);
+            background: rgba(47, 128, 237, 0.1);
+        }
+
+        .chain-btn.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .chain-btn.primary:hover {
+            background: #1a6fd4;
+        }
+
+        /* Gas token contract popup */
+        .gas-token-link {
+            color: var(--accent2);
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-family: 'Fira Code', monospace;
+            transition: color 0.2s;
+            white-space: nowrap;
+        }
+        .gas-token-link:hover { color: var(--accent); }
+        .gas-popup-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 9000;
+            backdrop-filter: blur(4px);
+        }
+        .gas-popup {
+            display: none;
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9001;
+            background: rgba(10, 13, 22, 0.98);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 24px 28px;
+            min-width: 340px;
+            max-width: 480px;
+            box-shadow: 0 12px 48px rgba(0,0,0,0.7);
+            backdrop-filter: blur(24px);
+            color: var(--text);
+        }
+        .gas-popup .gp-title {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .gas-popup .gp-title .gp-badge {
+            font-size: 0.6rem;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .gas-popup .gp-badge.blockscout { background: rgba(86,204,242,0.15); color: var(--accent2); border: 1px solid rgba(86,204,242,0.3); }
+        .gas-popup .gp-badge.canonical { background: rgba(0,204,0,0.12); color: var(--success); border: 1px solid rgba(0,204,0,0.25); }
+        .gas-popup .gp-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            gap: 12px;
+        }
+        .gas-popup .gp-label { color: rgba(255,255,255,0.45); font-size: 0.82rem; white-space: nowrap; }
+        .gas-popup .gp-val {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.78rem;
+            word-break: break-all;
+            text-align: right;
+        }
+        .gas-popup .gp-contract {
+            margin-top: 8px;
+            padding: 10px 12px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.76rem;
+            word-break: break-all;
+            line-height: 1.6;
+            user-select: all;
+        }
+        .gas-popup .gp-actions {
+            margin-top: 14px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .gas-popup .gp-btn {
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text);
+            cursor: pointer;
+            font-size: 0.78rem;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+        .gas-popup .gp-btn:hover { border-color: var(--accent); background: rgba(47,128,237,0.1); }
+        .gas-popup .gp-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .gas-popup .gp-close {
+            position: absolute;
+            top: 12px; right: 14px;
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        .gas-popup .gp-close:hover { color: #ff6b6b; }
+
+        /* ── Chain confirmation dialog ────────────────────── */
+        .chain-confirm-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            z-index: 9000;
+        }
+        .chain-confirm-backdrop.visible { display: flex; align-items: center; justify-content: center; }
+
+        .chain-confirm {
+            background: #0d1117;
+            border: 1px solid var(--accent);
+            border-radius: 12px;
+            width: 380px;
+            max-width: calc(100vw - 32px);
+            box-shadow: 0 16px 48px rgba(0,0,0,0.8), 0 0 40px rgba(47,128,237,0.15);
+            overflow: hidden;
+            animation: confirmSlideIn 0.2s ease-out;
+        }
+        @keyframes confirmSlideIn {
+            from { opacity: 0; transform: translateY(-16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .chain-confirm-header {
+            padding: 14px 18px 10px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .chain-confirm-header .confirm-icon {
+            width: 36px; height: 36px; border-radius: 8px;
+            background: var(--card); display: flex; align-items: center; justify-content: center; overflow: hidden;
+            flex-shrink: 0;
+        }
+        .chain-confirm-header .confirm-icon img { width: 36px; height: 36px; object-fit: contain; }
+        .chain-confirm-header .confirm-title { font-size: 0.95rem; font-weight: 600; color: #fff; }
+        .chain-confirm-header .confirm-subtitle { font-size: 0.72rem; color: var(--dim); margin-top: 1px; }
+
+        .chain-confirm-body { padding: 10px 18px 8px; }
+
+        .chain-confirm-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-size: 0.78rem;
+            gap: 8px;
+        }
+        .chain-confirm-row:last-child { border-bottom: none; }
+        .chain-confirm-row .label { color: var(--dim); white-space: nowrap; }
+        .chain-confirm-row .value { color: #fff; font-family: 'Fira Code', monospace; font-size: 0.73rem; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .chain-confirm-status {
+            margin: 8px 0 4px;
+            padding: 7px 10px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            line-height: 1.4;
+        }
+        .chain-confirm-status.already-added {
+            background: rgba(255,170,0,0.08);
+            border: 1px solid rgba(255,170,0,0.2);
+            color: #ffaa00;
+        }
+        .chain-confirm-status.new-chain {
+            background: rgba(0,204,0,0.06);
+            border: 1px solid rgba(0,204,0,0.15);
+            color: #00cc00;
+        }
+
+        .chain-confirm-rpc-label {
+            font-size: 0.75rem;
+            color: var(--dim);
+            padding: 8px 0 4px;
+        }
+        .chain-confirm-rpc-list {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            max-height: 130px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .chain-confirm-rpc-list::-webkit-scrollbar { width: 4px; }
+        .chain-confirm-rpc-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+        .rpc-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.1s;
+            font-size: 0.73rem;
+            font-family: 'Fira Code', monospace;
+        }
+        .rpc-option:hover { background: rgba(255,255,255,0.05); }
+        .rpc-option input[type="checkbox"] {
+            appearance: none;
+            width: 14px; height: 14px;
+            border: 1.5px solid rgba(255,255,255,0.25);
+            border-radius: 3px;
+            background: transparent;
+            cursor: pointer;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .rpc-option input[type="checkbox"]:checked {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+        .rpc-option input[type="checkbox"]:checked::after {
+            content: '';
+            position: absolute;
+            left: 3.5px; top: 1px;
+            width: 4px; height: 7px;
+            border: solid #fff;
+            border-width: 0 1.5px 1.5px 0;
+            transform: rotate(45deg);
+        }
+        .rpc-option .rpc-host {
+            color: #fff;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+        .rpc-option .rpc-badge {
+            font-size: 0.6rem;
+            padding: 1px 5px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .rpc-badge.primary { background: rgba(0,204,0,0.15); color: #00cc00; }
+        .rpc-badge.public { background: rgba(47,128,237,0.12); color: var(--accent); }
+
+        .chain-confirm-source {
+            margin: 6px 0 2px;
+            padding: 7px 10px;
+            background: rgba(47,128,237,0.06);
+            border: 1px solid rgba(47,128,237,0.12);
+            border-radius: 8px;
+            font-size: 0.7rem;
+            color: var(--dim);
+            line-height: 1.4;
+        }
+        .chain-confirm-source strong { color: var(--accent); }
+
+        .chain-confirm-actions {
+            display: flex;
+            gap: 8px;
+            padding: 10px 18px 14px;
+            border-top: 1px solid var(--border);
+        }
+        .chain-confirm-actions button {
+            flex: 1;
+            padding: 9px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .chain-confirm-actions .confirm-cancel {
+            background: transparent;
+            color: var(--dim);
+        }
+        .chain-confirm-actions .confirm-cancel:hover { background: rgba(255,255,255,0.05); color: #fff; }
+        .chain-confirm-actions .confirm-add {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+        .chain-confirm-actions .confirm-add:hover { filter: brightness(1.15); }
+
+        .chain-confirm-brand {
+            text-align: center;
+            padding: 0 18px 10px;
+            font-size: 0.65rem;
+            color: var(--dim);
+            opacity: 0.5;
+        }
+
+        /* ── Detail overlay panel ─────────────────────────── */
+        .detail-overlay-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 5000;
+        }
+
+        .detail-overlay-backdrop.visible { display: block; }
+
+        .detail-overlay {
+            display: none;
+            position: fixed;
+            z-index: 5001;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 680px;
+            max-width: calc(100vw - 40px);
+            max-height: calc(100vh - 120px);
+            background: #0d1117;
+            border: 1px solid var(--accent);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 40px rgba(47,128,237,0.15);
+            overflow: hidden;
+        }
+
+        .detail-overlay.visible { display: flex; flex-direction: column; }
+
+        .detail-overlay-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid var(--border);
+            cursor: grab;
+            user-select: none;
+        }
+
+        .detail-overlay-header:active { cursor: grabbing; }
+
+        .detail-overlay-header .chain-icon {
+            width: 48px;
+            height: 48px;
+        }
+
+        .detail-overlay-header .chain-icon img {
+            width: 48px;
+            height: 48px;
+        }
+
+        .detail-overlay-header .info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .detail-overlay-header .chain-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .detail-overlay-header .chain-id {
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        .detail-overlay-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+
+        .detail-overlay-close:hover {
+            background: rgba(255,50,50,0.2);
+            border-color: #f44;
+            color: #f44;
+        }
+
+        .detail-overlay-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px 24px;
+        }
+
+        .detail-market-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .detail-market-item {
+            flex: 1;
+            min-width: 100px;
+            padding: 12px;
+            background: rgba(47, 128, 237, 0.08);
+            border: 1px solid rgba(47, 128, 237, 0.2);
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .detail-market-item .val {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .detail-market-item .lbl {
+            font-size: 0.7rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        .detail-section { margin-bottom: 16px; }
+
+        .detail-section h4 {
+            font-size: 0.8rem;
+            color: var(--accent);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .rpc-item, .explorer-item, .faucet-item {
+            font-size: 0.8rem;
+            color: var(--muted);
+            padding: 3px 0;
+            word-break: break-all;
+            font-family: monospace;
+        }
+
+        .rpc-item a, .explorer-item a, .faucet-item a {
+            color: var(--accent2);
+            text-decoration: none;
+        }
+
+        .rpc-item a:hover, .explorer-item a:hover, .faucet-item a:hover { text-decoration: underline; }
+
+        .detail-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Load more */
+        .load-more {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        /* Status message */
+        .status-msg {
+            text-align: center;
+            padding: 40px;
+            color: var(--muted);
+        }
+
+        .loading { color: var(--accent); }
+
+        @media (max-width: 600px) {
+            .hero .slogan { font-size: 2rem; }
+            .hero .slogan .slogan-sm { font-size: 1rem; }
+            .slogan-wrap { padding: 15px 20px; }
+            .chain-grid { grid-template-columns: 1fr; }
+            .stats-row { gap: 10px; }
+            .stat-card { min-width: 80px; padding: 10px; }
+            .stat-card .value { font-size: 1.3rem; }
+            .detail-overlay {
+                top: 20px;
+                width: calc(100vw - 20px);
+                max-height: calc(100vh - 40px);
+            }
+        }
+        .app-close { position:fixed;top:12px;right:12px;z-index:10000;width:32px;height:32px;border-radius:50%;background:rgba(27,31,35,0.85);border:1px solid #30363d;color:#888;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s;backdrop-filter:blur(10px);line-height:1; }
+        .app-close:hover { background:#f44;color:#fff;border-color:#f44; }
+    </style>
+</head>
+<body>
+    <canvas id="gl"></canvas>
+    <canvas id="chains" style="position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;pointer-events:none;"></canvas>
+    <button class="app-close" onclick="(async()=>{try{const p=getWalletProvider();if(p){try{await p.request({method:'wallet_revokePermissions',params:[{eth_accounts:{}}]})}catch(e){}try{p.removeAllListeners?.('accountsChanged');p.removeAllListeners?.('chainChanged')}catch(e){}}walletConnected=false;connectedChainId=null;connectedAddress=null;localStorage.removeItem('walletChains');localStorage.removeItem('allchain_api_url');try{indexedDB.deleteDatabase('allchainz')}catch(e){}location.replace(location.pathname)}catch(e){location.replace(location.pathname)})()" title="Clear wallet and refresh">&times;</button>
+    <div class="vignette"></div>
+
+    <div class="nav-back">
+        <a href="/">&#8592; Back to AgenticPlace</a>
+    </div>
+
+    <div class="page">
+        <section class="hero">
+            <div class="wallet-wrap">
+                <button class="wallet-btn" id="walletBtn" onclick="connectWallet()">
+                    <span class="dot"></span>
+                    <span id="walletBtnLabel">Connect Wallet</span>
+                </button>
+                <div class="wallet-hover-card" id="walletHoverBtn"></div>
+            </div>
+            <div class="wallet-address" id="walletAddress"></div>
+            <div class="slogan-wrap">
+                <div class="slogan-bg"></div>
+                <h1 class="slogan"><span class="slogan-sm" id="titleNum" style="cursor:pointer;" title="Toggle numeric sort">123</span> <span class="allchain-text" data-action="logopopup">ALLCHAIN</span> <span class="slogan-sm" id="titleAlpha" style="cursor:pointer;" title="Toggle alphabetic sort">from A-Z</span></h1>
+            </div>
+            <p>Chain as a Service for AI agents and wallets. Browse 2500+ EVM networks, add chains to MetaMask, and discover RPCs.</p>
+        </section>
+
+        <div class="container">
+            <div class="config-bar" id="configBar" style="display:none;">
+                <label>API:</label>
+                <input type="text" id="apiUrl" value="" />
+            </div>
+
+            <div id="stats-row" class="stats-row">
+                <div class="stat-card"><div class="value" id="stat-total">-</div><div class="label">Total Chains</div></div>
+                <div class="stat-card"><div class="value" id="stat-mainnet">-</div><div class="label">Mainnets</div></div>
+                <div class="stat-card"><div class="value" id="stat-testnet">-</div><div class="label">Testnets</div></div>
+                <div class="stat-card stat-wallet-card" id="stat-wallet-card" onclick="walletConnected ? disconnectWallet() : connectWallet()" style="cursor:pointer;">
+                    <div class="value" id="stat-connected" style="font-size:1.2rem;">Connect</div>
+                    <div class="label" id="stat-wallet-label">Wallet</div>
+                    <div class="wallet-hover-card" id="walletHoverStat"></div>
+                </div>
+            </div>
+            <div id="price-timer" style="text-align:right;font-family:'Fira Code',monospace;font-size:0.72rem;color:rgba(180,210,255,0.85);padding:4px 8px 0;letter-spacing:0.02em;text-shadow:0 0 8px rgba(47,128,237,0.3);"></div>
+
+            <div class="search-section">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search by chain name, ID, or symbol..." />
+                </div>
+                <div class="filter-row">
+                    <button class="filter-btn" data-filter="all">ALLCHAIN</button>
+                    <button class="filter-btn active" data-filter="mainnet">Mainnets</button>
+                    <button class="filter-btn" data-filter="testnet">Testnets</button>
+                    <button class="filter-btn mcap-toggle" id="mcapOnlyBtn" title="Show only chains with known market value">MarketCap</button>
+                    <button class="filter-btn dex-toggle" id="dexOnlyBtn" title="Show only chains with a DEX">DEX</button>
+                    <span style="margin-left:auto; color:var(--muted); font-size:0.8rem;">Sort:</span>
+                    <button class="filter-btn active" data-sort="marketcap">MCap &#9660;</button>
+                    <button class="filter-btn" data-sort="marketcap_asc">MCap &#9650;</button>
+                    <button class="filter-btn" data-sort="name">A-Z</button>
+                    <button class="filter-btn" data-sort="name_desc">Z-A</button>
+                    <button class="filter-btn" data-sort="chainid">Chain ID</button>
+                    <button class="filter-btn" data-sort="rpc_count">RPCs</button>
+                </div>
+            </div>
+
+            <div id="chainGrid" class="chain-grid"></div>
+            <div id="loadMore" class="load-more" style="display:none">
+                <div style="color:var(--muted);font-size:0.85rem;padding:10px;">Loading more chains...</div>
+            </div>
+            <div id="scrollSentinel" style="height:1px;"></div>
+            <div id="statusMsg" class="status-msg loading">Loading chain data...</div>
+        </div>
+    </div>
+
+    <!-- Detail overlay -->
+    <div class="chain-confirm-backdrop" id="chainConfirmBackdrop"></div>
+    <div class="gas-popup-backdrop" id="gasBackdrop" onclick="closeGasPopup()"></div>
+    <div class="gas-popup" id="gasPopup">
+        <button class="gp-close" onclick="closeGasPopup()">&times;</button>
+        <div id="gasPopupContent"></div>
+    </div>
+
+    <div class="detail-overlay-backdrop" id="detailBackdrop" onclick="closeDetailOverlay()"></div>
+    <div class="detail-overlay" id="detailOverlay">
+        <div class="detail-overlay-header" id="detailDragHandle">
+            <div class="chain-icon" id="detailIcon"></div>
+            <div class="info">
+                <div class="chain-name" id="detailName"></div>
+                <div class="chain-id" id="detailChainId"></div>
+            </div>
+            <button class="detail-overlay-close" onclick="closeDetailOverlay()" title="Close">&times;</button>
+        </div>
+        <div class="detail-overlay-body" id="detailBody">
+        </div>
+    </div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────
+let allChains = [];
+let filteredChains = [];
+let displayCount = 30;
+let currentFilter = 'mainnet';
+let currentSort = 'marketcap';
+let mcapOnly = false;
+let dexOnly = false;
+let walletConnected = false;
+let connectedChainId = null;
+
+// Chains available on Uniswap (for card badges and detail links)
+const UNISWAP_CHAIN_IDS = new Set([1, 10, 56, 137, 324, 480, 8453, 42161, 42220, 43114, 81457, 7777777]);
+
+// DEX availability — chainId → { name, url, color, badge }
+const CHAIN_DEX_MAP = {
+    // Ethereum — Uniswap + PancakeSwap, 1inch, SushiSwap
+    1:     { name: 'Uniswap', url: 'https://app.uniswap.org/swap?chain=ethereum', color: '#ff007a', badge: 'UNI', extra: [
+               { name: 'PancakeSwap', url: 'https://pancakeswap.finance/swap?chain=eth', badge: 'CAKE' },
+               { name: '1inch', url: 'https://app.1inch.io/#/1/simple/swap', badge: '1INCH' },
+               { name: 'SushiSwap', url: 'https://www.sushi.com/ethereum/swap', badge: 'SUSHI' }
+           ]},
+    // Optimism — Uniswap, 1inch, SushiSwap
+    10:    { name: 'Uniswap', url: 'https://app.uniswap.org/swap?chain=optimism', color: '#ff007a', badge: 'UNI', extra: [
+               { name: '1inch', url: 'https://app.1inch.io/#/10/simple/swap', badge: '1INCH' },
+               { name: 'SushiSwap', url: 'https://www.sushi.com/optimism/swap', badge: 'SUSHI' }
+           ]},
+    // BNB Smart Chain — PancakeSwap + Uniswap, 1inch, SushiSwap
+    56:    { name: 'PancakeSwap', url: 'https://pancakeswap.finance/swap?chain=bsc', color: '#d1884f', badge: 'CAKE', extra: [
+               { name: 'Uniswap', url: 'https://app.uniswap.org/swap?chain=bnb', badge: 'UNI' },
+               { name: '1inch', url: 'https://app.1inch.io/#/56/simple/swap', badge: '1INCH' },
+               { name: 'SushiSwap', url: 'https://www.sushi.com/bsc/swap', badge: 'SUSHI' }
+           ]},
+    // zkSync — Uniswap + PancakeSwap, 1inch, SushiSwap
+    324:   { name: 'Uniswap', url: 'https://app.uniswap.org/swap?chain=zksync', color: '#ff007a', badge: 'UNI', extra: [
+               { name: 'PancakeSwap', url: 'https://pancakeswap.finance/swap?chain=zkSync', badge: 'CAKE' },
+               { name: '1inch', url: 'https://app.1inch.io/#/324/simple/swap', badge: '1INCH' },
+               { name: 'SushiSwap', url: 'https://www.sushi.com/zksync-era/swap', badge: 'SUSHI' }
+           ]},
+    // World Chain — Uniswap
+    480:   { name: 'Uniswap', url: 'https://app.uniswap.org/swap?chain=worldchain', color: '#ff007a', badge: 'UNI' },
+    // Base — Uniswap + PancakeSwap, 1inch, SushiSwap
+    8453:  { name: 'Uniswap', url: 'https://app.uniswap.org/swap?chain=base', color: '#ff007a', badge: 'UNI', extra: [
+               { name: 'PancakeSwap', url: 'https://pancakeswap.finance/swap?chain=base', badge: 'CAKE' },
+               { name: '1inch', url: 'https://app.1inch.io/#/8453/simple/swap', badge: '1INCH' },
+               { name: 'SushiSwap', url: 'https://www.sushi.com/base/swap', badge: 'SUSHI' }
+           ]},
+    // Arbitrum — Uniswap + PancakeSwap, 1inch, SushiSwap
+    42161: { name: 'Uniswap', url: 'https://app.uniswap.org/swap?chain=arbitrum', color: '#ff007a', badge: 'UNI', extra: [
+               { name: 'PancakeSwap', url: 'https://pancakeswap.finance/swap?chain=arb', badge: 'CAKE' },
+               { name: '1inch', url: 'https://app.1inch.io/#/42161/simple/swap', badge: '1INCH' },
+               { name: 'SushiSwap', url: 'https://www.sushi.com/arbitrum/swap', badge: 'SUSHI' }
+           ]},
+    // Celo — Uniswap, SushiSwap
+    42220: { name: 'Uniswap', url: 'https://app.uniswap.org/swap?chain=celo', color: '#ff007a', badge: 'UNI', extra: [
+               { name: 'SushiSwap', url: 'https://www.sushi.com/celo/swap', badge: 'SUSHI' }
+           ]},
+    // Avalanche — LFJ (Trader Joe) + Uniswap, 1inch, SushiSwap
+    43114: { name: 'LFJ', url: 'https://lfj.gg/swap', color: '#e84142', badge: 'DEX', extra: [
+               { name: 'Uniswap', url: 'https://app.uniswap.org/swap?chain=avalanche', badge: 'UNI' },
+               { name: '1inch', url: 'https://app.1inch.io/#/43114/simple/swap', badge: '1INCH' },
+               { name: 'SushiSwap', url: 'https://www.sushi.com/avalanche/swap', badge: 'SUSHI' }
+           ]},
+    // Blast — Uniswap, SushiSwap
+    81457: { name: 'Uniswap', url: 'https://app.uniswap.org/swap?chain=blast', color: '#ff007a', badge: 'UNI', extra: [
+               { name: 'SushiSwap', url: 'https://www.sushi.com/blast/swap', badge: 'SUSHI' }
+           ]},
+    // Zora — Uniswap
+    7777777: { name: 'Uniswap', url: 'https://app.uniswap.org/swap?chain=zora', color: '#ff007a', badge: 'UNI' },
+    // Polygon — QuickSwap + Uniswap, 1inch, SushiSwap
+    137:   { name: 'QuickSwap', url: 'https://quickswap.exchange/#/swap', color: '#448aff', badge: 'DEX', extra: [
+               { name: 'Uniswap', url: 'https://app.uniswap.org/swap?chain=polygon', badge: 'UNI' },
+               { name: '1inch', url: 'https://app.1inch.io/#/137/simple/swap', badge: '1INCH' },
+               { name: 'SushiSwap', url: 'https://www.sushi.com/polygon/swap', badge: 'SUSHI' }
+           ]},
+    // Moonbeam — StellaSwap
+    1284:  { name: 'StellaSwap', url: 'https://app.stellaswap.com/exchange/cross-chain-swap', color: '#7b3fe4', badge: 'DEX' },
+    // Moonriver — Solarbeam
+    1285:  { name: 'Solarbeam', url: 'https://app.solarbeam.io/exchange/swap', color: '#f7931a', badge: 'DEX' },
+    // Fantom — SpookySwap, SushiSwap
+    250:   { name: 'SpookySwap', url: 'https://spooky.fi/#/swap', color: '#6665dd', badge: 'DEX', extra: [
+               { name: 'SushiSwap', url: 'https://www.sushi.com/fantom/swap', badge: 'SUSHI' }
+           ]},
+    // Gnosis — CoW Swap (MEV-protected), 1inch, SushiSwap
+    100:   { name: 'CoW Swap', url: 'https://swap.cow.fi/#/100/swap/', color: '#012f7a', badge: 'DEX', extra: [
+               { name: '1inch', url: 'https://app.1inch.io/#/100/simple/swap', badge: '1INCH' },
+               { name: 'SushiSwap', url: 'https://www.sushi.com/gnosis/swap', badge: 'SUSHI' }
+           ]},
+    // Cronos — VVS Finance, SushiSwap
+    25:    { name: 'VVS Finance', url: 'https://vvs.finance/swap', color: '#2f80ed', badge: 'DEX', extra: [
+               { name: 'SushiSwap', url: 'https://www.sushi.com/cronos/swap', badge: 'SUSHI' }
+           ]},
+    // Metis — Netswap, SushiSwap
+    1088:  { name: 'Netswap', url: 'https://netswap.io/#/swap', color: '#00d2ff', badge: 'DEX', extra: [
+               { name: 'SushiSwap', url: 'https://www.sushi.com/metis/swap', badge: 'SUSHI' }
+           ]},
+    // Mantle — FusionX, SushiSwap
+    5000:  { name: 'FusionX', url: 'https://fusionx.finance/swap', color: '#000', badge: 'DEX', extra: [
+               { name: 'SushiSwap', url: 'https://www.sushi.com/mantle/swap', badge: 'SUSHI' }
+           ]},
+    // Linea — SyncSwap + PancakeSwap, 1inch, SushiSwap
+    59144: { name: 'SyncSwap', url: 'https://syncswap.xyz', color: '#7ef0b8', badge: 'DEX', extra: [
+               { name: 'PancakeSwap', url: 'https://pancakeswap.finance/swap?chain=linea', badge: 'CAKE' },
+               { name: '1inch', url: 'https://app.1inch.io/#/59144/simple/swap', badge: '1INCH' },
+               { name: 'SushiSwap', url: 'https://www.sushi.com/linea/swap', badge: 'SUSHI' }
+           ]},
+    // Scroll — SyncSwap, SushiSwap
+    534352:{ name: 'SyncSwap', url: 'https://syncswap.xyz', color: '#7ef0b8', badge: 'DEX', extra: [
+               { name: 'SushiSwap', url: 'https://www.sushi.com/scroll/swap', badge: 'SUSHI' }
+           ]},
+    // Kava — Equilibre
+    2222:  { name: 'Equilibre', url: 'https://equilibre.finance/swap', color: '#ff6b35', badge: 'DEX' },
+    // PulseChain — PulseX
+    369:   { name: 'PulseX', url: 'https://pulsex.mypinata.cloud/ipfs/bafybeiesh56oijasgr7creubue6xt5anivxifrwd5a5argiz4orbed57qi/#/?outputCurrency=ETH', color: '#00ff7f', badge: 'DEX' },
+    // Sonic — Beethoven X, 1inch, SushiSwap
+    146:   { name: 'Beethoven X', url: 'https://beets.fi', color: '#d4a800', badge: 'DEX', extra: [
+               { name: '1inch', url: 'https://app.1inch.io/#/146/simple/swap', badge: '1INCH' },
+               { name: 'SushiSwap', url: 'https://www.sushi.com/sonic/swap', badge: 'SUSHI' }
+           ]},
+    // Harmony — Harmony Swap (Uniswap v3 fork) + Bridge
+    1666600000: { name: 'Harmony Swap', url: 'https://swap.harmony.one/', color: '#00aeef', badge: 'DEX', extra: [
+               { name: 'Harmony Bridge', url: 'https://swap.harmony.one/#/getone', badge: 'BRIDGE' }
+           ]},
+    // Boba — SushiSwap
+    288:   { name: 'SushiSwap', url: 'https://www.sushi.com/boba/swap', color: '#d65aff', badge: 'SUSHI' },
+    // Rootstock — SushiSwap
+    30:    { name: 'SushiSwap', url: 'https://www.sushi.com/rootstock/swap', color: '#d65aff', badge: 'SUSHI' },
+    // Mode — SushiSwap
+    34443: { name: 'SushiSwap', url: 'https://www.sushi.com/mode/swap', color: '#d65aff', badge: 'SUSHI' },
+    // Taiko — SushiSwap
+    167000:{ name: 'SushiSwap', url: 'https://www.sushi.com/taiko/swap', color: '#d65aff', badge: 'SUSHI' },
+};
+let connectedAddress = null;
+
+// Chains confirmed to be in the connected wallet
+let walletChains = new Set(JSON.parse(localStorage.getItem('walletChains') || '[]'));
+
+function getApiUrl() {
+    return document.getElementById('apiUrl').value.replace(/\/+$/, '');
+}
+
+// ── Wallet Connection (Chainlist Pattern) ─────────────────
+let detectedWallets = [];
+let walletsReady = false;
+
+function setupEIP6963WalletDetection() {
+    return new Promise((resolve) => {
+        let eventCount = 0;
+        function onAnnouncement(event) {
+            eventCount++;
+            const { info, provider } = event.detail;
+            if (detectedWallets.some(wallet => wallet.uuid === info.uuid)) return;
+            detectedWallets.push({ name: info.name, provider: provider, icon: info.icon, id: info.walletId, uuid: info.uuid });
+        }
+        window.addEventListener('eip6963:announceProvider', onAnnouncement);
+        window.dispatchEvent(new Event('eip6963:requestProvider'));
+        setTimeout(() => {
+            window.removeEventListener('eip6963:announceProvider', onAnnouncement);
+            const legacyWallets = detectLegacyWallets();
+            for (const wallet of legacyWallets) {
+                if (!detectedWallets.some(w => w.id === wallet.id)) detectedWallets.push(wallet);
+            }
+            walletsReady = true;
+            updateWalletHovers();
+            resolve(detectedWallets);
+        }, 800);
+    });
+}
+
+function detectLegacyWallets() {
+    const wallets = [];
+    // Check providers[] FIRST — window.ethereum is a proxy that causes selectExtension errors
+    if (window.ethereum && window.ethereum.providers && Array.isArray(window.ethereum.providers)) {
+        window.ethereum.providers.forEach((provider) => {
+            if (provider.isMetaMask && !wallets.some(w => w.id === 'metamask')) {
+                wallets.push({ name: 'MetaMask', provider: provider, icon: '🦊', id: 'metamask', uuid: 'metamask-from-providers' });
+            }
+            if (provider.isCoinbaseWallet && !wallets.some(w => w.id === 'coinbase')) {
+                wallets.push({ name: 'Coinbase Wallet', provider: provider, icon: '🔵', id: 'coinbase', uuid: 'coinbase-from-providers' });
+            }
+        });
+    }
+    if (!wallets.some(w => w.id === 'metamask') && window.ethereum && window.ethereum.isMetaMask) {
+        wallets.push({ name: 'MetaMask', provider: window.ethereum, icon: '🦊', id: 'metamask', uuid: 'metamask-legacy' });
+    }
+    if (window.phantom && window.phantom.ethereum) {
+        wallets.push({ name: 'Phantom', provider: window.phantom.ethereum, icon: '👻', id: 'phantom', uuid: 'phantom-legacy' });
+    }
+    if (!wallets.some(w => w.id === 'coinbase') && window.ethereum && window.ethereum.isCoinbaseWallet) {
+        wallets.push({ name: 'Coinbase Wallet', provider: window.ethereum, icon: '🔵', id: 'coinbase', uuid: 'coinbase-legacy' });
+    }
+    if (wallets.length === 0 && window.ethereum) {
+        wallets.push({ name: 'Ethereum Wallet', provider: window.ethereum, icon: '💎', id: 'ethereum', uuid: 'ethereum-legacy' });
+    }
+    return wallets;
+}
+
+async function detectWallets() {
+    if (!walletsReady) await setupEIP6963WalletDetection();
+    return detectedWallets;
+}
+
+function getWalletProvider() {
+    if (detectedWallets && detectedWallets.length > 0) {
+        const mm = detectedWallets.find(w => w.id === 'metamask' || w.name === 'MetaMask');
+        if (mm) return mm.provider;
+        return detectedWallets[0].provider;
+    }
+    const legacy = detectLegacyWallets();
+    if (legacy.length > 0) {
+        const mm = legacy.find(w => w.id === 'metamask');
+        if (mm) return mm.provider;
+        return legacy[0].provider;
+    }
+    return null;
+}
+
+// ── Wallet Connect ────────────────────────────────────────────────
+async function connectWallet() {
+    const btn = document.getElementById('walletBtn');
+    const label = document.getElementById('walletBtnLabel');
+
+    if (walletConnected) {
+        await disconnectWallet();
+        return;
+    }
+
+    // Ensure detection has run
+    if (!walletsReady) await detectWallets();
+
+    const provider = getWalletProvider();
+    if (!provider) {
+        alert('MetaMask or a compatible EVM wallet is required.\n\nInstall MetaMask from https://metamask.io');
+        return;
+    }
+
+    try {
+        label.textContent = 'Connecting...';
+        console.log('🔗 Using provider:', provider.constructor?.name, provider.isMetaMask ? '(MetaMask)' : '');
+
+        const accounts = await provider.request({ method: 'eth_requestAccounts' });
+        if (accounts && accounts.length > 0) {
+            connectedAddress = accounts[0];
+            const chainIdHex = await provider.request({ method: 'eth_chainId' });
+            connectedChainId = parseInt(chainIdHex, 16);
+            walletConnected = true;
+
+            btn.classList.add('connected');
+            const short = connectedAddress.slice(0, 6) + '...' + connectedAddress.slice(-4);
+            label.textContent = short;
+            document.getElementById('walletAddress').textContent = connectedAddress;
+
+            walletChains.add(connectedChainId);
+            saveWalletChains();
+
+            try {
+                provider.on('accountsChanged', (accts) => {
+                    if (!accts.length) disconnectWallet();
+                    else { connectedAddress = accts[0]; renderChains(); }
+                });
+                provider.on('chainChanged', (cid) => {
+                    connectedChainId = parseInt(cid, 16);
+                    walletChains.add(connectedChainId);
+                    saveWalletChains();
+                    renderChains();
+                    updateStats();
+                });
+            } catch {}
+
+            updateStats();
+            renderChains();
+            console.log(`✅ Connected: ${connectedAddress} on chain ${connectedChainId}`);
+        }
+    } catch (err) {
+        console.error('Wallet connect failed:', err);
+        label.textContent = 'Connect Wallet';
+        if (err.code === 4001) { /* User rejected */ }
+        else { alert('Failed to connect wallet: ' + err.message); }
+    }
+}
+
+function saveWalletChains() {
+    localStorage.setItem('walletChains', JSON.stringify([...walletChains]));
+}
+
+async function disconnectWallet() {
+    const provider = getWalletProvider();
+    if (provider) {
+        try { await provider.request({ method: 'wallet_revokePermissions', params: [{ eth_accounts: {} }] }); } catch {}
+        try { provider.removeAllListeners?.('accountsChanged'); provider.removeAllListeners?.('chainChanged'); } catch {}
+    }
+
+    walletConnected = false;
+    connectedChainId = null;
+    connectedAddress = null;
+    walletChains.clear();
+    saveWalletChains();
+
+    const btn = document.getElementById('walletBtn');
+    btn.classList.remove('connected');
+    document.getElementById('walletBtnLabel').textContent = 'Connect Wallet';
+    document.getElementById('walletAddress').textContent = '';
+
+    updateStats();
+    renderChains();
+}
+
+async function addToMetaMask(chainId) {
+    const provider = getWalletProvider();
+    if (!provider) {
+        alert('MetaMask or a compatible wallet is required.\n\nInstall MetaMask from https://metamask.io');
+        return;
+    }
+    if (!walletConnected) {
+        await connectWallet();
+        if (!walletConnected) return;
+    }
+
+    const chain = allChains.find(c => c.chainId === chainId);
+    if (!chain) { alert('Chain not found. Please refresh.'); return; }
+
+    const statusEl = document.getElementById('statusMsg');
+    const showStatus = (msg) => { statusEl.style.display = 'block'; statusEl.textContent = msg; };
+
+    showStatus(`Preparing ${chain.name}...`);
+    showStatus(`Adding ${chain.name} to wallet...`);
+
+    let params = null;
+
+    // Strategy 1: Try API metamask endpoint
+    try {
+        const ctrl = new AbortController();
+        setTimeout(() => ctrl.abort(), 5000);
+        const res = await fetch(`${getApiUrl()}/chains/${chainId}/metamask`, { signal: ctrl.signal });
+        if (res.ok) {
+            const apiParams = await res.json();
+            if (apiParams.rpcUrls && apiParams.rpcUrls.length > 0) {
+                params = apiParams;
+                console.log('Got params from API metamask endpoint');
+            }
+        }
+    } catch (e) { console.log('API metamask endpoint failed:', e.message); }
+
+    // Strategy 2: Build from local chain data + on-demand fetch
+    if (!params) {
+        let rpcUrls = [];
+
+        // Use locally cached RPCs (from CDN load)
+        if (chain.rpc && Array.isArray(chain.rpc) && chain.rpc.length > 0) {
+            rpcUrls = chain.rpc.filter(r => typeof r === 'string' && r.startsWith('http') && !r.includes('${'));
+            if (rpcUrls.length > 0) console.log(`Got ${rpcUrls.length} RPCs from local cache`);
+        }
+
+        // On-demand: fetch from API detail
+        if (rpcUrls.length === 0) {
+            showStatus(`Fetching RPC data for ${chain.name}...`);
+            try {
+                const ctrl = new AbortController();
+                setTimeout(() => ctrl.abort(), 5000);
+                const res = await fetch(`${getApiUrl()}/chains/${chainId}`, { signal: ctrl.signal });
+                if (res.ok) {
+                    const detail = await res.json();
+                    if (detail.rpcUrls && detail.rpcUrls.length > 0) {
+                        rpcUrls = detail.rpcUrls;
+                        chain.rpc = rpcUrls;
+                        console.log(`Got ${rpcUrls.length} RPCs from API detail`);
+                    }
+                    if (detail.explorers && detail.explorers.length > 0) chain.explorers = detail.explorers;
+                }
+            } catch (e) { console.log('API detail failed:', e.message); }
+        }
+
+        // On-demand: fetch from CDN
+        if (rpcUrls.length === 0) {
+            showStatus(`Fetching RPCs from chainid.network...`);
+            try {
+                const ctrl = new AbortController();
+                setTimeout(() => ctrl.abort(), 8000);
+                const res = await fetch(CDN_URL, { signal: ctrl.signal });
+                if (res.ok) {
+                    const cdnChains = await res.json();
+                    const cdnChain = cdnChains.find(c => c.chainId === chainId);
+                    if (cdnChain && cdnChain.rpc) {
+                        rpcUrls = cdnChain.rpc.filter(r => typeof r === 'string' && r.startsWith('https') && !r.includes('${'));
+                        chain.rpc = rpcUrls;
+                        if (cdnChain.explorers) chain.explorers = cdnChain.explorers;
+                        console.log(`Got ${rpcUrls.length} RPCs from CDN for chain ${chainId}`);
+                    } else {
+                        console.log(`Chain ${chainId} not found in CDN data`);
+                    }
+                }
+            } catch (e) { console.log('CDN fetch failed:', e.message); }
+        }
+
+        // Last resort: generic fallback
+        if (rpcUrls.length === 0) {
+            const sn = chain.shortName || chain.name.toLowerCase().replace(/[\s\-\.]/g, '');
+            rpcUrls = [`https://rpc.ankr.com/${sn}`, `https://${sn}.public-rpc.com`];
+            console.log('Using generic fallback RPCs:', rpcUrls);
+        }
+
+        let blockExplorerUrls = [];
+        if (chain.explorers && Array.isArray(chain.explorers)) {
+            blockExplorerUrls = chain.explorers.filter(e => e && e.url).slice(0, 2).map(e => e.url);
+        }
+
+        params = {
+            chainId: '0x' + chainId.toString(16),
+            chainName: chain.name,
+            nativeCurrency: chain.nativeCurrency || { name: 'ETH', symbol: 'ETH', decimals: 18 },
+            rpcUrls: rpcUrls
+        };
+        if (blockExplorerUrls.length > 0) params.blockExplorerUrls = blockExplorerUrls;
+    }
+
+    console.log('Final wallet_addEthereumChain params:', JSON.stringify(params, null, 2));
+
+    // Show professional confirmation dialog before MetaMask popup
+    const confirmResult = await showChainConfirmDialog(params, chain);
+    if (!confirmResult) {
+        showStatus('Chain addition cancelled');
+        setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+        return;
+    }
+
+    // Apply user's RPC selection
+    if (confirmResult.selectedRpcs) {
+        params.rpcUrls = confirmResult.selectedRpcs;
+    }
+
+    const wasInWallet = confirmResult.alreadyInWallet;
+    showStatus(wasInWallet
+        ? `Updating ${params.chainName} configuration...`
+        : `Requesting wallet to add ${params.chainName}...`);
+
+    try {
+        await provider.request({
+            method: 'wallet_addEthereumChain',
+            params: [params],
+        });
+        const currentHex = await provider.request({ method: 'eth_chainId' });
+        connectedChainId = parseInt(currentHex, 16);
+        const addedId = parseInt(params.chainId, 16);
+        walletChains.add(addedId);
+        walletChains.add(connectedChainId);
+        saveWalletChains();
+
+        if (wasInWallet) {
+            showStatus(`${params.chainName} updated — ${params.rpcUrls.length} RPCs, ${(params.blockExplorerUrls||[]).length} explorer(s) synced to wallet`);
+            console.log(`Updated existing chain ${addedId} with ${params.rpcUrls.length} RPCs`);
+        } else {
+            showStatus(`${params.chainName} added to wallet!`);
+        }
+        setTimeout(() => { statusEl.style.display = 'none'; }, 4000);
+        renderChains();
+        updateStats();
+    } catch (err) {
+        console.error('wallet_addEthereumChain failed:', err);
+        statusEl.style.display = 'none';
+        const msg = err.code === 4001 ? 'Cancelled by user'
+            : err.code === -32002 ? 'Check your wallet — request pending'
+            : err.message || 'Unknown error';
+        alert('Failed to add chain: ' + msg);
+    }
+}
+
+// ── Chain Confirmation Dialog ─────────────────────────────────────
+function showChainConfirmDialog(params, chain) {
+    return new Promise(async (resolve) => {
+        const backdrop = document.getElementById('chainConfirmBackdrop');
+        const provider = getWalletProvider();
+        const chainIdInt = parseInt(params.chainId, 16);
+
+        // Check if chain is already known to be in the wallet
+        let alreadyInWallet = walletChains.has(chainIdInt);
+
+        const iconSrc = chain.icon
+            ? (chain.icon.startsWith('http') || chain.icon.startsWith('/') ? chain.icon : getApiUrl() + chain.icon)
+            : '';
+        const iconHtml = iconSrc
+            ? `<img src="${iconSrc}" alt="${params.chainName}" onerror="this.parentElement.textContent='${(chain.chain || params.chainName || '?')[0]}'">`
+            : (chain.chain || params.chainName || '?')[0];
+
+        const rpcItems = params.rpcUrls.map((url, i) => {
+            let host;
+            try { host = new URL(url).hostname; } catch { host = url; }
+            const badge = i === 0 ? '<span class="rpc-badge primary">primary</span>'
+                : host.includes('publicnode') || host.includes('public') || host.includes('ankr') ? '<span class="rpc-badge public">public</span>' : '';
+            return `<label class="rpc-option">
+                <input type="checkbox" value="${url}" checked data-rpc>
+                <span class="rpc-host">${host}</span>${badge}
+            </label>`;
+        }).join('');
+
+        const explorerDisplay = (params.blockExplorerUrls || []).slice(0, 1).map(u => {
+            try { return new URL(u).hostname; } catch { return u; }
+        }).join('') || 'None';
+
+        const source = chain.source === 'cdn' ? 'chainid.network' : 'AgenticPlace database';
+
+        const statusHtml = alreadyInWallet
+            ? `<div class="chain-confirm-status already-added">Already in wallet — clicking "${btnText}" will overwrite the existing RPC endpoints and explorer with ${params.rpcUrls.length} verified endpoint${params.rpcUrls.length !== 1 ? 's' : ''}. Your wallet applies the update silently.</div>`
+            : `<div class="chain-confirm-status new-chain">New chain — your wallet will prompt you to approve adding this network.</div>`;
+
+        const titleText = alreadyInWallet ? `Update ${params.chainName}` : `Add ${params.chainName}`;
+        const subtitleText = alreadyInWallet ? 'Chain exists in wallet — review updated config' : 'Review chain configuration';
+        const btnText = alreadyInWallet ? 'Update Chain' : 'Add to Wallet';
+
+        backdrop.innerHTML = `
+            <div class="chain-confirm">
+                <div class="chain-confirm-header">
+                    <div class="confirm-icon">${iconHtml}</div>
+                    <div>
+                        <div class="confirm-title">${titleText}</div>
+                        <div class="confirm-subtitle">${subtitleText}</div>
+                    </div>
+                </div>
+                <div class="chain-confirm-body">
+                    ${statusHtml}
+                    <div class="chain-confirm-row">
+                        <span class="label">Chain ID</span>
+                        <span class="value">${chainIdInt} (${params.chainId})</span>
+                    </div>
+                    <div class="chain-confirm-row">
+                        <span class="label">Currency</span>
+                        <span class="value">${params.nativeCurrency.symbol}</span>
+                    </div>
+                    <div class="chain-confirm-row">
+                        <span class="label">Explorer</span>
+                        <span class="value">${explorerDisplay}</span>
+                    </div>
+                    <div class="chain-confirm-rpc-label">RPC Endpoints (${params.rpcUrls.length}) — uncheck to exclude</div>
+                    <div class="chain-confirm-rpc-list">${rpcItems}</div>
+                    <div class="chain-confirm-source">
+                        <strong>Verified by AgenticPlace</strong> &mdash; sourced from ${source}.
+                        Your wallet will confirm this action.
+                    </div>
+                </div>
+                <div class="chain-confirm-actions">
+                    <button class="confirm-cancel" id="chainConfirmCancel">Cancel</button>
+                    <button class="confirm-add" id="chainConfirmAdd">${btnText}</button>
+                </div>
+                <div class="chain-confirm-brand">AgenticPlace &mdash; mindX + BANKON</div>
+            </div>`;
+
+        backdrop.classList.add('visible');
+
+        document.getElementById('chainConfirmAdd').onclick = () => {
+            const selected = [...backdrop.querySelectorAll('[data-rpc]:checked')].map(cb => cb.value);
+            if (selected.length === 0) {
+                backdrop.querySelector('.chain-confirm-rpc-label').style.color = '#ff4444';
+                backdrop.querySelector('.chain-confirm-rpc-label').textContent = 'Select at least one RPC endpoint';
+                return;
+            }
+            backdrop.classList.remove('visible');
+            resolve({ alreadyInWallet, selectedRpcs: selected });
+        };
+        document.getElementById('chainConfirmCancel').onclick = () => {
+            backdrop.classList.remove('visible');
+            resolve(false);
+        };
+        backdrop.onclick = (e) => {
+            if (e.target === backdrop) {
+                backdrop.classList.remove('visible');
+                resolve(false);
+            }
+        };
+    });
+}
+
+// ── IndexedDB Cache ───────────────────────────────────────────────
+const IDB_NAME = 'allchainz';
+const IDB_STORE = 'chains';
+const IDB_VERSION = 1;
+
+function openIDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+        req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(IDB_STORE)) {
+                db.createObjectStore(IDB_STORE, { keyPath: 'id' });
+            }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function saveToIDB(chains) {
+    try {
+        const db = await openIDB();
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        const store = tx.objectStore(IDB_STORE);
+        store.clear();
+        store.put({ id: 'chains', data: chains, ts: Date.now() });
+        db.close();
+    } catch (e) { /* IndexedDB unavailable — silent */ }
+}
+
+async function loadFromIDB() {
+    try {
+        const db = await openIDB();
+        return new Promise((resolve) => {
+            const tx = db.transaction(IDB_STORE, 'readonly');
+            const req = tx.objectStore(IDB_STORE).get('chains');
+            req.onsuccess = () => {
+                db.close();
+                resolve(req.result ? req.result.data : null);
+            };
+            req.onerror = () => { db.close(); resolve(null); };
+        });
+    } catch (e) { return null; }
+}
+
+// ── CDN Fallback ──────────────────────────────────────────────────
+const CDN_URL = 'https://chainid.network/chains.json';
+
+function normalizeCDNChain(c) {
+    const usableRpcs = (c.rpc || []).filter(r => typeof r === 'string' && r.startsWith('http') && !r.includes('${'));
+    return {
+        chainId: c.chainId,
+        name: c.name,
+        chain: c.chain || c.shortName || '',
+        nativeCurrency: c.nativeCurrency || { name: 'Ether', symbol: 'ETH', decimals: 18 },
+        rpc: usableRpcs,
+        rpcCount: usableRpcs.length,
+        explorers: c.explorers || [],
+        faucetCount: (c.faucets || []).length,
+        explorerCount: (c.explorers || []).length,
+        infoUrl: c.infoURL || '',
+        shortName: c.shortName || '',
+        icon: '/gfx/chains/' + c.chainId + '.png',
+        features: c.features || [],
+        source: 'cdn'
+    };
+}
+
+async function fetchFromCDN() {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 10000);
+    const res = await fetch(CDN_URL, { signal: controller.signal });
+    if (!res.ok) throw new Error(`CDN returned ${res.status}`);
+    const raw = await res.json();
+    return raw.map(normalizeCDNChain);
+}
+
+// ── CoinGecko Client-Side Market Data ─────────────────────────────
+// Maps chainId → CoinGecko coin ID for native gas token price
+// Mirrors backend CHAIN_TO_COINGECKO — used as fallback when API has no market data
+const CHAIN_COINGECKO_MAP = {
+    // Bitcoin (non-EVM, chainId 0)
+    0: 'bitcoin',
+    // L1s
+    1: 'ethereum', 14: 'flare-networks', 19: 'songbird', 20: 'elastos',
+    24: 'kardiachain', 25: 'crypto-com-chain', 30: 'rootstock', 40: 'telos',
+    42: 'lukso-token-2', 50: 'xdce-crowd-sale', 52: 'coinex-token', 56: 'binancecoin',
+    61: 'ethereum-classic', 66: 'oec-token', 82: 'meter-stable', 88: 'tomochain',
+    96: 'bitkub-coin', 100: 'xdai', 106: 'velas', 122: 'fuse-network-token',
+    137: 'polygon-ecosystem-token', 143: 'monad', 146: 'sonic-3',
+    151: 'redbelly-network-token', 196: 'okb', 199: 'bittorrent',
+    250: 'sonic-3', 295: 'hedera-hashgraph', 311: 'omax-token', 314: 'filecoin',
+    361: 'theta-fuel', 369: 'pulsechain', 397: 'near', 416: 'sx-network-2',
+    520: 'xtcom-token', 530: 'fx-coin', 592: 'astar', 648: 'endurance',
+    888: 'wanchain', 1088: 'metis-token', 1111: 'wemix-token',
+    1116: 'coredaoorg', 1130: 'defichain', 1135: 'lisk', 1284: 'moonbeam',
+    1285: 'moonriver', 1329: 'sei-network', 1339: 'lava', 2001: 'cardano',
+    2040: 'vanar-chain', 2222: 'kava', 2366: 'kiteai', 4337: 'beam-2',
+    4689: 'iotex', 5000: 'mantle', 5165: 'fasttoken', 5888: 'mantra',
+    6001: 'bouncebit', 7000: 'zetachain', 9001: 'evmos', 9745: 'plasma',
+    10088: 'gatechain-token', 11820: 'artela-network', 16661: 'zero-gravity',
+    17777: 'eos', 22776: 'marcopolo', 23294: 'oasis-network', 32520: 'bitrise-token',
+    32769: 'zilliqa', 39797: 'energi', 42220: 'celo', 42262: 'oasis-network',
+    43114: 'avalanche-2', 50104: 'sophon', 53935: 'defi-kingdoms', 88888: 'chiliz',
+    100009: 'vechain', 245022934: 'neon', 333000333: 'meld-2', 1666600000: 'harmony',
+    // L2s (native = ETH, BNB, BTC, XRP, ADA)
+    10: 'ethereum', 169: 'ethereum', 200901: 'bitcoin', 204: 'binancecoin', 252: 'ethereum',
+    288: 'ethereum', 324: 'ethereum', 480: 'ethereum', 570: 'ethereum',
+    1101: 'ethereum', 1868: 'ethereum', 1890: 'ethereum', 3776: 'ethereum',
+    5112: 'ethereum', 7560: 'ethereum', 7777777: 'ethereum', 7887: 'ethereum',
+    8453: 'ethereum', 27563: 'ethereum', 34443: 'ethereum', 42161: 'ethereum',
+    42170: 'ethereum', 48900: 'ethereum', 59144: 'ethereum', 81457: 'ethereum',
+    167000: 'ethereum', 534352: 'ethereum', 810180: 'ethereum',
+    888888888: 'ethereum', 1313161554: 'ethereum', 1380012617: 'ethereum',
+    1440000: 'ripple', 2001: 'cardano', 10241024: 'ethereum'
+};
+
+// Protocol tokens for L2s (separate from native gas token — used for market cap)
+const CHAIN_PROTOCOL_MAP = {
+    10: 'optimism', 169: 'manta-network', 252: 'frax-share', 288: 'boba-network',
+    324: 'zksync', 480: 'worldcoin-wld', 570: 'syscoin', 3776: 'astar',
+    34443: 'mode', 42161: 'arbitrum', 59144: 'linea', 81457: 'blast',
+    167000: 'taiko', 534352: 'scroll', 810180: 'zklink',
+    1313161554: 'aurora-near'
+};
+
+let lastCoinGeckoFetch = 0;
+const COINGECKO_API_KEY = ''; // Leave empty for free tier. Set for pro: faster refresh.
+// Free tier: 5 min cycle. With API key: 2 min cycle.
+const PRICE_REFRESH_INTERVAL = COINGECKO_API_KEY ? 2 * 60 * 1000 : 5 * 60 * 1000;
+
+async function fetchCoinGeckoPrices() {
+
+    const allIds = new Set([...Object.values(CHAIN_COINGECKO_MAP), ...Object.values(CHAIN_PROTOCOL_MAP)]);
+    const ids = [...allIds].join(',');
+    let url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=250&sparkline=false`;
+    if (COINGECKO_API_KEY) {
+        url = `https://pro-api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=250&sparkline=false&x_cg_pro_api_key=${COINGECKO_API_KEY}`;
+    }
+
+    try {
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(), 10000);
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) return false;
+        const coins = await res.json();
+        lastCoinGeckoFetch = Date.now();
+
+        const coinMap = {};
+        coins.forEach(c => { coinMap[c.id] = c; });
+
+        // Enrich allChains with market data
+        // L2s where native token is ETH/BNB/BTC/XRP/ADA — don't assign parent chain market cap
+        const l2NativeChains = new Set(Object.keys(CHAIN_PROTOCOL_MAP).map(Number).concat([
+            200901, 204, 1101, 1440000, 1868, 1890, 2001, 5112, 7560,
+            7777777, 7887, 8453, 27563, 42170, 48900,
+            888888888, 1380012617, 10241024
+        ]));
+        allChains.forEach(chain => {
+            const geckoId = CHAIN_COINGECKO_MAP[chain.chainId];
+            if (!geckoId) return;
+            const coin = coinMap[geckoId];
+            if (!coin) return;
+
+            chain.nativePrice = coin.current_price;
+            chain.priceChange24h = coin.price_change_percentage_24h;
+
+            // L2s using ETH/BNB as gas: don't assign ETH's market cap to them
+            const isL2 = l2NativeChains.has(chain.chainId);
+            const protoId = CHAIN_PROTOCOL_MAP[chain.chainId];
+            const protoCoin = protoId ? coinMap[protoId] : null;
+
+            if (protoCoin && protoCoin.id !== geckoId) {
+                chain.marketCap = protoCoin.market_cap || 0;
+                chain.volume24h = protoCoin.total_volume || 0;
+                chain.protocolSymbol = protoCoin.symbol?.toUpperCase();
+                chain.protocolPrice = protoCoin.current_price;
+            } else if (!isL2) {
+                chain.marketCap = coin.market_cap || 0;
+                chain.volume24h = coin.total_volume || 0;
+            }
+        });
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+// ── Fetch (3-tier: API → CDN → IndexedDB) ────────────────────────
+async function fetchChains() {
+    const statusEl = document.getElementById('statusMsg');
+    statusEl.style.display = 'block';
+    statusEl.className = 'status-msg loading';
+    statusEl.textContent = 'Loading chain data...';
+
+    let source = '';
+
+    // Tier 1: Backend API
+    try {
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(`${getApiUrl()}/chains?limit=5000`, { signal: controller.signal });
+        if (!res.ok) throw new Error(`API returned ${res.status}`);
+        const data = await res.json();
+        allChains = data.chains || [];
+        // Store authoritative counts from the database
+        if (data.mainnets !== undefined) window._dbMainnets = data.mainnets;
+        if (data.testnets !== undefined) window._dbTestnets = data.testnets;
+        source = 'api';
+    } catch (err) {
+        // Tier 2: chainid.network CDN
+        try {
+            statusEl.textContent = 'API unavailable, loading from chainid.network...';
+            allChains = await fetchFromCDN();
+            source = 'cdn';
+        } catch (cdnErr) {
+            // Tier 3: IndexedDB cache
+            statusEl.textContent = 'Loading from local cache...';
+            const cached = await loadFromIDB();
+            if (cached && cached.length > 0) {
+                allChains = cached;
+                source = 'cache';
+            }
+        }
+    }
+
+    // Enrich chains with known missing data (upstream has gaps)
+    const CHAIN_ENRICHMENT = {
+        1130: {
+            rpc: ['https://dmc.mydefichain.com/mainnet', 'https://blockscout.mainnet.ocean.jellyfishsdk.com'],
+            explorers: [{ name: 'DeFiChain Explorer', url: 'https://defiscan.live', standard: 'none' }, { name: 'Blockscout', url: 'https://blockscout.mainnet.ocean.jellyfishsdk.com', standard: 'EIP3091' }],
+            infoURL: 'https://defichain.com',
+        },
+        1131: {
+            rpc: ['https://dmc.mydefichain.com/testnet'],
+            explorers: [{ name: 'DeFiChain Testnet Explorer', url: 'https://defiscan.live/testnet', standard: 'none' }],
+            infoURL: 'https://defichain.com',
+        },
+    };
+    for (const chain of allChains) {
+        const enrich = CHAIN_ENRICHMENT[chain.chainId];
+        if (enrich) {
+            if (enrich.rpc && (!chain.rpc || chain.rpc.length === 0)) {
+                chain.rpc = enrich.rpc;
+                chain.rpcCount = enrich.rpc.length;
+            }
+            if (enrich.explorers && (!chain.explorers || chain.explorers.length === 0)) {
+                chain.explorers = enrich.explorers;
+                chain.explorerCount = enrich.explorers.length;
+            }
+            if (enrich.infoURL && !chain.infoUrl) {
+                chain.infoUrl = enrich.infoURL;
+                chain.infoURL = enrich.infoURL;
+            }
+        }
+    }
+
+    if (allChains.length > 0) {
+        // Fetch prices on page load — this is the "0 moment", clock starts from here
+        statusEl.textContent = 'Fetching live prices from CoinGecko...';
+        await fetchCoinGeckoPrices();
+        priceRefreshStatus = 'updated';
+        schedulePriceRefresh(); // start the 5-min clock from NOW
+
+        updateStats();
+        applyFilter();
+        saveToIDB(allChains);
+        const label = source === 'api' ? 'API' : source === 'cdn' ? 'chainid.network' : 'local cache';
+        statusEl.textContent = `Loaded ${allChains.length.toLocaleString()} chains from ${label}`;
+        statusEl.className = 'status-msg';
+        setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+    } else {
+        statusEl.className = 'status-msg';
+        statusEl.textContent = 'No chain data available. Check API (' + getApiUrl() + '), internet, or try again later.';
+    }
+}
+
+function updateStats() {
+    document.getElementById('stat-total').textContent = allChains.length.toLocaleString();
+    // Use authoritative DB counts when available, otherwise count from loaded data
+    if (window._dbMainnets !== undefined && window._dbTestnets !== undefined) {
+        document.getElementById('stat-mainnet').textContent = window._dbMainnets.toLocaleString();
+        document.getElementById('stat-testnet').textContent = window._dbTestnets.toLocaleString();
+    } else {
+        const testnets = allChains.filter(c => isTestnet(c));
+        document.getElementById('stat-mainnet').textContent = (allChains.length - testnets.length).toLocaleString();
+        document.getElementById('stat-testnet').textContent = testnets.length.toLocaleString();
+    }
+
+    const walletCard = document.getElementById('stat-wallet-card');
+    const walletLabel = document.getElementById('stat-wallet-label');
+    const walletValue = document.getElementById('stat-connected');
+    if (walletConnected && connectedAddress) {
+        walletValue.textContent = 'Disconnect';
+        walletValue.style.cssText = 'font-size:1.2rem; background:linear-gradient(135deg,#ff4444,#ff6b6b); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;';
+        walletLabel.textContent = connectedAddress.slice(0, 6) + '...' + connectedAddress.slice(-4);
+        walletCard.style.borderColor = 'rgba(0,204,0,0.4)';
+    } else {
+        walletValue.textContent = 'Connect';
+        walletValue.style.cssText = 'font-size:1.2rem;';
+        walletLabel.textContent = 'Wallet';
+        walletCard.style.borderColor = '';
+    }
+    updateWalletHovers();
+}
+
+function updateWalletHovers() {
+    const hoverBtn = document.getElementById('walletHoverBtn');
+    const hoverStat = document.getElementById('walletHoverStat');
+    if (!hoverBtn || !hoverStat) return;
+
+    let html;
+    if (walletConnected && connectedAddress) {
+        // Find active wallet name
+        const activeWallet = detectedWallets.find(w => w.provider === getWalletProvider());
+        const walletName = activeWallet ? activeWallet.name : 'Wallet';
+        const chainName = allChains.find(c => c.chainId === connectedChainId)?.name || 'Unknown';
+        const chainHex = connectedChainId ? '0x' + connectedChainId.toString(16) : '--';
+
+        html = `<div class="wh-title">${walletName} Connected</div>`
+             + `<div class="wh-row"><span class="wh-label">Address</span><span class="wh-val">${connectedAddress}</span></div>`
+             + `<div class="wh-row"><span class="wh-label">Chain</span><span class="wh-val">${chainName}</span></div>`
+             + `<div class="wh-row"><span class="wh-label">Chain ID</span><span class="wh-val">${connectedChainId} (${chainHex})</span></div>`
+             + `<div class="wh-row"><span class="wh-label">Chains added</span><span class="wh-val">${walletChains.size}</span></div>`
+             + `<div class="wh-action disconnect">Click to disconnect</div>`;
+    } else {
+        const walletList = detectedWallets.length > 0
+            ? detectedWallets.map(w => w.name).join(', ')
+            : 'No wallet detected';
+        html = `<div class="wh-title">Wallet</div>`
+             + `<div class="wh-row"><span class="wh-label">Status</span><span class="wh-val">Not connected</span></div>`
+             + `<div class="wh-row"><span class="wh-label">Detected</span><span class="wh-val">${walletList}</span></div>`
+             + `<div class="wh-action connect">Click to connect</div>`;
+    }
+    hoverBtn.innerHTML = html;
+    hoverStat.innerHTML = html;
+}
+
+const MAINNET_WITH_FAUCETS = new Set([
+    100, 122, 137, 1088, 42220, 1284, 1285, 1666600000, 369, 40, 82, 592,
+    7000, 2222, 288, 42170, 1776, 32769, 108, 106, 30,
+]);
+
+function isTestnet(chain) {
+    // Prefer the actual database flag when available
+    if (typeof chain.testnet === 'boolean') return chain.testnet;
+    // Fallback heuristics for CDN-loaded data
+    if (MAINNET_WITH_FAUCETS.has(chain.chainId)) return false;
+    const n = (chain.name || '').toLowerCase();
+    if (n.includes('testnet') || n.includes('sepolia') || n.includes('goerli') || n.includes('devnet')) return true;
+    if (n.includes('mainnet') || n.includes('main net')) return false;
+    return (chain.faucetCount > 0);
+}
+
+// ── Filter & Search ────────────────────────────────────────────────
+function applyFilter() {
+    const q = document.getElementById('searchInput').value.toLowerCase().trim();
+    let result = [...allChains];
+
+    // Only apply mainnet/testnet filter when NOT searching
+    if (!q) {
+        if (currentFilter === 'mainnet') result = result.filter(c => !isTestnet(c));
+        else if (currentFilter === 'testnet') result = result.filter(c => isTestnet(c));
+    }
+
+    // Filter to only chains with market cap data
+    if (mcapOnly) {
+        result = result.filter(c => c.marketCap && c.marketCap > 0);
+    }
+
+    // Filter to only chains with a DEX
+    if (dexOnly) {
+        result = result.filter(c => CHAIN_DEX_MAP[c.chainId]);
+    }
+
+    if (q) {
+        const num = parseInt(q, 10);
+        result = result.filter(c => {
+            if (!isNaN(num) && c.chainId === num) return true;
+            return (c.name || '').toLowerCase().includes(q) ||
+                   (c.chain || '').toLowerCase().includes(q) ||
+                   (c.nativeCurrency?.symbol || '').toLowerCase().includes(q);
+        });
+    }
+
+    // Sort
+    if (currentSort === 'name') result.sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
+    else if (currentSort === 'name_desc') result.sort(function(a,b){ return (b.name||'').localeCompare(a.name||''); });
+    else if (currentSort === 'chainid') result.sort(function(a,b){ return a.chainId - b.chainId; });
+    else if (currentSort === 'chainid_desc') result.sort(function(a,b){ return b.chainId - a.chainId; });
+    else if (currentSort === 'marketcap') result.sort(function(a,b){ return (b.marketCap||0) - (a.marketCap||0); });
+    else if (currentSort === 'marketcap_asc') result.sort(function(a,b){ return (a.marketCap||0) - (b.marketCap||0); });
+    else if (currentSort === 'rpc_count') result.sort(function(a,b){ return (b.rpcCount||0) - (a.rpcCount||0); });
+
+    filteredChains = result;
+    displayCount = 30;
+    renderChains();
+}
+
+function renderChains() {
+    const grid = document.getElementById('chainGrid');
+    const toShow = filteredChains.slice(0, displayCount);
+
+    grid.innerHTML = toShow.map(chain => {
+        const isConnected = walletConnected && connectedChainId === chain.chainId;
+        const isInWallet = walletConnected && walletChains.has(chain.chainId) && !isConnected;
+        const iconSrc = chain.icon
+            ? (chain.icon.startsWith('http') || chain.icon.startsWith('/') ? chain.icon : getApiUrl() + chain.icon)
+            : '';
+        const iconHtml = iconSrc
+            ? `<img src="${iconSrc}" alt="${chain.name}" onerror="this.parentElement.innerHTML='<span class=\\'fallback\\'>${(chain.chain || chain.name || '?')[0]}</span>'">`
+            : `<span class="fallback">${(chain.chain || chain.name || '?')[0]}</span>`;
+
+        const connectedBadge = isConnected
+            ? `<span class="chain-connected-badge"><span class="dot"></span> Connected</span>`
+            : isInWallet
+            ? `<span class="chain-connected-badge" style="background:rgba(47,128,237,0.15);border-color:rgba(47,128,237,0.3);"><span class="dot" style="background:#2F80ED;"></span> In Wallet</span>`
+            : '';
+
+        const ct = (chain.chainType || 'L1').toLowerCase();
+        const typeBadge = `<span class="chain-type-badge ${ct}">${chain.chainType || 'L1'}</span>`;
+
+        // For L2s with protocol token: show protocol token as primary, ETH as secondary
+        // For L1s: show native token as primary
+        const hasProto = !!chain.protocolSymbol;
+        let primaryToken, secondaryToken;
+
+        if (hasProto) {
+            // L2 with its own token: protocol token is primary
+            primaryToken = `<span>${chain.protocolSymbol} $${formatPrice(chain.protocolPrice)}</span>`;
+            secondaryToken = `<span style="opacity:0.6">${chain.nativeCurrency?.symbol || 'ETH'} $${formatPrice(chain.nativePrice)}</span>`;
+        } else {
+            // L1 or L2 without own token: native is primary
+            primaryToken = `<span>${chain.nativeCurrency?.symbol || '\u2014'}${chain.nativePrice ? ' $' + formatPrice(chain.nativePrice) : ''}</span>`;
+            secondaryToken = '';
+        }
+
+        return `
+        <div class="chain-card" onclick="openDetailOverlay(${chain.chainId})" data-chainid="${chain.chainId}">
+            <div class="chain-header">
+                <div class="chain-icon">${iconHtml}</div>
+                <div style="flex:1;min-width:0;">
+                    <div class="chain-name">${chain.name}</div>
+                    <div class="chain-id">
+                        <span>Chain ID: ${chain.chainId} (0x${chain.chainId.toString(16)})</span>
+                        <span class="chain-badges">
+                            ${typeBadge}
+                            ${(() => { const dex = CHAIN_DEX_MAP[chain.chainId]; return dex ? `<span class="chain-type-badge" style="background:${dex.color};color:#fff;font-size:0.6rem;" title="${dex.name}">${dex.badge}</span>` : ''; })()}
+                            ${connectedBadge}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="chain-meta">
+                ${primaryToken}
+                ${chain.marketCap ? '<span>MCap $' + formatCompact(chain.marketCap) + '</span>' : ''}
+                ${secondaryToken}
+                <span class="rpc-toggle" onclick="event.stopPropagation(); toggleRpcPanel(${chain.chainId}, this)" title="RPC Endpoints">${chain.rpcCount || 0} RPCs <span class="rpc-arrow">&#9656;</span></span>
+                <span>${chain.explorerCount || 0} Explorers</span>
+                ${chain.verifiedContracts ? `<span class="contracts-toggle" onclick="event.stopPropagation(); toggleContractsPanel(${chain.chainId}, this)" title="Verified Smart Contracts">${formatCompact(chain.verifiedContracts)} Contracts <span class="ct-arrow">&#9656;</span></span>` : ''}
+                ${chain.gasToken ? `<span class="gas-token-link" onclick="event.stopPropagation(); showGasPopup(${chain.chainId})" title="Gas token contract">${chain.gasToken.symbol}</span>` : ''}
+                ${chain.priceChange24h ? '<span style="color:' + (chain.priceChange24h >= 0 ? '#00cc00' : '#ff4444') + '">' + (chain.priceChange24h >= 0 ? '+' : '') + chain.priceChange24h.toFixed(1) + '%</span>' : ''}
+            </div>
+            <div class="rpc-panel" id="rpc-${chain.chainId}"></div>
+            <div class="contracts-panel" id="contracts-${chain.chainId}"></div>
+            <div class="chain-actions">
+                ${chain.nonEvm
+                    ? `<button class="chain-btn primary btc-info-btn" style="background:#f7931a;" data-action="btcinfo">&#8383; Bitcoin in MetaMask</button>`
+                    : `<button class="chain-btn primary" onclick="event.stopPropagation(); addToMetaMask(${chain.chainId})">Add to Wallet</button>`
+                }
+                ${(() => { const dex = CHAIN_DEX_MAP[chain.chainId]; return dex ? `<button class="chain-btn" style="color:${dex.color};border-color:${dex.color}33;" onclick="event.stopPropagation(); window.open('${dex.url}','_blank')" title="Swap on ${dex.name}">${dex.name}</button>` : ''; })()}
+                <button class="chain-btn" onclick="event.stopPropagation(); openDetailOverlay(${chain.chainId})">
+                    Details &#9662;
+                </button>
+            </div>
+        </div>`;
+    }).join('');
+
+    const loadMoreEl = document.getElementById('loadMore');
+    loadMoreEl.style.display = displayCount < filteredChains.length ? 'block' : 'none';
+
+    // Auto-fit chain names — shrink font so every name is one line, no wrapping
+    document.querySelectorAll('.chain-name').forEach(el => {
+        el.style.fontSize = ''; // reset
+        const parent = el.parentElement;
+        if (!parent) return;
+        const maxW = parent.clientWidth;
+        if (el.scrollWidth > maxW) {
+            const ratio = maxW / el.scrollWidth;
+            const newSize = Math.max(0.65, 1.1 * ratio);
+            el.style.fontSize = newSize + 'rem';
+        }
+    });
+}
+
+function loadMoreChains() {
+    if (displayCount >= filteredChains.length) return;
+    displayCount += 30;
+    renderChains();
+}
+
+// ── RPC Endpoint Toggle ──────────────────────────────────────────
+const _rpcCache = {};
+
+async function toggleRpcPanel(chainId, toggleEl) {
+    const panel = document.getElementById('rpc-' + chainId);
+    if (!panel) return;
+    const isOpen = panel.classList.contains('open');
+
+    // Close: just collapse
+    if (isOpen) {
+        panel.classList.remove('open');
+        toggleEl.classList.remove('open');
+        return;
+    }
+
+    // Open
+    toggleEl.classList.add('open');
+    panel.classList.add('open');
+
+    // Already loaded
+    if (_rpcCache[chainId]) {
+        renderRpcPanel(panel, _rpcCache[chainId]);
+        return;
+    }
+
+    // Show loading state
+    panel.innerHTML = '<span class="rpc-loading">Loading endpoints...</span>';
+
+    // Fetch from API detail endpoint
+    try {
+        const ctrl = new AbortController();
+        setTimeout(() => ctrl.abort(), 6000);
+        const res = await fetch(`${getApiUrl()}/chains/${chainId}`, { signal: ctrl.signal });
+        if (res.ok) {
+            const detail = await res.json();
+            const rpcs = (detail.rpcUrls || []).filter(u => typeof u === 'string' && u.startsWith('https'));
+            _rpcCache[chainId] = rpcs;
+            renderRpcPanel(panel, rpcs);
+            // Also cache on the chain object for addToMetaMask
+            const chain = allChains.find(c => c.chainId === chainId);
+            if (chain && rpcs.length > 0) { chain.rpc = rpcs; chain.rpcCount = rpcs.length; }
+            return;
+        }
+    } catch (e) { /* fall through */ }
+
+    // Fallback: check local chain data
+    const chain = allChains.find(c => c.chainId === chainId);
+    if (chain && chain.rpc && chain.rpc.length > 0) {
+        _rpcCache[chainId] = chain.rpc;
+        renderRpcPanel(panel, chain.rpc);
+    } else {
+        panel.innerHTML = '<span class="rpc-loading">No endpoints available — open Details for more info</span>';
+    }
+}
+
+function renderRpcPanel(panel, rpcs) {
+    if (!rpcs || rpcs.length === 0) {
+        panel.innerHTML = '<span class="rpc-loading">No public RPC endpoints found</span>';
+        return;
+    }
+    panel.innerHTML = rpcs.map(url => `<div class="rpc-url">${url}</div>`).join('');
+}
+
+// ── Verified Contracts Toggle ────────────────────────────────────
+const _contractsCache = {};
+
+async function toggleContractsPanel(chainId, toggleEl) {
+    const panel = document.getElementById('contracts-' + chainId);
+    if (!panel) return;
+    const isOpen = panel.classList.contains('open');
+
+    if (isOpen) {
+        panel.classList.remove('open');
+        toggleEl.classList.remove('open');
+        return;
+    }
+
+    toggleEl.classList.add('open');
+    panel.classList.add('open');
+
+    if (_contractsCache[chainId]) {
+        renderContractsPanel(panel, _contractsCache[chainId], chainId);
+        return;
+    }
+
+    panel.innerHTML = '<span class="contracts-loading">Loading verified contracts...</span>';
+
+    try {
+        const ctrl = new AbortController();
+        setTimeout(() => ctrl.abort(), 8000);
+        const res = await fetch(`${getApiUrl()}/chains/${chainId}/contracts?limit=20`, { signal: ctrl.signal });
+        if (res.ok) {
+            const data = await res.json();
+            _contractsCache[chainId] = data;
+            renderContractsPanel(panel, data, chainId);
+            return;
+        }
+    } catch (e) { /* fall through */ }
+
+    panel.innerHTML = '<span class="contracts-loading">No contract data available — run Blockscout sync to populate</span>';
+}
+
+function renderContractsPanel(panel, data, chainId) {
+    if (!data || !data.contracts || data.contracts.length === 0) {
+        const chain = allChains.find(c => c.chainId === chainId);
+        const bsUrl = chain?.blockscoutUrl || data?.blockscoutUrl;
+        panel.innerHTML = `<span class="contracts-loading">No indexed contracts yet${bsUrl ? ` — <a href="${bsUrl}" target="_blank" rel="noopener">view on Blockscout</a>` : ''}</span>`;
+        return;
+    }
+
+    let html = data.contracts.map(c => {
+        const addr = c.address;
+        const shortAddr = addr.slice(0, 6) + '...' + addr.slice(-4);
+        const chain = allChains.find(ch => ch.chainId === chainId);
+        const bsUrl = chain?.blockscoutUrl || data?.blockscoutUrl;
+        const addrLink = bsUrl ? `<a href="${bsUrl}/address/${addr}" target="_blank" rel="noopener" style="color:inherit;" onclick="event.stopPropagation()">${shortAddr}</a>` : shortAddr;
+        return `<div class="contract-item">
+            <span class="contract-name" title="${c.name || 'unnamed'}">${c.name || 'unnamed'}</span>
+            <span class="contract-addr">${addrLink}</span>
+            ${c.language ? `<span class="contract-lang">${c.language}</span>` : ''}
+            ${c.proxy ? `<span class="contract-proxy" title="${c.proxy.type}">${c.proxy.implementationName || 'proxy'}</span>` : ''}
+        </div>`;
+    }).join('');
+
+    // Footer with totals and Blockscout link
+    const chain = allChains.find(c => c.chainId === chainId);
+    const bsUrl = chain?.blockscoutUrl || data?.blockscoutUrl;
+    const totalVerified = data.verifiedOnChain ? formatCompact(data.verifiedOnChain) : data.total;
+    html += `<div class="contracts-footer">
+        ${totalVerified ? `${totalVerified} verified contracts on chain` : ''}
+        ${data.total > data.contracts.length ? ` (showing ${data.contracts.length})` : ''}
+        ${bsUrl ? ` &middot; <a href="${bsUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Blockscout</a>` : ''}
+    </div>`;
+
+    panel.innerHTML = html;
+}
+
+// ── Gas Token Contract Popup ─────────────────────────────────────
+async function showGasPopup(chainId) {
+    const chain = allChains.find(c => c.chainId === chainId);
+    if (!chain || !chain.gasToken) return;
+
+    const gt = chain.gasToken;
+    const contract = gt.contract;
+    const sourceBadge = gt.source === 'blockscout'
+        ? '<span class="gp-badge blockscout">Blockscout verified</span>'
+        : '<span class="gp-badge canonical">Canonical</span>';
+
+    // Fetch explorer URL from chain detail if not cached
+    let explorerLink = '';
+    if (chain.explorers && chain.explorers.length > 0) {
+        const url = (chain.explorers[0].url || chain.explorers[0]).replace(/\/+$/, '');
+        explorerLink = url + '/address/' + contract;
+    } else if (chain.explorerCount > 0) {
+        try {
+            const ctrl = new AbortController();
+            setTimeout(() => ctrl.abort(), 4000);
+            const res = await fetch(`${getApiUrl()}/chains/${chainId}`, { signal: ctrl.signal });
+            if (res.ok) {
+                const detail = await res.json();
+                if (detail.explorers && detail.explorers.length > 0) {
+                    chain.explorers = detail.explorers;
+                    const url = (detail.explorers[0].url || '').replace(/\/+$/, '');
+                    if (url) explorerLink = url + '/address/' + contract;
+                }
+            }
+        } catch (e) { /* proceed without explorer link */ }
+    }
+
+    const content = document.getElementById('gasPopupContent');
+    content.innerHTML =
+        `<div class="gp-title">${chain.name} Gas Token ${sourceBadge}</div>`
+      + `<div class="gp-row"><span class="gp-label">Native</span><span class="gp-val">${chain.nativeCurrency?.symbol || '?'}</span></div>`
+      + `<div class="gp-row"><span class="gp-label">Wrapped</span><span class="gp-val">${gt.symbol}</span></div>`
+      + `<div class="gp-row"><span class="gp-label">Chain ID</span><span class="gp-val">${chainId} (0x${chainId.toString(16)})</span></div>`
+      + `<div class="gp-contract">${contract}</div>`
+      + `<div class="gp-actions">`
+      + `<button class="gp-btn primary" onclick="navigator.clipboard.writeText('${contract}');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Address',1500)">Copy Address</button>`
+      + (explorerLink ? `<button class="gp-btn" onclick="window.open('${explorerLink}','_blank')">View on Explorer</button>` : '')
+      + `</div>`;
+
+    document.getElementById('gasBackdrop').style.display = 'block';
+    document.getElementById('gasPopup').style.display = 'block';
+}
+
+function closeGasPopup() {
+    document.getElementById('gasBackdrop').style.display = 'none';
+    document.getElementById('gasPopup').style.display = 'none';
+}
+
+// Infinite scroll via IntersectionObserver
+var _scrollObserver = new IntersectionObserver(function(entries) {
+    if (entries[0].isIntersecting && displayCount < filteredChains.length) {
+        loadMoreChains();
+    }
+}, { rootMargin: '200px' });
+_scrollObserver.observe(document.getElementById('scrollSentinel'));
+
+// ── Detail Overlay ─────────────────────────────────────────────────
+async function openDetailOverlay(chainId) {
+    const overlay = document.getElementById('detailOverlay');
+    const backdrop = document.getElementById('detailBackdrop');
+    const body = document.getElementById('detailBody');
+
+    // Find chain summary from loaded data
+    const chain = allChains.find(c => c.chainId === chainId);
+    const iconSrc = chain && chain.icon
+        ? (chain.icon.startsWith('http') || chain.icon.startsWith('/') ? chain.icon : getApiUrl() + chain.icon)
+        : '';
+
+    // Set header
+    document.getElementById('detailIcon').innerHTML = iconSrc
+        ? `<img src="${iconSrc}" alt="${chain?.name || ''}" onerror="this.parentElement.innerHTML='<span class=\\'fallback\\'>?</span>'">`
+        : `<span class="fallback">${(chain?.chain || chain?.name || '?')[0]}</span>`;
+    document.getElementById('detailName').textContent = chain?.name || 'Chain ' + chainId;
+    document.getElementById('detailChainId').textContent = `Chain ID: ${chainId} (0x${chainId.toString(16)})`;
+
+    body.innerHTML = '<div class="status-msg loading" style="padding:20px">Loading details...</div>';
+
+    // Reset position to center
+    overlay.style.left = '50%';
+    overlay.style.top = '80px';
+    overlay.style.transform = 'translateX(-50%)';
+
+    backdrop.classList.add('visible');
+    overlay.classList.add('visible');
+
+    // Try API first, fall back to local chain data
+    let data = null;
+    try {
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(), 5000);
+        const res = await fetch(`${getApiUrl()}/chains/${chainId}`, { signal: controller.signal });
+        if (res.ok) data = await res.json();
+    } catch (e) { /* API unavailable — use local data */ }
+
+    // Fall back to local chain summary
+    if (!data && chain) {
+        data = {
+            chainId: chain.chainId,
+            name: chain.name,
+            chain: chain.chain,
+            nativeCurrency: chain.nativeCurrency,
+            rpc: [],
+            rpcCount: chain.rpcCount || 0,
+            explorers: [],
+            explorerCount: chain.explorerCount || 0,
+            faucets: [],
+            faucetCount: chain.faucetCount || 0,
+            shortName: chain.shortName || '',
+            infoURL: chain.infoUrl || '',
+            networkId: chain.chainId,
+            status: chain.status || '',
+            market: chain.marketCap ? {
+                marketCap: chain.marketCap,
+                volume24h: chain.volume24h,
+                price: chain.nativePrice,
+                priceChange24h: chain.priceChange24h,
+                protocolSymbol: chain.protocolSymbol,
+                protocolPrice: chain.protocolPrice
+            } : null,
+            source: chain.source || 'api'
+        };
+    }
+
+    if (!data) {
+        body.innerHTML = '<div class="status-msg">Chain not found.</div>';
+        return;
+    }
+
+    let html = '';
+
+    // Market data row
+    if (data.market || chain?.nativePrice) {
+        const md = data.market || {};
+        const hasProto = !!md.protocolSymbol;
+        html += '<div class="detail-market-row">';
+
+        if (hasProto && md.protocolPrice !== undefined) {
+            html += `<div class="detail-market-item"><div class="val">$${formatPrice(md.protocolPrice)}</div><div class="lbl">${md.protocolSymbol} Price</div></div>`;
+        }
+
+        if (md.price || chain?.nativePrice) {
+            const nPrice = md.price || chain?.nativePrice || 0;
+            const lbl = hasProto ? (data.nativeCurrency?.symbol || '') + ' (Gas)' : (data.nativeCurrency?.symbol || '') + ' Price';
+            html += `<div class="detail-market-item"><div class="val">$${formatPrice(nPrice)}</div><div class="lbl">${lbl}</div></div>`;
+        }
+
+        if (md.marketCap || chain?.marketCap) {
+            const mcapLabel = hasProto ? md.protocolSymbol + ' MCap' : 'Market Cap';
+            html += `<div class="detail-market-item"><div class="val">$${formatCompact(md.marketCap || chain?.marketCap || 0)}</div><div class="lbl">${mcapLabel}</div></div>`;
+        }
+        if (md.volume24h) {
+            html += `<div class="detail-market-item"><div class="val">$${formatCompact(md.volume24h)}</div><div class="lbl">24h Volume</div></div>`;
+        }
+        if (md.priceChange24h || chain?.priceChange24h) {
+            const pct = md.priceChange24h || chain?.priceChange24h || 0;
+            const color = pct >= 0 ? '#00cc00' : '#ff4444';
+            html += `<div class="detail-market-item"><div class="val" style="color:${color}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div><div class="lbl">24h Change</div></div>`;
+        }
+        html += '</div>';
+    }
+
+    // Native currency
+    if (data.nativeCurrency) {
+        html += `<div class="detail-section"><h4>Native Currency</h4>`;
+        html += `<div class="rpc-item">${data.nativeCurrency.name} (${data.nativeCurrency.symbol}) — ${data.nativeCurrency.decimals} decimals</div>`;
+        html += `</div>`;
+    }
+
+    // DEX availability
+    const dex = CHAIN_DEX_MAP[chainId];
+    if (dex) {
+        html += `<div class="detail-section"><h4>Decentralized Exchange</h4>`;
+        html += `<div class="rpc-item"><a href="${dex.url}" target="_blank" rel="noopener" style="color:${dex.color};">Swap on ${dex.name}</a></div>`;
+        // Show extra DEXes (e.g. Polygon has QuickSwap + Uniswap)
+        if (dex.extra) {
+            for (const ex of dex.extra) {
+                html += `<div class="rpc-item"><a href="${ex.url}" target="_blank" rel="noopener">Swap on ${ex.name}</a></div>`;
+            }
+        }
+        // If this is a Uniswap chain, also show explore link
+        const UNISWAP_SLUGS = { 1:'ethereum',10:'optimism',56:'bnb',137:'polygon',324:'zksync',480:'worldchain',8453:'base',42161:'arbitrum',42220:'celo',43114:'avalanche',81457:'blast',7777777:'zora' };
+        const uniSlug = UNISWAP_SLUGS[chainId];
+        if (uniSlug) {
+            if (dex.badge !== 'UNI') {
+                html += `<div class="rpc-item"><a href="https://app.uniswap.org/swap?chain=${uniSlug}" target="_blank" rel="noopener">Swap on Uniswap</a></div>`;
+            }
+            html += `<div class="rpc-item"><a href="https://app.uniswap.org/explore/tokens/${uniSlug}" target="_blank" rel="noopener">Explore tokens on Uniswap</a></div>`;
+        }
+        html += `</div>`;
+    }
+
+    // CoinGecko asset platform info
+    const geckoId = CHAIN_COINGECKO_MAP[chainId];
+    if (geckoId) {
+        html += `<div class="detail-section"><h4>Asset Platform</h4>`;
+        html += `<div class="rpc-item">CoinGecko ID: <code>${geckoId}</code></div>`;
+        const protoId = CHAIN_PROTOCOL_MAP[chainId];
+        if (protoId) html += `<div class="rpc-item">Protocol Token: <code>${protoId}</code></div>`;
+        html += `<div class="rpc-item"><a href="https://www.coingecko.com/en/coins/${protoId || geckoId}" target="_blank" rel="noopener">View on CoinGecko</a></div>`;
+        html += `</div>`;
+    }
+
+    if (data.rpc && data.rpc.length > 0) {
+        html += `<div class="detail-section"><h4>RPC Endpoints (${data.rpc.length})</h4>`;
+        data.rpc.slice(0, 10).forEach(r => {
+            html += `<div class="rpc-item">${r}</div>`;
+        });
+        if (data.rpc.length > 10) html += `<div class="rpc-item" style="color:var(--accent)">... and ${data.rpc.length - 10} more</div>`;
+        html += `</div>`;
+    } else if (data.rpcCount > 0) {
+        html += `<div class="detail-section"><h4>RPC Endpoints</h4><div class="rpc-item">${data.rpcCount} available (connect API for details)</div></div>`;
+    }
+
+    if (data.explorers && data.explorers.length > 0) {
+        html += `<div class="detail-section"><h4>Block Explorers</h4>`;
+        data.explorers.forEach(e => {
+            html += `<div class="explorer-item"><a href="${e.url}" target="_blank" rel="noopener">${e.name} — ${e.url}</a></div>`;
+        });
+        html += `</div>`;
+    } else if (data.explorerCount > 0) {
+        html += `<div class="detail-section"><h4>Block Explorers</h4><div class="rpc-item">${data.explorerCount} available</div></div>`;
+    }
+
+    if (data.faucets && data.faucets.length > 0) {
+        html += `<div class="detail-section"><h4>Faucets</h4>`;
+        data.faucets.forEach(f => {
+            html += `<div class="faucet-item"><a href="${f}" target="_blank" rel="noopener">${f}</a></div>`;
+        });
+        html += `</div>`;
+    }
+
+    // Blockscout on-chain stats
+    if (data.blockscout) {
+        const bs = data.blockscout;
+        html += `<div class="detail-section"><h4>Blockscout On-Chain Data</h4>`;
+        if (bs.verifiedContracts) html += `<div class="rpc-item">Verified Contracts: <strong style="color:#00cc88">${Number(bs.verifiedContracts).toLocaleString()}</strong></div>`;
+        if (bs.totalContracts) html += `<div class="rpc-item">Total Contracts: ${Number(bs.totalContracts).toLocaleString()}</div>`;
+        if (bs.totalAddresses) html += `<div class="rpc-item">Total Addresses: ${Number(bs.totalAddresses).toLocaleString()}</div>`;
+        if (bs.totalTransactions) html += `<div class="rpc-item">Total Transactions: ${Number(bs.totalTransactions).toLocaleString()}</div>`;
+        if (bs.totalBlocks) html += `<div class="rpc-item">Total Blocks: ${Number(bs.totalBlocks).toLocaleString()}</div>`;
+        if (bs.gasPrices && (bs.gasPrices.slow || bs.gasPrices.avg || bs.gasPrices.fast)) {
+            html += `<div class="rpc-item">Gas: <span style="color:#00cc00">${bs.gasPrices.slow || '?'}</span> / <span style="color:#ffaa00">${bs.gasPrices.avg || '?'}</span> / <span style="color:#ff4444">${bs.gasPrices.fast || '?'}</span> Gwei</div>`;
+        }
+        if (bs.networkUtilization) html += `<div class="rpc-item">Network Utilization: ${bs.networkUtilization.toFixed(1)}%</div>`;
+        if (bs.url) html += `<div class="rpc-item"><a href="${bs.url}" target="_blank" rel="noopener" style="color:#00cc88;">View on Blockscout</a></div>`;
+        html += `</div>`;
+    }
+
+    // Verified contracts preview (from indexed data)
+    if (data.contractCount > 0) {
+        html += `<div class="detail-section"><h4>Verified Contracts (${data.contractCount} indexed)</h4>`;
+        html += `<div id="detail-contracts-${chainId}" class="contracts-loading" style="color:rgba(255,255,255,0.4);font-style:italic;">Loading contracts...</div>`;
+        html += `</div>`;
+        // Async load contracts
+        loadDetailContracts(chainId);
+    }
+
+    html += `<div class="detail-section"><h4>Info</h4>`;
+    html += `<div class="rpc-item">Network ID: ${data.networkId ?? chainId}</div>`;
+    if (data.shortName) html += `<div class="rpc-item">Short Name: ${data.shortName}</div>`;
+    if (data.status) html += `<div class="rpc-item">Status: ${data.status}</div>`;
+    if (data.source) html += `<div class="rpc-item">Source: ${data.source}</div>`;
+    if (data.infoURL) html += `<div class="rpc-item"><a href="${data.infoURL}" target="_blank" rel="noopener">${data.infoURL}</a></div>`;
+    html += `</div>`;
+
+    // Action buttons
+    html += `<div class="detail-actions">`;
+    if (chainId === 0) {
+        html += `<button class="chain-btn primary btc-info-btn" style="background:#f7931a;" data-action="btcinfo">&#8383; Bitcoin in MetaMask</button>`;
+    } else {
+        html += `<button class="chain-btn primary" onclick="addToMetaMask(${chainId})">Add to Wallet</button>`;
+    }
+    if (data.explorers && data.explorers[0]) {
+        html += `<button class="chain-btn" onclick="window.open('${data.explorers[0].url}','_blank')">Open Explorer</button>`;
+    }
+    if (data.infoURL) {
+        html += `<button class="chain-btn" onclick="window.open('${data.infoURL}','_blank')">Website</button>`;
+    }
+    if (dex) {
+        html += `<button class="chain-btn" style="background:${dex.color};color:#fff;border:none;" onclick="window.open('${dex.url}','_blank')">Swap on ${dex.name}</button>`;
+    }
+    html += `</div>`;
+
+    body.innerHTML = html || '<div class="status-msg">No additional details available.</div>';
+}
+
+function closeDetailOverlay() {
+    document.getElementById('detailOverlay').classList.remove('visible');
+    document.getElementById('detailBackdrop').classList.remove('visible');
+}
+
+// Load contracts list inside detail overlay
+async function loadDetailContracts(chainId) {
+    const el = document.getElementById('detail-contracts-' + chainId);
+    if (!el) return;
+    try {
+        const ctrl = new AbortController();
+        setTimeout(() => ctrl.abort(), 8000);
+        const res = await fetch(`${getApiUrl()}/chains/${chainId}/contracts?limit=15`, { signal: ctrl.signal });
+        if (!res.ok) { el.textContent = 'Failed to load contracts'; return; }
+        const data = await res.json();
+        if (!data.contracts || data.contracts.length === 0) {
+            el.textContent = 'No contracts indexed yet';
+            return;
+        }
+        const chain = allChains.find(c => c.chainId === chainId);
+        const bsUrl = chain?.blockscoutUrl || data?.blockscoutUrl;
+        let html = data.contracts.map(c => {
+            const addr = c.address;
+            const shortAddr = addr.slice(0, 8) + '...' + addr.slice(-6);
+            const link = bsUrl ? `<a href="${bsUrl}/address/${addr}" target="_blank" rel="noopener" style="color:var(--muted);font-family:'Fira Code',monospace;font-size:0.7rem;">${shortAddr}</a>` : `<span style="font-family:'Fira Code',monospace;font-size:0.7rem;">${shortAddr}</span>`;
+            return `<div class="rpc-item" style="display:flex;gap:8px;align-items:center;">
+                <span style="color:#00cc88;min-width:140px;">${c.name || 'unnamed'}</span>
+                ${link}
+                ${c.language ? `<span style="font-size:0.6rem;color:var(--muted);opacity:0.6;">${c.language}</span>` : ''}
+                ${c.proxy ? `<span style="font-size:0.6rem;color:var(--accent);">proxy</span>` : ''}
+            </div>`;
+        }).join('');
+        if (data.verifiedOnChain && data.verifiedOnChain > data.contracts.length) {
+            html += `<div style="margin-top:6px;font-size:0.7rem;color:var(--muted);">
+                ${Number(data.verifiedOnChain).toLocaleString()} total verified on chain
+                ${bsUrl ? `&middot; <a href="${bsUrl}/verified-contracts" target="_blank" rel="noopener" style="color:#00cc88;">View all on Blockscout</a>` : ''}
+            </div>`;
+        }
+        el.innerHTML = html;
+    } catch (e) {
+        el.textContent = 'Failed to load contracts';
+    }
+}
+
+// Close on Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeDetailOverlay();
+});
+
+// ── Draggable overlay ──────────────────────────────────────────────
+(function initDrag() {
+    const overlay = document.getElementById('detailOverlay');
+    const handle = document.getElementById('detailDragHandle');
+    let isDragging = false;
+    let startX, startY, origLeft, origTop;
+
+    function onStart(e) {
+        // Don't drag if clicking close button
+        if (e.target.closest('.detail-overlay-close')) return;
+        isDragging = true;
+        const touch = e.touches ? e.touches[0] : e;
+        const rect = overlay.getBoundingClientRect();
+        origLeft = rect.left;
+        origTop = rect.top;
+        startX = touch.clientX;
+        startY = touch.clientY;
+        // Switch from centered transform to absolute positioning
+        overlay.style.transform = 'none';
+        overlay.style.left = rect.left + 'px';
+        overlay.style.top = rect.top + 'px';
+        e.preventDefault();
+    }
+
+    function onMove(e) {
+        if (!isDragging) return;
+        const touch = e.touches ? e.touches[0] : e;
+        const dx = touch.clientX - startX;
+        const dy = touch.clientY - startY;
+        overlay.style.left = (origLeft + dx) + 'px';
+        overlay.style.top = (origTop + dy) + 'px';
+    }
+
+    function onEnd() {
+        isDragging = false;
+    }
+
+    handle.addEventListener('mousedown', onStart);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onEnd);
+    handle.addEventListener('touchstart', onStart, { passive: false });
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd);
+})();
+
+// ── Events ─────────────────────────────────────────────────────────
+document.getElementById('searchInput').addEventListener('input', () => {
+    clearTimeout(window._searchTimeout);
+    window._searchTimeout = setTimeout(applyFilter, 200);
+});
+
+// Filter buttons (network type)
+document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        applyFilter();
+    });
+});
+
+// MCap Only toggle
+document.getElementById('mcapOnlyBtn').addEventListener('click', async function() {
+    mcapOnly = !mcapOnly;
+    this.classList.toggle('active', mcapOnly);
+    this.title = mcapOnly ? 'Show all chains' : 'Show only chains with known market value';
+
+    // If toggling on and no chains have market data, fetch from CoinGecko
+    if (mcapOnly && !allChains.some(c => c.marketCap && c.marketCap > 0)) {
+        const statusEl = document.getElementById('statusMsg');
+        statusEl.style.display = 'block';
+        statusEl.className = 'status-msg loading';
+        statusEl.textContent = 'Fetching market data from CoinGecko...';
+        const ok = await fetchCoinGeckoPrices();
+        if (ok) {
+            saveToIDB(allChains);
+            statusEl.style.display = 'none';
+        } else {
+            statusEl.className = 'status-msg';
+            statusEl.textContent = 'Could not fetch market data. Try again later.';
+            setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+        }
+    }
+
+    applyFilter();
+});
+
+// DEX Only toggle
+document.getElementById('dexOnlyBtn').addEventListener('click', function() {
+    dexOnly = !dexOnly;
+    this.classList.toggle('active', dexOnly);
+    this.title = dexOnly ? 'Show all chains' : 'Show only chains with a DEX';
+    applyFilter();
+});
+
+// Sort buttons
+function updateTitleForSort() {
+    const numEl = document.getElementById('titleNum');
+    const alphaEl = document.getElementById('titleAlpha');
+    if (currentSort === 'chainid') { numEl.textContent = '123'; alphaEl.textContent = 'from A-Z'; }
+    else if (currentSort === 'chainid_desc') { numEl.textContent = '321'; alphaEl.textContent = 'from A-Z'; }
+    else if (currentSort === 'name') { numEl.textContent = '123'; alphaEl.textContent = 'from A-Z'; }
+    else if (currentSort === 'name_desc') { numEl.textContent = '321'; alphaEl.textContent = 'from Z-A'; }
+    else if (currentSort === 'marketcap') { numEl.textContent = '123'; alphaEl.textContent = 'from A-Z'; }
+    else if (currentSort === 'marketcap_asc') { numEl.textContent = '321'; alphaEl.textContent = 'from Z-A'; }
+    else { numEl.textContent = '123'; alphaEl.textContent = 'from A-Z'; }
+}
+
+function setSort(sort) {
+    currentSort = sort;
+    document.querySelectorAll('.filter-btn[data-sort]').forEach(b => {
+        b.classList.toggle('active', b.dataset.sort === sort);
+    });
+    updateTitleForSort();
+    applyFilter();
+}
+
+document.querySelectorAll('.filter-btn[data-sort]').forEach(btn => {
+    btn.addEventListener('click', () => setSort(btn.dataset.sort));
+});
+
+// Title click toggles: "123" toggles chainid/chainid_desc, "A-Z" toggles name/name_desc
+document.getElementById('titleNum').addEventListener('click', () => {
+    setSort(currentSort === 'chainid' ? 'chainid_desc' : 'chainid');
+});
+document.getElementById('titleAlpha').addEventListener('click', () => {
+    setSort(currentSort === 'name' ? 'name_desc' : 'name');
+});
+
+function formatPrice(n) {
+    if (!n && n !== 0) return '?';
+    if (n >= 100) return n.toLocaleString(undefined, {maximumFractionDigits:2});
+    if (n >= 1) return n.toFixed(2);
+    if (n >= 0.01) return n.toFixed(4);
+    return n.toFixed(6);
+}
+
+function formatCompact(n) {
+    if (n >= 1e12) return (n / 1e12).toFixed(1) + 'T';
+    if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return n.toFixed(0);
+}
+
+document.getElementById('apiUrl').addEventListener('change', fetchChains);
+
+// Listen for MetaMask chain/account changes
+if (window.ethereum) {
+    window.ethereum.on('chainChanged', (chainIdHex) => {
+        if (walletConnected) {
+            connectedChainId = parseInt(chainIdHex, 16);
+            updateStats();
+            renderChains();
+        }
+    });
+    window.ethereum.on('accountsChanged', (accounts) => {
+        if (accounts.length === 0) {
+            walletConnected = false;
+            connectedChainId = null;
+            connectedAddress = null;
+            document.getElementById('walletBtn').classList.remove('connected');
+            document.getElementById('walletBtnLabel').textContent = 'Connect Wallet';
+            document.getElementById('walletAddress').textContent = '';
+            updateStats();
+            renderChains();
+        } else if (walletConnected) {
+            connectedAddress = accounts[0];
+            const short = connectedAddress.slice(0, 6) + '...' + connectedAddress.slice(-4);
+            document.getElementById('walletBtnLabel').textContent = short;
+            document.getElementById('walletAddress').textContent = connectedAddress;
+        }
+    });
+}
+
+// ── Init ───────────────────────────────────────────────────────────
+// API URL: locked to same-origin in production, configurable in dev
+const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+const isDev = isLocal || new URLSearchParams(location.search).has('dev');
+const defaultApiUrl = isLocal ? 'http://localhost:4025' : 'https://agenticplace.pythai.net/api/allchainz';
+const savedApiUrl = isDev ? localStorage.getItem('allchain_api_url') : null;
+document.getElementById('apiUrl').value = savedApiUrl || defaultApiUrl;
+if (isDev) {
+    document.getElementById('configBar').style.display = '';
+    document.getElementById('apiUrl').addEventListener('change', (e) => {
+        localStorage.setItem('allchain_api_url', e.target.value);
+    });
+}
+
+// ── Bitcoin / Logo popup functions (use event delegation to bypass SES lockdown) ──
+document.addEventListener('click', function(e) {
+    const el = e.target.closest('[data-action]');
+    if (!el) return;
+    const action = el.dataset.action;
+    if (action === 'btcinfo') { e.stopPropagation(); showBitcoinInfo(); }
+    else if (action === 'btcopen') { openMetaMaskBitcoin(); }
+    else if (action === 'logopopup') { showLogoPopup(e); }
+    else if (action === 'closepopup') { el.closest('.popup-overlay')?.remove(); }
+});
+
+async function openMetaMaskBitcoin() {
+    const status = document.getElementById('btc-connect-status');
+    const btn = document.getElementById('btc-open-btn');
+
+    if (!window.ethereum || !window.ethereum.isMetaMask) {
+        window.open('https://metamask.io/download/', '_blank');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Opening MetaMask...';
+
+    try {
+        // Request permissions — this opens MetaMask where user can switch to BTC account
+        const provider = getWalletProvider();
+        await provider.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] });
+        status.innerHTML = `
+            <div style="background:rgba(247,147,26,0.1);border:1px solid rgba(247,147,26,0.3);border-radius:8px;padding:10px;margin-top:4px;">
+                <div style="color:#f7931a;font-weight:600;margin-bottom:6px;">MetaMask is open</div>
+                <div style="color:#ccc;font-size:0.8rem;line-height:1.5;">
+                    Click the <b>account selector</b> at the top of MetaMask and switch to your
+                    <b style="color:#f7931a;">Bitcoin account</b> (bc1... address).
+                </div>
+            </div>`;
+        btn.innerHTML = '&#8383; Open Again';
+        btn.style.background = '#00cc66';
+    } catch (err) {
+        if (err.code === 4001) {
+            status.innerHTML = '<div style="color:#ff8800;padding:4px;">Cancelled — click to try again</div>';
+        } else {
+            status.innerHTML = '<div style="color:#ff4444;padding:4px;">' + (err.message || 'Connection failed') + '</div>';
+        }
+    }
+    btn.disabled = false;
+}
+
+function showBitcoinInfo() {
+    const overlay = document.createElement('div');
+    overlay.className = 'popup-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100000;cursor:pointer;backdrop-filter:blur(4px);';
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+
+    const hasMetaMask = typeof window.ethereum !== 'undefined' && window.ethereum.isMetaMask;
+    const chain = allChains.find(c => c.chainId === 0);
+    const priceHtml = chain && chain.nativePrice
+        ? `<div style="display:flex;gap:8px;margin:10px 0;">
+            <div style="flex:1;background:rgba(247,147,26,0.08);border:1px solid rgba(247,147,26,0.2);border-radius:8px;padding:8px;text-align:center;">
+                <div style="color:#f7931a;font-weight:700;font-size:1rem;">$${formatPrice(chain.nativePrice)}</div>
+                <div style="color:#888;font-size:0.7rem;">BTC Price</div>
+            </div>
+            ${chain.marketCap ? `<div style="flex:1;background:rgba(247,147,26,0.08);border:1px solid rgba(247,147,26,0.2);border-radius:8px;padding:8px;text-align:center;">
+                <div style="color:#fff;font-weight:600;font-size:0.9rem;">$${formatCompact(chain.marketCap)}</div>
+                <div style="color:#888;font-size:0.7rem;">Market Cap</div>
+            </div>` : ''}
+            ${chain.priceChange24h !== undefined ? `<div style="flex:1;background:rgba(247,147,26,0.08);border:1px solid rgba(247,147,26,0.2);border-radius:8px;padding:8px;text-align:center;">
+                <div style="color:${chain.priceChange24h >= 0 ? '#00cc00' : '#ff4444'};font-weight:600;font-size:0.9rem;">${chain.priceChange24h >= 0 ? '+' : ''}${chain.priceChange24h.toFixed(2)}%</div>
+                <div style="color:#888;font-size:0.7rem;">24h Change</div>
+            </div>` : ''}
+           </div>` : '';
+
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#0d1117;border:1px solid #f7931a;border-radius:12px;padding:0;max-width:400px;width:92%;max-height:85vh;overflow-y:auto;cursor:default;color:#e0e0e0;font-size:0.85rem;';
+    card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px 10px;border-bottom:1px solid rgba(247,147,26,0.2);">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <img src="/gfx/chains/0.png" alt="Bitcoin" style="width:36px;height:36px;border-radius:8px;">
+                <div>
+                    <div style="color:#f7931a;font-weight:700;font-size:1.05rem;">Bitcoin on MetaMask</div>
+                    <div style="color:#888;font-size:0.72rem;">Native BTC — no wrapping, no bridging</div>
+                </div>
+            </div>
+            <button data-action="closepopup" style="background:none;border:none;color:#888;font-size:1.3rem;cursor:pointer;padding:0 4px;line-height:1;">&times;</button>
+        </div>
+        <div style="padding:12px 18px;">
+            ${priceHtml}
+            <div style="font-size:0.78rem;color:#aaa;line-height:1.6;margin:8px 0 12px;">
+                MetaMask creates a <b style="color:#f7931a;">Bitcoin account</b> automatically alongside your Ethereum account.
+                Your BTC address (bc1...) is derived from the same seed phrase.
+            </div>
+            <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:10px 12px;margin:0 0 12px;">
+                <div style="font-size:0.75rem;color:#888;margin-bottom:8px;font-weight:600;">How to access your Bitcoin</div>
+                <div style="font-size:0.78rem;line-height:1.8;color:#ccc;">
+                    <div><span style="color:#f7931a;font-weight:700;">1.</span> Open MetaMask</div>
+                    <div><span style="color:#f7931a;font-weight:700;">2.</span> Tap the account selector at the top</div>
+                    <div><span style="color:#f7931a;font-weight:700;">3.</span> Select your <b>Bitcoin</b> account (bc1...)</div>
+                </div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:10px 12px;margin:0 0 12px;">
+                <div style="font-size:0.75rem;color:#888;margin-bottom:6px;font-weight:600;">What you can do</div>
+                <div style="font-size:0.78rem;line-height:1.7;color:#ccc;">
+                    <div style="display:flex;gap:6px;align-items:center;"><span style="color:#00cc00;">&#10003;</span> Send and receive native BTC</div>
+                    <div style="display:flex;gap:6px;align-items:center;"><span style="color:#00cc00;">&#10003;</span> Buy BTC with card or bank transfer</div>
+                    <div style="display:flex;gap:6px;align-items:center;"><span style="color:#00cc00;">&#10003;</span> Swap BTC to ETH, SOL, and EVM tokens</div>
+                    <div style="display:flex;gap:6px;align-items:center;"><span style="color:#00cc00;">&#10003;</span> View balance and transaction history</div>
+                </div>
+            </div>
+            <div id="btc-connect-status"></div>
+            <div style="display:flex;gap:8px;margin-top:4px;">
+                ${hasMetaMask
+                    ? '<button id="btc-open-btn" data-action="btcopen" style="flex:1;background:#f7931a;color:#fff;border:none;padding:10px;border-radius:8px;font-size:0.85rem;cursor:pointer;font-weight:600;">&#8383; Open MetaMask</button>'
+                    : '<a href="https://metamask.io/download/" target="_blank" style="flex:1;background:#f7931a;color:#fff;border:none;padding:10px;border-radius:8px;font-size:0.85rem;cursor:pointer;font-weight:600;text-decoration:none;display:block;text-align:center;">Install MetaMask</a>'
+                }
+                <button data-action="closepopup" style="background:transparent;color:#888;border:1px solid #30363d;padding:10px 16px;border-radius:8px;font-size:0.85rem;cursor:pointer;">Close</button>
+            </div>
+        </div>
+        <div style="text-align:center;padding:0 18px 10px;font-size:0.65rem;color:#555;">AgenticPlace — mindX + BANKON</div>
+    `;
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+}
+
+function showLogoPopup(e) {
+    e.stopPropagation();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100000;cursor:pointer;backdrop-filter:blur(4px);';
+    overlay.onclick = () => overlay.remove();
+    const img = document.createElement('img');
+    img.src = '/gfx/allchain-logo.png';
+    img.alt = 'ALLCHAIN';
+    img.style.cssText = 'max-width:80vw;max-height:80vh;border-radius:16px;box-shadow:0 0 60px rgba(247,147,26,0.5);animation:logoPop 0.3s ease-out;';
+    overlay.appendChild(img);
+    // Add animation keyframes if not already present
+    if (!document.getElementById('logo-pop-style')) {
+        const style = document.createElement('style');
+        style.id = 'logo-pop-style';
+        style.textContent = '@keyframes logoPop { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }';
+        document.head.appendChild(style);
+    }
+    document.body.appendChild(overlay);
+}
+
+fetchChains();
+
+// ── Price refresh — 5 min cycle, 0 = fetch, clock restarts ──
+let priceRefreshStatus = 'waiting';
+let _nextPriceRefresh = Date.now() + PRICE_REFRESH_INTERVAL;
+
+function updatePriceTimer() {
+    const el = document.getElementById('price-timer');
+    if (!el) return;
+    if (lastCoinGeckoFetch === 0) {
+        el.innerHTML = '<span style="color:#ffaa00">prices: waiting for first fetch...</span>';
+        return;
+    }
+    const ago = Math.floor((Date.now() - lastCoinGeckoFetch) / 1000);
+    const mins = Math.floor(ago / 60), secs = ago % 60;
+    const timeStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+    const nextIn = Math.max(0, Math.floor((_nextPriceRefresh - Date.now()) / 1000));
+    const nextMins = Math.floor(nextIn / 60), nextSecs = nextIn % 60;
+    const nextStr = nextMins > 0 ? `${nextMins}m ${nextSecs}s` : `${nextSecs}s`;
+
+    let statusColor = '#8cb4ff';
+    if (priceRefreshStatus === 'updated') statusColor = '#00cc88';
+    else if (priceRefreshStatus === 'fetching...') statusColor = '#ffaa00';
+    else if (priceRefreshStatus.startsWith('error')) statusColor = '#ff4444';
+    else if (priceRefreshStatus === 'waiting') statusColor = '#ffaa00';
+
+    const agoColor = ago > 600 ? '#ff4444' : ago > 300 ? '#ffaa00' : '#8cb4ff';
+    const nextColor = nextIn <= 10 ? '#00cc88' : '#8cb4ff';
+
+    el.innerHTML = `<span style="color:${agoColor}">prices: ${timeStr} ago</span> · <span style="color:${nextColor}">next in ${nextStr}</span> · <span style="color:${statusColor}">${priceRefreshStatus}</span>`;
+}
+setInterval(updatePriceTimer, 1000);
+
+// Single refresh loop — setTimeout chain guarantees 0 = fetch = restart
+async function schedulePriceRefresh() {
+    _nextPriceRefresh = Date.now() + PRICE_REFRESH_INTERVAL;
+    setTimeout(async () => {
+        try {
+            priceRefreshStatus = 'fetching...';
+            updatePriceTimer();
+            const ok = await fetchCoinGeckoPrices();
+            if (ok && allChains.length > 0) {
+                saveToIDB(allChains);
+                updateStats();
+                applyFilter();
+                priceRefreshStatus = 'updated';
+            } else {
+                priceRefreshStatus = 'no data';
+            }
+        } catch (e) {
+            priceRefreshStatus = 'error: ' + (e.message || '').substring(0, 30);
+        }
+        // Clock restarts immediately after fetch completes
+        schedulePriceRefresh();
+    }, PRICE_REFRESH_INTERVAL);
+}
+// Do NOT auto-start here — schedulePriceRefresh() is called after the initial
+// fetchCoinGeckoPrices() in fetchChains(), so page load = 0 moment.
+</script>
+
+
+<script>
+// ── WebGL Nebula Background (proven pattern from index.html) ──
+(() => {
+    const c = document.getElementById('gl');
+    const gl = c.getContext('webgl', { alpha: false, antialias: false });
+    if(!gl) return;
+    function resize(){const d=Math.min(2,devicePixelRatio||1);const w=Math.floor(innerWidth*d),h=Math.floor(innerHeight*d);
+      if(c.width!==w||c.height!==h){c.width=w;c.height=h;gl.viewport(0,0,w,h);}}
+    const vs=`attribute vec2 a_pos;varying vec2 v_uv;void main(){v_uv=(a_pos*0.5)+0.5;gl_Position=vec4(a_pos,0.0,1.0);}`;
+    const fs=`precision highp float;varying vec2 v_uv;uniform vec2 u_res;uniform float u_time;
+      float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+      float noise(vec2 p){vec2 i=floor(p);vec2 f=fract(p);float a=hash(i);float b=hash(i+vec2(1.0,0.0));float c=hash(i+vec2(0.0,1.0));float d=hash(i+vec2(1.0,1.0));vec2 u=f*f*(3.0-2.0*f);return mix(a,b,u.x)+(c-a)*u.y*(1.0-u.x)+(d-b)*u.x*u.y;}
+      void main(){vec2 uv=v_uv;vec2 p=(uv*u_res-0.5*u_res)/min(u_res.x,u_res.y);float t=u_time*0.12;
+        vec3 col=mix(vec3(0.03,0.04,0.09),vec3(0.0),smoothstep(0.0,1.25,length(p)));
+        vec2 q=p*2.4;float n=(noise(q+vec2(t,-t*1.3))*0.65+noise(q*1.7+vec2(-t*0.7,t*1.1))*0.35);
+        float ridges=pow(1.0-abs(sin((p.x*2.2+p.y*1.4+n*2.0)*3.14159)),6.0);
+        float ring=smoothstep(0.28,0.26,abs(length(p)-0.62))*(0.55+0.45*sin(u_time*0.4+p.x*6.0));
+        vec3 neon=mix(vec3(0.08,0.70,0.85),vec3(0.50,0.15,0.85),smoothstep(0.15,0.95,n));
+        col+=neon*(ridges*0.14)+neon*(ring*0.10);
+        col+=vec3(0.08,0.70,0.85)*(0.5+0.5*sin(uv.y*900.0+u_time*2.0))*0.005;
+        col*=1.0-smoothstep(0.65,1.15,length(p))*0.55;
+        gl_FragColor=vec4(col,1.0);}`;
+    function sh(t,s){const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS)){return null;}return o;}
+    const vsh=sh(gl.VERTEX_SHADER,vs),fsh=sh(gl.FRAGMENT_SHADER,fs);
+    if(!vsh||!fsh)return;
+    const pr=gl.createProgram();gl.attachShader(pr,vsh);gl.attachShader(pr,fsh);gl.linkProgram(pr);
+    if(!gl.getProgramParameter(pr,gl.LINK_STATUS))return;
+    gl.useProgram(pr);
+    const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+    const pl=gl.getAttribLocation(pr,'a_pos');gl.enableVertexAttribArray(pl);
+    gl.vertexAttribPointer(pl,2,gl.FLOAT,false,0,0);
+    const tl=gl.getUniformLocation(pr,'u_time'),rl=gl.getUniformLocation(pr,'u_res');
+    let start=performance.now();resize();
+    if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+    (function draw(now){const t=(now-start)/1000;resize();
+      gl.uniform1f(tl,t);gl.uniform2f(rl,c.width,c.height);
+      gl.drawArrays(gl.TRIANGLES,0,6);requestAnimationFrame(draw);})(0);
+})();
+</script>
+
+<script>
+// ── Hyperreal Interlocking Chains ─────────────────────────────────
+// Stadium-shaped links that thread through each other like a real
+// chain pulled taut. Crossing chains, parallel sidechains, depth layers.
+(() => {
+    const cv = document.getElementById('chains');
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    if (!ctx) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const dpr = Math.min(2, devicePixelRatio || 1);
+    function resize() { cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+    resize(); addEventListener('resize', resize, { passive: true });
+    const W = () => innerWidth, H = () => innerHeight;
+
+    const COLS = [
+        { base: '#2F80ED', hi: '#7BB3FF', dark: '#1A4A8A', glow: 'rgba(47,128,237,' },
+        { base: '#56CCF2', hi: '#A8E8FF', dark: '#2A7A8F', glow: 'rgba(86,204,242,' },
+        { base: '#00CC66', hi: '#55FFaa', dark: '#007744', glow: 'rgba(0,204,102,' },
+        { base: '#F7931A', hi: '#FFCC66', dark: '#8A5500', glow: 'rgba(247,147,26,' },
+        { base: '#836EF9', hi: '#B8AAFF', dark: '#4A3C8A', glow: 'rgba(131,110,249,' },
+        { base: '#E84393', hi: '#FDA7DF', dark: '#8B1A5A', glow: 'rgba(232,67,147,' },
+        { base: '#00B894', hi: '#55EFC4', dark: '#006B5A', glow: 'rgba(0,184,148,' },
+        { base: '#FDCB6E', hi: '#FFEAA7', dark: '#8B7032', glow: 'rgba(253,203,110,' },
+    ];
+
+    const LINK_W = 22, LINK_H = 9, TUBE = 3.2;
+    const GROW_INTERVAL = 0.8, MAX_LINKS = 70;
+
+    const chains = [
+        { ci: 0, sx: 0.02, sy: 0.18, ang: 0.06,  curve: 0.003, depth: 1.0 },
+        { ci: 1, sx: 0.98, sy: 0.32, ang: 3.12,  curve:-0.004, depth: 1.0 },
+        { ci: 2, sx: 0.03, sy: 0.78, ang: 0.12,  curve: 0.003, depth: 0.9 },
+        { ci: 3, sx: 0.28, sy: 0.03, ang: 1.35,  curve:-0.007, depth: 0.7 },
+        { ci: 4, sx: 0.72, sy: 0.03, ang: 1.85,  curve: 0.006, depth: 0.7 },
+        { ci: 5, sx: 0.50, sy: 0.97, ang:-1.25,  curve: 0.005, depth: 0.6 },
+        { ci: 0, sx: 0.04, sy: 0.23, ang: 0.08,  curve: 0.003, depth: 0.35 },
+        { ci: 1, sx: 0.96, sy: 0.37, ang: 3.10,  curve:-0.004, depth: 0.35 },
+        { ci: 6, sx: 0.08, sy: 0.92, ang:-0.65,  curve: 0.008, depth: 0.5 },
+        { ci: 7, sx: 0.88, sy: 0.88, ang: 2.35,  curve:-0.006, depth: 0.5 },
+        { ci: 2, sx: 0.22, sy: 0.74, ang:-0.55,  curve: 0.018, depth: 0.3 },
+        { ci: 4, sx: 0.58, sy: 0.28, ang: 0.85,  curve:-0.016, depth: 0.3 },
+        { ci: 5, sx: 0.40, sy: 0.50, ang: 0.30,  curve: 0.005, depth: 0.45 },
+    ].map(c => ({
+        ...c, links: [], nextGrow: 0.5 + Math.random() * 2, ph: Math.random() * 6.28,
+        maxLinks: c.depth < 0.5 ? 25 : MAX_LINKS,
+    }));
+
+    const junctions = [];
+
+    function drawChainLink(x, y, angle, col, alpha, half, depthScale) {
+        const s = depthScale || 1;
+        const w = LINK_W * s, h = LINK_H * s, tb = TUBE * s;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+        function stadiumPath(hw, hh) {
+            ctx.beginPath();
+            ctx.moveTo(-hw + hh, -hh);
+            ctx.lineTo(hw - hh, -hh);
+            ctx.arc(hw - hh, 0, hh, -Math.PI / 2, Math.PI / 2);
+            ctx.lineTo(-hw + hh, hh);
+            ctx.arc(-hw + hh, 0, hh, Math.PI / 2, -Math.PI / 2);
+            ctx.closePath();
+        }
+        if (half === 'back') {
+            ctx.globalAlpha = alpha * 0.3;
+            ctx.lineWidth = tb * 1.4;
+            ctx.strokeStyle = col.dark;
+            ctx.beginPath();
+            ctx.moveTo(-w + h, h * 0.15); ctx.lineTo(-w + h, h);
+            ctx.arc(-w + h, 0, h, Math.PI / 2, -Math.PI / 2, true);
+            ctx.lineTo(-w + h, -h * 0.15); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(w - h, h * 0.15); ctx.lineTo(w - h, h);
+            ctx.arc(w - h, 0, h, Math.PI / 2, -Math.PI / 2);
+            ctx.lineTo(w - h, -h * 0.15); ctx.stroke();
+            ctx.restore(); return;
+        }
+        ctx.globalAlpha = alpha;
+        ctx.shadowColor = col.glow + '0.25)'; ctx.shadowBlur = 8 * s;
+        const grad = ctx.createLinearGradient(0, -h - tb, 0, h + tb);
+        grad.addColorStop(0, col.hi); grad.addColorStop(0.3, col.base);
+        grad.addColorStop(0.7, col.dark); grad.addColorStop(1, col.dark);
+        ctx.lineWidth = tb * 1.8; ctx.strokeStyle = grad;
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        stadiumPath(w, h); ctx.stroke();
+        ctx.shadowBlur = 0; ctx.globalAlpha = alpha * 0.3;
+        ctx.lineWidth = tb * 0.3; ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        ctx.beginPath();
+        ctx.moveTo(-w + h + 2 * s, -h + tb * 0.3);
+        ctx.lineTo(w - h - 2 * s, -h + tb * 0.3); ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawTipNode(x, y, col, t, phase) {
+        const pulse = 1.0 + Math.sin(t * 2.5 + phase) * 0.3, r = 6 * pulse;
+        ctx.save();
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r * 2.5);
+        g.addColorStop(0, col.glow + '0.5)'); g.addColorStop(0.5, col.glow + '0.1)');
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 2.5, 0, Math.PI * 2); ctx.fill();
+        const cg = ctx.createRadialGradient(x - 1, y - 1, 0, x, y, r);
+        cg.addColorStop(0, '#fff'); cg.addColorStop(0.3, col.hi); cg.addColorStop(1, col.base);
+        ctx.fillStyle = cg; ctx.globalAlpha = 0.85;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+    }
+
+    function drawJunction(x, y, colA, colB, age) {
+        const fade = Math.min(1, age * 0.5);
+        ctx.save(); ctx.globalAlpha = fade * 0.4;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, 20);
+        g.addColorStop(0, 'rgba(255,255,255,0.3)');
+        g.addColorStop(0.3, colA.glow + '0.2)');
+        g.addColorStop(0.6, colB.glow + '0.1)');
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 20, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+    }
+
+    let t0 = performance.now();
+
+    function draw(now) {
+        const t = (now - t0) / 1000;
+        const w = W(), h = H();
+        ctx.clearRect(0, 0, w, h);
+
+        // Grow
+        chains.forEach(ch => {
+            if (t >= ch.nextGrow && ch.links.length < (ch.maxLinks || MAX_LINKS)) {
+                let x, y, ang;
+                if (ch.links.length === 0) { x = ch.sx * w; y = ch.sy * h; ang = ch.ang; }
+                else {
+                    const tip = ch.links[ch.links.length - 1];
+                    ang = tip.ang + ch.curve + Math.sin(t * 0.15 + ch.ph) * 0.02;
+                    x = tip.x + Math.cos(ang) * (LINK_W * 1.1);
+                    y = tip.y + Math.sin(ang) * (LINK_W * 1.1);
+                }
+                if (x < 40) ang = Math.abs(ang) * 0.5 + 0.1;
+                if (x > w - 40) ang = Math.PI - Math.abs(ang) * 0.5;
+                if (y < 40) ang = Math.abs(ang);
+                if (y > h - 40) ang = -Math.abs(ang);
+                ch.links.push({ x, y, ang });
+                ch.nextGrow = t + GROW_INTERVAL + Math.random() * 0.4;
+            }
+        });
+
+        // Junctions
+        for (let ai = 0; ai < chains.length; ai++) {
+            if (chains[ai].links.length < 2) continue;
+            for (let bi = ai + 1; bi < chains.length; bi++) {
+                if (chains[bi].links.length < 2) continue;
+                let found = false;
+                for (let ia = 0; ia < chains[ai].links.length && !found; ia += 3) {
+                    for (let ib = 0; ib < chains[bi].links.length && !found; ib += 3) {
+                        const la = chains[ai].links[ia], lb = chains[bi].links[ib];
+                        const d = Math.hypot(la.x - lb.x, la.y - lb.y);
+                        if (d < 40 && d > 3) {
+                            if (!junctions.some(j => ((j.ciA===ai&&j.ciB===bi)||(j.ciA===bi&&j.ciB===ai)) && Math.hypot(j.x-la.x,j.y-la.y)<70)) {
+                                found = true;
+                                junctions.push({ x:(la.x+lb.x)*0.5, y:(la.y+lb.y)*0.5, ciA:ai, ciB:bi, ang:Math.atan2(lb.y-la.y,lb.x-la.x), age:0 });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        junctions.forEach(j => { j.age += 1/60; });
+
+        // 3-pass interlocking render
+        for (let pass = 0; pass < 3; pass++) {
+            chains.forEach(ch => {
+                const col = COLS[ch.ci % COLS.length];
+                const da = ch.depth || 1.0, ds = 0.6 + da * 0.4;
+                ch.links.forEach((link, i) => {
+                    const isEven = (i % 2 === 0);
+                    const rot = link.ang + (isEven ? 0 : Math.PI / 2);
+                    const age = ch.links.length - 1 - i;
+                    const alpha = Math.min(1, age * 0.6 + 0.4) * 0.75 * da;
+                    if (pass === 0 && isEven) drawChainLink(link.x, link.y, rot, col, alpha, 'back', ds);
+                    else if (pass === 1 && !isEven) { drawChainLink(link.x, link.y, rot, col, alpha*0.85, 'back', ds); drawChainLink(link.x, link.y, rot, col, alpha, 'front', ds); }
+                    else if (pass === 2 && isEven) drawChainLink(link.x, link.y, rot, col, alpha, 'front', ds);
+                });
+            });
+        }
+
+        // Junction bridges
+        junctions.forEach(j => {
+            const colA = COLS[chains[j.ciA].ci % COLS.length], colB = COLS[chains[j.ciB].ci % COLS.length];
+            drawJunction(j.x, j.y, colA, colB, j.age);
+            const fade = Math.min(1, j.age * 0.5);
+            const mixed = { base: colA.base, hi: colB.hi, dark: colA.dark, glow: colB.glow };
+            drawChainLink(j.x, j.y, j.ang, mixed, fade*0.5, 'back', 0.85);
+            drawChainLink(j.x, j.y, j.ang + Math.PI/2, colB, fade*0.6, 'front', 0.85);
+            drawChainLink(j.x, j.y, j.ang, mixed, fade*0.6, 'front', 0.85);
+        });
+
+        // Tip nodes
+        chains.forEach(ch => {
+            const col = COLS[ch.ci % COLS.length];
+            if (ch.links.length === 0) drawTipNode(ch.sx * w, ch.sy * h, col, t, ch.ph);
+            else drawTipNode(ch.links[ch.links.length-1].x, ch.links[ch.links.length-1].y, col, t, ch.ph);
+        });
+
+        // Data pulses
+        chains.forEach((ch, ci) => {
+            if (ch.links.length < 3) return;
+            const prog = ((t * 0.06 + ci * 1.1) % 4) / 4;
+            const li = Math.min(Math.floor(prog * ch.links.length), ch.links.length - 1);
+            const p = ch.links[li], col = COLS[ch.ci % COLS.length];
+            ctx.save();
+            const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 8);
+            g.addColorStop(0, '#fff'); g.addColorStop(0.3, col.hi);
+            g.addColorStop(0.7, col.glow + '0.25)'); g.addColorStop(1, 'transparent');
+            ctx.fillStyle = g; ctx.globalAlpha = 0.5;
+            ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff'; ctx.globalAlpha = 0.7; ctx.fill();
+            ctx.restore();
+        });
+
+        requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
