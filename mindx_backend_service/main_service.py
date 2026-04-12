@@ -993,13 +993,12 @@ async def inft_page():
     return _DashResponse(content="<h1>iNFT</h1><p>Interface loading...</p>")
 
 
-@app.get("/allchainz", response_class=_DashResponse, include_in_schema=False)
-@app.get("/allchain", response_class=_DashResponse, include_in_schema=False)
-async def allchainz_page():
-    """ALLCHAIN — 2500+ EVM chain discovery. Chain as a Service for agents and public."""
-    if _ALLCHAINZ_HTML_PATH.exists():
-        return _DashResponse(content=_ALLCHAINZ_HTML_PATH.read_text(encoding="utf-8"))
-    return _DashResponse(content="<h1>ALLCHAIN</h1><p>Loading...</p>")
+@app.get("/allchainz", include_in_schema=False)
+@app.get("/allchain", include_in_schema=False)
+async def allchainz_redirect():
+    """ALLCHAIN — redirect to agenticplace.pythai.net where wallet interactions are safe."""
+    from starlette.responses import RedirectResponse
+    return RedirectResponse(url="https://agenticplace.pythai.net/allchainz.html", status_code=302)
 
 
 @app.get("/boardroom", response_class=_DashResponse, include_in_schema=False)
