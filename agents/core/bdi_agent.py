@@ -813,40 +813,128 @@ class BDIAgent:
         return self._skeleton_plan_fallback(goal_id, goal_description)
 
     async def _retry_with_alternate_provider(self, prompt: str) -> Optional[str]:
-        """Try an alternate inference provider when the primary returns None.
+        """Cycle through available inference providers when the primary returns None.
 
-        Extends the 5-step resilience chain into BDI planning: if the configured
-        LLM handler fails, ask InferenceDiscovery for a different provider.
+        Extends the 5-step resilience chain into BDI planning. Walks providers
+        from minimal (cheapest local) to maximal (cloud), respecting each
+        provider's rate limits. Rebuilds from minimalization back into
+        maximization — realistic API consumption, not wasteful shotgunning.
+
+        Order: local Ollama → Ollama cloud → cloud APIs (scored by InferenceDiscovery)
         """
+        from llm.inference_discovery import InferenceDiscovery
+
         try:
-            from llm.inference_discovery import InferenceDiscovery
             disc = await InferenceDiscovery.get_instance()
-            summary = disc.status_summary()
-            if summary.get("available", 0) < 1:
-                return None
+        except Exception:
+            return None
 
-            # Try to get an alternate provider
-            best = await disc.get_best_provider()
-            if not best:
-                return None
-            provider_name, source = best
+        # Probe current availability
+        try:
+            await disc.probe_all()
+        except Exception:
+            pass
 
-            self.logger.info(f"BDI planning: retrying with alternate provider '{provider_name}'")
+        # Build ordered provider list: minimal → maximal
+        # InferenceDiscovery.sources are scored by reliability × speed × recency
+        available = []
+        for name, source in disc.sources.items():
+            if str(getattr(source, 'status', '')).upper() in ('AVAILABLE', 'DEGRADED'):
+                available.append((name, source))
 
-            from llm.llm_factory import create_llm_handler
-            alt_handler = await create_llm_handler(provider_name=source.provider_type)
-            if alt_handler:
-                response = await alt_handler.generate_text(
-                    prompt=prompt,
-                    model=getattr(alt_handler, 'model_name_for_api', None),
-                    temperature=0.0,
-                    json_mode=True,
-                )
+        if not available:
+            self.logger.debug("BDI planning: no alternate providers available")
+            return None
+
+        # Sort: local first (cheapest), then by score descending (best cloud)
+        def _sort_key(item):
+            name, src = item
+            is_local = 1 if any(k in name for k in ['local', 'vllm', 'ollama_gpu']) else 0
+            score = getattr(src, 'score', 0) if hasattr(src, 'score') else 0
+            return (-is_local, -score)
+        available.sort(key=_sort_key)
+
+        # Skip the provider we already failed on
+        primary_provider = getattr(self.llm_handler, 'provider_name', '') if self.llm_handler else ''
+
+        from llm.llm_factory import create_llm_handler
+
+        for name, source in available:
+            provider_type = getattr(source, 'provider_type', name)
+            if provider_type == primary_provider:
+                continue  # Already failed on this one
+
+            # Check rate limits before attempting
+            rate_info = disc.rate_limits.get(name, {})
+            rpm = rate_info.get('rpm', 60)
+            daily = rate_info.get('daily')
+            if daily and hasattr(disc, '_cloud_call_count') and disc._cloud_call_count >= daily:
+                self.logger.debug(f"BDI planning: skipping '{name}' — daily limit ({daily}) reached")
+                continue
+
+            # Try OllamaCloudTool for ollama_cloud source (has its own rate limiter)
+            if 'cloud' in name and 'ollama' in name:
+                response = await self._try_ollama_cloud(prompt)
                 if response:
-                    self.logger.info(f"BDI planning: alternate provider '{provider_name}' succeeded")
                     return response
+                continue
+
+            # Try via llm_factory (creates handler with proper rate limit profile)
+            try:
+                models = getattr(source, 'models', [])
+                model_name = models[0] if models else None
+                alt_handler = await create_llm_handler(
+                    provider_name=provider_type,
+                    model_name=model_name,
+                )
+                if not alt_handler:
+                    continue
+
+                self.logger.info(
+                    f"BDI planning: trying '{name}' ({provider_type}"
+                    f"{', ' + model_name if model_name else ''}, rpm={rpm})"
+                )
+                response = await asyncio.wait_for(
+                    alt_handler.generate_text(
+                        prompt=prompt,
+                        model=getattr(alt_handler, 'model_name_for_api', model_name),
+                        temperature=0.0,
+                        json_mode=True,
+                    ),
+                    timeout=30,
+                )
+                if response and not response.startswith("Error:"):
+                    self.logger.info(f"BDI planning: '{name}' succeeded")
+                    # Track cloud usage
+                    if hasattr(disc, '_cloud_call_count') and 'cloud' in name:
+                        disc._cloud_call_count += 1
+                    return response
+
+            except asyncio.TimeoutError:
+                self.logger.debug(f"BDI planning: '{name}' timed out (30s)")
+            except Exception as e:
+                self.logger.debug(f"BDI planning: '{name}' failed: {e}")
+
+        self.logger.info("BDI planning: all alternate providers exhausted")
+        return None
+
+    async def _try_ollama_cloud(self, prompt: str) -> Optional[str]:
+        """Try Ollama cloud inference via OllamaCloudTool (has embedded rate limiter)."""
+        try:
+            from tools.cloud.ollama_cloud_tool import OllamaCloudTool
+            cloud = OllamaCloudTool()
+            result = await cloud.execute(
+                operation="generate",
+                model="qwen3:32b",
+                prompt=prompt,
+                temperature=0.0,
+                max_tokens=2048,
+            )
+            if result.get("success") and result.get("response"):
+                self.logger.info("BDI planning: Ollama cloud succeeded")
+                return result["response"]
         except Exception as e:
-            self.logger.debug(f"BDI planning: alternate provider retry failed: {e}")
+            self.logger.debug(f"BDI planning: Ollama cloud failed: {e}")
         return None
 
     def _skeleton_plan_fallback(self, goal_id: str, goal_description: str) -> bool:
