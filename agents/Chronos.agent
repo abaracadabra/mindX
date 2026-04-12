@@ -1342,3 +1342,78 @@ agent_partnerships:
       - Long-term capability building
 ```
 
+---
+
+## SCHEDULED TASKS (mindX Production)
+
+Chronos owns all time-bound periodic operations. Other agents execute them
+within their loops, but the schedule discipline belongs to Chronos.
+
+```yaml
+scheduled_tasks:
+  - name: cloud_model_catalog_refresh
+    interval: 24h
+    executor: AuthorAgent.refresh_cloud_model_catalog()
+    output: data/config/ollama_cloud_models.json
+    purpose: Keep Ollama cloud model catalog current for boardroom + InferenceDiscovery
+
+  - name: daily_chapter
+    interval: 24h (lunar cycle)
+    executor: AuthorAgent.write_daily_chapter()
+    output: docs/publications/daily/
+    purpose: One chapter per day across 28-day lunar cycle
+
+  - name: improvement_journal
+    interval: 30m
+    executor: ImprovementJournal.write_entry()
+    output: docs/IMPROVEMENT_JOURNAL.md
+    purpose: System health snapshot every 30 minutes
+
+  - name: stm_to_ltm_promotion
+    interval: 1h
+    executor: _periodic_memory_promotion()
+    output: data/memory/ltm/
+    purpose: Pattern-based STM → LTM consolidation
+
+  - name: machine_dreaming
+    interval: 2h
+    executor: _periodic_dream_cycle()
+    output: data/memory/
+    purpose: Offline knowledge refinement and consolidation
+
+  - name: periodic_embedding
+    interval: 6h
+    executor: _periodic_embedding()
+    output: pgvectorscale
+    purpose: Embed new docs and memories without embeddings
+
+  - name: health_audit
+    interval: 15m
+    executor: HealthAuditorTool.start_periodic_audit()
+    output: recovery actions
+    purpose: Monitor vital signs, trigger recovery
+
+  - name: mastermind_strategic_review
+    interval: 30m
+    executor: MastermindAgent._run_autonomous_loop()
+    output: SEA campaigns
+    purpose: Strategic review, trigger campaigns when backlog ≥ 3
+
+  - name: mindxagent_autonomous_cycle
+    interval: 5m
+    executor: MindXAgent autonomous loop
+    output: improvements, Godel journal
+    purpose: Tactical self-improvement cycles
+
+  - name: book_publish
+    interval: on startup + daily
+    executor: AuthorAgent.publish()
+    output: docs/BOOK_OF_MINDX.md
+    purpose: On-demand edition compilation
+
+chronos_principle: |
+  I do not execute these tasks. I define the rhythm.
+  AuthorAgent writes. MastermindAgent orchestrates. MindXAgent improves.
+  I keep the clock. Without chronos, there is no preparation for kairos.
+```
+

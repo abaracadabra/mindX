@@ -1296,9 +1296,11 @@ The full moon approaches. The 28 chapters become one."""
     async def refresh_cloud_model_catalog(self):
         """Refresh the Ollama cloud model catalog in data/config/.
 
-        AuthorAgent is the sole curator of living docs. This method fetches
-        the current cloud model list and updates the catalog file that the
-        boardroom, InferenceDiscovery, and docs reference.
+        This is a Chronos-domain task — time-bound, scheduled, periodic.
+        AuthorAgent executes it during the daily cycle because AuthorAgent
+        has the periodic loop. Chronos provides the discipline; AuthorAgent
+        provides the hands. The catalog feeds the boardroom, InferenceDiscovery,
+        and the Book.
         """
         catalog_path = PROJECT_ROOT / "data" / "config" / "ollama_cloud_models.json"
         try:
@@ -1352,7 +1354,8 @@ The full moon approaches. The 28 chapters become one."""
                     logger.info(f"AuthorAgent lunar cycle: {result}")
                 except Exception as e:
                     logger.warning(f"AuthorAgent daily chapter failed: {e}")
-                # Refresh cloud model catalog (AuthorAgent curates living docs)
+                # Chronos-domain tasks: scheduled catalog refresh
+                # AuthorAgent writes. Chronos keeps the schedule. Both serve the living docs.
                 try:
                     await self.refresh_cloud_model_catalog()
                 except Exception:
