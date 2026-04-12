@@ -73,6 +73,23 @@ details[open]>summary{margin-bottom:1px}
 .rk-v{background:rgba(36,36,20,.7);color:#d29922}.rk-p{background:rgba(20,20,36,.7);color:#6e7681}
 .rk-u{background:rgba(20,20,20,.7);color:#3d424d}
 .pulse{animation:p 2s ease-in-out infinite}@keyframes p{0%,100%{opacity:.3}50%{opacity:1}}
+
+/* ── Popup window system ── */
+.popup-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:100;display:none;backdrop-filter:blur(2px)}
+.popup-overlay.open{display:flex;align-items:center;justify-content:center}
+.popup{position:absolute;background:rgba(10,14,20,.97);border:1px solid rgba(48,54,61,.6);border-radius:6px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.6);min-width:320px;min-height:240px;resize:both}
+.popup-hdr{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(13,17,23,.9);border-bottom:1px solid rgba(48,54,61,.5);cursor:move;flex-shrink:0;user-select:none}
+.popup-hdr .title{font-size:11px;color:#e6edf3;font-weight:700;font-family:'SF Mono',monospace}
+.popup-hdr .title b{color:#58a6ff}
+.popup-tools{display:flex;gap:4px;align-items:center}
+.popup-tools button{width:24px;height:24px;border:1px solid rgba(48,54,61,.4);border-radius:3px;background:transparent;color:#8b949e;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.popup-tools button:hover{border-color:#58a6ff;color:#58a6ff;background:rgba(88,166,255,.06)}
+.popup-tools button[title]:hover::after{content:attr(title);position:absolute;top:100%;right:0;background:rgba(13,17,23,.95);color:#8b949e;padding:2px 6px;border-radius:3px;font-size:8px;white-space:nowrap;margin-top:4px;pointer-events:none}
+.popup-body{flex:1;overflow-y:auto;padding:8px 12px;scrollbar-width:thin;scrollbar-color:rgba(88,166,255,.2) transparent}
+.popup-body::-webkit-scrollbar{width:6px}.popup-body::-webkit-scrollbar-thumb{background:rgba(88,166,255,.2);border-radius:3px}
+.popup-status{padding:3px 10px;border-top:1px solid rgba(48,54,61,.3);font-size:8px;color:#484f58;flex-shrink:0;display:flex;justify-content:space-between}
+@keyframes popIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+.popup.animate{animation:popIn .2s ease-out}
 .toast{position:fixed;top:32px;right:8px;z-index:10;width:300px;pointer-events:none}
 .toast-item{background:rgba(10,32,18,.92);border:1px solid rgba(63,185,80,.3);border-radius:4px;padding:5px 8px;margin-bottom:4px;backdrop-filter:blur(12px);animation:slideIn .5s ease-out,toastPulse 2s ease-in-out 1s 2,fadeOut .8s ease-in 12s forwards;pointer-events:auto;box-shadow:0 2px 16px rgba(63,185,80,.12),0 1px 8px rgba(0,0,0,.3)}
 .toast-item .t-hdr{font-size:9px;color:#4a5060;display:flex;justify-content:space-between;margin-bottom:2px}
@@ -92,6 +109,23 @@ details[open]>summary{margin-bottom:1px}
 <body>
 <canvas id="bg"></canvas>
 <div class="toast" id="toast"></div>
+
+<!-- Popup Window Overlay -->
+<div class="popup-overlay" id="popup-overlay" onclick="if(event.target===this)dockPopup()">
+  <div class="popup animate" id="popup" style="width:700px;height:500px;top:10%;left:20%">
+    <div class="popup-hdr" id="popup-hdr">
+      <span class="title">mind<b>X</b> <span id="popup-tab-name">dialogue</span></span>
+      <div class="popup-tools">
+        <button onclick="copyPopupContent()" title="Copy to clipboard">&#x2398;</button>
+        <button onclick="exportPopupMd()" title="Export as .md">&#x21E9;</button>
+        <button onclick="togglePopupFullscreen()" title="Fullscreen" id="popup-fs-btn">&#x2922;</button>
+        <button onclick="dockPopup()" title="Dock back" style="color:#f85149">&#x2715;</button>
+      </div>
+    </div>
+    <div class="popup-body" id="popup-body"></div>
+    <div class="popup-status"><span id="popup-count">0 items</span><span>drag header to move &middot; resize from edges</span></div>
+  </div>
+</div>
 <div class="wrap">
 <div class="hdr">
 <div style="display:flex;align-items:center;gap:8px"><h1>mind<b>X</b></h1><div class="sub" id="sub">...</div></div>
@@ -100,7 +134,7 @@ details[open]>summary{margin-bottom:1px}
 <div class="main">
 <div class="left"><div class="g" id="grid"></div></div>
 <div class="right">
-<div class="tabs"><div class="tab active" onclick="T(0)" id="t0">dialogue</div><div class="tab" onclick="T(1)" id="t1">actions</div><div class="tab" onclick="T(2)" id="t2">agents</div><div class="tab" onclick="T(3)" id="t3">dojo</div><div class="tab" onclick="T(4)" id="t4">feed</div></div>
+<div class="tabs"><div class="tab active" onclick="T(0)" id="t0">dialogue</div><div class="tab" onclick="T(1)" id="t1">actions</div><div class="tab" onclick="T(2)" id="t2">agents</div><div class="tab" onclick="T(3)" id="t3">dojo</div><div class="tab" onclick="T(4)" id="t4">feed</div><div class="tab" onclick="openPopup()" id="t-expand" title="Expand to popup window" style="max-width:28px;color:#58a6ff">&#x26F6;</div></div>
 <div class="conv" id="pnl"></div>
 <div class="ft">mindx.pythai.net <span id="ts"></span> <a href="/docs.html">docs</a> <a href="/book" class="dm">book</a> <a href="/journal" class="dm">journal</a> <a href="/docs" class="dm">api</a></div>
 </div>
@@ -611,7 +645,166 @@ function rpnl(d){
 async function rf(){try{const r=await fetch(API);if(r.ok){LD=await r.json();render(LD)}}catch(e){document.getElementById('bge').textContent='OFF';document.getElementById('bge').className='badge w'}}
 rf();setInterval(rf,6000);
 
-// Thesis evidence now comes from /diagnostics/live (no separate fetch needed)
+// ── Popup Window System ──
+(function(){
+  const overlay=document.getElementById('popup-overlay');
+  const popup=document.getElementById('popup');
+  const popHdr=document.getElementById('popup-hdr');
+  const popBody=document.getElementById('popup-body');
+  const popTabName=document.getElementById('popup-tab-name');
+  const popCount=document.getElementById('popup-count');
+  let popOpen=false;
+  let popFS=false;
+  let savedStyle={};
+  const TABS=['dialogue','actions','agents','dojo','feed'];
+
+  // Open popup with current tab content
+  window.openPopup=function(){
+    overlay.classList.add('open');
+    popup.classList.add('animate');
+    popOpen=true;
+    popTabName.textContent=TABS[curT]||'data';
+    renderPopup();
+    setTimeout(()=>popup.classList.remove('animate'),200);
+  };
+
+  // Dock back to side panel
+  window.dockPopup=function(){
+    overlay.classList.remove('open');
+    popOpen=false;
+    if(popFS){togglePopupFullscreen()}
+  };
+
+  // Render full history into popup (not truncated like panel)
+  function renderPopup(){
+    if(!LD||!popOpen)return;
+    const d=LD;
+    let h='';let count=0;
+
+    if(curT===0){
+      // Full dialogue history
+      const ms=d.interactions||[];
+      count=ms.length;
+      ms.forEach(m=>{
+        const ts=m.timestamp||'',td=ts.length>10?ts.slice(5,19).replace('T',' '):ts;
+        h+=`<div class="msg msg-usr"><div class="msg-hdr"><span style="color:#d2a8ff;font-weight:600">${m.agent||'mindX'}</span><span>${td}</span></div><div class="msg-txt">${(m.prompt||'').replace(/</g,'&lt;')}</div></div>`;
+        h+=`<div class="msg msg-ai"><div class="msg-hdr"><span style="color:#3fb950;font-weight:600">${m.model||'?'}</span><span>${m.latency_ms?m.latency_ms+'ms':''}</span></div><div class="msg-txt">${(m.response||'').replace(/</g,'&lt;')}</div></div>`;
+      });
+    } else if(curT===1){
+      // Full actions
+      const acts=d.actions||[];
+      count=acts.length;
+      acts.forEach(a=>{
+        const sc=a.status==='completed'?'#3fb950':a.status==='failed'?'#f85149':'#d29922';
+        const ts=(a.created_at||'').slice(5,19).replace('T',' ');
+        h+=`<div style="padding:6px;border-bottom:1px solid rgba(8,11,16,.3)"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="color:${sc};font-weight:700;font-size:10px">${a.status}</span><span style="color:#6e7681;font-size:9px">${ts}</span></div><div style="font-size:11px;color:#c5d0dc;line-height:1.5;margin:3px 0">${(a.description||'').replace(/</g,'&lt;')}</div><div style="font-size:9px;color:#6e7681">${a.agent_id||'?'} &middot; ${a.action_type||'?'}${a.result?' &middot; '+a.result:''}</div></div>`;
+      });
+    } else if(curT===2){
+      // Full agent interactions
+      const ai=d.agent_interactions||[];
+      const st=d.dojo||[];
+      count=ai.length+st.length;
+      if(ai.length){
+        h+='<div style="font-size:10px;color:#58a6ff;font-weight:600;padding:4px 0;border-bottom:1px solid rgba(8,11,16,.3)">INTERACTIONS</div>';
+        ai.forEach(i=>{
+          h+=`<div style="padding:4px 0;border-bottom:1px solid rgba(8,11,16,.2)"><span style="color:#58a6ff">${i.from}</span> → ${i.to} <span style="color:#d2a8ff">${i.type}</span> ${i.topic?'['+i.topic+']':''} <span style="color:#484f58;font-size:9px">${i.ts}</span></div>`;
+        });
+      }
+    } else if(curT===3){
+      // Full dojo with all details
+      const st=d.dojo||[];
+      count=st.length;
+      st.forEach(s=>{
+        const sc=Math.min(100,s.score/100);
+        h+=`<div style="padding:4px 0;border-bottom:1px solid rgba(8,11,16,.3)"><div class="r"><span>${rk(s.tier)} <strong>${s.agent_id}</strong></span><span style="color:#4a5060">${s.rank} ${s.score} ${s.bona_fide?'BF':''}</span></div><div style="font-size:9px;color:#6e7681">group: ${s.group||'?'}</div>${bar(sc)}</div>`;
+      });
+    } else if(curT===4){
+      // Full feed
+      const events=window._afFeedEvents||[];
+      count=events.length;
+      if(window._afRenderToPanel){
+        window._afRenderToPanel(popBody);
+        popCount.textContent=count+' events';
+        return;
+      }
+    }
+    if(!h)h='<div style="padding:12px;color:#6e7681">No data yet.</div>';
+    popBody.innerHTML=h;
+    popCount.textContent=count+' items';
+  }
+
+  // Re-render popup when tab changes
+  const origT=window.T;
+  if(typeof origT==='function'){
+    // T is already defined as a global function
+  }
+  // Override T to also update popup
+  const _origT=T;
+  T=function(n){_origT(n);if(popOpen){popTabName.textContent=TABS[n]||'data';renderPopup()}};
+
+  // Copy content as text
+  window.copyPopupContent=function(){
+    const text=popBody.innerText;
+    navigator.clipboard.writeText(text).then(()=>{
+      popCount.textContent='Copied to clipboard!';
+      setTimeout(()=>renderPopup(),1500);
+    }).catch(()=>{
+      // Fallback
+      const ta=document.createElement('textarea');
+      ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();
+      popCount.textContent='Copied!';setTimeout(()=>renderPopup(),1500);
+    });
+  };
+
+  // Export as .md
+  window.exportPopupMd=function(){
+    const tabName=TABS[curT]||'data';
+    const text=popBody.innerText;
+    const md=`# mindX ${tabName} — ${new Date().toISOString()}\n\n${text}`;
+    const blob=new Blob([md],{type:'text/markdown'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=`mindx_${tabName}_${new Date().toISOString().slice(0,19).replace(/[:-]/g,'')}.md`;
+    a.click();URL.revokeObjectURL(url);
+    popCount.textContent='Exported!';setTimeout(()=>renderPopup(),1500);
+  };
+
+  // Fullscreen toggle
+  window.togglePopupFullscreen=function(){
+    if(!popFS){
+      savedStyle={width:popup.style.width,height:popup.style.height,top:popup.style.top,left:popup.style.left};
+      popup.style.width='96vw';popup.style.height='92vh';popup.style.top='2vh';popup.style.left='2vw';
+      document.getElementById('popup-fs-btn').innerHTML='&#x2923;';
+      popFS=true;
+    } else {
+      popup.style.width=savedStyle.width||'700px';popup.style.height=savedStyle.height||'500px';
+      popup.style.top=savedStyle.top||'10%';popup.style.left=savedStyle.left||'20%';
+      document.getElementById('popup-fs-btn').innerHTML='&#x2922;';
+      popFS=false;
+    }
+  };
+
+  // Drag-and-drop
+  let dragging=false,dragX=0,dragY=0;
+  popHdr.addEventListener('mousedown',e=>{
+    if(e.target.tagName==='BUTTON')return;
+    dragging=true;dragX=e.clientX-popup.offsetLeft;dragY=e.clientY-popup.offsetTop;
+    popup.style.transition='none';
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!dragging)return;
+    popup.style.left=(e.clientX-dragX)+'px';
+    popup.style.top=(e.clientY-dragY)+'px';
+  });
+  document.addEventListener('mouseup',()=>{dragging=false;popup.style.transition=''});
+
+  // Keyboard: Escape to dock
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&popOpen)dockPopup()});
+
+  // Also refresh popup on diagnostic update
+  const _origRf=rf;
+  rf=async function(){await _origRf();if(popOpen)renderPopup()};
+})();
 
 // ── Activity Feed (SSE) — integrated into tab 4 + header badge ──
 (function(){
