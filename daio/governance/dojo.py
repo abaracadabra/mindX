@@ -139,23 +139,23 @@ class Dojo:
             return {"error": f"Agent {agent_id} not found"}
 
         old_score = agent.get("reputation_score", 0)
-        new_score = max(0, min(10000, old_score + delta))
+        new_score = max(0, min(100000, old_score + delta))  # Cap at sovereign ceiling (100,000)
         old_rank = get_rank(old_score)
         new_rank = get_rank(new_score)
 
         agent["reputation_score"] = new_score
 
-        # Update verification tier
-        if new_score >= 8000:
-            agent["verification_tier"] = 4  # sovereign
-        elif new_score >= 5000:
-            agent["verification_tier"] = 3  # bona_fide
-        elif new_score >= 3000:
-            agent["verification_tier"] = 2  # verified
-        elif new_score >= 1000:
-            agent["verification_tier"] = 1  # provisional
+        # Update verification tier — aligned with RANKS thresholds
+        if new_score >= 50001:
+            agent["verification_tier"] = 4  # sovereign (rank: sovereign)
+        elif new_score >= 5001:
+            agent["verification_tier"] = 3  # bona_fide (rank: master+)
+        elif new_score >= 1501:
+            agent["verification_tier"] = 2  # verified (rank: expert+)
+        elif new_score >= 501:
+            agent["verification_tier"] = 1  # provisional (rank: journeyman+)
         else:
-            agent["verification_tier"] = 0  # unverified
+            agent["verification_tier"] = 0  # unverified (novice/apprentice)
 
         # BONA FIDE clawback check
         if new_score < 2500:

@@ -126,6 +126,12 @@ class Boardroom:
         except Exception:
             pass
 
+        # Validate all 7 soldiers are present — missing soldiers get default provider
+        for soldier_id in SOLDIER_WEIGHTS:
+            if soldier_id not in self.soldier_providers:
+                self.soldier_providers[soldier_id] = "ollama"  # Default fallback
+                logger.warning(f"Boardroom: soldier '{soldier_id}' missing from provider map, defaulting to ollama")
+
     @classmethod
     async def get_instance(cls) -> "Boardroom":
         if cls._instance is None:

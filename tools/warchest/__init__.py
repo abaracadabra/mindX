@@ -11,6 +11,7 @@
 #   lockdown.py     — emergency containment, shut down exposed surfaces
 #   suntsu.agent    — strategic doctrine (Art of War)
 #   myoshi.agent    — tactical precision (Book of Five Rings)
+#   judgedread.agent — I am the law. Reputation verdicts and BONA FIDE enforcement
 #
 # These tools are not for routine operation. They are reserves.
 # Deployed when the situation demands overwhelming response.
