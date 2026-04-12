@@ -1038,7 +1038,7 @@ _PUBLIC_EXACT = frozenset({
     "/governance/status",
 })
 _PUBLIC_PREFIXES = (
-    "/doc/", "/docs", "/redoc", "/mindterm/static/",
+    "/doc/", "/docs", "/redoc", "/thesis/", "/mindterm/static/",
     "/dojo/agent/", "/bankon", "/agenticplace/", "/chat/docs",
     "/actions/export", "/diagnostics/export", "/api/rage/embed",
     "/users/challenge", "/users/register", "/error-pages/", "/static/",
