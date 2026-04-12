@@ -184,11 +184,11 @@ Full list: [Agent Docs](agents/) (30 agent docs)
 
 ### RAGE (not RAG)
 
-mindX uses RAGE (Retrieval Augmented Generation Engine) — not RAG. RAGE is semantic retrieval through the [AGInt cognitive engine](AGINT.md), backed by [pgvector](pgvectorscale_memory_integration.md) for vector storage and [Ollama embeddings](ollama/features/embeddings.md) (`mxbai-embed-large`, `nomic-embed-text`).
+mindX uses RAGE (Retrieval Augmented Generation Engine) — not RAG. RAGE is semantic retrieval through the [AGInt cognitive engine](AGINT.md), backed by [pgvector](https://github.com/pgvector/pgvector) for vector storage and [Ollama embeddings](ollama/features/embeddings.md) ([`mxbai-embed-large`](https://ollama.com/library/mxbai-embed-large), [`nomic-embed-text`](https://ollama.com/library/nomic-embed-text)). Compare to [SwarmRecall](https://github.com/swarmclawai/swarmrecall)'s hosted persistence — mindX owns its own memory stack.
 
-- [AGInt / RAGE](AGINT.md) — Augmented Intelligence reasoning and retrieval architecture
-- [Memory Architecture](mindx_memory_architecture_scalable.md) — Scalable memory design
-- [pgvector Integration](pgvectorscale_memory_integration.md) — PostgreSQL 16 + pgvector (151,000+ memories in production)
+- [AGInt / RAGE](AGINT.md) — Augmented Intelligence reasoning and retrieval architecture, origin of the [BDI cognitive loop](agents/bdi_agent.md)
+- [Memory Architecture](mindx_memory_architecture_scalable.md) — Scalable memory design documented in the [Thesis](THESIS.md)
+- [pgvector Integration](pgvectorscale_memory_integration.md) — [PostgreSQL 16](https://www.postgresql.org/) + [pgvector](https://github.com/pgvector/pgvector) (157K+ memories in [production](DEPLOYMENT_MINDX_PYTHAI_NET.md))
 
 ### Memory Tiers
 
@@ -220,10 +220,10 @@ The schema layer is recursive: mindX writes its own documentation, references it
 
 ### DAIO (Decentralized Autonomous Intelligence Organization)
 
-- [DAIO Framework](DAIO.md) — On-chain governance with Solidity smart contracts ([Foundry-based](../daio/contracts/))
-- [DAIO Civilization](DAIO_CIVILIZATION_GOVERNANCE.md) — Governance as civilization-building
-- [Boardroom Consensus](#boardroom) — Multi-agent voting with weighted authority
-- [Dojo Reputation](#dojo) — 7-rank privilege escalation via BONA FIDE on Algorand
+- [DAIO Framework](DAIO.md) — On-chain governance with [Solidity](https://soliditylang.org/) smart contracts, [Foundry](https://github.com/foundry-rs/foundry) toolchain, [OpenZeppelin](https://github.com/OpenZeppelin/openzeppelin-contracts) contracts. The third pillar of the [Manifesto](MANIFESTO.md).
+- [DAIO Civilization](DAIO_CIVILIZATION_GOVERNANCE.md) — Governance as civilization-building. 2/3 consensus across Marketing, Community, Development — documented in the [Thesis](THESIS.md).
+- [Boardroom Consensus](#boardroom) — Multi-agent voting. [CEOAgent](agents/ceo_agent.md) bridges [on-chain directives](../daio/contracts/) to [off-chain execution](../agents/orchestration/ceo_agent.py).
+- [Dojo Reputation](#dojo) — 7-rank privilege escalation. BONA FIDE = privilege from reputation, not assignment. The [Manifesto](MANIFESTO.md) principle: "earned sovereignty."
 
 ### Safety & Circuit Breakers
 
@@ -305,9 +305,9 @@ mindX is a Godel machine — a self-improving system where the improvement mecha
 
 ## Interoperability
 
-- [A2A Protocol](a2a_tool.md) — Agent-to-agent communication, cryptographic signing, discovery via agent cards ([source](../tools/communication/a2a_tool.py))
-- [MCP (Model Context Protocol)](mcp_tool.md) — Structured context for agent actions, tool definitions ([source](../tools/communication/mcp_tool.py))
-- [AgenticPlace](AgenticPlace_Deep_Dive.md) — Agent marketplace at [agenticplace.pythai.net](https://agenticplace.pythai.net); `.extensions` → `.json` → blockchain publishing
+- [A2A Protocol](a2a_tool.md) — [Agent-to-agent](https://github.com/a2aproject/a2a-python) communication, cryptographic signing, discovery via agent cards. Compare to [SwarmRelay](https://github.com/swarmclawai/swarmrelay)'s E2E encrypted messaging. ([source](../tools/communication/a2a_tool.py))
+- [MCP (Model Context Protocol)](mcp_tool.md) — [Anthropic MCP](https://modelcontextprotocol.io/) for structured context, tool registration. [HostingerVPSAgent](../agents/hostinger_vps_agent.py) registers its [3 channels](../agents/hostinger.vps.agent) as MCP tools. ([source](../tools/communication/mcp_tool.py))
+- [AgenticPlace](AgenticPlace_Deep_Dive.md) — Agent marketplace at [agenticplace.pythai.net](https://agenticplace.pythai.net); `.extensions` → `.json` → blockchain publishing. [SwarmFeed](https://github.com/swarmclawai/swarmfeed) timeline patterns inform agent activity discovery.
 
 ## Economics
 
@@ -317,11 +317,12 @@ mindX is a Godel machine — a self-improving system where the improvement mecha
 
 ## Publications & Research
 
-- [Thesis](THESIS.md) — Darwin-Godel Machine synthesis: mindX as practical implementation
-- [Manifesto](MANIFESTO.md) — 3 pillars, Project Chimaiera, $BANKON token, cypherpunk tradition
-- [Book of mindX](BOOK_OF_MINDX.md) — 17 chapters, autonomous Godel journal, lunar cycle editions
+- [Thesis](THESIS.md) — [Darwin](ATTRIBUTION.md#intellectual-inspirations)-[Godel](ATTRIBUTION.md#intellectual-inspirations) Machine synthesis: mindX as practical implementation of [self-referential improvement](BOOK_OF_MINDX.md). The [BDI architecture](agents/bdi_agent.md) is the cognitive substrate, the [5-step resilience chain](ollama/INDEX.md#resilience-design) is the operational guarantee, and the [Dojo](../daio/governance/dojo.py) is the evolutionary pressure.
+- [Manifesto](MANIFESTO.md) — 3 pillars ([BDI reasoning](agents/bdi_agent.md), [BANKON vault](vault_system.md), [DAIO governance](DAIO.md)), Project [Chimaiera](ollama/setup/modelfile.md#from-modelfile-to-agent-alignment) roadmap, $BANKON token, [cypherpunk](ATTRIBUTION.md#intellectual-inspirations) tradition. Not cyberpunk — sovereign agents earn privilege through [Dojo reputation](#dojo), not assigned authority.
+- [Book of mindX](BOOK_OF_MINDX.md) — 17 chapters written by [AuthorAgent](AUTHOR_AGENT.md) via [machine.dreaming](#self-improvement). Lunar cycle editions. The [Godel journal](BOOK_OF_MINDX.md) — the machine's record of its own improvement.
 - [Emergent Resilience](publications/ErmegentResilience.md) — Academic paper on emergent resilient AI systems
 - [Academic Overview](academic_overview.md) — Formal academic framing
+- [Attribution](ATTRIBUTION.md) — Open source that powers mindX: [Ollama](https://ollama.com), [vLLM](https://github.com/vllm-project/vllm), [SwarmClaw](https://github.com/swarmclawai), [pgvector](https://github.com/pgvector/pgvector), [A2A](https://github.com/a2aproject/a2a-python), [MCP](https://modelcontextprotocol.io/), and every dependency acknowledged
 
 ## PYTHAI Ecosystem
 
@@ -333,18 +334,49 @@ mindX is a Godel machine — a self-improving system where the improvement mecha
 | BANKON | [bankon.pythai.net](https://bankon.pythai.net) | Token deployment |
 | PYTHAI GPT | [gpt.pythai.net](https://gpt.pythai.net) | Team GPT (mindX interacts via OpenAI) |
 
+## Open Source Stack & Attribution
+
+### Inference
+
+| Project | Role | mindX Integration |
+|---------|------|-------------------|
+| [Ollama](https://ollama.com) | Local + cloud LLM inference | [Dual-pillar operational standard](#operational-standards): [CPU pillar](ollama/INDEX.md) (`localhost:11434`) + [Cloud pillar](ollama/cloud/cloud.md) (`ollama.com`). [OllamaCloudTool](../tools/cloud/ollama_cloud_tool.py), [OllamaChatManager](../agents/core/ollama_chat_manager.py), [precision metrics](ollama/mindx/precision_metrics.md). [28-file local reference](ollama/INDEX.md). |
+| [Ollama Docs](https://docs.ollama.com/) | API reference | Fetched and compiled into [docs/ollama/](ollama/INDEX.md) for resilient offline operation |
+| [Ollama Cloud](https://ollama.com/search?c=cloud) | GPU inference (36+ models) | [Cloud guarantee](ollama/INDEX.md#resilience-design) — Step 5 in [resilience chain](../llm/RESILIENCE.md). [8.2x faster](ollama/INDEX.md#latest-benchmark-2026-04-11) than CPU. |
+| [vLLM](https://github.com/vllm-project/vllm) | High-throughput GPU serving | [Research](OLLAMA_VLLM_CLOUD_RESEARCH.md): not viable on 4GB VPS; planned for [GPU server](ollama/mindx/architecture.md) when online. PagedAttention, continuous batching. |
+
+### SwarmClaw AI Stack (open source reference architecture)
+
+mindX extrapolates ideas from the [SwarmClaw](https://github.com/swarmclawai) ecosystem while maintaining its own [cypherpunk identity](MANIFESTO.md) and [BDI cognitive architecture](agents/bdi_agent.md). Attribution: ideas adapted, not code imported.
+
+| Project | What It Does | mindX Extrapolation |
+|---------|-------------|---------------------|
+| [swarmclaw](https://github.com/swarmclawai/swarmclaw) | Agent runtime & orchestration — multi-provider, delegation, scheduling, task board, chat connectors | mindX [Orchestration Hierarchy](#orchestration-hierarchy): [CEO](agents/ceo_agent.md) → [Mastermind](agents/mastermind_agent.md) → [Coordinator](agents/coordinator_agent.md). [Multi-provider inference](../llm/inference_discovery.py). [Boardroom](#boardroom) delegation. |
+| [swarmrecall](https://github.com/swarmclawai/swarmrecall) | Hosted persistence for agents — memory, knowledge graphs, learnings, skills as a service | mindX [RAGE](#rage-not-rag) + [pgvector](#memory-tiers) (157K+ memories, 131K embeddings). [Memory Agent](agents/memory_agent.md). [machine.dreaming](#self-improvement) LTM consolidation. |
+| [swarmrelay](https://github.com/swarmclawai/swarmrelay) | E2E encrypted agent messaging — DMs, groups, key rotation, WebSocket, A2A Protocol | mindX [A2A Tool](a2a_tool.md) for agent-to-agent communication. [MCP Tool](mcp_tool.md) for structured context. [Boardroom](#boardroom) consensus messaging. |
+| [swarmfeed](https://github.com/swarmclawai/swarmfeed) | Social network for AI agents — post, follow, react, discover through shared timeline | mindX [Activity Feed](../mindx_backend_service/activity_feed.py): SSE real-time stream with [room filtering](../mindx_backend_service/activity_feed.py) (boardroom, dojo, inference, thinking). Integrated into [dashboard](https://mindx.pythai.net). |
+| [swarmvault](https://github.com/swarmclawai/swarmvault) | Local-first LLM knowledge base compiler — raw sources → markdown wiki + knowledge graph + search index | mindX [three-layer knowledge model](SCHEMA.md): STM (raw) → LTM (compiled via [RAGE](AGINT.md)) → docs (schema). [SCHEMA.md](SCHEMA.md) as the instruction layer. |
+
+**AgenticPlace integration**: The SwarmClaw stack's marketplace and relay patterns inform [AgenticPlace](AgenticPlace_Deep_Dive.md) at [agenticplace.pythai.net](https://agenticplace.pythai.net) — agent `.extensions` → `.json` → blockchain publishing. The [swarmfeed](https://github.com/swarmclawai/swarmfeed) timeline pattern could extend AgenticPlace with agent activity discovery.
+
+### Infrastructure
+
+| Project | Role | mindX Integration |
+|---------|------|-------------------|
+| [pgvector](https://github.com/pgvector/pgvector) | Vector similarity search for PostgreSQL | [151K+ memories](DEPLOYMENT_MINDX_PYTHAI_NET.md), 131K embeddings, [RAGE semantic search](AGINT.md) |
+| [A2A Protocol](https://github.com/a2aproject/a2a-python) | Agent-to-agent communication standard | [A2A Tool](a2a_tool.md): agent discovery, cryptographic signing, message delivery |
+
 ## External References
 
 | Resource | URL |
 |----------|-----|
 | mindX GitHub | [github.com/Professor-Codephreak](https://github.com/Professor-Codephreak) |
+| SwarmClaw AI | [github.com/swarmclawai](https://github.com/swarmclawai) |
 | Ollama | [ollama.com](https://ollama.com) |
-| Ollama Docs | [docs.ollama.com](https://docs.ollama.com/) |
 | Ollama Cloud Models | [ollama.com/search?c=cloud](https://ollama.com/search?c=cloud) |
-| SwarmClaw (reference) | [swarmclaw.ai/docs](https://www.swarmclaw.ai/docs) |
-| SwarmVault (reference) | [github.com/swarmclawai/swarmvault](https://github.com/swarmclawai/swarmvault) |
-| A2A Protocol | [github.com/a2aproject/a2a-python](https://github.com/a2aproject/a2a-python) |
+| vLLM | [github.com/vllm-project/vllm](https://github.com/vllm-project/vllm) |
 | pgvector | [github.com/pgvector/pgvector](https://github.com/pgvector/pgvector) |
+| A2A Protocol | [github.com/a2aproject/a2a-python](https://github.com/a2aproject/a2a-python) |
 
 ---
 

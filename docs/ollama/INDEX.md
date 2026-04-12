@@ -318,7 +318,8 @@ Implementation: [`_resolve_inference_model()`](../../agents/core/mindXagent.py) 
 | mindX Production | [mindx.pythai.net](https://mindx.pythai.net) | Live [CPU pillar](#operational-standards) |
 | mindX Thesis | [`docs/THESIS.md`](../../docs/THESIS.md) | Darwin-Godel Machine synthesis |
 | mindX Manifesto | [`docs/MANIFESTO.md`](../../docs/MANIFESTO.md) | [Chimaiera](#modelfile-as-canonical-schema) roadmap |
-| RAGE | [`docs/AGINT.md`](../../docs/AGINT.md) | [Embeddings](features/embeddings.md) architecture |
+| RAGE | [`docs/AGINT.md`](../../docs/AGINT.md) | [Embeddings](features/embeddings.md) architecture — RAGE wipes the floor with RAG |
+| Attribution | [`docs/ATTRIBUTION.md`](../../docs/ATTRIBUTION.md) | Open source stack: [Ollama](https://ollama.com), [vLLM](https://github.com/vllm-project/vllm), [SwarmClaw](https://github.com/swarmclawai), [pgvector](https://github.com/pgvector/pgvector) |
 
 ---
 
