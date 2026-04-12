@@ -1291,6 +1291,41 @@ The full moon approaches. The 28 chapters become one."""
             pass  # Inference unavailable — chapter stands as-is
         return chapter_text
 
+    # ── Living documentation curation ──
+
+    async def refresh_cloud_model_catalog(self):
+        """Refresh the Ollama cloud model catalog in data/config/.
+
+        AuthorAgent is the sole curator of living docs. This method fetches
+        the current cloud model list and updates the catalog file that the
+        boardroom, InferenceDiscovery, and docs reference.
+        """
+        catalog_path = PROJECT_ROOT / "data" / "config" / "ollama_cloud_models.json"
+        try:
+            from tools.cloud.ollama_cloud_tool import OllamaCloudTool
+            cloud = OllamaCloudTool()
+            result = await cloud.execute(operation="list_models", force_refresh=True)
+            if result.get("success") and result.get("models"):
+                models = result["models"]
+                # Load existing catalog to preserve boardroom assignments
+                existing = {}
+                if catalog_path.exists():
+                    existing = json.loads(catalog_path.read_text(encoding="utf-8"))
+                existing["cloud_models"] = [
+                    {"name": m.get("name", ""), "params": m.get("details", {}).get("parameter_size", ""),
+                     "tags": m.get("capabilities", []), "best_for": m.get("description", "")[:80]}
+                    for m in models if m.get("name")
+                ]
+                existing["last_updated"] = datetime.now(timezone.utc).isoformat()
+                existing["updated_by"] = "AuthorAgent.refresh_cloud_model_catalog"
+                existing["model_count"] = len(existing["cloud_models"])
+                catalog_path.write_text(json.dumps(existing, indent=2), encoding="utf-8")
+                logger.info(f"AuthorAgent: refreshed cloud model catalog ({len(existing['cloud_models'])} models)")
+                return {"status": "refreshed", "models": len(existing["cloud_models"])}
+        except Exception as e:
+            logger.debug(f"AuthorAgent: cloud catalog refresh failed: {e}")
+        return {"status": "unchanged"}
+
     # ── Periodic runners ──
 
     async def run_daily(self):
@@ -1306,7 +1341,9 @@ The full moon approaches. The 28 chapters become one."""
         self._periodic_task = None
 
     async def run_periodic(self, interval_seconds: int = 86400):
-        """Write one chapter per day on the lunar cycle (24h default)."""
+        """Write one chapter per day on the lunar cycle (24h default).
+        Also refreshes the cloud model catalog daily — AuthorAgent is the
+        sole curator of living documentation."""
         self._periodic_running = True
         try:
             while True:
@@ -1315,6 +1352,11 @@ The full moon approaches. The 28 chapters become one."""
                     logger.info(f"AuthorAgent lunar cycle: {result}")
                 except Exception as e:
                     logger.warning(f"AuthorAgent daily chapter failed: {e}")
+                # Refresh cloud model catalog (AuthorAgent curates living docs)
+                try:
+                    await self.refresh_cloud_model_catalog()
+                except Exception:
+                    pass
                 await asyncio.sleep(interval_seconds)
         except asyncio.CancelledError:
             logger.info("AuthorAgent: periodic task cancelled")
