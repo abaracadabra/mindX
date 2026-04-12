@@ -283,6 +283,7 @@ Implementation: [`_resolve_inference_model()`](../../agents/core/mindXagent.py) 
 | [`api/ollama/ollama_admin_routes.py`](../../api/ollama/ollama_admin_routes.py) | Admin endpoints (status, test, models) | [FAQ](setup/faq.md) | CPU |
 | [`agents/core/model_scorer.py`](../../agents/core/model_scorer.py) | [`HierarchicalModelScorer`](../../agents/core/model_scorer.py) | [Modelfile Schema](#modelfile-as-canonical-schema) | Both |
 | [`agents/core/inference_optimizer.py`](../../agents/core/inference_optimizer.py) | Sliding-scale frequency optimization | [Architecture](mindx/architecture.md) | CPU |
+| [`agents/hostinger_vps_agent.py`](../../agents/hostinger_vps_agent.py) | VPS management: 3 MCP channels (SSH + [Hostinger API](https://developers.hostinger.com) + [Backend](https://mindx.pythai.net)) | [NAV.md](../NAV.md#deployment) | Both |
 
 ### Test Scripts
 

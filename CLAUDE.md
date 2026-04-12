@@ -8,6 +8,8 @@ mindX is an autonomous multi-agent orchestration system implementing a Belief-De
 
 **Documentation**: [`docs/NAV.md`](docs/NAV.md) is the master navigation hub — 40+ sections covering all agents, tools, governance, inference, memory, deployment. [`docs/SCHEMA.md`](docs/SCHEMA.md) is the instruction layer — how to maintain, cross-reference, and evolve the docs. Start with NAV.
 
+**VPS Deployment**: [`agents/hostinger_vps_agent.py`](agents/hostinger_vps_agent.py) manages mindx.pythai.net via three MCP channels: SSH, [Hostinger API](https://developers.hostinger.com), and mindX Backend HTTPS. See [`agents/hostinger.vps.agent`](agents/hostinger.vps.agent) for full parameters.
+
 ## Development Commands
 
 ### Setup

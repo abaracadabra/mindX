@@ -105,6 +105,13 @@ Reputation-based privilege escalation — every agent earns rank through demonst
 | Grandmaster | 15,001–50,000 | Constitutional vote participation |
 | Sovereign | 50,001+ | Self-governing |
 
+### Infrastructure Agents
+
+| Agent | Channels | Role |
+|-------|----------|------|
+| [HostingerVPSAgent](../agents/hostinger_vps_agent.py) | SSH + [Hostinger API](https://developers.hostinger.com) + [Backend HTTPS](https://mindx.pythai.net) | VPS deployment, health, metrics, backups. Three MCP channels. [.agent](../agents/hostinger.vps.agent) |
+| [OllamaCloudTool](../tools/cloud/ollama_cloud_tool.py) | Local proxy + [Cloud API](https://ollama.com) | Cloud inference for any agent. [Dual pillar](ollama/INDEX.md#operational-standards). 9 operations. |
+
 ### Specialized Agents
 
 | Agent | Role | Doc |
@@ -274,6 +281,7 @@ Priority: Environment variables (`MINDX_` prefix) > [BANKON Vault](vault_system.
 ## Deployment
 
 - [Production Deployment](DEPLOYMENT_MINDX_PYTHAI_NET.md) — mindx.pythai.net on Hostinger VPS (168.231.126.58), Apache2 + Let's Encrypt, systemd service
+- [HostingerVPSAgent](../agents/hostinger_vps_agent.py) — Three MCP channels for VPS management: SSH (shell), [Hostinger API](https://developers.hostinger.com) (restart/metrics/backups), [mindX Backend](https://mindx.pythai.net) (diagnostics/activity). Persistent state, MCP tool registration. See [.agent definition](../agents/hostinger.vps.agent)
 - [Vault System](vault_system.md) — BANKON Vault: AES-256-GCM + HKDF-SHA512 encrypted credentials
 - [Docker](ollama/setup/docker.md) — Ollama containerization (CPU, NVIDIA, AMD)
 - [Production Stack](DEPLOYMENT_MINDX_PYTHAI_NET.md) — PostgreSQL 16 + pgvector, 8 local models, 36 cloud models, 20 sovereign agents, machine.dreaming 2h LTM cycles

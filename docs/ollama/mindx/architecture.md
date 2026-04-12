@@ -148,10 +148,21 @@ Test script: [`scripts/test_cloud_all_models.py`](../../../scripts/test_cloud_al
 - Admin routes for diagnostics
 - HierarchicalModelScorer feedback loop
 
-## Cloud Integration (To Add)
+## Cloud Integration (Implemented)
 
-1. Store `OLLAMA_API_KEY` in BANKON vault
-2. Add `ollama_cloud` as inference source in InferenceDiscovery
-3. Route heavy tasks to cloud, light tasks to local (ResourceGovernor)
-4. Rate limit cloud at 10 RPM (see cloud/rate_limiting.md)
-5. Use cloud model discovery for dynamic capability updates
+- [`OllamaCloudTool`](../../../tools/cloud/ollama_cloud_tool.py) — cloud inference as a first-class BaseTool
+- Wired into [`_resolve_inference_model()`](../../../agents/core/mindXagent.py) as Step 5 (guarantee)
+- Rate limited at 10 RPM via embedded `CloudRateLimiter`
+- 18dp precision metrics at `data/metrics/cloud_precision_metrics.json`
+
+## VPS Deployment (HostingerVPSAgent)
+
+[`agents/hostinger_vps_agent.py`](../../../agents/hostinger_vps_agent.py) manages the production VPS through three MCP channels:
+
+| Channel | Transport | Auth | Capabilities |
+|---------|-----------|------|-------------|
+| SSH | `root@168.231.126.58` | `~/.ssh/id_rsa` | deploy, health, restart, logs, models, disk |
+| [Hostinger API](https://developers.hostinger.com) | HTTPS | `HOSTINGER_API_KEY` | restart (no SSH), metrics, backups, VPS info |
+| [mindX Backend](https://mindx.pythai.net) | HTTPS | None (public) | health, diagnostics, inference, dojo, activity |
+
+`full_health_check()` queries all three in parallel. `register_mcp_context()` publishes tool definitions for agent discovery. See [`.agent` definition](../../../agents/hostinger.vps.agent).
