@@ -96,7 +96,7 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 <div class="main">
 <div class="left"><div class="g" id="grid"></div></div>
 <div class="right">
-<div class="tabs"><div class="tab active" onclick="T(0)" id="t0">dialogue</div><div class="tab" onclick="T(1)" id="t1">actions</div><div class="tab" onclick="T(2)" id="t2">agents</div><div class="tab" onclick="T(3)" id="t3">dojo</div></div>
+<div class="tabs"><div class="tab active" onclick="T(0)" id="t0">dialogue</div><div class="tab" onclick="T(1)" id="t1">actions</div><div class="tab" onclick="T(2)" id="t2">agents</div><div class="tab" onclick="T(3)" id="t3">dojo</div><div class="tab" onclick="T(4)" id="t4">feed</div></div>
 <div class="conv" id="pnl"></div>
 <div class="ft">mindx.pythai.net <span id="ts"></span> <a href="/docs.html">docs</a> <a href="/book" class="dm">book</a> <a href="/journal" class="dm">journal</a> <a href="/docs" class="dm">api</a></div>
 </div>
@@ -307,6 +307,51 @@ function render(d){
     ah+=`<div class="r"><span><span class="d dg"></span>health auditor</span><span style="color:#4a5060">${healthActions} checks</span></div>`;
   }
   h+=`<div class="c w2"><div class="ct">autonomous systems</div>${ah}</div>`;
+  // governor profile — resource awareness
+  if(gv.profile){
+    const gp=gv.profile,gs=gv.system||{};
+    let gh='';
+    gh+=`<div class="r"><span>RAM budget</span><span style="color:#58a6ff">${gp.max_ram_pct}%</span></div>`;
+    gh+=`<div class="r"><span>CPU budget</span><span style="color:#58a6ff">${gp.max_cpu_pct}%</span></div>`;
+    gh+=`<div class="r"><span>neighbor RAM</span><span style="color:#d29922">${(gs.neighbor_ram_pct||0).toFixed(1)}%</span></div>`;
+    gh+=`<div class="r"><span>system RAM</span><span style="color:${gs.system_ram_pct>65?'#f85149':'#3fb950'}">${(gs.system_ram_pct||0).toFixed(1)}%</span></div>`;
+    gh+=`<div class="r"><span>keep alive</span><span style="color:#4a5060">${gp.ollama_keep_alive}</span></div>`;
+    if(gp.description)gh+=`<div style="font-size:8px;color:#484f58;padding-top:3px;border-top:1px solid rgba(8,11,16,.3)">${gp.description}</div>`;
+    h+=`<div class="c"><div class="ct">governor: ${gv.mode} ${gv.auto_adjust?'(auto)':''}</div>${gh}</div>`;
+  }
+  // database deep — the knowledge store
+  if(db.status==='connected'){
+    let ddb='';
+    ddb+=`<div class="r"><span>memories</span><span style="color:#3fb950;font-weight:600;font-size:14px">${(db.memories||0).toLocaleString()}</span></div>`;
+    ddb+=`<div class="r"><span>embeddings</span><span style="color:#d2a8ff">${(db.mem_embeddings||0).toLocaleString()}</span></div>`;
+    ddb+=`<div class="r"><span>doc chunks</span><span style="color:#79c0ff">${db.doc_embeddings||0}</span></div>`;
+    ddb+=`<div class="r"><span>actions</span><span style="color:#8b949e">${db.actions||0}</span></div>`;
+    ddb+=`<div class="r"><span>G&ouml;del choices</span><span style="color:#d29922">${db.godel_choices||0}</span></div>`;
+    ddb+=`<div class="r"><span>size</span><span style="color:#4a5060">${db.db_size||'?'}</span></div>`;
+    h+=`<div class="c"><div class="ct">pgvector knowledge</div>${ddb}</div>`;
+  }
+  // boardroom sessions
+  const bs=d.boardroom||[];
+  if(bs.length){
+    let bh='';
+    bs.slice(0,5).forEach(s=>{
+      const oc=s.outcome==='approved'?'#3fb950':s.outcome==='rejected'?'#f85149':'#d29922';
+      bh+=`<div class="r"><span style="color:${oc};font-weight:600;font-size:9px">${(s.outcome||'?').toUpperCase()}</span><span style="color:#b0b8c4;font-size:9px">${(s.directive||'').slice(0,60)}</span></div>`;
+      bh+=`<div class="r"><span style="color:#4a5060;font-size:8px;padding-left:8px">${s.votes||0} votes &middot; score ${s.score||0} &middot; ${s.dissent||0} dissent</span></div>`;
+    });
+    h+=`<div class="c w2"><div class="ct">boardroom sessions</div>${bh}</div>`;
+  }
+  // recent actions with improvement context
+  const acts=(d.actions||[]).slice(0,6);
+  if(acts.length){
+    let ach='';
+    acts.forEach(a=>{
+      const sc=a.status==='completed'?'dg':a.status==='failed'?'dr':a.status==='pending'?'dy':'dx';
+      ach+=`<div class="r"><span><span class="d ${sc}"></span><span style="font-weight:600">${a.agent_id||'?'}</span></span><span style="color:#4a5060;font-size:9px">${a.action_type||''}</span></div>`;
+      ach+=`<div style="font-size:9px;color:#8b949e;padding:0 0 3px 12px;border-bottom:1px solid rgba(8,11,16,.3)">${(a.description||'').slice(0,80)}</div>`;
+    });
+    h+=`<div class="c w2"><div class="ct">recent actions</div>${ach}</div>`;
+  }
   // live agent interactions — the pulse of mindX
   const ai=d.agent_interactions||[];
   if(ai.length){
@@ -316,47 +361,69 @@ function render(d){
     });
     h+=`<div class="c w2"><div class="ct">agent interactions (${ai.length} events)</div>${ih}</div>`;
   }
-  // active endpoints — show what's responding
+  // ── Endpoints with clickable links ──
   let ep='';
-  ep+=`<div class="r"><span><span class="d dg"></span>/diagnostics/live</span><span style="color:#4a5060">6s poll</span></div>`;
-  ep+=`<div class="r"><span><span class="d dg"></span>/health</span><span style="color:#4a5060">200 OK</span></div>`;
-  if(inf.available>0)ep+=`<div class="r"><span><span class="d dg"></span>/inference/status</span><span style="color:#4a5060">${inf.available} sources</span></div>`;
-  ep+=`<div class="r"><span><span class="d ${(d.database||{}).status==='connected'?'dg':'dr'}"></span>pgvector</span><span style="color:#4a5060">${(d.database||{}).status||'?'}</span></div>`;
-  if(d.dojo?.length)ep+=`<div class="r"><span><span class="d dg"></span>/dojo/standings</span><span style="color:#4a5060">${d.dojo.length} agents</span></div>`;
-  ep+=`<div class="r"><span><span class="d ${(d.actions||[]).length>0?'dg':'dx'}"></span>/actions</span><span style="color:#4a5060">${(d.database||{}).actions||0} total</span></div>`;
-  ep+=`<div class="r"><span><span class="d dg"></span>RAGE</span><span style="color:#4a5060">${(d.rage_embed||{}).docs||0} docs, ${(d.rage_embed||{}).memories||0} vectors</span></div>`;
-  h+=`<div class="c"><div class="ct">endpoints</div>${ep}</div>`;
-  // memory activity — which agents are actively creating memories
-  const stmAgents=Object.entries(d.memory?.stm_by_agent||{}).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const EPS=[
+    ['/diagnostics/live','dg','6s poll','Real-time system telemetry — CPU, memory, agents, inference, actions, beliefs'],
+    ['/activity/stream','dg','SSE','Server-Sent Events real-time activity feed'],
+    ['/activity/recent','dg','JSON','Recent activity events with room filtering'],
+    ['/health','dg','200 OK','Simple health check'],
+    ['/inference/status','dg',inf.available+'/'+inf.total+' src','Inference provider availability and scores'],
+    ['/dojo/standings','dg',(d.dojo||[]).length+' agents','Agent reputation rankings with BONA FIDE verification'],
+    ['/redoc','dg','API','Full API reference — '+(db.actions||0)+' actions tracked'],
+  ];
+  if(db.status==='connected')EPS.push(['/docs','dg',db.db_size||'?','pgvector: '+(db.memories||0).toLocaleString()+' memories, '+(db.mem_embeddings||0).toLocaleString()+' embeddings']);
+  EPS.forEach(([path,st,label,tip])=>{
+    ep+=`<div class="r" title="${tip}"><span><span class="d ${st}"></span><a href="${path}" style="color:#79c0ff;text-decoration:none;font-size:10px" title="${tip}">${path}</a></span><span style="color:#4a5060;font-size:9px">${label}</span></div>`;
+  });
+  h+=`<div class="c"><div class="ct"><a href="/docs" style="color:#58a6ff;text-decoration:none" title="Full API reference">endpoints</a></div>${ep}</div>`;
+
+  // ── Memory activity with expandable agent breakdown ──
+  const stmAgents=Object.entries(d.memory?.stm_by_agent||{}).sort((a,b)=>b[1]-a[1]);
   if(stmAgents.length){
+    const totalStm=d.memory?.stm_records||1;
     let mah='';
-    stmAgents.forEach(([agent, count])=>{
-      const pct=Math.round(count/(d.memory?.stm_records||1)*100);
-      mah+=`<div class="r"><span>${agent}</span><span style="color:#4a5060">${count.toLocaleString()} (${pct}%)</span></div>`;
+    stmAgents.slice(0,5).forEach(([agent, count])=>{
+      const pct=Math.round(count/totalStm*100);
+      mah+=`<div class="r" title="${count.toLocaleString()} STM records (${pct}% of total)"><span style="color:#b0b8c4">${agent}</span><span style="color:#d2a8ff">${count.toLocaleString()} <small style="color:#4a5060">${pct}%</small></span></div>`;
+      mah+=bar(pct);
     });
-    h+=`<div class="c"><div class="ct">memory activity (top 8)</div>${mah}</div>`;
+    if(stmAgents.length>5){
+      mah+=`<details style="margin-top:4px"><summary style="cursor:pointer;color:#484f58;font-size:9px">${stmAgents.length-5} more agents</summary>`;
+      stmAgents.slice(5).forEach(([agent, count])=>{
+        mah+=`<div class="r"><span style="color:#8b949e">${agent}</span><span style="color:#4a5060">${count.toLocaleString()}</span></div>`;
+      });
+      mah+=`</details>`;
+    }
+    h+=`<div class="c" title="Short-term memory records by agent — ${totalStm.toLocaleString()} total"><div class="ct">memory: ${stmAgents.length} agents &middot; ${totalStm.toLocaleString()} records</div>${mah}</div>`;
   }
-  // recent actions summary in grid (visible without clicking tab)
-  const acts=d.actions||[];
-  if(acts.length){
-    let rh='';acts.slice(0,6).forEach(a=>{
-      const sc=a.status==='completed'?'dg':a.status==='failed'?'dr':'dy';
-      const ts=(a.created_at||'').slice(11,16);
-      rh+=`<div class="r"><span><span class="d ${sc}"></span>${(a.description||'').slice(0,60)}</span><span style="color:#4a5060">${a.agent_id||'?'} ${ts}</span></div>`;
-    });
-    h+=`<div class="c w2"><div class="ct">recent actions (${acts.length})</div>${rh}</div>`;
-  }
-  // dojo summary in grid
+
+  // ── Dojo with expandable standings + group badges ──
   const djg=d.dojo||[];
   if(djg.length){
-    let dh2='';djg.slice(0,6).forEach(s=>{
-      dh2+=`<div class="r"><span>${rk(s.tier)} ${s.agent_id}</span><span style="color:#4a5060">${s.score}</span></div>`;
-    });
-    h+=`<div class="c w2"><div class="ct">dojo standings (${djg.length})</div>${dh2}</div>`;
+    const grps={};djg.forEach(s=>(grps[s.group]=grps[s.group]||[]).push(s));
+    let dh2='';
+    for(const[group,members]of Object.entries(grps)){
+      dh2+=`<details open style="margin:2px 0"><summary style="cursor:pointer;color:#58a6ff;font-size:9px;text-transform:uppercase;letter-spacing:.5px" title="${members.length} agents in ${group}">${group} <span style="color:#4a5060">(${members.length})</span></summary>`;
+      members.forEach(s=>{
+        const sc=Math.min(100,s.score/100);
+        dh2+=`<div class="r" title="Score: ${s.score} | Rank: ${s.rank} | Tier: ${s.tier} | BONA FIDE: ${s.bona_fide?'verified':'pending'}"><span>${rk(s.tier)} <a href="/dojo/agent/${s.agent_id}" style="color:#c9d1d9;text-decoration:none">${s.agent_id}</a></span><span style="color:#4a5060">${s.rank} <small>${s.score}</small></span></div>`;
+        dh2+=bar(sc);
+      });
+      dh2+=`</details>`;
+    }
+    h+=`<div class="c w2" title="Agent reputation system — BONA FIDE on Algorand"><div class="ct"><a href="/dojo/standings" style="color:#58a6ff;text-decoration:none">dojo standings</a> (${djg.length})</div>${dh2}</div>`;
   }
-  // logs full width
-  let ll='';(d.recent_logs||[]).slice(0,10).forEach(l=>ll+=`<div class="ll">${l.replace(/</g,'&lt;')}</div>`);
-  h+=`<div class="c w4"><div class="ct">log</div>${ll}</div>`;
+
+  // ── Logs with expandable view ──
+  const logs=d.recent_logs||[];
+  let ll='';logs.slice(0,5).forEach(l=>ll+=`<div class="ll">${l.replace(/</g,'&lt;')}</div>`);
+  if(logs.length>5){
+    ll+=`<details style="margin-top:2px"><summary style="cursor:pointer;color:#484f58;font-size:9px">${logs.length-5} more log entries</summary>`;
+    logs.slice(5).forEach(l=>ll+=`<div class="ll">${l.replace(/</g,'&lt;')}</div>`);
+    ll+=`</details>`;
+  }
+  h+=`<div class="c w4" title="Runtime log — most recent entries"><div class="ct">log (${logs.length})</div>${ll}</div>`;
 
   document.getElementById('grid').innerHTML=h;
   document.getElementById('sub').textContent=`${d.uptime} | ${(d.agents||[]).length} agents | ${inf.available||0} inference | ${(d.interactions||[]).length} dialogues`;
@@ -407,85 +474,103 @@ function rpnl(d){
     }
     if(!h)h='<div style="padding:12px;color:#6e7681;font-size:12px">No agent interactions yet. The orchestration hierarchy will populate as agents communicate.</div>';
     p.innerHTML=h;
-  } else {
-    // Dojo full view
+  } else if(curT===3){
+    // Dojo full view with expandable groups
     const st=d.dojo||[];
     if(!st.length){p.innerHTML='<div style="padding:8px;color:#3d424d">no standings</div>';return}
-    let h='';st.forEach(s=>{h+=`<div style="padding:2px 0;border-bottom:1px solid rgba(8,11,16,.4)"><div class="r"><span>${rk(s.tier)} ${s.agent_id}</span><span style="color:#4a5060">${s.rank} ${s.score}</span></div>${bar(Math.min(100,s.score/100))}</div>`});
+    const grps={};st.forEach(s=>(grps[s.group]=grps[s.group]||[]).push(s));
+    let h='';
+    for(const[group,members]of Object.entries(grps)){
+      h+=`<details open style="margin:4px 0"><summary style="cursor:pointer;color:#58a6ff;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:4px 0;border-bottom:1px solid rgba(8,11,16,.4)">${group} <span style="color:#4a5060;font-weight:400">(${members.length})</span></summary>`;
+      members.forEach(s=>{
+        const sc=Math.min(100,s.score/100);
+        h+=`<div style="padding:4px 0;border-bottom:1px solid rgba(8,11,16,.3)" title="Score: ${s.score} | Rank: ${s.rank} | Tier: ${s.tier} | Group: ${s.group}">`;
+        h+=`<div class="r"><span>${rk(s.tier)} <span style="color:#c9d1d9;font-weight:600">${s.agent_id}</span></span><span style="color:#4a5060">${s.rank} <small>${s.score}</small> ${s.bona_fide?'<span style="color:#3fb950;font-size:8px">BF</span>':''}</span></div>`;
+        h+=bar(sc);
+        h+=`</div>`;
+      });
+      h+=`</details>`;
+    }
     p.innerHTML=h;
+  } else if(curT===4){
+    // Activity Feed tab — rendered by SSE feed system
+    if(!window._afFeedEvents||!window._afFeedEvents.length){
+      p.innerHTML='<div style="padding:12px;color:#6e7681;font-size:12px">Connecting to activity stream...<br><small style="color:#484f58">Events from boardroom, dojo, inference, improvement, thinking will appear here in real-time via SSE.</small></div>';
+    } else {
+      window._afRenderToPanel&&window._afRenderToPanel(p);
+    }
   }
 }
 async function rf(){try{const r=await fetch(API);if(r.ok){LD=await r.json();render(LD)}}catch(e){document.getElementById('bge').textContent='OFF';document.getElementById('bge').className='badge w'}}
 rf();setInterval(rf,6000);
 
-// ── Activity Feed (SSE) ──
+// ── Activity Feed (SSE) — integrated into tab 4 + header badge ──
 (function(){
   const TIER={0:'UN',1:'PRV',2:'VER',3:'BF',4:'SOV',5:'GM',6:'MST'};
   const TCOL={0:'#f85149',1:'#d29922',2:'#58a6ff',3:'#3fb950',4:'#d2a8ff',5:'#79c0ff',6:'#e6edf3'};
-  const ROOMS=['all','boardroom','dojo','inference','improvement','thinking','godel','memory','system'];
-  let activeRoom='all';
+  const RICON={boardroom:'\u2696',dojo:'\u2694',inference:'\u26A1',improvement:'\u2699',thinking:'\U0001F9E0',godel:'\u221E',memory:'\U0001F4BE',system:'\u2699'};
   let feedEvents=[];
   const MAX_FEED=100;
+  window._afFeedEvents=feedEvents;
 
-  function ago(ts){const s=Math.floor(Date.now()/1000-ts);if(s<60)return s+'s ago';if(s<3600)return Math.floor(s/60)+'m ago';return Math.floor(s/3600)+'h ago'}
+  function ago(ts){const s=Math.floor(Date.now()/1000-ts);if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'m';return Math.floor(s/3600)+'h'}
 
   function renderCard(e){
     const badge=`<span style="color:${TCOL[e.agent_tier]||TCOL[0]};font-weight:700;font-size:9px">[${TIER[e.agent_tier]||'UN'}]</span>`;
-    const detail=e.detail?`<details style="margin-top:4px"><summary style="cursor:pointer;color:#484f58;font-size:9px">expand detail</summary><pre style="font-size:8px;color:#6e7681;max-height:120px;overflow:auto;padding:4px;margin-top:4px;background:rgba(5,8,16,.4);border-radius:3px">${JSON.stringify(e.detail,null,2).slice(0,600)}</pre></details>`:'';
-    return `<div class="af-card" data-room="${e.room}" style="display:${activeRoom==='all'||activeRoom===e.room?'block':'none'}">
+    let detailHtml='';
+    if(e.detail){
+      const d=e.detail;
+      // Smart rendering based on room type
+      if(e.room==='boardroom'&&d.votes){
+        detailHtml=`<details style="margin-top:4px"><summary style="cursor:pointer;color:#58a6ff;font-size:9px" title="Expand vote breakdown">vote breakdown</summary><div style="padding:4px 0;font-size:9px">`;
+        (d.votes||[]).forEach(v=>{
+          const vc=v.vote==='approve'?'#3fb950':v.vote==='reject'?'#f85149':'#8b949e';
+          detailHtml+=`<div class="r" title="${v.soldier}: ${v.vote} (confidence: ${v.confidence}, provider: ${v.provider}, latency: ${v.latency_ms}ms)"><span style="color:${vc}">${v.vote==='approve'?'\u2713':v.vote==='reject'?'\u2717':'\u2014'} ${v.soldier}</span><span style="color:#484f58">${v.provider||'?'} ${v.latency_ms||''}ms</span></div>`;
+        });
+        detailHtml+=`<div style="color:#484f58;margin-top:3px">score: ${d.weighted_score||'?'} | dissent: ${d.dissent_branches||0}</div></div></details>`;
+      } else if(e.room==='godel'&&d.options_considered){
+        detailHtml=`<details style="margin-top:4px"><summary style="cursor:pointer;color:#d29922;font-size:9px" title="Expand decision rationale">rationale &amp; options</summary><div style="padding:4px 0;font-size:9px">`;
+        detailHtml+=`<div style="color:#8b949e;margin-bottom:3px">${d.rationale||''}</div>`;
+        (d.options_considered||[]).forEach(o=>{
+          const chosen=o===d.chosen_option;
+          detailHtml+=`<div style="color:${chosen?'#3fb950':'#4a5060'};padding:1px 0">${chosen?'\u25B6':'\u00B7'} ${o}</div>`;
+        });
+        detailHtml+=`</div></details>`;
+      } else if(e.room==='inference'&&d.model){
+        detailHtml=`<details style="margin-top:4px"><summary style="cursor:pointer;color:#d2a8ff;font-size:9px" title="Expand inference detail">model &amp; metrics</summary><div style="padding:4px 0;font-size:9px;color:#8b949e">`;
+        if(d.latency_ms)detailHtml+=`latency: ${d.latency_ms}ms | `;
+        if(d.model)detailHtml+=`model: ${d.model} | `;
+        detailHtml+=`<br><div style="max-height:80px;overflow:auto;margin-top:4px;color:#6e7681;white-space:pre-wrap;font-size:8px">${(d.response||d.answer||'').slice(0,300)}</div>`;
+        detailHtml+=`</div></details>`;
+      } else {
+        detailHtml=`<details style="margin-top:4px"><summary style="cursor:pointer;color:#484f58;font-size:9px">detail</summary><pre style="font-size:8px;color:#6e7681;max-height:100px;overflow:auto;padding:4px;margin-top:4px;background:rgba(5,8,16,.4);border-radius:3px;white-space:pre-wrap">${JSON.stringify(d,null,2).slice(0,500)}</pre></details>`;
+      }
+    }
+    return `<div style="padding:8px 6px;border-bottom:1px solid rgba(8,11,16,.4);transition:background .15s" title="${e.room}: ${e.type} by ${e.agent}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
         <span>${badge} <span style="color:#c9d1d9;font-size:10px;font-weight:600">${e.agent||'system'}</span></span>
-        <span style="color:#484f58;font-size:8px">${ago(e.timestamp)} <span style="color:${TCOL[2]};opacity:.5">#${e.room}</span></span>
+        <span style="color:#484f58;font-size:8px">${ago(e.timestamp)} <span style="color:${TCOL[2]};opacity:.4">#${e.room}</span></span>
       </div>
       <div style="color:#b0b8c4;font-size:10px;line-height:1.5">${(e.content||'').replace(/</g,'&lt;').slice(0,300)}</div>
-      ${detail}
+      ${detailHtml}
     </div>`;
   }
 
-  function renderFeed(){
-    const el=document.getElementById('af-list');
-    if(!el)return;
-    el.innerHTML=feedEvents.filter(e=>activeRoom==='all'||e.room===activeRoom).slice(0,50).map(renderCard).join('');
-  }
+  // Render feed into right panel when tab 4 is active
+  window._afRenderToPanel=function(panel){
+    if(!feedEvents.length){panel.innerHTML='<div style="padding:12px;color:#6e7681;font-size:12px">Activity stream loading...</div>';return}
+    panel.innerHTML=feedEvents.slice(0,40).map(renderCard).join('');
+  };
 
-  function setRoom(r){activeRoom=r;document.querySelectorAll('.af-tab').forEach(t=>t.classList.toggle('active',t.dataset.room===r));renderFeed()}
-
-  // Inject feed UI into dashboard
-  const wrap=document.querySelector('.wrap');
-  if(wrap){
-    const feedPanel=document.createElement('div');
-    feedPanel.id='activity-feed';
-    feedPanel.style.cssText='position:fixed;right:0;top:0;bottom:0;width:320px;background:rgba(10,14,20,.95);border-left:1px solid rgba(48,54,61,.5);z-index:20;display:flex;flex-direction:column;overflow:hidden;backdrop-filter:blur(8px)';
-    feedPanel.innerHTML=`
-      <div style="padding:8px 10px;border-bottom:1px solid rgba(48,54,61,.5);flex-shrink:0">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <span style="color:#e6edf3;font-size:12px;font-weight:700;font-family:'SF Mono',monospace">Activity Feed</span>
-          <span id="af-count" style="color:#484f58;font-size:9px">connecting...</span>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:3px" id="af-tabs">
-          ${ROOMS.map(r=>`<button class="af-tab${r==='all'?' active':''}" data-room="${r}" onclick="window._afSetRoom&&window._afSetRoom('${r}')" style="padding:2px 6px;font-size:8px;border:1px solid rgba(48,54,61,.4);border-radius:3px;background:transparent;color:#8b949e;cursor:pointer;font-family:inherit">${r}</button>`).join('')}
-        </div>
-      </div>
-      <div id="af-list" style="flex:1;overflow-y:auto;padding:6px;scrollbar-width:thin;scrollbar-color:rgba(88,166,255,.15) transparent"></div>
-    `;
-    document.body.appendChild(feedPanel);
-    window._afSetRoom=setRoom;
-
-    // Style for cards and active tabs
-    const style=document.createElement('style');
-    style.textContent=`
-      .af-card{padding:8px;border-bottom:1px solid rgba(48,54,61,.25);transition:background .15s}
-      .af-card:hover{background:rgba(22,27,34,.4)}
-      .af-tab.active{background:rgba(88,166,255,.12)!important;color:#58a6ff!important;border-color:rgba(88,166,255,.3)!important}
-      .af-tab:hover{border-color:rgba(88,166,255,.3)}
-      @media(max-width:900px){#activity-feed{display:none}}
-    `;
-    document.head.appendChild(style);
-
-    // Adjust main content to not overlap
-    const mainStyle=document.createElement('style');
-    mainStyle.textContent='@media(min-width:901px){.g,.tabs,.tab-panels,.ft,.lo{margin-right:320px}}';
-    document.head.appendChild(mainStyle);
+  // Update tab badge count
+  function updateBadge(){
+    const tab=document.getElementById('t4');
+    if(tab)tab.textContent='feed ('+feedEvents.length+')';
+    // If feed tab is active, re-render
+    if(curT===4){
+      const p=document.getElementById('pnl');
+      if(p)window._afRenderToPanel(p);
+    }
   }
 
   // SSE connection
@@ -496,23 +581,13 @@ rf();setInterval(rf,6000);
         const ev=JSON.parse(e.data);
         feedEvents.unshift(ev);
         if(feedEvents.length>MAX_FEED)feedEvents.length=MAX_FEED;
-        renderFeed();
-        const cnt=document.getElementById('af-count');
-        if(cnt)cnt.textContent=feedEvents.length+' events';
+        window._afFeedEvents=feedEvents;
+        updateBadge();
       }catch(err){}
     });
-    es.addEventListener('heartbeat',function(){
-      const cnt=document.getElementById('af-count');
-      if(cnt&&feedEvents.length)cnt.textContent=feedEvents.length+' events';
-    });
+    es.addEventListener('heartbeat',function(){updateBadge()});
     es.onerror=function(){
-      const cnt=document.getElementById('af-count');
-      if(cnt)cnt.textContent='reconnecting...';
       setTimeout(()=>{es.close();connectSSE()},5000);
-    };
-    es.onopen=function(){
-      const cnt=document.getElementById('af-count');
-      if(cnt)cnt.textContent='connected';
     };
   }
   connectSSE();
