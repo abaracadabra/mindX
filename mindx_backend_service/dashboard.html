@@ -37,20 +37,20 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 .left::-webkit-scrollbar{display:none}
 .right{width:280px;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;border-left:1px solid rgba(26,31,46,.5)}
 @media(max-width:960px){.main{flex-direction:column}.right{width:100%;height:40vh}}
-.g{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(20,24,32,.1)}
+.g{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(16,20,28,.08)}
 @media(max-width:1300px){.g{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:960px){.g{grid-template-columns:repeat(2,1fr)}}
-.c{background:rgba(10,14,20,.85);padding:5px 7px;border-left:2px solid rgba(88,166,255,.06);transition:border-color .3s}
-.c:hover{border-left-color:rgba(88,166,255,.2)}
-.ct{font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:#58a6ff;margin-bottom:2px;font-family:'SF Mono','Fira Code',monospace;opacity:.7}
+.c{background:rgba(10,14,20,.85);padding:3px 5px;border-left:2px solid rgba(88,166,255,.04);transition:border-color .3s}
+.c:hover{border-left-color:rgba(88,166,255,.15)}
+.ct{font-size:8px;text-transform:uppercase;letter-spacing:.5px;color:#58a6ff;margin-bottom:1px;font-family:'SF Mono','Fira Code',monospace;opacity:.7}
 .ct a{color:inherit;text-decoration:none}.ct a:hover{text-decoration:underline}
-.mv{font-size:18px;font-weight:700;color:#e6edf3;line-height:1;font-family:'SF Mono','Fira Code',monospace}
-.ms{font-size:9px;color:#5a6070;margin-top:1px}
-.bc{height:2px;background:rgba(30,34,42,.5);border-radius:1px;margin-top:2px;overflow:hidden}
+.mv{font-size:16px;font-weight:700;color:#e6edf3;line-height:1;font-family:'SF Mono','Fira Code',monospace}
+.ms{font-size:8px;color:#5a6070;margin-top:1px}
+.bc{height:2px;background:rgba(30,34,42,.5);border-radius:1px;margin-top:1px;overflow:hidden}
 .b{height:100%;border-radius:1px;transition:width .5s}
 .bg{background:#3fb950}.by{background:#d29922}.br{background:#f85149}
 .w2{grid-column:span 2}.w4{grid-column:1/-1}
-.r{display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:10px;border-bottom:1px solid rgba(8,11,16,.25);gap:4px}
+.r{display:flex;justify-content:space-between;align-items:center;padding:1px 0;font-size:9px;border-bottom:1px solid rgba(8,11,16,.2);gap:3px}
 .r:last-child{border:none}
 .d{display:inline-block;width:4px;height:4px;border-radius:50%;margin-right:3px;vertical-align:middle;box-shadow:0 0 3px currentColor}
 .dg{background:#3fb950;color:#3fb950}.dr{background:#f85149;color:#f85149}.dy{background:#d29922;color:#d29922}.dx{background:#3d424d;color:#3d424d}
@@ -134,7 +134,18 @@ details[open]>summary{margin-bottom:1px}
 <div class="main">
 <div class="left"><div class="g" id="grid"></div></div>
 <div class="right">
-<div class="tabs"><div class="tab active" onclick="T(0)" id="t0">dialogue</div><div class="tab" onclick="T(1)" id="t1">actions</div><div class="tab" onclick="T(2)" id="t2">agents</div><div class="tab" onclick="T(3)" id="t3">dojo</div><div class="tab" onclick="T(4)" id="t4">feed</div><div class="tab" onclick="openPopup()" id="t-expand" title="Expand to popup window" style="max-width:28px;color:#58a6ff">&#x26F6;</div></div>
+<div class="tabs" style="position:relative">
+  <div class="tab active" onclick="T(0)" id="t0">dialogue</div>
+  <div class="tab" onclick="T(1)" id="t1">actions</div>
+  <div class="tab" onclick="T(2)" id="t2">agents</div>
+  <div class="tab" onclick="T(3)" id="t3">dojo</div>
+  <div class="tab" onclick="T(4)" id="t4">feed</div>
+  <div style="display:flex;gap:1px;margin-left:auto;flex-shrink:0">
+    <div class="tab" onclick="copyPanelContent()" title="Copy content" style="max-width:22px;font-size:10px">&#x2398;</div>
+    <div class="tab" onclick="exportPanelMd()" title="Export .md" style="max-width:22px;font-size:10px">&#x21E9;</div>
+    <div class="tab" onclick="popoutPanel()" title="Expand to floating window" style="max-width:22px;color:#58a6ff;font-size:10px">&#x26F6;</div>
+  </div>
+</div>
 <div class="conv" id="pnl"></div>
 <div class="ft">mindx.pythai.net <span id="ts"></span> <a href="/docs.html">docs</a> <a href="/book" class="dm">book</a> <a href="/journal" class="dm">journal</a> <a href="/docs" class="dm">api</a></div>
 </div>
@@ -201,7 +212,7 @@ requestAnimationFrame(anim);
 const API='/diagnostics/live';let cpuH=[],curT=0;
 let seenTs=new Set(); // track seen interaction timestamps
 let pendingNew=[]; // new interactions waiting to settle into panel
-function T(n){curT=n;document.querySelectorAll('.tab').forEach((t,i)=>t.className='tab'+(i===n?' active':''));if(LD)rpnl(LD)}
+function T(n){curT=n;document.querySelectorAll('.tab').forEach((t,i)=>{if(i<5)t.className='tab'+(i===n?' active':'')});if(LD)rpnl(LD);if(_popOpen){const ptn=document.getElementById('popup-tab-name');if(ptn)ptn.textContent=_TABS[n]||'data';_renderPopupContent()}}
 function spk(a){if(!a.length)return'';const mx=Math.max(...a,1);let r='';a.forEach((v,i)=>{const h=Math.max(1,Math.round(v/mx*8));r+=`<rect x="${i*2}" y="${8-h}" width="1" height="${h}"/>`});return `<svg class="sp" width="${a.length*2}" height="8">${r}</svg>`}
 function bar(p){return `<div class="bc"><div class="b ${p>85?'br':p>65?'by':'bg'}" style="width:${p}%"></div></div>`}
 function sa(a){return a?a.slice(0,6)+'..'+a.slice(-4):'?'}
@@ -645,166 +656,109 @@ function rpnl(d){
 async function rf(){try{const r=await fetch(API);if(r.ok){LD=await r.json();render(LD)}}catch(e){document.getElementById('bge').textContent='OFF';document.getElementById('bge').className='badge w'}}
 rf();setInterval(rf,6000);
 
-// ── Popup Window System ──
-(function(){
+// ── Panel tools: copy, export, popup ──
+var _TABS=['dialogue','actions','agents','dojo','feed'];
+var _popOpen=false,_popFS=false,_popSaved={};
+
+function copyPanelContent(){
+  const pnl=_popOpen?document.getElementById('popup-body'):document.getElementById('pnl');
+  if(!pnl)return;
+  const text=pnl.innerText;
+  navigator.clipboard.writeText(text).then(()=>{
+    const ft=document.querySelector('.ft');if(ft){const o=ft.textContent;ft.textContent='Copied to clipboard!';setTimeout(()=>ft.textContent=o,1500)}
+  }).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();
+  });
+}
+
+function exportPanelMd(){
+  const pnl=_popOpen?document.getElementById('popup-body'):document.getElementById('pnl');
+  if(!pnl)return;
+  const name=_TABS[curT]||'data';
+  const md='# mindX '+name+' — '+new Date().toISOString()+'\n\n'+pnl.innerText;
+  const blob=new Blob([md],{type:'text/markdown'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='mindx_'+name+'_'+new Date().toISOString().slice(0,19).replace(/[:-]/g,'')+'.md';
+  a.click();URL.revokeObjectURL(a.href);
+}
+
+function _renderPopupContent(){
+  const popBody=document.getElementById('popup-body');
+  const popCount=document.getElementById('popup-count');
+  if(!popBody||!LD)return;
+  const d=LD;let h='';let count=0;
+  if(curT===0){
+    const ms=d.interactions||[];count=ms.length;
+    ms.forEach(m=>{
+      const td=(m.timestamp||'').slice(5,19).replace('T',' ');
+      h+=`<div class="msg msg-usr"><div class="msg-hdr"><span style="color:#d2a8ff;font-weight:600">${m.agent||'mindX'}</span><span>${td}</span></div><div class="msg-txt">${(m.prompt||'').replace(/</g,'&lt;')}</div></div>`;
+      h+=`<div class="msg msg-ai"><div class="msg-hdr"><span style="color:#3fb950;font-weight:600">${m.model||'?'}</span><span>${m.latency_ms?m.latency_ms+'ms':''}</span></div><div class="msg-txt">${(m.response||'').replace(/</g,'&lt;')}</div></div>`;
+    });
+  }else if(curT===1){
+    const acts=d.actions||[];count=acts.length;
+    acts.forEach(a=>{
+      const sc=a.status==='completed'?'#3fb950':a.status==='failed'?'#f85149':'#d29922';
+      h+=`<div style="padding:4px;border-bottom:1px solid rgba(8,11,16,.3)"><div style="display:flex;justify-content:space-between"><span style="color:${sc};font-weight:700;font-size:9px">${a.status}</span><span style="color:#6e7681;font-size:8px">${(a.created_at||'').slice(5,19)}</span></div><div style="font-size:10px;color:#c5d0dc;line-height:1.4;margin:2px 0">${(a.description||'').replace(/</g,'&lt;')}</div><div style="font-size:8px;color:#6e7681">${a.agent_id||'?'} · ${a.action_type||''}</div></div>`;
+    });
+  }else if(curT===2){
+    const ai=d.agent_interactions||[];count=ai.length;
+    ai.forEach(i=>{h+=`<div style="padding:2px 0;border-bottom:1px solid rgba(8,11,16,.2);font-size:10px"><span style="color:#58a6ff">${i.from}</span> → ${i.to} <span style="color:#d2a8ff">${i.type}</span> <span style="color:#484f58;font-size:8px">${i.ts}</span></div>`});
+  }else if(curT===3){
+    const st=d.dojo||[];count=st.length;
+    st.forEach(s=>{h+=`<div style="padding:3px 0;border-bottom:1px solid rgba(8,11,16,.3)"><div class="r"><span>${rk(s.tier)} <strong>${s.agent_id}</strong></span><span style="color:#4a5060">${s.rank} ${s.score}</span></div>${bar(Math.min(100,s.score/100))}</div>`});
+  }else if(curT===4&&window._afFeedEvents){
+    count=window._afFeedEvents.length;
+    if(window._afRenderToPanel){window._afRenderToPanel(popBody);if(popCount)popCount.textContent=count+' events';return}
+  }
+  popBody.innerHTML=h||'<div style="padding:8px;color:#6e7681;font-size:10px">No data.</div>';
+  if(popCount)popCount.textContent=count+' items';
+}
+
+function popoutPanel(){
   const overlay=document.getElementById('popup-overlay');
   const popup=document.getElementById('popup');
-  const popHdr=document.getElementById('popup-hdr');
-  const popBody=document.getElementById('popup-body');
-  const popTabName=document.getElementById('popup-tab-name');
-  const popCount=document.getElementById('popup-count');
-  let popOpen=false;
-  let popFS=false;
-  let savedStyle={};
-  const TABS=['dialogue','actions','agents','dojo','feed'];
+  if(!overlay||!popup)return;
+  overlay.classList.add('open');
+  popup.classList.add('animate');
+  _popOpen=true;
+  const ptn=document.getElementById('popup-tab-name');
+  if(ptn)ptn.textContent=_TABS[curT]||'data';
+  _renderPopupContent();
+  setTimeout(()=>popup.classList.remove('animate'),200);
+}
 
-  // Open popup with current tab content
-  window.openPopup=function(){
-    overlay.classList.add('open');
-    popup.classList.add('animate');
-    popOpen=true;
-    popTabName.textContent=TABS[curT]||'data';
-    renderPopup();
-    setTimeout(()=>popup.classList.remove('animate'),200);
-  };
+function dockPopup(){
+  const overlay=document.getElementById('popup-overlay');
+  if(overlay)overlay.classList.remove('open');
+  _popOpen=false;
+  if(_popFS)togglePopupFullscreen();
+}
 
-  // Dock back to side panel
-  window.dockPopup=function(){
-    overlay.classList.remove('open');
-    popOpen=false;
-    if(popFS){togglePopupFullscreen()}
-  };
-
-  // Render full history into popup (not truncated like panel)
-  function renderPopup(){
-    if(!LD||!popOpen)return;
-    const d=LD;
-    let h='';let count=0;
-
-    if(curT===0){
-      // Full dialogue history
-      const ms=d.interactions||[];
-      count=ms.length;
-      ms.forEach(m=>{
-        const ts=m.timestamp||'',td=ts.length>10?ts.slice(5,19).replace('T',' '):ts;
-        h+=`<div class="msg msg-usr"><div class="msg-hdr"><span style="color:#d2a8ff;font-weight:600">${m.agent||'mindX'}</span><span>${td}</span></div><div class="msg-txt">${(m.prompt||'').replace(/</g,'&lt;')}</div></div>`;
-        h+=`<div class="msg msg-ai"><div class="msg-hdr"><span style="color:#3fb950;font-weight:600">${m.model||'?'}</span><span>${m.latency_ms?m.latency_ms+'ms':''}</span></div><div class="msg-txt">${(m.response||'').replace(/</g,'&lt;')}</div></div>`;
-      });
-    } else if(curT===1){
-      // Full actions
-      const acts=d.actions||[];
-      count=acts.length;
-      acts.forEach(a=>{
-        const sc=a.status==='completed'?'#3fb950':a.status==='failed'?'#f85149':'#d29922';
-        const ts=(a.created_at||'').slice(5,19).replace('T',' ');
-        h+=`<div style="padding:6px;border-bottom:1px solid rgba(8,11,16,.3)"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="color:${sc};font-weight:700;font-size:10px">${a.status}</span><span style="color:#6e7681;font-size:9px">${ts}</span></div><div style="font-size:11px;color:#c5d0dc;line-height:1.5;margin:3px 0">${(a.description||'').replace(/</g,'&lt;')}</div><div style="font-size:9px;color:#6e7681">${a.agent_id||'?'} &middot; ${a.action_type||'?'}${a.result?' &middot; '+a.result:''}</div></div>`;
-      });
-    } else if(curT===2){
-      // Full agent interactions
-      const ai=d.agent_interactions||[];
-      const st=d.dojo||[];
-      count=ai.length+st.length;
-      if(ai.length){
-        h+='<div style="font-size:10px;color:#58a6ff;font-weight:600;padding:4px 0;border-bottom:1px solid rgba(8,11,16,.3)">INTERACTIONS</div>';
-        ai.forEach(i=>{
-          h+=`<div style="padding:4px 0;border-bottom:1px solid rgba(8,11,16,.2)"><span style="color:#58a6ff">${i.from}</span> → ${i.to} <span style="color:#d2a8ff">${i.type}</span> ${i.topic?'['+i.topic+']':''} <span style="color:#484f58;font-size:9px">${i.ts}</span></div>`;
-        });
-      }
-    } else if(curT===3){
-      // Full dojo with all details
-      const st=d.dojo||[];
-      count=st.length;
-      st.forEach(s=>{
-        const sc=Math.min(100,s.score/100);
-        h+=`<div style="padding:4px 0;border-bottom:1px solid rgba(8,11,16,.3)"><div class="r"><span>${rk(s.tier)} <strong>${s.agent_id}</strong></span><span style="color:#4a5060">${s.rank} ${s.score} ${s.bona_fide?'BF':''}</span></div><div style="font-size:9px;color:#6e7681">group: ${s.group||'?'}</div>${bar(sc)}</div>`;
-      });
-    } else if(curT===4){
-      // Full feed
-      const events=window._afFeedEvents||[];
-      count=events.length;
-      if(window._afRenderToPanel){
-        window._afRenderToPanel(popBody);
-        popCount.textContent=count+' events';
-        return;
-      }
-    }
-    if(!h)h='<div style="padding:12px;color:#6e7681">No data yet.</div>';
-    popBody.innerHTML=h;
-    popCount.textContent=count+' items';
+function togglePopupFullscreen(){
+  const popup=document.getElementById('popup');if(!popup)return;
+  if(!_popFS){
+    _popSaved={w:popup.style.width,h:popup.style.height,t:popup.style.top,l:popup.style.left};
+    popup.style.width='96vw';popup.style.height='92vh';popup.style.top='2vh';popup.style.left='2vw';
+    _popFS=true;
+  }else{
+    popup.style.width=_popSaved.w||'700px';popup.style.height=_popSaved.h||'500px';
+    popup.style.top=_popSaved.t||'10%';popup.style.left=_popSaved.l||'20%';
+    _popFS=false;
   }
+}
 
-  // Re-render popup when tab changes
-  const origT=window.T;
-  if(typeof origT==='function'){
-    // T is already defined as a global function
-  }
-  // Override T to also update popup
-  const _origT=T;
-  T=function(n){_origT(n);if(popOpen){popTabName.textContent=TABS[n]||'data';renderPopup()}};
-
-  // Copy content as text
-  window.copyPopupContent=function(){
-    const text=popBody.innerText;
-    navigator.clipboard.writeText(text).then(()=>{
-      popCount.textContent='Copied to clipboard!';
-      setTimeout(()=>renderPopup(),1500);
-    }).catch(()=>{
-      // Fallback
-      const ta=document.createElement('textarea');
-      ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();
-      popCount.textContent='Copied!';setTimeout(()=>renderPopup(),1500);
-    });
-  };
-
-  // Export as .md
-  window.exportPopupMd=function(){
-    const tabName=TABS[curT]||'data';
-    const text=popBody.innerText;
-    const md=`# mindX ${tabName} — ${new Date().toISOString()}\n\n${text}`;
-    const blob=new Blob([md],{type:'text/markdown'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;a.download=`mindx_${tabName}_${new Date().toISOString().slice(0,19).replace(/[:-]/g,'')}.md`;
-    a.click();URL.revokeObjectURL(url);
-    popCount.textContent='Exported!';setTimeout(()=>renderPopup(),1500);
-  };
-
-  // Fullscreen toggle
-  window.togglePopupFullscreen=function(){
-    if(!popFS){
-      savedStyle={width:popup.style.width,height:popup.style.height,top:popup.style.top,left:popup.style.left};
-      popup.style.width='96vw';popup.style.height='92vh';popup.style.top='2vh';popup.style.left='2vw';
-      document.getElementById('popup-fs-btn').innerHTML='&#x2923;';
-      popFS=true;
-    } else {
-      popup.style.width=savedStyle.width||'700px';popup.style.height=savedStyle.height||'500px';
-      popup.style.top=savedStyle.top||'10%';popup.style.left=savedStyle.left||'20%';
-      document.getElementById('popup-fs-btn').innerHTML='&#x2922;';
-      popFS=false;
-    }
-  };
-
-  // Drag-and-drop
-  let dragging=false,dragX=0,dragY=0;
-  popHdr.addEventListener('mousedown',e=>{
-    if(e.target.tagName==='BUTTON')return;
-    dragging=true;dragX=e.clientX-popup.offsetLeft;dragY=e.clientY-popup.offsetTop;
-    popup.style.transition='none';
-  });
-  document.addEventListener('mousemove',e=>{
-    if(!dragging)return;
-    popup.style.left=(e.clientX-dragX)+'px';
-    popup.style.top=(e.clientY-dragY)+'px';
-  });
-  document.addEventListener('mouseup',()=>{dragging=false;popup.style.transition=''});
-
-  // Keyboard: Escape to dock
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&popOpen)dockPopup()});
-
-  // Also refresh popup on diagnostic update
-  const _origRf=rf;
-  rf=async function(){await _origRf();if(popOpen)renderPopup()};
+// Drag popup header
+(function(){
+  const hdr=document.getElementById('popup-hdr');
+  const popup=document.getElementById('popup');
+  if(!hdr||!popup)return;
+  let d=false,dx=0,dy=0;
+  hdr.addEventListener('mousedown',e=>{if(e.target.tagName==='BUTTON'||e.target.closest('button'))return;d=true;dx=e.clientX-popup.offsetLeft;dy=e.clientY-popup.offsetTop;popup.style.transition='none'});
+  document.addEventListener('mousemove',e=>{if(d){popup.style.left=(e.clientX-dx)+'px';popup.style.top=(e.clientY-dy)+'px'}});
+  document.addEventListener('mouseup',()=>{d=false;popup.style.transition=''});
 })();
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup()});
 
 // ── Activity Feed (SSE) — integrated into tab 4 + header badge ──
 (function(){
