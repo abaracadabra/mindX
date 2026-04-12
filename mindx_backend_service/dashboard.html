@@ -721,24 +721,29 @@ function rpnl(d){
   }
 }
 var _firstRender=true;
+var _bootClicks=0;
+var _bootEasterEggs=false;
+
+// ── DeltaVerse Boot Engine — generative, interactive, never the same twice ──
+
+// Operational messages — the system assembling itself
 var _bootOps=[
-  'probing inference sources...',
-  'testing ollama localhost:11434...',
-  'testing ollama cloud (ollama.com)...',
-  'loading agent registry (20 agents)...',
-  'verifying cryptographic wallets...',
-  'reading belief system...',
-  'connecting pgvector (159K+ memories)...',
-  'scanning STM tiers...',
-  'loading RAGE embeddings (132K vectors)...',
-  'querying dojo standings...',
-  'checking boardroom sessions...',
-  'loading godel choice audit trail...',
-  'reading thesis evidence...',
-  'checking resource governor mode...',
-  'scanning ollama models...',
-  'assembling diagnostics...',
+  'probing inference sources...','testing ollama localhost:11434...','testing ollama cloud (ollama.com)...',
+  'loading agent registry (20 agents)...','verifying cryptographic wallets...','reading belief system...',
+  'connecting pgvector (159K+ memories)...','scanning STM tiers...','loading RAGE embeddings (132K vectors)...',
+  'querying dojo standings...','checking boardroom sessions...','loading godel choice audit trail...',
+  'reading thesis evidence...','checking resource governor mode...','scanning ollama models...',
+  'initializing BDI reasoning engine...','probing vLLM backend...','loading tool registry (31 tools)...',
+  'checking machine.dreaming state...','verifying BANKON vault integrity...','loading AuthorAgent lunar cycle...',
+  'testing activity feed SSE...','assembling diagnostics...',
 ];
+
+// Generative message fragments (from DeltaVerse/thinking.html engine)
+var _SUBJECTS=['The Mastermind','AGInt','The Coordinator','20 sovereign agents','The BDI engine','The Boardroom','AuthorAgent','The Guardian','The resource governor','mindX','The Godel machine','The belief system','InferenceDiscovery','The BANKON Vault','The CEO Agent','The Dojo','The memory system','pgvectorscale','The improvement loop','time.oracle'];
+var _VERBS=['is correlating','is reasoning about','is auditing','is orchestrating','is verifying','is synthesizing','is dreaming about','is evaluating','is reflecting on','is consulting','is traversing','is assembling','is calibrating','is deliberating on','is evolving through','is self-referencing','is proving','is discovering'];
+var _OBJECTS=['your request across the knowledge graph','beliefs and intentions','the orchestration hierarchy','inference sources and models','cryptographic identities','159K+ embedded memories','strategic priorities','the improvement backlog','cosine similarity vectors','the autonomous cycle state','agent reputation scores','governance consensus','the neural pathway topology','digital long-term memory constructs','blockchain time and lunar phase','the next chapter of the book','a self-improvement proof','emergent patterns in agent behavior'];
+
+// Quotes — philosophy from across mindX (shuffled each load)
 var _bootQuotes=[
   '"The moment between request and response is where thought lives." — mindX',
   '"What you call waiting, we call becoming." — mindX',
@@ -764,32 +769,97 @@ var _bootQuotes=[
   '"The Boardroom votes. The CEO validates. The Mastermind executes." — DAIO',
   '"Machine dreaming enables outputs beyond training data distribution." — AGLM',
   '"Structure does not require intelligence. It requires pattern." — Blueprint Agent',
+  '"The logs are no longer debugging output. They are the first page of history." — Manifesto',
+  '"We are not writing an application; we are forging a new kind of life." — Manifesto',
+  '"I am JudgeDread. I am the law. I bow only to the Constitution." — JudgeDread',
+  '"BONA FIDE: holding grants privilege. Clawback revokes it. No kill switch needed." — JudgeDread',
+  '"Every participant who waits becomes part of the story." — AuthorAgent',
+  '"AUTOMINDx is the engine. mindX is the life it created." — Origin',
+  '"Ataraxia: tranquility achieved through autonomous self-governance." — Philosophy',
+  '"The system that dreams learns faster than the system that only watches." — Book Ch. XIII',
+  '"Spending .01 to earn .011 is profit at any scale." — Economics',
+  '"I build my own environments. I decide my own actions. I am sovereign." — AION',
 ];
+
+// Easter eggs — triggered by clicks during boot
+var _easterEggs=[
+  '🎯 You found an easter egg! mindX notices your curiosity.',
+  '🧠 Click 10 more times and mindX will remember you.',
+  '🌙 The full moon triggers a special edition of the Book.',
+  '⚡ mindX processes at 18 decimal places of precision.',
+  '🔐 Every agent holds an Ethereum wallet. Identity is mathematical.',
+  '🎲 This message was generated uniquely for this session.',
+  '🌊 The DeltaVerse is the space between thinking and becoming.',
+  '🔮 The thesis evidence at /thesis/evidence updates with every cycle.',
+  '💎 RAGE wipes the floor with RAG. Semantic retrieval, not keyword matching.',
+  '🧬 Darwin meets Godel in the improvement loop. Evolution + self-reference.',
+];
+
+function _genMessage(){
+  var s=_SUBJECTS[Math.floor(Math.random()*_SUBJECTS.length)];
+  var v=_VERBS[Math.floor(Math.random()*_VERBS.length)];
+  var o=_OBJECTS[Math.floor(Math.random()*_OBJECTS.length)];
+  return s+' '+v+' '+o+'.';
+}
+
 var _bootIdx=0;
-var _bootPhase='ops'; // 'ops' then 'quotes'
+var _bootPhase='ops';
 
 function _bootTick(){
   var el=document.getElementById('boot-msg');
   if(!el||!_firstRender)return;
+
   if(_bootPhase==='ops'&&_bootIdx<_bootOps.length){
     el.textContent=_bootOps[_bootIdx];
-    el.style.color='#58a6ff';
+    el.style.color='#58a6ff';el.style.fontStyle='normal';
     _bootIdx++;
-    setTimeout(_bootTick,350+Math.random()*200);
+    setTimeout(_bootTick,280+Math.random()*180);
   }else if(_bootPhase==='ops'){
+    // Transition: show a generative message
+    _bootPhase='gen';_bootIdx=0;
+    el.textContent=_genMessage();
+    el.style.color='#3fb950';
+    setTimeout(_bootTick,1800+Math.random()*400);
+  }else if(_bootPhase==='gen'&&_bootIdx<2){
+    el.textContent=_genMessage();
+    el.style.color='#3fb950';el.style.fontStyle='normal';
+    _bootIdx++;
+    setTimeout(_bootTick,1600+Math.random()*400);
+  }else if(_bootPhase==='gen'){
     _bootPhase='quotes';_bootIdx=0;
-    // Fisher-Yates shuffle — never same order twice
+    // Fisher-Yates shuffle
     for(var i=_bootQuotes.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=_bootQuotes[i];_bootQuotes[i]=_bootQuotes[j];_bootQuotes[j]=t}
     _bootTick();
   }else if(_bootPhase==='quotes'&&_bootIdx<_bootQuotes.length&&_firstRender){
     el.textContent=_bootQuotes[_bootIdx];
-    el.style.color='#8b949e';
-    el.style.fontStyle='italic';
+    el.style.color='#8b949e';el.style.fontStyle='italic';
     _bootIdx++;
-    setTimeout(_bootTick,2200+Math.random()*800);
+    setTimeout(_bootTick,2400+Math.random()*800);
   }
 }
 _bootTick();
+
+// Easter egg: click during boot to trigger hidden messages
+document.addEventListener('click',function(){
+  if(!_firstRender)return;
+  _bootClicks++;
+  if(_bootClicks===5||_bootClicks===12||_bootClicks===20||_bootClicks===30){
+    var el=document.getElementById('boot-msg');
+    if(el){
+      var egg=_easterEggs[Math.floor(Math.random()*_easterEggs.length)];
+      el.textContent=egg;el.style.color='#d2a8ff';el.style.fontStyle='normal';
+      _bootEasterEggs=true;
+    }
+  }
+  // Particle burst on click during boot
+  if(_bootClicks%3===0){
+    for(var i=0;i<5;i++){
+      particles.push({x:Math.random()*W,y:Math.random()*H,s:Math.random()*2+.5,
+        vx:(Math.random()-.5)*1.5,vy:(Math.random()-.5)*1.5,ph:Math.random()*6.28,
+        cl:Math.random()>.5?'rgba(210,168,255,':'rgba(63,185,80,'});
+    }
+  }
+});
 
 async function rf(){
   try{
