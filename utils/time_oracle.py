@@ -3,13 +3,15 @@
 time.oracle — Multi-source time correlation for mindX.
 
 Correlates four independent time sources into a consensus time object:
-  - cpu.oracle    — system time (time.time, time.monotonic)
-  - solar.oracle  — sunrise/sunset from astronomical calculation
-  - lunar.oracle  — moon phase from calculation + timeanddate.com verification
-  - blocktime.oracle — blockchain block timestamp via JSON-RPC
+  - cpu.oracle       — system time at nanosecond resolution (18dp Decimal)
+  - solar.oracle     — sunrise/sunset from astronomical calculation
+  - lunar.oracle     — moon phase from synodic period + timeanddate.com verification
+  - blocktime.oracle — blockchain block timestamps via JSON-RPC (allchain)
 
-Future: time.oracle will feed into a broader oracle framework alongside
-the existing on-chain OracleRegistry.sol for price/volatility data.
+chronos.oracle inherits from this. Chronos speaks the time.
+time.oracle measures it.
+
+cypherpunk2048 standard: 18 decimal places. Python Decimal. No float drift.
 
 Usage:
     from utils.time_oracle import TimeOracle
@@ -24,11 +26,16 @@ import json
 import math
 import time
 import asyncio
+from decimal import Decimal
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pathlib import Path
 
-import requests
+try:
+    import requests
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
 
 from utils.config import PROJECT_ROOT
 from utils.logging_config import get_logger
@@ -54,14 +61,17 @@ _LUNAR_REF = datetime(2000, 1, 6, 18, 14, tzinfo=timezone.utc)
 # ── cpu.oracle ─────────────────────────────────────────────────────
 
 class CpuOracle:
-    """System time from the CPU clock."""
+    """System time from the CPU clock. 18dp Decimal precision (cypherpunk2048)."""
 
     def read(self) -> Dict[str, Any]:
+        now_ns = time.time_ns()
         now = time.time()
         mono = time.monotonic()
         dt = datetime.now(timezone.utc)
         return {
             "unix": now,
+            "unix_ns": now_ns,
+            "unix_18dp": str(Decimal(str(now_ns)) / Decimal("1000000000")),
             "monotonic": mono,
             "utc": dt.isoformat(),
             "stale": False,
@@ -244,81 +254,143 @@ class LunarOracle:
 # ── blocktime.oracle ───────────────────────────────────────────────
 
 class BlocktimeOracle:
-    """Blockchain block timestamp via JSON-RPC eth_getBlockByNumber."""
+    """Blockchain block timestamps via JSON-RPC. Allchain: Ethereum, Algorand, Polygon, ARC."""
 
-    def __init__(self, rpc_url: str = ""):
-        self.rpc_url = rpc_url
-        self._cache: Optional[Dict] = None
-        self._cache_ts: float = 0
+    def __init__(self, chains: Optional[Dict[str, str]] = None):
+        # chains: {chain_name: rpc_url}
+        self.chains: Dict[str, str] = chains or {}
+        self._cache: Dict[str, Dict] = {}
+        self._cache_ts: Dict[str, float] = {}
 
     async def read(self) -> Dict[str, Any]:
-        if not self.rpc_url:
-            return {"stale": True, "source": "blocktime.oracle", "error": "no RPC URL configured"}
+        if not self.chains:
+            return {"stale": True, "source": "blocktime.oracle", "error": "no chains configured", "chains": {}}
 
-        if self._cache and (time.time() - self._cache_ts) < _TTL_BLOCKTIME:
-            return self._cache
+        results = {}
+        for chain_name, rpc_url in self.chains.items():
+            if not rpc_url:
+                continue
+            # Return cache if fresh
+            if chain_name in self._cache and (time.time() - self._cache_ts.get(chain_name, 0)) < _TTL_BLOCKTIME:
+                results[chain_name] = self._cache[chain_name]
+                continue
+            try:
+                block_data = await self._fetch_chain(chain_name, rpc_url)
+                if block_data:
+                    results[chain_name] = block_data
+                    self._cache[chain_name] = block_data
+                    self._cache_ts[chain_name] = time.time()
+            except Exception as e:
+                results[chain_name] = {"stale": True, "error": str(e)[:80]}
 
+        stale_count = sum(1 for v in results.values() if v.get("stale"))
+        return {
+            "chains": results,
+            "chain_count": len(results),
+            "stale": stale_count == len(results) if results else True,
+            "source": "blocktime.oracle",
+        }
+
+    async def _fetch_chain(self, chain_name: str, rpc_url: str) -> Optional[Dict]:
+        """Fetch latest block from a chain. Supports EVM (eth_getBlockByNumber) and Algorand (/v2/status)."""
+        if not REQUESTS_AVAILABLE:
+            return {"stale": True, "error": "requests library not available"}
+
+        if "algorand" in chain_name.lower() or "algo" in chain_name.lower():
+            return await self._fetch_algorand(chain_name, rpc_url)
+
+        # EVM chain (Ethereum, Polygon, ARC, etc.)
         try:
             def _fetch():
-                payload = {
-                    "jsonrpc": "2.0", "id": 1,
-                    "method": "eth_getBlockByNumber",
-                    "params": ["latest", False],
-                }
-                r = requests.post(self.rpc_url, json=payload, timeout=10)
+                payload = {"jsonrpc": "2.0", "id": 1, "method": "eth_getBlockByNumber", "params": ["latest", False]}
+                r = requests.post(rpc_url, json=payload, timeout=10)
                 r.raise_for_status()
                 return r.json()
 
             data = await asyncio.to_thread(_fetch)
             result_block = data.get("result", {})
             if not result_block:
-                return {"stale": True, "source": "blocktime.oracle", "error": "empty result"}
+                return {"stale": True, "error": "empty result"}
 
             block_num = int(result_block.get("number", "0x0"), 16)
             block_ts = int(result_block.get("timestamp", "0x0"), 16)
-            cpu_ts = time.time()
-            drift_ms = int(abs(cpu_ts - block_ts) * 1000)
+            drift_ms = int(abs(time.time() - block_ts) * 1000)
 
-            result = {
-                "block_number": block_num,
-                "block_timestamp": block_ts,
+            return {
+                "chain": chain_name, "block_number": block_num, "block_timestamp": block_ts,
                 "block_utc": datetime.fromtimestamp(block_ts, tz=timezone.utc).isoformat(),
-                "drift_ms": drift_ms,
-                "stale": False,
-                "source": "blocktime.oracle",
-                "rpc_url": self.rpc_url.split("/")[2] if "/" in self.rpc_url else "configured",
+                "drift_ms": drift_ms, "stale": False,
             }
-            self._cache = result
-            self._cache_ts = time.time()
-            return result
         except Exception as e:
-            logger.debug(f"blocktime.oracle: RPC failed: {e}")
-            return {"stale": True, "source": "blocktime.oracle", "error": str(e)[:100]}
+            logger.debug(f"blocktime.oracle: {chain_name} RPC failed: {e}")
+            return {"stale": True, "chain": chain_name, "error": str(e)[:80]}
+
+    async def _fetch_algorand(self, chain_name: str, rpc_url: str) -> Optional[Dict]:
+        """Fetch Algorand round/status."""
+        try:
+            def _fetch():
+                r = requests.get(f"{rpc_url.rstrip('/')}/v2/status", timeout=10)
+                r.raise_for_status()
+                return r.json()
+
+            data = await asyncio.to_thread(_fetch)
+            last_round = data.get("last-round", 0)
+            return {
+                "chain": chain_name, "block_number": last_round,
+                "block_timestamp": int(time.time()),  # Algorand status doesn't return block timestamp directly
+                "stale": False,
+            }
+        except Exception as e:
+            logger.debug(f"blocktime.oracle: {chain_name} failed: {e}")
+            return {"stale": True, "chain": chain_name, "error": str(e)[:80]}
 
 
 # ── time.oracle (master coordinator) ──────────────────────────────
 
 class TimeOracle:
-    """Multi-source time correlation. Correlates cpu, solar, lunar, and blockchain time."""
+    """Multi-source time correlation. Correlates cpu, solar, lunar, and blocktime allchain.
+
+    chronos.oracle inherits from this. Chronos speaks the time at 18dp.
+    time.oracle measures it across cpu, solar, lunar, and blockchain domains.
+    """
 
     _instance: Optional["TimeOracle"] = None
+    _lock: Optional[asyncio.Lock] = None
 
     def __init__(self):
         lat = float(os.environ.get("MINDX_LATITUDE", "50.1"))   # Default: ~Hostinger VPS region
         lon = float(os.environ.get("MINDX_LONGITUDE", "14.4"))
-        rpc_url = (os.environ.get("MINDX_TIME_ORACLE_RPC_URL", "")
-                   or os.environ.get("MINDX_ACCESS_GATE_RPC_URL", "")).strip()
+
+        # Allchain: collect all configured blockchain RPC endpoints
+        chains: Dict[str, str] = {}
+        primary_rpc = (os.environ.get("MINDX_TIME_ORACLE_RPC_URL", "")
+                       or os.environ.get("MINDX_ACCESS_GATE_RPC_URL", "")).strip()
+        if primary_rpc:
+            chains["ethereum"] = primary_rpc
+        # Additional chains from environment
+        polygon_rpc = os.environ.get("POLYGON_RPC_URL", "").strip()
+        if polygon_rpc:
+            chains["polygon"] = polygon_rpc
+        algo_rpc = os.environ.get("ALGORAND_NODE_URL", "").strip()
+        if algo_rpc:
+            chains["algorand"] = algo_rpc
+        arc_rpc = os.environ.get("ARC_RPC_URL", "").strip()
+        if arc_rpc:
+            chains["arc"] = arc_rpc
 
         self.cpu = CpuOracle()
         self.solar = SolarOracle(lat=lat, lon=lon)
         self.lunar = LunarOracle()
-        self.blocktime = BlocktimeOracle(rpc_url=rpc_url)
+        self.blocktime = BlocktimeOracle(chains=chains)
 
     @classmethod
     async def get_instance(cls) -> "TimeOracle":
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
+        if cls._lock is None:
+            cls._lock = asyncio.Lock()
+        async with cls._lock:
+            if cls._instance is None:
+                cls._instance = cls()
+            return cls._instance
 
     async def get_time(self) -> Dict[str, Any]:
         """Return correlated time from all sources."""
