@@ -397,6 +397,43 @@ async function startBattle() {
 
 // Init
 loadStandings();
+
+// ── DeltaVerse: dojo perception ──
+(function(){
+  var cv=document.createElement('canvas');
+  cv.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none';
+  document.body.insertBefore(cv,document.body.firstChild);
+  var cx=cv.getContext('2d'),W,H,pts=[],mouse={x:-1,y:-1,vx:0,vy:0,px:0,py:0,speed:0},wind={x:0,y:0};
+  var distHeld=false,distStr=0,distX=0,distY=0,distLinger=0;
+  function rsz(){W=cv.width=innerWidth;H=cv.height=innerHeight;mkPts()}
+  addEventListener('resize',rsz);rsz();
+  function mkPts(){pts=[];for(var i=0;i<100;i++)pts.push({x:Math.random()*W,y:Math.random()*H,z:Math.random()*2+.5,vx:0,vy:0,rx:Math.random()*W,ry:Math.random()*H,ph:Math.random()*6.28,cl:Math.random()>.6?'0,255,136':Math.random()>.5?'255,170,0':'200,100,255'})}
+  document.addEventListener('mousemove',function(e){mouse.px=mouse.x;mouse.py=mouse.y;mouse.x=e.clientX;mouse.y=e.clientY;mouse.vx=mouse.x-mouse.px;mouse.vy=mouse.y-mouse.py;mouse.speed=Math.sqrt(mouse.vx*mouse.vx+mouse.vy*mouse.vy);wind.x=wind.x*.92+mouse.vx*.06;wind.y=wind.y*.92+mouse.vy*.03});
+  document.addEventListener('mousedown',function(){distHeld=true;distX=mouse.x;distY=mouse.y});
+  document.addEventListener('mouseup',function(){distHeld=false});
+  function draw(t){
+    cx.clearRect(0,0,W,H);wind.x*=.98;wind.y*=.98;
+    if(distHeld){distStr=Math.min(distStr+.025,1);distX=mouse.x;distY=mouse.y;distLinger=0}
+    else{distLinger++;distStr*=(distLinger<20?.997:.83);if(distStr<.005)distStr=0}
+    for(var i=0;i<pts.length;i++){
+      var p=pts[i];
+      if(mouse.x>0&&mouse.speed>1&&!distHeld){var dx=mouse.x-p.x,dy=mouse.y-p.y,d=Math.sqrt(dx*dx+dy*dy);if(d<180){var f=(180-d)/180*.1*p.z*Math.min(mouse.speed/8,3);p.vx+=mouse.vx*f*.15;p.vy+=mouse.vy*f*.15}}
+      if(distStr>.01){var ddx=distX-p.x,ddy=distY-p.y,dd=Math.sqrt(ddx*ddx+ddy*ddy);if(dd<250*distStr&&dd>3){var pull=(250*distStr-dd)/(250*distStr)*distStr*.3;var ang=Math.atan2(ddy,ddx);p.vx+=Math.cos(ang+1.3)*pull*2*p.z;p.vy+=Math.sin(ang+1.3)*pull*2*p.z}}
+      p.vx+=wind.x*.008*p.z;p.vy+=wind.y*.004*p.z;
+      p.vx+=(p.rx-p.x)*.002;p.vy+=(p.ry-p.y)*.002;
+      p.vx*=.97;p.vy*=.97;p.x+=p.vx;p.y+=p.vy;
+      if(p.x<-10){p.x=W+10;p.rx=p.x}if(p.x>W+10){p.x=-10;p.rx=p.x}
+      if(p.y<-10){p.y=H+10;p.ry=p.y}if(p.y>H+10){p.y=-10;p.ry=p.y}
+      p.ph+=.015;var spd=Math.sqrt(p.vx*p.vx+p.vy*p.vy);
+      var alpha=.12+.08*Math.sin(p.ph)+Math.min(spd*.1,.2);var size=p.z*(.4+.12*Math.sin(p.ph*.7));
+      if(spd>1.5){cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(p.x-p.vx*1.5,p.y-p.vy*1.5);cx.strokeStyle='rgba('+p.cl+','+(alpha*.3)+')';cx.lineWidth=size*.5;cx.stroke()}
+      cx.beginPath();cx.arc(p.x,p.y,size,0,6.28);cx.fillStyle='rgba('+p.cl+','+alpha+')';cx.fill();
+    }
+    if(distStr>.01){for(var ring=0;ring<3;ring++){var r=(12+ring*18)*distStr;cx.beginPath();cx.arc(distX,distY,r,0,6.28);cx.strokeStyle='rgba(0,255,136,'+((.08-ring*.02)*distStr)+')';cx.lineWidth=(1.5-ring*.3)*distStr;cx.stroke()}}
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
 </script>
 </body>
 </html>
