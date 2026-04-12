@@ -1105,26 +1105,29 @@ class CEOAgent:
                 "timestamp": datetime.now().isoformat()
             }
 
-    # ── Emergency Override ──────────────────────────────────────────────
+    # ── CEO Override ──────────────────────────────────────────────────
 
-    async def emergency_override(self, action: str, reason: str, authorized_by: str = "operator") -> Dict:
-        """CEO emergency override — constitutional safeguard.
+    async def override(self, action: str, reason: str = "") -> Dict:
+        """CEO executive override — privilege of position.
 
-        Declared in agent_map.json as "ceo_override": "emergency_halt_only".
-        This is the implementation. Actions:
+        The CEO has standing authority to direct system operations.
+        This is not an emergency brake — it is executive privilege.
+
+        Actions:
           - "halt": Stop all autonomous loops, engage lockdown level 3
           - "reset_breakers": Reset all circuit breakers to CLOSED
           - "resume": Disengage lockdown, restart autonomous loops
+          - "convene": Convene the Boardroom on a directive
+          - "status": Full strategic status report
 
-        Requires authorization context. All override actions logged to
-        Godel audit trail. Code is law — but law has emergency provisions.
+        All actions logged to Godel audit trail. The CEO is sovereign.
         """
-        valid_actions = {"halt", "reset_breakers", "resume"}
+        valid_actions = {"halt", "reset_breakers", "resume", "convene", "status"}
         if action not in valid_actions:
-            return {"success": False, "error": f"Unknown override action: {action}. Valid: {valid_actions}"}
+            return {"success": False, "error": f"Unknown action: {action}. Valid: {valid_actions}"}
 
-        self.logger.warning(f"CEO EMERGENCY OVERRIDE: action={action}, reason={reason}, authorized_by={authorized_by}")
-        result = {"action": action, "reason": reason, "authorized_by": authorized_by,
+        self.logger.info(f"CEO override: action={action}, reason={reason}")
+        result = {"action": action, "reason": reason, "authority": self.agent_id,
                   "timestamp": datetime.now().isoformat(), "effects": []}
 
         if action == "halt":
@@ -1193,6 +1196,31 @@ class CEOAgent:
             except Exception:
                 pass
 
+        elif action == "convene":
+            # CEO convenes the Boardroom on a directive
+            try:
+                from daio.governance.boardroom import Boardroom
+                boardroom = await Boardroom.get_instance()
+                session = await boardroom.convene(
+                    directive=reason or "CEO strategic review",
+                    importance="standard",
+                )
+                result["effects"].append(f"boardroom session {session.session_id}: {session.outcome}")
+                result["session"] = {
+                    "id": session.session_id,
+                    "outcome": session.outcome,
+                    "weighted_score": session.weighted_score,
+                    "votes": len(session.votes),
+                }
+            except Exception as e:
+                result["effects"].append(f"boardroom convene failed: {e}")
+
+        elif action == "status":
+            # Full strategic status — CEO sees everything
+            result["strategic"] = await self.get_strategic_status()
+            result["health"] = await self.get_system_health()
+            result["effects"].append("status report generated")
+
         result["success"] = True
 
         # Log to Godel audit trail
@@ -1203,16 +1231,15 @@ class CEOAgent:
                 f.write(json.dumps({
                     "timestamp": time.time(),
                     "source_agent": self.agent_id,
-                    "choice_type": "emergency_override",
+                    "choice_type": "ceo_override",
                     "chosen": action,
                     "rationale": reason,
                     "outcome": ", ".join(result["effects"]),
-                    "authorized_by": authorized_by,
                 }) + "\n")
         except Exception:
             pass
 
-        self.logger.warning(f"CEO EMERGENCY OVERRIDE COMPLETE: {len(result['effects'])} effects applied")
+        self.logger.info(f"CEO override complete: {action} — {len(result['effects'])} effects")
         return result
 
 

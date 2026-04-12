@@ -29,7 +29,7 @@
           "cpo_product": 1.0,
           "cro_risk": 1.2
         },
-        "ceo_override": "emergency_halt_only"
+        "ceo_override": "executive_privilege"
       }
     },
     "orchestration": {
