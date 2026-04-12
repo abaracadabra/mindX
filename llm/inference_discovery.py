@@ -248,7 +248,12 @@ class InferenceDiscovery:
                                 else:
                                     source.status = ProviderStatus.UNREACHABLE
                         except Exception:
-                            source.status = ProviderStatus.UNREACHABLE
+                            # Local vLLM unreachable — check if Ollama cloud fallback is available
+                            if os.getenv("OLLAMA_API_KEY"):
+                                source.status = ProviderStatus.DEGRADED
+                                logger.debug(f"InferenceDiscovery: vLLM local unreachable, DEGRADED (cloud fallback available)")
+                            else:
+                                source.status = ProviderStatus.UNREACHABLE
 
                 elif source.provider_type == "ollama":
                     async with session.get(

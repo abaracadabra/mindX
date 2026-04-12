@@ -10,6 +10,11 @@ vLLM advantages over Ollama for production:
   - Speculative decoding, prefix caching
 
 Serves as PRIMARY local inference; Ollama remains as CPU/dev fallback.
+
+Cloud fallback: when local vLLM is unreachable, falls back to Ollama cloud
+(https://ollama.com/v1/) which speaks the same OpenAI-compatible protocol.
+Cloud access uses OllamaCloudTool's rate limiter (50 req/session, adaptive
+pacing) — realistic API consumption, not shotgunning.
 """
 import json
 import os
@@ -55,8 +60,16 @@ class VLLMHandler(LLMHandlerInterface):
         )
 
         self._session: Optional[aiohttp.ClientSession] = None
+
+        # Ollama cloud fallback — same protocol, Bearer auth
+        self.cloud_base_url = os.getenv("OLLAMA_CLOUD_URL", "https://ollama.com").rstrip("/")
+        self.cloud_api_key = os.getenv("OLLAMA_API_KEY", "")
+        self._using_cloud = False  # True when currently falling back to cloud
+        self._cloud_rate_limiter = None  # Lazy-initialized from OllamaCloudTool
+
         logger.info(
             f"VLLMHandler initialized: base={self.api_base_url}, "
+            f"cloud_fallback={'available' if self.cloud_api_key else 'no API key'}, "
             f"model={self.model_name_for_api}"
         )
 
@@ -99,15 +112,24 @@ class VLLMHandler(LLMHandlerInterface):
             logger.warning(f"VLLMHandler: Rate limiter retries exhausted for '{model}'")
             return None
 
-        # Try chat completions first (preferred for instruction-tuned models)
+        # Try local vLLM first (primary — free, fast, no rate limits)
         result = await self._try_chat_completions(
             session, prompt, model, max_tokens, temperature, json_mode, **kwargs
         )
         if result is not None:
+            self._using_cloud = False
             return result
 
-        # Fallback to raw completions endpoint
-        return await self._try_completions(
+        # Fallback to raw completions endpoint (still local)
+        result = await self._try_completions(
+            session, prompt, model, max_tokens, temperature, json_mode, **kwargs
+        )
+        if result is not None:
+            self._using_cloud = False
+            return result
+
+        # Local vLLM unreachable — fall back to Ollama cloud (same protocol)
+        return await self._try_cloud_fallback(
             session, prompt, model, max_tokens, temperature, json_mode, **kwargs
         )
 
@@ -304,6 +326,125 @@ class VLLMHandler(LLMHandlerInterface):
                 return None
         except Exception as e:
             logger.debug(f"vLLM embeddings failed: {e}")
+            return None
+
+    # ── Ollama Cloud Fallback ──────────────────────────────────────────
+
+    async def _try_cloud_fallback(
+        self,
+        session: aiohttp.ClientSession,
+        prompt: str,
+        model: str,
+        max_tokens: Optional[int],
+        temperature: Optional[float],
+        json_mode: Optional[bool],
+        **kwargs,
+    ) -> Optional[str]:
+        """Fall back to Ollama cloud when local vLLM is unreachable.
+
+        Same OpenAI-compatible protocol (/v1/chat/completions), Bearer auth.
+        Uses OllamaCloudTool's rate limiter for realistic API consumption.
+        """
+        if not self.cloud_api_key:
+            return None  # No API key — can't use cloud
+
+        # Enforce cloud rate limits (borrow from OllamaCloudTool)
+        if not self._cloud_rate_limiter:
+            try:
+                from tools.cloud.ollama_cloud_tool import CloudRateLimiter
+                self._cloud_rate_limiter = CloudRateLimiter()
+            except ImportError:
+                pass
+
+        if self._cloud_rate_limiter:
+            allowed = await self._cloud_rate_limiter.acquire()
+            if not allowed:
+                logger.debug("VLLMHandler: cloud rate limiter blocked request")
+                return None
+
+        cloud_endpoint = f"{self.cloud_base_url}/v1/chat/completions"
+        cloud_headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.cloud_api_key}",
+        }
+
+        # Build messages
+        messages = kwargs.get("messages")
+        if not messages:
+            system_prompt = kwargs.get("system_prompt")
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+
+        payload: Dict[str, Any] = {
+            "model": model,
+            "messages": messages,
+            "stream": False,
+        }
+        if max_tokens and max_tokens > 0:
+            payload["max_tokens"] = max_tokens
+        if temperature is not None:
+            payload["temperature"] = temperature
+        if json_mode:
+            payload["response_format"] = {"type": "json_object"}
+
+        try:
+            async with session.post(
+                cloud_endpoint, json=payload, headers=cloud_headers,
+                timeout=aiohttp.ClientTimeout(total=60),
+            ) as resp:
+                if resp.status != 200:
+                    error_text = await resp.text()
+                    logger.debug(f"VLLMHandler cloud fallback error ({resp.status}): {error_text[:200]}")
+                    return None
+
+                data = await resp.json(loads=json.loads)
+
+                # OpenAI-compatible format (Ollama /v1/ returns this)
+                choices = data.get("choices", [])
+                if choices:
+                    message = choices[0].get("message", {})
+                    content = message.get("content", "")
+                    if content:
+                        self._using_cloud = True
+                        usage = data.get("usage", {})
+                        logger.info(
+                            f"VLLMHandler: cloud fallback succeeded — "
+                            f"model={model}, tokens={usage.get('total_tokens', '?')}"
+                        )
+                        return content
+                return None
+        except aiohttp.ClientError as e:
+            logger.debug(f"VLLMHandler cloud fallback connection error: {e}")
+            return None
+        except Exception as e:
+            logger.debug(f"VLLMHandler cloud fallback error: {e}")
+            return None
+
+    async def list_cloud_models(self) -> Optional[List[Dict[str, Any]]]:
+        """List models available at Ollama cloud via /v1/models."""
+        if not self.cloud_api_key or not aiohttp:
+            return None
+        session = await self._get_session()
+        cloud_headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.cloud_api_key}",
+        }
+        try:
+            async with session.get(
+                f"{self.cloud_base_url}/v1/models",
+                headers=cloud_headers,
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json(loads=json.loads)
+                    models = data.get("data", data.get("models", []))
+                    logger.info(f"VLLMHandler: {len(models)} cloud models available")
+                    return models
+                return None
+        except Exception as e:
+            logger.debug(f"VLLMHandler cloud model listing failed: {e}")
             return None
 
     async def close(self):

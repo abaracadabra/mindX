@@ -46,6 +46,10 @@
     "grok": {
       "rpm": 30,
       "rph": 10000
+    },
+    "vllm_cloud": {
+      "rpm": 10,
+      "rph": 50
     }
   },
   "execution_timeouts": {
