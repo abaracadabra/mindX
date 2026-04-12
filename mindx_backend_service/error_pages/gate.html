@@ -258,6 +258,101 @@ function draw(t) {
     c.lineWidth = h.verified ? 1.5 : .8; c.stroke();
   }
 
+  // ── Spacetime distortion ──
+  if (distortHeld) {
+    distortStrength = Math.min(distortStrength + 0.03, 1.0);
+    distortX = mouseX; distortY = mouseY;
+    distortTrail.push({x: mouseX, y: mouseY, t: t});
+    if (distortTrail.length > 40) distortTrail.shift();
+    distortLingerTimer = 0;
+  } else {
+    // Linger phase: hold steady briefly (doubt), then rapid evaporation
+    distortLingerTimer = (distortLingerTimer || 0) + 1;
+    if (distortLingerTimer < 18) {
+      // Linger: barely decay — the distortion doubts whether to close
+      distortStrength *= 0.995;
+    } else {
+      // Rapid evaporation: collapse fast
+      distortStrength *= 0.82;
+    }
+    if (distortStrength < 0.005) { distortStrength = 0; distortTrail = []; }
+  }
+
+  if (distortStrength > 0.01) {
+    const ds = distortStrength;
+
+    // Vortex: spiral particles around cursor
+    for (const p of particles) {
+      const dx = distortX - p.x, dy = distortY - p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 300 * ds && dist > 5) {
+        const pull = (300 * ds - dist) / (300 * ds) * ds * 0.4;
+        // Tangential force (spiral) + radial pull
+        const angle = Math.atan2(dy, dx);
+        p.vx += Math.cos(angle + 1.2) * pull * 2 + dx / dist * pull * 0.3;
+        p.vy += Math.sin(angle + 1.2) * pull * 2 + dy / dist * pull * 0.3;
+      }
+    }
+
+    // Draw distortion rings
+    for (let ring = 0; ring < 5; ring++) {
+      const r = (20 + ring * 30) * ds;
+      const wobble = Math.sin(t * 0.003 + ring * 1.5) * 6 * ds;
+      c.beginPath();
+      c.arc(distortX + wobble, distortY + wobble * 0.7, r, 0, 6.28);
+      c.strokeStyle = `rgba(210,168,255,${(0.15 - ring * 0.025) * ds})`;
+      c.lineWidth = (3 - ring * 0.4) * ds;
+      c.stroke();
+    }
+
+    // Event horizon core
+    const gradient = c.createRadialGradient(distortX, distortY, 0, distortX, distortY, 40 * ds);
+    gradient.addColorStop(0, `rgba(5,8,16,${0.8 * ds})`);
+    gradient.addColorStop(0.4, `rgba(88,166,255,${0.08 * ds})`);
+    gradient.addColorStop(0.7, `rgba(210,168,255,${0.05 * ds})`);
+    gradient.addColorStop(1, 'transparent');
+    c.fillStyle = gradient;
+    c.fillRect(distortX - 60 * ds, distortY - 60 * ds, 120 * ds, 120 * ds);
+
+    // Wormhole trail
+    if (distortTrail.length > 2) {
+      c.beginPath();
+      c.moveTo(distortTrail[0].x, distortTrail[0].y);
+      for (let i = 1; i < distortTrail.length; i++) {
+        c.lineTo(distortTrail[i].x, distortTrail[i].y);
+      }
+      c.strokeStyle = `rgba(210,168,255,${0.2 * ds})`;
+      c.lineWidth = 2 * ds;
+      c.stroke();
+
+      // Glow along trail
+      c.strokeStyle = `rgba(88,166,255,${0.06 * ds})`;
+      c.lineWidth = 12 * ds;
+      c.stroke();
+    }
+
+    // Grid warp: draw distorted grid lines near cursor
+    c.strokeStyle = `rgba(88,166,255,${0.04 * ds})`;
+    c.lineWidth = 0.5;
+    const gridSize = 40;
+    for (let gx = distortX - 200; gx < distortX + 200; gx += gridSize) {
+      c.beginPath();
+      for (let gy = distortY - 200; gy < distortY + 200; gy += 4) {
+        const gdx = gx - distortX, gdy = gy - distortY;
+        const gDist = Math.sqrt(gdx * gdx + gdy * gdy);
+        const warp = gDist < 150 ? (150 - gDist) / 150 * 15 * ds : 0;
+        const angle = Math.atan2(gdy, gdx);
+        const wx = gx + Math.sin(angle * 3 + t * 0.003) * warp;
+        if (gy === distortY - 200) c.moveTo(wx, gy);
+        else c.lineTo(wx, gy);
+      }
+      c.stroke();
+    }
+
+    // XP for distortion
+    dvXP += 0.5 * ds;
+  }
+
   // Unlock animations
   for (let i = unlockAnim.length - 1; i >= 0; i--) {
     const u = unlockAnim[i]; u.life -= .015;
@@ -269,10 +364,28 @@ function draw(t) {
 }
 requestAnimationFrame(draw);
 
-// ── DeltaVerse perception: mouse velocity + wind ──
+// ── DeltaVerse perception: mouse velocity + wind + spacetime distortion ──
 let mouseVX = 0, mouseVY = 0, mousePX = 0, mousePY = 0, mouseSpeed = 0;
 let windX = 0, windY = 0;
 let dvClicks = 0, dvMoves = 0, dvXP = 0;
+
+// Spacetime distortion state
+let distortHeld = false, distortStrength = 0, distortX = 0, distortY = 0;
+let distortTrail = [], distortLingerTimer = 0;
+
+cv.addEventListener('mousedown', e => {
+  distortHeld = true; distortX = e.clientX; distortY = e.clientY;
+  cv.style.cursor = 'none';
+});
+cv.addEventListener('mouseup', () => {
+  distortHeld = false;
+  cv.style.cursor = 'crosshair';
+});
+document.addEventListener('mouseup', () => { distortHeld = false; cv.style.cursor = 'crosshair'; });
+document.addEventListener('touchstart', e => {
+  if (e.touches.length) { distortHeld = true; distortX = e.touches[0].clientX; distortY = e.touches[0].clientY; }
+}, { passive: true });
+document.addEventListener('touchend', () => { distortHeld = false; });
 
 cv.addEventListener('mousemove', e => {
   mousePX = mouseX; mousePY = mouseY;
