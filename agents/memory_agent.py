@@ -349,6 +349,21 @@ class MemoryAgent:
             logger.error(f"Failed to retrieve recent memories for {agent_id}: {e}", exc_info=True)
             return []
 
+    async def get_memories_by_agent(
+        self,
+        agent_id: str,
+        limit: int = 50,
+        memory_type: Optional[MemoryType] = None,
+        days_back: int = 7
+    ) -> List[MemoryRecord]:
+        """Retrieve memories for a specific agent. Delegates to get_recent_memories.
+
+        Used as fallback by RAGE routes when semantic search is unavailable.
+        """
+        return await self.get_recent_memories(
+            agent_id=agent_id, memory_type=memory_type, limit=limit, days_back=days_back
+        )
+
     async def analyze_agent_patterns(self, agent_id: str, days_back: int = 7) -> Dict[str, Any]:
         """Analyze patterns in an agent's memory for self-awareness.
 

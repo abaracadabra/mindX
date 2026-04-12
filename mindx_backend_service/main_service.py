@@ -2001,6 +2001,14 @@ async def startup_event():
             except Exception as he:
                 logger.warning(f"HealthAuditor failed to start: {he}")
 
+        # MastermindAgent strategic loop — 30-min cadence, reviews backlog, triggers SEA campaigns
+        async def _start_mastermind_loop():
+            await asyncio.sleep(180)  # Let mindXagent autonomous mode start first
+            try:
+                await mastermind_instance.start_autonomous_loop(interval_seconds=1800)
+            except Exception as ml_err:
+                logger.warning(f"MastermindAgent autonomous loop failed to start: {ml_err}")
+
         asyncio.create_task(_auto_start_autonomous())
         asyncio.create_task(_periodic_memory_promotion())
         asyncio.create_task(_periodic_dream_cycle())
@@ -2008,7 +2016,8 @@ async def startup_event():
         asyncio.create_task(_periodic_author())
         asyncio.create_task(_periodic_embedding())
         asyncio.create_task(_periodic_health_audit())
-        logger.info("Autonomous mode + STM→LTM + Journal + AuthorAgent + Embedding + HealthAuditor scheduled")
+        asyncio.create_task(_start_mastermind_loop())
+        logger.info("Autonomous mode + STM→LTM + Journal + AuthorAgent + Embedding + HealthAuditor + Mastermind strategic loop scheduled")
 
         # Log backend startup transcript to data/ via memory_agent (logs are memories; startup_agent can get a copy)
         try:

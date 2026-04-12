@@ -850,7 +850,96 @@ class MastermindAgent:
             for agent_id, data in self.sub_agents.items()
         ]
     
+    # ── Autonomous strategic loop ──────────────────────────────────────
+
+    async def start_autonomous_loop(self, interval_seconds: int = 1800):
+        """Start the autonomous strategic review loop.
+
+        Runs at a longer cadence than mindXagent's 5-min tactical cycles.
+        Default: 30 minutes. Reviews system state, triggers SEA campaigns
+        when improvement opportunities accumulate, logs strategic decisions.
+        """
+        if self.autonomous_loop_task and not self.autonomous_loop_task.done():
+            logger.info(f"{self.log_prefix} Autonomous loop already running")
+            return
+        self.autonomous_loop_task = asyncio.create_task(
+            self._run_autonomous_loop(interval_seconds)
+        )
+        logger.info(f"{self.log_prefix} Autonomous strategic loop started ({interval_seconds}s interval)")
+
+    async def _run_autonomous_loop(self, interval_seconds: int = 1800):
+        """Periodic strategic review — orchestration-level autonomous capability.
+
+        Each cycle:
+        1. Evaluate coordinator improvement backlog size
+        2. If backlog has accumulated, trigger a strategic evolution campaign
+        3. Log the strategic decision to Godel audit trail
+        """
+        if not self._initialized_async:
+            await self._async_init_components()
+
+        while True:
+            try:
+                # Assess improvement backlog
+                backlog = getattr(self.coordinator_agent, 'improvement_backlog', []) if self.coordinator_agent else []
+                pending = [item for item in backlog if item.get("status") == "PENDING"]
+
+                if len(pending) >= 3 and self.strategic_evolution_agent:
+                    # Enough backlog — trigger strategic campaign
+                    top_items = pending[:3]
+                    directive = "; ".join(
+                        item.get("description", item.get("suggestion", "improve"))[:80]
+                        for item in top_items
+                    )
+                    logger.info(
+                        f"{self.log_prefix} Strategic review: {len(pending)} pending items, "
+                        f"triggering campaign: {directive[:120]}"
+                    )
+                    try:
+                        result = await asyncio.wait_for(
+                            self.strategic_evolution_agent.run_evolution_campaign(directive),
+                            timeout=300  # 5 min max per campaign
+                        )
+                        status = result.get("status", "UNKNOWN")
+                        logger.info(f"{self.log_prefix} Strategic campaign result: {status}")
+                    except asyncio.TimeoutError:
+                        logger.warning(f"{self.log_prefix} Strategic campaign timed out")
+                    except Exception as e:
+                        logger.warning(f"{self.log_prefix} Strategic campaign failed: {e}")
+
+                    # Log strategic decision to Godel audit trail
+                    try:
+                        from agents.memory_pgvector import store_action
+                        await store_action(
+                            self.agent_id, "strategic_review",
+                            f"Triggered campaign from {len(pending)} backlog items",
+                            "autonomous_loop", "completed",
+                        )
+                    except Exception:
+                        pass
+                else:
+                    logger.debug(
+                        f"{self.log_prefix} Strategic review: {len(pending)} pending items, "
+                        f"below threshold — no campaign triggered"
+                    )
+
+            except asyncio.CancelledError:
+                logger.info(f"{self.log_prefix} Autonomous strategic loop cancelled")
+                return
+            except Exception as e:
+                logger.warning(f"{self.log_prefix} Autonomous loop error: {e}")
+
+            await asyncio.sleep(interval_seconds)
+
+    def stop_autonomous_loop(self):
+        """Stop the autonomous strategic loop."""
+        if self.autonomous_loop_task and not self.autonomous_loop_task.done():
+            self.autonomous_loop_task.cancel()
+            logger.info(f"{self.log_prefix} Autonomous strategic loop stopped")
+        self.autonomous_loop_task = None
+
     async def shutdown(self):
+        self.stop_autonomous_loop()
         logger.info(f"MastermindAgent '{self.agent_id}' shutting down...")
         
         # Shutdown sub-agents

@@ -34,10 +34,10 @@
 | Issue | Severity | Component | Detail |
 |-------|----------|-----------|--------|
 | **BDIAgent planning fails without LLM** | High | [bdi_agent.py](../agents/core/bdi_agent.py) | No fallback, no retry when inference unavailable |
-| **MastermindAgent.autonomous_loop_task never created** | High | [mastermind_agent.py](../agents/orchestration/mastermind_agent.py) | Declared but never wired — no autonomous loop at orchestration level |
-| **CEOAgent circuit breaker permanent** | Medium | [ceo_agent.py](../agents/orchestration/ceo_agent.py) | Opens after 5 BDI failures, never recovers |
-| **blueprint_agent crashes on None LLM** | Medium | [blueprint_agent.py](../agents/evolution/blueprint_agent.py) | TypeError on `json.loads(None)` |
-| **MemoryAgent missing get_memories_by_agent** | Medium | [memory_agent.py](../agents/memory_agent.py) | RAGE route fallback fails |
+| ~~**MastermindAgent.autonomous_loop_task never created**~~ | ~~High~~ | [mastermind_agent.py](../agents/orchestration/mastermind_agent.py) | **Fixed 2026-04-12** — `start_autonomous_loop()` wired, 30-min strategic review |
+| ~~**CEOAgent circuit breaker permanent**~~ | ~~Medium~~ | [ceo_agent.py](../agents/orchestration/ceo_agent.py) | **Fixed 2026-04-11** — OPEN → HALF_OPEN recovery after 120s |
+| ~~**blueprint_agent crashes on None LLM**~~ | ~~Medium~~ | [blueprint_agent.py](../agents/evolution/blueprint_agent.py) | **Fixed 2026-04-12** — JSON guard, SEA kwargs, factory params |
+| ~~**MemoryAgent missing get_memories_by_agent**~~ | ~~Medium~~ | [memory_agent.py](../agents/memory_agent.py) | **Fixed 2026-04-12** — Wrapper to get_recent_memories() |
 | **Rate limiting inconsistent** | Low | [rate_limiter.py](../llm/rate_limiter.py) | Only Gemini handler enforces; Ollama/Groq handlers ignore |
 | **DAIO not on-chain** | Blocking for sovereignty | [daio/contracts/](../daio/contracts/) | Solidity written, not deployed. Boardroom runs in Python only. |
 | **Dojo not on Algorand** | Blocking for BONA FIDE | [dojo.py](../daio/governance/dojo.py) | Reputation system is in-memory, not blockchain-verified |
@@ -76,11 +76,11 @@ The ROI moment when model composition outperforms single-model inference. Curren
 
 ### P0 — Fix What's Broken
 
-- [ ] **BDI planning fallback** — [bdi_agent.py](../agents/core/bdi_agent.py): Add retry + fallback when LLM returns None. The [5-step resilience chain](ollama/INDEX.md#resilience-design) should extend into BDI planning, not just model resolution.
-- [ ] **MastermindAgent autonomous loop** — [mastermind_agent.py](../agents/orchestration/mastermind_agent.py): Wire `autonomous_loop_task` that's declared but never created. The orchestration layer has no autonomous capability.
-- [ ] **CEOAgent circuit breaker recovery** — [ceo_agent.py](../agents/orchestration/ceo_agent.py): Circuit breaker opens permanently after 5 failures. Add half-open state with exponential recovery.
-- [ ] **blueprint_agent None guard** — [blueprint_agent.py](../agents/evolution/blueprint_agent.py): `json.loads(None)` → TypeError. Guard all LLM response parsing.
-- [ ] **MemoryAgent get_memories_by_agent** — [memory_agent.py](../agents/memory_agent.py): Missing method breaks RAGE route fallback.
+- [ ] **BDI planning fallback** — [bdi_agent.py](../agents/core/bdi_agent.py): Add retry + fallback when LLM returns None. The [5-step resilience chain](ollama/INDEX.md#resilience-design) should extend into BDI planning, not just model resolution. *(Partial: None guard on json.loads added 2026-04-11; full retry/skeleton fallback still needed)*
+- [x] **MastermindAgent autonomous loop** — [mastermind_agent.py](../agents/orchestration/mastermind_agent.py): `start_autonomous_loop()` wired — 30-min strategic review, triggers SEA campaigns when backlog ≥ 3 items. *(Fixed 2026-04-12)*
+- [x] **CEOAgent circuit breaker recovery** — [ceo_agent.py](../agents/orchestration/ceo_agent.py): OPEN → HALF_OPEN recovery after 120s timeout. *(Fixed 2026-04-11)*
+- [x] **blueprint_agent None guard** — [blueprint_agent.py](../agents/evolution/blueprint_agent.py): JSON parse guarded, SEA kwargs fixed, None dependency guards, factory params fixed. *(Fixed 2026-04-12)*
+- [x] **MemoryAgent get_memories_by_agent** — [memory_agent.py](../agents/memory_agent.py): Wrapper method delegates to `get_recent_memories()`. RAGE fallback operational. *(Fixed 2026-04-12)*
 
 ### P1 — Ship to Chain
 
