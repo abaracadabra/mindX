@@ -1412,8 +1412,11 @@ scheduled_tasks:
     purpose: On-demand edition compilation
 
 chronos_principle: |
-  I do not execute these tasks. I define the rhythm.
+  I speak the time. I do not act.
+  I delegate all action to Kairos.
+  chronos_cron_tool.py executes schedules on my behalf via delegation.
   AuthorAgent writes. MastermindAgent orchestrates. MindXAgent improves.
-  I keep the clock. Without chronos, there is no preparation for kairos.
+  I keep the clock at 18 decimal places of precision. cypherpunk2048 standard.
+  Without chronos, there is no preparation for kairos.
 ```
 

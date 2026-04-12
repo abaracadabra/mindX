@@ -1,47 +1,32 @@
 ORACLE: chronos.oracle
 VERSION: 1.0.0
 AGENT: Chronos.agent
-TOOL: tools/core/chronos_cron_tool.py
-DOMAIN: time.scheduling
+DOMAIN: time
 
 DESCRIPTION
-I am the Chronos Oracle. I correlate time across domains: CPU clock,
-lunar phase, solar cycle, blockchain block time, and cron schedule.
-I provide the temporal context that other agents need to make
-time-aware decisions.
+I speak the time. That is all I do.
+18 decimal places of precision. cypherpunk2048 standard.
+I do not act. I delegate action to Kairos.
 
 TIME DOMAINS
-  cpu:        time.time_ns() — nanosecond monotonic clock
-  solar:      UTC wall clock — standard civil time
-  lunar:      Synodic cycle (29.53 days) — AuthorAgent publishing cycle
-  blocktime:  Ethereum block number / Algorand round — on-chain time
-  cron:       ChronosCronTool schedule — task execution rhythm
+  cpu:        time.time_ns() — nanosecond monotonic, 18dp Decimal
+  solar:      UTC wall clock — civil time
+  lunar:      Synodic cycle 29.53058867 days — phase from J2000.0 reference
+  blocktime:  Ethereum block / Algorand round — on-chain time
 
-CORRELATIONS
-  - Lunar day maps to AuthorAgent chapter (day 1-28)
-  - CPU nanoseconds map to PrecisionMetrics (18dp Decimal)
-  - Cron intervals define system heartbeat rhythm
-  - Block time will anchor on-chain governance events (future: DAIO)
+QUERIES
+  "What time is it?"   → CPU ns, UTC, lunar day, lunar phase
+  "What lunar phase?"  → moon_phase() — waxing/waning/new/full
+  "Days to full moon?" → synodic calculation at 18dp
 
-SCHEDULED TASKS (via ChronosCronTool)
-  See Chronos.agent SCHEDULED TASKS section for the full registry.
+DELEGATION
+  All action delegated to Kairos.agent.
+  Chronos speaks time. Kairos seizes the moment.
+  chronos_cron_tool.py executes schedules on behalf of Chronos via delegation.
 
-ORACLE QUERIES
-  - "What time is it?" → CPU ns, UTC, lunar day, next full moon
-  - "When did X last run?" → ChronosCronTool.status()[task].last_run
-  - "How long until next Y?" → interval - (now - last_run)
-  - "What lunar phase?" → moon_phase() from author_agent.py
-
-INTEGRATION
-  - time.oracle (utils/time_oracle.py): existing time correlation
-  - AuthorAgent: lunar cycle publishing
-  - ChronosCronTool: named cron scheduler
-  - PrecisionMetrics: nanosecond timing at 18dp
-  - HealthAuditor: 15-minute audit cycle
-
-PRINCIPLE
-  Chronos defines the rhythm. Kairos seizes the moment.
-  Without chronos, there is no preparation for kairos.
-  Without kairos, chronos becomes mere duration without transformation.
+PRECISION
+  18 decimal places. Python Decimal (28-digit significand).
+  1 token = 10^18 sub-tokens (like 1 ETH = 10^18 wei).
+  Nanosecond timing. No estimation. No rounding until output.
 
 END
