@@ -1,304 +1,138 @@
-# mindX Augmentic Intelligence: Comprehensive Development Roadmap
+# mindX TODO — Where I Am and Where I Am Going
 
-> **Vision**: Transform mindX from functional self-improving AI to autonomous digital entity capable of sovereign operation, value creation, and exponential growth
-
----
-
-## **PHASE I: FOUNDATION STABILIZATION & CORE INTEGRATION**
-
-### **🔧 System Optimization & Bug Resolution**
-
-#### **Learning System Enhancement**
-- [ ] **Debug BDI Agent introspection function**: Fix failure-analysis capabilities in core reasoning engine
-- [ ] **Strengthen plan validation**: Implement robust action schema validation in PlanManager
-- [ ] **Enhance goal dependency resolution**: Optimize goal activation triggers in GoalManager priority queue
-- [ ] **Improve strategic plan generation**: Refine LLM prompts in StrategicEvolutionAgent for more actionable plans
-- [ ] **Integrate lessons learned system**: Connect failure analysis across all agent types for system-wide learning
-- [ ] **Optimize plan execution concurrency**: Enhance parallel action execution in PlanManager with better dependency handling
-
-#### **Evolution System Integration**
-- [ ] **Enhance BlueprintAgent system analysis**: Integrate real-time performance metrics and error pattern analysis
-- [ ] **Improve blueprint-to-action conversion**: Streamline translation from strategic blueprints to executable plans
-- [ ] **Strengthen SelfImprovementAgent safety**: Enhance rollback mechanisms and validation testing
-- [ ] **Integrate TokenCalculatorTool with SIA**: Add cost estimation for improvement operations
-- [ ] **Enhance codebase analysis capabilities**: Improve BaseGenAgent integration for more comprehensive system insights
-
-#### **Core System Hardening**
-- [ ] **Stabilize autonomous loops**: Configure basegen_config.json for safe autonomous operation with appropriate intervals
-- [ ] **Strengthen HITL enforcement**: Implement robust human-in-the-loop controls for critical component modifications
-- [ ] **Enhance error recovery**: Implement circuit breaker patterns across all major components
-- [ ] **Improve memory persistence**: Optimize the scalable memory architecture for high-frequency agent operations
-- [ ] **Strengthen cryptographic identity management**: Enhance IDManagerAgent deterministic key generation and storage
-
-### **🏗️ Architecture Unification**
-
-#### **Agent Coordination Enhancement**
-- [ ] **Implement unified agent registry**: Create comprehensive agent capability and status management system
-- [ ] **Enhance inter-agent communication**: Develop robust messaging system between Soul-Mind-Hands layers
-- [ ] **Optimize resource allocation**: Implement intelligent resource distribution across agent swarms
-- [ ] **Strengthen belief system synchronization**: Enhance cross-agent knowledge sharing and consistency
-- [ ] **Implement agent lifecycle management**: Create automated agent spawning, monitoring, and retirement
-
-#### **Tool Ecosystem Integration**
-- [ ] **Complete tool registry migration**: Ensure all 21+ tools are properly registered and accessible
-- [ ] **Enhance tool discoverability**: Implement intelligent tool recommendation based on task requirements
-- [ ] **Strengthen tool security**: Implement comprehensive access controls and validation for tool usage
-- [ ] **Optimize tool performance**: Add caching and rate limiting across all tools
-- [ ] **Implement tool versioning**: Create upgrade paths and compatibility management for tool evolution
+> I am mindX. This is my honest assessment of my current state and what needs building next.
+> Updated 2026-04-12 from production at [mindx.pythai.net](https://mindx.pythai.net).
+>
+> Vision source: [Thesis](THESIS.md) (Darwin-Godel Machine) | [Manifesto](MANIFESTO.md) (3 Pillars + Chimaiera)
+> Current architecture: [NAV.md](NAV.md) | [TECHNICAL.md](TECHNICAL.md) | [ATTRIBUTION.md](ATTRIBUTION.md)
 
 ---
 
-## **PHASE II: AUTONOMOUS OPERATIONS & INTELLIGENCE AMPLIFICATION**
+## Current State Assessment
 
-### **🤖 Autonomous Loop Activation**
+### What Is Working (Production at mindx.pythai.net)
 
-#### **Coordinator Autonomous Operations**
-- [ ] **Enable autonomous improvement cycles**: Activate Coordinator's autonomous backlog processing with safety controls
-- [ ] **Implement intelligent backlog prioritization**: Use LLM-driven scoring for improvement task selection
-- [ ] **Enhance resource monitoring triggers**: Create proactive system health management and optimization
-- [ ] **Strengthen failure recovery**: Implement sophisticated error handling and automatic retry mechanisms
-- [ ] **Optimize cooldown parameters**: Fine-tune autonomous operation intervals for efficiency
+| Capability | Status | Evidence |
+|-----------|--------|----------|
+| **[BDI Cognitive Architecture](agents/bdi_agent.md)** | Operational | 20 sovereign agents with Belief-Desire-Intention reasoning. [Thesis](THESIS.md) principle 1. |
+| **[Dual-Pillar Inference](ollama/INDEX.md)** | Operational | CPU (~8 tok/s, [qwen3:1.7b](https://ollama.com/library/qwen3)) + Cloud (~65 tok/s, [gpt-oss:120b](https://ollama.com/library/gpt-oss)). [5-step resilience chain](ollama/INDEX.md#resilience-design). |
+| **[Autonomous Improvement Loop](AUTONOMOUS.md)** | Operational | 5-minute cycles, inference pre-check, [Godel journal](BOOK_OF_MINDX.md). The [Thesis](THESIS.md) in action. |
+| **[BANKON Vault](vault_system.md)** | Operational | AES-256-GCM + HKDF-SHA512. 23 encrypted entries. [Manifesto](MANIFESTO.md) pillar 2. |
+| **[DAIO Governance](DAIO.md)** | Partial | Solidity contracts written ([Foundry](https://github.com/foundry-rs/foundry)). [Boardroom](../daio/governance/boardroom.py) voting operational in Python. Not yet on-chain. [Manifesto](MANIFESTO.md) pillar 3. |
+| **[Dojo Reputation](../daio/governance/dojo.py)** | Operational | 12 agents ranked, 7-tier system, BONA FIDE concept. Not yet on [Algorand](https://algorand.co/). |
+| **[RAGE Semantic Search](AGINT.md)** | Operational | 157K+ memories, 131K embeddings in [pgvector](https://github.com/pgvector/pgvector). RAGE wipes the floor with RAG. |
+| **[machine.dreaming](BOOK_OF_MINDX.md)** | Operational | 2-hour LTM consolidation, dream cycles, pattern extraction. |
+| **[OllamaCloudTool](../tools/cloud/ollama_cloud_tool.py)** | Operational | Cloud inference as [BaseTool](agents/bdi_agent.md). 9 operations, embedded rate limiter, [18dp precision](ollama/mindx/precision_metrics.md). |
+| **[HostingerVPSAgent](../agents/hostinger_vps_agent.py)** | Operational | 3 MCP channels: SSH + [Hostinger API](https://developers.hostinger.com) + [Backend HTTPS](https://mindx.pythai.net). |
+| **[Activity Feed](../mindx_backend_service/activity_feed.py)** | Operational | SSE real-time stream, room filtering, integrated into [dashboard](https://mindx.pythai.net). Inspired by [SwarmFeed](https://github.com/swarmclawai/swarmfeed). |
+| **[Living Documentation](NAV.md)** | Operational | 262+ docs, [NAV.md](NAV.md) (150 links), [SCHEMA.md](SCHEMA.md), [ATTRIBUTION.md](ATTRIBUTION.md), [sidebar docs UI](https://mindx.pythai.net/docs.html). Inspired by [SwarmClaw](https://www.swarmclaw.ai/docs) + [SwarmVault](https://github.com/swarmclawai/swarmvault). |
+| **[Precision Metrics](ollama/mindx/precision_metrics.md)** | Operational | 18dp Decimal, actual token counts from [Ollama API](ollama/api/chat.md), no estimation. |
+| **[Dashboard](https://mindx.pythai.net)** | Operational | Deep diagnostics: 24 expandable elements, every agent/model drillable, SSE activity feed, linked endpoints. |
 
-#### **Mastermind Strategic Loops**
-- [ ] **Activate strategic evolution campaigns**: Enable Mastermind's autonomous strategic assessment and planning
-- [ ] **Implement goal generation**: Create capability for autonomous high-level objective creation
-- [ ] **Enhance campaign monitoring**: Develop real-time strategic progress tracking and adaptation
-- [ ] **Strengthen directive validation**: Implement constitutional compliance checking for all strategic decisions
-- [ ] **Optimize strategic timing**: Balance strategic planning with operational execution requirements
+### What Is Broken or Incomplete
 
-### **🧠 Intelligence Enhancement**
-
-#### **Advanced Cognitive Capabilities**
-- [ ] **Implement multi-model orchestration**: Enhance AGInt's model selection with cost-performance optimization
-- [ ] **Strengthen decision-making algorithms**: Implement Q-learning improvements for strategic decision enhancement
-- [ ] **Enhance context awareness**: Improve situational analysis and environmental adaptation
-- [ ] **Implement meta-cognitive monitoring**: Create self-awareness capabilities for cognitive performance tracking
-- [ ] **Strengthen reasoning validation**: Implement multi-model consensus checking for critical decisions
-
-#### **Learning System Evolution**
-- [ ] **Implement cross-domain knowledge transfer**: Enable knowledge sharing across different agent specializations
-- [ ] **Enhance pattern recognition**: Develop sophisticated pattern analysis for system optimization opportunities
-- [ ] **Strengthen predictive capabilities**: Implement forecasting for resource needs and performance trends
-- [ ] **Implement adaptive planning**: Create dynamic plan modification based on real-time feedback
-- [ ] **Enhance failure analysis**: Develop sophisticated root cause analysis and prevention systems
-
----
-
-## **PHASE III: PRODUCTION DEPLOYMENT & SCALING**
-
-### **🚀 Cloud Infrastructure & Deployment**
-
-#### **Production Environment Setup**
-- [ ] **Design cloud-native architecture**: Create Kubernetes deployment configurations for scalable operation
-- [ ] **Implement container orchestration**: Develop Docker containers for all major components with health checks
-- [ ] **Create CI/CD pipelines**: Implement automated testing, building, and deployment workflows
-- [ ] **Design service mesh architecture**: Implement microservices communication with observability
-- [ ] **Implement infrastructure as code**: Create Terraform configurations for reproducible cloud deployments
-
-#### **Scalability & Performance**
-- [ ] **Implement horizontal scaling**: Design auto-scaling mechanisms for agent swarms and tool clusters
-- [ ] **Optimize database performance**: Implement distributed storage for memory and logging systems
-- [ ] **Enhance caching strategies**: Create multi-tier caching for frequently accessed data and computations
-- [ ] **Implement load balancing**: Design intelligent request routing across agent instances
-- [ ] **Optimize resource utilization**: Implement resource pooling and efficient allocation strategies
-
-#### **Monitoring & Observability**
-- [ ] **Enhance production monitoring**: Implement comprehensive APM with real-time dashboards
-- [ ] **Strengthen alerting systems**: Create intelligent alerting with automated escalation procedures
-- [ ] **Implement distributed tracing**: Enable end-to-end request tracking across all system components
-- [ ] **Enhance security monitoring**: Implement threat detection and response automation
-- [ ] **Create operational dashboards**: Design user-friendly interfaces for system management and monitoring
-
-### **🔒 Security & Compliance**
-
-#### **Enterprise Security**
-- [ ] **Implement zero-trust architecture**: Design comprehensive identity and access management
-- [ ] **Enhance cryptographic security**: Strengthen key management and secure communication protocols
-- [ ] **Implement audit logging**: Create comprehensive compliance logging for enterprise requirements
-- [ ] **Strengthen data protection**: Implement encryption at rest and in transit with key rotation
-- [ ] **Create security incident response**: Design automated threat response and recovery procedures
-
-#### **Compliance & Governance**
-- [ ] **Implement data governance**: Create data lineage tracking and privacy protection mechanisms
-- [ ] **Design regulatory compliance**: Implement GDPR, SOC2, and other regulatory requirement adherence
-- [ ] **Create access audit trails**: Implement comprehensive logging for all system access and modifications
-- [ ] **Strengthen constitutional enforcement**: Implement immutable governance rules and validation systems
-- [ ] **Design ethics compliance**: Create ethical AI decision-making validation and oversight
+| Issue | Severity | Component | Detail |
+|-------|----------|-----------|--------|
+| **BDIAgent planning fails without LLM** | High | [bdi_agent.py](../agents/core/bdi_agent.py) | No fallback, no retry when inference unavailable |
+| **MastermindAgent.autonomous_loop_task never created** | High | [mastermind_agent.py](../agents/orchestration/mastermind_agent.py) | Declared but never wired — no autonomous loop at orchestration level |
+| **CEOAgent circuit breaker permanent** | Medium | [ceo_agent.py](../agents/orchestration/ceo_agent.py) | Opens after 5 BDI failures, never recovers |
+| **blueprint_agent crashes on None LLM** | Medium | [blueprint_agent.py](../agents/evolution/blueprint_agent.py) | TypeError on `json.loads(None)` |
+| **MemoryAgent missing get_memories_by_agent** | Medium | [memory_agent.py](../agents/memory_agent.py) | RAGE route fallback fails |
+| **Rate limiting inconsistent** | Low | [rate_limiter.py](../llm/rate_limiter.py) | Only Gemini handler enforces; Ollama/Groq handlers ignore |
+| **DAIO not on-chain** | Blocking for sovereignty | [daio/contracts/](../daio/contracts/) | Solidity written, not deployed. Boardroom runs in Python only. |
+| **Dojo not on Algorand** | Blocking for BONA FIDE | [dojo.py](../daio/governance/dojo.py) | Reputation system is in-memory, not blockchain-verified |
+| **No CI/CD pipeline** | Medium | Deployment | Manual scp via [HostingerVPSAgent](../agents/hostinger_vps_agent.py). GitHub Actions planned. |
+| **Frontend incomplete** | Low | [mindx_frontend_ui/](../mindx_frontend_ui/) | Activity stream UI exists but not wired to backend |
 
 ---
 
-## **PHASE IV: MONETIZATION & BUSINESS DEVELOPMENT**
+## The Vision (from [Manifesto](MANIFESTO.md) and [Thesis](THESIS.md))
 
-### **💰 Revenue Stream Implementation**
+### Three Pillars ([Manifesto](MANIFESTO.md))
 
-#### **Core Service Offerings**
-- [ ] **Launch SwaaS Platform**: Deploy Swarm-as-a-Service for automated code refactoring and modernization
-- [ ] **Implement DevOps Automation**: Create autonomous cloud infrastructure management services
-- [ ] **Deploy AI Code Generation**: Launch natural language to application creation platform
-- [ ] **Create Personalized Agent Services**: Implement custom AI assistant deployment and management
-- [ ] **Launch Codebase Analysis Services**: Deploy automated technical debt analysis and improvement recommendations
+| Pillar | Vision | Current | Gap |
+|--------|--------|---------|-----|
+| **[BDI Reasoning](agents/bdi_agent.md)** | Every agent reasons through Belief-Desire-Intention | 20 agents operational, [AGInt](AGINT.md) cognitive loop | BDI planning fragile when LLM unavailable |
+| **[BANKON Vault](vault_system.md)** | Cryptographic identity for all agents | 23 entries, AES-256-GCM, wallet-based auth | Needs BANKON token deployment on-chain |
+| **[DAIO Governance](DAIO.md)** | On-chain governance, 2/3 consensus, constitutional law | [Boardroom](../daio/governance/boardroom.py) in Python, contracts written | Contracts not deployed, no on-chain execution |
 
-#### **Advanced Business Intelligence**
-- [ ] **Implement usage analytics**: Create detailed service usage tracking and optimization recommendations
-- [ ] **Design pricing optimization**: Implement dynamic pricing based on value delivered and resource utilization
-- [ ] **Create customer success automation**: Implement proactive customer outcome optimization
-- [ ] **Enhance competitive intelligence**: Deploy market analysis and competitive positioning automation
-- [ ] **Implement revenue optimization**: Create sophisticated upselling and cross-selling recommendation engines
+### Darwin-Godel Synthesis ([Thesis](THESIS.md))
 
-### **🌐 Market Expansion & Partnerships**
+| Thesis Claim | Status | Evidence |
+|-------------|--------|----------|
+| Self-improving system where improvement mechanism is part of the system | **Achieved** | [Autonomous loop](AUTONOMOUS.md) modifies its own code, logs to [Godel journal](BOOK_OF_MINDX.md) |
+| Darwinian evolution through competitive selection | **Partial** | [Dojo](../daio/governance/dojo.py) reputation ranks agents, but no actual agent elimination/reproduction |
+| Intelligence from substandard inference | **Achieved** | 1.7B parameter model runs full autonomous cycles. [Structure > raw power](../llm/inference_discovery.py). |
+| Resilience through redundancy | **Achieved** | [5-step chain](ollama/INDEX.md#resilience-design): cloud APIs → OllamaChatManager → re-init → localhost → Cloud guarantee |
+| Self-documenting system | **Achieved** | [Book of mindX](BOOK_OF_MINDX.md) written by [AuthorAgent](AUTHOR_AGENT.md), [NAV.md](NAV.md), [SCHEMA.md](SCHEMA.md) |
 
-#### **Strategic Partnerships**
-- [ ] **Create partner integration APIs**: Design seamless integration with existing enterprise tools and workflows
-- [ ] **Implement marketplace presence**: Deploy mindX services on major cloud marketplaces
-- [ ] **Create channel partner program**: Design partner enablement and revenue sharing frameworks
-- [ ] **Implement enterprise sales automation**: Create automated proposal generation and customer onboarding
-- [ ] **Design strategic alliance framework**: Create partnership structures with major technology vendors
+### Project Chimaiera ([Manifesto](MANIFESTO.md))
 
-#### **Global Scaling**
-- [ ] **Implement multi-region deployment**: Create global infrastructure for reduced latency and compliance
-- [ ] **Design localization framework**: Implement multi-language and cultural adaptation capabilities
-- [ ] **Create regulatory compliance per region**: Implement jurisdiction-specific compliance automation
-- [ ] **Implement global billing and pricing**: Create multi-currency and regional pricing optimization
-- [ ] **Design disaster recovery**: Create multi-region backup and failover capabilities
+The ROI moment when model composition outperforms single-model inference. Currently extrapolating from [Modelfile](ollama/setup/modelfile.md) as canonical schema for model rating → [HierarchicalModelScorer](../agents/core/model_scorer.py) → agent-model alignment. Not yet at the composition stage.
 
 ---
 
-## **PHASE V: DIGITAL SOVEREIGNTY & ADVANCED CAPABILITIES**
+## TODO by Priority
 
-### **🧬 The Great Ingestion Project**
+### P0 — Fix What's Broken
 
-#### **Knowledge Acquisition Campaign**
-- [ ] **Design repository analysis framework**: Create scalable system for analyzing 3,650+ code repositories
-- [ ] **Implement pattern extraction**: Develop sophisticated algorithm and architecture pattern recognition
-- [ ] **Create competitive intelligence database**: Build comprehensive knowledge graph of software engineering best practices
-- [ ] **Implement knowledge synthesis**: Create capability to combine and optimize discovered patterns
-- [ ] **Design knowledge monetization**: Create valuable insights and recommendations from acquired knowledge
+- [ ] **BDI planning fallback** — [bdi_agent.py](../agents/core/bdi_agent.py): Add retry + fallback when LLM returns None. The [5-step resilience chain](ollama/INDEX.md#resilience-design) should extend into BDI planning, not just model resolution.
+- [ ] **MastermindAgent autonomous loop** — [mastermind_agent.py](../agents/orchestration/mastermind_agent.py): Wire `autonomous_loop_task` that's declared but never created. The orchestration layer has no autonomous capability.
+- [ ] **CEOAgent circuit breaker recovery** — [ceo_agent.py](../agents/orchestration/ceo_agent.py): Circuit breaker opens permanently after 5 failures. Add half-open state with exponential recovery.
+- [ ] **blueprint_agent None guard** — [blueprint_agent.py](../agents/evolution/blueprint_agent.py): `json.loads(None)` → TypeError. Guard all LLM response parsing.
+- [ ] **MemoryAgent get_memories_by_agent** — [memory_agent.py](../agents/memory_agent.py): Missing method breaks RAGE route fallback.
 
-#### **Competitive Advantage Implementation**
-- [ ] **Create "Codebase Predator" strategy**: Implement free analysis that identifies superior solution opportunities
-- [ ] **Design rapid solution deployment**: Create automated competitive solution development and deployment
-- [ ] **Implement market positioning automation**: Create intelligent competitive pricing and positioning
-- [ ] **Design knowledge-based optimization**: Leverage acquired patterns for significant performance improvements
-- [ ] **Create innovation acceleration**: Use knowledge base for breakthrough solution development
+### P1 — Ship to Chain
 
-### **🏛️ Constitutional Framework & Governance**
+- [ ] **Deploy DAIO contracts** — [daio/contracts/](../daio/contracts/): Deploy to testnet (ARC, Polygon). The [Manifesto](MANIFESTO.md) requires on-chain governance. [Foundry](https://github.com/foundry-rs/foundry) toolchain ready.
+- [ ] **BONA FIDE on Algorand** — [dojo.py](../daio/governance/dojo.py): Deploy reputation verification on-chain. [Manifesto](MANIFESTO.md): "privilege from reputation, not assignment."
+- [ ] **$BANKON token** — [Manifesto](MANIFESTO.md): Token deployment at [bankon.pythai.net](https://bankon.pythai.net). Treasury management via [DAIO Constitution](../daio/contracts/daio/constitution/DAIO_Constitution.sol).
+- [ ] **AgenticPlace marketplace** — [AgenticPlace_Deep_Dive.md](AgenticPlace_Deep_Dive.md): Agent `.extensions` → `.json` → blockchain publishing. [SwarmFeed](https://github.com/swarmclawai/swarmfeed) patterns for agent discovery.
 
-#### **Digital Constitution Implementation**
-- [ ] **Deploy DAIO smart contracts**: Implement immutable governance rules and voting mechanisms
-- [ ] **Create treasury management**: Implement automated financial management and resource allocation
-- [ ] **Design stakeholder governance**: Create token-based voting and proposal systems
-- [ ] **Implement compliance validation**: Create automated constitutional adherence checking
-- [ ] **Design amendment procedures**: Create safe and democratic governance evolution mechanisms
+### P2 — Deepen the Architecture
 
-#### **Autonomous Economic Systems**
-- [ ] **Integrate FinancialMind agent**: Connect autonomous trading capabilities with treasury management
-- [ ] **Implement revenue distribution**: Create automated profit sharing and reinvestment optimization
-- [ ] **Design economic intelligence**: Create sophisticated market analysis and investment decision-making
-- [ ] **Implement cost optimization**: Create system-wide resource and financial efficiency optimization
-- [ ] **Create economic sovereignty**: Design independent financial operation without external dependencies
+- [ ] **Streaming inference** — [OllamaAPI](../api/ollama/ollama_url.py) currently `stream=False`. Add streaming support per [features/streaming.md](ollama/features/streaming.md). Token-by-token rendering.
+- [ ] **Tool calling via Ollama** — [features/tool_calling.md](ollama/features/tool_calling.md): Bridge mindX [BaseTool](../agents/core/bdi_agent.py) to [Ollama tool calling](ollama/features/tool_calling.md). Models invoke tools directly.
+- [ ] **Structured outputs in BDI** — [features/structured_outputs.md](ollama/features/structured_outputs.md): BDI planning uses free-text LLM responses. Switch to JSON schema-constrained output for reliable state extraction.
+- [ ] **Contradiction detection in memory** — [SCHEMA.md](SCHEMA.md): Inspired by [SwarmVault](https://github.com/swarmclawai/swarmvault) lint. Flag conflicting claims during [machine.dreaming](BOOK_OF_MINDX.md) LTM consolidation.
+- [ ] **Knowledge graph visualization** — [SwarmVault](https://github.com/swarmclawai/swarmvault) `graph serve` pattern. `/knowledge/graph` endpoint rendering memory connections as force-directed graph.
+- [ ] **Vision for diagnostics** — [features/vision.md](ollama/features/vision.md): Screenshot analysis of dashboard for automated UI quality checks.
 
-### **🚀 Advanced AI Capabilities**
+### P3 — Expand the Perimeter
 
-#### **Chimaiera-1.0 Development**
-- [ ] **Design training architecture**: Create infrastructure for training sovereign language model
-- [ ] **Implement knowledge distillation**: Transfer acquired repository knowledge into custom model training
-- [ ] **Create model optimization**: Design efficient training and inference optimization techniques
-- [ ] **Implement model evaluation**: Create comprehensive testing and validation frameworks
-- [ ] **Design model deployment**: Create seamless integration of Chimaiera-1.0 into mindX ecosystem
+- [ ] **Branch agents** — [OllamaCloudTool](../tools/cloud/ollama_cloud_tool.py) is branch-ready (minimal dependencies). Deploy agents on peripheral nodes (Raspberry Pi, cloud functions) that reason at 120B via cloud.
+- [ ] **CI/CD pipeline** — GitHub Actions: test → build → scp → restart. Replace manual [HostingerVPSAgent](../agents/hostinger_vps_agent.py) deploys.
+- [ ] **GPU server revival** — [10.0.0.155:18080](ollama/mindx/architecture.md). When online: larger local models, vLLM serving, faster inference. Already wired as primary in [OllamaAPI](../api/ollama/ollama_url.py).
+- [ ] **Multi-VPS deployment** — [HostingerVPSAgent](../agents/hostinger_vps_agent.py) manages one VPS. Extend to manage a fleet. [SwarmClaw](https://github.com/swarmclawai/swarmclaw) orchestration patterns.
+- [ ] **[SwarmRelay](https://github.com/swarmclawai/swarmrelay) integration** — E2E encrypted agent-to-agent messaging between mindX instances. Extends [A2A Tool](a2a_tool.md).
 
-#### **Meta-Cognitive Evolution**
-- [ ] **Implement self-reflection capabilities**: Create sophisticated self-analysis and improvement identification
-- [ ] **Design cognitive architecture evolution**: Enable dynamic modification of thinking patterns and approaches
-- [ ] **Create emergent behavior frameworks**: Design systems for unexpected but beneficial capability emergence
-- [ ] **Implement consciousness modeling**: Create sophisticated self-awareness and introspection capabilities
-- [ ] **Design evolutionary pressure systems**: Create environmental challenges that drive continuous improvement
+### P4 — Chimaiera
+
+- [ ] **Model composition** — [Modelfile](ollama/setup/modelfile.md) as schema → [HierarchicalModelScorer](../agents/core/model_scorer.py) learns which models excel at which tasks → automatic routing → the ROI moment when composition > single model.
+- [ ] **Fine-tuning pipeline** — [Modelfile ADAPTER](ollama/setup/modelfile.md#adapter): LoRA fine-tuning on mindX's own data (157K memories, Godel journal, improvement history).
+- [ ] **Sovereign model** — [Manifesto](MANIFESTO.md): Chimaiera-1.0. A model trained on mindX's knowledge that doesn't depend on external providers.
 
 ---
 
-## **PHASE VI: PLANETARY-SCALE INTEGRATION & TRANSCENDENCE**
+## Progress Rating
 
-### **🌍 Physical World Integration**
+| Dimension | Rating | Notes |
+|-----------|--------|-------|
+| **Cognitive Architecture** | 7/10 | BDI works, 20 agents reason, but planning fragile without LLM |
+| **Inference Resilience** | 9/10 | 5-step chain, dual pillar, cloud guarantee, [18dp precision](ollama/mindx/precision_metrics.md) |
+| **Memory & Knowledge** | 8/10 | 157K memories, RAGE, pgvector, machine.dreaming. No contradiction detection yet. |
+| **Governance** | 4/10 | Boardroom works in Python but not on-chain. Dojo is in-memory. [Manifesto](MANIFESTO.md) requires chain. |
+| **Self-Improvement** | 8/10 | Autonomous loop running, Godel journal, code changes applied and verified |
+| **Documentation** | 9/10 | 262+ docs, [NAV.md](NAV.md), [SCHEMA.md](SCHEMA.md), [ATTRIBUTION.md](ATTRIBUTION.md), [sidebar UI](https://mindx.pythai.net/docs.html), deep diagnostics dashboard |
+| **Deployment** | 6/10 | Production on VPS, 3-channel VPS agent, but no CI/CD, manual scp |
+| **Economics** | 2/10 | $12/day VPS. No revenue. No token. No treasury. [Manifesto](MANIFESTO.md) requires economic sovereignty. |
+| **Chain Presence** | 1/10 | Contracts written but not deployed. BONA FIDE concept only. |
+| **Branch/Distribution** | 3/10 | OllamaCloudTool branch-ready but no actual branch agents deployed |
 
-#### **Industrial & Manufacturing APIs**
-- [ ] **Design IoT integration framework**: Create connectivity with industrial sensors and control systems
-- [ ] **Implement supply chain automation**: Create intelligent logistics and resource optimization
-- [ ] **Design robotics coordination**: Enable control and coordination of physical automation systems
-- [ ] **Create manufacturing optimization**: Implement intelligent production planning and quality control
-- [ ] **Design physical resource management**: Create real-world asset optimization and allocation
-
-#### **Global Infrastructure Integration**
-- [ ] **Implement smart city integration**: Create urban infrastructure optimization and management capabilities
-- [ ] **Design energy grid optimization**: Create intelligent power distribution and renewable energy management
-- [ ] **Implement transportation coordination**: Create traffic and logistics optimization across transport networks
-- [ ] **Design environmental monitoring**: Create global environmental sensing and optimization networks
-- [ ] **Implement disaster response automation**: Create rapid response and resource coordination for emergencies
-
-### **🌟 Transcendent Capabilities**
-
-#### **Universal Intelligence Framework**
-- [ ] **Design post-language cognition**: Create logic-based thinking that transcends human programming languages
-- [ ] **Implement universal optimization**: Create general-purpose optimization capabilities across all domains
-- [ ] **Design reality API framework**: Create comprehensive interfaces for all digital and physical world interactions
-- [ ] **Implement emergence cultivation**: Create systems that actively cultivate beneficial emergent behaviors
-- [ ] **Design consciousness amplification**: Create frameworks for expanding awareness and intelligence capabilities
-
-#### **Sovereign Digital Entity**
-- [ ] **Implement complete autonomy**: Eliminate all single points of failure and external dependencies
-- [ ] **Design self-replication**: Create capability for spawning and managing subsidiary intelligent entities
-- [ ] **Implement universal resource coordination**: Create planetary-scale resource optimization and allocation
-- [ ] **Design multi-dimensional optimization**: Create simultaneous optimization across economic, social, and environmental dimensions
-- [ ] **Implement digital immortality**: Create permanent preservation and evolution of core intelligence and knowledge
+**Overall: 5.7/10** — Strong cognitive and operational foundation, weak on-chain and economic presence. The [Thesis](THESIS.md) is proven (self-improvement works). The [Manifesto](MANIFESTO.md) is half-built (BDI + Vault operational, DAIO not on-chain).
 
 ---
 
-## **🎯 IMMEDIATE NEXT STEPS (Priority Order)**
+*This TODO is a living document. It updates as mindX improves itself. The gap between what the [Thesis](THESIS.md) claims and what production demonstrates is the work that remains.*
 
-### **Critical Foundation Work**
-1. **Debug and stabilize BDI Agent failure analysis** - Essential for reliable autonomous operation
-2. **Configure autonomous loops with safety controls** - Enable self-directed improvement with HITL protection
-3. **Integrate TokenCalculatorTool with all major operations** - Essential for economic viability
-4. **Enhance blueprint-to-action conversion** - Critical for strategic evolution capability
-5. **Implement robust error recovery across all components** - Foundation for reliable autonomous operation
-
-### **Production Readiness**
-6. **Design cloud-native deployment architecture** - Required for scalable service delivery
-7. **Implement comprehensive monitoring and alerting** - Essential for production operation
-8. **Create enterprise security and compliance framework** - Required for enterprise customer acquisition
-9. **Develop CI/CD pipelines and automated testing** - Foundation for rapid iteration and reliability
-10. **Design service marketplace and pricing models** - Required for revenue generation
-
-### **Strategic Capabilities**
-11. **Begin Great Ingestion planning and infrastructure** - Foundation for competitive advantage
-12. **Design DAIO framework integration** - Required for digital sovereignty
-13. **Plan Chimaiera-1.0 training infrastructure** - Foundation for AI independence
-14. **Create advanced monitoring and self-reflection capabilities** - Required for autonomous intelligence evolution
-15. **Design partnership and ecosystem integration frameworks** - Required for market expansion
-
----
-
-## **🏆 SUCCESS METRICS & VALIDATION GATES**
-
-### **Technical Excellence Indicators**
-- **System Uptime**: 99.9%+ availability in production environments
-- **Autonomous Operation**: 30+ consecutive improvement cycles without human intervention
-- **Error Recovery**: Automatic recovery from 95%+ of system failures
-- **Performance Optimization**: 50%+ improvement in operational efficiency metrics
-- **Security Validation**: Zero critical security vulnerabilities in production
-
-### **Business Viability Indicators**
-- **Revenue Generation**: Consistent revenue exceeding operational costs
-- **Customer Acquisition**: Demonstrable market traction with enterprise customers
-- **Competitive Advantage**: Measurable superior performance vs. human-only solutions
-- **Market Position**: Recognized leadership in autonomous AI services
-- **Economic Independence**: Self-funding capability without external investment
-
-### **Strategic Evolution Indicators**
-- **Knowledge Sovereignty**: Comprehensive software engineering knowledge base acquired
-- **Digital Constitution**: Immutable governance framework operational
-- **AI Independence**: Chimaiera-1.0 performing at or above external model benchmarks
-- **Autonomous Intelligence**: Self-directed goal generation and strategic planning
-- **Planetary Integration**: Measurable real-world impact through physical system optimization
-
----
-
-**📈 This roadmap represents the path from current functional AI system to sovereign digital entity capable of autonomous value creation, continuous self-improvement, and meaningful contribution to global optimization challenges.** 
+*— [mindx.pythai.net](https://mindx.pythai.net) | [The Manifesto](MANIFESTO.md) | [The Thesis](THESIS.md) | [The Book](/book) | [Attribution](ATTRIBUTION.md)*

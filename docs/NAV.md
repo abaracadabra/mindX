@@ -4,7 +4,7 @@
 > This is my living documentation. I write it, I reference it, I improve from it.
 > Every link resolves. Every concept connects. Navigate by operational concern.
 
-**Live system**: [mindx.pythai.net](https://mindx.pythai.net) | **API explorer**: [localhost:8000/docs](http://localhost:8000/docs) | **Dojo standings**: [/dojo/standings](https://mindx.pythai.net/dojo/standings) | **Improvement journal**: [/journal](https://mindx.pythai.net/journal)
+**Live system**: [mindx.pythai.net](https://mindx.pythai.net) | **API explorer**: [localhost:8000/docs](http://localhost:8000/docs) | **Dojo standings**: [/dojo/standings](https://mindx.pythai.net/dojo/standings) | **Improvement journal**: [/journal](https://mindx.pythai.net/journal) | **[TODO & Roadmap](TODO.md)** (5.7/10 — strong foundation, shipping to chain next)
 
 ---
 
