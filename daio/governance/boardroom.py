@@ -53,6 +53,7 @@ class BoardroomSession:
     weighted_score: float = 0.0
     dissent_branches: List[Dict[str, Any]] = field(default_factory=list)
     execution_result: Optional[str] = None
+    model_report: Dict[str, Any] = field(default_factory=dict)
 
 
 # Soldier weights from executive_board.yaml
@@ -199,6 +200,9 @@ class Boardroom:
         if session.outcome == "exploration":
             session.dissent_branches = self._create_exploration_branches(session)
 
+        # Build model assignment report
+        session.model_report = self._build_model_report(session, model_mode)
+
         # Log session
         self.sessions.append(session)
         if len(self.sessions) > 100:
@@ -207,9 +211,50 @@ class Boardroom:
 
         logger.info(
             f"Boardroom session {session.session_id}: {session.outcome} "
-            f"(score={session.weighted_score:.3f}, votes={len(session.votes)})"
+            f"(score={session.weighted_score:.3f}, votes={len(session.votes)}, mode={model_mode})"
         )
         return session
+
+    def _build_model_report(self, session: BoardroomSession, model_mode: str) -> Dict[str, Any]:
+        """Build detailed report of which model each member used and inference path."""
+        report = {
+            "model_mode": model_mode,
+            "members": {},
+            "inference_summary": {"local": 0, "cloud": 0, "abstained": 0},
+        }
+        # CEO entry
+        report["members"]["ceo_agent_main"] = {
+            "role": "Chief Executive Officer",
+            "assigned_local": "qwen3:0.6b",
+            "assigned_cloud": None,
+            "used": "directive_only",
+            "path": "CEO does not deliberate — CEO directs",
+            "weight": 1.0,
+        }
+        # Soldier entries from votes
+        for v in session.votes:
+            local_m = SOLDIER_MODELS.get(v.soldier_id, "?")
+            cloud_m = SOLDIER_CLOUD_MODELS.get(v.soldier_id, "?")
+            used = v.provider  # e.g. "vllm/deepseek-v3.2 (cloud)" or "vllm/qwen3:1.7b"
+            is_cloud = "(cloud)" in used
+            report["members"][v.soldier_id] = {
+                "role": SOLDIER_PERSONAS.get(v.soldier_id, "")[:60],
+                "assigned_local": local_m,
+                "assigned_cloud": cloud_m,
+                "used": used,
+                "path": "cloud" if is_cloud else "local",
+                "weight": v.weight,
+                "vote": v.vote,
+                "confidence": v.confidence,
+                "latency_ms": v.latency_ms,
+            }
+            if v.vote == "abstain":
+                report["inference_summary"]["abstained"] += 1
+            elif is_cloud:
+                report["inference_summary"]["cloud"] += 1
+            else:
+                report["inference_summary"]["local"] += 1
+        return report
 
     def _load_soldier_persona(self, soldier_id: str) -> str:
         """Load full persona from .agent file, fall back to SOLDIER_PERSONAS dict."""

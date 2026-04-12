@@ -596,6 +596,19 @@ async function convene() {
         });
       }
 
+      // Model report — which model each member used
+      if (data.model_report) {
+        const mr = data.model_report;
+        const summary = mr.inference_summary || {};
+        let reportLines = [`Model mode: ${mr.model_mode} | Local: ${summary.local||0} | Cloud: ${summary.cloud||0} | Abstained: ${summary.abstained||0}`];
+        for (const [mid, info] of Object.entries(mr.members || {})) {
+          if (mid === 'ceo_agent_main') continue;
+          const short = (SOLDIERS.find(s=>s.id===mid)||{}).short || mid;
+          reportLines.push(`${short}: ${info.used} [${info.path}] ${info.latency_ms||0}ms`);
+        }
+        addMessage('REPORT', reportLines.join('\n'), 'system');
+      }
+
       btn.disabled = false;
       btn.textContent = 'CONVENE';
     }, (data.votes?data.votes.length:0) * 400 + 500);

@@ -3268,8 +3268,11 @@ async def boardroom_convene(directive: str, importance: str = "standard", model_
             "session_id": session.session_id,
             "outcome": session.outcome,
             "weighted_score": round(session.weighted_score, 3),
-            "votes": [{"soldier": v.soldier_id, "vote": v.vote, "provider": v.provider, "confidence": v.confidence, "latency_ms": v.latency_ms} for v in session.votes],
+            "votes": [{"soldier": v.soldier_id, "vote": v.vote, "provider": v.provider,
+                        "reasoning": v.reasoning[:300], "confidence": v.confidence,
+                        "latency_ms": v.latency_ms, "weight": v.weight} for v in session.votes],
             "dissent_branches": session.dissent_branches,
+            "model_report": session.model_report,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
