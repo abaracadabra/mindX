@@ -1030,6 +1030,7 @@ _PUBLIC_EXACT = frozenset({
     "/", "/health", "/docs.html", "/book", "/journal", "/automindx", "/automindx.html", "/inft", "/inft.html",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/diagnostics/live", "/activity/stream", "/activity/recent", "/activity/stats",
+    "/thesis/evidence", "/thesis/summary",
     "/vault/credentials/providers", "/dojo/standings",
     "/inference/status", "/boardroom/sessions",
     "/chat/docs/stats", "/actions/efficiency", "/vllm/status", "/vllm/health",
@@ -1323,6 +1324,29 @@ async def activity_stats():
     from mindx_backend_service.activity_feed import ActivityFeed
     feed = ActivityFeed.get_instance()
     return feed.stats
+
+
+# ── Thesis Evidence: scientific proof endpoints ──
+
+@app.get("/thesis/evidence", tags=["thesis"], summary="Structured evidence for the Darwin-Godel Machine thesis")
+async def thesis_evidence():
+    """Collect and return empirical evidence for each thesis claim."""
+    from mindx_backend_service.thesis_evidence import ThesisEvidenceCollector
+    collector = ThesisEvidenceCollector.get_instance()
+    return collector.collect_all()
+
+@app.get("/thesis/summary", tags=["thesis"], summary="Human-readable thesis evidence summary")
+async def thesis_summary():
+    """Quick verdict for each thesis claim."""
+    from mindx_backend_service.thesis_evidence import ThesisEvidenceCollector
+    collector = ThesisEvidenceCollector.get_instance()
+    evidence = collector.collect_all()
+    lines = [f"Darwin-Godel Machine Evidence ({evidence['collected_at']})"]
+    lines.append(f"Evidence span: {evidence['evidence_span_hours']} hours")
+    lines.append("")
+    for claim, data in evidence.get("claims", {}).items():
+        lines.append(f"  {claim}: {data['verdict']}")
+    return {"summary": "\n".join(lines), "claims": {k: v["verdict"] for k, v in evidence.get("claims", {}).items()}}
 
 
 @app.get("/diagnostics/live", tags=["diagnostics"])
@@ -1864,16 +1888,19 @@ async def startup_event():
             except Exception as je:
                 logger.warning(f"ImprovementJournal failed: {je}")
 
-        # AuthorAgent — The Book of mindX, published every 2 hours
+        # AuthorAgent — The Book of mindX, on-demand publish on startup + daily lunar cycle
         async def _periodic_author():
             await asyncio.sleep(120)  # Let journal write first
             try:
                 from agents.author_agent import AuthorAgent
                 author = await AuthorAgent.get_instance()
+                # Cancel any previous periodic task to prevent duplicate loops
+                author.cancel_periodic()
                 await author.publish()  # On-demand edition on startup
                 logger.info("AuthorAgent: startup edition published")
                 # Daily lunar cycle: 1 chapter/day, full moon compilation on day 28
-                await author.run_periodic(interval_seconds=86400)  # Daily
+                author._periodic_task = asyncio.current_task()
+                await author.run_periodic(interval_seconds=86400)
             except Exception as ae:
                 logger.warning(f"AuthorAgent failed: {ae}")
 
@@ -1936,11 +1963,22 @@ async def startup_event():
                         except Exception as e:
                             logger.error(f"HealthAuditor: failed to restart autonomous mode: {e}")
                     # Restart AuthorAgent if stale (max once/hour)
+                    # Only restart if the periodic task is actually dead, not just
+                    # because today's daily chapter was already written
                     author_check = audit_results.get("author_agent", {})
                     if not author_check.get("healthy") and now - _author_last_restart[0] > 3600:
-                        _author_last_restart[0] = now
-                        logger.warning("HealthAuditor: AuthorAgent stale, restarting periodic task")
-                        asyncio.create_task(_periodic_author())
+                        try:
+                            from agents.author_agent import AuthorAgent
+                            aa = await AuthorAgent.get_instance()
+                            if not aa._periodic_running:
+                                _author_last_restart[0] = now
+                                logger.warning("HealthAuditor: AuthorAgent periodic task dead, restarting")
+                                asyncio.create_task(_periodic_author())
+                            else:
+                                logger.debug("HealthAuditor: AuthorAgent periodic task still running, skipping restart")
+                        except Exception:
+                            _author_last_restart[0] = now
+                            asyncio.create_task(_periodic_author())
 
                 await auditor.start_periodic_audit(recovery_callback=_recovery_callback)
             except Exception as he:
