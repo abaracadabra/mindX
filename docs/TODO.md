@@ -33,7 +33,7 @@
 
 | Issue | Severity | Component | Detail |
 |-------|----------|-----------|--------|
-| **BDIAgent planning fails without LLM** | High | [bdi_agent.py](../agents/core/bdi_agent.py) | No fallback, no retry when inference unavailable |
+| ~~**BDIAgent planning fails without LLM**~~ | ~~High~~ | [bdi_agent.py](../agents/core/bdi_agent.py) | **Fixed 2026-04-12** — InferenceDiscovery retry + skeleton fallback |
 | ~~**MastermindAgent.autonomous_loop_task never created**~~ | ~~High~~ | [mastermind_agent.py](../agents/orchestration/mastermind_agent.py) | **Fixed 2026-04-12** — `start_autonomous_loop()` wired, 30-min strategic review |
 | ~~**CEOAgent circuit breaker permanent**~~ | ~~Medium~~ | [ceo_agent.py](../agents/orchestration/ceo_agent.py) | **Fixed 2026-04-11** — OPEN → HALF_OPEN recovery after 120s |
 | ~~**blueprint_agent crashes on None LLM**~~ | ~~Medium~~ | [blueprint_agent.py](../agents/evolution/blueprint_agent.py) | **Fixed 2026-04-12** — JSON guard, SEA kwargs, factory params |
@@ -76,7 +76,7 @@ The ROI moment when model composition outperforms single-model inference. Curren
 
 ### P0 — Fix What's Broken
 
-- [ ] **BDI planning fallback** — [bdi_agent.py](../agents/core/bdi_agent.py): Add retry + fallback when LLM returns None. The [5-step resilience chain](ollama/INDEX.md#resilience-design) should extend into BDI planning, not just model resolution. *(Partial: None guard on json.loads added 2026-04-11; full retry/skeleton fallback still needed)*
+- [x] **BDI planning fallback** — [bdi_agent.py](../agents/core/bdi_agent.py): InferenceDiscovery retry with alternate provider + skeleton plan fallback when all LLM attempts fail. Degraded but functional — logs to Godel audit trail. *(Fixed 2026-04-12)*
 - [x] **MastermindAgent autonomous loop** — [mastermind_agent.py](../agents/orchestration/mastermind_agent.py): `start_autonomous_loop()` wired — 30-min strategic review, triggers SEA campaigns when backlog ≥ 3 items. *(Fixed 2026-04-12)*
 - [x] **CEOAgent circuit breaker recovery** — [ceo_agent.py](../agents/orchestration/ceo_agent.py): OPEN → HALF_OPEN recovery after 120s timeout. *(Fixed 2026-04-11)*
 - [x] **blueprint_agent None guard** — [blueprint_agent.py](../agents/evolution/blueprint_agent.py): JSON parse guarded, SEA kwargs fixed, None dependency guards, factory params fixed. *(Fixed 2026-04-12)*

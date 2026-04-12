@@ -733,8 +733,12 @@ class BDIAgent:
                               f"Validation Error: '{last_error}'.\n"
                               f"ORIGINAL FAULTY TEXT:\n{current_plan_str}\n\n"
                               f"Correct the faulty text to resolve the error. Respond ONLY with the corrected JSON list.")
-                
+
                 current_plan_str = await self._llm_generate_with_cost_tracking(prompt=prompt, model=self.llm_handler.model_name_for_api, operation_type="planning", temperature=0.0, json_mode=True)
+
+                # Retry with alternate provider if primary returns None
+                if not current_plan_str:
+                    current_plan_str = await self._retry_with_alternate_provider(prompt)
 
                 if not current_plan_str: raise ValueError("LLM returned empty response.")
                 
@@ -801,14 +805,115 @@ class BDIAgent:
                     continue
 
                 if attempt >= max_repair_attempts:
-                    self.logger.error(f"Plan generation failed permanently for goal '{goal_description}'.")
-                    self.set_plan([], goal_id); self.intentions["plan_status"] = "FAILED_PLANNING"
-                    return False
+                    self.logger.warning(f"LLM planning exhausted for goal '{goal_description}'. Falling back to skeleton plan.")
+                    return self._skeleton_plan_fallback(goal_id, goal_description)
             except Exception as e:
-                self.logger.critical(f"An unexpected error occurred during planning: {e}", exc_info=True)
-                self.set_plan([], goal_id); self.intentions["plan_status"] = "FAILED_PLANNING"
-                return False
-        return False
+                self.logger.error(f"Unexpected error during planning: {e}", exc_info=True)
+                return self._skeleton_plan_fallback(goal_id, goal_description)
+        return self._skeleton_plan_fallback(goal_id, goal_description)
+
+    async def _retry_with_alternate_provider(self, prompt: str) -> Optional[str]:
+        """Try an alternate inference provider when the primary returns None.
+
+        Extends the 5-step resilience chain into BDI planning: if the configured
+        LLM handler fails, ask InferenceDiscovery for a different provider.
+        """
+        try:
+            from llm.inference_discovery import InferenceDiscovery
+            disc = await InferenceDiscovery.get_instance()
+            summary = disc.status_summary()
+            if summary.get("available", 0) < 1:
+                return None
+
+            # Try to get an alternate provider
+            best = await disc.get_best_provider()
+            if not best:
+                return None
+            provider_name, source = best
+
+            self.logger.info(f"BDI planning: retrying with alternate provider '{provider_name}'")
+
+            from llm.llm_factory import create_llm_handler
+            alt_handler = await create_llm_handler(provider_name=source.provider_type)
+            if alt_handler:
+                response = await alt_handler.generate_text(
+                    prompt=prompt,
+                    model=getattr(alt_handler, 'model_name_for_api', None),
+                    temperature=0.0,
+                    json_mode=True,
+                )
+                if response:
+                    self.logger.info(f"BDI planning: alternate provider '{provider_name}' succeeded")
+                    return response
+        except Exception as e:
+            self.logger.debug(f"BDI planning: alternate provider retry failed: {e}")
+        return None
+
+    def _skeleton_plan_fallback(self, goal_id: str, goal_description: str) -> bool:
+        """Generate a structural skeleton plan when all LLM attempts fail.
+
+        Structure does not require intelligence. It requires pattern.
+        The skeleton provides a valid plan structure that downstream agents
+        can execute — degraded but functional, not dead.
+        """
+        self.logger.info(f"BDI planning: generating skeleton plan for goal '{goal_id}'")
+
+        # Extract action type hints from goal description
+        desc_lower = goal_description.lower()
+        skeleton_actions = []
+
+        if any(kw in desc_lower for kw in ["audit", "review", "analyze", "check", "inspect"]):
+            skeleton_actions.append({
+                "type": "audit_and_improve",
+                "description": f"Audit: {goal_description[:100]}",
+                "params": {"target_path": ".", "scope": "quick"}
+            })
+        elif any(kw in desc_lower for kw in ["improve", "optimize", "enhance", "fix", "refactor"]):
+            skeleton_actions.append({
+                "type": "audit_and_improve",
+                "description": f"Analyze before improving: {goal_description[:100]}",
+                "params": {"target_path": ".", "scope": "quick"}
+            })
+        elif any(kw in desc_lower for kw in ["deploy", "start", "launch", "run"]):
+            skeleton_actions.append({
+                "type": "system_analyzer",
+                "description": f"System check before action: {goal_description[:100]}",
+                "params": {}
+            })
+
+        # Always include a system analysis step as fallback
+        if not skeleton_actions:
+            skeleton_actions.append({
+                "type": "system_analyzer",
+                "description": f"Analyze system state for: {goal_description[:100]}",
+                "params": {}
+            })
+
+        self.set_plan(skeleton_actions, goal_id)
+        self.intentions["plan_status"] = "PLANNED_SKELETON"
+        self.logger.info(
+            f"BDI planning: skeleton plan generated ({len(skeleton_actions)} actions, "
+            f"status=PLANNED_SKELETON). Structure from pattern, not intelligence."
+        )
+
+        # Log degraded planning to Godel audit trail
+        try:
+            godel_path = Path("data/logs/godel_choices.jsonl")
+            godel_path.parent.mkdir(parents=True, exist_ok=True)
+            import json as _json
+            with open(godel_path, "a") as f:
+                f.write(_json.dumps({
+                    "timestamp": time.time(),
+                    "source_agent": self.agent_id,
+                    "choice_type": "degraded_planning",
+                    "chosen": "skeleton_plan",
+                    "rationale": "All LLM providers unavailable — generated structural skeleton",
+                    "outcome": f"{len(skeleton_actions)} skeleton actions",
+                }) + "\n")
+        except Exception:
+            pass
+
+        return True
 
     async def run(self, max_cycles: int = 100, external_input: Optional[Dict[str, Any]] = None) -> str:
         if not self._initialized: await self.async_init_components()
