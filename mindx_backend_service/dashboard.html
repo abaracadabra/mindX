@@ -668,56 +668,105 @@ function rpnl(d){
     // Auto-scroll to bottom for newest
     p.scrollTop=p.scrollHeight;
   } else if(curT===1){
-    // Actions — expandable detail cards
+    // Actions — expandable detail cards with cross-referenced godel choices
     const acts=d.actions||[];
-    if(!acts.length){p.innerHTML='<div style="padding:8px;color:#6e7681;font-size:10px">No actions yet. The autonomous loop will generate actions from the improvement backlog.</div>';return}
-    let h='<div style="font-size:8px;color:#484f58;padding:2px 0;border-bottom:1px solid rgba(8,11,16,.3)">'+acts.length+' ACTIONS — click to expand</div>';
+    const godels=d.godel_choices||[];
+    const thesis=d.thesis||{};
+    if(!acts.length){p.innerHTML='<div style="padding:8px;color:#6e7681;font-size:10px">No actions yet. Autonomous loop will generate actions from the improvement backlog.</div>';return}
+
+    // Header with thesis metrics
+    let h='<div style="padding:3px 6px;background:rgba(5,8,16,.4);border-bottom:1px solid rgba(8,11,16,.3);font-size:8px;color:#484f58;display:flex;justify-content:space-between">';
+    h+=`<span>${acts.length} actions — click any to expand</span>`;
+    if(thesis.improvement_rate!==undefined){
+      const rc=thesis.improvement_rate>0.5?'#3fb950':thesis.improvement_rate>0.1?'#d29922':'#f85149';
+      h+=`<span>thesis: <span style="color:${rc};font-weight:700">${(thesis.improvement_rate*100).toFixed(1)}%</span> success (${thesis.improvements_succeeded||0}/${thesis.improvements_attempted||0})</span>`;
+    }
+    h+='</div>';
+
     acts.forEach(function(a,i){
       const sc=a.status==='completed'?'#3fb950':a.status==='failed'?'#f85149':'#d29922';
-      const scBg=a.status==='completed'?'rgba(13,51,33,.15)':a.status==='failed'?'rgba(51,13,13,.15)':'rgba(51,43,13,.15)';
+      const scBg=a.status==='completed'?'rgba(13,51,33,.12)':a.status==='failed'?'rgba(51,13,13,.12)':'rgba(51,43,13,.12)';
       const ts=(a.created_at||'').slice(5,19).replace('T',' ');
+      const tsShort=(a.created_at||'').slice(11,16);
       const desc=(a.description||'').replace(/</g,'&lt;');
-      // Parse agents from description (e.g., "Agents: agent1, agent2, agent3")
       const agentMatch=desc.match(/Agents?:\s*([^.]+)/);
       const agentList=agentMatch?agentMatch[1].split(',').map(function(s){return s.trim()}):[a.agent_id];
       const changeMatch=desc.match(/(\d+)\s*changes?/);
       const changes=changeMatch?changeMatch[1]:'0';
-      // Parse cycle number
       const cycleMatch=desc.match(/Cycle\s*(\d+)/);
       const cycle=cycleMatch?cycleMatch[1]:'?';
-      // Parse goal
       const goalMatch=desc.match(/(?:Cycle\s*\d+[^:]*:\s*)(.+?)(?:\.\s*Agents|$)/);
       const goal=goalMatch?goalMatch[1]:desc.slice(0,80);
+
+      // Find related godel choices (by timestamp proximity)
+      const actionTime=new Date(a.created_at||0).getTime()/1000;
+      const relatedGodels=godels.filter(function(g){
+        const gt=new Date(g.timestamp||0).getTime()/1000;
+        return Math.abs(gt-actionTime)<300; // within 5 minutes
+      });
 
       h+=`<details style="margin:1px 0;background:${scBg};border-left:2px solid ${sc};border-radius:0 2px 2px 0">`;
       h+=`<summary style="cursor:pointer;padding:3px 6px;font-size:10px;display:flex;justify-content:space-between;align-items:center">`;
       h+=`<span><span style="color:${sc};font-weight:700;font-size:8px;text-transform:uppercase;letter-spacing:.3px;margin-right:4px">${a.status}</span>`;
-      h+=`<span style="color:#c9d1d9">${a.action_type==='improvement_result'?'Cycle '+cycle+' result':a.action_type==='improvement_cycle'?'Cycle '+cycle+' start':a.action_type||'action'}</span></span>`;
-      h+=`<span style="color:#484f58;font-size:8px">${ts}</span>`;
+      h+=`<span style="color:#c9d1d9">${a.action_type==='improvement_result'?'Cycle '+cycle+' result':a.action_type==='improvement_cycle'?'Cycle '+cycle+' start':a.action_type==='book_published'?'Book published':a.action_type||'action'}</span></span>`;
+      h+=`<span style="color:#484f58;font-size:8px">${tsShort}</span>`;
       h+=`</summary>`;
-      h+=`<div style="padding:4px 8px 6px;font-size:9px;border-top:1px solid rgba(8,11,16,.2)">`;
+      h+=`<div style="padding:4px 8px 6px;font-size:9px;border-top:1px solid rgba(8,11,16,.15)">`;
+
       // Goal
-      h+=`<div style="color:#e6edf3;font-weight:600;margin-bottom:3px">${goal}</div>`;
-      // Agent pipeline
-      if(agentList.length>0){
-        h+=`<div style="margin-bottom:3px"><span style="color:#484f58">pipeline:</span> `;
+      h+=`<div style="color:#e6edf3;font-weight:600;margin-bottom:4px;font-size:10px">${goal}</div>`;
+
+      // Agent pipeline with role badges
+      if(agentList.length>1||agentList[0]!==a.agent_id){
+        h+=`<div style="margin-bottom:4px;padding:3px 0;border-bottom:1px solid rgba(8,11,16,.15)"><span style="color:#484f58;font-size:8px">AGENT PIPELINE</span><br>`;
         agentList.forEach(function(ag,j){
-          h+=`<span style="color:#58a6ff">${ag}</span>`;
+          const agColor=ag.includes('strategic')?'#d2a8ff':ag.includes('bdi')?'#58a6ff':ag.includes('mastermind')?'#3fb950':'#8b949e';
+          h+=`<span style="color:${agColor};font-weight:600">${ag}</span>`;
           if(j<agentList.length-1)h+=` <span style="color:#484f58">→</span> `;
         });
         h+=`</div>`;
       }
-      // Metrics
-      h+=`<div style="display:flex;gap:8px;flex-wrap:wrap;color:#6e7681;margin-bottom:2px">`;
-      h+=`<span>source: <span style="color:#8b949e">${a.source||'?'}</span></span>`;
-      h+=`<span>agent: <span style="color:#d2a8ff">${a.agent_id||'?'}</span></span>`;
-      if(changes!=='0')h+=`<span>changes: <span style="color:#3fb950">${changes}</span></span>`;
-      if(a.id)h+=`<span>id: <span style="color:#484f58">${a.id}</span></span>`;
+
+      // Metrics grid
+      h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-bottom:4px;font-size:8px">`;
+      h+=`<div style="padding:2px 4px;background:rgba(5,8,16,.3)"><span style="color:#484f58">source</span> <span style="color:#8b949e">${a.source||'?'}</span></div>`;
+      h+=`<div style="padding:2px 4px;background:rgba(5,8,16,.3)"><span style="color:#484f58">agent</span> <span style="color:#d2a8ff">${a.agent_id||'?'}</span></div>`;
+      h+=`<div style="padding:2px 4px;background:rgba(5,8,16,.3)"><span style="color:#484f58">changes</span> <span style="color:${changes!=='0'?'#3fb950':'#484f58'}">${changes}</span></div>`;
+      h+=`<div style="padding:2px 4px;background:rgba(5,8,16,.3)"><span style="color:#484f58">id</span> <span style="color:#6e7681">${a.id||'?'}</span></div>`;
+      h+=`<div style="padding:2px 4px;background:rgba(5,8,16,.3)"><span style="color:#484f58">type</span> <span style="color:#58a6ff">${a.action_type||'?'}</span></div>`;
+      h+=`<div style="padding:2px 4px;background:rgba(5,8,16,.3)"><span style="color:#484f58">time</span> <span style="color:#6e7681">${ts}</span></div>`;
       h+=`</div>`;
+
       // Full description
-      h+=`<div style="color:#8b949e;margin-top:2px;white-space:pre-wrap;word-break:break-word">${desc}</div>`;
+      h+=`<details style="margin:2px 0"><summary style="cursor:pointer;color:#484f58;font-size:8px">full description</summary>`;
+      h+=`<div style="color:#8b949e;padding:3px 0;white-space:pre-wrap;word-break:break-word;font-size:9px">${desc}</div>`;
+      h+=`</details>`;
+
+      // Related Gödel choices
+      if(relatedGodels.length>0){
+        h+=`<details style="margin:2px 0"><summary style="cursor:pointer;color:#d29922;font-size:8px">related decisions (${relatedGodels.length})</summary>`;
+        relatedGodels.forEach(function(g){
+          const gts=(g.timestamp||'').slice(11,19);
+          const oc=g.outcome==='success'?'#3fb950':g.outcome?'#d29922':'#484f58';
+          h+=`<div style="padding:2px 0;border-bottom:1px solid rgba(8,11,16,.15);font-size:8px">`;
+          h+=`<span style="color:${oc}">[${(g.outcome||'?').slice(0,3)}]</span> `;
+          h+=`<span style="color:#58a6ff">${g.agent}</span> `;
+          h+=`<span style="color:#8b949e">${g.type}</span> `;
+          h+=`<span style="color:#484f58">${gts}</span>`;
+          if(g.chosen)h+=`<div style="color:#7ee787;padding-left:8px">→ ${(g.chosen||'').slice(0,100)}</div>`;
+          if(g.rationale)h+=`<div style="color:#6e7681;padding-left:8px;font-style:italic">${g.rationale}</div>`;
+          h+=`</div>`;
+        });
+        h+=`</details>`;
+      }
+
       // Result
-      if(a.result){h+=`<div style="color:#7ee787;margin-top:3px;border-top:1px solid rgba(8,11,16,.2);padding-top:2px">result: ${(a.result+'').replace(/</g,'&lt;')}</div>`}
+      if(a.result){
+        h+=`<div style="color:#7ee787;margin-top:3px;padding-top:3px;border-top:1px solid rgba(8,11,16,.15)">`;
+        h+=`<span style="color:#484f58;font-size:8px">RESULT</span><br>`;
+        h+=`${(a.result+'').replace(/</g,'&lt;')}</div>`;
+      }
+
       h+=`</div></details>`;
     });
     p.innerHTML=h;
