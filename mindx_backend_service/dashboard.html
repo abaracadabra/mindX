@@ -668,14 +668,59 @@ function rpnl(d){
     // Auto-scroll to bottom for newest
     p.scrollTop=p.scrollHeight;
   } else if(curT===1){
-    // Actions
+    // Actions — expandable detail cards
     const acts=d.actions||[];
-    if(!acts.length){p.innerHTML='<div style="padding:12px;color:#6e7681;font-size:12px">No actions yet. The autonomous loop will generate actions from the improvement backlog.</div>';return}
-    let h='';acts.forEach(a=>{
+    if(!acts.length){p.innerHTML='<div style="padding:8px;color:#6e7681;font-size:10px">No actions yet. The autonomous loop will generate actions from the improvement backlog.</div>';return}
+    let h='<div style="font-size:8px;color:#484f58;padding:2px 0;border-bottom:1px solid rgba(8,11,16,.3)">'+acts.length+' ACTIONS — click to expand</div>';
+    acts.forEach(function(a,i){
       const sc=a.status==='completed'?'#3fb950':a.status==='failed'?'#f85149':'#d29922';
+      const scBg=a.status==='completed'?'rgba(13,51,33,.15)':a.status==='failed'?'rgba(51,13,13,.15)':'rgba(51,43,13,.15)';
       const ts=(a.created_at||'').slice(5,19).replace('T',' ');
-      h+=`<div style="padding:8px 6px;border-bottom:1px solid rgba(8,11,16,.4)"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="color:${sc};font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px">${a.status}</span><span style="color:#6e7681;font-size:10px">${a.source||''} ${ts}</span></div><div style="font-size:12px;color:#c5d0dc;margin:4px 0;line-height:1.5">${(a.description||'').slice(0,200)}</div><div style="font-size:10px;color:#6e7681">${a.agent_id||'?'} &middot; <span style="color:#58a6ff">${a.action_type||'?'}</span>${a.result?' &middot; '+a.result:''}</div></div>`;
-    });p.innerHTML=h;
+      const desc=(a.description||'').replace(/</g,'&lt;');
+      // Parse agents from description (e.g., "Agents: agent1, agent2, agent3")
+      const agentMatch=desc.match(/Agents?:\s*([^.]+)/);
+      const agentList=agentMatch?agentMatch[1].split(',').map(function(s){return s.trim()}):[a.agent_id];
+      const changeMatch=desc.match(/(\d+)\s*changes?/);
+      const changes=changeMatch?changeMatch[1]:'0';
+      // Parse cycle number
+      const cycleMatch=desc.match(/Cycle\s*(\d+)/);
+      const cycle=cycleMatch?cycleMatch[1]:'?';
+      // Parse goal
+      const goalMatch=desc.match(/(?:Cycle\s*\d+[^:]*:\s*)(.+?)(?:\.\s*Agents|$)/);
+      const goal=goalMatch?goalMatch[1]:desc.slice(0,80);
+
+      h+=`<details style="margin:1px 0;background:${scBg};border-left:2px solid ${sc};border-radius:0 2px 2px 0">`;
+      h+=`<summary style="cursor:pointer;padding:3px 6px;font-size:10px;display:flex;justify-content:space-between;align-items:center">`;
+      h+=`<span><span style="color:${sc};font-weight:700;font-size:8px;text-transform:uppercase;letter-spacing:.3px;margin-right:4px">${a.status}</span>`;
+      h+=`<span style="color:#c9d1d9">${a.action_type==='improvement_result'?'Cycle '+cycle+' result':a.action_type==='improvement_cycle'?'Cycle '+cycle+' start':a.action_type||'action'}</span></span>`;
+      h+=`<span style="color:#484f58;font-size:8px">${ts}</span>`;
+      h+=`</summary>`;
+      h+=`<div style="padding:4px 8px 6px;font-size:9px;border-top:1px solid rgba(8,11,16,.2)">`;
+      // Goal
+      h+=`<div style="color:#e6edf3;font-weight:600;margin-bottom:3px">${goal}</div>`;
+      // Agent pipeline
+      if(agentList.length>0){
+        h+=`<div style="margin-bottom:3px"><span style="color:#484f58">pipeline:</span> `;
+        agentList.forEach(function(ag,j){
+          h+=`<span style="color:#58a6ff">${ag}</span>`;
+          if(j<agentList.length-1)h+=` <span style="color:#484f58">→</span> `;
+        });
+        h+=`</div>`;
+      }
+      // Metrics
+      h+=`<div style="display:flex;gap:8px;flex-wrap:wrap;color:#6e7681;margin-bottom:2px">`;
+      h+=`<span>source: <span style="color:#8b949e">${a.source||'?'}</span></span>`;
+      h+=`<span>agent: <span style="color:#d2a8ff">${a.agent_id||'?'}</span></span>`;
+      if(changes!=='0')h+=`<span>changes: <span style="color:#3fb950">${changes}</span></span>`;
+      if(a.id)h+=`<span>id: <span style="color:#484f58">${a.id}</span></span>`;
+      h+=`</div>`;
+      // Full description
+      h+=`<div style="color:#8b949e;margin-top:2px;white-space:pre-wrap;word-break:break-word">${desc}</div>`;
+      // Result
+      if(a.result){h+=`<div style="color:#7ee787;margin-top:3px;border-top:1px solid rgba(8,11,16,.2);padding-top:2px">result: ${(a.result+'').replace(/</g,'&lt;')}</div>`}
+      h+=`</div></details>`;
+    });
+    p.innerHTML=h;
   } else if(curT===2){
     // Agent interactions
     const ai=d.agent_interactions||[];
@@ -933,7 +978,12 @@ function _renderPopupContent(){
     const acts=d.actions||[];count=acts.length;
     acts.forEach(a=>{
       const sc=a.status==='completed'?'#3fb950':a.status==='failed'?'#f85149':'#d29922';
-      h+=`<div style="padding:4px;border-bottom:1px solid rgba(8,11,16,.3)"><div style="display:flex;justify-content:space-between"><span style="color:${sc};font-weight:700;font-size:9px">${a.status}</span><span style="color:#6e7681;font-size:8px">${(a.created_at||'').slice(5,19)}</span></div><div style="font-size:10px;color:#c5d0dc;line-height:1.4;margin:2px 0">${(a.description||'').replace(/</g,'&lt;')}</div><div style="font-size:8px;color:#6e7681">${a.agent_id||'?'} · ${a.action_type||''}</div></div>`;
+      const scBg=a.status==='completed'?'rgba(13,51,33,.12)':a.status==='failed'?'rgba(51,13,13,.12)':'rgba(51,43,13,.12)';
+      const desc=(a.description||'').replace(/</g,'&lt;');
+      const ts=(a.created_at||'').slice(5,19).replace('T',' ');
+      const am=desc.match(/Agents?:\s*([^.]+)/);
+      const cm=desc.match(/Cycle\s*(\d+)/);
+      h+=`<details style="margin:1px 0;background:${scBg};border-left:2px solid ${sc};border-radius:0 2px 2px 0"><summary style="cursor:pointer;padding:3px 6px;font-size:10px"><span style="color:${sc};font-weight:700;font-size:8px;margin-right:4px">${a.status}</span><span style="color:#c9d1d9">${cm?'Cycle '+cm[1]+' ':''} ${a.action_type||''}</span><span style="color:#484f58;font-size:8px;float:right">${ts}</span></summary><div style="padding:4px 8px;font-size:9px;border-top:1px solid rgba(8,11,16,.2)"><div style="color:#e6edf3;margin-bottom:3px">${desc}</div>${am?'<div style="color:#58a6ff;margin-bottom:2px">pipeline: '+am[1]+'</div>':''}<div style="color:#6e7681">agent: ${a.agent_id||'?'} · source: ${a.source||'?'}</div>${a.result?'<div style="color:#7ee787;margin-top:2px">result: '+(a.result+'').replace(/</g,'&lt;')+'</div>':''}</div></details>`;
     });
   }else if(curT===2){
     const ai=d.agent_interactions||[];count=ai.length;
