@@ -1019,7 +1019,7 @@ app.add_middleware(
 _PUBLIC_EXACT = frozenset({
     "/", "/health", "/docs.html", "/book", "/journal", "/automindx", "/automindx.html", "/inft", "/inft.html",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
-    "/diagnostics/live", "/vault/credentials/status",
+    "/diagnostics/live", "/activity/stream", "/activity/recent", "/activity/stats",
     "/vault/credentials/providers", "/dojo/standings",
     "/inference/status", "/boardroom/sessions",
     "/chat/docs/stats", "/actions/efficiency", "/vllm/status", "/vllm/health",
