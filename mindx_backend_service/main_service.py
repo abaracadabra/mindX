@@ -771,13 +771,20 @@ async def read_doc(name: str):
         doc_dir = doc_path.parent
         doc_name = doc_path.name
         doc_path = _ci_find(doc_dir, doc_name) or doc_path
-    # If still not found and path has no subdirectory, try common subdirs
-    if not doc_path.exists() or not doc_path.is_file() and '/' not in safe:
-        for subdir in ["agents", "publications", "publications/daily", "ollama", "ollama/mindx", "pitchdeck"]:
-            found = _ci_find(PROJECT_ROOT / "docs" / subdir, safe.split('/')[-1])
-            if found:
-                doc_path = found
-                break
+    # If still not found, try common subdirs and project root
+    if not doc_path.exists() or not doc_path.is_file():
+        # Try project root (CLAUDE.md, AGENTS.md, etc.)
+        root_path = PROJECT_ROOT / safe.split('/')[-1]
+        if not root_path.suffix:
+            root_path = root_path.with_suffix('.md')
+        if root_path.exists() and root_path.is_file():
+            doc_path = root_path
+        elif '/' not in safe:
+            for subdir in ["agents", "publications", "publications/daily", "ollama", "ollama/mindx", "pitchdeck"]:
+                found = _ci_find(PROJECT_ROOT / "docs" / subdir, safe.split('/')[-1])
+                if found:
+                    doc_path = found
+                    break
     if not doc_path.exists() or not doc_path.is_file():
         return _DashResponse(content=_doc_page("Not Found", f"<h1>Document not found</h1><p><code>{safe}</code> does not exist in docs/</p><p>Browse all documents at <a href='/docs.html'>docs</a> or read <a href='/book'>The Book of mindX</a>.</p>"), status_code=404)
     md = doc_path.read_text(encoding="utf-8", errors="replace")
