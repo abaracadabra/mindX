@@ -213,68 +213,147 @@ function render(d){
   }
 
   let h='';
-  // row 1: vitals
-  h+=`<div class="c"><div class="ct">cpu ${spk(cpuH)}</div><div class="mv">${s.cpu_percent||0}%</div><div class="ms">avg ${s.cpu_avg||0}% ${ld[0]} ${ld[1]} ${ld[2]}</div>${bar(Math.max(s.cpu_percent||0,s.cpu_avg||0))}</div>`;
-  h+=`<div class="c"><div class="ct">mem</div><div class="mv">${s.memory_used_gb||0}<small style="font-size:9px;color:#3d424d">/${s.memory_total_gb||0}G</small></div>${bar(s.memory_percent||0)}</div>`;
-  h+=`<div class="c"><div class="ct">disk</div><div class="mv">${s.disk_used_gb||0}<small style="font-size:9px;color:#3d424d">/${s.disk_total_gb||0}G</small></div>${bar(s.disk_percent||0)}</div>`;
-  h+=`<div class="c"><div class="ct">up</div><div class="mv">${d.uptime||'?'}</div><div class="ms">pid ${d.pid||'?'} ${d.process_memory_mb||'?'}MB</div></div>`;
-  // row 2: counters
-  h+=`<div class="c"><div class="ct">beliefs</div><div class="mv">${d.beliefs?.count||0}</div></div>`;
-  h+=`<div class="c"><div class="ct">vault</div><div class="mv">${v.entries||0}</div><div class="ms">${v.cipher||''}</div></div>`;
-  h+=`<div class="c"><div class="ct">dialogues</div><div class="mv">${(d.interactions||[]).length}</div></div>`;
-  h+=`<div class="c"><div class="ct">stm total</div><div class="mv">${d.memory?.stm_records||0}</div><div class="ms">${d.memory?.agent_workspaces||0} wksp</div></div>`;
-  // stm breakdown
-  const sa2=d.memory?.stm_by_agent||{};const sk=Object.keys(sa2);
-  if(sk.length){let st='';sk.forEach(k=>st+=`<div class="r"><span>${k}</span><span style="color:#4a5060">${sa2[k]}</span></div>`);
-  h+=`<div class="c w2"><div class="ct">stm by agent</div>${st}</div>`}
-  // inference — models in use with status
+  // ── SYSTEM VITALS — expandable with load averages and process detail ──
+  h+=`<div class="c" title="CPU utilization: current and 50-sample history"><div class="ct">cpu ${spk(cpuH)}</div><div class="mv">${s.cpu_percent||0}%</div>${bar(Math.max(s.cpu_percent||0,s.cpu_avg||0))}<details style="margin-top:4px"><summary style="cursor:pointer;color:#484f58;font-size:9px">load &amp; history</summary><div style="font-size:9px;color:#6e7681;padding:4px 0">avg: ${s.cpu_avg||0}%<br>load: ${ld[0]} ${ld[1]} ${ld[2]}<br>samples: ${cpuH.length}/50</div></details></div>`;
+  h+=`<div class="c" title="RAM: ${s.memory_used_gb}GB used of ${s.memory_total_gb}GB total (${s.memory_percent}%)"><div class="ct">mem</div><div class="mv">${s.memory_used_gb||0}<small style="font-size:9px;color:#3d424d">/${s.memory_total_gb||0}G</small></div>${bar(s.memory_percent||0)}<details style="margin-top:4px"><summary style="cursor:pointer;color:#484f58;font-size:9px">process</summary><div style="font-size:9px;color:#6e7681;padding:4px 0">mindX process: ${d.process_memory_mb||'?'}MB<br>percent: ${s.memory_percent||0}%<br>free: ${((s.memory_total_gb||0)-(s.memory_used_gb||0)).toFixed(2)}GB</div></details></div>`;
+  h+=`<div class="c" title="Disk: ${s.disk_used_gb}GB of ${s.disk_total_gb}GB"><div class="ct">disk</div><div class="mv">${s.disk_used_gb||0}<small style="font-size:9px;color:#3d424d">/${s.disk_total_gb||0}G</small></div>${bar(s.disk_percent||0)}<details style="margin-top:4px"><summary style="cursor:pointer;color:#484f58;font-size:9px">breakdown</summary><div style="font-size:9px;color:#6e7681;padding:4px 0">${Object.entries(d.disk_detail||{}).map(([k,v])=>`${k}: ${v}`).join('<br>')}</div></details></div>`;
+  h+=`<div class="c" title="System uptime and process info"><div class="ct">up</div><div class="mv">${d.uptime||'?'}</div><div class="ms">pid ${d.pid||'?'}</div><details style="margin-top:4px"><summary style="cursor:pointer;color:#484f58;font-size:9px">detail</summary><div style="font-size:9px;color:#6e7681;padding:4px 0">process: ${d.process_memory_mb||'?'}MB<br>uptime: ${d.uptime_seconds||0}s<br>timestamp: ${d.timestamp||'?'}</div></details></div>`;
+
+  // ── KNOWLEDGE COUNTERS — each expandable ──
+  const bSample=d.beliefs?.sample||[];
+  h+=`<div class="c" title="BDI belief system — ${d.beliefs?.count||0} beliefs in identity map"><div class="ct"><a href="/core/bdi-status" style="color:#58a6ff;text-decoration:none">beliefs</a></div><div class="mv">${d.beliefs?.count||0}</div><details style="margin-top:4px"><summary style="cursor:pointer;color:#484f58;font-size:9px">sample (${bSample.length})</summary>${bSample.map(b=>`<div style="font-size:8px;color:#7ee787;padding:2px 0;border-bottom:1px solid rgba(8,11,16,.3);word-break:break-all" title="${b.key}">${b.key.replace('identity.map.','')}</div>${typeof b.value==='object'?'<details style="margin-left:8px"><summary style="color:#484f58;font-size:8px;cursor:pointer">value</summary><pre style="font-size:7px;color:#6e7681;max-height:80px;overflow:auto;padding:4px;background:rgba(5,8,16,.4);border-radius:2px">${JSON.stringify(b.value,null,2).slice(0,400)}</pre></details>':''}`).join('')}</details></div>`;
+
+  h+=`<div class="c" title="BANKON Vault — ${v.entries||0} encrypted entries"><div class="ct">vault</div><div class="mv">${v.entries||0}</div><details style="margin-top:4px"><summary style="cursor:pointer;color:#484f58;font-size:9px">security</summary><div style="font-size:9px;color:#6e7681;padding:4px 0">cipher: ${v.cipher||'?'}<br>kdf: ${v.kdf||'?'}<br>version: ${v.version||'?'}<br>locked: ${v.locked?'yes':'no'}</div></details></div>`;
+
+  h+=`<div class="c" title="Agent-to-model dialogues via heartbeat"><div class="ct">dialogues</div><div class="mv">${(d.interactions||[]).length}</div><details style="margin-top:4px"><summary style="cursor:pointer;color:#484f58;font-size:9px">latest</summary>${(d.interactions||[]).slice(0,3).map(m=>`<div style="font-size:8px;color:#8b949e;padding:3px 0;border-bottom:1px solid rgba(8,11,16,.3)"><span style="color:#d2a8ff">${m.agent||'?'}</span> → <span style="color:#3fb950">${m.model||'?'}</span> <span style="color:#484f58">${m.latency_ms||'?'}ms</span><br><span style="color:#6e7681">${(m.prompt||'').slice(0,60)}...</span></div>`).join('')}</details></div>`;
+
+  h+=`<div class="c" title="Short-term memory: ${d.memory?.stm_records||0} records across ${d.memory?.agent_workspaces||0} workspaces"><div class="ct">stm total</div><div class="mv">${(d.memory?.stm_records||0).toLocaleString()}</div><div class="ms">${d.memory?.agent_workspaces||0} workspaces</div></div>`;
+
+  // ── AGENTS — each agent is an expandable element ──
+  const agents=d.agents||[];
+  const dojoMap={};(d.dojo||[]).forEach(s=>dojoMap[s.agent_id]=s);
+  const stmMap=d.memory?.stm_by_agent||{};
+  // Group agents by dojo group
+  const agentGroups={};
+  agents.forEach(a=>{
+    const dj=dojoMap[a.entity_id];
+    const group=dj?.group||'unassigned';
+    (agentGroups[group]=agentGroups[group]||[]).push({...a,dojo:dj,stm:stmMap[a.entity_id]||0});
+  });
+  let agH='';
+  for(const[group,members]of Object.entries(agentGroups)){
+    agH+=`<details ${group==='orchestration'||group==='executive_board'?'open':''} style="margin:2px 0"><summary style="cursor:pointer;color:#58a6ff;font-size:9px;text-transform:uppercase;letter-spacing:.5px;padding:3px 0;border-bottom:1px solid rgba(8,11,16,.3)" title="${members.length} agents in ${group}">${group} <span style="color:#484f58">(${members.length})</span></summary>`;
+    members.forEach(a=>{
+      const dj=a.dojo;
+      const tier=a.verification_tier??0;
+      const stmCount=a.stm||0;
+      const role=(a.role||'').slice(0,80);
+      agH+=`<details style="margin:1px 0 1px 4px"><summary style="cursor:pointer;font-size:10px;padding:3px 0;border-bottom:1px solid rgba(8,11,16,.2)" title="${a.entity_id}: ${role}">${rk(tier)} <span style="color:#c9d1d9;font-weight:600">${a.entity_id}</span> <span style="color:#484f58;font-size:8px">${dj?dj.rank+' '+dj.score:''}</span></summary>`;
+      agH+=`<div style="padding:4px 6px 6px;font-size:9px;color:#8b949e;border-left:2px solid rgba(88,166,255,.1);margin-left:4px">`;
+      agH+=`<div title="Agent role">${role}</div>`;
+      agH+=`<div style="color:#484f58;margin-top:3px">wallet: <a href="#" style="color:#79c0ff;text-decoration:none;font-size:8px" title="${a.address||'?'}">${sa(a.address)}</a></div>`;
+      if(dj){
+        agH+=`<div style="margin-top:3px">rank: <span style="color:#d2a8ff">${dj.rank}</span> | score: <span style="color:#3fb950">${dj.score}</span> | tier: ${dj.tier} ${dj.bona_fide?'| <span style="color:#3fb950">BONA FIDE</span>':''}</div>`;
+        agH+=bar(Math.min(100,dj.score/100));
+      }
+      if(stmCount>0){
+        agH+=`<div style="margin-top:3px">STM records: <span style="color:#d2a8ff">${stmCount.toLocaleString()}</span></div>`;
+      }
+      // Find recent actions for this agent
+      const agentActions=(d.actions||[]).filter(ac=>ac.agent_id===a.entity_id).slice(0,3);
+      if(agentActions.length){
+        agH+=`<details style="margin-top:4px"><summary style="cursor:pointer;color:#484f58;font-size:8px">recent actions (${agentActions.length})</summary>`;
+        agentActions.forEach(ac=>{
+          const sc=ac.status==='completed'?'#3fb950':ac.status==='failed'?'#f85149':'#d29922';
+          agH+=`<div style="padding:2px 0;font-size:8px"><span style="color:${sc}">${ac.status}</span> ${(ac.description||'').slice(0,60)}</div>`;
+        });
+        agH+=`</details>`;
+      }
+      // Find godel choices for this agent
+      const agentGodel=(d.godel_choices||[]).filter(g=>g.agent===a.entity_id).slice(0,2);
+      if(agentGodel.length){
+        agH+=`<details style="margin-top:3px"><summary style="cursor:pointer;color:#484f58;font-size:8px">G\u00F6del choices (${agentGodel.length})</summary>`;
+        agentGodel.forEach(g=>{
+          const oc=g.outcome==='success'?'#3fb950':g.outcome?'#d29922':'#484f58';
+          agH+=`<div style="padding:2px 0;font-size:8px"><span style="color:${oc}">[${g.outcome||'?'}]</span> ${g.type}: ${(g.chosen||'').slice(0,60)}</div>`;
+        });
+        agH+=`</details>`;
+      }
+      agH+=`</div></details>`;
+    });
+    agH+=`</details>`;
+  }
+  h+=`<div class="c w2" title="${agents.length} sovereign agents with cryptographic wallets"><div class="ct"><a href="/dojo/standings" style="color:#58a6ff;text-decoration:none">agents</a> ${agents.length}</div>${agH}</div>`;
+
+  // ── INFERENCE — each model and provider is an expandable element ──
   let sr='';
-  const localSrc=inf.sources?.ollama_local||inf.sources?.ollama_gpu||{};
-  const localModels=localSrc.models||[];
-  if(localModels.length){
-    sr+='<div style="font-size:9px;color:#4a5060;text-transform:uppercase;letter-spacing:.5px;padding:2px 0;border-bottom:1px solid rgba(8,11,16,.3)">LOCAL MODELS</div>';
-    localModels.forEach(m=>{
-      const isEmbed=m.includes('embed');
-      const clr=isEmbed?'#d2a8ff':'#3fb950';
-      const tag=isEmbed?'EMB':'LLM';
-      sr+=`<div class="r"><span><span class="d dg"></span><span style="color:${clr};font-weight:600">${m}</span></span><span style="color:#3d424d;font-size:9px">${tag}</span></div>`;
-    });
-  }
-  // Cloud + API providers
-  const cloudSrcs=Object.entries(inf.sources||{}).filter(([n])=>n.startsWith('cloud_')||n==='ollama_cloud');
-  if(cloudSrcs.length){
-    sr+='<div style="font-size:9px;color:#4a5060;text-transform:uppercase;letter-spacing:.5px;padding:4px 0 2px;border-bottom:1px solid rgba(8,11,16,.3);margin-top:4px">CLOUD PROVIDERS</div>';
-    cloudSrcs.forEach(([n,i])=>{
-      const label=n.replace('cloud_','').replace('ollama_cloud','ollama cloud');
-      const sc=i.status==='available'?'dg':i.status==='degraded'?'dy':'dr';
-      const scl=i.score?` (${i.score.toFixed(2)})`:'';
-      sr+=`<div class="r"><span><span class="d ${sc}"></span>${label}</span><span style="color:#3d424d;font-size:9px">${i.status}${scl}</span></div>`;
-    });
-  }
-  h+=`<div class="c w2"><div class="ct">inference ${inf.available||0}/${inf.total||0} sources &middot; ${localModels.length} models</div>${sr}</div>`;
-  // agents
-  let ag='';for(const a of(d.agents||[]))ag+=`<div class="r"><span>${rk(a.verification_tier??1)} ${a.entity_id}</span><span style="color:#58a6ff;font-size:8px">${sa(a.address)}</span></div>`;
-  h+=`<div class="c w2"><div class="ct">agents ${(d.agents||[]).length}</div>${ag}</div>`;
-  // godel + beliefs side by side
+  const allSources=Object.entries(inf.sources||{});
+  const localSrcs=allSources.filter(([n])=>!n.startsWith('cloud_')&&n!=='ollama_cloud');
+  const cloudSrcs=allSources.filter(([n])=>n.startsWith('cloud_')||n==='ollama_cloud');
+
+  // Local sources with per-model expansion
+  localSrcs.forEach(([name,src])=>{
+    const models=src.models||[];
+    sr+=`<details ${src.status==='available'?'open':''} style="margin:2px 0"><summary style="cursor:pointer;font-size:10px;padding:2px 0;border-bottom:1px solid rgba(8,11,16,.3)" title="${name}: ${src.type}, score ${(src.score||0).toFixed(3)}"><span class="d ${src.status==='available'?'dg':'dr'}"></span><span style="color:#e6edf3;font-weight:600">${name}</span> <span style="color:#484f58;font-size:9px">${src.status} (${(src.score||0).toFixed(2)})</span></summary>`;
+    sr+=`<div style="padding:4px 6px;border-left:2px solid rgba(63,185,80,.1);margin-left:4px">`;
+    sr+=`<div style="font-size:9px;color:#6e7681">type: ${src.type} | score: ${(src.score||0).toFixed(3)}</div>`;
+    if(models.length){
+      models.forEach(m=>{
+        const isEmbed=m.includes('embed');
+        const clr=isEmbed?'#d2a8ff':'#3fb950';
+        const tag=isEmbed?'EMB':'LLM';
+        // Find model performance data
+        const perf=(d.model_perf||[]).filter(p=>p.model===m);
+        sr+=`<details style="margin:2px 0"><summary style="cursor:pointer;font-size:10px;color:${clr};padding:2px 0" title="${m}: ${tag} model">${m} <span style="color:#484f58;font-size:8px">${tag}</span></summary>`;
+        sr+=`<div style="padding:2px 6px;font-size:8px;color:#6e7681">`;
+        if(perf.length){
+          perf.forEach(p=>{
+            sr+=`<div>latency: ${p.latency_ms}ms | tok/s: ${p.tps} | cpu: ${p.cpu_at_query}%</div>`;
+          });
+        } else {
+          sr+=`<div>no performance data yet — metrics populate after inference requests</div>`;
+        }
+        sr+=`</div></details>`;
+      });
+    }
+    sr+=`</div></details>`;
+  });
+
+  // Cloud sources — each expandable
+  sr+=`<div style="font-size:8px;color:#484f58;text-transform:uppercase;letter-spacing:.5px;padding:4px 0 2px;margin-top:4px">CLOUD</div>`;
+  cloudSrcs.forEach(([name,src])=>{
+    const label=name.replace('cloud_','').replace('ollama_cloud','ollama cloud');
+    const st=src.status==='available'?'dg':src.status==='degraded'?'dy':'dr';
+    sr+=`<details style="margin:1px 0"><summary style="cursor:pointer;font-size:10px;padding:2px 0;border-bottom:1px solid rgba(8,11,16,.2)" title="${name}: ${src.type}, score ${(src.score||0).toFixed(3)}, status ${src.status}"><span class="d ${st}"></span><span style="color:#c9d1d9">${label}</span> <span style="color:#484f58;font-size:9px">${(src.score||0).toFixed(2)}</span></summary>`;
+    sr+=`<div style="padding:2px 6px;font-size:8px;color:#6e7681;border-left:2px solid rgba(88,166,255,.1);margin-left:4px">status: ${src.status} | type: ${src.type} | score: ${(src.score||0).toFixed(3)}${src.models?.length?' | models: '+src.models.join(', '):''}</div></details>`;
+  });
+
+  h+=`<div class="c w2" title="Inference discovery: ${inf.available||0} available of ${inf.total||0} sources"><div class="ct"><a href="/inference/status" style="color:#58a6ff;text-decoration:none">inference</a> ${inf.available||0}/${inf.total||0} sources</div>${sr}</div>`;
+
+  // ── GODEL CHOICES — each expandable with rationale ──
   let gl='';(d.godel_choices||[]).forEach(g=>{
     const ts=g.timestamp?g.timestamp.slice(11,19):'';
-    const oc=g.outcome?` [${g.outcome}]`:'';
-    gl+=`<div class="r"><span style="color:#58a6ff">${g.agent}</span><span style="color:#3d424d">${g.type}${oc}</span></div>`;
-    if(g.chosen)gl+=`<div class="r"><span style="color:#7ee787;font-size:9px;padding-left:6px">&rarr; ${g.chosen}</span><span style="color:#3d424d;font-size:9px">${ts}</span></div>`;
+    const oc=g.outcome==='success'?'#3fb950':g.outcome?'#d29922':'#484f58';
+    gl+=`<details style="margin:1px 0"><summary style="cursor:pointer;font-size:10px;padding:2px 0;border-bottom:1px solid rgba(8,11,16,.3)" title="${g.type}: ${g.chosen}"><span style="color:${oc}">[${(g.outcome||'?').slice(0,3)}]</span> <span style="color:#58a6ff">${g.agent}</span> <span style="color:#484f58;font-size:9px">${ts}</span></summary>`;
+    gl+=`<div style="padding:4px 6px;font-size:9px;color:#8b949e;border-left:2px solid rgba(210,168,255,.1);margin-left:4px">`;
+    gl+=`<div>type: <span style="color:#d2a8ff">${g.type}</span></div>`;
+    gl+=`<div style="color:#7ee787">&rarr; ${(g.chosen||'').slice(0,120)}</div>`;
+    if(g.rationale)gl+=`<div style="color:#6e7681;margin-top:2px">rationale: ${g.rationale}</div>`;
+    gl+=`</div></details>`;
   });
-  h+=`<div class="c w2"><div class="ct">g&ouml;del choices</div>${gl||'<span style="color:#3d424d">-</span>'}</div>`;
-  let bl='';(d.beliefs?.sample||[]).slice(0,4).forEach(b=>bl+=`<div class="r"><span style="color:#7ee787;font-size:8px">${b.key.replace('identity.map.','')}</span></div>`);
-  h+=`<div class="c"><div class="ct">beliefs</div>${bl||'<span style="color:#3d424d">-</span>'}</div>`;
-  // model performance — raw scientific values, no bias
+  h+=`<div class="c w2" title="Self-improvement decisions — the Godel machine audit trail"><div class="ct"><a href="/mindxagent/actions" style="color:#58a6ff;text-decoration:none">g\u00F6del choices</a> (${(d.godel_choices||[]).length})</div>${gl||'<span style="color:#3d424d">no choices yet</span>'}</div>`;
+
+  // ── MODEL PERFORMANCE — expandable per model ──
   const mp=d.model_perf||[];
   if(mp.length){
     let mh='';
     let totalTokens=0;
     mp.slice(-8).forEach(m=>{
       totalTokens+=(m.tokens_est||0);
-      mh+=`<div class="r"><span style="color:#b0b8c4;font-weight:600;min-width:100px">${m.model||'?'}</span><span style="color:#8b949e">${m.latency_ms}ms</span><span style="color:#8b949e">${m.tps}t/s</span><span style="color:#6e7681">cpu:${m.cpu_at_query}%</span></div>`;
+      mh+=`<details style="margin:1px 0"><summary style="cursor:pointer;font-size:10px;padding:2px 0;border-bottom:1px solid rgba(8,11,16,.3)" title="${m.model}: ${m.latency_ms}ms, ${m.tps} tok/s"><span style="color:#b0b8c4;font-weight:600">${m.model||'?'}</span> <span style="color:#3fb950;font-size:9px">${m.tps}t/s</span> <span style="color:#484f58;font-size:9px">${m.latency_ms}ms</span></summary>`;
+      mh+=`<div style="padding:2px 6px;font-size:8px;color:#6e7681;border-left:2px solid rgba(63,185,80,.1);margin-left:4px">latency: ${m.latency_ms}ms | tokens/sec: ${m.tps} | cpu@query: ${m.cpu_at_query}% | tokens: ${m.tokens_est||0}</div></details>`;
     });
-    h+=`<div class="c w2"><div class="ct">model performance &middot; ${mp.length} queries &middot; ${totalTokens} tokens</div>${mh}</div>`;
+    h+=`<div class="c w2" title="LLM performance metrics from actual inference requests"><div class="ct">model performance &middot; ${mp.length} queries &middot; ${totalTokens.toLocaleString()} tokens</div>${mh}</div>`;
   }
   // disk + database + RAGE embed
   const dd=d.disk_detail||{};const db=d.database||{};const re=d.rage_embed||{};
