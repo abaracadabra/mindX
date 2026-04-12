@@ -105,6 +105,9 @@ SOLDIER_PERSONAS = {
 
 OLLAMA_URL = "http://localhost:11434"
 
+# Agent file path for loading extended personas
+BOARDROOM_AGENTS_DIR = PROJECT_ROOT / "agents" / "boardroom"
+
 
 class Boardroom:
     """CEO + Seven Soldiers weighted consensus engine."""
@@ -204,6 +207,31 @@ class Boardroom:
         )
         return session
 
+    def _load_soldier_persona(self, soldier_id: str) -> str:
+        """Load full persona from .agent file, fall back to SOLDIER_PERSONAS dict."""
+        # Try loading from .agent file (richer context)
+        agent_file = BOARDROOM_AGENTS_DIR / f"{soldier_id.split('_')[0]}.agent"
+        if agent_file.exists():
+            try:
+                content = agent_file.read_text(encoding="utf-8")
+                # Extract DESCRIPTION and OPERATING PRINCIPLES sections
+                sections = []
+                current = None
+                for line in content.split("\n"):
+                    if line.strip() in ("DESCRIPTION", "OPERATING PRINCIPLES", "BOARDROOM ROLE"):
+                        current = line.strip()
+                        continue
+                    elif line.strip() and not line.startswith(" ") and not line.startswith("\t") and current:
+                        current = None
+                    if current and line.strip():
+                        sections.append(line.strip())
+                if sections:
+                    return " ".join(sections[:8])  # First 8 lines — enough for persona
+            except Exception:
+                pass
+        # Fall back to hardcoded persona
+        return SOLDIER_PERSONAS.get(soldier_id, f"You are {soldier_id}.")
+
     async def _query_soldier(
         self,
         soldier_id: str,
@@ -214,10 +242,11 @@ class Boardroom:
         context: Optional[Dict[str, Any]],
     ) -> SoldierVote:
         """Query a Soldier using their assigned model with role-specific persona.
+        Loads persona from .agent file (rich doctrine) or falls back to SOLDIER_PERSONAS dict.
         Tries cloud model first (if signed in), falls back to local."""
         local_model = SOLDIER_MODELS.get(soldier_id, "qwen3:1.7b")
         cloud_model = SOLDIER_CLOUD_MODELS.get(soldier_id)
-        persona = SOLDIER_PERSONAS.get(soldier_id, f"You are {soldier_id}.")
+        persona = self._load_soldier_persona(soldier_id)
 
         prompt = (
             f"{persona}\n\n"
