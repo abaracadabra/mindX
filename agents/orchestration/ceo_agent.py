@@ -661,15 +661,26 @@ class CEOAgent:
         directive = self.security_validator.sanitize_input(directive)
         context = self.security_validator.sanitize_input(context) if context else {}
         
-        # Check circuit breaker
+        # Check circuit breaker — allow recovery via HALF_OPEN state
         breaker = self._circuit_breakers.get("strategic_directive")
         if breaker and breaker.state == "OPEN":
-            return {
-                "success": False,
-                "status": "CIRCUIT_BREAKER_OPEN",
-                "message": "Strategic directive circuit breaker is open",
-                "timestamp": datetime.now().isoformat()
-            }
+            # Check if recovery timeout has elapsed — transition to HALF_OPEN
+            if breaker.last_failure_time:
+                time_since_failure = (datetime.now() - breaker.last_failure_time).total_seconds()
+                recovery_timeout = getattr(breaker, 'recovery_timeout', 120)
+                if time_since_failure >= recovery_timeout:
+                    breaker.state = "HALF_OPEN"
+                    logger.info(f"CEO circuit breaker transitioning OPEN → HALF_OPEN after {time_since_failure:.0f}s recovery")
+                else:
+                    return {
+                        "success": False,
+                        "status": "CIRCUIT_BREAKER_OPEN",
+                        "message": f"Circuit breaker open, recovery in {recovery_timeout - time_since_failure:.0f}s",
+                        "timestamp": datetime.now().isoformat()
+                    }
+            else:
+                # No failure time recorded — force HALF_OPEN to allow recovery attempt
+                breaker.state = "HALF_OPEN"
         
         # Initialize BDI components if needed
         await self.async_init_components()

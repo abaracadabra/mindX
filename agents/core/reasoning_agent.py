@@ -125,8 +125,10 @@ class ReasoningAgent:
         
         try:
             response_str = await self.llm_handler.generate_text(prompt, json_mode=True)
+            if not response_str:
+                return {"error": "LLM unavailable", "type": "deductive", "conclusion": "Unable to reason — inference unavailable"}
             result = json.loads(response_str)
-            
+
             # Store reasoning
             reasoning_record = {
                 "timestamp": time.time(),
@@ -195,8 +197,10 @@ class ReasoningAgent:
         
         try:
             response_str = await self.llm_handler.generate_text(prompt, json_mode=True)
+            if not response_str:
+                return {"error": "LLM unavailable", "type": "inductive", "generalization": "Unable to reason — inference unavailable"}
             result = json.loads(response_str)
-            
+
             reasoning_record = {
                 "timestamp": time.time(),
                 "type": ReasoningType.INDUCTIVE.value,
@@ -266,8 +270,10 @@ class ReasoningAgent:
         
         try:
             response_str = await self.llm_handler.generate_text(prompt, json_mode=True)
+            if not response_str:
+                return {"error": "LLM unavailable", "type": "abductive", "best_explanation": "Unable to reason — inference unavailable"}
             result = json.loads(response_str)
-            
+
             reasoning_record = {
                 "timestamp": time.time(),
                 "type": ReasoningType.ABDUCTIVE.value,

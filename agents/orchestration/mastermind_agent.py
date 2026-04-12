@@ -241,6 +241,8 @@ class MastermindAgent:
                   f"Provide your assessment in JSON format with keys 'overall_assessment' (string) and 'identified_gaps' (list of strings).")
         try:
             response_str = await self.llm_handler.generate_text(prompt, json_mode=True)
+            if not response_str:
+                return False, "LLM returned empty response during tool assessment"
             assessment_result = json.loads(response_str)
             await self.belief_system.add_belief("assessment.tool_suite.latest", assessment_result)
             
@@ -292,6 +294,8 @@ class MastermindAgent:
                   f"Respond ONLY with a JSON object containing a 'recommendations' list.")
         try:
             response_str = await self.llm_handler.generate_text(prompt, json_mode=True)
+            if not response_str:
+                return False, "LLM returned empty response during strategy proposal"
             strategy = json.loads(response_str)
             await self.belief_system.add_belief("strategy.tool_proposal.latest", strategy)
             

@@ -195,7 +195,16 @@ Respond ONLY with the JSON array.
                 max_tokens=2000
             )
             
-            actions_data = json.loads(response)
+            if not response:
+                logger.error(f"LLM returned empty response for goal decomposition: {goal.description[:60]}")
+                return []
+            try:
+                actions_data = json.loads(response)
+            except (json.JSONDecodeError, TypeError) as e:
+                logger.error(f"LLM returned invalid JSON for goal decomposition: {e}")
+                return []
+            if not isinstance(actions_data, list):
+                actions_data = actions_data.get("actions", []) if isinstance(actions_data, dict) else []
             detailed_actions = []
             
             for i, action_data in enumerate(actions_data):

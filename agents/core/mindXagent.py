@@ -2757,6 +2757,7 @@ class MindXAgent:
                         # Update action status — descriptive result with test outcome
                         try:
                             from agents.memory_pgvector import store_action
+                            agents_used = getattr(result, 'agents_used', []) if result else []
                             agents_str = ', '.join(agents_used[:3]) if agents_used else 'none'
                             changes_str = f", {len(result.improvements_made)} changes" if hasattr(result, 'improvements_made') and result.improvements_made else ""
                             await store_action(

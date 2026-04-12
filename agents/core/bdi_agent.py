@@ -418,7 +418,11 @@ class BDIAgent:
                   f"Extract values for the parameters from the goal. Respond ONLY with a valid JSON object.")
         try:
             response_str = await self.llm_handler.generate_text(prompt, model=self.llm_handler.model_name_for_api, temperature=0.0, json_mode=True)
+            if not response_str:
+                return False, "LLM returned empty response during parameter extraction"
             return True, json.loads(response_str)
+        except (json.JSONDecodeError, TypeError) as e:
+            return False, f"LLM returned invalid JSON during parameter extraction: {e}"
         except Exception as e:
             return False, f"Failed to extract parameters via LLM: {e}"
 
