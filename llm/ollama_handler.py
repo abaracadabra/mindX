@@ -105,6 +105,12 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
 
         logger.debug(f"OllamaHandler: POST to {generate_endpoint}. Model: {model}. JSON Mode: {json_mode}. Payload options: {ollama_options}. Prompt (start): {prompt[:100]}...")
         
+        # Enforce rate limiting if configured (local Ollama typically unlimited, but
+        # respects limits when set by llm_factory for shared/remote instances)
+        if self.rate_limiter and not await self.rate_limiter.wait():
+            logger.warning(f"OllamaHandler: Rate limiter retries exhausted for '{model}'")
+            return None  # Graceful — triggers BDI provider cascade
+
         response_content_full = ""
         try:
             async with session.post(generate_endpoint, json=payload) as response:
@@ -120,7 +126,17 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
                 # Ollama's non-streaming /api/generate returns a single JSON object
                 # when stream=false. If it were stream=true, we'd iterate response.content.
                 response_data = await response.json(loads=json.loads) # Use standard json
-                
+
+                # Record actual token counts at 18dp precision (cypherpunk2048 standard)
+                if response_data.get("eval_count", 0) > 0 or response_data.get("prompt_eval_count", 0) > 0:
+                    try:
+                        from llm.precision_metrics import OllamaResponseMetrics, PrecisionMetricsTracker
+                        metrics = OllamaResponseMetrics.from_api_response(response_data, model=model)
+                        tracker = PrecisionMetricsTracker()
+                        tracker.record_with_cost(metrics, provider="ollama")
+                    except Exception:
+                        pass  # Metrics are observational — never block inference
+
                 if "response" in response_data:
                     response_content_full = response_data["response"].strip()
                 elif "error" in response_data: # pragma: no cover

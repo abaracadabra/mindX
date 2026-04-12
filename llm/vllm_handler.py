@@ -94,6 +94,11 @@ class VLLMHandler(LLMHandlerInterface):
 
         session = await self._get_session()
 
+        # Enforce rate limiting if configured
+        if self.rate_limiter and not await self.rate_limiter.wait():
+            logger.warning(f"VLLMHandler: Rate limiter retries exhausted for '{model}'")
+            return None
+
         # Try chat completions first (preferred for instruction-tuned models)
         result = await self._try_chat_completions(
             session, prompt, model, max_tokens, temperature, json_mode, **kwargs

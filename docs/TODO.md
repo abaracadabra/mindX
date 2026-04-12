@@ -38,7 +38,7 @@
 | ~~**CEOAgent circuit breaker permanent**~~ | ~~Medium~~ | [ceo_agent.py](../agents/orchestration/ceo_agent.py) | **Fixed 2026-04-11** — OPEN → HALF_OPEN recovery after 120s |
 | ~~**blueprint_agent crashes on None LLM**~~ | ~~Medium~~ | [blueprint_agent.py](../agents/evolution/blueprint_agent.py) | **Fixed 2026-04-12** — JSON guard, SEA kwargs, factory params |
 | ~~**MemoryAgent missing get_memories_by_agent**~~ | ~~Medium~~ | [memory_agent.py](../agents/memory_agent.py) | **Fixed 2026-04-12** — Wrapper to get_recent_memories() |
-| **Rate limiting inconsistent** | Low | [rate_limiter.py](../llm/rate_limiter.py) | Only Gemini handler enforces; Ollama/Groq handlers ignore |
+| ~~**Rate limiting inconsistent**~~ | ~~Low~~ | [rate_limiter.py](../llm/rate_limiter.py) | **Fixed 2026-04-12** — All handlers (Groq, Ollama, vLLM) now enforce rate_limiter.wait() before API calls |
 | **DAIO not on-chain** | Blocking for sovereignty | [daio/contracts/](../daio/contracts/) | Solidity written, not deployed. Boardroom runs in Python only. |
 | **Dojo not on Algorand** | Blocking for BONA FIDE | [dojo.py](../daio/governance/dojo.py) | Reputation system is in-memory, not blockchain-verified |
 | **No CI/CD pipeline** | Medium | Deployment | Manual scp via [HostingerVPSAgent](../agents/hostinger_vps_agent.py). GitHub Actions planned. |

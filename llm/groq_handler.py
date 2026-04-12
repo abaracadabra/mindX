@@ -81,6 +81,11 @@ class GroqHandler(LLMHandlerInterface): # pragma: no cover
              request_params.pop("stream", None) # For now, force non-streamed if this method is called
 
         try:
+            # Enforce rate limiting (from parent LLMHandlerInterface via llm_factory)
+            if self.rate_limiter and not await self.rate_limiter.wait():
+                logger.warning(f"GroqHandler: Rate limiter retries exhausted for '{model}'")
+                return "Error: RateLimitRetriesExceeded"
+
             # Enforce execution timeout
             timeout_seconds = getattr(self, 'execution_timeout_minutes', 15) * 60
             chat_completion = await asyncio.wait_for(

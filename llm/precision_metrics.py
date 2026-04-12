@@ -156,6 +156,16 @@ class OllamaResponseMetrics:
             "total_tokens_subtokens": str(Decimal(self.total_tokens) * SUBTOKEN_FACTOR),
         }
 
+    def cost_usd(self, input_price_per_million: Decimal, output_price_per_million: Decimal) -> Decimal:
+        """Calculate cost in USD at 18-decimal precision.
+
+        Prices are per 1M tokens. cypherpunk2048 standard: every fraction counts.
+        Spending .01 to earn .011 is profit at any scale.
+        """
+        input_cost = _decimal(self.prompt_eval_count) * input_price_per_million / Decimal("1000000")
+        output_cost = _decimal(self.eval_count) * output_price_per_million / Decimal("1000000")
+        return input_cost + output_cost
+
 
 @dataclass
 class PrecisionAccumulator:
@@ -354,6 +364,11 @@ class PrecisionMetricsTracker:
         self.global_total_eval_duration_ns: int = 0
         self.global_requests_with_actuals: int = 0
 
+        # Cost tracking — 18-decimal Decimal precision (cypherpunk2048 standard)
+        # Prices per 1M tokens, loaded from provider pricing data
+        self.global_total_cost_usd: Decimal = DECIMAL_ZERO
+        self.provider_pricing: dict[str, dict[str, Decimal]] = self._load_provider_pricing()
+
         self._load()
 
     def record(self, response: OllamaResponseMetrics):
@@ -398,6 +413,72 @@ class PrecisionMetricsTracker:
             return DECIMAL_ZERO
         return _decimal(self.global_requests_with_actuals) / _decimal(self.global_total_requests)
 
+    def _load_provider_pricing(self) -> dict:
+        """Load token pricing from TokenCalculatorTool's pricing data.
+
+        Returns {model_key: {"input": Decimal, "output": Decimal}} per 1M tokens.
+        All prices stored as Decimal — no float drift across millions of requests.
+        """
+        pricing = {}
+        try:
+            pricing_path = Path("data/config/token_pricing.json")
+            if not pricing_path.exists():
+                pricing_path = Path("data/monitoring/token_pricing.json")
+            if pricing_path.exists():
+                raw = json.loads(pricing_path.read_text())
+                for provider, models in raw.get("pricing_per_1M_tokens", {}).items():
+                    for model_key, prices in models.items():
+                        if isinstance(prices, dict):
+                            key = f"{provider}/{model_key}"
+                            pricing[key] = {
+                                "input": _decimal(prices.get("input", 0)),
+                                "output": _decimal(prices.get("output", 0)),
+                            }
+        except Exception:
+            pass
+
+        # Hardcoded fallback for known providers (per 1M tokens, USD)
+        defaults = {
+            "ollama/local": {"input": DECIMAL_ZERO, "output": DECIMAL_ZERO},
+            "ollama/cloud": {"input": DECIMAL_ZERO, "output": DECIMAL_ZERO},
+            "gemini/gemini-2.0-flash": {"input": Decimal("0.10"), "output": Decimal("0.40")},
+            "gemini/gemini-1.5-pro": {"input": Decimal("1.25"), "output": Decimal("5.00")},
+            "groq/llama3-8b-8192": {"input": Decimal("0.05"), "output": Decimal("0.08")},
+            "groq/llama3-70b-8192": {"input": Decimal("0.59"), "output": Decimal("0.79")},
+            "openai/gpt-4o": {"input": Decimal("2.50"), "output": Decimal("10.00")},
+            "openai/gpt-4o-mini": {"input": Decimal("0.15"), "output": Decimal("0.60")},
+            "anthropic/claude-sonnet-4-6": {"input": Decimal("3.00"), "output": Decimal("15.00")},
+            "anthropic/claude-haiku-4-5": {"input": Decimal("0.80"), "output": Decimal("4.00")},
+            "mistral/mistral-large": {"input": Decimal("2.00"), "output": Decimal("6.00")},
+            "mistral/mistral-small": {"input": Decimal("0.10"), "output": Decimal("0.30")},
+            "together/meta-llama/Llama-3-70b": {"input": Decimal("0.90"), "output": Decimal("0.90")},
+        }
+        for k, v in defaults.items():
+            if k not in pricing:
+                pricing[k] = v
+        return pricing
+
+    def _get_pricing(self, model: str, provider: str = "") -> tuple:
+        """Resolve pricing for a model. Returns (input_per_M, output_per_M) as Decimals."""
+        # Try exact match
+        for key_prefix in [f"{provider}/{model}", model]:
+            if key_prefix in self.provider_pricing:
+                p = self.provider_pricing[key_prefix]
+                return p["input"], p["output"]
+        # Try substring match
+        for key, p in self.provider_pricing.items():
+            if model and model in key:
+                return p["input"], p["output"]
+        return DECIMAL_ZERO, DECIMAL_ZERO
+
+    def record_with_cost(self, response: OllamaResponseMetrics, provider: str = "") -> Decimal:
+        """Record response AND calculate cost. Returns cost in USD (18dp)."""
+        self.record(response)
+        input_price, output_price = self._get_pricing(response.model, provider)
+        cost = response.cost_usd(input_price, output_price)
+        self.global_total_cost_usd += cost
+        return cost
+
     def summary(self) -> dict:
         """Full precision summary across all models."""
         q = lambda d: str(d.quantize(Decimal(f"1e-{PRECISION_PLACES}"), rounding=ROUND_HALF_UP))
@@ -413,6 +494,7 @@ class PrecisionMetricsTracker:
                 "actual_count_rate": q(self.global_actual_rate),
                 "total_eval_duration_ns": self.global_total_eval_duration_ns,
                 "requests_with_actual_counts": self.global_requests_with_actuals,
+                "total_cost_usd": q(self.global_total_cost_usd),
             },
             "models": {name: m.to_dict() for name, m in self.models.items()},
         }
@@ -442,6 +524,7 @@ class PrecisionMetricsTracker:
                 "global_total_prompt_tokens": self.global_total_prompt_tokens,
                 "global_total_eval_duration_ns": self.global_total_eval_duration_ns,
                 "global_requests_with_actuals": self.global_requests_with_actuals,
+                "global_total_cost_usd": str(self.global_total_cost_usd),
                 "models": {},
             }
             for name, m in self.models.items():
@@ -473,6 +556,7 @@ class PrecisionMetricsTracker:
             self.global_total_prompt_tokens = data.get("global_total_prompt_tokens", 0)
             self.global_total_eval_duration_ns = data.get("global_total_eval_duration_ns", 0)
             self.global_requests_with_actuals = data.get("global_requests_with_actuals", 0)
+            self.global_total_cost_usd = _decimal(data.get("global_total_cost_usd", 0))
 
             for name, mdata in data.get("models", {}).items():
                 m = ModelPrecisionMetrics(model_name=name)
