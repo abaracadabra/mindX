@@ -342,6 +342,21 @@ class Boardroom:
             }
             with open(self.session_log_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(entry) + "\n")
+
+            # Emit to ActivityFeed for live landing page
+            try:
+                from mindx_backend_service.activity_feed import ActivityFeed
+                vote_summary = " ".join(
+                    f'{v.soldier_id[:3]}:{"✓" if v.vote=="approve" else "✗" if v.vote=="reject" else "—"}'
+                    for v in session.votes
+                )
+                ActivityFeed.get_instance().emit(
+                    "boardroom", "ceo_agent", "session",
+                    f'{session.directive[:120]} → {session.outcome.upper()} ({session.weighted_score:.3f}) {vote_summary}',
+                    detail=entry, agent_tier=4
+                )
+            except Exception:
+                pass
         except Exception as e:
             logger.warning(f"Boardroom: failed to log session: {e}")
 

@@ -2865,7 +2865,18 @@ class MindXAgent:
             self.thinking_process = self.thinking_process[-self.max_thinking_history:]
         
         logger.debug(f"{self.log_prefix} [THINKING] {step}: {thought}")
-    
+
+        # Emit to ActivityFeed for live landing page
+        try:
+            from mindx_backend_service.activity_feed import ActivityFeed
+            ActivityFeed.get_instance().emit(
+                "thinking", self.agent_id, "thinking_step",
+                f"{step}: {thought[:200]}",
+                detail=thinking_entry, agent_tier=3
+            )
+        except Exception:
+            pass
+
     async def _log_action_choices(self, context: str, choices: List[Dict[str, Any]]):
         """Log action choices for UI display and persist as Gödel core choice."""
         if not self.settings.get("show_action_choices", True):

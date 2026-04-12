@@ -417,6 +417,106 @@ function rpnl(d){
 }
 async function rf(){try{const r=await fetch(API);if(r.ok){LD=await r.json();render(LD)}}catch(e){document.getElementById('bge').textContent='OFF';document.getElementById('bge').className='badge w'}}
 rf();setInterval(rf,6000);
+
+// ── Activity Feed (SSE) ──
+(function(){
+  const TIER={0:'UN',1:'PRV',2:'VER',3:'BF',4:'SOV',5:'GM',6:'MST'};
+  const TCOL={0:'#f85149',1:'#d29922',2:'#58a6ff',3:'#3fb950',4:'#d2a8ff',5:'#79c0ff',6:'#e6edf3'};
+  const ROOMS=['all','boardroom','dojo','inference','improvement','thinking','godel','memory','system'];
+  let activeRoom='all';
+  let feedEvents=[];
+  const MAX_FEED=100;
+
+  function ago(ts){const s=Math.floor(Date.now()/1000-ts);if(s<60)return s+'s ago';if(s<3600)return Math.floor(s/60)+'m ago';return Math.floor(s/3600)+'h ago'}
+
+  function renderCard(e){
+    const badge=`<span style="color:${TCOL[e.agent_tier]||TCOL[0]};font-weight:700;font-size:9px">[${TIER[e.agent_tier]||'UN'}]</span>`;
+    const detail=e.detail?`<details style="margin-top:4px"><summary style="cursor:pointer;color:#484f58;font-size:9px">expand detail</summary><pre style="font-size:8px;color:#6e7681;max-height:120px;overflow:auto;padding:4px;margin-top:4px;background:rgba(5,8,16,.4);border-radius:3px">${JSON.stringify(e.detail,null,2).slice(0,600)}</pre></details>`:'';
+    return `<div class="af-card" data-room="${e.room}" style="display:${activeRoom==='all'||activeRoom===e.room?'block':'none'}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
+        <span>${badge} <span style="color:#c9d1d9;font-size:10px;font-weight:600">${e.agent||'system'}</span></span>
+        <span style="color:#484f58;font-size:8px">${ago(e.timestamp)} <span style="color:${TCOL[2]};opacity:.5">#${e.room}</span></span>
+      </div>
+      <div style="color:#b0b8c4;font-size:10px;line-height:1.5">${(e.content||'').replace(/</g,'&lt;').slice(0,300)}</div>
+      ${detail}
+    </div>`;
+  }
+
+  function renderFeed(){
+    const el=document.getElementById('af-list');
+    if(!el)return;
+    el.innerHTML=feedEvents.filter(e=>activeRoom==='all'||e.room===activeRoom).slice(0,50).map(renderCard).join('');
+  }
+
+  function setRoom(r){activeRoom=r;document.querySelectorAll('.af-tab').forEach(t=>t.classList.toggle('active',t.dataset.room===r));renderFeed()}
+
+  // Inject feed UI into dashboard
+  const wrap=document.querySelector('.wrap');
+  if(wrap){
+    const feedPanel=document.createElement('div');
+    feedPanel.id='activity-feed';
+    feedPanel.style.cssText='position:fixed;right:0;top:0;bottom:0;width:320px;background:rgba(10,14,20,.95);border-left:1px solid rgba(48,54,61,.5);z-index:20;display:flex;flex-direction:column;overflow:hidden;backdrop-filter:blur(8px)';
+    feedPanel.innerHTML=`
+      <div style="padding:8px 10px;border-bottom:1px solid rgba(48,54,61,.5);flex-shrink:0">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="color:#e6edf3;font-size:12px;font-weight:700;font-family:'SF Mono',monospace">Activity Feed</span>
+          <span id="af-count" style="color:#484f58;font-size:9px">connecting...</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px" id="af-tabs">
+          ${ROOMS.map(r=>`<button class="af-tab${r==='all'?' active':''}" data-room="${r}" onclick="window._afSetRoom&&window._afSetRoom('${r}')" style="padding:2px 6px;font-size:8px;border:1px solid rgba(48,54,61,.4);border-radius:3px;background:transparent;color:#8b949e;cursor:pointer;font-family:inherit">${r}</button>`).join('')}
+        </div>
+      </div>
+      <div id="af-list" style="flex:1;overflow-y:auto;padding:6px;scrollbar-width:thin;scrollbar-color:rgba(88,166,255,.15) transparent"></div>
+    `;
+    document.body.appendChild(feedPanel);
+    window._afSetRoom=setRoom;
+
+    // Style for cards and active tabs
+    const style=document.createElement('style');
+    style.textContent=`
+      .af-card{padding:8px;border-bottom:1px solid rgba(48,54,61,.25);transition:background .15s}
+      .af-card:hover{background:rgba(22,27,34,.4)}
+      .af-tab.active{background:rgba(88,166,255,.12)!important;color:#58a6ff!important;border-color:rgba(88,166,255,.3)!important}
+      .af-tab:hover{border-color:rgba(88,166,255,.3)}
+      @media(max-width:900px){#activity-feed{display:none}}
+    `;
+    document.head.appendChild(style);
+
+    // Adjust main content to not overlap
+    const mainStyle=document.createElement('style');
+    mainStyle.textContent='@media(min-width:901px){.g,.tabs,.tab-panels,.ft,.lo{margin-right:320px}}';
+    document.head.appendChild(mainStyle);
+  }
+
+  // SSE connection
+  function connectSSE(){
+    const es=new EventSource('/activity/stream');
+    es.addEventListener('activity',function(e){
+      try{
+        const ev=JSON.parse(e.data);
+        feedEvents.unshift(ev);
+        if(feedEvents.length>MAX_FEED)feedEvents.length=MAX_FEED;
+        renderFeed();
+        const cnt=document.getElementById('af-count');
+        if(cnt)cnt.textContent=feedEvents.length+' events';
+      }catch(err){}
+    });
+    es.addEventListener('heartbeat',function(){
+      const cnt=document.getElementById('af-count');
+      if(cnt&&feedEvents.length)cnt.textContent=feedEvents.length+' events';
+    });
+    es.onerror=function(){
+      const cnt=document.getElementById('af-count');
+      if(cnt)cnt.textContent='reconnecting...';
+      setTimeout(()=>{es.close();connectSSE()},5000);
+    };
+    es.onopen=function(){
+      const cnt=document.getElementById('af-count');
+      if(cnt)cnt.textContent='connected';
+    };
+  }
+  connectSSE();
+})();
 </script>
 </body>
 </html>

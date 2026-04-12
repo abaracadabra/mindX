@@ -1273,6 +1273,48 @@ async def _disk_usage_detail() -> dict:
     return await asyncio.to_thread(_run)
 
 
+# ── Activity Feed: SSE streaming + recent events ──
+
+@app.get("/activity/stream", tags=["activity"], include_in_schema=False)
+async def activity_sse_stream(request: Request):
+    """SSE endpoint — real-time activity events for the landing page."""
+    from mindx_backend_service.activity_feed import ActivityFeed, _seed_from_logs
+    feed = ActivityFeed.get_instance()
+    if len(feed.events) == 0:
+        _seed_from_logs(feed)
+
+    async def event_generator():
+        async for chunk in feed.sse_generator():
+            yield chunk
+
+    from starlette.responses import StreamingResponse
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+@app.get("/activity/recent", tags=["activity"])
+async def activity_recent(room: str = None, limit: int = 50):
+    """Recent activity events (JSON). Optional room filter."""
+    from mindx_backend_service.activity_feed import ActivityFeed, _seed_from_logs
+    feed = ActivityFeed.get_instance()
+    if len(feed.events) == 0:
+        _seed_from_logs(feed)
+    return {"events": feed.recent(limit=limit, room=room), "stats": feed.stats}
+
+@app.get("/activity/stats", tags=["activity"])
+async def activity_stats():
+    """Activity feed statistics."""
+    from mindx_backend_service.activity_feed import ActivityFeed
+    feed = ActivityFeed.get_instance()
+    return feed.stats
+
+
 @app.get("/diagnostics/live", tags=["diagnostics"])
 async def diagnostics_live_endpoint():
     global _diag_last_probe, _diag_cache, _diag_cache_ts
