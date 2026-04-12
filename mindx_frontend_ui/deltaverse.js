@@ -208,9 +208,25 @@
     this.distort = {active:false,strength:0,x:0,y:0,linger:0,trail:[],holdTime:0};
     this.depth = 0;
     this.maxDepth = 5;
-    this.idle = 0;       // seconds since last interaction
-    this.visible = true; // tab focus state
+    this.idle = 0;
+    this.visible = true;
     this.directions_seen = {};
+
+    // ── Infinite space: world coordinates beyond viewport ──
+    // The participant moves through an infinite field. Screen coords map to world coords.
+    // Pan accumulates from edge-pushing and drag. Zoom from scroll depth.
+    this.world = {
+      x: 0, y: 0,           // Camera position in infinite space
+      zoom: 1.0,             // Zoom level (0.1 = far, 5.0 = deep)
+      vx: 0, vy: 0,          // Camera velocity (inertial panning)
+    };
+    // Gravitational memory: places where the participant lingered leave energy
+    this.hotspots = [];       // [{wx, wy, energy, decay}] — world coordinates
+    this._hotspotTimer = 0;
+
+    // ── Perception telemetry buffer (for backend sync) ──
+    this._telemetryBuffer = [];
+    this._telemetryMaxLen = 100;
 
     // ── Gamification state ──
     this.profile = {
@@ -318,6 +334,7 @@
       this._checkRapidClick(now);
       // Tap gesture detection
       this._handleTap(data.x || 0, data.y || 0, now);
+      this.recordTelemetry('click', {x: data.x, y: data.y, combo: this.profile.combo});
       this._emit('click', {x: data.x, y: data.y, profile: this.getProfile()});
 
     } else if (type === 'move') {
@@ -365,16 +382,27 @@
         if (this._motionHistory.length > this._motionMaxLen) this._motionHistory.shift();
         this._detectGestures();
       }
-      this._emit('move', {x: data.x, y: data.y, vx: dx, vy: dy, ax: this.mouse.ax, ay: this.mouse.ay, speed: this.mouse.speed, direction: this.mouse.direction});
+      // ── Infinite space: edge-pushing pans the camera ──
+      var vw = typeof window !== 'undefined' ? window.innerWidth : 1920;
+      var vh = typeof window !== 'undefined' ? window.innerHeight : 1080;
+      var edgeZone = 30;
+      if (data.x < edgeZone) this.world.vx -= (edgeZone - data.x) * 0.02 * this.mouse.speed * 0.1;
+      if (data.x > vw - edgeZone) this.world.vx += (data.x - (vw - edgeZone)) * 0.02 * this.mouse.speed * 0.1;
+      if (data.y < edgeZone) this.world.vy -= (edgeZone - data.y) * 0.02 * this.mouse.speed * 0.1;
+      if (data.y > vh - edgeZone) this.world.vy += (data.y - (vh - edgeZone)) * 0.02 * this.mouse.speed * 0.1;
+
+      this._emit('move', {x: data.x, y: data.y, vx: dx, vy: dy, ax: this.mouse.ax, ay: this.mouse.ay, speed: this.mouse.speed, direction: this.mouse.direction, worldX: this.world.x, worldY: this.world.y});
 
     } else if (type === 'scroll') {
       this.profile.scrolls++;
       var delta = data.delta || 0;
       this.depth = clamp(this.depth + (delta > 0 ? 0.3 : -0.3), 0, this.maxDepth);
       this.profile.depth_max = Math.max(this.profile.depth_max, this.depth);
+      // Infinite zoom: scroll also scales the world view
+      this.world.zoom = clamp(this.world.zoom + (delta > 0 ? -0.05 : 0.05), 0.1, 5.0);
       this._addXP(1 * cm);
       this._checkAchievement('scroll_depth', this.depth >= 3);
-      this._emit('depth', {depth: this.depth, delta: delta});
+      this._emit('depth', {depth: this.depth, zoom: this.world.zoom, delta: delta});
 
     } else if (type === 'mousedown') {
       this.mouse.down = true;
@@ -405,7 +433,90 @@
     }
   };
 
-  // ── Distortion decay (call per frame from renderer) ──
+  // ── Per-frame update: world physics, distortion, hotspots (call from renderer) ──
+
+  DeltaVerse.prototype.update = function() {
+    this.updateWorld();
+    this.updateDistortion();
+    this.updateHotspots();
+  };
+
+  DeltaVerse.prototype.updateWorld = function() {
+    // Inertial camera panning
+    this.world.x += this.world.vx;
+    this.world.y += this.world.vy;
+    this.world.vx *= 0.95; // Friction
+    this.world.vy *= 0.95;
+  };
+
+  // Convert screen coordinates to world coordinates
+  DeltaVerse.prototype.screenToWorld = function(sx, sy) {
+    var vw = typeof window !== 'undefined' ? window.innerWidth : 1920;
+    var vh = typeof window !== 'undefined' ? window.innerHeight : 1080;
+    return {
+      x: (sx - vw / 2) / this.world.zoom + this.world.x,
+      y: (sy - vh / 2) / this.world.zoom + this.world.y,
+    };
+  };
+
+  // Convert world coordinates to screen coordinates
+  DeltaVerse.prototype.worldToScreen = function(wx, wy) {
+    var vw = typeof window !== 'undefined' ? window.innerWidth : 1920;
+    var vh = typeof window !== 'undefined' ? window.innerHeight : 1080;
+    return {
+      x: (wx - this.world.x) * this.world.zoom + vw / 2,
+      y: (wy - this.world.y) * this.world.zoom + vh / 2,
+    };
+  };
+
+  // ── Gravitational memory: places where the participant lingered ──
+
+  DeltaVerse.prototype.updateHotspots = function() {
+    this._hotspotTimer++;
+    // Record hotspot every 2 seconds if mouse is relatively still
+    if (this._hotspotTimer >= 120 && this.mouse.speed < 3 && this.mouse.x > 0) {
+      var wp = this.screenToWorld(this.mouse.x, this.mouse.y);
+      // Merge with nearby hotspot if within range
+      var merged = false;
+      for (var i = 0; i < this.hotspots.length; i++) {
+        var h = this.hotspots[i];
+        if (dist(wp.x, wp.y, h.wx, h.wy) < 50 / this.world.zoom) {
+          h.energy = Math.min(h.energy + 0.2, 3.0);
+          merged = true;
+          break;
+        }
+      }
+      if (!merged) {
+        this.hotspots.push({wx: wp.x, wy: wp.y, energy: 0.5, decay: 0.998});
+      }
+      // Cap hotspot count
+      if (this.hotspots.length > 50) this.hotspots.shift();
+      this._hotspotTimer = 0;
+    }
+    // Decay hotspots
+    for (var j = this.hotspots.length - 1; j >= 0; j--) {
+      this.hotspots[j].energy *= this.hotspots[j].decay;
+      if (this.hotspots[j].energy < 0.01) this.hotspots.splice(j, 1);
+    }
+  };
+
+  // ── Telemetry: buffer perception events for backend sync ──
+
+  DeltaVerse.prototype.recordTelemetry = function(event, data) {
+    this._telemetryBuffer.push({
+      t: Date.now(), e: event, d: data,
+      wx: this.world.x, wy: this.world.y, wz: this.world.zoom,
+    });
+    if (this._telemetryBuffer.length > this._telemetryMaxLen) this._telemetryBuffer.shift();
+  };
+
+  DeltaVerse.prototype.flushTelemetry = function() {
+    var buf = this._telemetryBuffer.slice();
+    this._telemetryBuffer = [];
+    return buf;
+  };
+
+  // ── Distortion decay ──
 
   DeltaVerse.prototype.updateDistortion = function() {
     if (!this.distort.active && this.distort.strength > 0) {
@@ -473,6 +584,7 @@
     var ach = ACHIEVEMENTS[id]; if (!ach) return;
     this.profile.achievements.push(id);
     this._addXP(ach.xp);
+    this.recordTelemetry('achievement', {id: id, xp: ach.xp});
     this._emit('achievement', {id: id, name: ach.name, desc: ach.desc, xp: ach.xp});
   };
 
@@ -656,6 +768,9 @@
         peak_speed: this.profile.peak_speed, total_sessions: this.profile.total_sessions,
         depth_max: this.profile.depth_max, circles_detected: this.profile.circles_detected,
         distort_total_time: this.profile.distort_total_time,
+        // Infinite space: persist camera and hotspots
+        world_x: this.world.x, world_y: this.world.y, world_zoom: this.world.zoom,
+        hotspots: this.hotspots.slice(0, 20), // Keep top 20 hotspots
       }));
     } catch(e) {}
   };
@@ -671,6 +786,11 @@
       if (s.depth_max) this.profile.depth_max = s.depth_max;
       if (s.circles_detected) this.profile.circles_detected = s.circles_detected;
       if (s.distort_total_time) this.profile.distort_total_time = s.distort_total_time;
+      // Restore infinite space
+      if (s.world_x !== undefined) this.world.x = s.world_x;
+      if (s.world_y !== undefined) this.world.y = s.world_y;
+      if (s.world_zoom) this.world.zoom = s.world_zoom;
+      if (s.hotspots) this.hotspots = s.hotspots;
     } catch(e) {}
   };
 
