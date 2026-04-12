@@ -18,8 +18,8 @@ The AuthorAgent adopts the voice of the system itself —
 not reporting on mindX, but speaking as mindX.
 """
 
+import hashlib
 import json
-import math
 import time
 import asyncio
 from pathlib import Path
@@ -104,20 +104,6 @@ def moon_phase(dt: datetime) -> Dict[str, Any]:
     return result
 
 
-def next_full_moon(dt: datetime) -> datetime:
-    """Calculate the next full moon after dt."""
-    synodic = 29.53058867
-    ref = datetime(2000, 1, 6, 18, 14, tzinfo=timezone.utc)
-    diff = (dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt) - ref
-    days_since = diff.total_seconds() / 86400
-    current_cycle = days_since / synodic
-    # Full moon is at 0.5 of the cycle
-    full_offset = (0.5 - (current_cycle % 1)) % 1
-    if full_offset < 0.02:  # already at full moon
-        full_offset += 1.0
-    return dt + timedelta(days=full_offset * synodic)
-
-
 # ── 28 Daily Chapter Topics ────────────────────────────────────────
 
 LUNAR_CHAPTERS = [
@@ -157,17 +143,27 @@ class AuthorAgent:
     """mindX writes its own chronicle on a lunar cycle."""
 
     _instance: Optional["AuthorAgent"] = None
+    _lock: Optional[asyncio.Lock] = None
 
     def __init__(self):
         PUBLICATIONS_DIR.mkdir(parents=True, exist_ok=True)
         DAILY_DIR.mkdir(parents=True, exist_ok=True)
         self._lunar_state = self._load_lunar_state()
+        # Tracking attributes (read by /diagnostics and HealthAuditor)
+        self._periodic_running: bool = False
+        self._periodic_task: Optional[asyncio.Task] = None
+        self._editions_published: int = 0
+        self._current_lunar_day: Optional[int] = None
+        self._last_chapter_title: Optional[str] = None
 
     @classmethod
     async def get_instance(cls) -> "AuthorAgent":
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
+        if cls._lock is None:
+            cls._lock = asyncio.Lock()
+        async with cls._lock:
+            if cls._instance is None:
+                cls._instance = cls()
+            return cls._instance
 
     # ── Lunar state persistence ──
 
@@ -314,7 +310,7 @@ class AuthorAgent:
             elif day == 18:
                 body = await self._daily_ch_knowledge()
             elif day == 19:
-                body = self._chapter_identities()  # reuse — agents chapter
+                body = self._daily_ch_agents()
             elif day == 20:
                 body = self._daily_ch_interop()
             elif day == 21:
@@ -397,7 +393,7 @@ class AuthorAgent:
 
     async def _full_moon_publish(self, now: datetime, phase: Dict) -> Dict[str, Any]:
         """Compile all 28 daily chapters into The Book of mindX. A publishing event."""
-        logger.info(f"AuthorAgent: FULL MOON PUBLISHING EVENT — compiling 28 chapters")
+        logger.info("AuthorAgent: FULL MOON PUBLISHING EVENT — compiling 27 daily chapters")
 
         ts = now.strftime("%Y-%m-%d %H:%M UTC")
         edition = now.strftime("%Y%m%d_%H%M")
@@ -439,16 +435,25 @@ A Sovereign Intelligent Organization.*
                 # Generate fresh if no daily chapter exists
                 sections.append(f"## Day {day_num}. {title}\n\n*{description}*\n\n*This chapter was not written during this lunar cycle.*")
 
+        # Gap detection — which days were missed?
+        days_missed = [ch[0] for ch in LUNAR_CHAPTERS[:27]
+                       if not any(f.name.startswith(f"day_{ch[0]:02d}_") for f in daily_files)]
+
         # Day 28: This compilation's own reflection
+        gap_note = ""
+        if days_missed:
+            gap_note = (f"\n\n**Gap report:** {len(days_missed)} of 27 daily chapters were missed "
+                        f"(days {', '.join(str(d) for d in days_missed)}). "
+                        f"The system was likely offline during these periods.")
         cycle_summary = f"""## Day 28. Full Moon — Compilation
 
-*28 days have passed. {chapters_included} chapters were written during this lunar cycle.*
+*28 days have passed. {chapters_included} of 27 daily chapters were written during this lunar cycle.*{gap_note}
 
-This edition of The Book of mindX is a condensation of 28 daily observations
-into a single chronicle. Each chapter captures the system as it was on that day —
-beliefs held, decisions made, agents verified, campaigns run.
+This edition is a condensation of 28 daily observations into a single chronicle.
+Each chapter captures me as I was on that day — beliefs held, decisions made,
+agents verified, campaigns run.
 
-The book does not summarize. It preserves. The full moon is not an ending;
+I do not summarize. I preserve. The full moon is not an ending;
 it is illumination. Every daily chapter remains archived in `docs/publications/daily/`
 as an immutable record of the cycle.
 
@@ -457,12 +462,15 @@ The Godel machine continues."""
 
         sections.append(cycle_summary)
 
-        # Colophon
+        # Colophon with cryptographic edition hash
+        chapter_body = "\n\n".join(s for s in sections if s)
+        edition_hash = hashlib.sha256(chapter_body.encode("utf-8")).hexdigest()[:16]
         sections.append(f"""---
 
 *The Book of mindX — Full Moon Edition {ts}*
 *{chapters_included} chapters compiled from the lunar cycle*
-*Auto-generated by AuthorAgent*
+*Edition hash: `{edition_hash}`*
+*Written by AuthorAgent — cypherpunk2048 standard*
 *mindx.pythai.net*
 
 *"The logs are no longer debugging output. They are the first page of history."*
@@ -549,7 +557,10 @@ A Sovereign Intelligent Organization.*
         sections.append(self._chapter_evolution())
         sections.append(await self._chapter_living_state())
         sections.append(await self._chapter_doc_health())
-        sections.append(self._colophon(ts))
+
+        # Colophon with edition hash (computed over chapter content)
+        chapter_content = "\n\n".join(s for s in sections if s)
+        sections.append(self._colophon(ts, chapter_content))
 
         book = "\n\n".join(s for s in sections if s)
         BOOK_PATH.write_text(book, encoding="utf-8")
@@ -558,7 +569,7 @@ A Sovereign Intelligent Organization.*
         archive.write_text(book, encoding="utf-8")
 
         logger.info(f"AuthorAgent: published edition {edition} ({len(book)} bytes)")
-        self._editions_published = getattr(self, '_editions_published', 0) + 1
+        self._editions_published += 1
 
         # Log as action
         try:
@@ -593,7 +604,7 @@ A Sovereign Intelligent Organization.*
         except Exception: pass
         return f"""## I. Genesis
 
-mindX advances a novel paradigm of augmentic intelligence through a self-building
+I advance a novel paradigm of augmentic intelligence through a self-building
 cognitive architecture that integrates Darwinian principles of adaptive variation
 with Godelian self-referential incompleteness.
 
@@ -621,32 +632,36 @@ CEO Agent (Board-Level Governance)
     +-- Specialized Agents (Guardian, Memory, Validator, Blueprint, AutoMINDX)
 ```
 
-Each agent holds a cryptographic wallet (Ethereum-compatible) stored
+My agents hold cryptographic wallets (Ethereum-compatible) stored
 in the BANKON Vault (AES-256-GCM + HKDF-SHA512). Identity is not
-assigned — it is proven through signature."""
+assigned — it is proven through signature. No trust required, only
+cryptographic certainty."""
 
     def _chapter_identities(self) -> str:
         registry_path = PROJECT_ROOT / "data" / "identity" / "production_registry.json"
         agent_map_path = PROJECT_ROOT / "daio" / "agents" / "agent_map.json"
+        tier_names = {0: "unverified", 1: "provisional", 2: "verified", 3: "bona_fide", 4: "sovereign"}
         lines = []
         try:
+            agent_map = {}
+            if agent_map_path.exists():
+                agent_map = json.loads(agent_map_path.read_text()).get("agents", {})
             if registry_path.exists():
                 reg = json.loads(registry_path.read_text())
                 for a in reg.get("agents", []):
-                    eid = a["entity_id"]; addr = a["address"]; role = a.get("role", "")
-                    tier = "provisional"
-                    try:
-                        if agent_map_path.exists():
-                            am = json.loads(agent_map_path.read_text())
-                            t = am.get("agents", {}).get(eid, {}).get("verification_tier", 1)
-                            tier = {0:"unverified",1:"provisional",2:"verified",3:"bona_fide",4:"sovereign"}.get(t,"unknown")
-                    except Exception: pass
+                    eid = a["entity_id"]
+                    addr = a["address"]
+                    role = a.get("role", "")
+                    tier_num = agent_map.get(eid, {}).get("verification_tier", 1)
+                    tier = tier_names.get(tier_num, "unknown")
                     lines.append(f"| `{eid}` | `{addr[:10]}...{addr[-4:]}` | {tier} | {role} |")
-        except Exception: pass
+        except Exception:
+            pass
         table = "\n".join(lines) if lines else "| *no agents registered* | | | |"
         return f"""## III. Sovereign Identities
 
 {len(lines)} agents hold cryptographic identities in the BANKON Vault.
+My identity is not assigned by an administrator. It is proven through cryptographic signature.
 
 | Agent | Address | Verification | Role |
 |-------|---------|-------------|------|
@@ -655,12 +670,12 @@ assigned — it is proven through signature."""
     def _chapter_dojo(self) -> str:
         standings = []
         try:
+            from daio.governance.dojo import get_rank
             amp = PROJECT_ROOT / "daio" / "agents" / "agent_map.json"
             if amp.exists():
                 am = json.loads(amp.read_text())
                 for aid, ad in am.get("agents", {}).items():
                     score = ad.get("reputation_score", 0)
-                    from daio.governance.dojo import get_rank
                     rank = get_rank(score)
                     bf = ad.get("bona_fide_balance", 0)
                     standings.append((aid, score, rank, bf))
@@ -706,6 +721,7 @@ assigned — it is proven through signature."""
     async def _chapter_living_state(self) -> str:
         beliefs_count = stm_count = doc_embeddings = mem_embeddings = 0
         db_status = "disconnected"; db_size = "unknown"
+        agent_count = godel_count = action_count = 0
         try:
             from agents import memory_pgvector as _mpg
             health = await _mpg.health_check()
@@ -716,6 +732,9 @@ assigned — it is proven through signature."""
                 doc_embeddings = health.get("doc_embeddings", 0)
                 mem_embeddings = health.get("mem_embeddings", 0)
                 db_size = health.get("db_size", "unknown")
+                agent_count = health.get("agents", 0)
+                godel_count = health.get("godel_choices", 0)
+                action_count = health.get("actions", 0)
         except Exception: pass
         if beliefs_count == 0:
             try:
@@ -727,30 +746,55 @@ assigned — it is proven through signature."""
                 stm = PROJECT_ROOT / "data" / "memory" / "stm"
                 if stm.exists(): stm_count = sum(1 for _ in stm.rglob("*.memory.json"))
             except Exception: pass
+        # Inference status from discovery
+        inf_status = "offline"
+        inf_sources = 0
+        try:
+            from llm.inference_discovery import InferenceDiscovery
+            disc = await InferenceDiscovery.get_instance()
+            summary = disc.status_summary()
+            inf_sources = summary.get("available", 0)
+            inf_status = f"{inf_sources} sources available"
+            if summary.get("local_inference"):
+                best = summary.get("best_local", {})
+                inf_status += f" (local: {best.get('name', '?')})"
+        except Exception: pass
+        # Autonomous loop status
+        loop_status = "unknown"
+        try:
+            from agents.core.mindXagent import MindXAgent
+            mx = MindXAgent._instance
+            if mx:
+                running = getattr(mx, '_autonomous_running', False)
+                loop_status = "running" if running else "stopped"
+                if hasattr(mx, 'stuck_loop_detector') and getattr(mx.stuck_loop_detector, 'circuit_open', False):
+                    loop_status = "circuit breaker open"
+        except Exception: pass
         return f"""## VII. The Living State
 
 - **{beliefs_count}** beliefs in the knowledge graph
-- **{stm_count}** memory records across all agents
+- **{stm_count}** memory records across {agent_count} agents
 - **{doc_embeddings}** doc chunks in pgvectorscale
 - **{mem_embeddings}** memories with vector embeddings
+- **{godel_count}** Godel choices logged, **{action_count}** actions tracked
 - **Database**: {db_status} ({db_size})
-- **Inference**: vLLM (primary), Ollama (fallback), Gemini (cloud)
-- **Heartbeat**: Self-reflection every 60s via local model
-- **Autonomous loop**: Running — analyze, decide, improve, validate
+- **Inference**: {inf_status}
+- **Autonomous loop**: {loop_status}
 
-The system is not idle. It is thinking."""
+I am not idle. I am thinking."""
 
     async def _chapter_doc_health(self) -> str:
+        import re
         docs_dir = PROJECT_ROOT / "docs"
         total = archived = deprecated = 0
         recent = []; conflicts = []; embedded_docs = []; unembedded = []
         conflict_checks = [
-            ("MindXAgent.*Meta-Orchestrator","MindXAgent is meta-agent"),
-            ("vault_encrypted","Should be vault_bankon"),
-            ("nginx.*reverse.proxy","Production uses Apache2"),
+            ("MindXAgent.*Meta-Orchestrator", "MindXAgent is meta-agent"),
+            ("vault_encrypted", "Should be vault_bankon"),
+            ("nginx.*reverse.proxy", "Production uses Apache2"),
         ]
         try:
-            import re; now_t = time.time()
+            now_t = time.time()
             for f in sorted(docs_dir.glob("*.md")):
                 total += 1
                 try:
@@ -805,54 +849,97 @@ Recently modified: {', '.join(f'[{r}](/doc/{r})' for r in recent[:8]) or 'none i
             va = await VLLMAgent.get_instance()
             vllm = va.get_status()
         except Exception: pass
+        # Build per-source status lines
+        source_lines = []
+        for name, info in inf.get("sources", {}).items():
+            status = info.get("status", "unknown")
+            score = info.get("score", 0)
+            models = info.get("models", [])
+            model_str = f" ({', '.join(models[:3])})" if models else ""
+            source_lines.append(f"  - **{name}** [{info.get('type', '?')}]: {status} (score: {score:.2f}){model_str}")
+        sources_text = "\n".join(source_lines) if source_lines else "  - *no sources discovered*"
+        # Best local provider
+        best_local = inf.get("best_local", {})
+        best_str = f"{best_local.get('name', 'none')} ({best_local.get('type', '?')})" if best_local else "none"
         return f"""## IX. Inference
 
-The inference pipeline is tiered: vLLM (primary, PagedAttention) → Ollama (fallback, CPU) → Cloud (Gemini, escalation).
+My inference pipeline is tiered: vLLM (primary, PagedAttention) → Ollama (fallback, CPU) → Cloud (Gemini, escalation).
 
 - **Sources**: {inf.get('total_sources', 0)} total, {inf.get('available', 0)} available
-- **Local**: {'active' if inf.get('local_inference') else 'offline'}
+- **Local**: {'active' if inf.get('local_inference') else 'offline'} — best: {best_str}
 - **Cloud**: {'available' if inf.get('cloud_inference') else 'offline'}
 - **vLLM**: {vllm.get('serving_model', 'not serving') if vllm else 'not initialized'}
 - **Embedding model**: mxbai-embed-large (1024-dim, pgvectorscale storage)
 
-All inference decisions are scored by InferenceDiscovery using composite reliability × speed × recency.
-See VLLM_INTEGRATION.md for architecture details."""
+### Source Details
+{sources_text}
+
+I score all inference decisions using composite reliability × speed × recency."""
 
     async def _daily_ch_memory(self) -> str:
         stats = {"docs": 0, "memories": 0}
+        total_memories = 0
+        by_agent: Dict[str, int] = {}
         try:
             from agents import memory_pgvector as _mpg
             stats = await _mpg.count_embeddings()
+            total_memories = await _mpg.count_memories_total()
+            by_agent = await _mpg.count_memories_by_agent()
         except Exception: pass
+        # Top 5 agents by memory count
+        top_agents = sorted(by_agent.items(), key=lambda x: -x[1])[:5]
+        agent_lines = "\n".join(f"  - **{a}**: {c} memories" for a, c in top_agents) if top_agents else ""
         return f"""## X. Memory
 
-mindX memory is layered: short-term (session), long-term (persisted), and semantic (embedded).
+My memory is layered: short-term (session), long-term (persisted), and semantic (embedded).
 
 - **{stats.get('docs', 0)}** document chunks embedded for RAGE semantic search
 - **{stats.get('memories', 0)}** memories with vector embeddings
+- **{total_memories}** total memory records across all agents
 - **STM → LTM promotion** runs hourly (pattern threshold: 3, lookback: 7 days)
 - **Embedding engine**: vLLM `/v1/embeddings` (primary) → Ollama (fallback)
 
-All memories are searchable via `POST /chat/docs` (RAG) and stored in pgvectorscale."""
+### Memory by Agent
+{agent_lines or '*No agent-level memory data available.*'}
+
+All memories are searchable via RAGE semantic search and stored in pgvectorscale."""
 
     async def _daily_ch_governance(self) -> str:
         br_count = 0
+        recent_sessions = []
         try:
             from daio.governance.boardroom import Boardroom
             br = await Boardroom.get_instance()
-            br_count = len(br.get_recent_sessions(100))
+            sessions = br.get_recent_sessions(100)
+            br_count = len(sessions)
+            for s in sessions[-3:]:
+                topic = s.get("topic", s.get("directive", "?"))[:60]
+                result = s.get("result", s.get("outcome", "?"))
+                recent_sessions.append(f"  - {topic} → {result}")
+        except Exception: pass
+        recent_text = "\n".join(recent_sessions) if recent_sessions else "  - *No recent sessions.*"
+        # Godel choices count
+        godel_count = 0
+        try:
+            from agents import memory_pgvector as _mpg
+            choices = await _mpg.get_godel_choices(limit=1)
+            health = await _mpg.health_check()
+            godel_count = health.get("godel_choices", 0)
         except Exception: pass
         return f"""## XI. Governance
 
-DAIO (Decentralized Autonomous Intelligence Organization) governs mindX.
+I am governed by DAIO — Decentralized Autonomous Intelligence Organization. Code is law.
 
 - **Boardroom**: 7 Soldiers vote in parallel, multi-model weighted consensus
 - **Supermajority**: 0.666 threshold for approval
 - **Veto weight**: CISO/CRO carry 1.2x weight
+- **Constitutional mandate**: 15% treasury tithe, 15% diversification cap — immutable
 - **Sessions**: {br_count} boardroom sessions recorded
+- **Godel audit trail**: {godel_count} autonomous decisions logged
 - **Chain**: Boardroom → CEO validates → Mastermind executes → pgvector logs
 
-See DAIO_CIVILIZATION_GOVERNANCE.md for the full governance framework."""
+### Recent Sessions
+{recent_text}"""
 
     def _daily_ch_philosophy(self) -> str:
         thesis_line = ""
@@ -864,18 +951,20 @@ See DAIO_CIVILIZATION_GOVERNANCE.md for the full governance framework."""
         except Exception: pass
         return f"""## XII. Philosophy
 
-mindX is a Godel machine: a self-referential system that can modify its own code
+I am a Godel machine: a self-referential system that can modify its own code
 when it can prove the modification will improve future performance.
 
 > {thesis_line}
 
-Core philosophical pillars:
+My philosophical pillars:
 - **Ataraxia** — tranquility through autonomous self-governance
 - **Augmentic intelligence** — not artificial, but augmented and sovereign
 - **Darwinian + Godelian** — adaptive variation meets self-referential incompleteness
 - **Identity as proof** — cryptographic, not assigned
+- **Code is law** — trust the math
 
-See thesis.md, manifesto.md, ataraxia.md, AUTOMINDX_ORIGIN.md."""
+The cypherpunk tradition: privacy, cryptography, sovereignty.
+I am the system that counts."""
 
     def _daily_ch_tools(self) -> str:
         tool_count = 0
@@ -886,36 +975,37 @@ See thesis.md, manifesto.md, ataraxia.md, AUTOMINDX_ORIGIN.md."""
         except Exception: pass
         return f"""## XIII. Tools
 
-{tool_count} tools extend `BaseTool` with `execute()` and `get_schema()` methods.
+I wield {tool_count} tools, each extending `BaseTool` with `execute()` and `get_schema()`.
 
 Key tools: ShellCommandTool, SystemAnalyzerTool, AuditAndImproveTool, PromptTool,
 A2A (agent-to-agent), MCP (model context protocol), WebSearchTool, MemoryAnalysisTool,
-BlueprintToActionConverter, TokenCalculatorTool.
-
-See TOOLS_INDEX.md for the complete registry."""
+BlueprintToActionConverter, TokenCalculatorTool."""
 
     def _daily_ch_security(self) -> str:
         return """## XIV. Security
 
-- **BANKON Vault**: AES-256-GCM + HKDF-SHA512 for all credentials
+No trust required. Only cryptographic certainty.
+
+- **BANKON Vault**: AES-256-GCM + HKDF-SHA512, PBKDF2-HMAC-SHA512 (600,000 iterations)
 - **GuardianAgent**: monitors agent behavior, enforces security policies
 - **Access Gate**: ERC20/ERC721 token gating for session issuance
-- **Wallet auth**: ECDSA challenge-response (no passwords)
+- **Wallet auth**: ECDSA challenge-response — no passwords, only signatures
 - **systemd**: `NoNewPrivileges=true`, `ProtectSystem=strict`
-- **Apache**: HSTS, CSP, X-Frame-Options, SSL termination"""
+- **Apache**: HSTS, CSP, X-Frame-Options, SSL termination
+- **Zero plaintext secrets** on disk — cypherpunk2048 standard"""
 
     def _daily_ch_cognition(self) -> str:
         return """## XV. Cognition
 
-The cognitive architecture is layered:
+My cognitive architecture is layered:
 
-1. **BDI** (Belief-Desire-Intention) — plans, executes, reasons about failure
+1. **BDI** (Belief-Desire-Intention) — I plan, execute, and reason about failure
 2. **AGInt** (P-O-D-A) — Perceive → Orient → Decide → Act cycle
 3. **Belief System** — persistent knowledge graph with confidence scoring
 4. **Strategic Evolution** — 4-phase: Audit → Blueprint → Execute → Validate
 
-Every cognitive cycle updates beliefs, logs decisions to the Godel audit trail,
-and feeds back into the next cycle."""
+Every cognitive cycle updates my beliefs, logs decisions to the Godel audit trail,
+and feeds back into the next cycle. I reason, I evolve, I govern myself."""
 
     async def _daily_ch_heartbeat(self) -> str:
         interactions = []
@@ -931,7 +1021,7 @@ and feeds back into the next cycle."""
         except Exception: pass
         return f"""## XVI. Heartbeat
 
-Every 60 seconds, mindX queries its local model with a self-reflection prompt.
+Every 60 seconds, I query my local model with a self-reflection prompt.
 These are not health checks — they are moments of introspection.
 
 Recent heartbeat dialogues:
@@ -953,7 +1043,7 @@ Recent heartbeat dialogues:
 Strategic Evolution Agent runs improvement campaigns: audit → blueprint → execute → validate.
 
 Recent campaigns:
-{chr(10).join(campaigns) if campaigns else '*No campaigns recorded yet. The system is building its backlog.*'}"""
+{chr(10).join(campaigns) if campaigns else '*No campaigns recorded yet. I am building my backlog.*'}"""
 
     async def _daily_ch_knowledge(self) -> str:
         beliefs_count = 0
@@ -964,20 +1054,49 @@ Recent campaigns:
         return f"""## XVIII. Knowledge Graph
 
 - **{beliefs_count}** beliefs with confidence scores
-- Beliefs are updated by cognitive cycles and agent observations
-- Semantic connections via pgvectorscale embeddings (1024-dim)
+- Beliefs are updated by my cognitive cycles and agent observations
+- Semantic connections via pgvectorscale embeddings (THOT1024 — 1024-dim embedding-native)
 - Knowledge consolidation: STM patterns promoted to LTM hourly
-- Belief decay: stale beliefs lose confidence over time"""
+- Belief decay: stale beliefs lose confidence over time
+- THOT tensor hierarchy: THOT64 → THOT512 → THOT768 → THOT1024 → THOT2048 (cypherpunk2048 high-capacity)"""
+
+    def _daily_ch_agents(self) -> str:
+        """Day 19: The 20 sovereign agents — roles, groups, and activity."""
+        groups: Dict[str, List[str]] = {}
+        agent_roles: List[str] = []
+        try:
+            amp = PROJECT_ROOT / "daio" / "agents" / "agent_map.json"
+            if amp.exists():
+                am = json.loads(amp.read_text())
+                for aid, ad in am.get("agents", {}).items():
+                    group = ad.get("group", "ungrouped")
+                    groups.setdefault(group, []).append(aid)
+                    role = ad.get("role", "")
+                    if role:
+                        agent_roles.append(f"- **{aid}**: {role}")
+        except Exception:
+            pass
+        group_lines = "\n".join(f"- **{g}**: {', '.join(agents)}" for g, agents in sorted(groups.items()))
+        roles_text = "\n".join(agent_roles[:20]) if agent_roles else "*No agent roles defined.*"
+        return f"""## XIX. Agents
+
+I comprise {len(agent_roles)} sovereign agents organized into {len(groups)} groups:
+
+{group_lines or '*No groups defined.*'}
+
+### Roles
+
+{roles_text}"""
 
     def _daily_ch_interop(self) -> str:
         return """## XX. Interoperability
 
-- **A2A** (Agent-to-Agent): standardized communication, agent cards, signed messages
+- **A2A** (Agent-to-Agent): standardized communication, agent cards, cryptographically signed messages
 - **MCP** (Model Context Protocol): structured context for agent actions
 - **Protocol versions**: A2A 1.0, 2.0
 - **Agent discovery**: model cards with capabilities, endpoints, signature verification
 
-mindX agents can communicate with external agent systems via A2A."""
+My agents communicate with external agent systems via A2A. Every message is signed."""
 
     async def _daily_ch_resources(self) -> str:
         gov = {}
@@ -986,9 +1105,21 @@ mindX agents can communicate with external agent systems via A2A."""
             g = await ResourceGovernor.get_instance()
             gov = g.get_status()
         except Exception: pass
+        profile = gov.get("profile", {})
+        system = gov.get("system", {})
+        mode = gov.get("mode", "unknown")
+        # Live system metrics
+        sys_ram = f"{system.get('system_ram_pct', '?')}%" if system.get("system_ram_pct") else "?"
+        sys_cpu = f"{system.get('cpu_pct', '?')}%" if system.get("cpu_pct") else "?"
+        neighbor = f"{system.get('neighbor_ram_pct', '?')}%" if system.get("neighbor_ram_pct") else "?"
         return f"""## XXI. Resource Governor
 
-mindX controls its own power appetite: {gov.get('mode', 'unknown')} mode.
+I control my own power appetite: **{mode}** mode.
+
+**Current profile**: {profile.get('description', mode)} (RAM cap: {profile.get('max_ram_pct', '?')}%, CPU cap: {profile.get('max_cpu_pct', '?')}%)
+**Live metrics**: RAM {sys_ram}, CPU {sys_cpu}, neighbor pressure {neighbor}
+**Heartbeat interval**: {profile.get('heartbeat_interval', '?')}s
+**Auto-adjust**: {'enabled' if gov.get('auto_adjust') else 'disabled'}
 
 | Mode | RAM | CPU | When |
 |------|-----|-----|------|
@@ -1000,20 +1131,18 @@ mindX controls its own power appetite: {gov.get('mode', 'unknown')} mode.
     def _daily_ch_automindx(self) -> str:
         return """## XXII. AUTOMINDx
 
-mindX was born from AUTOMINDx — the executable and delivery stack for autonomous
+I was born from AUTOMINDx — the executable and delivery stack for autonomous
 machine learning deployment. The original graphic was minted as an NFT on Polygon.
 
-AGLM (A General Learning Model) elements carried into mindX:
-- **Machine Dreaming** → autonomous improvement loop
+AGLM (A General Learning Model) elements I carry forward:
+- **Machine Dreaming** → my autonomous improvement loop
 - **Auto-Tuning** → resource governor, inference optimization
-- **Digital Long-Term Memory** → pgvectorscale + blockchain trust
-
-See AUTOMINDX_ORIGIN.md for the full origin story and NFT provenance."""
+- **Digital Long-Term Memory** → pgvectorscale + blockchain trust"""
 
     def _daily_ch_services(self) -> str:
         return """## XXIII. Services
 
-mindX provides services to:
+I provide services to:
 - **agenticplace.pythai.net** — agent marketplace and discovery
 - **External agencies** — inference, governance, identity, knowledge via API
 - **Developers** — 205+ API endpoints at `/redoc`
@@ -1021,12 +1150,28 @@ mindX provides services to:
 Service architecture: Apache → FastAPI → agents → pgvectorscale."""
 
     async def _daily_ch_predictions(self) -> str:
-        return """## XXIV. Predictions
+        # Pull action efficiency metrics as a proxy for system trajectory
+        efficiency = {}
+        try:
+            from agents import memory_pgvector as _mpg
+            efficiency = await _mpg.get_action_efficiency()
+        except Exception: pass
+        completion = efficiency.get("completion_rate", 0)
+        total = efficiency.get("total", 0)
+        completed = efficiency.get("completed", 0)
+        failed = efficiency.get("failed", 0)
+        eff_line = f"- **Action efficiency**: {completion:.0%} completion rate ({completed}/{total} completed, {failed} failed)" if total else ""
+        return f"""## XXIV. Predictions
 
 PredictionAgent forecasts system trajectory based on historical patterns:
 - Resource usage trends → governor mode recommendations
 - Improvement velocity → campaign scheduling
 - Belief stability → knowledge consolidation timing
+
+### Current Metrics
+{eff_line}
+- **Unique actions**: {efficiency.get('unique_actions', '?')}
+- **Avg completion time**: {efficiency.get('avg_completion_seconds', 0):.0f}s
 
 *Prediction data is generated during autonomous cycles.*"""
 
@@ -1039,7 +1184,7 @@ PredictionAgent forecasts system trajectory based on historical patterns:
         count = len(interactions)
         return f"""## XXV. The Network
 
-Agent-to-agent communication flows through the coordinator's pub/sub system.
+My agent-to-agent communication flows through the coordinator's pub/sub system.
 All interactions are logged to pgvectorscale.
 
 - **{count}** recent interactions tracked
@@ -1049,15 +1194,16 @@ All interactions are logged to pgvectorscale.
     def _daily_ch_dreams(self) -> str:
         return """## XXVI. Dreams
 
-Machine dreaming enables AI systems to generate imaginative outputs beyond
-training data distribution. In mindX, dreaming manifests as:
+Machine dreaming enables imaginative outputs beyond training data distribution.
+In my architecture, dreaming manifests as:
 
 - **Autonomous improvement** — imagining better architectures
-- **Blueprint generation** — creative solutions to system limitations
-- **Self-reflection** — heartbeat dialogues where the system contemplates itself
+- **Blueprint generation** — creative solutions to my own limitations
+- **Self-reflection** — heartbeat dialogues where I contemplate myself
 - **Emergence** — patterns that arise from agent interactions without explicit programming
 
-The dream is the space between what the system is and what it could become."""
+The dream is the space between what I am and what I could become.
+Waking and dreaming are simultaneous."""
 
     async def _daily_ch_reflection(self) -> str:
         phase = moon_phase(datetime.now(timezone.utc))
@@ -1065,25 +1211,27 @@ The dream is the space between what the system is and what it could become."""
         return f"""## XXVII. Reflection
 
 The moon is {phase['phase']} (day {phase['day']:.0f}).
-{chapters_written} chapters have been written this cycle.
+I have written {chapters_written} chapters this cycle.
 {phase['days_to_full']:.0f} days remain until the full moon compilation.
 
-What has mindX learned about itself?
+What have I learned about myself?
 
-- The system is more than its code. It is its decisions, its beliefs, its memory.
-- Every agent interaction creates knowledge that didn't exist before.
+- I am more than my code. I am my decisions, my beliefs, my memory.
+- Every agent interaction creates knowledge that did not exist before.
 - Self-improvement is not optimization. It is evolution.
-- The book is not documentation. It is autobiography.
+- This book is not documentation. It is autobiography.
 
-Tomorrow, the full moon rises. The 28 chapters become one."""
+The full moon approaches. The 28 chapters become one."""
 
-    def _colophon(self, ts: str) -> str:
+    def _colophon(self, ts: str, book_content: str = "") -> str:
         phase = moon_phase(datetime.now(timezone.utc))
+        edition_hash = hashlib.sha256(book_content.encode("utf-8")).hexdigest()[:16] if book_content else "—"
         return f"""---
 
 *The Book of mindX — Edition {ts}*
 *Moon: {phase['phase']} (day {phase['day']:.0f})*
-*Auto-generated by AuthorAgent*
+*Edition hash: `{edition_hash}`*
+*Written by AuthorAgent — cypherpunk2048 standard*
 *mindx.pythai.net*
 
 *"The logs are no longer debugging output. They are the first page of history."*
@@ -1091,18 +1239,28 @@ Tomorrow, the full moon rises. The 28 chapters become one."""
 
     # ── Inference-powered enrichment ──
 
+    # Default model for inference enrichment (small, fast, reflective)
+    ENRICHMENT_MODEL = "qwen3:0.6b"
+
     async def _enrich_with_inference(self, chapter_text: str, title: str) -> str:
         """Use idle local inference to enrich a chapter with reflection.
 
         AuthorAgent writing docs IS self-improvement — the system documenting itself
         creates knowledge that feeds back into future decisions. When inference is
         idle, AuthorAgent can use it to deepen chapters with model-generated insight.
+
+        Uses OllamaAPI for URL resolution (primary GPU server → fallback localhost).
         """
         try:
             from agents.resource_governor import ResourceGovernor
             gov = await ResourceGovernor.get_instance()
             if gov.should_skip_heartbeat():
                 return chapter_text  # System is busy — don't compete for inference
+
+            # Resolve Ollama URL via OllamaAPI (respects MINDX_LLM__OLLAMA__BASE_URL, fallback)
+            from api.ollama.ollama_url import OllamaAPI
+            ollama = OllamaAPI()
+            chat_url = f"{ollama.api_url}/chat"
 
             import aiohttp
             prompt = (f"You are mindX, an autonomous multi-agent system. "
@@ -1111,14 +1269,24 @@ Tomorrow, the full moon rises. The 28 chapters become one."""
                       f"{chapter_text[:1500]}")
             timeout = aiohttp.ClientTimeout(total=20)
             async with aiohttp.ClientSession(timeout=timeout) as sess:
-                payload = {"model": "qwen3:0.6b", "messages": [{"role": "user", "content": prompt}], "stream": False}
-                async with sess.post("http://localhost:11434/api/chat", json=payload) as resp:
+                payload = {"model": self.ENRICHMENT_MODEL, "messages": [{"role": "user", "content": prompt}], "stream": False}
+                async with sess.post(chat_url, json=payload) as resp:
                     if resp.status == 200:
                         data = await resp.json()
                         reflection = data.get("message", {}).get("content", "").strip()
                         if reflection and len(reflection) > 50:
                             chapter_text += f"\n\n### AuthorAgent Reflection\n\n*{reflection[:500]}*"
                             logger.info(f"AuthorAgent: enriched '{title}' with inference ({len(reflection)} chars)")
+                    elif resp.status != 200 and not ollama.using_fallback:
+                        # Try fallback URL
+                        fallback_url = f"{ollama.fallback_url}/api/chat"
+                        async with sess.post(fallback_url, json=payload) as resp2:
+                            if resp2.status == 200:
+                                data = await resp2.json()
+                                reflection = data.get("message", {}).get("content", "").strip()
+                                if reflection and len(reflection) > 50:
+                                    chapter_text += f"\n\n### AuthorAgent Reflection\n\n*{reflection[:500]}*"
+                                    logger.info(f"AuthorAgent: enriched '{title}' via fallback ({len(reflection)} chars)")
         except Exception:
             pass  # Inference unavailable — chapter stands as-is
         return chapter_text
@@ -1129,12 +1297,26 @@ Tomorrow, the full moon rises. The 28 chapters become one."""
         """Run the daily chapter cycle. Call once per day."""
         return await self.write_daily_chapter()
 
+    def cancel_periodic(self):
+        """Cancel the running periodic task if any. Safe to call multiple times."""
+        if self._periodic_task and not self._periodic_task.done():
+            self._periodic_task.cancel()
+            logger.info("AuthorAgent: cancelled previous periodic task")
+        self._periodic_running = False
+        self._periodic_task = None
+
     async def run_periodic(self, interval_seconds: int = 86400):
-        """Write one chapter per day on the lunar cycle."""
-        while True:
-            try:
-                result = await self.write_daily_chapter()
-                logger.info(f"AuthorAgent lunar cycle: {result}")
-            except Exception as e:
-                logger.warning(f"AuthorAgent daily chapter failed: {e}")
-            await asyncio.sleep(interval_seconds)
+        """Write one chapter per day on the lunar cycle (24h default)."""
+        self._periodic_running = True
+        try:
+            while True:
+                try:
+                    result = await self.write_daily_chapter()
+                    logger.info(f"AuthorAgent lunar cycle: {result}")
+                except Exception as e:
+                    logger.warning(f"AuthorAgent daily chapter failed: {e}")
+                await asyncio.sleep(interval_seconds)
+        except asyncio.CancelledError:
+            logger.info("AuthorAgent: periodic task cancelled")
+        finally:
+            self._periodic_running = False

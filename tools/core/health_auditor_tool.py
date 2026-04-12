@@ -83,18 +83,45 @@ class HealthAuditorTool(BaseTool):
             return {"healthy": False, "reason": str(e)}
 
     async def check_author_agent(self) -> Dict[str, Any]:
-        """Has AuthorAgent written a chapter in the last 26 hours?"""
-        daily_dir = PROJECT_ROOT / "docs" / "publications" / "daily"
-        if not daily_dir.exists():
-            return {"healthy": False, "reason": "daily directory missing", "stale_hours": None}
-        chapters = sorted(daily_dir.glob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
-        if not chapters:
-            return {"healthy": False, "reason": "no chapters found", "stale_hours": None}
-        latest_mtime = chapters[0].stat().st_mtime
+        """Has AuthorAgent published or written a chapter in the last 26 hours?
+
+        Checks both daily chapters (lunar cycle) and on-demand editions (publish()).
+        Also checks _periodic_running to avoid restarting a task that's alive but
+        already wrote today's chapter.
+        """
+        pub_dir = PROJECT_ROOT / "docs" / "publications"
+        daily_dir = pub_dir / "daily"
+        # Collect the most recent file from daily chapters AND on-demand editions
+        latest_mtime = 0.0
+        latest_name = None
+        for d in [daily_dir, pub_dir]:
+            if not d.exists():
+                continue
+            for f in d.glob("*.md"):
+                try:
+                    mt = f.stat().st_mtime
+                    if mt > latest_mtime:
+                        latest_mtime = mt
+                        latest_name = f.name
+                except Exception:
+                    continue
+        if latest_mtime == 0.0:
+            return {"healthy": False, "reason": "no publications found", "stale_hours": None}
         age_hours = (time.time() - latest_mtime) / 3600
-        if age_hours > 26:
-            return {"healthy": False, "reason": f"latest chapter is {age_hours:.1f}h old", "stale_hours": round(age_hours, 1)}
-        return {"healthy": True, "latest_chapter": chapters[0].name, "age_hours": round(age_hours, 1)}
+        # Also check if the periodic task is actually running
+        periodic_running = False
+        try:
+            from agents.author_agent import AuthorAgent
+            aa = AuthorAgent._instance
+            if aa:
+                periodic_running = getattr(aa, '_periodic_running', False)
+        except Exception:
+            pass
+        if age_hours > 26 and not periodic_running:
+            return {"healthy": False, "reason": f"latest publication is {age_hours:.1f}h old and periodic task not running",
+                    "stale_hours": round(age_hours, 1)}
+        return {"healthy": True, "latest_file": latest_name, "age_hours": round(age_hours, 1),
+                "periodic_running": periodic_running}
 
     async def check_inference(self) -> Dict[str, Any]:
         """Is at least one inference source available?"""

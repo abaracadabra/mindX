@@ -843,9 +843,9 @@ The blueprint should include specific, actionable BDI goals that can be executed
             }
             
             # Generate blueprint with audit context
+            blueprint_context["blueprint_prompt"] = blueprint_prompt
             blueprint = await self.blueprint_agent.generate_next_evolution_blueprint(
-                context_hint=blueprint_prompt,
-                additional_context=blueprint_context
+                context_override=blueprint_context
             )
             
             if "error" not in blueprint:

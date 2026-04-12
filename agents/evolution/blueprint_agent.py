@@ -17,11 +17,8 @@ evolved into a dedicated planning service that other agents consume:
 Author: Professor Codephreak (© Professor Codephreak)
 Origin: coordinator_agent → auditandimprove → blueprint_agent
 """
-import logging
 import asyncio
 import json
-import os
-import re
 import time
 from pathlib import Path
 from typing import Dict, List, Any, Optional
@@ -43,7 +40,7 @@ class BlueprintAgent:
     and self-improvement capabilities.
     """
     _instance = None
-    _lock = asyncio.Lock()
+    _lock = None  # Lazily initialized to avoid asyncio deprecation
 
     def __init__(self,
                  belief_system: BeliefSystem,
@@ -108,30 +105,36 @@ class BlueprintAgent:
         summary["known_limitations_from_beliefs"] = [belief.value for _, belief in conceptual_todos[:5]]
         
         # 4. Recent Agent Actions from MemoryAgent
-        try:
-            trace_dir = self.memory_agent.process_trace_path
-            recent_traces = sorted(trace_dir.glob("*.trace.json"), key=os.path.getmtime, reverse=True)
-            summary["recent_agent_actions"] = []
-            for trace_file in recent_traces[:10]:
-                with open(trace_file, "r") as f:
-                    trace_data = json.load(f)
+        if self.memory_agent:
+            try:
+                trace_dir = self.memory_agent.process_trace_path
+                recent_traces = sorted(trace_dir.glob("*.trace.json"),
+                                       key=lambda p: p.stat().st_mtime, reverse=True)
+                summary["recent_agent_actions"] = []
+                for trace_file in recent_traces[:10]:
+                    trace_data = json.loads(trace_file.read_text(encoding="utf-8"))
                     summary["recent_agent_actions"].append({
                         "process": trace_data.get("process_name"),
                         "agent": trace_data.get("metadata", {}).get("agent_id"),
                         "timestamp": trace_data.get("timestamp_utc")
                     })
-        except Exception as e:
-            summary["recent_agent_actions"] = f"Error reading traces: {e}"
+            except Exception as e:
+                summary["recent_agent_actions"] = f"Error reading traces: {e}"
+        else:
+            summary["recent_agent_actions"] = "memory_agent not available"
 
         # 5. Codebase Snapshot from BaseGenAgent
-        try:
-            codebase_report = self.base_gen_agent.generate_markdown_summary(root_path_str=str(PROJECT_ROOT))
-            if codebase_report["status"] == "SUCCESS":
-                summary["codebase_snapshot_path"] = codebase_report["output_file"]
-            else:
-                summary["codebase_snapshot_path"] = f"Error: {codebase_report['message']}"
-        except Exception as e:
-            summary["codebase_snapshot_path"] = f"Error generating codebase snapshot: {e}"
+        if self.base_gen_agent:
+            try:
+                codebase_report = self.base_gen_agent.generate_markdown_summary(root_path_str=str(PROJECT_ROOT))
+                if codebase_report["status"] == "SUCCESS":
+                    summary["codebase_snapshot_path"] = codebase_report["output_file"]
+                else:
+                    summary["codebase_snapshot_path"] = f"Error: {codebase_report['message']}"
+            except Exception as e:
+                summary["codebase_snapshot_path"] = f"Error generating codebase snapshot: {e}"
+        else:
+            summary["codebase_snapshot_path"] = "base_gen_agent not available"
 
         return summary
 
@@ -177,14 +180,18 @@ class BlueprintAgent:
                     max_tokens=2000, temperature=0.2, json_mode=True
                 )
 
-                if response_str and "error" not in str(response_str).lower()[:50]:
+                if response_str:
                     try:
                         llm_blueprint = json.loads(response_str)
-                        if all(k in llm_blueprint for k in ["blueprint_title", "focus_areas", "bdi_todo_list"]):
+                        if isinstance(llm_blueprint, dict) and all(
+                            k in llm_blueprint for k in ["blueprint_title", "focus_areas", "bdi_todo_list"]
+                        ):
                             blueprint = llm_blueprint
                             blueprint["source"] = "llm_enriched"
                             logger.info(f"{self.agent_id}: Blueprint enriched by LLM: '{blueprint.get('blueprint_title')}'")
-                    except json.JSONDecodeError:
+                        else:
+                            logger.debug(f"{self.agent_id}: LLM response missing required keys — skeleton preserved")
+                    except (json.JSONDecodeError, TypeError):
                         logger.debug(f"{self.agent_id}: LLM returned invalid JSON — skeleton preserved")
             except Exception as e:
                 logger.debug(f"{self.agent_id}: LLM enrichment failed: {e} — skeleton preserved")
@@ -285,18 +292,24 @@ class BlueprintAgent:
 
 # Factory function to get the singleton instance
 async def get_blueprint_agent_async(
-    belief_system: BeliefSystem, 
+    belief_system: BeliefSystem,
     coordinator_ref: CoordinatorAgent,
     model_registry_ref: ModelRegistry,
-    config_override: Optional[Config] = None, 
+    memory_agent: Optional[MemoryAgent] = None,
+    base_gen_agent: Optional[BaseGenAgent] = None,
+    config_override: Optional[Config] = None,
     test_mode: bool = False
 ) -> BlueprintAgent:
+    if BlueprintAgent._lock is None:
+        BlueprintAgent._lock = asyncio.Lock()
     async with BlueprintAgent._lock:
         if not BlueprintAgent._instance or test_mode:
             BlueprintAgent._instance = BlueprintAgent(
-                belief_system=belief_system, 
+                belief_system=belief_system,
                 coordinator_ref=coordinator_ref,
                 model_registry_ref=model_registry_ref,
-                config_override=config_override, 
+                memory_agent=memory_agent,
+                base_gen_agent=base_gen_agent,
+                config_override=config_override,
                 test_mode=test_mode)
     return BlueprintAgent._instance

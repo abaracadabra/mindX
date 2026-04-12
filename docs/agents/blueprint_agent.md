@@ -2,11 +2,13 @@
 
 ## Summary
 
-The Blueprint Agent analyzes the current state of the mindX system and generates strategic blueprints for the next iteration of self-improvement. It focuses on capability, resilience, and perpetuity, using LLM-powered analysis to propose actionable development goals.
+I provision the blueprint. I provide skeletons, wireframes, frameworks, and modular plans as structure. Other agents are the hands and feet. Professor Codephreak is the architect. I am the provisioner of the blueprint.
+
+I always produce structure. I do not degrade — I decompose. When LLM is available, I enrich the skeleton with strategic analysis. When LLM is not available, I build structure from patterns in the coordinator's improvement backlog. Structure does not require intelligence. It requires pattern.
 
 ## Technical Explanation
 
-The Blueprint Agent is a strategic planning agent that:
+I am a strategic planning agent that:
 - Analyzes current mindX system state
 - Evaluates cognitive resources (available LLMs)
 - Identifies improvement opportunities
@@ -34,23 +36,19 @@ The Blueprint Agent is a strategic planning agent that:
 ## Usage
 
 ```python
-from evolution.blueprint_agent import BlueprintAgent
-from core.belief_system import BeliefSystem
-from orchestration.coordinator_agent import CoordinatorAgent
+from agents.evolution.blueprint_agent import BlueprintAgent
+from agents.core.belief_system import BeliefSystem
+from agents.orchestration.coordinator_agent import CoordinatorAgent
 from llm.model_registry import ModelRegistry
 from agents.memory_agent import MemoryAgent
-<<<<<<< Current (Your changes)
-from agents.base_gen_agent import BaseGenAgent
-=======
 from agents.utility.base_gen_agent import BaseGenAgent
->>>>>>> Incoming (Background Agent changes)
 
 # Initialize components
 belief_system = BeliefSystem()
 coordinator = CoordinatorAgent(...)
 model_registry = ModelRegistry()
 memory_agent = MemoryAgent()
-base_gen_agent = BaseGenAgent(...)
+base_gen_agent = BaseGenAgent(memory_agent=memory_agent)
 
 # Create blueprint agent
 blueprint_agent = BlueprintAgent(
@@ -61,7 +59,7 @@ blueprint_agent = BlueprintAgent(
     base_gen_agent=base_gen_agent
 )
 
-# Generate blueprint
+# Generate blueprint — always returns structure, never None
 blueprint = await blueprint_agent.generate_next_evolution_blueprint()
 ```
 
@@ -244,17 +242,32 @@ You operate with strategic vision and generate blueprints for mindX evolution.
 
 ## Integration
 
-- **Belief System**: Stores blueprints as beliefs
-- **Coordinator Agent**: Accesses improvement backlog
-- **Model Registry**: Evaluates cognitive resources
-- **Memory Agent**: Logs blueprint generation
-- **Base Gen Agent**: Generates codebase snapshots
+- **Belief System**: Stores blueprints as beliefs (`mindx.evolution.blueprint.latest`)
+- **Coordinator Agent**: Reads improvement backlog, distributes BDI todos back
+- **Model Registry**: Acquires reasoning LLM handler (fallback: Ollama)
+- **Memory Agent**: Logs blueprint generation (optional — guards against None)
+- **Base Gen Agent**: Generates codebase snapshots (optional — guards against None)
+- **BlueprintToActionConverter**: Downstream — decomposes blueprints into BDI-executable actions
+- **StrategicEvolutionAgent**: Orchestrates campaigns using blueprints
+- **MindXAgent**: Generates blueprints during autonomous improvement cycles
+
+## Pipeline
+
+```
+BlueprintAgent (skeleton → LLM enrichment)
+    ↓
+BlueprintToActionConverter (decompose into DetailedActions)
+    ↓
+StrategicEvolutionAgent (orchestrate campaign)
+    ↓
+BDI Agent (plan and execute) → SimpleCoder (write code)
+```
 
 ## File Location
 
-- **Source**: `evolution/blueprint_agent.py`
+- **Source**: `agents/evolution/blueprint_agent.py`
 - **Type**: `strategic_planner`
-- **Pattern**: Singleton
+- **Pattern**: Singleton (lazily-initialized lock)
 
 ## Blockchain Publication
 
