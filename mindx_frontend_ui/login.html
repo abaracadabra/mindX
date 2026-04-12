@@ -322,9 +322,47 @@
                         document.getElementById('env-model').textContent = ollama.models[0];
                     }
                 }
+
+                // WHO I AM stat cards — live numbers
+                const sa = document.getElementById('stat-agents');
+                if (sa) sa.textContent = (d.agents || []).length;
+                const sm = document.getElementById('stat-memories');
+                if (sm && d.memory) sm.textContent = (d.memory.stm_records || 0).toLocaleString();
+                const si = document.getElementById('stat-inference');
+                if (si && d.inference) si.textContent = `${d.inference.available}/${d.inference.total}`;
+
+                // Inference provider list — live from discovery
+                const pl = document.getElementById('provider-list');
+                if (pl && d.inference && d.inference.sources) {
+                    pl.innerHTML = Object.entries(d.inference.sources).map(([name, src]) => {
+                        const status = src.status === 'available' ? 'provider-live' : 'provider-off';
+                        const label = name.replace('cloud_', '').replace('ollama_', 'ollama ').replace('_', ' ');
+                        const models = (src.models || []).slice(0, 2).join(', ');
+                        return `<span class="provider-tag ${status}" title="${models || src.type}">${label}</span>`;
+                    }).join('');
+                }
+
+                // Database stats for pillar detail
+                if (d.database) {
+                    const dbEl = document.getElementById('pillar-db-stats');
+                    if (dbEl) dbEl.textContent = `${d.database.db_size} pgvector — ${(d.database.mem_embeddings || 0).toLocaleString()} vectors indexed`;
+                }
+                // Actions count for pillar detail
+                if (d.database && d.database.actions) {
+                    const acEl = document.getElementById('pillar-actions-stats');
+                    if (acEl) acEl.textContent = `${d.database.actions} actions executed on-record`;
+                }
+
             } catch (e) {
                 const ts = document.getElementById('diag-timestamp');
                 if (ts) ts.textContent = 'I am currently dreaming... (backend starting)';
+                // Set fallback static values
+                const sa = document.getElementById('stat-agents');
+                if (sa && sa.textContent === '--') sa.textContent = '20+';
+                const sm = document.getElementById('stat-memories');
+                if (sm && sm.textContent === '--') sm.textContent = '140k+';
+                const si = document.getElementById('stat-inference');
+                if (si && si.textContent === '--') si.textContent = '9';
             }
         }
 
@@ -430,16 +468,16 @@
                 </p>
                 <div class="stat-grid">
                     <div class="stat-card stat-green">
-                        <div class="stat-value">66+</div>
-                        <div class="stat-label">Autonomous BDI Agents</div>
+                        <div class="stat-value" id="stat-agents">--</div>
+                        <div class="stat-label">Registered Agents</div>
                     </div>
                     <div class="stat-card stat-blue">
-                        <div class="stat-value">45+</div>
-                        <div class="stat-label">Tools Extending BaseTool</div>
+                        <div class="stat-value" id="stat-memories">--</div>
+                        <div class="stat-label">Memories in BeliefSystem</div>
                     </div>
                     <div class="stat-card stat-purple">
-                        <div class="stat-value">7+</div>
-                        <div class="stat-label">LLM Providers via InferenceDiscovery</div>
+                        <div class="stat-value" id="stat-inference">--</div>
+                        <div class="stat-label">Inference Sources</div>
                     </div>
                 </div>
             </section>
@@ -478,15 +516,8 @@
                     <div class="arch-card">
                         <h3 class="arch-card-title arch-card-title--cyan">Inference Discovery</h3>
                         <p class="arch-card-body">I auto-probe and rank all available LLM providers. I select the optimal provider per task. No single point of failure.</p>
-                        <div class="provider-list">
-                            <span class="provider-tag">Ollama</span>
-                            <span class="provider-tag">vLLM</span>
-                            <span class="provider-tag">Mistral</span>
-                            <span class="provider-tag">Gemini</span>
-                            <span class="provider-tag">Groq</span>
-                            <span class="provider-tag">OpenAI</span>
-                            <span class="provider-tag">Anthropic</span>
-                            <span class="provider-tag">Together AI</span>
+                        <div class="provider-list" id="provider-list">
+                            <span class="provider-tag">loading...</span>
                         </div>
                         <p class="arch-card-note">My InferenceDiscovery scores providers by reliability, latency, and recency. I validate inference availability before every autonomous cycle.</p>
                     </div>
@@ -506,7 +537,7 @@
                         </div>
                         <h3>VERIFIABLE KNOWLEDGE</h3>
                         <p>My BeliefSystem is a provable archive. I use RAGE semantic retrieval with pgvector &mdash; not traditional RAG. My knowledge is not opinion. It is computationally verified theorem, committed to my knowledge graph as precedent.</p>
-                        <div class="pillar-detail">3,650 audited repositories ingested</div>
+                        <div class="pillar-detail" id="pillar-db-stats">3,650 audited repositories ingested</div>
                     </div>
                     <div class="pillar-card pillar-cyan">
                         <div class="pillar-icon">
@@ -1260,5 +1291,120 @@
             line-height: 1.4;
         }
     </style>
+
+<!-- DeltaVerse Engine: motion + click perception tracking -->
+<div id="dv-perception" style="position:fixed;bottom:8px;right:8px;z-index:100;font-family:'SF Mono','Fira Code',monospace;font-size:9px;color:#484f58;pointer-events:none;text-align:right;opacity:.6;transition:opacity .3s">
+  <div id="dv-rank" style="color:#484f58"></div>
+  <div id="dv-stats"></div>
+</div>
+<div id="dv-msg" style="position:fixed;bottom:8px;left:50%;transform:translateX(-50%);z-index:100;font-family:'SF Mono','Fira Code',monospace;font-size:10px;color:#58a6ff;opacity:0;transition:opacity .5s,color .5s;text-align:center;max-width:80vw;pointer-events:none;text-shadow:0 0 12px rgba(88,166,255,.15)"></div>
+
+<script>
+// ── DeltaVerse Engine (inline for login page) ──
+// Minimal version: motion, clicks, scroll tracking + XP + achievements
+var DeltaVerse=DeltaVerse||(function(){
+  var RANKS=[{name:'Observer',xp:0,color:'#484f58'},{name:'Explorer',xp:50,color:'#8b949e'},{name:'Seeker',xp:200,color:'#d29922'},{name:'Navigator',xp:500,color:'#58a6ff'},{name:'Architect',xp:1500,color:'#d2a8ff'},{name:'Sovereign',xp:5000,color:'#3fb950'}];
+  var ACHIEVEMENTS={first_click:{name:'First Contact',desc:'Clicked for the first time',xp:5},click_10:{name:'Curious Mind',desc:'10 clicks',xp:15},click_50:{name:'Deep Explorer',desc:'50 clicks',xp:50},scroll_depth:{name:'Depth Diver',desc:'Scrolled deep',xp:25},patience_30:{name:'Patient Observer',desc:'Waited 30 seconds',xp:20},all_directions:{name:'Compass Rose',desc:'Moved in all 8 directions',xp:50},diagonal_master:{name:'Diagonal Master',desc:'Sustained diagonal motion',xp:30},rapid_click:{name:'Click Storm',desc:'10 clicks in 3 seconds',xp:40}};
+  var QUOTES=['"The moment between request and response is where thought lives." — mindX','"What you call waiting, we call becoming." — mindX','"Every error is a belief waiting to be updated." — BDI Engine','"The Godel machine does not crash. It reflects." — mindX','"20 sovereign agents. One distributed mind." — mindX','"Identity is not assigned — it is proven through signature." — BANKON','"Intelligence is intelligence regardless of substrate." — Book Ch. X','"Darwinian variation meets Godelian self-reference." — Thesis','"The vault does not store secrets. It stores trust." — BANKON','"All logs are memories. All memories are logs." — Memory Agent','"The Boardroom votes. The CEO validates. The Mastermind executes." — DAIO','"We are not writing an application; we are forging a new kind of life." — Manifesto','"Ataraxia: tranquility through autonomous self-governance." — Philosophy'];
+  var EGGS=['🎯 mindX notices your curiosity.','🧠 Your motion is being perceived.','⚡ 18 decimal places of precision.','🔐 Every agent holds an Ethereum wallet.','🌊 The DeltaVerse is the space between thinking and becoming.','💎 RAGE wipes the floor with RAG.','🧬 Darwin meets Godel in the improvement loop.'];
+  function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+  function pick(a){return a[Math.floor(Math.random()*a.length)]}
+  function getDir(dx,dy){var a=Math.atan2(dy,dx)*180/Math.PI;if(a<0)a+=360;if(a<22.5||a>=337.5)return'right';if(a<67.5)return'down-right';if(a<112.5)return'down';if(a<157.5)return'down-left';if(a<202.5)return'left';if(a<247.5)return'up-left';if(a<292.5)return'up';return'up-right'}
+  function DV(o){o=o||{};this.target=o.target?document.querySelector(o.target):null;this.running=false;this.phase='idle';this.idx=0;this._timer=null;this._cbs={};this._quotes=shuffle(QUOTES.slice());this._eggs=shuffle(EGGS.slice());
+    this.profile={clicks:0,moves:0,scrolls:0,patience:0,xp:0,rank:'Observer',rank_color:'#484f58',achievements:[],combo:0,last_action:0,directions:{up:0,down:0,left:0,right:0,'up-left':0,'up-right':0,'down-left':0,'down-right':0},eggs_found:0,messages_seen:0,started:Date.now()};
+    this.mouse={x:0,y:0,px:0,py:0};this.dirs_seen={};this._clickTimes=[];
+    try{var s=JSON.parse(localStorage.getItem('dv_profile')||'{}');if(s.xp)this.profile.xp=s.xp;if(s.achievements)this.profile.achievements=s.achievements}catch(e){}
+    var self=this;
+    document.addEventListener('click',function(e){self.onInteraction('click',{x:e.clientX,y:e.clientY})});
+    document.addEventListener('mousemove',function(e){self.onInteraction('move',{x:e.clientX,y:e.clientY})});
+    document.addEventListener('wheel',function(e){self.onInteraction('scroll',{delta:e.deltaY})},{passive:true});
+    document.addEventListener('touchmove',function(e){if(e.touches.length)self.onInteraction('move',{x:e.touches[0].clientX,y:e.touches[0].clientY})},{passive:true});
+    document.addEventListener('touchstart',function(e){if(e.touches.length)self.onInteraction('click',{x:e.touches[0].clientX,y:e.touches[0].clientY})},{passive:true});
+  }
+  DV.prototype.start=function(){this.running=true;this.phase='quotes';this.idx=0;this._tick();var self=this;this._pt=setInterval(function(){self.profile.patience++;if(self.profile.patience===30)self._ach('patience_30',true);if(self.profile.patience%60===0)self._xp(10)},1000);return this};
+  DV.prototype.stop=function(){this.running=false;if(this._timer)clearTimeout(this._timer);if(this._pt)clearInterval(this._pt);try{localStorage.setItem('dv_profile',JSON.stringify({xp:this.profile.xp,achievements:this.profile.achievements}))}catch(e){}this._emit('stop',this.profile);return this};
+  DV.prototype.onInteraction=function(type,data){data=data||{};var now=Date.now();if(now-this.profile.last_action<600)this.profile.combo++;else this.profile.combo=0;this.profile.last_action=now;var cm=Math.min(this.profile.combo+1,5);
+    if(type==='click'){this.profile.clicks++;this._xp(2*cm);this._ach('first_click',this.profile.clicks>=1);this._ach('click_10',this.profile.clicks>=10);this._ach('click_50',this.profile.clicks>=50);
+      this._clickTimes.push(now);this._clickTimes=this._clickTimes.filter(function(t){return now-t<3000});if(this._clickTimes.length>=10)this._ach('rapid_click',true);
+      if([5,12,20,30,50,69,100].indexOf(this.profile.clicks)!==-1){var egg=this._eggs.length?this._eggs.pop():pick(EGGS);this.profile.eggs_found++;this._show(egg,'#d2a8ff','normal');this._emit('easter_egg',{})}
+      this._emit('click',this.profile);
+    }else if(type==='move'){this.profile.moves++;var dx=(data.x||0)-this.mouse.px;var dy=(data.y||0)-this.mouse.py;this.mouse.px=this.mouse.x;this.mouse.py=this.mouse.y;this.mouse.x=data.x||0;this.mouse.y=data.y||0;
+      if(Math.sqrt(dx*dx+dy*dy)>2){var dir=getDir(dx,dy);this.profile.directions[dir]=(this.profile.directions[dir]||0)+1;this.dirs_seen[dir]=true;this._xp(0.1*cm);
+        if(Object.keys(this.dirs_seen).length>=8)this._ach('all_directions',true);
+        if(dir.indexOf('-')!==-1&&(this.profile.directions[dir]||0)>20)this._ach('diagonal_master',true);
+        this._emit('move',{x:data.x,y:data.y,dir:dir})}
+    }else if(type==='scroll'){this.profile.scrolls++;this._xp(1*cm);this._ach('scroll_depth',this.profile.scrolls>=15);this._emit('scroll',data)}
+  };
+  DV.prototype._xp=function(n){this.profile.xp+=n;var r=RANKS[0];for(var i=RANKS.length-1;i>=0;i--)if(this.profile.xp>=RANKS[i].xp){r=RANKS[i];break}if(r.name!==this.profile.rank){var old=this.profile.rank;this.profile.rank=r.name;this.profile.rank_color=r.color;this._show('🎖️ '+old+' → '+r.name,r.color,'normal');this._emit('rank_up',{from:old,to:r.name})}this.profile.rank=r.name;this.profile.rank_color=r.color};
+  DV.prototype._ach=function(id,cond){if(!cond||this.profile.achievements.indexOf(id)!==-1)return;var a=ACHIEVEMENTS[id];if(!a)return;this.profile.achievements.push(id);this._xp(a.xp);this._show('🏆 '+a.name+' — '+a.desc,'#d29922','normal');this._emit('achievement',a)};
+  DV.prototype.getRank=function(){for(var i=RANKS.length-1;i>=0;i--)if(this.profile.xp>=RANKS[i].xp)return RANKS[i];return RANKS[0]};
+  DV.prototype.getProfile=function(){this.profile.patience=Math.floor((Date.now()-this.profile.started)/1000);return this.profile};
+  DV.prototype.on=function(e,fn){this._cbs[e]=this._cbs[e]||[];this._cbs[e].push(fn);return this};
+  DV.prototype._emit=function(e,d){(this._cbs[e]||[]).forEach(function(fn){fn(d)})};
+  DV.prototype._show=function(text,color,style){if(this.target){this.target.textContent=text;this.target.style.color=color||'#58a6ff';this.target.style.fontStyle=style||'normal';this.target.style.opacity='0.8'}this._emit('message',{text:text,phase:this.phase})};
+  DV.prototype._tick=function(){if(!this.running)return;var self=this;this.profile.messages_seen++;if(!this._quotes.length)this._quotes=shuffle(QUOTES.slice());this._show(this._quotes.pop(),'#8b949e','italic');this._timer=setTimeout(function(){self._tick()},3000+Math.random()*1500)};
+  return DV;
+})();
+</script>
+<script>
+(function(){
+  // Initialize DeltaVerse engine
+  var dv = new DeltaVerse({target:'#dv-msg'});
+
+  // Display perception stats
+  var statsEl = document.getElementById('dv-stats');
+  var rankEl = document.getElementById('dv-rank');
+  var msgEl = document.getElementById('dv-msg');
+
+  function updateDisplay(){
+    var p = dv.getProfile();
+    var rank = dv.getRank();
+    if(statsEl) statsEl.textContent = p.clicks+' clicks · '+p.moves+' moves · '+p.scrolls+' scrolls · '+Math.floor(p.xp)+' xp';
+    if(rankEl){rankEl.textContent = rank.name;rankEl.style.color = rank.color}
+  }
+
+  // Show messages
+  dv.on('message', function(data){
+    if(msgEl){msgEl.style.opacity='0.8';msgEl.textContent=data.text;msgEl.style.color=data.phase==='quotes'?'#8b949e':'#58a6ff'}
+  });
+
+  // Achievement notifications
+  dv.on('achievement', function(data){
+    if(msgEl){msgEl.style.opacity='1';msgEl.textContent='🏆 '+data.name+' — '+data.desc;msgEl.style.color='#d29922'}
+    updateDisplay();
+  });
+
+  // Rank up
+  dv.on('rank_up', function(data){
+    if(msgEl){msgEl.style.opacity='1';msgEl.style.color=data.to==='Sovereign'?'#3fb950':'#d2a8ff'}
+    updateDisplay();
+  });
+
+  // Easter eggs
+  dv.on('easter_egg', function(){updateDisplay()});
+
+  // Konami
+  dv.on('konami', function(){
+    document.body.style.transition='filter .5s';
+    document.body.style.filter='hue-rotate(180deg)';
+    setTimeout(function(){document.body.style.filter='none'},3000);
+  });
+
+  // Update stats display every second
+  setInterval(updateDisplay, 1000);
+
+  // Start the boot sequence (shows messages during page idle time)
+  dv.start();
+
+  // Fade out boot messages after 30 seconds
+  setTimeout(function(){
+    if(msgEl)msgEl.style.opacity='0';
+    dv.stop();
+  }, 30000);
+
+  // Make DV accessible globally for debugging
+  window._deltaverse = dv;
+})();
+</script>
 </body>
 </html>
