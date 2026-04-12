@@ -3259,11 +3259,11 @@ async def governance_status():
     }
 
 @app.post("/boardroom/convene", tags=["governance"], summary="Convene boardroom — CEO + Seven Soldiers evaluate directive")
-async def boardroom_convene(directive: str, importance: str = "standard"):
+async def boardroom_convene(directive: str, importance: str = "standard", model_mode: str = "auto"):
     try:
         from daio.governance.boardroom import Boardroom
         br = await Boardroom.get_instance()
-        session = await br.convene(directive=directive, importance=importance)
+        session = await br.convene(directive=directive, importance=importance, model_mode=model_mode)
         return {
             "session_id": session.session_id,
             "outcome": session.outcome,

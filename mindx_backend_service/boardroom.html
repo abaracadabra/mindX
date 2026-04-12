@@ -113,6 +113,17 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
 .msg.system{border-color:var(--advisory);background:rgba(255,170,0,.05)}
 
 /* Input area */
+/* Toolbar */
+.toolbar{display:flex;gap:6px;margin-top:10px;align-items:center}
+.toolbar button{background:var(--surface);border:1px solid var(--border);color:var(--text2);
+  padding:5px 12px;font-family:inherit;font-size:9px;cursor:pointer;transition:all .2s;letter-spacing:1px}
+.toolbar button:hover{border-color:var(--accent);color:var(--accent)}
+.toolbar .copied{color:var(--accent);border-color:var(--accent)}
+.toolbar select{background:var(--surface);border:1px solid var(--border);color:var(--text2);
+  padding:5px 8px;font-family:inherit;font-size:9px}
+.toolbar .sep{width:1px;height:16px;background:var(--border)}
+.toolbar .label{font-size:8px;color:var(--text3);letter-spacing:1px}
+
 .input-area{margin-top:12px;display:flex;gap:8px}
 .input-area input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--white);
   padding:10px 14px;font-family:inherit;font-size:12px;outline:none;transition:border .2s}
@@ -263,6 +274,18 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
         <div class="score-bar" id="score-bar" style="display:none">
           <div class="fill" id="score-fill"></div>
           <div class="threshold"></div>
+        </div>
+
+        <div class="toolbar">
+          <button onclick="copyDeliberation()" id="copy-btn" title="Copy deliberation to clipboard">COPY</button>
+          <button onclick="exportToMd()" title="Export session as Markdown">EXPORT .MD</button>
+          <div class="sep"></div>
+          <span class="label">Model:</span>
+          <select id="model-mode-select" title="Inference routing for next convene">
+            <option value="auto">Auto (cloud → local)</option>
+            <option value="local">Local only</option>
+            <option value="cloud">Cloud only</option>
+          </select>
         </div>
 
         <div class="input-area">
@@ -512,9 +535,10 @@ async function convene() {
   addMessage('SYSTEM', 'Seven Soldiers convened. Deliberation in progress...', 'system');
 
   const importance = document.getElementById('importance-select').value;
+  const modelMode = document.getElementById('model-mode-select').value;
 
   try {
-    const resp = await fetch(`/boardroom/convene?directive=${encodeURIComponent(directive)}&importance=${importance}`, {method:'POST'});
+    const resp = await fetch(`/boardroom/convene?directive=${encodeURIComponent(directive)}&importance=${importance}&model_mode=${modelMode}`, {method:'POST'});
     const data = await resp.json();
 
     // Show each soldier's vote and track stats
@@ -649,6 +673,65 @@ function replaySession(el) {
     document.getElementById('score-bar').style.display = 'block';
     document.getElementById('score-fill').style.width = ((s.weighted_score||0)*100)+'%';
   } catch(e) { console.error(e); }
+}
+
+// Copy deliberation to clipboard
+function copyDeliberation() {
+  const msgs = document.getElementById('messages');
+  const text = Array.from(msgs.querySelectorAll('.msg')).map(m => {
+    const sender = m.querySelector('.sender')?.textContent || '';
+    const content = m.querySelector('.content')?.textContent || '';
+    return `${sender}: ${content}`;
+  }).join('\n');
+  const outcome = document.getElementById('outcome')?.textContent || '';
+  const full = text + (outcome ? `\n\nVERDICT: ${outcome}` : '');
+  navigator.clipboard.writeText(full).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.classList.add('copied');
+    btn.textContent = 'COPIED';
+    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = 'COPY'; }, 2000);
+  }).catch(() => {
+    // Fallback for non-HTTPS
+    const ta = document.createElement('textarea');
+    ta.value = full;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  });
+}
+
+// Export session as Markdown
+function exportToMd() {
+  const mandate = document.getElementById('ceo-mandate')?.textContent || '—';
+  const outcome = document.getElementById('outcome')?.textContent || '—';
+  const msgs = document.getElementById('messages');
+  const votes = Array.from(msgs.querySelectorAll('.msg')).map(m => {
+    const sender = m.querySelector('.sender')?.textContent || '';
+    const content = m.querySelector('.content')?.textContent || '';
+    const cls = m.className;
+    const vote = cls.includes('approve') ? 'APPROVE' : cls.includes('reject') ? 'REJECT' : cls.includes('system') ? 'SYSTEM' : 'ABSTAIN';
+    return { sender, content, vote };
+  });
+
+  let md = `# Boardroom Session\n\n`;
+  md += `**Directive:** ${mandate}\n`;
+  md += `**Outcome:** ${outcome}\n`;
+  md += `**Date:** ${new Date().toISOString()}\n\n`;
+  md += `## Votes\n\n`;
+  md += `| Soldier | Vote | Reasoning |\n|---------|------|----------|\n`;
+  votes.filter(v => v.vote !== 'SYSTEM').forEach(v => {
+    md += `| ${v.sender} | ${v.vote} | ${v.content.substring(0, 120)} |\n`;
+  });
+  md += `\n---\n*Exported from mindx.pythai.net/boardroom*\n`;
+
+  const blob = new Blob([md], {type: 'text/markdown'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `boardroom_${Date.now()}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // Enter key submits

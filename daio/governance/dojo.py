@@ -231,15 +231,59 @@ class Dojo:
         return standings
 
     def _log_event(self, event: ReputationEvent):
+        """Log reputation event as both file AND embedded memory.
+
+        Logs are memories and memories are logs. Every dojo event is:
+        1. JSONL log line (existing, backwards compatible)
+        2. Structured JSON in data/dojo/ (searchable, reviewable)
+        3. Embedded in pgvectorscale (semantic search via RAGE)
+        """
+        entry = {
+            "agent_id": event.agent_id,
+            "event_type": event.event_type,
+            "delta": event.delta,
+            "reason": event.reason,
+            "timestamp": event.timestamp,
+        }
+
+        # 1. JSONL log
         try:
-            entry = {
-                "agent_id": event.agent_id,
-                "event_type": event.event_type,
-                "delta": event.delta,
-                "reason": event.reason,
-                "timestamp": event.timestamp,
-            }
             with open(self.event_log_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(entry) + "\n")
+        except Exception:
+            pass
+
+        # 2. Structured JSON in data/dojo/
+        try:
+            dojo_dir = PROJECT_ROOT / "data" / "dojo"
+            dojo_dir.mkdir(parents=True, exist_ok=True)
+            event_file = dojo_dir / f"event_{int(event.timestamp)}.json"
+            event_file.write_text(json.dumps(entry, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+
+        # 3. Embed in pgvectorscale — logs are memories, memories are logs
+        try:
+            import asyncio
+            asyncio.create_task(self._embed_event(event, entry))
+        except Exception:
+            pass
+
+    async def _embed_event(self, event: ReputationEvent, entry: Dict):
+        """Embed dojo reputation event in pgvectorscale."""
+        try:
+            from agents import memory_pgvector as _mpg
+            direction = "gained" if event.delta > 0 else "lost"
+            doc_text = f"Dojo: {event.agent_id} {direction} {abs(event.delta)} reputation ({event.event_type}): {event.reason}"
+            await _mpg.embed_and_store_doc(f"dojo_event_{int(event.timestamp)}", doc_text)
+            await _mpg.store_memory(
+                memory_id=f"dojo_{event.agent_id}_{int(event.timestamp)}",
+                agent_id=event.agent_id,
+                memory_type="reputation_event",
+                importance=7 if abs(event.delta) >= 500 else 5,
+                content=entry,
+                context={"domain": "dojo", "event_type": event.event_type},
+                tags=["dojo", event.event_type, direction],
+            )
         except Exception:
             pass

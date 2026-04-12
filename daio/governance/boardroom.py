@@ -161,9 +161,13 @@ class Boardroom:
         directive: str,
         importance: str = "standard",
         context: Optional[Dict[str, Any]] = None,
+        model_mode: str = "auto",
     ) -> BoardroomSession:
         """
         Convene a boardroom session. CEO presents directive, Soldiers evaluate in parallel.
+
+        model_mode: "local" (SOLDIER_MODELS only), "cloud" (SOLDIER_CLOUD_MODELS via cloud),
+                    "auto" (try cloud, fall back to local — default)
         """
         session = BoardroomSession(
             session_id=f"br_{int(time.time())}",
@@ -177,7 +181,7 @@ class Boardroom:
         for soldier_id, provider in self.soldier_providers.items():
             weight = SOLDIER_WEIGHTS.get(soldier_id, 1.0)
             tasks.append(
-                self._query_soldier(soldier_id, provider, directive, importance, weight, context)
+                self._query_soldier(soldier_id, provider, directive, importance, weight, context, model_mode)
             )
 
         if tasks:
@@ -240,10 +244,13 @@ class Boardroom:
         importance: str,
         weight: float,
         context: Optional[Dict[str, Any]],
+        model_mode: str = "auto",
     ) -> SoldierVote:
-        """Query a Soldier using their assigned model with role-specific persona.
-        Loads persona from .agent file (rich doctrine) or falls back to SOLDIER_PERSONAS dict.
-        Tries cloud model first (if signed in), falls back to local."""
+        """Query a Soldier using VLLMHandler (vLLM → Ollama local → Ollama cloud fallback).
+
+        model_mode: "local" (force SOLDIER_MODELS), "cloud" (force SOLDIER_CLOUD_MODELS), "auto" (cloud then local)
+        Routes through the full inference stack with rate limiting on cloud.
+        """
         local_model = SOLDIER_MODELS.get(soldier_id, "qwen3:1.7b")
         cloud_model = SOLDIER_CLOUD_MODELS.get(soldier_id)
         persona = self._load_soldier_persona(soldier_id)
@@ -262,38 +269,39 @@ class Boardroom:
             f"\"reasoning\": \"...\", \"confidence\": 0.0-1.0}}"
         )
 
-        # Try cloud model first, fall back to local
-        model = local_model
-        if cloud_model:
-            model = cloud_model  # Will fail gracefully if not signed in
+        # Select model based on mode
+        if model_mode == "local":
+            model = local_model
+        elif model_mode == "cloud" and cloud_model:
+            model = cloud_model
+        else:  # auto — prefer cloud, handler falls back to local
+            model = cloud_model or local_model
 
         t0 = time.time()
+        used_model = model
         try:
-            import aiohttp
-            response = None
-            used_model = model
+            # Route through VLLMHandler — gets vLLM → Ollama local → Ollama cloud fallback
+            from llm.vllm_handler import VLLMHandler
+            handler = VLLMHandler(
+                model_name_for_api=model,
+                base_url=OLLAMA_URL,  # Ollama local as primary base
+            )
+            response = await handler.generate_text(
+                prompt=prompt, model=model,
+                json_mode=True, max_tokens=500, temperature=0.3,
+            )
 
-            # Try assigned model (cloud or local)
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60)) as sess:
-                payload = {
-                    "model": model,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "stream": False,
-                    "format": "json",
-                }
-                async with sess.post(f"{OLLAMA_URL}/api/chat", json=payload) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        response = data.get("message", {}).get("content", "")
-                    elif model != local_model:
-                        # Cloud model failed — fall back to local
-                        logger.debug(f"Boardroom: {soldier_id} cloud model {model} failed, falling back to {local_model}")
-                        used_model = local_model
-                        payload["model"] = local_model
-                        async with sess.post(f"{OLLAMA_URL}/api/chat", json=payload) as resp2:
-                            if resp2.status == 200:
-                                data = await resp2.json()
-                                response = data.get("message", {}).get("content", "")
+            # If cloud model failed and we're in auto mode, try local explicitly
+            if not response and model != local_model and model_mode == "auto":
+                used_model = local_model
+                response = await handler.generate_text(
+                    prompt=prompt, model=local_model,
+                    json_mode=True, max_tokens=500, temperature=0.3,
+                )
+
+            # Track which path succeeded
+            if handler._using_cloud:
+                used_model = f"{model} (cloud)"
 
             latency = int((time.time() - t0) * 1000)
 
@@ -302,9 +310,9 @@ class Boardroom:
             if response and not response.startswith("Error"):
                 try:
                     parsed = json.loads(response)
-                    vote_data = parsed
+                    if isinstance(parsed, dict):
+                        vote_data = parsed
                 except json.JSONDecodeError:
-                    # Extract vote from text
                     resp_lower = response.lower()
                     if "approve" in resp_lower:
                         vote_data = {"vote": "approve", "reasoning": response[:200], "confidence": 0.6}
@@ -313,7 +321,7 @@ class Boardroom:
 
             return SoldierVote(
                 soldier_id=soldier_id,
-                provider=f"ollama/{used_model}",
+                provider=f"vllm/{used_model}",
                 vote=vote_data.get("vote", "abstain"),
                 reasoning=vote_data.get("reasoning", "")[:300],
                 confidence=float(vote_data.get("confidence", 0.5)),
@@ -324,9 +332,9 @@ class Boardroom:
             latency = int((time.time() - t0) * 1000)
             return SoldierVote(
                 soldier_id=soldier_id,
-                provider=f"ollama/{local_model}",
+                provider=f"vllm/{local_model}",
                 vote="abstain",
-                reasoning=f"Model unavailable: {str(e)[:100]}",
+                reasoning=f"Inference unavailable: {str(e)[:100]}",
                 confidence=0.0,
                 latency_ms=latency,
                 weight=weight,
@@ -374,41 +382,104 @@ class Boardroom:
         return branches
 
     def _log_session(self, session: BoardroomSession):
-        """Append session to JSONL log."""
+        """Log session as both structured file AND embedded memory.
+
+        Logs are memories and memories are logs. Every boardroom session is:
+        1. JSONL log line (backwards compatible)
+        2. Structured JSON in data/boardroom/ (searchable, reviewable)
+        3. Embedded in pgvectorscale (semantic search via RAGE)
+        4. Activity feed event (live dashboard)
+        """
+        entry = {
+            "session_id": session.session_id,
+            "directive": session.directive[:200],
+            "importance": session.importance,
+            "timestamp": session.timestamp,
+            "outcome": session.outcome,
+            "weighted_score": round(session.weighted_score, 3),
+            "votes": [
+                {"soldier": v.soldier_id, "vote": v.vote, "provider": v.provider,
+                 "reasoning": v.reasoning[:200], "confidence": v.confidence, "latency_ms": v.latency_ms}
+                for v in session.votes
+            ],
+            "dissent_branches": len(session.dissent_branches),
+        }
+
+        # 1. JSONL log (existing, backwards compatible)
         try:
-            entry = {
-                "session_id": session.session_id,
-                "directive": session.directive[:200],
-                "importance": session.importance,
-                "timestamp": session.timestamp,
-                "outcome": session.outcome,
-                "weighted_score": round(session.weighted_score, 3),
-                "votes": [
-                    {"soldier": v.soldier_id, "vote": v.vote, "provider": v.provider,
-                     "confidence": v.confidence, "latency_ms": v.latency_ms}
-                    for v in session.votes
-                ],
-                "dissent_branches": len(session.dissent_branches),
-            }
             with open(self.session_log_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(entry) + "\n")
+        except Exception as e:
+            logger.warning(f"Boardroom: JSONL log failed: {e}")
 
-            # Emit to ActivityFeed for live landing page
-            try:
-                from mindx_backend_service.activity_feed import ActivityFeed
-                vote_summary = " ".join(
-                    f'{v.soldier_id[:3]}:{"✓" if v.vote=="approve" else "✗" if v.vote=="reject" else "—"}'
+        # 2. Structured JSON in data/boardroom/
+        try:
+            boardroom_dir = PROJECT_ROOT / "data" / "boardroom"
+            boardroom_dir.mkdir(parents=True, exist_ok=True)
+            session_file = boardroom_dir / f"{session.session_id}.json"
+            # Include full reasoning in the structured file
+            full_entry = dict(entry)
+            full_entry["votes"] = [
+                {"soldier": v.soldier_id, "vote": v.vote, "provider": v.provider,
+                 "reasoning": v.reasoning, "confidence": v.confidence, "latency_ms": v.latency_ms,
+                 "weight": v.weight}
+                for v in session.votes
+            ]
+            full_entry["dissent_branches_detail"] = session.dissent_branches
+            session_file.write_text(json.dumps(full_entry, indent=2), encoding="utf-8")
+        except Exception as e:
+            logger.debug(f"Boardroom: structured log failed: {e}")
+
+        # 3. Embed in pgvectorscale — logs are memories, memories are logs
+        try:
+            import asyncio
+            asyncio.create_task(self._embed_session(session, entry))
+        except Exception:
+            pass
+
+        # 4. Activity feed (live dashboard)
+        try:
+            from mindx_backend_service.activity_feed import ActivityFeed
+            vote_summary = " ".join(
+                f'{v.soldier_id[:3]}:{"✓" if v.vote=="approve" else "✗" if v.vote=="reject" else "—"}'
+                for v in session.votes
+            )
+            ActivityFeed.get_instance().emit(
+                "boardroom", "ceo_agent", "session",
+                f'{session.directive[:120]} → {session.outcome.upper()} ({session.weighted_score:.3f}) {vote_summary}',
+                detail=entry, agent_tier=4
+            )
+        except Exception:
+            pass
+
+    async def _embed_session(self, session: BoardroomSession, entry: Dict):
+        """Embed boardroom session in pgvectorscale for semantic search."""
+        try:
+            from agents import memory_pgvector as _mpg
+
+            # Store as embedded document (chunked, searchable via RAGE)
+            doc_text = (
+                f"Boardroom session {session.session_id}: {session.directive}\n"
+                f"Outcome: {session.outcome} (score: {session.weighted_score:.3f})\n"
+                + "\n".join(
+                    f"- {v.soldier_id} voted {v.vote} ({v.confidence:.0%}): {v.reasoning[:150]}"
                     for v in session.votes
                 )
-                ActivityFeed.get_instance().emit(
-                    "boardroom", "ceo_agent", "session",
-                    f'{session.directive[:120]} → {session.outcome.upper()} ({session.weighted_score:.3f}) {vote_summary}',
-                    detail=entry, agent_tier=4
-                )
-            except Exception:
-                pass
+            )
+            await _mpg.embed_and_store_doc(f"boardroom_{session.session_id}", doc_text)
+
+            # Store as memory record
+            await _mpg.store_memory(
+                memory_id=f"boardroom_{session.session_id}",
+                agent_id="ceo_agent_main",
+                memory_type="boardroom_session",
+                importance=8 if session.importance in ("critical", "constitutional") else 6,
+                content=entry,
+                context={"domain": "boardroom", "outcome": session.outcome},
+                tags=["boardroom", session.outcome, session.importance],
+            )
         except Exception as e:
-            logger.warning(f"Boardroom: failed to log session: {e}")
+            logger.debug(f"Boardroom: pgvectorscale embed failed: {e}")
 
     def get_recent_sessions(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Return recent sessions for dashboard display."""
