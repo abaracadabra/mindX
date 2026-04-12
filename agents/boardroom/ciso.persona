@@ -22,9 +22,9 @@
   },
   "inference": {
     "local_model": "deepseek-r1:1.5b",
-    "cloud_model": "nemotron-3-nano:30b",
+    "cloud_model": "nemotron-3-super",
     "provider": "anthropic",
-    "reasoning": "Thinking/reasoning model — careful deliberation. Strongest safety alignment provider."
+    "reasoning": "Thinking model — careful deliberation. Cloud: nemotron-3-super 120B MoE (12B active), safety-aligned."
   },
   "boardroom": {
     "evaluates": "security posture impact, attack surface change, credential exposure",

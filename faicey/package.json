@@ -32,8 +32,11 @@
     "blockchain": "node examples/blockchain-precision-demo.js",
     "blockchain-precision": "node examples/blockchain-precision-demo.js",
     "soundwave": "node examples/blockchain-precision-demo.js",
-    "deploy:soundwave": "hardhat run contracts/deploy-soundwave.js",
-    "test:soundwave": "hardhat test contracts/SoundWaveToken.test.js"
+    "deploy:soundwave": "cd contracts && forge script contracts/deploy-soundwave.js",
+    "deploy:jaimla-vnft": "cd contracts && forge script script/DeployJaimlaVNFT.s.sol --broadcast",
+    "test:contracts": "cd contracts && forge test -vv",
+    "build:contracts": "cd contracts && forge build --sizes",
+    "vnft": "node examples/blockchain-precision-demo.js"
   },
   "keywords": [
     "faicey",

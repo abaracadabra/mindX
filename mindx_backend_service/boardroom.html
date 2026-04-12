@@ -164,6 +164,68 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
 .score-bar .fill{height:100%;background:var(--accent);transition:width .6s ease-out}
 .score-bar .threshold{position:absolute;left:66.6%;top:0;height:100%;width:1px;background:var(--veto)}
 
+/* Inaugural Session Banner */
+.inaugural{max-width:1400px;margin:0 auto 16px;padding:0 12px}
+.inaugural-banner{background:linear-gradient(135deg,rgba(0,255,136,.06),rgba(255,187,51,.04));
+  border:1px solid rgba(255,187,51,.3);padding:12px 18px;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;transition:all .3s}
+.inaugural-banner:hover{border-color:var(--accent);box-shadow:0 0 20px rgba(0,255,136,.06)}
+.inaugural-title{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:900;
+  color:var(--advisory);letter-spacing:4px;text-transform:uppercase;
+  text-shadow:0 0 15px rgba(255,187,51,.2)}
+.inaugural-sub{font-size:9px;color:var(--text3);letter-spacing:2px}
+.inaugural-body{background:var(--glass);border:1px solid var(--glass-border);border-top:none;
+  padding:14px 18px;max-height:500px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg)}
+.inaugural-desc{font-size:11px;color:var(--text2);line-height:1.6;margin-bottom:12px;
+  padding:8px 12px;border-left:2px solid var(--advisory);background:rgba(255,187,51,.03)}
+.reg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:6px;margin-bottom:10px}
+.reg-card{background:var(--surface);padding:8px 10px;border:1px solid var(--glass-border);position:relative}
+.reg-card .rc-title{font-family:'Orbitron',sans-serif;font-size:8px;font-weight:700;
+  color:var(--accent);letter-spacing:2px}
+.reg-card .rc-status{font-size:9px;margin-top:4px}
+.reg-card .rc-check{font-size:8px;color:var(--text3);margin-top:2px}
+.reg-card .rc-check .done{color:var(--accent)}
+.reg-card .rc-check .pending{color:var(--advisory)}
+.inaugural-path{font-size:9px;color:var(--text3);padding:8px 0;border-top:1px solid var(--glass-border);
+  display:flex;flex-direction:column;gap:4px}
+.inaugural-path .ip-label{font-family:'Orbitron',sans-serif;font-size:8px;letter-spacing:2px;
+  color:var(--text3);text-transform:uppercase}
+.inaugural-path .ip-item{color:var(--text2);padding-left:12px}
+
+/* Cloud Inference Panel — toggle + scroll */
+.cloud-panel{max-width:1400px;margin:20px auto 0;padding:0 12px}
+.cloud-toggle{display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 0;
+  border-bottom:1px solid var(--border);margin-bottom:0;transition:all .2s}
+.cloud-toggle:hover{border-color:var(--accent)}
+.cloud-toggle .label{font-family:'Orbitron',sans-serif;font-size:10px;color:var(--text3);
+  letter-spacing:3px;text-transform:uppercase;flex:1}
+.cloud-toggle .cloud-status{font-size:9px;color:var(--accent);letter-spacing:1px}
+.cloud-toggle .chevron{color:var(--text3);font-size:12px;transition:transform .3s}
+.cloud-toggle.open .chevron{transform:rotate(180deg)}
+.cloud-body{max-height:0;overflow:hidden;transition:max-height .4s ease-out}
+.cloud-body.open{max-height:600px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg)}
+.cloud-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;padding:12px 0}
+.cloud-card{background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border:1px solid var(--glass-border);padding:10px 12px;transition:all .25s;position:relative}
+.cloud-card:hover{border-color:var(--accent);box-shadow:0 0 12px rgba(0,255,136,.08)}
+.cloud-card .cc-title{font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;
+  color:var(--accent);letter-spacing:2px;text-transform:uppercase}
+.cloud-card .cc-role{font-size:9px;color:var(--text3);margin-top:2px}
+.cloud-card .cc-model{font-size:11px;color:var(--white);margin-top:6px;font-weight:500}
+.cloud-card .cc-local{font-size:9px;color:var(--text3);margin-top:2px}
+.cloud-card .cc-provider{font-size:8px;color:var(--text3);margin-top:4px;letter-spacing:1px;text-transform:uppercase}
+.cloud-card .cc-weight{position:absolute;top:8px;right:10px;font-size:9px;font-weight:700}
+.cloud-card .cc-weight.w12{color:var(--veto)}
+.cloud-card .cc-weight.w08{color:var(--advisory)}
+.cloud-card .cc-weight.w10{color:var(--text3)}
+.cloud-card.veto{border-left:2px solid var(--veto)}
+.cloud-card.advisory{border-left:2px solid var(--advisory)}
+.cloud-rate{display:flex;gap:16px;padding:8px 0 4px;flex-wrap:wrap}
+.cloud-rate .cr-item{font-size:9px;color:var(--text3)}
+.cloud-rate .cr-item span{color:var(--accent);font-weight:500}
+.cloud-source{font-size:8px;color:var(--text3);padding:4px 0 8px;letter-spacing:1px;
+  border-top:1px solid var(--glass-border);margin-top:4px}
+
 /* History panel */
 .history{max-width:1400px;margin:30px auto 0;padding:0 12px}
 .history .label{font-family:'Orbitron',sans-serif;font-size:10px;color:var(--text3);
@@ -271,6 +333,26 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
     <a href="/docs.html">Docs</a>
   </div>
 
+  <!-- Inaugural Session Banner -->
+  <div class="inaugural" id="inaugural">
+    <div class="inaugural-banner">
+      <div class="inaugural-title">INAUGURAL SESSION</div>
+      <div class="inaugural-sub">First Historical Board Meeting &middot; Swearing In &middot; 2026-04-12</div>
+    </div>
+    <div class="inaugural-body" id="inaugural-body">
+      <div class="inaugural-desc">
+        Board members attend to be created. Model assignments verified. Cloud inference confirmed.
+        Identity issuance pending &mdash; wallets and BONA FIDE not yet deployed.
+      </div>
+      <div class="reg-grid" id="reg-grid"></div>
+      <div class="inaugural-path">
+        <span class="ip-label">EVOLUTION PATH</span>
+        <span class="ip-item">MINTCONTRACT module &rarr; wallet issuance &rarr; BONA FIDE deployment &rarr; ID verification</span>
+        <span class="ip-item">CEO as a Service &middot; Boardroom as a Service</span>
+      </div>
+    </div>
+  </div>
+
   <!-- CEO + Table + Soldiers -->
   <div class="board-wrap">
     <!-- Left seats: COO, CFO -->
@@ -326,6 +408,30 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
   <!-- Bottom seats: CTO, CPO, CRO -->
   <div style="display:flex;justify-content:center;gap:12px;margin-top:12px;flex-wrap:wrap" id="seats-bottom"></div>
 
+  <!-- Cloud Inference Panel -->
+  <div class="cloud-panel">
+    <div class="cloud-toggle" id="cloud-toggle" onclick="toggleCloudPanel()">
+      <span class="label">Cloud Inference &middot; ollama.cloud</span>
+      <span class="cloud-status" id="cloud-status">FREE TIER</span>
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="cloud-body" id="cloud-body">
+      <div class="cloud-rate" id="cloud-rate">
+        <div class="cr-item">Session: <span id="cr-session">0/50</span> req</div>
+        <div class="cr-item">Weekly: <span id="cr-weekly">0/500</span> req</div>
+        <div class="cr-item">Tokens: <span id="cr-tokens">0/100K</span></div>
+        <div class="cr-item">Pacing: <span id="cr-pacing">3s</span></div>
+        <div class="cr-item">Mode: <span id="cr-mode">auto</span></div>
+      </div>
+      <div class="cloud-grid" id="cloud-grid"></div>
+      <div class="cloud-source">
+        source: agents/ollama.cloud.agent &middot; tools/cloud/ollama_cloud_tool.py &middot;
+        auth: <span id="cloud-auth">ollama signin (no API key)</span> &middot;
+        precision: 18dp &middot; cypherpunk2048 standard
+      </div>
+    </div>
+  </div>
+
   <!-- History -->
   <div class="history">
     <div class="label">Session History</div>
@@ -344,72 +450,73 @@ const AGENTS = {
   ceo_agent_main: {
     short:'CEO', name:'Chief Executive Officer', weight:1.0,
     desc:'I direct. The soldiers deliberate. The Constitution constrains.',
-    localModel:'qwen3:0.6b', cloudModel:null, provider:null,
-    reasoning:'Speed not depth — delegates heavy reasoning to soldiers',
+    localModel:'qwen3:0.6b', cloudModel:'glm-5.1', maxModel:'glm-5', provider:'ollama',
+    reasoning:'Tier 1: qwen3:0.6b (local). Tier 2: glm-5.1 (SOTA agentic). Tier 3: glm-5 (744B/40B active).',
     persona:'Directive, concise, outcome-focused',
     capabilities:['strategic_oversight','resource_allocation','emergency_halt','boardroom_chair'],
     doctrine:'I conclude from outcomes to calculate the next mandate, or simply sustain mandate.',
-    tier:'sovereign', bonafide:true,
+    tier:'sovereign', bonafide:false, wallet:null,
+    cloudFallback:['glm-5'],
   }
 };
 const SOLDIERS = [
   {id:'coo_operations', short:'COO', name:'Chief Operating Officer', weight:1.0, side:'left',
    desc:'Operational feasibility, timelines, resources',
-   localModel:'qwen3:0.6b', cloudModel:'gemini-3-flash-preview', provider:'gemini',
-   reasoning:'Fast operational decisions — speed over depth (4.3 tok/s)',
+   localModel:'qwen3:0.6b', cloudModel:'gemini-3-flash-preview', maxModel:'ministral-3:14b', provider:'gemini',
+   reasoning:'Tier 1: qwen3:0.6b (local). Tier 2: gemini-3-flash-preview (speed). Tier 3: ministral-3:14b (14B edge).',
    persona:'Operational, precise, tempo-driven',
    capabilities:['execution_planning','milestone_management','resource_allocation','blocker_resolution'],
    doctrine:'Every task has deliverables + acceptance criteria + stop condition.',
-   tier:'verified', bonafide:true},
+   tier:'verified', bonafide:false, wallet:null, cloudFallback:['ministral-3:14b']},
   {id:'cfo_finance', short:'CFO', name:'Chief Financial Officer', weight:1.0, side:'left',
    desc:'Cost/benefit, budget, treasury. 18dp precision.',
-   localModel:'deepseek-coder:1.3b', cloudModel:'qwen3.5:8b', provider:'groq',
-   reasoning:'Fastest local — quantitative reasoning. Cloud: qwen3.5 8B for depth.',
+   localModel:'deepseek-coder:1.3b', cloudModel:'qwen3.5:9b', maxModel:'qwen3.5:122b', provider:'groq',
+   reasoning:'Tier 1: deepseek-coder:1.3b (local). Tier 2: qwen3.5:9b (quantitative). Tier 3: qwen3.5:122b (122B max).',
    persona:'Quantitative, disciplined, value-focused',
    capabilities:['cost_benefit_analysis','token_economics','treasury_management','financial_modeling'],
    doctrine:'No spending without validated return. Spending .01 to earn .011 is profit.',
-   tier:'verified', bonafide:true},
+   tier:'verified', bonafide:false, wallet:null, cloudFallback:['minimax-m2']},
   {id:'ciso_security', short:'CISO', name:'Chief Information Security Officer', weight:1.2, side:'right',
    desc:'Security posture, attack surface, zero trust. 1.2x veto.', veto:true,
-   localModel:'deepseek-r1:1.5b', cloudModel:'nemotron-3-super', provider:'anthropic',
-   reasoning:'Thinking model — careful deliberation. Cloud: nemotron-3-super 120B MoE (12B active).',
+   localModel:'deepseek-r1:1.5b', cloudModel:'nemotron-3-super', maxModel:'qwen3-next', provider:'anthropic',
+   reasoning:'Tier 1: deepseek-r1:1.5b (local thinking). Tier 2: nemotron-3-super (120B MoE). Tier 3: qwen3-next (80B deep).',
    persona:'Cautious, thorough, threat-aware',
    capabilities:['threat_modeling','access_control','credential_audit','prompt_injection_defense'],
    doctrine:'Least privilege. Defense in depth. Zero trust. Every LLM response is untrusted input.',
-   tier:'verified', bonafide:true},
+   tier:'verified', bonafide:false, wallet:null, cloudFallback:['qwen3-next','nemotron-3-nano:30b']},
   {id:'clo_legal', short:'CLO', name:'Chief Legal Officer', weight:0.8, side:'right',
    desc:'Legal risk, licensing, attribution. 0.8x advisory.', advisory:true,
-   localModel:'qwen3:0.6b', cloudModel:'devstral-small-2:24b', provider:'mistral',
-   reasoning:'Legal review is pattern-matching — speed over depth (4.3 tok/s)',
+   localModel:'qwen3:0.6b', cloudModel:'devstral-small-2:24b', maxModel:'cogito-2.1', provider:'mistral',
+   reasoning:'Tier 1: qwen3:0.6b (local). Tier 2: devstral-small-2:24b (structured). Tier 3: cogito-2.1 (671B deep).',
    persona:'Measured, precedent-aware, compliance-focused',
    capabilities:['legal_risk','licensing_compliance','attribution_tracking','constitutional_interpretation'],
    doctrine:'Code is law — but law has context. Attribution is non-negotiable.',
-   tier:'verified', bonafide:true},
+   tier:'verified', bonafide:false, wallet:null, cloudFallback:['cogito-2.1']},
   {id:'cto_technology', short:'CTO', name:'Chief Technology Officer', weight:1.0, side:'bottom',
    desc:'Technical feasibility, architecture, infrastructure',
-   localModel:'qwen3:1.7b', cloudModel:'qwen3-coder-next', provider:'ollama',
-   reasoning:'Deepest local reasoning — architecture requires depth (10.0 tok/s)',
+   localModel:'qwen3:1.7b', cloudModel:'qwen3-coder-next', maxModel:'devstral-2', provider:'ollama',
+   reasoning:'Tier 1: qwen3:1.7b (local). Tier 2: qwen3-coder-next (agentic code). Tier 3: devstral-2 (123B code agent).',
    persona:'Technical, precise, architecture-minded',
    capabilities:['architecture_review','infrastructure_assessment','technical_feasibility','model_selection'],
    doctrine:'Architecture decisions are permanent. Measure twice, deploy once.',
-   tier:'verified', bonafide:true},
+   tier:'verified', bonafide:false, wallet:null, cloudFallback:['devstral-2','glm-4.7']},
   {id:'cpo_product', short:'CPO', name:'Chief Product Officer', weight:1.0, side:'bottom',
    desc:'User value, market fit, scope impact',
-   localModel:'qwen3.5:2b', cloudModel:'gemma4:31b', provider:'together',
-   reasoning:'More depth for product judgment across 4 PYTHAI properties',
+   localModel:'qwen3.5:2b', cloudModel:'gemma4:31b', maxModel:'kimi-k2.5', provider:'together',
+   reasoning:'Tier 1: qwen3.5:2b (local). Tier 2: gemma4:31b (multimodal). Tier 3: kimi-k2.5 (native multimodal agentic).',
    persona:'Pragmatic, user-focused, value-driven',
    capabilities:['product_requirements','user_value_assessment','scope_control','marketplace_strategy'],
    doctrine:'Ship the minimum that creates value — then iterate.',
-   tier:'verified', bonafide:true,
+   tier:'verified', bonafide:false, wallet:null, cloudFallback:['kimi-k2.5','minimax-m2.5'],
    products:['bankon.pythai.net','mindx.pythai.net','agenticplace.pythai.net','pythai.net']},
   {id:'cro_risk', short:'CRO', name:'Chief Risk Officer', weight:1.2, side:'bottom',
    desc:'Risk magnitude, reversibility, blast radius. 1.2x veto.', veto:true,
-   localModel:'qwen3:4b', cloudModel:'deepseek-v3.2', provider:'deepseek',
-   reasoning:'Deepest reasoning available — risk is complex multivariate analysis',
+   localModel:'qwen3:4b', cloudModel:'deepseek-v3.2', maxModel:'minimax-m2.7', provider:'deepseek',
+   reasoning:'Tier 1: qwen3:4b (local). Tier 2: deepseek-v3.2 (reasoning). Tier 3: minimax-m2.7 (agentic risk modeling).',
    persona:'Analytical, probabilistic, worst-case-aware',
    capabilities:['risk_aggregation','reversibility_assessment','rollback_verification','cascading_failure_analysis'],
    doctrine:'Every action must have a rollback path. Risk is quantified, not felt.',
-   tier:'verified', bonafide:true},
+   tier:'verified', bonafide:false, wallet:null, cloudFallback:['minimax-m2.7','rnj-1']},
 ];
 
 // Track session results per soldier for success rate
@@ -466,19 +573,22 @@ function showAgentCard(id) {
     </div>
 
     <div class="acp-section">
-      <div class="acp-label">Inference Assignment</div>
+      <div class="acp-label">Inference Tiers (Ollama Cloud Library)</div>
       <div class="acp-grid">
-        <div class="acp-stat"><div class="sl">Local Model</div><div class="sv accent">${agent.localModel || '—'}</div></div>
-        <div class="acp-stat"><div class="sl">Cloud Model</div><div class="sv">${agent.cloudModel || 'none'}</div></div>
+        <div class="acp-stat"><div class="sl">Tier 1 — Local</div><div class="sv accent">${agent.localModel || '—'}</div></div>
+        <div class="acp-stat"><div class="sl">Tier 2 — Cloud Mid</div><div class="sv">${agent.cloudModel || 'none'}</div></div>
+        <div class="acp-stat"><div class="sl">Tier 3 — Cloud Max</div><div class="sv" style="color:var(--advisory)">${agent.maxModel || 'none'}</div></div>
         <div class="acp-stat"><div class="sl">Provider</div><div class="sv">${agent.provider || 'local only'}</div></div>
-        <div class="acp-stat"><div class="sl">Reasoning</div><div class="sv" style="font-size:9px">${agent.reasoning || '—'}</div></div>
+      </div>
+      <div style="font-size:9px;color:var(--text3);margin-top:6px;padding:4px 8px;background:var(--accent-dim)">
+        routine/standard → Tier 2 &middot; critical/constitutional → Tier 3
       </div>
     </div>
 
     <div class="acp-section">
       <div class="acp-label">Persona</div>
       <div style="font-size:11px;color:var(--text);margin-bottom:4px">${agent.persona || '—'}</div>
-      <div style="font-size:9px;color:var(--text3)">Tier: ${agent.tier || '—'} &middot; BONA FIDE: ${agent.bonafide?'<span style="color:var(--accent)">HELD</span>':'<span style="color:var(--veto)">REVOKED</span>'}</div>
+      <div style="font-size:9px;color:var(--text3)">Tier: ${agent.tier || '—'} &middot; BONA FIDE: ${agent.bonafide?'<span style="color:var(--accent)">HELD</span>':'<span style="color:var(--advisory)">PENDING</span>'} &middot; Wallet: ${agent.wallet?'<span style="color:var(--accent)">'+agent.wallet.substring(0,10)+'...</span>':'<span style="color:var(--advisory)">NOT ISSUED</span>'}</div>
     </div>
 
     <div class="acp-section">
@@ -614,7 +724,8 @@ async function convene() {
         });
       }
 
-      // Model report — which model each member used
+      // Model report — which model each member used + cloud panel update
+      updateCloudRate(data.model_report);
       if (data.model_report) {
         const mr = data.model_report;
         const summary = mr.inference_summary || {};
@@ -769,6 +880,106 @@ function exportToMd() {
 document.getElementById('directive-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') convene();
 });
+
+// ── Inaugural Session: Board Member Registration ──
+function initInaugural() {
+  const grid = document.getElementById('reg-grid');
+  // CEO first
+  const ceo = AGENTS.ceo_agent_main;
+  grid.innerHTML = `<div class="reg-card">
+    <div class="rc-title">CEO</div>
+    <div class="rc-status" style="font-size:10px;color:var(--white)">${ceo.name}</div>
+    <div class="rc-check"><span class="done">&#10003;</span> Model: ${ceo.localModel}</div>
+    <div class="rc-check"><span class="done">&#10003;</span> Persona assigned</div>
+    <div class="rc-check"><span class="pending">&#9675;</span> Wallet: not issued</div>
+    <div class="rc-check"><span class="pending">&#9675;</span> BONA FIDE: not deployed</div>
+    <div class="rc-check"><span class="pending">&#9675;</span> ID verification: pending</div>
+  </div>`;
+
+  // Soldiers
+  SOLDIERS.forEach(s => {
+    const modelCheck = s.cloudModel
+      ? `<span class="done">&#10003;</span> Cloud: ${s.cloudModel}`
+      : `<span class="pending">&#9675;</span> Cloud: none`;
+    grid.innerHTML += `<div class="reg-card">
+      <div class="rc-title">${s.short}</div>
+      <div class="rc-status" style="font-size:10px;color:var(--white)">${s.name}</div>
+      <div class="rc-check"><span class="done">&#10003;</span> Local: ${s.localModel}</div>
+      <div class="rc-check">${modelCheck}</div>
+      <div class="rc-check"><span class="done">&#10003;</span> Weight: ${s.weight}x ${s.veto?'(veto)':s.advisory?'(advisory)':''}</div>
+      <div class="rc-check"><span class="pending">&#9675;</span> Wallet: not issued</div>
+      <div class="rc-check"><span class="pending">&#9675;</span> BONA FIDE: pending</div>
+    </div>`;
+  });
+}
+initInaugural();
+
+// ── Cloud Inference Panel ──
+function toggleCloudPanel() {
+  const toggle = document.getElementById('cloud-toggle');
+  const body = document.getElementById('cloud-body');
+  toggle.classList.toggle('open');
+  body.classList.toggle('open');
+  if (body.classList.contains('open')) {
+    populateCloudGrid();
+    syncCloudMode();
+  }
+}
+
+function syncCloudMode() {
+  const mode = document.getElementById('model-mode-select').value;
+  document.getElementById('cr-mode').textContent = mode;
+}
+
+// Update cloud mode display when model toggle changes
+document.getElementById('model-mode-select').addEventListener('change', syncCloudMode);
+
+function populateCloudGrid() {
+  const grid = document.getElementById('cloud-grid');
+  if (grid.children.length > 0) return; // already populated
+
+  // CEO card
+  grid.innerHTML = `<div class="cloud-card">
+    <div class="cc-title">CEO</div>
+    <div class="cc-role">Directs — does not deliberate</div>
+    <div class="cc-model">qwen3:0.6b <span style="font-size:8px;color:var(--text3)">(local only)</span></div>
+    <div class="cc-local">cloud: none — speed over depth</div>
+    <div class="cc-provider">local &middot; sovereign</div>
+    <div class="cc-weight w10">1.0x</div>
+  </div>`;
+
+  // Soldier cards
+  SOLDIERS.forEach(s => {
+    const wCls = s.weight===1.2?'w12':s.weight===0.8?'w08':'w10';
+    const extra = s.veto?'veto':s.advisory?'advisory':'';
+    grid.innerHTML += `<div class="cloud-card ${extra}">
+      <div class="cc-title">${s.short}</div>
+      <div class="cc-role">${s.desc}</div>
+      <div class="cc-model">${s.cloudModel || 'none'}</div>
+      <div class="cc-local">local: ${s.localModel}</div>
+      <div class="cc-provider">${s.provider || 'local'} &middot; ${s.tier}</div>
+      <div class="cc-weight ${wCls}">${s.weight}x</div>
+    </div>`;
+  });
+}
+
+// Update cloud rate display after convene
+function updateCloudRate(modelReport) {
+  if (!modelReport) return;
+  const summary = modelReport.inference_summary || {};
+  const cloudCount = summary.cloud || 0;
+  const localCount = summary.local || 0;
+  document.getElementById('cr-mode').textContent = modelReport.model_mode || 'auto';
+  // Visual feedback on cloud activity
+  const statusEl = document.getElementById('cloud-status');
+  if (cloudCount > 0) {
+    statusEl.textContent = `ACTIVE (${cloudCount} cloud, ${localCount} local)`;
+    statusEl.style.color = 'var(--accent)';
+  } else if (localCount > 0) {
+    statusEl.textContent = `LOCAL ONLY (${localCount})`;
+    statusEl.style.color = 'var(--advisory)';
+  }
+}
 
 // Init
 initSeats();

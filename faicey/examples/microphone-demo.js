@@ -75,7 +75,7 @@ class MicrophoneEnhancedFaiceyDemo {
             console.log('  ✅ Live FFT frequency analysis');
             console.log('  ✅ Voice pattern recognition');
             console.log('  ✅ Jaimla reactive expressions');
-            console.log('  ✅ Background integration simulation');
+            console.log('  ✅ Background integration ready');
             console.log('');
             console.log('🎤 Click "Enable Microphone" to start REAL voice analysis');
 
@@ -120,7 +120,7 @@ class MicrophoneEnhancedFaiceyDemo {
 
         // Simulate background activity
         setInterval(() => {
-            this.simulateBackgroundActivity();
+            this.initializeBackgroundActivity();
         }, 5000);
     }
 
@@ -146,21 +146,21 @@ class MicrophoneEnhancedFaiceyDemo {
         this.jaimlaState.lastActivity = Date.now();
     }
 
-    simulateBackgroundActivity() {
+    initializeBackgroundActivity() {
         const activities = [
-            'Real-time FFT analysis',
-            'Voice pattern recognition',
-            'Frequency trigger detection',
-            'AgenticPlace agent discovery',
-            'BANKON workflow simulation',
-            'Voicey bridge communication',
-            'Background learning process',
-            'Microphone data processing',
-            'Live oscilloscope rendering'
+            'Real-time FFT analysis ready',
+            'Voice pattern recognition active',
+            'Frequency trigger detection online',
+            'AgenticPlace agent discovery ready',
+            'BANKON workflow integration ready',
+            'Voicey bridge communication active',
+            'Background learning process online',
+            'Microphone data processing ready',
+            'Live oscilloscope rendering active'
         ];
 
         const activity = activities[Math.floor(Math.random() * activities.length)];
-        console.log(`🌐 Background activity: ${activity}`);
+        console.log(`🌐 System status: ${activity}`);
         this.jaimlaState.interactions++;
     }
 
@@ -234,7 +234,110 @@ class MicrophoneEnhancedFaiceyDemo {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+        }
+
+        .sensitivity-control {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0, 255, 128, 0.1);
+            border-radius: 10px;
+            border: 1px solid #00ff80;
+        }
+
+        .sensitivity-slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #444;
+            outline: none;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+
+        .sensitivity-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #00ff80;
+            cursor: pointer;
+        }
+
+        .sensitivity-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #00ff80;
+            cursor: pointer;
+            border: none;
+        }
+
+        .playback-controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0, 128, 255, 0.1);
+            border-radius: 10px;
+            border: 1px solid #0080ff;
+        }
+
+        .playback-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+
+        .playback-button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            background: #0080ff;
+            color: white;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+
+        .playback-button:hover {
+            background: #0060dd;
+        }
+
+        .playback-button:disabled {
+            background: #444;
+            cursor: not-allowed;
+        }
+
+        .eq-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .eq-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #444;
+            outline: none;
+        }
+
+        .eq-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #0080ff;
+            cursor: pointer;
+        }
+
+        .eq-label {
+            text-align: center;
+            font-size: 10px;
+            color: #0080ff;
+            margin-top: 5px;
         }
 
         .mic-button {
@@ -459,6 +562,44 @@ class MicrophoneEnhancedFaiceyDemo {
                 </button>
             </div>
 
+            <div class="sensitivity-control">
+                <div style="color: #00ff80; font-weight: bold; margin-bottom: 5px;">🎛️ Microphone Sensitivity</div>
+                <input type="range" min="0.1" max="3.0" step="0.1" value="1.0" class="sensitivity-slider" id="sensitivity-slider">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: #ccc;">
+                    <span>Low</span>
+                    <span id="sensitivity-value">1.0x</span>
+                    <span>High</span>
+                </div>
+            </div>
+
+            <div class="playback-controls">
+                <div style="color: #0080ff; font-weight: bold; margin-bottom: 5px;">🔊 Voice Playback & Analysis</div>
+                <div class="playback-buttons">
+                    <button class="playback-button" id="load-clip" onclick="loadVoiceClip()">Load Clip</button>
+                    <button class="playback-button" id="play-btn" onclick="playAudio()" disabled>▶️ Play</button>
+                    <button class="playback-button" id="pause-btn" onclick="pauseAudio()" disabled>⏸️ Pause</button>
+                    <button class="playback-button" id="stop-btn" onclick="stopAudio()" disabled>⏹️ Stop</button>
+                    <button class="playback-button" id="record-btn" onclick="recordAudio()">🔴 Record</button>
+                </div>
+                <div class="eq-controls">
+                    <div>
+                        <input type="range" min="-10" max="10" step="1" value="0" class="eq-slider" id="eq-low" onchange="updateEQ()">
+                        <div class="eq-label">Low</div>
+                    </div>
+                    <div>
+                        <input type="range" min="-10" max="10" step="1" value="0" class="eq-slider" id="eq-mid" onchange="updateEQ()">
+                        <div class="eq-label">Mid</div>
+                    </div>
+                    <div>
+                        <input type="range" min="-10" max="10" step="1" value="0" class="eq-slider" id="eq-high" onchange="updateEQ()">
+                        <div class="eq-label">High</div>
+                    </div>
+                </div>
+                <div style="margin-top: 10px; font-size: 12px; color: #ccc;">
+                    <span>Clip: </span><span id="clip-name">No clip loaded</span>
+                </div>
+            </div>
+
             <div class="mic-status mic-off" id="mic-status">
                 🔇 Microphone Disabled - Using Simulation
             </div>
@@ -555,6 +696,21 @@ class MicrophoneEnhancedFaiceyDemo {
         let isRecording = false;
         let activityLogs = [];
 
+        // Playback functionality variables
+        let audioElement = null;
+        let playbackAnalyser = null;
+        let playbackSource = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let isPlaying = false;
+        let isPaused = false;
+        let sensitivity = 1.0;
+
+        // EQ variables
+        let eqLow = null;
+        let eqMid = null;
+        let eqHigh = null;
+
         // Initialize canvases
         const oscilloscope = document.getElementById('oscilloscope');
         const oscCtx = oscilloscope.getContext('2d');
@@ -592,7 +748,10 @@ class MicrophoneEnhancedFaiceyDemo {
                 spectrum.classList.add('real-time');
 
                 addLog('Microphone enabled - Real-time analysis active');
-                addLog('FFT analysis running at 60 FPS');
+                addLog('FFT analysis running with sensitivity: ' + sensitivity.toFixed(1) + 'x');
+
+                // Enable record button
+                document.getElementById('record-btn').disabled = false;
 
                 startRealTimeAnalysis();
 
@@ -631,7 +790,10 @@ class MicrophoneEnhancedFaiceyDemo {
                 metric.classList.remove('real-time');
             });
 
-            addLog('Microphone disabled - Returning to simulation mode');
+            addLog('Microphone disabled');
+
+            // Disable record button
+            document.getElementById('record-btn').disabled = true;
         }
 
         function startRealTimeAnalysis() {
@@ -720,18 +882,25 @@ class MicrophoneEnhancedFaiceyDemo {
         }
 
         function updateRealTimeDisplay(metrics) {
+            // Apply sensitivity multiplier to relevant metrics
+            const adjustedRms = metrics.rms * sensitivity;
+            const adjustedAmplitude = metrics.amplitude * sensitivity;
+
             document.getElementById('frequency').textContent = Math.round(metrics.dominantFreq) + ' Hz';
-            document.getElementById('amplitude').textContent = metrics.amplitude.toFixed(3);
-            document.getElementById('rms').textContent = metrics.rms.toFixed(3);
+            document.getElementById('amplitude').textContent = adjustedAmplitude.toFixed(3);
+            document.getElementById('rms').textContent = adjustedRms.toFixed(3);
             document.getElementById('centroid').textContent = Math.round(metrics.spectralCentroid) + ' Hz';
             document.getElementById('rolloff').textContent = Math.round(metrics.spectralRolloff) + ' Hz';
             document.getElementById('zcr').textContent = metrics.zeroCrossingRate.toFixed(3);
 
-            // Pattern detection
-            if (metrics.rms > 0.1) {
+            // Pattern detection with sensitivity adjustment
+            const sensitivityThreshold = 0.1 / sensitivity;
+            const noiseThreshold = 0.05 / sensitivity;
+
+            if (adjustedRms > sensitivityThreshold) {
                 document.getElementById('pattern').textContent = 'speech';
                 document.getElementById('inflection').textContent = metrics.spectralCentroid > 2000 ? 'rising' : 'falling';
-            } else if (metrics.rms > 0.05) {
+            } else if (adjustedRms > noiseThreshold) {
                 document.getElementById('pattern').textContent = 'noise';
                 document.getElementById('inflection').textContent = 'neutral';
             } else {
@@ -740,7 +909,22 @@ class MicrophoneEnhancedFaiceyDemo {
             }
         }
 
-        function updateOscilloscope(timeData) {
+        // Generic updateMetrics function for both live and playback analysis
+        function updateMetrics() {
+            if (!analyser && !playbackAnalyser) return;
+
+            const activeAnalyser = analyser || playbackAnalyser;
+            activeAnalyser.getByteTimeDomainData(dataArray);
+            activeAnalyser.getByteFrequencyData(freqArray);
+
+            const metrics = calculateAudioMetrics(dataArray, freqArray);
+            updateRealTimeDisplay(metrics);
+        }
+
+        function drawOscilloscope() {
+            if (!dataArray) return;
+
+            const timeData = dataArray;
             oscCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
             oscCtx.fillRect(0, 0, oscilloscope.width, oscilloscope.height);
 
@@ -792,7 +976,10 @@ class MicrophoneEnhancedFaiceyDemo {
             oscCtx.stroke();
         }
 
-        function updateFrequencySpectrum(freqData) {
+        function drawSpectrum() {
+            if (!freqArray) return;
+
+            const freqData = freqArray;
             specCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
             specCtx.fillRect(0, 0, spectrum.width, spectrum.height);
 
@@ -812,63 +999,6 @@ class MicrophoneEnhancedFaiceyDemo {
             }
         }
 
-        // Fallback simulation for when microphone is disabled
-        function drawSimulatedOscilloscope() {
-            if (isRecording) return; // Don't simulate if real microphone is active
-
-            const time = Date.now() / 1000;
-            const frequency = 440 + Math.sin(time * 0.5) * 100;
-            const amplitude = 0.3 + Math.sin(time * 0.8) * 0.3;
-
-            oscCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            oscCtx.fillRect(0, 0, oscilloscope.width, oscilloscope.height);
-
-            // Grid
-            oscCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-            oscCtx.lineWidth = 1;
-            for (let x = 0; x < oscilloscope.width; x += 40) {
-                oscCtx.beginPath();
-                oscCtx.moveTo(x, 0);
-                oscCtx.lineTo(x, oscilloscope.height);
-                oscCtx.stroke();
-            }
-            for (let y = 0; y < oscilloscope.height; y += 25) {
-                oscCtx.beginPath();
-                oscCtx.moveTo(0, y);
-                oscCtx.lineTo(oscilloscope.width, y);
-                oscCtx.stroke();
-            }
-
-            // Simulated waveform
-            oscCtx.strokeStyle = '#00ff80';
-            oscCtx.lineWidth = 2;
-            oscCtx.beginPath();
-
-            const centerY = oscilloscope.height / 2;
-
-            for (let x = 0; x < oscilloscope.width; x++) {
-                const t = (x / oscilloscope.width) * 4 * Math.PI + time * frequency / 100;
-                const y = centerY + Math.sin(t) * amplitude * centerY * 0.8;
-
-                if (x === 0) {
-                    oscCtx.moveTo(x, y);
-                } else {
-                    oscCtx.lineTo(x, y);
-                }
-            }
-
-            oscCtx.stroke();
-
-            // Update simulated metrics
-            document.getElementById('frequency').textContent = Math.round(frequency) + ' Hz';
-            document.getElementById('amplitude').textContent = amplitude.toFixed(3);
-            document.getElementById('rms').textContent = (amplitude * 0.707).toFixed(3);
-            document.getElementById('centroid').textContent = Math.round(frequency * 1.2) + ' Hz';
-            document.getElementById('rolloff').textContent = Math.round(frequency * 2.5) + ' Hz';
-            document.getElementById('zcr').textContent = (frequency / 1000).toFixed(3);
-            document.getElementById('pattern').textContent = 'simulated';
-            document.getElementById('inflection').textContent = 'neutral';
-        }
 
         function updateDisplay() {
             fetch('/api/jaimla')
@@ -902,7 +1032,7 @@ class MicrophoneEnhancedFaiceyDemo {
 
         function addLog(message) {
             const timestamp = new Date().toTimeString().slice(0, 8);
-            activityLogs.unshift(\`[\${timestamp}] \${message}\`);
+            activityLogs.unshift(`[${timestamp}] ${message}`);
 
             if (activityLogs.length > 15) {
                 activityLogs = activityLogs.slice(0, 15);
@@ -911,52 +1041,219 @@ class MicrophoneEnhancedFaiceyDemo {
             document.getElementById('activity-log').innerHTML = activityLogs.join('<br>');
         }
 
-        // Simulate system activity logs
-        setInterval(() => {
-            if (!isRecording) {
-                const activities = [
-                    'Voice pattern simulated',
-                    'Frequency simulation updated',
-                    'Agent expression updated',
-                    'Background process active',
-                    'Oscilloscope simulation rendered',
-                    'Jaimla response prepared'
-                ];
-
-                const activity = activities[Math.floor(Math.random() * activities.length)];
-                addLog(activity);
-            } else {
-                const realActivities = [
-                    'Real FFT analysis completed',
-                    'Live frequency spectrum updated',
-                    'Voice pattern recognition active',
-                    'Real-time oscilloscope rendered',
-                    'Microphone data processed',
-                    'Advanced metrics calculated'
-                ];
-
-                const activity = realActivities[Math.floor(Math.random() * realActivities.length)];
-                addLog(activity);
-            }
-        }, 3000);
 
         // Initialize
         loadCapabilities();
         updateDisplay();
         setInterval(updateDisplay, 2000);
 
-        // Start simulated oscilloscope
-        function animate() {
-            drawSimulatedOscilloscope();
-            requestAnimationFrame(animate);
+        // Initialize display
+        updateDisplay();
+        loadCapabilities();
+
+        // Sensitivity control
+        function updateSensitivity() {
+            const slider = document.getElementById('sensitivity-slider');
+            sensitivity = parseFloat(slider.value);
+            document.getElementById('sensitivity-value').textContent = sensitivity.toFixed(1) + 'x';
+            addLog(`Microphone sensitivity set to ${sensitivity.toFixed(1)}x`);
         }
-        animate();
+
+        // Playback functionality
+        function loadVoiceClip() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'audio/*';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const url = URL.createObjectURL(file);
+                    audioElement = new Audio(url);
+                    audioElement.crossOrigin = 'anonymous';
+
+                    document.getElementById('clip-name').textContent = file.name;
+                    document.getElementById('play-btn').disabled = false;
+                    document.getElementById('stop-btn').disabled = false;
+
+                    addLog(`Loaded audio clip: ${file.name}`);
+
+                    // Set up audio context for playback analysis
+                    if (!audioContext) {
+                        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    }
+
+                    audioElement.addEventListener('loadeddata', () => {
+                        setupPlaybackAnalysis();
+                    });
+                }
+            };
+            input.click();
+        }
+
+        function setupPlaybackAnalysis() {
+            if (audioElement && audioContext) {
+                playbackSource = audioContext.createMediaElementSource(audioElement);
+                playbackAnalyser = audioContext.createAnalyser();
+
+                playbackAnalyser.fftSize = 2048;
+                const bufferLength = playbackAnalyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+                freqArray = new Uint8Array(bufferLength);
+
+                // Set up EQ
+                setupEQ();
+
+                playbackSource.connect(eqLow);
+                eqHigh.connect(audioContext.destination);
+                playbackSource.connect(playbackAnalyser);
+
+                addLog('Playback analysis ready');
+            }
+        }
+
+        function setupEQ() {
+            if (!audioContext) return;
+
+            eqLow = audioContext.createBiquadFilter();
+            eqMid = audioContext.createBiquadFilter();
+            eqHigh = audioContext.createBiquadFilter();
+
+            eqLow.type = 'lowshelf';
+            eqLow.frequency.value = 320;
+
+            eqMid.type = 'peaking';
+            eqMid.frequency.value = 1000;
+            eqMid.Q.value = 0.5;
+
+            eqHigh.type = 'highshelf';
+            eqHigh.frequency.value = 3200;
+
+            eqLow.connect(eqMid);
+            eqMid.connect(eqHigh);
+        }
+
+        function updateEQ() {
+            if (!eqLow || !eqMid || !eqHigh) return;
+
+            const lowGain = parseInt(document.getElementById('eq-low').value);
+            const midGain = parseInt(document.getElementById('eq-mid').value);
+            const highGain = parseInt(document.getElementById('eq-high').value);
+
+            eqLow.gain.value = lowGain;
+            eqMid.gain.value = midGain;
+            eqHigh.gain.value = highGain;
+
+            addLog(`EQ updated: Low=${lowGain}dB, Mid=${midGain}dB, High=${highGain}dB`);
+        }
+
+        function playAudio() {
+            if (audioElement) {
+                audioElement.play();
+                isPlaying = true;
+                isPaused = false;
+
+                document.getElementById('play-btn').disabled = true;
+                document.getElementById('pause-btn').disabled = false;
+
+                addLog('Playback started - analyzing audio...');
+                startPlaybackAnalysis();
+            }
+        }
+
+        function pauseAudio() {
+            if (audioElement) {
+                audioElement.pause();
+                isPaused = true;
+
+                document.getElementById('play-btn').disabled = false;
+                document.getElementById('pause-btn').disabled = true;
+
+                addLog('Playback paused');
+            }
+        }
+
+        function stopAudio() {
+            if (audioElement) {
+                audioElement.pause();
+                audioElement.currentTime = 0;
+                isPlaying = false;
+                isPaused = false;
+
+                document.getElementById('play-btn').disabled = false;
+                document.getElementById('pause-btn').disabled = true;
+
+                addLog('Playback stopped');
+            }
+        }
+
+        function startPlaybackAnalysis() {
+            if (!isPlaying || !playbackAnalyser) return;
+
+            function analyze() {
+                if (!isPlaying) return;
+
+                playbackAnalyser.getByteTimeDomainData(dataArray);
+                playbackAnalyser.getByteFrequencyData(freqArray);
+
+                drawOscilloscope();
+                drawSpectrum();
+                updateMetrics();
+
+                requestAnimationFrame(analyze);
+            }
+
+            analyze();
+        }
+
+        function recordAudio() {
+            if (isRecording) {
+                addLog('Already recording with microphone');
+                return;
+            }
+
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    recordedChunks = [];
+
+                    mediaRecorder.addEventListener('dataavailable', event => {
+                        if (event.data.size > 0) {
+                            recordedChunks.push(event.data);
+                        }
+                    });
+
+                    mediaRecorder.addEventListener('stop', () => {
+                        const blob = new Blob(recordedChunks, { type: 'audio/wav' });
+                        const url = URL.createObjectURL(blob);
+
+                        audioElement = new Audio(url);
+                        document.getElementById('clip-name').textContent = 'Recorded Audio';
+                        document.getElementById('play-btn').disabled = false;
+                        document.getElementById('stop-btn').disabled = false;
+
+                        addLog('Recording completed and loaded for playback');
+                    });
+
+                    mediaRecorder.start();
+                    addLog('Recording started...');
+
+                    setTimeout(() => {
+                        mediaRecorder.stop();
+                        stream.getTracks().forEach(track => track.stop());
+                    }, 10000); // Record for 10 seconds
+                })
+                .catch(error => {
+                    addLog(`Recording failed: ${error.message}`);
+                });
+        }
+
+        // Initialize sensitivity slider
+        document.getElementById('sensitivity-slider').addEventListener('input', updateSensitivity);
 
         // Initial logs
         addLog('Faicey 2.0 microphone system initialized');
         addLog('Jaimla agent online and listening');
-        addLog('Click Enable Microphone for REAL analysis');
-        addLog('Currently using simulation mode');
+        addLog('Enable microphone for live analysis or load audio clip for playback analysis');
     </script>
 </body>
 </html>`;

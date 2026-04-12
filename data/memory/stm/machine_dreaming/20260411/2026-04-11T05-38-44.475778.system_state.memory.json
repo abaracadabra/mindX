@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-04-11T05:38:44.475778",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "machine_dreaming",
+  "content": {
+    "process_name": "machine_dream_cycle",
+    "data": {
+      "agents_dreamed": 24,
+      "insights_generated": 111,
+      "promoted_to_ltm": 111,
+      "archived": 0,
+      "cross_agent_patterns": {
+        "failure": 9,
+        "behavioral": 82,
+        "performance": 17,
+        "success": 3
+      }
+    }
+  },
+  "context": {
+    "agent_id": "machine_dreaming",
+    "domain": "machine.dreaming"
+  },
+  "tags": [
+    "machine_dream_cycle",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "b8a976a315d50257"
+}

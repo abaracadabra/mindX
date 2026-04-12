@@ -28,5 +28,41 @@
     "suggestion": "Enhance model input validation with specific checks for LLM providers",
     "justification": "Prevent incompatible or invalid inputs from causing failures in AI inference processes",
     "priority": 7
+  },
+  {
+    "target_component_path": "system",
+    "suggestion": "Install Ollama and pull required models for local AI inference",
+    "justification": "From improvement backlog",
+    "priority": 8
+  },
+  {
+    "target_component_path": "system",
+    "suggestion": "Implement fallback provider selection when primary LLM fails",
+    "justification": "From improvement backlog",
+    "priority": 7
+  },
+  {
+    "target_component_path": "system",
+    "suggestion": "Implement comprehensive input validation for API requests",
+    "justification": "From improvement backlog",
+    "priority": 9
+  },
+  {
+    "target_component_path": "system",
+    "suggestion": "Install Ollama and pull required models for local AI inference",
+    "justification": "From improvement backlog",
+    "priority": 8
+  },
+  {
+    "target_component_path": "system",
+    "suggestion": "Implement fallback provider selection when primary LLM fails",
+    "justification": "From improvement backlog",
+    "priority": 7
+  },
+  {
+    "target_component_path": "system",
+    "suggestion": "Implement comprehensive input validation for API requests",
+    "justification": "From improvement backlog",
+    "priority": 9
   }
 ]

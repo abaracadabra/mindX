@@ -82,17 +82,82 @@ SOLDIER_MODELS = {
 }
 
 # Cloud model assignments — Ollama Cloud free tier (after `ollama signin` on VPS)
-# Each soldier has a unique cloud model matched to their role and reasoning style.
+# All 20 cloud models mapped to CEO + 7 Soldiers by role fitness.
+# Primary: first choice. Fallback: if primary unavailable or rate-limited.
 # Local daemon proxies to cloud — no separate API key needed.
 SOLDIER_CLOUD_MODELS = {
     "coo_operations": "gemini-3-flash-preview",  # Speed + intelligence — operations need fast decisions
-    "cfo_finance": "qwen3.5:8b",                 # Quantitative reasoning, vision — cost calculations
+    "cfo_finance": "qwen3.5:9b",                 # Quantitative reasoning, vision — cost calculations
     "cto_technology": "qwen3-coder-next",        # Agentic coding — architecture and code review
     "ciso_security": "nemotron-3-super",         # 120B MoE (12B active) — NVIDIA safety-aligned, thinking
     "clo_legal": "devstral-small-2:24b",         # Code exploration — license/attribution pattern matching
     "cpo_product": "gemma4:31b",                 # Multimodal, vision — product evaluation across surfaces
     "cro_risk": "deepseek-v3.2",                 # Deepest reasoning — risk is multivariate analysis
 }
+
+# CEO cloud model — strategic direction requires the strongest available model
+CEO_CLOUD_MODEL = "glm-5.1"  # SOTA agentic engineering — CEO directs with full intelligence
+
+# Tiered cloud model map — 3 tiers per board member, all from Ollama cloud library:
+#   Tier 1 "local":  The model already pulled on VPS (fast, no cloud needed)
+#   Tier 2 "mid":    Next step up — cloud model matched to role (default for cloud mode)
+#   Tier 3 "max":    Biggest/deepest cloud model suited to this role (for critical decisions)
+#
+# All 20 Ollama cloud models mapped. No model left unmapped.
+BOARD_CLOUD_MAP = {
+    "ceo_agent_main": {
+        "local": "qwen3:0.6b",           # 0.6B — fast directive processing
+        "mid":   "glm-5.1",              # SOTA agentic engineering
+        "max":   "glm-5",                # 744B (40B active) — complex systems, long-horizon
+    },
+    "coo_operations": {
+        "local": "qwen3:0.6b",           # 0.6B — fast operational tempo
+        "mid":   "gemini-3-flash-preview",# Speed + intelligence at low cost
+        "max":   "ministral-3:14b",       # 14B — deepest edge model, vision + tools
+    },
+    "cfo_finance": {
+        "local": "deepseek-coder:1.3b",  # 1.3B — fastest local, calculations
+        "mid":   "qwen3.5:9b",           # 9B — quantitative reasoning, vision
+        "max":   "qwen3.5:122b",         # 122B — maximum quantitative depth
+    },
+    "cto_technology": {
+        "local": "qwen3:1.7b",           # 1.7B — architectural reasoning
+        "mid":   "qwen3-coder-next",     # Agentic coding, tool-specialized
+        "max":   "devstral-2",           # 123B — large-scale code agent
+    },
+    "ciso_security": {
+        "local": "deepseek-r1:1.5b",     # 1.5B — thinking model, careful
+        "mid":   "nemotron-3-super",     # 120B MoE (12B active) — safety-aligned
+        "max":   "qwen3-next",          # 80B — deep thinking for threat analysis
+    },
+    "clo_legal": {
+        "local": "qwen3:0.6b",           # 0.6B — compliance pattern-matching
+        "mid":   "devstral-small-2:24b", # 24B — structured analysis, vision
+        "max":   "cogito-2.1",           # 671B — deepest general reasoning
+    },
+    "cpo_product": {
+        "local": "qwen3.5:2b",           # 2B — product judgment
+        "mid":   "gemma4:31b",           # 31B — multimodal, vision, audio
+        "max":   "kimi-k2.5",           # Native multimodal agentic
+    },
+    "cro_risk": {
+        "local": "qwen3:4b",             # 4B — deepest local, risk depth
+        "mid":   "deepseek-v3.2",        # Efficient reasoning, thinking
+        "max":   "minimax-m2.7",         # Coding + agentic risk modeling
+    },
+}
+
+# Remaining cloud models available for general agent pool:
+#   nemotron-3-nano (4b, 30b) — efficient agentic, quick scans
+#   minimax-m2.5              — productivity SOTA
+#   minimax-m2                — coding and agentic workflows
+#   glm-4.7                   — advanced coding capability
+#   rnj-1 (8b)                — code + STEM, dense
+#   devstral-small-2 (24b)    — already assigned to CLO
+CLOUD_POOL = [
+    "nemotron-3-nano:30b", "minimax-m2.5", "minimax-m2",
+    "glm-4.7", "rnj-1",
+]
 
 # Soldier personas — injected into prompts for role-specific evaluation
 SOLDIER_PERSONAS = {
@@ -224,10 +289,12 @@ class Boardroom:
             "inference_summary": {"local": 0, "cloud": 0, "abstained": 0},
         }
         # CEO entry
+        ceo_tiers = BOARD_CLOUD_MAP.get("ceo_agent_main", {})
         report["members"]["ceo_agent_main"] = {
             "role": "Chief Executive Officer",
-            "assigned_local": "qwen3:0.6b",
-            "assigned_cloud": None,
+            "assigned_local": ceo_tiers.get("local", "qwen3:0.6b"),
+            "assigned_cloud": ceo_tiers.get("mid", CEO_CLOUD_MODEL),
+            "cloud_max": ceo_tiers.get("max"),
             "used": "directive_only",
             "path": "CEO does not deliberate — CEO directs",
             "weight": 1.0,
@@ -236,12 +303,14 @@ class Boardroom:
         for v in session.votes:
             local_m = SOLDIER_MODELS.get(v.soldier_id, "?")
             cloud_m = SOLDIER_CLOUD_MODELS.get(v.soldier_id, "?")
+            tiers = BOARD_CLOUD_MAP.get(v.soldier_id, {})
             used = v.provider  # e.g. "vllm/deepseek-v3.2 (cloud)" or "vllm/qwen3:1.7b"
             is_cloud = "(cloud)" in used
             report["members"][v.soldier_id] = {
                 "role": SOLDIER_PERSONAS.get(v.soldier_id, "")[:60],
                 "assigned_local": local_m,
                 "assigned_cloud": cloud_m,
+                "cloud_max": tiers.get("max"),
                 "used": used,
                 "path": "cloud" if is_cloud else "local",
                 "weight": v.weight,
@@ -315,13 +384,23 @@ class Boardroom:
             f"\"reasoning\": \"...\", \"confidence\": 0.0-1.0}}"
         )
 
-        # Select model based on mode
+        # Select model based on mode + importance tier
+        # Tier selection: routine/standard → mid, critical/constitutional → max
+        tier_map = BOARD_CLOUD_MAP.get(soldier_id, {})
         if model_mode == "local":
             model = local_model
-        elif model_mode == "cloud" and cloud_model:
-            model = cloud_model
-        else:  # auto — prefer cloud, handler falls back to local
-            model = cloud_model or local_model
+        elif model_mode == "cloud":
+            if importance in ("critical", "constitutional") and tier_map.get("max"):
+                model = tier_map["max"]
+            elif tier_map.get("mid"):
+                model = tier_map["mid"]
+            else:
+                model = cloud_model or local_model
+        else:  # auto — prefer cloud tier, handler falls back to local
+            if importance in ("critical", "constitutional") and tier_map.get("max"):
+                model = tier_map["max"]
+            else:
+                model = cloud_model or local_model
 
         t0 = time.time()
         used_model = model

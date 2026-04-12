@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-04-12T12:27:48.100362",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "id_manager_for_coordinator_agent_main",
+  "content": {
+    "process_name": "id_manager_address_derived",
+    "data": {
+      "entity_id": "coordinator_agent_main",
+      "address": "0x295927d4FacdaFAf7eC3A7E7B5f116Ce733bB3A3",
+      "source": "private_key"
+    }
+  },
+  "context": {
+    "agent_id": "id_manager_for_coordinator_agent_main"
+  },
+  "tags": [
+    "id_manager_address_derived",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "a420f15e91c033a2"
+}

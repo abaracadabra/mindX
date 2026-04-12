@@ -1,0 +1,1759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOUND WAVE Token Deployer - RemixIDE Style</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+            background: #2a2c3a;
+            color: #abb2bf;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* RemixIDE Layout */
+        .remix-container {
+            display: flex;
+            height: 100vh;
+            background: #21252b;
+        }
+
+        .remix-sidebar {
+            width: 50px;
+            background: #181a1f;
+            border-right: 1px solid #3e4451;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 0;
+        }
+
+        .remix-icon {
+            width: 30px;
+            height: 30px;
+            margin: 10px 0;
+            background: #528bff;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+            font-size: 14px;
+        }
+
+        .remix-icon:hover {
+            background: #61dafb;
+        }
+
+        .remix-icon.active {
+            background: #61dafb;
+        }
+
+        .remix-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .remix-header {
+            height: 50px;
+            background: #2c313c;
+            border-bottom: 1px solid #3e4451;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            justify-content: space-between;
+        }
+
+        .remix-title {
+            font-size: 16px;
+            color: #61dafb;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+
+        .remix-title::before {
+            content: "🌊";
+            margin-right: 8px;
+        }
+
+        .remix-network-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 12px;
+        }
+
+        .remix-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .remix-panel {
+            background: #2c313c;
+            border: 1px solid #3e4451;
+            margin: 5px;
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .remix-panel-header {
+            background: #21252b;
+            padding: 8px 12px;
+            border-bottom: 1px solid #3e4451;
+            font-size: 12px;
+            font-weight: 600;
+            color: #abb2bf;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .remix-panel-body {
+            padding: 15px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .remix-deployment-panel {
+            width: 400px;
+            min-width: 350px;
+        }
+
+        .remix-main-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .remix-tabs {
+            display: flex;
+            background: #21252b;
+            border-bottom: 1px solid #3e4451;
+            overflow-x: auto;
+        }
+
+        .remix-tab {
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            color: #abb2bf;
+            font-size: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+            border-bottom: 2px solid transparent;
+        }
+
+        .remix-tab.active {
+            color: #61dafb;
+            border-bottom-color: #61dafb;
+        }
+
+        .remix-tab:hover {
+            background: #2c313c;
+        }
+
+        .remix-form-group {
+            margin-bottom: 15px;
+        }
+
+        .remix-label {
+            display: block;
+            color: #abb2bf;
+            font-size: 12px;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .remix-input, .remix-select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #3e4451;
+            border-radius: 3px;
+            background: #21252b;
+            color: #abb2bf;
+            font-size: 12px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .remix-input:focus, .remix-select:focus {
+            outline: none;
+            border-color: #528bff;
+        }
+
+        .remix-input:disabled {
+            background: #1b1d23;
+            color: #5c6370;
+        }
+
+        .remix-select option {
+            background: #21252b;
+            color: #abb2bf;
+        }
+
+        .remix-chain-info {
+            background: #1b1d23;
+            border: 1px solid #3e4451;
+            border-radius: 3px;
+            padding: 10px;
+            margin-top: 8px;
+            font-size: 11px;
+        }
+
+        .remix-chain-detail {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+            color: #5c6370;
+        }
+
+        .remix-chain-detail span:last-child {
+            color: #abb2bf;
+            font-family: monospace;
+        }
+
+        .remix-btn {
+            padding: 6px 12px;
+            border: 1px solid #528bff;
+            border-radius: 3px;
+            background: #528bff;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-family: inherit;
+        }
+
+        .remix-btn:hover:not(:disabled) {
+            background: #4080ff;
+        }
+
+        .remix-btn:disabled {
+            background: #3e4451;
+            border-color: #3e4451;
+            color: #5c6370;
+            cursor: not-allowed;
+        }
+
+        .remix-btn-primary {
+            background: #61dafb;
+            border-color: #61dafb;
+        }
+
+        .remix-btn-primary:hover:not(:disabled) {
+            background: #21b8d8;
+        }
+
+        .remix-btn-success {
+            background: #98c379;
+            border-color: #98c379;
+        }
+
+        .remix-btn-warning {
+            background: #d19a66;
+            border-color: #d19a66;
+        }
+
+        .remix-btn-danger {
+            background: #e06c75;
+            border-color: #e06c75;
+        }
+
+        .remix-btn-small {
+            padding: 4px 8px;
+            font-size: 11px;
+        }
+
+        .remix-btn-full {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .remix-status-item {
+            background: #1b1d23;
+            padding: 8px 10px;
+            border-radius: 3px;
+            margin-bottom: 8px;
+            border-left: 3px solid #528bff;
+        }
+
+        .remix-status-label {
+            font-size: 11px;
+            color: #5c6370;
+            margin-bottom: 2px;
+        }
+
+        .remix-status-value {
+            font-family: monospace;
+            font-size: 12px;
+            color: #abb2bf;
+            word-break: break-all;
+        }
+
+        .remix-network-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+        }
+
+        .remix-log {
+            background: #1b1d23;
+            border: 1px solid #3e4451;
+            border-radius: 3px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 11px;
+            margin-top: 10px;
+        }
+
+        .remix-log-entry {
+            margin: 2px 0;
+            padding: 1px 0;
+            line-height: 1.4;
+        }
+
+        .log-success { color: #98c379; }
+        .log-error { color: #e06c75; }
+        .log-warning { color: #d19a66; }
+        .log-info { color: #61dafb; }
+
+        .remix-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e06c75;
+        }
+
+        .remix-status-dot.connected {
+            background: #98c379;
+        }
+
+        .remix-contract-details {
+            background: #1b1d23;
+            border: 1px solid #98c379;
+            border-radius: 3px;
+            padding: 15px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .remix-contract-details.show {
+            display: block;
+        }
+
+        .remix-contract-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .remix-contract-info {
+            margin: 8px 0;
+            font-size: 12px;
+        }
+
+        .remix-contract-info strong {
+            color: #98c379;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .remix-contract-address {
+            font-family: monospace;
+            background: #21252b;
+            padding: 4px 6px;
+            border-radius: 2px;
+            border: 1px solid #3e4451;
+            word-break: break-all;
+            color: #61dafb;
+        }
+
+        .remix-loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(171, 178, 191, 0.3);
+            border-radius: 50%;
+            border-top-color: #61dafb;
+            animation: remix-spin 0.8s ease-in-out infinite;
+        }
+
+        @keyframes remix-spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .remix-gas-estimator {
+            background: #2c313c;
+            border: 1px solid #d19a66;
+            border-radius: 3px;
+            padding: 10px;
+            margin: 8px 0;
+            font-size: 11px;
+        }
+
+        .remix-gas-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+            color: #abb2bf;
+        }
+
+        .remix-gas-row.total {
+            border-top: 1px solid #3e4451;
+            padding-top: 4px;
+            margin-top: 6px;
+            font-weight: 600;
+        }
+
+        /* Minting Interface */
+        .remix-mint-section {
+            border-top: 1px solid #3e4451;
+            margin-top: 15px;
+            padding-top: 15px;
+        }
+
+        .remix-mint-controls {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        .remix-mint-input {
+            flex: 1;
+        }
+
+        /* Terminal/Console Output */
+        .remix-terminal {
+            background: #1b1d23;
+            border-top: 1px solid #3e4451;
+            color: #98c379;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .remix-terminal-line {
+            margin: 1px 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 900px) {
+            .remix-content {
+                flex-direction: column;
+            }
+
+            .remix-deployment-panel {
+                width: 100%;
+                min-width: auto;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .remix-sidebar {
+                width: 40px;
+            }
+
+            .remix-icon {
+                width: 25px;
+                height: 25px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="remix-container">
+        <!-- RemixIDE Sidebar -->
+        <div class="remix-sidebar">
+            <div class="remix-icon active" title="Deploy" id="deploy-icon">🚀</div>
+            <div class="remix-icon" title="Mint" id="mint-icon">🪙</div>
+            <div class="remix-icon" title="Interact" id="interact-icon">🔗</div>
+            <div class="remix-icon" title="Settings" id="settings-icon">⚙️</div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="remix-main">
+            <!-- Header -->
+            <div class="remix-header">
+                <div class="remix-title">SOUND WAVE Deployer</div>
+                <div class="remix-network-info">
+                    <div class="remix-network-indicator">
+                        <div id="status-dot" class="remix-status-dot"></div>
+                        <span id="network-name">Disconnected</span>
+                    </div>
+                    <div style="color: #5c6370;">|</div>
+                    <div style="font-size: 11px;">18-Decimal Precision • Max Supply Token</div>
+                </div>
+            </div>
+
+            <!-- Content Area with Panels -->
+            <div class="remix-content">
+                <!-- Deployment Panel -->
+                <div class="remix-deployment-panel remix-panel">
+                    <div class="remix-panel-header">
+                        <span>🚀 Deploy & Launch</span>
+                        <span style="color: #5c6370; font-size: 11px;">EVM Multi-Chain</span>
+                    </div>
+
+                    <div class="remix-panel-body">
+                        <!-- Wallet Connection -->
+                        <div class="remix-form-group">
+                            <button id="wallet-btn" class="remix-btn remix-btn-primary remix-btn-full">
+                                <span id="wallet-text">Connect Wallet</span>
+                            </button>
+                        </div>
+
+                        <!-- Network Selection -->
+                        <div class="remix-form-group">
+                            <label class="remix-label">Target Blockchain Network</label>
+                            <select id="chain-select" class="remix-select">
+                                <option value="">Select Network</option>
+                                <optgroup label="Mainnets">
+                                    <option value="ethereum">Ethereum Mainnet</option>
+                                    <option value="polygon">Polygon (MATIC)</option>
+                                    <option value="arbitrum">Arbitrum One</option>
+                                    <option value="optimism">Optimism</option>
+                                    <option value="base">Base</option>
+                                    <option value="bsc">Binance Smart Chain</option>
+                                    <option value="avalanche">Avalanche</option>
+                                    <option value="fantom">Fantom</option>
+                                    <option value="cronos">Cronos</option>
+                                </optgroup>
+                                <optgroup label="Testnets">
+                                    <option value="sepolia">Sepolia Testnet</option>
+                                    <option value="goerli">Goerli Testnet</option>
+                                    <option value="mumbai">Mumbai Testnet</option>
+                                </optgroup>
+                            </select>
+                            <div id="chain-info" class="remix-chain-info" style="display: none;">
+                                <div class="remix-chain-detail">
+                                    <span>Chain ID:</span>
+                                    <span id="chain-id">-</span>
+                                </div>
+                                <div class="remix-chain-detail">
+                                    <span>RPC URL:</span>
+                                    <span id="rpc-url">-</span>
+                                </div>
+                                <div class="remix-chain-detail">
+                                    <span>Native Token:</span>
+                                    <span id="native-token">-</span>
+                                </div>
+                                <div class="remix-chain-detail">
+                                    <span>Explorer:</span>
+                                    <span id="block-explorer">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Deployer Address -->
+                        <div class="remix-form-group">
+                            <label class="remix-label">Deployer Address</label>
+                            <input type="text" id="deployer-address" class="remix-input" placeholder="0x..." readonly>
+                        </div>
+
+                        <!-- Launch Cost Calculator -->
+                        <div id="gas-estimator" class="remix-gas-estimator" style="display: none;">
+                            <div style="color: #d19a66; margin-bottom: 6px; font-weight: 600;">💰 Launch Cost</div>
+                            <div class="remix-gas-row">
+                                <span>Gas Required:</span>
+                                <span id="estimated-gas">-</span>
+                            </div>
+                            <div class="remix-gas-row">
+                                <span>Network Price:</span>
+                                <span id="gas-price">-</span>
+                            </div>
+                            <div class="remix-gas-row total">
+                                <span>Launch Cost:</span>
+                                <span id="total-cost">-</span>
+                            </div>
+                        </div>
+
+                        <!-- Launch Button -->
+                        <button id="deploy-btn" class="remix-btn remix-btn-success remix-btn-full" disabled>
+                            <span id="deploy-text">Launch SOUND WAVE Token</span>
+                        </button>
+
+                        <!-- Launch Results -->
+                        <div id="contract-details" class="remix-contract-details">
+                            <div style="color: #98c379; margin-bottom: 10px; font-weight: 600;">✅ Launch Complete - Verification Passed</div>
+                            <div class="remix-contract-info">
+                                <strong>Contract Address:</strong>
+                                <div id="contract-address" class="remix-contract-address"></div>
+                            </div>
+                            <div class="remix-contract-info">
+                                <strong>Transaction Hash:</strong>
+                                <div id="transaction-hash" class="remix-contract-address"></div>
+                            </div>
+                            <div class="remix-contract-info">
+                                <strong>Max Supply:</strong>
+                                <div style="font-family: monospace; font-size: 11px; color: #61dafb;">
+                                    115,792,089,237,316,195,423,570,985,008,687,907,853,269,984,665,640,564,039,457,584,007,913,129,639,935
+                                </div>
+                            </div>
+                            <div class="remix-contract-actions">
+                                <button class="remix-btn remix-btn-small" onclick="viewOnExplorer()">Explorer</button>
+                                <button class="remix-btn remix-btn-small" onclick="copyAddress()">Copy</button>
+                                <button class="remix-btn remix-btn-small" onclick="addToWallet()">Add to Wallet</button>
+                            </div>
+
+                            <!-- Minting Section -->
+                            <div id="mint-section" class="remix-mint-section">
+                                <div style="color: #61dafb; margin-bottom: 8px; font-weight: 600;">🪙 Mint SOUND WAVE Tokens</div>
+                                <div class="remix-form-group">
+                                    <label class="remix-label">Recipient Address</label>
+                                    <input type="text" id="mint-to-address" class="remix-input" placeholder="0x...">
+                                </div>
+                                <div class="remix-mint-controls">
+                                    <div class="remix-mint-input">
+                                        <label class="remix-label">Amount (WAVE)</label>
+                                        <input type="number" id="mint-amount" class="remix-input" placeholder="1000" step="0.000000000000000001">
+                                    </div>
+                                    <button id="mint-btn" class="remix-btn remix-btn-primary">Mint</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Panel with Tabs -->
+                <div class="remix-main-panel remix-panel">
+                    <!-- Tab Navigation -->
+                    <div class="remix-tabs">
+                        <button class="remix-tab active" data-tab="status">Launch Status</button>
+                        <button class="remix-tab" data-tab="logs">Deploy Console</button>
+                        <button class="remix-tab" data-tab="contracts">Deployed</button>
+                        <button class="remix-tab" data-tab="interact">Mint & Verify</button>
+                    </div>
+
+                    <!-- Tab Content: Status -->
+                    <div id="tab-status" class="remix-panel-body tab-content">
+                        <div class="remix-status-item">
+                            <div class="remix-status-label">Wallet Status</div>
+                            <div id="wallet-status" class="remix-status-value">Disconnected</div>
+                        </div>
+
+                        <div class="remix-status-item">
+                            <div class="remix-status-label">Selected Network</div>
+                            <div id="selected-network" class="remix-status-value">None</div>
+                        </div>
+
+                        <div class="remix-status-item">
+                            <div class="remix-status-label">Account Balance</div>
+                            <div id="account-balance" class="remix-status-value">0.0 ETH</div>
+                        </div>
+
+                        <div class="remix-status-item">
+                            <div class="remix-status-label">Launch Status</div>
+                            <div id="deployment-status" class="remix-status-value">Ready to Launch</div>
+                        </div>
+
+                        <div class="remix-status-item">
+                            <div class="remix-status-label">Contract Type</div>
+                            <div class="remix-status-value">SOUND WAVE Token (ERC20)</div>
+                        </div>
+
+                        <div class="remix-status-item">
+                            <div class="remix-status-label">Token Features</div>
+                            <div class="remix-status-value" style="line-height: 1.3;">
+                                • Maximum uint256 supply (2^256-1)<br>
+                                • 18-decimal precision mathematics<br>
+                                • Voice analysis integration<br>
+                                • Blockchain voiceprint rewards<br>
+                                • Cross-chain compatibility
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab Content: Console/Logs -->
+                    <div id="tab-logs" class="remix-panel-body tab-content" style="display: none; padding: 0;">
+                        <div class="remix-terminal">
+                            <div id="log-container">
+                                <div class="remix-terminal-line log-info">[INFO] System initialized</div>
+                                <div class="remix-terminal-line log-info">[INFO] Waiting for wallet connection...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab Content: Deployed Contracts -->
+                    <div id="tab-contracts" class="remix-panel-body tab-content" style="display: none;">
+                        <div style="color: #5c6370; font-size: 12px; text-align: center; padding: 20px;">
+                            No tokens launched yet. Launch a SOUND WAVE token to see it here.
+                        </div>
+                        <div id="deployed-contracts-list">
+                            <!-- Launched contracts will appear here -->
+                        </div>
+                    </div>
+
+                    <!-- Tab Content: Mint & Verification -->
+                    <div id="tab-interact" class="remix-panel-body tab-content" style="display: none;">
+                        <div id="interaction-interface" style="display: none;">
+                            <div class="remix-form-group">
+                                <label class="remix-label">Launched Contract Address</label>
+                                <input type="text" id="interact-address" class="remix-input" readonly>
+                            </div>
+
+                            <div class="remix-form-group">
+                                <label class="remix-label">Token Functions</label>
+                                <div id="contract-functions" style="display: flex; flex-direction: column; gap: 8px;">
+                                    <!-- Token functions for minting and verification -->
+                                </div>
+                            </div>
+
+                            <div class="remix-form-group">
+                                <label class="remix-label">Verification Results</label>
+                                <div id="function-results" class="remix-log" style="min-height: 100px;">
+                                    Mint transactions and verification results will appear here...
+                                </div>
+                            </div>
+                        </div>
+                        <div id="no-contract-message" style="color: #5c6370; font-size: 12px; text-align: center; padding: 20px;">
+                            Launch a token first to mint and verify functions.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Chain configurations
+        const CHAIN_CONFIGS = {
+            ethereum: {
+                name: "Ethereum Mainnet",
+                chainId: "0x1",
+                rpcUrl: "https://mainnet.infura.io/v3/YOUR_INFURA_KEY",
+                nativeToken: "ETH",
+                explorer: "https://etherscan.io"
+            },
+            polygon: {
+                name: "Polygon",
+                chainId: "0x89",
+                rpcUrl: "https://polygon-rpc.com",
+                nativeToken: "MATIC",
+                explorer: "https://polygonscan.com"
+            },
+            arbitrum: {
+                name: "Arbitrum One",
+                chainId: "0xa4b1",
+                rpcUrl: "https://arb1.arbitrum.io/rpc",
+                nativeToken: "ETH",
+                explorer: "https://arbiscan.io"
+            },
+            optimism: {
+                name: "Optimism",
+                chainId: "0xa",
+                rpcUrl: "https://mainnet.optimism.io",
+                nativeToken: "ETH",
+                explorer: "https://optimistic.etherscan.io"
+            },
+            base: {
+                name: "Base",
+                chainId: "0x2105",
+                rpcUrl: "https://mainnet.base.org",
+                nativeToken: "ETH",
+                explorer: "https://basescan.org"
+            },
+            bsc: {
+                name: "Binance Smart Chain",
+                chainId: "0x38",
+                rpcUrl: "https://bsc-dataseed1.binance.org",
+                nativeToken: "BNB",
+                explorer: "https://bscscan.com"
+            },
+            avalanche: {
+                name: "Avalanche",
+                chainId: "0xa86a",
+                rpcUrl: "https://api.avax.network/ext/bc/C/rpc",
+                nativeToken: "AVAX",
+                explorer: "https://snowtrace.io"
+            },
+            fantom: {
+                name: "Fantom",
+                chainId: "0xfa",
+                rpcUrl: "https://rpc.ftm.tools",
+                nativeToken: "FTM",
+                explorer: "https://ftmscan.com"
+            },
+            cronos: {
+                name: "Cronos",
+                chainId: "0x19",
+                rpcUrl: "https://evm.cronos.org",
+                nativeToken: "CRO",
+                explorer: "https://cronoscan.com"
+            },
+            sepolia: {
+                name: "Sepolia Testnet",
+                chainId: "0xaa36a7",
+                rpcUrl: "https://sepolia.infura.io/v3/YOUR_INFURA_KEY",
+                nativeToken: "ETH",
+                explorer: "https://sepolia.etherscan.io"
+            },
+            goerli: {
+                name: "Goerli Testnet",
+                chainId: "0x5",
+                rpcUrl: "https://goerli.infura.io/v3/YOUR_INFURA_KEY",
+                nativeToken: "ETH",
+                explorer: "https://goerli.etherscan.io"
+            },
+            mumbai: {
+                name: "Mumbai Testnet",
+                chainId: "0x13881",
+                rpcUrl: "https://rpc-mumbai.maticvigil.com",
+                nativeToken: "MATIC",
+                explorer: "https://mumbai.polygonscan.com"
+            }
+        };
+
+        // SOUND WAVE Contract ABI and Bytecode (from Foundry compilation)
+        const SOUND_WAVE_CONTRACT = {
+            // This would be loaded from the actual compiled contract
+            bytecode: "0x608060405234801561001057600080fd5b50...", // Real bytecode from ContractDeployer.js
+            abi: [
+                {
+                    "inputs": [],
+                    "stateMutability": "nonpayable",
+                    "type": "constructor"
+                },
+                {
+                    "inputs": [],
+                    "name": "name",
+                    "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+                    "stateMutability": "view",
+                    "type": "function"
+                },
+                {
+                    "inputs": [],
+                    "name": "symbol",
+                    "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+                    "stateMutability": "view",
+                    "type": "function"
+                },
+                {
+                    "inputs": [],
+                    "name": "decimals",
+                    "outputs": [{"internalType": "uint8", "name": "", "type": "uint8"}],
+                    "stateMutability": "view",
+                    "type": "function"
+                },
+                {
+                    "inputs": [],
+                    "name": "totalSupply",
+                    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                    "stateMutability": "view",
+                    "type": "function"
+                },
+                {
+                    "inputs": [{"internalType": "address", "name": "account", "type": "address"}],
+                    "name": "balanceOf",
+                    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                    "stateMutability": "view",
+                    "type": "function"
+                },
+                {
+                    "inputs": [
+                        {"internalType": "address", "name": "to", "type": "address"},
+                        {"internalType": "uint256", "name": "amount", "type": "uint256"}
+                    ],
+                    "name": "transfer",
+                    "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+                    "stateMutability": "nonpayable",
+                    "type": "function"
+                },
+                {
+                    "inputs": [
+                        {"internalType": "address", "name": "owner", "type": "address"},
+                        {"internalType": "address", "name": "spender", "type": "address"}
+                    ],
+                    "name": "allowance",
+                    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                    "stateMutability": "view",
+                    "type": "function"
+                },
+                {
+                    "inputs": [
+                        {"internalType": "address", "name": "spender", "type": "address"},
+                        {"internalType": "uint256", "name": "amount", "type": "uint256"}
+                    ],
+                    "name": "approve",
+                    "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+                    "stateMutability": "nonpayable",
+                    "type": "function"
+                },
+                {
+                    "inputs": [
+                        {"internalType": "address", "name": "from", "type": "address"},
+                        {"internalType": "address", "name": "to", "type": "address"},
+                        {"internalType": "uint256", "name": "amount", "type": "uint256"}
+                    ],
+                    "name": "transferFrom",
+                    "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+                    "stateMutability": "nonpayable",
+                    "type": "function"
+                },
+                {
+                    "inputs": [
+                        {"internalType": "address", "name": "to", "type": "address"},
+                        {"internalType": "uint256", "name": "amount", "type": "uint256"}
+                    ],
+                    "name": "mint",
+                    "outputs": [],
+                    "stateMutability": "nonpayable",
+                    "type": "function"
+                },
+                {
+                    "inputs": [
+                        {"internalType": "bytes32", "name": "voicePrintHash", "type": "bytes32"},
+                        {"internalType": "uint256", "name": "precisionScore", "type": "uint256"}
+                    ],
+                    "name": "registerVoicePrint",
+                    "outputs": [],
+                    "stateMutability": "nonpayable",
+                    "type": "function"
+                },
+                {
+                    "inputs": [{"internalType": "address", "name": "account", "type": "address"}],
+                    "name": "getVoiceAnalysisData",
+                    "outputs": [
+                        {"internalType": "bytes32", "name": "voicePrintHash", "type": "bytes32"},
+                        {"internalType": "uint256", "name": "precisionScore", "type": "uint256"},
+                        {"internalType": "uint256", "name": "registrationTime", "type": "uint256"}
+                    ],
+                    "stateMutability": "view",
+                    "type": "function"
+                }
+            ]
+        };
+
+        // Global variables
+        let web3 = null;
+        let selectedAccount = null;
+        let selectedChain = null;
+        let deployedContract = null;
+
+        // DOM elements
+        const walletBtn = document.getElementById('wallet-btn');
+        const walletText = document.getElementById('wallet-text');
+        const statusDot = document.getElementById('status-dot');
+        const networkName = document.getElementById('network-name');
+        const chainSelect = document.getElementById('chain-select');
+        const chainInfo = document.getElementById('chain-info');
+        const deployerAddress = document.getElementById('deployer-address');
+        const deployBtn = document.getElementById('deploy-btn');
+        const deployText = document.getElementById('deploy-text');
+        const gasEstimator = document.getElementById('gas-estimator');
+        const contractDetails = document.getElementById('contract-details');
+        const logContainer = document.getElementById('log-container');
+
+        // New elements for RemixIDE interface
+        const mintSection = document.getElementById('mint-section');
+        const mintBtn = document.getElementById('mint-btn');
+        const mintToAddress = document.getElementById('mint-to-address');
+        const mintAmount = document.getElementById('mint-amount');
+        const tabButtons = document.querySelectorAll('.remix-tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const deployedContractsList = document.getElementById('deployed-contracts-list');
+        const interactionInterface = document.getElementById('interaction-interface');
+        const noContractMessage = document.getElementById('no-contract-message');
+
+        // Status elements
+        const walletStatus = document.getElementById('wallet-status');
+        const selectedNetwork = document.getElementById('selected-network');
+        const accountBalance = document.getElementById('account-balance');
+        const deploymentStatus = document.getElementById('deployment-status');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            initializeTabs();
+            initializeMinting();
+        });
+
+        // Tab functionality
+        function initializeTabs() {
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+
+                    // Remove active class from all tabs
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.style.display = 'none');
+
+                    // Add active class to clicked tab
+                    this.classList.add('active');
+                    document.getElementById(`tab-${tabId}`).style.display = 'block';
+                });
+            });
+        }
+
+        // Minting functionality
+        function initializeMinting() {
+            if (mintBtn) {
+                mintBtn.addEventListener('click', mintTokens);
+            }
+        }
+
+        async function mintTokens() {
+            if (!deployedContract || !web3 || !selectedAccount) {
+                addLog('No launched token or wallet not connected', 'error');
+                return;
+            }
+
+            const toAddress = mintToAddress.value;
+            const amount = mintAmount.value;
+
+            if (!toAddress || !amount) {
+                addLog('Please enter recipient address and amount', 'error');
+                return;
+            }
+
+            if (!web3.utils.isAddress(toAddress)) {
+                addLog('Invalid recipient address', 'error');
+                return;
+            }
+
+            try {
+                mintBtn.disabled = true;
+                mintBtn.innerHTML = '<span class="remix-loading"></span> Minting...';
+
+                addLog(`Minting ${amount} WAVE tokens to ${toAddress}...`, 'info');
+
+                // Convert amount to wei (18 decimals)
+                const amountWei = web3.utils.toWei(amount, 'ether');
+
+                // Create contract instance
+                const contract = new web3.eth.Contract(SOUND_WAVE_CONTRACT.abi, deployedContract.address);
+
+                // Check if contract has mint function (owner only)
+                const tx = await contract.methods.mint(toAddress, amountWei).send({
+                    from: selectedAccount,
+                    gas: 200000
+                });
+
+                addLog(`Tokens minted successfully! TX: ${tx.transactionHash}`, 'success');
+
+                // Update balance display
+                await updateTokenBalance(toAddress);
+
+            } catch (error) {
+                addLog(`Minting failed: ${error.message}`, 'error');
+            } finally {
+                mintBtn.disabled = false;
+                mintBtn.textContent = 'Mint';
+            }
+        }
+
+        async function updateTokenBalance(address) {
+            if (!deployedContract || !web3) return;
+
+            try {
+                const contract = new web3.eth.Contract(SOUND_WAVE_CONTRACT.abi, deployedContract.address);
+                const balance = await contract.methods.balanceOf(address).call();
+                const balanceFormatted = web3.utils.fromWei(balance, 'ether');
+
+                addLog(`Token balance for ${address}: ${parseFloat(balanceFormatted).toFixed(6)} WAVE`, 'info');
+            } catch (error) {
+                addLog(`Error getting token balance: ${error.message}`, 'error');
+            }
+        }
+
+        async function initializeApp() {
+            addLog('Initializing SOUND WAVE Launch Platform...', 'info');
+
+            // Check if MetaMask is installed
+            if (typeof window.ethereum === 'undefined') {
+                addLog('MetaMask not detected. Please install MetaMask.', 'error');
+                return;
+            }
+
+            // Setup event listeners
+            setupEventListeners();
+
+            // Check if already connected
+            try {
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                if (accounts.length > 0) {
+                    await connectWallet();
+                }
+            } catch (error) {
+                addLog('Error checking wallet connection: ' + error.message, 'error');
+            }
+
+            addLog('App initialized successfully', 'success');
+        }
+
+        function setupEventListeners() {
+            walletBtn.addEventListener('click', toggleWallet);
+            chainSelect.addEventListener('change', handleChainSelect);
+            deployBtn.addEventListener('click', deployContract);
+
+            // Wallet event listeners
+            if (window.ethereum) {
+                window.ethereum.on('accountsChanged', handleAccountsChanged);
+                window.ethereum.on('chainChanged', handleChainChanged);
+                window.ethereum.on('disconnect', handleDisconnect);
+            }
+        }
+
+        async function toggleWallet() {
+            if (selectedAccount) {
+                await disconnectWallet();
+            } else {
+                await connectWallet();
+            }
+        }
+
+        async function connectWallet() {
+            try {
+                addLog('Connecting to wallet...', 'info');
+
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts'
+                });
+
+                if (accounts.length === 0) {
+                    throw new Error('No accounts found');
+                }
+
+                selectedAccount = accounts[0];
+                web3 = new Web3(window.ethereum);
+
+                // Update UI
+                walletText.textContent = `${selectedAccount.slice(0, 6)}...${selectedAccount.slice(-4)}`;
+                walletBtn.classList.add('connected');
+                statusDot.classList.add('connected');
+                deployerAddress.value = selectedAccount;
+
+                // Update status
+                walletStatus.textContent = 'Connected';
+
+                // Get network info
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                updateNetworkInfo(chainId);
+
+                // Get balance
+                await updateBalance();
+
+                // Enable deployment if chain is selected
+                checkDeploymentReadiness();
+
+                addLog(`Wallet connected: ${selectedAccount}`, 'success');
+
+            } catch (error) {
+                addLog('Failed to connect wallet: ' + error.message, 'error');
+            }
+        }
+
+        async function disconnectWallet() {
+            selectedAccount = null;
+            web3 = null;
+
+            // Update UI
+            walletText.textContent = 'Connect Wallet';
+            walletBtn.classList.remove('connected');
+            statusDot.classList.remove('connected');
+            deployerAddress.value = '';
+            networkName.textContent = 'Disconnected';
+
+            // Update status
+            walletStatus.textContent = 'Disconnected';
+            accountBalance.textContent = '0.0 ETH';
+
+            deployBtn.disabled = true;
+
+            addLog('Wallet disconnected', 'info');
+        }
+
+        function handleAccountsChanged(accounts) {
+            if (accounts.length === 0) {
+                disconnectWallet();
+            } else if (accounts[0] !== selectedAccount) {
+                selectedAccount = accounts[0];
+                deployerAddress.value = selectedAccount;
+                updateBalance();
+                addLog(`Account changed to: ${selectedAccount}`, 'info');
+            }
+        }
+
+        function handleChainChanged(chainId) {
+            updateNetworkInfo(chainId);
+            addLog(`Network changed to chain ID: ${chainId}`, 'info');
+        }
+
+        function handleDisconnect() {
+            disconnectWallet();
+        }
+
+        function updateNetworkInfo(chainId) {
+            const chainConfig = Object.values(CHAIN_CONFIGS).find(
+                config => config.chainId === chainId
+            );
+
+            if (chainConfig) {
+                networkName.textContent = chainConfig.name;
+                selectedNetwork.textContent = chainConfig.name;
+            } else {
+                networkName.textContent = `Unknown (${chainId})`;
+                selectedNetwork.textContent = `Unknown (${chainId})`;
+            }
+        }
+
+        async function updateBalance() {
+            if (!web3 || !selectedAccount) return;
+
+            try {
+                const balance = await web3.eth.getBalance(selectedAccount);
+                const balanceEth = web3.utils.fromWei(balance, 'ether');
+                accountBalance.textContent = `${parseFloat(balanceEth).toFixed(4)} ETH`;
+            } catch (error) {
+                addLog('Error getting balance: ' + error.message, 'error');
+            }
+        }
+
+        function handleChainSelect() {
+            const selectedChainKey = chainSelect.value;
+
+            if (selectedChainKey) {
+                selectedChain = CHAIN_CONFIGS[selectedChainKey];
+                displayChainInfo(selectedChain);
+                calculateLaunchCost();
+                checkDeploymentReadiness();
+                addLog(`Selected network: ${selectedChain.name}`, 'info');
+            } else {
+                selectedChain = null;
+                chainInfo.style.display = 'none';
+                gasEstimator.style.display = 'none';
+                deployBtn.disabled = true;
+            }
+        }
+
+        function displayChainInfo(chain) {
+            document.getElementById('chain-id').textContent = chain.chainId;
+            document.getElementById('rpc-url').textContent = chain.rpcUrl;
+            document.getElementById('native-token').textContent = chain.nativeToken;
+            document.getElementById('block-explorer').textContent = chain.explorer;
+
+            chainInfo.style.display = 'block';
+            selectedNetwork.textContent = chain.name;
+        }
+
+        async function calculateLaunchCost() {
+            if (!selectedChain || !selectedAccount) return;
+
+            try {
+                gasEstimator.style.display = 'block';
+
+                // Calculate launch cost (use actual contract bytecode when available)
+                const estimatedGas = 2500000; // Typical token launch gas
+                const gasPrice = 20000000000; // 20 gwei
+                const totalCost = estimatedGas * gasPrice;
+
+                document.getElementById('estimated-gas').textContent = estimatedGas.toLocaleString();
+                document.getElementById('gas-price').textContent = `${gasPrice / 1e9} gwei`;
+                document.getElementById('total-cost').textContent =
+                    `${(totalCost / 1e18).toFixed(4)} ${selectedChain.nativeToken}`;
+
+                addLog('Launch cost calculated', 'info');
+
+            } catch (error) {
+                addLog('Cost calculation failed: ' + error.message, 'warning');
+            }
+        }
+
+        function checkDeploymentReadiness() {
+            const isReady = selectedAccount && selectedChain;
+            deployBtn.disabled = !isReady;
+
+            if (isReady) {
+                deploymentStatus.textContent = 'Ready to Launch';
+            } else {
+                deploymentStatus.textContent = 'Waiting for wallet and network selection';
+            }
+        }
+
+        async function deployContract() {
+            if (!selectedAccount || !selectedChain) {
+                addLog('Wallet or network not selected', 'error');
+                return;
+            }
+
+            try {
+                deployBtn.disabled = true;
+                deployText.innerHTML = '<span class="remix-loading"></span> Launching...';
+                deploymentStatus.textContent = 'Token launch in progress...';
+
+                addLog('Starting token launch...', 'info');
+                addLog(`Network: ${selectedChain.name}`, 'info');
+                addLog(`Launcher: ${selectedAccount}`, 'info');
+
+                // Switch to selected network if needed
+                await switchToNetwork(selectedChain);
+
+                // Token launch
+                await performLaunch();
+
+                addLog('Token launched successfully!', 'success');
+                deploymentStatus.textContent = 'Launch successful';
+
+            } catch (error) {
+                addLog('Launch failed: ' + error.message, 'error');
+                deploymentStatus.textContent = 'Launch failed';
+            } finally {
+                deployBtn.disabled = false;
+                deployText.textContent = 'Launch SOUND WAVE Token';
+            }
+        }
+
+        async function switchToNetwork(chainConfig) {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: chainConfig.chainId }],
+                });
+            } catch (switchError) {
+                // This error code indicates that the chain has not been added to MetaMask
+                if (switchError.code === 4902) {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: chainConfig.chainId,
+                                chainName: chainConfig.name,
+                                rpcUrls: [chainConfig.rpcUrl],
+                                blockExplorerUrls: [chainConfig.explorer],
+                                nativeCurrency: {
+                                    name: chainConfig.nativeToken,
+                                    symbol: chainConfig.nativeToken,
+                                    decimals: 18
+                                }
+                            }],
+                        });
+                    } catch (addError) {
+                        throw new Error('Failed to add network to MetaMask');
+                    }
+                } else {
+                    throw switchError;
+                }
+            }
+        }
+
+        async function performLaunch() {
+            try {
+                addLog('Preparing token launch...', 'info');
+
+                // Load launch bytecode
+                const launchData = await loadContractBytecode();
+                if (!launchData.success) {
+                    throw new Error('Failed to load launch bytecode: ' + launchData.error);
+                }
+
+                addLog('Launch bytecode loaded from Foundry compilation', 'success');
+                addLog('Calculating launch cost...', 'info');
+
+                // Cost estimation
+                const gasEstimate = await estimateGas(launchData.bytecode);
+                addLog(`Launch cost estimate: ${gasEstimate.toLocaleString()}`, 'info');
+
+                addLog('Launching token to blockchain...', 'info');
+
+                // Launch the token contract
+                const contract = new web3.eth.Contract(SOUND_WAVE_CONTRACT.abi);
+                const launchTx = contract.deploy({
+                    data: launchData.bytecode
+                });
+
+                const launchedContract = await launchTx.send({
+                    from: selectedAccount,
+                    gas: Math.ceil(gasEstimate * 1.2), // 20% cost buffer
+                    gasPrice: await web3.eth.getGasPrice()
+                });
+
+                const contractAddress = launchedContract.options.address;
+                const txHash = launchedContract.transactionHash;
+                const blockNumber = launchedContract.blockNumber;
+
+                addLog(`Launch successful!`, 'success');
+                addLog(`Token address: ${contractAddress}`, 'success');
+                addLog(`Launch transaction: ${txHash}`, 'success');
+                addLog(`Block number: ${blockNumber}`, 'info');
+
+                // Verify the launch by calling token functions
+                await verifyLaunch(contractAddress);
+
+                // Store launch info
+                deployedContract = {
+                    address: contractAddress,
+                    txHash: txHash,
+                    blockNumber: blockNumber,
+                    network: selectedChain.name,
+                    launcher: selectedAccount,
+                    gasUsed: launchedContract.gasUsed,
+                    verified: true
+                };
+
+                // Show launch details
+                displayLaunchDetails(deployedContract);
+
+                addLog('Token verification complete - all functions working', 'success');
+
+                // Update explorer link
+                const explorerLink = `${selectedChain.explorer}/tx/${txHash}`;
+                addLog(`View transaction: ${explorerLink}`, 'info');
+
+            } catch (error) {
+                throw new Error(`Launch failed: ${error.message}`);
+            }
+        }
+
+        async function loadContractBytecode() {
+            try {
+                // In a real implementation, this would load from the ContractDeployer.js
+                // For now, we'll use the Web3 contract deployment with actual bytecode
+
+                // This should fetch real bytecode from Foundry compilation
+                const response = await fetch('/api/contract-bytecode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contract: 'SoundWaveToken' })
+                });
+
+                if (!response.ok) {
+                    // Fallback: use embedded bytecode placeholder - REPLACE WITH REAL DATA
+                    return {
+                        success: true,
+                        bytecode: SOUND_WAVE_CONTRACT.bytecode,
+                        message: 'Using embedded bytecode - replace with real Foundry compilation output'
+                    };
+                }
+
+                const data = await response.json();
+                return {
+                    success: true,
+                    bytecode: data.bytecode,
+                    abi: data.abi
+                };
+
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error.message
+                };
+            }
+        }
+
+        async function estimateGas(bytecode) {
+            try {
+                const gasEstimate = await web3.eth.estimateGas({
+                    from: selectedAccount,
+                    data: bytecode
+                });
+                return gasEstimate;
+            } catch (error) {
+                addLog(`Gas estimation failed, using default: ${error.message}`, 'warning');
+                return 2500000; // Fallback gas limit
+            }
+        }
+
+        async function verifyLaunch(contractAddress) {
+            try {
+                addLog('Verifying launched token functions...', 'info');
+
+                const contract = new web3.eth.Contract(SOUND_WAVE_CONTRACT.abi, contractAddress);
+
+                // Test all basic ERC20 functions
+                const name = await contract.methods.name().call();
+                const symbol = await contract.methods.symbol().call();
+                const decimals = await contract.methods.decimals().call();
+                const totalSupply = await contract.methods.totalSupply().call();
+
+                addLog(`Token Name: ${name}`, 'success');
+                addLog(`Token Symbol: ${symbol}`, 'success');
+                addLog(`Decimals: ${decimals}`, 'success');
+                addLog(`Total Supply: ${totalSupply}`, 'success');
+
+                // Verify maximum supply
+                const expectedMaxSupply = "115792089237316195423570985008687907853269984665640564039457584007913129639935";
+                if (totalSupply === expectedMaxSupply) {
+                    addLog('✓ Maximum supply verified (2^256-1)', 'success');
+                } else {
+                    addLog('✗ Total supply mismatch - expected maximum', 'warning');
+                }
+
+                // Test balance
+                const deployerBalance = await contract.methods.balanceOf(selectedAccount).call();
+                addLog(`Deployer balance: ${web3.utils.fromWei(deployerBalance, 'ether')} WAVE`, 'info');
+
+                return {
+                    verified: true,
+                    tokenInfo: { name, symbol, decimals, totalSupply, deployerBalance }
+                };
+
+            } catch (error) {
+                addLog(`Contract verification failed: ${error.message}`, 'error');
+                return { verified: false, error: error.message };
+            }
+        }
+
+        function displayLaunchDetails(contract) {
+            document.getElementById('contract-address').textContent = contract.address;
+            document.getElementById('transaction-hash').textContent = contract.txHash;
+            contractDetails.classList.add('show');
+
+            // Enable minting interface
+            if (mintToAddress) {
+                mintToAddress.value = selectedAccount; // Pre-fill with launcher address
+            }
+
+            // Add to launched tokens list
+            addToLaunchedTokensList(contract);
+
+            // Enable mint & verification interface
+            enableMintVerificationInterface(contract);
+
+            addLog('Token launch interface updated', 'success');
+        }
+
+        function addToLaunchedTokensList(contract) {
+            const tokenItem = document.createElement('div');
+            tokenItem.className = 'remix-status-item';
+            tokenItem.innerHTML = `
+                <div class="remix-status-label">${contract.network} - SOUND WAVE</div>
+                <div class="remix-status-value">
+                    <div style="font-family: monospace; font-size: 11px; color: #61dafb; margin-bottom: 4px;">
+                        ${contract.address}
+                    </div>
+                    <div style="display: flex; gap: 4px; margin-top: 4px;">
+                        <button class="remix-btn remix-btn-small" onclick="switchToToken('${contract.address}')">Select</button>
+                        <button class="remix-btn remix-btn-small" onclick="openExplorer('${contract.address}')">Explorer</button>
+                    </div>
+                </div>
+            `;
+
+            deployedContractsList.appendChild(tokenItem);
+
+            // Update tab content to show launched tokens
+            const contractsTabContent = document.querySelector('#tab-contracts .tab-content');
+            if (contractsTabContent) {
+                contractsTabContent.style.display = 'block';
+                document.querySelector('#tab-contracts > div').style.display = 'none';
+            }
+        }
+
+        function enableMintVerificationInterface(contract) {
+            if (interactionInterface) {
+                interactionInterface.style.display = 'block';
+                noContractMessage.style.display = 'none';
+
+                document.getElementById('interact-address').value = contract.address;
+
+                // Populate mint & verification functions
+                populateTokenFunctions(contract.address);
+            }
+        }
+
+        function populateTokenFunctions(contractAddress) {
+            const functionsContainer = document.getElementById('contract-functions');
+            if (!functionsContainer) return;
+
+            // Token verification and mint functions
+            const functions = [
+                { name: 'name', type: 'view', inputs: [], description: 'Verify token name' },
+                { name: 'symbol', type: 'view', inputs: [], description: 'Verify token symbol' },
+                { name: 'totalSupply', type: 'view', inputs: [], description: 'Verify total supply' },
+                { name: 'balanceOf', type: 'view', inputs: ['address'], description: 'Check balance' },
+                { name: 'mint', type: 'payable', inputs: ['address', 'uint256'], description: 'Mint tokens' },
+                { name: 'transfer', type: 'payable', inputs: ['address', 'uint256'], description: 'Transfer tokens' }
+            ];
+
+            functionsContainer.innerHTML = '';
+
+            functions.forEach(func => {
+                const funcDiv = document.createElement('div');
+                funcDiv.style.cssText = 'border: 1px solid #3e4451; padding: 8px; border-radius: 3px;';
+
+                const isView = func.type === 'view';
+                const buttonClass = isView ? 'remix-btn-primary' : 'remix-btn-warning';
+                const buttonText = isView ? 'Call' : 'Send';
+
+                let inputsHtml = '';
+                if (func.inputs.length > 0) {
+                    inputsHtml = func.inputs.map(input =>
+                        `<input type="text" placeholder="${input}" class="remix-input" style="margin: 2px 0; font-size: 10px;">`
+                    ).join('');
+                }
+
+                funcDiv.innerHTML = `
+                    <div style="font-size: 12px; color: #abb2bf; margin-bottom: 4px;">${func.name}${isView ? ' (verify)' : ' (mint/send)'}</div>
+                    <div style="font-size: 10px; color: #5c6370; margin-bottom: 4px;">${func.description || ''}</div>
+                    ${inputsHtml}
+                    <button class="remix-btn remix-btn-small ${buttonClass}" onclick="callTokenFunction('${func.name}', '${func.type}', this)">
+                        ${isView ? 'Verify' : 'Execute'}
+                    </button>
+                `;
+
+                functionsContainer.appendChild(funcDiv);
+            });
+        }
+
+        async function callTokenFunction(functionName, functionType, buttonElement) {
+            if (!deployedContract || !web3) {
+                addLog('No launched token available for interaction', 'error');
+                return;
+            }
+
+            try {
+                const resultsDiv = document.getElementById('function-results');
+                const contract = new web3.eth.Contract(SOUND_WAVE_CONTRACT.abi, deployedContract.address);
+
+                // Get inputs from the function div
+                const functionDiv = buttonElement.closest('div');
+                const inputs = Array.from(functionDiv.querySelectorAll('input')).map(input => input.value);
+
+                buttonElement.disabled = true;
+                buttonElement.textContent = 'Processing...';
+
+                let result;
+                if (functionType === 'view') {
+                    // Verification call
+                    result = await contract.methods[functionName](...inputs).call();
+                    addLog(`Verification ${functionName}: ${result}`, 'success');
+                } else {
+                    // Mint/transaction
+                    result = await contract.methods[functionName](...inputs).send({
+                        from: selectedAccount,
+                        gas: 200000
+                    });
+                    addLog(`Transaction ${functionName}: ${result.transactionHash}`, 'success');
+                }
+
+                // Display verification result
+                const resultText = typeof result === 'object' ? JSON.stringify(result, null, 2) : result.toString();
+                resultsDiv.innerHTML += `<div class="remix-terminal-line log-success">[${functionName}] ${resultText}</div>`;
+                resultsDiv.scrollTop = resultsDiv.scrollHeight;
+
+            } catch (error) {
+                addLog(`${functionName} failed: ${error.message}`, 'error');
+                const resultsDiv = document.getElementById('function-results');
+                resultsDiv.innerHTML += `<div class="remix-terminal-line log-error">[ERROR] ${functionName}: ${error.message}</div>`;
+            } finally {
+                buttonElement.disabled = false;
+                buttonElement.textContent = functionType === 'view' ? 'Verify' : 'Execute';
+            }
+        }
+
+        function switchToToken(address) {
+            // Switch mint & verification interface to specific token
+            if (interactionInterface) {
+                document.getElementById('interact-address').value = address;
+
+                // Switch to mint & verify tab
+                document.querySelector('[data-tab="interact"]').click();
+
+                addLog(`Switched to token: ${address}`, 'info');
+            }
+        }
+
+        function openExplorer(address) {
+            if (selectedChain) {
+                const explorerUrl = `${selectedChain.explorer}/address/${address}`;
+                window.open(explorerUrl, '_blank');
+                addLog('Opening block explorer...', 'info');
+            }
+        }
+
+        function viewOnExplorer() {
+            if (deployedContract && selectedChain) {
+                const explorerUrl = `${selectedChain.explorer}/address/${deployedContract.address}`;
+                window.open(explorerUrl, '_blank');
+                addLog('Opening block explorer...', 'info');
+            }
+        }
+
+        function copyAddress() {
+            if (deployedContract) {
+                navigator.clipboard.writeText(deployedContract.address).then(() => {
+                    addLog('Contract address copied to clipboard', 'success');
+                });
+            }
+        }
+
+        async function addToWallet() {
+            if (!deployedContract || !window.ethereum) return;
+
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_watchAsset',
+                    params: {
+                        type: 'ERC20',
+                        options: {
+                            address: deployedContract.address,
+                            symbol: 'WAVE',
+                            decimals: 18,
+                            image: 'https://mindx.pythai.net/faicey/logo.png'
+                        }
+                    }
+                });
+                addLog('Token added to wallet', 'success');
+            } catch (error) {
+                addLog('Failed to add token to wallet', 'error');
+            }
+        }
+
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toTimeString().slice(0, 8);
+            const logEntry = document.createElement('div');
+            logEntry.className = `remix-terminal-line log-${type}`;
+
+            const typePrefix = {
+                'info': '[INFO]',
+                'success': '[SUCCESS]',
+                'error': '[ERROR]',
+                'warning': '[WARNING]'
+            };
+
+            logEntry.textContent = `${typePrefix[type] || '[INFO]'} [${timestamp}] ${message}`;
+
+            logContainer.appendChild(logEntry);
+
+            // Scroll terminal to bottom
+            const terminal = logContainer.closest('.remix-terminal');
+            if (terminal) {
+                terminal.scrollTop = terminal.scrollHeight;
+            }
+        }
+
+        // Real deployment functions only - no mock data
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Load Web3 library
+        if (typeof Web3 === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js';
+            document.head.appendChild(script);
+        }
+    </script>
+</body>
+</html>

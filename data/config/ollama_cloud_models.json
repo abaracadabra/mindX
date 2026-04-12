@@ -7,7 +7,7 @@
     {"name": "glm-5.1", "params": null, "tags": ["tools", "thinking", "cloud"], "best_for": "Agentic engineering, strongest coding (SOTA SWE-Bench Pro)", "pulls": 24700},
     {"name": "gemma4", "params": "26B, 31B", "tags": ["vision", "tools", "thinking", "audio", "cloud"], "best_for": "Frontier multimodal, reasoning", "pulls": 2500000},
     {"name": "minimax-m2.7", "params": null, "tags": ["tools", "thinking", "cloud"], "best_for": "Coding, productivity workflows", "pulls": 65300},
-    {"name": "qwen3.5", "params": "0.8B-122B", "tags": ["vision", "tools", "thinking", "cloud"], "best_for": "General multimodal, 58 variants", "pulls": 5800000},
+    {"name": "qwen3.5", "params": "0.8B, 2B, 4B, 9B, 27B, 35B, 122B", "tags": ["vision", "tools", "thinking", "cloud"], "best_for": "General multimodal, 58 variants (no 8B — sizes are 0.8/2/4/9/27/35/122)", "pulls": 5800000},
     {"name": "qwen3-coder-next", "params": null, "tags": ["tools", "cloud"], "best_for": "Agentic coding, local dev", "pulls": 1000000},
     {"name": "ministral-3", "params": "3B, 8B, 14B", "tags": ["vision", "tools", "cloud"], "best_for": "Edge deployment across hardware", "pulls": 920400},
     {"name": "devstral-small-2", "params": "24B", "tags": ["vision", "tools", "cloud"], "best_for": "Code exploration, multi-file editing", "pulls": 768500},
@@ -35,15 +35,17 @@
     {"name": "gemma3", "params": "270M-27B", "tags": ["vision", "cloud"], "best_for": "Single GPU capable, vision", "pulls": 35400000}
   ],
   "boardroom_assignments": {
-    "ceo_agent_main": {"local": "qwen3:0.6b", "cloud": null, "role": "Convener — does not deliberate"},
-    "coo_operations": {"local": "qwen3:0.6b", "cloud": "gemini-3-flash-preview", "role": "Speed for operations"},
-    "cfo_finance": {"local": "deepseek-coder:1.3b", "cloud": "qwen3.5:8b", "role": "Quantitative depth"},
-    "cto_technology": {"local": "qwen3:1.7b", "cloud": "qwen3-coder-next", "role": "Agentic coding architect"},
-    "ciso_security": {"local": "deepseek-r1:1.5b", "cloud": "nemotron-3-super", "role": "Safety-aligned MoE, 1.2x veto"},
-    "clo_legal": {"local": "qwen3:0.6b", "cloud": "devstral-small-2:24b", "role": "Structured compliance analysis"},
-    "cpo_product": {"local": "qwen3.5:2b", "cloud": "gemma4:31b", "role": "Multimodal product evaluation"},
-    "cro_risk": {"local": "qwen3:4b", "cloud": "deepseek-v3.2", "role": "Deepest reasoning, 1.2x veto"}
+    "_note": "3 tiers per member. Tier 1=local (on VPS). Tier 2=cloud mid (routine/standard). Tier 3=cloud max (critical/constitutional).",
+    "ceo_agent_main": {"tier1": "qwen3:0.6b", "tier2": "glm-5.1", "tier3": "glm-5", "role": "Strategic direction — SOTA to 744B"},
+    "coo_operations": {"tier1": "qwen3:0.6b", "tier2": "gemini-3-flash-preview", "tier3": "ministral-3:14b", "role": "Speed → edge depth"},
+    "cfo_finance": {"tier1": "deepseek-coder:1.3b", "tier2": "qwen3.5:9b", "tier3": "qwen3.5:122b", "role": "Quantitative → max depth"},
+    "cto_technology": {"tier1": "qwen3:1.7b", "tier2": "qwen3-coder-next", "tier3": "devstral-2", "role": "Architecture → 123B code agent"},
+    "ciso_security": {"tier1": "deepseek-r1:1.5b", "tier2": "nemotron-3-super", "tier3": "qwen3-next", "role": "Safety MoE → 80B deep thinking"},
+    "clo_legal": {"tier1": "qwen3:0.6b", "tier2": "devstral-small-2:24b", "tier3": "cogito-2.1", "role": "Structured → 671B reasoning"},
+    "cpo_product": {"tier1": "qwen3.5:2b", "tier2": "gemma4:31b", "tier3": "kimi-k2.5", "role": "Multimodal → native agentic"},
+    "cro_risk": {"tier1": "qwen3:4b", "tier2": "deepseek-v3.2", "tier3": "minimax-m2.7", "role": "Reasoning → agentic risk modeling"}
   },
+  "cloud_pool": ["nemotron-3-nano:30b", "minimax-m2.5", "minimax-m2", "glm-4.7", "rnj-1"],
   "local_models_on_vps": [
     {"name": "qwen3:4b", "size_gb": 2.5},
     {"name": "deepseek-coder:1.3b", "size_gb": 0.8},

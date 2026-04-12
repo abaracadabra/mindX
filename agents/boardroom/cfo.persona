@@ -21,9 +21,9 @@
   },
   "inference": {
     "local_model": "deepseek-coder:1.3b",
-    "cloud_model": "ministral-3:3b",
+    "cloud_model": "qwen3.5:9b",
     "provider": "groq",
-    "reasoning": "Fastest model — calculations over contemplation"
+    "reasoning": "Fastest local — quantitative reasoning. Cloud: qwen3.5 9B for depth."
   },
   "boardroom": {
     "evaluates": "cost/benefit ratio, budget impact, treasury sustainability",

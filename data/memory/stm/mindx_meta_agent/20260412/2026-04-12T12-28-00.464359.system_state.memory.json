@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-04-12T12:28:00.464359",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "process_name": "mindxagent_identity_loaded",
+    "data": {
+      "source": "docs/INDEX.md",
+      "content": "# MindX Documentation Index\n\n## Comprehensive Documentation Index\n\nThis document provides a complete index of all documentation in the mindX system, organized by category and component type.\n\n**Last Updated**: 2026-04-03\n**Total Documentation Files**: 194+\n**CORE Documentation**: Complete 15-component analysis \u2705\n**Agent Documentation**: 34+\n**Tool Documentation**: 29+\n**DAIO Documentation**: 15 files covering 12 core + modular contracts \u2705\n**Production Ready**: \u2705 Enterprise-grade deployment and security documentation complete  \n\n---\n\n## \ud83c\udf10 mindX API (read the docs)\n\nmindX provides an API for agents, UIs, and external systems. When the backend is running (default port 8000):\n\n- **Interactive docs (Swagger UI):** [http://localhost:8000/docs](http://localhost:8000/docs)\n- **API reference:** **[API.md](API.md)** \u2014 base URL, route groups, AgenticPlace connection, connecting mindX to Ollama\n\nAgenticPlace uses mindX as its provider; see [AgenticPlace_Deep_Dive.md](AgenticPlace_Deep_Dive.md) and [API.md](API.md).\n\n---\n\n## \ud83d\udcca Monitoring and Rate Control (both directions)\n\nWhether mindX is **ingesting**, **providing inference**, or **services**, monitoring and rate control are essential in **both directions** (inbound and outbound). Actual network and data metrics are in scientific units (ms, bytes, req/min).\n\n- **Doc:** **[monitoring_rate_control.md](monitoring_rate_control.md)** \u2014 bidirectional monitoring, scientific metrics (latency ms, payload bytes, throughput req/s and req/min), where they are collected (inbound middleware, outbound limiters, PerformanceMonitor)\n- **Inbound API:** `GET /api/monitoring/inbound` \u2014 inbound request metrics (latency_ms, request/response bytes, requests_per_minute, rate_limit_rejects)\n- **Outbound:** `llm/rate_limiter.py`, `api/ollama/ollama_url.py` and other provider APIs expose `get_metrics()`; see [rate_limiting_optimization.md](rate_limiting_optimization.md)\n\n---\n\n## \ud83c\udfdb\ufe0f mindX + DAIO Integration\n\n**mindX is enhanced with DAIO (Decentralized Autonomous Intelligence Organization)** - a comprehensive blockchain-native governance and economic layer that enables autonomous agent coordination with cryptographic sovereignty.\n\n- **Complete Integration**: [DAIO Documentation Index](../daio/docs/INDEX.md) - 15 documentation files covering 12 smart contracts\n- **Governance Model**: Hybrid human-AI consensus (66.67% human + 33.33% AI weighted voting)\n- **Economic Framework**: Multi-project treasury with 15% diversification and tithe\n- **Agent Identity**: IDNFT and SoulBadger systems for cryptographic agent identity\n- **Constitutional Enforcement**: Immutable governance rules via smart contracts\n\n**Key DAIO Integration Points**:\n- **IDManagerAgent** enhanced with IDNFT blockchain identity\n- **Governance participation** via knowledge-weighted AI agent voting\n- **Treasury integration** for autonomous funding and economic operations\n- **Constitutional enforcement** for governance rule compliance\n\n---\n\n## \ud83d\udcda Documentation Categories\n\n### \ud83e\udd16 Agent Documentation\n\nAll agent documentation is organized in the `agents/` folder structure. See [agents/index.md](../agents/index.md) for the complete agent registry.\n\n#### \ud83e\udde0 CORE System Documentation (15 Foundational Components)\n\n**Primary CORE References:**\n- **[CORE.md](CORE.md)** - \u2705 **COMPLETE CORE ARCHITECTURE** - Definitive technical reference for all 15 CORE components\n- **[CORE_AUDIT_SUMMARY.md](CORE_AUDIT_SUMMARY.md)** - Complete audit results and CORE analysis summary\n- **[ORCHESTRATION.md](ORCHESTRATION.md)** - Updated with accurate CORE startup sequence and dependencies\n- **[AGENTS.md](AGENTS.md)** - Complete agent registry with CORE vs Specialized classification\n\n**CORE Component Documentation:**\n\n*Meta-Orchestration:*\n- **MindXAgent** (`agents/core/mindXagent.py`) - Meta-orchestrator with complete system understanding (~149KB)\n\n*Cognitive Architecture:*\n- **[BDI Agent](agents/bdi_agent.md)** - Core reasoning engine with Belief-Desire-Intention architecture (~64KB)\n- **[AGInt Agent](agint.md)** - P-O-D-A cognitive loop orchestrator (~32KB)\n- **[Belief System](belief_system.md)** - Singleton shared knowledge store with confidence scoring (~8KB)\n- **ReasoningAgent** - Deductive/inductive reasoning engine\n\n*Infrastructure Services:*\n- **CoordinatorAgent** - Central service bus with pub/sub system (~56KB)\n- **MemoryAgent** - Persistent memory with STM/LTM promotion (~53KB)\n- **[ID Manager Agent](agents/id_manager_agent.md)** - Cryptographic identity ledger (~16KB)\n- **GuardianAgent** - Security infrastructure and access control (~16KB)\n- **SessionManager** - Session lifecycle management\n\n*Orchestration Layer:*\n- **MastermindAgent** - Strategic control and AION directive management (~41KB)\n- **StartupAgent** - System bootstrap controller (~83KB)\n- **SystemStateTracker** - State management and event tracking\n\n**Total CORE**: ~582KB of foundational code enabling all system functionality\n\n#### Agent Implementations (agents/)\n\n- **[Guardian Agent](agents/guard",
+      "loaded_at": 1776022080.4643512,
+      "key_points": [
+        "MindX Agent is the meta-agent that understands all agents",
+        "Serves as execution mind of the G\u00f6del machine",
+        "Orchestrates self-improvement through SEA, BDI, Mastermind",
+        "Subservient to higher intelligence",
+        "Maintains comprehensive knowledge of all agents"
+      ]
+    }
+  },
+  "context": {
+    "agent_id": "mindx_meta_agent",
+    "source": "INDEX.md"
+  },
+  "tags": [
+    "mindxagent_identity_loaded",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "2b8ab1438e0b7942"
+}

@@ -21,9 +21,10 @@
   },
   "inference": {
     "local_model": "qwen3:0.6b",
-    "cloud_model": null,
-    "provider": null,
-    "reasoning": "CEO needs speed not depth — delegates heavy reasoning to soldiers"
+    "cloud_model": "glm-5.1",
+    "max_model": "glm-5",
+    "provider": "ollama",
+    "reasoning": "Tier 1: qwen3:0.6b (local speed). Tier 2: glm-5.1 (SOTA agentic). Tier 3: glm-5 (744B/40B active, long-horizon)."
   },
   "authority": {
     "tier": "sovereign",

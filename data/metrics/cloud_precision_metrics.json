@@ -1,0 +1,22 @@
+{
+  "global_total_requests": 1,
+  "global_total_eval_tokens": 144,
+  "global_total_prompt_tokens": 81,
+  "global_total_eval_duration_ns": 0,
+  "global_requests_with_actuals": 1,
+  "models": {
+    "gpt-oss:120b-cloud": {
+      "total_requests": 1,
+      "successful_requests": 1,
+      "failed_requests": 0,
+      "total_eval_count": 144,
+      "total_prompt_eval_count": 81,
+      "requests_with_actual_counts": 1,
+      "total_eval_duration_ns": 0,
+      "total_prompt_eval_duration_ns": 0,
+      "total_load_duration_ns": 0,
+      "first_request_ns": 1775940980752367862,
+      "last_request_ns": 1775940980752367862
+    }
+  }
+}

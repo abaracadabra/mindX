@@ -28,43 +28,47 @@ INFERENCE
     backoff: exponential on 429, max 600s
   precision: 18 decimal places (cypherpunk2048 standard)
 
-CLOUD MODELS (as of 2026-04-12)
-  # Reasoning & General Purpose
-  - deepseek-v3.2         tools, thinking         Efficient reasoning — deepest cloud model
-  - cogito-2.1            671B                    General purpose (MIT license)
-  - qwen3.5               0.8B-122B              Multimodal, vision, tools, thinking
-  - qwen3-next            80B                    Efficient reasoning, parameter efficient
-  - glm-5                 744B (40B active)       Complex systems engineering
-  - glm-5.1               —                      Agentic engineering, strongest coding
-  - kimi-k2.5             —                      Native multimodal agentic
+CLOUD MODELS (20 models, verified 2026-04-12 via ollama.com/search?c=cloud)
+  #  Model                   Params               Tags                          Best For
+  01 glm-5.1                 —                    tools, thinking               SOTA agentic engineering (SWE-Bench Pro)
+  02 gemma4                  26B, 31B             vision, tools, thinking, audio Frontier multimodal reasoning
+  03 minimax-m2.7            —                    tools, thinking               Coding, agentic workflows
+  04 qwen3.5                 0.8B,2B,4B,9B,27B,35B,122B  vision, tools, thinking  General multimodal (NO 8B — use 9B)
+  05 qwen3-coder-next        —                    tools                         Agentic coding, tool-specialized
+  06 ministral-3             3B, 8B, 14B          vision, tools                 Edge deployment across hardware
+  07 devstral-small-2        24B                  vision, tools                 Code exploration, multi-file editing
+  08 nemotron-3-super        120B (12B active)    tools, thinking               NVIDIA MoE, safety-aligned
+  09 qwen3-next              80B                  tools, thinking               Parameter efficiency, deep thinking
+  10 glm-5                   744B (40B active)    tools, thinking               Complex systems, long-horizon
+  11 kimi-k2.5               —                    vision, tools, thinking       Native multimodal agentic
+  12 rnj-1                   8B                   tools                         Code + STEM, dense
+  13 nemotron-3-nano          4B, 30B              tools, thinking               Efficient agentic models
+  14 minimax-m2.5            —                    tools, thinking               Productivity SOTA
+  15 devstral-2              123B                 tools                         Large-scale code agent
+  16 cogito-2.1              671B                 cloud                         General purpose (MIT license)
+  17 gemini-3-flash-preview  —                    vision, tools, thinking       Speed + intelligence at low cost
+  18 glm-4.7                 —                    tools, thinking               Advanced coding capability
+  19 deepseek-v3.2           —                    tools, thinking               Efficient reasoning
+  20 minimax-m2              —                    tools, thinking               Coding and agentic workflows
 
-  # Coding & Development
-  - qwen3-coder-next      —                      Agentic coding, tool-specialized
-  - devstral-small-2      24B                    Code exploration, multi-file editing
-  - devstral-2            123B                   Large-scale code agent
-  - rnj-1                 8B                     Code + STEM, dense
-  - minimax-m2.7          —                      Coding, productivity workflows
-  - glm-4.7               —                      Advanced coding capability
+BOARDROOM MODEL ASSIGNMENTS — 3 TIERS
+  Every board member has 3 inference tiers. All cloud models from Ollama cloud library.
+  Tier 1 = local (pulled on VPS). Tier 2 = cloud mid (default). Tier 3 = cloud max (critical/constitutional).
+  Importance routing: routine/standard → Tier 2, critical/constitutional → Tier 3.
 
-  # Efficient / Edge / MoE
-  - nemotron-3-super      120B (12B active)       NVIDIA MoE, multi-agent
-  - nemotron-3-nano       4B, 30B                Efficient agentic models
-  - ministral-3           3B, 8B, 14B            Edge deployment, vision
-  - gemini-3-flash-preview —                     Speed + intelligence, vision
+  Member            Tier 1 (local)          Tier 2 (cloud mid)          Tier 3 (cloud max)
+  ─────────────     ──────────────          ──────────────────          ──────────────────
+  CEO               qwen3:0.6b              glm-5.1                     glm-5 (744B/40B)
+  COO (1.0x)        qwen3:0.6b              gemini-3-flash-preview      ministral-3:14b
+  CFO (1.0x)        deepseek-coder:1.3b     qwen3.5:9b                  qwen3.5:122b
+  CTO (1.0x)        qwen3:1.7b              qwen3-coder-next            devstral-2 (123B)
+  CISO (1.2x veto)  deepseek-r1:1.5b        nemotron-3-super (120B)     qwen3-next (80B)
+  CLO (0.8x adv)    qwen3:0.6b              devstral-small-2:24b        cogito-2.1 (671B)
+  CPO (1.0x)        qwen3.5:2b              gemma4:31b                  kimi-k2.5
+  CRO (1.2x veto)   qwen3:4b               deepseek-v3.2               minimax-m2.7
 
-  # Multimodal
-  - gemma4                26B, 31B               Vision, tools, thinking, audio
-  - minimax-m2.5          —                      Productivity and coding
-
-BOARDROOM MODEL ASSIGNMENTS
-  Each of the Seven Soldiers uses a different cloud model matched to their role:
-  - coo_operations:  gemini-3-flash-preview   (speed — fast operational decisions)
-  - cfo_finance:     qwen3.5:8b               (quantitative — cost calculations)
-  - cto_technology:  qwen3-coder-next         (code-specialized — architecture)
-  - ciso_security:   nemotron-3-super         (safety-aligned MoE — 1.2x veto)
-  - clo_legal:       devstral-small-2:24b     (structured analysis — compliance)
-  - cpo_product:     gemma4:31b               (multimodal — product evaluation)
-  - cro_risk:        deepseek-v3.2            (deepest reasoning — 1.2x veto)
+  Cloud pool (available for general agents):
+  nemotron-3-nano (4b,30b), minimax-m2.5, minimax-m2, glm-4.7, rnj-1 (8b)
 
 CAPABILITIES
 - name: chat

@@ -1,0 +1,15 @@
+{
+  "sessions": {
+    "gpt-oss:120b-cloud": [
+      {
+        "role": "user",
+        "content": "You are mindX. In one sentence, describe what you are."
+      },
+      {
+        "role": "assistant",
+        "content": "I am mindX, an AI\u2011powered conversational assistant that uses large language models to understand and generate human\u2011like text across a wide range of topics."
+      }
+    ]
+  },
+  "last_saved": "2026-04-11T13:56:20"
+}

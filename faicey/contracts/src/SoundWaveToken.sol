@@ -197,17 +197,25 @@ contract SoundWaveToken is IERC20, IERC20Metadata {
      * Bulk voice print registration for Faicey integration
      */
     function bulkRegisterVoicePrints(
-        bytes32[] calldata voicePrintHashes,
-        uint256[] calldata precisionScores
+        bytes32[] calldata _voicePrintHashes,
+        uint256[] calldata _precisionScores
     ) external {
-        require(voicePrintHashes.length == precisionScores.length, "WAVE: array length mismatch");
-        require(voicePrintHashes.length <= 100, "WAVE: too many voice prints");
+        require(_voicePrintHashes.length == _precisionScores.length, "WAVE: array length mismatch");
+        require(_voicePrintHashes.length <= 100, "WAVE: too many voice prints");
 
-        for (uint256 i = 0; i < voicePrintHashes.length; i++) {
-            // Register each voice print (internal call to avoid external restrictions)
-            voicePrintHashes[msg.sender] = voicePrintHashes[i];
-            voicePrecisionScores[msg.sender] = precisionScores[i];
-            emit VoicePrintRegistered(msg.sender, voicePrintHashes[i], precisionScores[i]);
+        for (uint256 i = 0; i < _voicePrintHashes.length; i++) {
+            // Register each voice print with individual calls
+            require(_voicePrintHashes[i] != bytes32(0), "WAVE: invalid voice print hash");
+            require(voiceAnalysisEnabled, "WAVE: voice analysis disabled");
+
+            // Store the voice print data (overwrites previous for simplicity in this bulk function)
+            voicePrintHashes[msg.sender] = _voicePrintHashes[i];
+            voicePrecisionScores[msg.sender] = _precisionScores[i];
+
+            emit VoicePrintRegistered(msg.sender, _voicePrintHashes[i], _precisionScores[i]);
+
+            // Give reward for each voice print
+            _rewardVoiceAnalysis(msg.sender, _precisionScores[i]);
         }
 
         voiceAnalysisTimestamps[msg.sender] = block.timestamp;

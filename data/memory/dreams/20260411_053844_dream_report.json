@@ -1,0 +1,232 @@
+{
+  "timestamp": "2026-04-11T05:38:44.474932",
+  "duration_seconds": "5.386105775833129883",
+  "agents_dreamed": 24,
+  "total_agents": 24,
+  "insights_generated": 111,
+  "memories_promoted_to_ltm": 111,
+  "memories_archived": 0,
+  "tuning_recommendations": [
+    {
+      "agent_id": "simple_coder_agent",
+      "parameter": "strategy",
+      "recommendation": "Low success rate observed. Consider alternative approaches.",
+      "priority": "medium"
+    },
+    {
+      "agent_id": "mindx_meta_agent",
+      "parameter": "dream_frequency",
+      "recommendation": "High STM volume (311). Consider more frequent dream cycles.",
+      "priority": "low"
+    },
+    {
+      "agent_id": "admin",
+      "parameter": "dream_frequency",
+      "recommendation": "High STM volume (1000). Consider more frequent dream cycles.",
+      "priority": "low"
+    },
+    {
+      "agent_id": "coordinator_agent_main",
+      "parameter": "error_handling",
+      "recommendation": "High error frequency (4 patterns). Review failure modes.",
+      "priority": "high"
+    },
+    {
+      "agent_id": "mastermind_prime",
+      "parameter": "error_handling",
+      "recommendation": "High error frequency (4 patterns). Review failure modes.",
+      "priority": "high"
+    },
+    {
+      "agent_id": "mastermind_prime",
+      "parameter": "strategy",
+      "recommendation": "Low success rate observed. Consider alternative approaches.",
+      "priority": "medium"
+    },
+    {
+      "agent_id": "default_identity_manager",
+      "parameter": "dream_frequency",
+      "recommendation": "High STM volume (398). Consider more frequent dream cycles.",
+      "priority": "low"
+    }
+  ],
+  "cross_agent_patterns": {
+    "failure": 9,
+    "behavioral": 82,
+    "performance": 17,
+    "success": 3
+  },
+  "per_agent": [
+    {
+      "agent_id": "test",
+      "memories_analyzed": 1,
+      "patterns_extracted": 0,
+      "promoted_to_ltm": 0,
+      "duration_seconds": "0.012597560882568359",
+      "top_insight": null,
+      "top_score": null
+    },
+    {
+      "agent_id": "simple_coder_agent",
+      "memories_analyzed": 3,
+      "patterns_extracted": 9,
+      "promoted_to_ltm": 9,
+      "duration_seconds": "0.133316993713378906",
+      "top_insight": "coding_learning: ",
+      "top_score": "0.216741596878066461"
+    },
+    {
+      "agent_id": "id_manager_for_mastermind_prime",
+      "memories_analyzed": 200,
+      "patterns_extracted": 6,
+      "promoted_to_ltm": 6,
+      "duration_seconds": "0.352813005447387695",
+      "top_insight": "Top processes: id_manager_wallet_exists(100), id_manager_address_derived(100)",
+      "top_score": "0.368511369187278226"
+    },
+    {
+      "agent_id": "agint_system",
+      "memories_analyzed": 160,
+      "patterns_extracted": 6,
+      "promoted_to_ltm": 6,
+      "duration_seconds": "0.285434722900390625",
+      "top_insight": "Top processes: agint_cycle_log(160)",
+      "top_score": "0.353092140165095991"
+    },
+    {
+      "agent_id": "id_manager_for_mindx_meta_agent",
+      "memories_analyzed": 30,
+      "patterns_extracted": 5,
+      "promoted_to_ltm": 5,
+      "duration_seconds": "0.133170604705810547",
+      "top_insight": "Top processes: id_manager_wallet_exists(15), id_manager_address_derived(15)",
+      "top_score": "0.238617871013483668"
+    },
+    {
+      "agent_id": "shutdown_agent",
+      "memories_analyzed": 37,
+      "patterns_extracted": 5,
+      "promoted_to_ltm": 5,
+      "duration_seconds": "0.139395236968994141",
+      "top_insight": "Top processes: shutdown_initiation(19), system_shutdown_complete(18)",
+      "top_score": "0.252765375458689656"
+    },
+    {
+      "agent_id": "mindx_meta_agent",
+      "memories_analyzed": 311,
+      "patterns_extracted": 6,
+      "promoted_to_ltm": 6,
+      "duration_seconds": "0.504184246063232422",
+      "top_insight": "Dominant memory type: system_state (263 occurrences)",
+      "top_score": "0.387456628299172989"
+    },
+    {
+      "agent_id": "admin",
+      "memories_analyzed": 1000,
+      "patterns_extracted": 4,
+      "promoted_to_ltm": 4,
+      "duration_seconds": "1.237509727478027344",
+      "top_insight": "Dominant memory type: performance (1000 occurrences)",
+      "top_score": "0.480069452396691021"
+    },
+    {
+      "agent_id": "automindx_agent_main",
+      "memories_analyzed": 100,
+      "patterns_extracted": 5,
+      "promoted_to_ltm": 5,
+      "duration_seconds": "0.229695081710815430",
+      "top_insight": "Top processes: automindx_get_persona(100)",
+      "top_score": "0.320691419805222866"
+    },
+    {
+      "agent_id": "coordinator_agent_main",
+      "memories_analyzed": 27,
+      "patterns_extracted": 12,
+      "promoted_to_ltm": 12,
+      "duration_seconds": "0.131174802780151367",
+      "top_insight": "Top processes: coordinator_interaction(9), coordinator_agent_creation_failed(6), coordinator_agent_c",
+      "top_score": "0.231545285014755076"
+    },
+    {
+      "agent_id": "github_agent_tool",
+      "memories_analyzed": 60,
+      "patterns_extracted": 5,
+      "promoted_to_ltm": 5,
+      "duration_seconds": "0.182018041610717773",
+      "top_insight": "Top processes: github_backup_created(60)",
+      "top_score": "0.285652773601722754"
+    },
+    {
+      "agent_id": "guardian_agent_main",
+      "memories_analyzed": 100,
+      "patterns_extracted": 5,
+      "promoted_to_ltm": 5,
+      "duration_seconds": "0.242534637451171875",
+      "top_insight": "Top processes: guardian_initialization(100)",
+      "top_score": "0.320691419805222866"
+    },
+    {
+      "agent_id": "machine_dreaming",
+      "memories_analyzed": 1,
+      "patterns_extracted": 0,
+      "promoted_to_ltm": 0,
+      "duration_seconds": "0.005953788757324219",
+      "top_insight": null,
+      "top_score": null
+    },
+    {
+      "agent_id": "main_service",
+      "memories_analyzed": 11,
+      "patterns_extracted": 5,
+      "promoted_to_ltm": 5,
+      "duration_seconds": "0.128411769866943359",
+      "top_insight": "Top processes: backend_startup_transcript(11)",
+      "top_score": "0.172668999367619980"
+    },
+    {
+      "agent_id": "id_manager_for_coordinator_agent_main",
+      "memories_analyzed": 200,
+      "patterns_extracted": 6,
+      "promoted_to_ltm": 6,
+      "duration_seconds": "0.366356611251831055",
+      "top_insight": "Top processes: id_manager_wallet_exists(100), id_manager_address_derived(100)",
+      "top_score": "0.368511369187278226"
+    },
+    {
+      "agent_id": "startup_agent",
+      "memories_analyzed": 147,
+      "patterns_extracted": 6,
+      "promoted_to_ltm": 6,
+      "duration_seconds": "0.291108846664428711",
+      "top_insight": "Dominant memory type: system_state (147 occurrences)",
+      "top_score": "0.347241874463193212"
+    },
+    {
+      "agent_id": "bdi_directive_handler",
+      "memories_analyzed": 40,
+      "patterns_extracted": 5,
+      "promoted_to_ltm": 5,
+      "duration_seconds": "0.147509336471557617",
+      "top_insight": "Top processes: godel_core_choice(40)",
+      "top_score": "0.258045417075157713"
+    },
+    {
+      "agent_id": "mastermind_prime",
+      "memories_analyzed": 22,
+      "patterns_extracted": 13,
+      "promoted_to_ltm": 13,
+      "duration_seconds": "0.201416969299316406",
+      "top_insight": "Success rate: 18.2%",
+      "top_score": "0.247586879275925986"
+    },
+    {
+      "agent_id": "default_identity_manager",
+      "memories_analyzed": 398,
+      "patterns_extracted": 8,
+      "promoted_to_ltm": 8,
+      "duration_seconds": "0.622450590133666992",
+      "top_insight": "Success rate: 100.0%",
+      "top_score": "2.600972895686747943"
+    }
+  ]
+}

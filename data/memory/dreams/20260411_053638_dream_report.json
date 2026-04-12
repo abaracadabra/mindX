@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-04-11T05:36:38.610729",
+  "duration_seconds": "0.086980342864990234",
+  "agents_dreamed": 23,
+  "total_agents": 23,
+  "insights_generated": 0,
+  "memories_promoted_to_ltm": 0,
+  "memories_archived": 0,
+  "tuning_recommendations": [],
+  "cross_agent_patterns": {},
+  "per_agent": []
+}

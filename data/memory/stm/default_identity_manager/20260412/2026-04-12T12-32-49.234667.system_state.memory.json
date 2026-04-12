@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-04-12T12:32:49.234667",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "default_identity_manager",
+  "content": {
+    "process_name": "id_manager_address_lookup",
+    "data": {
+      "entity_id": "guardian_agent_main",
+      "address": "0xD26041A987b75DA3c398D1E71647FeB4c5F48FFa",
+      "source": "belief_system"
+    }
+  },
+  "context": {
+    "agent_id": "default_identity_manager"
+  },
+  "tags": [
+    "id_manager_address_lookup",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "d8bd6e7d5e52ab3b"
+}

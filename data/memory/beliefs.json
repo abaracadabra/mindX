@@ -1,0 +1,92 @@
+{
+  "identity.map.entity_to_address.guardian_agent_main": {
+    "value": "0xD26041A987b75DA3c398D1E71647FeB4c5F48FFa",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1776022066.8901587,
+    "last_updated": 1776022066.8901587
+  },
+  "identity.map.address_to_entity.0xD26041A987b75DA3c398D1E71647FeB4c5F48FFa": {
+    "value": "guardian_agent_main",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1776022067.0302863,
+    "last_updated": 1776022067.0302863
+  },
+  "identity.map.entity_to_address.coordinator_agent_main": {
+    "value": "0x295927d4FacdaFAf7eC3A7E7B5f116Ce733bB3A3",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1776022067.8915844,
+    "last_updated": 1776022067.8915844
+  },
+  "identity.map.address_to_entity.0x295927d4FacdaFAf7eC3A7E7B5f116Ce733bB3A3": {
+    "value": "coordinator_agent_main",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1776022068.0099907,
+    "last_updated": 1776022068.0099907
+  },
+  "identity.map.entity_to_address.mastermind_prime": {
+    "value": "0x0a56d74eDaD0839E7F9278fc9A3907aB600969f7",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1776022068.5543776,
+    "last_updated": 1776022068.5543776
+  },
+  "identity.map.address_to_entity.0x0a56d74eDaD0839E7F9278fc9A3907aB600969f7": {
+    "value": "mastermind_prime",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1776022068.843393,
+    "last_updated": 1776022068.843393
+  },
+  "mindx.evolution.blueprint.latest": {
+    "value": {
+      "blueprint_title": "Structural Blueprint (skeleton from improvement backlog)",
+      "target_mindx_version_increment": "0.0.1",
+      "focus_areas": [
+        "system"
+      ],
+      "bdi_todo_list": [
+        {
+          "goal_description": "Install Ollama and pull required models for local AI inference",
+          "priority": 8,
+          "target_component": "system"
+        },
+        {
+          "goal_description": "Implement fallback provider selection when primary LLM fails",
+          "priority": 7,
+          "target_component": "system"
+        },
+        {
+          "goal_description": "Implement comprehensive input validation for API requests",
+          "priority": 9,
+          "target_component": "system"
+        },
+        {
+          "goal_description": "Add output validation checks to ensure expected formats and data types",
+          "priority": 8,
+          "target_component": "system"
+        },
+        {
+          "goal_description": "Enhance model input validation with specific checks for LLM providers",
+          "priority": 7,
+          "target_component": "system"
+        }
+      ],
+      "key_performance_indicators": [
+        "Improvement cycle completion rate",
+        "Agent health score"
+      ],
+      "potential_risks": [
+        "Skeleton requires LLM enrichment for strategic depth"
+      ],
+      "source": "skeleton"
+    },
+    "confidence": 0.95,
+    "source": "self_analysis",
+    "timestamp": 1776022239.3365555,
+    "last_updated": 1776022299.3372688
+  }
+}
