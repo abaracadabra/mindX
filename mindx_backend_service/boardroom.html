@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mindX Boardroom</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@400;500;700;900&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0f;--bg2:#0d0d14;--bg3:#12121c;--surface:#161622;--surface2:#1a1a2a;
+  --accent:#00ff88;--accent2:#00cc6a;--accent-dim:rgba(0,255,136,.08);
+  --veto:#ff3366;--advisory:#ffaa00;--approve:#00ff88;--reject:#ff3366;--abstain:#666;
+  --text:#c8c8d4;--text2:#8888a0;--text3:#555570;--white:#e8e8f0;
+  --border:rgba(0,255,136,.12);--glow:0 0 20px rgba(0,255,136,.15);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;overflow-x:hidden}
+
+/* Scanline overlay */
+body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,136,.008) 2px,rgba(0,255,136,.008) 4px);
+  pointer-events:none;z-index:9999}
+
+/* Grid noise texture */
+body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+  background:radial-gradient(ellipse at 20% 50%,rgba(0,255,136,.03) 0%,transparent 50%),
+    radial-gradient(ellipse at 80% 20%,rgba(0,100,255,.02) 0%,transparent 40%);
+  pointer-events:none;z-index:0}
+
+.page{position:relative;z-index:1;min-height:100vh;padding:20px}
+
+/* Header */
+.hdr{text-align:center;margin-bottom:24px;position:relative}
+.hdr h1{font-family:'Orbitron',sans-serif;font-size:clamp(18px,3vw,28px);font-weight:900;
+  color:var(--accent);letter-spacing:6px;text-transform:uppercase;
+  text-shadow:0 0 30px rgba(0,255,136,.3),0 0 60px rgba(0,255,136,.1)}
+.hdr .sub{font-size:11px;color:var(--text3);letter-spacing:3px;margin-top:4px}
+.hdr .status{position:absolute;right:20px;top:50%;transform:translateY(-50%);
+  font-size:10px;color:var(--text3);text-align:right}
+.hdr .status .live{color:var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Navigation */
+.nav{display:flex;justify-content:center;gap:16px;margin-bottom:20px}
+.nav a{color:var(--text3);text-decoration:none;font-size:11px;letter-spacing:2px;
+  padding:6px 14px;border:1px solid var(--border);transition:all .2s}
+.nav a:hover,.nav a.active{color:var(--accent);border-color:var(--accent);background:var(--accent-dim)}
+
+/* Main layout: table in center */
+.board-wrap{display:grid;grid-template-columns:1fr minmax(300px,640px) 1fr;gap:0;max-width:1400px;margin:0 auto}
+
+/* Soldier seats — left and right columns */
+.seats{display:flex;flex-direction:column;gap:12px;padding:40px 12px}
+.seats.left{align-items:flex-end}
+.seats.right{align-items:flex-start}
+
+/* Individual seat card */
+.seat{width:180px;background:var(--surface);border:1px solid var(--border);
+  padding:10px 12px;position:relative;cursor:pointer;transition:all .3s;
+  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px))}
+.seat:hover{border-color:var(--accent);box-shadow:var(--glow);transform:scale(1.02)}
+.seat.voted-approve{border-color:var(--approve);box-shadow:0 0 12px rgba(0,255,136,.2)}
+.seat.voted-reject{border-color:var(--reject);box-shadow:0 0 12px rgba(255,51,102,.2)}
+.seat.voted-abstain{border-color:var(--abstain)}
+.seat.veto{border-left:2px solid var(--veto)}
+.seat.advisory{border-left:2px solid var(--advisory)}
+.seat .title{font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;
+  color:var(--accent);letter-spacing:2px;text-transform:uppercase}
+.seat .role{font-size:10px;color:var(--text2);margin-top:2px}
+.seat .weight{position:absolute;top:6px;right:8px;font-size:9px;font-weight:700}
+.seat .weight.w12{color:var(--veto)}
+.seat .weight.w08{color:var(--advisory)}
+.seat .weight.w10{color:var(--text3)}
+.seat .vote-badge{margin-top:6px;font-size:10px;font-weight:700;letter-spacing:1px}
+.seat .reasoning{font-size:9px;color:var(--text3);margin-top:4px;line-height:1.4;
+  max-height:0;overflow:hidden;transition:max-height .3s}
+.seat.expanded .reasoning{max-height:200px}
+.seat .conf{font-size:9px;color:var(--text3);margin-top:2px}
+.seat .model{font-size:8px;color:var(--text3);opacity:.5;margin-top:2px}
+
+/* Central table */
+.table-center{position:relative;display:flex;flex-direction:column;min-height:600px}
+
+/* CEO seat at head of table */
+.ceo-seat{background:var(--surface);border:1px solid rgba(0,255,136,.25);
+  padding:14px 18px;margin-bottom:16px;text-align:center;position:relative;
+  clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 12px,100% calc(100% - 12px),calc(100% - 12px) 100%,12px 100%,0 calc(100% - 12px),0 12px)}
+.ceo-seat .title{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:900;
+  color:var(--accent);letter-spacing:4px}
+.ceo-seat .sub{font-size:9px;color:var(--text3);margin-top:2px}
+.ceo-seat .mandate{font-size:10px;color:var(--text2);margin-top:6px;font-style:italic}
+
+/* Deliberation area */
+.deliberation{flex:1;background:var(--bg2);border:1px solid var(--border);
+  padding:16px;position:relative;overflow:hidden;
+  background-image:linear-gradient(rgba(0,255,136,.02) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,255,136,.02) 1px,transparent 1px);
+  background-size:20px 20px}
+.deliberation .label{font-family:'Orbitron',sans-serif;font-size:8px;color:var(--text3);
+  letter-spacing:3px;margin-bottom:10px;text-transform:uppercase}
+
+/* Conversation messages */
+.messages{max-height:360px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg)}
+.msg{padding:8px 10px;margin-bottom:6px;background:var(--surface);border-left:2px solid var(--text3);
+  animation:msgIn .3s ease-out}
+@keyframes msgIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+.msg .sender{font-size:9px;font-weight:700;color:var(--accent);letter-spacing:1px;text-transform:uppercase}
+.msg .content{font-size:11px;color:var(--text);margin-top:3px;line-height:1.5}
+.msg.approve{border-color:var(--approve)}
+.msg.reject{border-color:var(--reject)}
+.msg.abstain{border-color:var(--abstain)}
+.msg.system{border-color:var(--advisory);background:rgba(255,170,0,.05)}
+
+/* Input area */
+.input-area{margin-top:12px;display:flex;gap:8px}
+.input-area input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--white);
+  padding:10px 14px;font-family:inherit;font-size:12px;outline:none;transition:border .2s}
+.input-area input:focus{border-color:var(--accent)}
+.input-area input::placeholder{color:var(--text3)}
+.input-area select{background:var(--bg);border:1px solid var(--border);color:var(--text2);
+  padding:8px;font-family:inherit;font-size:10px;outline:none}
+.input-area button{background:var(--accent);color:var(--bg);border:none;
+  padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;
+  letter-spacing:2px;cursor:pointer;transition:all .2s;text-transform:uppercase}
+.input-area button:hover{box-shadow:0 0 20px rgba(0,255,136,.4)}
+.input-area button:disabled{opacity:.3;cursor:not-allowed}
+
+/* Outcome banner */
+.outcome{margin-top:12px;padding:12px 16px;text-align:center;
+  font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;letter-spacing:3px;
+  display:none;animation:bannerIn .5s ease-out}
+@keyframes bannerIn{from{opacity:0;transform:scaleX(.8)}to{opacity:1;transform:none}}
+.outcome.approved{display:block;background:rgba(0,255,136,.1);border:1px solid var(--approve);color:var(--approve)}
+.outcome.rejected{display:block;background:rgba(255,51,102,.1);border:1px solid var(--reject);color:var(--reject)}
+.outcome.exploration{display:block;background:rgba(255,170,0,.1);border:1px solid var(--advisory);color:var(--advisory)}
+
+.score-bar{margin-top:8px;height:4px;background:var(--bg);border:1px solid var(--border);position:relative;overflow:hidden}
+.score-bar .fill{height:100%;background:var(--accent);transition:width .6s ease-out}
+.score-bar .threshold{position:absolute;left:66.6%;top:0;height:100%;width:1px;background:var(--veto)}
+
+/* History panel */
+.history{max-width:1400px;margin:30px auto 0;padding:0 12px}
+.history .label{font-family:'Orbitron',sans-serif;font-size:10px;color:var(--text3);
+  letter-spacing:3px;margin-bottom:10px;text-transform:uppercase}
+.session-card{background:var(--surface);border:1px solid var(--border);padding:12px 14px;
+  margin-bottom:8px;cursor:pointer;transition:all .2s}
+.session-card:hover{border-color:var(--accent)}
+.session-card .top{display:flex;justify-content:space-between;align-items:center}
+.session-card .dir{font-size:11px;color:var(--white);flex:1;margin-right:12px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.session-card .out{font-size:10px;font-weight:700;letter-spacing:1px}
+.session-card .out.approved{color:var(--approve)}
+.session-card .out.rejected{color:var(--reject)}
+.session-card .out.exploration{color:var(--advisory)}
+.session-card .meta{font-size:9px;color:var(--text3);margin-top:4px}
+.session-card .votes-mini{display:flex;gap:4px;margin-top:6px}
+.session-card .vm{width:8px;height:8px;border-radius:1px}
+.session-card .vm.a{background:var(--approve)}
+.session-card .vm.r{background:var(--reject)}
+.session-card .vm.ab{background:var(--abstain)}
+
+/* Footer */
+.ft{text-align:center;padding:20px;font-size:10px;color:var(--text3);letter-spacing:1px;margin-top:30px}
+.ft a{color:var(--text2);text-decoration:none}
+.ft a:hover{color:var(--accent)}
+
+/* Loading spinner */
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--text3);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Responsive */
+@media(max-width:900px){
+  .board-wrap{grid-template-columns:1fr;gap:12px}
+  .seats{flex-direction:row;flex-wrap:wrap;justify-content:center;padding:8px}
+  .seats.left,.seats.right{align-items:center}
+  .seat{width:160px}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hdr">
+    <h1>The Boardroom</h1>
+    <div class="sub">CEO + Seven Soldiers &middot; Weighted Consensus &middot; 0.666 Supermajority</div>
+    <div class="status"><span class="live">&#9679;</span> mindx.pythai.net</div>
+  </div>
+
+  <div class="nav">
+    <a href="/" >Dashboard</a>
+    <a href="/boardroom" class="active">Boardroom</a>
+    <a href="/dojo" >Dojo</a>
+    <a href="/book">Book</a>
+    <a href="/docs.html">Docs</a>
+  </div>
+
+  <!-- CEO + Table + Soldiers -->
+  <div class="board-wrap">
+    <!-- Left seats: COO, CFO -->
+    <div class="seats left" id="seats-left"></div>
+
+    <!-- Center: CEO + Deliberation -->
+    <div class="table-center">
+      <div class="ceo-seat" id="ceo-seat">
+        <div class="title">CEO</div>
+        <div class="sub">I direct. The soldiers deliberate. The Constitution constrains.</div>
+        <div class="mandate" id="ceo-mandate">Awaiting directive...</div>
+      </div>
+
+      <div class="deliberation">
+        <div class="label">Deliberation Chamber</div>
+        <div class="messages" id="messages"></div>
+
+        <div class="outcome" id="outcome"></div>
+        <div class="score-bar" id="score-bar" style="display:none">
+          <div class="fill" id="score-fill"></div>
+          <div class="threshold"></div>
+        </div>
+
+        <div class="input-area">
+          <input type="text" id="directive-input" placeholder="Present a directive to the Boardroom..." />
+          <select id="importance-select">
+            <option value="routine">Routine</option>
+            <option value="standard" selected>Standard</option>
+            <option value="critical">Critical</option>
+            <option value="constitutional">Constitutional</option>
+          </select>
+          <button id="convene-btn" onclick="convene()">Convene</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right seats: CISO, CLO -->
+    <div class="seats right" id="seats-right"></div>
+  </div>
+
+  <!-- Bottom seats: CTO, CPO, CRO -->
+  <div style="display:flex;justify-content:center;gap:12px;margin-top:12px;flex-wrap:wrap" id="seats-bottom"></div>
+
+  <!-- History -->
+  <div class="history">
+    <div class="label">Session History</div>
+    <div id="history-list"></div>
+  </div>
+
+  <div class="ft">
+    <a href="/">dashboard</a> &middot; <a href="/boardroom">boardroom</a> &middot; <a href="/dojo">dojo</a> &middot;
+    <a href="/book">book</a> &middot; <a href="/journal">journal</a> &middot; <a href="/redoc">api</a> &middot;
+    mindx.pythai.net &middot; &copy; Professor Codephreak
+  </div>
+</div>
+
+<script>
+const SOLDIERS = [
+  {id:'coo_operations', short:'COO', name:'Chief Operating Officer', weight:1.0, side:'left',
+   desc:'Operational feasibility, timelines, resources'},
+  {id:'cfo_finance', short:'CFO', name:'Chief Financial Officer', weight:1.0, side:'left',
+   desc:'Cost/benefit, budget, treasury. 18dp precision.'},
+  {id:'ciso_security', short:'CISO', name:'Chief Information Security Officer', weight:1.2, side:'right',
+   desc:'Security posture, attack surface, zero trust. 1.2x veto.', veto:true},
+  {id:'clo_legal', short:'CLO', name:'Chief Legal Officer', weight:0.8, side:'right',
+   desc:'Legal risk, licensing, attribution. 0.8x advisory.', advisory:true},
+  {id:'cto_technology', short:'CTO', name:'Chief Technology Officer', weight:1.0, side:'bottom',
+   desc:'Technical feasibility, architecture, infrastructure'},
+  {id:'cpo_product', short:'CPO', name:'Chief Product Officer', weight:1.0, side:'bottom',
+   desc:'User value, market fit, scope impact'},
+  {id:'cro_risk', short:'CRO', name:'Chief Risk Officer', weight:1.2, side:'bottom',
+   desc:'Risk magnitude, reversibility, blast radius. 1.2x veto.', veto:true},
+];
+
+function createSeatHTML(s) {
+  const wCls = s.weight===1.2?'w12':s.weight===0.8?'w08':'w10';
+  const extra = s.veto?'veto':s.advisory?'advisory':'';
+  return `<div class="seat ${extra}" id="seat-${s.id}" onclick="toggleSeat('${s.id}')">
+    <div class="title">${s.short}</div>
+    <div class="role">${s.desc}</div>
+    <div class="weight ${wCls}">${s.weight}x</div>
+    <div class="vote-badge" id="vote-${s.id}"></div>
+    <div class="reasoning" id="reason-${s.id}"></div>
+    <div class="conf" id="conf-${s.id}"></div>
+    <div class="model" id="model-${s.id}"></div>
+  </div>`;
+}
+
+function initSeats() {
+  const left = document.getElementById('seats-left');
+  const right = document.getElementById('seats-right');
+  const bottom = document.getElementById('seats-bottom');
+  SOLDIERS.forEach(s => {
+    const target = s.side==='left'?left:s.side==='right'?right:bottom;
+    target.innerHTML += createSeatHTML(s);
+  });
+}
+
+function toggleSeat(id) {
+  document.getElementById('seat-'+id).classList.toggle('expanded');
+}
+
+function addMessage(sender, content, type='') {
+  const el = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg ' + type;
+  div.innerHTML = `<div class="sender">${sender}</div><div class="content">${content}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+function clearBoard() {
+  document.getElementById('messages').innerHTML = '';
+  document.getElementById('outcome').className = 'outcome';
+  document.getElementById('outcome').textContent = '';
+  document.getElementById('score-bar').style.display = 'none';
+  SOLDIERS.forEach(s => {
+    const seat = document.getElementById('seat-'+s.id);
+    seat.className = seat.className.replace(/voted-\w+/g,'').trim();
+    document.getElementById('vote-'+s.id).textContent = '';
+    document.getElementById('reason-'+s.id).textContent = '';
+    document.getElementById('conf-'+s.id).textContent = '';
+    document.getElementById('model-'+s.id).textContent = '';
+  });
+}
+
+async function convene() {
+  const input = document.getElementById('directive-input');
+  const btn = document.getElementById('convene-btn');
+  const directive = input.value.trim();
+  if (!directive) return;
+
+  clearBoard();
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  document.getElementById('ceo-mandate').textContent = directive;
+
+  addMessage('CEO', `Directive presented: "${directive}"`, 'system');
+  addMessage('SYSTEM', 'Seven Soldiers convened. Deliberation in progress...', 'system');
+
+  const importance = document.getElementById('importance-select').value;
+
+  try {
+    const resp = await fetch(`/boardroom/convene?directive=${encodeURIComponent(directive)}&importance=${importance}`, {method:'POST'});
+    const data = await resp.json();
+
+    // Show each soldier's vote
+    if (data.votes) {
+      data.votes.forEach((v, i) => {
+        setTimeout(() => {
+          const soldier = SOLDIERS.find(s => s.id === v.soldier);
+          const short = soldier ? soldier.short : v.soldier;
+
+          // Update seat
+          const seat = document.getElementById('seat-'+v.soldier);
+          if (seat) {
+            seat.classList.add('voted-'+v.vote);
+            document.getElementById('vote-'+v.soldier).textContent = v.vote.toUpperCase();
+            document.getElementById('vote-'+v.soldier).style.color =
+              v.vote==='approve'?'var(--approve)':v.vote==='reject'?'var(--reject)':'var(--abstain)';
+            document.getElementById('conf-'+v.soldier).textContent = `Confidence: ${(v.confidence*100).toFixed(0)}%`;
+            document.getElementById('model-'+v.soldier).textContent = v.provider || '';
+          }
+
+          // Add message
+          const reasoning = v.reasoning || v.vote;
+          addMessage(short, reasoning, v.vote);
+          if (seat) document.getElementById('reason-'+v.soldier).textContent = reasoning;
+        }, i * 400);
+      });
+    }
+
+    // Show outcome after all votes
+    setTimeout(() => {
+      const outcome = document.getElementById('outcome');
+      outcome.className = 'outcome ' + data.outcome;
+      outcome.textContent = `${data.outcome.toUpperCase()} (${(data.weighted_score*100).toFixed(1)}%)`;
+
+      document.getElementById('score-bar').style.display = 'block';
+      document.getElementById('score-fill').style.width = (data.weighted_score*100)+'%';
+      document.getElementById('score-fill').style.background =
+        data.outcome==='approved'?'var(--approve)':data.outcome==='rejected'?'var(--reject)':'var(--advisory)';
+
+      addMessage('CEO', `Verdict: ${data.outcome.toUpperCase()} — score ${(data.weighted_score*100).toFixed(1)}%`, 'system');
+
+      if (data.dissent_branches && data.dissent_branches.length) {
+        data.dissent_branches.forEach(b => {
+          addMessage('DISSENT', `${b.soldier}: ${b.reasoning || 'Exploration branch opened'}`, 'reject');
+        });
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'CONVENE';
+    }, (data.votes?data.votes.length:0) * 400 + 500);
+
+    // Refresh history
+    setTimeout(loadHistory, 2000);
+
+  } catch(e) {
+    addMessage('ERROR', e.message, 'reject');
+    btn.disabled = false;
+    btn.textContent = 'CONVENE';
+  }
+}
+
+async function loadHistory() {
+  try {
+    const resp = await fetch('/boardroom/sessions?limit=10');
+    const data = await resp.json();
+    const el = document.getElementById('history-list');
+    el.innerHTML = '';
+    (data.sessions||[]).forEach(s => {
+      const votes = (s.votes||[]).map(v =>
+        `<div class="vm ${v.vote==='approve'?'a':v.vote==='reject'?'r':'ab'}"></div>`
+      ).join('');
+      el.innerHTML += `<div class="session-card" onclick="replaySession(this)" data-session='${JSON.stringify(s)}'>
+        <div class="top">
+          <div class="dir">${s.directive||'—'}</div>
+          <div class="out ${s.outcome||''}">${(s.outcome||'?').toUpperCase()}</div>
+        </div>
+        <div class="meta">${s.session_id||''} &middot; ${s.importance||'standard'} &middot; score: ${((s.weighted_score||0)*100).toFixed(1)}%</div>
+        <div class="votes-mini">${votes}</div>
+      </div>`;
+    });
+  } catch(e) {
+    console.error('History load failed:', e);
+  }
+}
+
+function replaySession(el) {
+  try {
+    const s = JSON.parse(el.dataset.session);
+    clearBoard();
+    document.getElementById('ceo-mandate').textContent = s.directive || '—';
+    addMessage('CEO', `[REPLAY] Directive: "${s.directive}"`, 'system');
+    (s.votes||[]).forEach(v => {
+      const soldier = SOLDIERS.find(x => x.id === v.soldier);
+      const short = soldier ? soldier.short : v.soldier;
+      addMessage(short, v.reasoning||v.vote, v.vote);
+      const seat = document.getElementById('seat-'+v.soldier);
+      if (seat) {
+        seat.classList.add('voted-'+v.vote);
+        document.getElementById('vote-'+v.soldier).textContent = v.vote.toUpperCase();
+        document.getElementById('vote-'+v.soldier).style.color =
+          v.vote==='approve'?'var(--approve)':v.vote==='reject'?'var(--reject)':'var(--abstain)';
+      }
+    });
+    const outcome = document.getElementById('outcome');
+    outcome.className = 'outcome ' + (s.outcome||'');
+    outcome.textContent = `${(s.outcome||'?').toUpperCase()} (${((s.weighted_score||0)*100).toFixed(1)}%)`;
+    document.getElementById('score-bar').style.display = 'block';
+    document.getElementById('score-fill').style.width = ((s.weighted_score||0)*100)+'%';
+  } catch(e) { console.error(e); }
+}
+
+// Enter key submits
+document.getElementById('directive-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') convene();
+});
+
+// Init
+initSeats();
+loadHistory();
+</script>
+</body>
+</html>

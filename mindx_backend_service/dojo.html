@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mindX Dojo</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@400;500;700;900&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0f;--bg2:#0d0d14;--bg3:#12121c;--surface:#161622;--surface2:#1a1a2a;
+  --accent:#00ff88;--accent2:#00cc6a;--accent-dim:rgba(0,255,136,.08);
+  --veto:#ff3366;--advisory:#ffaa00;--gold:#ffd700;--silver:#c0c0c0;--bronze:#cd7f32;
+  --text:#c8c8d4;--text2:#8888a0;--text3:#555570;--white:#e8e8f0;
+  --border:rgba(0,255,136,.12);--glow:0 0 20px rgba(0,255,136,.15);
+  --sovereign:#ffd700;--master:#c0c0c0;--expert:#00ff88;--journeyman:#3399ff;
+  --apprentice:#8866cc;--novice:#555570;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;overflow-x:hidden}
+body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,136,.008) 2px,rgba(0,255,136,.008) 4px);
+  pointer-events:none;z-index:9999}
+
+.page{position:relative;z-index:1;min-height:100vh;padding:20px}
+
+.hdr{text-align:center;margin-bottom:24px}
+.hdr h1{font-family:'Orbitron',sans-serif;font-size:clamp(18px,3vw,28px);font-weight:900;
+  color:var(--accent);letter-spacing:6px;text-transform:uppercase;
+  text-shadow:0 0 30px rgba(0,255,136,.3)}
+.hdr .sub{font-size:11px;color:var(--text3);letter-spacing:3px;margin-top:4px}
+
+.nav{display:flex;justify-content:center;gap:16px;margin-bottom:24px}
+.nav a{color:var(--text3);text-decoration:none;font-size:11px;letter-spacing:2px;
+  padding:6px 14px;border:1px solid var(--border);transition:all .2s}
+.nav a:hover,.nav a.active{color:var(--accent);border-color:var(--accent);background:var(--accent-dim)}
+
+/* Tabs */
+.tabs{display:flex;justify-content:center;gap:8px;margin-bottom:24px}
+.tab{padding:8px 20px;font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;
+  letter-spacing:2px;cursor:pointer;border:1px solid var(--border);color:var(--text3);
+  background:transparent;transition:all .2s;text-transform:uppercase}
+.tab:hover{border-color:var(--accent);color:var(--accent)}
+.tab.active{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+
+/* Standings grid */
+.standings{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+
+.agent-card{background:var(--surface);border:1px solid var(--border);padding:14px 16px;
+  position:relative;cursor:pointer;transition:all .3s;overflow:hidden;
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px))}
+.agent-card:hover{border-color:var(--accent);box-shadow:var(--glow);transform:translateY(-2px)}
+.agent-card .rank-badge{position:absolute;top:0;right:0;padding:4px 10px;font-size:8px;
+  font-family:'Orbitron',sans-serif;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.agent-card .rank-badge.sovereign{background:var(--sovereign);color:#000}
+.agent-card .rank-badge.grandmaster{background:linear-gradient(135deg,var(--gold),var(--bronze));color:#000}
+.agent-card .rank-badge.master{background:var(--silver);color:#000}
+.agent-card .rank-badge.expert{background:var(--expert);color:#000}
+.agent-card .rank-badge.journeyman{background:var(--journeyman);color:#fff}
+.agent-card .rank-badge.apprentice{background:var(--apprentice);color:#fff}
+.agent-card .rank-badge.novice{background:var(--novice);color:#fff}
+
+.agent-card .name{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;
+  color:var(--white);letter-spacing:1px}
+.agent-card .role{font-size:9px;color:var(--text2);margin-top:3px;line-height:1.3}
+.agent-card .stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.agent-card .stat{background:var(--bg2);padding:6px 8px}
+.agent-card .stat .label{font-size:7px;color:var(--text3);letter-spacing:1px;text-transform:uppercase}
+.agent-card .stat .value{font-size:13px;font-weight:700;color:var(--white);margin-top:2px}
+
+.agent-card .score-bar{height:3px;background:var(--bg);margin-top:8px;overflow:hidden}
+.agent-card .score-bar .fill{height:100%;transition:width .6s}
+
+.agent-card .bonafide{font-size:8px;margin-top:6px;letter-spacing:1px}
+.agent-card .bonafide.held{color:var(--accent)}
+.agent-card .bonafide.revoked{color:var(--veto)}
+.agent-card .group{font-size:8px;color:var(--text3);margin-top:3px}
+
+/* Battle arena */
+.arena{max-width:1200px;margin:0 auto;display:none}
+.arena.active{display:block}
+
+.battle-setup{display:flex;gap:12px;margin-bottom:20px;align-items:flex-end;flex-wrap:wrap}
+.battle-setup .field{flex:1;min-width:180px}
+.battle-setup label{font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:4px}
+.battle-setup select,.battle-setup input{width:100%;background:var(--bg);border:1px solid var(--border);
+  color:var(--white);padding:10px;font-family:inherit;font-size:11px;outline:none}
+.battle-setup select:focus,.battle-setup input:focus{border-color:var(--accent)}
+.battle-setup button{background:var(--veto);color:#fff;border:none;
+  padding:10px 24px;font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;
+  letter-spacing:2px;cursor:pointer;text-transform:uppercase;transition:all .2s;min-width:120px}
+.battle-setup button:hover{box-shadow:0 0 20px rgba(255,51,102,.4)}
+.battle-setup button:disabled{opacity:.3}
+
+/* Battle field */
+.battlefield{display:grid;grid-template-columns:1fr 60px 1fr;gap:0;min-height:400px}
+
+.combatant{background:var(--surface);border:1px solid var(--border);padding:16px;position:relative}
+.combatant.winner{border-color:var(--accent);box-shadow:0 0 20px rgba(0,255,136,.15)}
+.combatant.loser{border-color:var(--veto);opacity:.7}
+.combatant .c-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.combatant .c-name{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;color:var(--accent);letter-spacing:2px}
+.combatant .c-rank{font-size:9px;color:var(--text3)}
+.combatant .c-response{font-size:11px;line-height:1.6;color:var(--text);margin-top:8px;
+  max-height:300px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg)}
+.combatant .c-score{margin-top:12px;padding:8px;background:var(--bg2);text-align:center}
+.combatant .c-score .val{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900}
+.combatant .c-score .lbl{font-size:8px;color:var(--text3);letter-spacing:2px;margin-top:2px}
+
+.vs-divider{display:flex;align-items:center;justify-content:center;position:relative}
+.vs-divider::before{content:'';position:absolute;top:0;bottom:0;left:50%;width:1px;
+  background:linear-gradient(transparent,var(--veto),transparent)}
+.vs-text{font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:var(--veto);
+  background:var(--bg);padding:8px 0;position:relative;z-index:1;text-shadow:0 0 20px rgba(255,51,102,.5)}
+
+/* Verdict banner */
+.verdict{margin-top:16px;padding:16px;text-align:center;display:none}
+.verdict.shown{display:block;animation:verdictIn .6s ease-out}
+@keyframes verdictIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+.verdict .winner-name{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;
+  color:var(--accent);letter-spacing:3px}
+.verdict .verdict-reason{font-size:11px;color:var(--text2);margin-top:6px}
+.verdict .verdict-action{margin-top:10px;font-size:10px;color:var(--advisory)}
+
+/* Loading */
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--text3);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.ft{text-align:center;padding:20px;font-size:10px;color:var(--text3);letter-spacing:1px;margin-top:30px}
+.ft a{color:var(--text2);text-decoration:none}
+.ft a:hover{color:var(--accent)}
+
+@media(max-width:700px){
+  .battlefield{grid-template-columns:1fr;gap:12px}
+  .vs-divider{height:40px}
+  .vs-divider::before{top:50%;bottom:auto;left:0;right:0;width:auto;height:1px;
+    background:linear-gradient(to right,transparent,var(--veto),transparent)}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hdr">
+    <h1>The Dojo</h1>
+    <div class="sub">Reputation &middot; Rank &middot; BONA FIDE &middot; Deliberation Arena</div>
+  </div>
+
+  <div class="nav">
+    <a href="/">Dashboard</a>
+    <a href="/boardroom">Boardroom</a>
+    <a href="/dojo" class="active">Dojo</a>
+    <a href="/book">Book</a>
+    <a href="/docs.html">Docs</a>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('standings')">Standings</div>
+    <div class="tab" onclick="showTab('battle')">Battle Arena</div>
+  </div>
+
+  <!-- Standings -->
+  <div class="standings" id="standings-view"></div>
+
+  <!-- Battle Arena -->
+  <div class="arena" id="battle-view">
+    <div class="battle-setup">
+      <div class="field">
+        <label>Challenger</label>
+        <select id="fighter-a"></select>
+      </div>
+      <div class="field">
+        <label>Defender</label>
+        <select id="fighter-b"></select>
+      </div>
+      <div class="field" style="flex:2">
+        <label>Topic of Deliberation</label>
+        <input type="text" id="battle-topic" placeholder="The question they must resolve..." />
+      </div>
+      <button id="battle-btn" onclick="startBattle()">FIGHT</button>
+    </div>
+
+    <div class="battlefield" id="battlefield" style="display:none">
+      <div class="combatant" id="combatant-a">
+        <div class="c-header">
+          <div class="c-name" id="ca-name">—</div>
+          <div class="c-rank" id="ca-rank">—</div>
+        </div>
+        <div class="c-response" id="ca-response">Awaiting deliberation...</div>
+        <div class="c-score">
+          <div class="val" id="ca-score">—</div>
+          <div class="lbl">Confidence</div>
+        </div>
+      </div>
+
+      <div class="vs-divider"><div class="vs-text">VS</div></div>
+
+      <div class="combatant" id="combatant-b">
+        <div class="c-header">
+          <div class="c-name" id="cb-name">—</div>
+          <div class="c-rank" id="cb-rank">—</div>
+        </div>
+        <div class="c-response" id="cb-response">Awaiting deliberation...</div>
+        <div class="c-score">
+          <div class="val" id="cb-score">—</div>
+          <div class="lbl">Confidence</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="verdict" id="verdict">
+      <div class="winner-name" id="verdict-winner"></div>
+      <div class="verdict-reason" id="verdict-reason"></div>
+      <div class="verdict-action" id="verdict-action"></div>
+    </div>
+  </div>
+
+  <div class="ft">
+    <a href="/">dashboard</a> &middot; <a href="/boardroom">boardroom</a> &middot; <a href="/dojo">dojo</a> &middot;
+    <a href="/book">book</a> &middot; <a href="/journal">journal</a> &middot; <a href="/redoc">api</a> &middot;
+    mindx.pythai.net &middot; &copy; Professor Codephreak
+  </div>
+</div>
+
+<script>
+const RANK_COLORS = {
+  sovereign:'var(--sovereign)', grandmaster:'linear-gradient(135deg,#ffd700,#cd7f32)',
+  master:'var(--silver)', expert:'var(--expert)', journeyman:'var(--journeyman)',
+  apprentice:'var(--apprentice)', novice:'var(--novice)'
+};
+
+let allAgents = [];
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab[onclick*="${name}"]`).classList.add('active');
+  document.getElementById('standings-view').style.display = name==='standings'?'grid':'none';
+  document.getElementById('battle-view').className = name==='battle'?'arena active':'arena';
+}
+
+async function loadStandings() {
+  try {
+    const resp = await fetch('/dojo/standings');
+    const data = await resp.json();
+    const standings = data.standings || {};
+    const el = document.getElementById('standings-view');
+    el.innerHTML = '';
+
+    // Sort by score descending
+    const sorted = Object.entries(standings).sort((a,b) => (b[1].reputation_score||0) - (a[1].reputation_score||0));
+    allAgents = sorted.map(([id]) => id);
+    populateFighters();
+
+    sorted.forEach(([agentId, info], idx) => {
+      const score = info.reputation_score || 0;
+      const rank = info.rank || 'novice';
+      const tier = info.verification_tier || 0;
+      const bona = info.bona_fide_balance > 0;
+      const group = info.group || '—';
+      const role = info.role || '—';
+      const pct = Math.min(100, score / 1000);  // Scale for visual
+
+      el.innerHTML += `
+        <div class="agent-card" onclick="showAgentDetail('${agentId}')">
+          <div class="rank-badge ${rank}">${rank}</div>
+          <div class="name">${agentId}</div>
+          <div class="role">${role}</div>
+          <div class="stats">
+            <div class="stat"><div class="label">Score</div><div class="value">${score.toLocaleString()}</div></div>
+            <div class="stat"><div class="label">Tier</div><div class="value">${tier}</div></div>
+          </div>
+          <div class="score-bar"><div class="fill" style="width:${pct}%;background:${RANK_COLORS[rank]||'var(--accent)'}"></div></div>
+          <div class="bonafide ${bona?'held':'revoked'}">${bona?'BONA FIDE HELD':'BONA FIDE REVOKED'}</div>
+          <div class="group">${group}</div>
+        </div>`;
+    });
+  } catch(e) {
+    console.error('Standings failed:', e);
+  }
+}
+
+function populateFighters() {
+  const selA = document.getElementById('fighter-a');
+  const selB = document.getElementById('fighter-b');
+  selA.innerHTML = '';
+  selB.innerHTML = '';
+  allAgents.forEach(id => {
+    selA.innerHTML += `<option value="${id}">${id}</option>`;
+    selB.innerHTML += `<option value="${id}">${id}</option>`;
+  });
+  // Default: first two different agents
+  if (allAgents.length > 1) selB.selectedIndex = 1;
+}
+
+async function showAgentDetail(agentId) {
+  try {
+    const resp = await fetch(`/dojo/agent/${agentId}`);
+    const data = await resp.json();
+    alert(JSON.stringify(data, null, 2));
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+async function startBattle() {
+  const fighterA = document.getElementById('fighter-a').value;
+  const fighterB = document.getElementById('fighter-b').value;
+  const topic = document.getElementById('battle-topic').value.trim();
+  if (!topic || fighterA === fighterB) return;
+
+  const btn = document.getElementById('battle-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  document.getElementById('battlefield').style.display = 'grid';
+  document.getElementById('verdict').className = 'verdict';
+
+  document.getElementById('ca-name').textContent = fighterA;
+  document.getElementById('cb-name').textContent = fighterB;
+  document.getElementById('ca-response').textContent = 'Deliberating...';
+  document.getElementById('cb-response').textContent = 'Deliberating...';
+  document.getElementById('ca-score').textContent = '...';
+  document.getElementById('cb-score').textContent = '...';
+  document.getElementById('combatant-a').className = 'combatant';
+  document.getElementById('combatant-b').className = 'combatant';
+
+  // Convene a boardroom session — the two fighters are essentially soldiers voting
+  // on the topic. We use the boardroom convene and extract their votes.
+  try {
+    const directive = `DOJO DELIBERATION between ${fighterA} and ${fighterB}: ${topic}`;
+    const resp = await fetch(`/boardroom/convene?directive=${encodeURIComponent(directive)}&importance=standard`, {method:'POST'});
+    const data = await resp.json();
+
+    // Find votes closest to our fighters (by name prefix match)
+    const votes = data.votes || [];
+    let voteA = votes[0] || {vote:'abstain', reasoning:'No response', confidence:0.3};
+    let voteB = votes[1] || {vote:'abstain', reasoning:'No response', confidence:0.3};
+
+    // Try to match actual soldiers
+    for (const v of votes) {
+      if (v.soldier && fighterA.includes(v.soldier.split('_')[0])) voteA = v;
+      if (v.soldier && fighterB.includes(v.soldier.split('_')[0])) voteB = v;
+    }
+
+    // Display responses with stagger
+    setTimeout(() => {
+      document.getElementById('ca-response').textContent = voteA.reasoning || voteA.vote;
+      document.getElementById('ca-score').textContent = ((voteA.confidence||0)*100).toFixed(0) + '%';
+      document.getElementById('ca-rank').textContent = voteA.soldier || '—';
+    }, 500);
+
+    setTimeout(() => {
+      document.getElementById('cb-response').textContent = voteB.reasoning || voteB.vote;
+      document.getElementById('cb-score').textContent = ((voteB.confidence||0)*100).toFixed(0) + '%';
+      document.getElementById('cb-rank').textContent = voteB.soldier || '—';
+    }, 1200);
+
+    // Determine winner
+    setTimeout(() => {
+      const confA = voteA.confidence || 0;
+      const confB = voteB.confidence || 0;
+      let winner, loser, winName, reason;
+
+      if (confA > confB) {
+        winner = 'a'; loser = 'b'; winName = fighterA;
+        reason = `${fighterA} dominates with ${(confA*100).toFixed(0)}% confidence vs ${(confB*100).toFixed(0)}%`;
+      } else if (confB > confA) {
+        winner = 'b'; loser = 'a'; winName = fighterB;
+        reason = `${fighterB} dominates with ${(confB*100).toFixed(0)}% confidence vs ${(confA*100).toFixed(0)}%`;
+      } else {
+        winner = null; winName = 'DRAW';
+        reason = `Both agents at ${(confA*100).toFixed(0)}% confidence — no dominant solution`;
+      }
+
+      if (winner) {
+        document.getElementById('combatant-'+winner).classList.add('winner');
+        document.getElementById('combatant-'+loser).classList.add('loser');
+      }
+
+      const verdict = document.getElementById('verdict');
+      verdict.className = 'verdict shown';
+      document.getElementById('verdict-winner').textContent = winName + (winner ? ' DOMINATES' : '');
+      document.getElementById('verdict-reason').textContent = reason;
+      document.getElementById('verdict-action').textContent =
+        `Verdict returns to the Boardroom: ${data.outcome||'pending'} (score: ${((data.weighted_score||0)*100).toFixed(1)}%)`;
+
+      btn.disabled = false;
+      btn.textContent = 'FIGHT';
+    }, 2000);
+
+  } catch(e) {
+    document.getElementById('ca-response').textContent = 'Error: ' + e.message;
+    btn.disabled = false;
+    btn.textContent = 'FIGHT';
+  }
+}
+
+// Init
+loadStandings();
+</script>
+</body>
+</html>

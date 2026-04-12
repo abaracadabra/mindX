@@ -919,6 +919,8 @@ async def improvement_journal_page():
     return _DashResponse(content=_doc_page("Improvement Journal", body + back, "", description="mindX Improvement Journal — timestamped log of autonomous decisions, self-improvement campaigns, belief changes, and system snapshots.", canonical_path="/journal"))
 
 _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
+_BOARDROOM_HTML_PATH = Path(__file__).parent / "boardroom.html"
+_DOJO_HTML_PATH = Path(__file__).parent / "dojo.html"
 _ERROR_PAGES_DIR = Path(__file__).parent / "error_pages"
 _FAVICON_DIR = Path(__file__).parent
 
@@ -990,6 +992,22 @@ async def inft_page():
     return _DashResponse(content="<h1>iNFT</h1><p>Interface loading...</p>")
 
 
+@app.get("/boardroom", response_class=_DashResponse, include_in_schema=False)
+async def boardroom_page():
+    """The Boardroom — CEO + Seven Soldiers interactive governance."""
+    if _BOARDROOM_HTML_PATH.exists():
+        return _DashResponse(content=_BOARDROOM_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>Boardroom</h1><p>Loading...</p>")
+
+
+@app.get("/dojo", response_class=_DashResponse, include_in_schema=False)
+async def dojo_page():
+    """The Dojo — Reputation standings and deliberation arena."""
+    if _DOJO_HTML_PATH.exists():
+        return _DashResponse(content=_DOJO_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>Dojo</h1><p>Loading...</p>")
+
+
 @app.get("/automindx", response_class=_DashResponse, include_in_schema=False)
 @app.get("/automindx.html", response_class=_DashResponse, include_in_schema=False)
 async def automindx_page():
@@ -1027,7 +1045,7 @@ app.add_middleware(
 # Uses @app.middleware("http") which always fires regardless of import order.
 
 _PUBLIC_EXACT = frozenset({
-    "/", "/health", "/docs.html", "/book", "/journal", "/automindx", "/automindx.html", "/inft", "/inft.html",
+    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/automindx", "/automindx.html", "/inft", "/inft.html",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/diagnostics/live", "/activity/stream", "/activity/recent", "/activity/stats",
     "/thesis/evidence", "/thesis/summary",
@@ -1038,7 +1056,7 @@ _PUBLIC_EXACT = frozenset({
     "/governance/status",
 })
 _PUBLIC_PREFIXES = (
-    "/doc/", "/docs", "/redoc", "/thesis/", "/mindterm/static/",
+    "/doc/", "/docs", "/redoc", "/thesis/", "/mindterm/static/", "/boardroom/", "/dojo/",
     "/dojo/agent/", "/bankon", "/agenticplace/", "/chat/docs",
     "/actions/export", "/diagnostics/export", "/api/rage/embed",
     "/users/challenge", "/users/register", "/error-pages/", "/static/",
