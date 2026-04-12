@@ -92,6 +92,7 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;cursor:cross
 
 <div class="key-counter" id="keyCounter"></div>
 <div class="unlock-count" id="unlockCount"></div>
+<div id="dv-perc" style="position:fixed;bottom:6px;right:8px;font-size:8px;color:#3d424d;font-family:'SF Mono',monospace;z-index:3;text-align:right"></div>
 <div class="quote" id="quote"></div>
 
 <script>
@@ -206,20 +207,38 @@ function draw(t) {
     }
   }
 
-  // Particles
+  // Decay wind
+  windX *= 0.98; windY *= 0.98;
+
+  // Particles — pushed by mouse velocity + wind
   for (const p of particles) {
     if (mouseX > 0) {
       const dx = mouseX - p.x, dy = mouseY - p.y, dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 150) {
-        const f = (150 - dist) / 150 * .015;
-        p.vx += dx / dist * f; p.vy += dy / dist * f;
+      if (dist < 200 && mouseSpeed > 1) {
+        // Push by velocity, not attraction — stars get thrown
+        const f = (200 - dist) / 200 * 0.12 * Math.min(mouseSpeed / 8, 3);
+        p.vx += mouseVX * f * 0.15;
+        p.vy += mouseVY * f * 0.15;
       }
     }
-    p.vx *= .997; p.vy *= .997;
+    // Wind: global force from rapid motion
+    p.vx += windX * 0.008;
+    p.vy += windY * 0.004;
+    // Damping
+    p.vx *= .97; p.vy *= .97;
     p.x += p.vx; p.y += p.vy;
     if (p.x < 0) p.x = W; if (p.x > W) p.x = 0; if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+
+    // Streak when moving fast
+    const spd = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+    if (spd > 1.5) {
+      c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(p.x - p.vx * 2, p.y - p.vy * 2);
+      c.strokeStyle = p.cl + (.05 + spd * .02) + ')'; c.lineWidth = p.s * .4; c.stroke();
+    }
+
+    const alpha = .1 + Math.sin(t * .0008 + p.ph) * .08 + Math.min(spd * .05, .15);
     c.beginPath(); c.arc(p.x, p.y, p.s, 0, 6.28);
-    c.fillStyle = p.cl + (.1 + Math.sin(t * .0008 + p.ph) * .08) + ')'; c.fill();
+    c.fillStyle = p.cl + alpha + ')'; c.fill();
   }
 
   // Hex identity nodes
@@ -250,8 +269,32 @@ function draw(t) {
 }
 requestAnimationFrame(draw);
 
-cv.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
-cv.addEventListener('mouseleave', () => { mouseX = -1; mouseY = -1; });
+// ── DeltaVerse perception: mouse velocity + wind ──
+let mouseVX = 0, mouseVY = 0, mousePX = 0, mousePY = 0, mouseSpeed = 0;
+let windX = 0, windY = 0;
+let dvClicks = 0, dvMoves = 0, dvXP = 0;
+
+cv.addEventListener('mousemove', e => {
+  mousePX = mouseX; mousePY = mouseY;
+  mouseX = e.clientX; mouseY = e.clientY;
+  mouseVX = mouseX - mousePX; mouseVY = mouseY - mousePY;
+  mouseSpeed = Math.sqrt(mouseVX * mouseVX + mouseVY * mouseVY);
+  windX = windX * 0.92 + mouseVX * 0.06;
+  windY = windY * 0.92 + mouseVY * 0.03;
+  dvMoves++;
+  dvXP += 0.1;
+});
+cv.addEventListener('mouseleave', () => { mouseX = -1; mouseY = -1; mouseSpeed = 0; });
+document.addEventListener('touchmove', e => {
+  if (!e.touches.length) return;
+  mousePX = mouseX; mousePY = mouseY;
+  mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY;
+  mouseVX = mouseX - mousePX; mouseVY = mouseY - mousePY;
+  mouseSpeed = Math.sqrt(mouseVX * mouseVX + mouseVY * mouseVY);
+  windX = windX * 0.92 + mouseVX * 0.06;
+  windY = windY * 0.92 + mouseVY * 0.03;
+  dvMoves++;
+}, { passive: true });
 
 // ── Click to "verify" hex nodes ──
 let verifiedCount = 0;
@@ -304,6 +347,13 @@ function spawnKey() {
 // Spawn keys over time
 setTimeout(spawnKey, 3000);
 setInterval(() => { if (keysSpawned < 4) spawnKey(); }, 5000);
+
+// ── DeltaVerse perception display ──
+document.addEventListener('click', () => { dvClicks++; dvXP += 2; });
+setInterval(() => {
+  const el = document.getElementById('dv-perc');
+  if (el) el.textContent = dvClicks + ' clicks · ' + dvMoves + ' moves · ' + Math.floor(dvXP) + ' xp';
+}, 1000);
 
 // ── Quotes ──
 const QUOTES = [
