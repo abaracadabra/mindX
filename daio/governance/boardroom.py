@@ -116,21 +116,36 @@ class Boardroom:
         self.session_log_path = PROJECT_ROOT / "data" / "governance" / "boardroom_sessions.jsonl"
         self.session_log_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Load soldier→provider map from agent_map
+        # Load soldier configuration from agent_map.json
+        # Primary: "soldiers" section (full config with models, weights, capabilities)
+        # Fallback: "soldier_provider_map" (legacy provider-only map)
         self.soldier_providers = {}
+        self.soldier_configs = {}
         try:
             agent_map_path = PROJECT_ROOT / "daio" / "agents" / "agent_map.json"
             if agent_map_path.exists():
                 data = json.loads(agent_map_path.read_text())
-                self.soldier_providers = data.get("soldier_provider_map", {})
+                soldiers_section = data.get("soldiers", {})
+                if soldiers_section:
+                    for sid, cfg in soldiers_section.items():
+                        self.soldier_providers[sid] = cfg.get("inference_provider", "ollama")
+                        self.soldier_configs[sid] = cfg
+                        # Update model assignments from registry if present
+                        if cfg.get("local_model") and sid in SOLDIER_MODELS:
+                            SOLDIER_MODELS[sid] = cfg["local_model"]
+                        if cfg.get("cloud_model") and sid in SOLDIER_CLOUD_MODELS:
+                            SOLDIER_CLOUD_MODELS[sid] = cfg["cloud_model"]
+                else:
+                    # Legacy: soldier_provider_map only
+                    self.soldier_providers = data.get("soldier_provider_map", {})
         except Exception:
             pass
 
         # Validate all 7 soldiers are present — missing soldiers get default provider
         for soldier_id in SOLDIER_WEIGHTS:
             if soldier_id not in self.soldier_providers:
-                self.soldier_providers[soldier_id] = "ollama"  # Default fallback
-                logger.warning(f"Boardroom: soldier '{soldier_id}' missing from provider map, defaulting to ollama")
+                self.soldier_providers[soldier_id] = "ollama"
+                logger.warning(f"Boardroom: soldier '{soldier_id}' missing from registry, defaulting to ollama")
 
     @classmethod
     async def get_instance(cls) -> "Boardroom":

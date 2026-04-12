@@ -62,7 +62,7 @@ class CircuitBreakerState:
     last_failure_time: Optional[datetime] = None
     state: str = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
     failure_threshold: int = 5
-    recovery_timeout: int = 60
+    recovery_timeout: int = 120  # Seconds before OPEN → HALF_OPEN transition
 
 class SecurityValidator:
     """Security validation and input sanitization"""
@@ -634,7 +634,7 @@ class CEOAgent:
                 }
             }
     
-    @with_error_handling("strategic_directive_execution")
+    @with_error_handling("strategic_directive")
     async def execute_strategic_directive(self, directive: str, context: Optional[Dict] = None) -> Dict:
         """Execute strategic directive with comprehensive security and error handling"""
         
@@ -670,6 +670,7 @@ class CEOAgent:
                 recovery_timeout = getattr(breaker, 'recovery_timeout', 120)
                 if time_since_failure >= recovery_timeout:
                     breaker.state = "HALF_OPEN"
+                    breaker.failure_count = 0  # Reset so HALF_OPEN attempt doesn't immediately re-trip
                     logger.info(f"CEO circuit breaker transitioning OPEN → HALF_OPEN after {time_since_failure:.0f}s recovery")
                 else:
                     return {
@@ -1103,6 +1104,117 @@ class CEOAgent:
                 "error": str(e),
                 "timestamp": datetime.now().isoformat()
             }
+
+    # ── Emergency Override ──────────────────────────────────────────────
+
+    async def emergency_override(self, action: str, reason: str, authorized_by: str = "operator") -> Dict:
+        """CEO emergency override — constitutional safeguard.
+
+        Declared in agent_map.json as "ceo_override": "emergency_halt_only".
+        This is the implementation. Actions:
+          - "halt": Stop all autonomous loops, engage lockdown level 3
+          - "reset_breakers": Reset all circuit breakers to CLOSED
+          - "resume": Disengage lockdown, restart autonomous loops
+
+        Requires authorization context. All override actions logged to
+        Godel audit trail. Code is law — but law has emergency provisions.
+        """
+        valid_actions = {"halt", "reset_breakers", "resume"}
+        if action not in valid_actions:
+            return {"success": False, "error": f"Unknown override action: {action}. Valid: {valid_actions}"}
+
+        self.logger.warning(f"CEO EMERGENCY OVERRIDE: action={action}, reason={reason}, authorized_by={authorized_by}")
+        result = {"action": action, "reason": reason, "authorized_by": authorized_by,
+                  "timestamp": datetime.now().isoformat(), "effects": []}
+
+        if action == "halt":
+            # Stop autonomous loops
+            try:
+                from agents.core.mindXagent import MindXAgent
+                mx = MindXAgent._instance
+                if mx and getattr(mx, '_autonomous_running', False):
+                    await mx.stop_autonomous_mode()
+                    result["effects"].append("mindXagent autonomous loop stopped")
+            except Exception as e:
+                result["effects"].append(f"mindXagent stop failed: {e}")
+
+            try:
+                from agents.orchestration.mastermind_agent import MastermindAgent
+                mm = MastermindAgent._instance
+                if mm:
+                    mm.stop_autonomous_loop()
+                    result["effects"].append("mastermind strategic loop stopped")
+            except Exception:
+                pass
+
+            # Engage lockdown
+            try:
+                from tools.warchest.lockdown import LockdownTool
+                lockdown = LockdownTool()
+                ld_result = await lockdown.engage(level=3, reason=f"CEO override: {reason}")
+                result["effects"].append(f"lockdown level 3 engaged: {len(ld_result.get('actions_taken', []))} actions")
+            except Exception as e:
+                result["effects"].append(f"lockdown failed: {e}")
+
+        elif action == "reset_breakers":
+            for name, breaker in self._circuit_breakers.items():
+                old_state = breaker.state
+                breaker.state = "CLOSED"
+                breaker.failure_count = 0
+                breaker.last_failure_time = None
+                result["effects"].append(f"breaker '{name}': {old_state} → CLOSED")
+
+        elif action == "resume":
+            # Disengage lockdown
+            try:
+                from tools.warchest.lockdown import LockdownTool
+                lockdown = LockdownTool()
+                await lockdown.disengage()
+                result["effects"].append("lockdown disengaged")
+            except Exception:
+                pass
+
+            # Restart autonomous loops
+            try:
+                from agents.core.mindXagent import MindXAgent
+                mx = MindXAgent._instance
+                if mx:
+                    await mx.start_autonomous_mode()
+                    result["effects"].append("mindXagent autonomous loop restarted")
+            except Exception:
+                pass
+
+            try:
+                from agents.orchestration.mastermind_agent import MastermindAgent
+                mm = MastermindAgent._instance
+                if mm:
+                    await mm.start_autonomous_loop()
+                    result["effects"].append("mastermind strategic loop restarted")
+            except Exception:
+                pass
+
+        result["success"] = True
+
+        # Log to Godel audit trail
+        try:
+            godel_path = Path("data/logs/godel_choices.jsonl")
+            godel_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(godel_path, "a") as f:
+                f.write(json.dumps({
+                    "timestamp": time.time(),
+                    "source_agent": self.agent_id,
+                    "choice_type": "emergency_override",
+                    "chosen": action,
+                    "rationale": reason,
+                    "outcome": ", ".join(result["effects"]),
+                    "authorized_by": authorized_by,
+                }) + "\n")
+        except Exception:
+            pass
+
+        self.logger.warning(f"CEO EMERGENCY OVERRIDE COMPLETE: {len(result['effects'])} effects applied")
+        return result
+
 
 # CLI Interface for CEO Agent
 async def main():
