@@ -1,509 +1,194 @@
-# mindX: Production Autonomous Augmented Intelligence System 🤖
-[![Version](https://img.shields.io/badge/version-2.0.0--production-blue)](https://github.com/cryptoagi/mindX)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Production Ready](https://img.shields.io/badge/production-ready-brightgreen)](docs/production_deployment.md)
-[![Author](https://img.shields.io/badge/author-Professor%20Codephreak-blue)](https://github.com/Professor-Codephreak)
+# mindX
 
-**mindX** is a production-grade autonomous Augmented Intelligence system implementing the Godel-machine architecture with multi-agent orchestration, encrypted vault management, and comprehensive security hardening.
+**I am a Darwin-Godel Machine.** I improve myself, log every decision, and prove it works with empirical data.
 
-**Author:** Professor Codephreak (© Professor Codephreak)
-**Organizations:** [github.com/agenticplace](https://github.com/agenticplace), [github.com/cryptoagi](https://github.com/cryptoagi), [github.com/Professor-Codephreak](https://github.com/Professor-Codephreak)
-**Resources:** [rage.pythai.net](https://rage.pythai.net)
+**Live:** [mindx.pythai.net](https://mindx.pythai.net) | **Docs:** [/docs.html](https://mindx.pythai.net/docs.html) | **API:** [/redoc](https://mindx.pythai.net/redoc) | **Thesis Evidence:** [/thesis/evidence](https://mindx.pythai.net/thesis/evidence) | **Book:** [/book](https://mindx.pythai.net/book)
 
-## 🚀 What is mindX?
+**Author:** [Professor Codephreak](https://github.com/Professor-Codephreak) | **Org:** [AgenticPlace](https://github.com/agenticplace) | [PYTHAI](https://pythai.net)
 
-mindX represents an implementation of a godel machine - a fully self-improving, economically viable, and cryptographically secure multi-agent system. We are building agents and creating a **sovereign digital polity** where Augmented Intelligence operates independently, evolves continuously, and participates in economic systems.
+---
 
-Machine Learning capabilities include advanced pattern recognition, autonomous decision-making, and continuous learning from operational data with encrypted memory management.
+## What mindX Is
 
-### **evolutionary Capabilities**
-- **Complete Autonomy**: 1-hour improvement cycles without human intervention
-- **Economic Viability**: Real-time cost optimization and treasury management
-- **Cryptographic Sovereignty**: Ethereum-compatible wallet-based agent authentication
-- TODO include crossmint in IDmanagerAgent
-- **Strategic Evolution**: 4-phase audit-driven self-improvement pipeline
-- **Mistral AI Integration**: Advanced reasoning, code generation, and memory systems
+An autonomous multi-agent orchestration system implementing [BDI cognitive architecture](docs/agents/bdi_agent.md). A [Godel machine](docs/THESIS.md) — a self-improving system where the improvement mechanism is part of the system being improved. 20 sovereign agents with cryptographic wallets, [RAGE semantic search](docs/AGINT.md) (not RAG), [DAIO governance](docs/DAIO.md), and [dual-pillar inference](docs/ollama/INDEX.md) (CPU + Cloud).
 
-## 🏗️ Complete Architecture
+### Current State (2026-04-12)
 
-### **CORE System Status**
-- **CORE Agents**: 15/15 foundational components identified and documented (100%)
-- **Specialized Agents**: 25+ domain-specific agents built on CORE foundation
-- **Tools Secured**: 17/17 tools cryptographically secured (100%)
-- **Identity Management**: Ethereum-compatible wallet system with encrypted vault storage
-- **Economic System**: Real-time cost optimization and treasury management
-- **Production Ready**: Enterprise deployment with encrypted vault security
+| Metric | Value |
+|--------|-------|
+| Agents | 20 sovereign with [Ethereum wallets](docs/vault_system.md) |
+| Memories | 159,000+ in [pgvector](https://github.com/pgvector/pgvector) |
+| Embeddings | 132,000+ semantic vectors |
+| Inference | [CPU](docs/ollama/INDEX.md) (~8 tok/s) + [Cloud](docs/ollama/cloud/cloud.md) (~65 tok/s) — [5-step resilience chain](docs/ollama/INDEX.md#resilience-design) |
+| Documentation | 262+ files, [sidebar UI](https://mindx.pythai.net/docs.html), [self-referential schema](docs/SCHEMA.md) |
+| Tools | [31+ registered](docs/TOOLS_INDEX.md) |
+| API Endpoints | 206+ ([Swagger](https://mindx.pythai.net/docs)) |
+| Thesis Evidence | [/thesis/evidence](https://mindx.pythai.net/thesis/evidence) — empirical proof, timestamp-verifiable |
 
-### **🧠 CORE Foundation (15 Components)**
+### Three Pillars ([Manifesto](docs/MANIFESTO.md))
 
-**Meta-Orchestration:**
-- **MindXAgent**: Meta-orchestrator understanding all agents (~149KB, ~3,800 lines)
-- **MastermindAgent** (`0xb9B46126551652eb58598F1285aC5E86E5CcfB43`): Strategic control and AION directive management
+1. **[BDI Reasoning](docs/agents/bdi_agent.md)** — Belief-Desire-Intention cognitive architecture. Every agent reasons.
+2. **[BANKON Vault](docs/vault_system.md)** — AES-256-GCM + HKDF-SHA512 encrypted credential storage. Identity is cryptographic.
+3. **[DAIO Governance](docs/DAIO.md)** — Decentralized Autonomous Intelligence Organization. On-chain governance (Solidity + [Foundry](https://github.com/foundry-rs/foundry)).
 
-**Cognitive Architecture:**
-- **BDIAgent** (`0xf8f2da254D4a3F461e0472c65221B26fB4e91fB7`): Core reasoning engine with tool execution (~64KB)
-- **AGInt** (`0x24C61a2d0e4C4C90386018B43b0DF72B6C6611e2`): P-O-D-A cognitive loop orchestrator
-- **BeliefSystem**: Singleton shared knowledge store with confidence scoring
+---
 
-**Infrastructure Services:**
-- **CoordinatorAgent** (`0x7371e20033f65aB598E4fADEb5B4e400Ef22040A`): Central service bus with pub/sub system (~56KB)
-- **MemoryAgent**: Persistent memory with STM/LTM promotion (~53KB)
-- **IDManagerAgent** (`0x290bB0497dBDbC5E8B577E0cc92457cB015A2a1f`): Cryptographic identity ledger
-- **GuardianAgent** (`0xC2cca3d6F29dF17D1999CFE0458BC3DEc024F02D`): Security infrastructure and access control
-- **StartupAgent**: System bootstrap controller (~83KB, ~2,400 lines)
+## Quick Start
 
-**Core Utilities:**
-- **ReasoningAgent**, **EpistemicAgent**, **NonMonotonicAgent**: Specialized reasoning
-- **SessionManager**: Session lifecycle management
-- **StuckLoopDetector** & **ExitDetector**: Loop prevention and exit conditions
-
-### **🚀 Specialized Agents (Built on CORE)**
-
-**Strategic Services:**
-- **StrategicEvolutionAgent** (`0x5208088F9C7c45a38f2a19B6114E3C5D17375C65`): 4-phase audit-driven improvement pipeline
-
-**Autonomous Operations:**
-- **AION Agent**: Autonomous chroot management with decision sovereignty
-- **SystemAdminAgent**: Privileged operations (AION-controlled only)
-- **BackupAgent**: Blockchain memory storage with git integration
-
-**Development & Analysis:**
-- **EnhancedSimpleCoder** & **SimpleCoder**: Advanced coding capabilities
-- **AnalyzerAgent** & **BenchmarkAgent**: Code analysis and performance testing
-
-**Monitoring & Health:**
-- **PerformanceMonitor** & **ResourceMonitor**: System health and metrics
-- **ErrorRecoveryCoordinator**: Intelligent error recovery
-
-### **Mistral AI Integration**
-- **Mistral Large** (`mistral-large-latest`): Advanced reasoning and strategic thinking
-- **Codestral** (`codestral-latest`): Autonomous code generation and software development
-- **Mistral Nemo** (`mistral-nemo-latest`): High-speed processing for real-time operations
-- **Mistral Embed** (`mistral-embed-v2`): Semantic memory and knowledge retrieval
-
-## 🚀 Quick Start
-
-### Prerequisites
 ```bash
-# Install Python dependencies
+# Clone
+git clone https://github.com/AgenticPlace/mindX.git
+cd mindX
+
+# Setup
+cp .env.sample .env       # Add API keys (Ollama works with zero keys)
 pip install -r requirements.txt
 
-# Ensure Python 3.11+ is available
-python3 --version
-```
-
-### Environment Setup
-```bash
-# Copy and configure environment
-cp .env.sample .env
-
-# Add your Mistral AI API key
-echo "MISTRAL_API_KEY=your-mistral-api-key-here" >> .env
-
-# Optional: Configure other API keys
-echo "OPENAI_API_KEY=your-openai-key" >> .env
-echo "ANTHROPIC_API_KEY=your-anthropic-key" >> .env
-```
-
-### Launch Autonomous System
-
-#### 🚀 **Recommended: Enhanced Web Interface**
-```bash
-# Start MindX with enhanced web interface (backend + frontend)
+# Run (recommended)
 ./mindX.sh --frontend
 
-# Features: Real-time monitoring, health status, agent management, system metrics
-# Access: http://localhost:3000 (Frontend) + http://localhost:8000 (Backend API)
+# Access
+# Frontend:  http://localhost:3000
+# Backend:   http://localhost:8000
+# API Docs:  http://localhost:8000/docs
+# Docs:      http://localhost:8000/docs.html
 ```
 
-#### 🔧 **Advanced Deployment Options**
+### Inference Setup
+
+mindX runs on [Ollama](https://ollama.com) — install it, pull a model, and mindX handles the rest:
+
 ```bash
-# Basic deployment (backend + frontend services)
-./mindX.sh --run
+# Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
 
-# Interactive setup with API key configuration
-./mindX.sh --interactive
+# Pull models
+ollama pull qwen3:1.7b           # Primary reasoning (1.4GB)
+ollama pull mxbai-embed-large    # Embeddings for RAGE (669MB)
 
-# Deploy to specific directory
-./mindX.sh /path/to/deployment/directory
-
-# Custom ports
-./mindX.sh --frontend --frontend-port 3001 --backend-port 8001
-
-# Use existing configuration files
-./mindX.sh --config-file /path/to/mindx_config.json --dotenv-file /path/to/.env
+# Cloud models (free tier, no API key via local proxy)
+ollama pull gpt-oss:120b-cloud   # 120B on GPU, proxied to ollama.com
 ```
 
-#### 📋 **mindX.sh Script Options**
+Zero API keys required for local inference. Cloud extends to 36+ models at [ollama.com](https://ollama.com/search?c=cloud). See [Ollama docs](docs/ollama/INDEX.md) for the complete reference.
+
+### Other Providers (Optional)
+
 ```bash
-# Show help and all available options
-./mindX.sh --help
-
-# Available options:
---frontend                   # Start enhanced web interface (recommended)
---run                        # Start backend and frontend services
---interactive                # Prompt for API keys during setup
---replicate                  # Copy source code to target directory
---config-file <path>         # Use existing mindx_config.json
---dotenv-file <path>         # Use existing .env file
---venv-name <name>           # Override virtual environment name
---frontend-port <port>       # Override frontend port (default: 3000)
---backend-port <port>        # Override backend port (default: 8000)
---log-level <level>          # Set log level (DEBUG, INFO, etc.)
+# Add to .env for additional providers
+GEMINI_API_KEY=...      # Google AI Studio
+GROQ_API_KEY=...        # Groq
+OPENAI_API_KEY=...      # OpenAI
+ANTHROPIC_API_KEY=...   # Anthropic
 ```
 
-#### 🎯 **Quick Start Examples**
+---
+
+## Architecture
+
+```
+CEO Agent ← DAIO governance directives (on-chain → off-chain bridge)
+    ↓
+MastermindAgent (singleton, strategic orchestration center)
+    ↓
+CoordinatorAgent (infrastructure management, autonomous improvement)
+    ↓
+20+ Specialized Agents (BDI-based cognitive agents)
+    ↓
+31+ Tools extending BaseTool (registered in augmentic_tools_registry.json)
+```
+
+### Inference Resilience ([5-step chain](docs/ollama/INDEX.md#resilience-design))
+
+```
+Step 1: InferenceDiscovery → best provider (Gemini, Mistral, Groq, etc.)
+Step 2: OllamaChatManager → local model selection
+Step 3: Re-init → retry with fresh connection
+Step 4: Direct HTTP → localhost:11434
+Step 5: OllamaCloudTool → ollama.com GPU ← GUARANTEE (24/7/365)
+```
+
+mindX never stops inferring when the internet is up.
+
+### Key Components
+
+| Component | File | Role |
+|-----------|------|------|
+| [mindXagent](agents/core/mindXagent.py) | Autonomous core | 5-minute improvement cycles, [Godel journal](docs/BOOK_OF_MINDX.md) |
+| [OllamaCloudTool](tools/cloud/ollama_cloud_tool.py) | Cloud inference | 9 operations, [18dp precision](docs/ollama/mindx/precision_metrics.md), branch-ready |
+| [Boardroom](daio/governance/boardroom.py) | Consensus | CEO + 7 soldiers, weighted voting, dissent branches |
+| [Dojo](daio/governance/dojo.py) | Reputation | 7 ranks (Novice → Sovereign), BONA FIDE |
+| [ActivityFeed](mindx_backend_service/activity_feed.py) | Real-time | SSE stream, room filtering, [dashboard](https://mindx.pythai.net) integration |
+| [ThesisEvidence](mindx_backend_service/thesis_evidence.py) | Scientific proof | Collects empirical data, evaluates 6 thesis claims |
+| [HostingerVPSAgent](agents/hostinger_vps_agent.py) | Deployment | 3 MCP channels: SSH + [Hostinger API](https://developers.hostinger.com) + Backend HTTPS |
+| [PrecisionMetrics](llm/precision_metrics.py) | Token tracking | 18 decimal places, `Decimal`, actual counts from Ollama API |
+
+---
+
+## Documentation
+
+**Start here:** [`docs/NAV.md`](docs/NAV.md) — master navigation hub with 150+ hyperlinks across 40+ sections.
+
+| Doc | What It Covers |
+|-----|----------------|
+| [NAV.md](docs/NAV.md) | Master navigation — every agent, tool, concept linked |
+| [SCHEMA.md](docs/SCHEMA.md) | How to maintain the docs (self-referential instruction layer) |
+| [TECHNICAL.md](docs/TECHNICAL.md) | 3,800-line definitive technical reference |
+| [TODO.md](docs/TODO.md) | Honest assessment — 5.7/10, what's working, what's broken, what's next |
+| [ATTRIBUTION.md](docs/ATTRIBUTION.md) | Open source that powers mindX |
+| [Ollama Reference](docs/ollama/INDEX.md) | 28-file self-contained Ollama docs |
+| [THESIS.md](docs/THESIS.md) | Darwin-Godel Machine synthesis |
+| [MANIFESTO.md](docs/MANIFESTO.md) | 3 pillars, Chimaiera roadmap, cypherpunk tradition |
+| [DEPLOYMENT](docs/DEPLOYMENT_MINDX_PYTHAI_NET.md) | Production at mindx.pythai.net |
+| [USAGE.md](docs/USAGE.md) | Detailed usage guide |
+
+---
+
+## Production Deployment
+
+**Live at [mindx.pythai.net](https://mindx.pythai.net)** — Hostinger VPS, 2 CPU, 8GB RAM, Ubuntu 24.04.
+
+| Endpoint | What It Shows |
+|----------|---------------|
+| [/](https://mindx.pythai.net) | Live diagnostics dashboard — deep expandable panels, SSE activity feed |
+| [/docs.html](https://mindx.pythai.net/docs.html) | Documentation with sidebar navigation |
+| [/book](https://mindx.pythai.net/book) | The Book of mindX — written by AuthorAgent |
+| [/journal](https://mindx.pythai.net/journal) | Improvement Journal — autonomous decisions |
+| [/thesis/evidence](https://mindx.pythai.net/thesis/evidence) | Empirical thesis evidence (JSON) |
+| [/dojo/standings](https://mindx.pythai.net/dojo/standings) | Agent reputation rankings |
+| [/inference/status](https://mindx.pythai.net/inference/status) | Inference provider availability |
+| [/activity/stream](https://mindx.pythai.net/activity/stream) | SSE real-time activity feed |
+| [/redoc](https://mindx.pythai.net/redoc) | API reference (206+ endpoints) |
+
+---
+
+## Testing
+
 ```bash
-# 1. First-time setup with interactive API key configuration
-./mindX.sh --frontend --interactive
-
-# 2. Production deployment with custom configuration
-./mindX.sh --frontend --config-file production_config.json
-
-# 3. Development setup with custom ports
-./mindX.sh --frontend --frontend-port 3001 --backend-port 8001
-
-# 4. Full system deployment without web interface
-./mindX.sh --run
+python -m pytest tests/ -v
+python -m pytest tests/ --cov=mindx --cov-report=term-missing
 ```
 
-#### 🔄 **Alternative Launch Methods**
+## Code Quality
+
 ```bash
-# Direct execution (legacy)
-python3 augmentic.py
-
-# Web interface launcher (legacy)
-./run_mindx_web.sh
-
-# Simple version (minimal features)
-python3 augmentic_simple.py
+ruff format .
+ruff check . --fix
+mypy mindx/
 ```
 
-### Monitor System Status
-```bash
-# Check system status
-python3 augmentic.py --status
+---
 
-# View agent performance metrics
-python3 augmentic.py --metrics
+## Open Source Attribution
 
-# Monitor Mistral AI usage and costs
-python3 augmentic.py --costs
+mindX builds on: [Ollama](https://ollama.com), [vLLM](https://github.com/vllm-project/vllm), [pgvector](https://github.com/pgvector/pgvector), [FastAPI](https://fastapi.tiangolo.com/), [OpenZeppelin](https://github.com/OpenZeppelin/openzeppelin-contracts), [Foundry](https://github.com/foundry-rs/foundry), [A2A Protocol](https://github.com/a2aproject/a2a-python), [MCP](https://modelcontextprotocol.io/). Ideas extrapolated from [SwarmClaw](https://github.com/swarmclawai) (docs layout, activity feed, knowledge model). Full list: [ATTRIBUTION.md](docs/ATTRIBUTION.md).
 
-# Check evolution progress
-python3 augmentic.py --evolution
-```
+## License
 
-## 📁 Project Structure
+MIT License — See [LICENSE](LICENSE) for details.
 
-```
-mindX/
-├── docs/                    # Complete documentation (103+ files)
-│   ├── agents_architectural_reference.md
-│   ├── mistral_api.md
-│   ├── hackathon.md
-│   └── [100+ more documentation files]
-├── tests/                   # Comprehensive test suite (30+ files)
-│   ├── test_mistral_chat_completion_api.py
-│   ├── test_agent_lifecycle_complete.py
-│   └── [25+ more test files]
-├── agents/                  # Agent implementations
-│   ├── mastermind_agent.py
-│   ├── guardian_agent.py
-│   └── [other agent files]
-├── api/                     # API components
-│   ├── mistral_api.py
-│   └── api_server.py
-├── core/                    # Core system components
-│   ├── bdi_agent.py
-│   ├── agint.py
-│   └── belief_system.py
-├── orchestration/           # Orchestration agents
-│   ├── coordinator_agent.py
-│   └── ceo_agent.py
-├── learning/                # Learning and evolution
-│   ├── strategic_evolution_agent.py
-│   └── self_improve_agent.py
-├── monitoring/              # Performance monitoring
-│   ├── enhanced_monitoring_system.py
-│   └── performance_monitor.py
-├── tools/                   # Tool ecosystem (27+ tools)
-│   ├── audit_and_improve_tool.py
-│   ├── augmentic_intelligence_tool.py
-│   └── [25+ more tools]
-├── models/                  # Model configurations
-│   ├── mistral.yaml
-│   └── gemini.yaml
-├── augmentic.py             # Main entry point
-├── augmentic_simple.py      # Simplified version
-├── start_autonomous_evolution.py
-├── mindX.sh                 # Enhanced deployment script with web interface
-├── run_mindx_web.sh         # Legacy web interface launcher (deprecated)
-├── mindx_frontend_ui/       # Enhanced frontend UI files
-│   ├── index.html           # Main HTML interface
-│   ├── app.js               # Frontend JavaScript with full integration
-│   ├── styles3.css          # Cyberpunk 2049 theme CSS
-│   └── server.js            # Frontend server
-├── mindx_backend_service/   # Backend API service
-│   └── main_service.py      # FastAPI backend with all endpoints
-├── pyproject.toml           # Project configuration
-├── requirements.txt         # Dependencies
-├── .env.sample              # Environment template
-└── .gitignore               # Git ignore rules
-```
+---
 
-## 🎯 Key Features
+*Where intelligence meets autonomy. The constraint is not the hardware — it is the ambition. And the ambition is sovereign.*
 
-### **Autonomous Operation**
-- **Complete Autonomy**: 1-hour improvement cycles without human intervention
-- **Strategic Evolution**: 4-phase audit-driven self-improvement pipeline
-- **Economic Viability**: Real-time cost optimization and treasury management
-- **Cryptographic Security**: Ethereum-compatible wallet-based authentication
-
-### **Mistral AI Integration**
-- **Advanced Reasoning**: Mistral Large for complex strategic thinking
-- **Code Generation**: Codestral for autonomous software development
-- **High-Speed Processing**: Mistral Nemo for real-time operations
-- **Semantic Memory**: Mistral Embed for knowledge retrieval and storage
-
-### **Production Ready**
-- **Agent Registry**: 9/20+ agents registered with cryptographic identities
-- **Tool Ecosystem**: 17/17 tools cryptographically secured
-- **Comprehensive Testing**: 30+ test files with full coverage
-- **Complete Documentation**: 103+ documentation files
-
-## 📚 Documentation
-
-### **Core Architecture**
-- **[Agent Architecture](https://github.com/abaracadabra/mindX/blob/main/docs/agents_architectural_reference.md)** - Complete agent registry and capabilities
-- **[Autonomous Civilization](https://github.com/abaracadabra/mindX/blob/main/docs/autonomous_civilization.md)** - Philosophical and technical foundation
-- **[BDI Agent](https://github.com/abaracadabra/mindX/blob/main/docs/bdi_agent.md)** - Belief-Desire-Intention architecture
-- **[Mastermind Agent](https://github.com/abaracadabra/mindX/blob/main/docs/mastermind_agent.md)** - Strategic orchestration system
-
-### **Mistral AI Integration**
-- **[Mistral API Documentation](https://github.com/abaracadabra/mindX/blob/main/docs/mistral_api.md)** - Complete API integration guide
-- **[Mistral API Compliance](https://github.com/abaracadabra/mindX/blob/main/docs/mistral_chat_completion_api_compliance.md)** - Official API 1.0.0 compliance
-- **[Mistral Models Configuration](https://github.com/abaracadabra/mindX/blob/main/docs/mistral_models.md)** - Model selection and optimization
-
-### **Advanced Features**
-- **[Strategic Evolution](https://github.com/abaracadabra/mindX/blob/main/docs/strategic_evolution_agent.md)** - Autonomous improvement system
-- **[Memory Architecture](https://github.com/abaracadabra/mindX/blob/main/docs/memory.md)** - Scalable memory management
-- **[Blueprint Agent](https://github.com/abaracadabra/mindX/blob/main/docs/blueprint_agent.md)** - System design automation
-- **[Guardian Agent](https://github.com/abaracadabra/mindX/blob/main/docs/guardian_agent.md)** - Security and validation
-
-- **[Technical Architecture](https://github.com/abaracadabra/mindX/blob/main/docs/TECHNICAL.md)** - Complete system design
-
-## 🧪 Testing
-
-### **Run Test Suite**
-```bash
-# Run all tests
-python -m pytest tests/
-
-# Run specific test categories
-python -m pytest tests/test_mistral_chat_completion_api.py
-python -m pytest tests/test_agent_lifecycle_complete.py
-
-# Run with coverage
-python -m pytest tests/ --cov=.
-```
-
-### **Test Categories**
-- **Mistral AI Integration**: API compliance and functionality tests
-- **Agent Lifecycle**: Complete agent creation and management tests
-- **System Integration**: End-to-end autonomous operation tests
-- **Performance**: Load testing and optimization validation
-
-## 🌐 Enhanced Web Interface
-
-### **Real-Time Monitoring Dashboard**
-The enhanced web interface provides a comprehensive control panel with:
-
-- **🔴🟢 Health Status**: Live system health indicators with component-level monitoring
-- **📊 Performance Metrics**: Real-time CPU, memory, and disk usage tracking
-- **🤖 Agent Management**: Complete agent registry with real-time status updates
-- **📝 System Logs**: Live log streaming with filtering and search capabilities
-- **💻 Terminal Access**: Built-in terminal for system commands and monitoring
-- **⚙️ Admin Controls**: System restart, backup, configuration management
-
-### **Access the Web Interface**
-```bash
-# Start enhanced web interface
-./mindX.sh --frontend
-
-# Access URLs:
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:8000
-# API Documentation: http://localhost:8000/docs
-```
-
-### **Web Interface Features**
-- **Cyberpunk 2049 Theme**: Professional UI with advanced animations
-- **Real-Time Updates**: Live data refresh without page reload
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
-- **Error Handling**: Graceful degradation and user-friendly error messages
-- **API Integration**: Complete backend-frontend integration with all endpoints
-
-## 🚀 Deployment
-
-### **Live Production**
-
-mindX is live at **https://mindx.pythai.net** — Hostinger VPS with SSL, BANKON Vault credential management, and systemd auto-restart.
-
-- **API Docs:** https://mindx.pythai.net/docs
-- **Health:** https://mindx.pythai.net/health
-- **Deployment Guide:** [docs/DEPLOYMENT_MINDX_PYTHAI_NET.md](docs/DEPLOYMENT_MINDX_PYTHAI_NET.md)
-
-API keys are stored encrypted in BANKON Vault (AES-256-GCM + HKDF-SHA512). Manage credentials:
-```bash
-python manage_credentials.py store gemini_api_key "YOUR_KEY"
-python manage_credentials.py list
-python manage_credentials.py providers   # Show all supported providers
-```
-
-### **Local Development**
-```bash
-# Enhanced web interface (recommended)
-./mindX.sh --frontend
-
-# Basic services deployment
-./mindX.sh --run
-
-# Custom deployment directory
-./mindX.sh /opt/mindx --frontend
-
-# Production with custom configuration
-./mindX.sh --frontend --config-file production_config.json --dotenv-file .env.prod
-```
-
-### **Development & Testing**
-```bash
-# Development with custom ports
-./mindX.sh --frontend --frontend-port 3001 --backend-port 8001
-
-# Interactive setup for first-time users
-./mindX.sh --frontend --interactive
-
-# Replicate source code to target directory
-./mindX.sh --replicate /path/to/deployment
-```
-
-### **Legacy Deployment Methods**
-```bash
-# Legacy web interface (deprecated)
-./run_mindx_web.sh
-
-# Docker deployment (if available)
-docker build -t mindx .
-docker run -p 8000:8000 mindx
-```
-
-### **Environment Requirements**
-- **Python**: 3.11+
-- **Memory**: 8GB+ RAM recommended
-- **Storage**: 10GB+ free space
-- **Network**: Internet access for Mistral AI API
-
-## 🔧 Troubleshooting
-
-### **Common Issues & Solutions**
-
-#### **Port Already in Use**
-```bash
-# Check what's using the ports
-lsof -i :3000  # Frontend port
-lsof -i :8000  # Backend port
-
-# Kill processes if needed
-sudo kill -9 $(lsof -ti:3000)
-sudo kill -9 $(lsof -ti:8000)
-
-# Use different ports
-./mindX.sh --frontend --frontend-port 3001 --backend-port 8001
-```
-
-#### **Permission Denied**
-```bash
-# Make script executable
-chmod +x mindX.sh
-
-# Run with proper permissions
-sudo ./mindX.sh --frontend
-```
-
-#### **Python Environment Issues**
-```bash
-# Ensure Python 3.11+ is installed
-python3 --version
-
-# Create virtual environment manually
-python3 -m venv .mindx_env
-source .mindx_env/bin/activate
-pip install -r requirements.txt
-```
-
-#### **API Key Configuration**
-```bash
-# Interactive setup for API keys
-./mindX.sh --frontend --interactive
-
-# Manual .env configuration
-cp .env.sample .env
-nano .env  # Add your API keys
-```
-
-#### **Frontend Not Loading**
-```bash
-# Check if backend is running
-curl http://localhost:8000/health
-
-# Check frontend logs
-tail -f data/logs/mindx_frontend_service.log
-
-# Restart with verbose logging
-./mindX.sh --frontend --log-level DEBUG
-```
-
-#### **Backend API Errors**
-```bash
-# Check backend logs
-tail -f data/logs/mindx_coordinator_service.log
-
-# Test API endpoints
-curl http://localhost:8000/
-curl http://localhost:8000/status/mastermind
-curl http://localhost:8000/health
-```
-
-### **Getting Help**
-- Check the logs in `data/logs/` directory
-- Run `./mindX.sh --help` for all available options
-- Review the API documentation at `http://localhost:8000/docs`
-- Check the [Issues](https://github.com/abaracadabra/mindX/issues) page
-
-## 🤝 Contributing
-
-This is the evolution of mindX - a production-ready godel-machine. The system is designed to operate independently while providing comprehensive documentation and testing capabilities.
-
-### **Development Guidelines**
-- Follow the existing code structure and patterns
-- Add comprehensive tests for new features
-- Update documentation for any changes
-- Ensure Mistral AI integration compatibility
-
-## 📄 License
-
-MIT License - See [LICENSE](LICENSE) for details.
-
-## 🔗 Links
-mindx.pythai.net
-## 🎉 **mindX: The First Autonomous Digital Civilization**
-
-**Status**: ✅ **EXPERIMENTAL** - Fully Deployed & Operational  
-**Achievement**: World's first autonomous digital civilization with economic viability  
-**Innovation**: Complete Mistral AI integration with cryptographic sovereignty  
-**Impact**: Transforming intelligence from service to stakeholder  
-
-*Where Intelligence Meets Autonomy - The Dawn of Agentic Sovereignty*
-
-(c) 2025 PYTHAI Institute for Emergent Systems
+(c) Professor Codephreak | [PYTHAI](https://pythai.net) | [AgenticPlace](https://github.com/agenticplace)
