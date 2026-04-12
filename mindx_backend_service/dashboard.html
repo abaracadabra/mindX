@@ -661,26 +661,46 @@ var _TABS=['dialogue','actions','agents','dojo','feed'];
 var _popOpen=false,_popFS=false,_popSaved={};
 
 function copyPanelContent(){
-  const pnl=_popOpen?document.getElementById('popup-body'):document.getElementById('pnl');
-  if(!pnl)return;
-  const text=pnl.innerText;
-  navigator.clipboard.writeText(text).then(()=>{
-    const ft=document.querySelector('.ft');if(ft){const o=ft.textContent;ft.textContent='Copied to clipboard!';setTimeout(()=>ft.textContent=o,1500)}
-  }).catch(()=>{
-    const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();
-  });
+  var pnl=_popOpen?document.getElementById('popup-body'):document.getElementById('pnl');
+  if(!pnl||!pnl.innerText.trim()){alert('Nothing to copy');return}
+  var text=pnl.innerText;
+  // Try modern clipboard API first
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){
+      _flashStatus('Copied '+text.length+' chars to clipboard');
+    }).catch(function(){
+      _fallbackCopy(text);
+    });
+  }else{
+    _fallbackCopy(text);
+  }
+}
+function _fallbackCopy(text){
+  var ta=document.createElement('textarea');
+  ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');_flashStatus('Copied!')}catch(e){_flashStatus('Copy failed')}
+  ta.remove();
+}
+function _flashStatus(msg){
+  var ft=document.querySelector('.ft');
+  if(ft){var o=ft.innerHTML;ft.textContent=msg;setTimeout(function(){ft.innerHTML=o},2000)}
 }
 
 function exportPanelMd(){
-  const pnl=_popOpen?document.getElementById('popup-body'):document.getElementById('pnl');
-  if(!pnl)return;
-  const name=_TABS[curT]||'data';
-  const md='# mindX '+name+' — '+new Date().toISOString()+'\n\n'+pnl.innerText;
-  const blob=new Blob([md],{type:'text/markdown'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='mindx_'+name+'_'+new Date().toISOString().slice(0,19).replace(/[:-]/g,'')+'.md';
-  a.click();URL.revokeObjectURL(a.href);
+  var pnl=_popOpen?document.getElementById('popup-body'):document.getElementById('pnl');
+  if(!pnl||!pnl.innerText.trim()){alert('Nothing to export');return}
+  var name=(_TABS&&_TABS[curT])||'data';
+  var ts=new Date().toISOString().slice(0,19).replace(/[:-]/g,'');
+  var md='# mindX '+name+' — '+new Date().toISOString()+'\n\n'+pnl.innerText;
+  var blob=new Blob([md],{type:'text/markdown;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download='mindx_'+name+'_'+ts+'.md';
+  a.style.display='none';document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){a.remove();URL.revokeObjectURL(url)},100);
+  _flashStatus('Exported '+name+'.md');
 }
 
 function _renderPopupContent(){
