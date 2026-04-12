@@ -745,16 +745,18 @@ try{const fs=localStorage.getItem('mindx_fs');if(fs)document.addEventListener('D
 <link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>{_DOC_STYLE}</style></head><body><div class="page">{nav}{meta_html}{body_html}</div>{font_ctrl}</body></html>'''
 
-@app.get("/doc/{name}", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
+@app.get("/doc/{name:path}", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
 async def read_doc(name: str):
-    """Render any markdown doc from docs/ directory."""
+    """Render any markdown doc from docs/ directory (supports subdirectories)."""
     import re as _re2
-    # Sanitize: only allow alphanumeric, underscore, hyphen, dot
-    safe = _re2.sub(r'[^a-zA-Z0-9_\-.]', '', name)
+    # Sanitize: allow alphanumeric, underscore, hyphen, dot, forward slash (for subdirs)
+    safe = _re2.sub(r'[^a-zA-Z0-9_\-./]', '', name)
+    # Prevent path traversal
+    safe = safe.replace('..', '').strip('/')
     if not safe.endswith('.md'):
         safe += '.md'
     doc_path = PROJECT_ROOT / "docs" / safe
-    # Case-insensitive fallback: if exact match fails, search docs/ for a case-insensitive match
+    # Case-insensitive fallback: search in the target directory
     def _ci_find(directory, filename):
         """Case-insensitive file lookup."""
         if not directory.exists():
@@ -765,16 +767,17 @@ async def read_doc(name: str):
                 return f
         return None
     if not doc_path.exists() or not doc_path.is_file():
-        doc_path = _ci_find(PROJECT_ROOT / "docs", safe) or doc_path
-    # Also check publications/ subdirectory for archived editions
-    if not doc_path.exists() or not doc_path.is_file():
-        doc_path = PROJECT_ROOT / "docs" / "publications" / safe
-    if not doc_path.exists() or not doc_path.is_file():
-        doc_path = _ci_find(PROJECT_ROOT / "docs" / "publications", safe) or doc_path
-    if not doc_path.exists() or not doc_path.is_file():
-        doc_path = PROJECT_ROOT / "docs" / "publications" / "daily" / safe
-    if not doc_path.exists() or not doc_path.is_file():
-        doc_path = _ci_find(PROJECT_ROOT / "docs" / "publications" / "daily", safe) or doc_path
+        # Try case-insensitive in the resolved directory
+        doc_dir = doc_path.parent
+        doc_name = doc_path.name
+        doc_path = _ci_find(doc_dir, doc_name) or doc_path
+    # If still not found and path has no subdirectory, try common subdirs
+    if not doc_path.exists() or not doc_path.is_file() and '/' not in safe:
+        for subdir in ["agents", "publications", "publications/daily", "ollama", "ollama/mindx", "pitchdeck"]:
+            found = _ci_find(PROJECT_ROOT / "docs" / subdir, safe.split('/')[-1])
+            if found:
+                doc_path = found
+                break
     if not doc_path.exists() or not doc_path.is_file():
         return _DashResponse(content=_doc_page("Not Found", f"<h1>Document not found</h1><p><code>{safe}</code> does not exist in docs/</p><p>Browse all documents at <a href='/docs.html'>docs</a> or read <a href='/book'>The Book of mindX</a>.</p>"), status_code=404)
     md = doc_path.read_text(encoding="utf-8", errors="replace")
