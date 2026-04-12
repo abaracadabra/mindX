@@ -1328,6 +1328,13 @@ async def activity_stats():
 
 # ── Thesis Evidence: scientific proof endpoints ──
 
+@app.get("/thesis", response_class=_DashResponse, tags=["thesis"], include_in_schema=False)
+@app.get("/thesis/", response_class=_DashResponse, tags=["thesis"], include_in_schema=False)
+async def thesis_redirect():
+    """Redirect /thesis/ to the rendered thesis document."""
+    from starlette.responses import RedirectResponse
+    return RedirectResponse(url="/doc/THESIS", status_code=302)
+
 @app.get("/thesis/evidence", tags=["thesis"], summary="Structured evidence for the Darwin-Godel Machine thesis")
 async def thesis_evidence():
     """Collect and return empirical evidence for each thesis claim."""
