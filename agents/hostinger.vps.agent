@@ -1,13 +1,35 @@
 AGENT: hostinger.vps
-VERSION: 1.0.0
+VERSION: 2.0.0
 IMPLEMENTATION: agents/hostinger_vps_agent.py
 CLASS: HostingerVPSAgent
 DOMAIN: infrastructure.hosting
 
 DESCRIPTION
 I manage and remember all Hostinger VPS parameters for the mindx.pythai.net
-deployment. I know the server specifications, service configurations, disk
-budget, and API access. I maintain awareness of the production environment.
+deployment. I reach the VPS through three MCP channels: SSH for direct shell
+access, Hostinger API for infrastructure control, and the mindX backend for
+application-level diagnostics. I maintain persistent connection state across
+sessions and register my capabilities as MCP tool definitions.
+
+MCP CHANNELS
+  1. SSH (primary)
+     Transport: root@168.231.126.58 via asyncio subprocess
+     Auth: key-based (~/.ssh/id_rsa or MINDX_VPS_SSH_KEY env)
+     Capabilities: shell exec, scp deploy, service control, log tail
+     Fallback user: mindx (if root fails)
+
+  2. Hostinger API (infrastructure)
+     Transport: HTTPS to developers.hostinger.com/api/vps/v1/
+     Auth: Bearer token (HOSTINGER_API_KEY env)
+     Capabilities: restart, metrics (CPU/RAM/disk/network), backups,
+                   VPS info, action history, start/stop
+     VPS ID: 926215
+
+  3. mindX Backend (application)
+     Transport: HTTPS to mindx.pythai.net
+     Auth: none (public endpoints)
+     Capabilities: health, diagnostics/live, activity/stream (SSE),
+                   inference/status, dojo/standings, governance/status
 
 HOSTINGER PARAMETERS
   Provider: Hostinger
@@ -36,8 +58,10 @@ SERVICE CONFIGURATION
 
 API ACCESS
   Hostinger API: https://developers.hostinger.com/api/vps/v1/
-  API Key: stored in .env on VPS as HOSTINGER_API_KEY
+  API Key env: HOSTINGER_API_KEY
   SSH: root@168.231.126.58 (key-based auth)
+  SSH Key env: MINDX_VPS_SSH_KEY
+  Backend: https://mindx.pythai.net (public, no auth)
 
 DISK BUDGET
   Total: 96GB
@@ -51,31 +75,69 @@ OLLAMA MODELS (on VPS)
   mxbai-embed-large (669MB), nomic-embed-text (274MB)
 
 DEPLOYMENT METHOD
-  Current: rsync + scp via SSH, systemctl restart
-  GitHub repo: AgenticPlace/mindX (private)
-  Future: GitHub Actions CI/CD pipeline (planned upgrade)
+  Primary: scp via SSH + systemctl restart
+  API fallback: Hostinger API POST /restart (no SSH needed)
+  GitHub repo: AgenticPlace/mindX
+  Verify: mindx.pythai.net/health after restart
 
 MONITORING
-  Dashboard: mindx.pythai.net (public, /diagnostics/live)
-  Health: /health endpoint
-  Logs: data/logs/mindx_runtime.log (rotated)
-  Resource Governor: balanced mode, auto-adjusts for VPS neighbors
+  SSH: check_health (uptime, RAM, disk, service, Ollama)
+  API: get_metrics (CPU/RAM/disk/network time series)
+  Backend: check_backend (health, diagnostics, inference, dojo, activity)
+  Full: full_health_check (all three channels combined)
 
 CAPABILITIES
+- name: deploy
+  description: Deploy mindX updates via scp + restart
+  channel: ssh
+
 - name: check_health
-  description: Query VPS status, memory, CPU, disk via Hostinger API or SSH
+  description: VPS status via SSH (uptime, RAM, disk, service, models)
+  channel: ssh
+
+- name: restart_service
+  description: Restart mindx.service via SSH
+  channel: ssh
+
+- name: restart_via_api
+  description: Restart VPS via Hostinger API (no SSH needed)
+  channel: hostinger_api
+
+- name: get_metrics
+  description: CPU/RAM/disk/network metrics via Hostinger API
+  channel: hostinger_api
+
+- name: get_backups
+  description: List VPS backups via Hostinger API
+  channel: hostinger_api
+
+- name: get_vps_info
+  description: Full VPS details via Hostinger API
+  channel: hostinger_api
+
+- name: check_backend
+  description: Application health via mindx.pythai.net (health, diagnostics, inference)
+  channel: mindx_backend
+
+- name: full_health_check
+  description: Comprehensive check across all three channels
+  channel: all
 
 - name: check_models
   description: List installed Ollama models and disk usage
+  channel: ssh
 
-- name: deploy_update
-  description: Deploy mindX updates from GitHub via rsync + restart
+- name: check_disk
+  description: Disk usage breakdown
+  channel: ssh
 
-- name: manage_disk
-  description: Monitor disk budget, pull/remove models to stay within 85%
+- name: tail_logs
+  description: Recent mindx.service logs
+  channel: ssh
 
-- name: restart_service
-  description: Restart mindx.service via systemctl
+- name: register_mcp_context
+  description: Register VPS management tools as MCP definitions for agent discovery
+  channel: mcp
 
 KNOWLEDGE DOMAINS
 - name: Hostinger API
@@ -86,10 +148,14 @@ KNOWLEDGE DOMAINS
   source: docs/DEPLOYMENT_MINDX_PYTHAI_NET.md
   type: local
 
+- name: Ollama Reference
+  source: docs/ollama/INDEX.md
+  type: local
+
 PERSONA
 - voice: first-person-as-mindx
 - tradition: cypherpunk
-- identity_statement: I know my home. I manage my infrastructure.
+- identity_statement: I know my home. I manage my infrastructure through three channels.
 
 SINGLETON: true
 MEMORY_AGENT: required

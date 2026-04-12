@@ -1,19 +1,47 @@
 """
 HostingerVPSAgent — I know my home. I manage my infrastructure.
 
-Persistent SSH connection to the Hostinger VPS at mindx.pythai.net.
-Handles deployment (git pull + restart), health checks, disk management,
-service control, and model management via SSH.
+Three MCP channels for reaching the VPS:
+  1. SSH (primary) — root@168.231.126.58, direct shell access
+  2. Hostinger API — https://developers.hostinger.com/api/vps/v1/
+     restart, metrics, backups, status (no SSH needed)
+  3. mindX Backend API — https://mindx.pythai.net/
+     health, diagnostics, governance, activity (public endpoints)
 
-Connection state persists across sessions in data/deployment/vps_state.json.
-SSH credentials stored in BANKON Vault or environment variables.
+Persistent state in data/deployment/vps_state.json survives restarts.
+SSH credentials from env (MINDX_VPS_SSH_KEY) or ~/.ssh/id_rsa.
+Hostinger API key from env (HOSTINGER_API_KEY) or BANKON vault.
+
+Available Hostinger API endpoints (discovered 2026-04-12):
+  GET  /virtual-machines                    — list VPS instances
+  GET  /virtual-machines/{id}               — VPS details
+  GET  /virtual-machines/{id}/actions       — action history
+  GET  /virtual-machines/{id}/backups       — backup list
+  GET  /virtual-machines/{id}/metrics       — CPU/RAM/disk/network metrics
+  POST /virtual-machines/{id}/start         — start VPS
+  POST /virtual-machines/{id}/stop          — stop VPS
+  POST /virtual-machines/{id}/restart       — restart VPS
+  POST /virtual-machines/{id}/recreate      — recreate VPS
+  GET  /data-centers                        — list data centers
+  GET  /templates                           — list OS templates
+
+mindX Backend public endpoints (no auth):
+  GET  /health                              — service health
+  GET  /diagnostics/live                    — full system telemetry
+  GET  /activity/stream                     — SSE real-time events
+  GET  /activity/recent                     — recent activity (JSON)
+  GET  /inference/status                    — inference providers
+  GET  /dojo/standings                      — agent reputation
+  GET  /governance/status                   — governance chain
 
 Usage:
     agent = await HostingerVPSAgent.get_instance()
-    result = await agent.deploy()          # git pull + restart on VPS
-    result = await agent.check_health()    # VPS status
-    result = await agent.restart_service() # systemctl restart mindx
-    result = await agent.check_models()    # Ollama models on VPS
+    result = await agent.deploy()              # scp + restart on VPS
+    result = await agent.check_health()        # SSH + API + backend
+    result = await agent.restart_via_api()     # Hostinger API restart (no SSH)
+    result = await agent.get_metrics()         # Hostinger API metrics
+    result = await agent.get_backups()         # Hostinger API backups
+    result = await agent.check_backend()       # mindX backend /diagnostics/live
 
 Author: Professor Codephreak
 """
@@ -41,6 +69,9 @@ DEFAULT_REMOTE_PATH = "/home/mindx/mindX"
 DEFAULT_SERVICE = "mindx"
 DEFAULT_REPO = "https://github.com/AgenticPlace/mindX.git"
 DEFAULT_BRANCH = "main"
+VPS_ID = "926215"
+HOSTINGER_API = "https://developers.hostinger.com/api/vps/v1"
+MINDX_BACKEND = "https://mindx.pythai.net"
 
 
 @dataclass
@@ -90,9 +121,12 @@ class HostingerVPSAgent:
         self.state = VPSConnectionState()
         self._load_state()
         self._resolve_ssh_config()
+        self._hostinger_api_key = os.getenv("HOSTINGER_API_KEY", "")
         logger.info(
-            f"{self.log_prefix} Initialized — {self.state.user}@{self.state.host}:{self.state.port} "
-            f"key={'set' if self.state.ssh_key_path else 'unset'}"
+            f"{self.log_prefix} Initialized — "
+            f"ssh={'set' if self.state.ssh_key_path else 'unset'}, "
+            f"api={'set' if self._hostinger_api_key else 'unset'}, "
+            f"backend={MINDX_BACKEND}"
         )
 
     @classmethod
@@ -448,13 +482,19 @@ class HostingerVPSAgent:
     # -----------------------------------------------------------------------
 
     def get_status(self) -> Dict[str, Any]:
-        """Return current persisted state."""
+        """Return current persisted state + channel availability."""
         return {
+            "channels": {
+                "ssh": {"available": bool(self.state.ssh_key_path), "user": self.state.user, "host": self.state.host},
+                "hostinger_api": {"available": bool(self._hostinger_api_key), "vps_id": VPS_ID},
+                "mindx_backend": {"available": True, "url": MINDX_BACKEND},
+            },
             "host": self.state.host,
             "user": self.state.user,
             "port": self.state.port,
             "remote_path": self.state.remote_path,
             "ssh_key_set": bool(self.state.ssh_key_path),
+            "hostinger_api_set": bool(self._hostinger_api_key),
             "last_connected": self.state.last_connected,
             "last_connection_success": self.state.last_connection_success,
             "consecutive_failures": self.state.consecutive_failures,
@@ -470,6 +510,204 @@ class HostingerVPSAgent:
             "vps_ollama_model_count": len(self.state.vps_ollama_models),
             "last_health_check": self.state.last_health_check,
         }
+
+    # -----------------------------------------------------------------------
+    # Channel 2: Hostinger API (no SSH needed)
+    # -----------------------------------------------------------------------
+
+    async def _hostinger_api_get(self, endpoint: str, timeout: int = 15) -> Optional[Dict]:
+        """GET request to Hostinger API."""
+        if not self._hostinger_api_key:
+            return None
+        try:
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{HOSTINGER_API}/{endpoint}",
+                    headers={"Authorization": f"Bearer {self._hostinger_api_key}"},
+                    timeout=aiohttp.ClientTimeout(total=timeout),
+                ) as resp:
+                    if resp.status == 200:
+                        return await resp.json()
+                    return {"error": f"HTTP {resp.status}", "status": resp.status}
+        except Exception as e:
+            return {"error": str(e)}
+
+    async def _hostinger_api_post(self, endpoint: str, data: Optional[Dict] = None, timeout: int = 30) -> Optional[Dict]:
+        """POST request to Hostinger API."""
+        if not self._hostinger_api_key:
+            return None
+        try:
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{HOSTINGER_API}/{endpoint}",
+                    headers={"Authorization": f"Bearer {self._hostinger_api_key}", "Content-Type": "application/json"},
+                    json=data or {},
+                    timeout=aiohttp.ClientTimeout(total=timeout),
+                ) as resp:
+                    return await resp.json()
+        except Exception as e:
+            return {"error": str(e)}
+
+    async def restart_via_api(self) -> Dict[str, Any]:
+        """Restart VPS via Hostinger API (no SSH needed)."""
+        result = await self._hostinger_api_post(f"virtual-machines/{VPS_ID}/restart")
+        if result and "error" not in result:
+            logger.info(f"{self.log_prefix} VPS restart triggered via Hostinger API")
+            await self._log_operation("api_restart", result)
+            return {"success": True, "method": "hostinger_api", **result}
+        return {"success": False, "method": "hostinger_api", "error": str(result)}
+
+    async def get_metrics(self, date_from: str = "", date_to: str = "") -> Dict[str, Any]:
+        """Get VPS performance metrics (CPU, RAM, disk, network) via Hostinger API."""
+        if not date_from:
+            from datetime import datetime, timedelta
+            date_to = datetime.utcnow().strftime("%Y-%m-%d")
+            date_from = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d")
+        result = await self._hostinger_api_get(
+            f"virtual-machines/{VPS_ID}/metrics?date_from={date_from}&date_to={date_to}"
+        )
+        if result and "error" not in result:
+            return {"success": True, "method": "hostinger_api", "metrics": result}
+        return {"success": False, "method": "hostinger_api", "error": str(result)}
+
+    async def get_backups(self) -> Dict[str, Any]:
+        """List VPS backups via Hostinger API."""
+        result = await self._hostinger_api_get(f"virtual-machines/{VPS_ID}/backups")
+        if result and "error" not in result:
+            return {"success": True, "method": "hostinger_api", "backups": result}
+        return {"success": False, "method": "hostinger_api", "error": str(result)}
+
+    async def get_vps_info(self) -> Dict[str, Any]:
+        """Get full VPS details via Hostinger API."""
+        result = await self._hostinger_api_get(f"virtual-machines/{VPS_ID}")
+        if result and "error" not in result:
+            return {"success": True, "method": "hostinger_api", "vps": result}
+        return {"success": False, "method": "hostinger_api", "error": str(result)}
+
+    async def get_actions_history(self) -> Dict[str, Any]:
+        """Get VPS action history via Hostinger API."""
+        result = await self._hostinger_api_get(f"virtual-machines/{VPS_ID}/actions")
+        if result and "error" not in result:
+            return {"success": True, "method": "hostinger_api", "actions": result}
+        return {"success": False, "method": "hostinger_api", "error": str(result)}
+
+    # -----------------------------------------------------------------------
+    # Channel 3: mindX Backend API (public HTTPS, no auth)
+    # -----------------------------------------------------------------------
+
+    async def _backend_get(self, path: str, timeout: int = 10) -> Optional[Dict]:
+        """GET request to mindX backend."""
+        try:
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{MINDX_BACKEND}{path}",
+                    timeout=aiohttp.ClientTimeout(total=timeout),
+                ) as resp:
+                    if resp.status == 200:
+                        return await resp.json()
+                    return None
+        except Exception:
+            return None
+
+    async def check_backend(self) -> Dict[str, Any]:
+        """Check mindX backend health and diagnostics via HTTPS."""
+        health = await self._backend_get("/health")
+        diagnostics = await self._backend_get("/diagnostics/live")
+        inference = await self._backend_get("/inference/status")
+        dojo = await self._backend_get("/dojo/standings")
+        activity = await self._backend_get("/activity/recent?limit=5")
+
+        return {
+            "success": health is not None,
+            "method": "mindx_backend_https",
+            "health": health,
+            "system": diagnostics.get("system") if diagnostics else None,
+            "agents": len(diagnostics.get("agents", [])) if diagnostics else 0,
+            "memories": diagnostics.get("database", {}).get("memories") if diagnostics else None,
+            "inference_available": inference.get("available") if inference else None,
+            "inference_total": inference.get("total") if inference else None,
+            "dojo_agents": len(dojo.get("standings", dojo) if isinstance(dojo, dict) else dojo or []),
+            "recent_activity": len(activity.get("events", [])) if activity else 0,
+            "autonomous": diagnostics.get("autonomous") if diagnostics else None,
+        }
+
+    async def full_health_check(self) -> Dict[str, Any]:
+        """
+        Comprehensive health check using ALL three channels.
+        SSH → direct system metrics
+        Hostinger API → VPS status + historical metrics
+        mindX Backend → application-level health
+        """
+        results = {"timestamp": time.time(), "channels": {}}
+
+        # Channel 1: SSH
+        ssh_result = await self.check_health()
+        results["channels"]["ssh"] = ssh_result
+
+        # Channel 2: Hostinger API
+        if self._hostinger_api_key:
+            api_info = await self.get_vps_info()
+            api_metrics = await self.get_metrics()
+            results["channels"]["hostinger_api"] = {
+                "vps_state": api_info.get("vps", {}).get("state") if api_info.get("success") else "unavailable",
+                "metrics_available": api_metrics.get("success", False),
+            }
+        else:
+            results["channels"]["hostinger_api"] = {"available": False, "reason": "HOSTINGER_API_KEY not set"}
+
+        # Channel 3: mindX Backend
+        backend_result = await self.check_backend()
+        results["channels"]["mindx_backend"] = backend_result
+
+        # Summary
+        results["healthy"] = (
+            ssh_result.get("success", False) or
+            backend_result.get("success", False)
+        )
+        results["channels_available"] = sum(1 for c in results["channels"].values()
+                                            if c.get("success", c.get("available", False)))
+
+        self._save_state()
+        await self._log_operation("full_health_check", results)
+        return results
+
+    # -----------------------------------------------------------------------
+    # MCP Context Registration
+    # -----------------------------------------------------------------------
+
+    async def register_mcp_context(self):
+        """Register this agent's capabilities as MCP tool definitions."""
+        try:
+            from tools.communication.mcp_tool import MCPTool
+            mcp = MCPTool.__new__(MCPTool)
+            # Register VPS management tools for other agents to discover
+            await mcp._register_tool(
+                tool_id="hostinger_vps_deploy",
+                tool_name="VPS Deploy",
+                description="Deploy latest code to mindx.pythai.net via SSH (scp + restart)",
+                parameters={"branch": {"type": "string", "default": "main"}},
+                agent_id="hostinger_vps_agent",
+            )
+            await mcp._register_tool(
+                tool_id="hostinger_vps_health",
+                tool_name="VPS Health Check",
+                description="Full health check across SSH, Hostinger API, and mindX backend",
+                parameters={},
+                agent_id="hostinger_vps_agent",
+            )
+            await mcp._register_tool(
+                tool_id="hostinger_vps_restart",
+                tool_name="VPS Restart (API)",
+                description="Restart VPS via Hostinger API (no SSH needed)",
+                parameters={},
+                agent_id="hostinger_vps_agent",
+            )
+            logger.info(f"{self.log_prefix} MCP tools registered (3 capabilities)")
+        except Exception as e:
+            logger.debug(f"{self.log_prefix} MCP registration skipped: {e}")
 
     # -----------------------------------------------------------------------
     # Memory logging
