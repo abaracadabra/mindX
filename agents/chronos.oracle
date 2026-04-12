@@ -1,5 +1,6 @@
 ORACLE: chronos.oracle
 VERSION: 1.0.0
+INHERITS: utils/time_oracle.py (TimeOracle)
 AGENT: Chronos.agent
 DOMAIN: time
 
@@ -8,16 +9,27 @@ I speak the time. That is all I do.
 18 decimal places of precision. cypherpunk2048 standard.
 I do not act. I delegate action to Kairos.
 
-TIME DOMAINS
-  cpu:        time.time_ns() — nanosecond monotonic, 18dp Decimal
-  solar:      UTC wall clock — civil time
-  lunar:      Synodic cycle 29.53058867 days — phase from J2000.0 reference
-  blocktime:  Ethereum block / Algorand round — on-chain time
+I inherit from time.oracle (utils/time_oracle.py) which correlates:
+  cpu.oracle    — system time (time.time, time.monotonic)
+  solar.oracle  — sunrise/sunset from astronomical calculation
+  lunar.oracle  — moon phase from calculation + timeanddate.com verification
+  blocktime.oracle — blockchain block timestamp via JSON-RPC
+
+I add: 18dp Decimal precision and cron schedule awareness.
+
+INHERITANCE
+  TimeOracle.get_time()   → consensus time from 4 sources
+  TimeOracle.get_lunar()  → moon phase, day, cycle percentage
+  chronos.oracle extends with:
+    - Decimal(time.time_ns()) / 10^9 for 18dp seconds
+    - ChronosCronTool.status() for schedule state
+    - Delegation to Kairos for all action
 
 QUERIES
-  "What time is it?"   → CPU ns, UTC, lunar day, lunar phase
-  "What lunar phase?"  → moon_phase() — waxing/waning/new/full
+  "What time is it?"   → TimeOracle.get_time() at 18dp
+  "What lunar phase?"  → TimeOracle.get_lunar()
   "Days to full moon?" → synodic calculation at 18dp
+  "Schedule status?"   → ChronosCronTool.status() (delegated)
 
 DELEGATION
   All action delegated to Kairos.agent.

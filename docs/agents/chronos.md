@@ -11,7 +11,7 @@ I do not act. I delegate all action to [Kairos](../../agents/Kairos.agent).
 | **CPU** | `time.time_ns()` | nanosecond → 18dp Decimal | Inference latency, token timing |
 | **Solar** | UTC wall clock | seconds | Civil time, scheduling |
 | **Lunar** | Synodic period 29.53058867d | 18dp Decimal | [AuthorAgent](../AUTHOR_AGENT.md) chapter cycle |
-| **Blocktime** | ETH block / Algorand round | block number | On-chain governance events |
+| **Blocktime** | ETH block / Algorand round / allchain | block number | On-chain governance events via [time.oracle](../../utils/time_oracle.py) |
 
 ## Precision Standard
 
@@ -71,7 +71,7 @@ elapsed = Decimal(str(now_ns)) / Decimal("1000000000")  # ns → seconds at 18dp
 | `agents/Chronos.agent` | Agent definition — philosophy, scheduled task registry |
 | `agents/chronos.oracle` | Oracle definition — time domains, queries, delegation |
 | `tools/core/chronos_cron_tool.py` | Cron scheduler — named tasks, history, state persistence |
-| `utils/time_oracle.py` | Time correlation utility |
+| `utils/time_oracle.py` | time.oracle — multi-source correlation (CPU, solar, lunar, blocktime allchain). chronos.oracle inherits from this. |
 | `llm/precision_metrics.py` | 18dp Decimal measurement infrastructure |
 
 ## Principle
