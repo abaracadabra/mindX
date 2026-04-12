@@ -81,16 +81,17 @@ SOLDIER_MODELS = {
     "cro_risk": "qwen3:4b",               # 2.3B — deepest local, risk needs maximum depth
 }
 
-# Cloud model assignments — Ollama Cloud free tier (after `ollama signin`)
-# Each soldier has a unique cloud model for enriched reasoning
+# Cloud model assignments — Ollama Cloud free tier (after `ollama signin` on VPS)
+# Each soldier has a unique cloud model matched to their role and reasoning style.
+# Local daemon proxies to cloud — no separate API key needed.
 SOLDIER_CLOUD_MODELS = {
-    "coo_operations": "gemini-3-flash-preview",  # fast operational reasoning
-    "cfo_finance": "ministral-3:3b",             # Mistral financial analysis
-    "cto_technology": "qwen3-coder-next",        # 80B code-specialized
-    "ciso_security": "nemotron-3-nano:30b",      # NVIDIA safety-aligned
-    "clo_legal": "devstral-small-2:24b",         # Mistral structured analysis
-    "cpo_product": "gemma4:31b",                 # Google product reasoning
-    "cro_risk": "deepseek-v3.2",                 # 671B deepest reasoning
+    "coo_operations": "gemini-3-flash-preview",  # Speed + intelligence — operations need fast decisions
+    "cfo_finance": "qwen3.5:8b",                 # Quantitative reasoning, vision — cost calculations
+    "cto_technology": "qwen3-coder-next",        # Agentic coding — architecture and code review
+    "ciso_security": "nemotron-3-super",         # 120B MoE (12B active) — NVIDIA safety-aligned, thinking
+    "clo_legal": "devstral-small-2:24b",         # Code exploration — license/attribution pattern matching
+    "cpo_product": "gemma4:31b",                 # Multimodal, vision — product evaluation across surfaces
+    "cro_risk": "deepseek-v3.2",                 # Deepest reasoning — risk is multivariate analysis
 }
 
 # Soldier personas — injected into prompts for role-specific evaluation
