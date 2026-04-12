@@ -95,7 +95,7 @@ details[open]>summary{margin-bottom:1px}
 <div class="wrap">
 <div class="hdr">
 <div style="display:flex;align-items:center;gap:8px"><h1>mind<b>X</b></h1><div class="sub" id="sub">...</div></div>
-<div style="display:flex;align-items:center;gap:6px;font-size:11px"><a href="/docs.html" style="color:#58a6ff;text-decoration:none">docs</a><span style="color:#4a5060">/</span><a href="/book" style="color:#8b949e;text-decoration:none">book</a><span style="color:#4a5060">/</span><a href="/journal" style="color:#8b949e;text-decoration:none">journal</a><span style="color:#4a5060">/</span><a href="/redoc" style="color:#8b949e;text-decoration:none">api</a><span style="color:#4a5060">/</span><a href="/dojo/standings" style="color:#8b949e;text-decoration:none">dojo</a><span style="color:#4a5060">/</span><a href="/inference/status" style="color:#8b949e;text-decoration:none">inference</a><span style="color:#4a5060">/</span><a href="/automindx" style="color:#d2a8ff;text-decoration:none">origin</a><span style="color:#4a5060">&middot;</span><span class="badge" id="bge">...</span><span class="pulse" style="color:#3fb950;font-size:5px">&#9679;</span></div>
+<div style="display:flex;align-items:center;gap:6px;font-size:11px"><a href="/docs.html" style="color:#58a6ff;text-decoration:none">docs</a><span style="color:#4a5060">/</span><a href="/book" style="color:#8b949e;text-decoration:none">book</a><span style="color:#4a5060">/</span><a href="/journal" style="color:#8b949e;text-decoration:none">journal</a><span style="color:#4a5060">/</span><a href="/redoc" style="color:#8b949e;text-decoration:none">api</a><span style="color:#4a5060">/</span><a href="/dojo/standings" style="color:#8b949e;text-decoration:none">dojo</a><span style="color:#4a5060">/</span><a href="/inference/status" style="color:#8b949e;text-decoration:none">inference</a><span style="color:#4a5060">/</span><a href="/thesis/evidence" style="color:#3fb950;text-decoration:none" title="Empirical evidence for the Darwin-Godel Machine thesis">thesis</a><span style="color:#4a5060">/</span><a href="/automindx" style="color:#d2a8ff;text-decoration:none">origin</a><span style="color:#4a5060">&middot;</span><span class="badge" id="bge">...</span><span class="pulse" style="color:#3fb950;font-size:5px">&#9679;</span></div>
 </div>
 <div class="main">
 <div class="left"><div class="g" id="grid"></div></div>
@@ -347,8 +347,26 @@ function render(d){
   });
   h+=`<div class="c w2" title="Self-improvement decisions — the Godel machine audit trail"><div class="ct"><a href="/mindxagent/actions" style="color:#58a6ff;text-decoration:none">g\u00F6del choices</a> (${(d.godel_choices||[]).length})</div>${gl||'<span style="color:#3d424d">no choices yet</span>'}</div>`;
 
-  // ── THESIS EVIDENCE — scientific proof panel (loaded async) ──
-  h+=`<div class="c w4" id="thesis-panel" title="Darwin-Godel Machine — empirical evidence for each thesis claim"><div class="ct"><a href="/thesis/evidence" style="color:#58a6ff;text-decoration:none">thesis evidence</a> — <a href="/doc/THESIS" style="color:#d2a8ff;text-decoration:none;font-size:8px">read thesis</a></div><div id="thesis-content" style="color:#484f58;font-size:9px">loading evidence...</div></div>`;
+  // ── THESIS EVIDENCE — scientific proof (from /diagnostics/live or async) ──
+  const th=d.thesis||{};
+  const thRate=th.improvement_rate||0;
+  const thColor=thRate>0.5?'#3fb950':thRate>0.1?'#d29922':thRate>0?'#f85149':'#484f58';
+  let thV='';
+  if(th.verdicts){
+    const VCLR={'SUPPORTED':'#3fb950','PARTIAL':'#d29922','NOT SUPPORTED':'#f85149','INSUFFICIENT':'#484f58'};
+    function vc(v){for(const[k,c]of Object.entries(VCLR)){if(v.startsWith(k))return c}return'#484f58'}
+    for(const[claim,verdict]of Object.entries(th.verdicts)){
+      thV+=`<div class="r" title="${verdict}"><span style="color:${vc(verdict)};font-weight:600;font-size:8px">${claim.replace(/_/g,' ')}</span><span style="color:#6e7681;font-size:8px">${verdict.split(' — ')[0]}</span></div>`;
+    }
+  }
+  h+=`<div class="c w2" title="Darwin-Godel Machine — empirical thesis evidence"><div class="ct"><a href="/thesis/evidence" style="color:#58a6ff;text-decoration:none">thesis</a> <span style="color:${thColor};font-weight:700">${(thRate*100).toFixed(1)}%</span> <a href="/doc/THESIS" style="color:#484f58;text-decoration:none;font-size:8px">read thesis</a></div>`;
+  h+=`<div class="r"><span>improvement rate</span><span style="color:${thColor};font-weight:700">${th.improvements_succeeded||0}/${th.improvements_attempted||0}</span></div>`;
+  h+=bar(Math.min(100,thRate*100));
+  h+=`<div class="r"><span>G\u00F6del choices</span><span style="color:#d2a8ff">${(th.godel_choices||0).toLocaleString()}</span></div>`;
+  h+=`<div class="r"><span>self-referential</span><span style="color:#3fb950">${th.self_referential||0}</span></div>`;
+  h+=`<div class="r"><span>evidence span</span><span style="color:#484f58">${th.evidence_span_hours||0}h</span></div>`;
+  if(thV){h+=`<details style="margin-top:2px"><summary style="cursor:pointer;color:#58a6ff;font-size:8px">claim verdicts</summary>${thV}</details>`}
+  h+=`</div>`;
 
   // ── MODEL PERFORMANCE — expandable per model ──
   const mp=d.model_perf||[];
@@ -459,6 +477,9 @@ function render(d){
     ['/redoc','dg','API','Full API reference — '+(db.actions||0)+' actions tracked'],
   ];
   if(db.status==='connected')EPS.push(['/docs','dg',db.db_size||'?','pgvector: '+(db.memories||0).toLocaleString()+' memories, '+(db.mem_embeddings||0).toLocaleString()+' embeddings']);
+  EPS.push(['/thesis/evidence','dg','JSON','Darwin-Godel thesis: empirical evidence for each claim with verdicts']);
+  EPS.push(['/thesis/summary','dg','verdicts','Quick thesis verdicts: self-improvement, autonomy, resilience, Godel self-reference']);
+  EPS.push(['/activity/stream','dg','SSE','Real-time activity feed via Server-Sent Events']);
   EPS.forEach(([path,st,label,tip])=>{
     ep+=`<div class="r" title="${tip}"><span><span class="d ${st}"></span><a href="${path}" style="color:#79c0ff;text-decoration:none;font-size:10px" title="${tip}">${path}</a></span><span style="color:#4a5060;font-size:9px">${label}</span></div>`;
   });
@@ -590,36 +611,7 @@ function rpnl(d){
 async function rf(){try{const r=await fetch(API);if(r.ok){LD=await r.json();render(LD)}}catch(e){document.getElementById('bge').textContent='OFF';document.getElementById('bge').className='badge w'}}
 rf();setInterval(rf,6000);
 
-// ── Thesis Evidence (loaded once, refreshed every 60s) ──
-async function loadThesis(){
-  try{
-    const r=await fetch('/thesis/evidence');
-    if(!r.ok)return;
-    const ev=await r.json();
-    const el=document.getElementById('thesis-content');
-    if(!el)return;
-    const claims=ev.claims||{};
-    const VCLR={'SUPPORTED':'#3fb950','PARTIAL':'#d29922','NOT SUPPORTED':'#f85149','INSUFFICIENT DATA':'#484f58','NOT EVALUATED':'#484f58'};
-    function vColor(v){for(const[k,c]of Object.entries(VCLR)){if(v.startsWith(k))return c}return'#484f58'}
-    let th='<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px">';
-    for(const[claim,data]of Object.entries(claims)){
-      const v=data.verdict||'NOT EVALUATED';
-      const vc=vColor(v);
-      const label=claim.replace(/_/g,' ');
-      const evd=data.evidence||{};
-      const evdStr=Object.entries(evd).map(([k,val])=>`${k.replace(/_/g,' ')}: ${typeof val==='number'?val.toLocaleString():val}`).join(' · ');
-      th+=`<details style="background:rgba(5,8,16,.3);padding:4px 6px;border-left:2px solid ${vc}" title="${v}">`;
-      th+=`<summary style="cursor:pointer;font-size:9px;color:${vc};font-weight:600">${label}</summary>`;
-      th+=`<div style="font-size:8px;color:#8b949e;padding:2px 0">${v}</div>`;
-      th+=`<div style="font-size:8px;color:#6e7681;padding:2px 0">${evdStr}</div>`;
-      th+=`</details>`;
-    }
-    th+=`</div>`;
-    th+=`<div style="font-size:8px;color:#484f58;margin-top:3px">span: ${ev.evidence_span_hours||0}h · choices: ${ev.aggregate?.total_godel_choices||0} · actions: ${ev.aggregate?.total_actions||0} · memories: ${(ev.aggregate?.total_memories||0).toLocaleString()} · dreams: ${ev.aggregate?.total_dream_cycles||0}</div>`;
-    el.innerHTML=th;
-  }catch(e){const el=document.getElementById('thesis-content');if(el)el.textContent='evidence collection failed'}
-}
-loadThesis();setInterval(loadThesis,60000);
+// Thesis evidence now comes from /diagnostics/live (no separate fetch needed)
 
 // ── Activity Feed (SSE) — integrated into tab 4 + header badge ──
 (function(){

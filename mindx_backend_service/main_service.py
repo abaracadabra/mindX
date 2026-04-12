@@ -1607,6 +1607,23 @@ async def diagnostics_live_endpoint():
         "recent_logs": logs,
     }
 
+    # Add thesis evidence (lightweight — uses cached metrics, no re-collection)
+    try:
+        from mindx_backend_service.thesis_evidence import ThesisEvidenceCollector
+        collector = ThesisEvidenceCollector.get_instance()
+        m = collector.metrics
+        response["thesis"] = {
+            "improvement_rate": round(m.improvement_success_rate, 4),
+            "improvements_succeeded": m.total_improvements_succeeded,
+            "improvements_attempted": m.total_improvements_attempted,
+            "godel_choices": m.total_godel_choices,
+            "self_referential": m.godel_self_referential,
+            "evidence_span_hours": round(m.evidence_span_hours, 1),
+            "verdicts": m.thesis_verdicts,
+        }
+    except Exception:
+        pass
+
     # Cache response for subsequent polls
     _diag_cache = response
     _diag_cache_ts = time.time()
