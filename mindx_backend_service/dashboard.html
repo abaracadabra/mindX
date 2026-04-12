@@ -83,6 +83,13 @@ details[open]>summary{margin-bottom:0}
 .rk-u{background:rgba(20,20,20,.7);color:#3d424d}
 .pulse{animation:p 2s ease-in-out infinite}@keyframes p{0%,100%{opacity:.3}50%{opacity:1}}
 
+/* ── Staggered reveal animation ── */
+@keyframes cellIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.c-in{animation:cellIn .3s ease-out forwards;opacity:0}
+.boot-msg{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:30;font-size:10px;color:#58a6ff;font-family:'SF Mono','Fira Code',monospace;letter-spacing:.5px;opacity:0;transition:opacity .4s}
+.boot-msg.show{opacity:1}
+.boot-msg.hide{opacity:0}
+
 /* ── Popup window system ── */
 .popup-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:100;display:none;backdrop-filter:blur(2px)}
 .popup-overlay.open{display:flex;align-items:center;justify-content:center}
@@ -140,6 +147,7 @@ details[open]>summary{margin-bottom:0}
 </noscript>
 <canvas id="bg"></canvas>
 <div class="toast" id="toast"></div>
+<div class="boot-msg show" id="boot-msg">initializing diagnostics...</div>
 
 <!-- Popup Window Overlay -->
 <div class="popup-overlay" id="popup-overlay" onclick="if(event.target===this)dockPopup()">
@@ -618,7 +626,25 @@ function render(d){
   }
   h+=`<div class="c w4" title="Runtime log — most recent entries"><div class="ct">log (${logs.length})</div>${ll}</div>`;
 
-  document.getElementById('grid').innerHTML=h;
+  var grid=document.getElementById('grid');
+  grid.innerHTML=h;
+
+  // Staggered reveal on first render — each cell slides in sequentially
+  if(_firstRender){
+    _firstRender=false;
+    var cells=grid.querySelectorAll('.c');
+    cells.forEach(function(cell,i){
+      cell.classList.add('c-in');
+      cell.style.animationDelay=(i*40)+'ms';
+    });
+    // Hide boot message after cells finish appearing
+    var bootEl=document.getElementById('boot-msg');
+    if(bootEl){
+      setTimeout(function(){bootEl.className='boot-msg hide'},cells.length*40+300);
+      setTimeout(function(){bootEl.remove()},cells.length*40+800);
+    }
+  }
+
   document.getElementById('sub').textContent=`${d.uptime} | ${(d.agents||[]).length} agents | ${inf.available||0} inference | ${(d.interactions||[]).length} dialogues`;
   document.getElementById('bge').textContent=s.cpu_percent!==undefined?'LIVE':'OFF';
   document.getElementById('bge').className='badge'+(s.cpu_percent!==undefined?'':' w');
@@ -694,11 +720,24 @@ function rpnl(d){
     }
   }
 }
+var _firstRender=true;
+var _bootMsgs=['probing inference sources...','loading agent registry...','reading belief system...','connecting pgvector...','scanning memory tiers...','loading dojo standings...','assembling diagnostics...'];
+var _bootIdx=0;
+
+function _bootTick(){
+  var el=document.getElementById('boot-msg');
+  if(!el||!_firstRender)return;
+  if(_bootIdx<_bootMsgs.length){
+    el.textContent=_bootMsgs[_bootIdx];_bootIdx++;
+    setTimeout(_bootTick,400);
+  }
+}
+_bootTick();
+
 async function rf(){
   try{
-    // Use preloaded data on first call if available
     if(!LD&&_preloadedData){LD=_preloadedData;_preloadedData=null;render(LD);return}
-    const r=await fetch(API);
+    var r=await fetch(API);
     if(r.ok){LD=await r.json();render(LD)}
   }catch(e){document.getElementById('bge').textContent='OFF';document.getElementById('bge').className='badge w'}
 }
