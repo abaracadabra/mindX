@@ -475,7 +475,7 @@ function mkNodes(ag){
       const ang=(i/Math.max(mem.length,1))*Math.PI*2+ri*.4;
       const t=a.verification_tier||1;
       // Core agents (tier 3+) are slightly larger
-      const baseR=t>=3?4.5:t>=2?3.5:2.5;
+      const baseR=t>=3?6:t>=2?5:3.5;
       nodes.push({x:x0+Math.cos(ang)*rad,y:y0+Math.sin(ang)*rad,r:baseR,id:a.entity_id,
         c:t>=3?'#56d364':t>=2?'#79c0ff':t>=1?'#e3b341':'#6e7681',
         vx:(Math.random()-.5)*.06,vy:(Math.random()-.5)*.06,ph:Math.random()*6.28,act:0,tier:t});
@@ -577,7 +577,7 @@ function drawBg(t){
       const ty=cy0+Math.sin(ang)*shellR;
       const fdx=tx-nodes[si].x,fdy=ty-nodes[si].y,fdist=Math.sqrt(fdx*fdx+fdy*fdy);
       if(fdist>8){
-        const ff=.002; // gentle formation pull
+        const ff=.001; // very soft formation pull
         nodes[si].vx+=fdx/fdist*ff*Math.min(fdist,80);
         nodes[si].vy+=fdy/fdist*ff*Math.min(fdist,80);
       }
@@ -609,12 +609,12 @@ function drawBg(t){
     if(mouseX>0){
       const gdx=mouseX-n.x,gdy=mouseY-n.y,gdist=Math.sqrt(gdx*gdx+gdy*gdy);
       if(gdist>30&&gdist<600){
-        const gf=.01/(1+gdist*.002); // soft attraction
+        const gf=.005/(1+gdist*.003); // very gentle attraction
         n.vx+=gdx/gdist*gf;
         n.vy+=gdy/gdist*gf;
       }
     }
-    n.vx*=.993;n.vy*=.993; // node damping
+    n.vx*=.975;n.vy*=.975; // strong damping — slow, deliberate movement
     n.x+=n.vx+Math.sin(t*.0003+n.ph)*.1;n.y+=n.vy+Math.cos(t*.0005+n.ph)*.08;
     if(n.x<20||n.x>W-20)n.vx*=-1;if(n.y<20||n.y>H-20)n.vy*=-1;
     const pr=n.r+Math.sin(t*.002+n.ph)*.4+(n.act>.5?1.2:0);
