@@ -63,7 +63,7 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 /* ── Main layout ── */
 .wrap{position:relative;z-index:1;display:flex;min-height:100vh}
 .content{flex:1;overflow-y:auto;scroll-behavior:smooth}
-.sidebar{width:280px;flex-shrink:0;position:sticky;top:40px;height:calc(100vh - 40px);display:flex;flex-direction:column;border-left:1px solid var(--border);background:rgba(4,6,9,.6);backdrop-filter:blur(12px)}
+.sidebar{width:280px;flex-shrink:0;position:sticky;top:48px;height:calc(100vh - 48px);display:flex;flex-direction:column;border-left:1px solid var(--border);background:rgba(4,6,9,.6);backdrop-filter:blur(12px)}
 @media(max-width:1024px){.sidebar{display:none}}
 
 /* ── Layers ── */
@@ -430,12 +430,9 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
 
   <div class="page-ft">
     mind<b style="color:var(--blue)">X</b> &#183;
-    <a href="/automindx">AUTOMINDx</a> &#183;
     <a href="https://github.com/Professor-Codephreak">Professor Codephreak</a> &#183;
     <a href="https://pythai.net">PYTHAI</a> &#183;
-    mindx.pythai.net &#183;
-    <a href="/doc/THESIS">thesis</a> &#183;
-    <a href="/doc/MANIFESTO">manifesto</a>
+    <a href="https://github.com/agenticplace">AgenticPlace</a>
   </div>
 
 </div><!-- /content -->
@@ -565,35 +562,40 @@ function drawBg(t){
     cx.globalAlpha=e.l*.2;cx.strokeStyle='#58a6ff';cx.lineWidth=e.l;cx.stroke();cx.globalAlpha=1;
   }
 
-  // ── Geometric formation — nodes arrange into orbits around convergence point ──
-  // Each node targets a position on concentric rings (like electron shells)
+  // ── Geometric formation — wide orbits around convergence, ambient float when idle ──
   if(mouseX>0&&nodes.length>1){
     const cx0=mouseX,cy0=mouseY;
-    const shells=[],perShell=6; // 6 nodes per ring (hexagonal)
+    const perShell=5; // fewer per ring = more spacing
     for(let si=0;si<nodes.length;si++){
       const shell=Math.floor(si/perShell);
       const idx=si%perShell;
-      const shellR=50+shell*45; // ring radii: 50, 95, 140, 185...
-      const angleOff=shell*.5; // stagger each ring
-      const ang=(idx/Math.min(perShell,nodes.length-shell*perShell))*Math.PI*2+angleOff+t*.0001;
+      const count=Math.min(perShell,nodes.length-shell*perShell);
+      const shellR=120+shell*80; // wide rings: 120, 200, 280, 360...
+      const angleOff=shell*.6;
+      const ang=(idx/count)*Math.PI*2+angleOff+t*.00015*(1+shell*.3);
       const tx=cx0+Math.cos(ang)*shellR;
       const ty=cy0+Math.sin(ang)*shellR;
-      // Gentle pull toward formation position (weak so it feels organic)
       const fdx=tx-nodes[si].x,fdy=ty-nodes[si].y,fdist=Math.sqrt(fdx*fdx+fdy*fdy);
-      if(fdist>5){
-        const ff=.003; // soft formation force
-        nodes[si].vx+=fdx/fdist*ff*Math.min(fdist,100);
-        nodes[si].vy+=fdy/fdist*ff*Math.min(fdist,100);
+      if(fdist>8){
+        const ff=.002; // gentle formation pull
+        nodes[si].vx+=fdx/fdist*ff*Math.min(fdist,80);
+        nodes[si].vy+=fdy/fdist*ff*Math.min(fdist,80);
       }
     }
+  } else {
+    // No mouse — ambient float: nodes drift gently with individual orbits
+    for(const n of nodes){
+      n.vx+=Math.sin(t*.0002+n.ph)*0.003;
+      n.vy+=Math.cos(t*.00025+n.ph*1.3)*0.003;
+    }
   }
-  // Inter-node repulsion — prevent overlap regardless of formation
+  // Inter-node repulsion — strong, wide radius to keep clear separation
   for(let i=0;i<nodes.length;i++){
     for(let j=i+1;j<nodes.length;j++){
       const dx=nodes[j].x-nodes[i].x,dy=nodes[j].y-nodes[i].y;
       const dist=Math.sqrt(dx*dx+dy*dy);
-      if(dist<45&&dist>1){
-        const rf=.06*(45-dist)/45;
+      if(dist<70&&dist>1){
+        const rf=.08*(70-dist)/70;
         nodes[i].vx-=dx/dist*rf;nodes[i].vy-=dy/dist*rf;
         nodes[j].vx+=dx/dist*rf;nodes[j].vy+=dy/dist*rf;
       }
