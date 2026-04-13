@@ -33,28 +33,32 @@ fetch('/diagnostics/live').then(function(r){return r.json()}).then(function(d){_
 <style>
 :root{
   --bg:#040609;--surface:rgba(10,14,20,.88);--surface2:rgba(16,20,28,.7);
-  --green:#3fb950;--blue:#58a6ff;--violet:#c9a0ff;--amber:#d29922;--red:#f85149;
-  --text:#c5cdd8;--text2:#7a8494;--text3:#484f58;--border:rgba(88,166,255,.06);
+  --green:#56d364;--blue:#79c0ff;--violet:#d2a8ff;--amber:#e3b341;--red:#f85149;
+  --text:#e6edf3;--text2:#b1bac4;--text3:#6e7681;--border:rgba(88,166,255,.08);
   --font:'DM Sans',system-ui,sans-serif;--mono:'JetBrains Mono','SF Mono',monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;overflow-x:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:15px;line-height:1.6;overflow-x:hidden}
 canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
 
 /* ── Header ── */
-.hdr{position:sticky;top:0;z-index:50;padding:0 24px;height:40px;display:flex;justify-content:space-between;align-items:center;background:rgba(4,6,9,.92);backdrop-filter:blur(20px);border-bottom:1px solid rgba(88,166,255,.08)}
-.hdr-brand{font-family:var(--mono);font-size:15px;font-weight:700;color:#e6edf3;letter-spacing:1.5px}
+.hdr{position:sticky;top:0;z-index:50;padding:0 20px;height:48px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(8,12,20,.96),rgba(4,6,9,.94));backdrop-filter:blur(24px);border-bottom:1px solid rgba(121,192,255,.1);box-shadow:0 2px 12px rgba(0,0,0,.4);flex-shrink:0}
+.hdr-brand{font-family:var(--mono);font-size:20px;font-weight:700;color:#f0f6fc;letter-spacing:2px;text-shadow:0 0 16px rgba(121,192,255,.12);flex-shrink:0;margin-right:16px}
 .hdr-brand b{color:var(--blue)}
-.hdr-nav{display:flex;align-items:center;gap:2px}
-.hdr-nav a{color:var(--text3);text-decoration:none;font-size:11px;padding:4px 8px;border-radius:4px;transition:all .2s;font-family:var(--mono)}
-.hdr-nav a:hover{color:var(--blue);background:rgba(88,166,255,.06)}
-.hdr-nav a.hl{color:var(--green)}
-.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse-dot 2s ease-in-out infinite;margin-left:8px}
-.live-dot.off{background:var(--amber);box-shadow:0 0 8px var(--amber)}
-@keyframes pulse-dot{0%,100%{opacity:.4;transform:scale(.9)}50%{opacity:1;transform:scale(1.1)}}
-.live-badge{font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:3px;background:rgba(63,185,80,.1);color:var(--green);border:1px solid rgba(63,185,80,.2);letter-spacing:.5px;margin-left:4px}
-.live-badge.off{background:rgba(210,153,34,.1);color:var(--amber);border-color:rgba(210,153,34,.2)}
+.hdr-mid{display:flex;align-items:center;gap:4px;flex:1;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.hdr-mid::-webkit-scrollbar{display:none}
+.hdr-mid a{color:#d0d7de;text-decoration:none;font-size:13px;padding:4px 10px;border-radius:4px;transition:all .2s;font-family:var(--mono);white-space:nowrap}
+.hdr-mid a:hover{color:#f0f6fc;background:rgba(121,192,255,.1);text-shadow:0 0 8px rgba(121,192,255,.15)}
+.hdr-mid a.hl{color:var(--green);font-weight:600}
+.hdr-mid .sep{color:rgba(110,118,129,.25);font-size:9px;margin:0 2px;flex-shrink:0}
+.hdr-right{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px}
+.hdr-sub{font-size:12px;color:var(--text2);font-family:var(--mono);white-space:nowrap}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse-dot 2s ease-in-out infinite}
+.live-dot.off{background:var(--amber);box-shadow:0 0 10px var(--amber)}
+@keyframes pulse-dot{0%,100%{opacity:.4;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
+.live-badge{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:4px;background:rgba(86,211,100,.12);color:var(--green);border:1px solid rgba(86,211,100,.25);letter-spacing:.5px;font-weight:600}
+.live-badge.off{background:rgba(227,179,65,.1);color:var(--amber);border-color:rgba(227,179,65,.2)}
 
 /* ── Main layout ── */
 .wrap{position:relative;z-index:1;display:flex;min-height:100vh}
@@ -72,31 +76,32 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 .hero{padding:60px 32px 48px;text-align:center;max-width:960px;margin:0 auto}
 .hero-title{font-family:var(--mono);font-size:clamp(36px,6vw,56px);font-weight:700;letter-spacing:4px;color:#e6edf3;margin-bottom:8px}
 .hero-title .m{color:var(--blue)}
-.hero-sub{font-size:15px;color:var(--text2);max-width:520px;margin:0 auto 32px;line-height:1.8}
+.hero-sub{font-size:17px;color:var(--text);max-width:560px;margin:0 auto 32px;line-height:1.8}
 .hero-sub em{color:var(--violet);font-style:normal;font-weight:500}
-.hero-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;max-width:640px;margin:0 auto}
-@media(max-width:600px){.hero-stats{grid-template-columns:repeat(2,1fr)}}
-.hs{background:var(--surface);padding:16px 12px;text-align:center;position:relative;overflow:hidden}
-.hs::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--green);opacity:.3;transition:opacity .3s}
-.hs:hover::after{opacity:.8}
-.hs-val{font-family:var(--mono);font-size:24px;font-weight:700;color:#e6edf3;line-height:1}
-.hs-lbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-top:4px;font-family:var(--mono)}
-.hero-quote{font-size:12px;color:var(--text3);font-style:italic;margin-top:24px;min-height:18px;transition:opacity .6s;font-family:var(--mono)}
+.hero-stats{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;max-width:820px;margin:0 auto}
+@media(max-width:800px){.hero-stats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:500px){.hero-stats{grid-template-columns:repeat(2,1fr)}}
+.hs{background:linear-gradient(180deg,rgba(14,18,26,.95),rgba(8,11,16,.98));padding:18px 14px;text-align:center;position:relative;overflow:hidden;border:1px solid rgba(88,166,255,.04);box-shadow:0 2px 8px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.02)}
+.hs::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--green);opacity:.4;transition:opacity .3s}
+.hs:hover::after{opacity:1}
+.hs-val{font-family:var(--mono);font-size:28px;font-weight:700;color:#f0f6fc;line-height:1}
+.hs-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-top:6px;font-family:var(--mono)}
+.hero-quote{font-size:13px;color:var(--text2);font-style:italic;margin-top:24px;min-height:18px;transition:opacity .6s;font-family:var(--mono)}
 
 /* ── LAYER 1: Thesis / Evolution Proof ── */
 .thesis-hdr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:20px;flex-wrap:wrap;gap:8px}
-.thesis-hdr h2{font-family:var(--mono);font-size:13px;text-transform:uppercase;letter-spacing:2px;color:var(--text2)}
+.thesis-hdr h2{font-family:var(--mono);font-size:15px;text-transform:uppercase;letter-spacing:2px;color:var(--text)}
 .thesis-hdr h2 span{color:var(--green)}
-.thesis-rate{font-family:var(--mono);font-size:11px;color:var(--text3)}
-.thesis-rate b{font-size:18px}
+.thesis-rate{font-family:var(--mono);font-size:13px;color:var(--text2)}
+.thesis-rate b{font-size:20px}
 .claims{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-bottom:20px}
 @media(max-width:700px){.claims{grid-template-columns:1fr}}
 .claim{background:var(--surface);padding:14px 16px;border-left:3px solid var(--text3);transition:border-color .3s}
 .claim.sup{border-left-color:var(--green)}.claim.par{border-left-color:var(--amber)}.claim.nos{border-left-color:var(--red)}.claim.ins{border-left-color:var(--text3)}
-.claim-name{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);font-family:var(--mono);margin-bottom:4px}
-.claim-verdict{font-size:13px;font-weight:700;font-family:var(--mono)}
+.claim-name{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text2);font-family:var(--mono);margin-bottom:4px}
+.claim-verdict{font-size:15px;font-weight:700;font-family:var(--mono)}
 .claim-verdict.sup{color:var(--green)}.claim-verdict.par{color:var(--amber)}.claim-verdict.nos{color:var(--red)}.claim-verdict.ins{color:var(--text3)}
-.claim-detail{font-size:11px;color:var(--text2);margin-top:6px;line-height:1.5}
+.claim-detail{font-size:12px;color:var(--text);margin-top:6px;line-height:1.5}
 .thesis-nums{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}
 @media(max-width:600px){.thesis-nums{grid-template-columns:repeat(2,1fr)}}
 .tn{background:var(--surface);padding:12px;text-align:center}
@@ -108,17 +113,17 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 @media(max-width:800px){.glance{grid-template-columns:repeat(2,1fr)}}
 .gc{background:var(--surface);padding:10px 14px;transition:background .2s}
 .gc:hover{background:rgba(16,20,28,.9)}
-.gc-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--blue);font-family:var(--mono);opacity:.7;display:flex;align-items:center;gap:6px}
-.gc-val{font-family:var(--mono);font-size:18px;font-weight:700;color:#e6edf3;margin:2px 0}
+.gc-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--blue);font-family:var(--mono);display:flex;align-items:center;gap:6px}
+.gc-val{font-family:var(--mono);font-size:22px;font-weight:700;color:#f0f6fc;margin:2px 0}
 .gc-bar{height:2px;background:rgba(30,34,42,.5);border-radius:1px;overflow:hidden;margin-top:2px}
 .gc-bar-fill{height:100%;transition:width .6s}
-.gc-detail{font-size:10px;color:var(--text3);margin-top:4px;display:none}
+.gc-detail{font-size:11px;color:var(--text2);margin-top:4px;display:none}
 .gc.open .gc-detail{display:block}
 .gc-sub{font-size:10px;color:var(--text3)}
 .sparkline rect{fill:var(--green);opacity:.6}
 
 /* ── LAYER 3+: Deep Dive Sections ── */
-.section-hdr{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text2);padding:16px 0 12px;border-bottom:1px solid var(--border);margin-bottom:12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none}
+.section-hdr{font-family:var(--mono);font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text);padding:16px 0 12px;border-bottom:1px solid var(--border);margin-bottom:12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none}
 .section-hdr .arrow{color:var(--text3);transition:transform .2s;font-size:10px}
 .section-hdr.open .arrow{transform:rotate(90deg)}
 .section-body{overflow:hidden;max-height:0;transition:max-height .4s ease-out;padding:0}
@@ -128,9 +133,9 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 .deep-grid.w1{grid-template-columns:1fr}
 
 /* ── Data rows ── */
-.dr{display:flex;justify-content:space-between;align-items:center;padding:4px 8px;font-size:11px;border-bottom:1px solid rgba(8,11,16,.2)}
+.dr{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;font-size:13px;border-bottom:1px solid rgba(8,11,16,.2)}
 .dr:last-child{border:none}
-.dr-key{color:var(--text2)}.dr-val{color:#e6edf3;font-family:var(--mono);font-size:11px}
+.dr-key{color:var(--text2)}.dr-val{color:#f0f6fc;font-family:var(--mono);font-size:13px}
 .dot{display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:5px;vertical-align:middle;box-shadow:0 0 4px currentColor}
 .dot-g{background:var(--green);color:var(--green)}.dot-r{background:var(--red);color:var(--red)}.dot-y{background:var(--amber);color:var(--amber)}.dot-x{background:var(--text3);color:var(--text3)}
 
@@ -301,19 +306,23 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
 
 <!-- Header -->
 <div class="hdr">
-  <div style="display:flex;align-items:center;gap:12px">
-    <span class="hdr-brand">mind<b>X</b></span>
-    <span style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="hdr-sub">...</span>
-  </div>
-  <div class="hdr-nav">
+  <span class="hdr-brand">mind<b>X</b></span>
+  <div class="hdr-mid">
     <a href="/docs.html">docs</a>
     <a href="/book">book</a>
     <a href="/journal">journal</a>
     <a href="/redoc">api</a>
-    <a href="/dojo/standings">dojo</a>
+    <span class="sep">|</span>
+    <a href="/dojo">dojo</a>
+    <a href="/boardroom">boardroom</a>
     <a href="/inference/status">inference</a>
+    <span class="sep">|</span>
     <a href="/thesis/evidence" class="hl">thesis</a>
-    <a href="/automindx">origin</a>
+    <a href="/doc/MANIFESTO">manifesto</a>
+    <a href="/automindx" style="color:var(--violet)">origin</a>
+  </div>
+  <div class="hdr-right">
+    <span class="hdr-sub" id="hdr-sub">connecting...</span>
     <span class="live-badge" id="live-badge">...</span>
     <span class="live-dot" id="live-dot"></span>
   </div>
@@ -327,13 +336,15 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
     <h1 class="hero-title">mind<span class="m">X</span></h1>
     <p class="hero-sub">A <em>Darwin-Godel Machine</em> — self-improving autonomous intelligence with sovereign agents, cryptographic identity, and constitutional governance. Live on commodity hardware.</p>
     <div class="hero-stats" id="hero-stats">
-      <div class="hs"><div class="hs-val" id="hs-up">--</div><div class="hs-lbl">uptime</div></div>
+      <div class="hs"><div class="hs-val" id="hs-up">--</div><div class="hs-lbl">operational</div></div>
+      <div class="hs"><div class="hs-val" id="hs-session">0:00</div><div class="hs-lbl">session</div></div>
       <div class="hs"><div class="hs-val" id="hs-agents">--</div><div class="hs-lbl">agents</div></div>
+      <div class="hs"><div class="hs-val" id="hs-verified">--</div><div class="hs-lbl">verified</div></div>
       <div class="hs"><div class="hs-val" id="hs-decisions">--</div><div class="hs-lbl">decisions</div></div>
       <div class="hs"><div class="hs-val" id="hs-memories">--</div><div class="hs-lbl">memories</div></div>
     </div>
     <div class="hero-quote" id="hero-quote"></div>
-    <div style="margin-top:12px;font-size:10px;font-family:var(--mono);color:var(--text3)"><a href="/automindx" class="link" style="opacity:.6">the origin story</a></div>
+    <div id="hero-links" style="margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;font-size:11px;font-family:var(--mono)"></div>
   </div>
 
   <div class="layer-sep"></div>
@@ -462,13 +473,15 @@ function mkNodes(ag){
   const grp={};ag.forEach(a=>{const g=a.group||'op';(grp[g]=grp[g]||[]).push(a)});
   let ri=0;
   for(const[,mem]of Object.entries(grp)){
-    const rad=60+ri*50;
+    const rad=90+ri*70; // wider ring spacing
     mem.forEach((a,i)=>{
       const ang=(i/Math.max(mem.length,1))*Math.PI*2+ri*.4;
       const t=a.verification_tier||1;
-      nodes.push({x:x0+Math.cos(ang)*rad,y:y0+Math.sin(ang)*rad,r:2+t,id:a.entity_id,
-        c:t>=3?'#3fb950':t>=2?'#58a6ff':t>=1?'#d29922':'#3d424d',
-        vx:(Math.random()-.5)*.08,vy:(Math.random()-.5)*.08,ph:Math.random()*6.28,act:0});
+      // Core agents (tier 3+) are slightly larger
+      const baseR=t>=3?4.5:t>=2?3.5:2.5;
+      nodes.push({x:x0+Math.cos(ang)*rad,y:y0+Math.sin(ang)*rad,r:baseR,id:a.entity_id,
+        c:t>=3?'#56d364':t>=2?'#79c0ff':t>=1?'#e3b341':'#6e7681',
+        vx:(Math.random()-.5)*.06,vy:(Math.random()-.5)*.06,ph:Math.random()*6.28,act:0,tier:t});
     });ri++;
   }
 }
@@ -552,20 +565,65 @@ function drawBg(t){
     cx.globalAlpha=e.l*.2;cx.strokeStyle='#58a6ff';cx.lineWidth=e.l;cx.stroke();cx.globalAlpha=1;
   }
 
-  // ── Nodes with hover detection + connection lines ──
+  // ── Geometric formation — nodes arrange into orbits around convergence point ──
+  // Each node targets a position on concentric rings (like electron shells)
+  if(mouseX>0&&nodes.length>1){
+    const cx0=mouseX,cy0=mouseY;
+    const shells=[],perShell=6; // 6 nodes per ring (hexagonal)
+    for(let si=0;si<nodes.length;si++){
+      const shell=Math.floor(si/perShell);
+      const idx=si%perShell;
+      const shellR=50+shell*45; // ring radii: 50, 95, 140, 185...
+      const angleOff=shell*.5; // stagger each ring
+      const ang=(idx/Math.min(perShell,nodes.length-shell*perShell))*Math.PI*2+angleOff+t*.0001;
+      const tx=cx0+Math.cos(ang)*shellR;
+      const ty=cy0+Math.sin(ang)*shellR;
+      // Gentle pull toward formation position (weak so it feels organic)
+      const fdx=tx-nodes[si].x,fdy=ty-nodes[si].y,fdist=Math.sqrt(fdx*fdx+fdy*fdy);
+      if(fdist>5){
+        const ff=.003; // soft formation force
+        nodes[si].vx+=fdx/fdist*ff*Math.min(fdist,100);
+        nodes[si].vy+=fdy/fdist*ff*Math.min(fdist,100);
+      }
+    }
+  }
+  // Inter-node repulsion — prevent overlap regardless of formation
+  for(let i=0;i<nodes.length;i++){
+    for(let j=i+1;j<nodes.length;j++){
+      const dx=nodes[j].x-nodes[i].x,dy=nodes[j].y-nodes[i].y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<45&&dist>1){
+        const rf=.06*(45-dist)/45;
+        nodes[i].vx-=dx/dist*rf;nodes[i].vy-=dy/dist*rf;
+        nodes[j].vx+=dx/dist*rf;nodes[j].vy+=dy/dist*rf;
+      }
+    }
+  }
+
+  // ── Nodes with gravity toward mouse + hover detection + connection lines ──
   hoveredNode=null;
   for(const n of nodes){
+    // Gentle gravity toward cursor — nodes slowly drift toward mouse
+    if(mouseX>0){
+      const gdx=mouseX-n.x,gdy=mouseY-n.y,gdist=Math.sqrt(gdx*gdx+gdy*gdy);
+      if(gdist>30&&gdist<600){
+        const gf=.01/(1+gdist*.002); // soft attraction
+        n.vx+=gdx/gdist*gf;
+        n.vy+=gdy/gdist*gf;
+      }
+    }
+    n.vx*=.993;n.vy*=.993; // node damping
     n.x+=n.vx+Math.sin(t*.0003+n.ph)*.1;n.y+=n.vy+Math.cos(t*.0005+n.ph)*.08;
     if(n.x<20||n.x>W-20)n.vx*=-1;if(n.y<20||n.y>H-20)n.vy*=-1;
     const pr=n.r+Math.sin(t*.002+n.ph)*.4+(n.act>.5?1.2:0);
     // Connection line to cursor
     if(mouseX>0){
       const dx=mouseX-n.x,dy=mouseY-n.y,dist=Math.sqrt(dx*dx+dy*dy);
-      if(dist<200){
-        const str=(200-dist)/200;
-        cx.beginPath();cx.moveTo(n.x,n.y);cx.lineTo(mouseX,mouseY);cx.strokeStyle='rgba(201,160,255,'+(str*.12)+')';cx.lineWidth=str;cx.stroke();
-        n.act=Math.max(n.act,str*.3);
-        if(dist<22){hoveredNode=n;n.act=Math.max(n.act,.6)}
+      if(dist<250){
+        const str=(250-dist)/250;
+        cx.beginPath();cx.moveTo(n.x,n.y);cx.lineTo(mouseX,mouseY);cx.strokeStyle='rgba(201,160,255,'+(str*.15)+')';cx.lineWidth=str*1.2;cx.stroke();
+        n.act=Math.max(n.act,str*.4);
+        if(dist<22){hoveredNode=n;n.act=Math.max(n.act,.7)}
       }
     }
     cx.beginPath();cx.arc(n.x,n.y,pr*2,0,6.28);cx.fillStyle=n.c+'08';cx.fill();
@@ -751,22 +809,33 @@ function render(d){
     if(ve.textContent!=='--'&&ve.textContent!==val)ve.classList.add('val-changed'),setTimeout(()=>ve.classList.remove('val-changed'),1200);
     ve.textContent=val;
   }
-  _setHs(_hsEls[0],'hs-up',d.uptime||'--');
-  _setHs(_hsEls[1],'hs-agents',String((d.agents||[]).length));
-  _setHs(_hsEls[2],'hs-decisions',(th.godel_choices||0).toLocaleString());
-  _setHs(_hsEls[3],'hs-memories',totalMem.toLocaleString());
+  // Count verified agents (tier >= 2)
+  const verifiedAgents=(d.agents||[]).filter(a=>a.verification_tier>=2).length;
+  // Show total evidence span as primary uptime, process uptime as tooltip
+  const evidenceHours=th.evidence_span_hours||0;
+  const totalUpStr=evidenceHours>24?Math.floor(evidenceHours/24)+'d '+Math.floor(evidenceHours%24)+'h':Math.floor(evidenceHours)+'h';
+  _setHs(_hsEls[0],'hs-up',evidenceHours>0?totalUpStr:(d.uptime||'--'));
+  if(_hsEls[0]&&!_hsEls[0]._tipSet){_hsEls[0]._tipSet=true;_hsEls[0].setAttribute('data-tip','Total operational evidence: '+evidenceHours.toFixed(0)+'h | Current process: '+(d.uptime||'?'))}
+  // Session timer (index 1) is updated separately below
+  _setHs(_hsEls[2],'hs-agents',String((d.agents||[]).length));
+  _setHs(_hsEls[3],'hs-verified',String(verifiedAgents));
+  _setHs(_hsEls[4],'hs-decisions',(th.godel_choices||0).toLocaleString());
+  _setHs(_hsEls[5],'hs-memories',totalMem.toLocaleString());
   // Set click handlers + tooltips (once)
   if(!_hsEls[0]._wired){
     _hsEls[0]._wired=true;
     _hsEls[0].setAttribute('data-tip','System uptime since last restart');
-    _hsEls[1].setAttribute('data-tip',(d.agents||[]).length+' sovereign agents with BDI reasoning &middot; <a href="/doc/agents_architectural_reference">docs</a>');
-    _hsEls[1].onclick=function(){scrollToSection('sec-agents')};
-    _hsEls[2].setAttribute('data-tip','G&ouml;del self-modification decisions &middot; <a href="/godel/choices">view all</a> &middot; <a href="/doc/THESIS">thesis</a>');
-    _hsEls[2].onclick=function(){scrollToSection('sec-godel')};
-    _hsEls[3].setAttribute('data-tip',totalMem.toLocaleString()+' memories in pgvector &middot; <a href="/doc/pgvectorscale_memory_integration">docs</a>');
-    _hsEls[3].onclick=function(){scrollToSection('sec-memory')};
+    _hsEls[1].setAttribute('data-tip','Your session duration on this page');
+    _hsEls[2].setAttribute('data-tip',(d.agents||[]).length+' sovereign agents with BDI reasoning &middot; <a href="/doc/agents_architectural_reference">docs</a>');
+    _hsEls[2].onclick=function(){scrollToSection('sec-agents')};
+    _hsEls[3].setAttribute('data-tip',verifiedAgents+' agents with verification tier 2+ (BONA FIDE eligible) &middot; <a href="/dojo/standings">dojo</a>');
+    _hsEls[3].onclick=function(){scrollToSection('sec-agents')};
+    _hsEls[4].setAttribute('data-tip','G&ouml;del self-modification decisions &middot; <a href="/godel/choices">view all</a> &middot; <a href="/doc/THESIS">thesis</a>');
+    _hsEls[4].onclick=function(){scrollToSection('sec-godel')};
+    _hsEls[5].setAttribute('data-tip',totalMem.toLocaleString()+' memories in pgvector &middot; <a href="/doc/pgvectorscale_memory_integration">docs</a>');
+    _hsEls[5].onclick=function(){scrollToSection('sec-memory')};
     // Add shimmer to each
-    _hsEls.forEach(function(el,i){if(!el.querySelector('.shimmer')){const sh=document.createElement('div');sh.className='shimmer';sh.style.animationDelay=(i*1.5)+'s';el.appendChild(sh)}});
+    _hsEls.forEach(function(el,i){if(!el.querySelector('.shimmer')){const sh=document.createElement('div');sh.className='shimmer';sh.style.animationDelay=(i*1)+'s';el.appendChild(sh)}});
   }
   // Pulse live dot on data refresh
   const _ld=document.getElementById('live-dot');_ld.classList.add('flash');setTimeout(()=>_ld.classList.remove('flash'),500);
@@ -822,39 +891,52 @@ function render(d){
     const group=dj?.group||'unassigned';
     (agentGroups[group]=agentGroups[group]||[]).push({...a,dojo:dj,stm:stmMap[a.entity_id]||0});
   });
-  let agH='';
+  let agH='<div style="font-size:11px;color:var(--text2);padding:4px 0;margin-bottom:8px"><a href="/doc/agents_architectural_reference" class="link">agent architecture</a> &#183; <a href="/dojo" class="link">dojo rankings</a> &#183; <a href="/doc/AGENTS" class="link">agent registry</a> &#183; <a href="/doc/DAIO" class="link">DAIO governance</a></div>';
   for(const[group,members]of Object.entries(agentGroups)){
     agH+=`<div class="agent-grp"><div class="agent-grp-hdr">${group} (${members.length})</div>`;
     members.forEach(a=>{
       const dj=a.dojo;
       const tier=a.verification_tier??0;
-      const role=(a.role||'').slice(0,80);
-      const agActs=(d.actions||[]).filter(ac=>ac.agent_id===a.entity_id).slice(0,3);
-      const agGodel=(d.godel_choices||[]).filter(g=>g.agent===a.entity_id).slice(0,2);
+      const role=(a.role||'');
+      const agActs=(d.actions||[]).filter(ac=>ac.agent_id===a.entity_id).slice(0,5);
+      const agGodel=(d.godel_choices||[]).filter(g=>g.agent===a.entity_id).slice(0,5);
       agH+=`<div class="agent-card" onclick="this.classList.toggle('open')" data-tip="${a.entity_id}: ${role.slice(0,80)}">`;
-      agH+=`<div>${rk(tier)} <a href="/dojo/agent/${a.entity_id}" class="alink name">${a.entity_id}</a> ${dj?`<span style="color:var(--text3);font-size:10px">${dj.rank} ${dj.score}</span>`:''}</div>`;
-      agH+=`<div class="meta">${role} <a href="/doc/agents_architectural_reference" class="link" style="font-size:9px;opacity:.5">docs</a></div>`;
+      agH+=`<div>${rk(tier)} <a href="/dojo" class="alink name">${a.entity_id}</a> ${dj?`<span style="color:var(--text3);font-size:11px">${dj.rank} ${dj.score}</span>`:''}</div>`;
+      agH+=`<div class="meta">${role.slice(0,80)}</div>`;
       agH+=`<div class="detail">`;
-      agH+=`<div>wallet: <a href="/identities" class="link" style="font-size:10px">${sa(a.address)}</a></div>`;
-      if(dj){
-        agH+=`<div style="margin-top:4px">rank: <span style="color:var(--violet)">${dj.rank}</span> | score: <span style="color:var(--green)">${dj.score}</span> | tier: ${dj.tier} ${dj.bona_fide?'| <span style="color:var(--green)">BONA FIDE</span>':''}</div>`;
-        agH+=bar(Math.min(100,dj.score/100));
-      }
-      if(a.stm>0)agH+=`<div style="margin-top:4px">STM: <span style="color:var(--violet)">${a.stm.toLocaleString()}</span> records</div>`;
+      // Level 2: Identity + reputation
+      agH+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:6px;font-size:11px">`;
+      agH+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">wallet</span> <a href="/identities" class="link" style="font-size:10px">${sa(a.address)}</a></div>`;
+      agH+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">tier</span> <span style="color:var(--text)">${tier}</span> ${dj?.bona_fide?'<span style="color:var(--green)">BONA FIDE</span>':''}</div>`;
+      if(dj){agH+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">rank</span> <span style="color:var(--violet)">${dj.rank}</span></div>`;
+      agH+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">score</span> <span style="color:var(--green)">${dj.score}</span></div>`}
+      agH+=`</div>`;
+      if(dj)agH+=bar(Math.min(100,dj.score/100));
+      if(a.stm>0)agH+=`<div style="margin:4px 0;font-size:11px">STM: <span style="color:var(--violet)">${a.stm.toLocaleString()}</span> records</div>`;
+      // Level 2: Full role description
+      if(role.length>80)agH+=`<details style="margin:4px 0"><summary style="cursor:pointer;color:var(--blue);font-size:10px;font-family:var(--mono)">full role</summary><div style="color:var(--text);padding:4px 0;font-size:12px;line-height:1.5">${role}</div></details>`;
+      // Level 3: Recent actions (click deeper)
       if(agActs.length){
-        agH+=`<div style="margin-top:6px;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Recent actions</div>`;
+        agH+=`<details style="margin:4px 0"><summary style="cursor:pointer;color:var(--blue);font-size:10px;font-family:var(--mono)">recent actions (${agActs.length})</summary><div style="padding:4px 0">`;
         agActs.forEach(ac=>{
           const sc=ac.status==='completed'?'var(--green)':ac.status==='failed'?'var(--red)':'var(--amber)';
-          agH+=`<div style="font-size:10px;padding:2px 0"><span style="color:${sc}">${ac.status}</span> ${(ac.description||'').slice(0,60)}</div>`;
+          const desc=(ac.description||'').replace(/</g,'&lt;');
+          agH+=`<details style="margin:2px 0;border-left:2px solid ${sc}"><summary style="cursor:pointer;padding:3px 6px;font-size:11px"><span style="color:${sc};font-weight:600;font-size:10px">${ac.status}</span> ${ac.action_type||''}</summary><div style="padding:4px 8px;font-size:11px;color:var(--text);white-space:pre-wrap;word-break:break-word">${desc}${ac.result?'<div style="color:var(--green);margin-top:4px">'+ac.result+'</div>':''}</div></details>`;
         });
+        agH+=`</div></details>`;
       }
+      // Level 3: Godel choices (click deeper)
       if(agGodel.length){
-        agH+=`<div style="margin-top:6px;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">G&#246;del choices</div>`;
+        agH+=`<details style="margin:4px 0"><summary style="cursor:pointer;color:var(--amber);font-size:10px;font-family:var(--mono)">G\u00F6del choices (${agGodel.length})</summary><div style="padding:4px 0">`;
         agGodel.forEach(g=>{
           const oc=g.outcome==='success'?'var(--green)':g.outcome?'var(--amber)':'var(--text3)';
-          agH+=`<div style="font-size:10px;padding:2px 0"><span style="color:${oc}">[${g.outcome||'?'}]</span> ${g.type}: ${(g.chosen||'').slice(0,60)}</div>`;
+          agH+=`<details style="margin:2px 0"><summary style="cursor:pointer;font-size:11px;padding:2px 0"><span style="color:${oc};font-family:var(--mono)">[${g.outcome||'?'}]</span> ${g.type}</summary><div style="padding:4px 8px;font-size:11px;color:var(--text)"><div style="color:var(--green)">\u2192 ${g.chosen||''}</div>${g.rationale?'<div style="color:var(--text3);margin-top:2px;font-style:italic">'+g.rationale+'</div>':''}</div></details>`;
         });
+        agH+=`<div style="margin-top:4px"><a href="/godel/choices?source_agent=${encodeURIComponent(a.entity_id)}" class="link" style="font-size:10px">view all decisions for ${a.entity_id}</a></div>`;
+        agH+=`</div></details>`;
       }
+      // Level 4: Doc links for extreme depth
+      agH+=`<div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(8,11,16,.2);font-size:10px"><a href="/doc/agents_architectural_reference" class="link">architecture</a> &#183; <a href="/dojo" class="link">dojo</a> &#183; <a href="/doc/DAIO" class="link">governance</a> &#183; <a href="/doc/belief_system" class="link">BDI</a></div>`;
       agH+=`</div></div>`;
     });
     agH+=`</div>`;
@@ -865,24 +947,30 @@ function render(d){
   const allSources=Object.entries(inf.sources||{});
   document.getElementById('inf-count').textContent=`(${inf.available||0}/${inf.total||0})`;
   let infH='';
+  infH+=`<div style="font-size:11px;color:var(--text2);padding:4px 0;margin-bottom:8px"><a href="/inference/status" class="link">full status</a> &#183; <a href="/doc/inference_optimization" class="link">inference docs</a> &#183; <a href="/inference/preference" class="link">model preference</a></div>`;
   allSources.forEach(([name,src])=>{
     const models=src.models||[];
     const isCloud=name.startsWith('cloud_')||name==='ollama_cloud';
     const label=isCloud?name.replace('cloud_','').replace('ollama_cloud','ollama cloud'):name;
     const st=src.status==='available'?'dot-g':src.status==='degraded'?'dot-y':'dot-r';
     infH+=`<div class="inf-src" onclick="this.classList.toggle('open')">`;
-    infH+=`<div style="display:flex;justify-content:space-between;align-items:center"><span><span class="dot ${st}"></span><a href="/inference/status" class="alink" style="color:#e6edf3;font-weight:600;font-size:12px">${label}</a>${isCloud?' <span style="color:var(--blue);font-size:9px;font-family:var(--mono)">CLOUD</span>':''}</span><span style="color:var(--text3);font-size:10px;font-family:var(--mono)">${src.status} (${(src.score||0).toFixed(2)})</span></div>`;
+    infH+=`<div style="display:flex;justify-content:space-between;align-items:center"><span><span class="dot ${st}"></span><span style="color:#f0f6fc;font-weight:600;font-size:13px">${label}</span>${isCloud?' <span style="color:var(--blue);font-size:10px;font-family:var(--mono)">CLOUD</span>':''}</span><span style="color:var(--text2);font-size:11px;font-family:var(--mono)">${src.status} &#183; score ${(src.score||0).toFixed(2)}</span></div>`;
     if(models.length){
       infH+=`<div class="models">`;
+      infH+=`<div style="font-size:10px;color:var(--text3);margin-bottom:4px">${models.length} model${models.length>1?'s':''} available</div>`;
       models.forEach(m=>{
         const isEmbed=m.includes('embed');
         const perf=(d.model_perf||[]).filter(p=>p.model===m);
-        infH+=`<div style="padding:3px 0 3px 12px;border-left:2px solid var(--border);margin:2px 0">`;
-        infH+=`<span style="color:${isEmbed?'var(--violet)':'var(--green)'};font-size:11px">${m}</span> <span style="color:var(--text3);font-size:9px;font-family:var(--mono)">${isEmbed?'EMB':'LLM'}</span>`;
+        infH+=`<details style="margin:2px 0;padding-left:12px;border-left:2px solid ${isEmbed?'rgba(210,168,255,.15)':'rgba(86,211,100,.15)'}"><summary style="cursor:pointer;font-size:12px;padding:2px 0"><span style="color:${isEmbed?'var(--violet)':'var(--green)'}">${m}</span> <span style="color:var(--text3);font-size:9px;font-family:var(--mono)">${isEmbed?'EMBEDDING':'LLM'}</span></summary>`;
+        infH+=`<div style="padding:4px 0;font-size:11px">`;
         if(perf.length){
-          perf.forEach(p=>{infH+=`<div style="font-size:10px;color:var(--text2)">${p.latency_ms}ms | ${p.tps} tok/s | cpu: ${p.cpu_at_query}%</div>`});
+          perf.forEach(p=>{infH+=`<div class="dr"><span class="dr-key">latency</span><span class="dr-val">${p.latency_ms}ms</span></div><div class="dr"><span class="dr-key">throughput</span><span class="dr-val">${p.tps} tok/s</span></div><div class="dr"><span class="dr-key">CPU at query</span><span class="dr-val">${p.cpu_at_query}%</span></div>`});
+        }else{
+          infH+=`<div style="color:var(--text3);font-size:11px">no performance data yet — metrics populate after inference</div>`;
         }
-        infH+=`</div>`;
+        if(isEmbed)infH+=`<div style="margin-top:4px"><a href="/doc/EMBEDDING_SYSTEM" class="link" style="font-size:10px">embedding docs</a></div>`;
+        else if(isCloud)infH+=`<div style="margin-top:4px"><a href="/doc/ollama_api_integration" class="link" style="font-size:10px">ollama docs</a></div>`;
+        infH+=`</div></details>`;
       });
       infH+=`</div>`;
     }
@@ -894,51 +982,70 @@ function render(d){
   const re=d.rage_embed||{};
   const stmAgents=Object.entries(d.memory?.stm_by_agent||{}).sort((a,b)=>b[1]-a[1]);
   document.getElementById('mem-count').textContent=db.status==='connected'?`(${(db.memories||0).toLocaleString()} memories)`:'';
-  let memH='<div class="deep-grid">';
+  let memH='<div style="font-size:11px;color:var(--text2);padding:4px 0;margin-bottom:8px"><a href="/doc/pgvectorscale_memory_integration" class="link">pgvector docs</a> &#183; <a href="/doc/mindx_memory_architecture_scalable" class="link">memory architecture</a> &#183; <a href="/api/rage/embed" class="link">RAGE search</a> &#183; <a href="/doc/EMBEDDING_SYSTEM" class="link">embedding system</a></div>';
+  memH+='<div class="deep-grid">';
   if(db.status==='connected'){
-    memH+=`<div style="background:var(--surface);padding:10px 14px">`;
-    memH+=`<div class="dr"><span class="dr-key"><a href="/doc/pgvectorscale_memory_integration" class="dlink">memories</a></span><span class="dr-val" style="font-size:16px;color:var(--green)">${(db.memories||0).toLocaleString()}</span></div>`;
+    memH+=`<div style="background:var(--surface);padding:12px 14px">`;
+    memH+=`<div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">pgvector database</div>`;
+    memH+=`<div class="dr"><span class="dr-key">memories</span><span class="dr-val" style="font-size:18px;color:var(--green)">${(db.memories||0).toLocaleString()}</span></div>`;
     memH+=`<div class="dr"><span class="dr-key">embeddings</span><span class="dr-val" style="color:var(--violet)">${(db.mem_embeddings||0).toLocaleString()}</span></div>`;
     memH+=`<div class="dr"><span class="dr-key">doc chunks</span><span class="dr-val">${db.doc_embeddings||0}</span></div>`;
-    memH+=`<div class="dr"><span class="dr-key">actions</span><span class="dr-val">${db.actions||0}</span></div>`;
+    memH+=`<div class="dr"><span class="dr-key">actions tracked</span><span class="dr-val">${db.actions||0}</span></div>`;
     memH+=`<div class="dr"><span class="dr-key"><a href="/godel/choices" class="dlink">G&#246;del choices</a></span><span class="dr-val" style="color:var(--amber)">${db.godel_choices||0}</span></div>`;
-    memH+=`<div class="dr"><span class="dr-key">db size</span><span class="dr-val">${db.db_size||'?'}</span></div>`;
+    memH+=`<div class="dr"><span class="dr-key">database size</span><span class="dr-val">${db.db_size||'?'}</span></div>`;
     memH+=`</div>`;
   }
-  if(re.docs||re.memories||stmAgents.length){
-    memH+=`<div style="background:var(--surface);padding:10px 14px">`;
-    if(re.docs)memH+=`<div class="dr"><span class="dr-key"><a href="/api/rage/embed" class="dlink">RAGE doc chunks</a></span><span class="dr-val" style="color:var(--violet)">${re.docs}</span></div>`;
-    if(re.memories)memH+=`<div class="dr"><span class="dr-key"><a href="/api/rage/embed" class="dlink">RAGE mem vectors</a></span><span class="dr-val" style="color:var(--violet)">${re.memories}</span></div>`;
-    const totalStm=d.memory?.stm_records||1;
-    stmAgents.slice(0,6).forEach(([agent,count])=>{
+  // RAGE + STM breakdown
+  memH+=`<div style="background:var(--surface);padding:12px 14px">`;
+  memH+=`<div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">semantic retrieval</div>`;
+  if(re.docs)memH+=`<div class="dr"><span class="dr-key"><a href="/api/rage/embed" class="dlink">RAGE doc chunks</a></span><span class="dr-val" style="color:var(--violet)">${re.docs}</span></div>`;
+  if(re.memories)memH+=`<div class="dr"><span class="dr-key"><a href="/api/rage/embed" class="dlink">RAGE mem vectors</a></span><span class="dr-val" style="color:var(--violet)">${re.memories}</span></div>`;
+  const totalStm=d.memory?.stm_records||1;
+  // Top 3 agents shown, rest in expandable
+  stmAgents.slice(0,3).forEach(([agent,count])=>{
+    const pct=Math.round(count/totalStm*100);
+    memH+=`<div class="dr"><span class="dr-key">${agent}</span><span class="dr-val">${count.toLocaleString()} <span style="color:var(--text3)">${pct}%</span></span></div>`;
+  });
+  if(stmAgents.length>3){
+    memH+=`<details style="margin:4px 0"><summary style="cursor:pointer;color:var(--blue);font-size:10px;font-family:var(--mono)">${stmAgents.length-3} more agents</summary><div style="padding:4px 0">`;
+    stmAgents.slice(3).forEach(([agent,count])=>{
       const pct=Math.round(count/totalStm*100);
       memH+=`<div class="dr"><span class="dr-key">${agent}</span><span class="dr-val">${count.toLocaleString()} <span style="color:var(--text3)">${pct}%</span></span></div>`;
     });
-    memH+=`</div>`;
+    memH+=`</div></details>`;
   }
-  memH+=`</div>`;
+  memH+=`</div></div>`;
   document.getElementById('sec-memory').innerHTML=memH;
 
   // Godel choices
   const godels=d.godel_choices||[];
   document.getElementById('godel-count').textContent=`(${godels.length})`;
-  let glH='';
+  let glH='<div style="font-size:11px;color:var(--text2);padding:4px 0;margin-bottom:8px"><a href="/godel/choices" class="link">full audit trail</a> &#183; <a href="/doc/THESIS" class="link">thesis</a> &#183; <a href="/thesis/evidence" class="link">evidence</a></div>';
   godels.forEach(g=>{
     const ts=g.timestamp?g.timestamp.slice(11,19):'';
+    const tsFull=g.timestamp?g.timestamp.slice(0,19).replace('T',' '):'';
     const cls=g.outcome==='success'?'s':g.outcome?'e':'';
     const oc=g.outcome==='success'?'var(--green)':g.outcome?'var(--amber)':'var(--text3)';
+    const chosen=(g.chosen||'').replace(/</g,'&lt;');
+    const chosenShort=chosen.length>80?chosen.slice(0,80)+'...':chosen;
     glH+=`<div class="godel-entry ${cls}" onclick="this.classList.toggle('open')">`;
-    glH+=`<div style="display:flex;justify-content:space-between;font-size:11px"><span><span style="color:${oc};font-family:var(--mono);font-size:10px">[${(g.outcome||'?').slice(0,3)}]</span> <a href="/godel/choices?source_agent=${encodeURIComponent(g.agent)}" class="link">${g.agent}</a> <span style="color:var(--text2)">${g.type}</span></span><span style="color:var(--text3);font-family:var(--mono);font-size:10px">${ts}</span></div>`;
+    glH+=`<div style="display:flex;justify-content:space-between;font-size:12px"><span><span style="color:${oc};font-family:var(--mono);font-size:10px">[${(g.outcome||'?').slice(0,3)}]</span> <a href="/godel/choices?source_agent=${encodeURIComponent(g.agent)}" class="link">${g.agent}</a> <span style="color:var(--text2)">${g.type}</span></span><span style="color:var(--text3);font-family:var(--mono);font-size:10px">${ts}</span></div>`;
     glH+=`<div class="godel-detail">`;
-    glH+=`<div style="color:var(--green)">&#8594; ${(g.chosen||'').slice(0,120)}</div>`;
-    if(g.rationale)glH+=`<div style="color:var(--text3);margin-top:2px">${g.rationale}</div>`;
+    glH+=`<div style="color:var(--green);font-size:12px">\u2192 ${chosenShort}</div>`;
+    if(g.rationale)glH+=`<div style="color:var(--text2);margin-top:4px;font-size:12px;line-height:1.5">${g.rationale}</div>`;
+    // Level 3: Full data
+    if(chosen.length>80){
+      glH+=`<details style="margin-top:4px"><summary style="cursor:pointer;color:var(--blue);font-size:10px;font-family:var(--mono)">full decision</summary><div style="padding:6px 8px;font-size:12px;color:var(--text);white-space:pre-wrap;word-break:break-word;background:rgba(5,8,16,.3);border-radius:2px;margin-top:4px;border-left:2px solid var(--green)">${chosen}</div></details>`;
+    }
+    glH+=`<div style="margin-top:4px;font-size:10px;color:var(--text3)">${tsFull} &#183; <a href="/godel/choices?source_agent=${encodeURIComponent(g.agent)}" class="link">all by ${g.agent}</a> &#183; <a href="/doc/THESIS" class="link">thesis</a></div>`;
     glH+=`</div></div>`;
   });
-  document.getElementById('sec-godel').innerHTML=glH||'<div style="padding:8px;color:var(--text3)">No choices yet</div>';
+  document.getElementById('sec-godel').innerHTML=glH||'<div style="padding:8px;color:var(--text3)">No choices yet &#183; <a href="/godel/choices" class="link">view historical</a></div>';
 
   // Autonomous systems
   const au=d.autonomous||{},auth=d.author||{},gv=d.governor||{};
-  let auH='<div style="background:var(--surface);padding:10px 14px">';
+  let auH='<div style="font-size:11px;color:var(--text2);padding:4px 0;margin-bottom:8px"><a href="/doc/AUTONOMOUS" class="link">autonomous docs</a> &#183; <a href="/doc/THESIS" class="link">thesis</a> &#183; <a href="/doc/AUTHOR_AGENT" class="link">author agent</a> &#183; <a href="/doc/BOOK_OF_MINDX" class="link">book</a> &#183; <a href="/doc/enhanced_monitoring_system" class="link">monitoring</a></div>';
+  auH+='<div style="background:var(--surface);padding:12px 14px">';
   auH+=`<div class="dr"><span class="dr-key"><span class="dot ${au.loop_running?'dot-g':'dot-r'}"></span><a href="/doc/THESIS" class="dlink">improvement loop</a></span><span class="dr-val">${au.loop_running?'active':'stopped'}${au.last_cycle?' &#183; '+au.last_cycle:''}</span></div>`;
   auH+=`<div class="dr"><span class="dr-key"><span class="dot ${auth.periodic_active?'dot-g':'dot-x'}"></span><a href="/doc/AUTHOR_AGENT" class="dlink">author agent</a></span><span class="dr-val">${auth.last_chapter||'no chapters yet'}${auth.lunar_day?' &#183; day '+auth.lunar_day:''}</span></div>`;
   auH+=`<div class="dr"><span class="dr-key"><span class="dot ${au.restart_pending?'dot-y':'dot-x'}"></span>restart signal</span><span class="dr-val">${au.restart_pending?'PENDING':'none'}</span></div>`;
@@ -964,16 +1071,20 @@ function render(d){
   // Recent actions
   const acts=(d.actions||[]).slice(0,8);
   document.getElementById('actions-count').textContent=`(${acts.length})`;
-  let acH='';
+  let acH='<div style="font-size:11px;color:var(--text2);padding:4px 0;margin-bottom:8px"><a href="/actions/export" class="link">export all</a> &#183; <a href="/actions/efficiency" class="link">efficiency metrics</a> &#183; <a href="/doc/goal_management" class="link">goal docs</a></div>';
   acts.forEach(a=>{
     const sc=a.status==='completed'?'dot-g':a.status==='failed'?'dot-r':'dot-y';
     const scC=a.status==='completed'?'var(--green)':a.status==='failed'?'var(--red)':'var(--amber)';
     const ts=(a.created_at||'').slice(5,19).replace('T',' ');
-    acH+=`<div style="padding:6px 10px;margin:1px 0;background:rgba(8,12,18,.5);border-left:2px solid ${scC}">`;
-    acH+=`<div style="display:flex;justify-content:space-between;font-size:11px"><span><span class="dot ${sc}"></span><span style="font-weight:600">${a.agent_id||'?'}</span> <span style="color:var(--text3)">${a.action_type||''}</span></span><span style="color:var(--text3);font-family:var(--mono);font-size:10px">${ts}</span></div>`;
-    acH+=`<div style="font-size:11px;color:var(--text2);margin-top:2px">${(a.description||'').slice(0,100)}</div>`;
-    if(a.result)acH+=`<div style="font-size:10px;color:var(--green);margin-top:2px">${(a.result+'').replace(/</g,'&lt;').slice(0,80)}</div>`;
-    acH+=`</div>`;
+    const desc=(a.description||'').replace(/</g,'&lt;');
+    const descShort=desc.length>100?desc.slice(0,100)+'...':desc;
+    acH+=`<details style="margin:2px 0;border-left:2px solid ${scC}"><summary style="cursor:pointer;padding:6px 10px;font-size:12px"><span class="dot ${sc}"></span><span style="font-weight:600">${a.agent_id||'?'}</span> <span style="color:var(--text2)">${a.action_type||''}</span> <span style="float:right;color:var(--text3);font-family:var(--mono);font-size:10px">${ts}</span></summary>`;
+    acH+=`<div style="padding:6px 12px;font-size:12px;color:var(--text)">`;
+    acH+=`<div style="margin-bottom:6px">${descShort}</div>`;
+    if(desc.length>100)acH+=`<details style="margin:4px 0"><summary style="cursor:pointer;color:var(--blue);font-size:10px;font-family:var(--mono)">full description</summary><div style="padding:6px 8px;white-space:pre-wrap;word-break:break-word;background:rgba(5,8,16,.3);border-radius:2px;margin-top:4px">${desc}</div></details>`;
+    if(a.result)acH+=`<div style="color:var(--green);margin-top:4px;padding:4px 8px;background:rgba(10,32,18,.2);border-radius:2px"><span style="font-size:10px;font-family:var(--mono);color:var(--text3)">RESULT</span><br>${(a.result+'').replace(/</g,'&lt;')}</div>`;
+    acH+=`<div style="margin-top:4px;font-size:10px"><span style="color:var(--text3)">source: ${a.source||'?'} &#183; id: ${a.id||'?'}</span></div>`;
+    acH+=`</div></details>`;
   });
   document.getElementById('sec-actions').innerHTML=acH||'<div style="padding:8px;color:var(--text3)">No actions yet</div>';
 
@@ -987,7 +1098,9 @@ function render(d){
     bsH+=`<div style="font-size:10px;color:var(--text3)">${ses.votes||0} votes &#183; score ${ses.score||0} &#183; ${ses.dissent||0} dissent</div>`;
     bsH+=`</div>`;
   });
-  document.getElementById('sec-boardroom').innerHTML=bsH||'<div style="padding:8px;color:var(--text3)">No sessions yet. <a href="/boardroom" class="link">Convene the boardroom</a> &middot; <a href="/doc/DAIO_CIVILIZATION_GOVERNANCE" class="link">governance docs</a></div>';
+  if(!bsH)bsH='<div style="padding:8px;color:var(--text2)">No sessions yet.</div>';
+  bsH='<div style="font-size:11px;color:var(--text2);padding:4px 0;margin-bottom:8px"><a href="/boardroom" class="link">convene boardroom</a> &#183; <a href="/doc/DAIO" class="link">DAIO</a> &#183; <a href="/doc/DAIO_CIVILIZATION_GOVERNANCE" class="link">governance</a> &#183; <a href="/dojo" class="link">dojo</a></div>'+bsH;
+  document.getElementById('sec-boardroom').innerHTML=bsH;
 
   // Endpoints
   let epH='';
@@ -1029,18 +1142,83 @@ function rpnl(d){
       const ts=m.timestamp||'',td=ts.length>10?ts.slice(5,19).replace('T',' '):ts;
       const key=ts+'_'+(m.prompt||'').slice(0,20);
       const cls=recentKeys.has(key)?' msg-new':'';
-      h+=`<div class="msg msg-usr${cls}"><div class="msg-hdr"><span style="color:var(--violet);font-weight:600">${m.agent||'mindX'}</span><span>${td}</span></div><div class="msg-txt">${(m.prompt||'').replace(/</g,'&lt;').slice(0,300)}</div></div>`;
-      h+=`<div class="msg msg-ai${cls}"><div class="msg-hdr"><span style="color:var(--green);font-weight:600">${m.model||'?'}</span><span>${m.latency_ms?m.latency_ms+'ms':''}</span></div><div class="msg-txt">${(m.response||'').replace(/</g,'&lt;').slice(0,500)}</div></div>`;
+      const prompt=(m.prompt||'').replace(/</g,'&lt;');
+      const response=(m.response||'').replace(/</g,'&lt;');
+      const promptShort=prompt.length>120?prompt.slice(0,120)+'...':prompt;
+      const responseShort=response.length>200?response.slice(0,200)+'...':response;
+      const hasMore=prompt.length>120||response.length>200;
+      h+=`<div class="msg msg-usr${cls}"><div class="msg-hdr"><span style="color:var(--violet);font-weight:600">${m.agent||'mindX'}</span><span>${td}</span></div><div class="msg-txt">${promptShort}</div></div>`;
+      h+=`<div class="msg msg-ai${cls}"><div class="msg-hdr"><span style="color:var(--green);font-weight:600">${m.model||'?'}</span><span>${m.latency_ms?m.latency_ms+'ms':''} ${m.tokens_est?'&#183; '+m.tokens_est+' tok':''}</span></div><div class="msg-txt">${responseShort}</div>`;
+      if(hasMore){
+        h+=`<details style="margin-top:4px"><summary style="cursor:pointer;color:var(--blue);font-size:10px;font-family:var(--mono)">full dialogue</summary><div style="padding:6px 0;font-size:12px;line-height:1.6"><div style="color:var(--violet);font-weight:600;font-size:10px;margin-bottom:4px;font-family:var(--mono)">${m.agent||'mindX'} PROMPT</div><div style="color:var(--text);white-space:pre-wrap;word-break:break-word;padding:6px 8px;background:rgba(22,16,32,.3);border-left:2px solid var(--violet);border-radius:2px;margin-bottom:8px">${prompt}</div><div style="color:var(--green);font-weight:600;font-size:10px;margin-bottom:4px;font-family:var(--mono)">${m.model||'?'} RESPONSE</div><div style="color:var(--text);white-space:pre-wrap;word-break:break-word;padding:6px 8px;background:rgba(10,32,18,.3);border-left:2px solid var(--green);border-radius:2px">${response}</div></div></details>`;
+      }
+      h+=`</div>`;
     });p.innerHTML=h;p.scrollTop=p.scrollHeight;
   } else if(curT===1){
-    const acts=d.actions||[];const thesis=d.thesis||{};
+    const acts=d.actions||[];const thesis=d.thesis||{};const godels=d.godel_choices||[];
     if(!acts.length){p.innerHTML='<div style="padding:12px;color:var(--text3)">No actions yet.</div>';return}
-    let h=`<div style="padding:4px 8px;font-size:9px;color:var(--text3);font-family:var(--mono);border-bottom:1px solid rgba(8,11,16,.3)">${acts.length} actions${thesis.improvement_rate!==undefined?' &#183; '+((thesis.improvement_rate*100).toFixed(1))+'% success':''}</div>`;
+    let h=`<div style="padding:4px 8px;font-size:10px;color:var(--text2);font-family:var(--mono);border-bottom:1px solid rgba(8,11,16,.3)">${acts.length} actions${thesis.improvement_rate!==undefined?' &#183; '+((thesis.improvement_rate*100).toFixed(1))+'% success':''}</div>`;
     acts.forEach(a=>{
       const sc=a.status==='completed'?'var(--green)':a.status==='failed'?'var(--red)':'var(--amber)';
-      const ts=(a.created_at||'').slice(11,16);
+      const scBg=a.status==='completed'?'rgba(13,51,33,.1)':a.status==='failed'?'rgba(51,13,13,.1)':'rgba(51,43,13,.1)';
+      const ts=(a.created_at||'').slice(5,19).replace('T',' ');
+      const tsShort=(a.created_at||'').slice(11,16);
       const desc=(a.description||'').replace(/</g,'&lt;');
-      h+=`<details style="margin:1px 0;border-left:2px solid ${sc}"><summary style="cursor:pointer;padding:4px 8px;font-size:11px"><span style="color:${sc};font-weight:700;font-size:9px;font-family:var(--mono)">${a.status}</span> ${a.action_type||''} <span style="float:right;color:var(--text3);font-size:9px">${ts}</span></summary><div style="padding:4px 8px 8px;font-size:10px;color:var(--text2);border-top:1px solid rgba(8,11,16,.2)">${desc}${a.result?'<div style="color:var(--green);margin-top:4px">'+a.result+'</div>':''}</div></details>`;
+      // Parse structured info from description
+      const agentMatch=desc.match(/Agents?:\s*([^.]+)/);
+      const agentList=agentMatch?agentMatch[1].split(',').map(s=>s.trim()):[a.agent_id];
+      const cycleMatch=desc.match(/Cycle\s*(\d+)/);
+      const goalMatch=desc.match(/(?:Cycle\s*\d+[^:]*:\s*)(.+?)(?:\.\s*Agents|$)/);
+      const goal=goalMatch?goalMatch[1]:desc.slice(0,100);
+      // Find related Godel choices by time proximity
+      const actionTime=new Date(a.created_at||0).getTime()/1000;
+      const relatedGodels=godels.filter(g=>{const gt=new Date(g.timestamp||0).getTime()/1000;return Math.abs(gt-actionTime)<300});
+      h+=`<details style="margin:2px 0;background:${scBg};border-left:2px solid ${sc};border-radius:0 3px 3px 0">`;
+      h+=`<summary style="cursor:pointer;padding:6px 10px;font-size:12px;display:flex;justify-content:space-between;align-items:center">`;
+      h+=`<span><span style="color:${sc};font-weight:700;font-size:10px;text-transform:uppercase;font-family:var(--mono);margin-right:6px">${a.status}</span>`;
+      h+=`<span style="color:var(--text)">${cycleMatch?'Cycle '+cycleMatch[1]+' ':''}${a.action_type||''}</span></span>`;
+      h+=`<span style="color:var(--text3);font-size:10px;font-family:var(--mono)">${tsShort}</span></summary>`;
+      h+=`<div style="padding:8px 12px;font-size:12px;border-top:1px solid rgba(8,11,16,.2)">`;
+      // Goal
+      h+=`<div style="color:var(--text);font-weight:600;margin-bottom:6px">${goal}</div>`;
+      // Agent pipeline
+      if(agentList.length>1||agentList[0]!==a.agent_id){
+        h+=`<div style="margin-bottom:6px;padding:4px 0;border-bottom:1px solid rgba(8,11,16,.15);font-size:10px;font-family:var(--mono);color:var(--text3)">PIPELINE: `;
+        agentList.forEach((ag,j)=>{
+          const c=ag.includes('strategic')?'var(--violet)':ag.includes('bdi')?'var(--blue)':ag.includes('mastermind')?'var(--green)':'var(--text2)';
+          h+=`<span style="color:${c};font-weight:600">${ag}</span>`;
+          if(j<agentList.length-1)h+=` <span style="color:var(--text3)">\u2192</span> `;
+        });
+        h+=`</div>`;
+      }
+      // Metrics
+      h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:6px;font-size:11px">`;
+      h+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">source</span> <span style="color:var(--text2)">${a.source||'?'}</span></div>`;
+      h+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">agent</span> <span style="color:var(--violet)">${a.agent_id||'?'}</span></div>`;
+      h+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">type</span> <span style="color:var(--blue)">${a.action_type||'?'}</span></div>`;
+      h+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">time</span> <span style="color:var(--text2)">${ts}</span></div>`;
+      h+=`</div>`;
+      // Full description
+      h+=`<details style="margin:4px 0"><summary style="cursor:pointer;color:var(--blue);font-size:10px;font-family:var(--mono)">full description</summary><div style="color:var(--text);padding:6px 8px;white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.6;background:rgba(5,8,16,.3);border-radius:2px;margin-top:4px">${desc}</div></details>`;
+      // Related Godel choices
+      if(relatedGodels.length){
+        h+=`<details style="margin:4px 0"><summary style="cursor:pointer;color:var(--amber);font-size:10px;font-family:var(--mono)">related decisions (${relatedGodels.length})</summary><div style="padding:4px 0">`;
+        relatedGodels.forEach(g=>{
+          const gts=(g.timestamp||'').slice(11,19);
+          const oc=g.outcome==='success'?'var(--green)':g.outcome?'var(--amber)':'var(--text3)';
+          h+=`<div style="padding:3px 0;border-bottom:1px solid rgba(8,11,16,.15);font-size:11px"><span style="color:${oc};font-family:var(--mono)">[${(g.outcome||'?').slice(0,3)}]</span> <span style="color:var(--blue)">${g.agent}</span> <span style="color:var(--text2)">${g.type}</span> <span style="color:var(--text3);font-size:9px">${gts}</span>`;
+          if(g.chosen)h+=`<div style="color:var(--green);padding-left:12px;font-size:11px">\u2192 ${(g.chosen||'')}</div>`;
+          if(g.rationale)h+=`<div style="color:var(--text3);padding-left:12px;font-style:italic;font-size:11px">${g.rationale}</div>`;
+          h+=`</div>`;
+        });
+        h+=`</div></details>`;
+      }
+      // Result
+      if(a.result){
+        h+=`<div style="color:var(--green);margin-top:6px;padding:6px 8px;border-top:1px solid rgba(8,11,16,.15);background:rgba(10,32,18,.2);border-radius:2px;font-size:12px">`;
+        h+=`<span style="color:var(--text3);font-size:10px;font-family:var(--mono)">RESULT</span><br>${(a.result+'').replace(/</g,'&lt;')}</div>`;
+      }
+      h+=`</div></details>`;
     });
     p.innerHTML=h;
   } else if(curT===2){
@@ -1076,32 +1254,76 @@ function rpnl(d){
   }
 }
 
-// ── Force layers visible immediately (content-first, data fills in) ──
+// ── Force layers visible immediately ──
 document.querySelectorAll('.layer').forEach(function(l){l.classList.add('vis')});
 
-// ── Data fetch ──
+// ── Progressive data loading — 3 second rule ──
 var _firstRender=true;
+var _bootStart=Date.now();
+
+// Layer 0: Try fast endpoints first (health is instant)
+fetch('/health').then(function(r){return r.json()}).then(function(d){
+  document.getElementById('live-badge').textContent='LIVE';
+  document.getElementById('live-badge').className='live-badge';
+  document.getElementById('live-dot').className='live-dot';
+  document.getElementById('hdr-sub').textContent='connected — loading diagnostics...';
+}).catch(function(){
+  document.getElementById('live-badge').textContent='CONNECTING';
+  document.getElementById('live-badge').className='live-badge off';
+});
+
+// Layer 1: Thesis evidence loads fast (cached, small payload)
+fetch('/thesis/evidence').then(function(r){return r.json()}).then(function(ev){
+  var th=ev||{};
+  // Populate thesis section immediately
+  var rate=0;
+  var si=th.claims?.self_improvement?.evidence||{};
+  rate=si.success_rate||0;
+  var rateEl=document.getElementById('thesis-rate');
+  if(rateEl)rateEl.innerHTML='<b style="color:'+(rate>.05?'var(--green)':rate>0?'var(--amber)':'var(--text3)')+'">'+si.cycles_succeeded+'/'+si.cycles_attempted+'</b> improvements &middot; <b>'+(rate*100).toFixed(1)+'%</b> success &middot; '+(th.evidence_span_hours||0).toFixed(0)+'h span';
+  // Populate claim cards
+  var clEl=document.getElementById('claims');
+  if(clEl&&th.claims){
+    var clH='';
+    var VCLS={SUPPORTED:'sup',PARTIAL:'par','NOT SUPPORTED':'nos',INSUFFICIENT:'ins'};
+    function vcls(v){for(var k in VCLS){if(v.startsWith(k))return VCLS[k]}return'ins'}
+    for(var claim in th.claims){
+      var cd=th.claims[claim];var v=cd.verdict||'loading...';var cls=vcls(v);var parts=v.split(' — ');
+      clH+='<div class="claim '+cls+'" onclick="this.classList.toggle(\'open\')" data-tip="'+v+'"><div class="shimmer"></div><div class="circuit"></div><div class="claim-name">'+claim.replace(/_/g,' ')+'</div><div class="claim-verdict '+cls+'">'+parts[0]+'</div>'+(parts[1]?'<div class="claim-detail">'+parts[1]+'</div>':'')+'<div class="claim-evidence"><a href="/thesis/evidence" class="link">evidence</a> &middot; <a href="/doc/THESIS" class="link">thesis</a></div></div>';
+    }
+    clEl.innerHTML=clH;
+  }
+  // Populate thesis numbers
+  var tnEl=document.getElementById('thesis-nums');
+  if(tnEl&&th.aggregate){
+    var a=th.aggregate;
+    tnEl.innerHTML='<div class="tn"><div class="tn-val" style="color:var(--violet)">'+(a.total_godel_choices||0).toLocaleString()+'</div><div class="tn-lbl">G\u00F6del choices</div></div><div class="tn"><div class="tn-val" style="color:var(--green)">'+(th.claims?.godel_self_reference?.evidence?.self_referential_choices||0)+'</div><div class="tn-lbl">self-referential</div></div><div class="tn"><div class="tn-val" style="color:var(--blue)">'+(a.total_memories||0).toLocaleString()+'</div><div class="tn-lbl">memories</div></div><div class="tn"><div class="tn-val" style="color:var(--amber)">'+(a.total_actions||0)+'</div><div class="tn-lbl">actions</div></div>';
+  }
+}).catch(function(){});
+
+// Session timer — updates every second, no API needed
+var _sessionStart=Date.now();
+setInterval(function(){
+  var s=Math.floor((Date.now()-_sessionStart)/1000);
+  var m=Math.floor(s/60);var sec=s%60;
+  var el=document.getElementById('hs-session');
+  if(el)el.textContent=m+':'+(sec<10?'0':'')+sec;
+},1000);
+
+// Layer 2: Full diagnostics (slower, loads everything)
 async function rf(){
   try{
-    if(!LD&&_preloadedData){LD=_preloadedData;_preloadedData=null;render(LD);if(_firstRender){_firstRender=false}return}
-    var r=await fetch('/diagnostics/live',{signal:AbortSignal.timeout?AbortSignal.timeout(8000):undefined});
-    if(r.ok){LD=await r.json();render(LD);if(_firstRender){_firstRender=false}}
+    if(!LD&&_preloadedData){LD=_preloadedData;_preloadedData=null;render(LD);_firstRender=false;return}
+    var r=await fetch('/diagnostics/live');
+    if(r.ok){LD=await r.json();render(LD);_firstRender=false}
   }catch(e){
-    document.getElementById('live-badge').textContent='CONNECTING';
-    document.getElementById('live-badge').className='live-badge off';
-    document.getElementById('live-dot').className='live-dot off';
+    if(Date.now()-_bootStart>5000){
+      document.getElementById('live-badge').textContent='CONNECTING';
+      document.getElementById('live-badge').className='live-badge off';
+    }
   }
 }
 rf();setInterval(rf,6000);
-
-// ── Fallback: if backend is slow, show page structure with "connecting" state ──
-setTimeout(function(){
-  if(_firstRender){
-    document.getElementById('live-badge').textContent='CONNECTING';
-    document.getElementById('live-badge').className='live-badge off';
-    document.getElementById('hdr-sub').textContent='connecting to mindX backend...';
-  }
-},3000);
 
 // ── Popup system ──
 var _popOpen=false,_popFS=false,_popSaved={};
@@ -1274,31 +1496,131 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
 
   dv.on('message',function(){updateRank()});
 
+  // ── Expanded DeltaVerse event hooks ──
+
+  // Depth change (scroll) → particle scatter + node pulse
+  dv.on('depth',function(data){
+    if(nodes.length&&Math.abs(data.delta||0)>2){
+      var dir=data.delta>0?1:-1;
+      for(var i=0;i<particles.length;i++)particles[i].vy+=dir*.08;
+      nodes[Math.floor(Math.random()*nodes.length)].act=.4;
+    }
+  });
+
+  // Momentum stop → particles implode toward center, shockwave
+  dv.on('momentum_stop',function(data){
+    if(data.sustained>2){
+      shockwaves.push({x:W/2,y:H/2,r:0,life:1,col:'rgba(86,211,100,'});
+      for(var i=0;i<particles.length;i++){
+        var dx=W/2-particles[i].x,dy=H/2-particles[i].y,dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist>1){particles[i].vx+=dx/dist*.3;particles[i].vy+=dy/dist*.3}
+      }
+    }
+  });
+
+  // Archetype formed → recolor nodes
+  dv.on('archetype',function(data){
+    updateRank();
+    for(var i=0;i<nodes.length;i++)nodes[i].act=.5;
+    showXpFloat('+archetype: '+(dv.profile.archetype||'?'));
+  });
+
+  // Ambient shift (time of day change) → shockwave from top
+  dv.on('ambient_shift',function(data){
+    shockwaves.push({x:W/2,y:0,r:0,life:1,col:'rgba(210,168,255,'});
+  });
+
+  // Rhythm detected → visual pulse
+  dv.on('rhythm',function(data){
+    if(data.bpm>15&&nodes.length>1){
+      for(var i=0;i<Math.min(3,nodes.length);i++)nodes[Math.floor(Math.random()*nodes.length)].act=.5;
+    }
+  });
+
+  // ── XP floating notification system ──
+  var _xpContainer=document.createElement('div');
+  _xpContainer.style.cssText='position:fixed;bottom:40px;right:12px;z-index:22;pointer-events:none;text-align:right';
+  document.body.appendChild(_xpContainer);
+
+  function showXpFloat(text){
+    var el=document.createElement('div');
+    el.style.cssText='font-family:var(--mono);font-size:11px;color:var(--green);opacity:1;transform:translateY(0);transition:all 1.5s ease-out;padding:2px 0;text-shadow:0 0 6px rgba(86,211,100,.3)';
+    el.textContent=text;
+    _xpContainer.appendChild(el);
+    requestAnimationFrame(function(){el.style.opacity='0';el.style.transform='translateY(-30px)'});
+    setTimeout(function(){if(el.parentNode)el.remove()},1600);
+    while(_xpContainer.children.length>5)_xpContainer.firstChild.remove();
+  }
+
+  // Show XP gain on clicks and interactions
+  var _lastXp=dv.profile.xp;
+  dv.on('click',function(){
+    var gained=Math.floor(dv.profile.xp-_lastXp);
+    if(gained>0)showXpFloat('+'+gained+' xp');
+    _lastXp=dv.profile.xp;
+    updateRank();
+  });
+  dv.on('tap',function(data){
+    if(data.count>=2){
+      var gained=Math.floor(dv.profile.xp-_lastXp);
+      if(gained>0)showXpFloat('+'+gained+' xp &#183; '+data.count+'x tap');
+      _lastXp=dv.profile.xp;
+    }
+  });
+  dv.on('gesture',function(data){
+    var gained=Math.floor(dv.profile.xp-_lastXp);
+    if(gained>0)showXpFloat('+'+gained+' xp &#183; '+data.type);
+    _lastXp=dv.profile.xp;
+    updateRank();
+  });
+
+  // Combo notifications
+  dv.on('click',function(){
+    if(dv.profile.combo>=3)showXpFloat(dv.profile.combo+'x combo');
+  });
+
   // ── Per-frame physics: DeltaVerse perception → canvas ──
   (function dvLoop(){
     dv.update();
-    // Wind → particle drift
-    if(particles.length&&dv.wind){
-      var wx=dv.wind.x*.1,wy=dv.wind.y*.1;
-      if(Math.abs(wx)>.005||Math.abs(wy)>.005){
-        for(var i=0;i<particles.length;i++){particles[i].vx+=wx*.01;particles[i].vy+=wy*.01}
+    // Wind → particle AND node drift (strong effect)
+    if(dv.wind){
+      var wx=dv.wind.x,wy=dv.wind.y;
+      if(Math.abs(wx)>.01||Math.abs(wy)>.01){
+        for(var i=0;i<particles.length;i++){particles[i].vx+=wx*.008;particles[i].vy+=wy*.008}
+        for(var ni=0;ni<nodes.length;ni++){nodes[ni].vx+=wx*.003;nodes[ni].vy+=wy*.003}
       }
     }
-    // Momentum → node drift
-    if(nodes.length&&dv.momentum.sustained>1){
-      var md={right:{x:1,y:0},left:{x:-1,y:0},up:{x:0,y:-1},down:{x:0,y:1},none:{x:0,y:0}};
+    // Momentum → node drift (stronger)
+    if(nodes.length&&dv.momentum.sustained>0.5){
+      var md={right:{x:1,y:0},left:{x:-1,y:0},up:{x:0,y:-1},down:{x:0,y:1},'up-right':{x:.7,y:-.7},'up-left':{x:-.7,y:-.7},'down-right':{x:.7,y:.7},'down-left':{x:-.7,y:.7},none:{x:0,y:0}};
       var d=md[dv.momentum.direction]||{x:0,y:0};
-      var mf=Math.min(dv.momentum.sustained,5)*.001;
+      var mf=Math.min(dv.momentum.sustained,8)*.002;
       for(var mi=0;mi<nodes.length;mi++){nodes[mi].vx+=d.x*mf;nodes[mi].vy+=d.y*mf}
+      for(var pi=0;pi<particles.length;pi++){particles[pi].vx+=d.x*mf*.5;particles[pi].vy+=d.y*mf*.5}
     }
-    // Resonance → node glow
-    if(nodes.length&&dv.resonance.alignment>.5){
-      for(var ri=0;ri<nodes.length;ri+=3)nodes[ri].act=Math.max(nodes[ri].act,dv.resonance.alignment*.03);
+    // Resonance → node glow (more responsive)
+    if(nodes.length&&dv.resonance.alignment>.3){
+      var ra=dv.resonance.alignment;
+      for(var ri=0;ri<nodes.length;ri+=2)nodes[ri].act=Math.max(nodes[ri].act,ra*.06);
     }
-    // Rhythm → edge flash on beat
-    if(dv.rhythm.bpm>10&&nodes.length>1){
+    // Rhythm → edge flash on beat (more aggressive)
+    if(dv.rhythm.bpm>8&&nodes.length>1){
       var tsb=Date.now()-dv.rhythm.lastBeat;
-      if(tsb>0&&tsb<30&&dv.rhythm.regularity>.4)flashE(Math.floor(Math.random()*nodes.length),Math.floor(Math.random()*nodes.length));
+      if(tsb>0&&tsb<50&&dv.rhythm.regularity>.3){
+        var nf=Math.max(1,Math.floor(dv.rhythm.bpm/15));
+        for(var fi=0;fi<nf;fi++)flashE(Math.floor(Math.random()*nodes.length),Math.floor(Math.random()*nodes.length));
+      }
+    }
+    // Pressure → particle speed boost
+    if(dv.pressure&&dv.pressure.intensity>.3){
+      var pboost=dv.pressure.intensity*.003;
+      for(var pb=0;pb<particles.length;pb++){
+        particles[pb].vx*=(1+pboost);particles[pb].vy*=(1+pboost);
+      }
+    }
+    // Idle → slow drift inward, gentle pulse
+    if(dv.idle>10&&nodes.length){
+      for(var ii=0;ii<nodes.length;ii+=2){nodes[ii].act=Math.max(nodes[ii].act,.15)}
     }
     requestAnimationFrame(dvLoop);
   })();
@@ -1316,6 +1638,49 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
     dv.on('click',function(){if(hint.parentNode){hint.style.opacity='0';setTimeout(function(){if(hint.parentNode)hint.remove()},2000)}});
     setTimeout(function(){if(hint.parentNode){hint.style.opacity='0';setTimeout(function(){if(hint.parentNode)hint.remove()},2000)}},15000);
   }
+
+  // ── Progressive hero links — earned through interaction ──
+  var _heroLinks=[
+    {at:3, href:'/doc/THESIS', text:'thesis', color:'var(--blue)'},
+    {at:7, href:'/doc/MANIFESTO', text:'manifesto', color:'var(--violet)'},
+    {at:9, href:'/docs.html', text:'262+ docs', color:'var(--blue)'},
+    {at:13, href:'/redoc', text:'API reference', color:'var(--green)'},
+    {at:21, href:'/thesis/evidence', text:'live evidence', color:'var(--green)'},
+  ];
+  var _heroLinksRevealed=0;
+  var _heroInteractions=0;
+  function _checkHeroLinks(){
+    _heroInteractions++;
+    var container=document.getElementById('hero-links');
+    if(!container)return;
+    for(var i=_heroLinksRevealed;i<_heroLinks.length;i++){
+      if(_heroInteractions>=_heroLinks[i].at){
+        var a=document.createElement('a');
+        a.href=_heroLinks[i].href;
+        a.className='link';
+        a.style.color=_heroLinks[i].color;
+        a.style.opacity='0';a.style.transition='opacity .6s';
+        a.textContent=_heroLinks[i].text;
+        container.appendChild(a);
+        (function(el){setTimeout(function(){el.style.opacity='1'},50)})(a);
+        _heroLinksRevealed=i+1;
+      }
+    }
+  }
+  // Count clicks, scrolls, drags, keys as interactions
+  dv.on('click',_checkHeroLinks);
+  dv.on('tap',_checkHeroLinks);
+  dv.on('depth',_checkHeroLinks);
+  dv.on('drag',_checkHeroLinks);
+  dv.on('gesture',_checkHeroLinks);
+  dv.on('key',_checkHeroLinks);
+  // Also reveal one randomly every 8 seconds for passive visitors
+  setInterval(function(){
+    if(_heroLinksRevealed<_heroLinks.length){
+      _heroInteractions=_heroLinks[_heroLinksRevealed].at;
+      _checkHeroLinks();
+    }
+  },8000);
 })();
 </script>
 </body>
