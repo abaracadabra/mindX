@@ -1,236 +1,239 @@
-# Python SDK Reference
+# Ollama Python SDK
 
+> Source: [github.com/ollama/ollama-python](https://github.com/ollama/ollama-python)
 > `pip install ollama` — Official Python library for Ollama (Python 3.8+)
+
+---
 
 ## Installation
 
 ```bash
-pip install ollama    # pip
-uv add ollama         # uv
+pip install ollama
 ```
+
+Requires Ollama running locally (`ollama serve`) and a model pulled (`ollama pull qwen3:1.7b`).
+
+## Quick Start
+
+```python
+from ollama import chat
+
+response = chat(model='qwen3:1.7b', messages=[
+    {'role': 'user', 'content': 'Why is the sky blue?'},
+])
+print(response.message.content)
+```
+
+Response objects support both dict-style and attribute access:
+```python
+print(response['message']['content'])  # dict style
+print(response.message.content)        # attribute style
+```
+
+## Streaming
+
+```python
+from ollama import chat
+
+stream = chat(
+    model='qwen3:1.7b',
+    messages=[{'role': 'user', 'content': 'Explain BDI reasoning'}],
+    stream=True,
+)
+for chunk in stream:
+    print(chunk.message.content, end='', flush=True)
+```
+
+---
 
 ## Client Types
 
-### Module-Level Functions (Simple)
+### Functional API
 
 ```python
-from ollama import chat, generate, embed, list, show, create, copy, delete, pull, push, ps
-from ollama import web_search, web_fetch
+from ollama import chat, generate, embed, list, show, pull, ps
+response = chat(model='qwen3:1.7b', messages=[...])
 ```
 
-### Client (Custom Configuration)
+### Client Class
 
 ```python
 from ollama import Client
-
-client = Client(
-    host='http://localhost:11434',
-    headers={'x-custom-header': 'value'}
-)
+client = Client(host='http://localhost:11434', headers={'User-Agent': 'mindX/1.0'})
 response = client.chat(model='qwen3:1.7b', messages=[...])
 ```
 
-### AsyncClient (For async/await)
+### AsyncClient
 
 ```python
 from ollama import AsyncClient
+import asyncio
 
 async def main():
-    client = AsyncClient()
-    response = await client.chat(model='qwen3:1.7b', messages=[...])
+    client = AsyncClient(host='http://localhost:11434')
+    response = await client.chat(model='qwen3:1.7b', messages=[
+        {'role': 'user', 'content': 'Hello'},
+    ])
+    print(response.message.content)
 
-# Streaming async
-async def stream():
-    async for part in await AsyncClient().chat(
-        model='qwen3:1.7b', messages=[...], stream=True
-    ):
-        print(part['message']['content'], end='')
+asyncio.run(main())
 ```
 
-### Cloud Client
+### Async Streaming
 
 ```python
-import os
-from ollama import Client
-
-# Direct cloud API access
-client = Client(
-    host='https://ollama.com',
-    headers={'Authorization': 'Bearer ' + os.environ.get('OLLAMA_API_KEY')}
-)
+async def stream_chat():
+    client = AsyncClient()
+    stream = await client.chat(
+        model='qwen3:1.7b',
+        messages=[{'role': 'user', 'content': 'Tell me about mindX'}],
+        stream=True,
+    )
+    async for chunk in stream:
+        print(chunk.message.content, end='', flush=True)
 ```
+
+---
 
 ## Complete API
 
 ### chat()
 
 ```python
-from ollama import chat
-
 response = chat(
     model='qwen3:1.7b',
     messages=[
-        {'role': 'system', 'content': 'You are a helpful assistant.'},
-        {'role': 'user', 'content': 'Why is the sky blue?'}
+        {'role': 'system', 'content': 'You are a mindX boardroom advisor.'},
+        {'role': 'user', 'content': 'Should we deploy to Algorand?'},
     ],
-    stream=False,        # True for streaming
-    think=True,          # Enable thinking trace
-    format='json',       # Or JSON schema dict
-    tools=[fn1, fn2],    # Python functions auto-parsed to schemas
-    options={'temperature': 0.7, 'num_ctx': 4096},
+    stream=False,
+    format='json',
+    tools=[...],
+    think=True,
     keep_alive='10m',
+    options={'temperature': 0.3, 'num_ctx': 4096, 'num_predict': 500},
 )
-
-print(response.message.content)
-print(response.message.thinking)  # If think=True
 ```
 
 ### generate()
 
 ```python
-from ollama import generate
-
 response = generate(
     model='qwen3:1.7b',
-    prompt='Why is the sky blue?',
-    system='You are a scientist.',
-    suffix='',           # For fill-in-middle
+    prompt='Analyze this codebase',
+    system='You are a code reviewer.',
     format='json',
-    stream=False,
     think=True,
-    raw=False,
-    keep_alive='10m',
-    options={'temperature': 0.7},
+    options={'temperature': 0.3},
 )
 print(response.response)
+print(response.thinking)
 ```
 
 ### embed()
 
 ```python
-import ollama
-
-# Single
-result = ollama.embed(model='mxbai-embed-large', input='Hello world')
-vector = result['embeddings'][0]  # list[float]
-
-# Batch
-result = ollama.embed(model='mxbai-embed-large', input=['First', 'Second', 'Third'])
-vectors = result['embeddings']  # list[list[float]]
+result = embed(model='mxbai-embed-large', input=['text1', 'text2'], truncate=True)
+print(len(result.embeddings))       # 2
+print(len(result.embeddings[0]))    # 1024
 ```
 
-### list()
+### Model Management
+
+```python
+from ollama import list, show, create, copy, delete, pull, push, ps
+
+models = list()
+info = show('qwen3:1.7b')
+create(model='custom', from_='qwen3:1.7b', system='...')
+copy('qwen3:1.7b', 'backup')
+delete('old-model')
+for p in pull('qwen3:1.7b', stream=True):
+    print(p.status, p.completed, '/', p.total)
+pull('deepseek-v3.2-cloud')  # cloud model metadata
+push('username/model')
+running = ps()
+```
+
+### Error Handling
 
 ```python
 import ollama
-models = ollama.list()
-for model in models['models']:
-    print(f"{model['name']} - {model['details']['parameter_size']}")
-```
-
-### show()
-
-```python
-import ollama
-info = ollama.show('qwen3:1.7b')
-print(info['details'])       # format, family, parameter_size
-print(info['capabilities'])  # ["completion", "tools", "thinking"]
-print(info['parameters'])    # Parameter text
-```
-
-### create()
-
-```python
-import ollama
-ollama.create(
-    model='mindx-agent',
-    from_='qwen3:1.7b',
-    system='You are mindX, an autonomous AI system.'
-)
-```
-
-### copy() / delete()
-
-```python
-import ollama
-ollama.copy('qwen3:1.7b', 'qwen3-backup')
-ollama.delete('old-model')
-```
-
-### pull() / push()
-
-```python
-import ollama
-
-# Pull with progress
-for status in ollama.pull('qwen3:1.7b', stream=True):
-    print(status)
-
-# Push (requires auth)
-ollama.push('username/my-model')
-```
-
-### ps()
-
-```python
-import ollama
-running = ollama.ps()
-for model in running['models']:
-    print(f"{model['name']} - VRAM: {model['size_vram']} bytes")
-```
-
-### web_search() / web_fetch()
-
-```python
-import ollama
-
-# Requires OLLAMA_API_KEY
-results = ollama.web_search("What is Ollama?")
-for r in results.results:
-    print(f"{r.title}: {r.url}")
-
-page = ollama.web_fetch('https://ollama.com')
-print(page.title, page.content[:200])
-```
-
-## Error Handling
-
-```python
-import ollama
-
 try:
-    ollama.chat('nonexistent-model')
+    response = ollama.chat(model='nonexistent', messages=[...])
 except ollama.ResponseError as e:
-    print(f'Error: {e.error}')
-    if e.status_code == 404:
-        ollama.pull('nonexistent-model')
+    print(f'Error {e.status_code}: {e.error}')
 ```
 
-## Tool Calling (Functions as Tools)
+---
 
-The Python SDK **auto-parses function docstrings** into tool schemas:
+## Thinking Models
 
 ```python
-from ollama import chat
-
-def get_weather(city: str) -> str:
-    """Get the current weather for a city.
-    
-    Args:
-        city: The name of the city
-    Returns:
-        Weather description
-    """
-    return "Sunny, 22C"
-
-# Just pass the function — SDK extracts the schema
-response = chat(model='qwen3', messages=[...], tools=[get_weather])
+response = chat(model='deepseek-r1:1.5b', messages=[...], think=True)
+print('Thinking:', response.message.thinking)
+print('Response:', response.message.content)
 ```
 
-## mindX Usage
+## Structured Outputs
 
-mindX uses `aiohttp` directly rather than the `ollama` SDK for maximum control. But the SDK is useful for:
-- Quick scripting and testing
-- Model management (pull, create, list)
-- Web search integration
-- The auto-parsed tool schema feature
+```python
+from pydantic import BaseModel
+
+class Vote(BaseModel):
+    vote: str
+    reasoning: str
+    confidence: float
+
+response = chat(model='qwen3:1.7b', messages=[...], format=Vote.model_json_schema())
+vote = Vote.model_validate_json(response.message.content)
+```
+
+## Tool Calling
+
+```python
+response = chat(model='qwen3:1.7b', messages=[...], tools=[{
+    'type': 'function',
+    'function': {
+        'name': 'get_weather',
+        'description': 'Get weather',
+        'parameters': {'type': 'object', 'properties': {
+            'location': {'type': 'string'},
+        }, 'required': ['location']},
+    },
+}])
+if response.message.tool_calls:
+    for call in response.message.tool_calls:
+        print(call.function.name, call.function.arguments)
+```
+
+## Vision
+
+```python
+response = chat(model='gemma4:31b', messages=[{
+    'role': 'user',
+    'content': 'Describe this screenshot',
+    'images': ['./screenshot.png'],
+}])
+```
+
+## Cloud Models
+
+### Local Proxy (after `ollama signin`)
+```python
+response = chat(model='gpt-oss:120b-cloud', messages=[...])
+```
+
+### Direct API
+```python
+cloud = Client(host='https://ollama.com', headers={'Authorization': f'Bearer {os.environ["OLLAMA_API_KEY"]}'})
+response = cloud.chat(model='gpt-oss:120b', messages=[...])
+```
+
+---
+
+**References:**
+- [ollama/ollama-python](https://github.com/ollama/ollama-python)
+- [ollama/ollama](https://github.com/ollama/ollama) — Server + REST API
+- [ollama.com/library](https://ollama.com/library) — Model catalog
+- [Cloud docs](../cloud/cloud.md) | [JavaScript SDK](javascript.md)
