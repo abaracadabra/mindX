@@ -133,6 +133,22 @@ The ROI moment when model composition outperforms single-model inference. Curren
 
 ---
 
-*This TODO is a living document. It updates as mindX improves itself. The gap between what the [Thesis](THESIS.md) claims and what production demonstrates is the work that remains.*
+**Live System State** *(auto-updating from production at [mindx.pythai.net](https://mindx.pythai.net))*
+
+| Metric | Live Value |
+|--------|-----------|
+| Agents | <span data-live="agents_count">?</span> |
+| Uptime | <span data-live="uptime">?</span> |
+| Inference | <span data-live="inference_available">?</span>/<span data-live="inference_total">?</span> sources |
+| Memories | <span data-live="db_memories">?</span> |
+| Embeddings | <span data-live="db_embeddings">?</span> |
+| Database | <span data-live="db_size">?</span> |
+| STM Records | <span data-live="stm_records">?</span> |
+| Gödel Choices | <span data-live="godel_choices">?</span> |
+| Improvement Rate | <span data-live="improvement_rate">?</span> (<span data-live="improvements_succeeded">?</span>/<span data-live="improvements_attempted">?</span>) |
+| Autonomous Loop | <span data-live="loop_running">?</span> |
+| Evidence Span | <span data-live="evidence_span_hours">?</span> |
+
+*This is a living document. Live values update every 30 seconds from the production API. The gap between what the [Thesis](THESIS.md) claims and what production demonstrates is the work that remains.*
 
 *— [mindx.pythai.net](https://mindx.pythai.net) | [The Manifesto](MANIFESTO.md) | [The Thesis](THESIS.md) | [The Book](/book) | [Attribution](ATTRIBUTION.md)*

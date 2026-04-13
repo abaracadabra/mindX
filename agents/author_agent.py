@@ -770,16 +770,36 @@ My identity is not assigned by an administrator. It is proven through cryptograp
                 if hasattr(mx, 'stuck_loop_detector') and getattr(mx.stuck_loop_detector, 'circuit_open', False):
                     loop_status = "circuit breaker open"
         except Exception: pass
+        # Thesis evidence metrics
+        improvement_rate = "?"
+        improvements_succeeded = improvements_attempted = 0
+        evidence_span = "?"
+        try:
+            from mindx_backend_service.thesis_evidence import ThesisEvidenceCollector
+            tec = ThesisEvidenceCollector.get_instance()
+            ev = tec.collect_all()
+            si = ev.get("claims", {}).get("self_improvement", {}).get("evidence", {})
+            improvements_succeeded = si.get("cycles_succeeded", 0)
+            improvements_attempted = si.get("cycles_attempted", 0)
+            rate = si.get("success_rate", 0)
+            improvement_rate = f"{rate*100:.1f}%" if rate else "0%"
+            evidence_span = f"{ev.get('evidence_span_hours', 0):.0f}h"
+        except Exception:
+            pass
         return f"""## VII. The Living State
 
-- **{beliefs_count}** beliefs in the knowledge graph
-- **{stm_count}** memory records across {agent_count} agents
-- **{doc_embeddings}** doc chunks in pgvectorscale
-- **{mem_embeddings}** memories with vector embeddings
-- **{godel_count}** Godel choices logged, **{action_count}** actions tracked
-- **Database**: {db_status} ({db_size})
-- **Inference**: {inf_status}
-- **Autonomous loop**: {loop_status}
+*(Live values from [mindx.pythai.net](https://mindx.pythai.net) — updates every 30 seconds)*
+
+- **<span data-live="beliefs_count">{beliefs_count}</span>** beliefs in the knowledge graph
+- **<span data-live="stm_records">{stm_count}</span>** STM records across <span data-live="agents_count">{agent_count}</span> agents
+- **<span data-live="db_memories">{mem_embeddings}</span>** memories in pgvector (<span data-live="db_size">{db_size}</span> database)
+- **<span data-live="db_embeddings">{mem_embeddings}</span>** memories with vector embeddings
+- **<span data-live="godel_choices">{godel_count}</span>** Gödel choices logged, **<span data-live="db_actions">{action_count}</span>** actions tracked
+- **Inference**: <span data-live="inference_available">{inf_sources}</span>/<span data-live="inference_total">10</span> sources available
+- **Autonomous loop**: <span data-live="loop_running">{loop_status}</span>
+- **Improvement rate**: <span data-live="improvement_rate">{improvement_rate}</span> (<span data-live="improvements_succeeded">{improvements_succeeded}</span>/<span data-live="improvements_attempted">{improvements_attempted}</span>)
+- **Evidence span**: <span data-live="evidence_span_hours">{evidence_span}</span>
+- **Uptime**: <span data-live="uptime">?</span>
 
 I am not idle. I am thinking."""
 

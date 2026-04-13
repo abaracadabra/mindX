@@ -220,8 +220,9 @@ async def create_llm_handler(
         # ADDED: Pass the rate_limiter and timeout to each handler's constructor
         if eff_provider_name == "ollama":
             if OllamaHandler: handler_instance = OllamaHandler(
-                model_name_for_api=model_arg_for_handler, 
+                model_name_for_api=model_arg_for_handler,
                 base_url=eff_base_url,
+                rate_limiter=rate_limiter,
                 execution_timeout_minutes=execution_timeout_minutes
             )
             else: logger.error("LLMFactory (mindX): OllamaHandler not imported."); handler_instance = MockLLMHandler(model_name=model_arg_for_handler)
@@ -266,6 +267,7 @@ async def create_llm_handler(
                     model_name_for_api=model_arg_for_handler,
                     api_key=eff_api_key,
                     base_url=eff_base_url,
+                    rate_limiter=rate_limiter,
                     execution_timeout_minutes=execution_timeout_minutes
                 )
             else:

@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from fastapi import FastAPI, HTTPException, Request, Body, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, Dict, Any, List
 
 # Add project root to path to allow imports
@@ -50,103 +50,138 @@ except Exception as e:
     logger.warning(f"MemoryAgent not available - memory logging disabled: {e}")
 
 # --- Pydantic Models for API Request/Response Validation ---
+# Input validation: Field() constraints + @field_validator for domain rules
+
+import re as _re
+_WALLET_PATTERN = r'^0x[a-fA-F0-9]{40}$'
+_ENTITY_PATTERN = r'^[a-zA-Z0-9_.\-]+$'
+
 
 class DirectivePayload(BaseModel):
-    directive: str
-    max_cycles: Optional[int] = 8
+    directive: str = Field(min_length=1, max_length=5000)
+    max_cycles: Optional[int] = Field(default=8, ge=1, le=100)
     autonomous_mode: Optional[bool] = False
 
 class AnalyzeCodebasePayload(BaseModel):
-    path: str
-    focus: str
+    path: str = Field(min_length=1, max_length=500)
+    focus: str = Field(min_length=1, max_length=1000)
+
+    @field_validator("path")
+    @classmethod
+    def reject_path_traversal(cls, v: str) -> str:
+        if ".." in v:
+            raise ValueError("Path traversal (..) not allowed")
+        return v
 
 class IdCreatePayload(BaseModel):
-    entity_id: str
+    entity_id: str = Field(min_length=1, max_length=100, pattern=_ENTITY_PATTERN)
 
 class IdDeprecatePayload(BaseModel):
-    public_address: str
-    entity_id_hint: Optional[str] = None
+    public_address: str = Field(min_length=10, max_length=100, pattern=_WALLET_PATTERN)
+    entity_id_hint: Optional[str] = Field(default=None, max_length=100)
 
 class AuditGeminiPayload(BaseModel):
     test_all: bool = False
     update_config: bool = False
 
 class CoordQueryPayload(BaseModel):
-    query: str
+    query: str = Field(min_length=1, max_length=5000)
 
 class CoordAnalyzePayload(BaseModel):
-    context: Optional[str] = None
+    context: Optional[str] = Field(default=None, max_length=5000)
 
 class CoordImprovePayload(BaseModel):
-    component_id: str
-    context: Optional[str] = None
+    component_id: str = Field(min_length=1, max_length=200, pattern=r'^[a-zA-Z0-9_.\-/]+$')
+    context: Optional[str] = Field(default=None, max_length=5000)
 
 class CoordBacklogIdPayload(BaseModel):
-    backlog_item_id: str
+    backlog_item_id: str = Field(min_length=1, max_length=100)
 
 class GitHubAgentOperationPayload(BaseModel):
-    operation: str
-    backup_type: Optional[str] = None
-    reason: Optional[str] = None
-    branch_name: Optional[str] = None
-    target_branch: Optional[str] = None
-    upgrade_description: Optional[str] = None
-    interval: Optional[str] = None
+    operation: str = Field(min_length=1, max_length=100)
+    backup_type: Optional[str] = Field(default=None, max_length=50)
+    reason: Optional[str] = Field(default=None, max_length=1000)
+    branch_name: Optional[str] = Field(default=None, max_length=200)
+    target_branch: Optional[str] = Field(default=None, max_length=200)
+    upgrade_description: Optional[str] = Field(default=None, max_length=2000)
+    interval: Optional[str] = Field(default=None, max_length=50)
     enabled: Optional[bool] = None
-    time: Optional[str] = None
-    day: Optional[str] = None
+    time: Optional[str] = Field(default=None, max_length=20)
+    day: Optional[str] = Field(default=None, max_length=20)
 
 class AgentCreatePayload(BaseModel):
-    agent_type: str
-    agent_id: str
+    agent_type: str = Field(min_length=1, max_length=50)
+    agent_id: str = Field(min_length=1, max_length=100, pattern=_ENTITY_PATTERN)
     config: Dict[str, Any]
-    owner_wallet: Optional[str] = None
+    owner_wallet: Optional[str] = Field(default=None, max_length=100)
 
 class AgentDeletePayload(BaseModel):
-    agent_id: str
-    owner_wallet: Optional[str] = None
+    agent_id: str = Field(min_length=1, max_length=100, pattern=_ENTITY_PATTERN)
+    owner_wallet: Optional[str] = Field(default=None, max_length=100)
 
 class UserRegisterPayload(BaseModel):
-    wallet_address: str
+    wallet_address: str = Field(min_length=10, max_length=100, pattern=_WALLET_PATTERN)
     metadata: Optional[Dict[str, Any]] = None
 
 class UserAgentCreatePayload(BaseModel):
-    owner_wallet: str
-    agent_id: str
-    agent_type: str
+    owner_wallet: str = Field(min_length=10, max_length=100, pattern=_WALLET_PATTERN)
+    agent_id: str = Field(min_length=1, max_length=100, pattern=_ENTITY_PATTERN)
+    agent_type: str = Field(min_length=1, max_length=50)
     metadata: Optional[Dict[str, Any]] = None
 
 class UserRegisterWithSignaturePayload(BaseModel):
-    wallet_address: str
-    signature: str
-    message: str
+    wallet_address: str = Field(min_length=10, max_length=100, pattern=_WALLET_PATTERN)
+    signature: str = Field(min_length=10, max_length=500)
+    message: str = Field(min_length=1, max_length=2000)
     metadata: Optional[Dict[str, Any]] = None
 
 class UserAgentCreateWithSignaturePayload(BaseModel):
-    owner_wallet: str
-    agent_id: str
-    agent_type: str
-    signature: str
-    message: str
+    owner_wallet: str = Field(min_length=10, max_length=100, pattern=_WALLET_PATTERN)
+    agent_id: str = Field(min_length=1, max_length=100, pattern=_ENTITY_PATTERN)
+    agent_type: str = Field(min_length=1, max_length=50)
+    signature: str = Field(min_length=10, max_length=500)
+    message: str = Field(min_length=1, max_length=2000)
     metadata: Optional[Dict[str, Any]] = None
 
 class UserAgentDeleteWithSignaturePayload(BaseModel):
-    wallet_address: str
-    agent_id: str
-    signature: str
-    message: str
+    wallet_address: str = Field(min_length=10, max_length=100, pattern=_WALLET_PATTERN)
+    agent_id: str = Field(min_length=1, max_length=100, pattern=_ENTITY_PATTERN)
+    signature: str = Field(min_length=10, max_length=500)
+    message: str = Field(min_length=1, max_length=2000)
 
 class ChallengeRequestPayload(BaseModel):
-    wallet_address: str
-    action: str
+    wallet_address: str = Field(min_length=10, max_length=100, pattern=_WALLET_PATTERN)
+    action: str = Field(min_length=1, max_length=50)
 
 class AgentEvolvePayload(BaseModel):
-    agent_id: str
-    directive: str
+    agent_id: str = Field(min_length=1, max_length=100, pattern=_ENTITY_PATTERN)
+    directive: str = Field(min_length=1, max_length=5000)
 
 class AgentSignPayload(BaseModel):
-    agent_id: str
-    message: str
+    agent_id: str = Field(min_length=1, max_length=100, pattern=_ENTITY_PATTERN)
+    message: str = Field(min_length=1, max_length=5000)
+
+# --- Response Models for Output Validation ---
+
+class GodelChoicesResponse(BaseModel):
+    choices: List[Dict[str, Any]]
+    total: int
+    error: Optional[str] = None
+
+class InferenceStatusResponse(BaseModel):
+    agent_id: str = "inference_agent"
+    providers: List[Dict[str, Any]] = []
+    usage_by_provider: Dict[str, Any] = {}
+    error: Optional[str] = None
+
+class InferencePreferenceResponse(BaseModel):
+    preference: str
+    status: Optional[str] = None
+    error: Optional[str] = None
+
+class ThesisSummaryResponse(BaseModel):
+    summary: str
+    claims: Dict[str, str]
 
 # --- FastAPI Application ---
 
@@ -724,7 +759,76 @@ def _doc_page(title: str, body_html: str, meta: str = "", description: str = "",
     meta_html = f'<div class="title-meta">{meta}</div>' if meta else ''
     font_ctrl = '''<div class="font-ctrl"><button onclick="adjFont(1)" title="Increase font size">+</button><button onclick="adjFont(-1)" title="Decrease font size">−</button></div>
 <script>function adjFont(d){const p=document.querySelector('.page');const s=parseFloat(getComputedStyle(p).fontSize)||14;p.style.fontSize=Math.max(10,Math.min(22,s+d))+'px';try{localStorage.setItem('mindx_fs',p.style.fontSize)}catch{}}
-try{const fs=localStorage.getItem('mindx_fs');if(fs)document.addEventListener('DOMContentLoaded',()=>{document.querySelector('.page').style.fontSize=fs})}catch{}</script>'''
+try{const fs=localStorage.getItem('mindx_fs');if(fs)document.addEventListener('DOMContentLoaded',()=>{document.querySelector('.page').style.fontSize=fs})}catch{}
+// ── Living docs: inject live data from API into data-live spans ──
+(function(){
+  var spans=document.querySelectorAll('[data-live]');
+  if(!spans.length)return;
+  var style=document.createElement('style');
+  style.textContent='[data-live]{font-family:"JetBrains Mono","SF Mono",monospace;font-weight:600;transition:color .3s}[data-live].loaded{color:#3fb950}[data-live].stale{color:#d29922}';
+  document.head.appendChild(style);
+  function populate(data,src){
+    spans.forEach(function(el){
+      var key=el.getAttribute('data-live');
+      var val=key.split('.').reduce(function(o,k){return o&&o[k]},data);
+      if(val!==undefined&&val!==null){
+        el.textContent=typeof val==='number'?val.toLocaleString():String(val);
+        el.classList.add('loaded');el.classList.remove('stale');
+        el.title='Live from /'+src+' at '+new Date().toISOString().slice(11,19);
+      }
+    });
+  }
+  fetch('/thesis/evidence').then(function(r){return r.json()}).then(function(d){populate(d,'thesis/evidence')}).catch(function(){});
+  fetch('/diagnostics/live').then(function(r){return r.json()}).then(function(d){
+    var flat={};
+    flat.agents_count=(d.agents||[]).length;
+    flat.uptime=d.uptime||"?";
+    flat.cpu_percent=(d.system||{}).cpu_percent||0;
+    flat.memory_percent=(d.system||{}).memory_percent||0;
+    flat.memory_used_gb=(d.system||{}).memory_used_gb||0;
+    flat.memory_total_gb=(d.system||{}).memory_total_gb||0;
+    flat.inference_available=(d.inference||{}).available||0;
+    flat.inference_total=(d.inference||{}).total||0;
+    flat.beliefs_count=(d.beliefs||{}).count||0;
+    flat.vault_entries=(d.vault||{}).entries||0;
+    flat.stm_records=(d.memory||{}).stm_records||0;
+    flat.db_memories=(d.database||{}).memories||0;
+    flat.db_embeddings=(d.database||{}).mem_embeddings||0;
+    flat.db_size=(d.database||{}).db_size||"?";
+    flat.db_actions=(d.database||{}).actions||0;
+    flat.db_godel_choices=(d.database||{}).godel_choices||0;
+    flat.dojo_count=(d.dojo||[]).length;
+    flat.actions_count=(d.actions||[]).length;
+    flat.interactions_count=(d.interactions||[]).length;
+    flat.loop_running=(d.autonomous||{}).loop_running?"active":"stopped";
+    flat.governor_mode=(d.governor||{}).mode||"?";
+    var th=d.thesis||{};
+    flat.improvement_rate=th.improvement_rate?((th.improvement_rate*100).toFixed(1)+'%'):"?";
+    flat.improvements_succeeded=th.improvements_succeeded||0;
+    flat.improvements_attempted=th.improvements_attempted||0;
+    flat.godel_choices=th.godel_choices||0;
+    flat.self_referential=th.self_referential||0;
+    flat.evidence_span_hours=th.evidence_span_hours?th.evidence_span_hours.toFixed(0)+"h":"?";
+    populate(flat,'diagnostics/live');
+  }).catch(function(){});
+  // Refresh only when page is visible (no background polling)
+  var _liveInterval=setInterval(function(){
+    if(document.hidden)return; // skip if tab not visible
+    fetch('/diagnostics/live').then(function(r){return r.json()}).then(function(d){
+      var flat={};
+      flat.agents_count=(d.agents||[]).length;flat.uptime=d.uptime||"?";
+      flat.cpu_percent=(d.system||{}).cpu_percent||0;
+      flat.inference_available=(d.inference||{}).available||0;flat.inference_total=(d.inference||{}).total||0;
+      flat.db_memories=(d.database||{}).memories||0;flat.db_embeddings=(d.database||{}).mem_embeddings||0;
+      flat.stm_records=(d.memory||{}).stm_records||0;flat.loop_running=(d.autonomous||{}).loop_running?"active":"stopped";
+      var th=d.thesis||{};flat.improvement_rate=th.improvement_rate?((th.improvement_rate*100).toFixed(1)+'%'):"?";
+      flat.improvements_succeeded=th.improvements_succeeded||0;flat.godel_choices=th.godel_choices||0;
+      flat.self_referential=th.self_referential||0;flat.evidence_span_hours=th.evidence_span_hours?th.evidence_span_hours.toFixed(0)+"h":"?";
+      populate(flat,'diagnostics/live');
+    }).catch(function(){spans.forEach(function(el){el.classList.add('stale')})});
+  },60000); // 60s refresh, only when visible
+})();
+</script>'''
     return f'''<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{title} — mindX</title>
 <meta name="description" content="{seo_desc[:160]}">
@@ -1057,7 +1161,10 @@ _PUBLIC_EXACT = frozenset({
     "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/diagnostics/live", "/activity/stream", "/activity/recent", "/activity/stats",
-    "/thesis/evidence", "/thesis/summary",
+    "/thesis", "/thesis/", "/thesis/evidence", "/thesis/summary",
+    "/godel/choices", "/inference/preference",
+    "/registry/agents", "/registry/tools", "/tools", "/identities",
+    "/coordinator/backlog", "/logs/runtime",
     "/vault/credentials/providers", "/dojo/standings",
     "/inference/status", "/boardroom/sessions",
     "/chat/docs/stats", "/actions/efficiency", "/vllm/status", "/vllm/health",
@@ -1369,7 +1476,7 @@ async def thesis_evidence():
     collector = ThesisEvidenceCollector.get_instance()
     return collector.collect_all()
 
-@app.get("/thesis/summary", tags=["thesis"], summary="Human-readable thesis evidence summary")
+@app.get("/thesis/summary", tags=["thesis"], summary="Human-readable thesis evidence summary", response_model=ThesisSummaryResponse)
 async def thesis_summary():
     """Quick verdict for each thesis claim."""
     from mindx_backend_service.thesis_evidence import ThesisEvidenceCollector
@@ -1414,7 +1521,7 @@ async def diagnostics_live_endpoint():
                 from llm.inference_discovery import InferenceDiscovery
                 disc = await InferenceDiscovery.get_instance()
                 await disc.probe_all()
-            except Exception: pass
+            except Exception as e: logger.debug(f"Diagnostics: inference probe failed: {e}")
             try:
                 from agents import memory_pgvector as _mpr
                 await _mpr.store_memory(
@@ -1427,7 +1534,7 @@ async def diagnostics_live_endpoint():
                              "disk_percent": round(disk.percent,1), "process_memory_mb": proc_mem},
                     context={}, tags=["resource", "metrics", "periodic"],
                 )
-            except Exception: pass
+            except Exception as e: logger.debug(f"Diagnostics: resource metrics store failed: {e}")
         asyncio.create_task(_bg_probe())
         asyncio.create_task(_heartbeat_query_local_model())
 
@@ -1442,7 +1549,7 @@ async def diagnostics_live_endpoint():
                 val = v.get("value", "")
                 if isinstance(val, str) and len(val) > 50: val = val[:50] + "..."
                 bs.append({"key": k, "value": val})
-    except Exception: pass
+    except Exception as e: logger.debug(f"Diagnostics: beliefs read failed: {e}")
     # stm count — try pgvector first, fall back to filesystem
     stm = 0
     stm_by_agent = {}
@@ -1482,7 +1589,7 @@ async def diagnostics_live_endpoint():
                     godel.append({"timestamp": g.get("timestamp_utc", g.get("timestamp","")), "agent": g.get("source_agent","?"), "type": g.get("choice_type",""), "chosen": str(g.get("chosen_option", g.get("chosen","")))[:100], "rationale": str(g.get("rationale",""))[:80], "outcome": str(g.get("outcome",""))[:40]})
                 except Exception: pass
             godel.reverse()
-    except Exception: pass
+    except Exception as e: logger.debug(f"Diagnostics: godel choices read failed: {e}")
     # registry
     rp = PROJECT_ROOT / "data" / "identity" / "production_registry.json"
     amp = PROJECT_ROOT / "daio" / "agents" / "agent_map.json"
@@ -1493,13 +1600,13 @@ async def diagnostics_live_endpoint():
             am = json.loads(amp.read_text())
             for aid, ad in am.get("agents", {}).items():
                 agent_tiers[aid] = ad.get("verification_tier", 0)
-    except Exception: pass
+    except Exception as e: logger.debug(f"Diagnostics: agent map read failed: {e}")
     try:
         if rp.exists():
             for a in json.loads(rp.read_text()).get("agents", []):
                 eid = a["entity_id"]
                 agents.append({"entity_id": eid, "address": a["address"], "role": a.get("role",""), "verification_tier": agent_tiers.get(eid, 1)})
-    except Exception: pass
+    except Exception as e: logger.debug(f"Diagnostics: agent registry read failed: {e}")
     # inference (use cached summary — probe runs async above)
     inf = {"total": 0, "available": 0, "sources": {}}
     try:
@@ -1507,13 +1614,13 @@ async def diagnostics_live_endpoint():
         disc = await InferenceDiscovery.get_instance()
         s = disc.status_summary()
         inf = {"total": s.get("total_sources",0), "available": s.get("available",0), "local_inference": s.get("local_inference",False), "cloud_inference": s.get("cloud_inference",False), "sources": s.get("sources",{})}
-    except Exception: pass
+    except Exception as e: logger.debug(f"Diagnostics: inference status failed: {e}")
     # vault
     vault = {}
     try:
         from mindx_backend_service.bankon_vault.vault import BankonVault
         v = BankonVault(); vault = v.info(); vault.pop("vault_dir", None)
-    except Exception: pass
+    except Exception as e: logger.debug(f"Diagnostics: vault info failed: {e}")
     # logs
     lp = PROJECT_ROOT / "data" / "logs" / "mindx_runtime.log"
     logs = []
@@ -1524,7 +1631,7 @@ async def diagnostics_live_endpoint():
                 if "API_KEY" in l or "private_key" in l.lower() or "WALLET_PK" in l: continue
                 logs.append(l[:250])
             logs.reverse()
-    except Exception: pass
+    except Exception as e: logger.debug(f"Diagnostics: log read failed: {e}")
     # Load dojo and boardroom data
     dojo_data = []
     try:
@@ -1532,7 +1639,7 @@ async def diagnostics_live_endpoint():
         dojo = await _safe_await(Dojo.get_instance(), default=None)
         if dojo:
             dojo_data = dojo.get_all_standings()[:12]
-    except Exception: pass
+    except Exception as e: logger.debug(f"Diagnostics: dojo data failed: {e}")
 
     br_data = []
     try:
@@ -1540,7 +1647,7 @@ async def diagnostics_live_endpoint():
         br = await _safe_await(Boardroom.get_instance(), default=None)
         if br:
             br_data = br.get_recent_sessions(5)
-    except Exception: pass
+    except Exception as e: logger.debug(f"Diagnostics: boardroom data failed: {e}")
 
     # Disk usage breakdown (async — never blocks event loop)
     disk_detail = await _safe_await(_disk_usage_detail(), timeout_s=6.0, default={})
@@ -2394,7 +2501,7 @@ async def id_deprecate(payload: IdDeprecatePayload):
     return await command_handler.handle_id_deprecate(payload.public_address, payload.entity_id_hint)
 
 
-@app.get("/godel/choices", summary="Get last N Gödel core choices (read-only audit log)")
+@app.get("/godel/choices", summary="Get last N Gödel core choices (read-only audit log)", response_model=GodelChoicesResponse)
 async def godel_choices(limit: int = 50, source_agent: Optional[str] = None):
     """Read last N Gödel choices via memory_agent (all logs are memories in data). Fallback to file read if memory_agent unavailable."""
     if command_handler and getattr(command_handler.mastermind, "memory_agent", None):
@@ -2426,7 +2533,7 @@ async def godel_choices(limit: int = 50, source_agent: Optional[str] = None):
         return {"choices": [], "total": 0, "error": str(e)}
 
 
-@app.get("/inference/status", summary="Get inference_agent status (providers, usage, budget)")
+@app.get("/inference/status", summary="Get inference_agent status (providers, usage, budget)", response_model=InferenceStatusResponse)
 async def get_inference_status():
     """Return inference_agent status: providers tracked, usage per provider, budget guideline, solvency."""
     try:
@@ -2436,6 +2543,36 @@ async def get_inference_status():
     except Exception as e:
         logger.warning(f"inference_agent status failed: {e}")
         return {"agent_id": "inference_agent", "error": str(e), "providers": [], "usage_by_provider": {}}
+
+
+@app.get("/inference/preference", summary="Get current model preference (auto/local_only/cloud_preferred)", response_model=InferencePreferenceResponse)
+async def get_inference_preference():
+    """Get the current inference model routing preference."""
+    try:
+        from llm.inference_discovery import InferenceDiscovery
+        disc = await InferenceDiscovery.get_instance()
+        return {"preference": disc.get_model_preference()}
+    except Exception as e:
+        return {"preference": "auto", "error": str(e)}
+
+
+@app.post("/inference/preference", summary="Set model preference (auto/local_only/cloud_preferred)")
+async def set_inference_preference(preference: str = "auto"):
+    """Set the inference model routing preference.
+
+    - **auto**: default routing — local for light tasks, cloud for heavy tasks
+    - **local_only**: always use local CPU models (proves intelligence is intelligence)
+    - **cloud_preferred**: prefer Ollama cloud free tier for all tasks (higher quality)
+    """
+    try:
+        from llm.inference_discovery import InferenceDiscovery
+        disc = await InferenceDiscovery.get_instance()
+        new_pref = disc.set_model_preference(preference)
+        return {"preference": new_pref, "status": "ok"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/commands/audit_gemini", summary="Audit Gemini models")
@@ -3268,11 +3405,11 @@ async def governance_status():
     }
 
 @app.post("/boardroom/convene", tags=["governance"], summary="Convene boardroom — CEO + Seven Soldiers evaluate directive")
-async def boardroom_convene(directive: str, importance: str = "standard", model_mode: str = "auto"):
+async def boardroom_convene(directive: str, importance: str = "standard", model_mode: str = "auto", priority: str = "standard", members: str = "all"):
     try:
         from daio.governance.boardroom import Boardroom
         br = await Boardroom.get_instance()
-        session = await br.convene(directive=directive, importance=importance, model_mode=model_mode)
+        session = await br.convene(directive=directive, importance=importance, model_mode=model_mode, priority=priority, members=members)
         return {
             "session_id": session.session_id,
             "outcome": session.outcome,

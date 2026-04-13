@@ -90,6 +90,8 @@ class InferenceDiscovery:
         self._last_probe = 0.0
         self._decision_rules: List[Dict[str, Any]] = []
         self._improvement_log: List[Dict[str, Any]] = []
+        # Model preference: "auto" (default), "local_only", or "cloud_preferred"
+        self._model_preference: str = "auto"
         self._initialize_known_sources()
 
     @classmethod
@@ -406,6 +408,20 @@ class InferenceDiscovery:
         )
         return best_name, best_src
 
+    def get_model_preference(self) -> str:
+        """Get current model preference: 'auto', 'local_only', or 'cloud_preferred'."""
+        return self._model_preference
+
+    def set_model_preference(self, preference: str) -> str:
+        """Set model preference. Returns the new preference."""
+        valid = ("auto", "local_only", "cloud_preferred")
+        if preference not in valid:
+            raise ValueError(f"Invalid preference '{preference}'. Must be one of: {valid}")
+        old = self._model_preference
+        self._model_preference = preference
+        logger.info(f"InferenceDiscovery: model preference changed {old} -> {preference}")
+        return self._model_preference
+
     async def get_provider_for_task(self, task_type: str) -> Optional[Tuple[str, InferenceSource, str]]:
         """
         Get the best provider for a specific task type.
@@ -415,8 +431,48 @@ class InferenceDiscovery:
         mindX works from substandard inference because structure > raw power.
         Cloud models are used for heavy tasks when free tier is available.
 
-        Efficiency: local for speed, cloud for depth, always within rate limits.
+        Respects _model_preference:
+          - "auto": use task_model_map routing (default)
+          - "local_only": always use local ollama, skip cloud
+          - "cloud_preferred": prefer cloud for all tasks, fallback to local
         """
+        # Cloud-preferred mode: route everything through cloud first
+        if self._model_preference == "cloud_preferred":
+            cloud = self.sources.get("ollama_cloud")
+            if cloud and cloud.status == ProviderStatus.AVAILABLE:
+                cloud_model_map = {
+                    "heartbeat": "ministral-3:3b",
+                    "embedding": "mxbai-embed-large",
+                    "simple_chat": "ministral-3:3b",
+                    "reasoning": "deepseek-v3.2",
+                    "coding": "qwen3-coder-next",
+                    "blueprint": "qwen3.5:397b",
+                    "analysis": "gemma4:31b",
+                }
+                model = cloud_model_map.get(task_type, "deepseek-v3.2")
+                self._cloud_call_count += 1
+                return "ollama_cloud", cloud, model
+            # Fallback to local if cloud unreachable
+            logger.debug("InferenceDiscovery: cloud_preferred but cloud unreachable, falling back to local")
+
+        # Local-only mode: skip cloud entirely
+        if self._model_preference == "local_only":
+            local = self.sources.get("ollama_local")
+            if local and local.status == ProviderStatus.AVAILABLE:
+                local_model_map = {
+                    "heartbeat": "qwen3:0.6b",
+                    "embedding": "mxbai-embed-large",
+                    "simple_chat": "qwen3:1.7b",
+                    "reasoning": "qwen3:1.7b",
+                    "coding": "qwen3:1.7b",
+                    "blueprint": "qwen3:1.7b",
+                    "analysis": "qwen3:1.7b",
+                }
+                model = local_model_map.get(task_type, "qwen3:1.7b")
+                return "ollama_local", local, model
+            # Even in local_only, fall through if local is down
+
+        # Auto mode (default): use task_model_map routing
         # Check task-to-model map
         mapping = self.task_model_map.get(task_type)
         if mapping:
