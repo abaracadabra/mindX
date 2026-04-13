@@ -451,10 +451,10 @@ class Boardroom:
         context: Optional[Dict[str, Any]],
         model_mode: str = "auto",
     ) -> SoldierVote:
-        """Query a Soldier using VLLMHandler (vLLM → Ollama local → Ollama cloud fallback).
+        """Query a Soldier via Ollama /api/generate (local models, cloud via ollama signin proxy).
 
         model_mode: "local" (force SOLDIER_MODELS), "cloud" (force SOLDIER_CLOUD_MODELS), "auto" (cloud then local)
-        Routes through the full inference stack with rate limiting on cloud.
+        Local models via localhost:11434. Cloud models proxied through Ollama daemon after `ollama signin`.
         """
         local_model = SOLDIER_MODELS.get(soldier_id, "qwen3:1.7b")
         cloud_model = SOLDIER_CLOUD_MODELS.get(soldier_id)
@@ -545,9 +545,13 @@ class Boardroom:
                     elif "reject" in resp_lower:
                         vote_data = {"vote": "reject", "reasoning": response[:200], "confidence": 0.6}
 
+            # Label: ollama/model for local, ollama-cloud/model for cloud
+            is_cloud = used_model != local_model and model_mode in ("auto", "cloud")
+            provider_label = f"ollama-cloud/{used_model}" if is_cloud else f"ollama/{used_model}"
+
             return SoldierVote(
                 soldier_id=soldier_id,
-                provider=f"vllm/{used_model}",
+                provider=provider_label,
                 vote=vote_data.get("vote", "abstain"),
                 reasoning=vote_data.get("reasoning", "")[:300],
                 confidence=float(vote_data.get("confidence", 0.5)),
@@ -558,7 +562,7 @@ class Boardroom:
             latency = int((time.time() - t0) * 1000)
             return SoldierVote(
                 soldier_id=soldier_id,
-                provider=f"vllm/{local_model}",
+                provider=f"ollama/{local_model}",
                 vote="abstain",
                 reasoning=f"Inference unavailable: {str(e)[:100]}",
                 confidence=0.0,
