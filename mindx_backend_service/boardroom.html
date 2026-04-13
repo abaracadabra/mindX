@@ -5,162 +5,166 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>mindX Boardroom</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@400;500;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700;900&family=JetBrains+Mono:wght@300;400;500&display=swap');
 
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#0c0d16;--bg2:#111320;--bg3:#161828;--surface:rgba(22,26,42,.85);--surface2:rgba(30,34,54,.9);
-  --accent:#00ff88;--accent2:#00cc6a;--accent-dim:rgba(0,255,136,.08);
-  --veto:#ff4477;--advisory:#ffbb33;--approve:#00ff88;--reject:#ff4477;--abstain:#777;
-  --text:#d8d8e8;--text2:#9a9ab8;--text3:#6e6e8c;--white:#f2f2fa;
-  --border:rgba(0,255,136,.14);--glow:0 0 24px rgba(0,255,136,.2);
-  --glass:rgba(16,20,32,.7);--glass-border:rgba(0,255,136,.1);
+  --bg:#0a0b12;--bg2:#0f1018;--bg3:#14151f;--surface:rgba(18,20,32,.9);--surface2:rgba(24,26,40,.92);
+  --accent:#22c55e;--accent2:#16a34a;--accent-dim:rgba(34,197,94,.06);--accent-glow:rgba(34,197,94,.12);
+  --veto:#ef4444;--advisory:#f59e0b;--approve:#22c55e;--reject:#ef4444;--abstain:#64748b;
+  --text:#c8cad8;--text2:#8b8da0;--text3:#585a6e;--white:#e8e9f0;
+  --border:rgba(100,116,139,.2);--glow:0 0 20px rgba(34,197,94,.1);
+  --glass:rgba(14,16,26,.8);--glass-border:rgba(100,116,139,.12);
 }
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;overflow-x:hidden}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;
+  overflow-x:hidden;-webkit-font-smoothing:antialiased}
 
-/* Scanline overlay — subtle CRT effect */
-body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
-  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,255,136,.005) 3px,rgba(0,255,136,.005) 4px);
-  pointer-events:none;z-index:9999}
-
-/* Ambient glow — strategic light sources */
+/* Subtle ambient — single warm glow, not overwhelming */
 body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
-  background:
-    radial-gradient(ellipse at 50% 0%,rgba(0,255,136,.04) 0%,transparent 40%),
-    radial-gradient(ellipse at 15% 60%,rgba(0,200,255,.02) 0%,transparent 35%),
-    radial-gradient(ellipse at 85% 30%,rgba(0,255,136,.015) 0%,transparent 30%);
+  background:radial-gradient(ellipse at 50% -10%,rgba(34,197,94,.025) 0%,transparent 50%);
   pointer-events:none;z-index:0}
 
-.page{position:relative;z-index:1;min-height:100vh;padding:20px}
+.page{position:relative;z-index:1;min-height:100vh;padding:20px 20px 40px}
 
-/* Header */
-.hdr{text-align:center;margin-bottom:24px;position:relative}
-.hdr h1{font-family:'Orbitron',sans-serif;font-size:clamp(18px,3vw,28px);font-weight:900;
-  color:var(--accent);letter-spacing:6px;text-transform:uppercase;
-  text-shadow:0 0 30px rgba(0,255,136,.3),0 0 60px rgba(0,255,136,.1)}
-.hdr .sub{font-size:11px;color:var(--text3);letter-spacing:3px;margin-top:6px;
-  padding-bottom:14px;border-bottom:1px solid var(--glass-border)}
+/* Header — clean, authoritative */
+.hdr{text-align:center;margin-bottom:28px;position:relative}
+.hdr h1{font-family:'Orbitron',sans-serif;font-size:clamp(18px,3vw,26px);font-weight:700;
+  color:var(--white);letter-spacing:10px;text-transform:uppercase}
+.hdr .sub{font-size:11px;color:var(--text3);letter-spacing:3px;margin-top:10px;
+  padding-bottom:16px;border-bottom:1px solid var(--glass-border);font-weight:300}
 .hdr .status{position:absolute;right:20px;top:50%;transform:translateY(-50%);
   font-size:10px;color:var(--text3);text-align:right}
-.hdr .status .live{color:var(--accent);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.hdr .status .live{color:var(--accent);animation:pulse 2.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* Navigation */
-.nav{display:flex;justify-content:center;gap:16px;margin-bottom:20px}
-.nav a{color:var(--text3);text-decoration:none;font-size:11px;letter-spacing:2px;
-  padding:6px 14px;border:1px solid var(--border);transition:all .2s}
-.nav a:hover,.nav a.active{color:var(--accent);border-color:var(--accent);background:var(--accent-dim)}
+/* Navigation — minimal */
+.nav{display:flex;justify-content:center;gap:4px;margin-bottom:24px}
+.nav a{color:var(--text3);text-decoration:none;font-size:10px;letter-spacing:2px;
+  padding:7px 16px;border:1px solid transparent;transition:all .2s;font-weight:500;text-transform:uppercase}
+.nav a:hover{color:var(--text);border-color:var(--border)}
+.nav a.active{color:var(--accent);border-color:var(--accent);background:var(--accent-dim)}
 
-/* Main layout: table in center */
-.board-wrap{display:grid;grid-template-columns:1fr minmax(300px,640px) 1fr;gap:0;max-width:1400px;margin:0 auto}
+/* Board member strip — single horizontal row, no wrap */
+.board-strip{display:flex;gap:6px;justify-content:center;flex-wrap:nowrap;max-width:100%;
+  margin:0 auto 18px;padding:0 12px;overflow-x:auto;scrollbar-width:none}
+.board-strip::-webkit-scrollbar{display:none}
+.chip{background:var(--surface);border:1px solid var(--glass-border);padding:6px 10px;cursor:grab;
+  transition:all .25s ease;position:relative;user-select:none;min-width:52px;text-align:center;
+  border-radius:3px;flex-shrink:0}
+.chip:active{cursor:grabbing}
+.chip:hover{border-color:var(--accent);box-shadow:0 0 12px var(--accent-glow);transform:translateY(-1px)}
+.chip.dragging{opacity:.35;transform:scale(.92)}
+.chip.seated{border-color:var(--accent);background:var(--accent-dim)}
+.chip.voted-approve{border-color:var(--approve);background:rgba(34,197,94,.06)}
+.chip.voted-reject{border-color:var(--reject);background:rgba(239,68,68,.06)}
+.chip.voted-abstain{border-color:var(--abstain)}
+.chip.veto{border-bottom:2px solid var(--veto)}
+.chip.advisory{border-bottom:2px solid var(--advisory)}
+.chip .chip-title{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;
+  color:var(--white);letter-spacing:2px}
+.chip .chip-weight{font-size:8px;color:var(--text3);margin-top:2px;font-weight:500}
+.chip .chip-weight.w12{color:var(--veto)}
+.chip .chip-weight.w08{color:var(--advisory)}
+.chip .chip-vote{font-size:8px;font-weight:600;margin-top:3px;letter-spacing:1px}
+/* Expand on hover — details slide out */
+.chip .chip-detail{max-height:0;overflow:hidden;transition:max-height .3s ease;
+  font-size:8px;color:var(--text3);line-height:1.6;margin-top:0;text-align:left;
+  font-family:'JetBrains Mono',monospace}
+.chip:hover .chip-detail{max-height:180px;margin-top:6px}
+.chip .chip-detail .cd-ok{color:var(--accent)}
+.chip .chip-detail .cd-pending{color:var(--advisory)}
 
-/* Soldier seats — left and right columns */
-.seats{display:flex;flex-direction:column;gap:12px;padding:40px 12px}
-.seats.left{align-items:flex-end}
-.seats.right{align-items:flex-start}
+/* Drop zone — the table where dragged members sit */
+.drop-zone{min-height:38px;border:1px dashed var(--border);padding:6px 8px;margin-bottom:12px;
+  display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;
+  transition:all .3s;background:transparent;border-radius:3px}
+.drop-zone.drag-over{border-color:var(--accent);background:var(--accent-dim)}
+.drop-zone .dz-label{font-size:8px;color:var(--text3);letter-spacing:2px;
+  font-family:'Orbitron',sans-serif;width:100%;text-align:center;padding:6px 0;font-weight:500}
+.drop-zone .chip{cursor:pointer}
 
-/* Individual seat card — glassmorphic */
-.seat{width:185px;background:var(--glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-  border:1px solid var(--glass-border);
-  padding:11px 13px;position:relative;cursor:pointer;transition:all .35s ease;
-  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px))}
-.seat:hover{border-color:var(--accent);box-shadow:var(--glow),inset 0 0 30px rgba(0,255,136,.03);transform:scale(1.03) translateY(-2px)}
-.seat.voted-approve{border-color:var(--approve);box-shadow:0 0 12px rgba(0,255,136,.2)}
-.seat.voted-reject{border-color:var(--reject);box-shadow:0 0 12px rgba(255,51,102,.2)}
-.seat.voted-abstain{border-color:var(--abstain)}
-.seat.veto{border-left:2px solid var(--veto)}
-.seat.advisory{border-left:2px solid var(--advisory)}
-.seat .title{font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;
-  color:var(--accent);letter-spacing:2px;text-transform:uppercase}
-.seat .role{font-size:10px;color:var(--text2);margin-top:2px}
-.seat .weight{position:absolute;top:6px;right:8px;font-size:9px;font-weight:700}
-.seat .weight.w12{color:var(--veto)}
-.seat .weight.w08{color:var(--advisory)}
-.seat .weight.w10{color:var(--text3)}
-.seat .vote-badge{margin-top:6px;font-size:10px;font-weight:700;letter-spacing:1px}
-.seat .reasoning{font-size:9px;color:var(--text3);margin-top:4px;line-height:1.4;
-  max-height:0;overflow:hidden;transition:max-height .3s}
-.seat.expanded .reasoning{max-height:200px}
-.seat .conf{font-size:9px;color:var(--text3);margin-top:2px}
-.seat .model{font-size:8px;color:var(--text3);opacity:.5;margin-top:2px}
+/* Main layout: single column, table centered */
+.board-wrap{max-width:820px;margin:0 auto}
 
 /* Central table */
-.table-center{position:relative;display:flex;flex-direction:column;min-height:600px}
+.table-center{position:relative;display:flex;flex-direction:column;min-height:480px}
 
-/* CEO seat at head of table — commanding presence */
-.ceo-seat{background:linear-gradient(135deg,rgba(0,255,136,.06),var(--glass));
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-  border:1px solid rgba(0,255,136,.25);
-  padding:16px 20px;margin-bottom:16px;text-align:center;position:relative;
-  clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 12px,100% calc(100% - 12px),calc(100% - 12px) 100%,12px 100%,0 calc(100% - 12px),0 12px);
-  box-shadow:0 0 40px rgba(0,255,136,.06);transition:all .3s}
-.ceo-seat:hover{border-color:rgba(0,255,136,.4);box-shadow:0 0 50px rgba(0,255,136,.12)}
-.ceo-seat .title{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:900;
-  color:var(--accent);letter-spacing:4px}
-.ceo-seat .sub{font-size:9px;color:var(--text3);margin-top:2px}
-.ceo-seat .mandate{font-size:10px;color:var(--text2);margin-top:6px;font-style:italic}
+/* CEO seat — clean authority */
+.ceo-seat{background:var(--surface);border:1px solid var(--border);
+  padding:16px 20px;margin-bottom:14px;text-align:center;position:relative;
+  border-radius:4px;transition:all .3s}
+.ceo-seat:hover{border-color:var(--accent);box-shadow:0 0 20px var(--accent-glow)}
+.ceo-seat .title{font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;
+  color:var(--white);letter-spacing:5px}
+.ceo-seat .sub{font-size:10px;color:var(--text3);margin-top:4px;font-weight:300;letter-spacing:.5px}
+.ceo-seat .mandate{font-size:11px;color:var(--text2);margin-top:8px;font-style:italic;font-weight:400}
 
-/* Deliberation area — the table surface */
-.deliberation{flex:1;background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-  border:1px solid var(--border);
-  padding:16px;position:relative;overflow:hidden;
-  background-image:linear-gradient(rgba(0,255,136,.015) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(0,255,136,.015) 1px,transparent 1px);
-  background-size:24px 24px;
-  box-shadow:inset 0 0 60px rgba(0,0,0,.3)}
+/* Deliberation area */
+.deliberation{flex:1;background:var(--surface);border:1px solid var(--border);
+  padding:18px;position:relative;overflow:hidden;border-radius:4px}
 .deliberation .label{font-family:'Orbitron',sans-serif;font-size:8px;color:var(--text3);
-  letter-spacing:3px;margin-bottom:10px;text-transform:uppercase}
+  letter-spacing:3px;margin-bottom:12px;text-transform:uppercase;font-weight:500}
 
 /* Conversation messages */
-.messages{max-height:360px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg)}
-.msg{padding:8px 10px;margin-bottom:6px;background:var(--surface);border-left:2px solid var(--text3);
-  animation:msgIn .3s ease-out}
-@keyframes msgIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
-.msg .sender{font-size:9px;font-weight:700;color:var(--accent);letter-spacing:1px;text-transform:uppercase}
-.msg .content{font-size:11px;color:var(--text);margin-top:3px;line-height:1.5}
+.messages{max-height:420px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--text3) var(--bg);
+  padding:2px 0}
+.msg{padding:10px 14px;margin-bottom:6px;background:var(--bg2);border-left:2px solid var(--text3);
+  animation:msgIn .3s ease-out;transition:all .2s;border-radius:0 3px 3px 0}
+.msg:hover{background:var(--bg3);border-left-color:var(--text2)}
+@keyframes msgIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.msg .sender{font-family:'Orbitron',sans-serif;font-size:9px;font-weight:600;color:var(--accent);
+  letter-spacing:2px;text-transform:uppercase}
+.msg .content{font-size:11px;color:var(--text);margin-top:4px;line-height:1.65;font-weight:300}
 .msg.approve{border-color:var(--approve)}
+.msg.approve .sender{color:var(--approve)}
 .msg.reject{border-color:var(--reject)}
+.msg.reject .sender{color:var(--reject)}
 .msg.abstain{border-color:var(--abstain)}
-.msg.system{border-color:var(--advisory);background:rgba(255,170,0,.05)}
+.msg.system{border-color:var(--advisory);background:rgba(245,158,11,.03)}
+.msg.system .sender{color:var(--advisory)}
 
-/* Input area */
-/* Toolbar */
-.toolbar{display:flex;gap:6px;margin-top:10px;align-items:center}
+/* Toolbar — command strip */
+.toolbar{display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap;
+  padding:10px 12px;background:var(--bg2);border:1px solid var(--glass-border);
+  border-radius:3px}
 .toolbar button{background:var(--surface);border:1px solid var(--border);color:var(--text2);
-  padding:5px 12px;font-family:inherit;font-size:9px;cursor:pointer;transition:all .2s;letter-spacing:1px}
+  padding:6px 14px;font-family:'Inter',sans-serif;font-size:9px;font-weight:500;
+  cursor:pointer;transition:all .2s;letter-spacing:.5px;border-radius:2px}
 .toolbar button:hover{border-color:var(--accent);color:var(--accent)}
 .toolbar .copied{color:var(--accent);border-color:var(--accent)}
-.toolbar select{background:var(--surface);border:1px solid var(--border);color:var(--text2);
-  padding:5px 8px;font-family:inherit;font-size:9px}
-.toolbar .sep{width:1px;height:16px;background:var(--border)}
-.toolbar .label{font-size:8px;color:var(--text3);letter-spacing:1px}
+.toolbar select{background:var(--bg);border:1px solid var(--border);color:var(--text);
+  padding:6px 10px;font-family:'Inter',sans-serif;font-size:9px;font-weight:500;
+  cursor:pointer;transition:border .2s;border-radius:2px}
+.toolbar select:hover,.toolbar select:focus{border-color:var(--accent);outline:none}
+.toolbar .sep{width:1px;height:18px;background:var(--border);flex-shrink:0}
+.toolbar .label{font-size:9px;color:var(--text3);letter-spacing:.5px;flex-shrink:0;font-weight:600;
+  text-transform:uppercase}
 
 .input-area{margin-top:12px;display:flex;gap:8px}
 .input-area input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--white);
-  padding:10px 14px;font-family:inherit;font-size:12px;outline:none;transition:border .2s}
+  padding:11px 16px;font-family:'Inter',sans-serif;font-size:13px;font-weight:400;
+  outline:none;transition:border .2s;border-radius:3px}
 .input-area input:focus{border-color:var(--accent)}
-.input-area input::placeholder{color:var(--text3)}
+.input-area input::placeholder{color:var(--text3);font-weight:300}
 .input-area select{background:var(--bg);border:1px solid var(--border);color:var(--text2);
-  padding:8px;font-family:inherit;font-size:10px;outline:none}
+  padding:8px 10px;font-family:'Inter',sans-serif;font-size:10px;outline:none;border-radius:3px}
 .input-area button{background:var(--accent);color:var(--bg);border:none;
-  padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;
-  letter-spacing:2px;cursor:pointer;transition:all .2s;text-transform:uppercase}
-.input-area button:hover{box-shadow:0 0 20px rgba(0,255,136,.4)}
-.input-area button:disabled{opacity:.3;cursor:not-allowed}
+  padding:11px 24px;font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;
+  letter-spacing:2px;cursor:pointer;transition:all .2s;text-transform:uppercase;border-radius:3px}
+.input-area button:hover{box-shadow:0 0 16px var(--accent-glow);filter:brightness(1.1)}
+.input-area button:disabled{opacity:.3;cursor:not-allowed;filter:none}
 
 /* Outcome banner */
-.outcome{margin-top:12px;padding:12px 16px;text-align:center;
-  font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;letter-spacing:3px;
-  display:none;animation:bannerIn .5s ease-out}
-@keyframes bannerIn{from{opacity:0;transform:scaleX(.8)}to{opacity:1;transform:none}}
-.outcome.approved{display:block;background:rgba(0,255,136,.08);border:1px solid var(--approve);color:var(--approve);
-  box-shadow:0 0 30px rgba(0,255,136,.1);text-shadow:0 0 10px rgba(0,255,136,.3)}
-.outcome.rejected{display:block;background:rgba(255,68,119,.08);border:1px solid var(--reject);color:var(--reject);
-  box-shadow:0 0 30px rgba(255,68,119,.1);text-shadow:0 0 10px rgba(255,68,119,.3)}
-.outcome.exploration{display:block;background:rgba(255,187,51,.08);border:1px solid var(--advisory);color:var(--advisory);
-  box-shadow:0 0 30px rgba(255,187,51,.1);text-shadow:0 0 10px rgba(255,187,51,.3)}
+.outcome{margin-top:14px;padding:14px 20px;text-align:center;
+  font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;letter-spacing:4px;
+  display:none;animation:bannerIn .5s ease-out;text-transform:uppercase;border-radius:3px}
+@keyframes bannerIn{from{opacity:0;transform:scaleX(.9)}to{opacity:1;transform:none}}
+.outcome.approved{display:block;background:rgba(34,197,94,.08);border:1px solid var(--approve);color:var(--approve)}
+.outcome.rejected{display:block;background:rgba(239,68,68,.08);border:1px solid var(--reject);color:var(--reject)}
+.outcome.exploration{display:block;background:rgba(245,158,11,.08);border:1px solid var(--advisory);color:var(--advisory)}
 
-.score-bar{margin-top:8px;height:4px;background:var(--bg);border:1px solid var(--border);position:relative;overflow:hidden}
+.score-bar{margin-top:8px;height:3px;background:var(--bg);border:1px solid var(--glass-border);
+  position:relative;overflow:hidden;border-radius:2px}
 .score-bar .fill{height:100%;background:var(--accent);transition:width .6s ease-out}
 .score-bar .threshold{position:absolute;left:66.6%;top:0;height:100%;width:1px;background:var(--veto)}
 
@@ -227,80 +231,124 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
   border-top:1px solid var(--glass-border);margin-top:4px}
 
 /* History panel */
-.history{max-width:1400px;margin:30px auto 0;padding:0 12px}
-.history .label{font-family:'Orbitron',sans-serif;font-size:10px;color:var(--text3);
-  letter-spacing:3px;margin-bottom:10px;text-transform:uppercase}
-.session-card{background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-  border:1px solid var(--glass-border);padding:12px 14px;
-  margin-bottom:8px;cursor:pointer;transition:all .25s}
-.session-card:hover{border-color:var(--accent);box-shadow:0 0 16px rgba(0,255,136,.08);transform:translateX(4px)}
+.history{max-width:820px;margin:30px auto 0;padding:0 12px}
+.history .label{font-family:'Orbitron',sans-serif;font-size:9px;color:var(--text3);
+  letter-spacing:3px;margin-bottom:10px;text-transform:uppercase;font-weight:500}
+.session-card{background:var(--surface);border:1px solid var(--glass-border);padding:12px 16px;
+  margin-bottom:6px;cursor:pointer;transition:all .2s;border-radius:3px}
+.session-card:hover{border-color:var(--accent);transform:translateX(3px)}
 .session-card .top{display:flex;justify-content:space-between;align-items:center}
-.session-card .dir{font-size:11px;color:var(--white);flex:1;margin-right:12px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.session-card .out{font-size:10px;font-weight:700;letter-spacing:1px}
+.session-card .dir{font-size:11px;color:var(--text);flex:1;margin-right:12px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:400}
+.session-card .out{font-size:10px;font-weight:600;letter-spacing:1px;font-family:'Orbitron',sans-serif}
 .session-card .out.approved{color:var(--approve)}
 .session-card .out.rejected{color:var(--reject)}
 .session-card .out.exploration{color:var(--advisory)}
-.session-card .meta{font-size:9px;color:var(--text3);margin-top:4px}
-.session-card .votes-mini{display:flex;gap:4px;margin-top:6px}
-.session-card .vm{width:8px;height:8px;border-radius:1px}
+.session-card .meta{font-size:9px;color:var(--text3);margin-top:4px;font-weight:300}
+.session-card .votes-mini{display:flex;gap:3px;margin-top:6px}
+.session-card .vm{width:7px;height:7px;border-radius:2px}
 .session-card .vm.a{background:var(--approve)}
 .session-card .vm.r{background:var(--reject)}
 .session-card .vm.ab{background:var(--abstain)}
 
 /* Footer */
-.ft{text-align:center;padding:20px;font-size:10px;color:var(--text3);letter-spacing:1px;margin-top:30px}
-.ft a{color:var(--text2);text-decoration:none}
+.ft{text-align:center;padding:24px;font-size:10px;color:var(--text3);letter-spacing:1px;margin-top:40px;font-weight:300}
+.ft a{color:var(--text2);text-decoration:none;transition:color .2s}
 .ft a:hover{color:var(--accent)}
 
 /* Agent card popup */
-.card-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);
-  z-index:100;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.card-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.65);
+  z-index:100;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 .card-overlay.show{display:flex;animation:fadeIn .2s ease-out}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.agent-card-popup{background:linear-gradient(160deg,rgba(14,18,30,.95),rgba(10,14,24,.98));
-  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  border:1px solid var(--accent);max-width:500px;width:92%;
-  max-height:85vh;overflow-y:auto;padding:0;position:relative;
-  clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));
-  box-shadow:0 0 60px rgba(0,255,136,.15),0 0 120px rgba(0,255,136,.05);
-  scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg)}
-.acp-close{position:absolute;top:10px;right:14px;background:none;border:none;color:var(--text3);
-  font-size:18px;cursor:pointer;z-index:2}
+.agent-card-popup{background:var(--bg);border:1px solid var(--border);
+  max-width:480px;width:92%;max-height:85vh;overflow-y:auto;padding:0;position:relative;
+  border-radius:6px;box-shadow:0 20px 60px rgba(0,0,0,.5);
+  scrollbar-width:thin;scrollbar-color:var(--text3) var(--bg)}
+.acp-close{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--text3);
+  font-size:18px;cursor:pointer;z-index:2;transition:color .2s}
 .acp-close:hover{color:var(--accent)}
-.acp-header{padding:18px 20px 12px;border-bottom:1px solid var(--border);position:relative}
-.acp-short{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:900;color:var(--accent);letter-spacing:4px}
-.acp-name{font-size:11px;color:var(--text2);margin-top:2px}
-.acp-weight{position:absolute;top:18px;right:40px;font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700}
-.acp-body{padding:16px 20px}
-.acp-section{margin-bottom:14px}
+.acp-header{padding:20px 24px 14px;border-bottom:1px solid var(--glass-border);position:relative}
+.acp-short{font-family:'Orbitron',sans-serif;font-size:20px;font-weight:700;color:var(--white);letter-spacing:4px}
+.acp-name{font-size:11px;color:var(--text2);margin-top:3px;font-weight:300}
+.acp-weight{position:absolute;top:20px;right:44px;font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700}
+.acp-body{padding:18px 24px}
+.acp-section{margin-bottom:16px}
 .acp-section .acp-label{font-family:'Orbitron',sans-serif;font-size:8px;color:var(--text3);
-  letter-spacing:3px;text-transform:uppercase;margin-bottom:6px}
-.acp-doctrine{font-size:11px;color:var(--white);font-style:italic;line-height:1.5;
-  padding:8px 12px;border-left:2px solid var(--accent);background:var(--accent-dim)}
-.acp-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.acp-stat{background:var(--surface);padding:8px 10px}
-.acp-stat .sl{font-size:7px;color:var(--text3);letter-spacing:1px;text-transform:uppercase}
-.acp-stat .sv{font-size:12px;font-weight:700;color:var(--white);margin-top:2px}
+  letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;font-weight:500}
+.acp-doctrine{font-size:11px;color:var(--text);font-style:italic;line-height:1.6;
+  padding:10px 14px;border-left:2px solid var(--accent);background:var(--accent-dim);
+  border-radius:0 3px 3px 0;font-weight:300}
+.acp-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.acp-stat{background:var(--surface);padding:10px 12px;border-radius:3px}
+.acp-stat .sl{font-size:8px;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;font-weight:500}
+.acp-stat .sv{font-size:12px;font-weight:600;color:var(--white);margin-top:3px;
+  font-family:'JetBrains Mono',monospace}
 .acp-stat .sv.accent{color:var(--accent)}
 .acp-stat .sv.veto{color:var(--veto)}
 .acp-stat .sv.advisory{color:var(--advisory)}
 .acp-caps{display:flex;flex-wrap:wrap;gap:4px}
-.acp-cap{font-size:8px;padding:3px 8px;background:var(--accent-dim);border:1px solid var(--border);color:var(--accent);letter-spacing:1px}
-.acp-bar{height:4px;background:var(--bg);margin-top:4px;overflow:hidden}
+.acp-cap{font-size:8px;padding:4px 10px;background:var(--accent-dim);border:1px solid var(--glass-border);
+  color:var(--text2);letter-spacing:.5px;border-radius:2px;font-weight:500}
+.acp-bar{height:3px;background:var(--bg);margin-top:6px;overflow:hidden;border-radius:2px}
 .acp-bar .fill{height:100%;background:var(--accent);transition:width .6s}
+
+/* Diagnostics Sidebar */
+.diag-sidebar{position:fixed;left:0;top:0;width:230px;height:100vh;background:var(--bg);
+  border-right:1px solid var(--border);z-index:50;transform:translateX(-230px);
+  transition:transform .3s ease;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--text3) var(--bg)}
+.diag-sidebar.open{transform:translateX(0)}
+.diag-toggle{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:51;
+  background:var(--surface);border:1px solid var(--border);border-left:none;
+  padding:10px 6px;cursor:pointer;writing-mode:vertical-rl;
+  font-family:'Orbitron',sans-serif;font-size:8px;color:var(--text3);letter-spacing:2px;
+  transition:all .3s;border-radius:0 3px 3px 0;font-weight:500}
+.diag-toggle:hover{color:var(--accent);border-color:var(--accent)}
+.diag-toggle.shifted{left:230px}
+.diag-close{position:absolute;top:12px;right:12px;background:none;border:1px solid var(--border);
+  color:var(--text3);font-size:14px;cursor:pointer;padding:2px 8px;transition:all .2s;
+  z-index:2;border-radius:2px}
+.diag-close:hover{color:var(--accent);border-color:var(--accent)}
+.diag-hdr{padding:16px 14px 12px;border-bottom:1px solid var(--border)}
+.diag-hdr .label{font-family:'Orbitron',sans-serif;font-size:9px;color:var(--white);
+  letter-spacing:3px;text-transform:uppercase;font-weight:600}
+.diag-section{padding:12px 14px;border-bottom:1px solid var(--glass-border)}
+.diag-section .ds-label{font-family:'Orbitron',sans-serif;font-size:7px;color:var(--text3);
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:500}
+.diag-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.diag-row .dk{font-size:9px;color:var(--text3);font-weight:400}
+.diag-row .dv{font-size:10px;color:var(--white);font-weight:600;
+  font-family:'JetBrains Mono',monospace}
+.diag-row .dv.ok{color:var(--accent)}
+.diag-row .dv.warn{color:var(--advisory)}
+.diag-row .dv.crit{color:var(--veto)}
+
+/* Priority selector */
+.priority-select{background:var(--bg);border:1px solid var(--border);color:var(--white);
+  padding:6px 10px;font-family:'Inter',sans-serif;font-size:9px;width:100%;margin-top:4px;
+  border-radius:2px;font-weight:500}
+.priority-badge{display:inline-block;padding:3px 10px;font-size:8px;font-weight:600;
+  letter-spacing:1.5px;border-radius:3px;text-transform:uppercase;
+  font-family:'Orbitron',sans-serif}
+.priority-badge.executive{background:rgba(239,68,68,.12);color:var(--veto);border:1px solid rgba(239,68,68,.25)}
+.priority-badge.elevated{background:rgba(245,158,11,.1);color:var(--advisory);border:1px solid rgba(245,158,11,.25)}
+.priority-badge.standard{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(34,197,94,.2)}
+.priority-badge.deferred{background:var(--surface);color:var(--text3);border:1px solid var(--glass-border)}
 
 /* Loading spinner */
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--text3);
-  border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+  border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* Responsive */
 @media(max-width:900px){
-  .board-wrap{grid-template-columns:1fr;gap:12px}
-  .seats{flex-direction:row;flex-wrap:wrap;justify-content:center;padding:8px}
-  .seats.left,.seats.right{align-items:center}
-  .seat{width:160px}
+  .board-wrap{max-width:100%;padding:0 8px}
+  .board-strip{gap:5px}
+  .chip{min-width:48px;padding:5px 8px}
+  .chip .chip-title{font-size:9px}
+  .toolbar{gap:5px;padding:8px}
+  .input-area{flex-wrap:wrap}
+  .input-area input{min-width:200px}
 }
 </style>
 </head>
@@ -319,6 +367,67 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
     </div>
   </div>
 
+  <!-- Diagnostics Sidebar -->
+  <div class="diag-sidebar" id="diag-sidebar">
+    <div class="diag-hdr">
+      <div class="label">Diagnostics</div>
+      <button class="diag-close" onclick="toggleDiag()" title="Close diagnostics">&times;</button>
+    </div>
+
+    <div class="diag-section">
+      <div class="ds-label">Session Priority</div>
+      <select class="priority-select" id="priority-select" onchange="updatePriority()">
+        <option value="executive">Executive — full preemption</option>
+        <option value="elevated">Elevated — yield to executive only</option>
+        <option value="standard" selected>Standard — shared resources</option>
+        <option value="deferred">Deferred — yield to all</option>
+      </select>
+      <div style="margin-top:6px">
+        <span class="priority-badge standard" id="priority-badge">STANDARD</span>
+      </div>
+      <div style="font-size:8px;color:var(--text3);margin-top:4px">
+        Executive preempts autonomous loop. Deferred waits for idle.
+      </div>
+    </div>
+
+    <div class="diag-section">
+      <div class="ds-label">VPS Resources</div>
+      <div class="diag-row"><span class="dk">CPU Load</span><span class="dv" id="d-cpu">—</span></div>
+      <div class="diag-row"><span class="dk">Memory</span><span class="dv" id="d-mem">—</span></div>
+      <div class="diag-row"><span class="dk">Ollama Runners</span><span class="dv" id="d-runners">—</span></div>
+      <div class="diag-row"><span class="dk">Autonomous Loop</span><span class="dv" id="d-auto">—</span></div>
+    </div>
+
+    <div class="diag-section">
+      <div class="ds-label">Inference Status</div>
+      <div class="diag-row"><span class="dk">Ollama Local</span><span class="dv" id="d-ollama">—</span></div>
+      <div class="diag-row"><span class="dk">Ollama Cloud</span><span class="dv" id="d-cloud">—</span></div>
+      <div class="diag-row"><span class="dk">Cloud Auth</span><span class="dv" id="d-auth">—</span></div>
+      <div class="diag-row"><span class="dk">Model Mode</span><span class="dv" id="d-mode">auto</span></div>
+    </div>
+
+    <div class="diag-section">
+      <div class="ds-label">Session Metrics</div>
+      <div class="diag-row"><span class="dk">Total Sessions</span><span class="dv" id="d-sessions">0</span></div>
+      <div class="diag-row"><span class="dk">Approval Rate</span><span class="dv" id="d-approve-rate">—</span></div>
+      <div class="diag-row"><span class="dk">Avg Latency</span><span class="dv" id="d-avg-latency">—</span></div>
+      <div class="diag-row"><span class="dk">Last Outcome</span><span class="dv" id="d-last-outcome">—</span></div>
+    </div>
+
+    <div class="diag-section">
+      <div class="ds-label">Board Members</div>
+      <div class="diag-row"><span class="dk">Active</span><span class="dv ok">8 / 8</span></div>
+      <div class="diag-row"><span class="dk">Wallets</span><span class="dv warn">NOT ISSUED</span></div>
+      <div class="diag-row"><span class="dk">BONA FIDE</span><span class="dv warn">PENDING</span></div>
+      <div class="diag-row"><span class="dk">Verification</span><span class="dv warn">Tier 1</span></div>
+    </div>
+
+    <div style="padding:10px 12px;font-size:8px;color:var(--text3);letter-spacing:1px">
+      cypherpunk2048 standard &middot; 18dp precision
+    </div>
+  </div>
+  <div class="diag-toggle" id="diag-toggle" onclick="toggleDiag()">DIAGNOSTICS</div>
+
   <div class="hdr">
     <h1>The Boardroom</h1>
     <div class="sub">CEO + Seven Soldiers &middot; Weighted Consensus &middot; 0.666 Supermajority</div>
@@ -333,37 +442,35 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
     <a href="/docs.html">Docs</a>
   </div>
 
-  <!-- Inaugural Session Banner -->
-  <div class="inaugural" id="inaugural">
-    <div class="inaugural-banner">
-      <div class="inaugural-title">INAUGURAL SESSION</div>
-      <div class="inaugural-sub">First Historical Board Meeting &middot; Swearing In &middot; 2026-04-12</div>
-    </div>
-    <div class="inaugural-body" id="inaugural-body">
-      <div class="inaugural-desc">
-        Board members attend to be created. Model assignments verified. Cloud inference confirmed.
-        Identity issuance pending &mdash; wallets and BONA FIDE not yet deployed.
-      </div>
-      <div class="reg-grid" id="reg-grid"></div>
-      <div class="inaugural-path">
-        <span class="ip-label">EVOLUTION PATH</span>
-        <span class="ip-item">MINTCONTRACT module &rarr; wallet issuance &rarr; BONA FIDE deployment &rarr; ID verification</span>
-        <span class="ip-item">CEO as a Service &middot; Boardroom as a Service</span>
+  <!-- Inaugural Banner — compact -->
+  <div style="max-width:1400px;margin:0 auto 10px;padding:0 12px">
+    <div style="background:linear-gradient(135deg,rgba(0,255,136,.04),rgba(255,187,51,.02));
+      border:1px solid rgba(255,187,51,.2);padding:8px 16px;display:flex;align-items:center;
+      justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div style="font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;
+        color:var(--advisory);letter-spacing:3px">INAUGURAL SESSION</div>
+      <div style="font-size:8px;color:var(--text3);letter-spacing:1px">
+        MINTCONTRACT &rarr; wallets &rarr; BONA FIDE &rarr; ID verification &middot;
+        CEO as a Service &middot; Boardroom as a Service
       </div>
     </div>
   </div>
 
-  <!-- CEO + Table + Soldiers -->
-  <div class="board-wrap">
-    <!-- Left seats: COO, CFO -->
-    <div class="seats left" id="seats-left"></div>
+  <!-- Board Member Strip — drag members to the table -->
+  <div class="board-strip" id="board-strip"></div>
 
-    <!-- Center: CEO + Deliberation -->
+  <!-- Central Table -->
+  <div class="board-wrap">
     <div class="table-center">
       <div class="ceo-seat" id="ceo-seat" onclick="showAgentCard('ceo_agent_main')" style="cursor:pointer" title="Click for CEO details">
         <div class="title">CEO</div>
         <div class="sub">I direct. The soldiers deliberate. The Constitution constrains.</div>
         <div class="mandate" id="ceo-mandate">Awaiting directive...</div>
+      </div>
+
+      <!-- Drop zone: drag soldiers here to seat them -->
+      <div class="drop-zone" id="drop-zone">
+        <div class="dz-label">DRAG SOLDIERS HERE TO SEAT THEM</div>
       </div>
 
       <div class="deliberation">
@@ -376,18 +483,43 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
           <div class="threshold"></div>
         </div>
 
+        <!-- Controls Row 1: Priority + Model + Attend -->
         <div class="toolbar">
-          <button onclick="copyDeliberation()" id="copy-btn" title="Copy deliberation to clipboard">COPY</button>
-          <button onclick="exportToMd()" title="Export session as Markdown">EXPORT .MD</button>
+          <span class="label">Priority:</span>
+          <select id="priority-select-main" title="Session priority — Executive preempts autonomous loop" onchange="updatePriorityFromMain()">
+            <option value="executive">Executive</option>
+            <option value="elevated">Elevated</option>
+            <option value="standard" selected>Standard</option>
+            <option value="deferred">Deferred</option>
+          </select>
+          <span class="priority-badge standard" id="priority-badge-main">STANDARD</span>
           <div class="sep"></div>
           <span class="label">Model:</span>
           <select id="model-mode-select" title="Inference routing for next convene">
-            <option value="auto">Auto (cloud → local)</option>
-            <option value="local">Local only</option>
-            <option value="cloud">Cloud only</option>
+            <option value="local" selected>Local</option>
+            <option value="auto">Auto</option>
+            <option value="cloud">Cloud</option>
           </select>
+          <div class="sep"></div>
+          <span class="label">Attend:</span>
+          <select id="members-select" title="Which soldiers attend this session">
+            <option value="all">All 7</option>
+            <option value="ciso,cro,cto">CISO+CRO+CTO</option>
+            <option value="ciso,cro">CISO+CRO</option>
+            <option value="ciso" selected>CISO</option>
+            <option value="cfo">CFO</option>
+            <option value="cto">CTO</option>
+            <option value="cro">CRO</option>
+            <option value="coo">COO</option>
+            <option value="clo">CLO</option>
+            <option value="cpo">CPO</option>
+          </select>
+          <div class="sep"></div>
+          <button onclick="copyDeliberation()" id="copy-btn" title="Copy to clipboard">COPY</button>
+          <button onclick="exportToMd()" title="Export as Markdown">MD</button>
         </div>
 
+        <!-- Controls Row 2: Directive input -->
         <div class="input-area">
           <input type="text" id="directive-input" placeholder="Present a directive to the Boardroom..." />
           <select id="importance-select">
@@ -401,12 +533,8 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
       </div>
     </div>
 
-    <!-- Right seats: CISO, CLO -->
-    <div class="seats right" id="seats-right"></div>
+    </div>
   </div>
-
-  <!-- Bottom seats: CTO, CPO, CRO -->
-  <div style="display:flex;justify-content:center;gap:12px;margin-top:12px;flex-wrap:wrap" id="seats-bottom"></div>
 
   <!-- Cloud Inference Panel -->
   <div class="cloud-panel">
@@ -523,28 +651,185 @@ const SOLDIERS = [
 const soldierStats = {};
 SOLDIERS.forEach(s => soldierStats[s.id] = {sessions:0, approvals:0, rejections:0, abstentions:0, avgConf:0, totalConf:0});
 
-function createSeatHTML(s) {
+// Track which soldiers are seated at the table
+const seatedSoldiers = new Set();
+
+function createChipHTML(s) {
   const wCls = s.weight===1.2?'w12':s.weight===0.8?'w08':'w10';
   const extra = s.veto?'veto':s.advisory?'advisory':'';
-  return `<div class="seat ${extra}" id="seat-${s.id}" onclick="showAgentCard('${s.id}')" title="Click for agent details">
-    <div class="title">${s.short}</div>
-    <div class="role">${s.desc}</div>
-    <div class="weight ${wCls}">${s.weight}x</div>
-    <div class="vote-badge" id="vote-${s.id}"></div>
-    <div class="reasoning" id="reason-${s.id}"></div>
-    <div class="conf" id="conf-${s.id}"></div>
-    <div class="model" id="model-${s.id}"></div>
+  const weightLabel = s.veto?s.weight+'x veto':s.advisory?s.weight+'x advisory':s.weight+'x';
+  return `<div class="chip ${extra}" id="chip-${s.id}" draggable="true"
+    ondragstart="dragStart(event,'${s.id}')" ondragend="dragEnd(event,'${s.id}')"
+    title="Click to seat/unseat &middot; Shift+click for details &middot; Drag to table">
+    <div class="chip-title">${s.short}</div>
+    <div class="chip-weight ${wCls}">${weightLabel}</div>
+    <div class="chip-vote" id="vote-${s.id}"></div>
+    <div class="chip-detail">
+      <div><span class="cd-ok">&#10003;</span> ${s.localModel}</div>
+      <div><span class="cd-ok">&#10003;</span> ${s.cloudModel||'—'}</div>
+      <div><span class="cd-ok">&#10003;</span> Tier 3: ${s.maxModel||'—'}</div>
+      <div><span class="cd-pending">&#9675;</span> Wallet: not issued</div>
+      <div><span class="cd-pending">&#9675;</span> BONA FIDE: pending</div>
+    </div>
+    <div class="conf" id="conf-${s.id}" style="font-size:8px;color:var(--text3);margin-top:2px"></div>
+    <div class="model" id="model-${s.id}" style="font-size:7px;color:var(--text3);opacity:.5;margin-top:1px"></div>
   </div>`;
 }
 
-function initSeats() {
-  const left = document.getElementById('seats-left');
-  const right = document.getElementById('seats-right');
-  const bottom = document.getElementById('seats-bottom');
-  SOLDIERS.forEach(s => {
-    const target = s.side==='left'?left:s.side==='right'?right:bottom;
-    target.innerHTML += createSeatHTML(s);
+function initStrip() {
+  const strip = document.getElementById('board-strip');
+  // CEO chip
+  const ceo = AGENTS.ceo_agent_main;
+  strip.innerHTML = `<div class="chip seated" data-ceo="true" title="CEO — always seated (Shift+click for details)" style="cursor:pointer">
+    <div class="chip-title" style="color:var(--accent)">CEO</div>
+    <div class="chip-weight" style="color:var(--text3)">1.0x convener</div>
+    <div class="chip-detail">
+      <div><span class="cd-ok">&#10003;</span> ${ceo.localModel}</div>
+      <div><span class="cd-ok">&#10003;</span> ${ceo.cloudModel||'—'}</div>
+      <div><span class="cd-ok">&#10003;</span> Tier 3: ${ceo.maxModel||'—'}</div>
+      <div><span class="cd-pending">&#9675;</span> Wallet: not issued</div>
+      <div><span class="cd-pending">&#9675;</span> BONA FIDE: pending</div>
+    </div>
+  </div>`;
+  // Soldier chips
+  SOLDIERS.forEach(s => { strip.innerHTML += createChipHTML(s); });
+}
+
+// Drag and drop — robust implementation
+let isDragging = false;
+
+function dragStart(e, id) {
+  isDragging = true;
+  e.dataTransfer.setData('text/plain', id);
+  e.dataTransfer.effectAllowed = 'move';
+  // Defer adding class so the drag image isn't faded
+  requestAnimationFrame(() => {
+    const chip = document.getElementById('chip-'+id);
+    if (chip) chip.classList.add('dragging');
   });
+}
+
+function dragEnd(e, id) {
+  isDragging = false;
+  const chip = document.getElementById('chip-'+id);
+  if (chip) chip.classList.remove('dragging');
+}
+
+function chipClick(e, id) {
+  // Don't open agent card if we just finished dragging
+  if (isDragging) { isDragging = false; return; }
+  showAgentCard(id);
+}
+
+function initDropZone() {
+  const dz = document.getElementById('drop-zone');
+
+  dz.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    dz.classList.add('drag-over');
+  });
+  dz.addEventListener('dragleave', e => {
+    // Only remove if actually leaving the drop zone (not entering a child)
+    if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over');
+  });
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    dz.classList.remove('drag-over');
+    const id = e.dataTransfer.getData('text/plain');
+    if (id) seatSoldier(id);
+  });
+
+  // Single click on strip chip to seat/unseat (instead of double-click)
+  document.getElementById('board-strip').addEventListener('click', e => {
+    if (isDragging) return;
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    // CEO chip — Shift+click for details, otherwise ignore
+    if (chip.dataset.ceo) { if (e.shiftKey) showAgentCard('ceo_agent_main'); return; }
+    if (!chip.id || !chip.id.startsWith('chip-')) return;
+    const id = chip.id.replace('chip-','');
+    // Toggle seat on click — hold Shift to open agent card instead
+    if (e.shiftKey) { showAgentCard(id); return; }
+    if (seatedSoldiers.has(id)) unseatSoldier(id);
+    else seatSoldier(id);
+  });
+}
+
+function seatSoldier(id) {
+  const s = SOLDIERS.find(x => x.id === id);
+  if (!s || seatedSoldiers.has(id)) return;
+  seatedSoldiers.add(id);
+  const chip = document.getElementById('chip-'+id);
+  if (chip) { chip.classList.remove('dragging'); chip.classList.add('seated'); }
+  // Add to drop zone
+  const dz = document.getElementById('drop-zone');
+  // Remove placeholder label if present
+  const label = dz.querySelector('.dz-label');
+  if (label) label.remove();
+  const mini = document.createElement('div');
+  mini.className = 'chip seated' + (s.veto?' veto':'') + (s.advisory?' advisory':'');
+  mini.id = 'seated-'+id;
+  mini.innerHTML = `<div class="chip-title">${s.short}</div><div class="chip-weight ${s.weight===1.2?'w12':s.weight===0.8?'w08':'w10'}">${s.weight}x</div>`;
+  mini.style.cursor = 'pointer';
+  mini.title = 'Click to remove from table';
+  mini.onclick = () => unseatSoldier(id);
+  dz.appendChild(mini);
+  // Update members select to match seated
+  syncMembersFromSeated();
+}
+
+function unseatSoldier(id) {
+  seatedSoldiers.delete(id);
+  const chip = document.getElementById('chip-'+id);
+  if (chip) chip.classList.remove('seated');
+  const seated = document.getElementById('seated-'+id);
+  if (seated) seated.remove();
+  // Re-add placeholder if empty
+  const dz = document.getElementById('drop-zone');
+  if (dz.children.length === 0) {
+    dz.innerHTML = '<div class="dz-label">DRAG SOLDIERS HERE TO SEAT THEM</div>';
+  }
+  syncMembersFromSeated();
+}
+
+function syncMembersFromSeated() {
+  // Build members string from seated soldiers for the API
+  const sel = document.getElementById('members-select');
+  if (seatedSoldiers.size === 0) {
+    sel.value = 'ciso'; // default
+  } else if (seatedSoldiers.size === 7) {
+    sel.value = 'all';
+  } else {
+    // Check if a preset matches
+    const seated = Array.from(seatedSoldiers).map(s => s.split('_')[0]).sort().join(',');
+    let matched = false;
+    for (const opt of sel.options) {
+      if (opt.value.split(',').sort().join(',') === seated) {
+        sel.value = opt.value;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      // Create dynamic option
+      const ids = Array.from(seatedSoldiers).map(s => s.split('_')[0]).join(',');
+      let dynOpt = sel.querySelector('option[data-dynamic]');
+      if (!dynOpt) {
+        dynOpt = document.createElement('option');
+        dynOpt.setAttribute('data-dynamic', 'true');
+        sel.appendChild(dynOpt);
+      }
+      dynOpt.value = ids;
+      dynOpt.textContent = ids.toUpperCase().replace(/,/g, '+') + ' (' + seatedSoldiers.size + ')';
+      sel.value = ids;
+    }
+  }
+}
+
+function initSeats() {
+  // Legacy compat — no-op, replaced by initStrip
 }
 
 function showAgentCard(id) {
@@ -639,12 +924,14 @@ function clearBoard() {
   document.getElementById('outcome').textContent = '';
   document.getElementById('score-bar').style.display = 'none';
   SOLDIERS.forEach(s => {
-    const seat = document.getElementById('seat-'+s.id);
-    seat.className = seat.className.replace(/voted-\w+/g,'').trim();
-    document.getElementById('vote-'+s.id).textContent = '';
-    document.getElementById('reason-'+s.id).textContent = '';
-    document.getElementById('conf-'+s.id).textContent = '';
-    document.getElementById('model-'+s.id).textContent = '';
+    const chip = document.getElementById('chip-'+s.id);
+    if (chip) chip.className = chip.className.replace(/voted-\w+/g,'').trim();
+    const vote = document.getElementById('vote-'+s.id);
+    if (vote) vote.textContent = '';
+    const conf = document.getElementById('conf-'+s.id);
+    if (conf) conf.textContent = '';
+    const model = document.getElementById('model-'+s.id);
+    if (model) model.textContent = '';
   });
 }
 
@@ -664,9 +951,10 @@ async function convene() {
 
   const importance = document.getElementById('importance-select').value;
   const modelMode = document.getElementById('model-mode-select').value;
+  const members = document.getElementById('members-select').value;
 
   try {
-    const resp = await fetch(`/boardroom/convene?directive=${encodeURIComponent(directive)}&importance=${importance}&model_mode=${modelMode}`, {method:'POST'});
+    const resp = await fetch(`/boardroom/convene?directive=${encodeURIComponent(directive)}&importance=${importance}&model_mode=${modelMode}&priority=${currentPriority}&members=${encodeURIComponent(members)}`, {method:'POST'});
     const data = await resp.json();
 
     // Show each soldier's vote and track stats
@@ -686,21 +974,22 @@ async function convene() {
             st.totalConf += (v.confidence || 0);
           }
 
-          // Update seat
-          const seat = document.getElementById('seat-'+v.soldier);
-          if (seat) {
-            seat.classList.add('voted-'+v.vote);
-            document.getElementById('vote-'+v.soldier).textContent = v.vote.toUpperCase();
-            document.getElementById('vote-'+v.soldier).style.color =
-              v.vote==='approve'?'var(--approve)':v.vote==='reject'?'var(--reject)':'var(--abstain)';
-            document.getElementById('conf-'+v.soldier).textContent = `Confidence: ${(v.confidence*100).toFixed(0)}%`;
-            document.getElementById('model-'+v.soldier).textContent = v.provider || '';
+          // Update chip
+          const chip = document.getElementById('chip-'+v.soldier);
+          if (chip) chip.classList.add('voted-'+v.vote);
+          const voteEl = document.getElementById('vote-'+v.soldier);
+          if (voteEl) {
+            voteEl.textContent = v.vote.toUpperCase();
+            voteEl.style.color = v.vote==='approve'?'var(--approve)':v.vote==='reject'?'var(--reject)':'var(--abstain)';
           }
+          const confEl = document.getElementById('conf-'+v.soldier);
+          if (confEl) confEl.textContent = `${(v.confidence*100).toFixed(0)}%`;
+          const modelEl = document.getElementById('model-'+v.soldier);
+          if (modelEl) modelEl.textContent = v.provider || '';
 
           // Add message
           const reasoning = v.reasoning || v.vote;
           addMessage(short, reasoning, v.vote);
-          if (seat) document.getElementById('reason-'+v.soldier).textContent = reasoning;
         }, i * 400);
       });
     }
@@ -746,7 +1035,12 @@ async function convene() {
     setTimeout(loadHistory, 2000);
 
   } catch(e) {
-    addMessage('ERROR', e.message, 'reject');
+    const msg = e.message || String(e);
+    if (msg.includes('Unexpected token')) {
+      addMessage('ERROR', 'Proxy timeout — soldiers are still deliberating on VPS CPU. Set priority to EXECUTIVE to preempt the autonomous loop, or retry with a shorter directive. Apache ProxyTimeout may need increase.', 'reject');
+    } else {
+      addMessage('ERROR', msg, 'reject');
+    }
     btn.disabled = false;
     btn.textContent = 'CONVENE';
   }
@@ -801,12 +1095,12 @@ function replaySession(el) {
       const soldier = SOLDIERS.find(x => x.id === v.soldier);
       const short = soldier ? soldier.short : v.soldier;
       addMessage(short, v.reasoning||v.vote, v.vote);
-      const seat = document.getElementById('seat-'+v.soldier);
-      if (seat) {
-        seat.classList.add('voted-'+v.vote);
-        document.getElementById('vote-'+v.soldier).textContent = v.vote.toUpperCase();
-        document.getElementById('vote-'+v.soldier).style.color =
-          v.vote==='approve'?'var(--approve)':v.vote==='reject'?'var(--reject)':'var(--abstain)';
+      const chip = document.getElementById('chip-'+v.soldier);
+      if (chip) chip.classList.add('voted-'+v.vote);
+      const voteEl = document.getElementById('vote-'+v.soldier);
+      if (voteEl) {
+        voteEl.textContent = v.vote.toUpperCase();
+        voteEl.style.color = v.vote==='approve'?'var(--approve)':v.vote==='reject'?'var(--reject)':'var(--abstain)';
       }
     });
     const outcome = document.getElementById('outcome');
@@ -881,38 +1175,99 @@ document.getElementById('directive-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') convene();
 });
 
-// ── Inaugural Session: Board Member Registration ──
-function initInaugural() {
-  const grid = document.getElementById('reg-grid');
-  // CEO first
-  const ceo = AGENTS.ceo_agent_main;
-  grid.innerHTML = `<div class="reg-card">
-    <div class="rc-title">CEO</div>
-    <div class="rc-status" style="font-size:10px;color:var(--white)">${ceo.name}</div>
-    <div class="rc-check"><span class="done">&#10003;</span> Model: ${ceo.localModel}</div>
-    <div class="rc-check"><span class="done">&#10003;</span> Persona assigned</div>
-    <div class="rc-check"><span class="pending">&#9675;</span> Wallet: not issued</div>
-    <div class="rc-check"><span class="pending">&#9675;</span> BONA FIDE: not deployed</div>
-    <div class="rc-check"><span class="pending">&#9675;</span> ID verification: pending</div>
-  </div>`;
+// ── Diagnostics Sidebar ──
+let currentPriority = 'standard';
 
-  // Soldiers
-  SOLDIERS.forEach(s => {
-    const modelCheck = s.cloudModel
-      ? `<span class="done">&#10003;</span> Cloud: ${s.cloudModel}`
-      : `<span class="pending">&#9675;</span> Cloud: none`;
-    grid.innerHTML += `<div class="reg-card">
-      <div class="rc-title">${s.short}</div>
-      <div class="rc-status" style="font-size:10px;color:var(--white)">${s.name}</div>
-      <div class="rc-check"><span class="done">&#10003;</span> Local: ${s.localModel}</div>
-      <div class="rc-check">${modelCheck}</div>
-      <div class="rc-check"><span class="done">&#10003;</span> Weight: ${s.weight}x ${s.veto?'(veto)':s.advisory?'(advisory)':''}</div>
-      <div class="rc-check"><span class="pending">&#9675;</span> Wallet: not issued</div>
-      <div class="rc-check"><span class="pending">&#9675;</span> BONA FIDE: pending</div>
-    </div>`;
-  });
+function toggleDiag() {
+  const sidebar = document.getElementById('diag-sidebar');
+  const tab = document.getElementById('diag-toggle');
+  sidebar.classList.toggle('open');
+  tab.classList.toggle('shifted');
+  // Update tab label
+  tab.textContent = sidebar.classList.contains('open') ? 'CLOSE' : 'DIAGNOSTICS';
 }
-initInaugural();
+
+function updatePriority() {
+  const sel = document.getElementById('priority-select');
+  currentPriority = sel.value;
+  const badge = document.getElementById('priority-badge');
+  badge.className = 'priority-badge ' + currentPriority;
+  badge.textContent = currentPriority.toUpperCase();
+  // Sync main toolbar
+  document.getElementById('priority-select-main').value = currentPriority;
+  const mainBadge = document.getElementById('priority-badge-main');
+  mainBadge.className = 'priority-badge ' + currentPriority;
+  mainBadge.textContent = currentPriority.toUpperCase();
+  document.getElementById('d-mode').textContent = document.getElementById('model-mode-select').value;
+}
+
+function updatePriorityFromMain() {
+  const sel = document.getElementById('priority-select-main');
+  currentPriority = sel.value;
+  const mainBadge = document.getElementById('priority-badge-main');
+  mainBadge.className = 'priority-badge ' + currentPriority;
+  mainBadge.textContent = currentPriority.toUpperCase();
+  // Sync diagnostics sidebar
+  const diagSel = document.getElementById('priority-select');
+  if (diagSel) diagSel.value = currentPriority;
+  const diagBadge = document.getElementById('priority-badge');
+  if (diagBadge) {
+    diagBadge.className = 'priority-badge ' + currentPriority;
+    diagBadge.textContent = currentPriority.toUpperCase();
+  }
+}
+
+async function refreshDiagnostics() {
+  try {
+    // Health check
+    const health = await fetch('/health').then(r => r.json()).catch(() => null);
+    if (health) {
+      document.getElementById('d-ollama').textContent = 'ACTIVE';
+      document.getElementById('d-ollama').className = 'dv ok';
+    }
+
+    // Metrics
+    const metrics = await fetch('/metrics').then(r => r.json()).catch(() => null);
+    if (metrics) {
+      const cpu = metrics.cpu_percent;
+      const mem = metrics.memory_percent;
+      const cpuEl = document.getElementById('d-cpu');
+      cpuEl.textContent = cpu != null ? cpu.toFixed(0) + '%' : '—';
+      cpuEl.className = 'dv ' + (cpu > 80 ? 'crit' : cpu > 50 ? 'warn' : 'ok');
+      const memEl = document.getElementById('d-mem');
+      memEl.textContent = mem != null ? mem.toFixed(0) + '%' : '—';
+      memEl.className = 'dv ' + (mem > 85 ? 'crit' : mem > 70 ? 'warn' : 'ok');
+    }
+
+    // mindXagent status
+    const agentStatus = await fetch('/mindxagent/status').then(r => r.json()).catch(() => null);
+    if (agentStatus) {
+      const autoEl = document.getElementById('d-auto');
+      const isAuto = agentStatus.autonomous_mode || agentStatus.is_autonomous;
+      autoEl.textContent = isAuto ? 'RUNNING' : 'IDLE';
+      autoEl.className = 'dv ' + (isAuto ? 'warn' : 'ok');
+    }
+
+    // Session history stats
+    const sessions = await fetch('/boardroom/sessions?limit=50').then(r => r.json()).catch(() => ({sessions:[]}));
+    const sList = sessions.sessions || [];
+    document.getElementById('d-sessions').textContent = sList.length;
+    if (sList.length > 0) {
+      const approved = sList.filter(s => s.outcome === 'approved').length;
+      document.getElementById('d-approve-rate').textContent = (approved / sList.length * 100).toFixed(0) + '%';
+      document.getElementById('d-last-outcome').textContent = (sList[0].outcome || '—').toUpperCase();
+      document.getElementById('d-last-outcome').className = 'dv ' +
+        (sList[0].outcome === 'approved' ? 'ok' : sList[0].outcome === 'rejected' ? 'crit' : 'warn');
+    }
+  } catch(e) { console.error('Diagnostics refresh failed:', e); }
+}
+
+// Refresh diagnostics every 30 seconds
+refreshDiagnostics();
+setInterval(refreshDiagnostics, 30000);
+
+// ── Inaugural Session: Board Member Registration ──
+// initInaugural — replaced by chip strip with hover details
 
 // ── Cloud Inference Panel ──
 function toggleCloudPanel() {
@@ -982,7 +1337,8 @@ function updateCloudRate(modelReport) {
 }
 
 // Init
-initSeats();
+initStrip();
+initDropZone();
 loadHistory();
 
 // ── DeltaVerse: boardroom perception ──

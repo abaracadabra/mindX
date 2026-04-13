@@ -223,19 +223,79 @@ class Boardroom:
             cls._instance = cls()
         return cls._instance
 
+    # Priority levels — corporate governance hierarchy
+    # executive:  full preemption, pauses autonomous loop, boardroom owns all inference
+    # elevated:   yields only to executive, preferred scheduling
+    # standard:   shared resources with autonomous loop (default)
+    # deferred:   yields to everything, runs when idle
+    PRIORITY_LEVELS = {
+        "executive": {"preempt_autonomous": True, "label": "Executive Session"},
+        "elevated": {"preempt_autonomous": False, "label": "Elevated Priority"},
+        "standard": {"preempt_autonomous": False, "label": "Standard Session"},
+        "deferred": {"preempt_autonomous": False, "label": "Deferred Session"},
+    }
+
+    async def _preempt_autonomous(self) -> bool:
+        """Pause (never stop) the autonomous loop to free inference for boardroom.
+
+        The autonomous loop is paused, not stopped. It resumes automatically
+        after the boardroom session completes via the finally block in convene().
+        Autonomous should never be stopped — only paused for executive sessions.
+        Kills active Ollama runners to free RAM/CPU for boardroom inference.
+        """
+        try:
+            from agents.core.mindXagent import MindXAgent
+            agent = await MindXAgent.get_instance()
+            if hasattr(agent, 'autonomous_active') and agent.autonomous_active:
+                agent._boardroom_pause = True
+                logger.info("Boardroom: EXECUTIVE PRIORITY — autonomous loop PAUSED (not stopped)")
+            # Kill active Ollama runners to free resources for boardroom
+            import subprocess
+            subprocess.run(["pkill", "-f", "ollama runner"], capture_output=True, timeout=5)
+            await asyncio.sleep(1)  # let memory free
+            logger.info("Boardroom: cleared Ollama runners for executive session")
+            return True
+        except Exception as e:
+            logger.warning(f"Boardroom: failed to pause autonomous loop: {e}")
+        return False
+
+    async def _resume_autonomous(self):
+        """Resume autonomous loop after executive session. Always resumes."""
+        try:
+            from agents.core.mindXagent import MindXAgent
+            agent = await MindXAgent.get_instance()
+            if hasattr(agent, '_boardroom_pause') and agent._boardroom_pause:
+                agent._boardroom_pause = False
+                logger.info("Boardroom: autonomous loop RESUMED after executive session")
+        except Exception as e:
+            logger.warning(f"Boardroom: failed to resume autonomous loop: {e}")
+
     async def convene(
         self,
         directive: str,
         importance: str = "standard",
         context: Optional[Dict[str, Any]] = None,
         model_mode: str = "auto",
+        priority: str = "standard",
+        members: Optional[str] = None,
     ) -> BoardroomSession:
         """
-        Convene a boardroom session. CEO presents directive, Soldiers evaluate in parallel.
+        Convene a boardroom session. CEO presents directive, Soldiers evaluate.
 
         model_mode: "local" (SOLDIER_MODELS only), "cloud" (SOLDIER_CLOUD_MODELS via cloud),
                     "auto" (try cloud, fall back to local — default)
+        priority: "executive" (preempt autonomous), "elevated", "standard" (default), "deferred"
+        members: comma-separated soldier IDs to include, or "all" (default).
+                 e.g. "ciso_security,cro_risk" for just CISO + CRO.
+                 Shorthand: "ciso,cro,cto" etc (prefix match).
         """
+        priority_cfg = self.PRIORITY_LEVELS.get(priority, self.PRIORITY_LEVELS["standard"])
+        preempted = False
+
+        # Executive priority: pause autonomous loop to free Ollama for boardroom
+        if priority_cfg["preempt_autonomous"]:
+            preempted = await self._preempt_autonomous()
+
         session = BoardroomSession(
             session_id=f"br_{int(time.time())}",
             directive=directive,
@@ -243,43 +303,73 @@ class Boardroom:
             timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         )
 
-        # Query all soldiers in parallel
-        tasks = []
-        for soldier_id, provider in self.soldier_providers.items():
-            weight = SOLDIER_WEIGHTS.get(soldier_id, 1.0)
-            tasks.append(
-                self._query_soldier(soldier_id, provider, directive, importance, weight, context, model_mode)
+        # Select which soldiers attend
+        if members and members != "all":
+            requested = [m.strip().lower() for m in members.split(",")]
+            attending = {}
+            for sid, prov in self.soldier_providers.items():
+                for req in requested:
+                    if sid.startswith(req) or sid == req:
+                        attending[sid] = prov
+                        break
+            if not attending:
+                attending = self.soldier_providers  # fallback: all
+            logger.info(f"Boardroom: selective attendance — {list(attending.keys())}")
+        else:
+            attending = self.soldier_providers
+
+        try:
+            # Query soldiers sequentially — VPS can only run 1-2 models at a time
+            # Sequential execution prevents Ollama OOM and connection timeouts
+            MAX_CONCURRENT = 1
+            semaphore = asyncio.Semaphore(MAX_CONCURRENT)
+
+            async def _limited_query(sid, prov, weight):
+                async with semaphore:
+                    return await self._query_soldier(sid, prov, directive, importance, weight, context, model_mode)
+
+            tasks = []
+            for soldier_id, provider in attending.items():
+                weight = SOLDIER_WEIGHTS.get(soldier_id, 1.0)
+                tasks.append(_limited_query(soldier_id, provider, weight))
+
+            if tasks:
+                votes = await asyncio.gather(*tasks, return_exceptions=True)
+                for v in votes:
+                    if isinstance(v, SoldierVote):
+                        session.votes.append(v)
+                    elif isinstance(v, Exception):
+                        logger.warning(f"Boardroom: soldier query failed: {v}")
+
+            # Tally weighted votes
+            session = self._tally_votes(session)
+
+            # Handle dissent
+            if session.outcome == "exploration":
+                session.dissent_branches = self._create_exploration_branches(session)
+
+            # Build model assignment report
+            session.model_report = self._build_model_report(session, model_mode)
+            session.model_report["priority"] = priority
+            session.model_report["priority_label"] = priority_cfg["label"]
+            session.model_report["preempted_autonomous"] = preempted
+
+            # Log session
+            self.sessions.append(session)
+            if len(self.sessions) > 100:
+                self.sessions = self.sessions[-100:]
+            self._log_session(session)
+
+            logger.info(
+                f"Boardroom session {session.session_id}: {session.outcome} "
+                f"(score={session.weighted_score:.3f}, votes={len(session.votes)}, "
+                f"mode={model_mode}, priority={priority})"
             )
-
-        if tasks:
-            votes = await asyncio.gather(*tasks, return_exceptions=True)
-            for v in votes:
-                if isinstance(v, SoldierVote):
-                    session.votes.append(v)
-                elif isinstance(v, Exception):
-                    logger.warning(f"Boardroom: soldier query failed: {v}")
-
-        # Tally weighted votes
-        session = self._tally_votes(session)
-
-        # Handle dissent
-        if session.outcome == "exploration":
-            session.dissent_branches = self._create_exploration_branches(session)
-
-        # Build model assignment report
-        session.model_report = self._build_model_report(session, model_mode)
-
-        # Log session
-        self.sessions.append(session)
-        if len(self.sessions) > 100:
-            self.sessions = self.sessions[-100:]
-        self._log_session(session)
-
-        logger.info(
-            f"Boardroom session {session.session_id}: {session.outcome} "
-            f"(score={session.weighted_score:.3f}, votes={len(session.votes)}, mode={model_mode})"
-        )
-        return session
+            return session
+        finally:
+            # Resume autonomous loop after executive session
+            if preempted:
+                await self._resume_autonomous()
 
     def _build_model_report(self, session: BoardroomSession, model_mode: str) -> Dict[str, Any]:
         """Build detailed report of which model each member used and inference path."""
@@ -405,28 +495,39 @@ class Boardroom:
         t0 = time.time()
         used_model = model
         try:
-            # Route through VLLMHandler — gets vLLM → Ollama local → Ollama cloud fallback
-            from llm.vllm_handler import VLLMHandler
-            handler = VLLMHandler(
-                model_name_for_api=model,
-                base_url=OLLAMA_URL,  # Ollama local as primary base
-            )
-            response = await handler.generate_text(
-                prompt=prompt, model=model,
-                json_mode=True, max_tokens=500, temperature=0.3,
-            )
+            # Direct Ollama /api/generate — bypasses VLLMHandler queuing issues
+            # The /v1/chat/completions endpoint queues behind running models;
+            # /api/generate is more reliable on resource-constrained VPS.
+            import aiohttp
+            payload = {
+                "model": model,
+                "prompt": prompt,
+                "stream": False,
+                "options": {"temperature": 0.3, "num_predict": 500},
+            }
+            response = None
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=300)) as sess:
+                async with sess.post(f"{OLLAMA_URL}/api/generate", json=payload) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        response = data.get("response", "")
+                        # Include thinking in reasoning if present
+                        thinking = data.get("thinking", "")
+                        if thinking and not response:
+                            response = thinking
+                    else:
+                        error_text = await resp.text()
+                        logger.warning(f"Boardroom: Ollama error ({resp.status}) for {model}: {error_text[:200]}")
 
-            # If cloud model failed and we're in auto mode, try local explicitly
-            if not response and model != local_model and model_mode == "auto":
+            # If cloud/auto model failed, try local fallback
+            if not response and model != local_model and model_mode in ("auto", "cloud"):
                 used_model = local_model
-                response = await handler.generate_text(
-                    prompt=prompt, model=local_model,
-                    json_mode=True, max_tokens=500, temperature=0.3,
-                )
-
-            # Track which path succeeded
-            if handler._using_cloud:
-                used_model = f"{model} (cloud)"
+                payload["model"] = local_model
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=300)) as sess:
+                    async with sess.post(f"{OLLAMA_URL}/api/generate", json=payload) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            response = data.get("response", "")
 
             latency = int((time.time() - t0) * 1000)
 
