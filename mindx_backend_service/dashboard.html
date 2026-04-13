@@ -43,15 +43,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:15
 canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
 
 /* ── Header ── */
-.hdr{position:sticky;top:0;z-index:50;padding:0 20px;height:48px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(8,12,20,.96),rgba(4,6,9,.94));backdrop-filter:blur(24px);border-bottom:1px solid rgba(121,192,255,.1);box-shadow:0 2px 12px rgba(0,0,0,.4);flex-shrink:0}
+.hdr{position:sticky;top:0;z-index:50;padding:0 20px;min-height:48px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(8,12,20,.96),rgba(4,6,9,.94));backdrop-filter:blur(24px);border-bottom:1px solid rgba(121,192,255,.1);box-shadow:0 2px 12px rgba(0,0,0,.4);flex-shrink:0;pointer-events:auto;position:relative;z-index:50}
 .hdr-brand{font-family:var(--mono);font-size:20px;font-weight:700;color:#f0f6fc;letter-spacing:2px;text-shadow:0 0 16px rgba(121,192,255,.12);flex-shrink:0;margin-right:16px}
 .hdr-brand b{color:var(--blue)}
-.hdr-mid{display:flex;align-items:center;gap:4px;flex:1;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-.hdr-mid::-webkit-scrollbar{display:none}
-.hdr-mid a{color:#d0d7de;text-decoration:none;font-size:13px;padding:4px 10px;border-radius:4px;transition:all .2s;font-family:var(--mono);white-space:nowrap}
-.hdr-mid a:hover{color:#f0f6fc;background:rgba(121,192,255,.1);text-shadow:0 0 8px rgba(121,192,255,.15)}
+.hdr-mid{display:flex;align-items:center;gap:4px;flex:1;flex-wrap:wrap}
+.hdr-mid a{color:#d0d7de;text-decoration:none;font-size:13px;padding:4px 10px;border-radius:4px;transition:color .2s,background .2s;font-family:var(--mono);white-space:nowrap;cursor:pointer}
+.hdr-mid a:hover{color:#f0f6fc;background:rgba(121,192,255,.1)}
 .hdr-mid a.hl{color:var(--green);font-weight:600}
-.hdr-mid .sep{color:rgba(110,118,129,.25);font-size:9px;margin:0 2px;flex-shrink:0}
+.hdr-mid .sep{color:rgba(110,118,129,.25);font-size:9px;margin:0 2px}
 .hdr-right{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px}
 .hdr-sub{font-size:12px;color:var(--text2);font-family:var(--mono);white-space:nowrap}
 .live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse-dot 2s ease-in-out infinite}
@@ -509,6 +508,8 @@ document.addEventListener('mousedown',function(){dragging=true});
 document.addEventListener('mouseup',function(){dragging=false});
 document.addEventListener('wheel',function(e){forceRadius=Math.max(60,Math.min(500,forceRadius-e.deltaY*.3))},{passive:true});
 document.addEventListener('click',function(e){
+  // Don't interfere with link clicks, buttons, or interactive elements
+  if(e.target.closest('a,button,details,summary,.hdr,.sidebar,.tabs,.panel-tools'))return;
   shockwaves.push({x:e.clientX,y:e.clientY,r:0,life:1,col:'rgba(201,160,255,'});
   // Node click → scroll to agent
   for(const n of nodes){
@@ -517,6 +518,7 @@ document.addEventListener('click',function(e){
   }
 });
 document.addEventListener('dblclick',function(e){
+  if(e.target.closest('a,button,details,summary,.hdr,.sidebar'))return;
   if(wells.length<6)wells.push({x:e.clientX,y:e.clientY,life:1});
   shockwaves.push({x:e.clientX,y:e.clientY,r:0,life:1,col:'rgba(63,185,80,'});
 });
@@ -1627,12 +1629,22 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
     requestAnimationFrame(dvLoop);
   })();
 
-  // ── DeltaVerse quote engine overrides hero quotes ──
-  setInterval(function(){
+  // ── DeltaVerse quote engine — pace matches participant interaction ──
+  var _quoteBase=10000; // 10s default (slow, contemplative)
+  var _quoteMin=4000;   // 4s fastest (active participant)
+  var _lastQuoteTime=0;
+  function _cycleQuote(){
+    var now=Date.now();
+    // Pace: faster when interacting, slower when idle
+    var pace=_quoteBase;
+    if(dv.pressure&&dv.pressure.intensity>.2)pace=Math.max(_quoteMin,_quoteBase-dv.pressure.intensity*6000);
+    if(now-_lastQuoteTime<pace)return;
+    _lastQuoteTime=now;
     var el=document.getElementById('hero-quote');if(!el)return;
     var msg=dv.synthesizePerception()||dv.getQuote();
-    if(msg){el.style.opacity='0';setTimeout(function(){el.textContent=msg;el.style.opacity='1'},600)}
-  },5800);
+    if(msg){el.style.opacity='0';setTimeout(function(){el.textContent=msg;el.style.opacity='1'},800)}
+  }
+  setInterval(_cycleQuote,1000); // check every second, but only change at pace
 
   // ── Hide interaction hint after first engagement ──
   var hint=document.getElementById('dv-hint');
