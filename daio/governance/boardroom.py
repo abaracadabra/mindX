@@ -20,6 +20,7 @@ Pattern:
 
 import asyncio
 import json
+import os
 import time
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field
@@ -171,6 +172,7 @@ SOLDIER_PERSONAS = {
 }
 
 OLLAMA_URL = "http://localhost:11434"
+OLLAMA_CLOUD_URL = "https://ollama.com"
 
 # Agent file path for loading extended personas
 BOARDROOM_AGENTS_DIR = PROJECT_ROOT / "agents" / "boardroom"
@@ -494,10 +496,8 @@ class Boardroom:
 
         t0 = time.time()
         used_model = model
+        is_cloud = False
         try:
-            # Direct Ollama /api/generate — bypasses VLLMHandler queuing issues
-            # The /v1/chat/completions endpoint queues behind running models;
-            # /api/generate is more reliable on resource-constrained VPS.
             import aiohttp
             payload = {
                 "model": model,
@@ -506,44 +506,110 @@ class Boardroom:
                 "options": {"temperature": 0.3, "num_predict": 500},
             }
             response = None
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=300)) as sess:
-                async with sess.post(f"{OLLAMA_URL}/api/generate", json=payload) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        response = data.get("response", "")
-                        # Include thinking in reasoning if present
-                        thinking = data.get("thinking", "")
-                        if thinking and not response:
-                            response = thinking
-                    else:
-                        error_text = await resp.text()
-                        logger.warning(f"Boardroom: Ollama error ({resp.status}) for {model}: {error_text[:200]}")
 
-            # If cloud/auto model failed, try local fallback
-            if not response and model != local_model and model_mode in ("auto", "cloud"):
-                used_model = local_model
-                payload["model"] = local_model
-                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=300)) as sess:
+            # Step 1: Try local Ollama daemon (handles both local + cloud-proxied models)
+            try:
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=120)) as sess:
                     async with sess.post(f"{OLLAMA_URL}/api/generate", json=payload) as resp:
                         if resp.status == 200:
                             data = await resp.json()
                             response = data.get("response", "")
+                            thinking = data.get("thinking", "")
+                            if thinking and not response:
+                                response = thinking
+                        elif resp.status == 404:
+                            logger.info(f"Boardroom: {model} not found locally, trying cloud...")
+                        else:
+                            error_text = await resp.text()
+                            logger.warning(f"Boardroom: Ollama error ({resp.status}) for {model}: {error_text[:200]}")
+            except Exception as e:
+                logger.warning(f"Boardroom: local Ollama failed for {model}: {e}")
+
+            # Step 2: If local failed and model is a cloud model, try Ollama Cloud direct API
+            if not response and model != local_model:
+                api_key = os.environ.get("OLLAMA_API_KEY", "")
+                if api_key:
+                    try:
+                        headers = {"Authorization": f"Bearer {api_key}"}
+                        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=120)) as sess:
+                            async with sess.post(f"{OLLAMA_CLOUD_URL}/api/generate", json=payload, headers=headers) as resp:
+                                if resp.status == 200:
+                                    data = await resp.json()
+                                    response = data.get("response", "")
+                                    is_cloud = True
+                                    logger.info(f"Boardroom: {model} responded via Ollama Cloud direct API")
+                                else:
+                                    logger.warning(f"Boardroom: Cloud API error ({resp.status}) for {model}")
+                    except Exception as e:
+                        logger.warning(f"Boardroom: Cloud API failed for {model}: {e}")
+
+            # Step 3: If cloud model failed, try Gemini as cloud alternative
+            if not response and model != local_model and model_mode in ("auto", "cloud"):
+                try:
+                    from llm.llm_factory import LLMFactory
+                    gemini = LLMFactory.create_llm_handler(provider_name="gemini")
+                    if gemini:
+                        gresponse = await gemini.generate_text(prompt, temperature=0.3, max_tokens=500)
+                        if gresponse and not gresponse.startswith("Error"):
+                            response = gresponse
+                            used_model = "gemini"
+                            is_cloud = True
+                            logger.info(f"Boardroom: {soldier_id} responded via Gemini cloud fallback")
+                except Exception as e:
+                    logger.debug(f"Boardroom: Gemini fallback failed: {e}")
+
+            # Step 4: Last resort — local model
+            if not response and used_model != local_model:
+                used_model = local_model
+                payload["model"] = local_model
+                try:
+                    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=120)) as sess:
+                        async with sess.post(f"{OLLAMA_URL}/api/generate", json=payload) as resp:
+                            if resp.status == 200:
+                                data = await resp.json()
+                                response = data.get("response", "")
+                except Exception as e:
+                    logger.warning(f"Boardroom: local fallback failed for {local_model}: {e}")
 
             latency = int((time.time() - t0) * 1000)
 
-            # Parse response
+            # Parse response — robust extraction from thinking models
             vote_data = {"vote": "abstain", "reasoning": "Could not parse response", "confidence": 0.3}
             if response and not response.startswith("Error"):
+                import re
+                # Strip thinking tags if present
+                clean = re.sub(r'<think>.*?</think>', '', response, flags=re.DOTALL).strip()
+                if not clean:
+                    clean = response  # Use raw if stripping removed everything
+
+                # Try 1: Direct JSON parse
+                parsed = None
                 try:
-                    parsed = json.loads(response)
-                    if isinstance(parsed, dict):
-                        vote_data = parsed
+                    parsed = json.loads(clean)
                 except json.JSONDecodeError:
-                    resp_lower = response.lower()
-                    if "approve" in resp_lower:
-                        vote_data = {"vote": "approve", "reasoning": response[:200], "confidence": 0.6}
-                    elif "reject" in resp_lower:
-                        vote_data = {"vote": "reject", "reasoning": response[:200], "confidence": 0.6}
+                    # Try 2: Extract JSON object from within text (models often wrap JSON in markdown)
+                    json_match = re.search(r'\{[^{}]*"vote"\s*:\s*"[^"]*"[^{}]*\}', clean, re.DOTALL)
+                    if json_match:
+                        try:
+                            parsed = json.loads(json_match.group())
+                        except json.JSONDecodeError:
+                            pass
+
+                if isinstance(parsed, dict) and "vote" in parsed:
+                    vote_data = parsed
+                else:
+                    # Try 3: Natural language extraction
+                    resp_lower = clean.lower()
+                    if '"approve"' in resp_lower or 'vote: approve' in resp_lower or 'i approve' in resp_lower:
+                        vote_data = {"vote": "approve", "reasoning": clean[:300], "confidence": 0.6}
+                    elif '"reject"' in resp_lower or 'vote: reject' in resp_lower or 'i reject' in resp_lower:
+                        vote_data = {"vote": "reject", "reasoning": clean[:300], "confidence": 0.6}
+                    elif 'approve' in resp_lower and 'reject' not in resp_lower:
+                        vote_data = {"vote": "approve", "reasoning": clean[:300], "confidence": 0.5}
+                    elif 'reject' in resp_lower and 'approve' not in resp_lower:
+                        vote_data = {"vote": "reject", "reasoning": clean[:300], "confidence": 0.5}
+                    else:
+                        vote_data = {"vote": "abstain", "reasoning": clean[:300], "confidence": 0.3}
 
             # Label: ollama/model for local, ollama-cloud/model for cloud
             is_cloud = used_model != local_model and model_mode in ("auto", "cloud")
