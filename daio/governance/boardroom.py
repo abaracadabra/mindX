@@ -82,83 +82,20 @@ SOLDIER_MODELS = {
     "cro_risk": "qwen3:4b",               # 2.3B — deepest local, risk needs maximum depth
 }
 
-# Cloud model assignments — Ollama Cloud free tier (after `ollama signin` on VPS)
-# All 20 cloud models mapped to CEO + 7 Soldiers by role fitness.
-# Primary: first choice. Fallback: if primary unavailable or rate-limited.
-# Local daemon proxies to cloud — no separate API key needed.
-SOLDIER_CLOUD_MODELS = {
-    "coo_operations": "gemini-3-flash-preview",  # Speed + intelligence — operations need fast decisions
-    "cfo_finance": "qwen3.5:9b",                 # Quantitative reasoning, vision — cost calculations
-    "cto_technology": "qwen3-coder-next",        # Agentic coding — architecture and code review
-    "ciso_security": "nemotron-3-super",         # 120B MoE (12B active) — NVIDIA safety-aligned, thinking
-    "clo_legal": "devstral-small-2:24b",         # Code exploration — license/attribution pattern matching
-    "cpo_product": "gemma4:31b",                 # Multimodal, vision — product evaluation across surfaces
-    "cro_risk": "deepseek-v3.2",                 # Deepest reasoning — risk is multivariate analysis
-}
-
-# CEO cloud model — strategic direction requires the strongest available model
-CEO_CLOUD_MODEL = "glm-5.1"  # SOTA agentic engineering — CEO directs with full intelligence
-
-# Tiered cloud model map — 3 tiers per board member, all from Ollama cloud library:
-#   Tier 1 "local":  The model already pulled on VPS (fast, no cloud needed)
-#   Tier 2 "mid":    Next step up — cloud model matched to role (default for cloud mode)
-#   Tier 3 "max":    Biggest/deepest cloud model suited to this role (for critical decisions)
+# Cloud model — ONE model for all 8 board members (CEO + 7 Soldiers).
 #
-# All 20 Ollama cloud models mapped. No model left unmapped.
-BOARD_CLOUD_MAP = {
-    "ceo_agent_main": {
-        "local": "qwen3:0.6b",           # 0.6B — fast directive processing
-        "mid":   "glm-5.1",              # SOTA agentic engineering
-        "max":   "glm-5",                # 744B (40B active) — complex systems, long-horizon
-    },
-    "coo_operations": {
-        "local": "qwen3:0.6b",           # 0.6B — fast operational tempo
-        "mid":   "gemini-3-flash-preview",# Speed + intelligence at low cost
-        "max":   "ministral-3:14b",       # 14B — deepest edge model, vision + tools
-    },
-    "cfo_finance": {
-        "local": "deepseek-coder:1.3b",  # 1.3B — fastest local, calculations
-        "mid":   "qwen3.5:9b",           # 9B — quantitative reasoning, vision
-        "max":   "qwen3.5:122b",         # 122B — maximum quantitative depth
-    },
-    "cto_technology": {
-        "local": "qwen3:1.7b",           # 1.7B — architectural reasoning
-        "mid":   "qwen3-coder-next",     # Agentic coding, tool-specialized
-        "max":   "devstral-2",           # 123B — large-scale code agent
-    },
-    "ciso_security": {
-        "local": "deepseek-r1:1.5b",     # 1.5B — thinking model, careful
-        "mid":   "nemotron-3-super",     # 120B MoE (12B active) — safety-aligned
-        "max":   "qwen3-next",          # 80B — deep thinking for threat analysis
-    },
-    "clo_legal": {
-        "local": "qwen3:0.6b",           # 0.6B — compliance pattern-matching
-        "mid":   "devstral-small-2:24b", # 24B — structured analysis, vision
-        "max":   "cogito-2.1",           # 671B — deepest general reasoning
-    },
-    "cpo_product": {
-        "local": "qwen3.5:2b",           # 2B — product judgment
-        "mid":   "gemma4:31b",           # 31B — multimodal, vision, audio
-        "max":   "kimi-k2.5",           # Native multimodal agentic
-    },
-    "cro_risk": {
-        "local": "qwen3:4b",             # 4B — deepest local, risk depth
-        "mid":   "deepseek-v3.2",        # Efficient reasoning, thinking
-        "max":   "minimax-m2.7",         # Coding + agentic risk modeling
-    },
-}
-
-# Remaining cloud models available for general agent pool:
-#   nemotron-3-nano (4b, 30b) — efficient agentic, quick scans
-#   minimax-m2.5              — productivity SOTA
-#   minimax-m2                — coding and agentic workflows
-#   glm-4.7                   — advanced coding capability
-#   rnj-1 (8b)                — code + STEM, dense
-#   devstral-small-2 (24b)    — already assigned to CLO
-CLOUD_POOL = [
-    "nemotron-3-nano:30b", "minimax-m2.5", "minimax-m2",
-    "glm-4.7", "rnj-1",
-]
+# Inaugural meeting evidence (2026-04-12, sessions br_1776022554 + br_1776022600):
+#   Session 1 (local): 6/7 soldiers abstained — tiny models couldn't parse JSON vote format.
+#     Only CISO (deepseek-r1:1.5b, thinking model) voted at 12.5s. Rest failed in 34-51ms.
+#   Session 2 (per-soldier cloud diversity): 7/7 abstained — all failed in 53-64ms.
+#     Seven different cloud models hit the free tier 1-concurrent-model wall. None loaded.
+#
+# Conclusion: per-soldier model diversity is aspirational on free tier. One model, all members.
+# Free tier limits: 50 req/5h session, 500 req/week, 100K tokens/session, 1 concurrent model.
+# Upgrade to Pro ($20/mo) to unlock per-soldier diversity via BOARD_CLOUD_MAP.
+#
+# gpt-oss:120b-cloud: 65.5 tok/s on cloud GPU (8.2x vs local 1.5B), proven 2026-04-11.
+CLOUD_MODEL = "gpt-oss:120b-cloud"
 
 # Soldier personas — injected into prompts for role-specific evaluation
 SOLDIER_PERSONAS = {
@@ -202,11 +139,9 @@ class Boardroom:
                     for sid, cfg in soldiers_section.items():
                         self.soldier_providers[sid] = cfg.get("inference_provider", "ollama")
                         self.soldier_configs[sid] = cfg
-                        # Update model assignments from registry if present
+                        # Update local model assignments from registry if present
                         if cfg.get("local_model") and sid in SOLDIER_MODELS:
                             SOLDIER_MODELS[sid] = cfg["local_model"]
-                        if cfg.get("cloud_model") and sid in SOLDIER_CLOUD_MODELS:
-                            SOLDIER_CLOUD_MODELS[sid] = cfg["cloud_model"]
                 else:
                     # Legacy: soldier_provider_map only
                     self.soldier_providers = data.get("soldier_provider_map", {})
@@ -280,16 +215,18 @@ class Boardroom:
         model_mode: str = "auto",
         priority: str = "standard",
         members: Optional[str] = None,
+        consensus: float = SUPERMAJORITY_THRESHOLD,
     ) -> BoardroomSession:
         """
         Convene a boardroom session. CEO presents directive, Soldiers evaluate.
 
-        model_mode: "local" (SOLDIER_MODELS only), "cloud" (SOLDIER_CLOUD_MODELS via cloud),
-                    "auto" (try cloud, fall back to local — default)
+        model_mode: "local" (SOLDIER_MODELS only), "cloud" (single CLOUD_MODEL for all members),
+                    "auto" (try CLOUD_MODEL, fall back to local — default)
         priority: "executive" (preempt autonomous), "elevated", "standard" (default), "deferred"
         members: comma-separated soldier IDs to include, or "all" (default).
                  e.g. "ciso_security,cro_risk" for just CISO + CRO.
                  Shorthand: "ciso,cro,cto" etc (prefix match).
+        consensus: weighted score threshold for approval (default 0.666 supermajority).
         """
         priority_cfg = self.PRIORITY_LEVELS.get(priority, self.PRIORITY_LEVELS["standard"])
         preempted = False
@@ -343,8 +280,8 @@ class Boardroom:
                     elif isinstance(v, Exception):
                         logger.warning(f"Boardroom: soldier query failed: {v}")
 
-            # Tally weighted votes
-            session = self._tally_votes(session)
+            # Tally weighted votes against consensus threshold
+            session = self._tally_votes(session, consensus)
 
             # Handle dissent
             if session.outcome == "exploration":
@@ -352,6 +289,7 @@ class Boardroom:
 
             # Build model assignment report
             session.model_report = self._build_model_report(session, model_mode)
+            session.model_report["consensus_threshold"] = consensus
             session.model_report["priority"] = priority
             session.model_report["priority_label"] = priority_cfg["label"]
             session.model_report["preempted_autonomous"] = preempted
@@ -373,20 +311,107 @@ class Boardroom:
             if preempted:
                 await self._resume_autonomous()
 
+    async def convene_stream(
+        self,
+        directive: str,
+        importance: str = "standard",
+        context: Optional[Dict[str, Any]] = None,
+        model_mode: str = "auto",
+        priority: str = "standard",
+        members: Optional[str] = None,
+        consensus: float = SUPERMAJORITY_THRESHOLD,
+    ):
+        """Stream boardroom votes as they arrive. Yields dicts: vote events then final outcome.
+
+        Identical logic to convene(), but yields each SoldierVote immediately
+        so the frontend can display responses as soldiers deliberate.
+        """
+        priority_cfg = self.PRIORITY_LEVELS.get(priority, self.PRIORITY_LEVELS["standard"])
+        preempted = False
+
+        if priority_cfg["preempt_autonomous"]:
+            preempted = await self._preempt_autonomous()
+
+        session = BoardroomSession(
+            session_id=f"br_{int(time.time())}",
+            directive=directive,
+            importance=importance,
+            timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        )
+
+        if members and members != "all":
+            requested = [m.strip().lower() for m in members.split(",")]
+            attending = {}
+            for sid, prov in self.soldier_providers.items():
+                for req in requested:
+                    if sid.startswith(req) or sid == req:
+                        attending[sid] = prov
+                        break
+            if not attending:
+                attending = self.soldier_providers
+        else:
+            attending = self.soldier_providers
+
+        try:
+            # Query soldiers one at a time, yield each vote immediately
+            for soldier_id, provider in attending.items():
+                weight = SOLDIER_WEIGHTS.get(soldier_id, 1.0)
+                try:
+                    vote = await self._query_soldier(soldier_id, provider, directive, importance, weight, context, model_mode)
+                    session.votes.append(vote)
+                    yield {"event": "vote", "data": {
+                        "soldier": vote.soldier_id, "vote": vote.vote,
+                        "provider": vote.provider, "reasoning": vote.reasoning[:300],
+                        "confidence": vote.confidence, "latency_ms": vote.latency_ms,
+                        "weight": vote.weight,
+                    }}
+                except Exception as e:
+                    logger.warning(f"Boardroom: soldier query failed: {e}")
+
+            # Tally and finalize against consensus threshold
+            session = self._tally_votes(session, consensus)
+            if session.outcome == "exploration":
+                session.dissent_branches = self._create_exploration_branches(session)
+            session.model_report = self._build_model_report(session, model_mode)
+            session.model_report["consensus_threshold"] = consensus
+            session.model_report["priority"] = priority
+            session.model_report["priority_label"] = priority_cfg["label"]
+            session.model_report["preempted_autonomous"] = preempted
+
+            self.sessions.append(session)
+            if len(self.sessions) > 100:
+                self.sessions = self.sessions[-100:]
+            self._log_session(session)
+
+            logger.info(
+                f"Boardroom session {session.session_id}: {session.outcome} "
+                f"(score={session.weighted_score:.3f}, votes={len(session.votes)}, "
+                f"mode={model_mode}, priority={priority})"
+            )
+
+            yield {"event": "outcome", "data": {
+                "session_id": session.session_id,
+                "outcome": session.outcome,
+                "weighted_score": round(session.weighted_score, 3),
+                "dissent_branches": session.dissent_branches,
+                "model_report": session.model_report,
+            }}
+        finally:
+            if preempted:
+                await self._resume_autonomous()
+
     def _build_model_report(self, session: BoardroomSession, model_mode: str) -> Dict[str, Any]:
         """Build detailed report of which model each member used and inference path."""
         report = {
             "model_mode": model_mode,
+            "cloud_model": CLOUD_MODEL,
             "members": {},
             "inference_summary": {"local": 0, "cloud": 0, "abstained": 0},
         }
-        # CEO entry
-        ceo_tiers = BOARD_CLOUD_MAP.get("ceo_agent_main", {})
+        # CEO entry — same single cloud model as soldiers
         report["members"]["ceo_agent_main"] = {
             "role": "Chief Executive Officer",
-            "assigned_local": ceo_tiers.get("local", "qwen3:0.6b"),
-            "assigned_cloud": ceo_tiers.get("mid", CEO_CLOUD_MODEL),
-            "cloud_max": ceo_tiers.get("max"),
+            "assigned_cloud": CLOUD_MODEL,
             "used": "directive_only",
             "path": "CEO does not deliberate — CEO directs",
             "weight": 1.0,
@@ -394,15 +419,12 @@ class Boardroom:
         # Soldier entries from votes
         for v in session.votes:
             local_m = SOLDIER_MODELS.get(v.soldier_id, "?")
-            cloud_m = SOLDIER_CLOUD_MODELS.get(v.soldier_id, "?")
-            tiers = BOARD_CLOUD_MAP.get(v.soldier_id, {})
-            used = v.provider  # e.g. "vllm/deepseek-v3.2 (cloud)" or "vllm/qwen3:1.7b"
-            is_cloud = "(cloud)" in used
+            used = v.provider
+            is_cloud = "cloud" in used
             report["members"][v.soldier_id] = {
                 "role": SOLDIER_PERSONAS.get(v.soldier_id, "")[:60],
                 "assigned_local": local_m,
-                "assigned_cloud": cloud_m,
-                "cloud_max": tiers.get("max"),
+                "assigned_cloud": CLOUD_MODEL,
                 "used": used,
                 "path": "cloud" if is_cloud else "local",
                 "weight": v.weight,
@@ -453,13 +475,12 @@ class Boardroom:
         context: Optional[Dict[str, Any]],
         model_mode: str = "auto",
     ) -> SoldierVote:
-        """Query a Soldier via Ollama /api/generate (local models, cloud via ollama signin proxy).
+        """Query a Soldier via Ollama /api/generate.
 
-        model_mode: "local" (force SOLDIER_MODELS), "cloud" (force SOLDIER_CLOUD_MODELS), "auto" (cloud then local)
-        Local models via localhost:11434. Cloud models proxied through Ollama daemon after `ollama signin`.
+        model_mode: "local" (force per-soldier SOLDIER_MODELS), "cloud"/"auto" (single CLOUD_MODEL for all)
+        Cloud models proxied through local Ollama daemon after `ollama signin`.
         """
         local_model = SOLDIER_MODELS.get(soldier_id, "qwen3:1.7b")
-        cloud_model = SOLDIER_CLOUD_MODELS.get(soldier_id)
         persona = self._load_soldier_persona(soldier_id)
 
         prompt = (
@@ -476,23 +497,11 @@ class Boardroom:
             f"\"reasoning\": \"...\", \"confidence\": 0.0-1.0}}"
         )
 
-        # Select model based on mode + importance tier
-        # Tier selection: routine/standard → mid, critical/constitutional → max
-        tier_map = BOARD_CLOUD_MAP.get(soldier_id, {})
+        # Select model — one cloud model for all members (free tier: 1 concurrent model)
         if model_mode == "local":
             model = local_model
-        elif model_mode == "cloud":
-            if importance in ("critical", "constitutional") and tier_map.get("max"):
-                model = tier_map["max"]
-            elif tier_map.get("mid"):
-                model = tier_map["mid"]
-            else:
-                model = cloud_model or local_model
-        else:  # auto — prefer cloud tier, handler falls back to local
-            if importance in ("critical", "constitutional") and tier_map.get("max"):
-                model = tier_map["max"]
-            else:
-                model = cloud_model or local_model
+        else:  # "cloud" or "auto" — single CLOUD_MODEL for all 8 board members
+            model = CLOUD_MODEL
 
         t0 = time.time()
         used_model = model
@@ -636,8 +645,8 @@ class Boardroom:
                 weight=weight,
             )
 
-    def _tally_votes(self, session: BoardroomSession) -> BoardroomSession:
-        """Calculate weighted consensus."""
+    def _tally_votes(self, session: BoardroomSession, threshold: float = SUPERMAJORITY_THRESHOLD) -> BoardroomSession:
+        """Calculate weighted consensus against the given threshold."""
         if not session.votes:
             session.outcome = "rejected"
             session.weighted_score = 0.0
@@ -653,7 +662,7 @@ class Boardroom:
         else:
             session.weighted_score = approve_weight / (approve_weight + reject_weight) if (approve_weight + reject_weight) > 0 else 0
 
-            if session.weighted_score >= SUPERMAJORITY_THRESHOLD:
+            if session.weighted_score >= threshold:
                 session.outcome = "approved"
             elif reject_weight > 0 and approve_weight > 0:
                 # Mixed votes — dissent exists, open exploration

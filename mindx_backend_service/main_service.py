@@ -3405,15 +3405,16 @@ async def governance_status():
     }
 
 @app.post("/boardroom/convene", tags=["governance"], summary="Convene boardroom — CEO + Seven Soldiers evaluate directive")
-async def boardroom_convene(directive: str, importance: str = "standard", model_mode: str = "auto", priority: str = "standard", members: str = "all"):
+async def boardroom_convene(directive: str, importance: str = "standard", model_mode: str = "auto", priority: str = "standard", members: str = "all", consensus: float = 0.666):
     try:
         from daio.governance.boardroom import Boardroom
         br = await Boardroom.get_instance()
-        session = await br.convene(directive=directive, importance=importance, model_mode=model_mode, priority=priority, members=members)
+        session = await br.convene(directive=directive, importance=importance, model_mode=model_mode, priority=priority, members=members, consensus=consensus)
         return {
             "session_id": session.session_id,
             "outcome": session.outcome,
             "weighted_score": round(session.weighted_score, 3),
+            "consensus_threshold": consensus,
             "votes": [{"soldier": v.soldier_id, "vote": v.vote, "provider": v.provider,
                         "reasoning": v.reasoning[:300], "confidence": v.confidence,
                         "latency_ms": v.latency_ms, "weight": v.weight} for v in session.votes],
@@ -3422,6 +3423,18 @@ async def boardroom_convene(directive: str, importance: str = "standard", model_
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/boardroom/convene/stream", tags=["governance"], summary="Stream boardroom votes as SSE — each vote arrives as it completes")
+async def boardroom_convene_stream(directive: str, importance: str = "standard", model_mode: str = "auto", priority: str = "standard", members: str = "all", consensus: float = 0.666):
+    from starlette.responses import StreamingResponse
+    from daio.governance.boardroom import Boardroom
+
+    async def event_stream():
+        br = await Boardroom.get_instance()
+        async for msg in br.convene_stream(directive=directive, importance=importance, model_mode=model_mode, priority=priority, members=members, consensus=consensus):
+            yield f"event: {msg['event']}\ndata: {json.dumps(msg['data'])}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 @app.get("/boardroom/sessions", tags=["governance"], summary="Recent boardroom sessions")
 async def boardroom_sessions(limit: int = 10):

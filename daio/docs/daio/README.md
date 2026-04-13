@@ -77,6 +77,9 @@ All contracts are located in `/home/hacker/mindX/daio/contracts/daio/`
 - **Ecosystem and references:** [ECOSYSTEM.md](ECOSYSTEM.md) — ipNFTfs, w3DAIO, DAONOW, dairef, MakerDAO/dss.
 - Constitution: `docs/daio/constitution/DAIO_Constitution.md`
 - Governance: `docs/daio/governance/`
+  - **[CONSENSUS_MATHEMATICS.md](governance/CONSENSUS_MATHEMATICS.md)** — Prime number consensus: 1/3 diffusion (three dictators) → 2/3 majority → 3/3 unilateral. MarriageDAO, SupremeCourtDAO (5/9), UNDAO (Security Council as Boardroom, General Assembly as Dojo), PhysicsDAO, openBDK genesis, 13-validator decentralization, mirror attack.
+  - **[PRIME_CONSENSUS.md](governance/PRIME_CONSENSUS.md)** — 5050 consensus combinators: every ratio a/b for body sizes 1–100. The complete reference of governance positions from fragment through unanimous.
+  - **[ROBERTS_RULES.md](governance/ROBERTS_RULES.md)** — Robert's Rules of Order encoded for DAIO. Motion state machine, precedence stack, 4 motion classes, 22 motion types, quorum. Contract: `RobertsRulesDAIO.sol`. Boardroom = full protocol (Security Council). Dojo = yes or no (General Assembly). Prior art: Rob's Rules DAO (Vocdoni/Aragon).
 - Identity: `docs/daio/identity/`
 - Treasury: `docs/daio/treasury/`
 - Settings: `docs/daio/settings/`

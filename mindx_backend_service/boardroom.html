@@ -431,7 +431,7 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
 
   <div class="hdr">
     <h1>The Boardroom</h1>
-    <div class="sub">CEO + Seven Soldiers &middot; Weighted Consensus &middot; 0.666 Supermajority</div>
+    <div class="sub">CEO + Seven Soldiers &middot; Weighted Consensus &middot; 1/3 Dictator &rarr; 2/3 Majority &rarr; 3/3 Unilateral</div>
     <div class="status"><span class="live">&#9679;</span> mindx.pythai.net</div>
   </div>
 
@@ -497,23 +497,30 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
           <div class="sep"></div>
           <span class="label">Model:</span>
           <select id="model-mode-select" title="Inference routing for next convene">
-            <option value="local" selected>Local</option>
+            <option value="local">Local</option>
             <option value="auto">Auto</option>
-            <option value="cloud">Cloud</option>
+            <option value="cloud" selected>Cloud</option>
           </select>
           <div class="sep"></div>
           <span class="label">Attend:</span>
           <select id="members-select" title="Which soldiers attend this session">
-            <option value="all">All 7</option>
+            <option value="all" selected>All 7</option>
             <option value="ciso,cro,cto">CISO+CRO+CTO</option>
             <option value="ciso,cro">CISO+CRO</option>
-            <option value="ciso" selected>CISO</option>
+            <option value="ciso">CISO</option>
             <option value="cfo">CFO</option>
             <option value="cto">CTO</option>
             <option value="cro">CRO</option>
             <option value="coo">COO</option>
             <option value="clo">CLO</option>
             <option value="cpo">CPO</option>
+          </select>
+          <div class="sep"></div>
+          <span class="label">Consensus:</span>
+          <select id="consensus-select" title="Consensus threshold — prime number governance: 1/3 dictator, 2/3 majority, 3/3 unilateral">
+            <option value="0.333">1/3 Dictator</option>
+            <option value="0.666" selected>2/3 Majority</option>
+            <option value="1.000">3/3 Unilateral</option>
           </select>
           <div class="sep"></div>
           <button onclick="copyDeliberation()" id="copy-btn" title="Copy to clipboard">COPY</button>
@@ -654,6 +661,7 @@ SOLDIERS.forEach(s => soldierStats[s.id] = {sessions:0, approvals:0, rejections:
 
 // Track which soldiers are seated at the table
 const seatedSoldiers = new Set();
+let _syncingFromDropdown = false;
 
 function createChipHTML(s) {
   const wCls = s.weight===1.2?'w12':s.weight===0.8?'w08':'w10';
@@ -777,8 +785,8 @@ function seatSoldier(id) {
   mini.title = 'Click to remove from table';
   mini.onclick = () => unseatSoldier(id);
   dz.appendChild(mini);
-  // Update members select to match seated
-  syncMembersFromSeated();
+  // Update members select to match seated (skip if dropdown triggered this)
+  if (!_syncingFromDropdown) syncMembersFromSeated();
 }
 
 function unseatSoldier(id) {
@@ -792,7 +800,7 @@ function unseatSoldier(id) {
   if (dz.children.length === 0) {
     dz.innerHTML = '<div class="dz-label">DRAG SOLDIERS HERE TO SEAT THEM</div>';
   }
-  syncMembersFromSeated();
+  if (!_syncingFromDropdown) syncMembersFromSeated();
 }
 
 function syncMembersFromSeated() {
@@ -832,6 +840,32 @@ function syncMembersFromSeated() {
 function initSeats() {
   // Legacy compat — no-op, replaced by initStrip
 }
+
+// Sync seats FROM dropdown — when user picks "All 7" (or any preset), auto-seat those soldiers
+function syncSeatsFromDropdown() {
+  _syncingFromDropdown = true;
+  const sel = document.getElementById('members-select');
+  const val = sel.value;
+  // Unseat everyone first
+  [...seatedSoldiers].forEach(id => unseatSoldier(id));
+  // Determine which soldiers to seat
+  let toSeat = [];
+  if (val === 'all') {
+    toSeat = SOLDIERS.map(s => s.id);
+  } else {
+    const prefixes = val.split(',').map(p => p.trim().toLowerCase());
+    SOLDIERS.forEach(s => {
+      for (const pfx of prefixes) {
+        if (s.id.startsWith(pfx) || s.id === pfx) { toSeat.push(s.id); break; }
+      }
+    });
+  }
+  toSeat.forEach(id => seatSoldier(id));
+  _syncingFromDropdown = false;
+}
+
+// Wire dropdown change to auto-seat
+document.getElementById('members-select').addEventListener('change', syncSeatsFromDropdown);
 
 function showAgentCard(id) {
   // Find agent data — CEO or soldier
@@ -948,24 +982,45 @@ async function convene() {
   document.getElementById('ceo-mandate').textContent = directive;
 
   addMessage('CEO', `Directive presented: "${directive}"`, 'system');
-  addMessage('SYSTEM', 'Seven Soldiers convened. Deliberation in progress...', 'system');
+  addMessage('BOARDROOM', 'Seven Soldiers convened. Deliberation in progress...', 'system');
 
   const importance = document.getElementById('importance-select').value;
   const modelMode = document.getElementById('model-mode-select').value;
   const members = document.getElementById('members-select').value;
+  const consensus = document.getElementById('consensus-select').value;
 
   try {
-    const resp = await fetch(`/boardroom/convene?directive=${encodeURIComponent(directive)}&importance=${importance}&model_mode=${modelMode}&priority=${currentPriority}&members=${encodeURIComponent(members)}`, {method:'POST'});
-    const data = await resp.json();
+    // Stream votes via SSE — each soldier's response appears as it arrives
+    const url = `/boardroom/convene/stream?directive=${encodeURIComponent(directive)}&importance=${importance}&model_mode=${modelMode}&priority=${currentPriority}&members=${encodeURIComponent(members)}&consensus=${consensus}`;
+    const resp = await fetch(url, {method: 'POST'});
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
 
-    // Show each soldier's vote and track stats
-    if (data.votes) {
-      data.votes.forEach((v, i) => {
-        setTimeout(() => {
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, {stream: true});
+
+      // Parse SSE events from buffer
+      let boundary;
+      while ((boundary = buffer.indexOf('\n\n')) !== -1) {
+        const raw = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+        let eventType = 'message', eventData = '';
+        for (const line of raw.split('\n')) {
+          if (line.startsWith('event: ')) eventType = line.slice(7);
+          else if (line.startsWith('data: ')) eventData = line.slice(6);
+        }
+        if (!eventData) continue;
+        const payload = JSON.parse(eventData);
+
+        if (eventType === 'vote') {
+          const v = payload;
           const soldier = SOLDIERS.find(s => s.id === v.soldier);
           const short = soldier ? soldier.short : v.soldier;
 
-          // Track stats for agent card
+          // Track stats
           if (soldierStats[v.soldier]) {
             const st = soldierStats[v.soldier];
             st.sessions++;
@@ -988,56 +1043,56 @@ async function convene() {
           const modelEl = document.getElementById('model-'+v.soldier);
           if (modelEl) modelEl.textContent = v.provider || '';
 
-          // Add message
-          const reasoning = v.reasoning || v.vote;
-          addMessage(short, reasoning, v.vote);
-        }, i * 400);
-      });
+          // Add message — appears immediately as soldier responds
+          addMessage(short, v.reasoning || v.vote, v.vote);
+
+        } else if (eventType === 'outcome') {
+          const data = payload;
+          const outcome = document.getElementById('outcome');
+          outcome.className = 'outcome ' + data.outcome;
+          outcome.textContent = `${data.outcome.toUpperCase()} (${(data.weighted_score*100).toFixed(1)}%)`;
+
+          document.getElementById('score-bar').style.display = 'block';
+          document.getElementById('score-fill').style.width = (data.weighted_score*100)+'%';
+          document.getElementById('score-fill').style.background =
+            data.outcome==='approved'?'var(--approve)':data.outcome==='rejected'?'var(--reject)':'var(--advisory)';
+
+          addMessage('CEO', `Verdict: ${data.outcome.toUpperCase()} — score ${(data.weighted_score*100).toFixed(1)}%`, 'system');
+
+          if (data.dissent_branches && data.dissent_branches.length) {
+            data.dissent_branches.forEach(b => {
+              addMessage('DISSENT', `${b.soldier}: ${b.reasoning || 'Exploration branch opened'}`, 'reject');
+            });
+          }
+
+          // Model report
+          updateCloudRate(data.model_report);
+          if (data.model_report) {
+            const mr = data.model_report;
+            const summary = mr.inference_summary || {};
+            let reportLines = [`Model mode: ${mr.model_mode} | Cloud model: ${mr.cloud_model||'?'} | Local: ${summary.local||0} | Cloud: ${summary.cloud||0} | Abstained: ${summary.abstained||0}`];
+            for (const [mid, info] of Object.entries(mr.members || {})) {
+              if (mid === 'ceo_agent_main') continue;
+              const short = (SOLDIERS.find(s=>s.id===mid)||{}).short || mid;
+              reportLines.push(`${short}: ${info.used} [${info.path}] ${info.latency_ms||0}ms`);
+            }
+            addMessage('REPORT', reportLines.join('\n'), 'system');
+          }
+
+          btn.disabled = false;
+          btn.textContent = 'CONVENE';
+          setTimeout(loadHistory, 1000);
+        }
+      }
     }
 
-    // Show outcome after all votes
-    setTimeout(() => {
-      const outcome = document.getElementById('outcome');
-      outcome.className = 'outcome ' + data.outcome;
-      outcome.textContent = `${data.outcome.toUpperCase()} (${(data.weighted_score*100).toFixed(1)}%)`;
-
-      document.getElementById('score-bar').style.display = 'block';
-      document.getElementById('score-fill').style.width = (data.weighted_score*100)+'%';
-      document.getElementById('score-fill').style.background =
-        data.outcome==='approved'?'var(--approve)':data.outcome==='rejected'?'var(--reject)':'var(--advisory)';
-
-      addMessage('CEO', `Verdict: ${data.outcome.toUpperCase()} — score ${(data.weighted_score*100).toFixed(1)}%`, 'system');
-
-      if (data.dissent_branches && data.dissent_branches.length) {
-        data.dissent_branches.forEach(b => {
-          addMessage('DISSENT', `${b.soldier}: ${b.reasoning || 'Exploration branch opened'}`, 'reject');
-        });
-      }
-
-      // Model report — which model each member used + cloud panel update
-      updateCloudRate(data.model_report);
-      if (data.model_report) {
-        const mr = data.model_report;
-        const summary = mr.inference_summary || {};
-        let reportLines = [`Model mode: ${mr.model_mode} | Local: ${summary.local||0} | Cloud: ${summary.cloud||0} | Abstained: ${summary.abstained||0}`];
-        for (const [mid, info] of Object.entries(mr.members || {})) {
-          if (mid === 'ceo_agent_main') continue;
-          const short = (SOLDIERS.find(s=>s.id===mid)||{}).short || mid;
-          reportLines.push(`${short}: ${info.used} [${info.path}] ${info.latency_ms||0}ms`);
-        }
-        addMessage('REPORT', reportLines.join('\n'), 'system');
-      }
-
-      btn.disabled = false;
-      btn.textContent = 'CONVENE';
-    }, (data.votes?data.votes.length:0) * 400 + 500);
-
-    // Refresh history
-    setTimeout(loadHistory, 2000);
+    // Safety: re-enable button if stream ended without outcome event
+    btn.disabled = false;
+    btn.textContent = 'CONVENE';
 
   } catch(e) {
     const msg = e.message || String(e);
-    if (msg.includes('Unexpected token')) {
+    if (msg.includes('Unexpected token') || msg.includes('network')) {
       addMessage('ERROR', 'Proxy timeout — soldiers are still deliberating on VPS CPU. Set priority to EXECUTIVE to preempt the autonomous loop, or retry with a shorter directive. Apache ProxyTimeout may need increase.', 'reject');
     } else {
       addMessage('ERROR', msg, 'reject');
@@ -1340,6 +1395,8 @@ function updateCloudRate(modelReport) {
 // Init
 initStrip();
 initDropZone();
+// Default: all 7 soldiers seated at the table
+syncSeatsFromDropdown();
 loadHistory();
 
 // ── DeltaVerse: boardroom perception ──
