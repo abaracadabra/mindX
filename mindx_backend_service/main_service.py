@@ -34,6 +34,8 @@ from utils.config import Config, PROJECT_ROOT
 from api.command_handler import CommandHandler
 from utils.logging_config import setup_logging, get_logger, LOG_DIR, LOG_FILENAME
 from mindx_backend_service.vault_manager import get_vault_manager
+# require_admin_access: session-token gated by security.admin_addresses
+from mindx_backend_service.security_middleware import require_admin_access
 from agents.monitoring.rate_limit_dashboard import RateLimitDashboard
 
 # Setup logging
@@ -1023,6 +1025,7 @@ async def improvement_journal_page():
     return _DashResponse(content=_doc_page("Improvement Journal", body + back, "", description="mindX Improvement Journal — timestamped log of autonomous decisions, self-improvement campaigns, belief changes, and system snapshots.", canonical_path="/journal"))
 
 _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
+_FEEDBACK_HTML_PATH = Path(__file__).parent / "feedback.html"
 _BOARDROOM_HTML_PATH = Path(__file__).parent / "boardroom.html"
 _DOJO_HTML_PATH = Path(__file__).parent / "dojo.html"
 _ALLCHAINZ_HTML_PATH = Path(__file__).parent / "allchainz.html"
@@ -1137,6 +1140,15 @@ async def public_dashboard():
         return _DashResponse(content=_DASH_HTML_PATH.read_text(encoding="utf-8"))
     return _DashResponse(content="<h1>mindX</h1><p>Dashboard loading...</p>")
 
+
+@app.get("/feedback", response_class=_DashResponse, include_in_schema=False)
+@app.get("/feedback.html", response_class=_DashResponse, include_in_schema=False)
+async def feedback_page():
+    """The Mind of mindX — agent dialogue, improvement choices, dream cycles."""
+    if _FEEDBACK_HTML_PATH.exists():
+        return _DashResponse(content=_FEEDBACK_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX feedback</h1><p>Page not deployed.</p>")
+
 # Add CORS middleware — production origins + development fallback
 _cors_origins = [
     "https://mindx.pythai.net",
@@ -1176,6 +1188,7 @@ _PUBLIC_PREFIXES = (
     "/dojo/agent/", "/bankon", "/agenticplace/", "/chat/docs",
     "/actions/export", "/diagnostics/export", "/api/rage/embed",
     "/users/challenge", "/users/register", "/error-pages/", "/static/",
+    "/insight/",
 )
 
 @app.middleware("http")
@@ -1458,6 +1471,370 @@ async def activity_stats():
     from mindx_backend_service.activity_feed import ActivityFeed
     feed = ActivityFeed.get_instance()
     return feed.stats
+
+
+# ── Insight: per-agent fitness + improvement summary + selection ──
+# Plan: /home/hacker/.claude/plans/glimmering-growing-scroll.md §"mindX Diagnostics"
+# Every endpoint is safe on pre-aggregation state: cached fields default to
+# empty, and frontend degrades gracefully on empty payloads.
+
+_INSIGHT_FILTERED_ROOMS = frozenset({"thinking", "improvement", "godel", "boardroom"})
+
+
+def _insight_safe(fn):
+    """Wrap insight endpoints so any exception becomes a soft 200 + fallback flag.
+    Keeps the landing page from breaking when aggregation is warming up."""
+    from functools import wraps
+
+    @wraps(fn)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await fn(*args, **kwargs)
+        except Exception as e:
+            logger.debug(f"[/insight] {fn.__name__} failed: {e}", exc_info=True)
+            return {"error": str(e), "fallback": True}
+
+    return wrapper
+
+
+@app.get("/insight/fitness", tags=["insight"])
+@_insight_safe
+async def insight_fitness():
+    """Per-agent fitness snapshot — leaderboard + axes for every registered agent."""
+    from mindx_backend_service.insight_aggregator import InsightAggregator
+    agg = InsightAggregator.get_instance()
+    return {"agents": agg.snapshot(), "weights": __import__("mindx_backend_service.insight_aggregator", fromlist=["FITNESS_WEIGHTS"]).FITNESS_WEIGHTS}
+
+
+@app.get("/insight/fitness/{agent_id}/trajectory", tags=["insight"])
+@_insight_safe
+async def insight_fitness_trajectory(agent_id: str, window: str = "7d"):
+    """Fitness over time (daily snapshots). window e.g. '7d' or '30d'."""
+    from mindx_backend_service.insight_aggregator import InsightAggregator
+    agg = InsightAggregator.get_instance()
+    days = 7
+    if window.endswith("d"):
+        try:
+            days = max(1, int(window[:-1]))
+        except Exception:
+            days = 7
+    return {"agent_id": agent_id, "window_days": days, "points": agg.trajectory(agent_id, days)}
+
+
+@app.get("/insight/improvement/summary", tags=["insight"])
+@_insight_safe
+async def insight_improvement_summary(window: str = "24h"):
+    """Campaigns + belief churn + model trend + directive coverage.
+
+    `window` is a hint only — the aggregator computes 1h/24h/7d buckets and
+    returns all three; this param exists for future windowed variants.
+    """
+    from mindx_backend_service.insight_aggregator import InsightAggregator
+    agg = InsightAggregator.get_instance()
+    return agg.improvement_summary()
+
+
+@app.get("/insight/improvement/timeline", tags=["insight"])
+@_insight_safe
+async def insight_improvement_timeline(limit: int = 50):
+    """Campaign timeline — most recent N campaigns as a ledger."""
+    from mindx_backend_service.insight_aggregator import CAMPAIGNS_FILE
+    if not CAMPAIGNS_FILE.exists():
+        return {"campaigns": [], "count": 0}
+    try:
+        data = json.loads(CAMPAIGNS_FILE.read_text()) or []
+    except Exception:
+        data = []
+    # Newest-first, limit-capped. No timestamps in file → index IS the order.
+    data = list(reversed(data))[:limit]
+    return {"campaigns": data, "count": len(data)}
+
+
+@app.get("/insight/dialogue/recent", tags=["insight"])
+@_insight_safe
+async def insight_dialogue_recent(room: str = "thinking", limit: int = 50):
+    """Thin wrapper over ActivityFeed.recent — no new storage, just re-exposes
+    the existing ring buffer filtered to one room."""
+    from mindx_backend_service.activity_feed import ActivityFeed, _seed_from_logs
+    feed = ActivityFeed.get_instance()
+    if len(feed.events) == 0:
+        _seed_from_logs(feed)
+    if room not in _INSIGHT_FILTERED_ROOMS and room != "all":
+        room = "thinking"
+    return {"events": feed.recent(limit=limit, room=None if room == "all" else room)}
+
+
+@app.get("/insight/selection/events", tags=["insight"])
+@_insight_safe
+async def insight_selection_events(limit: int = 100):
+    """Darwinian selection ledger — candidate_retire / candidate_spawn / (future) retire / spawn / mutation.
+    In shadow mode only candidate_* events appear."""
+    from agents.evolution.selection_engine import SelectionEngine
+    engine = SelectionEngine.get_instance()
+    return {"mode": engine.mode, "events": engine.recent_events(limit=limit)}
+
+
+@app.get("/insight/thinking/live", tags=["insight"], include_in_schema=False)
+async def insight_thinking_live(request: Request):
+    """Filtered SSE stream — only thinking/improvement/godel/boardroom rooms.
+    Reuses the existing ActivityFeed; adds a thin room filter in front of sse_generator."""
+    from mindx_backend_service.activity_feed import ActivityFeed, _seed_from_logs
+    from starlette.responses import StreamingResponse
+
+    feed = ActivityFeed.get_instance()
+    if len(feed.events) == 0:
+        _seed_from_logs(feed)
+
+    async def filtered_generator():
+        async for chunk in feed.sse_generator():
+            # SSE chunks are strings; keep heartbeats, drop activity events
+            # whose room isn't in our filter. Parse cheaply by json-decoding
+            # only the data line for activity events.
+            if chunk.startswith("event: heartbeat"):
+                yield chunk
+                continue
+            if chunk.startswith("event: activity"):
+                # extract the JSON payload after "data: " and before "\n\n"
+                try:
+                    data_line = chunk.split("\n", 2)[1]
+                    payload = json.loads(data_line[len("data: "):])
+                    if payload.get("room") in _INSIGHT_FILTERED_ROOMS:
+                        yield chunk
+                except Exception:
+                    yield chunk
+            else:
+                yield chunk
+
+    return StreamingResponse(
+        filtered_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+# ── Mind-of-mindX endpoints (consumed by /feedback.html) ──
+# Plan: /home/hacker/.claude/plans/purring-humming-stonebraker.md
+# Read-only views over existing append-only logs. No new storage; honest
+# fallbacks when source files are missing.
+
+@app.get("/insight/dreams/recent", tags=["insight"])
+@_insight_safe
+async def insight_dreams_recent(limit: int = 50):
+    """Last N dream cycle reports from data/memory/dreams/.
+
+    Each entry is the report dict written by MachineDreamCycle.run_full_dream().
+    Filename-sorted (newest first). Also returns `last_dream_age_seconds` so
+    callers can detect a stuck loop without parsing timestamps.
+    """
+    from utils.config import PROJECT_ROOT
+    import os, time as _time
+    dreams_dir = PROJECT_ROOT / "data" / "memory" / "dreams"
+    if not dreams_dir.exists():
+        return {"dreams": [], "count": 0, "last_dream_age_seconds": None}
+    files: list[tuple[str, float]] = []
+    try:
+        for entry in os.scandir(dreams_dir):
+            if entry.is_file() and entry.name.endswith("_dream_report.json"):
+                files.append((entry.name, entry.stat().st_mtime))
+    except OSError as e:
+        return {"dreams": [], "count": 0, "error": str(e), "last_dream_age_seconds": None}
+    files.sort(key=lambda t: t[1], reverse=True)
+    last_age = _time.time() - files[0][1] if files else None
+    out: list[dict] = []
+    for name, mtime in files[: max(1, min(limit, 200))]:
+        try:
+            with open(dreams_dir / name, "r") as f:
+                data = json.load(f)
+            data["_filename"] = name
+            data["_mtime"] = mtime
+            out.append(data)
+        except Exception:
+            continue
+    return {"dreams": out, "count": len(out), "last_dream_age_seconds": last_age}
+
+
+@app.get("/insight/godel/recent", tags=["insight"])
+@_insight_safe
+async def insight_godel_recent(limit: int = 50):
+    """Last N godel choices from data/logs/godel_choices.jsonl, newest first.
+
+    Each entry: source_agent, choice_type, perception_summary, options_considered,
+    chosen_option, rationale, outcome, timestamp_utc.
+    """
+    from mindx_backend_service.insight_aggregator import GODEL_CHOICES
+    if not GODEL_CHOICES.exists():
+        return {"events": [], "count": 0}
+    try:
+        # Tail the last N lines without loading the whole file.
+        with open(GODEL_CHOICES, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            block = 64 * 1024
+            data = b""
+            pos = size
+            while pos > 0 and data.count(b"\n") <= max(1, limit) + 1:
+                read = min(block, pos)
+                pos -= read
+                f.seek(pos)
+                data = f.read(read) + data
+        lines = [ln for ln in data.split(b"\n") if ln.strip()]
+        lines = lines[-max(1, min(limit, 500)):]
+        events = []
+        for ln in lines:
+            try:
+                events.append(json.loads(ln.decode("utf-8")))
+            except Exception:
+                continue
+        events.reverse()
+        return {"events": events, "count": len(events)}
+    except Exception as e:
+        return {"events": [], "count": 0, "error": str(e)}
+
+
+@app.get("/insight/boardroom/recent", tags=["insight"])
+@_insight_safe
+async def insight_boardroom_recent(limit: int = 20):
+    """Last N boardroom sessions with full vote detail."""
+    from mindx_backend_service.insight_aggregator import BOARDROOM_SESSIONS
+    if not BOARDROOM_SESSIONS.exists():
+        return {"sessions": [], "count": 0}
+    try:
+        lines = BOARDROOM_SESSIONS.read_text().strip().split("\n")
+        lines = lines[-max(1, min(limit, 200)):]
+        sessions = []
+        for ln in lines:
+            try:
+                sessions.append(json.loads(ln))
+            except Exception:
+                continue
+        sessions.reverse()
+        return {"sessions": sessions, "count": len(sessions)}
+    except Exception as e:
+        return {"sessions": [], "count": 0, "error": str(e)}
+
+
+@app.get("/insight/interactions/recent", tags=["insight"])
+@_insight_safe
+async def insight_interactions_recent(window: int = 3600):
+    """Cross-agent call edges aggregated from data/memory/agent_workspaces/*/process_trace.jsonl.
+
+    Each entry in process_trace is per-agent. Cross-agent edges are inferred
+    from `process_data.target_agent` or `process_data.requesting_agent` if
+    those fields are populated. If no cross-agent fields exist, returns the
+    set of *active* agents (those with traces inside the window) and a
+    `note` flagging that explicit cross-agent linkage is not yet instrumented.
+    """
+    from utils.config import PROJECT_ROOT
+    import time as _time
+    workspaces = PROJECT_ROOT / "data" / "memory" / "agent_workspaces"
+    if not workspaces.exists():
+        return {"nodes": [], "edges": [], "active_agents": [], "window_seconds": window,
+                "note": "agent_workspaces dir not found"}
+    cutoff = _time.time() - max(60, min(window, 86400))
+    nodes: dict[str, dict] = {}
+    edges: dict[tuple[str, str], int] = {}
+    explicit_links = 0
+    try:
+        for agent_dir in workspaces.iterdir():
+            if not agent_dir.is_dir():
+                continue
+            agent_id = agent_dir.name
+            trace = agent_dir / "process_trace.jsonl"
+            if not trace.exists():
+                continue
+            try:
+                with open(trace, "rb") as f:
+                    f.seek(0, 2)
+                    size = f.tell()
+                    head = max(0, size - 256 * 1024)
+                    f.seek(head)
+                    tail = f.read().decode("utf-8", errors="replace").splitlines()
+            except Exception:
+                continue
+            for ln in tail:
+                if not ln.strip():
+                    continue
+                try:
+                    evt = json.loads(ln)
+                except Exception:
+                    continue
+                ts = evt.get("timestamp")
+                if isinstance(ts, str):
+                    try:
+                        from datetime import datetime as _dt
+                        ts = _dt.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
+                    except Exception:
+                        ts = None
+                if ts is None or ts < cutoff:
+                    continue
+                nodes.setdefault(agent_id, {"id": agent_id, "events": 0})["events"] += 1
+                pdata = evt.get("process_data") or {}
+                target = pdata.get("target_agent") or pdata.get("requesting_agent")
+                if target and target != agent_id:
+                    explicit_links += 1
+                    key = (agent_id, str(target))
+                    edges[key] = edges.get(key, 0) + 1
+                    nodes.setdefault(str(target), {"id": str(target), "events": 0})
+    except Exception as e:
+        return {"nodes": [], "edges": [], "active_agents": [], "window_seconds": window,
+                "error": str(e)}
+    edge_list = [{"source": s, "target": t, "weight": w} for (s, t), w in edges.items()]
+    out = {
+        "nodes": list(nodes.values()),
+        "edges": edge_list,
+        "active_agents": sorted(nodes.keys()),
+        "window_seconds": window,
+        "explicit_links": explicit_links,
+    }
+    if explicit_links == 0:
+        out["note"] = ("No target_agent/requesting_agent fields found in process traces. "
+                       "Cross-agent linkage is not yet instrumented; only active-agent set is reliable.")
+    return out
+
+
+@app.get("/insight/stuck_loops", tags=["insight"])
+@_insight_safe
+async def insight_stuck_loops(window: int = 900, min_repeats: int = 5):
+    """Detect repeating (agent, step) tuples in the activity feed.
+
+    Returns groups appearing >= min_repeats times within the last `window`
+    seconds. Surfaces situations like the meta-agent's no-op improvement
+    loop visible at /activity/recent.
+    """
+    from mindx_backend_service.activity_feed import ActivityFeed
+    import time as _time
+    feed = ActivityFeed.get_instance()
+    cutoff = _time.time() - max(60, min(window, 7200))
+    counts: dict[tuple[str, str], dict] = {}
+    for evt in feed.events:
+        if evt.timestamp < cutoff:
+            continue
+        # Use the first ":" segment of content as the step key (matches
+        # mindx_meta_agent's pattern "executing_improvement: ...").
+        content = evt.content or ""
+        step = content.split(":", 1)[0].strip() if content else evt.type
+        key = (evt.agent, step[:80])
+        bucket = counts.setdefault(key, {
+            "agent": evt.agent, "step": step[:80], "count": 0,
+            "first_ts": evt.timestamp, "last_ts": evt.timestamp,
+            "sample_content": content[:160],
+        })
+        bucket["count"] += 1
+        bucket["last_ts"] = max(bucket["last_ts"], evt.timestamp)
+        bucket["first_ts"] = min(bucket["first_ts"], evt.timestamp)
+    groups = [g for g in counts.values() if g["count"] >= max(2, min_repeats)]
+    groups.sort(key=lambda g: g["count"], reverse=True)
+    return {
+        "window_seconds": window,
+        "min_repeats": min_repeats,
+        "groups": groups,
+        "buffer_size": len(feed.events),
+        "computed_at": _time.time(),
+    }
 
 
 # ── Thesis Evidence: scientific proof endpoints ──
@@ -2014,25 +2391,57 @@ async def startup_event():
         # LTM feeds back into STM perception — knowledge becomes wisdom.
         # Two switches per day. One Book edition per lunar cycle (new moon).
         async def _periodic_dream_cycle():
-            """12/12 dream cycle: STM→LTM consolidation every 12 hours."""
+            """STM→LTM consolidation. Resilient: failures back off, never kill the loop."""
             from agents.machine_dreaming import MachineDreamCycle, CONSOLIDATION_INTERVAL_HOURS
-            await asyncio.sleep(600)  # Wait 10 min for system to warm up
-            dreamer = MachineDreamCycle(memory_agent=memory_agent, days_back=180)
+            from mindx_backend_service.activity_feed import ActivityFeed
+            feed = ActivityFeed.get_instance()
+            await asyncio.sleep(60)  # Short warmup so a restart produces a dream within a minute
+            dreamer = None
+            try:
+                dreamer = MachineDreamCycle(memory_agent=memory_agent, days_back=180)
+                feed.emit("memory", "machine_dreaming", "loop_started",
+                          f"Dream loop online (interval={CONSOLIDATION_INTERVAL_HOURS}h)",
+                          detail={"interval_hours": CONSOLIDATION_INTERVAL_HOURS}, agent_tier=2)
+            except Exception as init_e:
+                logger.exception("Dream cycle: failed to init MachineDreamCycle")
+                feed.emit("memory", "machine_dreaming", "loop_init_failed",
+                          f"init error: {init_e}", detail={"error": str(init_e)}, agent_tier=2)
             while True:
+                if dreamer is None:
+                    # Re-attempt init on next cycle rather than dying.
+                    await asyncio.sleep(300)
+                    try:
+                        dreamer = MachineDreamCycle(memory_agent=memory_agent, days_back=180)
+                        feed.emit("memory", "machine_dreaming", "loop_recovered",
+                                  "Dreamer re-initialized", agent_tier=2)
+                    except Exception as re_e:
+                        logger.warning(f"Dream cycle: re-init failed: {re_e}")
+                        continue
                 try:
+                    feed.emit("memory", "machine_dreaming", "cycle_started",
+                              "Dream cycle starting", agent_tier=2)
                     result = await dreamer.run_full_dream()
                     lunar = result.get("lunar", {})
-                    logger.info(
-                        f"Dream cycle: {result.get('agents_dreamed', 0)} agents, "
+                    summary = (
+                        f"{result.get('agents_dreamed', 0)} agents, "
                         f"{result.get('insights_generated', 0)} insights, "
-                        f"{result.get('memories_promoted_to_ltm', 0)} promoted, "
+                        f"{result.get('memories_promoted_to_ltm', 0)} promoted"
+                    )
+                    logger.info(
+                        f"Dream cycle: {summary}, "
                         f"moon={lunar.get('phase_name', '?')} ({lunar.get('days_until_new_moon', '?')}d to new)"
                     )
+                    feed.emit("memory", "machine_dreaming", "cycle_complete", summary,
+                              detail=result, agent_tier=2)
                     if result.get("book_edition_triggered"):
                         logger.info("New moon — Book of mindX edition triggered")
+                    backoff = CONSOLIDATION_INTERVAL_HOURS * 3600
                 except Exception as dream_e:
-                    logger.debug(f"Dream cycle: {dream_e}")
-                await asyncio.sleep(CONSOLIDATION_INTERVAL_HOURS * 3600)  # 12 hours
+                    logger.exception("Dream cycle: cycle failed, will retry with backoff")
+                    feed.emit("memory", "machine_dreaming", "cycle_failed",
+                              f"error: {dream_e}", detail={"error": str(dream_e)}, agent_tier=2)
+                    backoff = 300  # 5 min retry on failure
+                await asyncio.sleep(backoff)
 
         # Improvement Journal — mindX documents its own evolution
         async def _periodic_journal():
@@ -2158,7 +2567,20 @@ async def startup_event():
         asyncio.create_task(_periodic_embedding())
         asyncio.create_task(_periodic_health_audit())
         asyncio.create_task(_start_mastermind_loop())
-        logger.info("Autonomous mode + STM→LTM + Journal + AuthorAgent + Embedding + HealthAuditor + Mastermind strategic loop scheduled")
+
+        # Insight aggregator: per-agent fitness + system improvement metrics.
+        # Plan: /home/hacker/.claude/plans/glimmering-growing-scroll.md §"mindX Diagnostics"
+        try:
+            from mindx_backend_service.insight_aggregator import InsightAggregator
+            from agents.evolution.selection_engine import SelectionEngine
+            await InsightAggregator.get_instance().start()
+            await SelectionEngine.get_instance().start()
+            logger.info("InsightAggregator + SelectionEngine (mode=%s) started",
+                        SelectionEngine.get_instance().mode)
+        except Exception as insight_e:
+            logger.warning(f"Failed to start insight pipeline: {insight_e}", exc_info=True)
+
+        logger.info("Autonomous mode + STM→LTM + Journal + AuthorAgent + Embedding + HealthAuditor + Mastermind strategic loop + Insight aggregator scheduled")
 
         # Log backend startup transcript to data/ via memory_agent (logs are memories; startup_agent can get a copy)
         try:
@@ -5055,8 +5477,11 @@ class IPAccessPayload(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
 
 @app.post("/vault/credentials/store", summary="Store access credential in vault")
-async def store_access_credential(payload: AccessCredentialPayload):
-    """Store an access credential (API key, token, etc.) in the vault."""
+async def store_access_credential(
+    payload: AccessCredentialPayload,
+    _wallet: str = Depends(require_admin_access),
+):
+    """Store an access credential (API key, token, etc.) in the vault.  ADMIN ONLY."""
     try:
         vault_manager = get_vault_manager()
         success = vault_manager.store_access_credential(
@@ -5091,8 +5516,12 @@ async def store_access_credential(payload: AccessCredentialPayload):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/vault/credentials/get/{credential_id}", summary="Get access credential from vault")
-async def get_access_credential(credential_id: str, mark_used: bool = True):
-    """Retrieve an access credential from the vault."""
+async def get_access_credential(
+    credential_id: str,
+    mark_used: bool = True,
+    _wallet: str = Depends(require_admin_access),
+):
+    """Retrieve an access credential from the vault.  ADMIN ONLY."""
     try:
         vault_manager = get_vault_manager()
         credential_value = vault_manager.get_access_credential(credential_id, mark_used=mark_used)
@@ -5115,8 +5544,8 @@ async def get_access_credential(credential_id: str, mark_used: bool = True):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/vault/credentials/list", summary="List all access credentials")
-async def list_access_credentials():
-    """List all access credentials stored in vault (metadata only, no values)."""
+async def list_access_credentials(_wallet: str = Depends(require_admin_access)):
+    """List all access credentials stored in vault (metadata only, no values).  ADMIN ONLY."""
     try:
         vault_manager = get_vault_manager()
         credentials = vault_manager.list_access_credentials()

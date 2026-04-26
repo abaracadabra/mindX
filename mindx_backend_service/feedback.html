@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mindX feedback — see into the mind</title>
+<meta name="description" content="Live agent dialogue, improvement choices, dream cycles, and stuck-loop detection for the mindX autonomous agent system.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://mindx.pythai.net/feedback.html">
+<link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=DM+Sans:wght@400;500;700&display=swap" as="style" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=DM+Sans:wght@400;500;700&display=swap"></noscript>
+<style>
+:root{
+  --bg:#040609;--surface:rgba(10,14,20,.88);--surface2:rgba(16,20,28,.7);
+  --green:#56d364;--blue:#79c0ff;--violet:#d2a8ff;--amber:#e3b341;--red:#f85149;
+  --text:#e6edf3;--text2:#b1bac4;--text3:#6e7681;--border:rgba(88,166,255,.08);
+  --font:'DM Sans',system-ui,sans-serif;--mono:'JetBrains Mono','SF Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.55;overflow-x:hidden}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.hdr{position:sticky;top:0;z-index:50;padding:0 20px;min-height:48px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(8,12,20,.96),rgba(4,6,9,.94));backdrop-filter:blur(24px);border-bottom:1px solid rgba(121,192,255,.1);box-shadow:0 2px 12px rgba(0,0,0,.4)}
+.hdr-brand{font-family:var(--mono);font-size:18px;font-weight:700;letter-spacing:2px;color:#f0f6fc}
+.hdr-brand b{color:var(--blue)}
+.hdr-mid{display:flex;gap:4px;flex-wrap:wrap;margin-left:16px}
+.hdr-mid a{color:#d0d7de;font-size:12px;padding:4px 10px;border-radius:4px;font-family:var(--mono)}
+.hdr-mid a:hover{background:rgba(121,192,255,.1);color:#f0f6fc}
+.hdr-mid a.hl{color:var(--green);font-weight:600}
+.hdr-right{display:flex;align-items:center;gap:8px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 2s ease-in-out infinite}
+.live-dot.off{background:var(--amber);box-shadow:0 0 10px var(--amber)}
+@keyframes pulse{0%,100%{opacity:.4;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
+.live-badge{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:4px;background:rgba(86,211,100,.12);color:var(--green);border:1px solid rgba(86,211,100,.25);letter-spacing:.5px;font-weight:600}
+.live-badge.off{background:rgba(227,179,65,.1);color:var(--amber);border-color:rgba(227,179,65,.2)}
+
+.wrap{max-width:1280px;margin:0 auto;padding:24px 20px 80px}
+.intro{padding:18px 20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:24px}
+.intro h1{font-family:var(--mono);font-size:22px;letter-spacing:2px;font-weight:700;margin-bottom:8px;color:#f0f6fc}
+.intro h1 em{color:var(--violet);font-style:normal}
+.intro p{color:var(--text2);font-size:13px;max-width:840px}
+.intro code{font-family:var(--mono);font-size:12px;color:var(--blue);background:rgba(121,192,255,.08);padding:1px 6px;border-radius:3px}
+
+section{margin:32px 0 36px}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:6px}
+.sec-head h2{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:2px;color:var(--blue);text-transform:uppercase}
+.sec-head .sub{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.sec-head .pill{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:3px;background:rgba(121,192,255,.08);color:var(--blue);border:1px solid rgba(121,192,255,.15);margin-left:6px}
+.sec-head .pill.warn{background:rgba(248,81,73,.1);color:var(--red);border-color:rgba(248,81,73,.25)}
+.sec-head .pill.ok{background:rgba(86,211,100,.1);color:var(--green);border-color:rgba(86,211,100,.25)}
+.sec-head .pill.amber{background:rgba(227,179,65,.1);color:var(--amber);border-color:rgba(227,179,65,.25)}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px}
+.empty{color:var(--text3);font-family:var(--mono);font-size:12px;text-align:center;padding:24px;font-style:italic}
+
+/* Live dialogue */
+#dialogue{max-height:520px;overflow-y:auto;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-family:var(--mono);font-size:12px}
+.row{display:grid;grid-template-columns:78px 160px 100px 1fr;gap:10px;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.03);align-items:start}
+.row:hover{background:rgba(121,192,255,.03)}
+.row .ts{color:var(--text3);font-size:10.5px}
+.row .ag{font-weight:600}
+.row .stp{color:var(--text2);font-size:10.5px;text-transform:uppercase;letter-spacing:.5px}
+.row .ct{color:var(--text);word-break:break-word}
+.row .ct details{display:inline}
+.row .ct summary{cursor:pointer;list-style:none}
+.row .ct summary::-webkit-details-marker{display:none}
+.row .ct pre{margin-top:6px;padding:6px;background:rgba(0,0,0,.3);border-radius:4px;font-size:10.5px;color:var(--text2);max-height:180px;overflow:auto}
+.tier{display:inline-block;padding:1px 6px;border-radius:3px;font-size:9.5px;font-weight:700;letter-spacing:.5px;margin-right:4px}
+
+/* Stuck-loop banner */
+.stuck-banner{background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.3);border-radius:8px;padding:12px 14px;margin-bottom:12px}
+.stuck-banner.ok{background:rgba(86,211,100,.06);border-color:rgba(86,211,100,.2)}
+.stuck-banner h3{font-family:var(--mono);font-size:12px;letter-spacing:1.5px;margin-bottom:6px;color:var(--red)}
+.stuck-banner.ok h3{color:var(--green)}
+.stuck-list{list-style:none;font-family:var(--mono);font-size:11.5px}
+.stuck-list li{padding:3px 0;color:var(--text2)}
+.stuck-list li b{color:var(--red);margin-right:8px}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+th{background:rgba(121,192,255,.04);color:var(--blue);font-weight:600;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;letter-spacing:.5px;text-transform:uppercase}
+td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text2);vertical-align:top}
+td b{color:var(--text)}
+tr:hover td{background:rgba(121,192,255,.02)}
+.outcome-approved{color:var(--green)}
+.outcome-rejected{color:var(--red)}
+.outcome-exploration{color:var(--amber)}
+.outcome-unknown{color:var(--text3)}
+
+/* Vote chips */
+.votes{display:flex;flex-wrap:wrap;gap:4px}
+.vote{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:3px;font-size:10px;border:1px solid var(--border)}
+.vote.approve{background:rgba(86,211,100,.08);color:var(--green);border-color:rgba(86,211,100,.2)}
+.vote.reject{background:rgba(248,81,73,.08);color:var(--red);border-color:rgba(248,81,73,.2)}
+.vote.abstain{background:rgba(227,179,65,.08);color:var(--amber);border-color:rgba(227,179,65,.2)}
+
+/* Dream cycle table */
+.dream-row td.tune{font-size:11px}
+.tune ul{list-style:none;padding-left:0}
+.tune li{padding:1px 0;color:var(--text2)}
+.tune li.high{color:var(--red)}
+.tune li.medium{color:var(--amber)}
+
+/* Interactions graph */
+#graph{width:100%;height:340px;background:var(--surface);border:1px solid var(--border);border-radius:8px}
+.graph-note{font-family:var(--mono);font-size:11px;color:var(--text3);padding:10px;text-align:center}
+
+/* Footer */
+.foot{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);text-align:center;color:var(--text3);font-family:var(--mono);font-size:11px;letter-spacing:1px}
+
+@media(max-width:768px){
+  .hdr-mid{display:none}
+  .row{grid-template-columns:60px 110px 1fr}
+  .row .stp{display:none}
+}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="hdr-brand"><b>mind</b>X feedback</div>
+  <div class="hdr-mid">
+    <a href="/">dashboard</a><span style="color:rgba(110,118,129,.25);font-size:9px">·</span>
+    <a href="/feedback.html" class="hl">feedback</a><span style="color:rgba(110,118,129,.25);font-size:9px">·</span>
+    <a href="/boardroom">boardroom</a><span style="color:rgba(110,118,129,.25);font-size:9px">·</span>
+    <a href="/dojo">dojo</a><span style="color:rgba(110,118,129,.25);font-size:9px">·</span>
+    <a href="/journal">journal</a><span style="color:rgba(110,118,129,.25);font-size:9px">·</span>
+    <a href="/book">book</a>
+  </div>
+  <div class="hdr-right">
+    <span id="liveDot" class="live-dot off"></span>
+    <span id="liveBadge" class="live-badge off">CONNECTING</span>
+  </div>
+</header>
+
+<main class="wrap">
+
+<div class="intro">
+  <h1>see into the <em>mind</em> of mindX</h1>
+  <p>
+    Live trace of agent reasoning, improvement choices, boardroom decisions, dream-cycle memory consolidation,
+    and a stuck-loop detector that flags repeating no-op cycles. All data is read directly from mindX's
+    append-only logs (<code>godel_choices.jsonl</code>, <code>boardroom_sessions.jsonl</code>,
+    <code>process_trace.jsonl</code>, <code>dreams/*.json</code>) plus the in-memory
+    <code>ActivityFeed</code>. No simulation, no spin.
+  </p>
+</div>
+
+<!-- 1. Stuck-loop detector (banner — appears before the feed if active) -->
+<section id="stuckSec">
+  <div class="sec-head">
+    <h2>stuck-loop detector
+      <span id="stuckPill" class="pill">checking…</span>
+    </h2>
+    <span class="sub">/insight/stuck_loops?window=900</span>
+  </div>
+  <div id="stuckBox"><div class="empty">scanning recent activity…</div></div>
+</section>
+
+<!-- 2. Live agent dialogue -->
+<section>
+  <div class="sec-head">
+    <h2>live agent dialogue <span id="dialoguePill" class="pill">SSE</span></h2>
+    <span class="sub">/insight/thinking/live · rooms: thinking · improvement · godel · boardroom · memory</span>
+  </div>
+  <div id="dialogue"><div class="empty">waiting for events…</div></div>
+</section>
+
+<!-- 3. Improvement ledger with reasoning -->
+<section>
+  <div class="sec-head">
+    <h2>improvement ledger — choices &amp; rationale</h2>
+    <span class="sub">/insight/improvement/timeline ⨝ /insight/godel/recent</span>
+  </div>
+  <div id="ledger" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<!-- 4. Boardroom decisions -->
+<section>
+  <div class="sec-head">
+    <h2>boardroom decisions <span id="boardPill" class="pill">last 20</span></h2>
+    <span class="sub">/insight/boardroom/recent</span>
+  </div>
+  <div id="boardroom" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<!-- 5. Dream cycles -->
+<section>
+  <div class="sec-head">
+    <h2>memory consolidation — dream cycles
+      <span id="dreamPill" class="pill">checking…</span>
+    </h2>
+    <span class="sub">/insight/dreams/recent · machine_dreaming</span>
+  </div>
+  <div id="dreams" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<!-- 6. Inter-agent call graph -->
+<section>
+  <div class="sec-head">
+    <h2>inter-agent activity (last hour)</h2>
+    <span class="sub">/insight/interactions/recent?window=3600</span>
+  </div>
+  <div id="graphBox">
+    <svg id="graph" viewBox="0 0 1200 340" preserveAspectRatio="xMidYMid meet"></svg>
+    <div id="graphNote" class="graph-note"></div>
+  </div>
+</section>
+
+<!-- 7. Inference source health (compact) -->
+<section>
+  <div class="sec-head">
+    <h2>inference health</h2>
+    <span class="sub">/diagnostics/live (sources)</span>
+  </div>
+  <div id="sources" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<div class="foot">
+  mindX · Darwin-Godel machine · live at <a href="https://mindx.pythai.net">mindx.pythai.net</a> ·
+  feedback view · plan: purring-humming-stonebraker
+</div>
+</main>
+
+<script>
+'use strict';
+
+// ── Util ──
+const $ = (id) => document.getElementById(id);
+const fmtTs = (ts) => {
+  const d = new Date(typeof ts === 'number' ? (ts > 1e12 ? ts : ts * 1000) : Date.parse(ts));
+  if (isNaN(d.getTime())) return '?';
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+};
+const ago = (sec) => {
+  if (sec == null || isNaN(sec)) return '?';
+  if (sec < 60) return Math.round(sec) + 's';
+  if (sec < 3600) return Math.round(sec / 60) + 'm';
+  if (sec < 86400) return Math.round(sec / 3600) + 'h';
+  return Math.round(sec / 86400) + 'd';
+};
+const escapeHtml = (s) => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const truncate = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n) + '…' : s; };
+
+// ── 1. Stuck-loop detector ──
+async function refreshStuck() {
+  try {
+    const r = await fetch('/insight/stuck_loops?window=900&min_repeats=5');
+    const d = await r.json();
+    const groups = d.groups || [];
+    const pill = $('stuckPill');
+    const box = $('stuckBox');
+    if (!groups.length) {
+      pill.textContent = 'NO LOOPS DETECTED';
+      pill.className = 'pill ok';
+      box.innerHTML = '<div class="stuck-banner ok"><h3>no stuck loops in last 15 min</h3>' +
+        '<div style="color:var(--text2);font-family:var(--mono);font-size:11.5px">activity feed shows healthy variation. ' +
+        '(buffer=' + (d.buffer_size || 0) + ')</div></div>';
+      return;
+    }
+    pill.textContent = groups.length + ' GROUP' + (groups.length > 1 ? 'S' : '');
+    pill.className = 'pill warn';
+    let html = '<div class="stuck-banner"><h3>repeating cycles detected (≥5 occurrences in 15 min)</h3><ul class="stuck-list">';
+    for (const g of groups.slice(0, 8)) {
+      const span = g.last_ts - g.first_ts;
+      html += '<li><b>×' + g.count + '</b><code>' + escapeHtml(g.agent) + '</code> · ' +
+        escapeHtml(g.step) + ' · over ' + Math.round(span) + 's' +
+        (g.sample_content ? '<br><span style="color:var(--text3);margin-left:24px">' + escapeHtml(truncate(g.sample_content, 140)) + '</span>' : '') +
+        '</li>';
+    }
+    html += '</ul></div>';
+    box.innerHTML = html;
+  } catch (e) {
+    $('stuckBox').innerHTML = '<div class="empty">stuck detector unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+// ── 2. Live dialogue (SSE) ──
+let _seenIds = new Set();
+const MAX_ROWS = 200;
+function renderRow(evt) {
+  const id = evt.id || (evt.timestamp + ':' + evt.agent);
+  if (_seenIds.has(id)) return;
+  _seenIds.add(id);
+  if (_seenIds.size > 500) {
+    // GC: drop the oldest half
+    const arr = Array.from(_seenIds).slice(-250);
+    _seenIds = new Set(arr);
+  }
+  const row = document.createElement('div');
+  row.className = 'row';
+  const tier = evt.tier_label || 'UN';
+  const tierColor = evt.tier_color || '#6e7681';
+  const room = evt.room || 'system';
+  const step = (evt.detail && evt.detail.step) || evt.type || '';
+  let detailHtml = '';
+  if (evt.detail) {
+    const txt = JSON.stringify(evt.detail, null, 2);
+    detailHtml = '<details><summary style="color:var(--text3);font-size:10.5px;margin-left:6px">⋯</summary>' +
+      '<pre>' + escapeHtml(truncate(txt, 4000)) + '</pre></details>';
+  }
+  row.innerHTML =
+    '<span class="ts">' + fmtTs(evt.timestamp) + '</span>' +
+    '<span class="ag"><span class="tier" style="background:' + tierColor + '20;color:' + tierColor + ';border:1px solid ' + tierColor + '40">' +
+      escapeHtml(tier) + '</span>' + escapeHtml(evt.agent || '?') + '</span>' +
+    '<span class="stp">' + escapeHtml(room) + ' · ' + escapeHtml(truncate(step, 24)) + '</span>' +
+    '<span class="ct">' + escapeHtml(truncate(evt.content || '', 240)) + detailHtml + '</span>';
+  const box = $('dialogue');
+  if (box.firstChild && box.firstChild.classList && box.firstChild.classList.contains('empty')) {
+    box.innerHTML = '';
+  }
+  box.insertBefore(row, box.firstChild);
+  while (box.childNodes.length > MAX_ROWS) box.removeChild(box.lastChild);
+}
+
+let _es = null;
+function startSSE() {
+  try {
+    _es = new EventSource('/insight/thinking/live');
+    _es.addEventListener('activity', (e) => {
+      try { renderRow(JSON.parse(e.data)); } catch (_) {}
+      $('liveDot').classList.remove('off');
+      $('liveBadge').classList.remove('off');
+      $('liveBadge').textContent = 'LIVE';
+    });
+    _es.addEventListener('heartbeat', () => {
+      $('liveDot').classList.remove('off');
+      $('liveBadge').classList.remove('off');
+      $('liveBadge').textContent = 'LIVE';
+    });
+    _es.onerror = () => {
+      $('liveDot').classList.add('off');
+      $('liveBadge').classList.add('off');
+      $('liveBadge').textContent = 'RECONNECT';
+      setTimeout(() => { try { _es.close(); } catch (_) {} startSSE(); }, 4000);
+    };
+  } catch (e) {
+    $('liveBadge').textContent = 'ERROR';
+  }
+}
+
+// Also bootstrap from /activity/recent so the feed isn't empty on first paint
+async function seedDialogue() {
+  try {
+    const r = await fetch('/activity/recent?limit=40');
+    const d = await r.json();
+    const events = (d.events || []).filter(e =>
+      ['thinking', 'improvement', 'godel', 'boardroom', 'memory'].includes(e.room));
+    events.reverse(); // ascending → oldest first so insertBefore preserves newest-first
+    events.forEach(renderRow);
+  } catch (_) {}
+}
+
+// ── 3. Improvement ledger ──
+async function refreshLedger() {
+  const box = $('ledger');
+  try {
+    const [tlR, gR] = await Promise.all([
+      fetch('/insight/improvement/timeline?limit=30').then(r => r.json()).catch(() => ({campaigns:[]})),
+      fetch('/insight/godel/recent?limit=80').then(r => r.json()).catch(() => ({events:[]})),
+    ]);
+    const campaigns = tlR.campaigns || [];
+    const godel = gR.events || [];
+    if (!campaigns.length && !godel.length) {
+      box.innerHTML = '<div class="empty">no improvement campaigns or godel choices on disk yet</div>';
+      return;
+    }
+    let html = '';
+    if (campaigns.length) {
+      html += '<table><thead><tr><th>run</th><th>directive</th><th>status</th><th>last msg</th></tr></thead><tbody>';
+      for (const c of campaigns.slice(0, 12)) {
+        const status = c.overall_campaign_status || c.status || 'unknown';
+        const cls = /SUCC/i.test(status) ? 'outcome-approved' :
+                    /FAIL/i.test(status) ? 'outcome-rejected' : 'outcome-unknown';
+        html += '<tr><td><b>' + escapeHtml(truncate(c.run_id || '?', 22)) + '</b></td>' +
+          '<td>' + escapeHtml(truncate(c.directive || '—', 80)) + '</td>' +
+          '<td class="' + cls + '">' + escapeHtml(status) + '</td>' +
+          '<td>' + escapeHtml(truncate(c.final_bdi_message || '', 120)) + '</td></tr>';
+      }
+      html += '</tbody></table>';
+    } else {
+      html += '<div class="empty" style="padding:12px">no campaigns recorded — improvement loop has not produced one yet</div>';
+    }
+
+    if (godel.length) {
+      html += '<div style="margin-top:18px;font-family:var(--mono);font-size:11px;color:var(--blue);letter-spacing:1.5px;text-transform:uppercase">recent godel choices · with rationale</div>';
+      html += '<table style="margin-top:8px"><thead><tr><th>ts</th><th>agent</th><th>type</th><th>chosen</th><th>rationale</th></tr></thead><tbody>';
+      for (const g of godel.slice(0, 30)) {
+        html += '<tr><td>' + escapeHtml(fmtTs(g.timestamp_utc)) + '</td>' +
+          '<td><b>' + escapeHtml(truncate(g.source_agent || '?', 30)) + '</b></td>' +
+          '<td>' + escapeHtml(truncate(g.choice_type || '?', 28)) + '</td>' +
+          '<td>' + escapeHtml(truncate(g.chosen_option || g.choice || '?', 36)) + '</td>' +
+          '<td>' + escapeHtml(truncate(g.rationale || '', 320)) + '</td></tr>';
+      }
+      html += '</tbody></table>';
+    }
+    box.innerHTML = html;
+  } catch (e) {
+    box.innerHTML = '<div class="empty">ledger unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+// ── 4. Boardroom ──
+async function refreshBoardroom() {
+  const box = $('boardroom');
+  try {
+    const r = await fetch('/insight/boardroom/recent?limit=20');
+    const d = await r.json();
+    const sessions = d.sessions || [];
+    $('boardPill').textContent = sessions.length + ' SESSION' + (sessions.length === 1 ? '' : 'S');
+    if (!sessions.length) {
+      box.innerHTML = '<div class="empty">no boardroom sessions logged yet</div>';
+      return;
+    }
+    let html = '<table><thead><tr><th>session</th><th>directive</th><th>outcome</th><th>score</th><th>votes</th></tr></thead><tbody>';
+    for (const s of sessions) {
+      const outcome = (s.outcome || 'unknown').toLowerCase();
+      const cls = 'outcome-' + (outcome === 'approved' || outcome === 'rejected' || outcome === 'exploration' ? outcome : 'unknown');
+      const votes = s.votes || [];
+      const voteHtml = '<div class="votes">' + votes.map(v => {
+        const cls = 'vote ' + (v.vote || 'abstain');
+        const sym = v.vote === 'approve' ? '✓' : v.vote === 'reject' ? '✗' : '–';
+        return '<span class="' + cls + '" title="' + escapeHtml(truncate(v.reasoning || '', 200)) +
+          '\nprovider=' + escapeHtml(v.provider || '?') + ' · conf=' + (v.confidence || 0).toFixed(2) +
+          ' · ' + (v.latency_ms || 0) + 'ms">' + sym + ' ' + escapeHtml((v.soldier || '?').slice(0, 6)) + '</span>';
+      }).join('') + '</div>';
+      html += '<tr><td><b>' + escapeHtml(truncate(s.session_id || '?', 16)) + '</b><br>' +
+        '<span style="color:var(--text3);font-size:10px">' + escapeHtml(fmtTs(s.timestamp)) + '</span></td>' +
+        '<td>' + escapeHtml(truncate(s.directive || '', 200)) + '</td>' +
+        '<td class="' + cls + '">' + escapeHtml(outcome) + '</td>' +
+        '<td>' + (typeof s.weighted_score === 'number' ? s.weighted_score.toFixed(3) : '?') + '</td>' +
+        '<td>' + voteHtml + '</td></tr>';
+    }
+    html += '</tbody></table>';
+    box.innerHTML = html;
+  } catch (e) {
+    box.innerHTML = '<div class="empty">boardroom unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+// ── 5. Dream cycles ──
+async function refreshDreams() {
+  const box = $('dreams');
+  const pill = $('dreamPill');
+  try {
+    const r = await fetch('/insight/dreams/recent?limit=20');
+    const d = await r.json();
+    const dreams = d.dreams || [];
+    const lastAge = d.last_dream_age_seconds;
+    if (lastAge == null) {
+      pill.textContent = 'NO DREAMS ON DISK';
+      pill.className = 'pill warn';
+    } else if (lastAge > 14 * 86400) {
+      pill.textContent = 'STALE · ' + ago(lastAge) + ' since last';
+      pill.className = 'pill warn';
+    } else if (lastAge > 24 * 3600) {
+      pill.textContent = 'OVERDUE · ' + ago(lastAge);
+      pill.className = 'pill amber';
+    } else {
+      pill.textContent = 'fresh · ' + ago(lastAge) + ' ago';
+      pill.className = 'pill ok';
+    }
+    if (!dreams.length) {
+      box.innerHTML = '<div class="empty">no dream reports in data/memory/dreams/ — has machine_dreaming ever run?</div>';
+      return;
+    }
+    let html = '<table><thead><tr><th>cycle</th><th>agents</th><th>insights</th><th>promoted</th><th>moon</th><th>duration</th><th>tuning recommendations</th></tr></thead><tbody>';
+    for (const dr of dreams) {
+      const lunar = dr.lunar || {};
+      const tunes = dr.tuning_recommendations || dr.recommendations || [];
+      const tuneHtml = tunes.length ? '<ul>' + tunes.map(t => {
+        const pri = (t.priority || '').toLowerCase();
+        return '<li class="' + (pri || '') + '">' + escapeHtml((t.priority || 'low').toUpperCase()) +
+          ' · <b>' + escapeHtml(t.agent_id || t.agent || '?') + '</b> — ' +
+          escapeHtml(truncate(t.recommendation || t.reason || t.message || '', 140)) + '</li>';
+      }).join('') + '</ul>' : '<span style="color:var(--text3)">none</span>';
+      html += '<tr class="dream-row"><td><b>' +
+        escapeHtml(fmtTs(dr.timestamp || dr._mtime)) + '</b><br>' +
+        '<span style="color:var(--text3);font-size:10px">' + escapeHtml(dr._filename || '') + '</span></td>' +
+        '<td>' + (dr.agents_dreamed || '?') + '</td>' +
+        '<td>' + (dr.insights_generated || 0) + '</td>' +
+        '<td>' + (dr.memories_promoted_to_ltm || 0) + '</td>' +
+        '<td>' + escapeHtml(lunar.phase_name || '?') + '<br>' +
+        '<span style="color:var(--text3);font-size:10px">' + (lunar.days_until_new_moon || '?') + 'd</span></td>' +
+        '<td>' + (dr.duration_seconds ? dr.duration_seconds.toFixed(1) + 's' : '?') + '</td>' +
+        '<td class="tune">' + tuneHtml + '</td></tr>';
+    }
+    html += '</tbody></table>';
+    box.innerHTML = html;
+  } catch (e) {
+    box.innerHTML = '<div class="empty">dreams unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+// ── 6. Inter-agent graph ──
+async function refreshGraph() {
+  const svg = $('graph');
+  const note = $('graphNote');
+  try {
+    const r = await fetch('/insight/interactions/recent?window=3600');
+    const d = await r.json();
+    const nodes = (d.nodes || []).slice().sort((a, b) => (b.events || 0) - (a.events || 0));
+    const edges = d.edges || [];
+    note.textContent = (d.note ? d.note + ' · ' : '') +
+      'active agents: ' + nodes.length + ' · explicit links: ' + (d.explicit_links || 0);
+    if (!nodes.length) {
+      svg.innerHTML = '<text x="600" y="170" fill="#6e7681" font-family="JetBrains Mono" font-size="13" text-anchor="middle">no agent traces in last hour</text>';
+      return;
+    }
+    // Layout: ring of nodes; thicker arc lines for higher-event-count agents
+    const W = 1200, H = 340, cx = W / 2, cy = H / 2 - 10, R = Math.min(W, H) / 2 - 60;
+    const top = nodes.slice(0, 14);
+    const pos = {};
+    top.forEach((n, i) => {
+      const ang = (i / top.length) * Math.PI * 2 - Math.PI / 2;
+      pos[n.id] = { x: cx + R * Math.cos(ang), y: cy + R * Math.sin(ang), n };
+    });
+    const maxEv = Math.max(1, ...top.map(n => n.events || 0));
+    let s = '';
+    // Edges first (so nodes draw on top)
+    for (const e of edges) {
+      const a = pos[e.source], b = pos[e.target];
+      if (!a || !b) continue;
+      const w = Math.max(1, Math.min(6, e.weight || 1));
+      s += '<line x1="' + a.x.toFixed(1) + '" y1="' + a.y.toFixed(1) + '" x2="' + b.x.toFixed(1) +
+        '" y2="' + b.y.toFixed(1) + '" stroke="#79c0ff" stroke-opacity="0.45" stroke-width="' + w + '"></line>';
+    }
+    for (const id in pos) {
+      const p = pos[id];
+      const r = 6 + 14 * Math.sqrt((p.n.events || 0) / maxEv);
+      const labelX = p.x + (p.x > cx ? 10 : -10);
+      const anchor = p.x > cx ? 'start' : 'end';
+      s += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + r.toFixed(1) +
+        '" fill="#79c0ff" fill-opacity="0.18" stroke="#79c0ff" stroke-width="1.5"></circle>';
+      s += '<text x="' + labelX.toFixed(1) + '" y="' + (p.y + 4).toFixed(1) + '" fill="#e6edf3" ' +
+        'font-family="JetBrains Mono" font-size="10.5" text-anchor="' + anchor + '">' +
+        escapeHtml(truncate(id, 22)) + ' (' + (p.n.events || 0) + ')</text>';
+    }
+    svg.innerHTML = s;
+  } catch (e) {
+    note.textContent = 'graph unavailable: ' + e.message;
+  }
+}
+
+// ── 7. Inference sources (compact) ──
+async function refreshSources() {
+  const box = $('sources');
+  try {
+    const r = await fetch('/diagnostics/live');
+    const d = await r.json();
+    const sources = d.inference_sources || d.sources || d.providers || null;
+    if (!sources) {
+      box.innerHTML = '<div class="empty">/diagnostics/live did not return source info</div>';
+      return;
+    }
+    const items = Array.isArray(sources) ? sources : Object.entries(sources).map(([k, v]) => ({ name: k, ...v }));
+    if (!items.length) {
+      box.innerHTML = '<div class="empty">no inference sources configured</div>';
+      return;
+    }
+    let html = '<table><thead><tr><th>source</th><th>status</th><th>endpoint</th><th>models</th></tr></thead><tbody>';
+    for (const s of items) {
+      const status = s.status || s.state || (s.reachable ? 'up' : 'down');
+      const cls = /up|ok|reachable|true/i.test(String(status)) ? 'outcome-approved' : 'outcome-rejected';
+      const models = Array.isArray(s.models) ? s.models.join(', ') : (s.models || s.default_model || '');
+      html += '<tr><td><b>' + escapeHtml(s.name || s.id || '?') + '</b></td>' +
+        '<td class="' + cls + '">' + escapeHtml(String(status)) + '</td>' +
+        '<td>' + escapeHtml(truncate(s.url || s.endpoint || '', 60)) + '</td>' +
+        '<td>' + escapeHtml(truncate(String(models), 100)) + '</td></tr>';
+    }
+    html += '</tbody></table>';
+    box.innerHTML = html;
+  } catch (e) {
+    box.innerHTML = '<div class="empty">/diagnostics/live unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+// ── boot ──
+async function boot() {
+  await seedDialogue();
+  startSSE();
+  await Promise.allSettled([refreshStuck(), refreshLedger(), refreshBoardroom(), refreshDreams(), refreshGraph(), refreshSources()]);
+  setInterval(refreshStuck, 30000);
+  setInterval(refreshLedger, 45000);
+  setInterval(refreshBoardroom, 60000);
+  setInterval(refreshDreams, 60000);
+  setInterval(refreshGraph, 60000);
+  setInterval(refreshSources, 60000);
+}
+document.addEventListener('DOMContentLoaded', boot);
+</script>
+</body>
+</html>

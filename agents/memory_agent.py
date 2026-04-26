@@ -248,8 +248,22 @@ class MemoryAgent:
                     pass  # File already saved — DB is best-effort
 
             logger.debug(f"Timestamped memory saved: {filepath}")
+
+            # Catalogue mirror (Phase 0) — additive; failures never affect this call.
+            try:
+                from agents.catalogue import emit_catalogue_event
+                await emit_catalogue_event(
+                    kind="memory.write",
+                    actor=agent_id,
+                    payload=record_dict,
+                    source_log=str(filepath.relative_to(self.data_path) if filepath.is_relative_to(self.data_path) else filepath.name),
+                    source_ref=memory_record.memory_id,
+                )
+            except Exception:
+                pass
+
             return memory_record.memory_id
-            
+
         except Exception as e:
             logger.error(f"Failed to save timestamped memory: {e}", exc_info=True)
             return None
@@ -650,6 +664,20 @@ class MemoryAgent:
                 record,
                 {"agent_id": record.get("source_agent", "system")},
             )
+
+            # Catalogue mirror (Phase 0)
+            try:
+                from agents.catalogue import emit_catalogue_event
+                await emit_catalogue_event(
+                    kind="godel.choice",
+                    actor=record.get("source_agent", "system"),
+                    payload=record,
+                    source_log="logs/godel_choices.jsonl",
+                    source_ref=record.get("cycle_id") and str(record.get("cycle_id")),
+                )
+            except Exception:
+                pass
+
             return filepath
         except Exception as e:
             logger.error(f"Failed to write Gödel choice log: {e}", exc_info=True)

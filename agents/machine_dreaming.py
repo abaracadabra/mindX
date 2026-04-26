@@ -745,6 +745,24 @@ class MachineDreamCycle:
             except Exception:
                 pass
 
+        # Catalogue mirror (Phase 0)
+        try:
+            _src_ref = None
+            try:
+                _src_ref = report_file.name  # type: ignore[name-defined]
+            except NameError:
+                pass
+            from agents.catalogue import emit_catalogue_event
+            await emit_catalogue_event(
+                kind="memory.dream",
+                actor="machine_dreaming",
+                payload=report,
+                source_log="memory/dreams/",
+                source_ref=_src_ref,
+            )
+        except Exception:
+            pass
+
         return report
 
     # === LTM INSIGHT RETRIEVAL FOR PERCEPTUAL AWARENESS ===

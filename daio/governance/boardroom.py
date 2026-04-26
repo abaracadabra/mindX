@@ -717,6 +717,20 @@ class Boardroom:
         except Exception as e:
             logger.warning(f"Boardroom: JSONL log failed: {e}")
 
+        # 1b. Catalogue mirror (Phase 0, additive)
+        try:
+            import asyncio as _asyncio
+            from agents.catalogue import emit_catalogue_event
+            _asyncio.create_task(emit_catalogue_event(
+                kind="board.session",
+                actor="boardroom",
+                payload=entry,
+                source_log="governance/boardroom_sessions.jsonl",
+                source_ref=session.session_id,
+            ))
+        except Exception:
+            pass
+
         # 2. Structured JSON in data/boardroom/
         try:
             boardroom_dir = PROJECT_ROOT / "data" / "boardroom"
