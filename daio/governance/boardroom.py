@@ -442,30 +442,117 @@ class Boardroom:
                 report["inference_summary"]["local"] += 1
         return report
 
-    def _load_soldier_persona(self, soldier_id: str) -> str:
-        """Load full persona from .agent file, fall back to SOLDIER_PERSONAS dict."""
-        # Try loading from .agent file (richer context)
-        agent_file = BOARDROOM_AGENTS_DIR / f"{soldier_id.split('_')[0]}.agent"
-        if agent_file.exists():
+    @staticmethod
+    def _extract_agent_section(content: str, section_name: str, max_lines: int = 8) -> str:
+        """Pull the body of a named ALL_CAPS section from a .agent file.
+        Body is everything until the next ALL_CAPS section header or EOF.
+        Trimmed to `max_lines` non-empty lines."""
+        lines = content.split("\n")
+        in_section = False
+        body = []
+        for raw in lines:
+            stripped = raw.strip()
+            if stripped == section_name:
+                in_section = True
+                continue
+            if not in_section:
+                continue
+            # End of section: a new ALL_CAPS header (single token or two)
+            if stripped and stripped == stripped.upper() and stripped.replace(" ", "").replace("_", "").isalpha() and 3 <= len(stripped) <= 40:
+                break
+            if stripped:
+                body.append(stripped)
+                if len(body) >= max_lines:
+                    break
+        return "\n".join(body)
+
+    def _load_member_card(self, member_id: str) -> Dict[str, Any]:
+        """Load the full role card for a board member (CEO or any soldier).
+        Reads BOTH `.agent` (operating description, boardroom role) AND
+        `.persona` (JSON: name, traits, beliefs, desires, inference). Returns
+        a dict with `system_prompt` (composed for LLM injection), plus the
+        raw `agent_card` and `persona` for richer downstream use.
+
+        Falls back to SOLDIER_PERSONAS dict, then a generic identity string.
+        Cached on first read; recomputed only on cache miss.
+        """
+        if not hasattr(self, "_member_card_cache"):
+            self._member_card_cache: Dict[str, Dict[str, Any]] = {}
+        if member_id in self._member_card_cache:
+            return self._member_card_cache[member_id]
+
+        short_id = member_id.split("_")[0]  # "ciso_security" → "ciso"
+        agent_path = BOARDROOM_AGENTS_DIR / f"{short_id}.agent"
+        persona_path = BOARDROOM_AGENTS_DIR / f"{short_id}.persona"
+
+        agent_card = ""
+        if agent_path.exists():
             try:
-                content = agent_file.read_text(encoding="utf-8")
-                # Extract DESCRIPTION and OPERATING PRINCIPLES sections
-                sections = []
-                current = None
-                for line in content.split("\n"):
-                    if line.strip() in ("DESCRIPTION", "OPERATING PRINCIPLES", "BOARDROOM ROLE"):
-                        current = line.strip()
-                        continue
-                    elif line.strip() and not line.startswith(" ") and not line.startswith("\t") and current:
-                        current = None
-                    if current and line.strip():
-                        sections.append(line.strip())
-                if sections:
-                    return " ".join(sections[:8])  # First 8 lines — enough for persona
+                agent_card = agent_path.read_text(encoding="utf-8")
             except Exception:
                 pass
-        # Fall back to hardcoded persona
-        return SOLDIER_PERSONAS.get(soldier_id, f"You are {soldier_id}.")
+
+        persona: Dict[str, Any] = {}
+        if persona_path.exists():
+            try:
+                persona = json.loads(persona_path.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+
+        # Compose the system prompt to inject. Order: persona hook line →
+        # behavioral traits → operating beliefs → DESCRIPTION → BOARDROOM ROLE.
+        parts: List[str] = []
+        title = persona.get("name") or short_id.upper()
+        if persona.get("description"):
+            parts.append(f"You are the {title}. {persona['description']}")
+        elif agent_card:
+            desc = self._extract_agent_section(agent_card, "DESCRIPTION", max_lines=6)
+            if desc:
+                parts.append(f"You are the {title}.\n{desc}")
+        else:
+            parts.append(f"You are the {title}.")
+
+        traits = persona.get("behavioral_traits") or []
+        if traits:
+            parts.append("Behavioral traits: " + ", ".join(traits[:8]))
+
+        beliefs = persona.get("beliefs") or {}
+        active = [k.replace("_", " ") for k, v in beliefs.items() if v is True]
+        if active:
+            parts.append("Operating beliefs: " + "; ".join(active[:6]))
+
+        desires = persona.get("desires") or {}
+        priorities = [f"{k.replace('_', ' ')}={v}" for k, v in desires.items() if str(v).lower() in ("high", "critical")]
+        if priorities:
+            parts.append("Priorities: " + "; ".join(priorities[:5]))
+
+        if agent_card:
+            br_role = self._extract_agent_section(agent_card, "BOARDROOM ROLE", max_lines=6)
+            if br_role:
+                parts.append(f"Boardroom role:\n{br_role}")
+
+        if not parts:
+            fb = SOLDIER_PERSONAS.get(member_id, f"You are {member_id}.")
+            parts.append(fb)
+
+        system_prompt = "\n\n".join(parts)
+        card = {
+            "id": member_id,
+            "short_id": short_id,
+            "title": title,
+            "system_prompt": system_prompt,
+            "agent_card": agent_card,
+            "persona": persona,
+            "weight": persona.get("weight", SOLDIER_WEIGHTS.get(member_id, 1.0)),
+            "veto_holder": persona.get("weight", SOLDIER_WEIGHTS.get(member_id, 1.0)) >= 1.2,
+            "loaded_from_files": bool(agent_card or persona),
+        }
+        self._member_card_cache[member_id] = card
+        return card
+
+    def _load_soldier_persona(self, soldier_id: str) -> str:
+        """Backwards-compatible wrapper — returns just the system_prompt string."""
+        return self._load_member_card(soldier_id).get("system_prompt") or SOLDIER_PERSONAS.get(soldier_id, f"You are {soldier_id}.")
 
     async def _query_soldier(
         self,
@@ -885,16 +972,25 @@ class Boardroom:
 
         results: Dict[str, Any] = {}
         present_count = 0
+
+        # Load the CEO card once — used to frame the roll-call prompt.
+        ceo_card = self._load_member_card("ceo_agent_main")
+        ceo_title = ceo_card.get("title") or "CEO"
+
         for soldier_id, local_model in SOLDIER_MODELS.items():
-            persona = SOLDIER_PERSONAS.get(soldier_id, f"You are the {soldier_id}.")
-            weight = SOLDIER_WEIGHTS.get(soldier_id, 1.0)
-            role_pretty = soldier_id.upper().replace("_", " ")
+            # Load full role card (.agent + .persona); falls back to dict.
+            card = self._load_member_card(soldier_id)
+            persona = card["system_prompt"]
+            weight = card.get("weight", SOLDIER_WEIGHTS.get(soldier_id, 1.0))
+            role_pretty = (card.get("title") or soldier_id.upper().replace("_", " "))
             prompt = (
                 f"{persona}\n\n"
-                f"The CEO is calling roll for the boardroom. Respond with EXACTLY one short sentence "
-                f"acknowledging your presence, your role, and that you are ready to deliberate. "
+                f"--- CONVOCATION ---\n"
+                f"The {ceo_title} is calling roll for the boardroom. Respond with EXACTLY one "
+                f"short sentence acknowledging your presence, your role, and that you are ready "
+                f"to deliberate.\n"
                 f'Format: "Present. I am the {role_pretty}, weight {weight}x, ready to deliberate."\n'
-                f"Respond with the acknowledgment only, no JSON, no preamble."
+                f"Respond with the acknowledgment only, no JSON, no preamble, no thinking."
             )
             payload = {
                 "model": CLOUD_MODEL if cloud_ok else local_model,
@@ -959,6 +1055,7 @@ class Boardroom:
                 "ack": ack[:400],
                 "latency_ms": latency,
                 "error": error,
+                "persona_source": "files" if card.get("loaded_from_files") else "fallback",
             }
         # Detect if any soldier hit unauthorized (= signin lapsed)
         any_unauthorized = any(
@@ -981,6 +1078,12 @@ class Boardroom:
                 f"the local-proxied path; see docs/ollama/cloud/cloud.md)."
             )
         return {
+            "ceo": {
+                "id": "ceo_agent_main",
+                "title": ceo_card.get("title") or "CEO",
+                "persona_source": "files" if ceo_card.get("loaded_from_files") else "fallback",
+                "weight": ceo_card.get("weight"),
+            },
             "results": results,
             "present": present_count,
             "total": len(SOLDIER_MODELS),

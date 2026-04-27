@@ -373,6 +373,31 @@ def render_boardroom_session(d: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def render_boardroom_cards(d: dict) -> str:
+    """Plain-text rendering of /insight/boardroom/cards — composed system
+    prompts for CEO + 7 soldiers, sourced from agents/boardroom/*.{agent,persona}.
+    """
+    if "error" in d:
+        return f"cards error: {d['error']}\n"
+    cards = d.get("cards") or {}
+    lines = ["═══ boardroom — loaded prompt + persona per member ═══", ""]
+    lines.append(f"  agents dir:        {d.get('agents_dir', 'agents/boardroom/')}")
+    lines.append(f"  loaded from files: {d.get('loaded_from_files', 0)} / {d.get('total', 0)}")
+    if d.get("fallback"):
+        lines.append(f"  ! fallback (no files): {d['fallback']}")
+    lines.append("")
+    for mid, c in cards.items():
+        veto = " VETO" if c.get("veto_holder") else ""
+        src = "✓ files" if c.get("loaded_from_files") else "○ fallback dict"
+        lines.append(f"─── {mid}  ({c.get('title', '')}, weight {c.get('weight', 1.0)}{veto}) ───")
+        lines.append(f"   source:        {src}  ·  system_prompt {c.get('system_prompt_chars', 0)} chars  ·  agent_card {c.get('agent_card_chars', 0)} chars")
+        sp = c.get("system_prompt") or ""
+        for sp_line in sp.split("\n")[:30]:
+            lines.append(f"   {sp_line}")
+        lines.append("")
+    return "\n".join(lines) + "\n"
+
+
 def render_boardroom_members(d: dict) -> str:
     """Plain-text rendering of /insight/boardroom/members (fitness leaderboard)
     or a single-member detail card."""
@@ -759,6 +784,7 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/boardroom/health":    render_boardroom_health,
     "/insight/boardroom/rollcall":  render_boardroom_rollcall,
     "/insight/boardroom/members":   render_boardroom_members,
+    "/insight/boardroom/cards":     render_boardroom_cards,
     "/insight/improvement/summary": render_improvement_summary,
     "/insight/stuck_loops":         render_stuck_loops,
     "/storage/eligible":            render_eligible,

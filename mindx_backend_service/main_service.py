@@ -2497,6 +2497,60 @@ async def insight_boardroom_members(request: Request, sessions: int = 50):
     return _maybe_h_text(request, _compute_member_metrics(sessions), route_path="/insight/boardroom/members")
 
 
+@app.get("/insight/boardroom/cards", tags=["insight"], summary="Loaded prompt + persona for CEO + 7 soldiers")
+@_insight_safe
+async def insight_boardroom_cards(request: Request):
+    """Per-member role cards as actually loaded by the boardroom engine.
+    Each card has the composed `system_prompt` injected into LLM calls,
+    plus the raw `agent_card` (.agent file) and `persona` (.persona JSON).
+    `persona_source: files | fallback` tells the operator whether the card
+    came from `agents/boardroom/*.{agent,persona}` (rich) or the hardcoded
+    SOLDIER_PERSONAS dict (one-line fallback).
+    """
+    try:
+        from daio.governance.boardroom import Boardroom, SOLDIER_MODELS
+        bd = await Boardroom.get_instance()
+        cards = {}
+        ceo = bd._load_member_card("ceo_agent_main")
+        cards["ceo_agent_main"] = {
+            "id": "ceo_agent_main",
+            "short_id": ceo.get("short_id"),
+            "title": ceo.get("title"),
+            "weight": ceo.get("weight"),
+            "veto_holder": ceo.get("veto_holder"),
+            "loaded_from_files": ceo.get("loaded_from_files"),
+            "system_prompt": ceo.get("system_prompt"),
+            "system_prompt_chars": len(ceo.get("system_prompt") or ""),
+            "agent_card_chars": len(ceo.get("agent_card") or ""),
+            "persona": ceo.get("persona"),
+        }
+        for sid in SOLDIER_MODELS.keys():
+            c = bd._load_member_card(sid)
+            cards[sid] = {
+                "id": sid,
+                "short_id": c.get("short_id"),
+                "title": c.get("title"),
+                "weight": c.get("weight"),
+                "veto_holder": c.get("veto_holder"),
+                "loaded_from_files": c.get("loaded_from_files"),
+                "system_prompt": c.get("system_prompt"),
+                "system_prompt_chars": len(c.get("system_prompt") or ""),
+                "agent_card_chars": len(c.get("agent_card") or ""),
+                "persona": c.get("persona"),
+            }
+        loaded_count = sum(1 for c in cards.values() if c["loaded_from_files"])
+        return _maybe_h_text(request, {
+            "cards": cards,
+            "total": len(cards),
+            "loaded_from_files": loaded_count,
+            "fallback": len(cards) - loaded_count,
+            "agents_dir": "agents/boardroom/",
+            "computed_at": time.time(),
+        }, route_path="/insight/boardroom/cards")
+    except Exception as e:
+        return _maybe_h_text(request, {"error": str(e)}, route_path="/insight/boardroom/cards")
+
+
 @app.get("/insight/boardroom/members/{soldier_id}", tags=["insight"], summary="Single member detail")
 @_insight_safe
 async def insight_boardroom_member(request: Request, soldier_id: str, sessions: int = 50):
