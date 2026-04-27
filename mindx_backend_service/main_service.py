@@ -2022,16 +2022,19 @@ async def insight_boardroom_roles(request: Request):
     payload = {
         "ceo": {
             "title": "Chief Executive (orchestrator)",
-            "role": "Convenes sessions, breaks ties, executes approved directives. Not a voting seat.",
+            "role": "Convenes sessions, breaks ties, executes approved directives. Not a voting seat. Identity verified by signature.",
         },
+        "interaction_model": "AI / agent / member interaction. Any participant whose identity verifies by signature can hold a seat. Decisions emerge from consensus + signature verification.",
+        "daio_control": "Optional. The boardroom engine works with or without DAIO control. DAIO (Solidity contracts) is the on-chain controller — when wired, boardroom decisions are on-chain enforced; when not, they remain off-chain consensus.",
+        "daio_voting_bridge": "A boardroom-approved CEO decision can be cast as the AI vote inside DAIO's 2/3 consensus across Marketing / Community / Development groups (each group: 2 humans + 1 AI). One off-chain consensus → one on-chain ballot. The boardroom is how the AI side of DAIO consensus gets its voice.",
         "soldiers": soldiers,
         "consensus_threshold": SUPERMAJORITY_THRESHOLD,
         "cloud_model": CLOUD_MODEL,
         "spec_link": "/doc/BOARDROOM",
         "hierarchy": {
-            "tier_1_boardroom": "CEO + 7 soldiers — primary decision tier (this endpoint).",
+            "tier_1_boardroom": "CEO + 7 soldiers — primary decision tier (this endpoint, in-process).",
             "tier_2_dojo": "Dispute resolution opened by any boardroom seat-holder. Configurable consensus per dispute (2/3, 50/99, supermajority).",
-            "tier_3_war_council": "13-seat on-chain assembly at mastermind.pythai.net (BONAFIDE mainnet). PYTHAI naming toggle. Roadmap.",
+            "tier_3_war_council": "13-seat on-chain assembly at mastermind.pythai.net (BONAFIDE mainnet, PYTHAI naming toggle). FOREIGN ENTITY — isolated from mindX, consumes the mindX API as a paying external client. Metered through bankon.pythai.net. mindX provides agents/inference/identity; war council provides on-chain finality; BANKON provides the meter. Roadmap.",
         },
         "note": "Boardroom is the FIRST hierarchy of decision. Variations exist for both boardroom and dojo, but CEO + 7 soldiers stays the primary tier. See /doc/BOARDROOM for the full spec.",
     }
