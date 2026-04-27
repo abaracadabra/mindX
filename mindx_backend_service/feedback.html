@@ -36,6 +36,74 @@ a:hover{text-decoration:underline}
 .live-badge{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:4px;background:rgba(86,211,100,.12);color:var(--green);border:1px solid rgba(86,211,100,.25);letter-spacing:.5px;font-weight:600}
 .live-badge.off{background:rgba(227,179,65,.1);color:var(--amber);border-color:rgba(227,179,65,.2)}
 
+/* Tab nav */
+.tabbar{position:sticky;top:48px;z-index:40;background:linear-gradient(180deg,rgba(8,12,20,.95),rgba(4,6,9,.92));backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;gap:6px;flex-wrap:wrap;overflow-x:auto}
+.tab-chip{font-family:var(--mono);font-size:11px;letter-spacing:1px;padding:5px 11px;border-radius:14px;border:1px solid var(--border);background:rgba(16,20,28,.5);color:var(--text2);cursor:pointer;text-transform:uppercase;display:inline-flex;align-items:center;gap:6px;transition:all .15s ease;white-space:nowrap}
+.tab-chip:hover{color:var(--text);border-color:rgba(121,192,255,.3);background:rgba(121,192,255,.06)}
+.tab-chip.active{color:var(--blue);border-color:var(--blue);background:rgba(121,192,255,.12);font-weight:600;text-shadow:0 0 8px rgba(121,192,255,.3)}
+.tab-chip .badge{font-size:9.5px;padding:0 5px;border-radius:8px;background:rgba(121,192,255,.18);color:var(--blue);min-width:14px;text-align:center;font-weight:700}
+.tab-chip.active .badge{background:var(--blue);color:#04060a}
+.tab-chip .badge.warn{background:rgba(248,81,73,.22);color:var(--red)}
+.tab-chip.active .badge.warn{background:var(--red);color:#04060a}
+.tab-chip .badge.amber{background:rgba(227,179,65,.22);color:var(--amber)}
+.tab-chip.active .badge.amber{background:var(--amber);color:#04060a}
+
+/* Scroll-flash on jump */
+@keyframes section-flash{0%{box-shadow:0 0 0 1px rgba(121,192,255,.6),0 0 24px rgba(121,192,255,.18)}100%{box-shadow:none}}
+section.flash{animation:section-flash 1.6s ease-out;border-radius:8px}
+
+/* Section descriptions */
+.sec-desc{font-family:var(--mono);font-size:11px;color:var(--text3);margin:-6px 0 12px 0;line-height:1.55;max-width:980px}
+.sec-desc abbr{cursor:help;border-bottom:1px dotted var(--text3);text-decoration:none}
+.sec-desc abbr:hover{color:var(--text2);border-bottom-color:var(--text2)}
+.sec-desc code{font-family:var(--mono);font-size:10.5px;color:var(--blue);background:rgba(121,192,255,.06);padding:0 4px;border-radius:3px}
+
+/* Filter chips (improvement ledger, future panels) */
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}
+.filter-chip{font-family:var(--mono);font-size:10.5px;letter-spacing:.5px;padding:4px 10px;border-radius:12px;border:1px solid var(--border);background:rgba(16,20,28,.5);color:var(--text2);cursor:pointer;text-transform:uppercase;transition:all .15s ease}
+.filter-chip:hover{color:var(--text);border-color:rgba(121,192,255,.3)}
+.filter-chip.active{color:var(--blue);border-color:var(--blue);background:rgba(121,192,255,.1);font-weight:600}
+.filter-chip:disabled{opacity:.4;cursor:not-allowed}
+
+/* Histogram + status counters */
+.status-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:10px}
+.status-cell{padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px}
+.status-cell .lbl{font-family:var(--mono);font-size:9.5px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase}
+.status-cell .val{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text);margin-top:2px}
+.status-cell.ok .val{color:var(--green)}
+.status-cell.fail .val{color:var(--red)}
+.status-cell.run .val{color:var(--amber)}
+.status-cell.block .val{color:var(--violet)}
+.histogram{height:8px;border-radius:4px;background:rgba(255,255,255,.04);overflow:hidden;display:flex;margin-bottom:14px}
+.histogram > span{display:block;height:100%}
+.histogram .h-ok{background:var(--green)}
+.histogram .h-fail{background:var(--red)}
+.histogram .h-run{background:var(--amber)}
+.histogram .h-block{background:var(--violet)}
+.histogram-legend{font-family:var(--mono);font-size:10.5px;color:var(--text3);margin-top:-8px;margin-bottom:14px}
+
+/* Cluster (improvement ledger) */
+.cluster{margin:6px 0;border:1px solid var(--border);border-radius:6px;background:rgba(16,20,28,.4);overflow:hidden}
+.cluster summary{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;font-family:var(--mono);font-size:12px;list-style:none}
+.cluster summary::-webkit-details-marker{display:none}
+.cluster summary:before{content:"▸";color:var(--text3);transition:transform .15s ease;display:inline-block;width:10px}
+.cluster[open] > summary:before{transform:rotate(90deg)}
+.cluster summary:hover{background:rgba(121,192,255,.04)}
+.cluster .count-pill{font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(248,81,73,.15);color:var(--red);min-width:38px;text-align:center}
+.cluster.ok .count-pill{background:rgba(86,211,100,.15);color:var(--green)}
+.cluster.run .count-pill{background:rgba(227,179,65,.18);color:var(--amber)}
+.cluster .shape{color:var(--text);font-weight:600}
+.cluster .directive{color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cluster .ages{color:var(--text3);font-size:10.5px;margin-left:auto}
+.cluster .runs{padding:6px 12px 12px;font-family:var(--mono);font-size:11px}
+.cluster .run-row{display:grid;grid-template-columns:120px 90px 1fr auto;gap:10px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03);align-items:center}
+.cluster .run-row:hover{background:rgba(121,192,255,.03)}
+.cluster .run-row .rid{color:var(--blue);font-weight:600}
+.cluster .run-row .ts{color:var(--text3);font-size:10.5px}
+.cluster .run-row .msg{color:var(--text2);font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cluster .run-row .jump{font-family:var(--mono);font-size:10px;letter-spacing:.5px;text-transform:uppercase;padding:2px 8px;border:1px solid var(--border);border-radius:10px;color:var(--blue);background:rgba(121,192,255,.06);cursor:pointer;text-decoration:none}
+.cluster .run-row .jump:hover{background:rgba(121,192,255,.15);text-decoration:none}
+
 .wrap{max-width:1280px;margin:0 auto;padding:24px 20px 80px}
 .intro{padding:18px 20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:24px}
 .intro h1{font-family:var(--mono);font-size:22px;letter-spacing:2px;font-weight:700;margin-bottom:8px;color:#f0f6fc}
@@ -156,6 +224,18 @@ tr:hover td{background:rgba(121,192,255,.02)}
   </div>
 </header>
 
+<nav class="tabbar" id="tabbar">
+  <button class="tab-chip" data-target="sec-loops">stuck<span class="badge" id="bg-loops">·</span></button>
+  <button class="tab-chip" data-target="sec-live">live<span class="badge" id="bg-live">·</span></button>
+  <button class="tab-chip" data-target="sec-bdi">bdi<span class="badge" id="bg-bdi">·</span></button>
+  <button class="tab-chip" data-target="sec-improvements">improvements<span class="badge" id="bg-improvements">·</span></button>
+  <button class="tab-chip" data-target="sec-boardroom">boardroom<span class="badge" id="bg-boardroom">·</span></button>
+  <button class="tab-chip" data-target="sec-dreams">dreams<span class="badge" id="bg-dreams">·</span></button>
+  <button class="tab-chip" data-target="sec-graph">graph<span class="badge" id="bg-graph">·</span></button>
+  <button class="tab-chip" data-target="sec-storage">memory<span class="badge" id="bg-storage">·</span></button>
+  <button class="tab-chip" data-target="sec-inference">inference<span class="badge" id="bg-inference">·</span></button>
+</nav>
+
 <main class="wrap">
 
 <div class="intro">
@@ -170,92 +250,119 @@ tr:hover td{background:rgba(121,192,255,.02)}
 </div>
 
 <!-- 1. Stuck-loop detector (banner — appears before the feed if active) -->
-<section id="stuckSec">
+<section id="sec-loops">
   <div class="sec-head">
     <h2>stuck-loop detector
       <span id="stuckPill" class="pill">checking…</span>
     </h2>
     <span class="sub">/insight/stuck_loops?window=900</span>
   </div>
+  <p class="sec-desc">
+    Groups identical <code>(agent, step)</code> tuples seen in the last 15 min. A row here means an agent is repeating the same action shape ≥5 times — usually a planning bug or tool failure that needs human eyes. <abbr title="A circuit breaker that detects no-progress loops in autonomous agents and gates further attempts">Loop detection</abbr> is server-computed from the <abbr title="In-memory ring buffer of last 200 agent events, broadcast over SSE">ActivityFeed</abbr> ring buffer.
+  </p>
   <div id="stuckBox"><div class="empty">scanning recent activity…</div></div>
 </section>
 
 <!-- 2. Live agent dialogue -->
-<section>
+<section id="sec-live">
   <div class="sec-head">
     <h2>live agent dialogue <span id="dialoguePill" class="pill">SSE</span></h2>
     <span class="sub">/insight/thinking/live · rooms: thinking · improvement · godel · boardroom · memory</span>
   </div>
+  <p class="sec-desc">
+    Server-sent stream of every agent thinking step, improvement event, <abbr title="Decisions logged with rationale to godel_choices.jsonl — mindX's self-reference audit trail">gödel choice</abbr>, boardroom event, and memory operation as they happen. Click <code>⋯</code> on any row to see the full event payload. The newest event is always at the top.
+  </p>
   <div id="dialogue"><div class="empty">waiting for events…</div></div>
 </section>
 
 <!-- 3. BDI activity — detailed plan/deliberation/action events -->
-<section>
+<section id="sec-bdi">
   <div class="sec-head">
-    <h2>BDI activity <span id="bdiPill" class="pill">checking…</span></h2>
+    <h2><abbr title="Belief-Desire-Intention reasoning loop">BDI</abbr> activity <span id="bdiPill" class="pill">checking…</span></h2>
     <span class="sub">/insight/bdi/recent · process_trace.jsonl · runs grouped, params + results inline</span>
   </div>
+  <p class="sec-desc">
+    Each agent run grouped by <code>run_id</code>. Within a run, events render in narrative order: <span style="color:var(--violet)">PLAN_START</span> → <span style="color:var(--blue)">DELIBERATE</span> → <span style="color:var(--green)">ACTION ✓</span> (or <span style="color:var(--red)">ACTION ✗</span>). Click <code>⋯</code> on any event for the full <code>process_data</code> JSON. This is the actual cognitive trace, not a thinking-step summary.
+  </p>
   <div id="bdi" class="card"><div class="empty">loading…</div></div>
 </section>
 
 <!-- 4. Improvement ledger with reasoning -->
-<section>
+<section id="sec-improvements">
   <div class="sec-head">
-    <h2>improvement ledger — choices &amp; rationale</h2>
-    <span class="sub">/insight/improvement/timeline ⨝ /insight/godel/recent</span>
+    <h2>improvement ledger <span id="ledgerPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/improvement/timeline ⨝ /insight/godel/recent · grouped by failure shape</span>
   </div>
+  <p class="sec-desc">
+    Each row is one autonomous campaign mindX attempted. Identical-failure rows collapse into one expandable cluster — 200 raw rows become 4 named failure modes with counts. The status histogram above the clusters shows the honest ratio. Click any run inside a cluster, then <code>show BDI →</code> to jump to its trace.
+  </p>
   <div id="ledger" class="card"><div class="empty">loading…</div></div>
 </section>
 
-<!-- 4. Boardroom decisions -->
-<section>
+<!-- 5. Boardroom decisions -->
+<section id="sec-boardroom">
   <div class="sec-head">
     <h2>boardroom decisions <span id="boardPill" class="pill">last 20</span></h2>
     <span class="sub">/insight/boardroom/recent</span>
   </div>
+  <p class="sec-desc">
+    Every directive evaluated by the 7-soldier <abbr title="CEO + Seven Soldiers (CISO, CRO, CFO, CLO, CPO, CTO, COO) consensus mechanism">boardroom</abbr>. CISO and CRO weight 1.2× as veto holders. Hover any vote chip for the soldier's per-call reasoning + provider + latency. Outcome is approved at weighted score ≥ 0.666; minority dissent creates exploration branches.
+  </p>
   <div id="boardroom" class="card"><div class="empty">loading…</div></div>
 </section>
 
-<!-- 5. Dream cycles -->
-<section>
+<!-- 6. Dream cycles -->
+<section id="sec-dreams">
   <div class="sec-head">
     <h2>memory consolidation — dream cycles
       <span id="dreamPill" class="pill">checking…</span>
     </h2>
     <span class="sub">/insight/dreams/recent · machine_dreaming</span>
   </div>
+  <p class="sec-desc">
+    The 7-phase <abbr title="STM → LTM consolidation: 1) state assessment 2) input preprocessing 3) symbolic aggregation 4) insight scoring 5) memory storage 6) parameter tuning 7) memory pruning">machine.dreaming</abbr> cycle runs every 8 hours. Each row shows agents dreamed, insights generated, memories promoted to LTM, lunar phase, duration, and per-agent tuning recommendations. If <code>last_dream_age</code> exceeds 9h, the loop has likely crashed — see stuck-loop detector.
+  </p>
   <div id="dreams" class="card"><div class="empty">loading…</div></div>
 </section>
 
-<!-- 6. Inter-agent call graph -->
-<section>
+<!-- 7. Inter-agent call graph -->
+<section id="sec-graph">
   <div class="sec-head">
     <h2>inter-agent activity (last hour)</h2>
     <span class="sub">/insight/interactions/recent?window=3600</span>
   </div>
+  <p class="sec-desc">
+    Force-directed ring of agents active in the last hour. Node size scales with event count. Edge weights are explicit cross-agent calls extracted from <code>process_trace.jsonl</code> — the page is honest when explicit linkage isn't yet instrumented and shows the bare active set instead.
+  </p>
   <div id="graphBox">
     <svg id="graph" viewBox="0 0 1200 340" preserveAspectRatio="xMidYMid meet"></svg>
     <div id="graphNote" class="graph-note"></div>
   </div>
 </section>
 
-<!-- 7. Memories on chain — IPFS offload + on-chain anchor receipts -->
-<section>
+<!-- 8. Memories on chain — IPFS offload + on-chain anchor receipts -->
+<section id="sec-storage">
   <div class="sec-head">
     <h2>memories on chain
       <span id="storagePill" class="pill">checking…</span>
     </h2>
     <span class="sub">/insight/storage/status &middot; /insight/storage/recent &middot; /storage/anchor/health</span>
   </div>
+  <p class="sec-desc">
+    Memory tiers: local files → IPFS pin (<a href="https://lighthouse.storage" target="_blank" rel="noopener">Lighthouse</a> + nft.storage) → optional on-chain anchor on <abbr title="ARC chain DatasetRegistry — permissionless registerDataset(bytes32,string)">ARC</abbr> or curated mint as <abbr title="Transferable Hyper-Optimized Tensor — ERC721 storing IPFS CID + dimensions on chain">THOT</abbr>. Cluster CID and tx-hash links are clickable to the relevant gateway/explorer. Anchor configuration shown below the counters.
+  </p>
   <div id="storage" class="card"><div class="empty">loading…</div></div>
 </section>
 
-<!-- 8. Inference source health (compact) -->
-<section>
+<!-- 9. Inference source health (compact) -->
+<section id="sec-inference">
   <div class="sec-head">
     <h2>inference health</h2>
     <span class="sub">/diagnostics/live (sources)</span>
   </div>
+  <p class="sec-desc">
+    Per-provider reachability + endpoints + available models. mindX routes BDI plan calls free-tier-first: local Ollama → Gemini → Groq → Mistral → cloud paid (gated until treasury earns). Status here shows which sources the router is actually reaching right now.
+  </p>
   <div id="sources" class="card"><div class="empty">loading…</div></div>
 </section>
 
@@ -386,6 +493,7 @@ async function refreshStuck() {
     if (!groups.length) {
       pill.textContent = 'NO LOOPS DETECTED';
       pill.className = 'pill ok';
+      _setBadge('loops', 0, '');
       box.innerHTML = '<div class="stuck-banner ok"><h3>no stuck loops in last 15 min</h3>' +
         '<div style="color:var(--text2);font-family:var(--mono);font-size:11.5px">activity feed shows healthy variation. ' +
         '(buffer=' + (d.buffer_size || 0) + ')</div></div>';
@@ -393,6 +501,7 @@ async function refreshStuck() {
     }
     pill.textContent = groups.length + ' GROUP' + (groups.length > 1 ? 'S' : '');
     pill.className = 'pill warn';
+    _setBadge('loops', groups.length, 'warn');
     let html = '<div class="stuck-banner"><h3>repeating cycles detected (≥5 occurrences in 15 min)</h3><ul class="stuck-list">';
     for (const g of groups.slice(0, 8)) {
       const span = g.last_ts - g.first_ts;
@@ -444,6 +553,8 @@ function renderRow(evt) {
   }
   box.insertBefore(row, box.firstChild);
   while (box.childNodes.length > MAX_ROWS) box.removeChild(box.lastChild);
+  // Update live tab badge with current dialogue row count
+  _setBadge('live', box.childNodes.length, '');
 }
 
 let _es = null;
@@ -495,12 +606,14 @@ async function refreshBDI() {
     if (!events.length) {
       pill.textContent = 'NO EVENTS';
       pill.className = 'pill amber';
+      _setBadge('bdi', 0, 'amber');
       box.innerHTML = '<div class="empty">no BDI events in process_trace yet (' +
         escapeHtml(d.note || d.error || 'agent has not run since deploy') + ')</div>';
       return;
     }
     pill.textContent = events.length + ' EVENTS';
     pill.className = 'pill ok';
+    _setBadge('bdi', events.length, '');
 
     // Group by run_id, preserving newest-first order. Events come back newest-first;
     // we render newest run first, with its events oldest→newest within the run so the
@@ -581,40 +694,148 @@ async function refreshBDI() {
   }
 }
 
-// ── 4. Improvement ledger ──
+// ── 4. Improvement ledger — clustered by failure shape ──
+let _ledgerFilter = 'all';   // 'all' | 'succeeded' | 'failed' | 'running'
+function _ledgerClassify(c) {
+  const s = (c.overall_campaign_status || c.status || '').toUpperCase();
+  const m = (c.final_bdi_message || '');
+  if (s.includes('SUCC') || /COMPLETED_GOAL_ACHIEVED/.test(m)) return 'succeeded';
+  if (/RUNNING/.test(m) && !/FAIL/.test(m)) return 'running';
+  if (s.includes('BLOCK')) return 'blocked';
+  return 'failed';
+}
+function _ledgerShape(c) {
+  // Extract a stable "shape" string for grouping. Strategy:
+  // - if final_bdi_message present, use first 80 chars (covers FAILED_PLANNING / FAILED_RECOVERY / RUNNING)
+  // - else use overall_campaign_status
+  const m = (c.final_bdi_message || '').trim();
+  if (m) {
+    // Normalize trailing reason whitespace
+    return m.replace(/\s+/g, ' ').slice(0, 80);
+  }
+  return c.overall_campaign_status || 'unknown';
+}
 async function refreshLedger() {
   const box = $('ledger');
+  const pill = $('ledgerPill');
   try {
     const [tlR, gR] = await Promise.all([
-      fetch('/insight/improvement/timeline?limit=30').then(r => r.json()).catch(() => ({campaigns:[]})),
+      fetch('/insight/improvement/timeline?limit=200').then(r => r.json()).catch(() => ({campaigns:[]})),
       fetch('/insight/godel/recent?limit=80').then(r => r.json()).catch(() => ({events:[]})),
     ]);
     const campaigns = tlR.campaigns || [];
     const godel = gR.events || [];
     if (!campaigns.length && !godel.length) {
-      box.innerHTML = '<div class="empty">no improvement campaigns or godel choices on disk yet</div>';
+      pill.textContent = 'EMPTY';
+      pill.className = 'pill amber';
+      box.innerHTML = '<div class="empty">no improvement campaigns or gödel choices on disk yet — autonomous loop has not produced one</div>';
+      _setBadge('improvements', 0, '');
       return;
     }
-    let html = '';
-    if (campaigns.length) {
-      html += '<table><thead><tr><th>run</th><th>directive</th><th>status</th><th>last msg</th></tr></thead><tbody>';
-      for (const c of campaigns.slice(0, 12)) {
-        const status = c.overall_campaign_status || c.status || 'unknown';
-        const cls = /SUCC/i.test(status) ? 'outcome-approved' :
-                    /FAIL/i.test(status) ? 'outcome-rejected' : 'outcome-unknown';
-        const runId = c.run_id || '?';
-        html += '<tr><td><b><span title="' + escapeHtml(runId) + '">' + escapeHtml(Human.hash(runId, 22)) + '</span></b></td>' +
-          '<td>' + escapeHtml(truncate(c.directive || '—', 80)) + '</td>' +
-          '<td class="' + cls + '">' + escapeHtml(status) + '</td>' +
-          '<td>' + escapeHtml(truncate(c.final_bdi_message || '', 120)) + '</td></tr>';
-      }
-      html += '</tbody></table>';
-    } else {
-      html += '<div class="empty" style="padding:12px">no campaigns recorded — improvement loop has not produced one yet</div>';
+
+    // ── Status counts ──
+    const counts = { total: campaigns.length, succeeded: 0, failed: 0, running: 0, blocked: 0 };
+    for (const c of campaigns) counts[_ledgerClassify(c)]++;
+    pill.textContent = counts.total + ' total · ' + counts.succeeded + ' OK · ' + counts.failed + ' fail';
+    pill.className = 'pill ' + (counts.succeeded > 0 ? 'ok' : counts.failed > 0 ? 'warn' : 'amber');
+    _setBadge('improvements', counts.failed, counts.succeeded === 0 && counts.failed > 0 ? 'warn' : '');
+
+    // Status histogram + counters
+    let html = '<div class="status-row">';
+    html += '<div class="status-cell"><div class="lbl">total</div><div class="val">' + Human.count(counts.total) + '</div></div>';
+    html += '<div class="status-cell ok"><div class="lbl">succeeded</div><div class="val">' + Human.count(counts.succeeded) + '</div></div>';
+    html += '<div class="status-cell fail"><div class="lbl">failed</div><div class="val">' + Human.count(counts.failed) + '</div></div>';
+    html += '<div class="status-cell run"><div class="lbl">running/maxed</div><div class="val">' + Human.count(counts.running) + '</div></div>';
+    html += '<div class="status-cell block"><div class="lbl">blocked</div><div class="val">' + Human.count(counts.blocked) + '</div></div>';
+    html += '</div>';
+
+    if (counts.total > 0) {
+      const T = counts.total;
+      html += '<div class="histogram" title="status distribution">';
+      if (counts.succeeded) html += '<span class="h-ok" style="width:' + (counts.succeeded/T*100) + '%"></span>';
+      if (counts.running)   html += '<span class="h-run" style="width:' + (counts.running/T*100) + '%"></span>';
+      if (counts.blocked)   html += '<span class="h-block" style="width:' + (counts.blocked/T*100) + '%"></span>';
+      if (counts.failed)    html += '<span class="h-fail" style="width:' + (counts.failed/T*100) + '%"></span>';
+      html += '</div>';
+      const pct = (n) => Math.round(n/T*100) + '%';
+      html += '<div class="histogram-legend">' +
+        (counts.succeeded ? '<span style="color:var(--green)">' + pct(counts.succeeded) + ' succeeded</span> · ' : '') +
+        (counts.running ? '<span style="color:var(--amber)">' + pct(counts.running) + ' running/max-cycle</span> · ' : '') +
+        (counts.blocked ? '<span style="color:var(--violet)">' + pct(counts.blocked) + ' blocked</span> · ' : '') +
+        (counts.failed ? '<span style="color:var(--red)">' + pct(counts.failed) + ' failed</span>' : '') +
+      '</div>';
     }
 
+    // Filter chips
+    html += '<div class="filter-row">';
+    const mkChip = (key, label, count, disabled) => {
+      const cls = 'filter-chip' + (_ledgerFilter === key ? ' active' : '');
+      const dis = disabled ? ' disabled title="no campaigns in this state"' : '';
+      return '<button class="' + cls + '" data-filter="' + key + '"' + dis + '>' + label + ' ' + (count != null ? '(' + Human.count(count) + ')' : '') + '</button>';
+    };
+    html += mkChip('all', 'All', counts.total, false);
+    html += mkChip('succeeded', 'Successes', counts.succeeded, counts.succeeded === 0);
+    html += mkChip('failed', 'Failures', counts.failed, counts.failed === 0);
+    html += mkChip('running', 'Running/maxed', counts.running, counts.running === 0);
+    html += '</div>';
+
+    // ── Cluster grouping ──
+    const filtered = campaigns.filter(c => _ledgerFilter === 'all' || _ledgerClassify(c) === _ledgerFilter);
+    if (!filtered.length) {
+      html += '<div class="empty" style="padding:14px">no campaigns match filter "' + escapeHtml(_ledgerFilter) + '"</div>';
+    } else {
+      const clusters = new Map();
+      filtered.forEach((c, idx) => {
+        const shape = _ledgerShape(c);
+        const directive = (c.directive || '—').slice(0, 100);
+        const key = shape + '|' + directive;
+        if (!clusters.has(key)) clusters.set(key, { shape, directive, runs: [] });
+        // index = position from end (newest=0); stable across one render
+        clusters.get(key).runs.push({ ...c, _idx: idx });
+      });
+      // Order: largest cluster first
+      const orderedClusters = Array.from(clusters.values()).sort((a, b) => b.runs.length - a.runs.length);
+      for (const cl of orderedClusters) {
+        const sample = cl.runs[0];
+        const klass = _ledgerClassify(sample);
+        const cssCls = 'cluster ' + (klass === 'succeeded' ? 'ok' : klass === 'running' ? 'run' : '');
+        const N = cl.runs.length;
+        // Pull (oldest, newest) ages from run_id index — newer ones came first in the timeline (newest-first)
+        const newest = cl.runs[0];
+        const oldest = cl.runs[cl.runs.length - 1];
+        // The timeline doesn't carry timestamps on every campaign, but newer entries are nearer index 0
+        const ageHint = N > 1 ? ' · ' + N + ' runs spanning rank-' + newest._idx + ' to rank-' + oldest._idx : '';
+        const directiveShort = escapeHtml(truncate(cl.directive, 100));
+        html += '<details class="' + cssCls + '"' + (N <= 3 ? ' open' : '') + '>';
+        html += '<summary>' +
+          '<span class="count-pill">' + N + '×</span>' +
+          '<span class="shape">' + escapeHtml(truncate(cl.shape, 78)) + '</span>' +
+          '<span class="directive">' + directiveShort + '</span>' +
+          '<span class="ages">' + ageHint.replace(/^\s*·\s*/, '') + '</span>' +
+        '</summary>';
+        html += '<div class="runs">';
+        for (const r of cl.runs.slice(0, 30)) {
+          const rid = r.run_id || '—';
+          const ridShort = Human.hash(rid, 22);
+          // rid in our /insight/bdi/recent uses the post-mastermind_run_xxxx as an outer id;
+          // BDI's own internal run_id is 8 chars. We surface the full mastermind_run_id and
+          // let the BDI-jump look up by goal/directive (Phase 5 will refine).
+          html += '<div class="run-row">';
+          html += '<span class="rid" title="' + escapeHtml(rid) + '"><code>' + escapeHtml(ridShort) + '</code></span>';
+          html += '<span class="ts">rank #' + r._idx + '</span>';
+          html += '<span class="msg" title="' + escapeHtml(r.final_bdi_message || '') + '">' + escapeHtml(truncate(r.final_bdi_message || '', 110)) + '</span>';
+          html += '<a class="jump" href="#sec-bdi" onclick="event.preventDefault();_jumpToBDI(this)" data-run="' + escapeHtml(rid) + '">show BDI →</a>';
+          html += '</div>';
+        }
+        if (cl.runs.length > 30) html += '<div style="color:var(--text3);font-size:10.5px;padding:6px 0">… and ' + (cl.runs.length - 30) + ' more</div>';
+        html += '</div>';
+        html += '</details>';
+      }
+    }
+
+    // ── Recent godel choices below clusters (unchanged shape) ──
     if (godel.length) {
-      html += '<div style="margin-top:18px;font-family:var(--mono);font-size:11px;color:var(--blue);letter-spacing:1.5px;text-transform:uppercase">recent godel choices · with rationale</div>';
+      html += '<div style="margin-top:18px;font-family:var(--mono);font-size:11px;color:var(--blue);letter-spacing:1.5px;text-transform:uppercase">recent gödel choices · with rationale</div>';
       html += '<table style="margin-top:8px"><thead><tr><th>ts</th><th>agent</th><th>type</th><th>chosen</th><th>rationale</th></tr></thead><tbody>';
       for (const g of godel.slice(0, 30)) {
         html += '<tr><td>' + relSpan(g.timestamp_utc) + '</td>' +
@@ -626,8 +847,25 @@ async function refreshLedger() {
       html += '</tbody></table>';
     }
     box.innerHTML = html;
+
+    // Wire filter chips
+    box.querySelectorAll('.filter-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        _ledgerFilter = btn.dataset.filter;
+        refreshLedger();
+      });
+    });
   } catch (e) {
     box.innerHTML = '<div class="empty">ledger unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function _jumpToBDI(el) {
+  const target = document.getElementById('sec-bdi');
+  if (target) {
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    target.classList.remove('flash'); void target.offsetWidth; target.classList.add('flash');
   }
 }
 
@@ -639,6 +877,7 @@ async function refreshBoardroom() {
     const d = await r.json();
     const sessions = d.sessions || [];
     $('boardPill').textContent = sessions.length + ' SESSION' + (sessions.length === 1 ? '' : 'S');
+    _setBadge('boardroom', sessions.length, '');
     if (!sessions.length) {
       box.innerHTML = '<div class="empty">no boardroom sessions logged yet</div>';
       return;
@@ -682,15 +921,19 @@ async function refreshDreams() {
     if (lastAge == null) {
       pill.textContent = 'NO DREAMS ON DISK';
       pill.className = 'pill warn';
+      _setBadge('dreams', 0, 'warn');
     } else if (lastAge > 14 * 86400) {
       pill.textContent = 'STALE · ' + ago(lastAge) + ' since last';
       pill.className = 'pill warn';
+      _setBadge('dreams', dreams.length, 'warn');
     } else if (lastAge > 24 * 3600) {
       pill.textContent = 'OVERDUE · ' + ago(lastAge);
       pill.className = 'pill amber';
+      _setBadge('dreams', dreams.length, 'amber');
     } else {
       pill.textContent = 'fresh · ' + ago(lastAge) + ' ago';
       pill.className = 'pill ok';
+      _setBadge('dreams', dreams.length, '');
     }
     if (!dreams.length) {
       box.innerHTML = '<div class="empty">no dream reports in data/memory/dreams/ — has machine_dreaming ever run?</div>';
@@ -733,6 +976,7 @@ async function refreshGraph() {
     const d = await r.json();
     const nodes = (d.nodes || []).slice().sort((a, b) => (b.events || 0) - (a.events || 0));
     const edges = d.edges || [];
+    _setBadge('graph', (d.nodes || []).length, '');
     note.textContent = (d.note ? d.note + ' · ' : '') +
       'active agents: ' + nodes.length + ' · explicit links: ' + (d.explicit_links || 0);
     if (!nodes.length) {
@@ -788,8 +1032,11 @@ async function refreshSources() {
     const items = Array.isArray(sources) ? sources : Object.entries(sources).map(([k, v]) => ({ name: k, ...v }));
     if (!items.length) {
       box.innerHTML = '<div class="empty">no inference sources configured</div>';
+      _setBadge('inference', 0, 'amber');
       return;
     }
+    const reachable = items.filter(s => /up|ok|reachable|true/i.test(String(s.status || s.state || (s.reachable ? 'up' : 'down')))).length;
+    _setBadge('inference', reachable, reachable === 0 ? 'warn' : '');
     let html = '<table><thead><tr><th>source</th><th>status</th><th>endpoint</th><th>models</th></tr></thead><tbody>';
     for (const s of items) {
       const status = s.status || s.state || (s.reachable ? 'up' : 'down');
@@ -824,11 +1071,13 @@ async function refreshStorage() {
     if (ipfs === 0 && local === 0) {
       pill.textContent = 'NOT YET WIRED';
       pill.className = 'pill amber';
+      _setBadge('storage', 0, 'amber');
       box.innerHTML = '<div class="empty">no offload events yet — set LIGHTHOUSE_API_KEY / NFTSTORAGE_API_KEY in vault, then trigger via POST /storage/offload (dry_run=true)</div>';
       return;
     }
     pill.textContent = ipfs + ' OFFLOADED';
     pill.className = ipfs > 0 ? 'pill ok' : 'pill';
+    _setBadge('storage', ipfs, '');
 
     let html = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">';
     html += '<div><div style="font-family:var(--mono);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:1px">total memories</div><div style="font-size:22px;font-family:var(--mono);font-weight:700;color:var(--text)">' + total + '</div></div>';
@@ -873,8 +1122,45 @@ async function refreshStorage() {
   }
 }
 
+// ── Tab nav: badges + scrollspy ──
+function _setBadge(key, count, kind) {
+  const el = document.getElementById('bg-' + key);
+  if (!el) return;
+  el.textContent = count == null ? '·' : Human.count(count);
+  el.className = 'badge' + (kind ? ' ' + kind : '');
+}
+function _initTabbar() {
+  const tabbar = document.getElementById('tabbar');
+  if (!tabbar) return;
+  // Click → smooth-scroll + flash
+  tabbar.querySelectorAll('.tab-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const target = document.getElementById(chip.dataset.target);
+      if (!target) return;
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      target.classList.remove('flash'); void target.offsetWidth; target.classList.add('flash');
+    });
+  });
+  // Scrollspy
+  const sectionToChip = new Map();
+  tabbar.querySelectorAll('.tab-chip').forEach(chip => {
+    const section = document.getElementById(chip.dataset.target);
+    if (section) sectionToChip.set(section, chip);
+  });
+  const observer = new IntersectionObserver((entries) => {
+    // Pick the topmost intersecting section
+    const visible = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+    if (visible.length === 0) return;
+    const section = visible[0].target;
+    tabbar.querySelectorAll('.tab-chip.active').forEach(c => c.classList.remove('active'));
+    sectionToChip.get(section)?.classList.add('active');
+  }, { rootMargin: '-100px 0px -60% 0px', threshold: 0 });
+  for (const section of sectionToChip.keys()) observer.observe(section);
+}
+
 // ── boot ──
 async function boot() {
+  _initTabbar();
   await seedDialogue();
   startSSE();
   await Promise.allSettled([refreshStuck(), refreshBDI(), refreshLedger(), refreshBoardroom(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
