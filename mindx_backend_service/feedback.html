@@ -164,6 +164,28 @@ tr:hover td{background:rgba(121,192,255,.02)}
 .vote.reject{background:rgba(248,81,73,.08);color:var(--red);border-color:rgba(248,81,73,.2)}
 .vote.abstain{background:rgba(227,179,65,.08);color:var(--amber);border-color:rgba(227,179,65,.2)}
 
+/* Cognitive ascent chain */
+.chain-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px}
+.chain-cell{padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:rgba(16,20,28,.5);position:relative;cursor:pointer;transition:all .15s ease}
+.chain-cell:hover{border-color:rgba(121,192,255,.3);transform:translateY(-1px)}
+.chain-cell.real{border-left:3px solid var(--green)}
+.chain-cell.ready,.chain-cell.closed{border-left:3px solid var(--green)}
+.chain-cell.stale{border-left:3px solid var(--amber)}
+.chain-cell.stub_no_key{border-left:3px solid var(--amber)}
+.chain-cell.open_loop{border-left:3px solid var(--amber)}
+.chain-cell.dead,.chain-cell.not_running,.chain-cell.not_implemented{border-left:3px solid var(--red);opacity:.85}
+.chain-cell.error{border-left:3px solid var(--red)}
+.chain-cell .glyph{position:absolute;top:8px;right:10px;font-size:14px;font-family:var(--mono)}
+.chain-cell.real .glyph,.chain-cell.ready .glyph,.chain-cell.closed .glyph{color:var(--green)}
+.chain-cell.stale .glyph,.chain-cell.stub_no_key .glyph,.chain-cell.open_loop .glyph{color:var(--amber)}
+.chain-cell.dead .glyph,.chain-cell.not_running .glyph,.chain-cell.not_implemented .glyph,.chain-cell.error .glyph{color:var(--red)}
+.chain-cell .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3)}
+.chain-cell .val{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text);margin-top:2px}
+.chain-cell .meta{font-family:var(--mono);font-size:10px;color:var(--text2);margin-top:4px;line-height:1.45;word-break:break-word}
+.chain-cell .arrow{position:absolute;top:50%;right:-13px;transform:translateY(-50%);color:var(--text3);font-size:14px;pointer-events:none;z-index:1}
+@media(max-width:900px){.chain-cell .arrow{display:none}}
+.chain-narrative{font-family:var(--mono);font-size:11px;color:var(--text2);background:rgba(121,192,255,.04);padding:10px 12px;border-radius:6px;line-height:1.6;margin-top:10px;border-left:2px solid var(--blue)}
+
 /* BDI activity */
 .bdi-run{margin:14px 0;border-left:2px solid rgba(121,192,255,.25);padding-left:10px}
 .bdi-run-hd{display:flex;gap:10px;align-items:baseline;font-family:var(--mono);font-size:11.5px;color:var(--text2);margin-bottom:4px}
@@ -225,6 +247,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
 </header>
 
 <nav class="tabbar" id="tabbar">
+  <button class="tab-chip" data-target="sec-cognition">cognition<span class="badge" id="bg-cognition">·</span></button>
   <button class="tab-chip" data-target="sec-loops">stuck<span class="badge" id="bg-loops">·</span></button>
   <button class="tab-chip" data-target="sec-live">live<span class="badge" id="bg-live">·</span></button>
   <button class="tab-chip" data-target="sec-bdi">bdi<span class="badge" id="bg-bdi">·</span></button>
@@ -250,6 +273,18 @@ tr:hover td{background:rgba(121,192,255,.02)}
 </div>
 
 <!-- 1. Stuck-loop detector (banner — appears before the feed if active) -->
+<!-- 0. Cognitive Ascent — the honest 7-cell chain status -->
+<section id="sec-cognition">
+  <div class="sec-head">
+    <h2>cognitive ascent <span id="cogPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/cognition · information → knowledge → concept → wisdom → THOT → ingestion → feedback</span>
+  </div>
+  <p class="sec-desc">
+    Honest snapshot of the chain the thesis describes. Each cell shows whether mindX is actually <b style="color:var(--green)">producing</b> at that tier today, is <b style="color:var(--amber)">ready/gated</b>, or is <b style="color:var(--red)">not implemented</b>. The chain runs raw STM (information) → <abbr title="machine.dreaming 7-phase consolidation: state assessment → input preprocessing → symbolic aggregation → insight scoring → memory storage → parameter tuning → memory pruning">dream consolidation</abbr> → LTM (knowledge: statistics + patterns) → <abbr title="LLM-extracted atomic rules: premise → conclusion with confidence">concept extraction</abbr> → <abbr title="Concepts that have been verified ≥3× with confidence ≥0.85 — Bayesian update over BDI outcomes">verified wisdom</abbr> → <abbr title="On-chain ERC721 anchor (THOT.mintTHOT) of the wisdom CID — makes wisdom externally citable">THOT mint</abbr> → external ingestion → BDI <code>perceive()</code> reads wisdom → next cycle. <a href="/insight/cognition?h=true" target="_blank" rel="noopener">view raw</a>
+  </p>
+  <div id="cognition" class="card"><div class="empty">loading…</div></div>
+</section>
+
 <section id="sec-loops">
   <div class="sec-head">
     <h2>stuck-loop detector
@@ -481,6 +516,83 @@ const escapeHtml = (s) => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 const truncate = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n) + '…' : s; };
+
+// ── 0. Cognitive Ascent — 7-cell chain status ──
+const _COG_GLYPH = {
+  real: '✓', ready: '○', closed: '✓',
+  stale: '·', stub_no_key: '·', open_loop: '·',
+  not_implemented: '✗', not_running: '✗', dead: '✗', error: '!'
+};
+async function refreshCognition() {
+  const box = $('cognition');
+  const pill = $('cogPill');
+  try {
+    const r = await fetch('/insight/cognition');
+    const d = await r.json();
+    const c = d.chain || {};
+    // Build cells in chain order; data layout: [{key, label, val, meta, status}]
+    const cells = [
+      { key: 'information',   label: 'information',   status: c.information?.status,
+        val: Human.count(c.information?.agents_with_stm || 0),
+        meta: 'agents writing STM' },
+      { key: 'consolidation', label: 'consolidation', status: c.consolidation?.status,
+        val: Human.count(c.consolidation?.dreams_total || 0),
+        meta: (c.consolidation?.dreams_24h || 0) + ' in 24h · last ' +
+              (c.consolidation?.last_dream_age_seconds != null
+                ? Human.duration(c.consolidation.last_dream_age_seconds) + ' ago' : 'never') },
+      { key: 'knowledge',     label: 'knowledge',     status: c.knowledge?.status,
+        val: Human.count(c.knowledge?.ltm_files || 0),
+        meta: 'LTM files · last ' + (c.knowledge?.last_updated_age_seconds != null
+              ? Human.duration(c.knowledge.last_updated_age_seconds) + ' ago' : 'never') },
+      { key: 'concepts',      label: 'concepts',      status: c.concepts?.status,
+        val: Human.count(c.concepts?.extracted_total || 0),
+        meta: (c.concepts?.since_24h || 0) + ' in 24h' },
+      { key: 'wisdom',        label: 'wisdom',        status: c.wisdom?.status,
+        val: Human.count(c.wisdom?.verified_total || 0),
+        meta: (c.wisdom?.pending_verification || 0) + ' pending verification' },
+      { key: 'thot',          label: 'THOT',          status: c.thot?.status,
+        val: Human.count(c.thot?.minted_total || 0),
+        meta: 'minted · ' + (c.thot?.pending_mint || 0) + ' queued · key ' +
+              (c.thot?.minter_key_set ? '✓' : '✗') },
+      { key: 'ingested',      label: 'ingestion',     status: c.ingested?.status,
+        val: Human.count(c.ingested?.external_wisdom_count || 0),
+        meta: 'external wisdom imports' },
+      { key: 'feedback',      label: 'feedback loop', status: c.feedback?.status,
+        val: Human.count((c.feedback?.wisdom_applied_24h || 0) + (c.feedback?.wisdom_violated_24h || 0)),
+        meta: (c.feedback?.wisdom_applied_24h || 0) + ' applied · ' +
+              (c.feedback?.wisdom_violated_24h || 0) + ' violated (24h)' },
+    ];
+    // Update tab badge: count cells that are real/closed (good)
+    const realCount = cells.filter(c => c.status === 'real' || c.status === 'closed' || c.status === 'ready').length;
+    const totalCount = cells.length;
+    pill.textContent = realCount + '/' + totalCount + ' producing';
+    pill.className = 'pill ' + (realCount === totalCount ? 'ok' : realCount >= 4 ? 'amber' : 'warn');
+    _setBadge('cognition', realCount, realCount < 4 ? 'warn' : (realCount < totalCount ? 'amber' : ''));
+
+    let html = '<div class="chain-grid">';
+    for (let i = 0; i < cells.length; i++) {
+      const cell = cells[i];
+      const status = cell.status || 'unknown';
+      const glyph = _COG_GLYPH[status] || '?';
+      html += '<div class="chain-cell ' + escapeHtml(status) + '" title="' + escapeHtml(status) + '">' +
+        '<span class="glyph">' + glyph + '</span>' +
+        '<div class="lbl">' + escapeHtml(cell.label) + '</div>' +
+        '<div class="val">' + cell.val + '</div>' +
+        '<div class="meta">' + escapeHtml(cell.meta) + '</div>' +
+        (i < cells.length - 1 ? '<span class="arrow">→</span>' : '') +
+        '</div>';
+    }
+    html += '</div>';
+    if (d.narrative) {
+      html += '<div class="chain-narrative">' + escapeHtml(d.narrative) + '</div>';
+    }
+    box.innerHTML = html;
+  } catch (e) {
+    pill.textContent = 'ERR';
+    pill.className = 'pill warn';
+    box.innerHTML = '<div class="empty">cognition view unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
 
 // ── 1. Stuck-loop detector ──
 async function refreshStuck() {
@@ -1163,7 +1275,8 @@ async function boot() {
   _initTabbar();
   await seedDialogue();
   startSSE();
-  await Promise.allSettled([refreshStuck(), refreshBDI(), refreshLedger(), refreshBoardroom(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
+  await Promise.allSettled([refreshCognition(), refreshStuck(), refreshBDI(), refreshLedger(), refreshBoardroom(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
+  setInterval(refreshCognition, 30000);
   setInterval(refreshStuck, 30000);
   setInterval(refreshBDI, 20000);
   setInterval(refreshLedger, 45000);

@@ -2219,6 +2219,208 @@ async def insight_storage_recent(request: Request, limit: int = 30):
         return {"events": [], "count": 0, "error": str(e)}
 
 
+@app.get("/insight/cognition", tags=["insight"], summary="Information→knowledge→concept→wisdom→THOT→ingestion chain status")
+@_insight_safe
+async def insight_cognition(request: Request):
+    """
+    Honest diagnostic of the 7-step cognitive ascent chain. Each cell reports
+    whether mindX is actually producing at that tier today, with a status
+    label of 'real' | 'stale' | 'stub' | 'open_loop' | 'not_implemented'.
+
+    Read-only. No behavior change. Plan: ~/.claude/plans/purring-humming-stonebraker.md
+    """
+    import os as _os, time as _time
+    now = _time.time()
+
+    # ── 1. INFORMATION (raw STM) ──
+    stm = PROJECT_ROOT / "data" / "memory" / "stm"
+    information: dict = {"status": "not_running"}
+    if stm.is_dir():
+        try:
+            agent_dirs = [d for d in stm.iterdir() if d.is_dir()]
+            information = {
+                "status": "real" if agent_dirs else "not_running",
+                "agents_with_stm": len(agent_dirs),
+                "stm_root": str(stm),
+            }
+        except OSError as e:
+            information = {"status": "error", "error": str(e)}
+
+    # ── 2. CONSOLIDATION (machine.dreaming) ──
+    dreams = PROJECT_ROOT / "data" / "memory" / "dreams"
+    consolidation: dict = {"status": "not_running", "dreams_total": 0, "dreams_24h": 0, "last_dream_age_seconds": None}
+    if dreams.is_dir():
+        try:
+            dfiles = [(f.name, f.stat().st_mtime) for f in dreams.iterdir()
+                      if f.is_file() and f.name.endswith("_dream_report.json")]
+            dfiles.sort(key=lambda t: t[1], reverse=True)
+            consolidation["dreams_total"] = len(dfiles)
+            consolidation["dreams_24h"] = sum(1 for _, m in dfiles if (now - m) < 86400)
+            if dfiles:
+                consolidation["last_dream_age_seconds"] = now - dfiles[0][1]
+                age = consolidation["last_dream_age_seconds"]
+                if age < 12 * 3600:
+                    consolidation["status"] = "real"
+                elif age < 48 * 3600:
+                    consolidation["status"] = "stale"
+                else:
+                    consolidation["status"] = "dead"
+            else:
+                consolidation["status"] = "not_running"
+        except OSError as e:
+            consolidation["status"] = "error"
+            consolidation["error"] = str(e)
+
+    # ── 3. KNOWLEDGE (LTM patterns + insights) ──
+    ltm = PROJECT_ROOT / "data" / "memory" / "ltm"
+    knowledge: dict = {"status": "not_running", "ltm_files": 0, "last_updated_age_seconds": None}
+    concept_files: list = []
+    wisdom_verified_count = 0
+    if ltm.is_dir():
+        try:
+            ltm_files: list = []
+            for agent_dir in ltm.iterdir():
+                if not agent_dir.is_dir():
+                    continue
+                for f in agent_dir.iterdir():
+                    if not f.is_file() or not f.name.endswith(".json"):
+                        continue
+                    ltm_files.append(f)
+                    if f.name.endswith("_concepts.json"):
+                        concept_files.append(f)
+            knowledge["ltm_files"] = len(ltm_files)
+            if ltm_files:
+                last_mtime = max(f.stat().st_mtime for f in ltm_files)
+                knowledge["last_updated_age_seconds"] = now - last_mtime
+                knowledge["status"] = "real" if (now - last_mtime) < 24 * 3600 else "stale"
+            # Quick wisdom-verified scan: any concept file with is_wisdom=True
+            for cf in concept_files[:200]:  # cap for speed
+                try:
+                    with open(cf, "r") as fh:
+                        data = json.load(fh)
+                    items = data if isinstance(data, list) else data.get("concepts") or []
+                    for c in items:
+                        if c.get("is_wisdom"):
+                            wisdom_verified_count += 1
+                except Exception:
+                    continue
+        except OSError as e:
+            knowledge["status"] = "error"
+            knowledge["error"] = str(e)
+
+    # ── 4. CONCEPTS (Phase 1 — *_concepts.json) ──
+    concepts: dict = {
+        "extracted_total": len(concept_files),
+        "since_24h": sum(1 for f in concept_files if (now - f.stat().st_mtime) < 86400) if concept_files else 0,
+        "status": "real" if concept_files else "not_implemented",
+    }
+
+    # ── 5–8. Tail catalogue events for wisdom/thot/ingest/feedback counts ──
+    cat_log = PROJECT_ROOT / "data" / "logs" / "catalogue_events.jsonl"
+    wisdom_minted = 0
+    wisdom_ingested = 0
+    feedback_applied_24h = 0
+    feedback_violated_24h = 0
+    if cat_log.exists():
+        try:
+            with open(cat_log, "rb") as f:
+                f.seek(0, 2)
+                size = f.tell()
+                head = max(0, size - 4 * 1024 * 1024)  # last ~4MB tail
+                f.seek(head)
+                tail = f.read().decode("utf-8", errors="replace").splitlines()
+            for ln in tail:
+                ln = ln.strip()
+                if not ln:
+                    continue
+                try:
+                    e = json.loads(ln)
+                except Exception:
+                    continue
+                k = e.get("kind", "")
+                ts = e.get("ts", 0)
+                fresh_24h = (now - ts) < 86400
+                if k == "wisdom.minted":
+                    wisdom_minted += 1
+                elif k == "wisdom.ingested":
+                    wisdom_ingested += 1
+                elif k == "wisdom.applied" and fresh_24h:
+                    feedback_applied_24h += 1
+                elif k == "wisdom.violated" and fresh_24h:
+                    feedback_violated_24h += 1
+        except Exception:
+            pass
+
+    wisdom: dict = {
+        "verified_total": wisdom_verified_count,
+        "pending_verification": max(0, len(concept_files) - wisdom_verified_count),
+        "status": "real" if wisdom_verified_count > 0 else "not_implemented",
+    }
+    thot_minter_set = bool(_os.environ.get("THOT_MINTER_KEY"))
+    wisdom_queue_dir = PROJECT_ROOT / "data" / "memory" / "wisdom_queue"
+    pending_mint = 0
+    if wisdom_queue_dir.is_dir():
+        try:
+            pending_mint = sum(1 for f in wisdom_queue_dir.iterdir() if f.is_file() and f.name.endswith(".json"))
+        except OSError:
+            pass
+    thot: dict = {
+        "minted_total": wisdom_minted,
+        "pending_mint": pending_mint,
+        "status": (
+            "real" if wisdom_minted > 0
+            else ("ready" if thot_minter_set else "stub_no_key")
+        ),
+        "minter_key_set": thot_minter_set,
+    }
+    ingested: dict = {
+        "external_wisdom_count": wisdom_ingested,
+        "status": "real" if wisdom_ingested > 0 else "not_implemented",
+    }
+    feedback: dict = {
+        "wisdom_applied_24h": feedback_applied_24h,
+        "wisdom_violated_24h": feedback_violated_24h,
+        "status": (
+            "closed" if (feedback_applied_24h + feedback_violated_24h) > 0
+            else "open_loop"
+        ),
+    }
+
+    # ── Narrative ──
+    parts: list[str] = []
+    parts.append(
+        f"information: {information['status']}, "
+        f"{information.get('agents_with_stm', 0)} agents with STM"
+    )
+    if consolidation["last_dream_age_seconds"] is not None:
+        age_h = consolidation["last_dream_age_seconds"] / 3600
+        parts.append(f"consolidation: {consolidation['status']}, last dream {age_h:.1f}h ago, {consolidation['dreams_24h']}/24h")
+    else:
+        parts.append("consolidation: no dream reports on disk")
+    parts.append(f"knowledge: {knowledge['status']}, {knowledge['ltm_files']} LTM files")
+    parts.append(f"concepts: {concepts['status']} ({concepts['extracted_total']})")
+    parts.append(f"wisdom: {wisdom['status']} ({wisdom['verified_total']} verified)")
+    parts.append(f"thot: {thot['status']} ({thot['minted_total']} minted, {thot['pending_mint']} queued)")
+    parts.append(f"ingestion: {ingested['status']} ({ingested['external_wisdom_count']} external)")
+    parts.append(f"feedback: {feedback['status']} ({feedback['wisdom_applied_24h']} applied / {feedback['wisdom_violated_24h']} violated, last 24h)")
+    narrative = " | ".join(parts)
+
+    return _maybe_h_text(request, {
+        "chain": {
+            "information": information,
+            "consolidation": consolidation,
+            "knowledge": knowledge,
+            "concepts": concepts,
+            "wisdom": wisdom,
+            "thot": thot,
+            "ingested": ingested,
+            "feedback": feedback,
+        },
+        "narrative": narrative,
+        "computed_at": now,
+    }, route_path="/insight/cognition")
+
+
 @app.post("/storage/offload", tags=["storage"], summary="Run offload projector (dry_run by default)")
 async def storage_offload(req: OffloadRequest, request: Request):
     """

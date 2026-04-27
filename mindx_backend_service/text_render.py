@@ -386,6 +386,67 @@ def render_eligible(d: dict) -> str:
     return out
 
 
+_COG_STATUS_GLYPH = {
+    "real": "✓",
+    "ready": "○",
+    "stale": "·",
+    "stub_no_key": "·",
+    "open_loop": "·",
+    "not_implemented": "✗",
+    "not_running": "✗",
+    "dead": "✗",
+    "error": "!",
+    "closed": "✓",
+}
+
+
+def render_cognition(d: dict) -> str:
+    chain = d.get("chain") or {}
+    rows: list[tuple[str, str, str]] = []  # (label, status_glyph status, detail)
+    inf = chain.get("information") or {}
+    rows.append(("information", inf.get("status", "?"), f"{inf.get('agents_with_stm', 0)} agents with STM"))
+    cons = chain.get("consolidation") or {}
+    age = cons.get("last_dream_age_seconds")
+    age_str = human_duration(age) + " ago" if age is not None else "never"
+    rows.append(("consolidation", cons.get("status", "?"),
+                 f"{cons.get('dreams_total', 0)} dreams · {cons.get('dreams_24h', 0)} in 24h · last {age_str}"))
+    kn = chain.get("knowledge") or {}
+    kn_age = kn.get("last_updated_age_seconds")
+    kn_age_s = human_duration(kn_age) + " ago" if kn_age is not None else "never"
+    rows.append(("knowledge", kn.get("status", "?"),
+                 f"{human_count(kn.get('ltm_files', 0))} LTM files · last {kn_age_s}"))
+    cn = chain.get("concepts") or {}
+    rows.append(("concepts", cn.get("status", "?"),
+                 f"{cn.get('extracted_total', 0)} extracted · {cn.get('since_24h', 0)} in 24h"))
+    w = chain.get("wisdom") or {}
+    rows.append(("wisdom", w.get("status", "?"),
+                 f"{w.get('verified_total', 0)} verified · {w.get('pending_verification', 0)} pending"))
+    t = chain.get("thot") or {}
+    minter = "key set" if t.get("minter_key_set") else "no key"
+    rows.append(("thot", t.get("status", "?"),
+                 f"{t.get('minted_total', 0)} minted · {t.get('pending_mint', 0)} queued · {minter}"))
+    ing = chain.get("ingested") or {}
+    rows.append(("ingested", ing.get("status", "?"),
+                 f"{ing.get('external_wisdom_count', 0)} external"))
+    fb = chain.get("feedback") or {}
+    rows.append(("feedback", fb.get("status", "?"),
+                 f"applied {fb.get('wisdom_applied_24h', 0)}/24h · violated {fb.get('wisdom_violated_24h', 0)}/24h"))
+
+    out: list[str] = []
+    out.append("information → knowledge → concept → wisdom → THOT → ingestion → feedback")
+    out.append("─" * 78)
+    for label, status, detail in rows:
+        glyph = _COG_STATUS_GLYPH.get(status, "?")
+        out.append(f"  {glyph}  {label:<14}  {status:<18}  {detail}")
+    out.append("")
+    out.append("  ✓ real / closed     ○ ready (gated)     · stale / stub")
+    out.append("  ✗ not implemented   ! error")
+    if d.get("narrative"):
+        out.append("")
+        out.append(d["narrative"])
+    return "\n".join(out) + "\n"
+
+
 def render_anchor_health(d: dict) -> str:
     return render_kv(
         {
@@ -407,6 +468,7 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/storage/recent":      render_storage_recent,
     "/insight/dreams/recent":       render_dreams_recent,
     "/insight/bdi/recent":          render_bdi_recent,
+    "/insight/cognition":           render_cognition,
     "/insight/godel/recent":        render_godel_recent,
     "/insight/boardroom/recent":    render_boardroom_recent,
     "/insight/improvement/summary": render_improvement_summary,
