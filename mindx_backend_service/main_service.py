@@ -1776,6 +1776,97 @@ async def insight_dreams_recent(request: Request, limit: int = 50):
     return _maybe_h_text(request, {"dreams": out, "count": len(out), "last_dream_age_seconds": last_age}, route_path="/insight/dreams/recent")
 
 
+@app.get("/insight/bdi/recent", tags=["insight"], summary="Detailed BDI events from process_trace.jsonl")
+@_insight_safe
+async def insight_bdi_recent(
+    request: Request,
+    agent_id: str = "bdi_agent_mastermind_strategy_mastermind_prime",
+    limit: int = 60,
+    kinds: str = "bdi_planning_start,bdi_deliberation,bdi_action,bdi_action_execution,bdi_goal_set",
+):
+    """Tail BDI process_trace.jsonl for one agent, filtered to BDI process_names.
+
+    Returns every plan, deliberation, action, and execution with full payload —
+    not the summarized thinking_step ActivityFeed events. Lets feedback.html
+    render the actual JSON action lists and tool params/results that the BDI
+    is generating.
+    """
+    workspace = PROJECT_ROOT / "data" / "memory" / "agent_workspaces" / agent_id
+    trace = workspace / "process_trace.jsonl"
+    if not trace.exists():
+        return {"agent_id": agent_id, "events": [], "count": 0, "note": f"no process_trace at {trace}"}
+    kind_set = {k.strip() for k in (kinds or "").split(",") if k.strip()}
+    try:
+        # Tail last ~512KB to avoid loading multi-MB files; this typically holds
+        # enough recent BDI activity for the page.
+        with open(trace, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            head = max(0, size - 512 * 1024)
+            f.seek(head)
+            tail = f.read().decode("utf-8", errors="replace").splitlines()
+        events: list[dict] = []
+        # Walk back-to-front so we keep the newest N matching events.
+        for ln in reversed(tail):
+            ln = ln.strip()
+            if not ln:
+                continue
+            try:
+                evt = json.loads(ln)
+            except Exception:
+                continue
+            pn = evt.get("process_name")
+            if kind_set and pn not in kind_set:
+                continue
+            md = evt.get("metadata") or {}
+            pd = evt.get("process_data") or {}
+            row = {
+                "timestamp_utc": evt.get("timestamp_utc"),
+                "process_name": pn,
+                "run_id": md.get("run_id"),
+                "memory_id": evt.get("memory_id"),
+            }
+            # Field-specific summary so the page doesn't have to know the
+            # internal shape; raw payload also surfaced for drill-down.
+            if pn == "bdi_planning_start":
+                row["goal_id"] = pd.get("goal_id")
+                row["goal_description"] = pd.get("goal_description")
+            elif pn == "bdi_deliberation":
+                sel = pd.get("selected_goal") or {}
+                row["goal_id"] = sel.get("id")
+                row["goal_description"] = sel.get("goal")
+                row["priority"] = sel.get("priority")
+                row["queue_size"] = len(pd.get("full_desire_queue") or [])
+            elif pn in ("bdi_action", "bdi_action_execution"):
+                # bdi_action_execution wraps `action`; bdi_action is flat.
+                a = pd.get("action") if "action" in pd else pd
+                row["action_type"] = a.get("type")
+                row["action_id"] = a.get("id")
+                row["params"] = a.get("params")
+                row["description"] = a.get("description")
+                row["success"] = pd.get("success") if "success" in pd else a.get("success")
+                result = pd.get("result") if "result" in pd else a.get("result")
+                if isinstance(result, str):
+                    row["result"] = result[:280]
+                else:
+                    row["result"] = result
+            elif pn == "bdi_goal_set":
+                row["goal_id"] = pd.get("id")
+                row["goal_description"] = pd.get("goal") or pd.get("description")
+                row["priority"] = pd.get("priority")
+            row["payload"] = pd
+            events.append(row)
+            if len(events) >= max(1, min(limit, 300)):
+                break
+        return _maybe_h_text(
+            request,
+            {"agent_id": agent_id, "events": events, "count": len(events)},
+            route_path="/insight/bdi/recent",
+        )
+    except Exception as e:
+        return {"agent_id": agent_id, "events": [], "count": 0, "error": str(e)}
+
+
 @app.get("/insight/godel/recent", tags=["insight"])
 @_insight_safe
 async def insight_godel_recent(request: Request, limit: int = 50):

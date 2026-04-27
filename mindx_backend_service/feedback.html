@@ -96,6 +96,28 @@ tr:hover td{background:rgba(121,192,255,.02)}
 .vote.reject{background:rgba(248,81,73,.08);color:var(--red);border-color:rgba(248,81,73,.2)}
 .vote.abstain{background:rgba(227,179,65,.08);color:var(--amber);border-color:rgba(227,179,65,.2)}
 
+/* BDI activity */
+.bdi-run{margin:14px 0;border-left:2px solid rgba(121,192,255,.25);padding-left:10px}
+.bdi-run-hd{display:flex;gap:10px;align-items:baseline;font-family:var(--mono);font-size:11.5px;color:var(--text2);margin-bottom:4px}
+.bdi-run-hd .id{color:var(--blue);font-weight:600}
+.bdi-run-hd .meta{color:var(--text3);font-size:10.5px}
+.bdi-event{display:grid;grid-template-columns:78px 110px 1fr;gap:10px;padding:3px 6px;font-family:var(--mono);font-size:11.5px;border-bottom:1px solid rgba(255,255,255,.03)}
+.bdi-event:hover{background:rgba(121,192,255,.03)}
+.bdi-event .ts{color:var(--text3);font-size:10.5px}
+.bdi-event .kind{font-weight:600;letter-spacing:.5px;font-size:10px;text-transform:uppercase;padding-top:1px}
+.bdi-event .kind.plan{color:var(--violet)}
+.bdi-event .kind.delib{color:var(--blue)}
+.bdi-event .kind.goal{color:var(--amber)}
+.bdi-event .kind.act{color:var(--green)}
+.bdi-event .kind.act-fail{color:var(--red)}
+.bdi-event .body{color:var(--text);word-break:break-word}
+.bdi-event .body .params{color:var(--text2);font-size:10.5px}
+.bdi-event .body .result{color:var(--text3);font-size:10.5px}
+.bdi-event .body details{display:inline}
+.bdi-event .body summary{cursor:pointer;list-style:none;color:var(--text3);font-size:10px;margin-left:4px}
+.bdi-event .body summary::-webkit-details-marker{display:none}
+.bdi-event .body pre{margin-top:4px;padding:6px;background:rgba(0,0,0,.3);border-radius:4px;font-size:10px;color:var(--text2);max-height:160px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+
 /* Dream cycle table */
 .dream-row td.tune{font-size:11px}
 .tune ul{list-style:none;padding-left:0}
@@ -167,7 +189,16 @@ tr:hover td{background:rgba(121,192,255,.02)}
   <div id="dialogue"><div class="empty">waiting for events…</div></div>
 </section>
 
-<!-- 3. Improvement ledger with reasoning -->
+<!-- 3. BDI activity — detailed plan/deliberation/action events -->
+<section>
+  <div class="sec-head">
+    <h2>BDI activity <span id="bdiPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/bdi/recent · process_trace.jsonl · runs grouped, params + results inline</span>
+  </div>
+  <div id="bdi" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<!-- 4. Improvement ledger with reasoning -->
 <section>
   <div class="sec-head">
     <h2>improvement ledger — choices &amp; rationale</h2>
@@ -453,7 +484,104 @@ async function seedDialogue() {
   } catch (_) {}
 }
 
-// ── 3. Improvement ledger ──
+// ── 3. BDI activity (real plan/deliberate/action events from process_trace.jsonl) ──
+async function refreshBDI() {
+  const box = $('bdi');
+  const pill = $('bdiPill');
+  try {
+    const r = await fetch('/insight/bdi/recent?limit=80');
+    const d = await r.json();
+    const events = d.events || [];
+    if (!events.length) {
+      pill.textContent = 'NO EVENTS';
+      pill.className = 'pill amber';
+      box.innerHTML = '<div class="empty">no BDI events in process_trace yet (' +
+        escapeHtml(d.note || d.error || 'agent has not run since deploy') + ')</div>';
+      return;
+    }
+    pill.textContent = events.length + ' EVENTS';
+    pill.className = 'pill ok';
+
+    // Group by run_id, preserving newest-first order. Events come back newest-first;
+    // we render newest run first, with its events oldest→newest within the run so the
+    // narrative reads top-to-bottom.
+    const byRun = new Map();
+    const runOrder = [];
+    for (const e of events) {
+      const rid = e.run_id || '—';
+      if (!byRun.has(rid)) { byRun.set(rid, []); runOrder.push(rid); }
+      byRun.get(rid).push(e);
+    }
+
+    const html = [];
+    for (const rid of runOrder) {
+      const runEvents = byRun.get(rid).slice().reverse();  // oldest-first within run
+      const first = runEvents[0];
+      const last = runEvents[runEvents.length - 1];
+      const goalDesc = runEvents.find(e => e.goal_description)?.goal_description || '';
+      html.push('<div class="bdi-run">');
+      html.push('<div class="bdi-run-hd">' +
+        '<span class="id">run ' + escapeHtml(Human.hash(rid, 12)) + '</span>' +
+        '<span>' + relSpan(first.timestamp_utc) + '</span>' +
+        '<span class="meta">' + runEvents.length + ' events · ' + escapeHtml(truncate(goalDesc, 90)) + '</span>' +
+      '</div>');
+      for (const e of runEvents) {
+        const ts = relSpan(e.timestamp_utc);
+        const pn = e.process_name || '?';
+        let kindCls = 'kind';
+        let kindLbl = pn;
+        let body = '';
+        if (pn === 'bdi_planning_start') {
+          kindCls = 'kind plan'; kindLbl = 'plan_start';
+          body = '<b>goal</b> <code title="' + escapeHtml(e.goal_id || '') + '">' +
+                 escapeHtml(Human.hash(e.goal_id || '?', 8)) + '</code> · ' +
+                 escapeHtml(truncate(e.goal_description || '', 120));
+        } else if (pn === 'bdi_deliberation') {
+          kindCls = 'kind delib'; kindLbl = 'deliberate';
+          body = '<b>goal</b> <code title="' + escapeHtml(e.goal_id || '') + '">' +
+                 escapeHtml(Human.hash(e.goal_id || '?', 8)) + '</code> · ' +
+                 'prio=' + (e.priority ?? '?') + ' · queue=' + countSpan(e.queue_size);
+        } else if (pn === 'bdi_goal_set') {
+          kindCls = 'kind goal'; kindLbl = 'goal_set';
+          body = '<b>goal</b> <code>' + escapeHtml(Human.hash(e.goal_id || '?', 8)) + '</code> · ' +
+                 'prio=' + (e.priority ?? '?') + ' · ' + escapeHtml(truncate(e.goal_description || '', 100));
+        } else if (pn === 'bdi_action' || pn === 'bdi_action_execution') {
+          const ok = e.success === true;
+          kindCls = 'kind ' + (ok ? 'act' : 'act-fail');
+          kindLbl = (pn === 'bdi_action_execution' ? 'execute' : 'action') + (ok ? ' ✓' : ' ✗');
+          const params = e.params || {};
+          const paramKeys = Object.keys(params);
+          const paramsStr = paramKeys.length
+            ? '(' + paramKeys.map(k => escapeHtml(k) + '=' + escapeHtml(truncate(String(params[k]), 32))).join(', ') + ')'
+            : '()';
+          const resultStr = e.result === undefined || e.result === null ? '' :
+                            (typeof e.result === 'string' ? e.result : JSON.stringify(e.result));
+          body = '<b>' + escapeHtml(e.action_type || '?') + '</b>' +
+                 '<span class="params"> ' + paramsStr + '</span>' +
+                 (resultStr ? ' → <span class="result">' + escapeHtml(truncate(resultStr, 200)) + '</span>' : '');
+        } else {
+          kindLbl = pn;
+        }
+        // Always provide a drill-down with the raw payload
+        const payload = JSON.stringify(e.payload || {}, null, 2);
+        body += '<details><summary>⋯</summary><pre>' + escapeHtml(truncate(payload, 4000)) + '</pre></details>';
+        html.push('<div class="bdi-event">' +
+          '<span class="ts">' + ts + '</span>' +
+          '<span class="' + kindCls + '">' + escapeHtml(kindLbl) + '</span>' +
+          '<span class="body">' + body + '</span>' +
+        '</div>');
+      }
+      html.push('</div>');
+    }
+    box.innerHTML = html.join('');
+  } catch (e) {
+    pill.textContent = 'ERR';
+    pill.className = 'pill warn';
+    box.innerHTML = '<div class="empty">BDI activity unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+// ── 4. Improvement ledger ──
 async function refreshLedger() {
   const box = $('ledger');
   try {
@@ -749,8 +877,9 @@ async function refreshStorage() {
 async function boot() {
   await seedDialogue();
   startSSE();
-  await Promise.allSettled([refreshStuck(), refreshLedger(), refreshBoardroom(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
+  await Promise.allSettled([refreshStuck(), refreshBDI(), refreshLedger(), refreshBoardroom(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
   setInterval(refreshStuck, 30000);
+  setInterval(refreshBDI, 20000);
   setInterval(refreshLedger, 45000);
   setInterval(refreshBoardroom, 60000);
   setInterval(refreshDreams, 60000);

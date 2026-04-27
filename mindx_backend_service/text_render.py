@@ -231,6 +231,37 @@ def render_dreams_recent(d: dict) -> str:
     )
 
 
+def render_bdi_recent(d: dict) -> str:
+    rows = d.get("events") or []
+    out: list[str] = []
+    out.append(f"agent: {d.get('agent_id', '?')}  · {len(rows)} events")
+    out.append("─" * 80)
+    last_run = None
+    for r in rows:
+        run = r.get("run_id") or "—"
+        if run != last_run:
+            out.append(f"\n● run {human_hash(run, 12)}")
+            last_run = run
+        ts = human_rel_ts(r.get("timestamp_utc"))
+        pn = r.get("process_name", "?")
+        if pn == "bdi_planning_start":
+            out.append(f"  {ts:>8}  PLAN_START   goal={human_hash(r.get('goal_id', '?'), 8)}  '{(r.get('goal_description') or '')[:60]}'")
+        elif pn == "bdi_deliberation":
+            out.append(f"  {ts:>8}  DELIBERATE   goal={human_hash(r.get('goal_id', '?'), 8)}  prio={r.get('priority', '?')}  queue={r.get('queue_size', '?')}")
+        elif pn == "bdi_goal_set":
+            out.append(f"  {ts:>8}  GOAL_SET     goal={human_hash(r.get('goal_id', '?'), 8)}  prio={r.get('priority', '?')}  '{(r.get('goal_description') or '')[:60]}'")
+        elif pn in ("bdi_action", "bdi_action_execution"):
+            ok = "✓" if r.get("success") else "✗"
+            params = r.get("params") or {}
+            params_s = ",".join(f"{k}={str(v)[:24]}" for k, v in (params.items() if isinstance(params, dict) else []))[:64]
+            res = (r.get("result") or "")
+            res_s = (str(res)[:60] + "…") if len(str(res)) > 60 else str(res)
+            out.append(f"  {ts:>8}  ACTION    {ok}  {r.get('action_type', '?'):<22} ({params_s})  → {res_s}")
+        else:
+            out.append(f"  {ts:>8}  {pn:<22}")
+    return "\n".join(out) + "\n"
+
+
 def render_godel_recent(d: dict) -> str:
     rows = d.get("events") or []
     def _rationale(v: Any) -> str:
@@ -375,6 +406,7 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/storage/status":      render_storage_status,
     "/insight/storage/recent":      render_storage_recent,
     "/insight/dreams/recent":       render_dreams_recent,
+    "/insight/bdi/recent":          render_bdi_recent,
     "/insight/godel/recent":        render_godel_recent,
     "/insight/boardroom/recent":    render_boardroom_recent,
     "/insight/improvement/summary": render_improvement_summary,
