@@ -29,6 +29,8 @@ EventKind = Literal[
     "memory.write",          # MemoryAgent.save_timestamped_memory
     "memory.consolidate",    # STM → LTM promotion
     "memory.dream",          # MachineDreamCycle phase event
+    "memory.offload",        # IPFS push (storage.offload_projector)
+    "memory.anchor",         # on-chain CID anchor (storage.anchor)
     "godel.choice",          # MemoryAgent.log_godel_choice
     "board.session",         # boardroom session completion
     "board.vote",            # individual vote within a session

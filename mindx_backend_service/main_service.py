@@ -1170,7 +1170,7 @@ app.add_middleware(
 # Uses @app.middleware("http") which always fires regardless of import order.
 
 _PUBLIC_EXACT = frozenset({
-    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html",
+    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/diagnostics/live", "/activity/stream", "/activity/recent", "/activity/stats",
     "/thesis", "/thesis/", "/thesis/evidence", "/thesis/summary",
@@ -1837,6 +1837,150 @@ async def insight_stuck_loops(window: int = 900, min_repeats: int = 5):
     }
 
 
+# ── Storage / IPFS offload endpoints ──
+# Plan: ~/.claude/plans/whispering-floating-merkle.md
+# All routes auth-gated by the access-gate middleware (not in _PUBLIC_EXACT).
+# Destructive (dry_run=False) mode additionally requires admin via require_admin_access.
+
+class OffloadRequest(BaseModel):
+    agent_id: Optional[str] = None
+    min_age_days: float = 14.0
+    max_batches: int = 10
+    dry_run: bool = True
+
+
+@app.get("/storage/health", tags=["storage"], summary="IPFS provider reachability")
+@_insight_safe
+async def storage_health():
+    try:
+        from agents.storage.lighthouse_provider import LighthouseProvider
+        from agents.storage.nftstorage_provider import NFTStorageProvider
+        from agents.storage.multi_provider import MultiProvider
+    except Exception as imp_e:
+        return {"error": f"storage module unavailable: {imp_e}"}
+    primary = None
+    mirror = None
+    try:
+        primary = LighthouseProvider()
+    except Exception as e:
+        primary_err = str(e)
+        primary = None
+    try:
+        mirror = NFTStorageProvider()
+    except Exception as e:
+        mirror_err = str(e)
+        mirror = None
+    if primary is None and mirror is None:
+        return {"reachable": False, "note": "no IPFS API keys configured (LIGHTHOUSE_API_KEY / NFTSTORAGE_API_KEY)"}
+    if primary is None:
+        provider = MultiProvider(mirror)  # type: ignore[arg-type]
+    elif mirror is None:
+        provider = MultiProvider(primary)
+    else:
+        provider = MultiProvider(primary, mirror)
+    try:
+        h = await provider.health()
+        await provider.close()
+        return h
+    except Exception as e:
+        return {"reachable": False, "error": str(e)}
+
+
+@app.get("/storage/eligible", tags=["storage"], summary="List STM directories eligible for offload")
+@_insight_safe
+async def storage_eligible(min_age_days: float = 14.0, agent_id: Optional[str] = None, limit: int = 50):
+    from agents.storage.eligibility import list_eligible
+    cands = list_eligible(PROJECT_ROOT, min_age_days=min_age_days, agent_id=agent_id)
+    out = [
+        {
+            "agent_id": c.agent_id,
+            "date_str": c.date_str,
+            "path": str(c.path),
+            "age_days": round(c.age_days, 2),
+            "size_bytes": c.size_bytes,
+        }
+        for c in cands[:max(1, min(limit, 500))]
+    ]
+    total_bytes = sum(c.size_bytes for c in cands)
+    return {
+        "candidates": out,
+        "candidate_count": len(cands),
+        "total_size_bytes": total_bytes,
+    }
+
+
+@app.get("/insight/storage/status", tags=["insight"], summary="Memory offload status counts")
+@_insight_safe
+async def insight_storage_status():
+    try:
+        from agents import memory_pgvector
+        return await memory_pgvector.get_offload_stats()
+    except Exception as e:
+        return {"error": str(e), "local": 0, "ipfs": 0, "thot": 0, "anchored": 0}
+
+
+@app.post("/storage/offload", tags=["storage"], summary="Run offload projector (dry_run by default)")
+async def storage_offload(req: OffloadRequest, request: Request):
+    """
+    Run a single pass of the offload projector.
+
+    By default `dry_run=True`: uploads + verifies + marks DB but does NOT
+    delete local STM files. Set `dry_run=false` to actually free disk —
+    this requires admin authorization.
+    """
+    if not req.dry_run:
+        # Destructive — require admin
+        await require_admin_access(request)
+    try:
+        from agents.storage.lighthouse_provider import LighthouseProvider
+        from agents.storage.nftstorage_provider import NFTStorageProvider
+        from agents.storage.multi_provider import MultiProvider
+        from agents.storage.offload_projector import OffloadProjector, serialize_run
+    except Exception as imp_e:
+        raise HTTPException(status_code=503, detail=f"storage module unavailable: {imp_e}")
+    primary = None
+    mirror = None
+    try:
+        primary = LighthouseProvider()
+    except Exception:
+        primary = None
+    try:
+        mirror = NFTStorageProvider()
+    except Exception:
+        mirror = None
+    if primary is None and mirror is None:
+        raise HTTPException(
+            status_code=503,
+            detail="No IPFS providers configured. Set LIGHTHOUSE_API_KEY or NFTSTORAGE_API_KEY in vault.",
+        )
+    if primary is None:
+        provider = MultiProvider(mirror)  # type: ignore[arg-type]
+    elif mirror is None:
+        provider = MultiProvider(primary)
+    else:
+        provider = MultiProvider(primary, mirror)
+    id_manager = None
+    try:
+        from agents.core.id_manager_agent import IDManagerAgent
+        id_manager = await IDManagerAgent.get_instance()
+    except Exception:
+        id_manager = None
+    projector = OffloadProjector(
+        provider=provider, memory_agent=memory_agent, id_manager=id_manager,
+        project_root=PROJECT_ROOT,
+    )
+    try:
+        run = await projector.run(
+            agent_id=req.agent_id,
+            min_age_days=req.min_age_days,
+            max_batches=max(1, min(req.max_batches, 200)),
+            dry_run=req.dry_run,
+        )
+    finally:
+        await provider.close()
+    return serialize_run(run)
+
+
 # ── Thesis Evidence: scientific proof endpoints ──
 
 @app.get("/thesis", response_class=_DashResponse, tags=["thesis"], include_in_schema=False)
@@ -2303,6 +2447,15 @@ async def startup_event():
             logger.warning(f"Failed to integrate mindterm with coordinator: {e}", exc_info=True)
         
         logger.info("mindX components initialized successfully. API is ready.")
+
+        # Ensure IPFS-offload schema columns exist (idempotent, additive ALTER).
+        # Plan: ~/.claude/plans/whispering-floating-merkle.md
+        try:
+            from agents import memory_pgvector
+            ok = await memory_pgvector.init_offload_schema()
+            logger.info(f"Memory offload schema init: {'ok' if ok else 'skipped (pg unavailable)'}")
+        except Exception as schema_e:
+            logger.warning(f"init_offload_schema failed: {schema_e}")
 
         # Run startup_agent.initialize_system() as a background task so it can
         # coordinate the full startup sequence and notify mindXagent (Ollama models, terminal log, etc.)

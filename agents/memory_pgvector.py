@@ -46,6 +46,91 @@ async def get_pool():
     return _pool
 
 
+async def init_offload_schema() -> bool:
+    """
+    Add IPFS-offload columns to the memories table. Idempotent — safe to call
+    on every boot. Plan: ~/.claude/plans/whispering-floating-merkle.md
+    """
+    pool = await get_pool()
+    if not pool:
+        return False
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """
+                ALTER TABLE memories ADD COLUMN IF NOT EXISTS content_cid TEXT;
+                ALTER TABLE memories ADD COLUMN IF NOT EXISTS content_cid_mirror TEXT;
+                ALTER TABLE memories ADD COLUMN IF NOT EXISTS offload_tier VARCHAR(16) DEFAULT 'local';
+                ALTER TABLE memories ADD COLUMN IF NOT EXISTS offloaded_at TIMESTAMP;
+                ALTER TABLE memories ADD COLUMN IF NOT EXISTS offload_tx_hash TEXT;
+                ALTER TABLE memories ADD COLUMN IF NOT EXISTS offload_chain VARCHAR(16);
+                CREATE INDEX IF NOT EXISTS idx_memories_offload_tier ON memories(offload_tier);
+                """
+            )
+        logger.info("pgvector: offload schema columns ensured")
+        return True
+    except Exception as e:
+        logger.warning(f"pgvector init_offload_schema failed: {e}")
+        return False
+
+
+async def mark_memory_offloaded(
+    memory_id: str,
+    content_cid: str,
+    content_cid_mirror: Optional[str],
+    offload_tier: str,
+    chain: Optional[str] = None,
+    tx_hash: Optional[str] = None,
+) -> bool:
+    """Update a memory row to record IPFS offload + on-chain anchor."""
+    pool = await get_pool()
+    if not pool:
+        return False
+    try:
+        await pool.execute(
+            """UPDATE memories
+               SET content_cid = $2,
+                   content_cid_mirror = $3,
+                   offload_tier = $4,
+                   offload_chain = $5,
+                   offload_tx_hash = $6,
+                   offloaded_at = NOW()
+               WHERE memory_id = $1""",
+            memory_id, content_cid, content_cid_mirror, offload_tier, chain, tx_hash,
+        )
+        return True
+    except Exception as e:
+        logger.debug(f"pgvector mark_memory_offloaded failed: {e}")
+        return False
+
+
+async def get_offload_stats() -> Dict[str, Any]:
+    """Aggregate offload status counts for diagnostics dashboard."""
+    pool = await get_pool()
+    if not pool:
+        return {"local": 0, "ipfs": 0, "thot": 0, "anchored": 0}
+    try:
+        row = await pool.fetchrow(
+            """SELECT
+                COUNT(*) FILTER (WHERE offload_tier='local'  OR offload_tier IS NULL) AS local_count,
+                COUNT(*) FILTER (WHERE offload_tier='ipfs')  AS ipfs_count,
+                COUNT(*) FILTER (WHERE offload_tier='thot')  AS thot_count,
+                COUNT(*) FILTER (WHERE offload_tx_hash IS NOT NULL) AS anchored_count,
+                MAX(offloaded_at) AS last_offload_ts
+               FROM memories"""
+        )
+        return {
+            "local": row["local_count"] or 0,
+            "ipfs": row["ipfs_count"] or 0,
+            "thot": row["thot_count"] or 0,
+            "anchored": row["anchored_count"] or 0,
+            "last_offload_ts": row["last_offload_ts"].isoformat() if row["last_offload_ts"] else None,
+        }
+    except Exception as e:
+        logger.debug(f"pgvector get_offload_stats failed: {e}")
+        return {"local": 0, "ipfs": 0, "thot": 0, "anchored": 0}
+
+
 async def store_memory(
     memory_id: str,
     agent_id: str,

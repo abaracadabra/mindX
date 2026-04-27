@@ -44,6 +44,14 @@ PROVIDER_ENV_MAP = {
     "mindx_api_keys": "MINDX_SECURITY_API_KEYS",
     # Admin wallet addresses
     "mindx_admin_addresses": "MINDX_SECURITY_ADMIN_ADDRESSES",
+    # IPFS storage providers — for memory offload (plan: whispering-floating-merkle.md)
+    "lighthouse_api_key": "LIGHTHOUSE_API_KEY",
+    "nftstorage_api_key": "NFTSTORAGE_API_KEY",
+    # Chain RPC URLs for memory anchoring (ARC + Polygon)
+    "arc_rpc_url": "ARC_RPC_URL",
+    "polygon_rpc_url": "POLYGON_RPC_URL",
+    # Treasury wallet — funds agent gas for chain anchoring
+    "memory_anchor_treasury_pk": "MEMORY_ANCHOR_TREASURY_PK",
 }
 
 
