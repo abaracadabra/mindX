@@ -230,7 +230,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
 
 <div class="foot">
   mindX · Darwin-Godel machine · live at <a href="https://mindx.pythai.net">mindx.pythai.net</a> ·
-  feedback view · plan: purring-humming-stonebraker
+  feedback view · numbers humanized · <code>?h=true</code> for plain text
 </div>
 </main>
 
@@ -244,6 +244,94 @@ const fmtTs = (ts) => {
   if (isNaN(d.getTime())) return '?';
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 };
+
+// ── Humanizer module — `df -h` style consistent formatting ──
+// Plan: ~/.claude/plans/luminous-humming-knuth.md
+const Human = {
+  bytes(n) {
+    n = Number(n);
+    if (!isFinite(n) || n == null) return '—';
+    const u = ['B','KB','MB','GB','TB','PB']; let i = 0;
+    while (Math.abs(n) >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+    return (i === 0 ? n : n.toFixed(n < 10 ? 2 : 1)) + ' ' + u[i];
+  },
+  count(n) {
+    n = Number(n);
+    if (!isFinite(n)) return '—';
+    if (Math.abs(n) < 1000) return String(n);
+    if (Math.abs(n) < 1e6)  return (n/1e3).toFixed(n < 1e4 ? 2 : 1) + 'k';
+    if (Math.abs(n) < 1e9)  return (n/1e6).toFixed(1) + 'M';
+    return (n/1e9).toFixed(1) + 'B';
+  },
+  duration(s) {
+    s = parseFloat(s);
+    if (!isFinite(s)) return '—';
+    if (s < 1)    return Math.round(s * 1000) + 'ms';
+    if (s < 60)   return s.toFixed(1) + 's';
+    if (s < 3600) return Math.floor(s/60) + 'm ' + Math.round(s%60) + 's';
+    if (s < 86400) return Math.floor(s/3600) + 'h ' + Math.round((s%3600)/60) + 'm';
+    return Math.floor(s/86400) + 'd ' + Math.round((s%86400)/3600) + 'h';
+  },
+  relTs(ts) {
+    const ms = (typeof ts === 'number' ? (ts > 1e12 ? ts : ts*1000) : Date.parse(ts));
+    if (!isFinite(ms)) return { label: '?', title: '' };
+    const dt = new Date(ms);
+    const diff = (Date.now() - ms) / 1000;
+    let label;
+    if (diff < 0)        label = 'in ' + Human.duration(-diff);
+    else if (diff < 60)  label = Math.max(1, Math.round(diff)) + 's ago';
+    else if (diff < 3600) label = Math.round(diff/60) + 'm ago';
+    else if (diff < 86400) label = Math.round(diff/3600) + 'h ago';
+    else                 label = Math.round(diff/86400) + 'd ago';
+    return { label, title: dt.toISOString() };
+  },
+  hash(s, n=14) {
+    if (!s) return '—';
+    s = String(s);
+    return s.length > n ? s.slice(0, n) + '…' : s;
+  },
+};
+
+// ── Explorer link helpers ──
+const Explorer = {
+  ipfs:    (cid) => 'https://nftstorage.link/ipfs/' + encodeURIComponent(cid),
+  arc:     (tx)  => 'https://testnet-explorer.arcchain.io/tx/' + encodeURIComponent(tx),
+  polygon: (tx)  => 'https://polygonscan.com/tx/' + encodeURIComponent(tx),
+};
+function cidLink(cid, n=14) {
+  if (!cid) return '—';
+  const safe = escapeHtml(cid);
+  const short = escapeHtml(Human.hash(cid, n));
+  return '<a href="' + Explorer.ipfs(cid) + '" target="_blank" rel="noopener" ' +
+    'title="' + safe + ' (open on IPFS gateway)"><code>' + short + '</code></a>';
+}
+function txLink(chain, tx, n=12) {
+  if (!tx) return '<span style="color:var(--text3)">(no chain)</span>';
+  const url = chain && Explorer[chain] ? Explorer[chain](tx) : null;
+  const short = escapeHtml(Human.hash(tx, n));
+  const safe = escapeHtml(tx);
+  if (!url) return '<code title="' + safe + '">' + short + '</code>';
+  return '<a href="' + url + '" target="_blank" rel="noopener" ' +
+    'title="' + safe + ' (open on ' + escapeHtml(chain) + ' explorer)">' +
+    '<code>' + short + '</code></a>';
+}
+function relSpan(ts) {
+  const r = Human.relTs(ts);
+  return '<span title="' + escapeHtml(r.title) + '">' + escapeHtml(r.label) + '</span>';
+}
+function bytesSpan(n) {
+  if (n == null || !isFinite(Number(n))) return '—';
+  return '<span title="' + Number(n) + ' bytes">' + escapeHtml(Human.bytes(n)) + '</span>';
+}
+function countSpan(n) {
+  if (n == null) return '—';
+  return '<span title="' + Number(n) + '">' + escapeHtml(Human.count(n)) + '</span>';
+}
+function durationSpan(s) {
+  if (s == null) return '—';
+  return '<span title="' + s + 's">' + escapeHtml(Human.duration(s)) + '</span>';
+}
+
 const ago = (sec) => {
   if (sec == null || isNaN(sec)) return '?';
   if (sec < 60) return Math.round(sec) + 's';
@@ -278,7 +366,7 @@ async function refreshStuck() {
     for (const g of groups.slice(0, 8)) {
       const span = g.last_ts - g.first_ts;
       html += '<li><b>×' + g.count + '</b><code>' + escapeHtml(g.agent) + '</code> · ' +
-        escapeHtml(g.step) + ' · over ' + Math.round(span) + 's' +
+        escapeHtml(g.step) + ' · over ' + escapeHtml(Human.duration(span)) +
         (g.sample_content ? '<br><span style="color:var(--text3);margin-left:24px">' + escapeHtml(truncate(g.sample_content, 140)) + '</span>' : '') +
         '</li>';
     }
@@ -314,7 +402,7 @@ function renderRow(evt) {
       '<pre>' + escapeHtml(truncate(txt, 4000)) + '</pre></details>';
   }
   row.innerHTML =
-    '<span class="ts">' + fmtTs(evt.timestamp) + '</span>' +
+    '<span class="ts">' + relSpan(evt.timestamp) + '</span>' +
     '<span class="ag"><span class="tier" style="background:' + tierColor + '20;color:' + tierColor + ';border:1px solid ' + tierColor + '40">' +
       escapeHtml(tier) + '</span>' + escapeHtml(evt.agent || '?') + '</span>' +
     '<span class="stp">' + escapeHtml(room) + ' · ' + escapeHtml(truncate(step, 24)) + '</span>' +
@@ -386,7 +474,8 @@ async function refreshLedger() {
         const status = c.overall_campaign_status || c.status || 'unknown';
         const cls = /SUCC/i.test(status) ? 'outcome-approved' :
                     /FAIL/i.test(status) ? 'outcome-rejected' : 'outcome-unknown';
-        html += '<tr><td><b>' + escapeHtml(truncate(c.run_id || '?', 22)) + '</b></td>' +
+        const runId = c.run_id || '?';
+        html += '<tr><td><b><span title="' + escapeHtml(runId) + '">' + escapeHtml(Human.hash(runId, 22)) + '</span></b></td>' +
           '<td>' + escapeHtml(truncate(c.directive || '—', 80)) + '</td>' +
           '<td class="' + cls + '">' + escapeHtml(status) + '</td>' +
           '<td>' + escapeHtml(truncate(c.final_bdi_message || '', 120)) + '</td></tr>';
@@ -400,7 +489,7 @@ async function refreshLedger() {
       html += '<div style="margin-top:18px;font-family:var(--mono);font-size:11px;color:var(--blue);letter-spacing:1.5px;text-transform:uppercase">recent godel choices · with rationale</div>';
       html += '<table style="margin-top:8px"><thead><tr><th>ts</th><th>agent</th><th>type</th><th>chosen</th><th>rationale</th></tr></thead><tbody>';
       for (const g of godel.slice(0, 30)) {
-        html += '<tr><td>' + escapeHtml(fmtTs(g.timestamp_utc)) + '</td>' +
+        html += '<tr><td>' + relSpan(g.timestamp_utc) + '</td>' +
           '<td><b>' + escapeHtml(truncate(g.source_agent || '?', 30)) + '</b></td>' +
           '<td>' + escapeHtml(truncate(g.choice_type || '?', 28)) + '</td>' +
           '<td>' + escapeHtml(truncate(g.chosen_option || g.choice || '?', 36)) + '</td>' +
@@ -438,8 +527,9 @@ async function refreshBoardroom() {
           '\nprovider=' + escapeHtml(v.provider || '?') + ' · conf=' + (v.confidence || 0).toFixed(2) +
           ' · ' + (v.latency_ms || 0) + 'ms">' + sym + ' ' + escapeHtml((v.soldier || '?').slice(0, 6)) + '</span>';
       }).join('') + '</div>';
-      html += '<tr><td><b>' + escapeHtml(truncate(s.session_id || '?', 16)) + '</b><br>' +
-        '<span style="color:var(--text3);font-size:10px">' + escapeHtml(fmtTs(s.timestamp)) + '</span></td>' +
+      const sid = s.session_id || '?';
+      html += '<tr><td><b><span title="' + escapeHtml(sid) + '">' + escapeHtml(Human.hash(sid, 16)) + '</span></b><br>' +
+        '<span style="color:var(--text3);font-size:10px">' + relSpan(s.timestamp) + '</span></td>' +
         '<td>' + escapeHtml(truncate(s.directive || '', 200)) + '</td>' +
         '<td class="' + cls + '">' + escapeHtml(outcome) + '</td>' +
         '<td>' + (typeof s.weighted_score === 'number' ? s.weighted_score.toFixed(3) : '?') + '</td>' +
@@ -489,14 +579,14 @@ async function refreshDreams() {
           escapeHtml(truncate(t.recommendation || t.reason || t.message || '', 140)) + '</li>';
       }).join('') + '</ul>' : '<span style="color:var(--text3)">none</span>';
       html += '<tr class="dream-row"><td><b>' +
-        escapeHtml(fmtTs(dr.timestamp || dr._mtime)) + '</b><br>' +
+        relSpan(dr.timestamp || (dr._mtime && dr._mtime * 1000)) + '</b><br>' +
         '<span style="color:var(--text3);font-size:10px">' + escapeHtml(dr._filename || '') + '</span></td>' +
-        '<td>' + (dr.agents_dreamed || '?') + '</td>' +
-        '<td>' + (dr.insights_generated || 0) + '</td>' +
-        '<td>' + (dr.memories_promoted_to_ltm || 0) + '</td>' +
+        '<td>' + countSpan(dr.agents_dreamed) + '</td>' +
+        '<td>' + countSpan(dr.insights_generated) + '</td>' +
+        '<td>' + countSpan(dr.memories_promoted_to_ltm) + '</td>' +
         '<td>' + escapeHtml(lunar.phase_name || '?') + '<br>' +
         '<span style="color:var(--text3);font-size:10px">' + (lunar.days_until_new_moon || '?') + 'd</span></td>' +
-        '<td>' + (dr.duration_seconds ? dr.duration_seconds.toFixed(1) + 's' : '?') + '</td>' +
+        '<td>' + durationSpan(dr.duration_seconds) + '</td>' +
         '<td class="tune">' + tuneHtml + '</td></tr>';
     }
     html += '</tbody></table>';
@@ -633,18 +723,16 @@ async function refreshStorage() {
 
     const events = recentR.events || [];
     if (events.length) {
-      html += '<table><thead><tr><th>ts</th><th>agent</th><th>date</th><th>files</th><th>bytes</th><th>cid</th><th>tx</th></tr></thead><tbody>';
+      html += '<table><thead><tr><th>ts</th><th>agent</th><th>date</th><th>files</th><th>size</th><th>cid</th><th>tx</th></tr></thead><tbody>';
       for (const e of events.slice(0, 20)) {
-        const cidShort = e.cid ? e.cid.slice(0, 14) + '…' : '—';
-        const txShort = e.tx_hash ? e.tx_hash.slice(0, 12) + '…' : '<span style="color:var(--text3)">(no chain)</span>';
         const verified = e.verified ? '<span class="outcome-approved">✓</span>' : '<span class="outcome-rejected">✗</span>';
-        html += '<tr><td>' + escapeHtml(fmtTs(e.ts)) + '</td>' +
+        html += '<tr><td>' + relSpan(e.ts) + '</td>' +
           '<td><b>' + escapeHtml(truncate(e.actor || '?', 28)) + '</b></td>' +
           '<td>' + escapeHtml(e.date_str || '') + '</td>' +
-          '<td>' + (e.file_count || 0) + ' ' + verified + '</td>' +
-          '<td>' + (e.bytes_packed ? Math.round(e.bytes_packed / 1024) + ' KB' : '?') + '</td>' +
-          '<td><code title="' + escapeHtml(e.cid || '') + '">' + cidShort + '</code></td>' +
-          '<td>' + (e.tx_hash ? '<code title="' + escapeHtml(e.tx_hash) + '">' + txShort + '</code>' : txShort) + '</td>' +
+          '<td>' + countSpan(e.file_count) + ' ' + verified + '</td>' +
+          '<td>' + bytesSpan(e.bytes_packed) + '</td>' +
+          '<td>' + cidLink(e.cid, 14) + '</td>' +
+          '<td>' + txLink(e.chain, e.tx_hash, 12) + '</td>' +
           '</tr>';
       }
       html += '</tbody></table>';

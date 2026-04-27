@@ -1149,6 +1149,125 @@ async def feedback_page():
         return _DashResponse(content=_FEEDBACK_HTML_PATH.read_text(encoding="utf-8"))
     return _DashResponse(content="<h1>mindX feedback</h1><p>Page not deployed.</p>")
 
+
+@app.get("/feedback.txt", include_in_schema=False)
+async def feedback_text(request: Request):
+    """One-screen plaintext snapshot — `curl https://mindx.pythai.net/feedback.txt`.
+
+    Aggregates the highest-signal numbers from the dashboard into ~24 lines.
+    Designed for `watch curl …` style monitoring from a terminal.
+    """
+    from starlette.responses import PlainTextResponse
+    from datetime import datetime, timezone
+    try:
+        from mindx_backend_service import text_render
+    except Exception:
+        return PlainTextResponse("text_render unavailable", status_code=500)
+
+    lines: list[str] = []
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    lines.append(f"mindX feedback · {now}")
+    lines.append("─" * 60)
+
+    # Storage status
+    try:
+        from agents import memory_pgvector
+        st = await memory_pgvector.get_offload_stats()
+        lines.append(
+            f"storage  local {text_render.human_count(st.get('local', 0))} · "
+            f"ipfs {text_render.human_count(st.get('ipfs', 0))} · "
+            f"thot {text_render.human_count(st.get('thot', 0))} · "
+            f"anchored {text_render.human_count(st.get('anchored', 0))} tx"
+        )
+        lines.append(f"  last_offload  {text_render.human_ts_with_rel(st.get('last_offload_ts'))}")
+    except Exception as e:
+        lines.append(f"storage  unavailable: {e}")
+
+    # Anchor health
+    try:
+        from agents.storage.anchor import AnchorClient
+        a = AnchorClient()
+        lines.append(
+            f"anchor   {'configured' if a.configured else 'not configured'} · "
+            f"chain_id={a.chain_id or '—'} · "
+            f"thot_minter={'set' if os.environ.get('THOT_MINTER_KEY') else 'stub'}"
+        )
+    except Exception:
+        lines.append("anchor   unavailable")
+
+    # Most recent dream
+    try:
+        import os as _os
+        dreams_dir = PROJECT_ROOT / "data" / "memory" / "dreams"
+        if dreams_dir.exists():
+            files = sorted(
+                (e for e in _os.scandir(dreams_dir)
+                 if e.is_file() and e.name.endswith("_dream_report.json")),
+                key=lambda e: e.stat().st_mtime, reverse=True,
+            )
+            if files:
+                with open(files[0].path, "r") as f:
+                    last = json.load(f)
+                lines.append(
+                    f"dream    last {text_render.human_rel_ts(last.get('timestamp'))} · "
+                    f"{text_render.human_count(last.get('agents_dreamed', 0))} agents · "
+                    f"{text_render.human_count(last.get('insights_generated', 0))} insights · "
+                    f"{text_render.human_duration(last.get('duration_seconds'))}"
+                )
+            else:
+                lines.append("dream    no dream reports on disk")
+        else:
+            lines.append("dream    dreams dir missing")
+    except Exception as e:
+        lines.append(f"dream    unavailable: {e}")
+
+    # Stuck loops in last 15 min
+    try:
+        from mindx_backend_service.activity_feed import ActivityFeed
+        import time as _time
+        feed = ActivityFeed.get_instance()
+        cutoff = _time.time() - 900
+        groups: dict[tuple[str, str], int] = {}
+        for evt in feed.events:
+            if evt.timestamp < cutoff:
+                continue
+            content = evt.content or ""
+            step = (content.split(":", 1)[0].strip() or evt.type)[:80]
+            key = (evt.agent, step)
+            groups[key] = groups.get(key, 0) + 1
+        loops = [(a, s, c) for (a, s), c in groups.items() if c >= 5]
+        loops.sort(key=lambda t: t[2], reverse=True)
+        if loops:
+            top = loops[0]
+            extra = f" (+{len(loops) - 1} more)" if len(loops) > 1 else ""
+            lines.append(
+                f"loops    {len(loops)} group · "
+                f"{top[0]} ×{top[2]} · {text_render.human_hash(top[1], 32)}{extra}"
+            )
+        else:
+            lines.append(f"loops    none in 15m  (buf={text_render.human_count(len(feed.events))})")
+    except Exception as e:
+        lines.append(f"loops    unavailable: {e}")
+
+    lines.append("─" * 60)
+    lines.append("recent agent dialogue (last 10)")
+    try:
+        from mindx_backend_service.activity_feed import ActivityFeed
+        feed = ActivityFeed.get_instance()
+        recent = feed.recent(limit=10, room=None)
+        for evt in recent:
+            ts = text_render.human_rel_ts(evt.get("timestamp"))
+            agent = text_render.human_hash(evt.get("agent", "?"), 22)
+            tier = evt.get("tier_label", "?")
+            content = (evt.get("content") or "")[:80]
+            lines.append(f"  {ts:>8}  {tier:>3}  {agent:<22}  {content}")
+    except Exception as e:
+        lines.append(f"  (dialogue unavailable: {e})")
+
+    lines.append("")
+    lines.append("see also: /feedback.html · /insight/storage/status?h=true")
+    return PlainTextResponse("\n".join(lines) + "\n", media_type="text/plain; charset=utf-8")
+
 # Add CORS middleware — production origins + development fallback
 _cors_origins = [
     "https://mindx.pythai.net",
@@ -1170,7 +1289,7 @@ app.add_middleware(
 # Uses @app.middleware("http") which always fires regardless of import order.
 
 _PUBLIC_EXACT = frozenset({
-    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html",
+    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/diagnostics/live", "/activity/stream", "/activity/recent", "/activity/stats",
     "/thesis", "/thesis/", "/thesis/evidence", "/thesis/summary",
@@ -1523,7 +1642,7 @@ async def insight_fitness_trajectory(agent_id: str, window: str = "7d"):
 
 @app.get("/insight/improvement/summary", tags=["insight"])
 @_insight_safe
-async def insight_improvement_summary(window: str = "24h"):
+async def insight_improvement_summary(request: Request, window: str = "24h"):
     """Campaigns + belief churn + model trend + directive coverage.
 
     `window` is a hint only — the aggregator computes 1h/24h/7d buckets and
@@ -1531,7 +1650,7 @@ async def insight_improvement_summary(window: str = "24h"):
     """
     from mindx_backend_service.insight_aggregator import InsightAggregator
     agg = InsightAggregator.get_instance()
-    return agg.improvement_summary()
+    return _maybe_h_text(request, agg.improvement_summary(), route_path="/insight/improvement/summary")
 
 
 @app.get("/insight/improvement/timeline", tags=["insight"])
@@ -1623,7 +1742,7 @@ async def insight_thinking_live(request: Request):
 
 @app.get("/insight/dreams/recent", tags=["insight"])
 @_insight_safe
-async def insight_dreams_recent(limit: int = 50):
+async def insight_dreams_recent(request: Request, limit: int = 50):
     """Last N dream cycle reports from data/memory/dreams/.
 
     Each entry is the report dict written by MachineDreamCycle.run_full_dream().
@@ -1654,12 +1773,12 @@ async def insight_dreams_recent(limit: int = 50):
             out.append(data)
         except Exception:
             continue
-    return {"dreams": out, "count": len(out), "last_dream_age_seconds": last_age}
+    return _maybe_h_text(request, {"dreams": out, "count": len(out), "last_dream_age_seconds": last_age}, route_path="/insight/dreams/recent")
 
 
 @app.get("/insight/godel/recent", tags=["insight"])
 @_insight_safe
-async def insight_godel_recent(limit: int = 50):
+async def insight_godel_recent(request: Request, limit: int = 50):
     """Last N godel choices from data/logs/godel_choices.jsonl, newest first.
 
     Each entry: source_agent, choice_type, perception_summary, options_considered,
@@ -1690,14 +1809,14 @@ async def insight_godel_recent(limit: int = 50):
             except Exception:
                 continue
         events.reverse()
-        return {"events": events, "count": len(events)}
+        return _maybe_h_text(request, {"events": events, "count": len(events)}, route_path="/insight/godel/recent")
     except Exception as e:
         return {"events": [], "count": 0, "error": str(e)}
 
 
 @app.get("/insight/boardroom/recent", tags=["insight"])
 @_insight_safe
-async def insight_boardroom_recent(limit: int = 20):
+async def insight_boardroom_recent(request: Request, limit: int = 20):
     """Last N boardroom sessions with full vote detail."""
     from mindx_backend_service.insight_aggregator import BOARDROOM_SESSIONS
     if not BOARDROOM_SESSIONS.exists():
@@ -1712,7 +1831,7 @@ async def insight_boardroom_recent(limit: int = 20):
             except Exception:
                 continue
         sessions.reverse()
-        return {"sessions": sessions, "count": len(sessions)}
+        return _maybe_h_text(request, {"sessions": sessions, "count": len(sessions)}, route_path="/insight/boardroom/recent")
     except Exception as e:
         return {"sessions": [], "count": 0, "error": str(e)}
 
@@ -1798,7 +1917,7 @@ async def insight_interactions_recent(window: int = 3600):
 
 @app.get("/insight/stuck_loops", tags=["insight"])
 @_insight_safe
-async def insight_stuck_loops(window: int = 900, min_repeats: int = 5):
+async def insight_stuck_loops(request: Request, window: int = 900, min_repeats: int = 5):
     """Detect repeating (agent, step) tuples in the activity feed.
 
     Returns groups appearing >= min_repeats times within the last `window`
@@ -1828,13 +1947,35 @@ async def insight_stuck_loops(window: int = 900, min_repeats: int = 5):
         bucket["first_ts"] = min(bucket["first_ts"], evt.timestamp)
     groups = [g for g in counts.values() if g["count"] >= max(2, min_repeats)]
     groups.sort(key=lambda g: g["count"], reverse=True)
-    return {
+    return _maybe_h_text(request, {
         "window_seconds": window,
         "min_repeats": min_repeats,
         "groups": groups,
         "buffer_size": len(feed.events),
         "computed_at": _time.time(),
-    }
+    }, route_path="/insight/stuck_loops")
+
+
+# ── ?h=true plain-text rendering for /insight/* and /storage/* ──
+# Plan: ~/.claude/plans/luminous-humming-knuth.md
+
+def _maybe_h_text(request: Request, data, *, route_path: str = ""):
+    """If request asks for plain text (?h=true or Accept: text/plain), render
+    via text_render and return PlainTextResponse. Otherwise return data
+    unchanged (FastAPI will JSON-encode).
+    """
+    try:
+        from mindx_backend_service import text_render
+    except Exception:
+        return data
+    if not text_render.wants_text(request):
+        return data
+    path = route_path or request.url.path
+    rendered = text_render.render(path, data if isinstance(data, dict) else {})
+    if rendered is None:
+        return data
+    from starlette.responses import PlainTextResponse
+    return PlainTextResponse(rendered, media_type="text/plain; charset=utf-8")
 
 
 # ── Storage / IPFS offload endpoints ──
@@ -1851,20 +1992,20 @@ class OffloadRequest(BaseModel):
 
 @app.get("/storage/anchor/health", tags=["storage"], summary="Chain anchor configuration status")
 @_insight_safe
-async def storage_anchor_health():
+async def storage_anchor_health(request: Request):
     try:
         from agents.storage.anchor import AnchorClient
     except Exception as e:
         return {"configured": False, "error": str(e)}
     a = AnchorClient()
-    return {
+    return _maybe_h_text(request, {
         "configured": a.configured,
         "rpc_url_set": bool(a.rpc_url),
         "chain_id": a.chain_id,
         "registry_address_set": bool(a.registry_address),
         "treasury_key_set": bool(a.private_key),
         "thot_minter_set": bool(os.environ.get("THOT_MINTER_KEY")),
-    }
+    }, route_path="/storage/anchor/health")
 
 
 @app.get("/storage/health", tags=["storage"], summary="IPFS provider reachability")
@@ -1906,7 +2047,7 @@ async def storage_health():
 
 @app.get("/storage/eligible", tags=["storage"], summary="List STM directories eligible for offload")
 @_insight_safe
-async def storage_eligible(min_age_days: float = 14.0, agent_id: Optional[str] = None, limit: int = 50):
+async def storage_eligible(request: Request, min_age_days: float = 14.0, agent_id: Optional[str] = None, limit: int = 50):
     from agents.storage.eligibility import list_eligible
     cands = list_eligible(PROJECT_ROOT, min_age_days=min_age_days, agent_id=agent_id)
     out = [
@@ -1920,26 +2061,26 @@ async def storage_eligible(min_age_days: float = 14.0, agent_id: Optional[str] =
         for c in cands[:max(1, min(limit, 500))]
     ]
     total_bytes = sum(c.size_bytes for c in cands)
-    return {
+    return _maybe_h_text(request, {
         "candidates": out,
         "candidate_count": len(cands),
         "total_size_bytes": total_bytes,
-    }
+    }, route_path="/storage/eligible")
 
 
 @app.get("/insight/storage/status", tags=["insight"], summary="Memory offload status counts")
 @_insight_safe
-async def insight_storage_status():
+async def insight_storage_status(request: Request):
     try:
         from agents import memory_pgvector
-        return await memory_pgvector.get_offload_stats()
+        return _maybe_h_text(request, await memory_pgvector.get_offload_stats(), route_path="/insight/storage/status")
     except Exception as e:
         return {"error": str(e), "local": 0, "ipfs": 0, "thot": 0, "anchored": 0}
 
 
 @app.get("/insight/storage/recent", tags=["insight"], summary="Recent memory.offload events (CIDs + tx_hashes)")
 @_insight_safe
-async def insight_storage_recent(limit: int = 30):
+async def insight_storage_recent(request: Request, limit: int = 30):
     """Tail of catalogue_events.jsonl filtered to kind='memory.offload'."""
     log_path = PROJECT_ROOT / "data" / "logs" / "catalogue_events.jsonl"
     if not log_path.exists():
@@ -1982,7 +2123,7 @@ async def insight_storage_recent(limit: int = 30):
             })
             if len(out) >= max(1, min(limit, 200)):
                 break
-        return {"events": out, "count": len(out)}
+        return _maybe_h_text(request, {"events": out, "count": len(out)}, route_path="/insight/storage/recent")
     except Exception as e:
         return {"events": [], "count": 0, "error": str(e)}
 
