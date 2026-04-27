@@ -2471,7 +2471,7 @@ THOT_DIMENSIONS = [
     {"dim": 4096,     "name": "THOT4096",     "purpose": "Quantum-aware tensor space"},
     {"dim": 8192,     "name": "THOT8192",     "purpose": "Quantum-aware high-dimensional"},
     {"dim": 65536,    "name": "THOT65536",    "purpose": "Theoretical quantum-resistant (2^16)"},
-    {"dim": 1048576,  "name": "THOT1048576",  "purpose": "Theoretical post-quantum (2^20)"},
+    {"dim": 1048576,  "display": "1024K",   "name": "THOT1048576",  "purpose": "post-quantum (2^20)"},
 ]
 
 

@@ -62,7 +62,7 @@ struct ThotData {
 | 4096 | THOT4096 | Quantum-aware tensor space |
 | 8192 | THOT8192 | Quantum-aware high-dimensional |
 | 65536 | THOT65536 | Theoretical quantum-resistant (2^16) |
-| 1048576 | THOT1048576 | Theoretical post-quantum (2^20) |
+| 1048576 | THOT1048576 | post-quantum (2^20) |
 
 `uint32 dimensions` — supports up to 4,294,967,295. New dimensions added by extending `_isValidDimension()` only.
 

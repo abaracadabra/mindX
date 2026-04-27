@@ -340,7 +340,7 @@ async function refreshDimensions() {
       const isWalletKey = row.dim === 256;
       const isEmbed = row.dim === 1024;
       const cls = isRoot ? 'root' : '';
-      html += '<tr><td class="' + cls + '">' + Human.count(row.dim) + '</td>';
+      html += '<tr><td class="' + cls + '">' + (row.display || Human.count(row.dim)) + '</td>';
       html += '<td>' + escapeHtml(row.name) + '</td>';
       html += '<td>' + escapeHtml(row.purpose);
       if (isWalletKey) html += ' <span style="color:var(--blue);font-size:10px"> ↔ matches Ethereum private key length</span>';

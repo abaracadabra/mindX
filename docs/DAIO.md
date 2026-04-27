@@ -288,7 +288,7 @@ class DAIOEventListener:
 | 4096 | THOT4096 | Quantum-aware tensor space |
 | 8192 | THOT8192 | Quantum-aware high-dimensional |
 | 65536 | THOT65536 | Theoretical quantum-resistant (2^16) |
-| 1048576 | THOT1048576 | Theoretical post-quantum (2^20) |
+| 1048576 | THOT1048576 | post-quantum (2^20) |
 
 Supporting NFT types: [iNFT](../daio/contracts/inft/iNFT.sol) (immutable THOT), [IntelligentNFT](../daio/contracts/inft/IntelligentNFT.sol) (dynamic agent NFT), [gNFT](../daio/contracts/THOT/nft/gNFT.sol) (visualization), [NFPrompT](../daio/contracts/THOT/nft/NFPrompT.sol) (agent prompts), [NFRLT](../daio/contracts/THOT/nft/NFRLT.sol) (royalty + soulbound). Interactive UI: [mindx.pythai.net/inft](https://mindx.pythai.net/inft).
 
