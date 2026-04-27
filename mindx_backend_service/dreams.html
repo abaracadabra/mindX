@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mindX dreams — machine.dreaming, with diagnostics</title>
+<meta name="description" content="Live view into mindX's machine.dreaming consolidation cycle. Bytes saved, STM→LTM compression ratios, side-by-side raw memory vs consolidated insight, and the ML-trainable artefacts each cycle produces.">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#040609">
+<link rel="canonical" href="https://mindx.pythai.net/dreams.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="mindX dreams — machine.dreaming, with diagnostics">
+<meta property="og:description" content="Bytes saved, STM→LTM compression ratios, side-by-side raw memory vs consolidated insight, ML-trainable artefacts.">
+<meta property="og:url" content="https://mindx.pythai.net/dreams.html">
+<link rel="icon" href="/favicon.ico">
+<link rel="alternate" type="text/plain" title="dreams plain text" href="/insight/dreams/recent?h=true">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=DM+Sans:wght@400;500;700&display=swap" as="style" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=DM+Sans:wght@400;500;700&display=swap"></noscript>
+<style>
+:root{
+  --bg:#040609;--surface:rgba(10,14,20,.88);--surface2:rgba(16,20,28,.7);
+  --green:#56d364;--blue:#79c0ff;--violet:#d2a8ff;--amber:#e3b341;--red:#f85149;--cyan:#39d3bb;
+  --text:#e6edf3;--text2:#b1bac4;--text3:#6e7681;--border:rgba(88,166,255,.08);
+  --font:'DM Sans',system-ui,sans-serif;--mono:'JetBrains Mono','SF Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.55;min-height:100vh}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.hdr{position:sticky;top:0;z-index:20;padding:0 20px;min-height:48px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(8,12,20,.96),rgba(4,6,9,.94));backdrop-filter:blur(24px);border-bottom:1px solid rgba(121,192,255,.1)}
+.hdr-brand{font-family:var(--mono);font-size:18px;font-weight:700;letter-spacing:2px;color:#f0f6fc}
+.hdr-brand b{color:var(--violet)}
+.hdr-mid{display:flex;gap:6px;flex-wrap:wrap;margin-left:16px}
+.hdr-mid a{color:#d0d7de;font-size:12px;padding:4px 10px;border-radius:4px;font-family:var(--mono)}
+.hdr-mid a:hover{background:rgba(121,192,255,.1);color:#f0f6fc}
+.hdr-mid a.hl{color:var(--violet);font-weight:600}
+.wrap{max-width:1400px;margin:0 auto;padding:24px 20px 60px}
+h1{font-family:var(--mono);font-size:22px;letter-spacing:1.5px;color:var(--violet);margin-bottom:6px}
+h1 b{color:var(--text)}
+.tag{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:18px}
+.lede{color:var(--text2);font-size:13px;line-height:1.7;margin:14px 0 24px;max-width:900px}
+.lede code{font-family:var(--mono);font-size:12px;background:rgba(210,168,255,.08);color:var(--violet);padding:1px 5px;border-radius:3px}
+
+.hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:24px}
+.hcell{background:rgba(16,20,28,.55);border:1px solid var(--border);border-left:3px solid var(--violet);border-radius:8px;padding:14px 18px}
+.hcell .lbl{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase}
+.hcell .val{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--text);margin-top:4px;line-height:1.1}
+.hcell .meta{font-family:var(--mono);font-size:10.5px;color:var(--text2);margin-top:4px}
+.hcell.green{border-left-color:var(--green)}
+.hcell.cyan{border-left-color:var(--cyan)}
+.hcell.amber{border-left-color:var(--amber)}
+
+.section{margin:24px 0}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:8px}
+.sec-head h2{font-family:var(--mono);font-size:15px;color:var(--blue);letter-spacing:1px}
+.sec-head .sub{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.sec-desc{font-size:12.5px;color:var(--text2);margin-bottom:14px;line-height:1.7;max-width:920px}
+.sec-desc code{font-family:var(--mono);font-size:11.5px;background:rgba(121,192,255,.06);padding:1px 5px;border-radius:3px;color:var(--blue)}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.empty{color:var(--text3);font-family:var(--mono);font-size:11.5px;text-align:center;padding:18px}
+
+.btn{display:inline-block;padding:8px 18px;background:rgba(210,168,255,.15);color:var(--violet);border:1px solid rgba(210,168,255,.3);border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;transition:all .15s}
+.btn:hover{background:rgba(210,168,255,.25);border-color:var(--violet)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.primary{background:rgba(86,211,100,.12);color:var(--green);border-color:rgba(86,211,100,.3)}
+.btn.primary:hover{background:rgba(86,211,100,.22);border-color:var(--green)}
+
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11.5px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.04)}
+th{color:var(--text3);font-weight:500;font-size:10.5px;letter-spacing:1px;text-transform:uppercase}
+tr.dream-row{cursor:pointer;transition:background .12s}
+tr.dream-row:hover{background:rgba(210,168,255,.05)}
+tr.dream-row.active{background:rgba(210,168,255,.10)}
+.bytes-saved{color:var(--green);font-weight:600}
+.bytes-grew{color:var(--amber)}
+.compression{color:var(--cyan);font-weight:600}
+
+.drill{margin-top:14px;padding:14px 16px;background:rgba(8,12,20,.7);border:1px solid var(--border);border-radius:8px;border-left:3px solid var(--violet);display:none}
+.drill.show{display:block;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.drill h3{font-family:var(--mono);font-size:13px;color:var(--violet);margin-bottom:10px}
+.drill .agent-card{margin-bottom:14px;padding:10px 12px;background:rgba(16,20,28,.5);border-radius:6px;border-left:2px solid var(--blue)}
+.drill .agent-card h4{font-family:var(--mono);font-size:12.5px;color:var(--blue);margin-bottom:6px}
+.drill .agent-card .nums{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--text2);margin-bottom:8px}
+.drill .agent-card .nums b{color:var(--text)}
+.drill details{margin:6px 0;padding:6px 10px;background:rgba(4,6,9,.6);border-radius:4px}
+.drill summary{cursor:pointer;font-family:var(--mono);font-size:11px;color:var(--text2);padding:2px 0}
+.drill summary:hover{color:var(--text)}
+.drill pre{margin-top:6px;padding:8px 10px;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:10.5px;color:var(--text);line-height:1.5;white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto}
+
+.creative{background:linear-gradient(135deg,rgba(210,168,255,.08),rgba(57,211,187,.06));border:1px solid rgba(210,168,255,.15);border-left:3px solid var(--violet);border-radius:8px;padding:18px 22px;margin:24px 0;font-family:var(--mono);font-size:12.5px;line-height:1.85;color:var(--text2);font-style:italic}
+.creative b{color:var(--violet);font-style:normal}
+.creative em{color:var(--cyan);font-style:normal;font-weight:500}
+
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:10.5px;color:var(--text3);margin-top:6px}
+.legend span b{color:var(--green)}
+.legend span.amber b{color:var(--amber)}
+.legend span.cyan b{color:var(--cyan)}
+.legend span.violet b{color:var(--violet)}
+
+.run-status{font-family:var(--mono);font-size:11px;color:var(--text2);margin-left:14px}
+.run-status.spin::before{content:'⟳ ';color:var(--amber);animation:spin 1.2s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+
+<body>
+<div class="hdr">
+  <span class="hdr-brand">mind<b>X.dreams</b></span>
+  <div class="hdr-mid">
+    <a href="/feedback.html">feedback</a>
+    <a href="/boardroom">boardroom</a>
+    <a href="/THOT.html">THOT</a>
+    <a href="/doc/agents/machine_dreaming">doc</a>
+    <a href="/insight/dreams/recent?h=true" target="_blank">raw ↗</a>
+  </div>
+</div>
+
+<div class="wrap">
+  <h1>machine.dreaming <b>— consolidation, in the open</b></h1>
+  <div class="tag">information → consolidation → knowledge → concept → wisdom → THOT</div>
+
+  <p class="lede">
+    Every <b>~8h</b> mindX runs a 7-phase dream cycle that takes raw STM (per-agent process traces, hours of accumulated data) and consolidates it into LTM (durable insights). The cycle <em>distributes, it does not delete</em> — pruned STM moves to archive; consolidated insights become LTM JSON; and a parallel <code>*_training.jsonl</code> file lands alongside, suitable for finetuning a wisdom-aware model. Over time, repeated dream-extracted patterns are verified against new outcomes; once a pattern crosses the verification threshold it becomes <a href="/feedback.html#sec-cognition">machine.wisdom</a> — anchored on chain as a <a href="/THOT.html">THOT</a>.
+    <br><br>
+    This page shows what the dream cycle actually <em>does</em>: bytes saved, STM input vs LTM output side-by-side, and the training rows produced.
+  </p>
+
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap">
+    <button class="btn primary" id="run-btn" onclick="runDream()">▸ Accelerate dream now</button>
+    <button class="btn" onclick="refreshAll()">↻ Refresh</button>
+    <span class="run-status" id="run-status">last cycle —</span>
+  </div>
+
+  <div id="hero" class="hero">
+    <div class="hcell"><div class="lbl">total dreams</div><div class="val" id="hero-total">—</div><div class="meta">cycles recorded</div></div>
+    <div class="hcell green"><div class="lbl">stm bytes freed</div><div class="val" id="hero-freed">—</div><div class="meta">across all cycles in window</div></div>
+    <div class="hcell cyan"><div class="lbl">ltm bytes grown</div><div class="val" id="hero-ltm">—</div><div class="meta">durable knowledge produced</div></div>
+    <div class="hcell amber"><div class="lbl">compression ratio</div><div class="val" id="hero-ratio">—</div><div class="meta">stm freed ÷ ltm grown · per cycle median</div></div>
+    <div class="hcell"><div class="lbl">training rows</div><div class="val" id="hero-training">—</div><div class="meta">finetuning examples written</div></div>
+    <div class="hcell"><div class="lbl">last dream</div><div class="val" id="hero-last">—</div><div class="meta">since most recent cycle</div></div>
+  </div>
+
+  <div class="creative" id="creative-blurb">
+    <em>The system dreams.</em> Every cycle, mindX looks back at the noise of recent operation — the
+    process traces, the tool calls, the abandoned plans — and asks: <b>what pattern repeated?</b>
+    What survived the friction of execution? Those survivors become insights. The insights become
+    knowledge. The knowledge, verified across cycles, becomes wisdom. The wisdom, anchored on chain,
+    becomes <a href="/THOT.html">THOT</a> — public, citable, transferable. <em>The dream is not where
+    information dies. It is where information learns to count.</em>
+  </div>
+
+  <div class="section">
+    <div class="sec-head">
+      <h2>recent cycles</h2>
+      <span class="sub">/insight/dreams/recent · click any row for the diff</span>
+    </div>
+    <p class="sec-desc">
+      Each row is one full dream-cycle pass across every agent with STM data. <b>Δ STM</b> is bytes freed (positive = data consolidated and pruned). <b>Δ LTM</b> is bytes added (durable insights persisted). <b>Ratio</b> is freed ÷ added — higher means denser consolidation. Click any row to drill into the per-agent breakdown and see actual STM-to-LTM data comparisons.
+    </p>
+    <div class="card" id="dreams-table"><div class="empty">loading…</div></div>
+    <div class="legend">
+      <span><b>Δ STM</b> bytes freed (consolidated + pruned)</span>
+      <span class="cyan"><b>Δ LTM</b> bytes grown (durable insights)</span>
+      <span class="amber"><b>ratio</b> stm-freed / ltm-grown · higher = denser</span>
+      <span class="violet"><b>training</b> rows written for finetuning</span>
+    </div>
+  </div>
+
+  <div id="dream-drill" class="drill">
+    <h3 id="drill-title">▸ dream detail</h3>
+    <div id="drill-body"></div>
+  </div>
+
+  <div class="section">
+    <div class="sec-head">
+      <h2>training data — the wisdom substrate</h2>
+      <span class="sub">why <code>*_training.jsonl</code> matters</span>
+    </div>
+    <p class="sec-desc">
+      Every dream cycle now writes a sibling <code>*_training.jsonl</code> file alongside the raw <code>*_dream_insights.json</code>. Each line is one fine-tuning example in the OpenAI/Anthropic chat-completion shape (<code>{"messages": [{role, content}, …]}</code>) — directly usable by <code>openai api fine_tunes.create</code>, <code>anthropic-tools</code>, or local LoRA training (Axolotl, Unsloth, vLLM-LoRA). The <em>system</em> message gives the consolidation persona; the <em>user</em> message is a real STM excerpt; the <em>assistant</em> message is the consolidated insight. As cycles accumulate, this corpus becomes a domain-specific instruction-tuning dataset — the substrate for promoting verified patterns to <a href="/feedback.html#sec-cognition">machine.wisdom</a> and ultimately on-chain <a href="/THOT.html">THOT</a> mints. A later phase will compose the verified subset into a single curated jsonl, embed it through pgvector, and offer it as a public dataset (CID-anchored on ARC).
+    </p>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function fmtBytes(n) {
+  n = Number(n) || 0;
+  if (Math.abs(n) < 1024) return n + ' B';
+  const u = ['B','KB','MB','GB','TB'];
+  let i = 0; while (Math.abs(n) >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return n.toFixed(1) + ' ' + u[i];
+}
+function fmtAge(seconds) {
+  if (seconds == null) return '—';
+  if (seconds < 60) return Math.round(seconds) + 's ago';
+  if (seconds < 3600) return Math.round(seconds/60) + 'm ago';
+  if (seconds < 86400) return Math.round(seconds/3600) + 'h ago';
+  return Math.round(seconds/86400) + 'd ago';
+}
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+}
+
+let _dreams = [];
+
+async function refreshAll() {
+  try {
+    const r = await fetch('/insight/dreams/recent?limit=50');
+    const d = await r.json();
+    _dreams = d.dreams || [];
+    renderHero(d);
+    renderTable(_dreams);
+  } catch (e) {
+    $('dreams-table').innerHTML = '<div class="empty">load failed: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function renderHero(d) {
+  const dreams = d.dreams || [];
+  $('hero-total').textContent = dreams.length;
+  let totalFreed = 0, totalGrown = 0, totalTraining = 0, ratios = [];
+  for (const dr of dreams) {
+    const diag = dr.diagnostic || {};
+    totalFreed += diag.stm_bytes_freed || 0;
+    totalGrown += diag.ltm_bytes_growth || 0;
+    totalTraining += diag.training_examples_written || 0;
+    if (diag.compression_ratio) ratios.push(diag.compression_ratio);
+  }
+  $('hero-freed').textContent = fmtBytes(totalFreed);
+  $('hero-ltm').textContent = fmtBytes(totalGrown);
+  ratios.sort((a, b) => a - b);
+  const median = ratios.length ? ratios[Math.floor(ratios.length / 2)] : 0;
+  $('hero-ratio').textContent = median ? median.toFixed(1) + '×' : '—';
+  $('hero-training').textContent = totalTraining.toLocaleString();
+  $('hero-last').textContent = fmtAge(d.last_dream_age_seconds);
+}
+
+function renderTable(dreams) {
+  if (!dreams.length) {
+    $('dreams-table').innerHTML = '<div class="empty">no dream cycles recorded yet</div>';
+    return;
+  }
+  let html = '<table><thead><tr>' +
+    '<th>timestamp</th><th>agents</th><th>insights</th>' +
+    '<th>Δ STM (freed)</th><th>Δ LTM (grown)</th><th>ratio</th>' +
+    '<th>training</th><th>duration</th><th></th></tr></thead><tbody>';
+  for (const d of dreams) {
+    const diag = d.diagnostic || {};
+    const fname = d._filename || '';
+    const safe = fname.replace(/'/g, "\\'");
+    const freed = diag.stm_bytes_freed || 0;
+    const grown = diag.ltm_bytes_growth || 0;
+    const ratio = diag.compression_ratio || 0;
+    const training = diag.training_examples_written || 0;
+    const dur = parseFloat(d.duration_seconds || 0);
+    const ts = new Date((d._mtime || 0) * 1000).toISOString().slice(0, 19);
+    html += '<tr class="dream-row" data-fname="' + escapeHtml(fname) + '" onclick="drillDream(\'' + safe + '\')">' +
+      '<td>' + ts.replace('T', ' ') + '</td>' +
+      '<td>' + (d.agents_dreamed || 0) + ' / ' + (d.total_agents || 0) + '</td>' +
+      '<td>' + (d.insights_generated || 0) + '</td>' +
+      '<td class="' + (freed > 0 ? 'bytes-saved' : '') + '">' + fmtBytes(freed) + '</td>' +
+      '<td class="' + (grown > 0 ? 'bytes-grew' : '') + '">' + fmtBytes(grown) + '</td>' +
+      '<td class="compression">' + (ratio ? ratio.toFixed(1) + '×' : '—') + '</td>' +
+      '<td>' + training.toLocaleString() + '</td>' +
+      '<td>' + dur.toFixed(1) + 's</td>' +
+      '<td>▸</td></tr>';
+  }
+  html += '</tbody></table>';
+  $('dreams-table').innerHTML = html;
+}
+
+let _activeDrill = null;
+async function drillDream(filename) {
+  document.querySelectorAll('tr.dream-row').forEach(r => r.classList.remove('active'));
+  if (_activeDrill === filename) {
+    $('dream-drill').classList.remove('show');
+    _activeDrill = null;
+    return;
+  }
+  _activeDrill = filename;
+  document.querySelectorAll('tr.dream-row[data-fname="' + filename + '"]').forEach(r => r.classList.add('active'));
+  $('dream-drill').classList.add('show');
+  $('drill-title').textContent = '▸ loading ' + filename + '…';
+  $('drill-body').innerHTML = '<div class="empty">fetching diff…</div>';
+  try {
+    const r = await fetch('/insight/dreams/diff/' + encodeURIComponent(filename));
+    const d = await r.json();
+    if (d.error) {
+      $('drill-body').innerHTML = '<div class="empty">' + escapeHtml(d.error) + '</div>';
+      return;
+    }
+    const report = d.report || {};
+    const samples = d.samples || {};
+    const diag = report.diagnostic || {};
+    $('drill-title').textContent = '▸ ' + filename + ' — ' + (report.timestamp || '');
+    let html = '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;font-family:var(--mono);font-size:11.5px">' +
+      '<span>agents: <b>' + (report.agents_dreamed || 0) + '/' + (report.total_agents || 0) + '</b></span>' +
+      '<span>insights: <b>' + (report.insights_generated || 0) + '</b></span>' +
+      '<span>STM freed: <b class="bytes-saved">' + fmtBytes(diag.stm_bytes_freed || 0) + '</b></span>' +
+      '<span>LTM grown: <b style="color:var(--cyan)">' + fmtBytes(diag.ltm_bytes_growth || 0) + '</b></span>' +
+      '<span>archive: <b>' + fmtBytes(diag.archive_bytes_after || 0) + '</b></span>' +
+      '<span>compression: <b style="color:var(--amber)">' + (diag.compression_ratio || 0).toFixed(1) + '×</b></span>' +
+      '<span>training: <b>' + (diag.training_examples_written || 0).toLocaleString() + '</b></span>' +
+      '</div>';
+
+    const perAgent = report.per_agent || [];
+    if (!perAgent.length) {
+      html += '<div class="empty">no per-agent results in this report</div>';
+    } else {
+      for (const ag of perAgent) {
+        const sm = samples[ag.agent_id] || {};
+        const stmExs = sm.stm_examples || [];
+        const ltm = sm.ltm_content;
+        const tr = sm.training_examples || [];
+        html += '<div class="agent-card"><h4>' + escapeHtml(ag.agent_id) + '</h4>' +
+          '<div class="nums">' +
+          '<span>memories: <b>' + (ag.memories_analyzed || 0) + '</b></span>' +
+          '<span>insights: <b>' + (ag.patterns_extracted || 0) + '</b></span>' +
+          '<span>promoted: <b>' + (ag.promoted_to_ltm || 0) + '</b></span>' +
+          '<span>STM: <b>' + fmtBytes(ag.stm_bytes_before || 0) + '</b> → <b>' + fmtBytes(ag.stm_bytes_after || 0) + '</b> (<b class="bytes-saved">−' + fmtBytes(ag.stm_bytes_freed || 0) + '</b>)</span>' +
+          '<span>LTM: <b>' + fmtBytes(ag.ltm_bytes_before || 0) + '</b> → <b>' + fmtBytes(ag.ltm_bytes_after || 0) + '</b> (<b style="color:var(--cyan)">+' + fmtBytes(ag.ltm_bytes_growth || 0) + '</b>)</span>' +
+          '<span>ratio: <b style="color:var(--amber)">' + (ag.compression_ratio || 0).toFixed(1) + '×</b></span>' +
+          '<span>training rows: <b>' + (ag.training_examples || 0) + '</b></span>' +
+          '</div>';
+
+        if (ag.top_insight) {
+          html += '<div style="font-family:var(--mono);font-size:11px;color:var(--violet);margin:6px 0">▶ ' + escapeHtml(ag.top_insight) + '</div>';
+        }
+
+        if (stmExs.length) {
+          html += '<details><summary>STM input — ' + (sm.stm_file_count || 0) + ' files (showing ' + stmExs.length + ')</summary>';
+          for (const ex of stmExs) {
+            html += '<div style="font-family:var(--mono);font-size:10.5px;color:var(--text3);margin-top:6px">' + escapeHtml(ex.path) + ' · ' + fmtBytes(ex.size) + '</div>';
+            html += '<pre>' + escapeHtml(ex.head) + '</pre>';
+          }
+          html += '</details>';
+        }
+        if (ltm) {
+          html += '<details><summary>LTM output — ' + escapeHtml(sm.ltm_file || '') + ' (' + fmtBytes(sm.ltm_size_bytes || 0) + ')</summary>';
+          html += '<pre>' + escapeHtml(JSON.stringify(ltm, null, 2)) + '</pre></details>';
+        }
+        if (tr.length) {
+          html += '<details><summary>training data — ' + (sm.training_total_examples || 0) + ' rows · <a href="/insight/dreams/diff/' + encodeURIComponent(filename) + '" target="_blank">raw</a></summary>';
+          for (let i = 0; i < tr.length; i++) {
+            html += '<div style="font-family:var(--mono);font-size:10.5px;color:var(--text3);margin-top:6px">example ' + (i+1) + ':</div>';
+            html += '<pre>' + escapeHtml(JSON.stringify(tr[i], null, 2)) + '</pre>';
+          }
+          html += '</details>';
+        }
+        html += '</div>';
+      }
+    }
+    $('drill-body').innerHTML = html;
+    $('dream-drill').scrollIntoView({behavior: 'smooth', block: 'nearest'});
+  } catch (e) {
+    $('drill-body').innerHTML = '<div class="empty">drill failed: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+async function runDream() {
+  const btn = $('run-btn');
+  const status = $('run-status');
+  btn.disabled = true;
+  btn.textContent = '⟳ dreaming…';
+  status.textContent = 'mindX is dreaming — collecting STM, aggregating patterns, scoring insights, promoting to LTM, archiving raw…';
+  status.classList.add('spin');
+  try {
+    const r = await fetch('/insight/dreams/run', {method: 'POST'});
+    const d = await r.json();
+    if (d.status === 'throttled') {
+      status.textContent = 'throttled — last run was recent. Next run in ' + d.next_run_in_seconds + 's.';
+    } else if (d.status === 'completed') {
+      const diag = (d.report && d.report.diagnostic) || {};
+      status.textContent = '✓ dream complete · freed ' + fmtBytes(diag.stm_bytes_freed || 0) +
+        ' STM · grew ' + fmtBytes(diag.ltm_bytes_growth || 0) + ' LTM · ' +
+        (diag.training_examples_written || 0) + ' training rows · ' +
+        (d.report._elapsed_seconds || '?') + 's';
+      await refreshAll();
+    } else if (d.status === 'in_progress') {
+      status.textContent = 'a dream cycle is already in progress — refreshing in 30s…';
+      setTimeout(refreshAll, 30000);
+    } else {
+      status.textContent = 'error: ' + (d.error || 'unknown');
+    }
+  } catch (e) {
+    status.textContent = 'request failed: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▸ Accelerate dream now';
+    status.classList.remove('spin');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  refreshAll();
+  setInterval(refreshAll, 60000);
+});
+</script>
+</body>
+</html>

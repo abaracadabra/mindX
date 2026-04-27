@@ -278,6 +278,25 @@ class DreamResult:
     archived: int = 0
     tuning_recommendations: List[Dict[str, Any]] = field(default_factory=list)
     duration_seconds: float = 0.0
+    # Diagnostic fields populated by run_dream_cycle:
+    stm_bytes_before: int = 0
+    stm_bytes_after: int = 0
+    ltm_bytes_before: int = 0
+    ltm_bytes_after: int = 0
+    archive_bytes_after: int = 0
+    training_examples_written: int = 0
+    training_file: str = ""
+
+    @property
+    def stm_bytes_freed(self) -> int:
+        """How many STM bytes were pruned/distributed in this cycle."""
+        return max(0, self.stm_bytes_before - self.stm_bytes_after)
+
+    @property
+    def compression_ratio(self) -> float:
+        """STM bytes consolidated per LTM byte produced. Higher = denser dream."""
+        ltm_delta = max(1, self.ltm_bytes_after - self.ltm_bytes_before)
+        return round(self.stm_bytes_freed / ltm_delta, 2) if ltm_delta else 0.0
 
 
 class MachineDreamCycle:
@@ -596,10 +615,34 @@ class MachineDreamCycle:
 
     # === FULL DREAM CYCLE FOR ONE AGENT ===
 
+    @staticmethod
+    def _dir_size(path: Path) -> int:
+        """Recursive byte sum, fault-tolerant."""
+        total = 0
+        try:
+            if not path.exists():
+                return 0
+            for p in path.rglob("*"):
+                try:
+                    if p.is_file():
+                        total += p.stat().st_size
+                except (OSError, PermissionError):
+                    continue
+        except Exception:
+            return total
+        return total
+
     async def run_dream_cycle(self, agent_id: str) -> DreamResult:
         """Run the complete 7-phase dream cycle for one agent."""
         start = time.time()
         result = DreamResult(agent_id=agent_id)
+
+        # Diagnostic capture: byte sizes before
+        stm_dir = PROJECT_ROOT / "data" / "memory" / "stm" / agent_id
+        ltm_dir = PROJECT_ROOT / "data" / "memory" / "ltm" / agent_id
+        archive_dir = PROJECT_ROOT / "data" / "memory" / "archive" / agent_id
+        result.stm_bytes_before = self._dir_size(stm_dir)
+        result.ltm_bytes_before = self._dir_size(ltm_dir)
 
         try:
             # Phase 1: State Assessment
@@ -609,6 +652,8 @@ class MachineDreamCycle:
             if result.memories_analyzed < 3:
                 # Not enough data to dream about
                 result.duration_seconds = time.time() - start
+                result.stm_bytes_after = result.stm_bytes_before
+                result.ltm_bytes_after = result.ltm_bytes_before
                 return result
 
             # Phase 2: Input Preprocessing
@@ -622,9 +667,16 @@ class MachineDreamCycle:
             scored_insights = self._score_insights(insights)
             result.insights = scored_insights
 
-            # Phase 5: Memory Storage (LTM promotion)
+            # Phase 5: Memory Storage (LTM promotion + ML-trainable export)
             promoted = await self._store_to_ltm(agent_id, scored_insights)
             result.promoted_to_ltm = promoted
+
+            try:
+                training_count, training_file = await self._write_training_data(agent_id, scored_insights, memories)
+                result.training_examples_written = training_count
+                result.training_file = training_file
+            except Exception as _te:
+                logger.debug(f"{self.log_prefix} training-data write failed for {agent_id}: {_te}")
 
             # Phase 6: Parameter Tuning
             tuning = self._generate_tuning(agent_id, scored_insights, state)
@@ -637,8 +689,84 @@ class MachineDreamCycle:
         except Exception as e:
             logger.warning(f"{self.log_prefix} Dream cycle error for {agent_id}: {e}")
 
+        # Diagnostic capture: byte sizes after
+        result.stm_bytes_after = self._dir_size(stm_dir)
+        result.ltm_bytes_after = self._dir_size(ltm_dir)
+        result.archive_bytes_after = self._dir_size(archive_dir)
         result.duration_seconds = time.time() - start
         return result
+
+    async def _write_training_data(
+        self,
+        agent_id: str,
+        insights: List[DreamInsight],
+        memories: List[Dict[str, Any]],
+    ) -> tuple:
+        """Write a `*_training.jsonl` file alongside the LTM insights.
+
+        Each line is one fine-tuning example in the OpenAI/Anthropic chat
+        completion shape:
+
+            {"messages": [
+                {"role": "system", "content": <consolidation persona>},
+                {"role": "user",   "content": <raw STM excerpt>},
+                {"role": "assistant", "content": <consolidated insight>}
+            ]}
+
+        These files are the substrate for promoting verified dream insights
+        into machine.wisdom (cognitive-ascent Phase 1+2). Once a concept
+        has crossed the verification threshold, the matching training rows
+        become inputs for finetuning a wisdom-aware model and for THOT
+        on-chain anchoring.
+        """
+        if not insights:
+            return 0, ""
+        ltm_path = PROJECT_ROOT / "data" / "memory" / "ltm" / agent_id
+        ltm_path.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        training_file = ltm_path / f"{ts}_training.jsonl"
+
+        # Persona injection — gives the LLM the consolidation context
+        system_prompt = (
+            f"You are the dream-consolidation engine for mindX agent {agent_id}. "
+            f"Given a sample of the agent's short-term memory, distil a single "
+            f"durable insight in the form: type · description · score · importance · novelty · confidence."
+        )
+
+        # Index memories by simple recency for context windows
+        recent_excerpt = "\n".join(
+            json.dumps({k: v for k, v in m.items() if k in ("timestamp", "process", "data", "metadata")},
+                       default=str)[:400]
+            for m in memories[:6]
+        )
+
+        examples = 0
+        with training_file.open("w", encoding="utf-8") as fh:
+            for ins in insights[:20]:
+                user_msg = (
+                    f"STM sample for {agent_id} (recent process traces):\n"
+                    f"{recent_excerpt}\n\n"
+                    f"Pattern frequency observed: {ins.frequency}.\n"
+                    f"Distil one durable insight."
+                )
+                assistant_msg = json.dumps({
+                    "type": ins.pattern_type,
+                    "description": ins.description,
+                    "score": round(ins.score, 4),
+                    "importance": ins.importance,
+                    "novelty": ins.novelty,
+                    "confidence": ins.confidence,
+                    "frequency": ins.frequency,
+                }, ensure_ascii=False)
+                row = {"messages": [
+                    {"role": "system",    "content": system_prompt},
+                    {"role": "user",      "content": user_msg},
+                    {"role": "assistant", "content": assistant_msg},
+                ]}
+                fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+                examples += 1
+
+        return examples, str(training_file.relative_to(PROJECT_ROOT))
 
     # === FULL DREAM FOR ALL AGENTS ===
 
@@ -686,6 +814,17 @@ class MachineDreamCycle:
         timing = self.clock.record_consolidation_complete()
         book_edition_due = self.clock.should_trigger_book_edition()
 
+        # Aggregate byte-level diagnostics across all agents
+        total_stm_before = sum(r.stm_bytes_before for r in all_results)
+        total_stm_after  = sum(r.stm_bytes_after for r in all_results)
+        total_ltm_before = sum(r.ltm_bytes_before for r in all_results)
+        total_ltm_after  = sum(r.ltm_bytes_after for r in all_results)
+        total_archive_after = sum(r.archive_bytes_after for r in all_results)
+        total_stm_freed = max(0, total_stm_before - total_stm_after)
+        total_ltm_growth = max(0, total_ltm_after - total_ltm_before)
+        total_training = sum(r.training_examples_written for r in all_results)
+        compression_ratio = round(total_stm_freed / max(1, total_ltm_growth), 2)
+
         # Store dream report — cypherpunk2048 precision
         duration = time.time() - start
         report = {
@@ -701,6 +840,17 @@ class MachineDreamCycle:
             "memories_archived": total_archived,
             "tuning_recommendations": all_tuning,
             "cross_agent_patterns": cross_agent_patterns,
+            "diagnostic": {
+                "stm_bytes_before": total_stm_before,
+                "stm_bytes_after":  total_stm_after,
+                "stm_bytes_freed":  total_stm_freed,
+                "ltm_bytes_before": total_ltm_before,
+                "ltm_bytes_after":  total_ltm_after,
+                "ltm_bytes_growth": total_ltm_growth,
+                "archive_bytes_after": total_archive_after,
+                "compression_ratio": compression_ratio,
+                "training_examples_written": total_training,
+            },
             "per_agent": [
                 {
                     "agent_id": r.agent_id,
@@ -710,6 +860,15 @@ class MachineDreamCycle:
                     "duration_seconds": f"{r.duration_seconds:.18f}",
                     "top_insight": r.insights[0].description[:100] if r.insights else None,
                     "top_score": f"{r.insights[0].score:.18f}" if r.insights else None,
+                    "stm_bytes_before": r.stm_bytes_before,
+                    "stm_bytes_after":  r.stm_bytes_after,
+                    "stm_bytes_freed":  r.stm_bytes_freed,
+                    "ltm_bytes_before": r.ltm_bytes_before,
+                    "ltm_bytes_after":  r.ltm_bytes_after,
+                    "ltm_bytes_growth": max(0, r.ltm_bytes_after - r.ltm_bytes_before),
+                    "compression_ratio": r.compression_ratio,
+                    "training_examples": r.training_examples_written,
+                    "training_file": r.training_file,
                 }
                 for r in all_results if r.memories_analyzed > 0
             ],

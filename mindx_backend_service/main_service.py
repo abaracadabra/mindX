@@ -1301,7 +1301,7 @@ app.add_middleware(
 # Uses @app.middleware("http") which always fires regardless of import order.
 
 _PUBLIC_EXACT = frozenset({
-    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html",
+    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/diagnostics/live", "/activity/stream", "/activity/recent", "/activity/stats",
     "/thesis", "/thesis/", "/thesis/evidence", "/thesis/summary",
@@ -1786,6 +1786,172 @@ async def insight_dreams_recent(request: Request, limit: int = 50):
         except Exception:
             continue
     return _maybe_h_text(request, {"dreams": out, "count": len(out), "last_dream_age_seconds": last_age}, route_path="/insight/dreams/recent")
+
+
+# ── Accelerated dream cycle (operator-triggered) ──
+# Run a full dream NOW with diagnostic capture. Returns the same report
+# shape as /insight/dreams/recent but reflects the just-completed cycle.
+# Rate-limited globally to one run per 120s to prevent thrash.
+
+_DREAM_RUN_LOCK = asyncio.Lock()
+_DREAM_RUN_LAST_TS: float = 0.0
+_DREAM_RUN_MIN_INTERVAL = 120.0
+_DREAM_RUN_LATEST: Optional[dict] = None
+
+
+@app.post("/insight/dreams/run", tags=["insight"], summary="Trigger an accelerated dream cycle now")
+@_insight_safe
+async def insight_dreams_run(request: Request, force: bool = False):
+    """Trigger MachineDreamCycle.run_full_dream() immediately. Diagnostic
+    capture is automatic: STM/LTM/archive byte sizes per agent before/after,
+    compression ratio, training-data examples written. Throttled to one run
+    per 2 minutes globally; pass `?force=true` to override.
+
+    Public, read/write to /data via the dream cycle. Returns the report dict
+    plus a one-line summary of what changed.
+    """
+    global _DREAM_RUN_LAST_TS, _DREAM_RUN_LATEST
+    now = time.time()
+    if not force and (now - _DREAM_RUN_LAST_TS) < _DREAM_RUN_MIN_INTERVAL:
+        return _maybe_h_text(request, {
+            "status": "throttled",
+            "next_run_in_seconds": round(_DREAM_RUN_MIN_INTERVAL - (now - _DREAM_RUN_LAST_TS), 1),
+            "latest": _DREAM_RUN_LATEST,
+        }, route_path="/insight/dreams/run")
+    if _DREAM_RUN_LOCK.locked():
+        return _maybe_h_text(request, {
+            "status": "in_progress",
+            "message": "a dream cycle is already running",
+        }, route_path="/insight/dreams/run")
+    async with _DREAM_RUN_LOCK:
+        try:
+            from agents.machine_dreaming import MachineDreamCycle
+            from agents.memory_agent import MemoryAgent
+            ma = await MemoryAgent.get_instance() if hasattr(MemoryAgent, "get_instance") else MemoryAgent()
+            mdc = MachineDreamCycle(memory_agent=ma)
+            t0 = time.time()
+            report = await mdc.run_full_dream()
+            report["_elapsed_seconds"] = round(time.time() - t0, 2)
+            _DREAM_RUN_LAST_TS = time.time()
+            _DREAM_RUN_LATEST = report
+            return _maybe_h_text(request, {"status": "completed", "report": report}, route_path="/insight/dreams/run")
+        except Exception as e:
+            return _maybe_h_text(request, {"status": "error", "error": str(e)}, route_path="/insight/dreams/run")
+
+
+@app.get("/insight/dreams/run", tags=["insight"], summary="Latest accelerated dream report (peek only)")
+@_insight_safe
+async def insight_dreams_run_status(request: Request):
+    """Peek at the latest accelerated dream without triggering a new run."""
+    return _maybe_h_text(request, {
+        "in_progress": _DREAM_RUN_LOCK.locked(),
+        "last_run_age_seconds": round(time.time() - _DREAM_RUN_LAST_TS, 1) if _DREAM_RUN_LAST_TS else None,
+        "latest": _DREAM_RUN_LATEST,
+    }, route_path="/insight/dreams/run")
+
+
+@app.get("/insight/dreams/diff/{filename}", tags=["insight"], summary="Per-dream STM→LTM diff with sample data")
+@_insight_safe
+async def insight_dream_diff(request: Request, filename: str):
+    """For one dream report, return the byte-delta breakdown plus a sample
+    of the raw STM input and the consolidated LTM output that came from it.
+    This is the side-by-side comparison the operator uses to verify the
+    dream cycle actually consolidated something rather than just deleted it.
+    """
+    dreams_dir = PROJECT_ROOT / "data" / "memory" / "dreams"
+    target = dreams_dir / filename
+    if ".." in filename or not target.exists() or not target.is_file():
+        return _maybe_h_text(request, {"error": "dream report not found", "filename": filename}, route_path="/insight/dreams/diff")
+    try:
+        report = json.loads(target.read_text())
+    except Exception as e:
+        return _maybe_h_text(request, {"error": str(e)}, route_path="/insight/dreams/diff")
+
+    # Find the most recent training file per agent (proves the dream produced
+    # a finetuning-ready artefact, not just a status update)
+    samples: dict[str, dict] = {}
+    ltm_root = PROJECT_ROOT / "data" / "memory" / "ltm"
+    stm_root = PROJECT_ROOT / "data" / "memory" / "stm"
+    for ag in (report.get("per_agent") or []):
+        agent_id = ag.get("agent_id")
+        if not agent_id:
+            continue
+        sample = {"agent_id": agent_id}
+
+        # Most recent dream_insights JSON
+        ltm_dir = ltm_root / agent_id
+        if ltm_dir.exists():
+            insight_files = sorted(
+                [p for p in ltm_dir.iterdir() if p.is_file() and p.name.endswith("_dream_insights.json")],
+                key=lambda p: p.stat().st_mtime, reverse=True
+            )
+            if insight_files:
+                try:
+                    sample["ltm_file"] = str(insight_files[0].relative_to(PROJECT_ROOT))
+                    sample["ltm_size_bytes"] = insight_files[0].stat().st_size
+                    sample["ltm_content"] = json.loads(insight_files[0].read_text())
+                except Exception:
+                    pass
+
+            # Most recent training file
+            training_files = sorted(
+                [p for p in ltm_dir.iterdir() if p.is_file() and p.name.endswith("_training.jsonl")],
+                key=lambda p: p.stat().st_mtime, reverse=True
+            )
+            if training_files:
+                try:
+                    sample["training_file"] = str(training_files[0].relative_to(PROJECT_ROOT))
+                    sample["training_size_bytes"] = training_files[0].stat().st_size
+                    # First 2 training examples (the rest follow same shape)
+                    lines = training_files[0].read_text().splitlines()
+                    sample["training_examples"] = [json.loads(ln) for ln in lines[:2] if ln.strip()]
+                    sample["training_total_examples"] = len(lines)
+                except Exception:
+                    pass
+
+        # Sample of raw STM input (3 most recent records, pre-dream)
+        stm_dir = stm_root / agent_id
+        if stm_dir.exists():
+            try:
+                stm_files = []
+                for p in stm_dir.rglob("*.json"):
+                    if p.is_file():
+                        stm_files.append((p.stat().st_mtime, p))
+                stm_files.sort(reverse=True)
+                stm_examples = []
+                for _, p in stm_files[:3]:
+                    try:
+                        stm_examples.append({
+                            "path": str(p.relative_to(PROJECT_ROOT)),
+                            "size": p.stat().st_size,
+                            "head": p.read_text()[:600],
+                        })
+                    except Exception:
+                        continue
+                sample["stm_examples"] = stm_examples
+                sample["stm_file_count"] = len(stm_files)
+            except Exception:
+                pass
+
+        samples[agent_id] = sample
+
+    payload = {
+        "filename": filename,
+        "report": report,
+        "samples": samples,
+        "computed_at": time.time(),
+    }
+    return _maybe_h_text(request, payload, route_path="/insight/dreams/diff")
+
+
+@app.get("/dreams.html", response_class=_DashResponse, include_in_schema=False)
+async def dreams_html_page():
+    """Dedicated machine.dreaming visualisation page."""
+    from starlette.responses import FileResponse
+    p = PROJECT_ROOT / "mindx_backend_service" / "dreams.html"
+    if p.exists():
+        return FileResponse(str(p), media_type="text/html")
+    return _DashResponse("<h1>dreams.html not yet built</h1>", status_code=404)
 
 
 @app.get("/insight/bdi/recent", tags=["insight"], summary="Detailed BDI events from process_trace.jsonl")
