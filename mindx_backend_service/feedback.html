@@ -232,6 +232,39 @@ tr:hover td{background:rgba(121,192,255,.02)}
 .chain-cell .arrow{position:absolute;top:50%;right:-13px;transform:translateY(-50%);color:var(--text3);font-size:14px;pointer-events:none;z-index:1}
 @media(max-width:900px){.chain-cell .arrow{display:none}}
 .chain-narrative{font-family:var(--mono);font-size:11px;color:var(--text2);background:rgba(121,192,255,.04);padding:10px 12px;border-radius:6px;line-height:1.6;margin-top:10px;border-left:2px solid var(--blue)}
+.chain-cell[role="button"]:focus{outline:2px solid var(--blue);outline-offset:2px}
+.chain-cell[aria-expanded="true"]{background:rgba(121,192,255,.10);border-color:var(--blue)}
+.cog-drill{margin:14px 0;padding:14px 16px;background:rgba(8,12,20,.7);border:1px solid var(--border);border-radius:8px;border-left:3px solid var(--blue);animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.cog-drill .drill-head{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.cog-drill .drill-head h3{font-family:var(--mono);font-size:13px;color:var(--blue);margin:0;flex:1}
+.cog-drill .drill-head .sub{font-family:var(--mono);font-size:10.5px;color:var(--text3)}
+.cog-drill .drill-head .drill-raw{font-family:var(--mono);font-size:10px;color:var(--text2);text-decoration:none}
+.cog-drill .drill-head .drill-close{margin-left:auto;background:transparent;border:1px solid var(--border);color:var(--text2);padding:2px 8px;border-radius:4px;cursor:pointer;font-family:var(--mono);font-size:11px}
+.cog-drill .drill-head .drill-close:hover{background:rgba(248,81,73,.12);color:var(--red);border-color:rgba(248,81,73,.3)}
+.cog-drill .drill-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
+.cog-drill .drill-item{padding:0;background:rgba(16,20,28,.5);border-radius:5px;border-left:2px solid transparent}
+.cog-drill .drill-item.kind-dream_insights{border-left-color:var(--violet)}
+.cog-drill .drill-item.kind-pattern_promotion{border-left-color:var(--green)}
+.cog-drill .drill-item.kind-concepts{border-left-color:var(--blue)}
+.cog-drill .drill-item.kind-wisdom{border-left-color:var(--amber)}
+.cog-drill .drill-item.kind-dream{border-left-color:var(--violet)}
+.cog-drill summary{cursor:pointer;padding:8px 10px;font-family:var(--mono);font-size:11.5px;list-style:none;display:block}
+.cog-drill summary::-webkit-details-marker{display:none}
+.cog-drill summary::before{content:'▸';color:var(--text3);margin-right:6px;display:inline-block;transition:transform .15s ease}
+.cog-drill details[open] summary::before{transform:rotate(90deg)}
+.cog-drill summary:hover{background:rgba(121,192,255,.04)}
+.cog-drill .drill-kind{display:inline-block;padding:1px 6px;border-radius:3px;background:rgba(121,192,255,.1);color:var(--blue);font-size:10px;letter-spacing:.5px}
+.cog-drill .drill-agent{color:var(--text2);font-weight:600}
+.cog-drill .drill-name{color:var(--text);font-weight:500}
+.cog-drill .drill-meta{color:var(--text3);float:right;font-size:10.5px}
+.cog-drill .drill-preview{padding:4px 12px 8px 30px;color:var(--text2);font-family:var(--mono);font-size:10.5px;line-height:1.5;word-break:break-word;border-top:1px dashed rgba(121,192,255,.1)}
+.cog-drill .drill-actions{padding:6px 12px 8px 30px;display:flex;gap:10px;align-items:center}
+.cog-drill .drill-actions button{background:rgba(121,192,255,.08);border:1px solid var(--border);color:var(--blue);padding:3px 10px;border-radius:4px;cursor:pointer;font-family:var(--mono);font-size:10.5px}
+.cog-drill .drill-actions button:hover{background:rgba(121,192,255,.18)}
+.cog-drill .drill-actions button:disabled{opacity:.5;cursor:default}
+.cog-drill .drill-actions a{font-family:var(--mono);font-size:10.5px;color:var(--text2)}
+.cog-drill .drill-content{padding:10px 12px;margin:0 12px 10px 30px;background:rgba(4,6,9,.7);border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:10.5px;color:var(--text);line-height:1.5;white-space:pre-wrap;word-break:break-word;max-height:480px;overflow:auto}
 
 /* BDI activity */
 .bdi-run{margin:14px 0;border-left:2px solid rgba(121,192,255,.25);padding-left:10px}
@@ -645,7 +678,9 @@ async function refreshCognition() {
       const glyph = _COG_GLYPH[status] || '?';
       const linkOpen = cell.link ? '<a href="' + cell.link + '" style="text-decoration:none;color:inherit">' : '';
       const linkClose = cell.link ? '</a>' : '';
-      html += linkOpen + '<div class="chain-cell ' + escapeHtml(status) + '" title="' + escapeHtml(status) + (cell.link ? ' · click → ' + cell.link : '') + '">' +
+      const drillAttr = cell.link ? '' : ' onclick="cogDrill(\'' + cell.key + '\')" tabindex="0" role="button" aria-expanded="false"';
+      html += linkOpen + '<div class="chain-cell ' + escapeHtml(status) + '"' + drillAttr +
+        ' title="' + escapeHtml(status) + (cell.link ? ' · click → ' + cell.link : ' · click to drill in') + '">' +
         '<span class="glyph">' + glyph + '</span>' +
         '<div class="lbl">' + escapeHtml(cell.label) + (cell.link ? ' ↗' : '') + '</div>' +
         '<div class="val">' + cell.val + '</div>' +
@@ -654,6 +689,7 @@ async function refreshCognition() {
         '</div>' + linkClose;
     }
     html += '</div>';
+    html += '<div id="cog-drill" class="cog-drill" hidden></div>';
     if (d.narrative) {
       html += '<div class="chain-narrative">' + escapeHtml(d.narrative) + '</div>';
     }
@@ -664,6 +700,191 @@ async function refreshCognition() {
     box.innerHTML = '<div class="empty">cognition view unavailable: ' + escapeHtml(e.message) + '</div>';
   }
 }
+
+// ── cognition drill-down ──
+let _cogDrillActive = null;
+async function cogDrill(key) {
+  const drill = $('cog-drill');
+  if (!drill) return;
+  if (_cogDrillActive === key) {
+    drill.hidden = true;
+    drill.innerHTML = '';
+    _cogDrillActive = null;
+    document.querySelectorAll('.chain-cell[role="button"]').forEach(c => c.setAttribute('aria-expanded', 'false'));
+    return;
+  }
+  _cogDrillActive = key;
+  drill.hidden = false;
+  drill.innerHTML = '<div class="empty">loading ' + escapeHtml(key) + '…</div>';
+  document.querySelectorAll('.chain-cell[role="button"]').forEach(c => {
+    const m = (c.getAttribute('onclick') || '').match(/cogDrill\('([^']+)'\)/);
+    c.setAttribute('aria-expanded', m && m[1] === key ? 'true' : 'false');
+  });
+  try {
+    if (key === 'knowledge') {
+      const r = await fetch('/insight/knowledge/recent?limit=20');
+      const d = await r.json();
+      drill.innerHTML = _renderKnowledgeDrill(d);
+    } else if (key === 'consolidation') {
+      const r = await fetch('/insight/dreams/recent?limit=10');
+      const d = await r.json();
+      drill.innerHTML = _renderConsolidationDrill(d);
+    } else if (key === 'thot') {
+      drill.innerHTML = _renderThotDrill();
+    } else {
+      drill.innerHTML = _renderTierExplainer(key);
+    }
+  } catch (e) {
+    drill.innerHTML = '<div class="empty">drill-down unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+function _drillHeader(title, sub, rawHref) {
+  return '<div class="drill-head">' +
+    '<h3>▸ ' + escapeHtml(title) + '</h3>' +
+    (sub ? '<span class="sub">' + sub + '</span>' : '') +
+    (rawHref ? ' <a href="' + rawHref + '" target="_blank" rel="noopener" class="drill-raw">view raw ↗</a>' : '') +
+    ' <button class="drill-close" onclick="cogDrill(\'' + _cogDrillActive + '\')" aria-label="close">✕</button>' +
+    '</div>';
+}
+function _renderKnowledgeDrill(d) {
+  const files = d.files || [];
+  let html = _drillHeader('knowledge — recent LTM files',
+    Human.count(d.total_scanned || files.length) + ' total · showing ' + files.length,
+    '/insight/knowledge/recent?h=true');
+  if (!files.length) return html + '<div class="empty">no LTM files yet</div>';
+  html += '<ul class="drill-list">';
+  for (const f of files) {
+    const path = escapeHtml(f.path || '');
+    const kindClass = (f.kind || 'other').replace(/[^a-z0-9_]/gi, '');
+    html += '<li class="drill-item kind-' + kindClass + '">' +
+      '<details>' +
+      '<summary>' +
+        '<span class="drill-kind">' + escapeHtml(f.kind || 'other') + '</span> ' +
+        '<span class="drill-agent">' + escapeHtml(f.agent || '') + '</span> · ' +
+        '<span class="drill-name">' + escapeHtml(f.name || '') + '</span>' +
+        ' <span class="drill-meta">' + Human.bytes(f.size || 0) + ' · ' + Human.relTs(f.mtime) + '</span>' +
+      '</summary>' +
+      '<div class="drill-preview">' + escapeHtml((f.preview || '').slice(0, 240)) +
+        (f.preview && f.preview.length > 240 ? '…' : '') + '</div>' +
+      '<div class="drill-actions">' +
+        '<button onclick="loadKnowledgeFile(this, \'' + path.replace(/'/g, "\\'") + '\')">load full</button>' +
+        ' <a href="/insight/knowledge/file?path=' + encodeURIComponent(f.path) + '" target="_blank" rel="noopener">raw JSON ↗</a>' +
+      '</div>' +
+      '<pre class="drill-content" hidden></pre>' +
+      '</details></li>';
+  }
+  html += '</ul>';
+  return html;
+}
+async function loadKnowledgeFile(btn, path) {
+  const detail = btn.closest('details');
+  const pre = detail.querySelector('.drill-content');
+  pre.hidden = false;
+  pre.textContent = 'loading…';
+  try {
+    const r = await fetch('/insight/knowledge/file?path=' + encodeURIComponent(path));
+    const d = await r.json();
+    if (d.content !== undefined && d.content !== null) {
+      pre.textContent = JSON.stringify(d.content, null, 2);
+    } else if (d.preview) {
+      pre.textContent = '(file too large — first ' + Human.bytes(d.max_bytes || 0) + ' shown)\n\n' + d.preview;
+    } else {
+      pre.textContent = JSON.stringify(d, null, 2);
+    }
+    btn.disabled = true;
+    btn.textContent = 'loaded';
+  } catch (e) {
+    pre.textContent = 'load failed: ' + e.message;
+  }
+}
+function _renderConsolidationDrill(d) {
+  const dreams = d.dreams || [];
+  let html = _drillHeader('consolidation — recent dream cycles',
+    'last age: ' + (d.last_dream_age_seconds != null ? Human.duration(d.last_dream_age_seconds) : '—'),
+    '/insight/dreams/recent?h=true');
+  if (!dreams.length) return html + '<div class="empty">no dreams recorded yet</div>';
+  html += '<ul class="drill-list">';
+  for (const dr of dreams) {
+    const ts = dr.dream_timestamp || dr.timestamp || dr.ts;
+    const dur = dr.duration_seconds != null ? Number(dr.duration_seconds) : null;
+    html += '<li class="drill-item kind-dream"><details>' +
+      '<summary>' +
+      '<span class="drill-kind">dream</span> · ' +
+      '<span class="drill-name">' + escapeHtml(dr.lunar_phase || dr.phase || 'cycle') + '</span>' +
+      ' <span class="drill-meta">' + (ts ? Human.relTs(ts) : '—') +
+        ' · ' + (dur != null && isFinite(dur) ? Human.duration(dur) : '') +
+        ' · ' + Human.count(dr.total_insights || (dr.insights ? dr.insights.length : 0)) + ' insights</span>' +
+      '</summary>' +
+      '<pre class="drill-content">' + escapeHtml(JSON.stringify(dr, null, 2).slice(0, 4000)) + '</pre>' +
+      '</details></li>';
+  }
+  html += '</ul>';
+  return html;
+}
+function _renderThotDrill() {
+  return _drillHeader('THOT — full page', 'mints, queue, dimension table, contract config', '/THOT.html') +
+    '<p style="color:var(--text2)">The THOT tier has its own dedicated surface. ' +
+    '<a href="/THOT.html" style="color:var(--green);font-weight:600">open /THOT.html ▸</a> ' +
+    'for recent mint events, the wisdom queue, and the 11-dimension standard.</p>';
+}
+function _renderTierExplainer(key) {
+  const explainers = {
+    information: {
+      title: 'information — STM (per-agent short-term memory)',
+      sub: 'data/memory/agent_workspaces/<agent>/process_trace.jsonl',
+      body: 'Every agent thought, tool call, and inter-agent message is appended to that agent\'s STM as it happens. The dream cycle reads STM ≥14d old and consolidates it into LTM, then prunes it to data/memory/archive/. The count above is the number of agents whose STM has been written to in the last 24h.',
+      links: [{href: '/doc/memory', text: 'memory doc'}, {href: '/insight/cognition?h=true', text: 'raw chain'}]
+    },
+    concepts: {
+      title: 'concepts — atomic LLM-extracted rules (NOT IMPLEMENTED)',
+      sub: 'planned: data/memory/ltm/<agent>/<ts>_concepts.json',
+      body: 'Phase 1 of the cognitive-ascent plan. Each dream cycle would call an LLM to extract 1–5 atomic concepts of shape {premise, conclusion, confidence, support_insight_ids} from the LTM insights it just wrote. Today this code does not exist; this cell is honestly red. When implemented, premises would look like "task_type==\'persona_lookup\' AND hour_in [09:00,17:00]" → conclusion: "automindx_get_persona succeeds".',
+      links: [{href: '/doc/insight_aggregator', text: 'aggregator doc'}, {href: '/doc/THESIS', text: 'thesis'}]
+    },
+    wisdom: {
+      title: 'wisdom — Bayesian-verified concepts (NOT IMPLEMENTED)',
+      sub: 'gated on concepts',
+      body: 'Phase 2 of cognitive ascent. A concept becomes wisdom when verification_count ≥ 3 AND confidence ≥ 0.85, updated by Bayesian rule (alpha=2, beta=2 prior; verification +1, contradiction +2). The first time a concept crosses both thresholds, is_wisdom=True is set and a wisdom.verified catalogue event fires.',
+      links: [{href: '/doc/THESIS', text: 'thesis'}]
+    },
+    ingested: {
+      title: 'ingestion — external THOT inbox (NOT IMPLEMENTED)',
+      sub: 'planned: POST /api/wisdom/ingest',
+      body: 'Phase 4 of cognitive ascent. Operators (or peer mindX instances) post a THOT CID; mindX fetches the wisdom bundle from IPFS, validates the sha256, and inserts the embedding into pgvector with tier="external_wisdom". Subsequent BDI plans would retrieve it via RAGE alongside locally-verified wisdom.',
+      links: [{href: '/THOT.html', text: 'THOT page'}, {href: '/doc/KNOWLEDGE_CATALOGUE', text: 'catalogue design'}]
+    },
+    feedback: {
+      title: 'feedback — wisdom_applied / wisdom_violated loop closure (NOT IMPLEMENTED)',
+      sub: 'gated on wisdom + BDI integration',
+      body: 'Phase 6 of cognitive ascent. Before BDI plans, perceive() retrieves the top wisdom relevant to the goal and injects it into the planning prompt. After execution, each plan emits wisdom.applied (followed) or wisdom.violated (ignored or counter-evidence) catalogue events. Those events feed back into the verifier, which raises confidence on plans-that-followed-wisdom-and-succeeded and lowers it on plans-that-ignored-wisdom-and-still-succeeded.',
+      links: []
+    }
+  };
+  const e = explainers[key];
+  if (!e) return _drillHeader(key, 'no drill-down configured', null) + '<div class="empty">no explainer registered for this tier yet</div>';
+  let html = _drillHeader(e.title, escapeHtml(e.sub), null);
+  html += '<p style="color:var(--text);line-height:1.6">' + escapeHtml(e.body) + '</p>';
+  if (e.links && e.links.length) {
+    html += '<p style="color:var(--text2);margin-top:8px">';
+    html += e.links.map(l => '<a href="' + escapeHtml(l.href) + '">' + escapeHtml(l.text) + '</a>').join(' · ');
+    html += '</p>';
+  }
+  return html;
+}
+// keyboard: Esc closes drill
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && _cogDrillActive) {
+    cogDrill(_cogDrillActive);
+  }
+});
+// allow Enter/Space on focused chain-cell
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const t = e.target;
+  if (!t || !t.classList || !t.classList.contains('chain-cell')) return;
+  const m = (t.getAttribute('onclick') || '').match(/cogDrill\('([^']+)'\)/);
+  if (m) { cogDrill(m[1]); e.preventDefault(); }
+});
 
 // ── system pulse (psutil) ──
 function _bar(pct, color) {

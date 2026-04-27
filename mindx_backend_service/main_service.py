@@ -2454,6 +2454,143 @@ async def insight_system(request: Request, full: bool = False):
     return _maybe_h_text(request, payload, route_path="/insight/system")
 
 
+# ── Knowledge drill-down (LTM viewer) ──
+# Public read-only views over data/memory/ltm/ — what mindX has learned.
+# Used by the feedback.html cognition-chain "knowledge" cell to show actual
+# LTM files behind the count.
+
+_LTM_ROOT = (PROJECT_ROOT / "data" / "memory" / "ltm").resolve()
+_LTM_MAX_FILE_BYTES = 256 * 1024  # 256 KB cap on /insight/knowledge/file
+
+
+def _classify_ltm_file(name: str) -> str:
+    n = name.lower()
+    if "dream_insights" in n: return "dream_insights"
+    if "pattern_promotion" in n: return "pattern_promotion"
+    if "concepts" in n: return "concepts"
+    if "wisdom" in n: return "wisdom"
+    return "other"
+
+
+@app.get("/insight/knowledge/recent", tags=["insight"], summary="Recent LTM files (knowledge drill-down)")
+async def insight_knowledge_recent(request: Request, limit: int = 20, agent: str = ""):
+    """List the most recent LTM JSON files written under data/memory/ltm/.
+    Public, read-only. `?agent=foo` filters to one agent dir; `?limit=` caps
+    the result count (max 100). Each row includes path, size, mtime, kind
+    (dream_insights / pattern_promotion / concepts / wisdom / other), and a
+    short text preview of the first ~200 chars of the JSON.
+    """
+    limit = max(1, min(int(limit or 20), 100))
+    try:
+        if not _LTM_ROOT.exists():
+            payload = {"files": [], "count": 0, "agents": [], "note": "ltm root not yet present"}
+            return _maybe_h_text(request, payload, route_path="/insight/knowledge/recent")
+
+        if agent:
+            search_dirs = [_LTM_ROOT / agent] if (_LTM_ROOT / agent).resolve().is_relative_to(_LTM_ROOT) and (_LTM_ROOT / agent).is_dir() else []
+        else:
+            search_dirs = [d for d in _LTM_ROOT.iterdir() if d.is_dir()]
+
+        agents_list = sorted(d.name for d in _LTM_ROOT.iterdir() if d.is_dir()) if _LTM_ROOT.exists() else []
+
+        candidates: list[tuple[float, Path]] = []
+        for d in search_dirs:
+            try:
+                for p in d.iterdir():
+                    if p.is_file() and p.suffix == ".json":
+                        try:
+                            candidates.append((p.stat().st_mtime, p))
+                        except OSError:
+                            pass
+            except (OSError, PermissionError):
+                continue
+        candidates.sort(key=lambda t: t[0], reverse=True)
+
+        files = []
+        for mtime, p in candidates[:limit]:
+            try:
+                size = p.stat().st_size
+                preview = ""
+                try:
+                    with p.open("rb") as f:
+                        chunk = f.read(220)
+                    preview = chunk.decode("utf-8", errors="replace").replace("\n", " ").strip()[:200]
+                except Exception:
+                    preview = ""
+                rel = str(p.relative_to(PROJECT_ROOT))
+                files.append({
+                    "path": rel,
+                    "agent": p.parent.name,
+                    "name": p.name,
+                    "kind": _classify_ltm_file(p.name),
+                    "size": size,
+                    "mtime": mtime,
+                    "preview": preview,
+                })
+            except Exception:
+                continue
+
+        payload = {
+            "files": files,
+            "count": len(files),
+            "total_scanned": len(candidates),
+            "agents": agents_list,
+            "agent_filter": agent or None,
+            "computed_at": time.time(),
+        }
+    except Exception as e:
+        payload = {"files": [], "count": 0, "error": str(e), "computed_at": time.time()}
+    return _maybe_h_text(request, payload, route_path="/insight/knowledge/recent")
+
+
+@app.get("/insight/knowledge/file", tags=["insight"], summary="Read one LTM file (knowledge drill-down)")
+async def insight_knowledge_file(request: Request, path: str):
+    """Return the parsed JSON body of a single LTM file. The `path` parameter
+    must normalize to a location inside data/memory/ltm/ — anything else
+    returns 400 (path traversal guard). Files larger than 256 KB return their
+    metadata + a head-truncated preview only.
+    """
+    from starlette.responses import JSONResponse
+    if not path:
+        return JSONResponse({"error": "path required"}, status_code=400)
+    try:
+        # Allow either project-relative path ("data/memory/ltm/...") or absolute.
+        candidate = Path(path)
+        if not candidate.is_absolute():
+            candidate = PROJECT_ROOT / candidate
+        candidate = candidate.resolve()
+        if not candidate.is_relative_to(_LTM_ROOT):
+            return JSONResponse({"error": "path must be inside data/memory/ltm/"}, status_code=400)
+        if not candidate.exists() or not candidate.is_file():
+            return JSONResponse({"error": "file not found"}, status_code=404)
+
+        st = candidate.stat()
+        meta = {
+            "path": str(candidate.relative_to(PROJECT_ROOT)),
+            "agent": candidate.parent.name,
+            "name": candidate.name,
+            "kind": _classify_ltm_file(candidate.name),
+            "size": st.st_size,
+            "mtime": st.st_mtime,
+        }
+        if st.st_size > _LTM_MAX_FILE_BYTES:
+            with candidate.open("rb") as f:
+                head = f.read(_LTM_MAX_FILE_BYTES).decode("utf-8", errors="replace")
+            meta.update({"truncated": True, "preview": head, "max_bytes": _LTM_MAX_FILE_BYTES})
+            return JSONResponse(meta, status_code=413)
+
+        try:
+            content = json.loads(candidate.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            content = None
+            meta["parse_error"] = str(e)
+            meta["raw"] = candidate.read_text(encoding="utf-8", errors="replace")[:_LTM_MAX_FILE_BYTES]
+        meta["content"] = content
+        return JSONResponse(meta)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 # ── THOT contract-correlated endpoints ──
 # Plan: ~/.claude/plans/purring-humming-stonebraker.md
 # Read-only views over THOT.sol state. Public; consistent with /insight/* policy.
