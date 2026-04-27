@@ -953,7 +953,7 @@ async function refreshLedger() {
         '<span style="color:var(--text3);font-size:10.5px">' +
         '"max-cycle (clean)" means the BDI loop hit its cycle limit without crashing — typically because the skeleton fallback ran NO_OP repeatedly. ' +
         'Production cause today: the cognition chain has not produced verified wisdom yet (see ' +
-        '<a href="#sec-cognition" onclick="document.getElementById(\\'sec-cognition\\').scrollIntoView({behavior:\\'smooth\\'})">cognitive ascent</a>). ' +
+        '<a href="#sec-cognition">cognitive ascent</a>). ' +
         'Click any cluster below for the matching BDI run trace.' +
         '</span></div>';
     }
@@ -1326,8 +1326,9 @@ function _setBadge(key, count, kind) {
 function _initTabbar() {
   const tabbar = document.getElementById('tabbar');
   if (!tabbar) return;
+  const chips = Array.from(tabbar.querySelectorAll('.tab-chip'));
   // Click → smooth-scroll + flash
-  tabbar.querySelectorAll('.tab-chip').forEach(chip => {
+  chips.forEach(chip => {
     chip.addEventListener('click', () => {
       const target = document.getElementById(chip.dataset.target);
       if (!target) return;
@@ -1337,19 +1338,56 @@ function _initTabbar() {
   });
   // Scrollspy
   const sectionToChip = new Map();
-  tabbar.querySelectorAll('.tab-chip').forEach(chip => {
+  chips.forEach(chip => {
     const section = document.getElementById(chip.dataset.target);
     if (section) sectionToChip.set(section, chip);
   });
   const observer = new IntersectionObserver((entries) => {
-    // Pick the topmost intersecting section
     const visible = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
     if (visible.length === 0) return;
     const section = visible[0].target;
-    tabbar.querySelectorAll('.tab-chip.active').forEach(c => c.classList.remove('active'));
+    chips.forEach(c => c.classList.remove('active'));
     sectionToChip.get(section)?.classList.add('active');
   }, { rootMargin: '-100px 0px -60% 0px', threshold: 0 });
   for (const section of sectionToChip.keys()) observer.observe(section);
+
+  // Keyboard navigation:
+  //   ↑ / k → previous section
+  //   ↓ / j → next section
+  //   Home / g → first
+  //   End  / G → last
+  //   Tab inside the bar already cycles natively; Up/Down cycle by section.
+  // Listens globally so the user doesn't have to focus a chip first;
+  // ignored when typing in <input>, <textarea>, or contenteditable.
+  function activeIdx() {
+    const idx = chips.findIndex(c => c.classList.contains('active'));
+    return idx === -1 ? 0 : idx;
+  }
+  function jumpTo(idx) {
+    if (idx < 0) idx = 0;
+    if (idx >= chips.length) idx = chips.length - 1;
+    const chip = chips[idx];
+    if (chip) chip.click();   // reuses existing click handler (scroll + flash)
+  }
+  document.addEventListener('keydown', (e) => {
+    // Don't hijack typing
+    const tag = (e.target?.tagName || '').toUpperCase();
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    let handled = false;
+    if (e.key === 'ArrowDown' || e.key === 'j' || e.key === 'J')      { jumpTo(activeIdx() + 1); handled = true; }
+    else if (e.key === 'ArrowUp' || e.key === 'k' || e.key === 'K')  { jumpTo(activeIdx() - 1); handled = true; }
+    else if (e.key === 'Home' || e.key === 'g')                       { jumpTo(0); handled = true; }
+    else if (e.key === 'End' || e.key === 'G')                        { jumpTo(chips.length - 1); handled = true; }
+    if (handled) e.preventDefault();
+  });
+
+  // Visual hint: tooltip on each chip explaining its keyboard shortcut + index.
+  chips.forEach((chip, idx) => {
+    const existing = chip.getAttribute('title') || '';
+    const hint = (existing ? existing + ' · ' : '') + 'press ↑/↓ or j/k to navigate · ' + (idx + 1) + '/' + chips.length;
+    chip.setAttribute('title', hint);
+  });
 }
 
 // ── boot ──
