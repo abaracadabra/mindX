@@ -440,23 +440,23 @@ class TokenCalculatorTool(BaseTool):
             if not self._check_rate_limit_production():
                 self._update_metrics("rate_limit_exceeded", error=True)
                 return False, "Rate limit exceeded. Production service temporarily throttled."
-                
-                logger.info(f"{self.log_prefix} [OP:{operation_id}] Executing '{action}' with {len(kwargs)} parameters")
-                
-                # Route to enhanced methods with timeouts
-                method_timeouts = {
-                    "estimate_cost": 20.0,
-                    "track_usage": 15.0,
-                    "get_usage_report": 30.0,
-                    "optimize_prompt": 45.0,
-                    "check_budget": 10.0,
-                    "get_cost_breakdown": 25.0,
-                    "update_pricing": 15.0,
-                    "get_metrics": 5.0  # New production method
-                }
-                
-                timeout = method_timeouts.get(action, 30.0)
-                
+
+            logger.info(f"{self.log_prefix} [OP:{operation_id}] Executing '{action}' with {len(kwargs)} parameters")
+
+            # Route to enhanced methods with timeouts
+            method_timeouts = {
+                "estimate_cost": 20.0,
+                "track_usage": 15.0,
+                "get_usage_report": 30.0,
+                "optimize_prompt": 45.0,
+                "check_budget": 10.0,
+                "get_cost_breakdown": 25.0,
+                "update_pricing": 15.0,
+                "get_metrics": 5.0  # New production method
+            }
+
+            timeout = method_timeouts.get(action, 30.0)
+
             try:
                 if action == "estimate_cost":
                     result = await asyncio.wait_for(self._estimate_cost_production(**kwargs), timeout=timeout)

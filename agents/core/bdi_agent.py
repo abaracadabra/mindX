@@ -977,11 +977,16 @@ class BDIAgent:
                 "params": {}
             })
 
+        # set_plan() sets plan_status="READY" when actions are non-empty.
+        # We deliberately DO NOT override it — the run() loop checks
+        # `plan_status == "READY"` before calling execute_current_intention,
+        # so a "PLANNED_SKELETON" tag would silently skip execution and
+        # produce an infinite no-op cycle (verified on production
+        # 2026-04-27: 12+ runs all failing identically).
         self.set_plan(skeleton_actions, goal_id)
-        self.intentions["plan_status"] = "PLANNED_SKELETON"
         self.logger.info(
             f"BDI planning: skeleton plan generated ({len(skeleton_actions)} actions, "
-            f"status=PLANNED_SKELETON). Structure from pattern, not intelligence."
+            f"status=READY via skeleton fallback). Structure from pattern, not intelligence."
         )
 
         # Log degraded planning to Godel audit trail
