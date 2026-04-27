@@ -445,18 +445,28 @@ const Human = {
     if (s < 86400) return Math.floor(s/3600) + 'h ' + Math.round((s%3600)/60) + 'm';
     return Math.floor(s/86400) + 'd ' + Math.round((s%86400)/3600) + 'h';
   },
-  relTs(ts) {
+  relTs(ts, opts) {
+    // opts.pastOnly=true: log events are inherently in the past; never render
+    // 'in 6h 31m' for them — clock skew between server (UTC) and client local
+    // can produce negative diffs that confuse readers. Floor at 0s ago and
+    // include skew note in the title for transparency.
     const ms = (typeof ts === 'number' ? (ts > 1e12 ? ts : ts*1000) : Date.parse(ts));
     if (!isFinite(ms)) return { label: '?', title: '' };
     const dt = new Date(ms);
-    const diff = (Date.now() - ms) / 1000;
+    let diff = (Date.now() - ms) / 1000;
+    let title = dt.toISOString();
     let label;
+    if (opts && opts.pastOnly && diff < 0) {
+      const skew = Math.round(-diff);
+      title = dt.toISOString() + ' · clock skew: server is ' + Human.duration(-diff) + ' ahead of your client';
+      diff = 0;
+    }
     if (diff < 0)        label = 'in ' + Human.duration(-diff);
     else if (diff < 60)  label = Math.max(1, Math.round(diff)) + 's ago';
     else if (diff < 3600) label = Math.round(diff/60) + 'm ago';
     else if (diff < 86400) label = Math.round(diff/3600) + 'h ago';
     else                 label = Math.round(diff/86400) + 'd ago';
-    return { label, title: dt.toISOString() };
+    return { label, title };
   },
   hash(s, n=14) {
     if (!s) return '—';
@@ -488,10 +498,13 @@ function txLink(chain, tx, n=12) {
     'title="' + safe + ' (open on ' + escapeHtml(chain) + ' explorer)">' +
     '<code>' + short + '</code></a>';
 }
-function relSpan(ts) {
-  const r = Human.relTs(ts);
+function relSpan(ts, opts) {
+  const r = Human.relTs(ts, opts);
   return '<span title="' + escapeHtml(r.title) + '">' + escapeHtml(r.label) + '</span>';
 }
+// All log events (BDI activity, dialogue, dreams, mints, etc.) are past-only —
+// use this wrapper everywhere to neutralize client clock skew.
+function relPast(ts) { return relSpan(ts, { pastOnly: true }); }
 function bytesSpan(n) {
   if (n == null || !isFinite(Number(n))) return '—';
   return '<span title="' + Number(n) + ' bytes">' + escapeHtml(Human.bytes(n)) + '</span>';
@@ -657,7 +670,7 @@ function renderRow(evt) {
       '<pre>' + escapeHtml(truncate(txt, 4000)) + '</pre></details>';
   }
   row.innerHTML =
-    '<span class="ts">' + relSpan(evt.timestamp) + '</span>' +
+    '<span class="ts">' + relPast(evt.timestamp) + '</span>' +
     '<span class="ag"><span class="tier" style="background:' + tierColor + '20;color:' + tierColor + ';border:1px solid ' + tierColor + '40">' +
       escapeHtml(tier) + '</span>' + escapeHtml(evt.agent || '?') + '</span>' +
     '<span class="stp">' + escapeHtml(room) + ' · ' + escapeHtml(truncate(step, 24)) + '</span>' +
@@ -747,14 +760,40 @@ async function refreshBDI() {
       const first = runEvents[0];
       const last = runEvents[runEvents.length - 1];
       const goalDesc = runEvents.find(e => e.goal_description)?.goal_description || '';
+
+      // Stuck-run detection: a single run with >=3 identical action types is
+      // a textbook stuck loop — usually NO_OP from skeleton fallback. Surface
+      // a banner above the run header so it can't be missed.
+      const actionCounts = new Map();
+      for (const ev of runEvents) {
+        if (ev.process_name === 'bdi_action' || ev.process_name === 'bdi_action_execution') {
+          const t = ev.action_type || '?';
+          actionCounts.set(t, (actionCounts.get(t) || 0) + 1);
+        }
+      }
+      let stuckBanner = '';
+      const topAction = Array.from(actionCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+      if (topAction && topAction[1] >= 3) {
+        const reason = topAction[0] === 'NO_OP'
+          ? 'skeleton fallback firing (LLM not producing parseable plans)'
+          : 'same action repeating without changing state';
+        stuckBanner =
+          '<div style="margin:6px 0 8px;padding:8px 10px;background:rgba(248,81,73,.08);border-left:3px solid var(--red);border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--text)">' +
+          '<b style="color:var(--red)">stuck loop</b> · action <code>' + escapeHtml(topAction[0]) +
+          '</code> repeated <b>' + topAction[1] + '×</b> in this run · ' +
+          '<span style="color:var(--text3)">' + escapeHtml(reason) + '</span>' +
+          '</div>';
+      }
+
       html.push('<div class="bdi-run">');
       html.push('<div class="bdi-run-hd">' +
         '<span class="id">run ' + escapeHtml(Human.hash(rid, 12)) + '</span>' +
-        '<span>' + relSpan(first.timestamp_utc) + '</span>' +
+        '<span>' + relPast(first.timestamp_utc) + '</span>' +
         '<span class="meta">' + runEvents.length + ' events · ' + escapeHtml(truncate(goalDesc, 90)) + '</span>' +
       '</div>');
+      if (stuckBanner) html.push(stuckBanner);
       for (const e of runEvents) {
-        const ts = relSpan(e.timestamp_utc);
+        const ts = relPast(e.timestamp_utc);
         const pn = e.process_name || '?';
         let kindCls = 'kind';
         let kindLbl = pn;
@@ -993,7 +1032,7 @@ async function refreshLedger() {
       html += '<div style="margin-top:18px;font-family:var(--mono);font-size:11px;color:var(--blue);letter-spacing:1.5px;text-transform:uppercase">recent gödel choices · with rationale</div>';
       html += '<table style="margin-top:8px"><thead><tr><th>ts</th><th>agent</th><th>type</th><th>chosen</th><th>rationale</th></tr></thead><tbody>';
       for (const g of godel.slice(0, 30)) {
-        html += '<tr><td>' + relSpan(g.timestamp_utc) + '</td>' +
+        html += '<tr><td>' + relPast(g.timestamp_utc) + '</td>' +
           '<td><b>' + escapeHtml(truncate(g.source_agent || '?', 30)) + '</b></td>' +
           '<td>' + escapeHtml(truncate(g.choice_type || '?', 28)) + '</td>' +
           '<td>' + escapeHtml(truncate(g.chosen_option || g.choice || '?', 36)) + '</td>' +
@@ -1051,7 +1090,7 @@ async function refreshBoardroom() {
       }).join('') + '</div>';
       const sid = s.session_id || '?';
       html += '<tr><td><b><span title="' + escapeHtml(sid) + '">' + escapeHtml(Human.hash(sid, 16)) + '</span></b><br>' +
-        '<span style="color:var(--text3);font-size:10px">' + relSpan(s.timestamp) + '</span></td>' +
+        '<span style="color:var(--text3);font-size:10px">' + relPast(s.timestamp) + '</span></td>' +
         '<td>' + escapeHtml(truncate(s.directive || '', 200)) + '</td>' +
         '<td class="' + cls + '">' + escapeHtml(outcome) + '</td>' +
         '<td>' + (typeof s.weighted_score === 'number' ? s.weighted_score.toFixed(3) : '?') + '</td>' +
@@ -1105,7 +1144,7 @@ async function refreshDreams() {
           escapeHtml(truncate(t.recommendation || t.reason || t.message || '', 140)) + '</li>';
       }).join('') + '</ul>' : '<span style="color:var(--text3)">none</span>';
       html += '<tr class="dream-row"><td><b>' +
-        relSpan(dr.timestamp || (dr._mtime && dr._mtime * 1000)) + '</b><br>' +
+        relPast(dr.timestamp || (dr._mtime && dr._mtime * 1000)) + '</b><br>' +
         '<span style="color:var(--text3);font-size:10px">' + escapeHtml(dr._filename || '') + '</span></td>' +
         '<td>' + countSpan(dr.agents_dreamed) + '</td>' +
         '<td>' + countSpan(dr.insights_generated) + '</td>' +
@@ -1258,7 +1297,7 @@ async function refreshStorage() {
       html += '<table><thead><tr><th>ts</th><th>agent</th><th>date</th><th>files</th><th>size</th><th>cid</th><th>tx</th></tr></thead><tbody>';
       for (const e of events.slice(0, 20)) {
         const verified = e.verified ? '<span class="outcome-approved">✓</span>' : '<span class="outcome-rejected">✗</span>';
-        html += '<tr><td>' + relSpan(e.ts) + '</td>' +
+        html += '<tr><td>' + relPast(e.ts) + '</td>' +
           '<td><b>' + escapeHtml(truncate(e.actor || '?', 28)) + '</b></td>' +
           '<td>' + escapeHtml(e.date_str || '') + '</td>' +
           '<td>' + countSpan(e.file_count) + ' ' + verified + '</td>' +

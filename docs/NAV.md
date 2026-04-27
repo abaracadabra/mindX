@@ -291,7 +291,7 @@ Quick links: [API: Chat](ollama/api/chat.md) | [API: Generate](ollama/api/genera
 
 ### Mind-of-mindX insight endpoints
 
-All accept `?h=true` (or `Accept: text/plain`) for human-readable text rendering. JSON unchanged when omitted.
+All accept `?h=true` (or `Accept: text/plain`) for human-readable text rendering. JSON unchanged when omitted. Every `/insight/*` route is served by [`InsightAggregator`](insight_aggregator.md) — the single chokepoint that turns mindX's append-only logs into the cached numerical surface. Read that doc first if any number on the page looks wrong.
 
 | Route | Returns |
 |-------|---------|
