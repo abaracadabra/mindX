@@ -2512,32 +2512,26 @@ async def insight_boardroom_cards(request: Request):
         bd = await Boardroom.get_instance()
         cards = {}
         ceo = bd._load_member_card("ceo_agent_main")
-        cards["ceo_agent_main"] = {
-            "id": "ceo_agent_main",
-            "short_id": ceo.get("short_id"),
-            "title": ceo.get("title"),
-            "weight": ceo.get("weight"),
-            "veto_holder": ceo.get("veto_holder"),
-            "loaded_from_files": ceo.get("loaded_from_files"),
-            "system_prompt": ceo.get("system_prompt"),
-            "system_prompt_chars": len(ceo.get("system_prompt") or ""),
-            "agent_card_chars": len(ceo.get("agent_card") or ""),
-            "persona": ceo.get("persona"),
-        }
-        for sid in SOLDIER_MODELS.keys():
-            c = bd._load_member_card(sid)
-            cards[sid] = {
-                "id": sid,
+        def _flat(c, member_id):
+            return {
+                "id": member_id,
                 "short_id": c.get("short_id"),
                 "title": c.get("title"),
                 "weight": c.get("weight"),
                 "veto_holder": c.get("veto_holder"),
                 "loaded_from_files": c.get("loaded_from_files"),
+                "sources_loaded": c.get("sources_loaded") or [],
                 "system_prompt": c.get("system_prompt"),
                 "system_prompt_chars": len(c.get("system_prompt") or ""),
+                "prompt_text": c.get("prompt_text"),
+                "prompt_chars": len(c.get("prompt_text") or ""),
+                "prompt_source": c.get("prompt_source"),
                 "agent_card_chars": len(c.get("agent_card") or ""),
                 "persona": c.get("persona"),
             }
+        cards["ceo_agent_main"] = _flat(ceo, "ceo_agent_main")
+        for sid in SOLDIER_MODELS.keys():
+            cards[sid] = _flat(bd._load_member_card(sid), sid)
         loaded_count = sum(1 for c in cards.values() if c["loaded_from_files"])
         return _maybe_h_text(request, {
             "cards": cards,

@@ -388,9 +388,22 @@ def render_boardroom_cards(d: dict) -> str:
     lines.append("")
     for mid, c in cards.items():
         veto = " VETO" if c.get("veto_holder") else ""
-        src = "✓ files" if c.get("loaded_from_files") else "○ fallback dict"
+        sources = c.get("sources_loaded") or []
+        src = "✓ " + "+".join(sources) if sources else "○ fallback dict"
         lines.append(f"─── {mid}  ({c.get('title', '')}, weight {c.get('weight', 1.0)}{veto}) ───")
-        lines.append(f"   source:        {src}  ·  system_prompt {c.get('system_prompt_chars', 0)} chars  ·  agent_card {c.get('agent_card_chars', 0)} chars")
+        prompt_loc = c.get("prompt_source") or "—"
+        lines.append(
+            f"   sources:       {src}"
+        )
+        lines.append(
+            f"   .prompt:       {c.get('prompt_chars', 0)} chars  ({prompt_loc})"
+        )
+        lines.append(
+            f"   .agent:        {c.get('agent_card_chars', 0)} chars"
+        )
+        lines.append(
+            f"   composed:      system_prompt = {c.get('system_prompt_chars', 0)} chars"
+        )
         sp = c.get("system_prompt") or ""
         for sp_line in sp.split("\n")[:30]:
             lines.append(f"   {sp_line}")
