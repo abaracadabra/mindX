@@ -2129,7 +2129,19 @@ async def insight_boardroom_health(request: Request):
 
     cloud_key_set = bool(_os.environ.get("OLLAMA_API_KEY"))
     quorum_ready = counts["ready"] >= 4
-    convene_ok = quorum_ready or cloud_key_set  # cloud fallback can rescue cold-load latency
+
+    # vLLM continuous-batching backend reachability (when configured)
+    vllm_reachable_now = False
+    try:
+        from daio.governance.boardroom import vllm_reachable, BOARDROOM_INFERENCE_BACKEND, BOARDROOM_VLLM_BASE_URL, BOARDROOM_VLLM_MODEL
+        if BOARDROOM_INFERENCE_BACKEND in ("vllm", "auto"):
+            vllm_reachable_now = await vllm_reachable(timeout=2.0)
+    except Exception:
+        BOARDROOM_INFERENCE_BACKEND = "auto"
+        BOARDROOM_VLLM_BASE_URL = ""
+        BOARDROOM_VLLM_MODEL = ""
+
+    convene_ok = quorum_ready or cloud_key_set or vllm_reachable_now
 
     payload = {
         "ollama_url": OLLAMA_URL,
@@ -2143,6 +2155,10 @@ async def insight_boardroom_health(request: Request):
         "ready_quorum_threshold": 4,
         "cloud_fallback_configured": cloud_key_set,
         "cloud_model": CLOUD_MODEL,
+        "vllm_backend": BOARDROOM_INFERENCE_BACKEND,
+        "vllm_base_url": BOARDROOM_VLLM_BASE_URL,
+        "vllm_model": BOARDROOM_VLLM_MODEL,
+        "vllm_reachable": vllm_reachable_now,
         "convene_ok": convene_ok,
         "advisory": (
             "All 7 soldiers ready — proceed with confidence." if counts["ready"] == 7

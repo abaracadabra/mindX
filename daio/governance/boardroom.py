@@ -99,6 +99,20 @@ BOARDROOM_NUM_PREDICT = int(os.environ.get("BOARDROOM_NUM_PREDICT", "2000"))
 BOARDROOM_TEMPERATURE = float(os.environ.get("BOARDROOM_TEMPERATURE", "0.3"))
 BOARDROOM_ROLLCALL_NUM_PREDICT = int(os.environ.get("BOARDROOM_ROLLCALL_NUM_PREDICT", "120"))
 
+# Inference backend selector. "auto" tries vLLM first if a server is reachable
+# at BOARDROOM_VLLM_BASE_URL, otherwise falls through to Ollama. Force a single
+# backend by setting "ollama" or "vllm" explicitly.
+#
+# vLLM is preferred when available because it provides TRUE continuous batching:
+# one model serves many concurrent prompts, interleaving generation tokens at
+# the per-step level. All 8 boardroom members can be in flight at once and the
+# model "takes turns" at the token level rather than the request level. Ollama
+# (incl. Ollama Cloud) approximates this upstream but the local daemon
+# serialises model swaps.
+BOARDROOM_INFERENCE_BACKEND = os.environ.get("BOARDROOM_INFERENCE_BACKEND", "auto").lower()
+BOARDROOM_VLLM_BASE_URL = os.environ.get("BOARDROOM_VLLM_BASE_URL", "http://localhost:8001/v1")
+BOARDROOM_VLLM_MODEL = os.environ.get("BOARDROOM_VLLM_MODEL", "mistralai/Mistral-7B-Instruct-v0.3")
+
 
 def boardroom_llm_knobs() -> Dict[str, Any]:
     """Return the active LLM knobs as a flat dict for surfacing on /insight."""
@@ -109,7 +123,22 @@ def boardroom_llm_knobs() -> Dict[str, Any]:
         "temperature": BOARDROOM_TEMPERATURE,
         "rollcall_num_predict": BOARDROOM_ROLLCALL_NUM_PREDICT,
         "supermajority_threshold": SUPERMAJORITY_THRESHOLD,
+        "inference_backend": BOARDROOM_INFERENCE_BACKEND,
+        "vllm_base_url": BOARDROOM_VLLM_BASE_URL,
+        "vllm_model": BOARDROOM_VLLM_MODEL,
     }
+
+
+async def vllm_reachable(timeout: float = 2.0) -> bool:
+    """Quick liveness probe for the configured vLLM server. Used by the 'auto'
+    backend selector and by /insight/boardroom/health."""
+    try:
+        import aiohttp
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as sess:
+            async with sess.get(f"{BOARDROOM_VLLM_BASE_URL.rstrip('/v1')}/v1/models") as r:
+                return r.status == 200
+    except Exception:
+        return False
 
 # Local model assignments — from VPS benchmarks and .agent definitions
 # Each soldier uses a different model — no two soldiers think alike
@@ -687,21 +716,55 @@ class Boardroom:
             }
             response = None
 
+            # Step 0: vLLM continuous batching (when configured + reachable).
+            # vLLM is the right substrate for "all 8 concurrent, model takes
+            # turns at the token level" — set BOARDROOM_INFERENCE_BACKEND=vllm
+            # (or "auto" + a reachable vLLM server) to activate.
+            if BOARDROOM_INFERENCE_BACKEND in ("vllm", "auto") and not response:
+                try:
+                    if BOARDROOM_INFERENCE_BACKEND == "vllm" or await vllm_reachable():
+                        vllm_payload = {
+                            "model": BOARDROOM_VLLM_MODEL,
+                            "prompt": prompt,
+                            "max_tokens": BOARDROOM_NUM_PREDICT,
+                            "temperature": BOARDROOM_TEMPERATURE,
+                            "stream": False,
+                        }
+                        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=120)) as sess:
+                            async with sess.post(f"{BOARDROOM_VLLM_BASE_URL.rstrip('/')}/completions", json=vllm_payload) as resp:
+                                if resp.status == 200:
+                                    data = await resp.json()
+                                    choices = data.get("choices") or []
+                                    if choices:
+                                        response = (choices[0].get("text") or "").strip()
+                                        used_model = BOARDROOM_VLLM_MODEL
+                                        is_cloud = False  # vLLM is self-hosted
+                                        # Mark provider label for downstream rendering
+                                        provider_override = f"vllm/{BOARDROOM_VLLM_MODEL}"
+                except Exception as e:
+                    logger.debug(f"Boardroom: vLLM path failed for {soldier_id}: {e}")
+
             # Step 1: Try local Ollama daemon (handles both local + cloud-proxied models)
+            # Skipped when vLLM already returned content above; also skipped
+            # entirely when the operator forced backend=vllm (no Ollama fallback).
+            ollama_skip = bool(response) or BOARDROOM_INFERENCE_BACKEND == "vllm"
             try:
-                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=120)) as sess:
-                    async with sess.post(f"{OLLAMA_URL}/api/generate", json=payload) as resp:
-                        if resp.status == 200:
-                            data = await resp.json()
-                            response = data.get("response", "")
-                            thinking = data.get("thinking", "")
-                            if thinking and not response:
-                                response = thinking
-                        elif resp.status == 404:
-                            logger.info(f"Boardroom: {model} not found locally, trying cloud...")
-                        else:
-                            error_text = await resp.text()
-                            logger.warning(f"Boardroom: Ollama error ({resp.status}) for {model}: {error_text[:200]}")
+                if ollama_skip:
+                    pass  # vLLM already produced a response, or operator forced vllm-only
+                else:
+                    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=120)) as sess:
+                        async with sess.post(f"{OLLAMA_URL}/api/generate", json=payload) as resp:
+                            if resp.status == 200:
+                                data = await resp.json()
+                                response = data.get("response", "")
+                                thinking = data.get("thinking", "")
+                                if thinking and not response:
+                                    response = thinking
+                            elif resp.status == 404:
+                                logger.info(f"Boardroom: {model} not found locally, trying cloud...")
+                            else:
+                                error_text = await resp.text()
+                                logger.warning(f"Boardroom: Ollama error ({resp.status}) for {model}: {error_text[:200]}")
             except Exception as e:
                 logger.warning(f"Boardroom: local Ollama failed for {model}: {e}")
 

@@ -539,6 +539,16 @@ def render_boardroom_health(d: dict) -> str:
     counts = d.get("counts") or {}
     lines.append(f"  ready={counts.get('ready', 0)}  pulled={counts.get('pulled', 0)}  missing={counts.get('missing', 0)}  error={counts.get('error', 0)}")
     lines.append(f"  cloud fallback:   {'✓ ' + (d.get('cloud_model') or '') if d.get('cloud_fallback_configured') else '✗ OFF (set OLLAMA_API_KEY)'}")
+    backend = d.get("vllm_backend", "auto")
+    vllm_url = d.get("vllm_base_url", "")
+    vllm_ok = d.get("vllm_reachable", False)
+    vllm_model = d.get("vllm_model", "")
+    if backend == "vllm":
+        lines.append(f"  vLLM (forced):    {'✓ ' + vllm_model + ' @ ' + vllm_url if vllm_ok else '✗ UNREACHABLE @ ' + vllm_url}")
+    elif backend == "auto":
+        lines.append(f"  vLLM (auto):      {'✓ ' + vllm_model + ' @ ' + vllm_url if vllm_ok else '○ no server @ ' + vllm_url + ' — Ollama in use'}")
+    else:
+        lines.append(f"  vLLM:             ○ disabled (BOARDROOM_INFERENCE_BACKEND=ollama)")
     lines.append(f"  convene_ok:       {'YES' if d.get('convene_ok') else 'NO'}  (quorum threshold: {d.get('ready_quorum_threshold', 4)} ready)")
     lines.append("")
     if d.get("advisory"):
