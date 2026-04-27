@@ -7,16 +7,16 @@
     "uvicorn_level": "info" 
   },
   "llm": {
-    "default_provider": "mistral",
+    "default_provider": "ollama",
     "providers": {
-      "ollama": {"enabled": false},
+      "ollama": {"enabled": true},
       "gemini": {"enabled": true},
       "mistral": {"enabled": true}
     },
     "bdi": {
       "default_llm": {
-        "provider": "mistral",
-        "model": "mistral-small-latest"
+        "provider": "ollama",
+        "model": "qwen3:1.7b"
       }
     }
   },
