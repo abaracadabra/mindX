@@ -1026,6 +1026,7 @@ async def improvement_journal_page():
 
 _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
 _FEEDBACK_HTML_PATH = Path(__file__).parent / "feedback.html"
+_THOT_HTML_PATH = Path(__file__).parent / "THOT.html"
 _BOARDROOM_HTML_PATH = Path(__file__).parent / "boardroom.html"
 _DOJO_HTML_PATH = Path(__file__).parent / "dojo.html"
 _ALLCHAINZ_HTML_PATH = Path(__file__).parent / "allchainz.html"
@@ -1148,6 +1149,17 @@ async def feedback_page():
     if _FEEDBACK_HTML_PATH.exists():
         return _DashResponse(content=_FEEDBACK_HTML_PATH.read_text(encoding="utf-8"))
     return _DashResponse(content="<h1>mindX feedback</h1><p>Page not deployed.</p>")
+
+
+@app.get("/thot", response_class=_DashResponse, include_in_schema=False)
+@app.get("/THOT", response_class=_DashResponse, include_in_schema=False)
+@app.get("/thot.html", response_class=_DashResponse, include_in_schema=False)
+@app.get("/THOT.html", response_class=_DashResponse, include_in_schema=False)
+async def thot_page():
+    """THOT contract correlation — mint history, dimension standard, wisdom queue, CID lookup."""
+    if _THOT_HTML_PATH.exists():
+        return _DashResponse(content=_THOT_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>THOT</h1><p>Page not deployed.</p>")
 
 
 @app.get("/feedback.txt", include_in_schema=False)
@@ -1289,7 +1301,7 @@ app.add_middleware(
 # Uses @app.middleware("http") which always fires regardless of import order.
 
 _PUBLIC_EXACT = frozenset({
-    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html",
+    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/diagnostics/live", "/activity/stream", "/activity/recent", "/activity/stats",
     "/thesis", "/thesis/", "/thesis/evidence", "/thesis/summary",
@@ -2419,6 +2431,245 @@ async def insight_cognition(request: Request):
         "narrative": narrative,
         "computed_at": now,
     }, route_path="/insight/cognition")
+
+
+# ── THOT contract-correlated endpoints ──
+# Plan: ~/.claude/plans/purring-humming-stonebraker.md
+# Read-only views over THOT.sol state. Public; consistent with /insight/* policy.
+# Contract: daio/contracts/THOT/core/THOT.sol — ERC721 + dataCID + dimensions
+
+# Dimension standard from THOT.sol _isValidDimension() — kept in sync manually.
+THOT_DIMENSIONS = [
+    {"dim": 8,        "name": "THOT8",        "purpose": "Root — the seed of THOT"},
+    {"dim": 64,       "name": "THOT64",       "purpose": "Lightweight vectors"},
+    {"dim": 256,      "name": "THOT256",      "purpose": "Wallet key dimension (32 bytes × 8 bits)"},
+    {"dim": 512,      "name": "THOT512",      "purpose": "Standard 8×8×8 3D knowledge clusters"},
+    {"dim": 768,      "name": "THOT768",      "purpose": "High-fidelity optimized tensors"},
+    {"dim": 1024,     "name": "THOT1024",     "purpose": "Embedding-native (mxbai-embed-large)"},
+    {"dim": 2048,     "name": "THOT2048",     "purpose": "cypherpunk2048 high-capacity"},
+    {"dim": 4096,     "name": "THOT4096",     "purpose": "Quantum-aware tensor space"},
+    {"dim": 8192,     "name": "THOT8192",     "purpose": "Quantum-aware high-dimensional"},
+    {"dim": 65536,    "name": "THOT65536",    "purpose": "Theoretical quantum-resistant (2^16)"},
+    {"dim": 1048576,  "name": "THOT1048576",  "purpose": "Theoretical post-quantum (2^20)"},
+]
+
+
+@app.get("/insight/thot/status", tags=["insight"], summary="THOT contract configuration + dimension standard + counts")
+@_insight_safe
+async def insight_thot_status(request: Request):
+    """Honest contract-config card. Reads catalogue + local queue; if THOT_CONTRACT_ADDRESS
+    is set, also surfaces chain coordinates for the page to display explorer links."""
+    import os as _os, time as _time
+    now = _time.time()
+
+    contract_addr = _os.environ.get("THOT_CONTRACT_ADDRESS", "")
+    chain_id = int(_os.environ.get("THOT_CHAIN_ID", "0") or 0)
+    rpc_url = _os.environ.get("THOT_RPC_URL", "") or _os.environ.get("POLYGON_RPC_URL", "")
+    minter_key_set = bool(_os.environ.get("THOT_MINTER_KEY"))
+    explorer_base = _os.environ.get("THOT_EXPLORER_BASE", "")
+
+    # Tail catalogue events for THOT-related counts
+    cat_log = PROJECT_ROOT / "data" / "logs" / "catalogue_events.jsonl"
+    minted_total = 0
+    minted_24h = 0
+    anchored_total = 0  # ARC DatasetRegistry, broader than THOT specifically
+    if cat_log.exists():
+        try:
+            with open(cat_log, "rb") as f:
+                f.seek(0, 2)
+                size = f.tell()
+                head = max(0, size - 4 * 1024 * 1024)
+                f.seek(head)
+                tail = f.read().decode("utf-8", errors="replace").splitlines()
+            for ln in tail:
+                ln = ln.strip()
+                if not ln:
+                    continue
+                try:
+                    e = json.loads(ln)
+                except Exception:
+                    continue
+                k = e.get("kind", "")
+                ts = e.get("ts", 0)
+                if k == "wisdom.minted":
+                    minted_total += 1
+                    if (now - ts) < 86400:
+                        minted_24h += 1
+                elif k == "memory.anchor":
+                    anchored_total += 1
+        except Exception:
+            pass
+
+    # Wisdom queue (Phase 3 of cognition plan)
+    wisdom_queue_dir = PROJECT_ROOT / "data" / "memory" / "wisdom_queue"
+    pending_mint = 0
+    if wisdom_queue_dir.is_dir():
+        try:
+            pending_mint = sum(1 for f in wisdom_queue_dir.iterdir() if f.is_file() and f.name.endswith(".json"))
+        except OSError:
+            pass
+
+    contract_status = (
+        "deployed_configured" if (contract_addr and chain_id and rpc_url)
+        else "not_configured"
+    )
+    mint_status = (
+        "ready" if (minter_key_set and contract_addr) else
+        "minter_no_key" if (contract_addr and not minter_key_set) else
+        "stub_no_contract"
+    )
+
+    return _maybe_h_text(request, {
+        "contract": {
+            "address": contract_addr,
+            "chain_id": chain_id,
+            "rpc_url": rpc_url,
+            "explorer_base": explorer_base,
+            "minter_key_set": minter_key_set,
+            "status": contract_status,
+        },
+        "mint": {
+            "status": mint_status,
+            "minted_total": minted_total,
+            "minted_24h": minted_24h,
+            "pending_in_queue": pending_mint,
+        },
+        "anchor": {
+            "memory_anchor_total": anchored_total,  # ARC DatasetRegistry hits — broader anchor surface
+        },
+        "dimensions": THOT_DIMENSIONS,
+        "computed_at": now,
+    }, route_path="/insight/thot/status")
+
+
+@app.get("/insight/thot/mints/recent", tags=["insight"], summary="Recent THOT mint events from catalogue stream")
+@_insight_safe
+async def insight_thot_mints_recent(request: Request, limit: int = 30):
+    """Tails catalogue_events.jsonl filtered to wisdom.minted (and memory.anchor for the
+    broader on-chain anchor surface that includes ARC DatasetRegistry registrations)."""
+    cat_log = PROJECT_ROOT / "data" / "logs" / "catalogue_events.jsonl"
+    if not cat_log.exists():
+        return {"events": [], "count": 0, "note": "catalogue_events.jsonl not found"}
+    out: list[dict] = []
+    try:
+        with open(cat_log, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            head = max(0, size - 4 * 1024 * 1024)
+            f.seek(head)
+            tail = f.read().decode("utf-8", errors="replace").splitlines()
+        for ln in reversed(tail):
+            ln = ln.strip()
+            if not ln:
+                continue
+            try:
+                evt = json.loads(ln)
+            except Exception:
+                continue
+            kind = evt.get("kind", "")
+            if kind not in ("wisdom.minted", "memory.anchor"):
+                continue
+            payload = evt.get("payload") or {}
+            anchor = payload.get("anchor") or {}
+            out.append({
+                "ts": evt.get("ts"),
+                "kind": kind,
+                "actor": evt.get("actor"),
+                "actor_wallet": evt.get("actor_wallet"),
+                "cid": payload.get("cid") or anchor.get("cid"),
+                "tx_hash": anchor.get("tx_hash") or payload.get("tx_hash"),
+                "chain": anchor.get("chain") or payload.get("chain"),
+                "dataset_id_hex": anchor.get("dataset_id_hex"),
+                "token_id": payload.get("token_id"),
+                "dimensions": payload.get("dimensions"),
+                "wisdom_id": payload.get("wisdom_id"),
+                "premise": payload.get("premise"),
+                "conclusion": payload.get("conclusion"),
+                "verification_count": payload.get("verification_count"),
+            })
+            if len(out) >= max(1, min(limit, 200)):
+                break
+    except Exception as e:
+        return {"events": [], "count": 0, "error": str(e)}
+    return _maybe_h_text(request, {"events": out, "count": len(out)}, route_path="/insight/thot/mints/recent")
+
+
+@app.get("/insight/thot/queue", tags=["insight"], summary="Pending wisdom waiting for THOT mint")
+@_insight_safe
+async def insight_thot_queue(request: Request, limit: int = 30):
+    """Reads data/memory/wisdom_queue/*.json — wisdom records that have been verified
+    but not yet minted (e.g. THOT_MINTER_KEY missing). Returns newest first.
+    Plan Phase 3 of cognition chain produces these; Phase α may show 0."""
+    queue_dir = PROJECT_ROOT / "data" / "memory" / "wisdom_queue"
+    if not queue_dir.is_dir():
+        return _maybe_h_text(request, {"items": [], "count": 0, "note": "wisdom_queue dir not yet created"}, route_path="/insight/thot/queue")
+    try:
+        files = sorted(
+            (f for f in queue_dir.iterdir() if f.is_file() and f.name.endswith(".json")),
+            key=lambda f: f.stat().st_mtime, reverse=True,
+        )
+    except OSError as e:
+        return {"items": [], "count": 0, "error": str(e)}
+    out: list[dict] = []
+    for f in files[: max(1, min(limit, 200))]:
+        try:
+            with open(f, "r") as fh:
+                data = json.load(fh)
+            data["_filename"] = f.name
+            data["_mtime"] = f.stat().st_mtime
+            out.append(data)
+        except Exception:
+            continue
+    return _maybe_h_text(request, {"items": out, "count": len(out)}, route_path="/insight/thot/queue")
+
+
+@app.get("/insight/thot/lookup", tags=["insight"], summary="Lookup THOT by dataCID — checks catalogue + (if configured) chain")
+@_insight_safe
+async def insight_thot_lookup(request: Request, cid: str = ""):
+    """Lookup if a CID has been minted. First checks the local catalogue stream for
+    wisdom.minted/memory.anchor with matching CID. If a chain RPC is configured,
+    also queries cidExists(dataCID) on the contract via raw eth_call."""
+    cid = (cid or "").strip()
+    if not cid:
+        return {"cid": "", "found": False, "error": "cid query param required"}
+    found_in_catalogue = False
+    catalogue_event: dict | None = None
+    cat_log = PROJECT_ROOT / "data" / "logs" / "catalogue_events.jsonl"
+    if cat_log.exists():
+        try:
+            with open(cat_log, "rb") as f:
+                f.seek(0, 2)
+                size = f.tell()
+                head = max(0, size - 4 * 1024 * 1024)
+                f.seek(head)
+                tail = f.read().decode("utf-8", errors="replace").splitlines()
+            for ln in reversed(tail):
+                if cid not in ln:
+                    continue
+                try:
+                    evt = json.loads(ln)
+                except Exception:
+                    continue
+                payload = evt.get("payload") or {}
+                anchor = payload.get("anchor") or {}
+                if payload.get("cid") == cid or anchor.get("cid") == cid:
+                    found_in_catalogue = True
+                    catalogue_event = {
+                        "ts": evt.get("ts"),
+                        "kind": evt.get("kind"),
+                        "actor": evt.get("actor"),
+                        "tx_hash": anchor.get("tx_hash") or payload.get("tx_hash"),
+                        "chain": anchor.get("chain") or payload.get("chain"),
+                    }
+                    break
+        except Exception:
+            pass
+    return _maybe_h_text(request, {
+        "cid": cid,
+        "found_in_catalogue": found_in_catalogue,
+        "catalogue_event": catalogue_event,
+        "chain_lookup": "not_implemented_yet",  # Phase 3 wires this when contract is deployed
+    }, route_path="/insight/thot/lookup")
 
 
 @app.post("/storage/offload", tags=["storage"], summary="Run offload projector (dry_run by default)")

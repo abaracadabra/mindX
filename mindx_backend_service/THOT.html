@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mindX THOT — Transferable Hyper-Optimized Tensor</title>
+<meta name="description" content="THOT contract correlation: mint history, dimension standard, wisdom mint queue, CID lookup. ERC721 anchor for verified wisdom on Ethereum/Polygon.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://mindx.pythai.net/THOT.html">
+<link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=DM+Sans:wght@400;500;700&display=swap" as="style" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=DM+Sans:wght@400;500;700&display=swap"></noscript>
+<style>
+:root{
+  --bg:#040609;--surface:rgba(10,14,20,.88);--surface2:rgba(16,20,28,.7);
+  --green:#56d364;--blue:#79c0ff;--violet:#d2a8ff;--amber:#e3b341;--red:#f85149;
+  --text:#e6edf3;--text2:#b1bac4;--text3:#6e7681;--border:rgba(88,166,255,.08);
+  --font:'DM Sans',system-ui,sans-serif;--mono:'JetBrains Mono','SF Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.55;overflow-x:hidden}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.hdr{position:sticky;top:0;z-index:50;padding:0 20px;min-height:48px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(8,12,20,.96),rgba(4,6,9,.94));backdrop-filter:blur(24px);border-bottom:1px solid rgba(121,192,255,.1);box-shadow:0 2px 12px rgba(0,0,0,.4)}
+.hdr-brand{font-family:var(--mono);font-size:18px;font-weight:700;letter-spacing:2px;color:#f0f6fc}
+.hdr-brand b{color:var(--violet)}
+.hdr-mid{display:flex;gap:4px;flex-wrap:wrap;margin-left:16px}
+.hdr-mid a{color:#d0d7de;font-size:12px;padding:4px 10px;border-radius:4px;font-family:var(--mono)}
+.hdr-mid a:hover{background:rgba(121,192,255,.1);color:#f0f6fc}
+.hdr-mid a.hl{color:var(--violet);font-weight:600}
+.hdr-right{display:flex;align-items:center;gap:8px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--violet);box-shadow:0 0 10px var(--violet);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.4;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
+
+.wrap{max-width:1280px;margin:0 auto;padding:24px 20px 80px}
+.intro{padding:18px 20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:24px;border-left:3px solid var(--violet)}
+.intro h1{font-family:var(--mono);font-size:22px;letter-spacing:2px;font-weight:700;margin-bottom:8px;color:#f0f6fc}
+.intro h1 em{color:var(--violet);font-style:normal}
+.intro p{color:var(--text2);font-size:13px;max-width:980px;line-height:1.7}
+.intro code{font-family:var(--mono);font-size:12px;color:var(--violet);background:rgba(210,168,255,.08);padding:1px 6px;border-radius:3px}
+.intro abbr{cursor:help;border-bottom:1px dotted var(--text3);text-decoration:none}
+
+section{margin:32px 0 36px;scroll-margin-top:60px}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px}
+.sec-head h2{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:2px;color:var(--violet);text-transform:uppercase}
+.sec-head .sub{font-family:var(--mono);font-size:11px;color:var(--text3)}
+.sec-head .pill{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:3px;background:rgba(210,168,255,.08);color:var(--violet);border:1px solid rgba(210,168,255,.2);margin-left:6px}
+.sec-head .pill.warn{background:rgba(248,81,73,.1);color:var(--red);border-color:rgba(248,81,73,.25)}
+.sec-head .pill.ok{background:rgba(86,211,100,.1);color:var(--green);border-color:rgba(86,211,100,.25)}
+.sec-head .pill.amber{background:rgba(227,179,65,.1);color:var(--amber);border-color:rgba(227,179,65,.25)}
+.sec-desc{font-family:var(--mono);font-size:11px;color:var(--text3);margin:-4px 0 12px 0;line-height:1.55;max-width:980px}
+.sec-desc abbr{cursor:help;border-bottom:1px dotted var(--text3);text-decoration:none}
+.sec-desc code{font-family:var(--mono);font-size:10.5px;color:var(--blue);background:rgba(121,192,255,.06);padding:0 4px;border-radius:3px}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px}
+.empty{color:var(--text3);font-family:var(--mono);font-size:12px;text-align:center;padding:24px;font-style:italic}
+
+/* Contract config card */
+.cfg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.cfg-cell{padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px}
+.cfg-cell .lbl{font-family:var(--mono);font-size:9.5px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase}
+.cfg-cell .val{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text);margin-top:4px;word-break:break-all}
+.cfg-cell .val.dim{color:var(--text3);font-weight:400;font-size:11.5px;font-style:italic}
+.cfg-cell.ok{border-left:3px solid var(--green)}
+.cfg-cell.warn{border-left:3px solid var(--amber)}
+.cfg-cell.miss{border-left:3px solid var(--red);opacity:.85}
+
+/* Dimension table */
+.dim-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+.dim-table th{background:rgba(210,168,255,.04);color:var(--violet);font-weight:600;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;letter-spacing:.5px;text-transform:uppercase}
+.dim-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text2);vertical-align:middle}
+.dim-table td:first-child{color:var(--text);font-weight:700;width:90px}
+.dim-table td:nth-child(2){color:var(--violet);width:160px}
+.dim-table tr:hover td{background:rgba(210,168,255,.03)}
+.dim-table .root{color:var(--green);font-weight:700}
+
+/* Mint events */
+.mint-row{display:grid;grid-template-columns:90px 110px 1fr 110px 100px 90px;gap:10px;padding:6px 8px;font-family:var(--mono);font-size:11.5px;border-bottom:1px solid rgba(255,255,255,.03);align-items:center}
+.mint-row:hover{background:rgba(210,168,255,.03)}
+.mint-row .ts{color:var(--text3);font-size:10.5px}
+.mint-row .kind{font-weight:700;font-size:10px;letter-spacing:.5px;text-transform:uppercase;padding:2px 6px;border-radius:3px;text-align:center}
+.mint-row .kind.thot{color:var(--violet);background:rgba(210,168,255,.1);border:1px solid rgba(210,168,255,.25)}
+.mint-row .kind.anchor{color:var(--blue);background:rgba(121,192,255,.08);border:1px solid rgba(121,192,255,.2)}
+.mint-row .body{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mint-row .body code{font-size:10.5px;color:var(--blue);background:rgba(121,192,255,.06);padding:0 4px;border-radius:3px}
+.mint-row .dim{color:var(--violet);text-align:right;font-weight:600}
+.mint-row .actor{color:var(--text2);font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mint-row a code{color:var(--blue)}
+.mint-row a:hover code{text-decoration:underline}
+.mint-row details{display:inline}
+.mint-row summary{cursor:pointer;list-style:none;color:var(--text3);font-size:10px}
+.mint-row summary::-webkit-details-marker{display:none}
+.mint-row pre{margin-top:6px;padding:6px;background:rgba(0,0,0,.3);border-radius:4px;font-size:10px;color:var(--text2);max-height:140px;overflow:auto;white-space:pre-wrap}
+
+/* Queue */
+.queue-row{padding:10px 12px;margin:6px 0;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-family:var(--mono);font-size:11.5px;border-left:2px solid var(--amber)}
+.queue-row .premise{color:var(--text);font-weight:600;font-size:12px;margin-bottom:3px}
+.queue-row .conclusion{color:var(--text2);margin-bottom:6px}
+.queue-row .meta{color:var(--text3);font-size:10.5px;display:flex;gap:14px;flex-wrap:wrap}
+.queue-row .meta b{color:var(--text2)}
+
+/* Lookup */
+.lookup-form{display:flex;gap:8px;margin-bottom:12px}
+.lookup-form input{flex:1;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:12px}
+.lookup-form input:focus{outline:none;border-color:var(--violet)}
+.lookup-form button{padding:8px 16px;background:rgba(210,168,255,.1);border:1px solid rgba(210,168,255,.3);border-radius:6px;color:var(--violet);font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-weight:600}
+.lookup-form button:hover{background:rgba(210,168,255,.2)}
+.lookup-result{padding:12px;font-family:var(--mono);font-size:12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;display:none}
+.lookup-result.show{display:block}
+.lookup-result.found{border-left:3px solid var(--green)}
+.lookup-result.notfound{border-left:3px solid var(--text3)}
+
+.foot{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);text-align:center;color:var(--text3);font-family:var(--mono);font-size:11px;letter-spacing:1px}
+
+@media(max-width:768px){
+  .hdr-mid{display:none}
+  .mint-row{grid-template-columns:80px 1fr 80px}
+  .mint-row .actor,.mint-row .ts{display:none}
+}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="hdr-brand"><b>THOT</b> · transferable hyper-optimized tensor</div>
+  <div class="hdr-mid">
+    <a href="/">dashboard</a><span style="color:rgba(110,118,129,.25);font-size:9px">·</span>
+    <a href="/feedback.html">feedback</a><span style="color:rgba(110,118,129,.25);font-size:9px">·</span>
+    <a href="/THOT.html" class="hl">THOT</a><span style="color:rgba(110,118,129,.25);font-size:9px">·</span>
+    <a href="/doc/DAIO">DAIO</a><span style="color:rgba(110,118,129,.25);font-size:9px">·</span>
+    <a href="/boardroom">boardroom</a><span style="color:rgba(110,118,129,.25);font-size:9px">·</span>
+    <a href="/dojo">dojo</a>
+  </div>
+  <div class="hdr-right">
+    <span class="live-dot"></span>
+    <span style="font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--violet)">ERC-721</span>
+  </div>
+</header>
+
+<main class="wrap">
+
+<div class="intro">
+  <h1><em>THOT</em> · the on-chain anchor for mindX wisdom</h1>
+  <p>
+    THOT is mindX's <abbr title="ERC-721: non-fungible token on Ethereum-compatible chains">NFT contract</abbr> for anchoring verified knowledge as <abbr title="Transferable Hyper-Optimized Tensor: a CID + dimensions + verification flag, immutable on chain">Transferable Hyper-Optimized Tensors</abbr>. Each THOT carries an <abbr title="Content Identifier — IPFS hash of the underlying tensor or wisdom bundle">IPFS CID</abbr>, a dimension count from the <a href="#sec-dimensions">11-step standard</a>, and a verified flag. The contract source: <a href="/doc/DAIO#thot-architecture-overview"><code>daio/contracts/THOT/core/THOT.sol</code></a>. The cognitive ascent that produces THOT-eligible wisdom is in the <a href="/feedback.html#sec-cognition">cognition tab</a> on the feedback page; once that chain closes (concept extraction → verification → mint), this page will fill with rows. Today it's mostly empty — <b>and that's the honest picture</b>.
+  </p>
+</div>
+
+<!-- 1. Contract config card -->
+<section id="sec-contract">
+  <div class="sec-head">
+    <h2>contract status <span id="cfgPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/thot/status · THOT.sol</span>
+  </div>
+  <p class="sec-desc">
+    Where is the contract deployed and is mindX configured to interact with it? <code>THOT_CONTRACT_ADDRESS</code>, <code>THOT_CHAIN_ID</code>, and <code>THOT_RPC_URL</code> set together = green. <code>THOT_MINTER_KEY</code> set = mint-ready. Without these the page renders honestly as not-yet-deployed; the dimension standard and the wisdom queue (<a href="#sec-queue">below</a>) still work because they don't require a chain.
+  </p>
+  <div id="cfg" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<!-- 2. Dimension standard -->
+<section id="sec-dimensions">
+  <div class="sec-head">
+    <h2>dimension standard <span class="pill">11 dims</span></h2>
+    <span class="sub">_isValidDimension() · THOT.sol</span>
+  </div>
+  <p class="sec-desc">
+    The <code>uint32 dims</code> values the contract accepts via <code>mintTHOT(...)</code>. Anything else reverts with <code>"Invalid dimensions"</code>. The standard is modular — extending it requires changing only <code>_isValidDimension()</code> in the contract. Quantum-resistant tiers (≥65,536) are theoretical reservations.
+  </p>
+  <div class="card">
+    <table class="dim-table" id="dim-table">
+      <thead><tr><th>dim</th><th>name</th><th>purpose</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 3. Recent mints -->
+<section id="sec-mints">
+  <div class="sec-head">
+    <h2>recent on-chain anchors <span id="mintPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/thot/mints/recent · catalogue stream</span>
+  </div>
+  <p class="sec-desc">
+    Tail of <code>data/logs/catalogue_events.jsonl</code> filtered to <code>wisdom.minted</code> (THOT mints) and <code>memory.anchor</code> (broader on-chain anchors via the <abbr title="Permissionless registerDataset(bytes32,string) on the ARC chain">ARC DatasetRegistry</abbr>). Click <code>⋯</code> for the full event payload. Once Phase 3 of the <a href="/feedback.html#sec-cognition">cognitive ascent plan</a> ships, every verified wisdom becomes a row here with its tx hash, CID gateway link, and explorer link.
+  </p>
+  <div id="mints" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<!-- 4. Wisdom mint queue -->
+<section id="sec-queue">
+  <div class="sec-head">
+    <h2>wisdom mint queue <span id="queuePill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/thot/queue · data/memory/wisdom_queue/</span>
+  </div>
+  <p class="sec-desc">
+    Wisdom records that have been <abbr title="confidence ≥ 0.85 with verification_count ≥ 3 — passes Bayesian threshold">verified</abbr> but not yet minted (e.g. <code>THOT_MINTER_KEY</code> missing or RPC unreachable). They wait here losslessly; when the minter key arrives, a periodic drainer flushes the queue. Each row shows the premise, conclusion, confidence, verification count, and target dimension.
+  </p>
+  <div id="queue" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<!-- 5. CID lookup -->
+<section id="sec-lookup">
+  <div class="sec-head">
+    <h2>CID lookup</h2>
+    <span class="sub">/insight/thot/lookup?cid=…</span>
+  </div>
+  <p class="sec-desc">
+    Paste an IPFS CID to check whether mindX has anchored it. First search is the local catalogue stream; once chain RPC is configured, it also calls <code>cidExists(bytes32)</code> on the contract directly.
+  </p>
+  <div class="card">
+    <form class="lookup-form" id="lookup-form" onsubmit="return doLookup(event)">
+      <input type="text" id="lookup-cid" placeholder="bafy… or 0x… (CID or content hash)" autocomplete="off">
+      <button type="submit">lookup</button>
+    </form>
+    <div id="lookup-result" class="lookup-result"></div>
+  </div>
+</section>
+
+<div class="foot">
+  THOT contract: <code>daio/contracts/THOT/core/THOT.sol</code> · ERC-721 · cypherpunk2048 ·
+  <a href="/doc/DAIO">DAIO docs</a> · <a href="/feedback.html#sec-cognition">cognition chain</a>
+</div>
+
+</main>
+
+<script>
+'use strict';
+
+const $ = (id) => document.getElementById(id);
+const escapeHtml = (s) => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const truncate = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n) + '…' : s; };
+
+const Human = {
+  bytes(n) {
+    n = Number(n); if (!isFinite(n)) return '—';
+    const u = ['B','KB','MB','GB','TB']; let i = 0;
+    while (Math.abs(n) >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+    return (i === 0 ? n : n.toFixed(1)) + ' ' + u[i];
+  },
+  count(n) {
+    n = Number(n); if (!isFinite(n)) return '—';
+    if (Math.abs(n) < 1000) return String(n);
+    if (Math.abs(n) < 1e6)  return (n/1e3).toFixed(1) + 'k';
+    return (n/1e6).toFixed(1) + 'M';
+  },
+  hash(s, n=14) { if (!s) return '—'; s = String(s); return s.length > n ? s.slice(0, n) + '…' : s; },
+  relTs(ts) {
+    const ms = (typeof ts === 'number' ? (ts > 1e12 ? ts : ts*1000) : Date.parse(ts));
+    if (!isFinite(ms)) return { label: '?', title: '' };
+    const dt = new Date(ms);
+    const diff = (Date.now() - ms) / 1000;
+    let label;
+    if (diff < 0)        label = 'in future';
+    else if (diff < 60)  label = Math.max(1, Math.round(diff)) + 's ago';
+    else if (diff < 3600) label = Math.round(diff/60) + 'm ago';
+    else if (diff < 86400) label = Math.round(diff/3600) + 'h ago';
+    else                 label = Math.round(diff/86400) + 'd ago';
+    return { label, title: dt.toISOString() };
+  },
+};
+function relSpan(ts) {
+  const r = Human.relTs(ts);
+  return '<span title="' + escapeHtml(r.title) + '">' + escapeHtml(r.label) + '</span>';
+}
+
+// Explorer URL builders — wired later when contract is deployed.
+function explorerTxUrl(chain, tx, base) {
+  if (!tx) return null;
+  if (base) return base.replace(/\/$/, '') + '/tx/' + encodeURIComponent(tx);
+  if (chain === 'arc')     return 'https://testnet-explorer.arcchain.io/tx/' + encodeURIComponent(tx);
+  if (chain === 'polygon') return 'https://polygonscan.com/tx/' + encodeURIComponent(tx);
+  return null;
+}
+function ipfsGatewayUrl(cid) {
+  if (!cid) return null;
+  return 'https://nftstorage.link/ipfs/' + encodeURIComponent(cid);
+}
+
+// ── 1. Contract config ──
+let _explorerBase = '';
+async function refreshConfig() {
+  const box = $('cfg');
+  const pill = $('cfgPill');
+  try {
+    const r = await fetch('/insight/thot/status');
+    const d = await r.json();
+    const c = d.contract || {};
+    const m = d.mint || {};
+    _explorerBase = c.explorer_base || '';
+    let cfgState = 'not_configured';
+    if (c.address && c.chain_id && c.rpc_url) cfgState = 'deployed_configured';
+    pill.textContent = cfgState === 'deployed_configured' ? 'CONFIGURED' : 'NOT YET DEPLOYED';
+    pill.className = 'pill ' + (cfgState === 'deployed_configured' ? 'ok' : 'warn');
+
+    const cells = [
+      { lbl: 'address', val: c.address || '— (env: THOT_CONTRACT_ADDRESS)', set: !!c.address },
+      { lbl: 'chain id', val: c.chain_id ? String(c.chain_id) : '— (env: THOT_CHAIN_ID)', set: !!c.chain_id },
+      { lbl: 'rpc url', val: c.rpc_url || '— (env: THOT_RPC_URL or POLYGON_RPC_URL)', set: !!c.rpc_url },
+      { lbl: 'minter key', val: c.minter_key_set ? 'set' : '— (env: THOT_MINTER_KEY)', set: c.minter_key_set },
+      { lbl: 'mint status', val: m.status || '?', set: m.status === 'ready' },
+      { lbl: 'minted total', val: Human.count(m.minted_total || 0), set: (m.minted_total || 0) > 0 },
+      { lbl: 'minted 24h', val: Human.count(m.minted_24h || 0), set: (m.minted_24h || 0) > 0 },
+      { lbl: 'pending in queue', val: Human.count(m.pending_in_queue || 0), set: (m.pending_in_queue || 0) > 0 },
+    ];
+    let html = '<div class="cfg-grid">';
+    for (const cell of cells) {
+      const cls = cell.set ? 'ok' : (cell.lbl.includes('total') || cell.lbl.includes('24h') || cell.lbl.includes('pending') ? 'warn' : 'miss');
+      html += '<div class="cfg-cell ' + cls + '">';
+      html += '<div class="lbl">' + escapeHtml(cell.lbl) + '</div>';
+      html += '<div class="val' + (!cell.set ? ' dim' : '') + '">' + escapeHtml(cell.val) + '</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+    if (cfgState !== 'deployed_configured') {
+      html += '<p style="margin-top:14px;font-family:var(--mono);font-size:11px;color:var(--text3);line-height:1.6">';
+      html += 'Set the env vars above (via <code>manage_credentials.py</code> for the minter key, <code>.env</code> for the rest) to enable on-chain interaction. ';
+      html += 'Until then, recent mints come from <a href="/data/logs/catalogue_events.jsonl">catalogue events</a> only and the wisdom queue accepts records but cannot drain.';
+      html += '</p>';
+    }
+    box.innerHTML = html;
+  } catch (e) {
+    pill.textContent = 'ERR'; pill.className = 'pill warn';
+    box.innerHTML = '<div class="empty">contract status unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+// ── 2. Dimension table ──
+async function refreshDimensions() {
+  try {
+    const r = await fetch('/insight/thot/status');
+    const d = await r.json();
+    const dims = d.dimensions || [];
+    const tbody = $('dim-table').querySelector('tbody');
+    let html = '';
+    for (const row of dims) {
+      const isRoot = row.dim === 8;
+      const isWalletKey = row.dim === 256;
+      const isEmbed = row.dim === 1024;
+      const cls = isRoot ? 'root' : '';
+      html += '<tr><td class="' + cls + '">' + Human.count(row.dim) + '</td>';
+      html += '<td>' + escapeHtml(row.name) + '</td>';
+      html += '<td>' + escapeHtml(row.purpose);
+      if (isWalletKey) html += ' <span style="color:var(--blue);font-size:10px"> ↔ matches Ethereum private key length</span>';
+      if (isEmbed) html += ' <span style="color:var(--green);font-size:10px"> ↔ matches mindX embedding model</span>';
+      html += '</td></tr>';
+    }
+    tbody.innerHTML = html;
+  } catch (e) { /* non-fatal */ }
+}
+
+// ── 3. Recent mint events ──
+async function refreshMints() {
+  const box = $('mints');
+  const pill = $('mintPill');
+  try {
+    const r = await fetch('/insight/thot/mints/recent?limit=30');
+    const d = await r.json();
+    const events = d.events || [];
+    if (!events.length) {
+      pill.textContent = 'NONE YET'; pill.className = 'pill amber';
+      box.innerHTML = '<div class="empty">no mint or anchor events recorded yet — the cognition chain has not produced verified wisdom that reached the mint step</div>';
+      return;
+    }
+    pill.textContent = events.length + ' EVENT' + (events.length === 1 ? '' : 'S');
+    pill.className = 'pill ok';
+    let html = '';
+    for (const e of events) {
+      const kind = e.kind || '';
+      const kindCls = kind === 'wisdom.minted' ? 'thot' : 'anchor';
+      const kindLbl = kind === 'wisdom.minted' ? 'THOT' : 'ANCHOR';
+      const cidShort = e.cid ? Human.hash(e.cid, 16) : '—';
+      const cidUrl = ipfsGatewayUrl(e.cid);
+      const txUrl = explorerTxUrl(e.chain, e.tx_hash, _explorerBase);
+      const txShort = e.tx_hash ? Human.hash(e.tx_hash, 12) : '(local)';
+      const dim = e.dimensions ? Human.count(e.dimensions) : '—';
+      const actor = e.actor || '—';
+      const cidLink = cidUrl
+        ? '<a href="' + cidUrl + '" target="_blank" rel="noopener" title="' + escapeHtml(e.cid || '') + '"><code>' + escapeHtml(cidShort) + '</code></a>'
+        : '<code title="' + escapeHtml(e.cid || '') + '">' + escapeHtml(cidShort) + '</code>';
+      const txLink = txUrl
+        ? '<a href="' + txUrl + '" target="_blank" rel="noopener" title="' + escapeHtml(e.tx_hash) + '"><code>' + escapeHtml(txShort) + '</code></a>'
+        : '<code title="' + escapeHtml(e.tx_hash || '') + '">' + escapeHtml(txShort) + '</code>';
+      const detail = '<details><summary>⋯</summary><pre>' + escapeHtml(JSON.stringify(e, null, 2)) + '</pre></details>';
+      html += '<div class="mint-row">';
+      html += '<span class="ts">' + relSpan(e.ts) + '</span>';
+      html += '<span class="kind ' + kindCls + '">' + kindLbl + '</span>';
+      html += '<span class="body">' + cidLink + (e.premise ? ' · ' + escapeHtml(truncate(e.premise + ' → ' + (e.conclusion || ''), 80)) : '') + ' ' + detail + '</span>';
+      html += '<span>' + txLink + '</span>';
+      html += '<span class="dim">' + dim + '</span>';
+      html += '<span class="actor">' + escapeHtml(truncate(actor, 24)) + '</span>';
+      html += '</div>';
+    }
+    box.innerHTML = html;
+  } catch (e) {
+    pill.textContent = 'ERR'; pill.className = 'pill warn';
+    box.innerHTML = '<div class="empty">mint feed unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+// ── 4. Wisdom queue ──
+async function refreshQueue() {
+  const box = $('queue');
+  const pill = $('queuePill');
+  try {
+    const r = await fetch('/insight/thot/queue?limit=20');
+    const d = await r.json();
+    const items = d.items || [];
+    if (!items.length) {
+      pill.textContent = 'EMPTY'; pill.className = 'pill';
+      box.innerHTML = '<div class="empty">no wisdom in queue. Verified concepts will land here when the cognition chain (Phase 3 of the plan) ships and produces wisdom that has not yet been minted.</div>';
+      return;
+    }
+    pill.textContent = items.length + ' QUEUED'; pill.className = 'pill amber';
+    let html = '';
+    for (const w of items) {
+      html += '<div class="queue-row">';
+      html += '<div class="premise">IF ' + escapeHtml(truncate(w.premise || '—', 140)) + '</div>';
+      html += '<div class="conclusion">THEN ' + escapeHtml(truncate(w.conclusion || '—', 140)) + '</div>';
+      html += '<div class="meta">';
+      html += '<span><b>conf</b> ' + (w.confidence != null ? (w.confidence * 100).toFixed(0) + '%' : '?') + '</span>';
+      html += '<span><b>verified</b> ' + (w.verification_count || 0) + '×</span>';
+      html += '<span><b>dim</b> ' + (w.dimensions || w.embedding_dim || '?') + '</span>';
+      html += '<span><b>agent</b> ' + escapeHtml(truncate(w.agent_id || '?', 28)) + '</span>';
+      html += '<span>' + relSpan(w._mtime || w.verified_at) + '</span>';
+      html += '</div>';
+      html += '</div>';
+    }
+    box.innerHTML = html;
+  } catch (e) {
+    box.innerHTML = '<div class="empty">queue unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+// ── 5. CID lookup ──
+async function doLookup(ev) {
+  ev.preventDefault();
+  const cid = $('lookup-cid').value.trim();
+  const out = $('lookup-result');
+  if (!cid) { out.classList.remove('show'); return false; }
+  out.className = 'lookup-result show';
+  out.innerHTML = '<span style="color:var(--text3)">looking up <code>' + escapeHtml(cid) + '</code>…</span>';
+  try {
+    const r = await fetch('/insight/thot/lookup?cid=' + encodeURIComponent(cid));
+    const d = await r.json();
+    if (d.found_in_catalogue) {
+      out.className = 'lookup-result show found';
+      const e = d.catalogue_event || {};
+      const txUrl = explorerTxUrl(e.chain, e.tx_hash, _explorerBase);
+      let html = '<b style="color:var(--green)">found</b> in catalogue stream<br>';
+      html += '<span style="color:var(--text3);font-size:10.5px">';
+      html += '<b>kind</b> ' + escapeHtml(e.kind || '?') + ' · ';
+      html += '<b>actor</b> ' + escapeHtml(e.actor || '?') + ' · ';
+      html += relSpan(e.ts);
+      if (e.tx_hash) {
+        html += ' · <b>tx</b> ' + (txUrl ? '<a href="' + txUrl + '" target="_blank" rel="noopener"><code>' + escapeHtml(Human.hash(e.tx_hash, 14)) + '</code></a>' : '<code>' + escapeHtml(Human.hash(e.tx_hash, 14)) + '</code>');
+      }
+      html += '</span><br>';
+      const cidUrl = ipfsGatewayUrl(cid);
+      if (cidUrl) html += '<a href="' + cidUrl + '" target="_blank" rel="noopener" style="font-size:11px">open on IPFS gateway →</a>';
+      out.innerHTML = html;
+    } else {
+      out.className = 'lookup-result show notfound';
+      out.innerHTML = '<b>not found</b> in catalogue stream. Chain lookup is <code>' + escapeHtml(d.chain_lookup || '?') + '</code>. Once the contract is deployed and configured, this would call <code>cidExists(bytes32)</code> directly.';
+    }
+  } catch (e) {
+    out.className = 'lookup-result show notfound';
+    out.innerHTML = '<b style="color:var(--red)">lookup failed</b>: ' + escapeHtml(e.message);
+  }
+  return false;
+}
+
+// ── boot ──
+async function boot() {
+  await Promise.allSettled([refreshConfig(), refreshDimensions(), refreshMints(), refreshQueue()]);
+  setInterval(refreshConfig, 60000);
+  setInterval(refreshMints, 30000);
+  setInterval(refreshQueue, 30000);
+}
+document.addEventListener('DOMContentLoaded', boot);
+</script>
+</body>
+</html>

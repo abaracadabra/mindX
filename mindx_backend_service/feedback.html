@@ -553,7 +553,8 @@ async function refreshCognition() {
       { key: 'thot',          label: 'THOT',          status: c.thot?.status,
         val: Human.count(c.thot?.minted_total || 0),
         meta: 'minted · ' + (c.thot?.pending_mint || 0) + ' queued · key ' +
-              (c.thot?.minter_key_set ? '✓' : '✗') },
+              (c.thot?.minter_key_set ? '✓' : '✗'),
+        link: '/THOT.html' },
       { key: 'ingested',      label: 'ingestion',     status: c.ingested?.status,
         val: Human.count(c.ingested?.external_wisdom_count || 0),
         meta: 'external wisdom imports' },
@@ -574,13 +575,15 @@ async function refreshCognition() {
       const cell = cells[i];
       const status = cell.status || 'unknown';
       const glyph = _COG_GLYPH[status] || '?';
-      html += '<div class="chain-cell ' + escapeHtml(status) + '" title="' + escapeHtml(status) + '">' +
+      const linkOpen = cell.link ? '<a href="' + cell.link + '" style="text-decoration:none;color:inherit">' : '';
+      const linkClose = cell.link ? '</a>' : '';
+      html += linkOpen + '<div class="chain-cell ' + escapeHtml(status) + '" title="' + escapeHtml(status) + (cell.link ? ' · click → ' + cell.link : '') + '">' +
         '<span class="glyph">' + glyph + '</span>' +
-        '<div class="lbl">' + escapeHtml(cell.label) + '</div>' +
+        '<div class="lbl">' + escapeHtml(cell.label) + (cell.link ? ' ↗' : '') + '</div>' +
         '<div class="val">' + cell.val + '</div>' +
         '<div class="meta">' + escapeHtml(cell.meta) + '</div>' +
         (i < cells.length - 1 ? '<span class="arrow">→</span>' : '') +
-        '</div>';
+        '</div>' + linkClose;
     }
     html += '</div>';
     if (d.narrative) {
