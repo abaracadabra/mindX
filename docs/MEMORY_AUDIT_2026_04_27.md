@@ -121,3 +121,63 @@ The cognitive ascent stops at file write. *The system dreams but doesn't teach i
 - [`/feedback.html#sec-cognition`](https://mindx.pythai.net/feedback.html#sec-cognition) — the cognitive-ascent chain UI
 
 *Audit conducted 2026-04-27. Updates to this file should be appended (not in-place edits) so the historical view is preserved.*
+
+---
+
+## Appendix — operator action 2026-04-27 ~20:06 UTC
+
+### What happened
+
+Live `POST /insight/memory/prune?dry_run=false&workspace_archive_after_days=0` was fired against the VPS while it had 600 MB free. **Three things happened, in order:**
+
+1. **Stage 1 — STM → archive succeeded.** 175,044 STM files older than 14 days moved from `memory/stm/` to `memory/archive/`. **1.3 GB shifted within the same filesystem** (no net disk change).
+2. **Stage 3 — workspace orphan rotation succeeded.** The 19.5 GB live `agent_workspaces/bdi_agent_mastermind_strategy_mastermind_prime/process_trace.jsonl` was renamed to `process_trace.1.jsonl` and a fresh empty live file was created for ongoing `log_process` writes. **No data lost; rename is metadata-only.**
+3. **Stage 3 — gzip failed mid-write.** With `archive_after_days=0` overriding the policy, the pruner attempted to immediately compress the 19.5 GB rotated file. Python's `gzip.open(...) + shutil.copyfileobj(...)` writes the .gz file incrementally without unlinking the source until success. With ~600 MB free at start and 19.5 GB source, the disk filled at ~707 MB compressed (~25 % through). HTTP request timed out, VPS briefly went OOM-disk, mindX service stayed up.
+
+### Recovery (manual, ~30 seconds)
+
+```bash
+ssh root@168.231.126.58 \
+  'rm -f /home/mindx/mindX/data/memory/archive/bdi_agent_mastermind_strategy_mastermind_prime/workspace_traces/process_trace.1.20260427.jsonl.gz \
+        /home/mindx/mindX/data/memory/agent_workspaces/bdi_agent_mastermind_strategy_mastermind_prime/process_trace.1.jsonl'
+```
+
+The rotated `.1.jsonl` (the 19.5 GB orphan) was deleted because:
+- Nothing in the codebase reads `process_trace.jsonl` (verified by grep — Gap 1 above)
+- The semantic content was already preserved in (a) pgvector via `memory_pgvector.store_memory`, (b) the catalogue at `data/logs/catalogue_events.jsonl`, and (c) the dream-cycle insights in `memory/ltm/`
+- The data was the most-redundant tier; the loss is recoverable from any of the three live indexes
+
+### After
+
+```
+disk:           80 % (was 100 %) · 21 GB free
+freed:          ~19.5 GB (the mastermind orphan)
+mastermind STM: 26.8 GB (unchanged; <14 d age)
+archive:        1.3 GB (175k files from Stage 1)
+mindX:          active throughout
+```
+
+### What was learned (codified in commit `b6d943a5`)
+
+Two safety guards added to `agents/storage/agent_workspace_pruner.py`:
+
+1. **Disk-headroom check before gzip.** Require `shutil.disk_usage(archive_root).free >= source_size + 256 MB` before starting any compression. If insufficient, skip the file with `"SKIPPED_LOW_DISK"` in the per-agent state and log a warning. Operator can free disk by other means and retry. **The next live-prune call from prod won't repeat this failure.**
+
+2. **Partial-file cleanup on gzip OSError.** If the gzip raises (disk-full, I/O error, anything), `unlink()` the partial `.gz` destination before the exception propagates. Avoids leaving orphaned partial files that block re-attempt with the same name.
+
+### Status of the audit recommendations after this round
+
+| Recommendation | Status |
+|---|---|
+| Tier-aware `prune_stm` (14 d threshold) | ✅ shipped + ran live; 175k files archived |
+| Orphan pruner (`agent_workspace_pruner.py`) | ✅ shipped + ran live; 19.5 GB freed; safety guards added |
+| `/insight/memory/audit` live endpoint | ✅ shipped |
+| `/insight/memory/tiers` policy endpoint | ✅ shipped |
+| `POST /insight/memory/prune` operator trigger | ✅ shipped |
+| Vault one Lighthouse free-tier API key | ⏸ operator action (not blocked on code) |
+| Wisdom-tier consumer (Phase 6a) | ✅ shipped — 91 docs indexed in pgvector with `wisdom:` prefix; retrieval working |
+| BDI `perceive()` consumes wisdom (Phase 6b) | ⏳ next — closes the cognitive-ascent loop |
+
+---
+
+*Appendix added 2026-04-27 ~21:00 UTC. The audit document remains the canonical record of the gap analysis; the appendix names what was acted on.*
