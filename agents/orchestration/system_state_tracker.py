@@ -275,17 +275,26 @@ class SystemStateTracker:
             if resource_monitor:
                 metrics = await resource_monitor.get_current_metrics()
                 if metrics:
+                    g = metrics.get if isinstance(metrics, dict) else lambda k, d=None: getattr(metrics, k, d)
+                    mem_used = g("memory_used")
+                    if mem_used is None:
+                        mem_used_gb = g("memory_used_gb", 0.0) or 0.0
+                        mem_used = int(float(mem_used_gb) * (1024 ** 3))
+                    mem_total = g("memory_total")
+                    if mem_total is None:
+                        mem_total_gb = g("memory_total_gb", 0.0) or 0.0
+                        mem_total = int(float(mem_total_gb) * (1024 ** 3))
                     return ResourceSnapshot(
                         timestamp=time.time(),
-                        cpu_percent=metrics.cpu_percent,
-                        memory_percent=metrics.memory_percent,
-                        memory_used=metrics.memory_used,
-                        memory_total=metrics.memory_total,
-                        disk_usage={},
-                        network_bytes_sent=metrics.network_bytes_sent,
-                        network_bytes_recv=metrics.network_bytes_recv,
-                        process_count=metrics.process_count,
-                        load_average=metrics.load_average
+                        cpu_percent=float(g("cpu_percent", 0.0) or 0.0),
+                        memory_percent=float(g("memory_percent", 0.0) or 0.0),
+                        memory_used=int(mem_used or 0),
+                        memory_total=int(mem_total or 0),
+                        disk_usage={"/": float(g("disk_percent", 0.0) or 0.0)},
+                        network_bytes_sent=int(g("network_bytes_sent", 0) or 0),
+                        network_bytes_recv=int(g("network_bytes_recv", 0) or 0),
+                        process_count=int(g("process_count", 0) or 0),
+                        load_average=tuple(g("load_average", (0.0, 0.0, 0.0)) or (0.0, 0.0, 0.0))
                     )
         except Exception as e:
             logger.warning(f"{self.log_prefix} Error capturing resource snapshot: {e}")

@@ -283,6 +283,14 @@ tr:hover td{background:rgba(121,192,255,.02)}
     Honest snapshot of the chain the thesis describes. Each cell shows whether mindX is actually <b style="color:var(--green)">producing</b> at that tier today, is <b style="color:var(--amber)">ready/gated</b>, or is <b style="color:var(--red)">not implemented</b>. The chain runs raw STM (information) → <abbr title="machine.dreaming 7-phase consolidation: state assessment → input preprocessing → symbolic aggregation → insight scoring → memory storage → parameter tuning → memory pruning">dream consolidation</abbr> → LTM (knowledge: statistics + patterns) → <abbr title="LLM-extracted atomic rules: premise → conclusion with confidence">concept extraction</abbr> → <abbr title="Concepts that have been verified ≥3× with confidence ≥0.85 — Bayesian update over BDI outcomes">verified wisdom</abbr> → <abbr title="On-chain ERC721 anchor (THOT.mintTHOT) of the wisdom CID — makes wisdom externally citable">THOT mint</abbr> → external ingestion → BDI <code>perceive()</code> reads wisdom → next cycle. <a href="/insight/cognition?h=true" target="_blank" rel="noopener">view raw</a>
   </p>
   <div id="cognition" class="card"><div class="empty">loading…</div></div>
+  <div class="sec-head" style="margin-top:18px">
+    <h3 style="font-size:1.05em;margin:0">system pulse <span id="sysPill" class="pill">checking…</span></h3>
+    <span class="sub">/insight/system · psutil host + self-process snapshot · feeds BDI <code>perceive()</code></span>
+  </div>
+  <p class="sec-desc">
+    Live host metrics from <code>psutil</code>: CPU/memory/swap/disk pressure, established sockets, and the mindX backend process's own footprint (RSS/threads/file descriptors). When pressure is detected, the BDI planning prompt receives a <code>SYSTEM STATE: … [PRESSURE: …]</code> preamble nudging it toward lightweight actions.
+  </p>
+  <div id="sysPulse" class="card"><div class="empty">loading…</div></div>
 </section>
 
 <section id="sec-loops">
@@ -607,6 +615,87 @@ async function refreshCognition() {
     pill.textContent = 'ERR';
     pill.className = 'pill warn';
     box.innerHTML = '<div class="empty">cognition view unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+// ── system pulse (psutil) ──
+function _bar(pct, color) {
+  pct = Math.max(0, Math.min(100, pct));
+  return '<div style="background:#1a1a1a;border-radius:3px;height:6px;overflow:hidden;margin-top:3px">' +
+         '<div style="background:' + color + ';width:' + pct.toFixed(1) + '%;height:100%"></div></div>';
+}
+function _sysColor(pct, warnAt, critAt) {
+  if (pct >= critAt) return 'var(--red)';
+  if (pct >= warnAt) return 'var(--amber)';
+  return 'var(--green)';
+}
+async function refreshSysPulse() {
+  const box = $('sysPulse');
+  const pill = $('sysPill');
+  try {
+    const r = await fetch('/insight/system');
+    const d = await r.json();
+    const c = d.compact || {};
+    if (!Object.keys(c).length) {
+      pill.textContent = 'no data';
+      pill.className = 'pill warn';
+      box.innerHTML = '<div class="empty">/insight/system returned empty payload</div>';
+      return;
+    }
+    const cpuPct = c.cpu_percent || 0;
+    const memPct = c.memory_percent || 0;
+    const swapPct = c.swap_percent || 0;
+    const diskPct = c.disk_root_percent || 0;
+    const iow = c.cpu_iowait || 0;
+    const pressure = [];
+    if (cpuPct > 90) pressure.push('CPU');
+    if (memPct > 85) pressure.push('MEM');
+    if (swapPct > 50) pressure.push('SWAP');
+    if (diskPct > 90) pressure.push('DISK');
+    if (iow > 20) pressure.push('IOWAIT');
+    if (pressure.length) {
+      pill.textContent = 'PRESSURE: ' + pressure.join(' · ');
+      pill.className = 'pill warn';
+    } else {
+      pill.textContent = 'healthy';
+      pill.className = 'pill ok';
+    }
+    const cell = (label, val, pct, warnAt, critAt, sub) =>
+      '<div class="chain-cell" style="min-height:auto;padding:8px 10px">' +
+        '<div class="lbl">' + label + '</div>' +
+        '<div class="val" style="font-size:1.1em">' + val + '</div>' +
+        (pct != null ? _bar(pct, _sysColor(pct, warnAt, critAt)) : '') +
+        (sub ? '<div class="meta">' + sub + '</div>' : '') +
+      '</div>';
+    let html = '<div class="chain-grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">';
+    html += cell('CPU',          cpuPct.toFixed(1) + '%',  cpuPct, 75, 90, 'iowait ' + iow.toFixed(1) + '% · steal ' + (c.cpu_steal || 0).toFixed(1) + '%');
+    html += cell('memory',       memPct.toFixed(1) + '%',  memPct, 75, 90, (c.memory_available_gb || 0).toFixed(2) + ' GB free');
+    html += cell('swap',         swapPct.toFixed(1) + '%', swapPct, 30, 70, '');
+    html += cell('disk /',       diskPct.toFixed(1) + '%', diskPct, 80, 92, '');
+    html += cell('load 1m',      (c.load_1m || 0).toFixed(2), null, null, null, '');
+    html += cell('sockets est.', Human.count(c.sockets_established || 0), null, null, null, '');
+    html += '</div>';
+    html += '<div class="sec-head" style="margin-top:14px;padding:0">' +
+            '<h3 style="font-size:0.95em;margin:0;color:var(--text2)">self process · pid ' +
+            (c.self_pid || '') + '</h3></div>';
+    html += '<div class="chain-grid" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">';
+    html += cell('rss',     (c.self_rss_mb || 0).toFixed(1) + ' MB', null, null, null, '');
+    html += cell('cpu',     (c.self_cpu_percent || 0).toFixed(1) + '%', null, null, null, '');
+    html += cell('threads', Human.count(c.self_threads || 0), null, null, null, '');
+    const fds = c.self_fds;
+    html += cell('file desc', (fds != null && fds >= 0) ? Human.count(fds) : 'n/a', null, null, null, '');
+    html += cell('uptime',  Human.duration(c.self_uptime_seconds || 0), null, null, null, '');
+    html += '</div>';
+    html += '<div class="chain-narrative" style="margin-top:10px">' +
+      'BDI <code>perceive()</code> reads <code>psutil_compact_summary()</code> each cycle and injects a SYSTEM STATE preamble into the planning prompt. When pressure ≥ threshold, plans are nudged toward lightweight actions. ' +
+      '<a href="/insight/system?h=true" target="_blank" rel="noopener">view raw</a> · ' +
+      '<a href="/insight/system?full=true&h=true" target="_blank" rel="noopener">full snapshot</a>' +
+      '</div>';
+    box.innerHTML = html;
+  } catch (e) {
+    pill.textContent = 'ERR';
+    pill.className = 'pill warn';
+    box.innerHTML = '<div class="empty">system pulse unavailable: ' + escapeHtml(e.message) + '</div>';
   }
 }
 
@@ -1395,8 +1484,9 @@ async function boot() {
   _initTabbar();
   await seedDialogue();
   startSSE();
-  await Promise.allSettled([refreshCognition(), refreshStuck(), refreshBDI(), refreshLedger(), refreshBoardroom(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
+  await Promise.allSettled([refreshCognition(), refreshSysPulse(), refreshStuck(), refreshBDI(), refreshLedger(), refreshBoardroom(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
   setInterval(refreshCognition, 30000);
+  setInterval(refreshSysPulse, 15000);
   setInterval(refreshStuck, 30000);
   setInterval(refreshBDI, 20000);
   setInterval(refreshLedger, 45000);

@@ -1,53 +1,80 @@
-# MindX Minimal Dependencies - Essential Only
-# This is a minimal set of dependencies to get MindX working
+# MindX Minimal Dependencies — Essential Only
+# Pinned to ">=" floors that match what is currently installed in production
+# (.mindx_env). For exact reproducible builds, use `pip freeze > requirements.lock.txt`.
+#
+# Audit: 2026-04-27 — every line below corresponds to an `import` somewhere in
+# the mindX core (agents/, orchestration/, llm/, mindx_backend_service/, tools/).
+# Optional/dev deps are noted with leading "#".
 
-# Core async and HTTP
+# ── Core async + HTTP ──
 aiohttp>=3.8.0
 aiofiles>=23.0.0
+httpx>=0.27.0          # tools/pay2play_metered_tool.py, agenticplace_routes.py
 
-# Web framework
+# ── Web framework ──
 fastapi>=0.100.0
 uvicorn>=0.20.0
+starlette>=0.40.0      # explicit pin (transitive via FastAPI; used directly in middleware)
+python-multipart>=0.0.20  # FastAPI UploadFile support — rage/routes.py
 
-# Data processing
+# ── Data validation ──
 pydantic>=2.0.0
 
-# AI/ML Libraries
+# ── LLM provider SDKs ──
 openai>=1.0.0
 anthropic>=0.30.0
 google-generativeai>=0.8.0
 mistralai>=1.0.0
+# ollama>=0.3.0        # OPTIONAL: official ollama python client (mindX has its own handler)
 
-# Configuration
+# ── Configuration ──
 python-dotenv>=1.0.0
 pyyaml>=6.0.0
 
-# Utilities
+# ── HTTP / utils ──
 requests>=2.30.0
-
-# Logging
 colorama>=0.4.0
+tqdm>=4.66.0           # transitive via openai/anthropic; explicit for stability
 
-# Testing
-pytest>=7.0.0
+# ── Numeric / vector ──
+numpy>=1.26.0          # rage/indexing.py, embedding math, transitive via pgvector
+
+# ── System monitoring (BDI perceive(), /system/resources, /insight/system) ──
 psutil>=5.9.0
-eth-account>=0.8.0
 
-# Cryptography and Security
+# ── Cryptography / wallets / vault ──
 cryptography>=41.0.0
+eth-account>=0.8.0     # Ethereum wallet derivation, signing
+pycryptodome>=3.20.0   # BANKON Vault AES-256-GCM + HKDF-SHA512
 
-# File Processing
+# ── File processing ──
 pathspec>=0.11.0
 
-# Optional: Official Ollama Python Library
-# Install with: pip install ollama
-# Provides better compatibility with Ollama API updates
-# ollama>=0.3.0
-
-# pgvectorscale Memory Integration
+# ── pgvector memory tier ──
 psycopg2-binary>=2.9.0
 pgvector>=0.2.0
-# sentence-transformers>=2.2.0  # Optional: Requires torch (~1GB). Install manually if needed: pip install sentence-transformers
-# Note: Code uses try/except for sentence-transformers, so it's safe to make optional
 asyncpg>=0.28.0
 SQLAlchemy>=2.0.0
+# sentence-transformers>=2.2.0  # OPTIONAL: requires torch (~1GB). Code is try/except guarded.
+#                                 # Install manually: pip install sentence-transformers
+
+# ── Testing ──
+pytest>=7.0.0
+pytest-asyncio>=0.23.0  # required for tests/lab/* async test suites
+
+# ── OPTIONAL / sub-component-only (NOT installed by default) ──
+# These are imported only by submodules that are dormant in the main backend.
+# Install on demand if you activate the corresponding component.
+#
+# aioredis>=2.0.0       # mindx_backend_service/performance_optimizer.py (DORMANT — not loaded by main_service)
+# paramiko>=3.4.0       # csshd7/ ssh wallet server (separate venv)
+# web3>=6.0.0           # csshd7/ ethpm tooling (mindX core uses raw_tx.py — no web3)
+# faiss-cpu>=1.7.4      # rage/deeprage/ alternate retriever
+# langchain>=0.2.0      # rage/deeprage/ langchain integration
+# huggingface-hub>=0.20 # rage/deeprage/ model hub
+# torch>=2.0.0          # only via sentence-transformers
+# transformers>=4.35.0  # only via sentence-transformers
+# streamlit>=1.30.0     # offline notebooks / experiments
+# qrcode>=7.4.0         # avatar / QR code generation
+# markdown2>=2.4.0      # markdown rendering (optional surface)
+# frontmatter>=1.1.0    # yaml frontmatter parsing for agent .md cards

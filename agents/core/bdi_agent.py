@@ -588,6 +588,13 @@ class BDIAgent:
         if external_input and isinstance(external_input, dict):
             for key, value in external_input.items():
                 await self.update_belief(f"environment.{key}", value, 0.9, BeliefSource.PERCEPTION)
+        # System state perception (psutil) — feeds planning prompt + decision-making
+        try:
+            from agents.monitoring.resource_monitor import psutil_compact_summary
+            sys_state = psutil_compact_summary()
+            await self.update_belief("system.state", sys_state, 0.95, BeliefSource.PERCEPTION)
+        except Exception as e:
+            self.logger.debug(f"perceive: system state unavailable: {e}")
         if self.intentions.get("plan_status") == "READY":
             if not await self._is_plan_still_valid_async():
                 self.logger.warning(f"Plan ID '{self.intentions.get('current_plan_id')}' no longer valid. Invalidating plan.")
@@ -712,7 +719,33 @@ class BDIAgent:
                 if param_name not in ['self', 'kwargs']: example_params[param_name] = f"<{param.annotation.__name__ if hasattr(param.annotation, '__name__') else 'value'}>"
         few_shot_example = json.dumps([{"type": example_action_type, "params": example_params}], indent=2)
 
+        # System-state preamble (psutil): plans should respect resource constraints
+        sys_preamble = ""
+        try:
+            from agents.monitoring.resource_monitor import psutil_compact_summary
+            sys_state = psutil_compact_summary()
+            if sys_state and isinstance(sys_state, dict):
+                pressure = []
+                if sys_state.get("cpu_percent", 0) > 90: pressure.append(f"CPU {sys_state['cpu_percent']:.0f}%")
+                if sys_state.get("memory_percent", 0) > 85: pressure.append(f"MEM {sys_state['memory_percent']:.0f}%")
+                if sys_state.get("swap_percent", 0) > 50: pressure.append(f"SWAP {sys_state['swap_percent']:.0f}%")
+                if sys_state.get("disk_root_percent", 0) > 90: pressure.append(f"DISK {sys_state['disk_root_percent']:.0f}%")
+                if sys_state.get("cpu_iowait", 0) > 20: pressure.append(f"IOWAIT {sys_state['cpu_iowait']:.0f}%")
+                pressure_str = f" [PRESSURE: {', '.join(pressure)}]" if pressure else ""
+                sys_preamble = (
+                    f"SYSTEM STATE: cpu={sys_state.get('cpu_percent', 0):.0f}% "
+                    f"mem={sys_state.get('memory_percent', 0):.0f}% "
+                    f"disk={sys_state.get('disk_root_percent', 0):.0f}% "
+                    f"load={sys_state.get('load_1m', 0):.2f} "
+                    f"self_rss={sys_state.get('self_rss_mb', 0):.0f}MB"
+                    f"{pressure_str}\n"
+                    f"Prefer lightweight actions when pressure is shown.\n\n"
+                )
+        except Exception as e:
+            self.logger.debug(f"plan: system preamble unavailable: {e}")
+
         initial_prompt = (
+            f"{sys_preamble}"
             f"Your current goal is: '{goal_description}'.{contextual_info}\n\n"
             f"Generate a JSON list of actions to achieve the goal. You MUST use ONLY the actions listed below, and you MUST provide all required parameters for each action as specified in the manifest.\n\n"
             f"ACTION MANIFEST:\n{action_details_str}\n\n"

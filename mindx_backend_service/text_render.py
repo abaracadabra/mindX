@@ -463,12 +463,63 @@ def render_anchor_health(d: dict) -> str:
 # ── Dispatch map: route path → renderer ──
 
 
+def render_system(d: dict) -> str:
+    """Plain-text rendering of /insight/system (psutil snapshot)."""
+    if "error" in d:
+        return f"system snapshot error: {d['error']}\n"
+    c = d.get("compact") or {}
+    snap = d.get("snapshot")  # only present when ?full=true
+    lines = ["═══ system pulse (psutil) ═══", ""]
+    lines.append(f"  cpu          {c.get('cpu_percent', 0):>5.1f}%   iowait {c.get('cpu_iowait', 0):>4.1f}%   steal {c.get('cpu_steal', 0):>4.1f}%   load1m {c.get('load_1m', 0):>5.2f}")
+    lines.append(f"  memory       {c.get('memory_percent', 0):>5.1f}%   {c.get('memory_available_gb', 0):>5.2f} GB free")
+    lines.append(f"  swap         {c.get('swap_percent', 0):>5.1f}%")
+    lines.append(f"  disk /       {c.get('disk_root_percent', 0):>5.1f}%")
+    lines.append(f"  sockets      {c.get('sockets_established', 0)} established")
+    lines.append("")
+    lines.append("─── self process (mindX backend) ───")
+    lines.append(f"  rss          {c.get('self_rss_mb', 0):.1f} MB")
+    lines.append(f"  cpu          {c.get('self_cpu_percent', 0):.1f}%")
+    lines.append(f"  threads      {c.get('self_threads', 0)}")
+    fds = c.get('self_fds', -1)
+    lines.append(f"  fds          {fds if fds >= 0 else 'n/a'}")
+    lines.append(f"  uptime       {human_duration(c.get('self_uptime_seconds', 0))}")
+    if snap:
+        lines.append("")
+        lines.append("─── full snapshot (truncated) ───")
+        cpu = snap.get("cpu", {}) or {}
+        if cpu.get("times_percent"):
+            tp = cpu["times_percent"]
+            lines.append(f"  cpu times    user {tp.get('user', 0):.1f} system {tp.get('system', 0):.1f} idle {tp.get('idle', 0):.1f} iowait {tp.get('iowait', 0):.1f}")
+        host = snap.get("host", {}) or {}
+        if host.get("uptime_seconds"):
+            lines.append(f"  host uptime  {human_duration(host['uptime_seconds'])}")
+        if host.get("process_count"):
+            lines.append(f"  processes    {host['process_count']}")
+        net = snap.get("net", {}) or {}
+        if isinstance(net.get("sockets"), dict):
+            s = net["sockets"]
+            lines.append(f"  sockets      tcp={s.get('tcp', 0)} udp={s.get('udp', 0)} listen={s.get('listen', 0)}")
+        nics = (net.get("if_stats") or {})
+        if nics:
+            up = [n for n, s in nics.items() if s.get("isup")]
+            lines.append(f"  nics up      {', '.join(up) if up else '(none)'}")
+        sensors = snap.get("sensors", {}) or {}
+        temps = sensors.get("temperatures") or {}
+        if temps:
+            for chip, entries in temps.items():
+                for e in entries[:1]:
+                    lines.append(f"  temp {chip[:12]:<12} {e.get('current', 0):.1f}°C ({e.get('label', '')})")
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
 RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/storage/status":      render_storage_status,
     "/insight/storage/recent":      render_storage_recent,
     "/insight/dreams/recent":       render_dreams_recent,
     "/insight/bdi/recent":          render_bdi_recent,
     "/insight/cognition":           render_cognition,
+    "/insight/system":              render_system,
     "/insight/godel/recent":        render_godel_recent,
     "/insight/boardroom/recent":    render_boardroom_recent,
     "/insight/improvement/summary": render_improvement_summary,

@@ -509,3 +509,249 @@ def get_resource_limits() -> Dict[str, Any]:
 async def get_resource_monitor_async(memory_agent=None, config_override=None, test_mode=False):
     """Async wrapper for get_resource_monitor."""
     return get_resource_monitor()
+
+
+# ─── Full psutil surface (used by /system/resources/full + BDI perceive) ───
+def psutil_snapshot() -> Dict[str, Any]:
+    """One-shot comprehensive psutil snapshot. Synchronous, ~50ms.
+
+    Returns every dimension psutil exposes that is operationally useful on
+    a Linux VPS: cpu_times_percent (user/system/idle/iowait/steal/irq),
+    cpu_stats (ctx_switches, interrupts), swap, disk I/O per-disk, net I/O
+    per-NIC, socket counts, sensors (temperatures/fans/battery), users,
+    and **self-process** stats for the running mindX backend.
+    """
+    snap: Dict[str, Any] = {"timestamp": time.time()}
+    try:
+        snap["cpu"] = {
+            "percent": psutil.cpu_percent(interval=None),
+            "per_core": psutil.cpu_percent(percpu=True, interval=None),
+            "count_logical": psutil.cpu_count(logical=True),
+            "count_physical": psutil.cpu_count(logical=False),
+        }
+        try:
+            cf = psutil.cpu_freq()
+            if cf:
+                snap["cpu"]["freq_mhz"] = {"current": cf.current, "min": cf.min, "max": cf.max}
+        except Exception:
+            pass
+        try:
+            ct = psutil.cpu_times_percent(interval=None)
+            snap["cpu"]["times_percent"] = {f: getattr(ct, f, 0.0) for f in ct._fields}
+        except Exception:
+            pass
+        try:
+            cs = psutil.cpu_stats()
+            snap["cpu"]["stats"] = {f: getattr(cs, f, 0) for f in cs._fields}
+        except Exception:
+            pass
+    except Exception as e:
+        snap["cpu"] = {"error": str(e)}
+
+    try:
+        vm = psutil.virtual_memory()
+        snap["memory"] = {f: getattr(vm, f, 0) for f in vm._fields}
+        snap["memory"]["used_gb"] = round(vm.used / 1024**3, 2)
+        snap["memory"]["available_gb"] = round(vm.available / 1024**3, 2)
+        snap["memory"]["total_gb"] = round(vm.total / 1024**3, 2)
+    except Exception as e:
+        snap["memory"] = {"error": str(e)}
+
+    try:
+        sm = psutil.swap_memory()
+        snap["swap"] = {f: getattr(sm, f, 0) for f in sm._fields}
+    except Exception:
+        snap["swap"] = {}
+
+    try:
+        snap["disk"] = {"per_path": {}, "io": {}, "io_per_disk": {}}
+        for part in psutil.disk_partitions(all=False):
+            try:
+                u = psutil.disk_usage(part.mountpoint)
+                snap["disk"]["per_path"][part.mountpoint] = {
+                    "device": part.device,
+                    "fstype": part.fstype,
+                    "total": u.total, "used": u.used, "free": u.free, "percent": u.percent,
+                }
+            except (OSError, PermissionError):
+                continue
+        try:
+            io = psutil.disk_io_counters()
+            if io:
+                snap["disk"]["io"] = {f: getattr(io, f, 0) for f in io._fields}
+        except Exception:
+            pass
+        try:
+            per = psutil.disk_io_counters(perdisk=True) or {}
+            for name, c in per.items():
+                snap["disk"]["io_per_disk"][name] = {f: getattr(c, f, 0) for f in c._fields}
+        except Exception:
+            pass
+    except Exception as e:
+        snap["disk"] = {"error": str(e)}
+
+    try:
+        snap["net"] = {"io": {}, "per_nic": {}, "if_addrs": {}, "if_stats": {}}
+        try:
+            io = psutil.net_io_counters()
+            if io:
+                snap["net"]["io"] = {f: getattr(io, f, 0) for f in io._fields}
+        except Exception:
+            pass
+        try:
+            per = psutil.net_io_counters(pernic=True) or {}
+            for nic, c in per.items():
+                snap["net"]["per_nic"][nic] = {f: getattr(c, f, 0) for f in c._fields}
+        except Exception:
+            pass
+        try:
+            stats = psutil.net_if_stats() or {}
+            for nic, s in stats.items():
+                snap["net"]["if_stats"][nic] = {
+                    "isup": s.isup, "duplex": int(getattr(s, "duplex", 0)),
+                    "speed_mbps": getattr(s, "speed", 0), "mtu": getattr(s, "mtu", 0),
+                }
+        except Exception:
+            pass
+        try:
+            kinds = {"tcp": 0, "udp": 0, "listen": 0, "established": 0}
+            for c in psutil.net_connections(kind="inet"):
+                if c.type == 1:    kinds["tcp"] += 1     # SOCK_STREAM
+                elif c.type == 2:  kinds["udp"] += 1     # SOCK_DGRAM
+                if c.status == "LISTEN":      kinds["listen"] += 1
+                elif c.status == "ESTABLISHED": kinds["established"] += 1
+            snap["net"]["sockets"] = kinds
+        except (psutil.AccessDenied, PermissionError):
+            snap["net"]["sockets"] = {"error": "access_denied"}
+        except Exception:
+            pass
+    except Exception as e:
+        snap["net"] = {"error": str(e)}
+
+    try:
+        snap["sensors"] = {}
+        try:
+            t = psutil.sensors_temperatures()
+            if t:
+                snap["sensors"]["temperatures"] = {
+                    chip: [{"label": e.label, "current": e.current, "high": e.high, "critical": e.critical} for e in entries]
+                    for chip, entries in t.items()
+                }
+        except Exception:
+            pass
+        try:
+            f = psutil.sensors_fans()
+            if f:
+                snap["sensors"]["fans"] = {
+                    chip: [{"label": e.label, "current": e.current} for e in entries]
+                    for chip, entries in f.items()
+                }
+        except Exception:
+            pass
+        try:
+            b = psutil.sensors_battery()
+            if b:
+                snap["sensors"]["battery"] = {
+                    "percent": b.percent, "secsleft": b.secsleft, "power_plugged": b.power_plugged
+                }
+        except Exception:
+            pass
+    except Exception:
+        snap["sensors"] = {}
+
+    try:
+        snap["host"] = {
+            "boot_time": psutil.boot_time(),
+            "uptime_seconds": int(time.time() - psutil.boot_time()),
+            "process_count": len(psutil.pids()),
+            "users": [{"name": u.name, "terminal": u.terminal, "started": u.started} for u in psutil.users()],
+        }
+        try:
+            snap["host"]["load_average"] = list(os.getloadavg())
+        except (OSError, AttributeError):
+            pass
+    except Exception as e:
+        snap["host"] = {"error": str(e)}
+
+    # Self-process: how much resource does mindX itself consume?
+    try:
+        p = psutil.Process(os.getpid())
+        with p.oneshot():
+            mi = p.memory_info()
+            try:
+                full = p.memory_full_info()
+                uss = getattr(full, "uss", 0)
+                pss = getattr(full, "pss", 0)
+            except (psutil.AccessDenied, AttributeError):
+                uss = pss = 0
+            try:
+                io = p.io_counters()
+                io_dict = {"read_bytes": io.read_bytes, "write_bytes": io.write_bytes,
+                           "read_count": io.read_count, "write_count": io.write_count}
+            except (psutil.AccessDenied, AttributeError):
+                io_dict = {}
+            try:
+                ct = p.cpu_times()
+                ct_dict = {"user": ct.user, "system": ct.system, "iowait": getattr(ct, "iowait", 0.0)}
+            except Exception:
+                ct_dict = {}
+            try:
+                num_fds = p.num_fds()
+            except (psutil.AccessDenied, AttributeError):
+                num_fds = -1
+            snap["self_process"] = {
+                "pid": p.pid,
+                "name": p.name(),
+                "status": p.status(),
+                "create_time": p.create_time(),
+                "uptime_seconds": int(time.time() - p.create_time()),
+                "cpu_percent": p.cpu_percent(interval=None),
+                "num_threads": p.num_threads(),
+                "num_fds": num_fds,
+                "rss_bytes": mi.rss,
+                "vms_bytes": mi.vms,
+                "uss_bytes": uss,
+                "pss_bytes": pss,
+                "rss_mb": round(mi.rss / 1024**2, 1),
+                "io": io_dict,
+                "cpu_times": ct_dict,
+                "nice": p.nice(),
+            }
+            try:
+                snap["self_process"]["connections"] = len(p.connections(kind="inet"))
+            except (psutil.AccessDenied, AttributeError):
+                pass
+    except Exception as e:
+        snap["self_process"] = {"error": str(e)}
+
+    return snap
+
+
+def psutil_compact_summary(snap: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Compact 14-field summary used by BDI perceive() and the feedback.html
+    system-pulse tile. Stable schema, every field always present."""
+    s = snap or psutil_snapshot()
+    cpu = s.get("cpu", {}) or {}
+    mem = s.get("memory", {}) or {}
+    swap = s.get("swap", {}) or {}
+    host = s.get("host", {}) or {}
+    sp = s.get("self_process", {}) or {}
+    sock = (s.get("net", {}) or {}).get("sockets", {}) or {}
+    times = cpu.get("times_percent", {}) or {}
+    root_pct = ((s.get("disk", {}) or {}).get("per_path", {}) or {}).get("/", {}).get("percent", 0.0)
+    return {
+        "cpu_percent": cpu.get("percent", 0.0),
+        "cpu_iowait": times.get("iowait", 0.0),
+        "cpu_steal": times.get("steal", 0.0),
+        "load_1m": (host.get("load_average") or [0.0, 0.0, 0.0])[0],
+        "memory_percent": mem.get("percent", 0.0),
+        "memory_available_gb": mem.get("available_gb", 0.0),
+        "swap_percent": swap.get("percent", 0.0),
+        "disk_root_percent": root_pct,
+        "sockets_established": sock.get("established", 0) if isinstance(sock, dict) else 0,
+        "self_rss_mb": sp.get("rss_mb", 0.0),
+        "self_cpu_percent": sp.get("cpu_percent", 0.0),
+        "self_threads": sp.get("num_threads", 0),
+        "self_fds": sp.get("num_fds", -1),
+        "self_uptime_seconds": sp.get("uptime_seconds", 0),
+    }

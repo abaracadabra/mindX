@@ -2433,6 +2433,27 @@ async def insight_cognition(request: Request):
     }, route_path="/insight/cognition")
 
 
+@app.get("/insight/system", tags=["insight"], summary="Comprehensive psutil snapshot — host + self-process")
+async def insight_system(request: Request, full: bool = False):
+    """Comprehensive `psutil` surface for the host VPS and the mindX backend
+    process itself. Public; read-only. `?full=true` returns the full nested
+    snapshot (cpu_times_percent breakdown, per-disk I/O, per-NIC counters,
+    sockets, sensors, etc.). Default returns the compact 14-field summary
+    used by the BDI perceive() preamble and the feedback.html system pulse.
+    `?h=true` for plain-text mode.
+    """
+    try:
+        from agents.monitoring.resource_monitor import psutil_snapshot, psutil_compact_summary
+        snap = psutil_snapshot()
+        if full:
+            payload = {"snapshot": snap, "compact": psutil_compact_summary(snap), "computed_at": time.time()}
+        else:
+            payload = {"compact": psutil_compact_summary(snap), "computed_at": time.time()}
+    except Exception as e:
+        payload = {"error": str(e), "computed_at": time.time()}
+    return _maybe_h_text(request, payload, route_path="/insight/system")
+
+
 # ── THOT contract-correlated endpoints ──
 # Plan: ~/.claude/plans/purring-humming-stonebraker.md
 # Read-only views over THOT.sol state. Public; consistent with /insight/* policy.
