@@ -172,6 +172,32 @@ async def prune_workspace_traces(
                 archive_dest = archive_dest_dir / f"{name[:-len('.jsonl')]}.{date_tag}.jsonl.gz"
 
                 if not dry_run:
+                    # Disk-headroom guard: gzip needs ~source_size + headroom
+                    # because the source isn't deleted until compression
+                    # completes. Without this check a 20 GB jsonl would fill
+                    # the disk before the gzip finishes (verified empirically
+                    # 2026-04-27 — see commit log).
+                    try:
+                        free_bytes = shutil.disk_usage(str(archive_root)).free
+                        # Need enough room for the source (original) + a safety
+                        # margin (gzip compressed grows even if final is smaller).
+                        # Use source_size as a conservative ceiling; the actual
+                        # compressed file is ~25 % of source, so we'll have
+                        # 75 % of source as net free after the unlink.
+                        headroom_needed = sz + (256 * 1024 * 1024)  # +256 MB safety
+                        if free_bytes < headroom_needed:
+                            logger.warning(
+                                f"workspace_pruner: insufficient disk for {f.name} "
+                                f"({sz} bytes source, {free_bytes} bytes free, "
+                                f"need {headroom_needed}); skipping. "
+                                f"Free disk first or vault IPFS keys to drain."
+                            )
+                            agent_state["archived"].append(f"SKIPPED_LOW_DISK: {f.name}")
+                            continue
+                    except Exception as e:
+                        logger.debug(f"workspace_pruner: disk check failed for {f}: {e}")
+                        continue
+
                     try:
                         archive_dest_dir.mkdir(parents=True, exist_ok=True)
                         with f.open("rb") as src, gzip.open(archive_dest, "wb") as dst:
@@ -180,6 +206,12 @@ async def prune_workspace_traces(
                         agent_state["archived"].append(archive_dest.name)
                         totals["archived"] += 1
                     except OSError as e:
+                        # If the gzip failed mid-write, clean up the partial .gz
+                        try:
+                            if archive_dest.exists():
+                                archive_dest.unlink()
+                        except OSError:
+                            pass
                         logger.debug(f"workspace_pruner: archive failed {f} → {archive_dest}: {e}")
                 else:
                     agent_state["archived"].append(f"WOULD: {archive_dest.name} ({sz} bytes)")
