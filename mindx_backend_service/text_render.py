@@ -306,6 +306,102 @@ def render_boardroom_recent(d: dict) -> str:
     )
 
 
+def render_boardroom_session(d: dict) -> str:
+    """Plain-text rendering of /insight/boardroom/session/<id> — full record
+    of one boardroom decision (CEO + 7 soldiers). For terminal monitoring."""
+    if "error" in d and "session_id" not in d:
+        return f"boardroom session error: {d['error']}\n"
+    if d.get("error"):
+        return f"session {d.get('session_id', '?')} not found ({d['error']})\n"
+    sid = d.get("session_id", "?")
+    outcome = (d.get("outcome") or "?").upper()
+    score = d.get("weighted_score", 0)
+    threshold = d.get("consensus_threshold", 0.666)
+    ts = d.get("timestamp", "")
+    importance = d.get("importance", "")
+    directive = (d.get("directive") or "")
+    votes = d.get("votes") or []
+    dissent = d.get("dissent_branches") or []
+    mr = d.get("model_report") or {}
+
+    lines = ["═══ boardroom session ═══", ""]
+    lines.append(f"  id          {sid}")
+    lines.append(f"  timestamp   {human_ts_with_rel(ts)}")
+    lines.append(f"  importance  {importance}")
+    lines.append(f"  outcome     {outcome}    score {score:.3f} / threshold {threshold:.3f}")
+    lines.append("")
+    lines.append("─── directive ───")
+    for ln in (directive or "(empty)").split("\n"):
+        lines.append(f"  {ln}")
+    lines.append("")
+    lines.append(f"─── votes ({len(votes)}) ───")
+    for v in votes:
+        soldier = v.get("soldier", "?")
+        weight = v.get("weight", 1.0)
+        veto = " VETO" if v.get("veto_holder") else ""
+        vote = (v.get("vote") or "").upper()
+        sym = "✓" if vote == "APPROVE" else "✗" if vote == "REJECT" else "–"
+        provider = v.get("provider", "")
+        latency = v.get("latency_ms")
+        confidence = v.get("confidence", 0)
+        reasoning = (v.get("reasoning") or "").strip()
+        lat_s = f"{int(latency)} ms" if isinstance(latency, (int, float)) else "?"
+        lines.append(f"  {sym} {soldier:<22} weight {weight:.1f}{veto}  {provider}  {lat_s}  conf {confidence:.2f}")
+        if reasoning:
+            for ln in reasoning.split("\n"):
+                lines.append(f"      {ln}")
+        lines.append("")
+    if mr:
+        lines.append("─── model_report ───")
+        if "priority" in mr:
+            lines.append(f"  priority    {mr.get('priority_label') or mr.get('priority')}")
+        if "preempted_autonomous" in mr:
+            lines.append(f"  preempted   {mr['preempted_autonomous']}")
+        if "members" in mr and isinstance(mr["members"], dict):
+            lines.append("  members:")
+            for k, v in mr["members"].items():
+                lines.append(f"    {k:<22} {v}")
+        if "inference_summary" in mr and isinstance(mr["inference_summary"], dict):
+            lines.append("  inference:")
+            for k, v in mr["inference_summary"].items():
+                lines.append(f"    {k:<22} {v}")
+        lines.append("")
+    lines.append(f"─── dissent ({len(dissent)} branch{'es' if len(dissent) != 1 else ''}) ───")
+    for branch in dissent[:5]:
+        lines.append(f"  • {str(branch)[:200]}")
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def render_boardroom_roles(d: dict) -> str:
+    """Plain-text rendering of /insight/boardroom/roles."""
+    if "error" in d:
+        return f"boardroom roles unavailable: {d['error']}\n"
+    lines = ["═══ boardroom — CEO + 7 soldiers ═══", ""]
+    ceo = d.get("ceo") or {}
+    lines.append(f"  CEO  {ceo.get('title', '')}")
+    lines.append(f"       {ceo.get('role', '')}")
+    lines.append("")
+    soldiers = d.get("soldiers") or {}
+    if soldiers:
+        lines.append(f"  {'soldier':<22} {'weight':<8} {'veto':<6} {'local model':<24} title")
+        lines.append("  " + "─" * 92)
+        for sid, info in soldiers.items():
+            veto = "✓" if info.get("veto_holder") else ""
+            lines.append(
+                f"  {sid:<22} {info.get('weight', 1.0):<8.1f} {veto:<6} "
+                f"{(info.get('local_model') or ''):<24} {info.get('title', '')}"
+            )
+    lines.append("")
+    lines.append(f"  consensus threshold:  {d.get('consensus_threshold', 0.666):.3f}")
+    lines.append(f"  cloud model:          {d.get('cloud_model', '')}")
+    lines.append("")
+    if d.get("note"):
+        lines.append(f"  NOTE: {d['note']}")
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
 def render_improvement_summary(d: dict) -> str:
     def _bucket(b: Any) -> str:
         if not isinstance(b, dict):
@@ -522,6 +618,8 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/system":              render_system,
     "/insight/godel/recent":        render_godel_recent,
     "/insight/boardroom/recent":    render_boardroom_recent,
+    "/insight/boardroom/session":   render_boardroom_session,
+    "/insight/boardroom/roles":     render_boardroom_roles,
     "/insight/improvement/summary": render_improvement_summary,
     "/insight/stuck_loops":         render_stuck_loops,
     "/storage/eligible":            render_eligible,

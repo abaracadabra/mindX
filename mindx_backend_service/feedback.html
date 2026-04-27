@@ -265,6 +265,15 @@ tr:hover td{background:rgba(121,192,255,.02)}
 .cog-drill .drill-actions button:disabled{opacity:.5;cursor:default}
 .cog-drill .drill-actions a{font-family:var(--mono);font-size:10.5px;color:var(--text2)}
 .cog-drill .drill-content{padding:10px 12px;margin:0 12px 10px 30px;background:rgba(4,6,9,.7);border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:10.5px;color:var(--text);line-height:1.5;white-space:pre-wrap;word-break:break-word;max-height:480px;overflow:auto}
+/* boardroom drill */
+.board-row{cursor:pointer;transition:background .12s ease}
+.board-row:hover{background:rgba(121,192,255,.05)}
+.board-row.active{background:rgba(121,192,255,.10);border-left:2px solid var(--blue)}
+.board-expand{background:transparent;border:1px solid var(--border);color:var(--text2);padding:2px 8px;border-radius:4px;cursor:pointer;font-family:var(--mono);font-size:11px;transition:all .15s}
+.board-expand:hover{background:rgba(121,192,255,.12);color:var(--blue);border-color:rgba(121,192,255,.3)}
+.cog-drill .drill-item.kind-board-vote.approve{border-left-color:var(--green)}
+.cog-drill .drill-item.kind-board-vote.reject{border-left-color:var(--red)}
+.cog-drill .drill-item.kind-board-vote.abstain{border-left-color:var(--text3)}
 
 /* BDI activity */
 .bdi-run{margin:14px 0;border-left:2px solid rgba(121,192,255,.25);padding-left:10px}
@@ -429,9 +438,10 @@ tr:hover td{background:rgba(121,192,255,.02)}
     <span class="sub">/insight/boardroom/recent</span>
   </div>
   <p class="sec-desc">
-    Every directive evaluated by the 7-soldier <a href="/doc/DAIO"><abbr title="CEO + Seven Soldiers (CISO, CRO, CFO, CLO, CPO, CTO, COO) consensus mechanism">boardroom</abbr></a>. CISO and CRO weight 1.2× as veto holders. Hover any vote chip for the soldier's per-call reasoning + provider + latency. Outcome is approved at weighted score ≥ 0.666; minority dissent creates exploration branches. See also <a href="/doc/agents/ceo_agent">CEO Agent</a>.
+    The <b>first hierarchy of decision</b>: every directive evaluated by the 7-soldier <a href="/doc/BOARDROOM"><abbr title="CEO + Seven Soldiers (CISO, CRO, CFO, CLO, CPO, CTO, COO) — the primary decision tier">boardroom</abbr></a>. CISO and CRO weight 1.2× as veto holders. Outcome is approved at weighted score ≥ 0.666; minority dissent opens an exploration branch. <b>Click any row</b> for the full per-soldier card (vote, weight, model, latency, confidence, full reasoning). See <a href="/doc/agents/ceo_agent">CEO Agent</a> · <a href="/insight/boardroom/roles?h=true" target="_blank" rel="noopener">role registry</a> · <a href="/doc/BOARDROOM">spec</a>. Disputes escalate to <abbr title="Dojo: dispute resolution opened by any boardroom seat-holder. Configurable consensus per dispute — 2/3, 50/99, supermajority.">dojo</abbr>; mainnet target is the 13-seat <abbr title="War council at mastermind.pythai.net — 13 BONAFIDE-tied seats with PYTHAI naming as toggle. Roadmap.">war council</abbr>.
   </p>
   <div id="boardroom" class="card"><div class="empty">loading…</div></div>
+  <div id="board-drill" class="cog-drill" hidden></div>
 </section>
 
 <!-- 6. Dream cycles -->
@@ -1433,7 +1443,7 @@ async function refreshBoardroom() {
       box.innerHTML = '<div class="empty">no boardroom sessions logged yet</div>';
       return;
     }
-    let html = '<table><thead><tr><th>session</th><th>directive</th><th>outcome</th><th>score</th><th>votes</th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>session</th><th>directive</th><th>outcome</th><th>score</th><th>votes</th><th></th></tr></thead><tbody>';
     for (const s of sessions) {
       const outcome = (s.outcome || 'unknown').toLowerCase();
       const cls = 'outcome-' + (outcome === 'approved' || outcome === 'rejected' || outcome === 'exploration' ? outcome : 'unknown');
@@ -1446,12 +1456,14 @@ async function refreshBoardroom() {
           ' · ' + (v.latency_ms || 0) + 'ms">' + sym + ' ' + escapeHtml((v.soldier || '?').slice(0, 6)) + '</span>';
       }).join('') + '</div>';
       const sid = s.session_id || '?';
-      html += '<tr><td><b><span title="' + escapeHtml(sid) + '">' + escapeHtml(Human.hash(sid, 16)) + '</span></b><br>' +
+      const safeSid = sid.replace(/'/g, "\\'");
+      html += '<tr class="board-row" data-sid="' + escapeHtml(sid) + '"><td><b><span title="' + escapeHtml(sid) + '">' + escapeHtml(Human.hash(sid, 16)) + '</span></b><br>' +
         '<span style="color:var(--text3);font-size:10px">' + relPast(s.timestamp) + '</span></td>' +
         '<td>' + escapeHtml(truncate(s.directive || '', 200)) + '</td>' +
         '<td class="' + cls + '">' + escapeHtml(outcome) + '</td>' +
         '<td>' + (typeof s.weighted_score === 'number' ? s.weighted_score.toFixed(3) : '?') + '</td>' +
-        '<td>' + voteHtml + '</td></tr>';
+        '<td>' + voteHtml + '</td>' +
+        '<td><button class="board-expand" onclick="boardDrill(\'' + safeSid + '\')" title="open full session detail">▸</button></td></tr>';
     }
     html += '</tbody></table>';
     box.innerHTML = html;
@@ -1459,6 +1471,118 @@ async function refreshBoardroom() {
     box.innerHTML = '<div class="empty">boardroom unavailable: ' + escapeHtml(e.message) + '</div>';
   }
 }
+
+// ── boardroom drill-down (click a row → full session card) ──
+let _boardActive = null;
+async function boardDrill(sid) {
+  const drill = $('board-drill');
+  if (!drill) return;
+  if (_boardActive === sid) {
+    drill.hidden = true;
+    drill.innerHTML = '';
+    _boardActive = null;
+    document.querySelectorAll('.board-row').forEach(r => r.classList.remove('active'));
+    return;
+  }
+  _boardActive = sid;
+  drill.hidden = false;
+  drill.innerHTML = '<div class="empty">loading session ' + escapeHtml(sid) + '…</div>';
+  document.querySelectorAll('.board-row').forEach(r => {
+    r.classList.toggle('active', r.getAttribute('data-sid') === sid);
+  });
+  try {
+    const r = await fetch('/insight/boardroom/session/' + encodeURIComponent(sid));
+    const d = await r.json();
+    drill.innerHTML = _renderBoardSession(d);
+    drill.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+  } catch (e) {
+    drill.innerHTML = '<div class="empty">session unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+function _renderBoardSession(d) {
+  if (d.error || !d.session_id) {
+    return '<div class="drill-head"><h3>session not found</h3>' +
+      '<button class="drill-close" onclick="boardDrill(\'' + escapeHtml(_boardActive || '') + '\')">✕</button></div>' +
+      '<div class="empty">' + escapeHtml(d.error || 'no record') + '</div>';
+  }
+  const outcome = (d.outcome || '?').toLowerCase();
+  const score = typeof d.weighted_score === 'number' ? d.weighted_score : 0;
+  const threshold = d.consensus_threshold || 0.666;
+  const importance = d.importance || '';
+  const directive = d.directive || '';
+  const votes = d.votes || [];
+  const dissent = d.dissent_branches || [];
+  const mr = d.model_report || {};
+  const safeSid = (_boardActive || '').replace(/'/g, "\\'");
+
+  let html = '<div class="drill-head">' +
+    '<h3>▸ session ' + escapeHtml(Human.hash(d.session_id, 16)) + '</h3>' +
+    '<span class="sub">' + relPast(d.timestamp || 0) + ' · ' + escapeHtml(importance) + '</span>' +
+    ' <a href="/insight/boardroom/session/' + encodeURIComponent(d.session_id) + '?h=true" target="_blank" rel="noopener" class="drill-raw">view raw ↗</a>' +
+    ' <button class="drill-close" onclick="boardDrill(\'' + safeSid + '\')" aria-label="close">✕</button>' +
+    '</div>';
+
+  const outcomeColor = outcome === 'approved' ? 'var(--green)' :
+                       outcome === 'rejected' ? 'var(--red)' :
+                       outcome === 'exploration' ? 'var(--amber)' : 'var(--text2)';
+  html += '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:baseline;margin-bottom:10px;font-family:var(--mono);font-size:12px">' +
+    '<span><b style="color:' + outcomeColor + ';text-transform:uppercase">' + escapeHtml(outcome) + '</b></span>' +
+    '<span>weighted_score <b>' + score.toFixed(3) + '</b> / threshold ' + threshold.toFixed(3) + '</span>' +
+    '<span>' + votes.length + ' vote' + (votes.length === 1 ? '' : 's') + '</span>' +
+    '<span>' + dissent.length + ' dissent</span>' +
+    '</div>';
+
+  html += '<div style="font-family:var(--mono);font-size:11.5px;color:var(--text2);margin-bottom:10px;padding:8px 10px;background:rgba(4,6,9,.5);border-radius:4px;border-left:2px solid var(--blue);white-space:pre-wrap;word-break:break-word">' +
+    '<span style="color:var(--text3);font-size:10px;letter-spacing:.5px;text-transform:uppercase">directive</span><br>' +
+    escapeHtml(directive) + '</div>';
+
+  html += '<ul class="drill-list">';
+  for (const v of votes) {
+    const sid = v.soldier || '?';
+    const vote = (v.vote || '').toLowerCase();
+    const sym = vote === 'approve' ? '✓' : vote === 'reject' ? '✗' : '–';
+    const symColor = vote === 'approve' ? 'var(--green)' : vote === 'reject' ? 'var(--red)' : 'var(--text3)';
+    const weight = typeof v.weight === 'number' ? v.weight : 1.0;
+    const veto = v.veto_holder ? ' <span style="color:var(--amber);font-size:10px;font-weight:700">VETO</span>' : '';
+    const provider = v.provider || '?';
+    const confidence = typeof v.confidence === 'number' ? v.confidence : 0;
+    const latency = typeof v.latency_ms === 'number' ? v.latency_ms : 0;
+    const reasoning = (v.reasoning || '').trim();
+    html += '<li class="drill-item kind-board-vote ' + escapeHtml(vote) + '">' +
+      '<details open>' +
+      '<summary>' +
+      '<span style="color:' + symColor + ';font-weight:700;font-size:14px;margin-right:6px">' + sym + '</span>' +
+      '<span class="drill-agent">' + escapeHtml(sid) + '</span>' +
+      ' <span class="drill-kind">weight ' + weight.toFixed(1) + '</span>' + veto +
+      ' <span class="drill-meta">' + escapeHtml(provider) + ' · ' +
+      Human.duration(latency / 1000) + ' · conf ' + confidence.toFixed(2) + '</span>' +
+      '</summary>' +
+      (reasoning ? '<div class="drill-preview" style="white-space:pre-wrap;color:var(--text);max-width:none">' + escapeHtml(reasoning) + '</div>' :
+                   '<div class="drill-preview" style="font-style:italic;color:var(--text3)">no reasoning recorded</div>') +
+      '</details></li>';
+  }
+  html += '</ul>';
+
+  if (Object.keys(mr).length) {
+    html += '<details class="drill-item kind-mr" style="margin-top:10px;padding:8px 10px;border-left-color:var(--violet)">' +
+      '<summary style="color:var(--violet);font-family:var(--mono);font-size:11.5px"><b>model_report</b> — CEO orchestration metadata</summary>' +
+      '<pre class="drill-content" style="margin-top:8px">' + escapeHtml(JSON.stringify(mr, null, 2)) + '</pre>' +
+      '</details>';
+  }
+  if (dissent.length) {
+    html += '<details class="drill-item kind-dissent" style="margin-top:10px;padding:8px 10px;border-left-color:var(--amber)">' +
+      '<summary style="color:var(--amber);font-family:var(--mono);font-size:11.5px"><b>dissent</b> — ' + dissent.length + ' exploration branch' + (dissent.length === 1 ? '' : 'es') + '</summary>' +
+      '<pre class="drill-content" style="margin-top:8px">' + escapeHtml(JSON.stringify(dissent, null, 2)) + '</pre>' +
+      '</details>';
+  }
+  return html;
+}
+// Esc closes the boardroom drill
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && _boardActive) {
+    boardDrill(_boardActive);
+  }
+});
 
 // ── 5. Dream cycles ──
 async function refreshDreams() {

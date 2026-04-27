@@ -1438,5 +1438,24 @@ loadHistory();
   requestAnimationFrame(draw);
 })();
 </script>
+
+<style>
+.governance-footer{max-width:820px;margin:40px auto 30px;padding:14px 18px;border:1px solid var(--glass-border);border-radius:8px;background:rgba(8,12,20,.55);font-family:'Orbitron',sans-serif;font-size:10px;color:var(--text2);line-height:1.7;letter-spacing:.5px}
+.governance-footer h4{font-size:11px;letter-spacing:2px;margin:0 0 8px;color:var(--accent)}
+.governance-footer .tier{display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px dashed rgba(121,192,255,.08)}
+.governance-footer .tier:last-child{border-bottom:0}
+.governance-footer .tier b{min-width:140px;color:var(--text);font-weight:700;font-family:var(--mono),monospace}
+.governance-footer a{color:var(--accent)}
+.governance-footer .badge-now{background:rgba(86,211,100,.12);color:var(--approve);padding:1px 6px;border-radius:3px;font-size:9px;margin-right:4px}
+.governance-footer .badge-soon{background:rgba(227,179,65,.12);color:var(--advisory);padding:1px 6px;border-radius:3px;font-size:9px;margin-right:4px}
+</style>
+
+<div class="governance-footer">
+  <h4>GOVERNANCE HIERARCHY</h4>
+  <div class="tier"><b>① BOARDROOM</b><span><span class="badge-now">NOW</span>CEO + 7 soldiers (CISO/CRO 1.2× veto · CFO/CLO/CPO/CTO/COO 1.0×) — supermajority 0.666 — running on this page. <a href="/insight/boardroom/roles?h=true" target="_blank">role registry</a> · <a href="/doc/BOARDROOM">spec</a></span></div>
+  <div class="tier"><b>② DOJO</b><span><span class="badge-soon">ESCALATION</span>opened by any boardroom seat-holder when consensus fails or a decision needs deeper review. Configurable consensus per dispute: <code>2/3</code>, <code>50/99</code>, supermajority — chosen at convocation. Variations on both boardroom and dojo are supported; the boardroom remains the first hierarchy of decision.</span></div>
+  <div class="tier"><b>③ WAR COUNCIL</b><span><span class="badge-soon">ROADMAP</span>13-seat on-chain assembly at <a href="https://mastermind.pythai.net" target="_blank" rel="noopener">mastermind.pythai.net</a> — CEO + GENIUS / SENATUS / CENSURA / FIDES / TABULARIUM / TESSERA / SPONSIO PACTUM / GUARDIAN / STRATEGIC EVOLUTION / COORDINATOR / TREASURY STEWARD / DOJO MASTER. Tied to BONAFIDE contracts on Polygon mainnet. PYTHAI naming is a toggle within the council.</span></div>
+</div>
+
 </body>
 </html>

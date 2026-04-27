@@ -1939,6 +1939,105 @@ async def insight_boardroom_recent(request: Request, limit: int = 20):
         return {"sessions": [], "count": 0, "error": str(e)}
 
 
+@app.get("/insight/boardroom/session/{session_id}", tags=["insight"], summary="Single boardroom session — full record")
+@_insight_safe
+async def insight_boardroom_session(request: Request, session_id: str):
+    """Full record of one boardroom session: directive, every soldier's vote with
+    weight/provider/latency/confidence/reasoning, dissent branches, model_report
+    (if present). Public, read-only. `?h=true` for plain-text rendering.
+    """
+    from mindx_backend_service.insight_aggregator import BOARDROOM_SESSIONS
+    if not BOARDROOM_SESSIONS.exists():
+        return _maybe_h_text(request, {"error": "no boardroom log yet"}, route_path="/insight/boardroom/session")
+    try:
+        # JSONL scan — sessions file is small (<1k entries typical), single pass is cheap.
+        target = None
+        with BOARDROOM_SESSIONS.open() as f:
+            for ln in f:
+                try:
+                    rec = json.loads(ln)
+                except Exception:
+                    continue
+                if rec.get("session_id") == session_id:
+                    target = rec
+                    # Keep scanning — last write wins if dupes exist (shouldn't, but defensive).
+        if target is None:
+            return _maybe_h_text(request, {"error": "session not found", "session_id": session_id}, route_path="/insight/boardroom/session")
+        # Enrich votes with role weight + veto flag from SOLDIER_WEIGHTS.
+        try:
+            from daio.governance.boardroom import SOLDIER_WEIGHTS, SUPERMAJORITY_THRESHOLD, SOLDIER_PERSONAS
+        except Exception:
+            SOLDIER_WEIGHTS = {}
+            SUPERMAJORITY_THRESHOLD = 0.666
+            SOLDIER_PERSONAS = {}
+        for v in target.get("votes", []) or []:
+            sid = v.get("soldier", "")
+            w = SOLDIER_WEIGHTS.get(sid, 1.0)
+            v.setdefault("weight", w)
+            v.setdefault("veto_holder", w >= 1.2)
+            v.setdefault("persona", (SOLDIER_PERSONAS.get(sid) or "")[:140])
+        target.setdefault("consensus_threshold", SUPERMAJORITY_THRESHOLD)
+        return _maybe_h_text(request, target, route_path="/insight/boardroom/session")
+    except Exception as e:
+        return _maybe_h_text(request, {"error": str(e), "session_id": session_id}, route_path="/insight/boardroom/session")
+
+
+@app.get("/insight/boardroom/roles", tags=["insight"], summary="Boardroom 7-soldier role registry")
+@_insight_safe
+async def insight_boardroom_roles(request: Request):
+    """Static role table for the 7 soldiers + CEO. Drives UI labels and tooltips
+    on /feedback.html#sec-board and /boardroom. Single source of truth is
+    `daio/governance/boardroom.py` (SOLDIER_WEIGHTS + SOLDIER_PERSONAS); this
+    endpoint just exposes it. The 13-seat PYTHAI roster (BOARDROOM.md) is the
+    mainnet roadmap, not yet wired into code.
+    """
+    try:
+        from daio.governance.boardroom import (
+            SOLDIER_WEIGHTS, SOLDIER_PERSONAS, SOLDIER_MODELS,
+            SUPERMAJORITY_THRESHOLD, CLOUD_MODEL,
+        )
+    except Exception as e:
+        return _maybe_h_text(request, {"error": f"boardroom module unavailable: {e}"}, route_path="/insight/boardroom/roles")
+    # Pretty title from soldier_id; veto = weight >= 1.2.
+    def _title(sid: str) -> str:
+        m = {
+            "coo_operations": "Chief Operating Officer",
+            "cfo_finance":    "Chief Financial Officer",
+            "cto_technology": "Chief Technology Officer",
+            "ciso_security":  "Chief Information Security Officer",
+            "clo_legal":      "Chief Legal Officer",
+            "cpo_product":    "Chief Product Officer",
+            "cro_risk":       "Chief Risk Officer",
+        }
+        return m.get(sid, sid.upper())
+    soldiers = {}
+    for sid, weight in SOLDIER_WEIGHTS.items():
+        soldiers[sid] = {
+            "title": _title(sid),
+            "weight": weight,
+            "veto_holder": weight >= 1.2,
+            "local_model": SOLDIER_MODELS.get(sid, ""),
+            "persona": (SOLDIER_PERSONAS.get(sid) or "")[:240],
+        }
+    payload = {
+        "ceo": {
+            "title": "Chief Executive (orchestrator)",
+            "role": "Convenes sessions, breaks ties, executes approved directives. Not a voting seat.",
+        },
+        "soldiers": soldiers,
+        "consensus_threshold": SUPERMAJORITY_THRESHOLD,
+        "cloud_model": CLOUD_MODEL,
+        "spec_link": "/doc/BOARDROOM",
+        "hierarchy": {
+            "tier_1_boardroom": "CEO + 7 soldiers — primary decision tier (this endpoint).",
+            "tier_2_dojo": "Dispute resolution opened by any boardroom seat-holder. Configurable consensus per dispute (2/3, 50/99, supermajority).",
+            "tier_3_war_council": "13-seat on-chain assembly at mastermind.pythai.net (BONAFIDE mainnet). PYTHAI naming toggle. Roadmap.",
+        },
+        "note": "Boardroom is the FIRST hierarchy of decision. Variations exist for both boardroom and dojo, but CEO + 7 soldiers stays the primary tier. See /doc/BOARDROOM for the full spec.",
+    }
+    return _maybe_h_text(request, payload, route_path="/insight/boardroom/roles")
+
+
 @app.get("/insight/interactions/recent", tags=["insight"])
 @_insight_safe
 async def insight_interactions_recent(window: int = 3600):
