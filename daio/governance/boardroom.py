@@ -855,14 +855,15 @@ class Boardroom:
         """
         entry = {
             "session_id": session.session_id,
-            "directive": session.directive[:200],
+            "directive": session.directive[:2000],
             "importance": session.importance,
             "timestamp": session.timestamp,
             "outcome": session.outcome,
             "weighted_score": round(session.weighted_score, 3),
             "votes": [
                 {"soldier": v.soldier_id, "vote": v.vote, "provider": v.provider,
-                 "reasoning": v.reasoning[:200], "confidence": v.confidence, "latency_ms": v.latency_ms}
+                 "reasoning": v.reasoning[:2000], "confidence": v.confidence, "latency_ms": v.latency_ms,
+                 "weight": v.weight}
                 for v in session.votes
             ],
             "dissent_branches": len(session.dissent_branches),
