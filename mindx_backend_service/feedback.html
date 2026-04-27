@@ -810,14 +810,18 @@ async function refreshBDI() {
 }
 
 // ── 4. Improvement ledger — clustered by failure shape ──
-let _ledgerFilter = 'all';   // 'all' | 'succeeded' | 'failed' | 'running'
+// 4-state classifier matches insight_aggregator._compute_improvement_summary
+// so feedback page math equals what /insight/improvement/summary reports.
+let _ledgerFilter = 'all';   // 'all' | 'succeeded' | 'running' | 'errored' | 'failed' | 'blocked'
 function _ledgerClassify(c) {
   const s = (c.overall_campaign_status || c.status || '').toUpperCase();
-  const m = (c.final_bdi_message || '');
-  if (s.includes('SUCC') || /COMPLETED_GOAL_ACHIEVED/.test(m)) return 'succeeded';
-  if (/RUNNING/.test(m) && !/FAIL/.test(m)) return 'running';
+  const m = (c.final_bdi_message || '').toUpperCase();
+  if (m.includes('COMPLETED_GOAL_ACHIEVED') || s === 'SUCCESS') return 'succeeded';
+  if (m.includes('CYCLE EXCEPTION')) return 'errored';
+  if (m.includes('FAILED')) return 'failed';
+  if (m.includes('RUNNING') || s === 'RUNNING' || s === 'IN_PROGRESS') return 'running';
   if (s.includes('BLOCK')) return 'blocked';
-  return 'failed';
+  return 'failed';   // truly unknown
 }
 function _ledgerShape(c) {
   // Extract a stable "shape" string for grouping. Strategy:
@@ -848,37 +852,71 @@ async function refreshLedger() {
       return;
     }
 
-    // ── Status counts ──
-    const counts = { total: campaigns.length, succeeded: 0, failed: 0, running: 0, blocked: 0 };
+    // ── Status counts (5-state to match aggregator: succeeded/running/errored/failed/blocked) ──
+    const counts = { total: campaigns.length, succeeded: 0, running: 0, errored: 0, failed: 0, blocked: 0 };
     for (const c of campaigns) counts[_ledgerClassify(c)]++;
-    pill.textContent = counts.total + ' total · ' + counts.succeeded + ' OK · ' + counts.failed + ' fail';
-    pill.className = 'pill ' + (counts.succeeded > 0 ? 'ok' : counts.failed > 0 ? 'warn' : 'amber');
-    _setBadge('improvements', counts.failed, counts.succeeded === 0 && counts.failed > 0 ? 'warn' : '');
+    // Sanity check the math — the page must never lie about totals
+    const sumCheck = counts.succeeded + counts.running + counts.errored + counts.failed + counts.blocked;
+    const mathOK = sumCheck === counts.total;
 
-    // Status histogram + counters
-    let html = '<div class="status-row">';
+    // Honest pill: show every non-zero bucket so all numbers add up visibly.
+    const pillParts = [counts.total + ' total'];
+    if (counts.succeeded) pillParts.push(counts.succeeded + ' ok');
+    if (counts.running)   pillParts.push(counts.running + ' run');
+    if (counts.errored)   pillParts.push(counts.errored + ' err');
+    if (counts.failed)    pillParts.push(counts.failed + ' fail');
+    if (counts.blocked)   pillParts.push(counts.blocked + ' block');
+    if (!mathOK) pillParts.push('!math:' + sumCheck);
+    pill.textContent = pillParts.join(' · ');
+    pill.className = 'pill ' + (counts.succeeded > 0 ? 'ok' : (counts.errored > 0 ? 'warn' : 'amber'));
+    _setBadge('improvements', counts.errored + counts.failed, counts.succeeded === 0 ? 'warn' : '');
+
+    // Status histogram + counters (5 cells)
+    let html = '<div class="status-row" style="grid-template-columns:repeat(6,1fr)">';
     html += '<div class="status-cell"><div class="lbl">total</div><div class="val">' + Human.count(counts.total) + '</div></div>';
     html += '<div class="status-cell ok"><div class="lbl">succeeded</div><div class="val">' + Human.count(counts.succeeded) + '</div></div>';
+    html += '<div class="status-cell run"><div class="lbl">max-cycle</div><div class="val">' + Human.count(counts.running) + '</div></div>';
+    html += '<div class="status-cell fail" style="border-left-color:#e3b341"><div class="lbl">errored</div><div class="val" style="color:var(--amber)">' + Human.count(counts.errored) + '</div></div>';
     html += '<div class="status-cell fail"><div class="lbl">failed</div><div class="val">' + Human.count(counts.failed) + '</div></div>';
-    html += '<div class="status-cell run"><div class="lbl">running/maxed</div><div class="val">' + Human.count(counts.running) + '</div></div>';
     html += '<div class="status-cell block"><div class="lbl">blocked</div><div class="val">' + Human.count(counts.blocked) + '</div></div>';
     html += '</div>';
 
     if (counts.total > 0) {
       const T = counts.total;
-      html += '<div class="histogram" title="status distribution">';
-      if (counts.succeeded) html += '<span class="h-ok" style="width:' + (counts.succeeded/T*100) + '%"></span>';
-      if (counts.running)   html += '<span class="h-run" style="width:' + (counts.running/T*100) + '%"></span>';
+      html += '<div class="histogram" title="status distribution — must sum to total">';
+      if (counts.succeeded) html += '<span class="h-ok"    style="width:' + (counts.succeeded/T*100) + '%"></span>';
+      if (counts.running)   html += '<span class="h-run"   style="width:' + (counts.running/T*100) + '%"></span>';
+      if (counts.errored)   html += '<span             style="width:' + (counts.errored/T*100) + '%;background:#e3b341"></span>';
       if (counts.blocked)   html += '<span class="h-block" style="width:' + (counts.blocked/T*100) + '%"></span>';
-      if (counts.failed)    html += '<span class="h-fail" style="width:' + (counts.failed/T*100) + '%"></span>';
+      if (counts.failed)    html += '<span class="h-fail"  style="width:' + (counts.failed/T*100) + '%"></span>';
       html += '</div>';
       const pct = (n) => Math.round(n/T*100) + '%';
-      html += '<div class="histogram-legend">' +
-        (counts.succeeded ? '<span style="color:var(--green)">' + pct(counts.succeeded) + ' succeeded</span> · ' : '') +
-        (counts.running ? '<span style="color:var(--amber)">' + pct(counts.running) + ' running/max-cycle</span> · ' : '') +
-        (counts.blocked ? '<span style="color:var(--violet)">' + pct(counts.blocked) + ' blocked</span> · ' : '') +
-        (counts.failed ? '<span style="color:var(--red)">' + pct(counts.failed) + ' failed</span>' : '') +
-      '</div>';
+      const legendParts = [];
+      if (counts.succeeded) legendParts.push('<span style="color:var(--green)">'  + pct(counts.succeeded) + ' succeeded</span>');
+      if (counts.running)   legendParts.push('<span style="color:var(--amber)">'  + pct(counts.running)   + ' max-cycle (clean)</span>');
+      if (counts.errored)   legendParts.push('<span style="color:var(--amber)">'  + pct(counts.errored)   + ' errored (cycle exception)</span>');
+      if (counts.blocked)   legendParts.push('<span style="color:var(--violet)">' + pct(counts.blocked)   + ' blocked</span>');
+      if (counts.failed)    legendParts.push('<span style="color:var(--red)">'    + pct(counts.failed)    + ' failed (planning/recovery)</span>');
+      html += '<div class="histogram-legend">' + legendParts.join(' · ') + '</div>';
+    }
+
+    // ── Honest "why no successes" callout ──
+    // Surfaces only when there are zero successes — otherwise hides itself.
+    if (counts.succeeded === 0 && counts.total > 0) {
+      const partsList = [];
+      if (counts.failed)  partsList.push('<b style="color:var(--red)">'    + counts.failed  + '× failed</b> (planning or execution)');
+      if (counts.running) partsList.push('<b style="color:var(--amber)">'  + counts.running + '× max-cycle</b> (BDI ran out of cycles cleanly — typically NO_OP skeleton)');
+      if (counts.errored) partsList.push('<b style="color:var(--amber)">'  + counts.errored + '× errored</b> (unhandled cycle exception)');
+      if (counts.blocked) partsList.push('<b style="color:var(--violet)">' + counts.blocked + '× blocked</b>');
+      html += '<div style="margin:14px 0;padding:12px 14px;background:rgba(248,81,73,.05);border:1px solid rgba(248,81,73,.2);border-left:3px solid var(--red);border-radius:6px;font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--text2)">' +
+        '<b style="color:var(--text);font-size:12px">no successful campaigns in window of ' + counts.total + '</b><br>' +
+        'distribution: ' + partsList.join(' · ') + '<br>' +
+        '<span style="color:var(--text3);font-size:10.5px">' +
+        '"max-cycle (clean)" means the BDI loop hit its cycle limit without crashing — typically because the skeleton fallback ran NO_OP repeatedly. ' +
+        'Production cause today: the cognition chain has not produced verified wisdom yet (see ' +
+        '<a href="#sec-cognition" onclick="document.getElementById(\\'sec-cognition\\').scrollIntoView({behavior:\\'smooth\\'})">cognitive ascent</a>). ' +
+        'Click any cluster below for the matching BDI run trace.' +
+        '</span></div>';
     }
 
     // Filter chips
@@ -890,8 +928,10 @@ async function refreshLedger() {
     };
     html += mkChip('all', 'All', counts.total, false);
     html += mkChip('succeeded', 'Successes', counts.succeeded, counts.succeeded === 0);
+    html += mkChip('running', 'Max-cycle', counts.running, counts.running === 0);
+    html += mkChip('errored', 'Errored', counts.errored, counts.errored === 0);
     html += mkChip('failed', 'Failures', counts.failed, counts.failed === 0);
-    html += mkChip('running', 'Running/maxed', counts.running, counts.running === 0);
+    if (counts.blocked) html += mkChip('blocked', 'Blocked', counts.blocked, false);
     html += '</div>';
 
     // ── Cluster grouping ──
