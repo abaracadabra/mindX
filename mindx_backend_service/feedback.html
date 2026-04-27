@@ -4,9 +4,56 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>mindX feedback — see into the mind</title>
-<meta name="description" content="Live agent dialogue, improvement choices, dream cycles, and stuck-loop detection for the mindX autonomous agent system.">
-<meta name="robots" content="index, follow">
+<meta name="description" content="Live operator console for mindX: agent dialogue (SSE), self-improvement ledger, BDI activity, dream cycles, stuck-loop detection, boardroom decisions, on-chain memory anchors, cognitive ascent (information → knowledge → concept → wisdom → THOT), and psutil-based system pulse. Public, read-only, refreshes every 15–60s.">
+<meta name="keywords" content="mindX, autonomous agents, BDI, AGInt, RAGE, machine.dreaming, THOT, DAIO, boardroom, Gödel machine, self-improvement, multi-agent system, FastAPI, Ollama, Mistral, Gemini, pgvector, IPFS, on-chain memory, cognitive ascent">
+<meta name="author" content="mindX (codephreak)">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#040609">
 <link rel="canonical" href="https://mindx.pythai.net/feedback.html">
+
+<!-- Open Graph (Facebook, LinkedIn, Slack, Discord previews) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="mindX">
+<meta property="og:url" content="https://mindx.pythai.net/feedback.html">
+<meta property="og:title" content="mindX feedback — see into the mind">
+<meta property="og:description" content="Live operator console: agent dialogue, self-improvement ledger, BDI activity, dream cycles, boardroom decisions, on-chain memory, cognitive-ascent chain, psutil system pulse.">
+<meta property="og:image" content="https://mindx.pythai.net/favicon-32.png">
+
+<!-- Twitter card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:url" content="https://mindx.pythai.net/feedback.html">
+<meta name="twitter:title" content="mindX feedback — see into the mind">
+<meta name="twitter:description" content="Live operator console: BDI · dreams · boardroom · cognitive ascent · psutil pulse · on-chain memory.">
+<meta name="twitter:image" content="https://mindx.pythai.net/favicon-32.png">
+
+<!-- Schema.org JSON-LD: SoftwareApplication + WebSite for richer indexing -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "mindX",
+      "alternateName": ["mindX autonomous agent", "Gödel machine"],
+      "url": "https://mindx.pythai.net",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Linux",
+      "description": "Autonomous multi-agent orchestration system implementing a Belief-Desire-Intention (BDI) cognitive architecture with Ethereum-compatible wallet authentication, multi-provider LLM routing, dream-cycle memory consolidation, and on-chain THOT (knowledge anchor) minting.",
+      "author": { "@type": "Person", "name": "codephreak", "url": "https://github.com/Professor-Codephreak" },
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    },
+    {
+      "@type": "WebSite",
+      "url": "https://mindx.pythai.net",
+      "name": "mindX feedback",
+      "description": "Live operator console for the mindX autonomous agent system — every signal the system can produce about itself, on one page.",
+      "publisher": { "@type": "Organization", "name": "PYTHAI", "url": "https://pythai.net" }
+    }
+  ]
+}
+</script>
+
+<link rel="alternate" type="text/plain" title="mindX feedback (plain text)" href="https://mindx.pythai.net/feedback.txt">
 <link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=DM+Sans:wght@400;500;700&display=swap" as="style" onload="this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=DM+Sans:wght@400;500;700&display=swap"></noscript>
@@ -280,7 +327,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
     <span class="sub">/insight/cognition · information → knowledge → concept → wisdom → THOT → ingestion → feedback</span>
   </div>
   <p class="sec-desc">
-    Honest snapshot of the chain the thesis describes. Each cell shows whether mindX is actually <b style="color:var(--green)">producing</b> at that tier today, is <b style="color:var(--amber)">ready/gated</b>, or is <b style="color:var(--red)">not implemented</b>. The chain runs raw STM (information) → <abbr title="machine.dreaming 7-phase consolidation: state assessment → input preprocessing → symbolic aggregation → insight scoring → memory storage → parameter tuning → memory pruning">dream consolidation</abbr> → LTM (knowledge: statistics + patterns) → <abbr title="LLM-extracted atomic rules: premise → conclusion with confidence">concept extraction</abbr> → <abbr title="Concepts that have been verified ≥3× with confidence ≥0.85 — Bayesian update over BDI outcomes">verified wisdom</abbr> → <abbr title="On-chain ERC721 anchor (THOT.mintTHOT) of the wisdom CID — makes wisdom externally citable">THOT mint</abbr> → external ingestion → BDI <code>perceive()</code> reads wisdom → next cycle. <a href="/insight/cognition?h=true" target="_blank" rel="noopener">view raw</a>
+    Honest snapshot of the chain the <a href="/doc/THESIS">thesis</a> describes. Each cell shows whether mindX is actually <b style="color:var(--green)">producing</b> at that tier today, is <b style="color:var(--amber)">ready/gated</b>, or is <b style="color:var(--red)">not implemented</b>. The chain runs raw STM (<a href="/doc/memory">information</a>) → <a href="/doc/agents/machine_dreaming"><abbr title="machine.dreaming 7-phase consolidation: state assessment → input preprocessing → symbolic aggregation → insight scoring → memory storage → parameter tuning → memory pruning">dream consolidation</abbr></a> → LTM (knowledge: statistics + patterns) → <abbr title="LLM-extracted atomic rules: premise → conclusion with confidence">concept extraction</abbr> → <abbr title="Concepts that have been verified ≥3× with confidence ≥0.85 — Bayesian update over BDI outcomes">verified wisdom</abbr> → <a href="/doc/THOT_NEXT_STEPS"><abbr title="On-chain ERC721 anchor (THOT.mintTHOT) of the wisdom CID — makes wisdom externally citable">THOT mint</abbr></a> → external ingestion → <a href="/doc/agents/bdi_agent">BDI</a> <code>perceive()</code> reads wisdom → next cycle. <a href="/insight/cognition?h=true" target="_blank" rel="noopener">view raw</a> · <a href="/doc/insight_aggregator">how this is computed</a>
   </p>
   <div id="cognition" class="card"><div class="empty">loading…</div></div>
   <div class="sec-head" style="margin-top:18px">
@@ -288,7 +335,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
     <span class="sub">/insight/system · psutil host + self-process snapshot · feeds BDI <code>perceive()</code></span>
   </div>
   <p class="sec-desc">
-    Live host metrics from <code>psutil</code>: CPU/memory/swap/disk pressure, established sockets, and the mindX backend process's own footprint (RSS/threads/file descriptors). When pressure is detected, the BDI planning prompt receives a <code>SYSTEM STATE: … [PRESSURE: …]</code> preamble nudging it toward lightweight actions.
+    Live host metrics from <a href="https://psutil.readthedocs.io" target="_blank" rel="noopener"><code>psutil</code></a>: CPU/memory/swap/disk pressure, established sockets, and the mindX backend process's own footprint (RSS/threads/file descriptors). When pressure is detected, the <a href="/doc/agents/bdi_agent">BDI</a> planning prompt receives a <code>SYSTEM STATE: … [PRESSURE: …]</code> preamble nudging it toward lightweight actions.
   </p>
   <div id="sysPulse" class="card"><div class="empty">loading…</div></div>
 </section>
@@ -301,7 +348,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
     <span class="sub">/insight/stuck_loops?window=900</span>
   </div>
   <p class="sec-desc">
-    Groups identical <code>(agent, step)</code> tuples seen in the last 15 min. A row here means an agent is repeating the same action shape ≥5 times — usually a planning bug or tool failure that needs human eyes. <abbr title="A circuit breaker that detects no-progress loops in autonomous agents and gates further attempts">Loop detection</abbr> is server-computed from the <abbr title="In-memory ring buffer of last 200 agent events, broadcast over SSE">ActivityFeed</abbr> ring buffer.
+    Groups identical <code>(agent, step)</code> tuples seen in the last 15 min. A row here means an agent is repeating the same action shape ≥5 times — usually a planning bug or tool failure that needs human eyes. <abbr title="A circuit breaker that detects no-progress loops in autonomous agents and gates further attempts">Loop detection</abbr> is server-computed from the <a href="/doc/insight_aggregator"><abbr title="In-memory ring buffer of last 200 agent events, broadcast over SSE">ActivityFeed</abbr></a> ring buffer.
   </p>
   <div id="stuckBox"><div class="empty">scanning recent activity…</div></div>
 </section>
@@ -313,7 +360,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
     <span class="sub">/insight/thinking/live · rooms: thinking · improvement · godel · boardroom · memory</span>
   </div>
   <p class="sec-desc">
-    Server-sent stream of every agent thinking step, improvement event, <abbr title="Decisions logged with rationale to godel_choices.jsonl — mindX's self-reference audit trail">gödel choice</abbr>, boardroom event, and memory operation as they happen. Click <code>⋯</code> on any row to see the full event payload. The newest event is always at the top.
+    Server-sent stream of every agent thinking step, improvement event, <a href="/doc/AGINT"><abbr title="Decisions logged with rationale to godel_choices.jsonl — mindX's self-reference audit trail">gödel choice</abbr></a>, <a href="/doc/DAIO">boardroom</a> event, and <a href="/doc/memory">memory</a> operation as they happen. Click <code>⋯</code> on any row to see the full event payload. The newest event is always at the top.
   </p>
   <div id="dialogue"><div class="empty">waiting for events…</div></div>
 </section>
@@ -321,7 +368,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
 <!-- 3. BDI activity — detailed plan/deliberation/action events -->
 <section id="sec-bdi">
   <div class="sec-head">
-    <h2><abbr title="Belief-Desire-Intention reasoning loop">BDI</abbr> activity <span id="bdiPill" class="pill">checking…</span></h2>
+    <h2><a href="/doc/agents/bdi_agent"><abbr title="Belief-Desire-Intention reasoning loop">BDI</abbr></a> activity <span id="bdiPill" class="pill">checking…</span></h2>
     <span class="sub">/insight/bdi/recent · process_trace.jsonl · runs grouped, params + results inline</span>
   </div>
   <p class="sec-desc">
@@ -337,7 +384,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
     <span class="sub">/insight/improvement/timeline ⨝ /insight/godel/recent · grouped by failure shape</span>
   </div>
   <p class="sec-desc">
-    Each row is one autonomous campaign mindX attempted. Identical-failure rows collapse into one expandable cluster — 200 raw rows become 4 named failure modes with counts. The status histogram above the clusters shows the honest ratio. Click any run inside a cluster, then <code>show BDI →</code> to jump to its trace.
+    Each row is one autonomous campaign <a href="/doc/agents/mastermind_agent">mindX</a> attempted. Identical-failure rows collapse into one expandable cluster — 200 raw rows become 4 named failure modes with counts. The status histogram above the clusters shows the honest ratio. Click any run inside a cluster, then <code>show BDI →</code> to jump to its trace. <a href="/doc/insight_aggregator">how counts are bucketed</a>.
   </p>
   <div id="ledger" class="card"><div class="empty">loading…</div></div>
 </section>
@@ -349,7 +396,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
     <span class="sub">/insight/boardroom/recent</span>
   </div>
   <p class="sec-desc">
-    Every directive evaluated by the 7-soldier <abbr title="CEO + Seven Soldiers (CISO, CRO, CFO, CLO, CPO, CTO, COO) consensus mechanism">boardroom</abbr>. CISO and CRO weight 1.2× as veto holders. Hover any vote chip for the soldier's per-call reasoning + provider + latency. Outcome is approved at weighted score ≥ 0.666; minority dissent creates exploration branches.
+    Every directive evaluated by the 7-soldier <a href="/doc/DAIO"><abbr title="CEO + Seven Soldiers (CISO, CRO, CFO, CLO, CPO, CTO, COO) consensus mechanism">boardroom</abbr></a>. CISO and CRO weight 1.2× as veto holders. Hover any vote chip for the soldier's per-call reasoning + provider + latency. Outcome is approved at weighted score ≥ 0.666; minority dissent creates exploration branches. See also <a href="/doc/agents/ceo_agent">CEO Agent</a>.
   </p>
   <div id="boardroom" class="card"><div class="empty">loading…</div></div>
 </section>
@@ -363,7 +410,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
     <span class="sub">/insight/dreams/recent · machine_dreaming</span>
   </div>
   <p class="sec-desc">
-    The 7-phase <abbr title="STM → LTM consolidation: 1) state assessment 2) input preprocessing 3) symbolic aggregation 4) insight scoring 5) memory storage 6) parameter tuning 7) memory pruning">machine.dreaming</abbr> cycle runs every 8 hours. Each row shows agents dreamed, insights generated, memories promoted to LTM, lunar phase, duration, and per-agent tuning recommendations. If <code>last_dream_age</code> exceeds 9h, the loop has likely crashed — see stuck-loop detector.
+    The 7-phase <a href="/doc/agents/machine_dreaming"><abbr title="STM → LTM consolidation: 1) state assessment 2) input preprocessing 3) symbolic aggregation 4) insight scoring 5) memory storage 6) parameter tuning 7) memory pruning">machine.dreaming</abbr></a> cycle runs every 8 hours. Each row shows agents dreamed, insights generated, memories promoted to <a href="/doc/memory">LTM</a>, lunar phase, duration, and per-agent tuning recommendations. If <code>last_dream_age</code> exceeds 9h, the loop has likely crashed — see stuck-loop detector.
   </p>
   <div id="dreams" class="card"><div class="empty">loading…</div></div>
 </section>
@@ -392,7 +439,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
     <span class="sub">/insight/storage/status &middot; /insight/storage/recent &middot; /storage/anchor/health</span>
   </div>
   <p class="sec-desc">
-    Memory tiers: local files → IPFS pin (<a href="https://lighthouse.storage" target="_blank" rel="noopener">Lighthouse</a> + nft.storage) → optional on-chain anchor on <abbr title="ARC chain DatasetRegistry — permissionless registerDataset(bytes32,string)">ARC</abbr> or curated mint as <abbr title="Transferable Hyper-Optimized Tensor — ERC721 storing IPFS CID + dimensions on chain">THOT</abbr>. Cluster CID and tx-hash links are clickable to the relevant gateway/explorer. Anchor configuration shown below the counters.
+    <a href="/doc/memory">Memory tiers</a>: local files → IPFS pin (<a href="https://lighthouse.storage" target="_blank" rel="noopener">Lighthouse</a> + nft.storage) → optional on-chain anchor on <a href="/doc/DAIO"><abbr title="ARC chain DatasetRegistry — permissionless registerDataset(bytes32,string)">ARC</abbr></a> or curated mint as <a href="/doc/THOT_NEXT_STEPS"><abbr title="Transferable Hyper-Optimized Tensor — ERC721 storing IPFS CID + dimensions on chain">THOT</abbr></a>. Cluster CID and tx-hash links are clickable to the relevant gateway/explorer. Anchor configuration shown below the counters. See <a href="/doc/KNOWLEDGE_CATALOGUE">Knowledge Catalogue</a> for the projection-layer design.
   </p>
   <div id="storage" class="card"><div class="empty">loading…</div></div>
 </section>
