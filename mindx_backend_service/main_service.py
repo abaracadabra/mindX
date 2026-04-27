@@ -2019,7 +2019,13 @@ async def insight_boardroom_roles(request: Request):
             "local_model": SOLDIER_MODELS.get(sid, ""),
             "persona": (SOLDIER_PERSONAS.get(sid) or "")[:240],
         }
+    try:
+        from daio.governance.boardroom import boardroom_llm_knobs
+        knobs = boardroom_llm_knobs()
+    except Exception:
+        knobs = {}
     payload = {
+        "llm_knobs": knobs,
         "ceo": {
             "title": "Chief Executive (orchestrator)",
             "role": "Convenes sessions, breaks ties, executes approved directives. Not a voting seat. Identity verified by signature.",

@@ -166,6 +166,44 @@ Plain-text output (truncated):
 
 Each result row carries `persona_source: "files" | "fallback"`. If any soldier reports `"fallback"`, at least one of the three files is missing for that member.
 
+## Adjustable LLM knobs (runtime-tunable)
+
+Beyond the per-member files, the inference layer exposes five knobs that mindX can adjust without code changes. All are env-overridable; defaults shown:
+
+| Env var | Default | Effect |
+|---|---|---|
+| `BOARDROOM_MAX_CONCURRENT` | **8** | semaphore limit during convene — how many soldier votes fly simultaneously. With cloud routing through one shared model (`gpt-oss:120b-cloud`), 8 is natural — every member can be in flight at once. With local routing, lower to match `OLLAMA_MAX_LOADED_MODELS`. |
+| `BOARDROOM_NUM_CTX` | **8192** | context window in tokens per inference call. Ollama's default is 4096 which truncates long persona prompts (now 1.5–4.2 KB after `.prompt + .agent + .persona` composition) plus directive + JSON output. 8192 is safe; 16384 covers verbose CFO prompts. |
+| `BOARDROOM_NUM_PREDICT` | **2000** | output token budget per vote. 2000 fits a JSON envelope plus ~1500 chars of reasoning. |
+| `BOARDROOM_TEMPERATURE` | **0.3** | sampling temperature for vote inference. Boardroom decisions favour determinism. |
+| `BOARDROOM_ROLLCALL_NUM_PREDICT` | **120** | output budget for the short ack prompt during roll call. ~one sentence. |
+
+VPS Ollama daemon settings (in `/etc/systemd/system/ollama.service.d/concurrency.conf`):
+
+```
+OLLAMA_MAX_LOADED_MODELS=3   # how many models stay resident
+OLLAMA_NUM_PARALLEL=8        # concurrent requests per model (matches MAX_CONCURRENT)
+OLLAMA_KEEP_ALIVE=24h        # don't unload between sessions
+```
+
+Read the active values:
+
+```bash
+curl https://mindx.pythai.net/insight/boardroom/roles?h=true | grep -A8 "adjustable LLM knobs"
+```
+
+Or programmatically:
+
+```python
+from daio.governance.boardroom import boardroom_llm_knobs
+boardroom_llm_knobs()
+# {'max_concurrent': 8, 'num_ctx': 8192, 'num_predict': 2000,
+#  'temperature': 0.3, 'rollcall_num_predict': 120,
+#  'supermajority_threshold': 0.666}
+```
+
+Override by setting the env var on the systemd unit (`/etc/systemd/system/mindx.service.d/`) or in `.env`, then restart `mindx.service`.
+
 ## Editing a member's voice
 
 To change how a member sounds:

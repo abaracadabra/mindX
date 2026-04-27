@@ -70,6 +70,47 @@ SOLDIER_WEIGHTS = {
 
 SUPERMAJORITY_THRESHOLD = 0.666
 
+# ── Adjustable LLM knobs (all env-overridable) ─────────────────────────────
+# These are the inference parameters mindX can tune at runtime without code
+# changes. Surfaced via /insight/boardroom/roles so operators can read them.
+#
+#   BOARDROOM_MAX_CONCURRENT — semaphore limit during convene; how many
+#       soldier votes fly simultaneously. With cloud routing (one model
+#       serves all 8 members), 8 is the natural default — every member
+#       can be in flight at once. With local routing, lower if Ollama
+#       OLLAMA_MAX_LOADED_MODELS can't hold the working set.
+#
+#   BOARDROOM_NUM_CTX — context window size in tokens. Ollama defaults
+#       to 4096 which truncates long persona prompts (now 1.5–4.2 KB
+#       after .prompt + .agent + .persona composition) plus directive +
+#       JSON output. 8192 is safe; 16384 covers the verbose CFO prompt.
+#
+#   BOARDROOM_NUM_PREDICT — output token budget per vote. 2000 tokens
+#       fits a JSON envelope plus ~1500 chars of reasoning.
+#
+#   BOARDROOM_TEMPERATURE — sampling temperature for vote inference.
+#       Boardroom decisions favour determinism; default 0.3.
+#
+#   BOARDROOM_ROLLCALL_NUM_PREDICT — output budget for the short ack
+#       prompt during roll call. Default 120 tokens (~one sentence).
+BOARDROOM_MAX_CONCURRENT = int(os.environ.get("BOARDROOM_MAX_CONCURRENT", "8"))
+BOARDROOM_NUM_CTX = int(os.environ.get("BOARDROOM_NUM_CTX", "8192"))
+BOARDROOM_NUM_PREDICT = int(os.environ.get("BOARDROOM_NUM_PREDICT", "2000"))
+BOARDROOM_TEMPERATURE = float(os.environ.get("BOARDROOM_TEMPERATURE", "0.3"))
+BOARDROOM_ROLLCALL_NUM_PREDICT = int(os.environ.get("BOARDROOM_ROLLCALL_NUM_PREDICT", "120"))
+
+
+def boardroom_llm_knobs() -> Dict[str, Any]:
+    """Return the active LLM knobs as a flat dict for surfacing on /insight."""
+    return {
+        "max_concurrent": BOARDROOM_MAX_CONCURRENT,
+        "num_ctx": BOARDROOM_NUM_CTX,
+        "num_predict": BOARDROOM_NUM_PREDICT,
+        "temperature": BOARDROOM_TEMPERATURE,
+        "rollcall_num_predict": BOARDROOM_ROLLCALL_NUM_PREDICT,
+        "supermajority_threshold": SUPERMAJORITY_THRESHOLD,
+    }
+
 # Local model assignments — from VPS benchmarks and .agent definitions
 # Each soldier uses a different model — no two soldiers think alike
 SOLDIER_MODELS = {
@@ -258,12 +299,11 @@ class Boardroom:
             attending = self.soldier_providers
 
         try:
-            # Concurrency tuned for OLLAMA_NUM_PARALLEL=4 / OLLAMA_MAX_LOADED_MODELS=4
-            # set on the VPS systemd override. With 4 slots Ollama keeps the
-            # working set of soldier-models resident across consecutive votes,
-            # eliminating the cold-load cliff that produced 0/7 roll calls.
-            MAX_CONCURRENT = int(os.environ.get("BOARDROOM_MAX_CONCURRENT", "3"))
-            semaphore = asyncio.Semaphore(MAX_CONCURRENT)
+            # Concurrency from BOARDROOM_MAX_CONCURRENT (default 8). With
+            # cloud routing through one shared model (gpt-oss:120b-cloud),
+            # all 8 members can be in flight simultaneously. With local
+            # routing, lower this to match OLLAMA_MAX_LOADED_MODELS.
+            semaphore = asyncio.Semaphore(BOARDROOM_MAX_CONCURRENT)
 
             async def _limited_query(sid, prov, weight):
                 async with semaphore:
@@ -639,7 +679,11 @@ class Boardroom:
                 "model": model,
                 "prompt": prompt,
                 "stream": False,
-                "options": {"temperature": 0.3, "num_predict": 2000},
+                "options": {
+                    "temperature": BOARDROOM_TEMPERATURE,
+                    "num_ctx":     BOARDROOM_NUM_CTX,
+                    "num_predict": BOARDROOM_NUM_PREDICT,
+                },
             }
             response = None
 
@@ -685,7 +729,7 @@ class Boardroom:
                     from llm.llm_factory import LLMFactory
                     gemini = LLMFactory.create_llm_handler(provider_name="gemini")
                     if gemini:
-                        gresponse = await gemini.generate_text(prompt, temperature=0.3, max_tokens=2000)
+                        gresponse = await gemini.generate_text(prompt, temperature=BOARDROOM_TEMPERATURE, max_tokens=BOARDROOM_NUM_PREDICT)
                         if gresponse and not gresponse.startswith("Error"):
                             response = gresponse
                             used_model = "gemini"
@@ -1035,7 +1079,11 @@ class Boardroom:
                 "model": CLOUD_MODEL if cloud_ok else local_model,
                 "prompt": prompt,
                 "stream": False,
-                "options": {"temperature": 0.0, "num_predict": 80},
+                "options": {
+                    "temperature": 0.0,
+                    "num_ctx":     BOARDROOM_NUM_CTX,
+                    "num_predict": BOARDROOM_ROLLCALL_NUM_PREDICT,
+                },
             }
             t0 = time.time()
             ack = ""

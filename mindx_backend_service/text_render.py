@@ -570,6 +570,15 @@ def render_boardroom_roles(d: dict) -> str:
     lines.append(f"  consensus threshold:  {d.get('consensus_threshold', 0.666):.3f}")
     lines.append(f"  cloud model:          {d.get('cloud_model', '')}")
     lines.append("")
+    knobs = d.get("llm_knobs") or {}
+    if knobs:
+        lines.append("  ─── adjustable LLM knobs (env-overridable) ───")
+        lines.append(f"  max_concurrent:       {knobs.get('max_concurrent')}      BOARDROOM_MAX_CONCURRENT")
+        lines.append(f"  num_ctx:              {knobs.get('num_ctx')}     BOARDROOM_NUM_CTX")
+        lines.append(f"  num_predict:          {knobs.get('num_predict')}      BOARDROOM_NUM_PREDICT")
+        lines.append(f"  temperature:          {knobs.get('temperature')}      BOARDROOM_TEMPERATURE")
+        lines.append(f"  rollcall_num_predict: {knobs.get('rollcall_num_predict')}       BOARDROOM_ROLLCALL_NUM_PREDICT")
+        lines.append("")
     if d.get("note"):
         lines.append(f"  NOTE: {d['note']}")
     lines.append("")
