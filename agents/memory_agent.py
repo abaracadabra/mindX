@@ -1538,21 +1538,39 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             logger.error(f"Failed to enable auto-learning for {agent_id}: {e}", exc_info=True)
             return False
 
-    async def prune_stm(self, max_age_days: int = 30) -> Dict[str, Any]:
+    async def prune_stm(
+        self,
+        max_age_days: int = 14,
+        dry_run: bool = True,
+    ) -> Dict[str, Any]:
         """
-        Archive STM memories older than max_age_days.
-        Moves old files to data/memory/archive/{agent_id}/{date}/ to keep STM lean.
-        machine.dreaming will inevitably prune — this keeps the data/ structure sane.
+        Archive STM date-dirs older than max_age_days. Moves to
+        data/memory/archive/{agent_id}/{date}/.
+
+        Per docs/memory_tiers.md: default age is 14d (was 30) so STM transitions
+        to archive exactly when it becomes eligible for IPFS offload — same
+        cliff, two systems agree.
+
+        dry_run=True (default) returns the plan without moving anything.
+        dry_run=False actually performs the moves and emits info logs.
+
+        Returns:
+            {pruned, would_prune_files, would_prune_bytes, per_agent: [...],
+             agents_affected, max_age_days, cutoff_date, errors,
+             archive_path, dry_run}
         """
         cutoff = datetime.now() - timedelta(days=max_age_days)
         archive_base = self.memory_base_path / "archive"
         pruned = 0
+        would_prune_files = 0
+        would_prune_bytes = 0
         errors = 0
         agents_pruned = set()
+        per_agent: dict[str, dict] = {}
 
         try:
             if not self.stm_path.is_dir():
-                return {"pruned": 0, "status": "no_stm_directory"}
+                return {"pruned": 0, "status": "no_stm_directory", "dry_run": dry_run}
 
             for agent_dir in self.stm_path.iterdir():
                 if not agent_dir.is_dir():
@@ -1562,30 +1580,183 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                         continue
                     try:
                         dir_date = datetime.strptime(date_dir.name, "%Y%m%d")
-                        if dir_date < cutoff:
-                            # Move to archive
-                            archive_dest = archive_base / agent_dir.name / date_dir.name
-                            archive_dest.parent.mkdir(parents=True, exist_ok=True)
-                            shutil.move(str(date_dir), str(archive_dest))
-                            file_count = len(list(archive_dest.glob("*.json")))
-                            pruned += file_count
-                            agents_pruned.add(agent_dir.name)
-                    except (ValueError, OSError) as e:
+                    except (ValueError, OSError):
+                        # Not a YYYYMMDD dir, skip
+                        continue
+                    if dir_date >= cutoff:
+                        continue
+                    # Eligible — count what we'd move
+                    try:
+                        file_list = list(date_dir.glob("*.json"))
+                        file_count = len(file_list)
+                        size_total = 0
+                        for f in file_list:
+                            try:
+                                size_total += f.stat().st_size
+                            except OSError:
+                                pass
+                    except OSError:
+                        file_count, size_total = 0, 0
+
+                    pa = per_agent.setdefault(agent_dir.name, {"files": 0, "bytes": 0, "dates": []})
+                    pa["files"] += file_count
+                    pa["bytes"] += size_total
+                    pa["dates"].append(date_dir.name)
+                    would_prune_files += file_count
+                    would_prune_bytes += size_total
+
+                    if dry_run:
+                        continue
+
+                    # Actually move to archive
+                    archive_dest = archive_base / agent_dir.name / date_dir.name
+                    archive_dest.parent.mkdir(parents=True, exist_ok=True)
+                    try:
+                        shutil.move(str(date_dir), str(archive_dest))
+                        pruned += file_count
+                        agents_pruned.add(agent_dir.name)
+                    except (OSError, shutil.Error) as e:
                         errors += 1
-                        logger.debug(f"Prune skip {date_dir}: {e}")
+                        logger.debug(f"Prune move failed {date_dir} → {archive_dest}: {e}")
+
+            # Sort per-agent list by bytes desc for the operator report
+            per_agent_list = sorted(
+                ({"agent": k, "files": v["files"], "bytes": v["bytes"], "dates": v["dates"]}
+                 for k, v in per_agent.items()),
+                key=lambda d: d["bytes"], reverse=True,
+            )
 
             result = {
+                "dry_run": dry_run,
                 "pruned": pruned,
-                "agents_affected": list(agents_pruned),
+                "would_prune_files": would_prune_files,
+                "would_prune_bytes": would_prune_bytes,
+                "per_agent": per_agent_list,
+                "agents_affected": list(agents_pruned) if not dry_run else list(per_agent.keys()),
                 "max_age_days": max_age_days,
                 "cutoff_date": cutoff.isoformat(),
                 "errors": errors,
                 "archive_path": str(archive_base),
             }
-            if pruned > 0:
+            if not dry_run and pruned > 0:
                 logger.info(f"STM pruned: {pruned} memories archived from {len(agents_pruned)} agents (>{max_age_days} days)")
             return result
 
         except Exception as e:
             logger.error(f"STM pruning failed: {e}", exc_info=True)
-            return {"pruned": 0, "error": str(e)}
+            return {"pruned": 0, "error": str(e), "dry_run": dry_run}
+
+    async def prune_archive_offloaded(
+        self,
+        max_age_days: int = 90,
+        dry_run: bool = True,
+    ) -> Dict[str, Any]:
+        """Delete archive/{agent}/{date}/ dirs that are ≥ max_age_days old AND
+        have a confirmed IPFS CID in pgvector. Without the CID confirmation
+        nothing is deleted — offload-then-delete invariant.
+
+        Per docs/memory_tiers.md: archive lives 90d locally then drains to
+        IPFS. This step is the "delete after CID confirmed" half of the
+        round-trip.
+        """
+        archive_base = self.memory_base_path / "archive"
+        if not archive_base.is_dir():
+            return {"deleted": 0, "status": "no_archive_directory", "dry_run": dry_run}
+
+        cutoff = datetime.now() - timedelta(days=max_age_days)
+        deleted = 0
+        would_delete_files = 0
+        would_delete_bytes = 0
+        skipped_no_cid = 0
+        per_agent: dict[str, dict] = {}
+
+        # Lazy: only check pgvector if anything is age-eligible
+        candidates: list[tuple[Path, str, str]] = []  # (date_dir, agent_id, date_str)
+        for agent_dir in archive_base.iterdir():
+            if not agent_dir.is_dir():
+                continue
+            for date_dir in agent_dir.iterdir():
+                if not date_dir.is_dir():
+                    continue
+                try:
+                    dir_date = datetime.strptime(date_dir.name, "%Y%m%d")
+                except ValueError:
+                    continue
+                if dir_date < cutoff:
+                    candidates.append((date_dir, agent_dir.name, date_dir.name))
+
+        if not candidates:
+            return {
+                "dry_run": dry_run,
+                "deleted": 0,
+                "would_delete_files": 0,
+                "would_delete_bytes": 0,
+                "skipped_no_cid": 0,
+                "per_agent": [],
+                "max_age_days": max_age_days,
+                "status": "no_age_eligible_archives",
+            }
+
+        # Check pgvector for each (agent, date) — has it been offloaded?
+        # Conservative: if pgvector unreachable, skip deletion entirely.
+        cid_confirmed: set[tuple[str, str]] = set()
+        try:
+            from agents import memory_pgvector as _mpg
+            for _, agent_id, date_str in candidates:
+                try:
+                    if hasattr(_mpg, "has_offloaded_cid"):
+                        if await _mpg.has_offloaded_cid(agent_id=agent_id, date=date_str):
+                            cid_confirmed.add((agent_id, date_str))
+                except Exception:
+                    continue
+        except Exception:
+            # pgvector module unreachable — refuse to delete anything
+            return {
+                "dry_run": dry_run,
+                "deleted": 0,
+                "would_delete_files": 0,
+                "would_delete_bytes": 0,
+                "skipped_no_cid": len(candidates),
+                "max_age_days": max_age_days,
+                "status": "pgvector_unreachable_invariant_protects_data",
+            }
+
+        for date_dir, agent_id, date_str in candidates:
+            if (agent_id, date_str) not in cid_confirmed:
+                skipped_no_cid += 1
+                continue
+            try:
+                file_list = list(date_dir.glob("*.json"))
+                file_count = len(file_list)
+                size_total = sum(f.stat().st_size for f in file_list if f.is_file())
+            except OSError:
+                file_count, size_total = 0, 0
+
+            pa = per_agent.setdefault(agent_id, {"files": 0, "bytes": 0, "dates": []})
+            pa["files"] += file_count
+            pa["bytes"] += size_total
+            pa["dates"].append(date_str)
+            would_delete_files += file_count
+            would_delete_bytes += size_total
+
+            if dry_run:
+                continue
+            try:
+                shutil.rmtree(str(date_dir))
+                deleted += file_count
+            except OSError as e:
+                logger.debug(f"Archive delete failed {date_dir}: {e}")
+
+        return {
+            "dry_run": dry_run,
+            "deleted": deleted,
+            "would_delete_files": would_delete_files,
+            "would_delete_bytes": would_delete_bytes,
+            "skipped_no_cid": skipped_no_cid,
+            "per_agent": [
+                {"agent": k, "files": v["files"], "bytes": v["bytes"], "dates": v["dates"]}
+                for k, v in per_agent.items()
+            ],
+            "max_age_days": max_age_days,
+            "cutoff_date": cutoff.isoformat(),
+        }

@@ -1992,6 +1992,95 @@ async def insight_memory_audit(request: Request, fresh: bool = False):
     return _maybe_h_text(request, payload, route_path="/insight/memory/audit")
 
 
+@app.post("/insight/memory/prune", tags=["insight"], summary="Operator-triggered tier-aware prune (default dry_run)")
+@_insight_safe
+async def insight_memory_prune(
+    request: Request,
+    dry_run: bool = True,
+    information_max_age_days: int = 14,
+    archive_max_age_days: int = 90,
+    workspace_rotate_at_bytes: int = 100 * 1024 * 1024,
+    workspace_archive_after_days: int = 30,
+    workspace_delete_after_days: int = 90,
+):
+    """Apply the policy from `/doc/memory_tiers` to /data right now.
+
+    Three operations run in sequence:
+      1. memory_agent.prune_stm — STM dirs ≥ N days → archive (move, no delete)
+      2. memory_agent.prune_archive_offloaded — archive dirs ≥ M days AND
+         IPFS-CID-confirmed → delete local
+      3. agent_workspace_pruner.prune_workspace_traces — orphan rotation +
+         archive + delete (the 20 GB problem)
+
+    `dry_run=true` (default) returns the plan without changing anything.
+    `dry_run=false` actually performs the moves; admin auth gate enforced
+    by the api_access_gate middleware (same as /storage/offload).
+
+    Returns a per-stage breakdown plus a top-line "would free X GB".
+    """
+    out: Dict[str, Any] = {
+        "dry_run": dry_run,
+        "stages": {},
+        "totals": {"would_free_bytes": 0, "did_free_bytes": 0},
+    }
+
+    # Stage 1 — STM → archive
+    try:
+        from agents.memory_agent import MemoryAgent
+        ma = await MemoryAgent.get_instance() if hasattr(MemoryAgent, "get_instance") else MemoryAgent()
+        stm_result = await ma.prune_stm(max_age_days=information_max_age_days, dry_run=dry_run)
+        out["stages"]["stm_to_archive"] = stm_result
+        if dry_run:
+            out["totals"]["would_free_bytes"] += stm_result.get("would_prune_bytes", 0)
+        else:
+            # Stage 1 doesn't actually free bytes (just moves to archive)
+            pass
+    except Exception as e:
+        out["stages"]["stm_to_archive"] = {"error": str(e)}
+
+    # Stage 2 — archive → delete (after IPFS confirmation)
+    try:
+        archive_result = await ma.prune_archive_offloaded(max_age_days=archive_max_age_days, dry_run=dry_run)
+        out["stages"]["archive_to_delete"] = archive_result
+        if dry_run:
+            out["totals"]["would_free_bytes"] += archive_result.get("would_delete_bytes", 0)
+        else:
+            out["totals"]["did_free_bytes"] += archive_result.get("would_delete_bytes", 0)
+    except Exception as e:
+        out["stages"]["archive_to_delete"] = {"error": str(e)}
+
+    # Stage 3 — agent_workspaces orphan rotation + archive + delete
+    try:
+        from agents.storage.agent_workspace_pruner import prune_workspace_traces
+        ws_result = await prune_workspace_traces(
+            project_root=PROJECT_ROOT,
+            rotate_at_bytes=workspace_rotate_at_bytes,
+            archive_after_days=workspace_archive_after_days,
+            delete_after_days=workspace_delete_after_days,
+            dry_run=dry_run,
+        )
+        out["stages"]["workspace_orphan"] = ws_result
+        ws_totals = ws_result.get("totals") or {}
+        if dry_run:
+            # rotated bytes don't free space (file moves within same fs);
+            # archived bytes save (gzip ~20-30%); deleted bytes fully free
+            out["totals"]["would_free_bytes"] += ws_totals.get("would_delete_bytes", 0)
+            out["totals"]["would_free_bytes"] += int(ws_totals.get("would_archive_bytes", 0) * 0.25)  # gzip estimate
+        else:
+            out["totals"]["did_free_bytes"] += ws_totals.get("would_delete_bytes", 0)
+    except Exception as e:
+        out["stages"]["workspace_orphan"] = {"error": str(e)}
+
+    out["computed_at"] = time.time()
+    out["policy_doc"] = "/doc/memory_tiers"
+    out["audit_doc"]  = "/doc/MEMORY_AUDIT_2026_04_27"
+    out["note"] = (
+        "dry_run=false requires admin auth; default is true. "
+        "ltm/* never touched. archive deletes only when IPFS CID confirmed."
+    ) if dry_run else "Live run; check did_free_bytes for actual savings."
+    return _maybe_h_text(request, out, route_path="/insight/memory/prune")
+
+
 @app.get("/insight/memory/tiers", tags=["insight"], summary="Memory tier retention policy + live state")
 async def insight_memory_tiers(request: Request):
     """The retention policy from `/doc/memory_tiers` joined with the live
