@@ -538,6 +538,7 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
           </select>
           <button id="convene-btn" onclick="convene()">Convene</button>
           <button id="rollcall-btn" onclick="bdRollcall()" style="margin-left:8px" title="CEO calls roll: each soldier acknowledges presence">Roll Call</button>
+          <button id="signin-btn" onclick="requestCloudSignin('Operator-initiated')" style="margin-left:8px" title="CEO requests operator signature for Ollama Cloud routing">Cloud Signin</button>
         </div>
         <div id="bd-rollcall-result" style="display:none;margin-top:14px;padding:12px 14px;background:rgba(8,12,20,.55);border:1px solid var(--glass-border);border-left:3px solid var(--accent);border-radius:6px;font-family:'Courier New',monospace;font-size:11px;line-height:1.65"></div>
       </div>
@@ -946,13 +947,85 @@ function closeCard() {
 // Close card on Escape
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCard(); });
 
-function addMessage(sender, content, type='') {
+function addMessage(sender, content, type='', opts={}) {
   const el = document.getElementById('messages');
   const div = document.createElement('div');
   div.className = 'msg ' + type;
-  div.innerHTML = `<div class="sender">${sender}</div><div class="content">${content}</div>`;
+  // opts.html: caller passed pre-sanitized HTML and wants it rendered as-is.
+  // Default: textContent escape so user-controlled strings can't inject.
+  const senderHtml = String(sender).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  if (opts.html) {
+    div.innerHTML = `<div class="sender">${senderHtml}</div><div class="content">${content}</div>`;
+  } else {
+    const safe = String(content).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+    div.innerHTML = `<div class="sender">${senderHtml}</div><div class="content">${safe}</div>`;
+  }
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
+}
+
+// CEO operator-handoff: cloud-signin URL surfaced as a participant interaction.
+async function requestCloudSignin(reason) {
+  addMessage('CEO', 'Detecting cloud authentication state…', 'system');
+  try {
+    const r = await fetch('/insight/boardroom/cloud_signin', {method: 'POST'});
+    const d = await r.json();
+    if (d.error || !d.connect_url) {
+      addMessage('CEO', 'Could not initiate signin handoff: ' + (d.error || 'no URL'), 'reject');
+      return;
+    }
+    const url = d.connect_url;
+    const safeUrl = url.replace(/"/g, '&quot;');
+    const reasonText = reason ? `<div style="margin-bottom:6px;color:#ffd166">Reason: ${String(reason).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</div>` : '';
+    const reused = d.reused ? '<span style="color:var(--text3);font-size:10px;margin-left:6px">(handoff already pending — same URL)</span>' : '';
+    const html =
+      reasonText +
+      `<div style="line-height:1.6">The boardroom needs the operator to authenticate the local Ollama daemon to the cloud, ` +
+      `so the seven soldiers can route through one cloud model and respond in seconds instead of cold-loading sequentially.</div>` +
+      `<div style="margin-top:10px"><a href="${safeUrl}" target="_blank" rel="noopener" ` +
+      `style="display:inline-block;padding:6px 14px;background:var(--accent);color:#000;font-weight:700;` +
+      `border-radius:4px;text-decoration:none;font-family:'Orbitron',sans-serif;letter-spacing:1px;font-size:11px">` +
+      `▸ SIGN FOR THE BOARDROOM</a>${reused}</div>` +
+      `<div style="margin-top:6px;color:var(--text3);font-size:10px;font-family:'Courier New',monospace;word-break:break-all">${safeUrl}</div>` +
+      `<div id="signin-status" style="margin-top:8px;color:var(--text2);font-size:11px">awaiting your click on ollama.com…</div>`;
+    addMessage('CEO → OPERATOR', html, 'system', {html: true});
+    // Poll the status endpoint until the signin process exits.
+    const pollStart = Date.now();
+    const poll = setInterval(async () => {
+      try {
+        const sr = await fetch('/insight/boardroom/cloud_signin/status');
+        const sd = await sr.json();
+        const stEl = document.getElementById('signin-status');
+        if (!stEl) { clearInterval(poll); return; }
+        if (sd.status === 'completed' || sd.status === 'exited') {
+          stEl.textContent = sd.status === 'completed' ? '✓ operator authenticated — cloud routing now active' :
+                             '! signin exited (rc=' + sd.returncode + ') — re-try if cloud still rejects';
+          stEl.style.color = sd.status === 'completed' ? '#00ff88' : '#ffd166';
+          clearInterval(poll);
+          // Trigger an immediate re-roll-call to confirm 7/7 present.
+          if (sd.status === 'completed' && typeof bdRollcall === 'function') {
+            setTimeout(bdRollcall, 1500);
+          }
+        } else if (sd.status === 'awaiting_operator_click') {
+          stEl.textContent = `awaiting your click… (${Math.floor((Date.now()-pollStart)/1000)}s)`;
+        }
+        if (Date.now() - pollStart > 600000) { clearInterval(poll); }  // 10 min cap
+      } catch (e) {
+        // transient — keep polling
+      }
+    }, 2500);
+  } catch (e) {
+    addMessage('CEO', 'Cloud signin handoff failed: ' + e.message, 'reject');
+  }
+}
+
+// Detect lapsed cloud auth from the rollcall result and auto-fire the handoff.
+function maybeAutoSigninHandoff(rollcallResult) {
+  if (!rollcallResult) return;
+  const advice = (rollcallResult.advice || '').toLowerCase();
+  if (advice.includes('signin')) {
+    requestCloudSignin('Ollama Cloud signin lapsed — local daemon returned unauthorized');
+  }
 }
 
 function clearBoard() {
@@ -1413,6 +1486,8 @@ async function bdRollcall() {
     const r = await fetch('/insight/boardroom/rollcall', {method: 'POST'});
     const d = await r.json();
     const results = d.results || {};
+    // If the CEO detects lapsed cloud auth, surface the operator handoff.
+    maybeAutoSigninHandoff(d);
     const sym = {present: '✓', silent: '○', error: '!'};
     const colorMap = {present: '#00ff88', silent: '#ffd166', error: '#ff5e62'};
     const cached = d.cached;

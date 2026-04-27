@@ -916,6 +916,10 @@ class Boardroom:
                         if resp.status == 200:
                             data = await resp.json()
                             ack = (data.get("response") or "").strip()
+                            # Reasoning models (gpt-oss, deepseek-r1) emit
+                            # the answer in `thinking` when `response` is empty.
+                            if not ack:
+                                ack = (data.get("thinking") or "").strip()
                             if not ack and isinstance(data.get("error"), str) and "unauthorized" in data["error"].lower():
                                 unauthorized = True
                         else:
@@ -932,6 +936,8 @@ class Boardroom:
                             if resp.status == 200:
                                 data = await resp.json()
                                 ack = (data.get("response") or "").strip()
+                                if not ack:
+                                    ack = (data.get("thinking") or "").strip()
                 if ack:
                     state = "present"
                     present_count += 1

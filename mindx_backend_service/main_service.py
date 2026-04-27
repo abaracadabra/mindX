@@ -2203,6 +2203,152 @@ async def insight_boardroom_rollcall_get(request: Request, prefer_cloud: bool = 
     return await insight_boardroom_rollcall(request, prefer_cloud=prefer_cloud)
 
 
+# ── Cloud signin handoff — surfaced as a CEO operator-interaction in dialogue ──
+# The CEO discovers the local Ollama daemon's signin has lapsed and asks the
+# human operator to authorize the daemon's ed25519 key on ollama.com. The
+# /boardroom and /feedback.html#sec-board pages render the returned URL as a
+# CEO message in the live dialogue stream — making the signin a participant
+# action rather than an out-of-band ssh task.
+
+import re as _re_mod
+import asyncio as _asyncio_mod
+
+_SIGNIN_LAST_PROC: Optional[_asyncio_mod.subprocess.Process] = None
+_SIGNIN_LAST_URL: Optional[str] = None
+_SIGNIN_LAST_TS: float = 0.0
+
+
+async def _spawn_ollama_signin_capture_url() -> dict:
+    """Spawn `sudo -u ollama ollama signin` in the background and capture the
+    connect URL from its stdout. The process is left running (not awaited /
+    not killed) so the local daemon stays in signin-pending state until the
+    operator completes the click on ollama.com.
+
+    Returns: {connect_url, pid, vps, captured_at, status}
+    """
+    global _SIGNIN_LAST_PROC, _SIGNIN_LAST_URL, _SIGNIN_LAST_TS
+    # If a previous signin process is still alive, reuse its URL (the daemon
+    # is still waiting for the operator to click).
+    if _SIGNIN_LAST_PROC is not None and _SIGNIN_LAST_URL and _SIGNIN_LAST_PROC.returncode is None:
+        return {
+            "connect_url": _SIGNIN_LAST_URL,
+            "pid": _SIGNIN_LAST_PROC.pid,
+            "vps": "srv926215",
+            "status": "in_progress",
+            "captured_at": _SIGNIN_LAST_TS,
+            "reused": True,
+        }
+    try:
+        proc = await _asyncio_mod.create_subprocess_shell(
+            "sudo -n -u ollama /usr/local/bin/ollama signin",
+            stdout=_asyncio_mod.subprocess.PIPE,
+            stderr=_asyncio_mod.subprocess.STDOUT,
+        )
+    except Exception as e:
+        return {"error": f"could not spawn ollama signin: {e}", "status": "error"}
+
+    url = None
+    deadline = time.time() + 5.0
+    out_buf: list[str] = []
+    while time.time() < deadline and url is None:
+        try:
+            line = await _asyncio_mod.wait_for(proc.stdout.readline(), timeout=1.0)
+        except _asyncio_mod.TimeoutError:
+            continue
+        if not line:
+            break
+        s = line.decode("utf-8", errors="ignore")
+        out_buf.append(s)
+        m = _re_mod.search(r"https://ollama\.com/connect\?[^\s]+", s)
+        if m:
+            url = m.group(0)
+            break
+
+    if url is None:
+        # Capture failed — kill the proc so we don't leak it.
+        try:
+            proc.kill()
+        except Exception:
+            pass
+        return {
+            "error": "ollama signin did not emit a connect URL within 5s",
+            "stdout": "".join(out_buf)[:1000],
+            "status": "error",
+        }
+
+    _SIGNIN_LAST_PROC = proc
+    _SIGNIN_LAST_URL = url
+    _SIGNIN_LAST_TS = time.time()
+    return {
+        "connect_url": url,
+        "pid": proc.pid,
+        "vps": "srv926215",
+        "status": "awaiting_operator_click",
+        "captured_at": _SIGNIN_LAST_TS,
+        "reused": False,
+    }
+
+
+@app.post("/insight/boardroom/cloud_signin", tags=["insight"], summary="CEO operator handoff — Ollama Cloud signin URL")
+@_insight_safe
+async def insight_boardroom_cloud_signin(request: Request):
+    """The CEO requests an operator signature. Spawns `ollama signin` on the
+    VPS, captures the magic connect URL, leaves the process alive so the
+    daemon awaits the operator's browser click. Returns the URL for the UI
+    to surface as a participant interaction in the boardroom dialogue.
+
+    Idempotent within a single signin window: repeated POSTs return the same
+    URL while the spawned process is still alive."""
+    payload = await _spawn_ollama_signin_capture_url()
+    if payload.get("connect_url"):
+        # Catalogue event so this shows up in /activity/stream + /feedback.html
+        try:
+            from agents.catalogue.events import emit_catalogue_event
+            await emit_catalogue_event(
+                kind="board.session",
+                actor="ceo_agent_main",
+                payload={
+                    "event": "operator_handoff",
+                    "reason": "ollama_cloud_signin_required",
+                    "connect_url": payload["connect_url"],
+                    "vps": payload.get("vps"),
+                    "message": "CEO: The boardroom requires operator authentication. Click the link to sign for the cloud-routed members.",
+                },
+                source_log="cloud_signin_handoff",
+                source_ref=str(payload.get("captured_at", "")),
+            )
+        except Exception:
+            pass
+    return _maybe_h_text(request, payload, route_path="/insight/boardroom/cloud_signin")
+
+
+@app.get("/insight/boardroom/cloud_signin/status", tags=["insight"], summary="Cloud signin handoff status (idempotent peek)")
+@_insight_safe
+async def insight_boardroom_cloud_signin_status(request: Request):
+    """Peek at the active signin handoff without spawning a new one. Returns
+    `{status: "no_active_signin"}` if nothing is pending, or the active URL
+    if a previous POST is still waiting for the operator."""
+    global _SIGNIN_LAST_PROC, _SIGNIN_LAST_URL, _SIGNIN_LAST_TS
+    if _SIGNIN_LAST_PROC is None or _SIGNIN_LAST_URL is None:
+        return _maybe_h_text(request, {"status": "no_active_signin"}, route_path="/insight/boardroom/cloud_signin/status")
+    if _SIGNIN_LAST_PROC.returncode is not None:
+        # Process exited — operator either clicked successfully or it failed.
+        rc = _SIGNIN_LAST_PROC.returncode
+        return _maybe_h_text(request, {
+            "status": "completed" if rc == 0 else "exited",
+            "returncode": rc,
+            "connect_url": _SIGNIN_LAST_URL,
+            "captured_at": _SIGNIN_LAST_TS,
+        }, route_path="/insight/boardroom/cloud_signin/status")
+    return _maybe_h_text(request, {
+        "status": "awaiting_operator_click",
+        "connect_url": _SIGNIN_LAST_URL,
+        "pid": _SIGNIN_LAST_PROC.pid,
+        "captured_at": _SIGNIN_LAST_TS,
+        "age_seconds": round(time.time() - _SIGNIN_LAST_TS, 1),
+    }, route_path="/insight/boardroom/cloud_signin/status")
+
+
 # ── Per-member fitness leaderboard ──
 # Phase 3 of plan: each soldier ranked by performance + resource consumption.
 # Reads boardroom_sessions.jsonl (untruncated reasoning, latency_ms, vote,
