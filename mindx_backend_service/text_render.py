@@ -373,6 +373,81 @@ def render_boardroom_session(d: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def render_boardroom_rollcall(d: dict) -> str:
+    """Plain-text rendering of /insight/boardroom/rollcall — live ack from each soldier."""
+    if "error" in d and not d.get("results"):
+        return f"roll call failed: {d['error']}\n"
+    lines = ["═══ boardroom — CEO calls roll ═══", ""]
+    if d.get("cached"):
+        lines.append(f"  (cached · {d.get('age_seconds', 0)}s old · next in {d.get('next_invocation_in', 0)}s)")
+        lines.append("")
+    present = d.get("present", 0)
+    total = d.get("total", 0)
+    quorum = d.get("quorum", False)
+    all_present = d.get("all_present", False)
+    cloud = d.get("cloud_used", False)
+    lines.append(f"  attendance:  {present}/{total} present  ·  quorum {'✓' if quorum else '✗'}  ·  full assembly {'✓' if all_present else '✗'}")
+    lines.append(f"  inference:   {'cloud (gpt-oss:120b-cloud)' if cloud else 'local Ollama'}")
+    lines.append("")
+    sym = {"present": "✓", "silent": "○", "error": "!"}
+    color = {"present": "", "silent": "", "error": ""}
+    results = d.get("results") or {}
+    if results:
+        for sid, r in results.items():
+            state = r.get("state", "?")
+            veto = " VETO" if r.get("veto_holder") else ""
+            ack = (r.get("ack") or "").strip().replace("\n", " ")
+            if not ack and state == "silent":
+                ack = "(no response within timeout)"
+            elif not ack and state == "error":
+                ack = f"({(r.get('error') or 'error')[:120]})"
+            lines.append(
+                f"  {sym.get(state, '?')} {sid:<22} weight {r.get('weight', 1.0):.1f}{veto}  "
+                f"{r.get('model_kind', '?'):<6}  {r.get('latency_ms', 0):>6}ms"
+            )
+            if ack:
+                lines.append(f"      {ack[:200]}")
+            lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def render_boardroom_health(d: dict) -> str:
+    """Plain-text rendering of /insight/boardroom/health — CEO roll call."""
+    if "error" in d:
+        return f"boardroom health unavailable: {d['error']}\n"
+    lines = ["═══ boardroom — CEO roll call ═══", ""]
+    lines.append(f"  ollama:           {d.get('ollama_url', '')}")
+    lines.append(f"  reachable:        {'✓' if d.get('ollama_reachable') else '✗'}")
+    lines.append(f"  models pulled:    {d.get('models_pulled_total', 0)}")
+    lines.append(f"  models loaded:    {d.get('models_loaded_total', 0)}")
+    err = d.get("ollama_error")
+    if err:
+        lines.append(f"  ollama error:     {err}")
+    lines.append("")
+    sym = {"ready": "✓", "pulled": "○", "missing": "✗", "error": "!"}
+    soldiers = d.get("soldiers") or {}
+    if soldiers:
+        lines.append(f"  {'soldier':<22} {'state':<10} {'model':<26} weight  veto")
+        lines.append("  " + "─" * 84)
+        for sid, info in soldiers.items():
+            state = info.get("state", "?")
+            veto = "✓" if info.get("veto_holder") else ""
+            lines.append(
+                f"  {sid:<22} {sym.get(state, '?')} {state:<8} "
+                f"{info.get('model', ''):<26} {info.get('weight', 1.0):<6.1f} {veto}"
+            )
+    lines.append("")
+    counts = d.get("counts") or {}
+    lines.append(f"  ready={counts.get('ready', 0)}  pulled={counts.get('pulled', 0)}  missing={counts.get('missing', 0)}  error={counts.get('error', 0)}")
+    lines.append(f"  cloud fallback:   {'✓ ' + (d.get('cloud_model') or '') if d.get('cloud_fallback_configured') else '✗ OFF (set OLLAMA_API_KEY)'}")
+    lines.append(f"  convene_ok:       {'YES' if d.get('convene_ok') else 'NO'}  (quorum threshold: {d.get('ready_quorum_threshold', 4)} ready)")
+    lines.append("")
+    if d.get("advisory"):
+        lines.append("  " + d["advisory"])
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
 def render_boardroom_roles(d: dict) -> str:
     """Plain-text rendering of /insight/boardroom/roles."""
     if "error" in d:
@@ -620,6 +695,8 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/boardroom/recent":    render_boardroom_recent,
     "/insight/boardroom/session":   render_boardroom_session,
     "/insight/boardroom/roles":     render_boardroom_roles,
+    "/insight/boardroom/health":    render_boardroom_health,
+    "/insight/boardroom/rollcall":  render_boardroom_rollcall,
     "/insight/improvement/summary": render_improvement_summary,
     "/insight/stuck_loops":         render_stuck_loops,
     "/storage/eligible":            render_eligible,

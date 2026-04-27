@@ -512,7 +512,7 @@ class Boardroom:
                 "model": model,
                 "prompt": prompt,
                 "stream": False,
-                "options": {"temperature": 0.3, "num_predict": 500},
+                "options": {"temperature": 0.3, "num_predict": 2000},
             }
             response = None
 
@@ -558,7 +558,7 @@ class Boardroom:
                     from llm.llm_factory import LLMFactory
                     gemini = LLMFactory.create_llm_handler(provider_name="gemini")
                     if gemini:
-                        gresponse = await gemini.generate_text(prompt, temperature=0.3, max_tokens=500)
+                        gresponse = await gemini.generate_text(prompt, temperature=0.3, max_tokens=2000)
                         if gresponse and not gresponse.startswith("Error"):
                             response = gresponse
                             used_model = "gemini"
@@ -610,15 +610,15 @@ class Boardroom:
                     # Try 3: Natural language extraction
                     resp_lower = clean.lower()
                     if '"approve"' in resp_lower or 'vote: approve' in resp_lower or 'i approve' in resp_lower:
-                        vote_data = {"vote": "approve", "reasoning": clean[:300], "confidence": 0.6}
+                        vote_data = {"vote": "approve", "reasoning": clean[:2000], "confidence": 0.6}
                     elif '"reject"' in resp_lower or 'vote: reject' in resp_lower or 'i reject' in resp_lower:
-                        vote_data = {"vote": "reject", "reasoning": clean[:300], "confidence": 0.6}
+                        vote_data = {"vote": "reject", "reasoning": clean[:2000], "confidence": 0.6}
                     elif 'approve' in resp_lower and 'reject' not in resp_lower:
-                        vote_data = {"vote": "approve", "reasoning": clean[:300], "confidence": 0.5}
+                        vote_data = {"vote": "approve", "reasoning": clean[:2000], "confidence": 0.5}
                     elif 'reject' in resp_lower and 'approve' not in resp_lower:
-                        vote_data = {"vote": "reject", "reasoning": clean[:300], "confidence": 0.5}
+                        vote_data = {"vote": "reject", "reasoning": clean[:2000], "confidence": 0.5}
                     else:
-                        vote_data = {"vote": "abstain", "reasoning": clean[:300], "confidence": 0.3}
+                        vote_data = {"vote": "abstain", "reasoning": clean[:2000], "confidence": 0.3}
 
             # Label: ollama/model for local, ollama-cloud/model for cloud
             is_cloud = used_model != local_model and model_mode in ("auto", "cloud")
@@ -628,7 +628,7 @@ class Boardroom:
                 soldier_id=soldier_id,
                 provider=provider_label,
                 vote=vote_data.get("vote", "abstain"),
-                reasoning=vote_data.get("reasoning", "")[:300],
+                reasoning=vote_data.get("reasoning", "")[:2000],
                 confidence=float(vote_data.get("confidence", 0.5)),
                 latency_ms=latency,
                 weight=weight,
@@ -814,3 +814,88 @@ class Boardroom:
             }
             for s in self.sessions[-limit:]
         ]
+
+    async def roll_call(self, prefer_cloud: bool = True) -> Dict[str, Any]:
+        """CEO calls roll. Each seated soldier is invoked with a short
+        acknowledgment prompt and must respond. Returns per-soldier presence
+        plus their model/latency/ack-text. Sequential to avoid model-swap
+        thrash on local Ollama; uses cloud model when available for speed.
+
+        ack states:
+            present  — soldier responded with valid ack text
+            silent   — soldier did not respond (timeout or empty)
+            error    — exception during invocation
+        """
+        import aiohttp
+
+        api_key = os.environ.get("OLLAMA_API_KEY", "")
+        cloud_ok = prefer_cloud and bool(api_key)
+
+        results: Dict[str, Any] = {}
+        present_count = 0
+        for soldier_id, local_model in SOLDIER_MODELS.items():
+            persona = SOLDIER_PERSONAS.get(soldier_id, f"You are the {soldier_id}.")
+            weight = SOLDIER_WEIGHTS.get(soldier_id, 1.0)
+            role_pretty = soldier_id.upper().replace("_", " ")
+            prompt = (
+                f"{persona}\n\n"
+                f"The CEO is calling roll for the boardroom. Respond with EXACTLY one short sentence "
+                f"acknowledging your presence, your role, and that you are ready to deliberate. "
+                f'Format: "Present. I am the {role_pretty}, weight {weight}x, ready to deliberate."\n'
+                f"Respond with the acknowledgment only, no JSON, no preamble."
+            )
+            payload = {
+                "model": CLOUD_MODEL if cloud_ok else local_model,
+                "prompt": prompt,
+                "stream": False,
+                "options": {"temperature": 0.0, "num_predict": 80},
+            }
+            t0 = time.time()
+            ack = ""
+            state = "silent"
+            used_model = payload["model"]
+            error = None
+            try:
+                # Try local Ollama first (handles cloud-proxied models too)
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as sess:
+                    async with sess.post(f"{OLLAMA_URL}/api/generate", json=payload) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            ack = (data.get("response") or "").strip()
+                # Fall back to local if cloud failed
+                if not ack and cloud_ok:
+                    payload["model"] = local_model
+                    used_model = local_model
+                    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as sess:
+                        async with sess.post(f"{OLLAMA_URL}/api/generate", json=payload) as resp:
+                            if resp.status == 200:
+                                data = await resp.json()
+                                ack = (data.get("response") or "").strip()
+                if ack:
+                    state = "present"
+                    present_count += 1
+            except Exception as e:
+                error = str(e)[:200]
+                state = "error"
+            latency = int((time.time() - t0) * 1000)
+            results[soldier_id] = {
+                "soldier": soldier_id,
+                "role": role_pretty,
+                "weight": weight,
+                "veto_holder": weight >= 1.2,
+                "model": used_model,
+                "model_kind": "cloud" if used_model == CLOUD_MODEL and cloud_ok else "local",
+                "state": state,
+                "ack": ack[:400],
+                "latency_ms": latency,
+                "error": error,
+            }
+        return {
+            "results": results,
+            "present": present_count,
+            "total": len(SOLDIER_MODELS),
+            "quorum": present_count >= 4,
+            "all_present": present_count == len(SOLDIER_MODELS),
+            "cloud_used": cloud_ok,
+            "completed_at": time.time(),
+        }

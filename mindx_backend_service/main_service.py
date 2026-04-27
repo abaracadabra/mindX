@@ -2041,6 +2041,168 @@ async def insight_boardroom_roles(request: Request):
     return _maybe_h_text(request, payload, route_path="/insight/boardroom/roles")
 
 
+@app.get("/insight/boardroom/health", tags=["insight"], summary="CEO roll call — model availability per soldier")
+@_insight_safe
+async def insight_boardroom_health(request: Request):
+    """The CEO's roll call. Before convening a session, verify every soldier's
+    assigned model is **pulled** (downloaded) and **loaded** (resident in
+    Ollama RAM). Reports per-soldier readiness:
+
+      - ready:    model is pulled AND loaded — soldier responds in <1s
+      - pulled:   model is on disk but cold — first call eats ~30-90s loading
+      - missing:  model not pulled — `ollama pull <name>` required
+      - error:    Ollama unreachable or other I/O failure
+
+    The CEO's roll-call greenlights a session only when ≥4 soldiers are ready
+    (CEO + 7 soldiers = 8; supermajority across 8 = 6, but we accept 4 as a
+    threshold for partial coverage with cloud fallback).
+
+    Public, read-only. ?h=true for plain text.
+    """
+    import os as _os
+    import aiohttp as _aiohttp
+    try:
+        from daio.governance.boardroom import SOLDIER_MODELS, SOLDIER_WEIGHTS, OLLAMA_URL, CLOUD_MODEL
+    except Exception as e:
+        return _maybe_h_text(request, {"error": f"boardroom module unavailable: {e}"}, route_path="/insight/boardroom/health")
+
+    pulled: set[str] = set()
+    loaded: set[str] = set()
+    ollama_reachable = False
+    err = None
+    try:
+        timeout = _aiohttp.ClientTimeout(total=8)
+        async with _aiohttp.ClientSession(timeout=timeout) as sess:
+            try:
+                async with sess.get(f"{OLLAMA_URL}/api/tags") as r:
+                    if r.status == 200:
+                        ollama_reachable = True
+                        d = await r.json()
+                        for m in d.get("models", []) or []:
+                            name = m.get("name") or ""
+                            if name:
+                                pulled.add(name)
+            except Exception as e:
+                err = f"tags: {e}"
+            try:
+                async with sess.get(f"{OLLAMA_URL}/api/ps") as r:
+                    if r.status == 200:
+                        d = await r.json()
+                        for m in d.get("models", []) or []:
+                            name = m.get("name") or ""
+                            if name:
+                                loaded.add(name)
+            except Exception as e:
+                err = (err + " · " if err else "") + f"ps: {e}"
+    except Exception as e:
+        err = f"ollama session: {e}"
+
+    def _state(model: str) -> str:
+        if not ollama_reachable:
+            return "error"
+        # Match either "qwen3:1.7b" exactly or "qwen3:1.7b-..." family
+        if model in loaded or any(name.startswith(model.split(":")[0] + ":") and model in loaded for name in loaded):
+            return "ready"
+        if model in pulled:
+            return "pulled"
+        return "missing"
+
+    soldiers_health = {}
+    counts = {"ready": 0, "pulled": 0, "missing": 0, "error": 0}
+    for sid, model in SOLDIER_MODELS.items():
+        state = _state(model)
+        counts[state] += 1
+        soldiers_health[sid] = {
+            "model": model,
+            "state": state,
+            "weight": SOLDIER_WEIGHTS.get(sid, 1.0),
+            "veto_holder": SOLDIER_WEIGHTS.get(sid, 1.0) >= 1.2,
+            "loaded": model in loaded,
+            "pulled": model in pulled,
+        }
+
+    cloud_key_set = bool(_os.environ.get("OLLAMA_API_KEY"))
+    quorum_ready = counts["ready"] >= 4
+    convene_ok = quorum_ready or cloud_key_set  # cloud fallback can rescue cold-load latency
+
+    payload = {
+        "ollama_url": OLLAMA_URL,
+        "ollama_reachable": ollama_reachable,
+        "ollama_error": err,
+        "models_pulled_total": len(pulled),
+        "models_loaded_total": len(loaded),
+        "soldiers": soldiers_health,
+        "counts": counts,
+        "ready_quorum": quorum_ready,
+        "ready_quorum_threshold": 4,
+        "cloud_fallback_configured": cloud_key_set,
+        "cloud_model": CLOUD_MODEL,
+        "convene_ok": convene_ok,
+        "advisory": (
+            "All 7 soldiers ready — proceed with confidence." if counts["ready"] == 7
+            else f"{counts['ready']}/7 soldiers ready · cloud fallback={'on' if cloud_key_set else 'OFF'}. "
+                 + ("Convocation viable; expect cold-load latency on first call to non-ready soldiers."
+                    if convene_ok else
+                    "Below quorum and no cloud fallback — convocation will likely return mostly abstains. "
+                    "Run `ollama pull <model>` for missing soldiers or set OLLAMA_API_KEY for cloud fallback.")
+        ),
+        "computed_at": time.time(),
+    }
+    return _maybe_h_text(request, payload, route_path="/insight/boardroom/health")
+
+
+# In-memory rollcall rate limit: at most 1 per 30s globally (single VPS, low cost).
+_ROLLCALL_LAST_TS: float = 0.0
+_ROLLCALL_CACHE: Optional[dict] = None
+_ROLLCALL_MIN_INTERVAL = 30.0
+
+
+@app.post("/insight/boardroom/rollcall", tags=["insight"], summary="Live roll call — each soldier acknowledges presence")
+@_insight_safe
+async def insight_boardroom_rollcall(request: Request, prefer_cloud: bool = True):
+    """**Live** CEO roll call. Each seated soldier is invoked with a short
+    acknowledgment prompt; presence is confirmed only when the soldier returns
+    valid ack text. Costs ~7 inference calls per invocation — operator-triggered.
+
+    Rate limited: at most one roll call per 30 seconds globally. Repeat calls
+    inside the window return the cached result with `cached: true` set.
+
+    Differs from GET /insight/boardroom/health: that one only checks model
+    readiness on Ollama. This one *actually calls each soldier* and records
+    the ack text. Use before convening a real session if you need confidence
+    every member is responsive.
+
+    Public, read-only relative to disk; consumes inference. ?h=true for plain
+    text (response will be slow — sequential calls).
+    """
+    global _ROLLCALL_LAST_TS, _ROLLCALL_CACHE
+    now = time.time()
+    if _ROLLCALL_CACHE is not None and (now - _ROLLCALL_LAST_TS) < _ROLLCALL_MIN_INTERVAL:
+        cached = dict(_ROLLCALL_CACHE)
+        cached["cached"] = True
+        cached["age_seconds"] = round(now - _ROLLCALL_LAST_TS, 1)
+        cached["next_invocation_in"] = round(_ROLLCALL_MIN_INTERVAL - (now - _ROLLCALL_LAST_TS), 1)
+        return _maybe_h_text(request, cached, route_path="/insight/boardroom/rollcall")
+    try:
+        from daio.governance.boardroom import Boardroom
+        bd = await Boardroom.get_instance()
+        result = await bd.roll_call(prefer_cloud=prefer_cloud)
+        result["cached"] = False
+        _ROLLCALL_LAST_TS = time.time()
+        _ROLLCALL_CACHE = result
+    except Exception as e:
+        result = {"error": str(e), "results": {}, "present": 0, "total": 0, "cached": False}
+    return _maybe_h_text(request, result, route_path="/insight/boardroom/rollcall")
+
+
+# Allow GET as a convenience (same throttle). Browsers can hit GET easily; POST
+# is the primary semantic.
+@app.get("/insight/boardroom/rollcall", tags=["insight"], summary="Live roll call (GET alias for browsers)")
+@_insight_safe
+async def insight_boardroom_rollcall_get(request: Request, prefer_cloud: bool = True):
+    return await insight_boardroom_rollcall(request, prefer_cloud=prefer_cloud)
+
+
 @app.get("/insight/interactions/recent", tags=["insight"])
 @_insight_safe
 async def insight_interactions_recent(window: int = 3600):

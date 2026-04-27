@@ -440,6 +440,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
   <p class="sec-desc">
     The <b>first hierarchy of decision</b>: every directive evaluated by the 7-soldier <a href="/doc/BOARDROOM"><abbr title="CEO + Seven Soldiers (CISO, CRO, CFO, CLO, CPO, CTO, COO) — the primary decision tier">boardroom</abbr></a>. AI / agent / member interaction; any seat holder verifies by <abbr title="Ethereum-compatible wallet signature via IDManagerAgent. The boardroom engine accepts decisions only from signature-verified identities.">signature</abbr>. Works <abbr title="DAIO (Solidity contracts) is the optional on-chain controller. When wired, boardroom decisions are on-chain enforced. When not, they remain off-chain consensus. Same engine either way.">with or without DAIO control</abbr>. CISO and CRO weight 1.2× as veto holders. Outcome is approved at weighted score ≥ 0.666; minority dissent opens an exploration branch. <abbr title="A boardroom-approved CEO decision can be cast as the AI vote inside DAIO's 2/3 consensus across Marketing / Community / Development groups (each group: 2 humans + 1 AI). One off-chain consensus → one on-chain ballot.">A boardroom decision can be cast as the AI vote in DAIO's 2/3 consensus across Marketing / Community / Development.</abbr> <b>Click any row</b> for the full per-soldier card (vote, weight, model, latency, confidence, full reasoning). See <a href="/doc/agents/ceo_agent">CEO Agent</a> · <a href="/insight/boardroom/roles?h=true" target="_blank" rel="noopener">role registry</a> · <a href="/doc/BOARDROOM">spec</a>. Disputes escalate to <abbr title="Dojo: dispute resolution opened by any boardroom seat-holder. Configurable consensus per dispute — 2/3, 50/99, supermajority.">dojo</abbr>; the 13-seat <abbr title="War council at mastermind.pythai.net — foreign entity isolated from mindX. Consumes the mindX API as a paying client; metered through bankon.pythai.net. 13 BONAFIDE-tied seats with PYTHAI naming as toggle. Roadmap.">war council</abbr> at <a href="https://mastermind.pythai.net" target="_blank" rel="noopener">mastermind.pythai.net</a> is a foreign entity that pays for mindX inference via <a href="https://bankon.pythai.net" target="_blank" rel="noopener">BANKON</a>.
   </p>
+  <div id="board-rollcall" class="card" style="margin-bottom:14px"><div class="empty">CEO roll call — checking model readiness…</div></div>
   <div id="boardroom" class="card"><div class="empty">loading…</div></div>
   <div id="board-drill" class="cog-drill" hidden></div>
 </section>
@@ -1472,6 +1473,106 @@ async function refreshBoardroom() {
   }
 }
 
+// ── boardroom roll call (model readiness + live ack) ──
+async function refreshBoardRollcall() {
+  const box = $('board-rollcall');
+  if (!box) return;
+  try {
+    const r = await fetch('/insight/boardroom/health');
+    const d = await r.json();
+    const soldiers = d.soldiers || {};
+    const counts = d.counts || {};
+    const ready = counts.ready || 0;
+    const tot = Object.keys(soldiers).length || 7;
+    const pillCls = ready === tot ? 'ok' : ready >= 4 ? 'amber' : 'warn';
+    const reachable = d.ollama_reachable;
+    const cloud = d.cloud_fallback_configured;
+    let html = '<div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:8px">' +
+      '<h3 style="margin:0;color:var(--blue);font-family:var(--mono);font-size:13px">CEO roll call</h3>' +
+      '<span class="pill ' + pillCls + '">' + ready + '/' + tot + ' READY</span>' +
+      '<span style="color:var(--text2);font-size:11px">ollama: ' + (reachable ? '✓' : '✗') +
+      ' · cloud fallback: ' + (cloud ? '✓ ' + escapeHtml(d.cloud_model || 'set') : '✗ off') + '</span>' +
+      '<button class="board-expand" onclick="liveRollcall()" title="actually invoke each soldier with an ack prompt">live ack ▸</button>' +
+      ' <a href="/insight/boardroom/health?h=true" target="_blank" rel="noopener" style="font-size:11px;color:var(--text2)">raw ↗</a>' +
+      '</div>';
+    const sym = {ready: '<span style="color:var(--green)">✓</span>',
+                 pulled: '<span style="color:var(--amber)">○</span>',
+                 missing: '<span style="color:var(--red)">✗</span>',
+                 error: '<span style="color:var(--red)">!</span>'};
+    html += '<table style="width:100%;font-family:var(--mono);font-size:11px"><thead><tr>' +
+      '<th style="text-align:left;color:var(--text3)">soldier</th>' +
+      '<th style="text-align:left;color:var(--text3)">model</th>' +
+      '<th style="text-align:left;color:var(--text3)">state</th>' +
+      '<th style="text-align:left;color:var(--text3)">weight</th>' +
+      '</tr></thead><tbody>';
+    for (const sid in soldiers) {
+      const s = soldiers[sid];
+      const state = s.state || '?';
+      const veto = s.veto_holder ? ' <span style="color:var(--amber);font-size:9px">VETO</span>' : '';
+      html += '<tr><td>' + escapeHtml(sid) + '</td>' +
+              '<td>' + escapeHtml(s.model || '') + '</td>' +
+              '<td>' + (sym[state] || '?') + ' ' + escapeHtml(state) + '</td>' +
+              '<td>' + (s.weight || 1.0).toFixed(1) + veto + '</td></tr>';
+    }
+    html += '</tbody></table>';
+    if (d.advisory) {
+      html += '<div style="margin-top:10px;padding:6px 10px;background:rgba(121,192,255,.05);border-left:2px solid var(--blue);font-family:var(--mono);font-size:11px;color:var(--text2);line-height:1.5">' +
+              escapeHtml(d.advisory) + '</div>';
+    }
+    html += '<div id="board-rollcall-live" hidden style="margin-top:14px"></div>';
+    box.innerHTML = html;
+  } catch (e) {
+    box.innerHTML = '<div class="empty">roll call unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+async function liveRollcall() {
+  const live = $('board-rollcall-live');
+  if (!live) return;
+  live.hidden = false;
+  live.innerHTML = '<div class="empty">CEO calling roll · invoking each soldier (sequential, may take 30-60s)…</div>';
+  try {
+    const r = await fetch('/insight/boardroom/rollcall', {method: 'POST'});
+    const d = await r.json();
+    const results = d.results || {};
+    const cached = d.cached;
+    let html = '<div style="display:flex;gap:12px;align-items:baseline;margin-bottom:8px">' +
+      '<h4 style="margin:0;color:var(--violet);font-family:var(--mono);font-size:12px">live acknowledgments</h4>' +
+      '<span class="pill ' + (d.all_present ? 'ok' : d.quorum ? 'amber' : 'warn') + '">' +
+        d.present + '/' + d.total + ' PRESENT</span>' +
+      (cached ? '<span style="color:var(--text3);font-size:10px">(cached · ' + d.age_seconds + 's old · next in ' + d.next_invocation_in + 's)</span>' : '') +
+      '<span style="color:var(--text2);font-size:10px">via ' + (d.cloud_used ? 'cloud' : 'local') + '</span>' +
+      ' <a href="/insight/boardroom/rollcall?h=true" target="_blank" rel="noopener" style="font-size:10.5px;color:var(--text2)">raw ↗</a>' +
+      '</div>';
+    html += '<ul class="drill-list">';
+    const sym = {present: '✓', silent: '○', error: '!'};
+    const colorMap = {present: 'var(--green)', silent: 'var(--amber)', error: 'var(--red)'};
+    for (const sid in results) {
+      const v = results[sid];
+      const state = v.state || '?';
+      const veto = v.veto_holder ? ' <span style="color:var(--amber);font-size:9px">VETO</span>' : '';
+      const ack = (v.ack || '').trim();
+      const errMsg = v.error;
+      html += '<li class="drill-item kind-board-vote ' + state + '">' +
+        '<details ' + (state === 'present' ? '' : 'open') + '>' +
+        '<summary>' +
+        '<span style="color:' + colorMap[state] + ';font-weight:700;font-size:14px;margin-right:6px">' + sym[state] + '</span>' +
+        '<span class="drill-agent">' + escapeHtml(sid) + '</span>' +
+        ' <span class="drill-kind">' + escapeHtml(v.role || '') + '</span>' + veto +
+        ' <span class="drill-meta">' + escapeHtml(v.model || '') + ' · ' + (v.model_kind || '') + ' · ' +
+          Human.duration((v.latency_ms || 0)/1000) + '</span>' +
+        '</summary>' +
+        (ack ? '<div class="drill-preview" style="white-space:pre-wrap;color:var(--text)">' + escapeHtml(ack) + '</div>' :
+         errMsg ? '<div class="drill-preview" style="color:var(--red);font-style:italic">' + escapeHtml(errMsg) + '</div>' :
+                  '<div class="drill-preview" style="color:var(--text3);font-style:italic">no acknowledgment received within timeout</div>') +
+        '</details></li>';
+    }
+    html += '</ul>';
+    live.innerHTML = html;
+  } catch (e) {
+    live.innerHTML = '<div class="empty">roll call invocation failed: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
 // ── boardroom drill-down (click a row → full session card) ──
 let _boardActive = null;
 async function boardDrill(sid) {
@@ -1876,13 +1977,14 @@ async function boot() {
   _initTabbar();
   await seedDialogue();
   startSSE();
-  await Promise.allSettled([refreshCognition(), refreshSysPulse(), refreshStuck(), refreshBDI(), refreshLedger(), refreshBoardroom(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
+  await Promise.allSettled([refreshCognition(), refreshSysPulse(), refreshStuck(), refreshBDI(), refreshLedger(), refreshBoardroom(), refreshBoardRollcall(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
   setInterval(refreshCognition, 30000);
   setInterval(refreshSysPulse, 15000);
   setInterval(refreshStuck, 30000);
   setInterval(refreshBDI, 20000);
   setInterval(refreshLedger, 45000);
   setInterval(refreshBoardroom, 60000);
+  setInterval(refreshBoardRollcall, 60000);
   setInterval(refreshDreams, 60000);
   setInterval(refreshGraph, 60000);
   setInterval(refreshStorage, 60000);
