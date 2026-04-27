@@ -391,6 +391,9 @@ def render_boardroom_rollcall(d: dict) -> str:
     lines.append("")
     sym = {"present": "✓", "silent": "○", "error": "!"}
     color = {"present": "", "silent": "", "error": ""}
+    if d.get("advice"):
+        lines.append(f"  ADVICE: {d['advice']}")
+        lines.append("")
     results = d.get("results") or {}
     if results:
         for sid, r in results.items():

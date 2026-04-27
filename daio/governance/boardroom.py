@@ -815,11 +815,20 @@ class Boardroom:
             for s in self.sessions[-limit:]
         ]
 
-    async def roll_call(self, prefer_cloud: bool = True) -> Dict[str, Any]:
+    async def roll_call(self, prefer_cloud: bool = True, per_soldier_timeout: int = 60) -> Dict[str, Any]:
         """CEO calls roll. Each seated soldier is invoked with a short
         acknowledgment prompt and must respond. Returns per-soldier presence
         plus their model/latency/ack-text. Sequential to avoid model-swap
         thrash on local Ollama; uses cloud model when available for speed.
+
+        Behavior on local-only (no OLLAMA_API_KEY): expect failures. Local
+        Ollama loads ONE model at a time; calling 7 different soldier-models
+        sequentially forces 6 cold loads, each ~30-90s on CPU. Total wall
+        budget: 7 × per_soldier_timeout = 7 minutes worst case. The HTTP
+        edge will likely time out before completion.
+
+        Recommended: vault OLLAMA_API_KEY so all 7 soldiers use one cloud
+        model (gpt-oss:120b-cloud). One model = no swaps = ~1-3s per ack.
 
         ack states:
             present  — soldier responded with valid ack text
@@ -857,16 +866,16 @@ class Boardroom:
             error = None
             try:
                 # Try local Ollama first (handles cloud-proxied models too)
-                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as sess:
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=per_soldier_timeout)) as sess:
                     async with sess.post(f"{OLLAMA_URL}/api/generate", json=payload) as resp:
                         if resp.status == 200:
                             data = await resp.json()
                             ack = (data.get("response") or "").strip()
-                # Fall back to local if cloud failed
+                # Fall back to local if cloud failed (and cloud was tried)
                 if not ack and cloud_ok:
                     payload["model"] = local_model
                     used_model = local_model
-                    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as sess:
+                    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=per_soldier_timeout)) as sess:
                         async with sess.post(f"{OLLAMA_URL}/api/generate", json=payload) as resp:
                             if resp.status == 200:
                                 data = await resp.json()
@@ -874,6 +883,9 @@ class Boardroom:
                 if ack:
                     state = "present"
                     present_count += 1
+            except asyncio.TimeoutError:
+                error = f"timeout after {per_soldier_timeout}s — local Ollama likely cold-loading {used_model}"
+                state = "error"
             except Exception as e:
                 error = str(e)[:200]
                 state = "error"
@@ -890,6 +902,14 @@ class Boardroom:
                 "latency_ms": latency,
                 "error": error,
             }
+        advice = None
+        if not cloud_ok and present_count < len(SOLDIER_MODELS):
+            advice = (
+                f"Only {present_count}/{len(SOLDIER_MODELS)} soldiers responded. Local Ollama can only "
+                f"hold ~1-2 models at a time on this VPS — cold-loading 7 sequentially is the bottleneck. "
+                f"Vault OLLAMA_API_KEY to route all soldiers through the shared cloud model "
+                f"({CLOUD_MODEL}) for sub-second acks."
+            )
         return {
             "results": results,
             "present": present_count,
@@ -897,5 +917,7 @@ class Boardroom:
             "quorum": present_count >= 4,
             "all_present": present_count == len(SOLDIER_MODELS),
             "cloud_used": cloud_ok,
+            "per_soldier_timeout": per_soldier_timeout,
+            "advice": advice,
             "completed_at": time.time(),
         }
