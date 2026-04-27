@@ -1,3 +1,20 @@
+gemini/default_model_for_gemini:
+  task_scores:
+    reasoning: 0.85
+    code_generation: 0.88
+    writing: 0.9
+    simple_chat: 0.95
+    data_analysis: 0.8
+    speed_sensitive: 0.92
+  cost_per_kilo_input_tokens: 0.0
+  cost_per_kilo_output_tokens: 0.0
+  max_context_length: 1000000
+  supports_streaming: true
+  supports_function_calling: true
+  api_name: gemini-1.5-flash
+  assessed_capabilities:
+  - text
+  - vision
 gemini/gemini-1.5-flash-latest:
   task_scores:
     reasoning: 0.85

@@ -1,11 +1,5 @@
 {
   "llm": {
-    "grok": {
-      "base_url": "https://api.x.ai/v1",
-      "default_model": "grok-beta",
-      "timeout": 120,
-      "inference_timeout": 180
-    },
     "ollama": {
       "base_url": "http://10.0.0.155:18080",
       "host": "10.0.0.155",
@@ -13,11 +7,41 @@
       "fallback_url": "http://localhost:11434",
       "fallback_host": "localhost",
       "fallback_port": 11434,
-      "default_model": "mistral-nemo:latest",
+      "default_model": "qwen3:1.7b",
       "keep_alive": "10m",
       "timeout": 120,
       "inference_timeout": 180,
       "prefer_gpu": true
+    },
+    "gemini": {
+      "base_url": "https://generativelanguage.googleapis.com/v1beta",
+      "default_model": "gemini-1.5-flash",
+      "timeout": 120,
+      "inference_timeout": 180
+    },
+    "groq": {
+      "base_url": "https://api.groq.com/openai/v1",
+      "default_model": "llama-3.3-70b-versatile",
+      "timeout": 120,
+      "inference_timeout": 180
+    },
+    "mistral": {
+      "base_url": "https://api.mistral.ai/v1",
+      "default_model": "mistral-small-latest",
+      "timeout": 120,
+      "inference_timeout": 180
+    },
+    "grok": {
+      "base_url": "https://api.x.ai/v1",
+      "default_model": "grok-beta",
+      "timeout": 120,
+      "inference_timeout": 180
+    },
+    "vllm": {
+      "base_url": "http://localhost:8000",
+      "default_model": "Qwen/Qwen3-0.6B",
+      "timeout": 300,
+      "inference_timeout": 300
     }
   },
   "rate_limit_profiles": {
@@ -36,12 +60,16 @@
       "rph": 50000
     },
     "mistral": {
-      "rpm": 50,
+      "rpm": 30,
       "rph": 80
     },
     "gemini": {
-      "rpm": 40,
+      "rpm": 15,
       "rph": 60
+    },
+    "groq": {
+      "rpm": 30,
+      "rph": 14400
     },
     "grok": {
       "rpm": 30,
@@ -62,13 +90,5 @@
     "max_repeated_errors": 5,
     "circuit_breaker_threshold": 3
   },
-  "llm": {
-    "vllm": {
-      "base_url": "http://localhost:8000",
-      "default_model": "Qwen/Qwen3-0.6B",
-      "timeout": 300,
-      "inference_timeout": 300
-    }
-  },
-  "default_provider_preference_order": ["gemini", "vllm", "mistral", "grok", "ollama"]
+  "default_provider_preference_order": ["ollama", "gemini", "groq", "mistral", "grok", "vllm"]
 }
