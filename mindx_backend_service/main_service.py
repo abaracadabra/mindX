@@ -2111,6 +2111,69 @@ async def insight_memory_tiers(request: Request):
     }, route_path="/insight/memory/tiers")
 
 
+# ── Wisdom tier (Phase 6 of memory plan) ──
+# Closes the cognitive-ascent loop. Reads *_training.jsonl produced by
+# the dream cycle, embeds each row into pgvector with `wisdom:` doc-name
+# prefix, and exposes search for BDI perceive() integration.
+
+@app.post("/insight/cognition/wisdom/index", tags=["insight"], summary="Index recent dream training files into pgvector")
+@_insight_safe
+async def insight_cognition_wisdom_index(request: Request, hours: int = 24, max_files: int = 200):
+    """Find every `*_training.jsonl` modified in the last `hours` and index
+    each row into pgvector under the `wisdom:` doc-name prefix. Idempotent
+    on re-index (UPDATE not INSERT). Operator-triggered; wired into the
+    dream cycle automatically too (every dream writes + indexes its own
+    training rows)."""
+    try:
+        from agents.cognition.wisdom_loader import index_recent_training
+        result = await index_recent_training(hours=hours, max_files=max_files)
+    except Exception as e:
+        result = {"error": str(e)}
+    return _maybe_h_text(request, result, route_path="/insight/cognition/wisdom/index")
+
+
+@app.get("/insight/cognition/wisdom/search", tags=["insight"], summary="Retrieve top-k wisdom for a query")
+@_insight_safe
+async def insight_cognition_wisdom_search(request: Request, q: str = "", top_k: int = 3, agent_id: str = ""):
+    """Semantic search over indexed wisdom rows. Filters to `wisdom:` prefix
+    in `doc_embeddings`. Optional `agent_id` filter. Returns top-k by cosine
+    similarity. This is the retrieval BDI perceive() will use to inject
+    'RELEVANT WISDOM' into plan() prompts (next phase wires it in)."""
+    if not q:
+        return _maybe_h_text(request, {"error": "q parameter required"}, route_path="/insight/cognition/wisdom/search")
+    try:
+        from agents.cognition.wisdom_loader import search_wisdom
+        results = await search_wisdom(q, top_k=top_k, agent_id=agent_id or None)
+    except Exception as e:
+        results = []
+        return _maybe_h_text(request, {"error": str(e), "results": []}, route_path="/insight/cognition/wisdom/search")
+    return _maybe_h_text(request, {
+        "query": q,
+        "agent_filter": agent_id or None,
+        "top_k": top_k,
+        "results": results,
+        "count": len(results),
+    }, route_path="/insight/cognition/wisdom/search")
+
+
+@app.get("/insight/cognition/wisdom/stats", tags=["insight"], summary="Wisdom tier indexing stats")
+@_insight_safe
+async def insight_cognition_wisdom_stats(request: Request):
+    """How many wisdom rows are currently indexed (pgvector). Honest count
+    for /insight/cognition's wisdom-tier counter."""
+    try:
+        from agents.cognition.wisdom_loader import count_indexed_wisdom
+        n = await count_indexed_wisdom()
+    except Exception as e:
+        return _maybe_h_text(request, {"error": str(e)}, route_path="/insight/cognition/wisdom/stats")
+    return _maybe_h_text(request, {
+        "indexed_wisdom_docs": n,
+        "doc_name_prefix": "wisdom:",
+        "table": "doc_embeddings",
+        "computed_at": time.time(),
+    }, route_path="/insight/cognition/wisdom/stats")
+
+
 # ── Accelerated dream cycle (operator-triggered) ──
 # Run a full dream NOW with diagnostic capture. Returns the same report
 # shape as /insight/dreams/recent but reflects the just-completed cycle.

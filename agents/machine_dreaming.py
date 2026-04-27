@@ -675,6 +675,18 @@ class MachineDreamCycle:
                 training_count, training_file = await self._write_training_data(agent_id, scored_insights, memories)
                 result.training_examples_written = training_count
                 result.training_file = training_file
+                # Phase 6 of memory plan: index the freshly-written training
+                # rows into pgvector so BDI perceive() can retrieve them as
+                # "RELEVANT WISDOM" during planning. The wisdom_loader uses
+                # `wisdom:` doc-name prefix; idempotent on re-index.
+                if training_file:
+                    try:
+                        from agents.cognition.wisdom_loader import index_training_jsonl
+                        idx_path = PROJECT_ROOT / training_file
+                        idx_result = await index_training_jsonl(idx_path, agent_id=agent_id)
+                        logger.debug(f"{self.log_prefix} wisdom indexed {agent_id}: {idx_result.get('indexed', 0)} rows")
+                    except Exception as _wi:
+                        logger.debug(f"{self.log_prefix} wisdom index failed {agent_id}: {_wi}")
             except Exception as _te:
                 logger.debug(f"{self.log_prefix} training-data write failed for {agent_id}: {_te}")
 
