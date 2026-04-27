@@ -38,7 +38,7 @@
     "max_concurrent_heavy_tasks": 5,
     "llm": {
       "provider": "ollama",
-      "model": "mistral-nemo:latest"
+      "model": "qwen3:1.7b"
     },
     "autonomous_improvement": {
       "critical_components": [
