@@ -4,7 +4,9 @@
 > This is my living documentation. I write it, I reference it, I improve from it.
 > Every link resolves. Every concept connects. Navigate by operational concern.
 
-**Live system**: [mindx.pythai.net](https://mindx.pythai.net) | **API explorer**: [localhost:8000/docs](http://localhost:8000/docs) | **Dojo standings**: [/dojo/standings](https://mindx.pythai.net/dojo/standings) | **Improvement journal**: [/journal](https://mindx.pythai.net/journal) | **[TODO & Roadmap](TODO.md)** (5.7/10 — strong foundation, shipping to chain next)
+**Live system**: [mindx.pythai.net](https://mindx.pythai.net) | **Feedback (mind-of-mindX)**: [/feedback.html](https://mindx.pythai.net/feedback.html) · [/feedback.txt](https://mindx.pythai.net/feedback.txt) | **API explorer**: [localhost:8000/docs](http://localhost:8000/docs) | **Dojo**: [/dojo/standings](https://mindx.pythai.net/dojo/standings) | **Journal**: [/journal](https://mindx.pythai.net/journal) | **[TODO](TODO.md)**
+
+**Plain-text mode** for terminal monitoring: append `?h=true` to any `/insight/*` or `/storage/*` endpoint, e.g. `curl https://mindx.pythai.net/insight/storage/status?h=true`. Or watch the whole snapshot: `watch curl -s https://mindx.pythai.net/feedback.txt`.
 
 ---
 
@@ -124,7 +126,7 @@ Reputation-based privilege escalation — every agent earns rank through demonst
 | [Persona Agent](agents/persona_agent.md) | Cognitive persona adoption | [Personas](automindx_and_personas.md) |
 | [Avatar Agent](agents/avatar_agent.md) | Visual avatar generation | [Avatar](agents/avatar_agent.md) |
 | [SimpleCoder](SimpleCoder.md) | Code generation and analysis | [SimpleCoder](SimpleCoder.md) |
-| [ID Manager](agents/id_manager_agent.md) | Ethereum wallet identity | [Identity](agents/coral_id_agent.md) |
+| [ID Manager](agents/id_manager_agent.md) | Two-wallet ERC-8004 identity via agentID | [Identity](agents/id_manager_agent.md) |
 | [Reasoning Agent](agents/reasoning_agent.md) | Multi-strategy reasoning | [Reasoning](reasoning.md) |
 
 Full list: [Agent Docs](agents/) (30 agent docs)
@@ -216,6 +218,21 @@ The schema layer is recursive: mindX writes its own documentation, references it
 - [Memory Philosophy](BOOK_OF_MINDX.md) — Distribute don't delete: local → pgvector → IPFS → cloud → p2p
 - [Agent Domain Knowledge](../agents/) — `.agent` files define knowledge domains (URLs, IPFS, local, pgvector)
 
+### Knowledge Catalogue (CQRS projection layer)
+
+Phase 0 instrumentation shipped 2026-04-26. Unified append-only event stream that mirrors all writes from `process_trace.jsonl`, `godel_choices.jsonl`, `boardroom_sessions.jsonl`, STM, and dream cycles into a single substrate. Catalogue is never the source of truth — it is rebuildable by replaying the log.
+
+- [Full design contract](KNOWLEDGE_CATALOGUE.md) — Dataplex six-resource model (EntryGroup / EntryType / AspectType / Entry / EntryLink / EntryLinkType), CQRS projector framework, hybrid retrieval (BM25 + dense + graph + cross-encoder), federation via NATS leaf-nodes
+- [Phase 0 implementation](../agents/catalogue/) — `events.py` (Pydantic `CatalogueEvent`, 16 typed kinds), `log.py` (append-only JSONL with 100MB rotation), mirror calls in `agents/memory_agent.py`, `agents/machine_dreaming.py`, `daio/governance/boardroom.py`. Sink: `data/logs/catalogue_events.jsonl`.
+
+### Storage Offload (IPFS + on-chain anchoring)
+
+Phase A–E shipped 2026-04-26. Pushes old/low-importance STM to IPFS (Lighthouse + nft.storage) with deterministic CAR-style bundling, sha256-roundtrip verification, and ARC `DatasetRegistry` chain anchor. Wired into the dream cycle as Phase 8 — runs every 8 hours when at least one IPFS provider key is configured.
+
+- [`agents/storage/`](../agents/storage/) — `provider.py` (abstract IPFSProvider), `lighthouse_provider.py`, `nftstorage_provider.py`, `multi_provider.py` (parallel upload + quorum-of-2 + fallback retrieve), `eligibility.py` (age + size predicate), `car_bundle.py` (deterministic gzipped JSONL, byte-stable CIDs), `offload_projector.py` (orchestrator, `dry_run=true` default), `anchor.py` (ARC `DatasetRegistry.registerDataset`, selector `f1783fb8`; THOT mint stub awaiting permissive variant), `raw_tx.py` (minimal EIP-1559 sender, no web3.py)
+- [`agents/memory_agent.fetch_offloaded_memory(memory_id)`](../agents/memory_agent.py) — lazy retrieval: looks up `content_cid` in pgvector, fetches the bundle from MultiProvider, returns the matching record
+- Vault keys (operator action): `lighthouse_api_key`, `nftstorage_api_key`, `arc_rpc_url`, `polygon_rpc_url`, `memory_anchor_treasury_pk` — stored via `python manage_credentials.py store …`
+
 ## Governance & Autonomy
 
 ### DAIO (Decentralized Autonomous Intelligence Organization)
@@ -258,6 +275,9 @@ Quick links: [API: Chat](ollama/api/chat.md) | [API: Generate](ollama/api/genera
 
 | Route | Method | Purpose |
 |-------|--------|---------|
+| `/` | GET | Public diagnostics dashboard |
+| `/feedback.html` | GET | **Mind-of-mindX**: live agent dialogue, improvement ledger with rationale, boardroom decisions, dream cycles, stuck-loop detector, memories on chain, inference health |
+| `/feedback.txt` | GET | **Plain-text snapshot** for `watch curl …`. ~24 lines covering storage, dreams, loops, last-10 dialogue |
 | `/agents/create` | POST | Create agent |
 | `/agents/list` | GET | List agents |
 | `/llm/chat` | POST | LLM chat |
@@ -268,6 +288,28 @@ Quick links: [API: Chat](ollama/api/chat.md) | [API: Generate](ollama/api/genera
 | `/metrics` | GET | System metrics |
 | `/dojo/standings` | GET | Agent reputation rankings |
 | `/inference/status` | GET | InferenceDiscovery status |
+
+### Mind-of-mindX insight endpoints
+
+All accept `?h=true` (or `Accept: text/plain`) for human-readable text rendering. JSON unchanged when omitted.
+
+| Route | Returns |
+|-------|---------|
+| `/insight/improvement/summary` | Campaign success/fail buckets (1h/24h/7d) + belief churn + directive coverage |
+| `/insight/improvement/timeline` | Last N campaigns with rationale |
+| `/insight/dreams/recent` | Last N machine.dreaming cycles + tuning recommendations + age-since-last |
+| `/insight/godel/recent` | Last N gödel choices with full rationale |
+| `/insight/boardroom/recent` | Last N boardroom sessions with per-soldier vote + provider + confidence |
+| `/insight/interactions/recent` | Cross-agent call graph (last hour) |
+| `/insight/stuck_loops` | Repeating `(agent, step)` tuples in 15-min window |
+| `/insight/fitness` | 7-axis fitness leaderboard |
+| `/insight/selection/events` | Darwinian selection ledger |
+| `/insight/storage/status` | Local/IPFS/THOT/anchored memory counts |
+| `/insight/storage/recent` | Recent IPFS offload events with CIDs and tx hashes |
+| `/storage/eligible` | STM directories eligible for offload (auth-gated) |
+| `/storage/anchor/health` | ARC chain anchor configuration state (auth-gated) |
+| `/storage/health` | IPFS provider reachability (auth-gated) |
+| `/storage/offload` | POST: run offload projector (auth + admin for `dry_run=false`) |
 
 ## Configuration
 

@@ -4,13 +4,26 @@
 
 This document provides a complete index of all documentation in the mindX system, organized by category and component type.
 
-**Last Updated**: 2026-04-03
+**Last Updated**: 2026-04-27
 **Total Documentation Files**: 194+
 **CORE Documentation**: Complete 15-component analysis ✅
 **Agent Documentation**: 34+
 **Tool Documentation**: 29+
 **DAIO Documentation**: 15 files covering 12 core + modular contracts ✅
 **Production Ready**: ✅ Enterprise-grade deployment and security documentation complete  
+
+---
+
+## 🆕 Recent additions (2026-04-26 / 04-27)
+
+- **[Knowledge Catalogue](KNOWLEDGE_CATALOGUE.md)** — CQRS projection layer over the append-only memory log. Full Dataplex six-resource schema, hybrid retrieval design, federation. Phase 0 instrumentation shipped at [`agents/catalogue/`](../agents/catalogue/) writing to `data/logs/catalogue_events.jsonl`.
+- **`/feedback.html`** — [Live mind-of-mindX page](https://mindx.pythai.net/feedback.html). Agent dialogue (SSE), improvement ledger ⨝ gödel rationale, boardroom decisions with vote chips, dream cycles table, stuck-loop detector, inter-agent SVG ring graph, **memories on chain** section, inference health.
+- **`/feedback.txt`** — [Public plain-text snapshot](https://mindx.pythai.net/feedback.txt) for `watch curl …`. ~24 lines covering storage, dreams, loops, last-10 dialogue.
+- **`?h=true` plain-text mode** on every `/insight/*` and `/storage/*` endpoint — `text/plain` rendering via `mindx_backend_service/text_render.py`. JSON unchanged when omitted.
+- **Storage offload subsystem** — [`agents/storage/`](../agents/storage/) — IPFS via Lighthouse + nft.storage with deterministic byte-stable CAR bundles, sha256 verification, ARC `DatasetRegistry` chain anchor. Phase 8 of `machine_dreaming.run_full_dream()` triggers automatically when IPFS keys are vaulted.
+- **Dream loop hardened** — `mindx_backend_service/main_service.py:_periodic_dream_cycle` wrapped in resilient try/except; warmup 600s → 60s. Was silently dead since 2026-04-12.
+- **BDI planning unblocked** — `agents/core/bdi_agent.py` now ships skeleton fallback that picks from registered tools (was hardcoding unregistered `audit_and_improve`); `agents/monitoring/token_calculator_tool.py` indentation bug fixed (UnboundLocalError on every plan call).
+- **LLM router fixed** — `data/config/{llm_factory_config,mindx_config}.json` had a duplicate `"llm"` key + Mistral as default + Ollama disabled. Reordered to ollama-first; default model `qwen3:1.7b` not the not-pulled `mistral-nemo:latest`.
 
 ---
 
@@ -99,7 +112,6 @@ All agent documentation is organized in the `agents/` folder structure. See [age
 - **[AutoMINDX Agent](agents/automindx_agent.md)** - Persona manager with iNFT export and marketplace integration
 - **[Persona Agent](agents/persona_agent.md)** - Persona adoption and management with BDI integration
 - **[Avatar Agent](agents/avatar_agent.md)** - Avatar generation for agents and participants
-- **[Coral ID Agent](agents/coral_id_agent.md)** - CrossMint-integrated identity management with multi-chain support
 - **[Enhanced Simple Coder](enhanced_simple_coder.md)** - Advanced coding agent with multi-model intelligence
 - **[Simple Coder Agent](agents/SimpleCoder_agent.md)** - BDI-integrated coding assistant with unified sandbox (Complete reference documentation)
 - **[Simple Coder](simple_coder.md)** - Enhanced coding agent with sandbox and autonomous mode
@@ -394,7 +406,7 @@ All tool documentation is organized in the `tools/` folder. Tools are now organi
 - **[Security Documentation](security.md)** - Security practices and policies
 - **[Identity Management Overhaul Report](IDENTITY_MANAGEMENT_OVERHAUL_REPORT.md)** - Identity system overhaul
 - **[Guardian Agent](agents/guardian_agent.md)** - Security agent documentation
-- **[Coral ID Agent](agents/coral_id_agent.md)** - CrossMint identity integration
+- **[ID Manager Agent](agents/id_manager_agent.md)** - Two-wallet ERC-8004 identity issuance via agentID (BANKON Vault-backed)
 
 #### Production Security Features
 - **AES-256 Encrypted Vault**: All sensitive data encrypted with enterprise-grade security
@@ -457,7 +469,7 @@ All tool documentation is organized in the `tools/` folder. Tools are now organi
 #### External Integrations
 
 - **[GitHub Agent](GITHUB_AGENT.md)** - GitHub integration with comprehensive UI controls, backup automation, schedule management, and repository synchronization. The GitHub Agent Tool is fully integrated into the mindX frontend, providing a dedicated section in the Control tab with status monitoring, backup operations, and direct repository access. See [GitHub Agent Documentation](GITHUB_AGENT.md) for architecture, operations, and UI integration details.
-- **[CrossMint Integration](agents/coral_id_agent.md)** - CrossMint NFT integration
+- **[agentID](https://github.com/pythai/agentID)** - ERC-8004 + BANKON IDNFT + Algorand bonafide unified agent identity issuance (replaces deprecated CrossMint path)
 
 ---
 

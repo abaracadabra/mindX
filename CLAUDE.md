@@ -118,8 +118,56 @@ Key routes:
 - `POST /directive/execute` - Execute directives
 - `/mindterm/sessions/{id}/ws` - WebSocket terminal access
 - `GET /health`, `GET /metrics` - System status
+- `GET /` - Public diagnostics dashboard
+- `GET /feedback.html` - Mind-of-mindX page (live agent dialogue, improvement ledger, boardroom, dream cycles, stuck-loop detector, memories on chain)
+- `GET /feedback.txt` - Plain-text snapshot for `watch curl …` (public)
+
+### Plain-text mode (`?h=true`)
+
+Any `/insight/*` or `/storage/*` endpoint returns `text/plain` when called with `?h=true` or `Accept: text/plain`. JSON unchanged when omitted. Designed for terminal monitoring:
+
+```bash
+curl https://mindx.pythai.net/insight/storage/status?h=true
+curl https://mindx.pythai.net/insight/dreams/recent?h=true
+watch -n5 'curl -s https://mindx.pythai.net/feedback.txt'
+```
+
+Implementation: `mindx_backend_service/text_render.py` (per-endpoint renderers + humanizers).
+
+### Insight + storage endpoints
+
+- `/insight/improvement/{summary,timeline}` - Campaign success rates + ledger with rationale
+- `/insight/dreams/recent` - machine.dreaming cycles + tuning recommendations
+- `/insight/godel/recent` - Gödel choices with rationale (full self-reference audit trail)
+- `/insight/boardroom/recent` - Boardroom sessions with per-soldier votes, providers, confidence
+- `/insight/stuck_loops` - Repeating `(agent, step)` tuples (15-min window)
+- `/insight/storage/{status,recent}` - IPFS offload counts + recent CIDs/tx_hashes
+- `/storage/{health,anchor/health,eligible}` - IPFS provider + chain anchor configuration (auth-gated)
+- `POST /storage/offload` - Run offload projector (`dry_run=true` default; admin required for `false`)
 
 API docs at `http://localhost:8000/docs`
+
+## Knowledge Catalogue (CQRS projection layer)
+
+Phase 0 instrumentation. Unified append-only event stream that mirrors all writes from disparate JSONL logs into one substrate. Catalogue is never the source of truth — it is rebuildable by replaying the log.
+
+- `agents/catalogue/events.py` — Pydantic `CatalogueEvent` with 16 typed `kind`s (`memory.{write,consolidate,dream,offload,anchor}`, `godel.choice`, `board.{session,vote}`, `tool.{invoke,result}`, `skill.{invoke,result}`, `alignment.score`, `improvement.{proposed,executed}`, `agent.interact`)
+- `agents/catalogue/log.py` — append-only JSONL writer with 100MB rotation
+- Sink: `data/logs/catalogue_events.jsonl`
+- Mirror call sites: `agents/memory_agent.py:save_timestamped_memory()` and `log_godel_choice()`, `agents/machine_dreaming.py:run_full_dream()`, `daio/governance/boardroom.py:_log_session()`, `agents/storage/offload_projector.py`
+- Phase 1+ design contract: `docs/KNOWLEDGE_CATALOGUE.md` (Dataplex six-resource model, hybrid retrieval, federation)
+- `MINDX_CATALOGUE_DISABLE=1` env disables the emitter cold
+
+## Storage Offload (IPFS + chain anchoring)
+
+`agents/storage/` package. Pushes old STM (≥14d, low importance) to IPFS via Lighthouse + nft.storage with deterministic gzipped JSONL bundles (byte-stable CIDs), sha256-roundtrip verification, and ARC `DatasetRegistry` on-chain anchor. Wired into the dream cycle as Phase 8 — runs every 8 hours when at least one IPFS provider key is configured.
+
+- `agents/storage/{provider,lighthouse_provider,nftstorage_provider,multi_provider}.py` - aiohttp-based, no SDK dependencies
+- `agents/storage/{eligibility,car_bundle,offload_projector}.py` - orchestrator (`dry_run=true` default; admin required for destructive `dry_run=false`)
+- `agents/storage/{raw_tx,anchor}.py` - minimal EIP-1559 sender (no `web3.py`); `AnchorClient.anchor_dataset_registry` uses selector `f1783fb8`; `anchor_thot` is a stub awaiting permissive contract variant
+- `agents/memory_agent.py:fetch_offloaded_memory(memory_id)` - lazy retrieval from IPFS when local file is gone
+- pgvector schema additions: `content_cid`, `content_cid_mirror`, `offload_tier`, `offloaded_at`, `offload_tx_hash`, `offload_chain` (idempotent ALTER TABLE IF NOT EXISTS in `memory_pgvector.init_offload_schema()`)
+- Vault keys (operator deposits): `lighthouse_api_key`, `nftstorage_api_key`, `arc_rpc_url`, `polygon_rpc_url`, `memory_anchor_treasury_pk`
 
 ## Production Deployment
 
