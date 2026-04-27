@@ -208,7 +208,18 @@ tr:hover td{background:rgba(121,192,255,.02)}
   </div>
 </section>
 
-<!-- 7. Inference source health (compact) -->
+<!-- 7. Memories on chain — IPFS offload + on-chain anchor receipts -->
+<section>
+  <div class="sec-head">
+    <h2>memories on chain
+      <span id="storagePill" class="pill">checking…</span>
+    </h2>
+    <span class="sub">/insight/storage/status &middot; /insight/storage/recent &middot; /storage/anchor/health</span>
+  </div>
+  <div id="storage" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<!-- 8. Inference source health (compact) -->
 <section>
   <div class="sec-head">
     <h2>inference health</h2>
@@ -578,16 +589,85 @@ async function refreshSources() {
   }
 }
 
+// ── 7. Memories on chain ──
+async function refreshStorage() {
+  const box = $('storage');
+  const pill = $('storagePill');
+  try {
+    const [statusR, recentR, anchorR] = await Promise.all([
+      fetch('/insight/storage/status').then(r => r.json()).catch(() => ({})),
+      fetch('/insight/storage/recent?limit=20').then(r => r.json()).catch(() => ({events:[]})),
+      fetch('/storage/anchor/health').then(r => r.json()).catch(() => ({})),
+    ]);
+    const ipfs = statusR.ipfs || 0;
+    const local = statusR.local || 0;
+    const anchored = statusR.anchored || 0;
+    const total = local + ipfs + (statusR.thot || 0);
+    if (ipfs === 0 && local === 0) {
+      pill.textContent = 'NOT YET WIRED';
+      pill.className = 'pill amber';
+      box.innerHTML = '<div class="empty">no offload events yet — set LIGHTHOUSE_API_KEY / NFTSTORAGE_API_KEY in vault, then trigger via POST /storage/offload (dry_run=true)</div>';
+      return;
+    }
+    pill.textContent = ipfs + ' OFFLOADED';
+    pill.className = ipfs > 0 ? 'pill ok' : 'pill';
+
+    let html = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">';
+    html += '<div><div style="font-family:var(--mono);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:1px">total memories</div><div style="font-size:22px;font-family:var(--mono);font-weight:700;color:var(--text)">' + total + '</div></div>';
+    html += '<div><div style="font-family:var(--mono);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:1px">local</div><div style="font-size:22px;font-family:var(--mono);font-weight:700;color:var(--blue)">' + local + '</div></div>';
+    html += '<div><div style="font-family:var(--mono);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:1px">IPFS-offloaded</div><div style="font-size:22px;font-family:var(--mono);font-weight:700;color:var(--green)">' + ipfs + '</div></div>';
+    html += '<div><div style="font-family:var(--mono);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:1px">on-chain anchored</div><div style="font-size:22px;font-family:var(--mono);font-weight:700;color:var(--violet)">' + anchored + '</div></div>';
+    html += '</div>';
+
+    if (anchorR && Object.keys(anchorR).length) {
+      const cls = anchorR.configured ? 'outcome-approved' : 'outcome-unknown';
+      html += '<div style="font-family:var(--mono);font-size:11px;color:var(--text2);margin-bottom:12px">';
+      html += 'anchor: <span class="' + cls + '">' + (anchorR.configured ? 'configured' : 'not configured') + '</span> · ';
+      html += 'rpc=' + (anchorR.rpc_url_set ? '✓' : '–') + ' · ';
+      html += 'chain_id=' + (anchorR.chain_id || '–') + ' · ';
+      html += 'registry=' + (anchorR.registry_address_set ? '✓' : '–') + ' · ';
+      html += 'treasury_pk=' + (anchorR.treasury_key_set ? '✓' : '–') + ' · ';
+      html += 'thot_minter=' + (anchorR.thot_minter_set ? '✓' : 'stub');
+      html += '</div>';
+    }
+
+    const events = recentR.events || [];
+    if (events.length) {
+      html += '<table><thead><tr><th>ts</th><th>agent</th><th>date</th><th>files</th><th>bytes</th><th>cid</th><th>tx</th></tr></thead><tbody>';
+      for (const e of events.slice(0, 20)) {
+        const cidShort = e.cid ? e.cid.slice(0, 14) + '…' : '—';
+        const txShort = e.tx_hash ? e.tx_hash.slice(0, 12) + '…' : '<span style="color:var(--text3)">(no chain)</span>';
+        const verified = e.verified ? '<span class="outcome-approved">✓</span>' : '<span class="outcome-rejected">✗</span>';
+        html += '<tr><td>' + escapeHtml(fmtTs(e.ts)) + '</td>' +
+          '<td><b>' + escapeHtml(truncate(e.actor || '?', 28)) + '</b></td>' +
+          '<td>' + escapeHtml(e.date_str || '') + '</td>' +
+          '<td>' + (e.file_count || 0) + ' ' + verified + '</td>' +
+          '<td>' + (e.bytes_packed ? Math.round(e.bytes_packed / 1024) + ' KB' : '?') + '</td>' +
+          '<td><code title="' + escapeHtml(e.cid || '') + '">' + cidShort + '</code></td>' +
+          '<td>' + (e.tx_hash ? '<code title="' + escapeHtml(e.tx_hash) + '">' + txShort + '</code>' : txShort) + '</td>' +
+          '</tr>';
+      }
+      html += '</tbody></table>';
+    } else {
+      html += '<div class="empty" style="padding:14px">no offload events recorded yet</div>';
+    }
+    box.innerHTML = html;
+  } catch (e) {
+    box.innerHTML = '<div class="empty">storage view unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
 // ── boot ──
 async function boot() {
   await seedDialogue();
   startSSE();
-  await Promise.allSettled([refreshStuck(), refreshLedger(), refreshBoardroom(), refreshDreams(), refreshGraph(), refreshSources()]);
+  await Promise.allSettled([refreshStuck(), refreshLedger(), refreshBoardroom(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
   setInterval(refreshStuck, 30000);
   setInterval(refreshLedger, 45000);
   setInterval(refreshBoardroom, 60000);
   setInterval(refreshDreams, 60000);
   setInterval(refreshGraph, 60000);
+  setInterval(refreshStorage, 60000);
   setInterval(refreshSources, 60000);
 }
 document.addEventListener('DOMContentLoaded', boot);

@@ -296,6 +296,71 @@ class MemoryAgent:
             tags=tags
         )
 
+    async def fetch_offloaded_memory(self, memory_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Lazy-load a memory whose content lives on IPFS.
+
+        Looks up content_cid in pgvector, fetches the bundle via MultiProvider,
+        iterates to find the matching memory_id. Returns the raw record dict
+        or None on miss / error.
+
+        Plan: ~/.claude/plans/whispering-floating-merkle.md (Phase E)
+        """
+        try:
+            from agents import memory_pgvector
+        except Exception:
+            return None
+        pool = await memory_pgvector.get_pool()
+        if not pool:
+            return None
+        try:
+            row = await pool.fetchrow(
+                "SELECT content_cid, content_cid_mirror, offload_tier "
+                "FROM memories WHERE memory_id=$1",
+                memory_id,
+            )
+        except Exception:
+            return None
+        if not row or row["offload_tier"] != "ipfs" or not row["content_cid"]:
+            return None
+        try:
+            from agents.storage.lighthouse_provider import LighthouseProvider
+            from agents.storage.nftstorage_provider import NFTStorageProvider
+            from agents.storage.multi_provider import MultiProvider
+            from agents.storage.car_bundle import bundle_iter
+            from agents.storage.provider import CID, ProviderError
+        except Exception:
+            return None
+        primary = None
+        mirror = None
+        try:
+            primary = LighthouseProvider()
+        except ProviderError:
+            primary = None
+        try:
+            mirror = NFTStorageProvider()
+        except ProviderError:
+            mirror = None
+        if primary is None and mirror is None:
+            return None
+        if primary is None:
+            provider = MultiProvider(mirror)
+        elif mirror is None:
+            provider = MultiProvider(primary)
+        else:
+            provider = MultiProvider(primary, mirror)
+        try:
+            blob = await provider.retrieve(CID(row["content_cid"]), timeout=12.0)
+        except ProviderError:
+            return None
+        finally:
+            await provider.close()
+        for entry in bundle_iter(blob):
+            rec = entry.get("record") or {}
+            if rec.get("memory_id") == memory_id:
+                return rec
+        return None
+
     async def get_recent_memories(
         self,
         agent_id: str,

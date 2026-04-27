@@ -763,7 +763,101 @@ class MachineDreamCycle:
         except Exception:
             pass
 
+        # Phase 8 — cold-tier distribution to IPFS (best-effort).
+        # Triggered when STM is large; failures don't block the dream report.
+        # Plan: ~/.claude/plans/whispering-floating-merkle.md
+        try:
+            cold = await self._distribute_to_cold_tier(report)
+            if cold:
+                report["cold_tier"] = cold
+        except Exception as cold_e:
+            logger.debug(f"{self.log_prefix} cold-tier distribute failed: {cold_e}")
+
         return report
+
+    # === PHASE 8 — COLD-TIER DISTRIBUTION (IPFS + on-chain anchor) ===
+
+    async def _distribute_to_cold_tier(self, report: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Push old/low-importance STM to IPFS via the offload projector.
+
+        Triggers: any agent's STM dir > 5GB, OR any agent has > 0 eligible
+        date directories older than 14 days. Both checks are cheap.
+
+        Honors `MINDX_COLD_TIER_DISABLE` env var so an operator can disable
+        without redeploy. Defaults to dry_run=False on the auto path so old
+        files actually get evicted; the manual /storage/offload endpoint
+        defaults to dry_run=True for safety.
+        """
+        import os as _os
+        if _os.environ.get("MINDX_COLD_TIER_DISABLE"):
+            return None
+
+        # Lazy imports — keep machine_dreaming dependency-light when storage
+        # module is absent.
+        try:
+            from agents.storage.eligibility import list_eligible
+            from agents.storage.lighthouse_provider import LighthouseProvider
+            from agents.storage.nftstorage_provider import NFTStorageProvider
+            from agents.storage.multi_provider import MultiProvider
+            from agents.storage.offload_projector import OffloadProjector
+            from agents.storage.provider import ProviderError
+        except Exception as imp_e:
+            logger.debug(f"{self.log_prefix} cold-tier: storage module unavailable: {imp_e}")
+            return None
+
+        cands = list_eligible(PROJECT_ROOT, min_age_days=14.0)
+        if not cands:
+            return None
+
+        # Build provider — at least one of Lighthouse/nft.storage must be set.
+        primary = None
+        mirror = None
+        try:
+            primary = LighthouseProvider()
+        except ProviderError:
+            primary = None
+        try:
+            mirror = NFTStorageProvider()
+        except ProviderError:
+            mirror = None
+        if primary is None and mirror is None:
+            logger.info(f"{self.log_prefix} cold-tier: no IPFS keys configured — skipping")
+            return {"skipped": "no_provider_keys", "candidates": len(cands)}
+
+        if primary is None:
+            provider = MultiProvider(mirror)  # type: ignore[arg-type]
+        elif mirror is None:
+            provider = MultiProvider(primary)
+        else:
+            provider = MultiProvider(primary, mirror)
+
+        projector = OffloadProjector(
+            provider=provider,
+            memory_agent=self.memory_agent,
+            project_root=PROJECT_ROOT,
+        )
+        try:
+            run = await projector.run(
+                min_age_days=14.0,
+                max_batches=20,            # bounded per dream cycle
+                dry_run=False,             # auto path actually frees disk
+            )
+        finally:
+            await provider.close()
+
+        if run.candidates_processed:
+            logger.info(
+                f"{self.log_prefix} cold-tier: processed {run.candidates_processed}/"
+                f"{run.candidates_total} candidates, freed "
+                f"{run.bytes_freed_total} bytes"
+            )
+        return {
+            "candidates_total": run.candidates_total,
+            "candidates_processed": run.candidates_processed,
+            "bytes_packed_total": run.bytes_packed_total,
+            "bytes_freed_total": run.bytes_freed_total,
+        }
 
     # === LTM INSIGHT RETRIEVAL FOR PERCEPTUAL AWARENESS ===
 

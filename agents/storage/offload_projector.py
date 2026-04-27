@@ -31,6 +31,7 @@ from typing import Optional
 from utils.logging_config import get_logger
 from utils.config import PROJECT_ROOT
 
+from .anchor import AnchorClient
 from .car_bundle import bundle_iter, manifest, pack_directory
 from .eligibility import OffloadCandidate, list_eligible
 from .multi_provider import MultiProvider
@@ -77,11 +78,15 @@ class OffloadProjector:
         memory_agent=None,
         id_manager=None,
         project_root: Optional[Path] = None,
+        anchor: Optional[AnchorClient] = None,
     ):
         self.provider = provider
         self.memory_agent = memory_agent
         self.id_manager = id_manager
         self.project_root = project_root or PROJECT_ROOT
+        # Anchor is optional: if unconfigured, offload still succeeds without
+        # an on-chain receipt (offload_tx_hash stays NULL).
+        self.anchor = anchor or AnchorClient()
 
     async def run(
         self,
@@ -166,12 +171,36 @@ class OffloadProjector:
 
             # Mark every memory_id in this batch as offloaded (best-effort)
             if result.verified:
-                marked = await self._mark_db(blob, cid_value=result.cid, mirror=None)
+                # On-chain anchor (best-effort; skipped if anchor not configured)
+                anchor_receipt: dict = {}
+                tx_hash: Optional[str] = None
+                if self.anchor.configured:
+                    try:
+                        anchor_receipt = await self.anchor.anchor_dataset_registry(
+                            agent_id=cand.agent_id,
+                            date_str=cand.date_str,
+                            cid=result.cid,
+                        )
+                        tx_hash = anchor_receipt.get("tx_hash")
+                        if tx_hash:
+                            logger.info(
+                                "[offload] anchored %s/%s -> tx %s",
+                                cand.agent_id, cand.date_str, tx_hash,
+                            )
+                    except Exception as ae:
+                        logger.debug("[offload] anchor failed: %s", ae)
+                        anchor_receipt = {"error": str(ae)}
+
+                marked = await self._mark_db(
+                    blob, cid_value=result.cid, mirror=None,
+                    tx_hash=tx_hash,
+                    chain="arc" if tx_hash else None,
+                )
                 result.memory_ids_marked = marked
 
                 # Emit catalogue event so /insight/storage/recent can read it
                 await self._emit_offload_event(
-                    cand=cand, result=result,
+                    cand=cand, result=result, anchor_receipt=anchor_receipt,
                 )
 
                 # Delete local files only if not in dry_run mode
@@ -198,7 +227,15 @@ class OffloadProjector:
             result.duration_seconds = time.time() - t0
         return result
 
-    async def _mark_db(self, blob: bytes, *, cid_value: str, mirror: Optional[str]) -> int:
+    async def _mark_db(
+        self,
+        blob: bytes,
+        *,
+        cid_value: str,
+        mirror: Optional[str],
+        tx_hash: Optional[str] = None,
+        chain: Optional[str] = None,
+    ) -> int:
         """For every memory_id in the bundle, update pgvector row."""
         try:
             from agents import memory_pgvector
@@ -216,6 +253,8 @@ class OffloadProjector:
                     content_cid=cid_value,
                     content_cid_mirror=mirror,
                     offload_tier="ipfs",
+                    tx_hash=tx_hash,
+                    chain=chain,
                 )
                 if ok:
                     marked += 1
@@ -223,7 +262,7 @@ class OffloadProjector:
                 continue
         return marked
 
-    async def _emit_offload_event(self, *, cand: OffloadCandidate, result: OffloadResult) -> None:
+    async def _emit_offload_event(self, *, cand: OffloadCandidate, result: OffloadResult, anchor_receipt: Optional[dict] = None) -> None:
         try:
             from agents.catalogue import emit_catalogue_event
         except Exception:
@@ -247,6 +286,7 @@ class OffloadProjector:
                     "verified": result.verified,
                     "deleted_local": result.deleted_local,
                     "dry_run": result.dry_run,
+                    "anchor": anchor_receipt or None,
                 },
                 source_log="storage/offload_projector",
                 source_ref=f"{cand.agent_id}/{cand.date_str}",

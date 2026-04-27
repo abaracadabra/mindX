@@ -1849,6 +1849,24 @@ class OffloadRequest(BaseModel):
     dry_run: bool = True
 
 
+@app.get("/storage/anchor/health", tags=["storage"], summary="Chain anchor configuration status")
+@_insight_safe
+async def storage_anchor_health():
+    try:
+        from agents.storage.anchor import AnchorClient
+    except Exception as e:
+        return {"configured": False, "error": str(e)}
+    a = AnchorClient()
+    return {
+        "configured": a.configured,
+        "rpc_url_set": bool(a.rpc_url),
+        "chain_id": a.chain_id,
+        "registry_address_set": bool(a.registry_address),
+        "treasury_key_set": bool(a.private_key),
+        "thot_minter_set": bool(os.environ.get("THOT_MINTER_KEY")),
+    }
+
+
 @app.get("/storage/health", tags=["storage"], summary="IPFS provider reachability")
 @_insight_safe
 async def storage_health():
@@ -1917,6 +1935,56 @@ async def insight_storage_status():
         return await memory_pgvector.get_offload_stats()
     except Exception as e:
         return {"error": str(e), "local": 0, "ipfs": 0, "thot": 0, "anchored": 0}
+
+
+@app.get("/insight/storage/recent", tags=["insight"], summary="Recent memory.offload events (CIDs + tx_hashes)")
+@_insight_safe
+async def insight_storage_recent(limit: int = 30):
+    """Tail of catalogue_events.jsonl filtered to kind='memory.offload'."""
+    log_path = PROJECT_ROOT / "data" / "logs" / "catalogue_events.jsonl"
+    if not log_path.exists():
+        return {"events": [], "count": 0, "note": "catalogue_events.jsonl not found"}
+    try:
+        with open(log_path, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            block = 256 * 1024
+            data = b""
+            pos = size
+            while pos > 0 and data.count(b"\n") <= max(1, limit) * 50:
+                read = min(block, pos)
+                pos -= read
+                f.seek(pos)
+                data = f.read(read) + data
+        out = []
+        for ln in reversed([l for l in data.split(b"\n") if l.strip()]):
+            try:
+                evt = json.loads(ln.decode("utf-8"))
+            except Exception:
+                continue
+            if evt.get("kind") != "memory.offload":
+                continue
+            payload = evt.get("payload") or {}
+            anchor = payload.get("anchor") or {}
+            out.append({
+                "ts": evt.get("ts"),
+                "actor": evt.get("actor"),
+                "actor_wallet": evt.get("actor_wallet"),
+                "date_str": payload.get("date_str"),
+                "file_count": payload.get("file_count"),
+                "bytes_packed": payload.get("bytes_packed"),
+                "cid": payload.get("cid"),
+                "verified": payload.get("verified"),
+                "deleted_local": payload.get("deleted_local"),
+                "tx_hash": anchor.get("tx_hash"),
+                "chain": anchor.get("chain"),
+                "dataset_id_hex": anchor.get("dataset_id_hex"),
+            })
+            if len(out) >= max(1, min(limit, 200)):
+                break
+        return {"events": out, "count": len(out)}
+    except Exception as e:
+        return {"events": [], "count": 0, "error": str(e)}
 
 
 @app.post("/storage/offload", tags=["storage"], summary="Run offload projector (dry_run by default)")
