@@ -258,9 +258,11 @@ class Boardroom:
             attending = self.soldier_providers
 
         try:
-            # Query soldiers sequentially — VPS can only run 1-2 models at a time
-            # Sequential execution prevents Ollama OOM and connection timeouts
-            MAX_CONCURRENT = 1
+            # Concurrency tuned for OLLAMA_NUM_PARALLEL=4 / OLLAMA_MAX_LOADED_MODELS=4
+            # set on the VPS systemd override. With 4 slots Ollama keeps the
+            # working set of soldier-models resident across consecutive votes,
+            # eliminating the cold-load cliff that produced 0/7 roll calls.
+            MAX_CONCURRENT = int(os.environ.get("BOARDROOM_MAX_CONCURRENT", "3"))
             semaphore = asyncio.Semaphore(MAX_CONCURRENT)
 
             async def _limited_query(sid, prov, weight):
@@ -361,7 +363,7 @@ class Boardroom:
                     session.votes.append(vote)
                     yield {"event": "vote", "data": {
                         "soldier": vote.soldier_id, "vote": vote.vote,
-                        "provider": vote.provider, "reasoning": vote.reasoning[:300],
+                        "provider": vote.provider, "reasoning": vote.reasoning[:2000],
                         "confidence": vote.confidence, "latency_ms": vote.latency_ms,
                         "weight": vote.weight,
                     }}
