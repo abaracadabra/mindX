@@ -1019,13 +1019,44 @@ async function requestCloudSignin(reason) {
   }
 }
 
-// Detect lapsed cloud auth from the rollcall result and auto-fire the handoff.
-function maybeAutoSigninHandoff(rollcallResult) {
+// Self-adaptation: read the structured recovery block from the rollcall
+// and auto-fire the matching endpoint. New patterns slot in here.
+function maybeAutoRecover(rollcallResult) {
   if (!rollcallResult) return;
-  const advice = (rollcallResult.advice || '').toLowerCase();
-  if (advice.includes('signin')) {
-    requestCloudSignin('Ollama Cloud signin lapsed — local daemon returned unauthorized');
+  const rec = rollcallResult.recovery;
+  if (rec && rec.auto_action) {
+    const a = rec.auto_action;
+    // Surface a CEO message naming the pattern and the recovery action
+    addMessage(
+      'CEO → SELF',
+      'Detected pattern: <b>' + (rec.pattern || 'unknown') + '</b> (' +
+      rec.matched_count + '/' + rec.matched_total + ' seats affected). ' +
+      '<br>Auto-action: <code>' + a.method + ' ' + a.endpoint + '</code>' +
+      '<br>' + (a.ui_message || ''),
+      'system',
+      {html: true}
+    );
+    // Pattern → handler
+    if (rec.pattern === 'ollama_signin_lapsed') {
+      requestCloudSignin(rec.operator_message || 'Ollama Cloud signin lapsed');
+    }
+    // Future patterns: add their handler here. Each one already has its
+    // remediation_hints surfaced to the operator via operator_message.
+  } else if (rec && rec.operator_message) {
+    // Recovery diagnosed but no auto-action — narrate the operator hint
+    addMessage(
+      'CEO → SELF',
+      'Detected pattern: <b>' + (rec.pattern || '?') + '</b> · ' +
+      (rec.severity || 'info') + ' severity<br>' + rec.operator_message,
+      'system',
+      {html: true}
+    );
   }
+}
+
+// Backwards-compat shim — older code calls maybeAutoSigninHandoff
+function maybeAutoSigninHandoff(rollcallResult) {
+  maybeAutoRecover(rollcallResult);
 }
 
 function clearBoard() {
@@ -1486,8 +1517,8 @@ async function bdRollcall() {
     const r = await fetch('/insight/boardroom/rollcall', {method: 'POST'});
     const d = await r.json();
     const results = d.results || {};
-    // If the CEO detects lapsed cloud auth, surface the operator handoff.
-    maybeAutoSigninHandoff(d);
+    // Self-adaptation: pattern-match failures → auto-recover when possible.
+    maybeAutoRecover(d);
     const sym = {present: '✓', silent: '○', error: '!'};
     const colorMap = {present: '#00ff88', silent: '#ffd166', error: '#ff5e62'};
     const cached = d.cached;

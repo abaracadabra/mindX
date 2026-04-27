@@ -1526,6 +1526,38 @@ async function refreshBoardRollcall() {
     box.innerHTML = '<div class="empty">roll call unavailable: ' + escapeHtml(e.message) + '</div>';
   }
 }
+// Self-adaptation: fire the recovery action the rollcall recommended
+async function fireRecovery(endpoint, method, statusId) {
+  const status = $(statusId);
+  if (status) status.textContent = 'firing…';
+  try {
+    const r = await fetch(endpoint, {method: method || 'POST'});
+    const d = await r.json();
+    if (status) {
+      if (d.connect_url) {
+        // Specifically the cloud_signin pattern — surface the URL
+        status.innerHTML = '✓ <a href="' + escapeHtml(d.connect_url) + '" target="_blank" rel="noopener" style="color:var(--green);font-weight:600">click to authenticate ↗</a> · ' +
+                          '<span style="color:var(--text3)">PID ' + (d.pid || '?') + '</span>';
+      } else if (d.status === 'completed' || d.status === 'awaiting_operator_click') {
+        status.textContent = '✓ ' + (d.status === 'completed' ? 'recovery completed' : 'awaiting operator action');
+        status.style.color = 'var(--green)';
+      } else if (d.error) {
+        status.textContent = '! ' + d.error;
+        status.style.color = 'var(--red)';
+      } else {
+        status.textContent = '✓ fired (status: ' + (d.status || 'unknown') + ')';
+      }
+    }
+    // Re-fetch the rollcall view in 5s so the banner updates after recovery
+    setTimeout(refreshBoardRollcall, 5000);
+  } catch (e) {
+    if (status) {
+      status.textContent = '! recovery failed: ' + e.message;
+      status.style.color = 'var(--red)';
+    }
+  }
+}
+
 async function liveRollcall() {
   const live = $('board-rollcall-live');
   if (!live) return;
@@ -1544,6 +1576,39 @@ async function liveRollcall() {
       '<span style="color:var(--text2);font-size:10px">via ' + (d.cloud_used ? 'cloud' : 'local') + '</span>' +
       ' <a href="/insight/boardroom/rollcall?h=true" target="_blank" rel="noopener" style="font-size:10.5px;color:var(--text2)">raw ↗</a>' +
       '</div>';
+
+    // Self-adaptation banner: if the rollcall diagnosed a recovery
+    // pattern, surface it here with a one-click action button when
+    // available.
+    const rec = d.recovery;
+    if (rec && rec.pattern) {
+      const sevColor = rec.severity === 'high' ? 'var(--red)' :
+                       rec.severity === 'medium' ? 'var(--amber)' : 'var(--blue)';
+      html += '<div style="margin:8px 0 12px;padding:10px 12px;background:rgba(248,81,73,.06);' +
+              'border-left:3px solid ' + sevColor + ';border-radius:4px;font-family:var(--mono);font-size:11.5px;line-height:1.55">' +
+              '<b style="color:' + sevColor + '">▸ self-adaptation: ' + escapeHtml(rec.pattern) + '</b>' +
+              '<span style="color:var(--text3);margin-left:8px">' +
+              (rec.matched_count || 0) + '/' + (rec.matched_total || 0) + ' seats affected</span>' +
+              '<div style="margin-top:6px;color:var(--text2)">' + escapeHtml(rec.operator_message || '') + '</div>';
+      if (rec.auto_action) {
+        const a = rec.auto_action;
+        const actId = 'recovery-act-' + Math.random().toString(36).slice(2, 8);
+        html += '<div style="margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">' +
+                '<button onclick="fireRecovery(\'' + a.endpoint + '\',\'' + a.method + '\',\'' + actId + '\')" ' +
+                'style="background:rgba(86,211,100,.15);color:var(--green);border:1px solid rgba(86,211,100,.3);' +
+                'padding:5px 12px;border-radius:4px;cursor:pointer;font-family:var(--mono);font-size:11px;font-weight:600">' +
+                '▸ ' + a.method + ' ' + escapeHtml(a.endpoint) + '</button>' +
+                '<span id="' + actId + '" style="color:var(--text3);font-size:10.5px"></span>' +
+                '</div>';
+      }
+      if (rec.remediation_hints && rec.remediation_hints.length) {
+        html += '<details style="margin-top:6px"><summary style="cursor:pointer;color:var(--text3);font-size:10.5px">other remediation paths (' + rec.remediation_hints.length + ')</summary>';
+        html += '<ul style="margin:6px 0 0 18px;color:var(--text2);font-size:10.5px">';
+        for (const h of rec.remediation_hints) html += '<li>' + escapeHtml(h) + '</li>';
+        html += '</ul></details>';
+      }
+      html += '</div>';
+    }
     html += '<ul class="drill-list">';
     const sym = {present: '✓', silent: '○', error: '!'};
     const colorMap = {present: 'var(--green)', silent: 'var(--amber)', error: 'var(--red)'};

@@ -1227,6 +1227,12 @@ class Boardroom:
                 f"so the local daemon can proxy {CLOUD_MODEL} for all soldiers (no API key needed for "
                 f"the local-proxied path; see docs/ollama/cloud/cloud.md)."
             )
+
+        # Self-adaptation: pattern-match the failure and emit a structured
+        # recovery action. The UI auto-fires the matching endpoint when
+        # `recovery.auto_action` is set.
+        recovery = self._diagnose_recovery(results, present_count)
+
         return {
             "ceo": {
                 "id": "ceo_agent_main",
@@ -1242,5 +1248,125 @@ class Boardroom:
             "cloud_used": cloud_ok,
             "per_soldier_timeout": per_soldier_timeout,
             "advice": advice,
+            "recovery": recovery,
             "completed_at": time.time(),
         }
+
+    def _diagnose_recovery(self, results: Dict[str, Any], present_count: int) -> Dict[str, Any]:
+        """Pattern-match the per-soldier failure modes and emit a structured
+        recovery action the UI can auto-fire.
+
+        Today this handles:
+          - ≥4 soldiers errored with "unauthorized"  → ollama_signin
+          - all soldiers timed out at the same ceiling → cold_load_storm
+          - all soldiers returned empty acks → prompt_or_format_drift
+          - persona_source == "fallback" for any soldier → file_missing
+
+        Adding a new pattern is one entry: the matcher predicate + the
+        recovery dict. The UI reads `auto_action` and POSTs the matching
+        endpoint; everything else is human-readable narration.
+        """
+        total = len(results)
+        if total == 0:
+            return {"pattern": None, "auto_action": None}
+
+        # Collect failure-mode counts
+        unauthorized = 0
+        timed_out = 0
+        empty_ack = 0
+        cold_load_msg = 0
+        for r in results.values():
+            err = (r.get("error") or "").lower()
+            state = r.get("state")
+            if "unauthorized" in err:
+                unauthorized += 1
+            if "timeout" in err or err.startswith("timeout"):
+                timed_out += 1
+            if state == "silent":
+                empty_ack += 1
+            if "cold-loading" in err or "cold_load" in err:
+                cold_load_msg += 1
+
+        # Pattern 1: unauthorized storm (highest priority, easiest fix)
+        if unauthorized >= max(4, total // 2):
+            return {
+                "pattern": "ollama_signin_lapsed",
+                "severity": "high",
+                "matched_count": unauthorized,
+                "matched_total": total,
+                "auto_action": {
+                    "method": "POST",
+                    "endpoint": "/insight/boardroom/cloud_signin",
+                    "ui_message": (
+                        f"{unauthorized}/{total} soldiers report 'unauthorized'. "
+                        f"CEO is initiating the operator-signin handoff automatically."
+                    ),
+                },
+                "operator_message": (
+                    "The boardroom needs you to re-authorise the local Ollama daemon to "
+                    "Ollama Cloud (one click on the URL the CEO will surface in dialogue). "
+                    "Until then every cloud-routed call returns 401. "
+                    "See docs/ollama/cloud/cloud.md."
+                ),
+                "fallback_when_no_signin": (
+                    "If the operator can't sign now, the boardroom can convene with locally-"
+                    "available models only (BOARDROOM_INFERENCE_BACKEND=ollama, slower). "
+                    "Cold-load latency dominates."
+                ),
+            }
+
+        # Pattern 2: cold-load storm — all timed out at the ceiling
+        if timed_out + cold_load_msg >= max(4, total // 2):
+            return {
+                "pattern": "cold_load_storm",
+                "severity": "medium",
+                "matched_count": timed_out + cold_load_msg,
+                "matched_total": total,
+                "auto_action": None,  # No safe auto-action; this requires operator decision
+                "operator_message": (
+                    f"{timed_out + cold_load_msg}/{total} soldiers timed out cold-loading. "
+                    f"Local Ollama swap-thrashes when seven distinct models are requested. "
+                    f"Either run `ollama signin` (cloud routing through one shared model) or "
+                    f"raise OLLAMA_MAX_LOADED_MODELS in the systemd override."
+                ),
+                "remediation_hints": [
+                    "POST /insight/boardroom/cloud_signin (preferred — sub-3s per soldier)",
+                    "increase OLLAMA_MAX_LOADED_MODELS=4 in /etc/systemd/system/ollama.service.d/concurrency.conf",
+                    "set BOARDROOM_INFERENCE_BACKEND=vllm with a vLLM server (continuous batching)",
+                ],
+            }
+
+        # Pattern 3: silent / empty acks (model loaded but produces nothing)
+        if empty_ack >= max(4, total // 2):
+            return {
+                "pattern": "empty_ack_drift",
+                "severity": "medium",
+                "matched_count": empty_ack,
+                "matched_total": total,
+                "auto_action": None,
+                "operator_message": (
+                    "Models load and respond fast but the ack text is empty — likely a prompt-"
+                    "format drift (model output landing in `thinking` instead of `response`, or "
+                    "BOARDROOM_NUM_CTX truncating the persona). Check /insight/boardroom/cards "
+                    "for the composed system_prompt size and BOARDROOM_NUM_CTX."
+                ),
+            }
+
+        # Pattern 4: fallback persona — at least one soldier missing files
+        fallback_seats = [sid for sid, r in results.items() if r.get("persona_source") == "fallback"]
+        if fallback_seats:
+            return {
+                "pattern": "persona_files_missing",
+                "severity": "low",
+                "matched_count": len(fallback_seats),
+                "matched_total": total,
+                "auto_action": None,
+                "operator_message": (
+                    f"{len(fallback_seats)} seat(s) running on the hardcoded fallback persona "
+                    f"({', '.join(fallback_seats)}). Restore the missing files in "
+                    f"prompts/boardroom/ and agents/boardroom/ — see /doc/agents/boardroom_members."
+                ),
+            }
+
+        # No issues
+        return {"pattern": None, "auto_action": None, "matched_count": 0}
