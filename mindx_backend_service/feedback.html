@@ -441,6 +441,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
     The <b>first hierarchy of decision</b>: every directive evaluated by the 7-soldier <a href="/doc/BOARDROOM"><abbr title="CEO + Seven Soldiers (CISO, CRO, CFO, CLO, CPO, CTO, COO) — the primary decision tier">boardroom</abbr></a>. AI / agent / member interaction; any seat holder verifies by <abbr title="Ethereum-compatible wallet signature via IDManagerAgent. The boardroom engine accepts decisions only from signature-verified identities.">signature</abbr>. Works <abbr title="DAIO (Solidity contracts) is the optional on-chain controller. When wired, boardroom decisions are on-chain enforced. When not, they remain off-chain consensus. Same engine either way.">with or without DAIO control</abbr>. CISO and CRO weight 1.2× as veto holders. Outcome is approved at weighted score ≥ 0.666; minority dissent opens an exploration branch. <abbr title="A boardroom-approved CEO decision can be cast as the AI vote inside DAIO's 2/3 consensus across Marketing / Community / Development groups (each group: 2 humans + 1 AI). One off-chain consensus → one on-chain ballot.">A boardroom decision can be cast as the AI vote in DAIO's 2/3 consensus across Marketing / Community / Development.</abbr> <b>Click any row</b> for the full per-soldier card (vote, weight, model, latency, confidence, full reasoning). See <a href="/doc/agents/ceo_agent">CEO Agent</a> · <a href="/insight/boardroom/roles?h=true" target="_blank" rel="noopener">role registry</a> · <a href="/doc/BOARDROOM">spec</a>. Disputes escalate to <abbr title="Dojo: dispute resolution opened by any boardroom seat-holder. Configurable consensus per dispute — 2/3, 50/99, supermajority.">dojo</abbr>; the 13-seat <abbr title="War council at mastermind.pythai.net — foreign entity isolated from mindX. Consumes the mindX API as a paying client; metered through bankon.pythai.net. 13 BONAFIDE-tied seats with PYTHAI naming as toggle. Roadmap.">war council</abbr> at <a href="https://mastermind.pythai.net" target="_blank" rel="noopener">mastermind.pythai.net</a> is a foreign entity that pays for mindX inference via <a href="https://bankon.pythai.net" target="_blank" rel="noopener">BANKON</a>.
   </p>
   <div id="board-rollcall" class="card" style="margin-bottom:14px"><div class="empty">CEO roll call — checking model readiness…</div></div>
+  <div id="board-leaderboard" class="card" style="margin-bottom:14px"><div class="empty">fitness leaderboard — loading…</div></div>
   <div id="boardroom" class="card"><div class="empty">loading…</div></div>
   <div id="board-drill" class="cog-drill" hidden></div>
 </section>
@@ -1573,6 +1574,137 @@ async function liveRollcall() {
   }
 }
 
+// ── boardroom fitness leaderboard ──
+function _fitClass(fit) {
+  if (fit >= 0.5) return 'green';
+  if (fit >= 0.15) return 'amber';
+  return 'red';
+}
+function _fitColor(fit) {
+  return fit >= 0.5 ? 'var(--green)' : fit >= 0.15 ? 'var(--amber)' : 'var(--red)';
+}
+async function refreshBoardLeaderboard() {
+  const box = $('board-leaderboard');
+  if (!box) return;
+  try {
+    const r = await fetch('/insight/boardroom/members?sessions=50');
+    const d = await r.json();
+    const members = d.members || {};
+    const rows = Object.values(members).sort((a, b) => (b.fitness || 0) - (a.fitness || 0));
+    let html = '<div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:8px">' +
+      '<h3 style="margin:0;color:var(--blue);font-family:var(--mono);font-size:13px">fitness leaderboard</h3>' +
+      '<span class="pill" style="background:rgba(121,192,255,.1);color:var(--blue)">' + (d.sessions_scanned || 0) + ' sessions scanned</span>' +
+      ' <a href="/insight/boardroom/members?h=true" target="_blank" rel="noopener" style="font-size:11px;color:var(--text2)">raw ↗</a>' +
+      '</div>';
+    if (!rows.length) {
+      html += '<div class="empty">no boardroom sessions logged in window</div>';
+      box.innerHTML = html;
+      return;
+    }
+    html += '<p style="color:var(--text2);font-size:11px;margin-bottom:10px;line-height:1.5">' +
+      'fitness = (utterance × signal) / cost — higher = better. ' +
+      'utterance = output chars / 1500 budget · signal = confidence × decisiveness · cost = wall-time. ' +
+      'Click a soldier for the last 20 votes with full reasoning.' +
+      '</p>';
+    html += '<table style="width:100%;font-family:var(--mono);font-size:11px">' +
+      '<thead><tr style="color:var(--text3)">' +
+      '<th style="text-align:left">soldier</th>' +
+      '<th style="text-align:right">fitness</th>' +
+      '<th style="text-align:right">signal</th>' +
+      '<th style="text-align:right">utterance</th>' +
+      '<th style="text-align:right">p50 latency</th>' +
+      '<th style="text-align:right">abstain</th>' +
+      '<th style="text-align:right">votes</th>' +
+      '<th></th>' +
+      '</tr></thead><tbody>';
+    for (const m of rows) {
+      const fit = m.fitness || 0;
+      const veto = m.veto_holder ? ' <span style="color:var(--amber);font-size:9px">VETO</span>' : '';
+      const safeSid = (m.soldier || '').replace(/'/g, "\\'");
+      html += '<tr class="board-row" data-soldier="' + escapeHtml(m.soldier) + '" style="cursor:pointer" onclick="showMember(\'' + safeSid + '\')">' +
+        '<td><b>' + escapeHtml(m.soldier) + '</b>' + veto + '<br><span style="color:var(--text3);font-size:10px">' + escapeHtml(m.model || '') + '</span></td>' +
+        '<td style="text-align:right;color:' + _fitColor(fit) + ';font-weight:700">' + fit.toFixed(3) + '</td>' +
+        '<td style="text-align:right">' + (m.signal_avg || 0).toFixed(2) + '</td>' +
+        '<td style="text-align:right">' + (m.utterance_avg || 0).toFixed(2) + '</td>' +
+        '<td style="text-align:right">' + Human.duration((m.latency_p50_ms || 0) / 1000) + '</td>' +
+        '<td style="text-align:right">' + ((m.abstain_rate || 0) * 100).toFixed(0) + '%</td>' +
+        '<td style="text-align:right">' + (m.votes_total || 0) + '</td>' +
+        '<td><button class="board-expand" onclick="event.stopPropagation();showMember(\'' + safeSid + '\')">▸</button></td>' +
+        '</tr>';
+    }
+    html += '</tbody></table>';
+    box.innerHTML = html;
+  } catch (e) {
+    box.innerHTML = '<div class="empty">leaderboard unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+async function showMember(soldierId) {
+  const drill = $('board-drill');
+  if (!drill) return;
+  if (_boardActive === ('member:' + soldierId)) {
+    drill.hidden = true; drill.innerHTML = ''; _boardActive = null; return;
+  }
+  _boardActive = 'member:' + soldierId;
+  drill.hidden = false;
+  drill.innerHTML = '<div class="empty">loading ' + escapeHtml(soldierId) + '…</div>';
+  try {
+    const r = await fetch('/insight/boardroom/members/' + encodeURIComponent(soldierId) + '?sessions=50');
+    const d = await r.json();
+    if (d.error) { drill.innerHTML = '<div class="empty">' + escapeHtml(d.error) + '</div>'; return; }
+    const veto = d.veto_holder ? ' <span style="color:var(--amber);font-size:10px;font-weight:700">VETO</span>' : '';
+    let html = '<div class="drill-head">' +
+      '<h3>▸ member ' + escapeHtml(d.soldier) + '</h3>' +
+      '<span class="sub">' + escapeHtml(d.model || '') + ' · weight ' + (d.weight || 1.0).toFixed(1) + veto + '</span>' +
+      ' <a href="/insight/boardroom/members/' + encodeURIComponent(soldierId) + '?h=true" target="_blank" rel="noopener" class="drill-raw">view raw ↗</a>' +
+      ' <button class="drill-close" onclick="showMember(\'' + soldierId.replace(/\'/g, "\\\'") + '\')" aria-label="close">✕</button>' +
+      '</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:12px">' +
+      '<div class="chain-cell"><div class="lbl">fitness</div><div class="val" style="color:' + _fitColor(d.fitness || 0) + '">' + (d.fitness || 0).toFixed(3) + '</div><div class="meta">avg</div></div>' +
+      '<div class="chain-cell"><div class="lbl">signal</div><div class="val">' + (d.signal_avg || 0).toFixed(2) + '</div></div>' +
+      '<div class="chain-cell"><div class="lbl">utterance</div><div class="val">' + (d.utterance_avg || 0).toFixed(2) + '</div></div>' +
+      '<div class="chain-cell"><div class="lbl">avg conf</div><div class="val">' + (d.avg_confidence || 0).toFixed(2) + '</div></div>' +
+      '<div class="chain-cell"><div class="lbl">latency p50</div><div class="val">' + Human.duration((d.latency_p50_ms || 0)/1000) + '</div></div>' +
+      '<div class="chain-cell"><div class="lbl">latency p95</div><div class="val">' + Human.duration((d.latency_p95_ms || 0)/1000) + '</div></div>' +
+      '<div class="chain-cell"><div class="lbl">abstain</div><div class="val">' + ((d.abstain_rate || 0)*100).toFixed(0) + '%</div></div>' +
+      '<div class="chain-cell"><div class="lbl">votes</div><div class="val">' + (d.votes_total || 0) + '</div></div>' +
+      '</div>';
+    const provs = d.providers || {};
+    if (Object.keys(provs).length) {
+      html += '<div style="font-family:var(--mono);font-size:11px;color:var(--text2);margin-bottom:10px">providers: ' +
+              Object.entries(provs).map(([k, n]) => escapeHtml(k) + '×' + n).join(' · ') + '</div>';
+    }
+    const lv = d.last_votes || [];
+    if (lv.length) {
+      html += '<h4 style="font-family:var(--mono);font-size:12px;color:var(--text2);margin:14px 0 6px">last ' + lv.length + ' votes</h4>';
+      html += '<ul class="drill-list">';
+      for (const v of lv) {
+        const vote = (v.vote || '').toLowerCase();
+        const sym = vote === 'approve' ? '✓' : vote === 'reject' ? '✗' : '–';
+        const symColor = vote === 'approve' ? 'var(--green)' : vote === 'reject' ? 'var(--red)' : 'var(--text3)';
+        html += '<li class="drill-item kind-board-vote ' + vote + '">' +
+          '<details>' +
+          '<summary>' +
+          '<span style="color:' + symColor + ';font-weight:700;font-size:14px;margin-right:6px">' + sym + '</span>' +
+          '<span class="drill-name">' + escapeHtml(Human.hash(v.session_id || '?', 14)) + '</span>' +
+          ' <span class="drill-meta">conf ' + (v.confidence || 0).toFixed(2) + ' · ' +
+            Human.duration((v.latency_ms || 0)/1000) + ' · ' + escapeHtml(v.provider || '?') + ' · ' +
+            relPast(v.ts) + '</span>' +
+          '</summary>' +
+          '<div class="drill-preview" style="white-space:pre-wrap;color:var(--text);max-width:none">' +
+            '<b>directive:</b> ' + escapeHtml(v.directive || '') + '\n\n' +
+            '<b>reasoning:</b> ' + escapeHtml(v.reasoning || '(empty)') +
+          '</div>' +
+          '</details></li>';
+      }
+      html += '</ul>';
+    }
+    drill.innerHTML = html;
+    drill.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+  } catch (e) {
+    drill.innerHTML = '<div class="empty">member detail unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
 // ── boardroom drill-down (click a row → full session card) ──
 let _boardActive = null;
 async function boardDrill(sid) {
@@ -1977,7 +2109,7 @@ async function boot() {
   _initTabbar();
   await seedDialogue();
   startSSE();
-  await Promise.allSettled([refreshCognition(), refreshSysPulse(), refreshStuck(), refreshBDI(), refreshLedger(), refreshBoardroom(), refreshBoardRollcall(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
+  await Promise.allSettled([refreshCognition(), refreshSysPulse(), refreshStuck(), refreshBDI(), refreshLedger(), refreshBoardroom(), refreshBoardRollcall(), refreshBoardLeaderboard(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
   setInterval(refreshCognition, 30000);
   setInterval(refreshSysPulse, 15000);
   setInterval(refreshStuck, 30000);
@@ -1985,6 +2117,7 @@ async function boot() {
   setInterval(refreshLedger, 45000);
   setInterval(refreshBoardroom, 60000);
   setInterval(refreshBoardRollcall, 60000);
+  setInterval(refreshBoardLeaderboard, 60000);
   setInterval(refreshDreams, 60000);
   setInterval(refreshGraph, 60000);
   setInterval(refreshStorage, 60000);

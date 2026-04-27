@@ -626,7 +626,7 @@ class Boardroom:
             is_cloud = used_model != local_model and model_mode in ("auto", "cloud")
             provider_label = f"ollama-cloud/{used_model}" if is_cloud else f"ollama/{used_model}"
 
-            return SoldierVote(
+            vote_obj = SoldierVote(
                 soldier_id=soldier_id,
                 provider=provider_label,
                 vote=vote_data.get("vote", "abstain"),
@@ -635,8 +635,39 @@ class Boardroom:
                 latency_ms=latency,
                 weight=weight,
             )
+            # Phase 3: per-soldier metrics — feed to PerformanceMonitor so
+            # downstream leaderboards can rank soldiers by fitness, abstain
+            # rate, latency, and signal/cost ratio.
+            try:
+                from agents.monitoring.performance_monitor import PerformanceMonitor
+                pm = PerformanceMonitor()
+                pm.log_llm_call(
+                    model_name=used_model,
+                    task_type="boardroom_vote",
+                    initiating_agent_id=soldier_id,
+                    latency_ms=float(latency),
+                    success=(vote_obj.vote != "abstain" or vote_obj.confidence >= 0.6),
+                    prompt_tokens=max(1, len(prompt) // 4),
+                    completion_tokens=max(1, len(vote_obj.reasoning) // 4),
+                )
+            except Exception as _pm_e:
+                logger.debug(f"Boardroom: performance_monitor.log_llm_call failed: {_pm_e}")
+            return vote_obj
         except Exception as e:
             latency = int((time.time() - t0) * 1000)
+            try:
+                from agents.monitoring.performance_monitor import PerformanceMonitor
+                pm = PerformanceMonitor()
+                pm.log_llm_call(
+                    model_name=local_model,
+                    task_type="boardroom_vote",
+                    initiating_agent_id=soldier_id,
+                    latency_ms=float(latency),
+                    success=False,
+                    error_type=type(e).__name__,
+                )
+            except Exception:
+                pass
             return SoldierVote(
                 soldier_id=soldier_id,
                 provider=f"ollama/{local_model}",
@@ -829,8 +860,14 @@ class Boardroom:
         budget: 7 × per_soldier_timeout = 7 minutes worst case. The HTTP
         edge will likely time out before completion.
 
-        Recommended: vault OLLAMA_API_KEY so all 7 soldiers use one cloud
-        model (gpt-oss:120b-cloud). One model = no swaps = ~1-3s per ack.
+        Recommended: have `ollama signin` run once on the VPS so the local
+        daemon proxies all 7 soldiers through one cloud model
+        (gpt-oss:120b-cloud). One model = no swaps = ~1-3s per ack.
+
+        Per docs/ollama/cloud/cloud.md: the LOCAL daemon path uses cloud
+        models WITHOUT an API key — auth is via `ollama signin` (ed25519
+        keypair at /usr/share/ollama/.ollama/id_ed25519). The
+        OLLAMA_API_KEY is only needed for direct https://ollama.com calls.
 
         ack states:
             present  — soldier responded with valid ack text
@@ -839,8 +876,12 @@ class Boardroom:
         """
         import aiohttp
 
-        api_key = os.environ.get("OLLAMA_API_KEY", "")
-        cloud_ok = prefer_cloud and bool(api_key)
+        # Local daemon proxies cloud-suffixed models when signed in. No API
+        # key required for that path. We always try cloud first when
+        # prefer_cloud=True; if local daemon returns 'unauthorized' the
+        # operator needs to run `ollama signin` on the VPS — surfaced via
+        # the 'advice' field below.
+        cloud_ok = bool(prefer_cloud)
 
         results: Dict[str, Any] = {}
         present_count = 0
@@ -866,14 +907,23 @@ class Boardroom:
             state = "silent"
             used_model = payload["model"]
             error = None
+            unauthorized = False
             try:
-                # Try local Ollama first (handles cloud-proxied models too)
+                # Try local Ollama first (handles cloud-proxied models too
+                # when the daemon is signed in via `ollama signin`).
                 async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=per_soldier_timeout)) as sess:
                     async with sess.post(f"{OLLAMA_URL}/api/generate", json=payload) as resp:
                         if resp.status == 200:
                             data = await resp.json()
                             ack = (data.get("response") or "").strip()
-                # Fall back to local if cloud failed (and cloud was tried)
+                            if not ack and isinstance(data.get("error"), str) and "unauthorized" in data["error"].lower():
+                                unauthorized = True
+                        else:
+                            txt = await resp.text()
+                            if "unauthorized" in txt.lower():
+                                unauthorized = True
+                                error = "ollama unauthorized — run `ollama signin` on the VPS"
+                # Fall back to local model if cloud failed
                 if not ack and cloud_ok:
                     payload["model"] = local_model
                     used_model = local_model
@@ -904,13 +954,25 @@ class Boardroom:
                 "latency_ms": latency,
                 "error": error,
             }
+        # Detect if any soldier hit unauthorized (= signin lapsed)
+        any_unauthorized = any(
+            (r.get("error") or "").lower().startswith("ollama unauthorized")
+            for r in results.values()
+        )
         advice = None
-        if not cloud_ok and present_count < len(SOLDIER_MODELS):
+        if any_unauthorized:
             advice = (
-                f"Only {present_count}/{len(SOLDIER_MODELS)} soldiers responded. Local Ollama can only "
-                f"hold ~1-2 models at a time on this VPS — cold-loading 7 sequentially is the bottleneck. "
-                f"Vault OLLAMA_API_KEY to route all soldiers through the shared cloud model "
-                f"({CLOUD_MODEL}) for sub-second acks."
+                "Ollama Cloud signin has lapsed — local daemon returns 'unauthorized'. "
+                "Run `sudo -u ollama ollama signin` on the VPS once to re-authenticate. "
+                f"Until then, soldiers fall back to local-only models which cold-load slowly. "
+                "See docs/ollama/cloud/cloud.md."
+            )
+        elif present_count < len(SOLDIER_MODELS):
+            advice = (
+                f"Only {present_count}/{len(SOLDIER_MODELS)} soldiers responded. With 7 distinct local "
+                f"models on a CPU VPS, cold-loading is the bottleneck. The fix is `ollama signin` once "
+                f"so the local daemon can proxy {CLOUD_MODEL} for all soldiers (no API key needed for "
+                f"the local-proxied path; see docs/ollama/cloud/cloud.md)."
             )
         return {
             "results": results,

@@ -2203,6 +2203,195 @@ async def insight_boardroom_rollcall_get(request: Request, prefer_cloud: bool = 
     return await insight_boardroom_rollcall(request, prefer_cloud=prefer_cloud)
 
 
+# ── Per-member fitness leaderboard ──
+# Phase 3 of plan: each soldier ranked by performance + resource consumption.
+# Reads boardroom_sessions.jsonl (untruncated reasoning, latency_ms, vote,
+# confidence per soldier) and computes fitness per soldier from the trailing
+# N sessions.
+#
+# fitness factors:
+#   utterance_score = len(reasoning) / target_chars  (capped 1.0; 1.0 = full
+#                     output budget used; 0.05 = empty/parse-fail)
+#   signal_score    = confidence × (1 if vote in (approve,reject) else 0.3)
+#   cost_score      = latency_ms / 1000  (wall-time as compute proxy)
+#   fitness = utterance × signal / max(cost, 1.0)   (higher = better)
+
+_FITNESS_TARGET_CHARS = 1500
+
+
+def _compute_member_metrics(sessions_window: int = 50) -> dict:
+    """Aggregate per-soldier fitness from the last N boardroom sessions."""
+    from mindx_backend_service.insight_aggregator import BOARDROOM_SESSIONS
+    if not BOARDROOM_SESSIONS.exists():
+        return {"members": {}, "sessions_scanned": 0}
+    try:
+        lines = BOARDROOM_SESSIONS.read_text().strip().split("\n")
+        recent = lines[-max(1, min(sessions_window, 200)):]
+        sessions = []
+        for ln in recent:
+            try:
+                sessions.append(json.loads(ln))
+            except Exception:
+                continue
+    except Exception as e:
+        return {"members": {}, "error": str(e)}
+
+    try:
+        from daio.governance.boardroom import SOLDIER_WEIGHTS, SOLDIER_MODELS
+    except Exception:
+        SOLDIER_WEIGHTS = {}
+        SOLDIER_MODELS = {}
+
+    # Aggregate per-soldier
+    by_soldier: dict[str, dict] = {}
+    for s in sessions:
+        for v in (s.get("votes") or []):
+            sid = v.get("soldier")
+            if not sid:
+                continue
+            if sid not in by_soldier:
+                by_soldier[sid] = {
+                    "soldier": sid,
+                    "weight": SOLDIER_WEIGHTS.get(sid, 1.0),
+                    "veto_holder": SOLDIER_WEIGHTS.get(sid, 1.0) >= 1.2,
+                    "model": SOLDIER_MODELS.get(sid, ""),
+                    "votes_total": 0,
+                    "approve": 0,
+                    "reject": 0,
+                    "abstain": 0,
+                    "providers": {},
+                    "latencies_ms": [],
+                    "confidences": [],
+                    "utterance_scores": [],
+                    "signal_scores": [],
+                    "fitness_per_vote": [],
+                    "last_vote": None,
+                }
+            m = by_soldier[sid]
+            vote = (v.get("vote") or "abstain").lower()
+            m["votes_total"] += 1
+            if vote in m:
+                m[vote] += 1
+            else:
+                m["abstain"] += 1
+            prov = v.get("provider") or "?"
+            m["providers"][prov] = m["providers"].get(prov, 0) + 1
+            lat = float(v.get("latency_ms") or 0)
+            m["latencies_ms"].append(lat)
+            conf = float(v.get("confidence") or 0)
+            m["confidences"].append(conf)
+            reasoning = v.get("reasoning") or ""
+            utterance = min(1.0, len(reasoning) / _FITNESS_TARGET_CHARS)
+            signal = conf * (1.0 if vote in ("approve", "reject") else 0.3)
+            cost = max(1.0, lat / 1000.0)
+            fitness = (utterance * signal) / cost
+            m["utterance_scores"].append(utterance)
+            m["signal_scores"].append(signal)
+            m["fitness_per_vote"].append(fitness)
+            m["last_vote"] = {
+                "session_id": s.get("session_id"),
+                "ts": s.get("timestamp"),
+                "vote": vote,
+                "confidence": conf,
+                "latency_ms": int(lat),
+                "reasoning_preview": reasoning[:200],
+                "provider": prov,
+            }
+
+    # Reduce
+    def _pct(arr, p):
+        if not arr:
+            return 0
+        s = sorted(arr)
+        i = max(0, min(len(s) - 1, int(round((p / 100.0) * (len(s) - 1)))))
+        return s[i]
+
+    for sid, m in by_soldier.items():
+        n = max(1, m["votes_total"])
+        m["latency_p50_ms"] = int(_pct(m["latencies_ms"], 50))
+        m["latency_p95_ms"] = int(_pct(m["latencies_ms"], 95))
+        m["abstain_rate"] = round(m["abstain"] / n, 3)
+        m["signal_rate"] = round(1.0 - m["abstain_rate"], 3)
+        m["avg_confidence"] = round(sum(m["confidences"]) / n, 3)
+        m["fitness"] = round(sum(m["fitness_per_vote"]) / n, 4)
+        m["fitness_p50"] = round(_pct(m["fitness_per_vote"], 50), 4)
+        m["utterance_avg"] = round(sum(m["utterance_scores"]) / n, 3)
+        m["signal_avg"] = round(sum(m["signal_scores"]) / n, 3)
+        # Compact arrays before serialization
+        m.pop("latencies_ms", None)
+        m.pop("confidences", None)
+        m.pop("utterance_scores", None)
+        m.pop("signal_scores", None)
+        m.pop("fitness_per_vote", None)
+
+    return {
+        "members": by_soldier,
+        "sessions_scanned": len(sessions),
+        "fitness_target_chars": _FITNESS_TARGET_CHARS,
+        "computed_at": time.time(),
+    }
+
+
+@app.get("/insight/boardroom/members", tags=["insight"], summary="Per-member fitness leaderboard")
+@_insight_safe
+async def insight_boardroom_members(request: Request, sessions: int = 50):
+    """Aggregate fitness across the trailing `sessions` boardroom sessions
+    (default 50, max 200). Each soldier's fitness factors:
+
+      utterance_score = len(reasoning) / 1500    (clipped to 1.0)
+      signal_score    = confidence × (1 if vote ∈ {approve,reject} else 0.3)
+      cost_score      = max(1, latency_s)
+      fitness         = (utterance × signal) / cost   per vote, then averaged.
+
+    Higher = better. A soldier that returns full reasoning + decisive vote at
+    low latency lands ~0.5–1.0; one that abstains after a 60s timeout with
+    empty reasoning lands ~0.0. Public, read-only. ?h=true for plain text.
+    """
+    sessions = max(1, min(int(sessions or 50), 200))
+    return _maybe_h_text(request, _compute_member_metrics(sessions), route_path="/insight/boardroom/members")
+
+
+@app.get("/insight/boardroom/members/{soldier_id}", tags=["insight"], summary="Single member detail")
+@_insight_safe
+async def insight_boardroom_member(request: Request, soldier_id: str, sessions: int = 50):
+    """Single soldier's fitness card + last 20 votes. ?h=true for plain text."""
+    from mindx_backend_service.insight_aggregator import BOARDROOM_SESSIONS
+    sessions = max(1, min(int(sessions or 50), 200))
+    summary = _compute_member_metrics(sessions)
+    member = (summary.get("members") or {}).get(soldier_id)
+    if not member:
+        return _maybe_h_text(request, {"error": "soldier not found in window", "soldier_id": soldier_id, "sessions_scanned": summary.get("sessions_scanned", 0)}, route_path="/insight/boardroom/members")
+    # Last 20 votes for this soldier
+    last_votes = []
+    if BOARDROOM_SESSIONS.exists():
+        try:
+            lines = BOARDROOM_SESSIONS.read_text().strip().split("\n")
+            for ln in reversed(lines[-200:]):
+                try:
+                    s = json.loads(ln)
+                except Exception:
+                    continue
+                for v in (s.get("votes") or []):
+                    if v.get("soldier") == soldier_id:
+                        last_votes.append({
+                            "session_id": s.get("session_id"),
+                            "ts": s.get("timestamp"),
+                            "directive": (s.get("directive") or "")[:160],
+                            "vote": v.get("vote"),
+                            "confidence": v.get("confidence"),
+                            "latency_ms": v.get("latency_ms"),
+                            "provider": v.get("provider"),
+                            "reasoning": v.get("reasoning"),
+                        })
+                if len(last_votes) >= 20:
+                    break
+        except Exception:
+            pass
+    member["last_votes"] = last_votes
+    member["sessions_scanned"] = summary.get("sessions_scanned", 0)
+    return _maybe_h_text(request, member, route_path="/insight/boardroom/members")
+
+
 @app.get("/insight/interactions/recent", tags=["insight"])
 @_insight_safe
 async def insight_interactions_recent(window: int = 3600):

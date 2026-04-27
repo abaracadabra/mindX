@@ -373,6 +373,64 @@ def render_boardroom_session(d: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def render_boardroom_members(d: dict) -> str:
+    """Plain-text rendering of /insight/boardroom/members (fitness leaderboard)
+    or a single-member detail card."""
+    if "error" in d and "members" not in d:
+        return f"members error: {d['error']}\n"
+    # Single member detail (when /insight/boardroom/members/{id} hit)
+    if "soldier" in d and "members" not in d:
+        m = d
+        lines = [f"═══ boardroom — {m.get('soldier')} ═══", ""]
+        lines.append(f"  model        {m.get('model', '')}")
+        lines.append(f"  weight       {m.get('weight', 1.0)}{'  VETO' if m.get('veto_holder') else ''}")
+        lines.append(f"  sessions     {d.get('sessions_scanned', 0)} scanned · {m.get('votes_total', 0)} votes")
+        lines.append(f"  fitness      {m.get('fitness', 0):.4f}  (avg)  ·  {m.get('fitness_p50', 0):.4f}  (p50)")
+        lines.append(f"  utterance    {m.get('utterance_avg', 0):.3f}  ·  signal {m.get('signal_avg', 0):.3f}")
+        lines.append(f"  latency      p50 {m.get('latency_p50_ms', 0)} ms  ·  p95 {m.get('latency_p95_ms', 0)} ms")
+        lines.append(f"  vote mix     ✓{m.get('approve', 0)}  ✗{m.get('reject', 0)}  –{m.get('abstain', 0)}  ·  abstain rate {m.get('abstain_rate', 0):.1%}")
+        lines.append(f"  avg conf     {m.get('avg_confidence', 0):.2f}")
+        provs = m.get("providers") or {}
+        if provs:
+            lines.append("  providers    " + ", ".join(f"{k}×{v}" for k, v in provs.items()))
+        lines.append("")
+        last = m.get("last_votes") or []
+        if last:
+            lines.append(f"─── last {len(last)} votes ───")
+            for v in last:
+                vote = (v.get("vote") or "?").upper()
+                sym = "✓" if vote == "APPROVE" else "✗" if vote == "REJECT" else "–"
+                lines.append(f"  {sym} {(v.get('session_id') or ''):<16} {(v.get('ts') or '')[:19]}  conf {v.get('confidence', 0):.2f}  {v.get('latency_ms', 0)}ms")
+                if v.get("directive"):
+                    lines.append(f"      → {v['directive'][:120]}")
+        lines.append("")
+        return "\n".join(lines) + "\n"
+    # Leaderboard
+    members = d.get("members") or {}
+    lines = ["═══ boardroom — fitness leaderboard ═══", ""]
+    lines.append(f"  sessions scanned: {d.get('sessions_scanned', 0)}  ·  target chars/vote: {d.get('fitness_target_chars', 1500)}")
+    lines.append("")
+    if not members:
+        lines.append("  no soldier data in window")
+        lines.append("")
+        return "\n".join(lines) + "\n"
+    rows = sorted(members.values(), key=lambda m: m.get("fitness", 0), reverse=True)
+    lines.append(f"  {'soldier':<22} {'fit':<7} {'sig':<5} {'utt':<5} {'p50ms':<7} {'p95ms':<7} {'abst':<5} votes")
+    lines.append("  " + "─" * 80)
+    for m in rows:
+        veto = "*" if m.get("veto_holder") else " "
+        lines.append(
+            f"  {m['soldier']:<22} {m.get('fitness', 0):<7.4f} "
+            f"{m.get('signal_avg', 0):<5.2f} {m.get('utterance_avg', 0):<5.2f} "
+            f"{m.get('latency_p50_ms', 0):<7} {m.get('latency_p95_ms', 0):<7} "
+            f"{m.get('abstain_rate', 0):<5.0%} {m.get('votes_total', 0)}{veto}"
+        )
+    lines.append("  " + "─" * 80)
+    lines.append("  legend: fit=fitness  sig=signal_avg  utt=utterance_avg  abst=abstain_rate  *=veto holder")
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
 def render_boardroom_rollcall(d: dict) -> str:
     """Plain-text rendering of /insight/boardroom/rollcall — live ack from each soldier."""
     if "error" in d and not d.get("results"):
@@ -700,6 +758,7 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/boardroom/roles":     render_boardroom_roles,
     "/insight/boardroom/health":    render_boardroom_health,
     "/insight/boardroom/rollcall":  render_boardroom_rollcall,
+    "/insight/boardroom/members":   render_boardroom_members,
     "/insight/improvement/summary": render_improvement_summary,
     "/insight/stuck_loops":         render_stuck_loops,
     "/storage/eligible":            render_eligible,
