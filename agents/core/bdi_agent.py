@@ -943,39 +943,73 @@ class BDIAgent:
         Structure does not require intelligence. It requires pattern.
         The skeleton provides a valid plan structure that downstream agents
         can execute — degraded but functional, not dead.
+
+        Picks action types ONLY from what's actually registered for this
+        agent (internal actions + available_tools). A hardcoded type that
+        the agent doesn't have causes execution to fail with
+        "not a valid internal action or a registered tool" — verified on
+        production 2026-04-27 where the prior 'audit_and_improve' choice
+        wasn't registered for the mastermind BDI.
         """
         self.logger.info(f"BDI planning: generating skeleton plan for goal '{goal_id}'")
 
-        # Extract action type hints from goal description
+        # What this agent can actually execute
+        available = set(self._internal_action_handlers.keys()) | set(self.available_tools.keys())
+
+        # Preference order, by goal-kind keyword. First match wins.
         desc_lower = goal_description.lower()
+        candidates_by_kind: list[tuple[list[str], list[tuple[str, dict]]]] = [
+            (
+                ["audit", "review", "analyze", "check", "inspect", "improve",
+                 "optimize", "enhance", "fix", "refactor"],
+                [
+                    ("audit_and_improve",   {"target_path": ".", "scope": "quick"}),
+                    ("system_analyzer",     {}),
+                    ("base_gen_agent",      {"root_path_str": "."}),
+                ],
+            ),
+            (
+                ["deploy", "start", "launch", "run", "execute"],
+                [
+                    ("system_analyzer",     {}),
+                    ("shell_command",       {"command": "echo skeleton-plan-noop"}),
+                ],
+            ),
+        ]
+
         skeleton_actions = []
+        chosen: tuple[str, dict] | None = None
+        for keywords, options in candidates_by_kind:
+            if any(kw in desc_lower for kw in keywords):
+                for action_type, params in options:
+                    if action_type in available:
+                        chosen = (action_type, params)
+                        break
+                if chosen:
+                    break
 
-        if any(kw in desc_lower for kw in ["audit", "review", "analyze", "check", "inspect"]):
-            skeleton_actions.append({
-                "type": "audit_and_improve",
-                "description": f"Audit: {goal_description[:100]}",
-                "params": {"target_path": ".", "scope": "quick"}
-            })
-        elif any(kw in desc_lower for kw in ["improve", "optimize", "enhance", "fix", "refactor"]):
-            skeleton_actions.append({
-                "type": "audit_and_improve",
-                "description": f"Analyze before improving: {goal_description[:100]}",
-                "params": {"target_path": ".", "scope": "quick"}
-            })
-        elif any(kw in desc_lower for kw in ["deploy", "start", "launch", "run"]):
-            skeleton_actions.append({
-                "type": "system_analyzer",
-                "description": f"System check before action: {goal_description[:100]}",
-                "params": {}
-            })
+        # Universal fallback: try system_analyzer, then ANY available tool,
+        # then NO_OP. Guarantees we set a plan with at least one runnable
+        # action so the BDI loop doesn't spin on an empty plan.
+        if not chosen:
+            for action_type, params in [
+                ("system_analyzer", {}),
+                ("base_gen_agent",  {"root_path_str": "."}),
+            ]:
+                if action_type in available:
+                    chosen = (action_type, params)
+                    break
+        if not chosen and self.available_tools:
+            first_tool = next(iter(self.available_tools.keys()))
+            chosen = (first_tool, {})
+        if not chosen:
+            chosen = ("NO_OP", {})
 
-        # Always include a system analysis step as fallback
-        if not skeleton_actions:
-            skeleton_actions.append({
-                "type": "system_analyzer",
-                "description": f"Analyze system state for: {goal_description[:100]}",
-                "params": {}
-            })
+        skeleton_actions.append({
+            "type": chosen[0],
+            "description": f"Skeleton: {goal_description[:100]}",
+            "params": chosen[1],
+        })
 
         # set_plan() sets plan_status="READY" when actions are non-empty.
         # We deliberately DO NOT override it — the run() loop checks
