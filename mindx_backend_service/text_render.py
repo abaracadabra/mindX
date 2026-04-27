@@ -373,6 +373,103 @@ def render_boardroom_session(d: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def render_memory_audit(d: dict) -> str:
+    """Plain-text rendering of /insight/memory/audit — live byte counts per tier."""
+    if "error" in d:
+        return f"audit error: {d['error']}\n"
+    tiers = d.get("tiers") or {}
+    lines = ["═══ memory audit · /data/memory/* ═══", ""]
+    cache = d.get("cache_age_seconds")
+    if cache is not None and cache > 0:
+        lines.append(f"  (cached · {cache}s old · ?fresh=true to recompute)")
+        lines.append("")
+
+    def gb(n):
+        if not n: return "0 B"
+        for unit in ("B", "KB", "MB", "GB", "TB"):
+            if abs(n) < 1024:
+                return f"{n:.1f} {unit}" if unit != "B" else f"{int(n)} B"
+            n /= 1024
+        return f"{n:.1f} PB"
+
+    def row(name, t):
+        if not t:
+            return ""
+        bytes_ = t.get("bytes", 0)
+        files  = t.get("files", 0) or t.get("count", 0)
+        extra  = []
+        if t.get("oldest_days") is not None:
+            extra.append(f"oldest {t['oldest_days']}d")
+        if t.get("agents"):
+            extra.append(f"{t['agents']} agents")
+        if t.get("training_rows"):
+            extra.append(f"{t['training_rows']} rows")
+        if t.get("policy_age_days"):
+            extra.append(f"policy: {t['policy_age_days']}d")
+        if t.get("policy") == "forever":
+            extra.append("policy: forever")
+        if t.get("note"):
+            extra.append(t["note"][:60])
+        return f"  {name:<22} {gb(bytes_):>12}   {files:>6} files   {'  ·  '.join(extra)}"
+
+    for tier_name in ("information_stm", "knowledge_ltm", "concept_dreams", "wisdom_training",
+                      "dream_reports", "archive", "thot_anchored", "orphan_workspaces"):
+        r = row(tier_name, tiers.get(tier_name))
+        if r:
+            lines.append(r)
+    lines.append("")
+    lines.append(f"  TOTAL under /data/memory: {gb(d.get('total_bytes_under_data_memory', 0))}")
+    lines.append("")
+    top = d.get("top_concentrators") or {}
+    stm = top.get("stm_per_agent") or []
+    if stm:
+        lines.append("  ─── top STM concentrators ───")
+        for entry in stm[:5]:
+            lines.append(f"    {gb(entry.get('bytes', 0)):>10}  ({int(entry.get('share', 0)*100)}%)  {entry.get('agent', '')}")
+    workspc = top.get("workspaces_per_agent") or []
+    if workspc:
+        lines.append("")
+        lines.append("  ─── top workspace concentrators (orphan tier) ───")
+        for entry in workspc[:5]:
+            lines.append(f"    {gb(entry.get('bytes', 0)):>10}  ({int(entry.get('share', 0)*100)}%)  {entry.get('agent', '')}")
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def render_memory_tiers(d: dict) -> str:
+    """Plain-text rendering of /insight/memory/tiers — policy + live state."""
+    if "error" in d:
+        return f"tiers error: {d['error']}\n"
+    policy = d.get("policy") or {}
+    live = d.get("live") or {}
+
+    def gb(n):
+        if not n: return "0"
+        for unit in ("B", "K", "M", "G", "T"):
+            if abs(n) < 1024:
+                return f"{n:.0f}{unit}"
+            n /= 1024
+        return f"{n:.0f}P"
+
+    lines = ["═══ memory tiers — policy + live state ═══", ""]
+    lines.append(f"  policy doc: {d.get('policy_doc', '')}")
+    lines.append(f"  audit doc:  {d.get('audit_doc', '')}")
+    lines.append("")
+    lines.append(f"  {'tier':<22} {'live':>8}  {'policy':<60}")
+    lines.append("  " + "─" * 92)
+    for tier_name, p in policy.items():
+        l = live.get(tier_name) or {}
+        live_size = l.get("bytes") if "bytes" in l else l.get("count", 0)
+        action = p.get("action_at_age") or ""
+        if p.get("max_age_days") is not None:
+            policy_str = f"≥{p['max_age_days']}d → {action}"
+        else:
+            policy_str = action
+        lines.append(f"  {tier_name:<22} {gb(live_size):>8}  {policy_str[:60]}")
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
 def render_boardroom_cards(d: dict) -> str:
     """Plain-text rendering of /insight/boardroom/cards — composed system
     prompts for CEO + 7 soldiers, sourced from agents/boardroom/*.{agent,persona}.
@@ -813,6 +910,8 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/boardroom/recent":    render_boardroom_recent,
     "/insight/boardroom/session":   render_boardroom_session,
     "/insight/boardroom/roles":     render_boardroom_roles,
+    "/insight/memory/audit":        render_memory_audit,
+    "/insight/memory/tiers":        render_memory_tiers,
     "/insight/boardroom/health":    render_boardroom_health,
     "/insight/boardroom/rollcall":  render_boardroom_rollcall,
     "/insight/boardroom/members":   render_boardroom_members,

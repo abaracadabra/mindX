@@ -1788,6 +1788,240 @@ async def insight_dreams_recent(request: Request, limit: int = 50):
     return _maybe_h_text(request, {"dreams": out, "count": len(out), "last_dream_age_seconds": last_age}, route_path="/insight/dreams/recent")
 
 
+# ── /data audit + tier policy (Phases 1+2 of memory plan) ──
+# /insight/memory/audit  — live byte counts per cognitive tier
+# /insight/memory/tiers  — policy + live state side-by-side
+# Replaces ad-hoc SSH `du` commands with a versioned endpoint.
+
+_MEMORY_AUDIT_CACHE: dict = {}
+_MEMORY_AUDIT_CACHE_TS: float = 0.0
+_MEMORY_AUDIT_TTL = 300.0  # 5 min — expensive to recompute (fs walk over /data)
+
+
+def _dir_size_count(path: Path) -> tuple[int, int]:
+    """Recursive (bytes, file_count). Fault-tolerant — permission errors skip."""
+    total = 0
+    files = 0
+    if not path.exists():
+        return 0, 0
+    try:
+        for p in path.rglob("*"):
+            try:
+                if p.is_file():
+                    total += p.stat().st_size
+                    files += 1
+            except (OSError, PermissionError):
+                continue
+    except Exception:
+        return total, files
+    return total, files
+
+
+def _compute_memory_audit() -> dict:
+    """Live audit of /data — what's where, what's eating disk, how old."""
+    import os as _os
+    data_root = PROJECT_ROOT / "data"
+    mem_root = data_root / "memory"
+    now = time.time()
+
+    # Top-level tiers
+    stm_root        = mem_root / "stm"
+    ltm_root        = mem_root / "ltm"
+    archive_root    = mem_root / "archive"
+    dreams_root     = mem_root / "dreams"
+    workspaces_root = mem_root / "agent_workspaces"
+
+    stm_bytes,        stm_files        = _dir_size_count(stm_root)
+    ltm_bytes_total,  ltm_files_total  = _dir_size_count(ltm_root)
+    archive_bytes,    archive_files    = _dir_size_count(archive_root)
+    dreams_bytes,     dreams_files     = _dir_size_count(dreams_root)
+    workspaces_bytes, workspaces_files = _dir_size_count(workspaces_root)
+
+    # Sub-tier breakdown of LTM (knowledge / concept / wisdom)
+    knowledge_bytes = knowledge_files = 0
+    concept_bytes   = concept_files   = 0
+    wisdom_bytes    = wisdom_files    = wisdom_rows = 0
+    if ltm_root.exists():
+        for agent_dir in ltm_root.iterdir():
+            if not agent_dir.is_dir():
+                continue
+            for f in agent_dir.iterdir():
+                if not f.is_file():
+                    continue
+                try:
+                    sz = f.stat().st_size
+                except OSError:
+                    continue
+                name = f.name
+                if name.endswith("_pattern_promotion.json"):
+                    knowledge_bytes += sz; knowledge_files += 1
+                elif name.endswith("_dream_insights.json"):
+                    concept_bytes += sz; concept_files += 1
+                elif name.endswith("_training.jsonl"):
+                    wisdom_bytes += sz; wisdom_files += 1
+                    try:
+                        with f.open("rb") as fh:
+                            for _ in fh:
+                                wisdom_rows += 1
+                    except OSError:
+                        pass
+
+    # STM age distribution + per-agent concentration
+    stm_oldest_days = 0.0
+    stm_newest_days = 999.0
+    stm_per_agent: dict[str, int] = {}
+    if stm_root.exists():
+        for agent_dir in stm_root.iterdir():
+            if not agent_dir.is_dir():
+                continue
+            sz, _ = _dir_size_count(agent_dir)
+            stm_per_agent[agent_dir.name] = sz
+            for date_dir in agent_dir.iterdir():
+                if not date_dir.is_dir():
+                    continue
+                ds = date_dir.name
+                if len(ds) == 8 and ds.isdigit():
+                    try:
+                        from datetime import datetime as _dt
+                        dt = _dt.strptime(ds, "%Y%m%d")
+                        age_days = (now - dt.timestamp()) / 86400
+                        stm_oldest_days = max(stm_oldest_days, age_days)
+                        stm_newest_days = min(stm_newest_days, age_days)
+                    except Exception:
+                        continue
+
+    # Per-workspace concentration (orphan tier — the 21 GB problem)
+    workspace_per_agent: dict[str, int] = {}
+    if workspaces_root.exists():
+        for agent_dir in workspaces_root.iterdir():
+            if agent_dir.is_dir():
+                sz, _ = _dir_size_count(agent_dir)
+                workspace_per_agent[agent_dir.name] = sz
+
+    # IPFS offload state (THOT-anchored count)
+    thot_anchored_count = 0
+    try:
+        from agents import memory_pgvector as _mpg
+        # If pgvector isn't reachable, this just stays 0
+        # (we don't fail the whole audit on a stat call)
+    except Exception:
+        pass
+
+    top_stm     = sorted(stm_per_agent.items(),       key=lambda kv: kv[1], reverse=True)[:5]
+    top_workspc = sorted(workspace_per_agent.items(), key=lambda kv: kv[1], reverse=True)[:5]
+
+    total_bytes = stm_bytes + ltm_bytes_total + archive_bytes + dreams_bytes + workspaces_bytes
+    return {
+        "tiers": {
+            "information_stm": {
+                "bytes": stm_bytes,
+                "files": stm_files,
+                "agents": len(stm_per_agent),
+                "oldest_days": round(stm_oldest_days, 1),
+                "newest_days": round(stm_newest_days, 1) if stm_newest_days < 999 else None,
+                "policy_age_days": 14,
+            },
+            "knowledge_ltm": {
+                "bytes": knowledge_bytes,
+                "files": knowledge_files,
+                "policy": "forever",
+            },
+            "concept_dreams": {
+                "bytes": concept_bytes,
+                "files": concept_files,
+                "policy": "forever",
+            },
+            "wisdom_training": {
+                "bytes": wisdom_bytes,
+                "files": wisdom_files,
+                "training_rows": wisdom_rows,
+                "policy": "forever",
+                "consumer_status": "write-only — no reader yet (cognitive-ascent loop open)",
+            },
+            "dream_reports": {
+                "bytes": dreams_bytes,
+                "files": dreams_files,
+                "policy_age_days": 90,
+            },
+            "archive": {
+                "bytes": archive_bytes,
+                "files": archive_files,
+                "policy_age_days": 90,
+            },
+            "thot_anchored": {
+                "count": thot_anchored_count,
+                "note": "0 because no IPFS keys vaulted; Phase 8 of dream cycle dormant",
+            },
+            "orphan_workspaces": {
+                "bytes": workspaces_bytes,
+                "files": workspaces_files,
+                "agents": len(workspace_per_agent),
+                "note": "log_process writes; nobody reads (Gap 1 in MEMORY_AUDIT_2026_04_27)",
+                "policy_age_days": 90,  # delete after 90d once orphan pruner ships
+            },
+        },
+        "top_concentrators": {
+            "stm_per_agent": [{"agent": a, "bytes": b, "share": round(b / max(1, stm_bytes), 3)} for a, b in top_stm],
+            "workspaces_per_agent": [{"agent": a, "bytes": b, "share": round(b / max(1, workspaces_bytes), 3)} for a, b in top_workspc],
+        },
+        "total_bytes_under_data_memory": total_bytes,
+        "computed_at": now,
+    }
+
+
+@app.get("/insight/memory/audit", tags=["insight"], summary="Live audit of /data memory tiers")
+async def insight_memory_audit(request: Request, fresh: bool = False):
+    """Live computation of every /data/memory/* tier with byte counts, file
+    counts, age distribution, and per-agent concentration. Cached for 5 min
+    (the fs walk is expensive on the 30 GB STM tree). `?fresh=true` bypasses
+    the cache. `?h=true` for plain text.
+
+    See `/doc/MEMORY_AUDIT_2026_04_27` for the canonical interpretation;
+    `/doc/memory_tiers` for the retention policy this audit supports.
+    """
+    global _MEMORY_AUDIT_CACHE, _MEMORY_AUDIT_CACHE_TS
+    now = time.time()
+    if not fresh and _MEMORY_AUDIT_CACHE and (now - _MEMORY_AUDIT_CACHE_TS) < _MEMORY_AUDIT_TTL:
+        cached = dict(_MEMORY_AUDIT_CACHE)
+        cached["cache_age_seconds"] = round(now - _MEMORY_AUDIT_CACHE_TS, 1)
+        return _maybe_h_text(request, cached, route_path="/insight/memory/audit")
+    payload = _compute_memory_audit()
+    _MEMORY_AUDIT_CACHE = payload
+    _MEMORY_AUDIT_CACHE_TS = now
+    payload["cache_age_seconds"] = 0
+    return _maybe_h_text(request, payload, route_path="/insight/memory/audit")
+
+
+@app.get("/insight/memory/tiers", tags=["insight"], summary="Memory tier retention policy + live state")
+async def insight_memory_tiers(request: Request):
+    """The retention policy from `/doc/memory_tiers` joined with the live
+    state from /insight/memory/audit. Single-stop view of "what's where +
+    how long it should live + what action would happen at the next prune."
+    """
+    audit = _compute_memory_audit() if not _MEMORY_AUDIT_CACHE else _MEMORY_AUDIT_CACHE
+    policy = {
+        "information_stm":  {"path": "memory/stm/{agent}/{date}/", "max_age_days": 14, "action_at_age": "archive (move to memory/archive/, no delete)"},
+        "archive":          {"path": "memory/archive/{agent}/{date}/", "max_age_days": 90, "action_at_age": "offload to IPFS, delete local after CID confirmed"},
+        "knowledge_ltm":    {"path": "memory/ltm/{agent}/*_pattern_promotion.json", "max_age_days": None, "action_at_age": "forever"},
+        "concept_dreams":   {"path": "memory/ltm/{agent}/*_dream_insights.json", "max_age_days": None, "action_at_age": "forever"},
+        "wisdom_training":  {"path": "memory/ltm/{agent}/*_training.jsonl", "max_age_days": None, "action_at_age": "forever (substrate for THOT)"},
+        "dream_reports":    {"path": "memory/dreams/*_dream_report.json", "max_age_days": 90, "action_at_age": "archive"},
+        "thot_anchored":    {"path": "pgvector memories.content_cid + on-chain", "max_age_days": None, "action_at_age": "forever (immutable)"},
+        "orphan_workspaces":{"path": "agent_workspaces/{agent}/process_traces/process_trace.jsonl",
+                              "rotate_at_bytes": 100 * 1024 * 1024,
+                              "archive_after_days": 30,
+                              "delete_after_days": 90,
+                              "action_at_age": "rotate at 100MB → archive at 30d → delete at 90d"},
+    }
+    return _maybe_h_text(request, {
+        "policy": policy,
+        "live": audit.get("tiers", {}),
+        "policy_doc": "/doc/memory_tiers",
+        "audit_doc":  "/doc/MEMORY_AUDIT_2026_04_27",
+        "computed_at": time.time(),
+    }, route_path="/insight/memory/tiers")
+
+
 # ── Accelerated dream cycle (operator-triggered) ──
 # Run a full dream NOW with diagnostic capture. Returns the same report
 # shape as /insight/dreams/recent but reflects the just-completed cycle.
