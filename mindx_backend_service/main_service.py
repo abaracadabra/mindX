@@ -1301,7 +1301,7 @@ app.add_middleware(
 # Uses @app.middleware("http") which always fires regardless of import order.
 
 _PUBLIC_EXACT = frozenset({
-    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html",
+    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/diagnostics/live", "/activity/stream", "/activity/recent", "/activity/stats",
     "/thesis", "/thesis/", "/thesis/evidence", "/thesis/summary",
@@ -1320,6 +1320,8 @@ _PUBLIC_PREFIXES = (
     "/actions/export", "/diagnostics/export", "/api/rage/embed",
     "/users/challenge", "/users/register", "/error-pages/", "/static/",
     "/insight/",
+    "/p2p/keeperhub/",
+    "/openagents/deployments/",
 )
 
 @app.middleware("http")
@@ -1408,6 +1410,56 @@ except Exception as _inf_import_err:
 # Include AgenticPlace router
 from mindx_backend_service.agenticplace_routes import router as agenticplace_router
 app.include_router(agenticplace_router)
+
+# Include KeeperHub × AgenticPlace x402/MPP bridge (Open Agents hackathon)
+try:
+    from openagents.keeperhub.bridge_routes import router as keeperhub_router
+    app.include_router(keeperhub_router, tags=["keeperhub"])
+    logger.info("KeeperHub bridge routes mounted at /p2p/keeperhub/*")
+except Exception as _kh_import_err:
+    logger.warning(f"KeeperHub bridge routes not loaded: {_kh_import_err}")
+
+# Open Agents dashboard insight routes
+try:
+    from mindx_backend_service.routes_openagents import router as openagents_router
+    app.include_router(openagents_router)
+    logger.info("Open Agents insight routes mounted at /insight/openagents/*")
+except Exception as _oa_import_err:
+    logger.warning(f"Open Agents insight routes not loaded: {_oa_import_err}")
+
+# /openagents.html static page
+_OPENAGENTS_HTML_PATH = PROJECT_ROOT / "mindx_backend_service" / "openagents.html"
+
+@app.get("/openagents", response_class=_DashResponse, include_in_schema=False)
+@app.get("/openagents.html", response_class=_DashResponse, include_in_schema=False)
+async def openagents_page():
+    """ETHGlobal Open Agents submission dashboard — 0G + KeeperHub + ENS + Uniswap."""
+    if _OPENAGENTS_HTML_PATH.exists():
+        return _DashResponse(content=_OPENAGENTS_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>Open Agents</h1><p>Page not deployed.</p>")
+
+# /inft7857.html — interactive console for the iNFT_7857 ERC-7857 contract.
+_INFT7857_HTML_PATH = PROJECT_ROOT / "mindx_backend_service" / "inft7857.html"
+
+@app.get("/inft7857", response_class=_DashResponse, include_in_schema=False)
+@app.get("/inft7857.html", response_class=_DashResponse, include_in_schema=False)
+async def inft7857_page():
+    """Interactive ERC-7857 console — mint / inspect / transfer / clone / burn / bind."""
+    if _INFT7857_HTML_PATH.exists():
+        return _DashResponse(content=_INFT7857_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>iNFT-7857</h1><p>Page not deployed.</p>")
+
+# Serve openagents/deployments/*.json so the UI can auto-load contract addresses
+@app.get("/openagents/deployments/{filename}", include_in_schema=False)
+async def openagents_deployments(filename: str):
+    """Serve the openagents/deployments/*.json files for the iNFT-7857 UI."""
+    from starlette.responses import FileResponse, JSONResponse
+    if not filename.endswith(".json") or "/" in filename or ".." in filename:
+        return JSONResponse({"error": "invalid filename"}, status_code=400)
+    p = PROJECT_ROOT / "openagents" / "deployments" / filename
+    if not p.exists():
+        return JSONResponse({"error": "not deployed yet", "filename": filename}, status_code=404)
+    return FileResponse(str(p), media_type="application/json")
 
 # /diagnostics/live — inline to avoid circular import issues
 import psutil as _ps
@@ -2467,6 +2519,127 @@ async def insight_godel_recent(request: Request, limit: int = 50):
         return _maybe_h_text(request, {"events": events, "count": len(events)}, route_path="/insight/godel/recent")
     except Exception as e:
         return {"events": [], "count": 0, "error": str(e)}
+
+
+def _read_alignment_events(limit: int = 50, source_kind: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Tail catalogue_events.jsonl and filter for kind='alignment.score'.
+
+    Source-agnostic: Phase 1 has only Gödel-source events; Phases 2/3 will
+    add boardroom and campaign sources without route changes. The optional
+    source_kind filters by payload.source_kind (e.g., 'godel.choice').
+    """
+    from agents.catalogue.log import CatalogueEventLog
+    log = CatalogueEventLog.default()
+    path = log.path
+    if not path.exists():
+        return []
+    block = 64 * 1024
+    needed = max(1, min(limit, 500))
+    try:
+        with open(path, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            data = b""
+            pos = size
+            scan_limit = needed * 20  # alignment events are sparse; scan deeper
+            while pos > 0 and data.count(b"\n") <= scan_limit:
+                read = min(block, pos)
+                pos -= read
+                f.seek(pos)
+                data = f.read(read) + data
+        events: List[Dict[str, Any]] = []
+        for ln in data.split(b"\n"):
+            if not ln.strip():
+                continue
+            try:
+                ev = json.loads(ln.decode("utf-8"))
+            except Exception:
+                continue
+            if ev.get("kind") != "alignment.score":
+                continue
+            if source_kind and ev.get("payload", {}).get("source_kind") != source_kind:
+                continue
+            events.append(ev)
+        events = events[-needed:]
+        events.reverse()
+        return events
+    except Exception:
+        return []
+
+
+@app.get("/insight/eval/recent", tags=["insight"])
+@_insight_safe
+async def insight_eval_recent(
+    request: Request,
+    limit: int = 50,
+    source_kind: Optional[str] = None,
+):
+    """Last N alignment.score events from the catalogue.
+
+    Phase 1 emits these from Gödel choice scoring (source_kind='godel.choice').
+    Optional source_kind filter for Phase 2+ when boardroom and campaign
+    sources start emitting.
+    """
+    events = _read_alignment_events(limit=limit, source_kind=source_kind)
+    return _maybe_h_text(
+        request,
+        {"events": events, "count": len(events)},
+        route_path="/insight/eval/recent",
+    )
+
+
+@app.get("/insight/eval/summary", tags=["insight"])
+@_insight_safe
+async def insight_eval_summary(request: Request, window: int = 200):
+    """Summary statistics over the last N alignment.score events.
+
+    Returns count, mean score, score histogram (10 bins), source breakdown,
+    and per-metric counts. Phase 1 will primarily show
+    metric=godel_rationale_coherence; Phases 2/3 expand the surface.
+    """
+    events = _read_alignment_events(limit=window)
+    n = len(events)
+    if n == 0:
+        return _maybe_h_text(
+            request,
+            {
+                "count": 0,
+                "mean_score": None,
+                "histogram": [0] * 10,
+                "by_source_kind": {},
+                "by_metric": {},
+            },
+            route_path="/insight/eval/summary",
+        )
+    scores: List[float] = []
+    by_source: Dict[str, int] = {}
+    by_metric: Dict[str, int] = {}
+    for ev in events:
+        payload = ev.get("payload", {}) or {}
+        try:
+            scores.append(float(payload.get("score")))
+        except (TypeError, ValueError):
+            continue
+        sk = payload.get("source_kind") or "unknown"
+        by_source[sk] = by_source.get(sk, 0) + 1
+        m = payload.get("metric") or "unknown"
+        by_metric[m] = by_metric.get(m, 0) + 1
+    histogram = [0] * 10
+    for s in scores:
+        idx = min(9, max(0, int(s * 10)))
+        histogram[idx] += 1
+    mean = sum(scores) / len(scores) if scores else None
+    return _maybe_h_text(
+        request,
+        {
+            "count": n,
+            "mean_score": mean,
+            "histogram": histogram,
+            "by_source_kind": by_source,
+            "by_metric": by_metric,
+        },
+        route_path="/insight/eval/summary",
+    )
 
 
 @app.get("/insight/boardroom/recent", tags=["insight"])
@@ -7743,12 +7916,6 @@ async def agint_stream(payload: DirectivePayload):
 # VAULT API ENDPOINTS
 # ================================
 
-class AccessCredentialPayload(BaseModel):
-    credential_id: str
-    credential_type: str
-    credential_value: str
-    metadata: Optional[Dict[str, Any]] = None
-
 class URLAccessPayload(BaseModel):
     url: str
     ip_address: Optional[str] = None
@@ -7761,44 +7928,14 @@ class IPAccessPayload(BaseModel):
     agent_id: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
-@app.post("/vault/credentials/store", summary="Store access credential in vault")
-async def store_access_credential(
-    payload: AccessCredentialPayload,
-    _wallet: str = Depends(require_admin_access),
-):
-    """Store an access credential (API key, token, etc.) in the vault.  ADMIN ONLY."""
-    try:
-        vault_manager = get_vault_manager()
-        success = vault_manager.store_access_credential(
-            credential_id=payload.credential_id,
-            credential_type=payload.credential_type,
-            credential_value=payload.credential_value,
-            metadata=payload.metadata
-        )
-        
-        if success:
-            # Also log to memory
-            if MEMORY_AVAILABLE:
-                memory_agent = MemoryAgent()
-                await memory_agent.save_timestamped_memory(
-                    agent_id=payload.agent_id or "system",
-                    memory_type=MemoryType.SYSTEM_STATE,
-                    content={
-                        "action": "credential_stored",
-                        "credential_id": payload.credential_id,
-                        "credential_type": payload.credential_type
-                    },
-                    importance=MemoryImportance.HIGH,
-                    tags=["vault", "credential", "security"]
-                )
-        
-        return {
-            "success": success,
-            "credential_id": payload.credential_id
-        }
-    except Exception as e:
-        logger.error(f"Error storing access credential: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+# NOTE: POST /vault/credentials/store and GET /vault/credentials/list
+# previously lived here, talking to the legacy vault_manager backend.
+# They were unreachable — bankon_vault_router is registered first
+# (line ~4607) and wins for the same paths. Removed; the canonical
+# implementation is in mindx_backend_service/bankon_vault/routes.py
+# (BANKON Vault: AES-256-GCM + HKDF-SHA512 with overseer-aware unlock).
+# The unique GET /vault/credentials/get/{credential_id} below is kept —
+# the router has no equivalent.
 
 @app.get("/vault/credentials/get/{credential_id}", summary="Get access credential from vault")
 async def get_access_credential(
@@ -7826,21 +7963,6 @@ async def get_access_credential(
             }
     except Exception as e:
         logger.error(f"Error getting access credential: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/vault/credentials/list", summary="List all access credentials")
-async def list_access_credentials(_wallet: str = Depends(require_admin_access)):
-    """List all access credentials stored in vault (metadata only, no values).  ADMIN ONLY."""
-    try:
-        vault_manager = get_vault_manager()
-        credentials = vault_manager.list_access_credentials()
-        return {
-            "success": True,
-            "credentials": credentials,
-            "count": len(credentials)
-        }
-    except Exception as e:
-        logger.error(f"Error listing access credentials: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/vault/access/url", summary="Log URL access")
@@ -8489,7 +8611,7 @@ async def test_postgresql_connection(payload: PostgreSQLConfigPayload):
 
 
 @app.get("/admin/vault/keys", summary="List agent private keys in vault")
-async def list_vault_keys():
+async def list_vault_keys(_wallet: str = Depends(require_admin_access)):
     """List all agent private keys stored in vault."""
     try:
         vault_manager = get_vault_manager()
@@ -8505,7 +8627,7 @@ async def list_vault_keys():
 
 
 @app.post("/admin/vault/migrate", summary="Migrate keys from legacy storage to vault")
-async def migrate_keys_to_vault():
+async def migrate_keys_to_vault(_wallet: str = Depends(require_admin_access)):
     """Migrate agent private keys from legacy .wallet_keys.env to vault."""
     try:
         vault_manager = get_vault_manager()
