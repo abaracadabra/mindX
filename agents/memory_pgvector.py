@@ -469,37 +469,59 @@ OLLAMA_EMBED_URL = "http://localhost:11434"  # Ollama fallback
 async def generate_embedding(text: str, model: str = EMBED_MODEL) -> Optional[List[float]]:
     """
     Generate embedding. Tries vLLM first (OpenAI-compatible /v1/embeddings),
-    falls back to Ollama /api/embeddings.
+    falls back to Ollama /api/embeddings. Returns None on failure with a
+    WARNING-level log so the operator can see the failure mode (rather
+    than the previous DEBUG silence which hid 0/105 backfill failures).
     """
     import aiohttp
+
+    vllm_status = ollama_status = None
 
     # 1. Try vLLM (fast, batched, production)
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=15)) as sess:
             payload = {"model": model, "input": text[:8000]}
             async with sess.post(f"{VLLM_EMBED_URL}/v1/embeddings", json=payload) as resp:
+                vllm_status = resp.status
                 if resp.status == 200:
                     data = await resp.json()
                     emb_data = data.get("data", [])
                     if emb_data and "embedding" in emb_data[0]:
                         return emb_data[0]["embedding"]
-    except Exception:
-        pass  # vLLM not available, fall through to Ollama
+    except Exception as e:
+        vllm_status = f"err:{type(e).__name__}"
 
     # 2. Fallback to Ollama (reliable, CPU)
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as sess:
             async with sess.post(f"{OLLAMA_EMBED_URL}/api/embeddings", json={"model": model, "prompt": text[:8000]}) as resp:
+                ollama_status = resp.status
                 if resp.status == 200:
                     data = await resp.json()
-                    return data.get("embedding")
+                    emb = data.get("embedding")
+                    if emb:
+                        return emb
+                    ollama_status = "200_empty"
+                else:
+                    # Read body once for diagnostics (Ollama returns 500 with a JSON body
+                    # for context-overflow — surface it so the operator can act).
+                    body = (await resp.text())[:200] if resp.status >= 400 else ""
+                    ollama_status = f"{resp.status}:{body}"
     except Exception as e:
-        logger.debug(f"Embedding generation failed (both vLLM and Ollama): {e}")
+        ollama_status = f"err:{type(e).__name__}"
 
+    logger.warning(
+        f"generate_embedding({model}, len={len(text)}): vLLM={vllm_status} ollama={ollama_status}"
+    )
     return None
 
 
-async def embed_and_store_doc(doc_name: str, text_content: str, chunk_size: int = 500) -> int:
+# mxbai-embed-large has a 512-token context window. 200 words ≈ 260-300 tokens
+# in English markdown, leaving headroom under the limit. Earlier chunk_size=500
+# produced 600-900 tokens and triggered HTTP 500 from Ollama on every chunk —
+# the entire failure was logged only at DEBUG, leaving 105/210 docs unembedded
+# with no operator-visible signal. See: 2026-04-29 backfill diagnosis.
+async def embed_and_store_doc(doc_name: str, text_content: str, chunk_size: int = 200) -> int:
     """Chunk a document and store embeddings in doc_embeddings table."""
     pool = await get_pool()
     if not pool:
@@ -513,20 +535,34 @@ async def embed_and_store_doc(doc_name: str, text_content: str, chunk_size: int 
         if len(chunk.strip()) > 50:  # Skip tiny chunks
             chunks.append(chunk)
 
+    if not chunks:
+        return 0
+
     stored = 0
+    embed_failures = 0
+    insert_failures = 0
     for idx, chunk in enumerate(chunks):
         emb = await generate_embedding(chunk)
-        if emb:
-            try:
-                await pool.execute(
-                    """INSERT INTO doc_embeddings (doc_name, chunk_idx, text_content, embedding)
-                       VALUES ($1, $2, $3, $4::vector)
-                       ON CONFLICT (doc_name, chunk_idx) DO UPDATE SET text_content=$3, embedding=$4::vector""",
-                    doc_name, idx, chunk, str(emb),
-                )
-                stored += 1
-            except Exception as e:
-                logger.debug(f"Doc embedding store failed: {e}")
+        if emb is None:
+            embed_failures += 1
+            continue
+        try:
+            await pool.execute(
+                """INSERT INTO doc_embeddings (doc_name, chunk_idx, text_content, embedding)
+                   VALUES ($1, $2, $3, $4::vector)
+                   ON CONFLICT (doc_name, chunk_idx) DO UPDATE SET text_content=$3, embedding=$4::vector""",
+                doc_name, idx, chunk, str(emb),
+            )
+            stored += 1
+        except Exception as e:
+            insert_failures += 1
+            logger.warning(f"embed_and_store_doc INSERT failed for {doc_name} chunk={idx}: {e}")
+
+    if stored == 0 and chunks:
+        logger.warning(
+            f"embed_and_store_doc({doc_name}): 0/{len(chunks)} chunks stored "
+            f"(embed_failures={embed_failures}, insert_failures={insert_failures})"
+        )
     return stored
 
 
