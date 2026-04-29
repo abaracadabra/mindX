@@ -807,7 +807,8 @@ I am not idle. I am thinking."""
         import re
         docs_dir = PROJECT_ROOT / "docs"
         total = archived = deprecated = 0
-        recent = []; conflicts = []; embedded_docs = []; unembedded = []
+        recent = []; conflicts = []; unembedded = []
+        docs_in_dir: set = set()
         conflict_checks = [
             ("MindXAgent.*Meta-Orchestrator", "MindXAgent is meta-agent"),
             ("vault_encrypted", "Should be vault_bankon"),
@@ -817,6 +818,7 @@ I am not idle. I am thinking."""
             now_t = time.time()
             for f in sorted(docs_dir.glob("*.md")):
                 total += 1
+                docs_in_dir.add(f.stem)
                 try:
                     text = f.read_text(encoding="utf-8", errors="replace")[:500]
                     if "[ARCHIVED]" in text: archived += 1
@@ -832,39 +834,64 @@ I am not idle. I am thinking."""
                         if re.search(pattern, text, re.IGNORECASE): conflicts.append(f"{f.stem}: {issue}")
                 except Exception: pass
         except Exception: pass
-        embedded_chunks = 0
+
+        # pgvector contains many "doc_name" entries beyond docs/*.md — daily
+        # lunar chapters, archived editions, full-moon publications, agent
+        # workspace memos. Intersecting with docs_in_dir gives the figure the
+        # reader expects when we say "X of {total} embedded".
+        embedded_in_docs_dir = 0
+        chunks_for_docs_in_dir = 0
+        total_index_rows = 0     # all unique doc_names in pgvector (dir + archives + dailies)
+        total_index_chunks = 0   # all chunks (sum of chunks col across all unique doc_names)
         try:
             from agents import memory_pgvector as _mpg
             indexed = await _mpg.get_indexed_docs()
-            # get_indexed_docs() returns one row per embedding *chunk*; a doc
-            # of N paragraphs becomes N rows. Dedupe by doc_name to get the
-            # actual doc count, and keep the chunk count separately so the
-            # display can report both (105 of 210 docs embedded, 1421 chunks).
-            embedded_chunks = len(indexed)
+            # get_indexed_docs returns one row per UNIQUE doc_name with a
+            # `chunks` column = COUNT(*) of embedding rows for that doc.
+            total_index_rows = len(indexed)
+            for d in indexed:
+                ch = d.get("chunks", 1) or 1
+                total_index_chunks += ch
+                if d["doc_name"] in docs_in_dir:
+                    embedded_in_docs_dir += 1
+                    chunks_for_docs_in_dir += ch
             embedded_names = {d["doc_name"] for d in indexed}
-            embedded_docs = embedded_names
-            for f in docs_dir.glob("*.md"):
-                if f.stem not in embedded_names: unembedded.append(f.stem)
+            for stem in sorted(docs_in_dir - embedded_names):
+                unembedded.append(stem)
         except Exception: pass
+
         try:
             LUNAR_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
             (PROJECT_ROOT/"data"/"governance"/"doc_audit.json").write_text(json.dumps({
-                "timestamp":time.time(),"total_docs":total,"archived":archived,
-                "deprecated":deprecated,"recently_modified":recent[:10],
-                "conflicts":conflicts[:10],
-                "embedded_doc_count":len(embedded_docs),
-                "embedded_chunk_count":embedded_chunks,
-                "unembedded":unembedded[:20],
-            },indent=2))
+                "timestamp": time.time(),
+                "total_docs": total,
+                "archived": archived,
+                "deprecated": deprecated,
+                "recently_modified": recent[:10],
+                "conflicts": conflicts[:10],
+                # Docs in docs/ that have embeddings — directly comparable to total_docs.
+                "embedded_in_docs_dir": embedded_in_docs_dir,
+                "chunks_for_docs_in_dir": chunks_for_docs_in_dir,
+                # Pgvector-wide totals (incl. archives, dailies, full-moon editions).
+                "pgvector_unique_doc_names": total_index_rows,
+                "pgvector_total_chunks": total_index_chunks,
+                "unembedded": unembedded[:20],
+            }, indent=2))
         except Exception: pass
-        chunks_clause = f" ({embedded_chunks:,} chunks)" if embedded_chunks else ""
+
+        chunks_clause = f" ({chunks_for_docs_in_dir:,} chunks)" if chunks_for_docs_in_dir else ""
         awaiting_clause = f" {len(unembedded)} awaiting." if unembedded else ""
+        archive_clause = (
+            f" Pgvector-wide: {total_index_rows:,} unique doc_names, "
+            f"{total_index_chunks:,} chunks (incl. archives, dailies, full-moon editions)."
+            if total_index_rows > total else ""
+        )
         return f"""## VIII. Documentation Health
 
 {total} docs, {archived} archived, {deprecated} deprecated.
 Recently modified: {', '.join(f'[{r}](/doc/{r})' for r in recent[:8]) or 'none in last 7 days'}
 
-**{len(embedded_docs)}** of {total} docs embedded in pgvectorscale{chunks_clause}.{awaiting_clause}"""
+**{embedded_in_docs_dir}** of {total} docs/ files embedded in pgvectorscale{chunks_clause}.{awaiting_clause}{archive_clause}"""
 
     # ── New daily chapter methods (days 9-27) ──
 
