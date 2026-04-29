@@ -658,26 +658,31 @@ def _render_md(md_text: str) -> str:
     h = re.sub(r'^### (.+)$', r'<h3>\1</h3>', h, flags=re.MULTILINE)
     h = re.sub(r'^## (.+)$', r'<h2>\1</h2>', h, flags=re.MULTILINE)
     h = re.sub(r'^# (.+)$', r'<h1>\1</h1>', h, flags=re.MULTILINE)
-    # Bold, italic
-    h = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', h)
-    h = re.sub(r'(?<!\*)\*([^*]+)\*(?!\*)', r'<em>\1</em>', h)
-    # Lists
-    h = re.sub(r'^- (.+)$', r'<li>\1</li>', h, flags=re.MULTILINE)
-    h = re.sub(r'^(\d+)\. (.+)$', r'<li>\2</li>', h, flags=re.MULTILINE)
+    # Bold — bound to a single line so a stray ** doesn't eat the rest of the doc.
+    # (Markdown engines vary here; we lose multi-line **bold** but gain a guard
+    # against the truncated-source runaway pattern.)
+    h = re.sub(r'\*\*([^\n*]+?)\*\*', r'<strong>\1</strong>', h)
+    # Italic — multi-line capable so manifesto-style pull-quotes that span
+    # multiple lines render as one <em>. The negative-lookbehind/ahead avoid
+    # eating ** boundaries; the [^*] character class can't bridge across
+    # other italic spans.
+    h = re.sub(r'(?<!\*)\*([^*]+?)\*(?!\*)', r'<em>\1</em>', h, flags=re.DOTALL)
+    # Strip any orphan ** that survived (truncated source, unmatched opener).
+    h = re.sub(r'\*\*', '', h)
+    # Lists — tagged so the post-pass can wrap consecutive runs in <ul>/<ol>
+    h = re.sub(r'^- (.+)$', r'<li data-mdul>\1</li>', h, flags=re.MULTILINE)
+    h = re.sub(r'^(\d+)\. (.+)$', r'<li data-mdol>\2</li>', h, flags=re.MULTILINE)
     # Blockquotes
     h = re.sub(r'^> (.+)$', r'<blockquote>\1</blockquote>', h, flags=re.MULTILINE)
     # Horizontal rules
     h = re.sub(r'^---+$', r'<hr>', h, flags=re.MULTILINE)
-    # Tables (basic: | col | col |)
+    # Tables: tag rows with a sentinel; post-pass wraps each consecutive run in
+    # <table><thead><tr><th>…</th></tr></thead><tbody>…</tbody></table>.
     def _table_row(m):
         cells = [c.strip() for c in m.group(1).split('|') if c.strip()]
         if all(c.replace('-','').replace(':','') == '' for c in cells):
-            return ''  # separator row
-        tag = 'th' if not hasattr(_table_row, '_seen') else 'td'
-        _table_row._seen = True
-        return '<tr>' + ''.join(f'<{tag}>{c}</{tag}>' for c in cells) + '</tr>'
-    if hasattr(_table_row, '_seen'):
-        del _table_row._seen
+            return '<!--mdtbl-sep-->'
+        return '<tr data-mdtbl>' + ''.join(f'<td>{c}</td>' for c in cells) + '</tr>'
     h = re.sub(r'^\|(.+)\|$', _table_row, h, flags=re.MULTILINE)
     # Links (explicit markdown links first)
     # Convert .md references in markdown link targets to /doc/ paths
@@ -701,8 +706,38 @@ def _render_md(md_text: str) -> str:
     h = h.replace('\n\n', '</p>\n<p>')
     h = '<p>' + h + '</p>'
     h = h.replace('<p></p>', '')
-    h = re.sub(r'<p>\s*(<h[1-4]|<pre|<hr|<blockquote|<ul|<ol|<table|<tr)', r'\1', h)
-    h = re.sub(r'(</h[1-4]>|</pre>|<hr>|</blockquote>|</ul>|</ol>|</table>|</tr>)\s*</p>', r'\1', h)
+    h = re.sub(r'<p>\s*(<h[1-4]|<pre|<hr|<blockquote|<ul|<ol|<table|<tr|<li)', r'\1', h)
+    h = re.sub(r'(</h[1-4]>|</pre>|<hr>|</blockquote>|</ul>|</ol>|</table>|</tr>|</li>)\s*</p>', r'\1', h)
+
+    # Wrap consecutive <li data-mdul> runs in <ul>; same for <li data-mdol> in <ol>.
+    h = re.sub(
+        r'(?:<li data-mdul>.*?</li>\s*)+',
+        lambda m: '<ul>' + m.group(0).replace(' data-mdul', '') + '</ul>',
+        h, flags=re.DOTALL,
+    )
+    h = re.sub(
+        r'(?:<li data-mdol>.*?</li>\s*)+',
+        lambda m: '<ol>' + m.group(0).replace(' data-mdol', '') + '</ol>',
+        h, flags=re.DOTALL,
+    )
+
+    # Wrap consecutive <tr data-mdtbl> runs in <table>; first row → <thead><th>,
+    # rest → <tbody><td>. The <!--mdtbl-sep--> separator is dropped.
+    def _wrap_table(m):
+        chunk = m.group(0).replace('<!--mdtbl-sep-->', '').strip()
+        chunk = chunk.replace(' data-mdtbl', '')
+        first_tr = re.match(r'(<tr>.*?</tr>)', chunk, flags=re.DOTALL)
+        if first_tr:
+            head = first_tr.group(1).replace('<td>', '<th>').replace('</td>', '</th>')
+            tail = chunk[len(first_tr.group(1)):].strip()
+            body = f'<tbody>{tail}</tbody>' if tail else ''
+            return f'<table><thead>{head}</thead>{body}</table>'
+        return f'<table>{chunk}</table>'
+    h = re.sub(
+        r'(?:<tr data-mdtbl>.*?</tr>\s*(?:<!--mdtbl-sep-->\s*)?)+',
+        _wrap_table, h, flags=re.DOTALL,
+    )
+
     return h
 
 # Build a set of known doc stems for cross-linking (refreshed lazily)
@@ -915,6 +950,70 @@ async def read_doc(name: str):
     back_links = f'{related_html}<hr style="margin:16px 0 12px;border-color:rgba(88,166,255,.12)"><div style="font-size:12px;color:#4a5060;display:flex;gap:16px;flex-wrap:wrap"><a href="/docs.html" style="color:#58a6ff">All Documents</a><a href="/doc/INDEX" style="color:#79c0ff">Document Index</a><a href="/book" style="color:#d2a8ff">The Book of mindX</a><a href="/journal" style="color:#3fb950">Improvement Journal</a><a href="/redoc" style="color:#d29922">API Reference</a></div>'
     return _DashResponse(content=_doc_page(safe, body + back_links, f"{safe} &middot; {size_kb} KB", description=_first_heading or f"mindX documentation: {safe}", canonical_path=f"/doc/{name}"))
 
+_BOOK_STYLE = """<style>
+/* ── Book of mindX — typography overlay (scoped to /book only) ──────── */
+.page{max-width:760px;padding:32px 28px 64px}
+.book-body{font-family:'Lora','Source Serif Pro','Georgia','Iowan Old Style',serif;font-size:14px;line-height:1.85;color:#c5cdd9;letter-spacing:.01em}
+.book-body p{font-size:14.5px;line-height:1.85;color:#c5cdd9;margin:14px 0;hyphens:auto;text-align:justify}
+.book-body h1{font-family:'Lora','Source Serif Pro','Georgia',serif;font-size:30px;font-weight:600;color:#e6edf3;letter-spacing:-.01em;text-align:center;margin:36px 0 8px;line-height:1.2}
+.book-body h2{font-family:'Lora','Source Serif Pro','Georgia',serif;font-size:22px;font-weight:600;color:#e6edf3;letter-spacing:.01em;border-top:none;padding-top:0;text-align:center;margin:56px 0 28px;position:relative}
+.book-body h2::before,.book-body h2::after{content:'';position:absolute;top:50%;width:60px;height:1px;background:linear-gradient(90deg,transparent,rgba(210,168,255,.35),transparent)}
+.book-body h2::before{left:50%;margin-left:-180px}
+.book-body h2::after{left:50%;margin-left:120px}
+.book-body h2 + p::first-letter,
+.book-body h2 + h1 + p::first-letter,
+.book-body h2 + p:first-of-type::first-letter{font-family:'Lora','Source Serif Pro','Georgia',serif;font-size:48px;font-weight:600;float:left;line-height:.95;padding:4px 8px 0 0;color:#d2a8ff}
+.book-body h3{font-family:'Lora','Source Serif Pro','Georgia',serif;font-size:17px;font-weight:600;color:#d2a8ff;margin:28px 0 10px;letter-spacing:.01em}
+.book-body h4{font-size:13px;color:#8b949e;margin:18px 0 6px;text-transform:uppercase;letter-spacing:.08em;font-family:'Inter','SF Pro Text',system-ui,sans-serif}
+/* Demote any stray <h1> that appears AFTER the title block (nested h1 in source) */
+.book-body h2 ~ h1{font-size:18px;font-weight:600;color:#d2a8ff;text-align:left;margin:24px 0 8px;letter-spacing:.01em}
+.book-body h2 ~ h1::before,.book-body h2 ~ h1::after{display:none}
+/* Edition/lunar header — the three opening blockquotes */
+.book-body > blockquote:nth-of-type(-n+3){text-align:center;font-size:11.5px;color:#8b949e;border-left:none;background:none;padding:2px 0;margin:2px 0;font-style:italic;font-family:'Inter','SF Pro Text',system-ui,sans-serif;letter-spacing:.04em}
+.book-body > blockquote:first-of-type{margin-top:18px;color:#d2a8ff}
+.book-body > blockquote:nth-of-type(3){margin-bottom:24px}
+/* Other blockquotes — pulled out as elegant call-outs */
+.book-body blockquote{border-left:2px solid rgba(210,168,255,.4);background:rgba(13,17,23,.45);padding:14px 22px;margin:24px auto;font-style:italic;color:#a5adba;border-radius:0 6px 6px 0;font-size:13.5px;line-height:1.7;max-width:92%}
+.book-body blockquote em{color:#a5adba}
+/* Horizontal rules — replace with ornamental separator */
+.book-body hr{border:none;height:1px;background:linear-gradient(90deg,transparent,rgba(210,168,255,.25),transparent);margin:32px auto;width:60%;position:relative}
+.book-body hr::after{content:'❦';position:absolute;left:50%;top:-10px;transform:translateX(-50%);background:#050810;padding:0 14px;color:rgba(210,168,255,.45);font-size:14px}
+/* Tables — book-style: alternating rows, generous padding, subtle borders */
+.book-body table{width:100%;border-collapse:collapse;margin:24px 0;font-size:12px;font-family:'Inter','SF Pro Text',system-ui,sans-serif;background:rgba(13,17,23,.35);border:1px solid rgba(26,31,46,.5);border-radius:6px;overflow:hidden}
+.book-body thead{background:rgba(88,166,255,.06)}
+.book-body th{text-align:left;padding:10px 14px;border-bottom:1px solid rgba(88,166,255,.18);color:#e6edf3;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.book-body td{padding:9px 14px;border-bottom:1px solid rgba(26,31,46,.3);color:#b0b8c4;font-size:12px;line-height:1.6}
+.book-body tbody tr:nth-child(even) td{background:rgba(22,27,34,.25)}
+.book-body tbody tr:last-child td{border-bottom:none}
+.book-body tbody tr:hover td{background:rgba(88,166,255,.06)}
+.book-body td code{font-size:10.5px;color:#79c0ff;background:transparent;padding:0}
+.book-body th:first-child,.book-body td:first-child{padding-left:18px}
+/* Lists */
+.book-body ul,.book-body ol{margin:14px 0 14px 8px;padding-left:24px}
+.book-body li{margin:6px 0;font-size:14px;line-height:1.75;color:#b8c0cc;font-family:'Lora','Source Serif Pro','Georgia',serif}
+.book-body ul li{list-style:none;position:relative;padding-left:4px}
+.book-body ul li::before{content:'·';position:absolute;left:-14px;color:rgba(210,168,255,.6);font-weight:700;font-size:18px;line-height:1}
+.book-body ol li{padding-left:4px}
+/* Code blocks — keep technical but slightly softer */
+.book-body pre{background:rgba(13,17,23,.7);border:1px solid rgba(26,31,46,.5);border-radius:6px;padding:16px 18px;font-size:11px;line-height:1.6;font-family:'JetBrains Mono','SF Mono','Fira Code',monospace;margin:18px 0;overflow-x:auto;color:#b0b8c4}
+.book-body p code,.book-body li code{font-family:'JetBrains Mono','SF Mono','Fira Code',monospace;background:rgba(22,27,34,.7);padding:2px 6px;border-radius:3px;color:#7ee787;font-size:11.5px}
+/* First paragraph after the lunar header — manifesto pull-quote */
+.book-body > p:first-of-type em,.book-body > blockquote + blockquote + blockquote ~ p:first-of-type em{color:#d2a8ff}
+/* Strong */
+.book-body strong{color:#e6edf3;font-weight:600}
+/* Center the page-level title */
+.book-body > h1:first-of-type{text-align:center;font-size:36px;letter-spacing:.02em;margin-top:8px}
+@media (max-width:640px){
+  .page{padding:20px 18px 48px}
+  .book-body{font-size:13.5px}
+  .book-body h1{font-size:24px}
+  .book-body h2{font-size:18px;margin:40px 0 20px}
+  .book-body h2::before,.book-body h2::after{display:none}
+  .book-body table{font-size:11px}
+  .book-body th,.book-body td{padding:7px 9px}
+}
+</style>"""
+
 @app.get("/book", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
 async def book_of_mindx_page():
     """The Book of mindX — rendered from latest edition with previous editions linked."""
@@ -922,7 +1021,7 @@ async def book_of_mindx_page():
     if not book_path.exists():
         return _DashResponse(content=_doc_page("The Book of mindX", "<h1>The Book of mindX</h1><p>First edition is being written. Check back in 2 minutes.</p>"))
     md = book_path.read_text(encoding="utf-8")
-    body = _render_md(md)
+    body = _BOOK_STYLE + '<div class="book-body">' + _render_md(md) + '</div>'
 
     # Build previous editions list (newest first)
     pub_dir = PROJECT_ROOT / "docs" / "publications"

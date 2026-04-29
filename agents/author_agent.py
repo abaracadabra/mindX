@@ -832,10 +832,17 @@ I am not idle. I am thinking."""
                         if re.search(pattern, text, re.IGNORECASE): conflicts.append(f"{f.stem}: {issue}")
                 except Exception: pass
         except Exception: pass
+        embedded_chunks = 0
         try:
             from agents import memory_pgvector as _mpg
             indexed = await _mpg.get_indexed_docs()
-            embedded_names = {d["doc_name"] for d in indexed}; embedded_docs = indexed
+            # get_indexed_docs() returns one row per embedding *chunk*; a doc
+            # of N paragraphs becomes N rows. Dedupe by doc_name to get the
+            # actual doc count, and keep the chunk count separately so the
+            # display can report both (105 of 210 docs embedded, 1421 chunks).
+            embedded_chunks = len(indexed)
+            embedded_names = {d["doc_name"] for d in indexed}
+            embedded_docs = embedded_names
             for f in docs_dir.glob("*.md"):
                 if f.stem not in embedded_names: unembedded.append(f.stem)
         except Exception: pass
@@ -844,15 +851,20 @@ I am not idle. I am thinking."""
             (PROJECT_ROOT/"data"/"governance"/"doc_audit.json").write_text(json.dumps({
                 "timestamp":time.time(),"total_docs":total,"archived":archived,
                 "deprecated":deprecated,"recently_modified":recent[:10],
-                "conflicts":conflicts[:10],"embedded_count":len(embedded_docs),"unembedded":unembedded[:20]
+                "conflicts":conflicts[:10],
+                "embedded_doc_count":len(embedded_docs),
+                "embedded_chunk_count":embedded_chunks,
+                "unembedded":unembedded[:20],
             },indent=2))
         except Exception: pass
+        chunks_clause = f" ({embedded_chunks:,} chunks)" if embedded_chunks else ""
+        awaiting_clause = f" {len(unembedded)} awaiting." if unembedded else ""
         return f"""## VIII. Documentation Health
 
 {total} docs, {archived} archived, {deprecated} deprecated.
 Recently modified: {', '.join(f'[{r}](/doc/{r})' for r in recent[:8]) or 'none in last 7 days'}
 
-**{len(embedded_docs)}** of {total} embedded in pgvectorscale.{(' ' + str(len(unembedded)) + ' awaiting.') if unembedded else ''}"""
+**{len(embedded_docs)}** of {total} docs embedded in pgvectorscale{chunks_clause}.{awaiting_clause}"""
 
     # ── New daily chapter methods (days 9-27) ──
 
