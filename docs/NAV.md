@@ -223,7 +223,7 @@ The schema layer is recursive: mindX writes its own documentation, references it
 Phase 0 instrumentation shipped 2026-04-26. Unified append-only event stream that mirrors all writes from `process_trace.jsonl`, `godel_choices.jsonl`, `boardroom_sessions.jsonl`, STM, and dream cycles into a single substrate. Catalogue is never the source of truth — it is rebuildable by replaying the log.
 
 - [Full design contract](KNOWLEDGE_CATALOGUE.md) — Dataplex six-resource model (EntryGroup / EntryType / AspectType / Entry / EntryLink / EntryLinkType), CQRS projector framework, hybrid retrieval (BM25 + dense + graph + cross-encoder), federation via NATS leaf-nodes
-- [Phase 0 implementation](../agents/catalogue/) — `events.py` (Pydantic `CatalogueEvent`, 16 typed kinds), `log.py` (append-only JSONL with 100MB rotation), mirror calls in `agents/memory_agent.py`, `agents/machine_dreaming.py`, `daio/governance/boardroom.py`. Sink: `data/logs/catalogue_events.jsonl`.
+- [Phase 0 implementation](../agents/catalogue/) — `events.py` (Pydantic `CatalogueEvent`, 17 typed kinds incl. `library.discover`), `log.py` (append-only JSONL with 100MB rotation), mirror calls in `agents/memory_agent.py`, `agents/machine_dreaming.py`, `daio/governance/boardroom.py`. Sink: `data/logs/catalogue_events.jsonl`.
 
 ### Storage Offload (IPFS + on-chain anchoring)
 
@@ -319,12 +319,17 @@ Priority: Environment variables (`MINDX_` prefix) > [BANKON Vault](vault_system.
 - [Provider Registry](../data/config/provider_registry.json) — All LLM providers
 - [LLM Factory Config](../data/config/llm_factory_config.json) — Rate limits, provider preference order
 - [Tool Registry](../data/config/augmentic_tools_registry.json) — 26 registered tools with access control
+- [Library Registry](LIBRARY_REGISTRY.md) — Awareness catalogue of external LLM libraries (Transformers, vLLM, DeepEval, Unsloth, et al.) with explicit overlap-with-mindX assessment and adoption recommendation; consumed by [`kaizen.agent`](../agents/kaizen.agent)
+- [Evaluation Framework](../agents/eval/README.md) — `agents/eval/` GEval-style criteria-based scoring (Apache-2.0 fork of [confident-ai/deepeval](https://github.com/confident-ai/deepeval)); Phase 1 wired to `log_godel_choice()` via `MINDX_EVAL_GODEL_ENABLED=1`; alignment scores surface at `/insight/eval/recent` and `/insight/eval/summary`
 
 ## Deployment
 
 - [Production Deployment](DEPLOYMENT_MINDX_PYTHAI_NET.md) — mindx.pythai.net on Hostinger VPS (168.231.126.58), Apache2 + Let's Encrypt, systemd service
 - [HostingerVPSAgent](../agents/hostinger_vps_agent.py) — Three MCP channels for VPS management: SSH (shell), [Hostinger API](https://developers.hostinger.com) (restart/metrics/backups), [mindX Backend](https://mindx.pythai.net) (diagnostics/activity). Persistent state, MCP tool registration. See [.agent definition](../agents/hostinger.vps.agent)
 - [Vault System](vault_system.md) — BANKON Vault: AES-256-GCM + HKDF-SHA512 encrypted credentials
+- **[BANKON Vault — canonical reference](BANKON_VAULT.md)** — full innerstanding: crypto stack, on-disk layout, three custody modes (Machine/Human/DAIO), lifecycle, HTTP surface, tests
+  - [BANKON Vault Handoff](BANKON_VAULT_HANDOFF.md) — operator runbook for the airgapped Machine→Human ceremony (threat model, recovery, DAIO migration path)
+  - [Legacy Vault Migration](LEGACY_VAULT_MIGRATION.md) — phased plan to retire `vault_manager` + `encrypted_vault_manager` (audit blocker for the handoff)
 - [Docker](ollama/setup/docker.md) — Ollama containerization (CPU, NVIDIA, AMD)
 - [Production Stack](DEPLOYMENT_MINDX_PYTHAI_NET.md) — PostgreSQL 16 + pgvector, 8 local models, 36 cloud models, 20 sovereign agents, machine.dreaming 2h LTM cycles
 
@@ -340,7 +345,7 @@ mindX is a Godel machine — a self-improving system where the improvement mecha
 
 ## Identity & Security
 
-- [BANKON Vault](vault_system.md) — Encrypted credential storage (AES-256-GCM + HKDF-SHA512); `python manage_credentials.py store/list/providers`
+- [BANKON Vault](vault_system.md) — Encrypted credential storage (AES-256-GCM + HKDF-SHA512); `python manage_credentials.py store/list/providers`. **Full reference: [BANKON_VAULT.md](BANKON_VAULT.md)**. Custody handoff: [BANKON_VAULT_HANDOFF.md](BANKON_VAULT_HANDOFF.md).
 - [ID Manager Agent](agents/id_manager_agent.md) — Ethereum-compatible wallet creation ([source](../agents/core/id_manager_agent.py))
 - [Security Configuration](security_configuration.md) — Access control, validation, rate limiting
 - [MetaMask Integration](DEPLOYMENT_MINDX_PYTHAI_NET.md) — Frontend wallet authentication

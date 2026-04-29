@@ -1,10 +1,14 @@
 # Vault System Documentation
 
+> **Canonical reference for BANKON Vault**: [BANKON_VAULT.md](BANKON_VAULT.md) — crypto stack, on-disk layout, three custody modes, lifecycle, HTTP surface, tests. Operator ceremony: [BANKON_VAULT_HANDOFF.md](BANKON_VAULT_HANDOFF.md). Legacy retirement plan: [LEGACY_VAULT_MIGRATION.md](LEGACY_VAULT_MIGRATION.md).
+>
 > **Update (April 2026)**: The production vault system is now **BANKON Vault** (AES-256-GCM + HKDF-SHA512).
 > Located at `mindx_backend_service/vault_bankon/`. The older `vault_encrypted/` (Fernet/PBKDF2) is superseded.
 > 12 agent identity keys + 3 provider credentials stored encrypted.
 > CLI: `python manage_credentials.py store|list|delete|providers`
 > See `mindx_backend_service/bankon_vault/vault.py` for implementation.
+>
+> This document covers the broader vault ecosystem (legacy vault_manager, encrypted_vault_manager, sessions, access logs, user folders). For the BANKON Vault deep dive, start at [BANKON_VAULT.md](BANKON_VAULT.md).
 
 ## Overview
 

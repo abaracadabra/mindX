@@ -266,6 +266,7 @@ All tool documentation is organized in the `tools/` folder. Tools are now organi
 - **[Memory System](memory.md)** - Memory architecture and persistence
 - **[pgvectorscale Memory Integration](pgvectorscale_memory_integration.md)** - Semantic memory with vector similarity search
 - **[Vault System](vault_system.md)** - ✅ **PRODUCTION ENCRYPTED VAULT** AES-256 encrypted credential storage with PBKDF2 key derivation, secure wallet private key management, URL/IP access tracking, **vault-backed user sessions** (wallet auth), **per-wallet user folders** (signature-scoped), and frontend `vault_manager.js`. Optional **access gate** (NFT/fungible) for session issuance; see [LIT_AND_ACCESS_ISSUANCE](LIT_AND_ACCESS_ISSUANCE.md). DAIO **keyminter** contracts ([VaultKeyDynamic](daio/contracts/docs/keyminter/KEYMINTER_VAULT_ACCESS.md), [VaultKeyIntelligent](daio/contracts/keyminter/README.md)) mint vault access keys.
+- **[BANKON Vault — canonical reference](BANKON_VAULT.md)** - ✅ **DEEP DIVE** Crypto stack (AES-256-GCM + HKDF-SHA512 + per-entry domain separation), on-disk layout, three custody modes (Machine/Human/DAIO with overseer-aware unlock), lifecycle (startup unlock, sentinel-mode restart, two-phase rotation), HTTP surface, 10 tests via `make test-vault`. Operator ceremony in [BANKON_VAULT_HANDOFF.md](BANKON_VAULT_HANDOFF.md); phased retirement of legacy vault modules in [LEGACY_VAULT_MIGRATION.md](LEGACY_VAULT_MIGRATION.md).
 - **[Identity Management](IDENTITY.md)** - Identity and authentication systems
 - **[Orchestration](ORCHESTRATION.md)** - System orchestration and coordination
 - **[System Architecture Map](system_architecture_map.md)** - Complete system architecture overview and component organization
@@ -557,7 +558,8 @@ The THOT ecosystem provides comprehensive lifecycle management for neural networ
 #### Agent-Specific
 
 - **[AutoMINDX Enhanced Summary](AUTOMINDX_ENHANCED_SUMMARY.md)** - AutoMINDX enhancements
-- **[AutoMINDX iNFT Summary](AUTOMINDX_INFT_SUMMARY.md)** - AutoMINDX NFT integration
+- **[iNFT-7857 (production)](INFT_7857.md)** - **ERC-7857 hardened build with AccessControl, Pausable, EIP-712 oracle proof, AgenticPlace + BANKON hooks; 56 Foundry tests; interactive UI at [/inft7857](https://mindx.pythai.net/inft7857)**
+- **[AutoMINDX iNFT Summary (legacy)](AUTOMINDX_INFT_SUMMARY.md)** - Original Apr 11 2026 iNFT contracts (preserved as prior-art reference)
 - **[AutoMINDX and Personas](automindx_and_personas.md)** - Persona management
 - **[Mastermind CLI](mastermind_cli.md)** - Mastermind command-line interface
 
