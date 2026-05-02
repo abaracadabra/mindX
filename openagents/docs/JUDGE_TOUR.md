@@ -50,7 +50,7 @@ FOUNDRY_PROFILE=agentregistry  forge test  # 20/20 — ERC-8004
 
 # Conclave Solidity tests
 cd ../../openagents/conclave/contracts
-forge test                                  # 10/10 — Conclave + ConclaveBond
+forge test                                  # 29/29 — Conclave + ConclaveBond
 ```
 
 **Combined: 155 tests, all green.** (120 forge + 9 Conclave-Python + 25 Cabinet-Python + 10 Conclave-Solidity = 164, with 9 of those being Conclave Python protocol tests counted separately.)

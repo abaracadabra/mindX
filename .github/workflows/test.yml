@@ -103,7 +103,7 @@ jobs:
         run: forge test -vv
 
   conclave-forge:
-    name: Forge · Conclave Solidity (10 tests)
+    name: Forge · Conclave Solidity (29 tests)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

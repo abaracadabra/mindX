@@ -1,46 +1,38 @@
 No files changed, compilation skipped
 
+Ran 19 tests for test/ConclaveBond.t.sol:ConclaveBondTest
+[PASS] test_attestAlgorandBond_emitsWithAlgoTxid() (gas: 87127)
+[PASS] test_attestAlgorandBond_onlyBridgeCanCall() (gas: 13313)
+[PASS] test_attestAlgorandBond_setsTxidAndAmount() (gas: 90863)
+[PASS] test_bonds_areIsolatedPerConclaveAndPerMember() (gas: 136714)
+[PASS] test_postBond_accumulates_onSecondCall() (gas: 79737)
+[PASS] test_postBond_emitsBondPosted_withZeroAlgoTxid() (gas: 68812)
+[PASS] test_postBond_storesAmount_andSetsReleasableAt() (gas: 74504)
+[PASS] test_postBond_valueMismatch_reverts() (gas: 19294)
+[PASS] test_postBond_zeroAmount_reverts() (gas: 12506)
+[PASS] test_receive_acceptsBareEthTransfer() (gas: 12479)
+[PASS] test_releaseBond_algorandPath_doesNotTransferEth() (gas: 74962)
+[PASS] test_releaseBond_emitsBondReleased() (gas: 63449)
+[PASS] test_releaseBond_native_returnsValueToCaller() (gas: 63387)
+[PASS] test_releaseBond_noBond_reverts() (gas: 13885)
+[PASS] test_releaseBond_tooEarly_reverts() (gas: 68344)
+[PASS] test_slash_clearsBond_andTransfersToConclave() (gas: 90339)
+[PASS] test_slash_emitsBondSlashed() (gas: 90313)
+[PASS] test_slash_onlyConclave_reverts() (gas: 12270)
+[PASS] test_slash_zeroBond_returnsZero_doesNotRevert() (gas: 16259)
+Suite result: ok. 19 passed; 0 failed; 0 skipped; finished in 3.38ms (2.74ms CPU time)
+
 Ran 10 tests for test/Conclave.t.sol:ConclaveTest
 [PASS] test_double_anchor_reverts() (gas: 872819)
-Logs:
-  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
-
 [PASS] test_only_convener_anchors() (gas: 784825)
-Logs:
-  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
-
 [PASS] test_record_resolution_with_quorum() (gas: 870703)
-Logs:
-  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
-
 [PASS] test_record_reverts_when_voter_unseated() (gas: 811622)
-Logs:
-  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
-
 [PASS] test_register_and_seated() (gas: 813610)
-Logs:
-  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
-
 [PASS] test_register_rejects_duplicate() (gas: 785733)
-Logs:
-  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
-
 [PASS] test_register_rejects_length_mismatch() (gas: 13661)
-Logs:
-  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
-
 [PASS] test_slash_unseats_and_burns_bond() (gas: 835292)
-Logs:
-  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
-
 [PASS] test_unseated_when_censura_below_min() (gas: 800716)
-Logs:
-  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
-
 [PASS] test_unseated_when_tessera_revoked() (gas: 806328)
-Logs:
-  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
+Suite result: ok. 10 passed; 0 failed; 0 skipped; finished in 3.44ms (5.93ms CPU time)
 
-Suite result: ok. 10 passed; 0 failed; 0 skipped; finished in 15.14ms (7.88ms CPU time)
-
-Ran 1 test suite in 30.53ms (15.14ms CPU time): 10 tests passed, 0 failed, 0 skipped (10 total tests)
+Ran 2 test suites in 10.29ms (6.82ms CPU time): 29 tests passed, 0 failed, 0 skipped (29 total tests)

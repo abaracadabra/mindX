@@ -8,13 +8,13 @@
 
 ## Aggregate
 
-**Total: 165 tests passing across 7 suites · 0 failures · 0 skips · 80% line coverage on Cabinet code**
+**Total: 184 tests passing across 7 suites · 0 failures · 0 skips · 80% line coverage on Cabinet code**
 
 | Suite | Tests | Result | Time | Output file |
 |---|---|---|---|---|
 | Cabinet pytest (Python) | 26 | ✅ pass | 3.13s | [`cabinet_pytest.txt`](cabinet_pytest.txt) |
 | Conclave Python protocol | 9 | ✅ pass | 0.16s | [`conclave_python.txt`](conclave_python.txt) |
-| Conclave Solidity (Foundry) | 10 | ✅ pass | 30.5ms | [`conclave_solidity.txt`](conclave_solidity.txt) |
+| Conclave Solidity (Foundry) | 29 | ✅ pass | 10.3ms | [`conclave_solidity.txt`](conclave_solidity.txt) |
 | iNFT-7857 (Foundry) | 57 | ✅ pass | 80.5ms | [`inft_7857_forge.txt`](inft_7857_forge.txt) |
 | BANKON v1 ENS (Foundry) | 29 | ✅ pass | 324.9ms | [`bankon_forge.txt`](bankon_forge.txt) |
 | THOT v1 (Foundry) | 14 | ✅ pass | 9.7ms | [`thot_forge.txt`](thot_forge.txt) |
