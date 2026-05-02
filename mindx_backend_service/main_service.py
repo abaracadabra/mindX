@@ -1293,6 +1293,36 @@ async def api_uniswap_check_approval(payload: Dict[str, Any] = Body(...)):
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 
+@app.get("/api/uniswap/skills", include_in_schema=False)
+async def api_uniswap_skills():
+    """Catalog of all 8 Uniswap AI skills.
+
+    Source of truth: tools/uniswap_skills.SKILLS. Includes plugin assignment,
+    slash invocation, install command, and an actionable flag (true if mindX
+    can execute the skill server-side; false = agent-first / Claude Code only).
+    """
+    from fastapi.responses import JSONResponse
+    from tools.uniswap_skills import SKILLS, INSTALL_CMD
+    return JSONResponse({
+        "ok": True,
+        "install_cmd": INSTALL_CMD,
+        "count": len(SKILLS),
+        "skills": SKILLS,
+    })
+
+
+@app.post("/api/uniswap/skills/{skill_name}", include_in_schema=False)
+async def api_uniswap_skill_run(skill_name: str, payload: Dict[str, Any] = Body(default={})):
+    """Run a Uniswap AI skill — both human (UI) and agent (BDI) callable."""
+    from fastapi.responses import JSONResponse
+    try:
+        from tools.uniswap_skills import run_skill
+        result = await run_skill(skill_name, payload)
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
 @app.get("/api/uniswap/decisions", include_in_schema=False)
 async def api_uniswap_decisions(limit: int = 20):
     """Recent BDI trader cycles from data/logs/uniswap_decisions.jsonl."""
@@ -1572,7 +1602,7 @@ app.add_middleware(
 _PUBLIC_EXACT = frozenset({
     "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html",
     "/keeperhub", "/keeperhub.html", "/uniswap", "/uniswap.html", "/bankon-ens", "/bankon-ens.html", "/bankonminter", "/bankonminter.html", "/zerog", "/zerog.html", "/conclave", "/conclave.html", "/agentregistry", "/agentregistry.html",
-    "/api/uniswap/quote", "/api/uniswap/check_approval", "/api/uniswap/decisions",
+    "/api/uniswap/quote", "/api/uniswap/check_approval", "/api/uniswap/decisions", "/api/uniswap/skills",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/diagnostics/live", "/activity/stream", "/activity/recent", "/activity/stats",
     "/thesis", "/thesis/", "/thesis/evidence", "/thesis/summary",
@@ -1593,6 +1623,7 @@ _PUBLIC_PREFIXES = (
     "/insight/",
     "/p2p/keeperhub/",
     "/openagents/deployments/",
+    "/api/uniswap/",      # quote/approval/skills/decisions — vault-keyed proxy
     "/admin/shadow/",     # shadow-overlord challenge/verify/release-key — gated by ECDSA sig + JWT, not session
     "/admin/cabinet/",    # gated by require_shadow_jwt at handler level
     "/cabinet/",          # public cabinet read (addresses only)

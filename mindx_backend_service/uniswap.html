@@ -141,6 +141,57 @@ button.bw:hover:not(:disabled){background:rgba(255,255,255,.10);filter:none}
 .tx-link{color:var(--ice);text-decoration:none;border-bottom:1px dashed rgba(77,166,255,.5);transition:all .15s ease}
 .tx-link:hover{color:var(--soul);border-bottom-color:var(--soul);text-shadow:0 0 8px rgba(255,200,51,.4)}
 
+/* Skills panel */
+.skills-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:14px}
+.skill-card{background:rgba(0,0,0,.35);border:1px solid var(--glass-border);border-radius:10px;padding:14px 16px;cursor:pointer;transition:all .2s ease;position:relative;display:flex;flex-direction:column;min-height:130px}
+.skill-card::before{content:'';position:absolute;left:0;top:14px;bottom:14px;width:2px;border-radius:1px;background:var(--ice);opacity:.5;transition:opacity .2s ease}
+.skill-card:hover{border-color:rgba(230,168,23,.3);transform:translateY(-2px);background:rgba(0,0,0,.5)}
+.skill-card:hover::before{opacity:1}
+.skill-card.trading::before{background:var(--soul)}
+.skill-card.liquidity::before{background:var(--sigil)}
+.skill-card.dev::before{background:var(--ice)}
+.skill-card.security::before{background:var(--blood)}
+.skill-card.deployment::before{background:var(--flame)}
+.skill-card.agent-first{opacity:.85}
+.skill-card .head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;padding-left:8px}
+.skill-card .invoc{font-family:'Fira Code',monospace;font-size:13px;color:var(--soul);font-weight:700;letter-spacing:.3px}
+.skill-card .plug{font-family:'Fira Code',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px;background:rgba(230,168,23,.06);border:1px solid var(--border);padding:2px 6px;border-radius:4px;font-weight:600}
+.skill-card .desc{font-size:11px;color:var(--text2);line-height:1.5;padding-left:8px;flex:1;font-family:'Fira Code',monospace}
+.skill-card .tags{display:flex;gap:6px;margin-top:8px;padding-left:8px}
+.skill-card .tag{font-size:9px;padding:2px 7px;border-radius:4px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;font-family:'Fira Code',monospace}
+.skill-card .tag.actionable{background:rgba(46,213,115,.12);color:var(--green);border:1px solid rgba(46,213,115,.3)}
+.skill-card .tag.agent-first{background:rgba(179,136,255,.12);color:var(--sigil);border:1px solid rgba(179,136,255,.3)}
+.skill-card .tag.cat{background:rgba(255,255,255,.04);color:var(--text2);border:1px solid var(--border)}
+
+/* Skill modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:50;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.shown{display:flex;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--deep);border:1px solid var(--border-hi);border-radius:14px;padding:24px 26px;max-width:680px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.modal h3{font-family:'Inter',sans-serif;font-size:16px;color:var(--soul);font-weight:800;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+.modal .invoc-line{font-family:'Fira Code',monospace;font-size:12px;color:var(--ice);margin-bottom:14px}
+.modal .meta-row{display:flex;gap:8px;margin-bottom:16px}
+.modal .meta-row .badge{font-size:9.5px;padding:3px 8px}
+.modal-body{margin-top:14px}
+.modal-body label{display:block;margin-top:10px}
+.modal-body .help{font-size:11px;color:var(--text3);margin:8px 0;line-height:1.6;padding:10px 12px;background:rgba(0,0,0,.4);border-left:2px solid var(--ice);border-radius:4px;font-family:'Fira Code',monospace}
+.modal-actions{display:flex;gap:10px;margin-top:18px;justify-content:flex-end;align-items:center}
+.modal-actions .install-cmd{font-family:'Fira Code',monospace;font-size:10px;color:var(--text3);background:rgba(0,0,0,.4);border:1px solid var(--border);padding:5px 10px;border-radius:5px;flex:1}
+.modal-output{margin-top:16px;background:rgba(0,0,0,.55);border:1px solid var(--glass-border);border-radius:8px;padding:14px;font-family:'Fira Code',monospace;font-size:11px;color:var(--text);line-height:1.6;max-height:340px;overflow:auto;white-space:pre-wrap;word-break:break-word;display:none}
+.modal-output.shown{display:block;animation:fadeIn .15s ease}
+.modal-output .ok-pill{display:inline-block;padding:2px 8px;background:rgba(46,213,115,.14);color:var(--green);border:1px solid rgba(46,213,115,.4);border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px}
+.modal-output .err-pill{display:inline-block;padding:2px 8px;background:rgba(255,68,68,.14);color:var(--blood);border:1px solid rgba(255,68,68,.4);border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px}
+.modal-output .deep-link{display:block;background:rgba(255,200,51,.08);border:1px solid rgba(255,200,51,.3);border-radius:6px;padding:10px;color:var(--soul);text-decoration:none;margin:8px 0;word-break:break-all}
+.modal-output .deep-link:hover{background:rgba(255,200,51,.16);text-shadow:0 0 8px rgba(255,200,51,.4)}
+.modal-output .checklist-item{padding:8px 0;border-bottom:1px dashed rgba(230,168,23,.10)}
+.modal-output .checklist-item:last-child{border-bottom:none}
+.modal-output .checklist-item .sev{font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700;letter-spacing:1px;margin-right:6px;text-transform:uppercase}
+.modal-output .checklist-item .sev.critical{background:rgba(255,68,68,.16);color:var(--blood)}
+.modal-output .checklist-item .sev.high{background:rgba(255,140,0,.16);color:var(--flame)}
+.modal-output .checklist-item .sev.medium{background:rgba(230,168,23,.12);color:var(--soul)}
+.modal-close{cursor:pointer;background:none;color:var(--text3);font-size:18px;border:none;padding:4px 10px;letter-spacing:0;text-transform:none;font-weight:400;box-shadow:none;font-family:inherit}
+.modal-close:hover{color:var(--white);filter:none;transform:none;box-shadow:none;background:none}
+
 /* Footer */
 .signature{margin-top:36px;padding:18px 0 0;border-top:1px solid var(--border);text-align:center;font-family:'Fira Code',monospace;font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase}
 .signature a{color:var(--ice);text-decoration:none;margin:0 8px}
@@ -262,8 +313,46 @@ button.bw:hover:not(:disabled){background:rgba(255,255,255,.10);filter:none}
   </div>
 </div>
 
+<!-- ─── UNISWAP AI SKILLS ─── -->
+<div class="panel" style="margin-top:18px">
+  <h2>UNISWAP AI SKILLS</h2>
+  <div class="lede">8 official skills · agent + human invocation · /skill-name</div>
+  <div class="desc">
+    Each skill is callable from this UI (click a card) <em>and</em> from the
+    BDI trader programmatically (POST <code style="color:var(--ice)">/api/uniswap/skills/&lt;name&gt;</code>).
+    Skills marked <span style="color:var(--green);font-weight:700">ACTIONABLE</span>
+    execute server-side; <span style="color:var(--sigil);font-weight:700">AGENT-FIRST</span>
+    skills return a manifest envelope to be invoked from a Claude Code or Cursor
+    session after running <code style="color:var(--ice)">npx skills add Uniswap/uniswap-ai</code>.
+  </div>
+  <div class="skills-grid" id="skills-grid">
+    <div class="empty">loading skills…</div>
+  </div>
+</div>
+
+<!-- ─── Skill modal ─── -->
+<div class="modal-bg" id="skill-modal">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <h3 id="m-name">…</h3>
+        <div class="invoc-line" id="m-invoc">…</div>
+      </div>
+      <button class="modal-close" id="m-close">×</button>
+    </div>
+    <div class="meta-row" id="m-meta"></div>
+    <div id="m-desc" style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:6px"></div>
+    <div class="modal-body" id="m-body"></div>
+    <div class="modal-actions">
+      <span class="install-cmd">npx skills add Uniswap/uniswap-ai</span>
+      <button id="m-run">Run skill</button>
+    </div>
+    <div class="modal-output" id="m-output"></div>
+  </div>
+</div>
+
 <div class="signature">
-  UNISWAP V4 TRADER · POSSIBILITY &amp; ACTIONS · v1
+  UNISWAP V4 TRADER · POSSIBILITY &amp; ACTIONS · SKILLS · v1
   <div style="margin-top:8px">
     <a href="/openagents">openagents</a>·<a href="/bankonminter">bankonminter</a>·<a href="/bankon-ens">bankon-ens</a>·<a href="/cabinet">cabinet</a>
   </div>
@@ -462,6 +551,221 @@ async function probeApi() {
 probeApi();
 loadCycles();
 setInterval(loadCycles, 10000);
+
+// ─── Uniswap AI Skills ──────────────────────────────────────────
+let SKILL_CATALOG = [];
+
+async function loadSkills() {
+  try {
+    const r = await fetch('/api/uniswap/skills');
+    const d = await r.json();
+    if (!d.ok) { log('skills load failed', 'err'); return; }
+    SKILL_CATALOG = d.skills || [];
+    renderSkillsGrid();
+    log(`✓ skills catalog: ${d.count} loaded`, 'ok');
+  } catch (e) {
+    log(`skills err: ${e.message}`, 'err');
+  }
+}
+
+function renderSkillsGrid() {
+  const grid = $('skills-grid');
+  if (!SKILL_CATALOG.length) { grid.innerHTML = '<div class="empty">no skills available</div>'; return; }
+  grid.innerHTML = '';
+  for (const s of SKILL_CATALOG) {
+    const card = document.createElement('div');
+    card.className = `skill-card ${s.category}` + (s.actionable ? '' : ' agent-first');
+    card.innerHTML = `
+      <div class="head">
+        <span class="invoc">${s.invocation}</span>
+        <span class="plug">${s.plugin}</span>
+      </div>
+      <div class="desc">${s.description}</div>
+      <div class="tags">
+        <span class="tag ${s.actionable ? 'actionable' : 'agent-first'}">${s.actionable ? 'actionable' : 'agent-first'}</span>
+        <span class="tag cat">${s.category}</span>
+      </div>
+    `;
+    card.onclick = () => openSkillModal(s);
+    grid.appendChild(card);
+  }
+}
+
+// Per-skill modal form definitions
+function buildSkillForm(skill) {
+  const n = skill.name;
+  const e = (id, label, placeholder, value='') =>
+    `<label class="field">${label}</label><input id="m-f-${id}" placeholder="${placeholder}" value="${value}">`;
+  const sel = (id, label, options) =>
+    `<label class="field">${label}</label><select id="m-f-${id}">${options.map(o => `<option value="${o[0]}">${o[1]}</option>`).join('')}</select>`;
+
+  switch (n) {
+    case 'swap-planner': return `
+      ${e('token_in',  'Token In',  '0xC02aaA39…WETH', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')}
+      ${e('token_out', 'Token Out', '0xA0b86991…USDC', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48')}
+      ${e('amount',    'Amount (human units)', '1.0', '1.0')}
+      ${sel('exact_field', 'Exact Side', [['input','exact-input (sell N tokens)'],['output','exact-output (buy N tokens)']])}
+      ${sel('chain_id',    'Chain',     [['1','Mainnet'],['8453','Base'],['42161','Arbitrum'],['10','Optimism']])}
+    `;
+    case 'liquidity-planner': return `
+      ${e('token_a', 'Token A', '0xC02aaA39…', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')}
+      ${e('token_b', 'Token B', '0xA0b86991…', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48')}
+      ${sel('protocol', 'Protocol', [['v3','Uniswap V3'],['v4','Uniswap V4'],['v2','Uniswap V2']])}
+      ${sel('fee_tier', 'Fee Tier', [['100','0.01%'],['500','0.05%'],['3000','0.30%'],['10000','1.00%']])}
+      ${sel('chain_id', 'Chain', [['1','Mainnet'],['8453','Base'],['42161','Arbitrum']])}
+    `;
+    case 'pay-with-any-token': return `
+      ${e('challenge_amount', 'Challenge amount (wei)', '5000000', '5000000')}
+      ${e('challenge_token',  'Challenge token (what 402 wants)', '0xA0b86991…USDC', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48')}
+      ${e('payment_token',    'Payment token (what we hold)',     '0xC02aaA39…WETH', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2')}
+      ${e('swapper',          'Swapper address',                  '0xd8dA…',         '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')}
+      ${sel('chain_id', 'Chain', [['1','Mainnet'],['8453','Base'],['42161','Arbitrum']])}
+    `;
+    case 'swap-integration': return `
+      ${sel('language', 'Language', [['python','Python (mindX tool)'],['typescript','TypeScript (viem)']])}
+      ${e('token_in',  'Token In',  '0x000…000 (native ETH)', '0x0000000000000000000000000000000000000000')}
+      ${e('token_out', 'Token Out', '0xA0b86991…USDC',         '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48')}
+      ${e('amount',    'Amount (wei)', '1000000000000000000',   '1000000000000000000')}
+    `;
+    case 'viem-integration': return `
+      ${e('contract', 'Contract address', '0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af (Universal Router v2)', '0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af')}
+      ${sel('chain_id', 'Chain', [['1','Mainnet'],['8453','Base'],['42161','Arbitrum'],['10','Optimism']])}
+    `;
+    case 'v4-security-foundations': return `
+      ${e('hook_addr', 'Hook address (optional)', '0x...', '')}
+      <label class="field">Enabled callbacks (optional, comma-sep)</label>
+      <input id="m-f-hook_flags" placeholder="beforeSwap,afterSwap,afterInitialize,afterAddLiquidity">
+      <div class="help">Leave fields blank to get the full hook security checklist. Provide enabled callbacks to filter to only relevant findings.</div>
+    `;
+    case 'configurator':
+    case 'deployer': return `
+      <div class="help">
+        This skill is <strong style="color:var(--sigil)">agent-first</strong> — designed for an
+        interactive Claude Code or Cursor session with the Uniswap AI plugin. Run
+        <code style="color:var(--ice)">${INSTALL_CMD}</code> in your editor's CLI, then invoke
+        <code style="color:var(--soul)">${skill.invocation}</code> with the auction context.
+        <br><br>
+        Clicking <strong>Run skill</strong> here returns the canonical skill manifest
+        + input template — useful for the BDI trader to introspect before delegating
+        to a Claude Code session.
+      </div>
+    `;
+    default:
+      return `<div class="help">No form template for this skill. Click Run to get the manifest envelope.</div>`;
+  }
+}
+
+const INSTALL_CMD = 'npx skills add Uniswap/uniswap-ai';
+
+function collectFormPayload(skill) {
+  const n = skill.name;
+  const v = (id) => $(`m-f-${id}`)?.value?.trim() || '';
+  const i = (id) => parseInt(v(id), 10);
+
+  switch (n) {
+    case 'swap-planner':       return { token_in: v('token_in'), token_out: v('token_out'),
+                                         amount: v('amount'), exact_field: v('exact_field'), chain_id: i('chain_id') };
+    case 'liquidity-planner':  return { token_a: v('token_a'), token_b: v('token_b'),
+                                         protocol: v('protocol'), fee_tier: i('fee_tier'), chain_id: i('chain_id') };
+    case 'pay-with-any-token': return { challenge_amount: v('challenge_amount'),
+                                         challenge_token: v('challenge_token'),
+                                         payment_token: v('payment_token'),
+                                         swapper: v('swapper'), chain_id: i('chain_id') };
+    case 'swap-integration':   return { language: v('language'), token_in: v('token_in'),
+                                         token_out: v('token_out'), amount: v('amount') };
+    case 'viem-integration':   return { contract: v('contract'), chain_id: i('chain_id') };
+    case 'v4-security-foundations':
+      const flags = v('hook_flags').split(',').map(s => s.trim()).filter(Boolean);
+      return { hook_addr: v('hook_addr') || null, hook_flags: flags };
+    default: return {};
+  }
+}
+
+let CURRENT_SKILL = null;
+
+function openSkillModal(skill) {
+  CURRENT_SKILL = skill;
+  $('m-name').textContent = skill.name;
+  $('m-invoc').textContent = `${skill.invocation}  ·  plugin: ${skill.plugin}`;
+  $('m-desc').textContent = skill.description;
+  $('m-meta').innerHTML = `
+    <span class="badge ${skill.actionable ? 'ok' : 'gold'}">${skill.actionable ? 'actionable' : 'agent-first'}</span>
+    <span class="badge ice">${skill.category}</span>
+  `;
+  $('m-body').innerHTML = buildSkillForm(skill);
+  $('m-output').classList.remove('shown');
+  $('m-output').innerHTML = '';
+  $('skill-modal').classList.add('shown');
+}
+
+$('m-close').onclick = () => $('skill-modal').classList.remove('shown');
+$('skill-modal').onclick = (e) => { if (e.target.id === 'skill-modal') $('skill-modal').classList.remove('shown'); };
+
+$('m-run').onclick = async () => {
+  if (!CURRENT_SKILL) return;
+  const payload = collectFormPayload(CURRENT_SKILL);
+  $('m-run').disabled = true;
+  $('m-run').textContent = 'Running…';
+  log(`POST /api/uniswap/skills/${CURRENT_SKILL.name}  ${JSON.stringify(payload).slice(0,80)}…`);
+  try {
+    const r = await fetch(`/api/uniswap/skills/${CURRENT_SKILL.name}`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    renderSkillOutput(d);
+    log(`✓ skill ${CURRENT_SKILL.name} ${d.ok ? 'ok' : 'err'}`, d.ok ? 'ok' : 'err');
+  } catch (e) {
+    renderSkillOutput({ ok: false, error: e.message });
+    log(`skill err: ${e.message}`, 'err');
+  } finally {
+    $('m-run').disabled = false;
+    $('m-run').textContent = 'Run skill';
+  }
+};
+
+function renderSkillOutput(d) {
+  const out = $('m-output');
+  out.classList.add('shown');
+  if (!d.ok) {
+    out.innerHTML = `<span class="err-pill">ERROR</span>\n${escapeHtml(JSON.stringify(d, null, 2))}`;
+    return;
+  }
+  let html = `<span class="ok-pill">OK</span>`;
+  if (d.deep_link) {
+    html += `\n<a class="deep-link" href="${d.deep_link}" target="_blank" rel="noopener">${d.deep_link}</a>`;
+  }
+  if (d.code) {
+    html += `\n<div style="font-size:10px;color:var(--text3);margin:6px 0">${d.language || ''}</div>${escapeHtml(d.code)}`;
+  }
+  if (d.checklist) {
+    html += '\n';
+    for (const c of d.checklist) {
+      html += `<div class="checklist-item"><span class="sev ${c.severity}">${c.severity}</span><strong>${c.id} · ${c.title}</strong>\n  <span style="color:var(--text2)">${c.detail}</span></div>`;
+    }
+  }
+  if (d.steps) {
+    html += '\n<strong style="color:var(--soul)">Settlement plan:</strong>\n';
+    for (const s of d.steps) html += `  <span style="color:var(--ice)">${s.n}.</span> <strong>${s.step}</strong>: ${s.detail}\n`;
+    if (d.input_required && d.output_exact) {
+      html += `\n<strong>Input required:</strong> ${d.input_required}\n<strong>Output (exact):</strong> ${d.output_exact}`;
+    }
+  }
+  if (d.rationale) {
+    html += `\n<div style="margin-top:10px;padding:8px;background:rgba(179,136,255,.06);border-left:2px solid var(--sigil);border-radius:4px;color:var(--text2);font-style:italic">${escapeHtml(d.rationale)}</div>`;
+  }
+  if (d.agent_first || d.hint || d.input_template) {
+    html += `\n<div style="margin-top:10px;color:var(--text2)">${escapeHtml(d.hint || '')}</div>`;
+    if (d.input_template) html += `\n<strong>Input template:</strong>\n${escapeHtml(JSON.stringify(d.input_template, null, 2))}`;
+  }
+  out.innerHTML = html;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+loadSkills();
 log('uniswap trader ui ready');
 </script>
 </body>
