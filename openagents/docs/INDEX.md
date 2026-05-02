@@ -13,6 +13,8 @@ This is the master navigation hub. Each prize track has its own subfolder with a
 - [`QUICKSTART.md`](QUICKSTART.md) — ten-minute reproduction (deps → forge test → demo).
 - [`EXPLANATION.md`](EXPLANATION.md) — design rationale and per-module narrative.
 - **[`LIVE_EVIDENCE.md`](LIVE_EVIDENCE.md)** — per-track verification page: curl commands, live endpoint status, and source-file pointers a judge can scan in one pass.
+- **[`SUBMISSIONS.md`](SUBMISSIONS.md)** — paste-ready text for all 8 ETHGlobal submission forms (tagline · long description · how-it-works · tech stack · test status). Use this when filing.
+- **[`SHIP_48H.md`](SHIP_48H.md)** — 48-hour deadline-aware execution roadmap (4 phases: critical fixes → content → submissions → buffer).
 - **[`boardroom/BOARDROOM.md`](boardroom/BOARDROOM.md)** — the deliberation engine that consumes every track. Live at `/insight/boardroom/recent` and `/boardroom/sessions`. See the dedicated section below.
 
 ## By hackathon track

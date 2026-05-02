@@ -81,7 +81,7 @@ done
 
 ## Phase 3 — File the 8 forms (hours 16–32)
 
-Each form: paste from the corresponding `docs/{track}/README.md` + GitHub URL + demo video URL.
+Use **`SUBMISSIONS.md`** — every form has a paste-ready block (tagline, long description, how-it-works, tech stack, test status, source pointers). No need to re-compose from per-track READMEs each time; the heavy lifting is done.
 
 - [ ] **0G — Best Autonomous Agents / iNFT** → `docs/0g/INFT_7857.md`
 - [ ] **0G — Best Framework, Tooling & Core Extensions** → `docs/0g/README.md` (sidecar + zerog_handler)
