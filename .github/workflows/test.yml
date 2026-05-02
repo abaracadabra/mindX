@@ -66,13 +66,22 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: 'true'  # top-level only; some nested OZ sub-submodules have stale URLs
+        # No submodule fetch — some nested OZ sub-submodules have stale URLs.
+        # We install lib deps fresh below via forge install.
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: stable
+
+      - name: Install forge libs fresh (forge-std + OpenZeppelin)
+        working-directory: ${{ matrix.cwd }}
+        run: |
+          rm -rf lib
+          mkdir -p lib
+          forge install foundry-rs/forge-std --no-git --no-commit
+          forge install OpenZeppelin/openzeppelin-contracts --no-git --no-commit
+          forge install OpenZeppelin/openzeppelin-contracts-upgradeable --no-git --no-commit
 
       - name: Run forge tests
         working-directory: ${{ matrix.cwd }}
@@ -85,8 +94,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: 'true'  # top-level only; some nested OZ sub-submodules have stale URLs
+        # No submodule fetch — some nested OZ sub-submodules have stale URLs.
+        # We install lib deps fresh below via forge install.
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
