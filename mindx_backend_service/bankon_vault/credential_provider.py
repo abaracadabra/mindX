@@ -52,6 +52,8 @@ PROVIDER_ENV_MAP = {
     "polygon_rpc_url": "POLYGON_RPC_URL",
     # Treasury wallet — funds agent gas for chain anchoring
     "memory_anchor_treasury_pk": "MEMORY_ANCHOR_TREASURY_PK",
+    # Uniswap Trading API (https://trade-api.gateway.uniswap.org/v1/*)
+    "uniswap_trade_api_key": "UNISWAP_TRADE_API_KEY",
 }
 
 
