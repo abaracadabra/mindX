@@ -53,7 +53,7 @@ If your framework wants any subset of the eight, lift them — they don't depend
 | 7 | **THOT.commit()** — pillar-gated memory-anchor primitive | composable; boosts M1 + M2 | **14** ✓ | shipped | `daio/contracts/THOT/v1/THOT.sol` |
 | 8 | **ERC-8004 AgentRegistry** — identity + capability layer | composable; boosts M1 + M4 | **20** ✓ | shipped | `daio/contracts/agentregistry/AgentRegistry.sol` |
 
-**Aggregate test totals: 138 tests, all green.**
+**Aggregate test totals: 164 tests, all green · 80% Python (Cabinet) line coverage · 89-96% Solidity coverage (4 daio contracts) · Slither audited (1 finding fixed + permanent CI guard).**
 
 ---
 

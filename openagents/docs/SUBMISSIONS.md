@@ -61,7 +61,7 @@ NFTs typically tokenize a public asset — a JPEG, a profile picture, a deed. An
 
 **Tech stack:** Solidity, Foundry, OpenZeppelin, EIP-712, ERC-7857 (draft), ERC-2981, 0G Compute, 0G Storage, 0G Galileo Chain, ethers.js v6, MetaMask, FastAPI, Python
 
-**Tested:** ✓ 56/56 forge tests pass · ✓ Live UI at https://mindx.pythai.net/inft7857
+**Tested:** ✓ 57/57 forge tests pass (incl. cross-function reentrancy regression test) · ✓ 95.65% line coverage · ✓ Slither-audited (1 finding fixed + tested) · ✓ Live UI at https://mindx.pythai.net/inft7857
 
 **Source:**
 - Contract: `daio/contracts/inft/iNFT_7857.sol`
@@ -198,7 +198,7 @@ Agent identity today is a wallet address (illegible) or an opaque UUID (not on-c
 
 **Tech stack:** Solidity, ENS NameWrapper, ERC-8004 AgentRegistry, EIP-712, OpenZeppelin, Foundry, Python, web3.py, eth-account, IPFS, 0G Storage
 
-**Tested:** ✓ 29/29 fuzz tests pass
+**Tested:** ✓ 29/29 fuzz tests pass · ✓ 94.85% line coverage · ✓ Slither-audited (clean)
 
 **Source:**
 - Contract: `daio/contracts/ens/v1/BankonSubnameRegistrar.sol`
@@ -392,7 +392,9 @@ These are the architectural points that distinguish the eight submissions as **o
 
 1. **Eight agnostic, composable peer modules.** Every module ships with its own README, tests, and Solidity contracts. Each exposes one clean interface (Solidity ABI or Python/TS API) — other frameworks call it without importing internals. The "agnostic-module statement" in each module's docs names only the assumed primitives (e.g. *"ed25519 + an EVM chain"*).
 
-2. **138 passing tests across the stack.** iNFT-7857: 56. BANKON: 29. THOT: 14. AgentRegistry: 20. Conclave Solidity: 10. Conclave Python: 9. (Plus 20 Cabinet tests — see "Bonus" below.)
+2. **164 passing tests across the stack.** iNFT-7857: 57 (incl. cross-function reentrancy regression). BANKON: 29 fuzz. THOT: 14. AgentRegistry: 20. Conclave Solidity: 10. Conclave Python: 9. Cabinet (the bonus): 25 (incl. cryptographic invariant proof). All green in CI.
+
+3. **Hard evidence on three axes per contract.** Tests pass + green CI · 89-96% line coverage on the 4 daio contracts (95.65% on iNFT, 94.85% on BANKON, 93.75% on THOT, 89.86% on AgentRegistry) · Slither-audited (1 reentrancy finding fixed + active-exploit regression test that proves the fix; 3 of 6 contracts scan completely clean). Slither runs in CI on every push as a permanent gate (`--fail-high`).
 
 3. **mindX is one consumer, not the only home.** The composition demo at `https://mindx.pythai.net/openagents` shows the modules wired together as one system; the same modules can be lifted independently into any other framework.
 
