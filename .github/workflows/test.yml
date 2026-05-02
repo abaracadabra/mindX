@@ -21,16 +21,29 @@ jobs:
       - name: Install minimal deps
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-asyncio fastapi[all] httpx eth-account web3 pyjwt cryptography pydantic
+          pip install pytest pytest-asyncio pytest-cov fastapi[all] httpx eth-account web3 pyjwt cryptography pydantic
 
-      - name: Run Cabinet test suite
+      - name: Run Cabinet test suite with coverage
         run: |
           python -m pytest \
             tests/bankon_vault/test_shadow_overlord.py \
             tests/bankon_vault/test_cabinet.py \
-            -c /dev/null -v
+            -c /dev/null -v \
+            --cov=mindx_backend_service.bankon_vault.shadow_overlord \
+            --cov=mindx_backend_service.bankon_vault.cabinet \
+            --cov=mindx_backend_service.bankon_vault.admin_routes \
+            --cov=mindx_backend_service.bankon_vault.sign_routes \
+            --cov-report=term --cov-report=xml --cov-fail-under=75
         env:
           PYTHONPATH: ${{ github.workspace }}
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cabinet-coverage
+          path: coverage.xml
+          retention-days: 30
 
   conclave-pytest:
     name: Conclave · Python (9 tests)

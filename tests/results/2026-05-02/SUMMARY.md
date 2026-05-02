@@ -8,7 +8,7 @@
 
 ## Aggregate
 
-**Total: 163 tests passing across 7 suites · 0 failures · 0 skips**
+**Total: 163 tests passing across 7 suites · 0 failures · 0 skips · 80% line coverage on Cabinet code**
 
 | Suite | Tests | Result | Time | Output file |
 |---|---|---|---|---|
@@ -19,6 +19,25 @@
 | BANKON v1 ENS (Foundry) | 29 | ✅ pass | 324.9ms | [`bankon_forge.txt`](bankon_forge.txt) |
 | THOT v1 (Foundry) | 14 | ✅ pass | 9.7ms | [`thot_forge.txt`](thot_forge.txt) |
 | AgentRegistry ERC-8004 (Foundry) | 20 | ✅ pass | 9.6ms | [`agentregistry_forge.txt`](agentregistry_forge.txt) |
+
+---
+
+## Coverage (Cabinet code · captured 2026-05-02)
+
+```
+Module                                                    Stmts   Miss  Cover
+─────────────────────────────────────────────────────────────────────────────
+mindx_backend_service/bankon_vault/admin_routes.py          108     10    89%
+mindx_backend_service/bankon_vault/cabinet.py               160     35    73%
+mindx_backend_service/bankon_vault/shadow_overlord.py       169     30    80%
+mindx_backend_service/bankon_vault/sign_routes.py            39      3    88%
+─────────────────────────────────────────────────────────────────────────────
+TOTAL                                                       476     78    80%
+```
+
+Full report: [`cabinet_coverage.txt`](cabinet_coverage.txt). Reproduce: `pytest --cov=mindx_backend_service.bankon_vault.{shadow_overlord,cabinet,admin_routes,sign_routes} --cov-report=term-missing`. CI gate: 75% minimum.
+
+The uncovered lines are mostly defensive error paths (rollback in `cabinet.provision`, JWT secret-missing in `shadow_overlord._jwt_secret()`) — exercised manually in fault-injection but not in the green-path test suite.
 
 ---
 
