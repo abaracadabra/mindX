@@ -32,7 +32,7 @@ anvil/
 ├── start.sh                 boot anvil + deploy + write deployments/anvil.json
 └── stop.sh                  kill the anvil process
 
-trade-tests/
+trade_tests/
 ├── spintrade_tool.py        Python wrapper — info / balance / quote / swap
 ├── run_bdi_against_spintrade.py   driver: BDI cycles vs. live SPINTRADE
 └── results/<timestamp>.jsonl     per-cycle perceive / decide / execute log
@@ -58,10 +58,10 @@ bash anvil/start.sh
 # → writes deployments/anvil.json with addresses
 
 # 3. Drive the BDI trader against the live pair
-python3 trade-tests/run_bdi_against_spintrade.py --cycles 4
+python3 trade_tests/run_bdi_against_spintrade.py --cycles 4
 # → 4 perceive→deliberate→execute cycles
 # → real swaps; tx hashes, gas, amount_out all real
-# → cycle log at trade-tests/results/<timestamp>.jsonl
+# → cycle log at trade_tests/results/<timestamp>.jsonl
 
 # 4. Stop anvil when done
 bash anvil/stop.sh
@@ -80,19 +80,19 @@ SPINTRADE solves this by giving the trader a **real swap target**:
 - One bash command deploys the pair + seeds liquidity
 - The trader's existing `quote` and `swap` actions broadcast against this
   pair, with real gas, real receipts, real reserve movement
-- `trade-tests/results/*.jsonl` is durable evidence per cycle
+- `trade_tests/results/*.jsonl` is durable evidence per cycle
 
 ## How openagents uses it
 
 The BDI trader at `openagents/uniswap/demo_trader.py` is unchanged. It now
-points at `spintrade/trade-tests/spintrade_tool.py` instead of the V4 stub
+points at `spintrade/trade_tests/spintrade_tool.py` instead of the V4 stub
 when the `--spintrade` flag (or `SPINTRADE_DEPLOYMENTS` env var) is set.
 
 See `docs/INTEGRATION.md` for the full BDI ↔ SPINTRADE wiring.
 
 ## Test results
 
-Sample evidence from `trade-tests/results/`:
+Sample evidence from `trade_tests/results/`:
 
 ```
 CYCLE 0: hold  (warm-up)

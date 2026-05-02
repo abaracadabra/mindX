@@ -210,12 +210,46 @@ async def execute_action(tool, decision: dict, dry_run: bool) -> dict:
 # ───── Main loop ──────────────────────────────────────────────────────── #
 
 async def trading_loop(args) -> dict:
-    """Run perceive → deliberate → execute → log on a fixed cadence."""
-    from tools.uniswap_v4_tool import UniswapV4Tool
+    """Run perceive → deliberate → execute → log on a fixed cadence.
 
-    tool = UniswapV4Tool()
-    info = tool._info()
-    trader_addr = info.get("trader_address")  # may be None in dry-run
+    Backend selection (via --backend flag or TRADER_BACKEND env var):
+      v4-stub    — original Sepolia V4 quoter, swap is dry-run (default for safety)
+      spintrade  — local Uniswap-style CPMM with BANKON/PYTHAI; real on-chain swaps
+                   on anvil (chain 31337). Reads spintrade/deployments/anvil.json.
+      trade-api  — real Uniswap Trading API gateway. Quote+swap broadcast on the
+                   chain selected by --chain-id. Requires UNISWAP_TRADE_API_KEY
+                   (env or vault) and (for swap) TRADER_PK funded on that chain.
+    """
+    backend = args.backend or os.environ.get("TRADER_BACKEND", "v4-stub")
+
+    if backend == "spintrade":
+        from spintrade.trade_tests.spintrade_tool import SpinTradeTool
+        deployments = args.deployments or os.environ.get(
+            "SPINTRADE_DEPLOYMENTS",
+            str(Path(__file__).resolve().parent.parent.parent / "spintrade" / "deployments" / "anvil.json"),
+        )
+        tool = SpinTradeTool.from_deployments_json(deployments,
+                                                    trader_pk=os.environ.get("TRADER_PK"))
+        # Adapt SpinTrade _info() shape to the BDI trader's expectations
+        info_dict = await tool.execute("info")
+        info = {"network": "anvil-spintrade",
+                "trader_address": tool.account.address if tool.account else None,
+                "pair": info_dict.get("pair"),
+                "spot_price": info_dict.get("spot_price_t1_per_t0")}
+    elif backend == "trade-api":
+        from tools.uniswap_api_tool import UniswapAPITool, UniswapAPIConfig
+        cfg = UniswapAPIConfig(
+            chain_id=args.chain_id,
+            rpc_url=args.rpc_url or "https://eth.drpc.org",
+        )
+        tool = UniswapAPITool(swapper_pk=os.environ.get("TRADER_PK"), config=cfg)
+        info = tool.execute.__self__._info()
+    else:
+        from tools.uniswap_v4_tool import UniswapV4Tool
+        tool = UniswapV4Tool()
+        info = tool._info()
+
+    trader_addr = info.get("trader_address") or info.get("swapper")
 
     # Lazy-load LLM handler so the script still runs without a configured provider.
     handler = None
@@ -318,6 +352,16 @@ def main():
                     help="don't execute swaps, just record decisions + quotes")
     ap.add_argument("--no-llm", action="store_true",
                     help="skip the LLM step entirely (will hold every cycle)")
+    ap.add_argument("--backend", choices=["v4-stub", "spintrade", "trade-api"],
+                    default=os.environ.get("TRADER_BACKEND"),
+                    help="execution venue: v4-stub (default, dry-run), spintrade "
+                         "(local anvil CPMM), trade-api (real Uniswap gateway)")
+    ap.add_argument("--deployments",
+                    help="(spintrade) path to deployments/anvil.json")
+    ap.add_argument("--chain-id", type=int, default=1,
+                    help="(trade-api) chain id (1=mainnet, 8453=base, etc.)")
+    ap.add_argument("--rpc-url",
+                    help="(trade-api) RPC URL (default: https://eth.drpc.org)")
     args = ap.parse_args()
     return asyncio.run(trading_loop(args))
 

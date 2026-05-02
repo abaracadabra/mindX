@@ -18,7 +18,7 @@ Locally these are siblings:
     ├── src/, test/, script/   ← Solidity (this repo)
     ├── anvil/start.sh         ← boots local execution venue
     ├── deployments/anvil.json ← addresses written here
-    └── trade-tests/
+    └── trade_tests/
         ├── spintrade_tool.py            ← real swap broadcaster
         └── run_bdi_against_spintrade.py ← driver that runs the BDI loop
 ```
@@ -56,7 +56,7 @@ There are two paths:
 ```bash
 cd ~/mindX/spintrade
 bash anvil/start.sh           # boot venue
-python3 trade-tests/run_bdi_against_spintrade.py --cycles 5
+python3 trade_tests/run_bdi_against_spintrade.py --cycles 5
 ```
 
 This driver imports `spintrade_tool.SpinTradeTool` directly and runs a
@@ -103,7 +103,7 @@ Both tools implement the same async surface:
 
 ## Trade-test evidence
 
-Each cycle is appended to `spintrade/trade-tests/results/<timestamp>.jsonl`:
+Each cycle is appended to `spintrade/trade_tests/results/<timestamp>.jsonl`:
 
 ```json
 {
