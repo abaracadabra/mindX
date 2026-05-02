@@ -1,0 +1,19 @@
+=== Solidity coverage per contract — captured 2026-05-02 ===
+
+Contract                                    Line %  Func %  Branch %
+──────────────────────────────────────────────────────────────────────
+daio/contracts/inft/iNFT_7857.sol           95.65%  91.67%    51.72%
+daio/contracts/ens/v1/BankonSubnameRegistrar.sol 94.85%  94.74%    78.05%
+daio/contracts/THOT/v1/THOT.sol             93.75%  85.71%      100%
+daio/contracts/agentregistry/AgentRegistry.sol 89.86%  76.92%    68.75%
+openagents/conclave/contracts/src/Conclave.sol 84.00%  81.82%    37.50%
+openagents/conclave/contracts/src/ConclaveBond.sol 54.29%  66.67%    16.67%
+
+Reproduce per-contract:
+  cd daio/contracts && FOUNDRY_PROFILE=inft           forge coverage --report summary
+  cd daio/contracts && FOUNDRY_PROFILE=bankon         forge coverage --report summary
+  cd daio/contracts && FOUNDRY_PROFILE=thot           forge coverage --report summary --ir-minimum
+  cd daio/contracts && FOUNDRY_PROFILE=agentregistry  forge coverage --report summary
+  cd openagents/conclave/contracts && forge coverage --report summary
+
+(THOT requires --ir-minimum — coverage instrumentation triggers stack-too-deep without it.)
