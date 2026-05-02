@@ -1,9 +1,10 @@
 # mindX
 
 [![tests](https://github.com/AgenticPlace/openagents/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/AgenticPlace/openagents/actions/workflows/test.yml)
-&nbsp;**193/193 tests passing** in clean CI · **80% line coverage** on Cabinet code
+&nbsp;**193/193 tests passing** in clean CI · **87% line coverage** on Cabinet code
 
-> 🏆 **ETHGlobal Open Agents submission lives at [`openagents/`](openagents/) — start with [`openagents/README.md`](openagents/README.md).**
+> 🏆 **ETHGlobal Open Agents submission scope: [`openagents/`](openagents/) — start with [`openagents/README.md`](openagents/README.md).**
+> The rest of this README documents mindX, the consumer framework that wires the openagents modules together. **Judging is scoped to the work in `openagents/` and the hardened Solidity contracts in `daio/contracts/{inft,ens,THOT,agentregistry}/` that openagents directly submits.** mindX itself is not the submission.
 > If you're a judge: jump directly to **[`openagents/docs/JUDGE_TOUR.md`](openagents/docs/JUDGE_TOUR.md)** for the 5-minute verification path. Live demo: [https://mindx.pythai.net/openagents](https://mindx.pythai.net/openagents).
 > Submission text: [`openagents/docs/SUBMISSIONS.md`](openagents/docs/SUBMISSIONS.md). Test results: [`tests/results/2026-05-02/SUMMARY.md`](tests/results/2026-05-02/SUMMARY.md). 193 tests passing across 7 suites.
 
@@ -21,7 +22,7 @@
 
 An autonomous multi-agent orchestration system implementing [BDI cognitive architecture](docs/agents/bdi_agent.md). A [Godel machine](docs/THESIS.md) — a self-improving system where the improvement mechanism is part of the system being improved. 20 sovereign agents with cryptographic wallets, [RAGE semantic search](docs/AGINT.md) (not RAG), [DAIO governance](docs/DAIO.md), and [dual-pillar inference](docs/ollama/INDEX.md) (CPU + Cloud).
 
-### Current State (2026-04-12)
+### Current State
 
 | Metric | Value |
 |--------|-------|
