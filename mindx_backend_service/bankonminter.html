@@ -284,6 +284,20 @@ button.warn:hover:not(:disabled){background:var(--warn);color:#000}
 <script>
 // ─── DOM helpers ────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
+
+// Map chain ID → native token symbol. Default to ETH for unknown chains.
+const NATIVE_SYMBOL = {
+  1: "ETH",          // Ethereum mainnet
+  11155111: "ETH",   // Sepolia
+  16661: "OG",       // 0G mainnet
+  16601: "OG",       // 0G Galileo testnet
+  31337: "ETH",      // Anvil
+  17000: "ETH",      // Holesky
+  8453: "ETH",       // Base
+  10: "ETH",         // Optimism
+  42161: "ETH",      // Arbitrum
+};
+const nativeSymbol = (chainId) => NATIVE_SYMBOL[Number(chainId)] || "ETH";
 const log = (m, c='') => {
   const d=document.createElement('div'); d.className='line '+c;
   d.innerHTML=`<span class="ts">${new Date().toISOString().split('T')[1].slice(0,8)}</span>${m}`;
@@ -505,7 +519,7 @@ $('btn-connect').onclick = async () => {
     const ethBal = await walletProvider.getBalance(connectedAddr);
     $('wallet-kv').innerHTML = `
       <div class="k">address</div><div class="v">${connectedAddr}</div>
-      <div class="k">balance</div><div class="v">${ethers.formatEther(ethBal)} ETH</div>
+      <div class="k">balance</div><div class="v">${ethers.formatEther(ethBal)} ${nativeSymbol(chainId)}</div>
       <div class="k">chain id</div><div class="v">${chainId}</div>
     `;
     $('conn-msg').textContent = '';
