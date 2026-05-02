@@ -1,6 +1,6 @@
 # Live Evidence — Per-Track Verification
 
-> One page a judge can scan to verify each submission against the live system. Every claim links to either a passing test, a curl-able endpoint, or a runnable demo. Status reflects **2026-04-30**.
+> One page a judge can scan to verify each submission against the live system. Every claim links to either a passing test, a curl-able endpoint, or a runnable demo. Status reflects **2026-05-02**.
 >
 > Companion to [`/feedback.html`](https://mindx.pythai.net/feedback.html) (the live "Mind-of-mindX" page) and [`/feedback.txt`](https://mindx.pythai.net/feedback.txt) (one-screen plain-text snapshot).
 
@@ -233,6 +233,74 @@ curl -s 'https://mindx.pythai.net/insight/boardroom/recent?h=true' | head -30
 - Spec: [`boardroom/BOARDROOM.md`](boardroom/BOARDROOM.md) — full DAIO Boardroom v1.0.0 specification (1911 lines).
 - Implementation: [`daio/governance/boardroom.py`](../../daio/governance/boardroom.py)
 - Catalogue mirroring (every session lands in the unified event stream): [`agents/catalogue/events.py`](../../agents/catalogue/events.py)
+
+---
+
+## Cabinet — composability proof in one demo
+
+> Not a separate prize track. **A live demonstration of the "agnostic composable modules" thesis** — a single feature that uses BANKON Vault, IDManagerAgent, Boardroom soldier roster, ERC-8004 AgentRegistry, and the catalogue event stream all at once, with no module aware of any other.
+
+### What it does
+
+Shadow-overlord admin tier provisions an executive cabinet (1 CEO + 7 soldiers, mirroring the Boardroom roster) of Ethereum wallets per company namespace. Private keys are stored encrypted in the BANKON Vault; the vault signs on the agent's behalf without ever releasing the key. Authentication is gated by an offline ECDSA signature — no admin key on the server.
+
+### Live UI
+
+- [`https://mindx.pythai.net/cabinet`](https://mindx.pythai.net/cabinet) — MetaMask-driven admin page (set `SHADOW_OVERLORD_ADDRESS` + `SHADOW_JWT_SECRET` env vars and restart `mindx.service` to enable).
+
+### 8 endpoints (curl-verifiable)
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| POST | `/admin/shadow/challenge` | rate-limit only | Issue a server-canonical challenge bound to scope+params |
+| POST | `/admin/shadow/verify` | ECDSA recovery | Consume an auth challenge; issue a 5-minute JWT |
+| GET | `/admin/cabinet/{co}/preflight` | shadow JWT | Inspect whether a cabinet exists |
+| POST | `/admin/cabinet/{co}/provision` | JWT + fresh sig | Mint 8 wallets atomically |
+| POST | `/admin/cabinet/{co}/clear` | JWT + sig + DESTROY string | Wipe a cabinet |
+| POST | `/vault/sign/{agent_id:path}` | JWT + sig + sha256 binding | Sign as agent — vault-as-oracle |
+| POST | `/admin/shadow/release-key/{agent_id:path}` | JWT + sig + RELEASE string | Emergency plaintext release |
+| GET | `/cabinet/{co}` | public | Read public roster (addresses only, vault_pk_id stripped) |
+
+### Cryptographic invariant (proven in tests)
+
+```
+Account.recover_message(encode_defunct(text=msg), signature=server_response.signature)
+    ==
+production_registry.json["cabinet"]["PYTHAI"]["soldiers"]["cfo_finance"]["address"]
+```
+
+The vault signs on the agent's behalf; the recovered signer matches the public address from the registry; no `private_key` field appears in any response.
+
+### Tests
+
+```bash
+.mindx_env/bin/python -m pytest \
+    tests/bankon_vault/test_shadow_overlord.py \
+    tests/bankon_vault/test_cabinet.py \
+    -c /dev/null -v
+# → 20 passed in ~3s
+```
+
+Verified 2026-05-02: **20/20 pass**.
+
+### How Cabinet composes the openagents stack
+
+| Module reused | Role in Cabinet |
+|---|---|
+| **BANKON Vault** (`mindx_backend_service/bankon_vault/vault.py`) | Encrypted storage for the 8 private keys; per-entry HKDF keying |
+| **HumanOverseer pattern** (`mindx_backend_service/bankon_vault/overseer.py`) | The shadow-overlord auth model is the same EIP-191 recover-and-compare pattern |
+| **IDManagerAgent** (`agents/core/id_manager_agent.py`) | Wallet generation primitive (`Account.create()`) and convention `agent_pk_{id}` |
+| **Boardroom** (`daio/governance/boardroom.py`) | The 7-soldier roster (`SOLDIER_WEIGHTS`) is the single source of truth — Cabinet wallets backfill the soldier slots in `daio/agents/agent_map.json` |
+| **ERC-8004 AgentRegistry** (`daio/contracts/agentregistry/`) | Future extension: each cabinet wallet mints an attestation NFT at provision time |
+| **Catalogue events** (`agents/catalogue/events.py`) | Three new EventKinds emit on every privileged op for forensic audit |
+| **EIP-712 signer pattern** (`openagents/ens/subdomain_issuer.py`) | The challenge construction template was lifted from the BANKON ENS gateway signer |
+
+### Source + spec
+
+- Plan: [`/home/hacker/.claude/plans/splendid-wishing-hejlsberg.md`](../../../.claude/plans/splendid-wishing-hejlsberg.md)
+- First-time-reader guide: [`docs/operations/SHADOW_OVERLORD_GUIDE.md`](../../docs/operations/SHADOW_OVERLORD_GUIDE.md) (~1,150 lines, 5 appendices, full test source + captured proof)
+- Operator runbook: [`docs/operations/SHADOW_OVERLORD_RUNBOOK.md`](../../docs/operations/SHADOW_OVERLORD_RUNBOOK.md)
+- Implementation: [`mindx_backend_service/bankon_vault/{shadow_overlord,cabinet,admin_routes,sign_routes}.py`](../../mindx_backend_service/bankon_vault/)
 
 ---
 

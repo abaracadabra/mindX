@@ -68,6 +68,7 @@ These don't have their own prize track; they multiply the value of the modules a
 
 - **THOT.commit()** — pillar-gated memory-anchor primitive. Contract: [`../../daio/contracts/THOT/v1/THOT.sol`](../../daio/contracts/THOT/v1/THOT.sol) · 14 tests pass. Touches 0G memory anchoring + iNFT lineage. See [`0g/THOT_0G_MEMORY_ANCHOR.md`](0g/THOT_0G_MEMORY_ANCHOR.md).
 - **ERC-8004 AgentRegistry** — identity + capability layer. Contract: [`../../daio/contracts/agentregistry/AgentRegistry.sol`](../../daio/contracts/agentregistry/AgentRegistry.sol) · 20 tests pass. Boosts the 0G iNFT track and the ENS track (subname-binding hook).
+- **Shadow-Overlord Cabinet** — admin tier that composes BANKON Vault + IDManagerAgent + Boardroom roster + AgentRegistry into a custodial 8-wallet cabinet (1 CEO + 7 soldiers per company namespace). Vault-as-signing-oracle; private keys never leave the vault. **20 tests pass** (10 unit + 10 integration). Live UI at [`/cabinet`](https://mindx.pythai.net/cabinet). Full guide: [`../../docs/operations/SHADOW_OVERLORD_GUIDE.md`](../../docs/operations/SHADOW_OVERLORD_GUIDE.md). See also `LIVE_EVIDENCE.md` § Cabinet.
 
 ## Governance & supporting docs
 
