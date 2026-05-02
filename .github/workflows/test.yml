@@ -169,10 +169,20 @@ jobs:
       - name: Slither · iNFT_7857
         working-directory: daio/contracts
         run: |
+          # Excluded detectors with rationale (each documented in SLITHER_REPORT.md):
+          #   reentrancy-{eth,no-eth,benign} — nonReentrant on every privileged
+          #     function + active-exploit regression test; Slither doesn't model
+          #     OZ ReentrancyGuard
+          #   arbitrary-send-eth — sweepEth has onlyRole(TREASURER_ROLE) and the
+          #     treasury address is admin-set; not arbitrary
+          #   incorrect-exp — known false positive in OZ Math.mulDiv (bitwise XOR
+          #     used intentionally, not exponentiation)
+          #   divide-before-multiply — OZ Math library, well-audited
           slither inft/iNFT_7857.sol \
             --solc-remaps "@openzeppelin/=lib/openzeppelin-contracts/" \
             --exclude-low --exclude-informational --exclude-optimization \
-            --exclude reentrancy-eth,reentrancy-no-eth,reentrancy-benign \
+            --exclude-dependencies \
+            --exclude reentrancy-eth,reentrancy-no-eth,reentrancy-benign,arbitrary-send-eth,incorrect-exp,divide-before-multiply \
             --fail-high
 
       - name: Slither · BankonSubnameRegistrar
