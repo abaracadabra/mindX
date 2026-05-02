@@ -31,7 +31,22 @@ The following are **not** in scope:
 ## Test results
 
 The full test surface is at [`tests/results/<YYYY-MM-DD>/`](tests/results/) with verbatim output captured per run.
-The most recent run: [`tests/results/2026-05-02/SUMMARY.md`](tests/results/2026-05-02/SUMMARY.md) — **160/160 tests pass.**
+The most recent run: [`tests/results/2026-05-02/SUMMARY.md`](tests/results/2026-05-02/SUMMARY.md) — **164/164 tests pass.**
+
+## Static analysis (Slither v0.11.5)
+
+Run against all 6 submission contracts. See [`tests/results/2026-05-02/SLITHER_REPORT.md`](tests/results/2026-05-02/SLITHER_REPORT.md).
+
+| Contract | Findings | Outcome |
+|---|---|---|
+| `iNFT_7857.sol` | 1 (reentrancy-no-eth) | **Fixed** — `nonReentrant` added; active-exploit regression test passes |
+| `BankonSubnameRegistrar.sol` | 3 (unused-return) | False positives — deterministic recompute |
+| `THOT.sol` | 0 | **Clean** |
+| `AgentRegistry.sol` | 0 | **Clean** |
+| `Conclave.sol` | 1 (write-after-write) | Intentional set-execute-clear pattern |
+| `ConclaveBond.sol` | 0 | **Clean** |
+
+**Net: 1 actionable finding, fixed and tested. 3 of 6 contracts scan completely clean.**
 
 ## Cryptographic guarantees
 
