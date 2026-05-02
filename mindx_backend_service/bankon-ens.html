@@ -174,33 +174,64 @@ $('btn-connect').onclick = async () => {
   }
 };
 
+// Mainnet RPC fallback chain — if one rate-limits or fails, try the next.
+// llamarpc was the original; it returns 429 too aggressively for unauthed
+// browser traffic. drpc + cloudflare-eth + ankr cover the gap.
+const ENS_RPCS = [
+  'https://eth.drpc.org',
+  'https://cloudflare-eth.com',
+  'https://rpc.ankr.com/eth',
+  'https://eth.llamarpc.com',
+];
+
+async function getMainnetProvider() {
+  // Prefer connected wallet IF on mainnet; otherwise probe RPCs in order.
+  if (provider) {
+    try {
+      const net = await provider.getNetwork();
+      if (net.chainId === 1n) return provider;
+    } catch {}
+  }
+  for (const url of ENS_RPCS) {
+    try {
+      const p = new ethers.JsonRpcProvider(url);
+      // Cheap health probe — getNetwork triggers an eth_chainId call.
+      const net = await p.getNetwork();
+      if (net.chainId === 1n) {
+        log(`using RPC ${url}`);
+        return p;
+      }
+    } catch (e) {
+      log(`RPC ${url.replace(/https?:\/\//,'')} failed: ${e.message?.slice(0,40)}`, 'warn');
+    }
+  }
+  throw new Error('all ENS RPCs unreachable — check network or proxy');
+}
+
 $('btn-resolve').onclick = async () => {
   const name = $('ens-name').value.trim();
   if (!name) return;
   $('resolve-msg').textContent = 'resolving…';
   $('resolve-kv').innerHTML = '';
   try {
-    // Use provider if connected, else public Cloudflare ENS gateway via Ankr or build mainnet provider
-    let p = provider;
-    if (!p || (await p.getNetwork()).chainId !== 1n) {
-      // Use public RPC for mainnet ENS resolution
-      p = new ethers.JsonRpcProvider('https://eth.llamarpc.com');
-    }
+    const p = await getMainnetProvider();
     const addr = await p.resolveName(name);
+    if (!addr) {
+      $('resolve-kv').innerHTML = `<div class="k">${name}</div><div class="v">not registered</div>`;
+      $('resolve-msg').textContent = '';
+      log(`${name} not registered`, 'warn');
+      return;
+    }
     const records = {};
-    if (addr) {
+    try {
       const resolver = await p.getResolver(name);
       if (resolver) {
         for (const k of ['url','description','avatar','com.twitter','com.github','agentURI','mindxEndpoint','baseAddress']) {
           try { const v = await resolver.getText(k); if (v) records[k] = v; } catch {}
         }
       }
-    }
-    if (!addr) {
-      $('resolve-kv').innerHTML = `<div class="k">${name}</div><div class="v">not registered</div>`;
-      $('resolve-msg').textContent = '';
-      log(`${name} not registered`, 'warn');
-      return;
+    } catch (e) {
+      log(`text records skipped: ${e.message?.slice(0,40)}`, 'warn');
     }
     let kv = `<div class="k">${name}</div><div class="v">${addr}</div>`;
     for (const [k,v] of Object.entries(records)) {
