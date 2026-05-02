@@ -1,0 +1,6 @@
+=== ens/v1/BankonSubnameRegistrar.sol ===
+BankonSubnameRegistrar._writeAndTransfer(string,address,uint64,AgentMetadata) (ens/v1/BankonSubnameRegistrar.sol#308-330) ignores return value by nameWrapper.setSubnodeOwner(parentNode,label,address(this),0,expiry) (ens/v1/BankonSubnameRegistrar.sol#315)
+BankonSubnameRegistrar._writeAndTransfer(string,address,uint64,AgentMetadata) (ens/v1/BankonSubnameRegistrar.sol#308-330) ignores return value by nameWrapper.setSubnodeRecord(parentNode,label,owner,address(defaultResolver),0,DEFAULT_FUSES,expiry) (ens/v1/BankonSubnameRegistrar.sol#322-326)
+BankonSubnameRegistrar._writeAgentRecords(bytes32,address,AgentMetadata) (ens/v1/BankonSubnameRegistrar.sol#332-383) ignores return value by defaultResolver.multicall(calls) (ens/v1/BankonSubnameRegistrar.sol#382)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#unused-return
+INFO:Slither:ens/v1/BankonSubnameRegistrar.sol analyzed (28 contracts with 58 detectors), 15 result(s) found

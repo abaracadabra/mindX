@@ -1,0 +1,11 @@
+=== src/Conclave.sol ===
+'forge clean' running (wd: /home/hacker/mindX/openagents/conclave/contracts)
+'forge config --json' running
+'forge build --build-info src/Conclave.sol' running (wd: /home/hacker/mindX/openagents/conclave/contracts)
+INFO:Detectors:
+Detector: write-after-write
+Conclave._slashContext (src/Conclave.sol#269) is written in both
+	_slashContext = conclave_id (src/Conclave.sol#202)
+	_slashContext = bytes32(0) (src/Conclave.sol#204)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#write-after-write
+INFO:Slither:src/Conclave.sol analyzed (5 contracts with 58 detectors), 1 result(s) found

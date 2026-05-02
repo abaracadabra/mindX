@@ -1,0 +1,5 @@
+=== src/ConclaveBond.sol ===
+'forge clean' running (wd: /home/hacker/mindX/openagents/conclave/contracts)
+'forge config --json' running
+'forge build --build-info src/ConclaveBond.sol' running (wd: /home/hacker/mindX/openagents/conclave/contracts)
+INFO:Slither:src/ConclaveBond.sol analyzed (2 contracts with 58 detectors), 0 result(s) found
