@@ -423,33 +423,117 @@ async function loadRegistrar() {
 }
 $('btn-load-registrar').onclick = loadRegistrar;
 
+// ─── EIP-6963 wallet detection (works with multiple installed wallets) ──
+// Pattern from agenticplace.pythai.net/allchain.html — handles the case
+// where window.ethereum is a buggy proxy that can't be used directly.
+let detectedWallets = [];
+let walletsReady = false;
+let rawProvider = null;   // raw EIP-1193 provider, not ethers-wrapped
+
+function setupEIP6963() {
+  return new Promise((resolve) => {
+    function onAnnouncement(event) {
+      const { info, provider } = event.detail;
+      if (detectedWallets.some(w => w.uuid === info.uuid)) return;
+      detectedWallets.push({ name: info.name, provider, icon: info.icon, id: info.walletId, uuid: info.uuid });
+    }
+    window.addEventListener('eip6963:announceProvider', onAnnouncement);
+    window.dispatchEvent(new Event('eip6963:requestProvider'));
+    setTimeout(() => {
+      window.removeEventListener('eip6963:announceProvider', onAnnouncement);
+      // Fallback: providers[] array (multi-wallet) → window.ethereum proxy
+      if (window.ethereum?.providers && Array.isArray(window.ethereum.providers)) {
+        for (const p of window.ethereum.providers) {
+          if (p.isMetaMask && !detectedWallets.some(w => w.id === 'metamask')) {
+            detectedWallets.push({ name: 'MetaMask', provider: p, icon: '🦊', id: 'metamask', uuid: 'metamask-providers' });
+          }
+          if (p.isCoinbaseWallet && !detectedWallets.some(w => w.id === 'coinbase')) {
+            detectedWallets.push({ name: 'Coinbase Wallet', provider: p, icon: '🔵', id: 'coinbase', uuid: 'coinbase-providers' });
+          }
+        }
+      }
+      if (!detectedWallets.some(w => w.id === 'metamask') && window.ethereum?.isMetaMask) {
+        detectedWallets.push({ name: 'MetaMask', provider: window.ethereum, icon: '🦊', id: 'metamask', uuid: 'metamask-legacy' });
+      }
+      if (window.phantom?.ethereum && !detectedWallets.some(w => w.id === 'phantom')) {
+        detectedWallets.push({ name: 'Phantom', provider: window.phantom.ethereum, icon: '👻', id: 'phantom', uuid: 'phantom' });
+      }
+      if (detectedWallets.length === 0 && window.ethereum) {
+        detectedWallets.push({ name: 'Ethereum Wallet', provider: window.ethereum, icon: '💎', id: 'ethereum', uuid: 'ethereum-legacy' });
+      }
+      walletsReady = true;
+      resolve(detectedWallets);
+    }, 800);
+  });
+}
+
+function pickProvider() {
+  if (!detectedWallets.length) return null;
+  const mm = detectedWallets.find(w => w.id === 'metamask' || w.name === 'MetaMask');
+  return (mm || detectedWallets[0]).provider;
+}
+
 // ─── Connect wallet ─────────────────────────────────────────────────
 $('btn-connect').onclick = async () => {
-  if (!window.ethereum) { log('MetaMask not detected', 'err'); return; }
   try {
-    walletProvider = new ethers.BrowserProvider(window.ethereum);
-    const accounts = await window.ethereum.request({method: 'eth_requestAccounts'});
+    if (!walletsReady) {
+      log('detecting wallets…');
+      await setupEIP6963();
+    }
+    rawProvider = pickProvider();
+    if (!rawProvider) {
+      log('no EVM wallet detected. Install MetaMask from https://metamask.io', 'err');
+      $('conn-msg').textContent = 'install MetaMask';
+      return;
+    }
+    log(`using wallet: ${detectedWallets.find(w=>w.provider===rawProvider)?.name || 'unknown'}`);
+
+    const accounts = await rawProvider.request({ method: 'eth_requestAccounts' });
+    if (!accounts || !accounts.length) throw new Error('no accounts returned');
     connectedAddr = ethers.getAddress(accounts[0]);
+
+    // Wrap raw provider with ethers BrowserProvider for contract calls.
+    // We pass the resolved raw provider — NOT window.ethereum — to avoid the
+    // proxy-conflict bug when multiple wallets are installed.
+    walletProvider = new ethers.BrowserProvider(rawProvider);
     walletSigner = await walletProvider.getSigner();
     const network = await walletProvider.getNetwork();
+    const chainId = Number(network.chainId);
+
     setBadge('badge-wallet', `WALLET: ${connectedAddr.slice(0,6)}…${connectedAddr.slice(-4)}`, 'ok');
-    setBadge('badge-network', `NETWORK: chain ${network.chainId}`, 'ens');
+    setBadge('badge-network', `NETWORK: chain ${chainId}`, 'ens');
     const ethBal = await walletProvider.getBalance(connectedAddr);
     $('wallet-kv').innerHTML = `
       <div class="k">address</div><div class="v">${connectedAddr}</div>
       <div class="k">balance</div><div class="v">${ethers.formatEther(ethBal)} ETH</div>
-      <div class="k">chain id</div><div class="v">${network.chainId}</div>
+      <div class="k">chain id</div><div class="v">${chainId}</div>
     `;
-    log(`connected ${connectedAddr} on chain ${network.chainId}`, 'ok');
+    $('conn-msg').textContent = '';
+    log(`connected ${connectedAddr} on chain ${chainId}`, 'ok');
+
     if (registrarAddr) await rebindRegistrarWrite();
     await refreshRoleStatus();
     enableMintButtons();
-    window.ethereum.on('accountsChanged', () => location.reload());
-    window.ethereum.on('chainChanged', () => location.reload());
+
+    // Wallet event listeners on the resolved raw provider
+    try {
+      rawProvider.on('accountsChanged', (accts) => {
+        if (!accts.length) location.reload();
+        else { connectedAddr = ethers.getAddress(accts[0]); log(`account changed: ${connectedAddr}`); location.reload(); }
+      });
+      rawProvider.on('chainChanged', () => location.reload());
+    } catch(_) {}
   } catch (e) {
-    log(`connect failed: ${e.message}`, 'err');
+    const msg = e?.code === 4001 ? 'connection rejected by user' : (e?.message || String(e));
+    log(`connect failed: ${msg}`, 'err');
+    $('conn-msg').textContent = msg;
   }
 };
+
+// Kick off detection immediately so it's ready by the time the user clicks
+setupEIP6963().then(() => {
+  log(`detected ${detectedWallets.length} wallet${detectedWallets.length===1?'':'s'}: ${detectedWallets.map(w=>w.name).join(', ') || 'none'}`);
+});
 
 async function rebindRegistrarWrite() {
   if (!registrarAddr || !walletSigner) return;
