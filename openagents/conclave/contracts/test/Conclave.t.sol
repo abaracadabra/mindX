@@ -246,4 +246,73 @@ contract ConclaveTest is Test {
             CONCLAVE_ID, members, pubkeys, roles, CENSURA_MIN, BOND_AMOUNT
         );
     }
+
+    // ────────── memberAt view ──────────
+
+    function test_memberAt_returnsFullMemberRecord() public {
+        _registerCabinet();
+        // Index 0 should be CEO (registered in order [CEO,COO,CFO,...])
+        (address addr, bytes32 pubkey, uint8 role, bool slashed) =
+            conclave.memberAt(CONCLAVE_ID, 0);
+        assertEq(addr, CEO);
+        assertEq(pubkey, bytes32(uint256(1)));
+        assertEq(role, 0);
+        assertFalse(slashed);
+    }
+
+    function test_memberAt_reflectsSlashedFlag() public {
+        _registerCabinet();
+        // Slash COO via the convener path
+        vm.prank(CEO);
+        conclave.slashForLeak(CONCLAVE_ID, SESSION_ID, COO, hex"deadbeef");
+        // COO is at index 1
+        (address addr,,, bool slashed) = conclave.memberAt(CONCLAVE_ID, 1);
+        assertEq(addr, COO);
+        assertTrue(slashed);
+    }
+
+    // ────────── withdrawSlashed ──────────
+
+    function test_withdrawSlashed_onlyConvener_reverts() public {
+        _registerCabinet();
+        vm.prank(COO);
+        vm.expectRevert(Conclave.NotConvener.selector);
+        conclave.withdrawSlashed(CONCLAVE_ID, payable(COO));
+    }
+
+    function test_withdrawSlashed_unknownConclave_reverts() public {
+        bytes32 missing = keccak256("missing");
+        vm.prank(CEO);
+        vm.expectRevert(Conclave.UnknownConclave.selector);
+        conclave.withdrawSlashed(missing, payable(CEO));
+    }
+
+    function test_withdrawSlashed_zeroBalance_isNoop() public {
+        _registerCabinet();
+        // No slashing has happened; treasury for this conclave is 0.
+        // withdrawSlashed with zero balance should NOT revert (early-return).
+        uint256 balBefore = CEO.balance;
+        vm.prank(CEO);
+        conclave.withdrawSlashed(CONCLAVE_ID, payable(CEO));
+        assertEq(CEO.balance, balBefore);
+        assertEq(conclave.slashedTreasury(CONCLAVE_ID), 0);
+    }
+
+    function test_withdrawSlashed_forwardsAmountToRecipient() public {
+        _registerCabinet();
+        // Slash COO — bond.slash forwards 1 ETH to Conclave's receive(),
+        // which credits slashedTreasury[CONCLAVE_ID] += 1 ether.
+        vm.prank(CEO);
+        conclave.slashForLeak(CONCLAVE_ID, SESSION_ID, COO, hex"deadbeef");
+        assertEq(conclave.slashedTreasury(CONCLAVE_ID), BOND_AMOUNT);
+
+        address payable recipient = payable(address(0xBA12));
+        uint256 balBefore = recipient.balance;
+
+        vm.prank(CEO);
+        conclave.withdrawSlashed(CONCLAVE_ID, recipient);
+
+        assertEq(recipient.balance - balBefore, BOND_AMOUNT);
+        assertEq(conclave.slashedTreasury(CONCLAVE_ID), 0);
+    }
 }

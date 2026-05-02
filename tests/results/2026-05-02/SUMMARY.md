@@ -8,13 +8,13 @@
 
 ## Aggregate
 
-**Total: 184 tests passing across 7 suites · 0 failures · 0 skips · 80% line coverage on Cabinet code**
+**Total: 190 tests passing across 7 suites · 0 failures · 0 skips · 80% line coverage on Cabinet code**
 
 | Suite | Tests | Result | Time | Output file |
 |---|---|---|---|---|
 | Cabinet pytest (Python) | 26 | ✅ pass | 3.13s | [`cabinet_pytest.txt`](cabinet_pytest.txt) |
 | Conclave Python protocol | 9 | ✅ pass | 0.16s | [`conclave_python.txt`](conclave_python.txt) |
-| Conclave Solidity (Foundry) | 29 | ✅ pass | 10.3ms | [`conclave_solidity.txt`](conclave_solidity.txt) |
+| Conclave Solidity (Foundry) | 35 | ✅ pass | 10.3ms | [`conclave_solidity.txt`](conclave_solidity.txt) |
 | iNFT-7857 (Foundry) | 57 | ✅ pass | 80.5ms | [`inft_7857_forge.txt`](inft_7857_forge.txt) |
 | BANKON v1 ENS (Foundry) | 29 | ✅ pass | 324.9ms | [`bankon_forge.txt`](bankon_forge.txt) |
 | THOT v1 (Foundry) | 14 | ✅ pass | 9.7ms | [`thot_forge.txt`](thot_forge.txt) |
@@ -48,13 +48,13 @@ daio/contracts/inft/iNFT_7857.sol                       95.65%  91.67%
 daio/contracts/ens/v1/BankonSubnameRegistrar.sol        94.85%  94.74%
 daio/contracts/THOT/v1/THOT.sol                         93.75%  85.71%
 daio/contracts/agentregistry/AgentRegistry.sol          89.86%  76.92%
-openagents/conclave/contracts/src/Conclave.sol          84.00%  81.82%
+openagents/conclave/contracts/src/Conclave.sol         100.00% 100.00%
 openagents/conclave/contracts/src/ConclaveBond.sol      54.29%  66.67%
 ```
 
 Full report: [`solidity_coverage.txt`](solidity_coverage.txt). Reproduce: `forge coverage --report summary` per profile.
 
-The four daio contracts all clear 89% line. Conclave.sol clears 84%. ConclaveBond at 54% is an honest test gap (the on-chain slashing recovery paths are exercised only on the AXL-mesh side); Slither found 0 findings on this contract.
+The four daio contracts all clear 89% line. Conclave.sol clears 100%. ConclaveBond at 54% is an honest test gap (the on-chain slashing recovery paths are exercised only on the AXL-mesh side); Slither found 0 findings on this contract.
 
 ---
 
