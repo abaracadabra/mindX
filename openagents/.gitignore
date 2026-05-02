@@ -1,0 +1,12 @@
+# Build artifacts
+conclave.tar.gz
+__pycache__/
+*.pyc
+*.pyo
+
+# Deployment outputs
+deployments/*.json
+
+# Sidecar build outputs
+sidecar/node_modules/
+sidecar/dist/

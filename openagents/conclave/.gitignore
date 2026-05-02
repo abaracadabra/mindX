@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+.venv/
+venv/
+.env
+
+# Foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/lib/
+
+# AXL local state (key files & node sockets)
+nodes/
+*.pem
+*.key
+*.sock
+
+# Editors
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Local data
+/tmp/
+/data/
+*.log

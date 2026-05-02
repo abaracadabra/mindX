@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mindX × Open Agents — agnostic composable module stack</title>
+<meta name="description" content="ETHGlobal Open Agents submission — eight agnostic, composable peer modules with horizontal+vertical scaling first-class. mindX is one canonical consumer. Modules: iNFT_7857, 0G Adapter, Conclave, BANKON v1, KeeperHub Bridge, Uniswap V4 Trader, THOT.commit(), ERC-8004 AgentRegistry.">
+<link rel="canonical" href="https://mindx.pythai.net/openagents.html">
+<link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<style>
+:root{
+  --bg:#040609;--surface:rgba(10,14,20,.88);--surface2:rgba(16,20,28,.7);
+  --green:#56d364;--blue:#79c0ff;--violet:#d2a8ff;--amber:#e3b341;--red:#f85149;--pink:#ff6b9d;
+  --text:#e6edf3;--text2:#b1bac4;--text3:#6e7681;--border:rgba(88,166,255,.08);
+  --mono:'JetBrains Mono','Fira Code','SF Mono','Menlo',monospace;
+  --font:system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.55}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+code,pre,.mono{font-family:var(--mono)}
+pre{white-space:pre;overflow-x:auto;font-size:11.5px;color:var(--text2);background:rgba(5,8,16,.6);border:1px solid var(--border);border-radius:6px;padding:12px}
+
+.hdr{position:sticky;top:0;z-index:50;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(8,12,20,.96),rgba(4,6,9,.94));backdrop-filter:blur(24px);border-bottom:1px solid rgba(121,192,255,.1)}
+.hdr-brand{font-family:var(--mono);font-size:18px;font-weight:700;letter-spacing:2px}
+.hdr-brand b{color:var(--blue)}
+.hdr-mid{display:flex;gap:10px;flex-wrap:wrap;font-family:var(--mono);font-size:12px}
+.hdr-mid a{color:#d0d7de;padding:4px 10px;border-radius:4px}
+.hdr-mid a.hl{color:var(--green);font-weight:600}
+.hdr-mid a:hover{background:rgba(121,192,255,.1)}
+
+main{max-width:1400px;margin:0 auto;padding:24px 20px 80px}
+
+/* Hero */
+.hero{padding:32px 24px;border-radius:12px;background:linear-gradient(135deg,rgba(86,211,100,.04),rgba(121,192,255,.06),rgba(210,168,255,.04));border:1px solid var(--border);margin-bottom:24px}
+.hero h1{font-size:30px;font-weight:600;margin-bottom:8px}
+.hero h1 .accent{color:var(--green)}
+.hero h1 .accent2{color:var(--violet)}
+.hero p{color:var(--text2);margin-bottom:14px;max-width:920px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tag{font-family:var(--mono);font-size:10.5px;padding:4px 10px;border-radius:4px;background:rgba(121,192,255,.10);border:1px solid rgba(121,192,255,.25);color:var(--blue)}
+.tag.live{background:rgba(86,211,100,.10);border-color:rgba(86,211,100,.35);color:var(--green)}
+.tag.pending{background:rgba(227,179,65,.10);border-color:rgba(227,179,65,.35);color:var(--amber)}
+
+.modules{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:20px}
+.mod-card{padding:12px 14px;border-radius:8px;background:var(--surface2);border:1px solid var(--border)}
+.mod-card .id{font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
+.mod-card .tk{font-size:12.5px;font-weight:600;margin-bottom:6px;color:var(--text)}
+.mod-card .st{font-family:var(--mono);font-size:10.5px}
+
+/* Composition card */
+.compose{background:rgba(20,24,32,.6);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:24px 0}
+.compose h2{font-size:13px;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:1.2px}
+.compose p{color:var(--text2);font-size:12.5px;margin-bottom:12px}
+
+/* Panel grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:16px}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;min-height:280px}
+.panel h2{font-size:13px;font-family:var(--mono);letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.panel h2 .name{display:flex;align-items:center;gap:8px}
+.panel h2 .badge{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(121,192,255,.16);color:var(--blue)}
+.panel h2 .module-num{font-size:10px;color:var(--text3);font-weight:400;letter-spacing:.5px}
+.panel .sub{font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.5}
+.panel .sub code{font-size:11px;color:var(--text2);background:rgba(5,8,16,.5);padding:1px 4px;border-radius:3px}
+.panel ul{list-style:none}
+.panel li{padding:8px 0;border-bottom:1px dashed rgba(110,118,129,.12);font-family:var(--mono);font-size:11.5px;color:var(--text2);overflow-x:auto}
+.panel li:last-child{border-bottom:none}
+.panel li .k{color:var(--text3);margin-right:6px;display:inline-block;min-width:80px}
+.panel li .v{color:var(--text)}
+.panel li .v.green{color:var(--green)}
+.panel li .v.blue{color:var(--blue)}
+.panel li .v.amber{color:var(--amber)}
+.panel li .v.red{color:var(--red)}
+.panel li .v.violet{color:var(--violet)}
+.panel li .v.pink{color:var(--pink)}
+
+.empty{padding:24px;text-align:center;color:var(--text3);font-size:12px;font-family:var(--mono)}
+.btn{font-family:var(--mono);font-size:11px;padding:6px 12px;border:1px solid rgba(121,192,255,.3);background:rgba(121,192,255,.06);color:var(--blue);border-radius:4px;cursor:pointer;text-decoration:none;display:inline-block}
+.btn:hover{background:rgba(121,192,255,.14)}
+
+footer{margin-top:40px;padding:20px;text-align:center;color:var(--text3);font-size:12px;border-top:1px solid var(--border)}
+footer a{color:var(--text2)}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-brand"><b>mind</b>X · open agents</div>
+  <div class="hdr-mid">
+    <a href="/">dashboard</a>
+    <a href="/feedback.html">feedback</a>
+    <a href="/boardroom">boardroom</a>
+    <a href="/dreams">dreams</a>
+    <a href="/THOT">thot</a>
+    <a href="/inft7857">inft-7857</a>
+    <a href="/openagents.html" class="hl">openagents</a>
+    <a href="/dojo">dojo</a>
+    <a href="/journal">journal</a>
+  </div>
+</header>
+
+<main>
+
+  <!-- ─────── Hero ─────── -->
+  <section class="hero">
+    <h1>mindX — <span class="accent">agnostic</span>, <span class="accent2">composable</span> agentic infrastructure</h1>
+    <p>This page is the live console for the ETHGlobal <a href="https://ethglobal.com/events/openagents" target="_blank" rel="noopener">Open Agents</a> submission. Eight sibling modules, each a peer that <em>any</em> agent framework can compose. mindX is one canonical consumer. Every module lives at <code>openagents/&lt;name&gt;/</code>, has its own README + tests + (where relevant) Solidity contracts, and is designed for horizontal + vertical scaling from byte one.</p>
+    <div class="tag-row" id="tags"></div>
+    <div class="modules" id="modules"></div>
+  </section>
+
+  <!-- ─────── Composition snippet ─────── -->
+  <section class="compose">
+    <h2>Compose your own</h2>
+    <p>Any framework — mindX, OpenClaw, NanoClaw, ZeroClaw, NullClaw, or your stack — can lift any subset of the eight modules. Below is the minimum-viable composition: an agent gets a soulbound BANKON subname, an ERC-8004 capability registration, an iNFT-7857 anchored intelligence, a 0G-Compute attestation, and a THOT memory commit, all in one Python coroutine. mindX wires this in <code>openagents/demo_agent.py</code>; your framework imports the same modules and wires it the same way.</p>
+<pre>
+# pip install web3 eth-account aiohttp
+from openagents.ens.subdomain_issuer       import SubdomainIssuer, AgentMetadata
+from openagents.conclave.integrations      import mindx_boardroom_adapter as adapter
+from agents.storage.zerog_provider         import ZeroGProvider
+from llm.zerog_handler                     import ZeroGHandler
+# (or: from your_framework.equivalents import ...)
+
+issuer    = SubdomainIssuer()                            # ENS BANKON v1
+provider  = ZeroGProvider()                              # 0G Storage proxy
+llm       = ZeroGHandler(api_key=ZEROG_API_KEY)          # 0G Compute
+result    = await issuer.register_free("my-agent", wallet, AgentMetadata(...))
+text      = await llm.generate_text(prompt="hello", model="zerog/gpt-oss-120b")
+chat_id   = llm.last_attestation                         # ZG-Res-Key
+root, tx  = await provider.upload(b"persona-bytes")      # 0G Storage
+# Anchor via THOT.commit(), mint iNFT_7857, register on AgentRegistry —
+# all via the same standard interfaces. See openagents/README.md for the
+# full composition demo.
+</pre>
+  </section>
+
+  <!-- ─────── 8 panels ─────── -->
+  <div class="grid">
+
+    <!-- 1. iNFT_7857 -->
+    <section class="panel">
+      <h2><span class="name">iNFT-7857 <span class="module-num">M1</span></span><span class="badge" id="bg-inft">·</span></h2>
+      <div class="sub">ERC-7857 hardened build · transfer-gated · EIP-712 oracle handoff · AgentRegistry / BANKON / 0G Storage hooks. <a href="/inft7857">/inft7857 console →</a></div>
+      <ul id="list-inft"><li class="empty">loading…</li></ul>
+    </section>
+
+    <!-- 2. 0G Adapter -->
+    <section class="panel">
+      <h2><span class="name">0G Adapter <span class="module-num">M2</span></span><span class="badge" id="bg-compute">·</span></h2>
+      <div class="sub"><code>llm/zerog_handler.py</code> + sidecar (<code>@0gfoundation/0g-ts-sdk</code>). Captures <code>ZG-Res-Key</code> attestation per call. <code>X-Request-Id</code> replay protection.</div>
+      <ul id="list-compute"><li class="empty">loading…</li></ul>
+    </section>
+
+    <!-- 3. Conclave -->
+    <section class="panel">
+      <h2><span class="name">Conclave <span class="module-num">M3 · Gensyn AXL</span></span><span class="badge" id="bg-conclave">·</span></h2>
+      <div class="sub">P2P signed-envelope mesh deliberation. Cabinet pattern (CEO + 7 soldiers). Resolution anchored on chain; deliberation never leaves the chamber. <a href="https://github.com/codephreak/conclave" target="_blank">repo →</a></div>
+      <ul id="list-conclave"><li class="empty">loading…</li></ul>
+    </section>
+
+    <!-- 4. BANKON v1 -->
+    <section class="panel">
+      <h2><span class="name">BANKON v1 <span class="module-num">M4 · ENS</span></span><span class="badge" id="bg-ens">·</span></h2>
+      <div class="sub">ENS NameWrapper subname registrar. Length-tiered pricing · EIP-712 voucher · multi-chain x402 · ERC-8004 bundle · soulbound fuses 0x50005.</div>
+      <ul id="list-ens"><li class="empty">loading…</li></ul>
+    </section>
+
+    <!-- 5. KeeperHub Bridge -->
+    <section class="panel">
+      <h2><span class="name">KeeperHub Bridge <span class="module-num">M5</span></span><span class="badge" id="bg-kh">·</span></h2>
+      <div class="sub">Bidirectional <code>x402</code> + <code>MPP</code> bridge between AgenticPlace and KeeperHub. Inbound + outbound. <a href="/p2p/keeperhub/info" target="_blank">bridge info →</a></div>
+      <ul id="list-kh"><li class="empty">loading…</li></ul>
+    </section>
+
+    <!-- 6. Uniswap Trader -->
+    <section class="panel">
+      <h2><span class="name">Uniswap V4 Trader <span class="module-num">M6</span></span><span class="badge" id="bg-uniswap">·</span></h2>
+      <div class="sub">BDI-style trader · perceive→deliberate→swap → log. Constraints from <code>personas/trader.prompt</code>. Sepolia for hackathon.</div>
+      <ul id="list-uniswap"><li class="empty">loading…</li></ul>
+    </section>
+
+    <!-- 7. THOT.commit() -->
+    <section class="panel">
+      <h2><span class="name">THOT.commit() <span class="module-num">M7</span></span><span class="badge" id="bg-thot">·</span></h2>
+      <div class="sub">Memory-anchoring primitive. Pillar-gated commit() with (rootHash, chatID, parentRootHash) → episodic-memory DAG. Content-addressed tokenIds.</div>
+      <ul id="list-thot"><li class="empty">loading…</li></ul>
+    </section>
+
+    <!-- 8. AgentRegistry (ERC-8004) -->
+    <section class="panel">
+      <h2><span class="name">AgentRegistry <span class="module-num">M8 · ERC-8004</span></span><span class="badge" id="bg-agentregistry">·</span></h2>
+      <div class="sub">ERC-8004-aligned identity + capability registry. Linked iNFT_7857 · capability bitmap · attestor signatures · soulbound option.</div>
+      <ul id="list-agentregistry"><li class="empty">loading…</li></ul>
+    </section>
+
+  </div>
+
+  <footer>
+    Submission for <a href="https://ethglobal.com/events/openagents" target="_blank">ETHGlobal Open Agents</a> · Apr 24 – May 6 2026 · BANKON × mindX
+    <div style="margin-top:6px"><a href="https://github.com/Professor-Codephreak/mindX" target="_blank">github.com/Professor-Codephreak/mindX</a> · <a href="/feedback.html">/feedback.html</a> · <a href="https://agenticplace.pythai.net" target="_blank">agenticplace.pythai.net</a></div>
+  </footer>
+</main>
+
+<script>
+const fmt = {
+  ts:    (s) => s ? new Date(s * 1000).toLocaleTimeString() + " · " + new Date(s * 1000).toLocaleDateString() : "—",
+  short: (s, n=24) => s ? (s.length > n ? s.slice(0, n) + "…" : s) : "—",
+  hash:  (s)       => s ? s.slice(0, 6) + "…" + s.slice(-6) : "—",
+  usdc:  (n)       => n != null ? "$" + Number(n).toFixed(4) : "—",
+  num:   (n)       => n != null ? Number(n).toLocaleString() : "—",
+};
+
+async function jload(url){
+  try { const r = await fetch(url); if (!r.ok) return null; return await r.json(); }
+  catch { return null; }
+}
+
+function setBadge(id, n){
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = n != null ? String(n) : "·";
+  if (n > 0) el.style.background = "rgba(86,211,100,.18)", el.style.color = "var(--green)";
+}
+
+function row(label, value, color){
+  const cls = color ? `v ${color}` : "v";
+  return `<li><span class="k">${label}</span><span class="${cls}">${value}</span></li>`;
+}
+
+/* ─────────── Hero ─────────── */
+function renderHero(d){
+  if (!d) return;
+  document.getElementById("tags").innerHTML = (d.compatible_with || []).map(c => `<span class="tag">${c}</span>`).join("");
+  const mods = document.getElementById("modules");
+  mods.innerHTML = (d.modules || []).map(m => `
+    <div class="mod-card">
+      <div class="id">${m.id}</div>
+      <div class="tk">${m.track}</div>
+      <div class="st"><span class="tag ${(m.status||'').includes('deployed') || (m.status||'').includes('live') ? 'live' : 'pending'}">${m.status}</span></div>
+    </div>`).join("");
+}
+
+/* ─────────── Module renderers ─────────── */
+function renderINFT(d){
+  const ul = document.getElementById("list-inft");
+  if (!d) { ul.innerHTML = `<li class="empty">backend not reachable</li>`; return; }
+  const inft = d.iNFT_7857 || {};
+  const dsreg = d.DatasetRegistry || {};
+  if (!inft.address) {
+    ul.innerHTML = `<li class="empty">not yet deployed — run <code>openagents/deploy/deploy_galileo.sh</code> · 56 tests passing locally</li>`;
+    setBadge("bg-inft", 0); return;
+  }
+  setBadge("bg-inft", d.recent_mint_count || 0);
+  let h = "";
+  h += row("contract",        fmt.hash(inft.address), "blue");
+  h += row("network",         d.network || "—", "amber");
+  h += row("dataset registry", fmt.hash(dsreg.address || ""), "blue");
+  if ((d.recent_mints || []).length > 0) {
+    h += `<li><span class="k">recent mints</span></li>`;
+    for (const m of d.recent_mints.slice(0,5)) {
+      const p = m.payload || {};
+      h += row("  tokenId", p.token_id || "—", "green");
+    }
+  } else {
+    h += `<li><span class="k">recent mints</span><span class="v">—</span></li>`;
+  }
+  ul.innerHTML = h;
+}
+
+function renderCompute(d){
+  const ul = document.getElementById("list-compute");
+  if (!d || !d.calls || !d.calls.length) {
+    ul.innerHTML = `<li class="empty">no 0G Compute calls yet — set <code>ZEROG_API_KEY</code> + run demo</li>`;
+    setBadge("bg-compute", 0); return;
+  }
+  setBadge("bg-compute", d.count);
+  ul.innerHTML = d.calls.slice(0, 8).map(c => `
+    <li>
+      ${row("when",    fmt.ts(c.ts))}
+      ${row("model",   fmt.short(c.model || "—", 24), "blue")}
+      ${row("attest",  fmt.hash(c.attestation), "green")}
+      ${row("backend", c.backend || "—")}
+    </li>`).join("");
+}
+
+function renderConclave(d){
+  const ul = document.getElementById("list-conclave");
+  if (!d) { ul.innerHTML = `<li class="empty">backend not reachable</li>`; return; }
+  const c = d.Conclave || {};
+  const b = d.ConclaveBond || {};
+  setBadge("bg-conclave", (d.recent_sessions || []).length);
+  let h = "";
+  if (!c.address) {
+    h += `<li class="empty">not yet deployed — run <code>cd openagents/conclave && forge script ...</code><br>(9 + 10 tests passing locally)</li>`;
+  } else {
+    h += row("Conclave",     fmt.hash(c.address), "violet");
+    h += row("ConclaveBond", fmt.hash(b.address), "violet");
+    h += row("network",      d.network || "—", "amber");
+  }
+  for (const s of (d.recent_sessions || []).slice(0, 5)) {
+    h += row("session", fmt.short(s.session_id, 18), "pink");
+  }
+  ul.innerHTML = h;
+}
+
+function renderENS(d){
+  const ul = document.getElementById("list-ens");
+  if (!d) { ul.innerHTML = `<li class="empty">backend not reachable</li>`; return; }
+  const reg = d.registrar || {};
+  setBadge("bg-ens", d.total_registered_onchain ?? (d.recent_issuances || []).length);
+  let h = "";
+  if (!reg.address) {
+    h += `<li class="empty">not yet deployed — run <code>openagents/ens/deploy_registrar.sh</code><br>(29 tests passing locally)</li>`;
+  } else {
+    h += row("registrar", fmt.hash(reg.address), "blue");
+    h += row("parent",    d.parent_name || "bankon.eth", "amber");
+  }
+  for (const e of (d.recent_issuances || []).slice(0, 5)) {
+    h += row("subname", fmt.short(e.subname, 26), "green");
+  }
+  ul.innerHTML = h;
+}
+
+function renderKH(d){
+  const ul = document.getElementById("list-kh");
+  if (!d) { ul.innerHTML = `<li class="empty">backend not reachable</li>`; return; }
+  setBadge("bg-kh", d.count || 0);
+  let h = "";
+  if (d.total_usdc != null) h += row("total settled", fmt.usdc(d.total_usdc), "green");
+  for (const s of (d.settlements || []).slice(0, 6)) {
+    h += `
+      <li>
+        ${row("when",     fmt.ts(s.ts))}
+        ${row("dir",      s.direction || "—", s.direction === "inbound" ? "blue" : "amber")}
+        ${row("endpoint", fmt.short(s.endpoint, 28))}
+        ${row("usdc",     fmt.usdc(s.amount_usdc))}
+      </li>`;
+  }
+  if (!d.settlements || !d.settlements.length) {
+    h += `<li class="empty">bridge mounted at <code>/p2p/keeperhub/*</code> — no settlements yet</li>`;
+  }
+  ul.innerHTML = h;
+}
+
+function renderUniswap(d){
+  const ul = document.getElementById("list-uniswap");
+  if (!d) { ul.innerHTML = `<li class="empty">backend not reachable</li>`; return; }
+  setBadge("bg-uniswap", d.cycles_logged || 0);
+  let h = "";
+  h += row("cycles",   fmt.num(d.cycles_logged), "blue");
+  h += row("quotes",   fmt.num(d.quote_count), "green");
+  h += row("swaps",    fmt.num(d.swap_count), "amber");
+  h += row("holds",    fmt.num(d.hold_count));
+  for (const r of (d.recent || []).slice(0, 4)) {
+    h += `<li>${row("  cycle " + r.cycle, r.action + " · conf=" + (r.confidence || 0).toFixed(2),
+      r.action === 'swap' ? 'amber' : (r.action === 'quote' ? 'green' : 'red'))}</li>`;
+  }
+  if (!d.cycles_logged) {
+    h += `<li class="empty">no cycles yet — run <code>python openagents/uniswap/demo_trader.py</code></li>`;
+  }
+  ul.innerHTML = h;
+}
+
+function renderTHOT(d){
+  const ul = document.getElementById("list-thot");
+  if (!d) { ul.innerHTML = `<li class="empty">backend not reachable</li>`; return; }
+  const g = d.THOT_v1_galileo || {};
+  const a = d.THOT_v1_aristotle || {};
+  setBadge("bg-thot", (d.recent_anchors || []).length);
+  let h = "";
+  if (g.address)  h += row("THOT (galileo)",   fmt.hash(g.address), "blue");
+  if (a.address)  h += row("THOT (aristotle)", fmt.hash(a.address), "violet");
+  if (!g.address && !a.address) {
+    h += `<li class="empty">not yet deployed — <code>FOUNDRY_PROFILE=thot forge create</code><br>(14 tests passing locally)</li>`;
+  }
+  for (const ev of (d.recent_anchors || []).slice(0, 5)) {
+    h += row("commit", fmt.hash(ev.rootHash), "green");
+  }
+  ul.innerHTML = h;
+}
+
+function renderAgentRegistry(d){
+  const ul = document.getElementById("list-agentregistry");
+  if (!d) { ul.innerHTML = `<li class="empty">backend not reachable</li>`; return; }
+  const g = d.AgentRegistry_galileo || {};
+  const s = d.AgentRegistry_sepolia || {};
+  const a = d.AgentRegistry_aristotle || {};
+  setBadge("bg-agentregistry", (d.recent_registrations || []).length);
+  let h = "";
+  if (g.address) h += row("registry (galileo)",   fmt.hash(g.address), "blue");
+  if (s.address) h += row("registry (sepolia)",   fmt.hash(s.address), "amber");
+  if (a.address) h += row("registry (aristotle)", fmt.hash(a.address), "violet");
+  if (!g.address && !s.address && !a.address) {
+    h += `<li class="empty">not yet deployed — <code>FOUNDRY_PROFILE=agentregistry forge create</code><br>(20 tests passing locally)</li>`;
+  }
+  for (const r of (d.recent_registrations || []).slice(0, 5)) {
+    h += row("agent", fmt.short(r.agentId, 20), "green");
+  }
+  ul.innerHTML = h;
+}
+
+/* ─────────── Refresh loop ─────────── */
+async function refresh(){
+  const [hero, inft, compute, conclave, ens, kh, uniswap, thot, agentreg] = await Promise.all([
+    jload("/insight/openagents/summary"),
+    jload("/insight/openagents/inft"),
+    jload("/insight/openagents/compute?limit=20"),
+    jload("/insight/openagents/conclave?limit=20"),
+    jload("/insight/openagents/ens?limit=20"),
+    jload("/insight/openagents/keeperhub?limit=20"),
+    jload("/insight/openagents/uniswap?limit=20"),
+    jload("/insight/openagents/thot?limit=20"),
+    jload("/insight/openagents/agentregistry?limit=20"),
+  ]);
+  renderHero(hero);
+  renderINFT(inft);
+  renderCompute(compute);
+  renderConclave(conclave);
+  renderENS(ens);
+  renderKH(kh);
+  renderUniswap(uniswap);
+  renderTHOT(thot);
+  renderAgentRegistry(agentreg);
+}
+
+refresh();
+setInterval(refresh, 15000);
+</script>
+</body>
+</html>

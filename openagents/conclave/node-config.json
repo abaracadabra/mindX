@@ -1,0 +1,19 @@
+{
+  "_comment": "Standard AXL node config used by every CONCLAVE member. The convener (or any one member behind a public IP) sets Listen; the rest leave Listen empty and dial the convener via Peers.",
+  "PrivateKeyPath": "private.pem",
+  "Peers": [],
+  "Listen": ["tls://0.0.0.0:9001"],
+  "InterfacePeers": {},
+  "AllowedPublicKeys": [],
+  "MulticastInterfaces": [
+    {
+      "Regex": ".*",
+      "Beacon": true,
+      "Listen": true,
+      "Port": 9001
+    }
+  ],
+  "NodeInfo": {
+    "name": "conclave-member"
+  }
+}

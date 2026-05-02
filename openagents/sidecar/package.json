@@ -1,0 +1,21 @@
+{
+  "name": "mindx-zerog-sidecar",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Agnostic Node sidecar wrapping 0G Storage. Any Python framework can consume this over HTTP. mindX is one consumer; the interface is /upload, /retrieve/:root, /health.",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-strip-types index.ts",
+    "dev": "node --watch --experimental-strip-types index.ts"
+  },
+  "dependencies": {
+    "@0gfoundation/0g-ts-sdk": "^1.2.6",
+    "express": "^4.21.0",
+    "multer": "^1.4.5-lts.1",
+    "ethers": "^6.13.0"
+  },
+  "engines": {
+    "node": ">=20.6.0"
+  }
+}

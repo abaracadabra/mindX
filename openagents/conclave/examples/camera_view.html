@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CONCLAVE — Camera View</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #16191f;
+    --line: #232831;
+    --text: #d8dde6;
+    --muted: #7a8290;
+    --accent: #c9a96a;
+    --good: #5fb85f;
+    --bad: #d96363;
+    --warn: #d99a4a;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, "Helvetica Neue", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--text); margin: 0;
+    font-family: var(--sans); font-size: 14px; }
+  header {
+    border-bottom: 1px solid var(--line); padding: 14px 22px;
+    display: flex; align-items: baseline; justify-content: space-between;
+  }
+  header h1 { margin: 0; font-size: 16px; font-weight: 600;
+    letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); }
+  header .sub { color: var(--muted); font-size: 12px; }
+  main {
+    display: grid; grid-template-columns: 320px 1fr 280px;
+    gap: 1px; background: var(--line); height: calc(100vh - 50px);
+  }
+  .panel { background: var(--panel); padding: 16px 18px; overflow: auto; }
+  .panel h2 {
+    margin: 0 0 12px 0; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+  }
+  .row { display: flex; align-items: center; padding: 8px 0;
+    border-bottom: 1px dashed var(--line); }
+  .row:last-child { border-bottom: 0; }
+  .seat { font-weight: 600; color: var(--text); width: 56px; flex-shrink: 0; }
+  .pubkey { font-family: var(--mono); font-size: 11px; color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    margin-right: 8px; flex-shrink: 0; }
+  .dot.up    { background: var(--good); }
+  .dot.down  { background: var(--bad); }
+  .dot.unknown { background: var(--muted); }
+  .transcript { font-family: var(--mono); font-size: 12px; line-height: 1.5; }
+  .msg { padding: 8px 10px; margin-bottom: 6px; border-radius: 4px;
+    background: #1a1e25; border-left: 2px solid var(--line); }
+  .msg.kind-Speak       { border-left-color: var(--text); }
+  .msg.kind-Motion      { border-left-color: var(--accent); }
+  .msg.kind-Vote        { border-left-color: var(--warn); }
+  .msg.kind-Resolution  { border-left-color: var(--good); }
+  .msg.kind-Adjourn     { border-left-color: var(--bad); }
+  .msg .meta {
+    display: flex; justify-content: space-between; font-size: 11px;
+    color: var(--muted); margin-bottom: 4px;
+  }
+  .msg .body { color: var(--text); white-space: pre-wrap; word-break: break-word; }
+  .vote-tally { font-family: var(--mono); }
+  .small { font-size: 11px; color: var(--muted); }
+  button {
+    background: transparent; color: var(--accent); border: 1px solid var(--accent);
+    padding: 4px 10px; border-radius: 3px; font-family: var(--sans);
+    font-size: 11px; cursor: pointer; letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  button:hover { background: var(--accent); color: var(--bg); }
+  .anchor { font-family: var(--mono); font-size: 11px; color: var(--good);
+    word-break: break-all; }
+  .danger { color: var(--bad); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Conclave · Camera View</h1>
+  <span class="sub">redacted observation only — full transcript stays in chamber</span>
+</header>
+
+<main>
+
+  <!-- LEFT: Seats -->
+  <section class="panel">
+    <h2>Seats (8)</h2>
+    <div id="seats"></div>
+    <p class="small" id="bridge-info" style="margin-top: 16px;"></p>
+  </section>
+
+  <!-- CENTER: Transcript -->
+  <section class="panel">
+    <h2>Session Transcript <span id="state-badge" class="small"></span></h2>
+    <div id="transcript" class="transcript"></div>
+  </section>
+
+  <!-- RIGHT: Motions / chain anchor -->
+  <section class="panel">
+    <h2>Motions</h2>
+    <div id="motions"></div>
+    <h2 style="margin-top: 24px;">On-chain Anchor</h2>
+    <div id="anchor">
+      <p class="small">no resolution anchored yet</p>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ============================================================
+// Camera View — pure observer over AXL /topology and a local
+// transcript file written by the convener. No private content
+// crosses the fence: this dashboard only sees what the convener
+// has chosen to export as redacted JSON.
+// ============================================================
+
+const ROLES = ["CEO","COO","CFO","CTO","CISO","GC","COS","OPS"];
+const BRIDGE = "http://127.0.0.1:9002";   // CEO bridge
+
+async function fetchTopology() {
+  try {
+    const r = await fetch(BRIDGE + "/topology");
+    if (!r.ok) throw new Error(r.statusText);
+    return await r.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+async function fetchTranscript() {
+  // The convener writes /tmp/conclave-redacted.json after each event.
+  try {
+    const r = await fetch("/transcript.json", { cache: "no-store" });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) { return null; }
+}
+
+function renderSeats(topology, transcript) {
+  const acclaimed = new Set(transcript?.acclaimers ?? []);
+  const peerById = new Map((topology?.peers ?? []).map(p => [p.public_key, p]));
+
+  const html = (transcript?.members ?? ROLES.map(r => ({role: r, pubkey: ""})))
+    .map(m => {
+      const up = peerById.has(m.pubkey?.replace(/^0x/, "")) || acclaimed.has(m.pubkey);
+      const cls = up ? "up" : "unknown";
+      const short = m.pubkey ? (m.pubkey.slice(0, 10) + "…" + m.pubkey.slice(-6)) : "—";
+      return `<div class="row">
+        <span class="dot ${cls}"></span>
+        <span class="seat">${m.role}</span>
+        <span class="pubkey" title="${m.pubkey ?? ""}">${short}</span>
+      </div>`;
+    })
+    .join("");
+
+  document.getElementById("seats").innerHTML = html;
+
+  document.getElementById("bridge-info").textContent =
+    topology
+      ? `mesh: ${topology.our_ipv6}  ·  peers: ${topology.peers.length}`
+      : "AXL bridge unreachable";
+}
+
+function renderTranscript(transcript) {
+  const stateBadge = document.getElementById("state-badge");
+  if (!transcript) {
+    document.getElementById("transcript").innerHTML =
+      `<p class="small">waiting for convener to publish a redacted transcript…</p>`;
+    stateBadge.textContent = "";
+    return;
+  }
+  stateBadge.textContent = `· ${transcript.state ?? "?"}`;
+  const events = transcript.events ?? [];
+  document.getElementById("transcript").innerHTML = events.map(e => `
+    <div class="msg kind-${e.kind}">
+      <div class="meta">
+        <span>${e.kind}${e.role ? " · " + e.role : ""}</span>
+        <span>${new Date((e.ts ?? 0) * 1000).toLocaleTimeString()}</span>
+      </div>
+      <div class="body">${escape(e.body ?? "")}</div>
+    </div>
+  `).join("");
+}
+
+function renderMotions(transcript) {
+  const motions = transcript?.motions ?? [];
+  document.getElementById("motions").innerHTML = motions.length
+    ? motions.map(m => `
+        <div class="msg kind-Motion">
+          <div class="meta">
+            <span>motion · ${m.class}</span>
+            <span>${m.outcome ?? "pending"}</span>
+          </div>
+          <div class="body">${escape(m.text ?? "")}</div>
+          <div class="vote-tally">
+            yea: ${m.tally?.yea ?? 0} · nay: ${m.tally?.nay ?? 0} ·
+            abstain: ${m.tally?.abstain ?? 0}
+          </div>
+        </div>`).join("")
+    : `<p class="small">no motions yet</p>`;
+
+  const anchor = transcript?.anchor;
+  document.getElementById("anchor").innerHTML = anchor
+    ? `<div class="anchor">tx: ${anchor.tx}</div>
+       <div class="small">block ${anchor.block ?? "?"}</div>`
+    : `<p class="small">no resolution anchored yet</p>`;
+}
+
+function escape(s) {
+  return String(s).replace(/[&<>"]/g,
+    c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+}
+
+async function tick() {
+  const [topology, transcript] = await Promise.all([
+    fetchTopology(), fetchTranscript()
+  ]);
+  renderSeats(topology, transcript);
+  renderTranscript(transcript);
+  renderMotions(transcript);
+}
+
+setInterval(tick, 1500);
+tick();
+</script>
+
+</body>
+</html>

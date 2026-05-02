@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iNFT-7857 Console — mindX × AgenticPlace × BANKON</title>
+<meta name="description" content="Interactive console for the mindX iNFT_7857 ERC-7857 contract: mint, inspect, transfer with sealed key, clone, authorize, revoke, burn, bind agent_id, list on AgenticPlace, escrow with BANKON. Wallet-connected, runs against any EVM chain.">
+<link rel="canonical" href="https://mindx.pythai.net/inft7857.html">
+<link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<style>
+:root{
+  --bg:#040609;--surface:rgba(10,14,20,.9);--surface2:rgba(16,20,28,.7);
+  --green:#3fb950;--blue:#58a6ff;--violet:#bc8cff;--amber:#e3b341;--red:#f85149;
+  --text:#e6edf3;--text2:#b0b8c4;--text3:#6e7681;--border:rgba(48,54,61,.5);
+  --mono:'Fira Code','SF Mono','Menlo',monospace;
+  --font:system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.55;min-height:100vh}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+code,pre,.mono{font-family:var(--mono)}
+
+/* Header */
+.hdr{position:sticky;top:0;z-index:50;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(8,12,20,.96),rgba(4,6,9,.94));backdrop-filter:blur(24px);border-bottom:1px solid rgba(88,166,255,.12)}
+.hdr-brand{font-family:var(--mono);font-size:18px;font-weight:700;letter-spacing:1.5px}
+.hdr-brand b{color:var(--blue)}
+.hdr-mid{display:flex;gap:8px;flex-wrap:wrap;font-family:var(--mono);font-size:11px}
+.hdr-mid a{color:#d0d7de;padding:4px 10px;border-radius:4px}
+.hdr-mid a.hl{color:var(--green);font-weight:600}
+.hdr-mid a:hover{background:rgba(88,166,255,.1)}
+.wallet-area{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px}
+.chain-pill{padding:4px 10px;border-radius:12px;background:rgba(88,166,255,.10);border:1px solid rgba(88,166,255,.3);color:var(--blue)}
+.chain-pill.warn{background:rgba(227,179,65,.10);border-color:rgba(227,179,65,.4);color:var(--amber)}
+.connect-btn{padding:6px 14px;border:1px solid var(--green);background:rgba(13,51,33,.6);color:var(--green);border-radius:5px;cursor:pointer;font-family:var(--mono);font-size:11px;font-weight:600}
+.connect-btn:hover{background:rgba(13,51,33,1);box-shadow:0 0 10px rgba(63,185,80,.25)}
+.addr{font-family:var(--mono);color:var(--text2)}
+
+main{max-width:1200px;margin:0 auto;padding:24px 20px 80px}
+
+/* Setup card */
+.setup{background:linear-gradient(135deg,rgba(63,185,80,.04),rgba(88,166,255,.05));border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:20px}
+.setup h2{font-size:13px;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px}
+.setup .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+.setup label{display:block;font-size:10px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.6px}
+.setup input{width:100%;padding:7px 10px;background:rgba(5,8,16,.8);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:12px}
+
+/* Contract info grid */
+.contract-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:14px}
+.ci-item{padding:10px 12px;background:rgba(5,8,16,.6);border:1px solid var(--border);border-radius:6px}
+.ci-item .k{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px}
+.ci-item .v{font-family:var(--mono);font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis}
+.ci-item .v.green{color:var(--green)}
+.ci-item .v.blue{color:var(--blue)}
+.ci-item .v.amber{color:var(--amber)}
+.ci-item .v.red{color:var(--red)}
+
+/* Tabs */
+.tabs{display:flex;gap:1px;margin-bottom:20px;background:rgba(20,24,32,.4);border-radius:8px;overflow:hidden;flex-wrap:wrap}
+.tab{flex:1;min-width:110px;padding:10px;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);background:rgba(10,14,20,.9);cursor:pointer;transition:all .15s;border:none;font-family:var(--font)}
+.tab:hover{color:var(--text2);background:rgba(15,20,30,.9)}
+.tab.active{color:var(--blue);border-bottom:2px solid var(--blue)}
+
+.panel{display:none}.panel.active{display:block}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+.card h3{font-size:13px;color:var(--text);margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:8px}
+.card h3 .role-badge{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:8px;background:rgba(188,140,255,.12);color:var(--violet);border:1px solid rgba(188,140,255,.3);text-transform:none;letter-spacing:.4px}
+.card h3 .role-badge.owner{background:rgba(63,185,80,.12);color:var(--green);border-color:rgba(63,185,80,.3)}
+.card p.desc{font-size:12px;color:var(--text3);margin-bottom:16px;line-height:1.5}
+
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-size:10px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.6px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:8px 12px;background:rgba(5,8,16,.8);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:12px;font-family:var(--mono)}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 1px rgba(88,166,255,.25)}
+.form-group textarea{resize:vertical;min-height:60px}
+.form-group .hint{font-size:10px;color:var(--text3);margin-top:3px;font-family:var(--mono)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-row.three{grid-template-columns:1fr 1fr 1fr}
+
+.btn{padding:9px 16px;border-radius:5px;border:1px solid;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;text-transform:uppercase;letter-spacing:.6px;font-family:var(--font)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:rgba(13,51,33,.9);color:var(--green);border-color:#238636}
+.btn-primary:hover:not(:disabled){background:rgba(13,51,33,1);box-shadow:0 0 10px rgba(63,185,80,.2)}
+.btn-secondary{background:rgba(20,30,50,.9);color:var(--blue);border-color:#1f6feb}
+.btn-secondary:hover:not(:disabled){background:rgba(20,30,50,1)}
+.btn-danger{background:rgba(50,15,15,.9);color:var(--red);border-color:#a93a32}
+.btn-danger:hover:not(:disabled){background:rgba(80,20,20,1)}
+.btn-row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+
+.result{margin-top:12px;padding:11px 13px;background:rgba(0,20,10,.4);border:1px solid rgba(63,185,80,.25);border-radius:5px;font-family:var(--mono);font-size:11px;color:#7ee787;white-space:pre-wrap;word-break:break-all;display:none;line-height:1.5}
+.result.show{display:block}
+.result.error{border-color:rgba(248,81,73,.35);color:var(--red);background:rgba(40,5,5,.5)}
+.result a{color:var(--blue)}
+.result .field{color:var(--text3)}
+.result .val{color:var(--text)}
+
+/* Event log */
+.events-card{background:rgba(8,11,17,.95);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-top:24px}
+.events-card h3{font-size:12px;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.8px;display:flex;justify-content:space-between;align-items:center}
+.events-card h3 .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);display:inline-block;margin-right:6px;animation:pulse 2s ease-in-out infinite}
+.events-card h3 .live-dot.off{background:var(--text3);box-shadow:none;animation:none}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+.event-list{max-height:340px;overflow-y:auto;font-family:var(--mono);font-size:11px}
+.event-list .event{padding:6px 8px;border-bottom:1px dashed rgba(110,118,129,.15);color:var(--text2)}
+.event-list .event:last-child{border-bottom:none}
+.event-list .event .name{color:var(--blue);font-weight:600;margin-right:6px}
+.event-list .event .args{color:var(--text3)}
+.event-list .empty{padding:20px;text-align:center;color:var(--text3)}
+
+/* Inline helpers */
+.kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;font-family:var(--mono);font-size:11.5px;margin-top:8px}
+.kv .k{color:var(--text3);text-transform:uppercase;font-size:10px;letter-spacing:.6px;padding-top:1px}
+.kv .v{color:var(--text);overflow-wrap:anywhere}
+.kv .v.green{color:var(--green)} .kv .v.amber{color:var(--amber)} .kv .v.red{color:var(--red)}
+
+.warn-banner{padding:10px 14px;background:rgba(227,179,65,.08);border:1px solid rgba(227,179,65,.35);border-radius:6px;color:var(--amber);font-size:12px;margin-bottom:14px;display:flex;gap:10px;align-items:flex-start}
+.warn-banner.danger{background:rgba(248,81,73,.08);border-color:rgba(248,81,73,.4);color:var(--red)}
+
+footer{margin-top:40px;padding:18px;text-align:center;color:var(--text3);font-size:11px;border-top:1px solid var(--border);font-family:var(--mono)}
+footer a{color:var(--text2)}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-brand"><b>i</b>NFT-7857</div>
+  <div class="hdr-mid">
+    <a href="/">dashboard</a>
+    <a href="/feedback.html">feedback</a>
+    <a href="/openagents">openagents</a>
+    <a href="/inft.html">inft (legacy)</a>
+    <a href="/inft7857.html" class="hl">inft-7857</a>
+    <a href="/boardroom">boardroom</a>
+  </div>
+  <div class="wallet-area">
+    <span id="chainPill" class="chain-pill warn">disconnected</span>
+    <span id="addrPill" class="addr"></span>
+    <button id="connectBtn" class="connect-btn">Connect Wallet</button>
+  </div>
+</header>
+
+<main>
+
+<div class="setup">
+  <h2>Contract setup</h2>
+  <div class="row">
+    <div>
+      <label>iNFT_7857 Contract Address</label>
+      <input id="contractAddr" placeholder="0x… (or auto-loaded from /openagents/deployments/galileo.json)" />
+    </div>
+    <div>
+      <label>RPC URL (read-only fallback)</label>
+      <input id="rpcUrl" value="https://evmrpc-testnet.0g.ai" />
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="loadDeployments()">Load galileo.json</button>
+    <button class="btn btn-secondary" onclick="refreshContract()">Refresh contract info</button>
+  </div>
+  <div id="contractInfo" class="contract-info" style="display:none"></div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-panel="overview">Overview</button>
+  <button class="tab" data-panel="mint">Mint</button>
+  <button class="tab" data-panel="inspect">Inspect Token</button>
+  <button class="tab" data-panel="transfer">Transfer (sealed key)</button>
+  <button class="tab" data-panel="clone">Clone</button>
+  <button class="tab" data-panel="usage">Authorize / Revoke</button>
+  <button class="tab" data-panel="burn">Burn</button>
+  <button class="tab" data-panel="bind">Bind (agent_id · AP · BANKON)</button>
+  <button class="tab" data-panel="admin">Admin</button>
+</div>
+
+<!-- ─────────────── Overview ─────────────── -->
+<section class="panel active" id="panel-overview">
+  <div class="card">
+    <h3>Contract overview</h3>
+    <p class="desc">All read-only state. Refresh after wallet connect to populate. Roles for the connected address are highlighted.</p>
+    <div id="overviewKV" class="kv"></div>
+  </div>
+  <div class="card">
+    <h3>My roles on this contract</h3>
+    <p class="desc">Roles control what you can do. Without MINTER_ROLE you can't mint; without DEFAULT_ADMIN_ROLE you can't grant roles or change the oracle. Ask the contract admin to grant roles.</p>
+    <div id="rolesKV" class="kv"></div>
+  </div>
+</section>
+
+<!-- ─────────────── Mint ─────────────── -->
+<section class="panel" id="panel-mint">
+  <div class="card">
+    <h3>Mint a new iNFT-7857 <span class="role-badge owner" id="mintRoleBadge" style="display:none">MINTER_ROLE required</span></h3>
+    <p class="desc">Anchor an encrypted intelligence payload (already uploaded to 0G Storage / IPFS) on chain. The merkle root + sealed-key hash + dimensions are stored permanently; the payload itself stays in storage.</p>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Recipient (to)</label>
+        <input id="m_to" placeholder="0x…" />
+        <div class="hint">becomes the iNFT owner; cannot be the zero address</div>
+      </div>
+      <div class="form-group">
+        <label>Content root (bytes32)</label>
+        <input id="m_contentRoot" placeholder="0x… (32-byte hex)" />
+        <div class="hint">0G Storage merkle root, or IPFS-CID-as-bytes32. One-shot per root, ever.</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Storage URI</label>
+      <input id="m_storageURI" value="0g://galileo/" />
+      <div class="hint">gateway hint, e.g. 0g://galileo/&lt;root&gt; or ipfs://&lt;cid&gt;</div>
+    </div>
+    <div class="form-row three">
+      <div class="form-group">
+        <label>Dimension</label>
+        <select id="m_dimensions">
+          <option>8</option><option>64</option><option>256</option><option>512</option>
+          <option>768</option><option>1024</option><option selected>2048</option>
+          <option>4096</option><option>8192</option><option>65536</option><option>1048576</option>
+        </select>
+        <div class="hint">THOT dimension — one of the 11 allowed</div>
+      </div>
+      <div class="form-group">
+        <label>Parallel units</label>
+        <input id="m_parallel" type="number" value="8" min="1" max="255" />
+      </div>
+      <div class="form-group">
+        <label>Metadata root (bytes32, optional)</label>
+        <input id="m_metaRoot" value="0x0000000000000000000000000000000000000000000000000000000000000000" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Sealed key hash (bytes32)</label>
+      <input id="m_sealedHash" placeholder="0x… (keccak256 of the AES key sealed for the recipient)" />
+      <div class="hint">cannot be zero; only the HASH lives on-chain — the ciphertext is delivered off-chain</div>
+      <button class="btn btn-secondary" style="margin-top:6px" onclick="genSealedKeyHash()">Generate random demo key+hash</button>
+    </div>
+    <div class="form-group">
+      <label>Token URI (optional)</label>
+      <input id="m_tokenURI" placeholder="https://mindx.pythai.net/inft/<root>" />
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="doMint()">Mint iNFT-7857</button>
+    </div>
+    <div id="mintResult" class="result"></div>
+  </div>
+</section>
+
+<!-- ─────────────── Inspect Token ─────────────── -->
+<section class="panel" id="panel-inspect">
+  <div class="card">
+    <h3>Inspect any iNFT-7857 by tokenId</h3>
+    <p class="desc">Read everything the contract knows about a given token: payload, owner, agent_id binding, AgenticPlace listing, BANKON vault binding, royalty receiver, EIP-712 oracle nonce.</p>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Token ID</label>
+        <input id="i_tokenId" type="number" value="1" min="1" />
+      </div>
+      <div class="form-group">
+        <label>Sale price (for royalty calc)</label>
+        <input id="i_salePrice" value="1000000000000000000" />
+        <div class="hint">in wei; default = 1 ether</div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="doInspect()">Inspect</button>
+    </div>
+    <div id="inspectResult" class="result"></div>
+  </div>
+  <div class="card">
+    <h3>Check usage authorization</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Token ID</label>
+        <input id="ia_tokenId" type="number" value="1" min="1" />
+      </div>
+      <div class="form-group">
+        <label>Executor address</label>
+        <input id="ia_executor" placeholder="0x…" />
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="checkUsage()">Check authorization</button>
+    </div>
+    <div id="usageResult" class="result"></div>
+  </div>
+</section>
+
+<!-- ─────────────── Transfer ─────────────── -->
+<section class="panel" id="panel-transfer">
+  <div class="card">
+    <h3>Transfer with sealed key (ERC-7857)</h3>
+    <p class="desc">Standard <code>transferFrom</code> reverts on this contract — that's the whole point of ERC-7857. Transfers happen via re-encryption: the oracle (TEE / ZK verifier) signs a domain-separated EIP-712 message authorizing the new sealed key for the new owner.</p>
+    <div class="warn-banner">
+      <span>⚠</span>
+      <div>For this demo console you can paste an oracle private key below to sign in-browser. <strong>Never paste a mainnet oracle key.</strong> Production deploys keep the oracle PK in a TEE and supply only the signature.</div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Token ID</label>
+        <input id="t_tokenId" type="number" value="1" min="1" />
+      </div>
+      <div class="form-group">
+        <label>From (current owner)</label>
+        <input id="t_from" placeholder="0x…" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>To (new owner)</label>
+      <input id="t_to" placeholder="0x…" />
+    </div>
+    <div class="form-group">
+      <label>Sealed key (raw bytes, hex 0x…)</label>
+      <input id="t_sealedKey" placeholder="0x… ciphertext for the new owner" />
+      <button class="btn btn-secondary" style="margin-top:6px" onclick="genSealedKey('t_sealedKey')">Generate random demo sealed key</button>
+    </div>
+    <div class="form-group">
+      <label>Oracle proof (signature, hex 0x…)</label>
+      <input id="t_proof" placeholder="0x… EIP-712 signature over (tokenId, from, to, contentRoot, hash(sealedKey), nonce)" />
+      <button class="btn btn-secondary" style="margin-top:6px" onclick="signOracleTransfer()">Sign with oracle PK below (demo)</button>
+    </div>
+    <div class="form-group">
+      <label>Oracle PRIVATE KEY (demo only — testnet)</label>
+      <input id="t_oraclePk" type="password" placeholder="0x… (kept only in this browser tab)" />
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="doTransfer()">Transfer with sealed key</button>
+    </div>
+    <div id="transferResult" class="result"></div>
+  </div>
+</section>
+
+<!-- ─────────────── Clone ─────────────── -->
+<section class="panel" id="panel-clone">
+  <div class="card">
+    <h3>Clone an agent (ERC-7857)</h3>
+    <p class="desc">Creates a child token sharing the parent's contentRoot but with its own sealed key. Pays the configured clone fee (in ETH/native gas token). Useful for licensing the persona of an existing agent to a new owner.</p>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Parent token ID</label>
+        <input id="cl_tokenId" type="number" value="1" min="1" />
+      </div>
+      <div class="form-group">
+        <label>Clone recipient</label>
+        <input id="cl_to" placeholder="0x…" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Sealed key for clone (raw bytes, hex 0x…)</label>
+      <input id="cl_sealedKey" placeholder="0x…" />
+      <button class="btn btn-secondary" style="margin-top:6px" onclick="genSealedKey('cl_sealedKey')">Generate random demo sealed key</button>
+    </div>
+    <div class="form-group">
+      <label>Oracle proof (EIP-712 signature)</label>
+      <input id="cl_proof" placeholder="0x…" />
+      <button class="btn btn-secondary" style="margin-top:6px" onclick="signOracleClone()">Sign with oracle PK below (demo)</button>
+    </div>
+    <div class="form-group">
+      <label>Oracle PRIVATE KEY (demo only)</label>
+      <input id="cl_oraclePk" type="password" placeholder="0x…" />
+    </div>
+    <div class="form-group">
+      <label>Value to send (wei) — must be ≥ cloneFee</label>
+      <input id="cl_value" value="0" />
+      <div class="hint">current cloneFee shown in Overview</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="doClone()">Clone agent</button>
+    </div>
+    <div id="cloneResult" class="result"></div>
+  </div>
+</section>
+
+<!-- ─────────────── Authorize / Revoke ─────────────── -->
+<section class="panel" id="panel-usage">
+  <div class="card">
+    <h3>Authorize usage</h3>
+    <p class="desc">Grant a third-party executor permission to run the iNFT off-chain (e.g. an inference relay). Permissions are a free-form bitmap interpreted off-chain. Each (token, executor) pair is independent — multiple executors can be authorized in parallel.</p>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Token ID</label>
+        <input id="au_tokenId" type="number" value="1" min="1" />
+      </div>
+      <div class="form-group">
+        <label>Executor address</label>
+        <input id="au_executor" placeholder="0x…" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Permissions (uint256 bitmap)</label>
+        <input id="au_permissions" value="255" />
+        <div class="hint">e.g. 1 = read, 2 = run, 4 = mint-derivative</div>
+      </div>
+      <div class="form-group">
+        <label>Expires at (unix seconds)</label>
+        <input id="au_expiry" placeholder="future timestamp" />
+        <div class="hint" id="au_expiry_hint"></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="setExpiryDays(7)">+7 days</button>
+      <button class="btn btn-secondary" onclick="setExpiryDays(30)">+30 days</button>
+      <button class="btn btn-primary" onclick="doAuthorize()">Authorize</button>
+    </div>
+    <div id="authorizeResult" class="result"></div>
+  </div>
+  <div class="card">
+    <h3>Revoke usage</h3>
+    <p class="desc">Immediately invalidate a previously-granted authorization.</p>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Token ID</label>
+        <input id="rv_tokenId" type="number" value="1" min="1" />
+      </div>
+      <div class="form-group">
+        <label>Executor</label>
+        <input id="rv_executor" placeholder="0x…" />
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-danger" onclick="doRevoke()">Revoke</button>
+    </div>
+    <div id="revokeResult" class="result"></div>
+  </div>
+</section>
+
+<!-- ─────────────── Burn ─────────────── -->
+<section class="panel" id="panel-burn">
+  <div class="card">
+    <h3>Burn iNFT-7857</h3>
+    <p class="desc">Permanently destroy the token. Clears the on-chain payload + AgenticPlace + BANKON bindings. The contentRoot remains marked as <code>used</code>, so the same root can never be re-minted (prevents silent re-mint of leaked content).</p>
+    <div class="warn-banner danger">
+      <span>⚠</span>
+      <div>This action is irreversible. The intelligence payload in 0G Storage is NOT deleted by this — only the on-chain anchor. If your private key was compromised, burn here AND rotate the off-chain payload.</div>
+    </div>
+    <div class="form-group">
+      <label>Token ID</label>
+      <input id="bn_tokenId" type="number" value="1" min="1" />
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-danger" onclick="doBurn()">Burn token</button>
+    </div>
+    <div id="burnResult" class="result"></div>
+  </div>
+</section>
+
+<!-- ─────────────── Bind ─────────────── -->
+<section class="panel" id="panel-bind">
+  <div class="card">
+    <h3>Bind a mindX agent_id <span class="role-badge owner">owner only</span></h3>
+    <p class="desc">One-shot: associate this iNFT with a mindX agent identifier (e.g. <code>ceo-mastermind</code>). Stored as both raw string and keccak256 hash so off-chain indexers can query either way. Cannot be changed once set.</p>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Token ID</label>
+        <input id="ai_tokenId" type="number" value="1" min="1" />
+      </div>
+      <div class="form-group">
+        <label>Agent ID (≤64 chars)</label>
+        <input id="ai_agentId" placeholder="ceo-mastermind" />
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="doBindAgentId()">Bind agent_id</button>
+    </div>
+    <div id="agentIdResult" class="result"></div>
+  </div>
+  <div class="card">
+    <h3>List on AgenticPlace marketplace</h3>
+    <p class="desc">Records the marketplace + price binding. The actual <code>offerSkill()</code> call happens on the marketplace contract; this stores the relation so off-chain readers (and the mindX dashboard) can correlate.</p>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Token ID</label>
+        <input id="ap_tokenId" type="number" value="1" min="1" />
+      </div>
+      <div class="form-group">
+        <label>Marketplace address</label>
+        <input id="ap_marketplace" placeholder="0x… (AgenticPlace contract)" />
+      </div>
+    </div>
+    <div class="form-row three">
+      <div class="form-group">
+        <label>Price (wei or token base units)</label>
+        <input id="ap_price" value="100000000000000000" />
+      </div>
+      <div class="form-group">
+        <label>Payment in</label>
+        <select id="ap_isETH">
+          <option value="true">ETH (native gas token)</option>
+          <option value="false">ERC-20 token</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>ERC-20 token (if not ETH)</label>
+        <input id="ap_paymentToken" placeholder="0x…" />
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="doOfferAP()">List on AgenticPlace</button>
+    </div>
+    <div id="apResult" class="result"></div>
+  </div>
+  <div class="card">
+    <h3>Bind to BANKON vault</h3>
+    <p class="desc">Register that the sealed AES key for this iNFT is escrowed in a BANKON vault, encrypted under the owner's BANKON identity. <code>vaultRef</code> is opaque — the vault uses it to look up the key on owner authorization.</p>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Token ID</label>
+        <input id="bv_tokenId" type="number" value="1" min="1" />
+      </div>
+      <div class="form-group">
+        <label>BANKON vault address</label>
+        <input id="bv_vault" placeholder="0x…" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Vault ref (bytes32)</label>
+      <input id="bv_ref" placeholder="0x… opaque ref the vault knows" />
+      <button class="btn btn-secondary" style="margin-top:6px" onclick="genVaultRef()">Generate ref from agent_id</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="doBindVault()">Bind BANKON vault</button>
+    </div>
+    <div id="vaultResult" class="result"></div>
+  </div>
+</section>
+
+<!-- ─────────────── Admin ─────────────── -->
+<section class="panel" id="panel-admin">
+  <div class="card">
+    <h3>Pause / Unpause <span class="role-badge">PAUSER_ROLE</span></h3>
+    <p class="desc">Emergency stop — blocks mints, transfers, clones, authorizations, AgenticPlace + BANKON bindings. Use if a vulnerability is discovered or compliance demands it. Burns and reads remain operational.</p>
+    <div class="btn-row">
+      <button class="btn btn-danger" onclick="doPause()">Pause</button>
+      <button class="btn btn-primary" onclick="doUnpause()">Unpause</button>
+    </div>
+    <div id="pauseResult" class="result"></div>
+  </div>
+  <div class="card">
+    <h3>Grant / revoke role <span class="role-badge">DEFAULT_ADMIN_ROLE</span></h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Role</label>
+        <select id="rl_role">
+          <option value="MINTER_ROLE">MINTER_ROLE</option>
+          <option value="ORACLE_ROLE">ORACLE_ROLE</option>
+          <option value="PAUSER_ROLE">PAUSER_ROLE</option>
+          <option value="TREASURER_ROLE">TREASURER_ROLE</option>
+          <option value="DEFAULT_ADMIN_ROLE">DEFAULT_ADMIN_ROLE</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Account</label>
+        <input id="rl_account" placeholder="0x…" />
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="doGrantRole()">Grant</button>
+      <button class="btn btn-danger" onclick="doRevokeRole()">Revoke</button>
+    </div>
+    <div id="roleResult" class="result"></div>
+  </div>
+  <div class="card">
+    <h3>Set oracle <span class="role-badge">DEFAULT_ADMIN_ROLE</span></h3>
+    <p class="desc">Replaces the ECDSA signer for sealed-key handoffs. Old oracle's ORACLE_ROLE is revoked atomically; new oracle is granted.</p>
+    <div class="form-group">
+      <label>New oracle address (use 0x0 to disable verification — dev only)</label>
+      <input id="ad_oracle" placeholder="0x…" />
+    </div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="doSetOracle()">Set oracle</button></div>
+    <div id="oracleResult" class="result"></div>
+  </div>
+  <div class="card">
+    <h3>Treasury + clone fee <span class="role-badge">TREASURER_ROLE</span></h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Treasury address</label>
+        <input id="ad_treasury" placeholder="0x…" />
+        <button class="btn btn-secondary" style="margin-top:6px" onclick="doSetTreasury()">Set treasury</button>
+      </div>
+      <div class="form-group">
+        <label>Clone fee (wei)</label>
+        <input id="ad_cloneFee" placeholder="e.g. 10000000000000000 = 0.01 ether" />
+        <button class="btn btn-secondary" style="margin-top:6px" onclick="doSetCloneFee()">Set clone fee</button>
+      </div>
+    </div>
+    <div id="treasuryResult" class="result"></div>
+  </div>
+  <div class="card">
+    <h3>Royalty <span class="role-badge">DEFAULT_ADMIN_ROLE</span></h3>
+    <div class="form-row three">
+      <div class="form-group">
+        <label>Token ID (0 = default)</label>
+        <input id="rt_tokenId" type="number" value="0" />
+      </div>
+      <div class="form-group">
+        <label>Receiver</label>
+        <input id="rt_receiver" placeholder="0x…" />
+      </div>
+      <div class="form-group">
+        <label>Fee bps (max 2500 = 25%)</label>
+        <input id="rt_bps" type="number" value="500" min="0" max="2500" />
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="doSetRoyalty()">Apply royalty</button>
+    </div>
+    <div id="royaltyResult" class="result"></div>
+  </div>
+  <div class="card">
+    <h3>Sweep stuck ETH <span class="role-badge">TREASURER_ROLE</span></h3>
+    <div class="form-group">
+      <label>Amount (wei)</label>
+      <input id="ad_sweepAmt" placeholder="e.g. all = balance" />
+    </div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="doSweep()">Sweep to treasury</button></div>
+    <div id="sweepResult" class="result"></div>
+  </div>
+</section>
+
+<!-- ─────────────── Event log ─────────────── -->
+<div class="events-card">
+  <h3><span><span id="liveDot" class="live-dot off"></span>Live event log</span><button class="btn btn-secondary" onclick="clearEvents()">Clear</button></h3>
+  <div id="eventList" class="event-list"><div class="empty">connect wallet + load contract to subscribe</div></div>
+</div>
+
+<footer>
+  iNFT-7857 console · part of the mindX submission to <a href="https://ethglobal.com/events/openagents" target="_blank">ETHGlobal Open Agents</a> · works on any EVM chain · <a href="/openagents">/openagents</a>
+</footer>
+
+</main>
+
+<script type="module">
+import { BrowserProvider, JsonRpcProvider, Contract, Wallet, getBytes,
+         hexlify, randomBytes, keccak256, parseEther, formatEther,
+         toUtf8Bytes, ZeroAddress, isHexString, getAddress, id as kid }
+from "https://esm.sh/ethers@6.13.5";
+
+/* ───────── ABI (minimum required for UI) ───────── */
+const ABI = [
+  // Reads
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function totalMinted() view returns (uint256)",
+  "function exists(uint256) view returns (bool)",
+  "function ownerOf(uint256) view returns (address)",
+  "function tokenURI(uint256) view returns (string)",
+  "function paused() view returns (bool)",
+  "function oracle() view returns (address)",
+  "function treasury() view returns (address)",
+  "function cloneFeeWei() view returns (uint256)",
+  "function oracleNonce(uint256) view returns (uint256)",
+  "function isRootUsed(bytes32) view returns (bool)",
+  "function getPayload(uint256) view returns (tuple(bytes32 contentRoot,string storageURI,bytes32 metadataRoot,uint32 dimensions,uint8 parallelUnits,uint40 mintedAt,bytes32 sealedKeyHash,bool verified))",
+  "function getUsageGrant(uint256,address) view returns (tuple(uint256 permissions,uint64 expiresAt,address grantor))",
+  "function isUsageAuthorized(uint256,address) view returns (bool)",
+  "function getAgentId(uint256) view returns (string)",
+  "function getAgentIdHash(uint256) view returns (bytes32)",
+  "function agenticPlaceFor(uint256) view returns (address)",
+  "function bankonVaultFor(uint256) view returns (address)",
+  "function bankonVaultRef(uint256) view returns (bytes32)",
+  "function cloneCount(uint256) view returns (uint256)",
+  "function clonedFrom(uint256) view returns (uint256)",
+  "function royaltyInfo(uint256,uint256) view returns (address,uint256)",
+  "function hasRole(bytes32,address) view returns (bool)",
+  "function MINTER_ROLE() view returns (bytes32)",
+  "function ORACLE_ROLE() view returns (bytes32)",
+  "function PAUSER_ROLE() view returns (bytes32)",
+  "function TREASURER_ROLE() view returns (bytes32)",
+  "function DEFAULT_ADMIN_ROLE() view returns (bytes32)",
+  "function eip712Domain() view returns (bytes1,string,string,uint256,address,bytes32,uint256[])",
+  "function sealedKeyDigest(uint256,address,address,bytes32,bytes32,uint256) view returns (bytes32)",
+  "function cloneDigest(uint256,address,bytes32,bytes32,uint256) view returns (bytes32)",
+  "function SEALED_KEY_TYPEHASH() view returns (bytes32)",
+  "function CLONE_TYPEHASH() view returns (bytes32)",
+  // Writes
+  "function mintAgent(address,bytes32,string,bytes32,uint32,uint8,bytes32,string) returns (uint256)",
+  "function transferWithSealedKey(address,address,uint256,bytes,bytes)",
+  "function cloneAgent(uint256,address,bytes,bytes) payable returns (uint256)",
+  "function authorizeUsage(uint256,address,uint256,uint64)",
+  "function revokeUsage(uint256,address)",
+  "function burn(uint256)",
+  "function bindAgentId(uint256,string)",
+  "function offerOnAgenticPlace(uint256,address,uint256,bool,address)",
+  "function bindBankonVault(uint256,address,bytes32)",
+  "function pause()",
+  "function unpause()",
+  "function setOracle(address)",
+  "function setTreasury(address)",
+  "function setCloneFee(uint256)",
+  "function setDefaultRoyalty(address,uint96)",
+  "function setTokenRoyalty(uint256,address,uint96)",
+  "function sweepEth(uint256)",
+  "function grantRole(bytes32,address)",
+  "function revokeRole(bytes32,address)",
+  // Events
+  "event AgentMinted(uint256 indexed,bytes32 indexed,uint32,address indexed)",
+  "event MetadataUpdated(uint256 indexed,bytes32,string)",
+  "event SealedKeyRotated(uint256 indexed,address indexed,bytes32)",
+  "event UsageAuthorized(uint256 indexed,address indexed,uint256,uint64,address indexed)",
+  "event UsageRevoked(uint256 indexed,address indexed,address indexed)",
+  "event AgentCloned(uint256 indexed,uint256 indexed,address indexed)",
+  "event AgentBurned(uint256 indexed,address indexed)",
+  "event OracleUpdated(address indexed,address indexed)",
+  "event AgentIdBound(uint256 indexed,bytes32 indexed,string)",
+  "event AgenticPlaceListed(uint256 indexed,address indexed,uint256,bool,address)",
+  "event BankonVaultBound(uint256 indexed,address indexed,bytes32)",
+  "event CloneFeeUpdated(uint256,uint256)",
+  "event TreasuryUpdated(address indexed,address indexed)",
+  "event Paused(address)",
+  "event Unpaused(address)"
+];
+
+/* ───────── State ───────── */
+const state = {
+  provider: null,        // read-only JsonRpcProvider
+  browser: null,         // BrowserProvider when wallet connected
+  signer: null,
+  account: null,
+  chainId: null,
+  contract: null,        // read-only attached
+  contractW: null,       // wallet-attached (write)
+  events: [],
+  domain: null,          // EIP-712 domain cache
+};
+
+/* ───────── DOM helpers ───────── */
+const $ = (id) => document.getElementById(id);
+const setText = (id, t) => { const el = $(id); if (el) el.textContent = t; };
+const showResult = (id, msg, isError) => {
+  const el = $(id); if (!el) return;
+  el.textContent = msg;
+  el.classList.toggle("show", true);
+  el.classList.toggle("error", !!isError);
+};
+const fmtAddr = (a) => a ? `${a.slice(0,6)}…${a.slice(-4)}` : "—";
+const fmtHash = (h) => h ? `${h.slice(0,10)}…${h.slice(-6)}` : "—";
+
+/* ───────── Tabs ───────── */
+document.querySelectorAll(".tab").forEach(t => {
+  t.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(x => x.classList.remove("active"));
+    t.classList.add("active");
+    $(`panel-${t.dataset.panel}`).classList.add("active");
+  });
+});
+
+/* ───────── Setup ───────── */
+async function getReadProvider() {
+  const url = $("rpcUrl").value.trim();
+  if (state.provider && state.provider._url === url) return state.provider;
+  state.provider = new JsonRpcProvider(url);
+  state.provider._url = url;
+  return state.provider;
+}
+
+window.loadDeployments = async function () {
+  try {
+    const r = await fetch("/openagents/deployments/galileo.json");
+    if (!r.ok) throw new Error(`fetch failed: ${r.status}`);
+    const d = await r.json();
+    const addr = d?.contracts?.iNFT_7857?.address;
+    if (!addr) throw new Error("iNFT_7857 not in deployments");
+    $("contractAddr").value = addr;
+    if (d.rpc) $("rpcUrl").value = d.rpc;
+    addEvent("system", `loaded contract ${fmtAddr(addr)} (network=${d.network})`);
+    refreshContract();
+  } catch (e) {
+    showResult("contractInfo", `couldn't load deployments: ${e.message}`, true);
+    $("contractInfo").style.display = "block";
+  }
+};
+
+window.refreshContract = async function () {
+  const addr = $("contractAddr").value.trim();
+  if (!addr || !isHexString(addr, 20)) {
+    addEvent("error", "set a valid contract address first"); return;
+  }
+  const prov = await getReadProvider();
+  state.contract = new Contract(addr, ABI, prov);
+  if (state.browser) {
+    state.signer = await state.browser.getSigner();
+    state.contractW = state.contract.connect(state.signer);
+  }
+  await refreshContractInfo();
+  await refreshRoles();
+  await subscribeEvents();
+};
+
+async function refreshContractInfo() {
+  const c = state.contract;
+  if (!c) return;
+  const grid = $("contractInfo");
+  grid.style.display = "grid";
+  grid.innerHTML = `<div class="ci-item"><div class="k">loading…</div></div>`;
+  try {
+    const [name, symbol, total, paused, oracle, treasury, fee] = await Promise.all([
+      c.name(), c.symbol(), c.totalMinted(), c.paused(),
+      c.oracle(), c.treasury(), c.cloneFeeWei()
+    ]);
+    grid.innerHTML = `
+      <div class="ci-item"><div class="k">name</div><div class="v">${name}</div></div>
+      <div class="ci-item"><div class="k">symbol</div><div class="v">${symbol}</div></div>
+      <div class="ci-item"><div class="k">total minted</div><div class="v green">${total}</div></div>
+      <div class="ci-item"><div class="k">paused</div><div class="v ${paused ? 'red':'green'}">${paused ? 'YES' : 'no'}</div></div>
+      <div class="ci-item"><div class="k">oracle</div><div class="v" title="${oracle}">${fmtAddr(oracle)}</div></div>
+      <div class="ci-item"><div class="k">treasury</div><div class="v" title="${treasury}">${fmtAddr(treasury)}</div></div>
+      <div class="ci-item"><div class="k">clone fee</div><div class="v amber">${formatEther(fee)} ETH</div></div>
+      <div class="ci-item"><div class="k">contract</div><div class="v blue" title="${c.target}">${fmtAddr(c.target)}</div></div>
+    `;
+    // Mirror to overview panel
+    const ov = $("overviewKV");
+    ov.innerHTML = `
+      <div class="k">name</div><div class="v">${name}</div>
+      <div class="k">symbol</div><div class="v">${symbol}</div>
+      <div class="k">total minted</div><div class="v green">${total}</div>
+      <div class="k">paused</div><div class="v ${paused ? 'red':'green'}">${paused ? 'YES — emergency stopped' : 'no'}</div>
+      <div class="k">oracle</div><div class="v">${oracle}</div>
+      <div class="k">treasury</div><div class="v">${treasury}</div>
+      <div class="k">clone fee</div><div class="v amber">${formatEther(fee)} ETH (${fee} wei)</div>
+      <div class="k">contract</div><div class="v blue">${c.target}</div>
+    `;
+  } catch (e) {
+    grid.innerHTML = `<div class="ci-item"><div class="k">error</div><div class="v red">${e.message}</div></div>`;
+  }
+}
+
+async function refreshRoles() {
+  const c = state.contract;
+  if (!c || !state.account) {
+    $("rolesKV").innerHTML = `<div class="k">connect wallet to read roles</div><div class="v">—</div>`;
+    return;
+  }
+  try {
+    const [adminR, minterR, oracleR, pauserR, treasR] = await Promise.all([
+      c.DEFAULT_ADMIN_ROLE(), c.MINTER_ROLE(), c.ORACLE_ROLE(), c.PAUSER_ROLE(), c.TREASURER_ROLE()
+    ]);
+    const checks = await Promise.all([
+      c.hasRole(adminR, state.account),
+      c.hasRole(minterR, state.account),
+      c.hasRole(oracleR, state.account),
+      c.hasRole(pauserR, state.account),
+      c.hasRole(treasR, state.account),
+    ]);
+    const labels = ["DEFAULT_ADMIN_ROLE", "MINTER_ROLE", "ORACLE_ROLE", "PAUSER_ROLE", "TREASURER_ROLE"];
+    let h = "";
+    labels.forEach((l, i) => {
+      const v = checks[i];
+      h += `<div class="k">${l}</div><div class="v ${v ? 'green' : 'red'}">${v ? '✓ granted' : '✗ not granted'}</div>`;
+    });
+    $("rolesKV").innerHTML = h;
+    $("mintRoleBadge").style.display = checks[1] ? "none" : "inline-block";
+  } catch (e) {
+    $("rolesKV").innerHTML = `<div class="k">error</div><div class="v red">${e.message}</div>`;
+  }
+}
+
+/* ───────── Wallet connect ───────── */
+$("connectBtn").addEventListener("click", async () => {
+  if (!window.ethereum) {
+    alert("No injected wallet found. Install MetaMask or use a Web3 browser.");
+    return;
+  }
+  state.browser = new BrowserProvider(window.ethereum);
+  const accounts = await state.browser.send("eth_requestAccounts", []);
+  state.account = getAddress(accounts[0]);
+  state.signer = await state.browser.getSigner();
+  const net = await state.browser.getNetwork();
+  state.chainId = Number(net.chainId);
+  $("addrPill").textContent = fmtAddr(state.account);
+  $("chainPill").textContent = `chain ${state.chainId}`;
+  $("chainPill").classList.toggle("warn", state.chainId !== 16602);
+  $("connectBtn").textContent = "Connected";
+  if (state.contract) {
+    state.contractW = state.contract.connect(state.signer);
+    await refreshRoles();
+    await subscribeEvents();
+  }
+  // Hot-reload on chain/account change
+  window.ethereum.on("accountsChanged",  () => location.reload());
+  window.ethereum.on("chainChanged",     () => location.reload());
+});
+
+/* ───────── Generic write helper ───────── */
+async function doWrite(label, resultEl, callPromise) {
+  showResult(resultEl, "submitting…");
+  try {
+    if (!state.contractW) throw new Error("connect wallet first");
+    const tx = await callPromise();
+    showResult(resultEl, `tx submitted: ${tx.hash}\nwaiting for confirmation…`);
+    const r = await tx.wait();
+    let body = `✓ ${label} confirmed\n  block:    ${r.blockNumber}\n  tx hash:  ${r.hash}\n  gas used: ${r.gasUsed}`;
+    showResult(resultEl, body);
+    await refreshContractInfo();
+    return r;
+  } catch (e) {
+    showResult(resultEl, `✗ ${label} failed: ${e.shortMessage || e.message}`, true);
+    throw e;
+  }
+}
+
+/* ───────── Mint ───────── */
+window.genSealedKeyHash = function () {
+  const k = hexlify(randomBytes(32));
+  const h = keccak256(k);
+  $("m_sealedHash").value = h;
+  addEvent("system", `generated demo key=${fmtHash(k)}, hash=${fmtHash(h)}`);
+};
+
+window.doMint = () => doWrite("mintAgent", "mintResult", async () => {
+  const args = [
+    getAddress($("m_to").value.trim()),
+    $("m_contentRoot").value.trim(),
+    $("m_storageURI").value.trim(),
+    $("m_metaRoot").value.trim() || "0x" + "0".repeat(64),
+    parseInt($("m_dimensions").value),
+    parseInt($("m_parallel").value),
+    $("m_sealedHash").value.trim(),
+    $("m_tokenURI").value.trim(),
+  ];
+  return state.contractW.mintAgent(...args);
+});
+
+/* ───────── Inspect ───────── */
+window.doInspect = async () => {
+  showResult("inspectResult", "loading…");
+  try {
+    const id = parseInt($("i_tokenId").value);
+    const c = state.contract;
+    const [exists, owner, payload, agentId, agentIdHash, ap, vault, vaultRef,
+           cc, parent, uri, royalty, nonce] = await Promise.all([
+      c.exists(id), c.ownerOf(id).catch(() => "—"), c.getPayload(id),
+      c.getAgentId(id), c.getAgentIdHash(id), c.agenticPlaceFor(id),
+      c.bankonVaultFor(id), c.bankonVaultRef(id), c.cloneCount(id),
+      c.clonedFrom(id), c.tokenURI(id).catch(() => ""),
+      c.royaltyInfo(id, BigInt($("i_salePrice").value)), c.oracleNonce(id)
+    ]);
+    const out =
+`tokenId            ${id}
+exists             ${exists}
+owner              ${owner}
+contentRoot        ${payload.contentRoot}
+storageURI         ${payload.storageURI}
+metadataRoot       ${payload.metadataRoot}
+dimensions         ${payload.dimensions}
+parallelUnits      ${payload.parallelUnits}
+mintedAt           ${payload.mintedAt} (${new Date(Number(payload.mintedAt)*1000).toISOString()})
+sealedKeyHash      ${payload.sealedKeyHash}
+verified           ${payload.verified}
+agentId            ${agentId || '(unbound)'}
+agentIdHash        ${agentIdHash}
+agenticPlaceFor    ${ap}
+bankonVaultFor     ${vault}
+bankonVaultRef     ${vaultRef}
+cloneCount         ${cc}
+clonedFrom         ${parent}
+tokenURI           ${uri}
+oracleNonce        ${nonce}
+royaltyReceiver    ${royalty[0]}
+royaltyAmount      ${royalty[1]} (on sale price ${$("i_salePrice").value})`;
+    showResult("inspectResult", out);
+  } catch (e) {
+    showResult("inspectResult", `error: ${e.shortMessage || e.message}`, true);
+  }
+};
+
+window.checkUsage = async () => {
+  try {
+    const id = parseInt($("ia_tokenId").value);
+    const ex = getAddress($("ia_executor").value.trim());
+    const [auth, grant] = await Promise.all([
+      state.contract.isUsageAuthorized(id, ex),
+      state.contract.getUsageGrant(id, ex),
+    ]);
+    const out =
+`tokenId        ${id}
+executor       ${ex}
+authorized     ${auth}
+permissions    ${grant.permissions}  (0b${grant.permissions.toString(2)})
+expiresAt      ${grant.expiresAt}  ${grant.expiresAt > 0n ? '('+new Date(Number(grant.expiresAt)*1000).toISOString()+')' : ''}
+grantor        ${grant.grantor}`;
+    showResult("usageResult", out, !auth);
+  } catch (e) {
+    showResult("usageResult", `error: ${e.shortMessage || e.message}`, true);
+  }
+};
+
+/* ───────── Transfer / Clone helpers ───────── */
+window.genSealedKey = function (id) {
+  $(id).value = hexlify(randomBytes(32));
+};
+
+async function getEip712Domain() {
+  if (state.domain) return state.domain;
+  const d = await state.contract.eip712Domain();
+  state.domain = {
+    name:              d[1],
+    version:           d[2],
+    chainId:           Number(d[3]),
+    verifyingContract: d[4],
+  };
+  return state.domain;
+}
+
+window.signOracleTransfer = async () => {
+  try {
+    const tokenId = BigInt($("t_tokenId").value);
+    const from    = getAddress($("t_from").value.trim());
+    const to      = getAddress($("t_to").value.trim());
+    const sealed  = $("t_sealedKey").value.trim();
+    const newHash = keccak256(sealed);
+    const root    = (await state.contract.getPayload(tokenId)).contentRoot;
+    const nonce   = await state.contract.oracleNonce(tokenId);
+    const dom = await getEip712Domain();
+    const types = {
+      SealedKeyHandoff: [
+        {name:"tokenId",type:"uint256"},{name:"from",type:"address"},{name:"to",type:"address"},
+        {name:"contentRoot",type:"bytes32"},{name:"newSealedKeyHash",type:"bytes32"},{name:"nonce",type:"uint256"}
+      ]
+    };
+    const value = { tokenId, from, to, contentRoot: root, newSealedKeyHash: newHash, nonce };
+    const w = new Wallet($("t_oraclePk").value.trim());
+    const sig = await w.signTypedData(dom, types, value);
+    $("t_proof").value = sig;
+    addEvent("system", `oracle signed sealed-key handoff: tokenId=${tokenId} sig=${fmtHash(sig)}`);
+  } catch (e) {
+    showResult("transferResult", `signing failed: ${e.message}`, true);
+  }
+};
+
+window.signOracleClone = async () => {
+  try {
+    const parentId = BigInt($("cl_tokenId").value);
+    const to       = getAddress($("cl_to").value.trim());
+    const sealed   = $("cl_sealedKey").value.trim();
+    const newHash  = keccak256(sealed);
+    const root     = (await state.contract.getPayload(parentId)).contentRoot;
+    const nonce    = await state.contract.oracleNonce(parentId);
+    const dom = await getEip712Domain();
+    const types = {
+      AgentClone: [
+        {name:"parentTokenId",type:"uint256"},{name:"to",type:"address"},
+        {name:"contentRoot",type:"bytes32"},{name:"newSealedKeyHash",type:"bytes32"},{name:"nonce",type:"uint256"}
+      ]
+    };
+    const value = { parentTokenId: parentId, to, contentRoot: root, newSealedKeyHash: newHash, nonce };
+    const w = new Wallet($("cl_oraclePk").value.trim());
+    const sig = await w.signTypedData(dom, types, value);
+    $("cl_proof").value = sig;
+    addEvent("system", `oracle signed clone: parent=${parentId} sig=${fmtHash(sig)}`);
+  } catch (e) {
+    showResult("cloneResult", `signing failed: ${e.message}`, true);
+  }
+};
+
+window.doTransfer = () => doWrite("transferWithSealedKey", "transferResult", async () =>
+  state.contractW.transferWithSealedKey(
+    getAddress($("t_from").value.trim()),
+    getAddress($("t_to").value.trim()),
+    BigInt($("t_tokenId").value),
+    $("t_sealedKey").value.trim(),
+    $("t_proof").value.trim(),
+  )
+);
+
+window.doClone = () => doWrite("cloneAgent", "cloneResult", async () =>
+  state.contractW.cloneAgent(
+    BigInt($("cl_tokenId").value),
+    getAddress($("cl_to").value.trim()),
+    $("cl_sealedKey").value.trim(),
+    $("cl_proof").value.trim(),
+    { value: BigInt($("cl_value").value || 0) }
+  )
+);
+
+/* ───────── Authorize / Revoke ───────── */
+window.setExpiryDays = function (days) {
+  const t = Math.floor(Date.now()/1000) + days*86400;
+  $("au_expiry").value = t;
+  $("au_expiry_hint").textContent = `= ${new Date(t*1000).toISOString()}`;
+};
+
+window.doAuthorize = () => doWrite("authorizeUsage", "authorizeResult", async () =>
+  state.contractW.authorizeUsage(
+    BigInt($("au_tokenId").value),
+    getAddress($("au_executor").value.trim()),
+    BigInt($("au_permissions").value),
+    BigInt($("au_expiry").value),
+  )
+);
+
+window.doRevoke = () => doWrite("revokeUsage", "revokeResult", async () =>
+  state.contractW.revokeUsage(
+    BigInt($("rv_tokenId").value),
+    getAddress($("rv_executor").value.trim()),
+  )
+);
+
+/* ───────── Burn ───────── */
+window.doBurn = () => doWrite("burn", "burnResult", async () =>
+  state.contractW.burn(BigInt($("bn_tokenId").value))
+);
+
+/* ───────── Bind ───────── */
+window.doBindAgentId = () => doWrite("bindAgentId", "agentIdResult", async () =>
+  state.contractW.bindAgentId(BigInt($("ai_tokenId").value), $("ai_agentId").value.trim())
+);
+
+window.genVaultRef = function () {
+  const a = $("ai_agentId").value.trim() || "agent-default";
+  $("bv_ref").value = kid(`bankon-vault-ref:${a}`);
+};
+
+window.doOfferAP = () => doWrite("offerOnAgenticPlace", "apResult", async () =>
+  state.contractW.offerOnAgenticPlace(
+    BigInt($("ap_tokenId").value),
+    getAddress($("ap_marketplace").value.trim()),
+    BigInt($("ap_price").value),
+    $("ap_isETH").value === "true",
+    $("ap_paymentToken").value.trim() ? getAddress($("ap_paymentToken").value.trim()) : ZeroAddress,
+  )
+);
+
+window.doBindVault = () => doWrite("bindBankonVault", "vaultResult", async () =>
+  state.contractW.bindBankonVault(
+    BigInt($("bv_tokenId").value),
+    getAddress($("bv_vault").value.trim()),
+    $("bv_ref").value.trim(),
+  )
+);
+
+/* ───────── Admin ───────── */
+window.doPause   = () => doWrite("pause",   "pauseResult", async () => state.contractW.pause());
+window.doUnpause = () => doWrite("unpause", "pauseResult", async () => state.contractW.unpause());
+
+async function getRoleId(name) {
+  if (name === "DEFAULT_ADMIN_ROLE") return await state.contract.DEFAULT_ADMIN_ROLE();
+  return await state.contract[name]();
+}
+
+window.doGrantRole = async () => {
+  try {
+    const role = await getRoleId($("rl_role").value);
+    await doWrite("grantRole", "roleResult", () =>
+      state.contractW.grantRole(role, getAddress($("rl_account").value.trim()))
+    );
+  } catch (e) { /* result already shown */ }
+};
+window.doRevokeRole = async () => {
+  try {
+    const role = await getRoleId($("rl_role").value);
+    await doWrite("revokeRole", "roleResult", () =>
+      state.contractW.revokeRole(role, getAddress($("rl_account").value.trim()))
+    );
+  } catch (e) { /* result already shown */ }
+};
+
+window.doSetOracle   = () => doWrite("setOracle",   "oracleResult",   async () =>
+  state.contractW.setOracle(getAddress($("ad_oracle").value.trim()))
+);
+window.doSetTreasury = () => doWrite("setTreasury", "treasuryResult", async () =>
+  state.contractW.setTreasury(getAddress($("ad_treasury").value.trim()))
+);
+window.doSetCloneFee = () => doWrite("setCloneFee", "treasuryResult", async () =>
+  state.contractW.setCloneFee(BigInt($("ad_cloneFee").value))
+);
+window.doSetRoyalty = () => doWrite("setRoyalty", "royaltyResult", async () => {
+  const id = parseInt($("rt_tokenId").value);
+  const rcv = getAddress($("rt_receiver").value.trim());
+  const bps = parseInt($("rt_bps").value);
+  if (id === 0) return state.contractW.setDefaultRoyalty(rcv, bps);
+  return state.contractW.setTokenRoyalty(BigInt(id), rcv, bps);
+});
+window.doSweep = () => doWrite("sweepEth", "sweepResult", async () =>
+  state.contractW.sweepEth(BigInt($("ad_sweepAmt").value))
+);
+
+/* ───────── Event log ───────── */
+function addEvent(name, body) {
+  state.events.unshift({ name, body, ts: Date.now() });
+  if (state.events.length > 50) state.events.pop();
+  renderEvents();
+}
+function renderEvents() {
+  const el = $("eventList");
+  if (state.events.length === 0) {
+    el.innerHTML = `<div class="empty">no events yet — submit a tx or refresh</div>`;
+    return;
+  }
+  el.innerHTML = state.events.map(e =>
+    `<div class="event"><span class="name">${e.name}</span><span class="args">${e.body}</span></div>`
+  ).join("");
+}
+window.clearEvents = function () { state.events = []; renderEvents(); };
+
+async function subscribeEvents() {
+  const c = state.contract;
+  if (!c) return;
+  c.removeAllListeners();
+  $("liveDot").classList.remove("off");
+
+  c.on("AgentMinted",        (id, root, dims, owner) => addEvent("AgentMinted",        `tokenId=${id} root=${fmtHash(root)} dims=${dims} owner=${fmtAddr(owner)}`));
+  c.on("MetadataUpdated",    (id, root, uri)         => addEvent("MetadataUpdated",    `tokenId=${id} root=${fmtHash(root)} uri=${uri}`));
+  c.on("SealedKeyRotated",   (id, owner, h)          => addEvent("SealedKeyRotated",   `tokenId=${id} newOwner=${fmtAddr(owner)} hash=${fmtHash(h)}`));
+  c.on("UsageAuthorized",    (id, ex, p, exp, by)    => addEvent("UsageAuthorized",    `tokenId=${id} executor=${fmtAddr(ex)} perms=${p} exp=${exp} by=${fmtAddr(by)}`));
+  c.on("UsageRevoked",       (id, ex, by)            => addEvent("UsageRevoked",       `tokenId=${id} executor=${fmtAddr(ex)} by=${fmtAddr(by)}`));
+  c.on("AgentCloned",        (parent, child, by)     => addEvent("AgentCloned",        `parent=${parent} child=${child} cloner=${fmtAddr(by)}`));
+  c.on("AgentBurned",        (id, by)                => addEvent("AgentBurned",        `tokenId=${id} burner=${fmtAddr(by)}`));
+  c.on("OracleUpdated",      (oldO, newO)            => addEvent("OracleUpdated",      `${fmtAddr(oldO)} → ${fmtAddr(newO)}`));
+  c.on("AgentIdBound",       (id, h, agentId)        => addEvent("AgentIdBound",       `tokenId=${id} agentId="${agentId}" hash=${fmtHash(h)}`));
+  c.on("AgenticPlaceListed", (id, mp, p, isE, t)     => addEvent("AgenticPlaceListed", `tokenId=${id} mp=${fmtAddr(mp)} price=${p} ${isE?'ETH':'token='+fmtAddr(t)}`));
+  c.on("BankonVaultBound",   (id, v, ref)            => addEvent("BankonVaultBound",   `tokenId=${id} vault=${fmtAddr(v)} ref=${fmtHash(ref)}`));
+  c.on("CloneFeeUpdated",    (oldF, newF)            => addEvent("CloneFeeUpdated",    `${formatEther(oldF)} → ${formatEther(newF)} ETH`));
+  c.on("TreasuryUpdated",    (oldT, newT)            => addEvent("TreasuryUpdated",    `${fmtAddr(oldT)} → ${fmtAddr(newT)}`));
+  c.on("Paused",             (by)                    => addEvent("Paused",             `by ${fmtAddr(by)}`));
+  c.on("Unpaused",           (by)                    => addEvent("Unpaused",           `by ${fmtAddr(by)}`));
+
+  addEvent("system", `subscribed to all events on ${fmtAddr(c.target)}`);
+}
+
+/* ───────── Auto-load on first paint ───────── */
+loadDeployments().catch(() => {});
+</script>
+</body>
+</html>
