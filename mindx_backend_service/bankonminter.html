@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BANKON Minter — &lt;label&gt;.bankon.eth</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#060810;--surface:rgba(14,16,28,.92);--surface2:rgba(20,22,36,.92);--accent:#56d364;--accent-dim:rgba(86,211,100,.06);--ens-blue:#5298FF;--warn:#e3b341;--err:#f85149;--blue:#79c0ff;--violet:#d2a8ff;--text:#e6edf3;--text2:#b1bac4;--text3:#6e7681;--white:#f0f6fc;--border:rgba(121,192,255,.1);--glass-border:rgba(121,192,255,.08)}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% -10%,rgba(82,152,255,.05) 0%,transparent 50%);pointer-events:none;z-index:0}
+.page{position:relative;z-index:1;min-height:100vh;padding:20px 20px 40px;max-width:1100px;margin:0 auto}
+.hdr{text-align:center;margin-bottom:24px}
+.hdr h1{font-family:'Orbitron',sans-serif;font-size:clamp(22px,3.5vw,32px);font-weight:700;color:var(--white);letter-spacing:8px;text-transform:uppercase}
+.hdr .sub{font-size:12px;color:var(--text2);letter-spacing:3px;margin-top:10px;padding-bottom:16px;border-bottom:1px solid var(--glass-border)}
+.status-bar{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+.badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 12px;border:1px solid var(--border);border-radius:3px;color:var(--text2)}
+.badge.ok{color:var(--accent);border-color:rgba(86,211,100,.3)}
+.badge.ens{color:var(--ens-blue);border-color:rgba(82,152,255,.4)}
+.badge.warn{color:var(--warn);border-color:rgba(227,179,65,.3)}
+.badge.err{color:var(--err);border-color:rgba(248,81,73,.3)}
+.panel{background:var(--surface);border:1px solid var(--glass-border);border-radius:6px;padding:22px;margin:14px 0}
+.panel h2{font-family:'Orbitron',sans-serif;font-size:14px;color:var(--white);letter-spacing:4px;text-transform:uppercase;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--glass-border)}
+.panel .desc{font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.5}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.row.column{flex-direction:column;align-items:stretch}
+label.field{font-size:11px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;display:block;margin-bottom:4px;font-family:'JetBrains Mono',monospace}
+input,select,textarea,button{background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px 10px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ens-blue)}
+input,select,textarea{width:100%}
+textarea{resize:vertical;min-height:60px}
+button{cursor:pointer;background:var(--accent-dim);border-color:var(--accent);color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;padding:8px 16px;width:auto}
+button:hover:not(:disabled){background:var(--accent);color:#000}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.ens{background:rgba(82,152,255,.1);border-color:var(--ens-blue);color:var(--ens-blue)}
+button.ens:hover:not(:disabled){background:var(--ens-blue);color:#fff}
+button.warn{background:rgba(227,179,65,.08);border-color:var(--warn);color:var(--warn)}
+button.warn:hover:not(:disabled){background:var(--warn);color:#000}
+.kv{display:grid;grid-template-columns:200px 1fr;gap:8px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;margin:6px 0}
+.kv .k{color:var(--text3)}.kv .v{color:var(--text);word-break:break-all}
+.muted{color:var(--text3);font-size:11px}
+.kbd{font-family:'JetBrains Mono',monospace;background:var(--surface2);padding:2px 6px;border-radius:2px;border:1px solid var(--border);font-size:11px}
+.log{background:#020308;border:1px solid var(--glass-border);border-radius:4px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);max-height:280px;overflow-y:auto;line-height:1.6}
+.log .line{margin:2px 0}
+.log .ok{color:var(--accent)}.log .warn{color:var(--warn)}.log .err{color:var(--err)}
+.log .ts{color:var(--text3);margin-right:8px}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--glass-border);margin-bottom:18px}
+.tab{padding:10px 20px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text3);cursor:pointer;letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid transparent;background:transparent;border-radius:0;border-left:none;border-right:none;border-top:none}
+.tab.active{color:var(--ens-blue);border-bottom-color:var(--ens-blue)}
+.tab:hover:not(.active){color:var(--text2)}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:768px){.grid2{grid-template-columns:1fr}}
+.preview{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--ens-blue);padding:14px;border-radius:3px;margin:10px 0}
+.preview .label{font-family:'Orbitron',sans-serif;font-size:18px;color:var(--ens-blue);font-weight:600;word-break:break-all}
+.preview .meta{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:6px}
+.role-status{padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--text3);font-family:'JetBrains Mono',monospace;font-size:12px;border-radius:3px;margin:8px 0}
+.role-status.ok{border-left-color:var(--accent);color:var(--accent)}
+.role-status.err{border-left-color:var(--err);color:var(--err)}
+.role-status.warn{border-left-color:var(--warn);color:var(--warn)}
+.error-box{background:rgba(248,81,73,.06);border:1px solid var(--err);border-left:3px solid var(--err);padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--err);border-radius:3px;margin:8px 0;display:none}
+.error-box.shown{display:block}
+.tx-link{color:var(--ens-blue);text-decoration:none;border-bottom:1px dashed var(--ens-blue)}
+.tx-link:hover{border-bottom-style:solid}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hdr">
+    <h1>BANKON MINTER</h1>
+    <div class="sub">DIRECT REGISTRAR INTERACTION — &lt;LABEL&gt;.BANKON.ETH</div>
+  </div>
+
+  <div class="status-bar">
+    <span class="badge" id="badge-network">NETWORK: ?</span>
+    <span class="badge" id="badge-wallet">WALLET: not connected</span>
+    <span class="badge" id="badge-registrar">REGISTRAR: not loaded</span>
+    <span class="badge" id="badge-role">ROLE: unknown</span>
+  </div>
+
+  <div class="panel">
+    <h2>1 · Network &amp; Registrar</h2>
+    <div class="desc">
+      Pick the chain you deployed BANKON v1 to, then load the registrar address.
+      Auto-load reads from <span class="kbd">/openagents/deployments/&lt;network&gt;.json</span>
+      (written by <span class="kbd">deploy_eth_bankon.sh</span>). You can also paste an address manually.
+    </div>
+    <div class="grid2">
+      <div>
+        <label class="field">Network</label>
+        <select id="network">
+          <option value="sepolia">Sepolia (chain 11155111)</option>
+          <option value="ethereum_mainnet">Ethereum mainnet (chain 1)</option>
+          <option value="anvil">Anvil local (chain 31337)</option>
+          <option value="custom">Custom RPC</option>
+        </select>
+      </div>
+      <div>
+        <label class="field">RPC URL <span class="muted">(read-only fallback if wallet missing)</span></label>
+        <input id="rpc-url" placeholder="https://sepolia.drpc.org">
+      </div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <label class="field" style="flex:1">Registrar address
+        <input id="registrar-addr" placeholder="0x… (paste deployed address or click Auto-load)">
+      </label>
+    </div>
+    <div class="row">
+      <button class="ens" id="btn-autoload">Auto-load from deployments JSON</button>
+      <button id="btn-load-registrar">Load registrar</button>
+      <span class="muted" id="registrar-msg"></span>
+    </div>
+    <div class="kv" id="registrar-kv"></div>
+  </div>
+
+  <div class="panel">
+    <h2>2 · Connect Wallet</h2>
+    <div class="desc">
+      Connect MetaMask. The connected address is the <em>caller</em> of the registrar — for the
+      free agent mint it must hold <span class="kbd">MINDX_AGENT_MINTER_ROLE</span>; for the free
+      reputation mint the <em>owner</em> address (who receives the subname) must pass the gate.
+    </div>
+    <div class="row">
+      <button id="btn-connect">Connect MetaMask</button>
+      <span class="muted" id="conn-msg"></span>
+    </div>
+    <div class="kv" id="wallet-kv"></div>
+    <div id="role-status" class="role-status">role check pending — load registrar + connect wallet first</div>
+  </div>
+
+  <div class="panel">
+    <h2>3 · Mint subname</h2>
+    <div class="tabs">
+      <button class="tab active" data-tab="agent">Free Agent (role-gated)</button>
+      <button class="tab" data-tab="reputation">Free Reputation (7+ char)</button>
+      <button class="tab" data-tab="quote">Read / Quote</button>
+    </div>
+
+    <div class="tab-pane active" id="tab-agent">
+      <div class="desc">
+        <strong>registerAgentSubname(agent, expiry, meta)</strong> — free, role-gated path. The
+        label is computed as the lowercase 40-char hex of <span class="kbd">agent</span> (no 0x prefix).
+        Caller must hold <span class="kbd">MINDX_AGENT_MINTER_ROLE</span>. Used by the mindX agent
+        mint service.
+      </div>
+      <div class="row column">
+        <div>
+          <label class="field">Agent wallet address</label>
+          <input id="a-agent" placeholder="0x… mindX agent receiving the subname">
+        </div>
+        <div>
+          <label class="field">Expiry days (will cap at parent expiry)</label>
+          <input id="a-days" type="number" value="365" min="1">
+        </div>
+        <div class="grid2">
+          <div>
+            <label class="field">agentURI <span class="muted">(ipfs:// or https://)</span></label>
+            <input id="a-uri" placeholder="ipfs://Qm… or https://…/agent.json">
+          </div>
+          <div>
+            <label class="field">mindxEndpoint</label>
+            <input id="a-mindx" placeholder="https://mindx.pythai.net/agent/<id>">
+          </div>
+        </div>
+        <div class="grid2">
+          <div>
+            <label class="field">x402Endpoint <span class="muted">(optional)</span></label>
+            <input id="a-x402" placeholder="https://…/p2p/keeperhub">
+          </div>
+          <div>
+            <label class="field">baseAddress <span class="muted">(L2 settlement, optional)</span></label>
+            <input id="a-base" placeholder="0x… or empty">
+          </div>
+        </div>
+        <div>
+          <label class="field">algoIDNftDID <span class="muted">(optional)</span></label>
+          <input id="a-algo-did" placeholder="did:algo:…">
+        </div>
+        <div>
+          <label class="field">contenthash <span class="muted">(0x-hex bytes, optional)</span></label>
+          <input id="a-contenthash" placeholder="0x… or empty">
+        </div>
+      </div>
+      <div class="preview" id="a-preview" style="display:none">
+        <div class="label" id="a-preview-label">…</div>
+        <div class="meta" id="a-preview-meta"></div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button id="btn-preview-agent">Preview label</button>
+        <button class="ens" id="btn-mint-agent" disabled>Mint agent subname</button>
+        <span class="muted" id="a-msg"></span>
+      </div>
+      <div class="error-box" id="a-error"></div>
+    </div>
+
+    <div class="tab-pane" id="tab-reputation">
+      <div class="desc">
+        <strong>registerFree(label, owner, expiry, meta)</strong> — free path, requires the
+        <em>owner</em> to be reputation-eligible per <span class="kbd">BankonReputationGate.isEligibleForFree</span>.
+        Label must be 7+ characters. Anyone may call (the gate is on the owner, not the caller).
+      </div>
+      <div class="row column">
+        <div>
+          <label class="field">Label <span class="muted">(7+ chars, [a-z0-9-])</span></label>
+          <input id="r-label" placeholder="e.g. mindx-cfo">
+        </div>
+        <div>
+          <label class="field">Owner address (receives subname)</label>
+          <input id="r-owner" placeholder="0x…">
+        </div>
+        <div>
+          <label class="field">Expiry days</label>
+          <input id="r-days" type="number" value="365" min="1">
+        </div>
+        <div class="grid2">
+          <div>
+            <label class="field">agentURI</label>
+            <input id="r-uri" placeholder="ipfs://Qm…">
+          </div>
+          <div>
+            <label class="field">mindxEndpoint</label>
+            <input id="r-mindx" placeholder="https://…">
+          </div>
+        </div>
+        <div class="grid2">
+          <div>
+            <label class="field">x402Endpoint</label>
+            <input id="r-x402" placeholder="https://…">
+          </div>
+          <div>
+            <label class="field">baseAddress</label>
+            <input id="r-base" placeholder="0x…">
+          </div>
+        </div>
+      </div>
+      <div class="preview" id="r-preview" style="display:none">
+        <div class="label" id="r-preview-label">…</div>
+        <div class="meta" id="r-preview-meta"></div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button id="btn-preview-rep">Preview label</button>
+        <button class="ens" id="btn-mint-rep" disabled>Mint reputation subname</button>
+        <span class="muted" id="r-msg"></span>
+      </div>
+      <div class="error-box" id="r-error"></div>
+    </div>
+
+    <div class="tab-pane" id="tab-quote">
+      <div class="desc">
+        Read calls — quote price (paid path), check ownership, view roles.
+      </div>
+      <div class="grid2">
+        <div>
+          <label class="field">Quote label</label>
+          <input id="q-label" placeholder="e.g. mindx-cfo">
+        </div>
+        <div>
+          <label class="field">Years</label>
+          <input id="q-years" type="number" value="1" min="1">
+        </div>
+      </div>
+      <div class="row">
+        <button id="btn-quote">Quote USD price</button>
+        <button id="btn-check-role">Check my role</button>
+        <button id="btn-paused">Check paused()</button>
+      </div>
+      <div class="kv" id="q-kv"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>4 · Activity Log</h2>
+    <div class="log" id="log"><div class="line muted">waiting…</div></div>
+  </div>
+
+  <div class="muted" style="text-align:center;margin-top:30px;font-size:10px;letter-spacing:2px">
+    BANKON MINTER · BankonSubnameRegistrar v1 · ETHGlobal Open Agents
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.0/dist/ethers.umd.min.js"></script>
+<script>
+// ─── DOM helpers ────────────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+const log = (m, c='') => {
+  const d=document.createElement('div'); d.className='line '+c;
+  d.innerHTML=`<span class="ts">${new Date().toISOString().split('T')[1].slice(0,8)}</span>${m}`;
+  const l=$('log'); if(l.firstChild?.classList?.contains('muted')) l.innerHTML='';
+  l.insertBefore(d, l.firstChild);
+};
+const setBadge = (id, t, c='') => { const e=$(id); e.textContent=t; e.className='badge'+(c?' '+c:''); };
+const showError = (id, msg) => { const e=$(id); e.textContent=msg; e.classList.add('shown'); };
+const clearError = (id) => { const e=$(id); e.textContent=''; e.classList.remove('shown'); };
+
+// ─── ABI — minimal subset of BankonSubnameRegistrar ──────────────────
+// Mirrors daio/contracts/ens/v1/BankonSubnameRegistrar.sol
+const META_TUPLE = "tuple(string agentURI,string mindxEndpoint,string x402Endpoint,string algoIDNftDID,bytes contenthash,address baseAddress,bytes algoAddr)";
+
+const REGISTRAR_ABI = [
+  // Mint paths
+  `function registerAgentSubname(address agent, uint64 expiry, ${META_TUPLE} meta) external returns (bytes32 node, uint256 agentId, string label)`,
+  `function registerFree(string label, address owner, uint64 expiry, ${META_TUPLE} meta) external returns (bytes32 node, uint256 agentId)`,
+  // Reads
+  "function MINDX_AGENT_MINTER_ROLE() view returns (bytes32)",
+  "function GATEWAY_SIGNER_ROLE() view returns (bytes32)",
+  "function BONAFIDE_GOV_ROLE() view returns (bytes32)",
+  "function hasRole(bytes32 role, address account) view returns (bool)",
+  "function paused() view returns (bool)",
+  "function parentNode() view returns (bytes32)",
+  "function quoteUSD(string label, uint64 expiry) view returns (uint256)",
+  "function nameWrapper() view returns (address)",
+  "function priceOracle() view returns (address)",
+  "function reputationGate() view returns (address)",
+  "function erc8004BundleEnabled() view returns (bool)",
+  // Events
+  "event SubnameRegistered(bytes32 indexed node, string label, address indexed owner, uint64 expiry, uint256 priceUSD6, bytes32 receiptHash, uint256 agentId, bool free)",
+];
+
+// ─── State ──────────────────────────────────────────────────────────
+const NETWORK_DEFAULTS = {
+  sepolia:          { chainId: 11155111, rpc: "https://sepolia.drpc.org",   explorer: "https://sepolia.etherscan.io" },
+  ethereum_mainnet: { chainId: 1,        rpc: "https://eth.drpc.org",       explorer: "https://etherscan.io" },
+  anvil:            { chainId: 31337,    rpc: "http://127.0.0.1:8545",      explorer: null },
+  custom:           { chainId: null,     rpc: "",                            explorer: null },
+};
+
+let walletProvider = null;     // ethers.BrowserProvider — for sending tx
+let walletSigner = null;
+let readProvider = null;       // ethers.JsonRpcProvider — for reads even without wallet
+let registrarAddr = null;
+let registrarRead = null;      // contract instance bound to readProvider
+let registrarWrite = null;     // contract instance bound to walletSigner
+let connectedAddr = null;
+let networkInfo = null;        // {chainId, rpc, explorer}
+
+// ─── Network select ─────────────────────────────────────────────────
+$('network').onchange = () => {
+  const net = $('network').value;
+  const d = NETWORK_DEFAULTS[net];
+  $('rpc-url').value = d.rpc;
+  networkInfo = { ...d, name: net };
+  setBadge('badge-network', `NETWORK: ${net}`, 'ens');
+  // re-init readProvider
+  if (d.rpc) {
+    try { readProvider = new ethers.JsonRpcProvider(d.rpc); } catch(_) { readProvider = null; }
+  } else { readProvider = null; }
+};
+$('network').dispatchEvent(new Event('change'));
+
+// ─── Auto-load registrar address from deployments JSON ──────────────
+$('btn-autoload').onclick = async () => {
+  const net = $('network').value;
+  if (net === 'custom' || net === 'anvil') {
+    log(`auto-load not available for ${net} — paste address manually`, 'warn');
+    return;
+  }
+  const url = `/openagents/deployments/${net}.json`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
+    const data = await res.json();
+    const addr = data?.contracts?.BankonSubnameRegistrar;
+    if (!addr) throw new Error("BankonSubnameRegistrar not in deployments JSON");
+    $('registrar-addr').value = addr;
+    log(`auto-loaded registrar ${addr} from ${url}`, 'ok');
+    $('registrar-msg').textContent = `loaded from ${url}`;
+    await loadRegistrar();
+  } catch (e) {
+    log(`auto-load failed: ${e.message}`, 'err');
+    $('registrar-msg').textContent = `auto-load failed — paste manually`;
+  }
+};
+
+// ─── Load registrar (read-only contract instance) ───────────────────
+async function loadRegistrar() {
+  const addr = $('registrar-addr').value.trim();
+  if (!addr || !ethers.isAddress(addr)) {
+    log('invalid registrar address', 'err');
+    return;
+  }
+  registrarAddr = ethers.getAddress(addr);
+  // Re-init read provider with current rpc-url field
+  const rpc = $('rpc-url').value.trim();
+  if (rpc) {
+    try { readProvider = new ethers.JsonRpcProvider(rpc); } catch(e) { readProvider = null; }
+  }
+  if (!readProvider) {
+    log('no read provider — set RPC URL first', 'warn');
+    return;
+  }
+  registrarRead = new ethers.Contract(registrarAddr, REGISTRAR_ABI, readProvider);
+  try {
+    const code = await readProvider.getCode(registrarAddr);
+    if (code === "0x") throw new Error("no contract at this address");
+    const [parentNode, paused, oracle, gate, wrapper, bundleEnabled] = await Promise.all([
+      registrarRead.parentNode(),
+      registrarRead.paused(),
+      registrarRead.priceOracle(),
+      registrarRead.reputationGate(),
+      registrarRead.nameWrapper(),
+      registrarRead.erc8004BundleEnabled(),
+    ]);
+    $('registrar-kv').innerHTML = `
+      <div class="k">address</div><div class="v">${registrarAddr}</div>
+      <div class="k">parentNode</div><div class="v">${parentNode}</div>
+      <div class="k">paused</div><div class="v">${paused}</div>
+      <div class="k">priceOracle</div><div class="v">${oracle}</div>
+      <div class="k">reputationGate</div><div class="v">${gate}</div>
+      <div class="k">nameWrapper</div><div class="v">${wrapper}</div>
+      <div class="k">erc8004BundleEnabled</div><div class="v">${bundleEnabled}</div>
+    `;
+    setBadge('badge-registrar', `REGISTRAR: ${registrarAddr.slice(0,6)}…${registrarAddr.slice(-4)}`, paused ? 'warn' : 'ens');
+    log(`registrar loaded (paused=${paused}, bundle=${bundleEnabled})`, 'ok');
+    if (walletSigner) await rebindRegistrarWrite();
+    await refreshRoleStatus();
+    enableMintButtons();
+  } catch (e) {
+    log(`load registrar failed: ${e.message}`, 'err');
+    setBadge('badge-registrar', 'REGISTRAR: load failed', 'err');
+  }
+}
+$('btn-load-registrar').onclick = loadRegistrar;
+
+// ─── Connect wallet ─────────────────────────────────────────────────
+$('btn-connect').onclick = async () => {
+  if (!window.ethereum) { log('MetaMask not detected', 'err'); return; }
+  try {
+    walletProvider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await window.ethereum.request({method: 'eth_requestAccounts'});
+    connectedAddr = ethers.getAddress(accounts[0]);
+    walletSigner = await walletProvider.getSigner();
+    const network = await walletProvider.getNetwork();
+    setBadge('badge-wallet', `WALLET: ${connectedAddr.slice(0,6)}…${connectedAddr.slice(-4)}`, 'ok');
+    setBadge('badge-network', `NETWORK: chain ${network.chainId}`, 'ens');
+    const ethBal = await walletProvider.getBalance(connectedAddr);
+    $('wallet-kv').innerHTML = `
+      <div class="k">address</div><div class="v">${connectedAddr}</div>
+      <div class="k">balance</div><div class="v">${ethers.formatEther(ethBal)} ETH</div>
+      <div class="k">chain id</div><div class="v">${network.chainId}</div>
+    `;
+    log(`connected ${connectedAddr} on chain ${network.chainId}`, 'ok');
+    if (registrarAddr) await rebindRegistrarWrite();
+    await refreshRoleStatus();
+    enableMintButtons();
+    window.ethereum.on('accountsChanged', () => location.reload());
+    window.ethereum.on('chainChanged', () => location.reload());
+  } catch (e) {
+    log(`connect failed: ${e.message}`, 'err');
+  }
+};
+
+async function rebindRegistrarWrite() {
+  if (!registrarAddr || !walletSigner) return;
+  registrarWrite = new ethers.Contract(registrarAddr, REGISTRAR_ABI, walletSigner);
+}
+
+// ─── Role status ────────────────────────────────────────────────────
+async function refreshRoleStatus() {
+  const el = $('role-status');
+  if (!registrarRead || !connectedAddr) {
+    el.textContent = 'role check pending — load registrar + connect wallet';
+    el.className = 'role-status';
+    setBadge('badge-role', 'ROLE: ?');
+    return;
+  }
+  try {
+    const role = await registrarRead.MINDX_AGENT_MINTER_ROLE();
+    const has = await registrarRead.hasRole(role, connectedAddr);
+    if (has) {
+      el.textContent = `✓ ${connectedAddr.slice(0,8)}…${connectedAddr.slice(-6)} HOLDS MINDX_AGENT_MINTER_ROLE — free agent mint enabled`;
+      el.className = 'role-status ok';
+      setBadge('badge-role', 'ROLE: MINTER ✓', 'ok');
+    } else {
+      el.textContent = `✗ ${connectedAddr.slice(0,8)}…${connectedAddr.slice(-6)} does NOT hold MINDX_AGENT_MINTER_ROLE — free agent mint will revert`;
+      el.className = 'role-status warn';
+      setBadge('badge-role', 'ROLE: no minter', 'warn');
+    }
+  } catch (e) {
+    el.textContent = `role check failed: ${e.message}`;
+    el.className = 'role-status err';
+  }
+}
+
+function enableMintButtons() {
+  const ready = registrarWrite && connectedAddr;
+  $('btn-mint-agent').disabled = !ready;
+  $('btn-mint-rep').disabled = !ready;
+}
+
+// ─── Tabs ───────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    $('tab-' + t.dataset.tab).classList.add('active');
+  };
+});
+
+// ─── Helpers ────────────────────────────────────────────────────────
+function buildMeta(prefix) {
+  // Prefix is "a-" or "r-" matching DOM id namespacing
+  const baseAddrRaw = $(prefix + 'base').value.trim();
+  const baseAddr = baseAddrRaw && ethers.isAddress(baseAddrRaw)
+    ? ethers.getAddress(baseAddrRaw)
+    : "0x0000000000000000000000000000000000000000";
+  let contenthash = "0x";
+  if (prefix === 'a-') {
+    const ch = $('a-contenthash').value.trim();
+    if (ch.startsWith('0x') && ch.length > 2) contenthash = ch;
+  }
+  return {
+    agentURI:      $(prefix + 'uri').value.trim(),
+    mindxEndpoint: $(prefix + 'mindx').value.trim(),
+    x402Endpoint:  $(prefix + 'x402').value.trim(),
+    algoIDNftDID:  prefix === 'a-' ? $('a-algo-did').value.trim() : "",
+    contenthash:   contenthash,
+    baseAddress:   baseAddr,
+    algoAddr:      "0x",
+  };
+}
+
+function metaTuple(m) {
+  return [m.agentURI, m.mindxEndpoint, m.x402Endpoint, m.algoIDNftDID, m.contenthash, m.baseAddress, m.algoAddr];
+}
+
+function expiryFromDays(days) {
+  const now = Math.floor(Date.now() / 1000);
+  return BigInt(now + Math.floor(days * 86400));
+}
+
+function txLink(hash) {
+  if (!networkInfo?.explorer) return hash;
+  return `<a class="tx-link" href="${networkInfo.explorer}/tx/${hash}" target="_blank">${hash.slice(0,12)}…${hash.slice(-8)}</a>`;
+}
+
+// ─── Tab: Free Agent (registerAgentSubname) ─────────────────────────
+function previewAgent() {
+  clearError('a-error');
+  const agent = $('a-agent').value.trim();
+  if (!ethers.isAddress(agent)) { showError('a-error', 'invalid agent address'); return null; }
+  const norm = ethers.getAddress(agent);
+  const label = norm.slice(2).toLowerCase();   // 40-char hex no 0x
+  const subname = `${label}.bankon.eth`;
+  $('a-preview-label').textContent = subname;
+  $('a-preview-meta').textContent = `agent ${norm} → label ${label} (${label.length} chars)`;
+  $('a-preview').style.display = 'block';
+  return { agent: norm, label, subname };
+}
+$('btn-preview-agent').onclick = previewAgent;
+
+$('btn-mint-agent').onclick = async () => {
+  clearError('a-error');
+  if (!registrarWrite) { showError('a-error', 'load registrar + connect wallet first'); return; }
+  const p = previewAgent();
+  if (!p) return;
+  const days = parseInt($('a-days').value, 10);
+  if (!days || days < 1) { showError('a-error', 'invalid expiry days'); return; }
+  const expiry = expiryFromDays(days);
+  const meta = buildMeta('a-');
+
+  // Pre-flight role check
+  try {
+    const role = await registrarRead.MINDX_AGENT_MINTER_ROLE();
+    const has = await registrarRead.hasRole(role, connectedAddr);
+    if (!has) {
+      showError('a-error', `your wallet does not hold MINDX_AGENT_MINTER_ROLE — tx will revert. Have the registrar admin grant the role first.`);
+      return;
+    }
+  } catch (e) { /* fall through, let chain decide */ }
+
+  $('btn-mint-agent').disabled = true;
+  $('a-msg').textContent = 'sending tx…';
+  try {
+    log(`registerAgentSubname(${p.agent}, expiry=${expiry}, meta=…)`);
+    const tx = await registrarWrite.registerAgentSubname(p.agent, expiry, metaTuple(meta));
+    log(`tx sent: ${txLink(tx.hash)}`);
+    $('a-msg').innerHTML = `tx sent: ${txLink(tx.hash)} — waiting…`;
+    const rcpt = await tx.wait();
+    log(`✓ mined in block ${rcpt.blockNumber} (gas ${rcpt.gasUsed})`, 'ok');
+
+    // Decode SubnameRegistered event
+    const iface = new ethers.Interface(REGISTRAR_ABI);
+    let registered = null;
+    for (const lg of rcpt.logs) {
+      try {
+        const parsed = iface.parseLog({topics: lg.topics, data: lg.data});
+        if (parsed?.name === "SubnameRegistered") { registered = parsed.args; break; }
+      } catch(_) {}
+    }
+    if (registered) {
+      log(`✓ ${p.subname} minted to ${registered.owner} (node=${registered.node.slice(0,12)}…, agentId=${registered.agentId})`, 'ok');
+      $('a-msg').innerHTML = `✓ <strong>${p.subname}</strong> minted — tx ${txLink(tx.hash)}, agentId ${registered.agentId}`;
+    } else {
+      $('a-msg').innerHTML = `✓ tx mined ${txLink(tx.hash)} (event not decoded)`;
+    }
+  } catch (e) {
+    const reason = e?.reason || e?.shortMessage || e?.message || String(e);
+    log(`mint failed: ${reason}`, 'err');
+    showError('a-error', reason);
+    $('a-msg').textContent = '';
+  } finally {
+    $('btn-mint-agent').disabled = false;
+  }
+};
+
+// ─── Tab: Reputation (registerFree) ─────────────────────────────────
+function previewRep() {
+  clearError('r-error');
+  const label = $('r-label').value.trim().toLowerCase();
+  if (!label) { showError('r-error', 'label required'); return null; }
+  if (label.length < 7) { showError('r-error', 'label must be 7+ chars'); return null; }
+  if (!/^[a-z0-9-]+$/.test(label)) { showError('r-error', 'label must match [a-z0-9-]'); return null; }
+  const owner = $('r-owner').value.trim();
+  if (!ethers.isAddress(owner)) { showError('r-error', 'invalid owner address'); return null; }
+  const subname = `${label}.bankon.eth`;
+  $('r-preview-label').textContent = subname;
+  $('r-preview-meta').textContent = `owner ${ethers.getAddress(owner)} · label ${label} (${label.length} chars)`;
+  $('r-preview').style.display = 'block';
+  return { label, owner: ethers.getAddress(owner), subname };
+}
+$('btn-preview-rep').onclick = previewRep;
+
+$('btn-mint-rep').onclick = async () => {
+  clearError('r-error');
+  if (!registrarWrite) { showError('r-error', 'load registrar + connect wallet first'); return; }
+  const p = previewRep();
+  if (!p) return;
+  const days = parseInt($('r-days').value, 10);
+  if (!days || days < 1) { showError('r-error', 'invalid expiry days'); return; }
+  const expiry = expiryFromDays(days);
+  const meta = buildMeta('r-');
+
+  $('btn-mint-rep').disabled = true;
+  $('r-msg').textContent = 'sending tx…';
+  try {
+    log(`registerFree(${p.label}, ${p.owner}, expiry=${expiry}, meta=…)`);
+    const tx = await registrarWrite.registerFree(p.label, p.owner, expiry, metaTuple(meta));
+    log(`tx sent: ${txLink(tx.hash)}`);
+    $('r-msg').innerHTML = `tx sent: ${txLink(tx.hash)} — waiting…`;
+    const rcpt = await tx.wait();
+    log(`✓ mined in block ${rcpt.blockNumber} (gas ${rcpt.gasUsed})`, 'ok');
+
+    const iface = new ethers.Interface(REGISTRAR_ABI);
+    let registered = null;
+    for (const lg of rcpt.logs) {
+      try {
+        const parsed = iface.parseLog({topics: lg.topics, data: lg.data});
+        if (parsed?.name === "SubnameRegistered") { registered = parsed.args; break; }
+      } catch(_) {}
+    }
+    if (registered) {
+      log(`✓ ${p.subname} minted to ${registered.owner}`, 'ok');
+      $('r-msg').innerHTML = `✓ <strong>${p.subname}</strong> minted — tx ${txLink(tx.hash)}`;
+    } else {
+      $('r-msg').innerHTML = `✓ tx mined ${txLink(tx.hash)}`;
+    }
+  } catch (e) {
+    const reason = e?.reason || e?.shortMessage || e?.message || String(e);
+    log(`mint failed: ${reason}`, 'err');
+    showError('r-error', reason);
+    $('r-msg').textContent = '';
+  } finally {
+    $('btn-mint-rep').disabled = false;
+  }
+};
+
+// ─── Tab: Quote / Read ──────────────────────────────────────────────
+$('btn-quote').onclick = async () => {
+  if (!registrarRead) { log('load registrar first', 'warn'); return; }
+  const label = $('q-label').value.trim();
+  const years = parseInt($('q-years').value, 10);
+  if (!label || !years) { log('label + years required', 'warn'); return; }
+  const expiry = BigInt(Math.floor(Date.now() / 1000) + years * 365 * 86400);
+  try {
+    const priceUSD6 = await registrarRead.quoteUSD(label, expiry);
+    const priceUSD = Number(priceUSD6) / 1e6;
+    $('q-kv').innerHTML += `
+      <div class="k">quote(${label}, ${years}y)</div>
+      <div class="v">$${priceUSD.toFixed(2)} (raw: ${priceUSD6} USD6)</div>
+    `;
+    log(`quoteUSD(${label}, ${years}y) = $${priceUSD.toFixed(2)}`, 'ok');
+  } catch (e) {
+    log(`quote failed: ${e.message}`, 'err');
+  }
+};
+
+$('btn-check-role').onclick = async () => {
+  if (!registrarRead || !connectedAddr) { log('load registrar + connect wallet', 'warn'); return; }
+  try {
+    const [minter, gateway, gov] = await Promise.all([
+      registrarRead.MINDX_AGENT_MINTER_ROLE(),
+      registrarRead.GATEWAY_SIGNER_ROLE(),
+      registrarRead.BONAFIDE_GOV_ROLE(),
+    ]);
+    const [hasMinter, hasGateway, hasGov] = await Promise.all([
+      registrarRead.hasRole(minter, connectedAddr),
+      registrarRead.hasRole(gateway, connectedAddr),
+      registrarRead.hasRole(gov, connectedAddr),
+    ]);
+    $('q-kv').innerHTML += `
+      <div class="k">MINDX_AGENT_MINTER_ROLE</div><div class="v">${hasMinter ? '✓ yes' : '✗ no'}</div>
+      <div class="k">GATEWAY_SIGNER_ROLE</div><div class="v">${hasGateway ? '✓ yes' : '✗ no'}</div>
+      <div class="k">BONAFIDE_GOV_ROLE</div><div class="v">${hasGov ? '✓ yes' : '✗ no'}</div>
+    `;
+    log(`roles: minter=${hasMinter}, gateway=${hasGateway}, gov=${hasGov}`, 'ok');
+  } catch (e) {
+    log(`role check failed: ${e.message}`, 'err');
+  }
+};
+
+$('btn-paused').onclick = async () => {
+  if (!registrarRead) { log('load registrar first', 'warn'); return; }
+  try {
+    const p = await registrarRead.paused();
+    $('q-kv').innerHTML += `<div class="k">paused()</div><div class="v">${p}</div>`;
+    log(`paused = ${p}`, p ? 'warn' : 'ok');
+  } catch (e) {
+    log(`paused() failed: ${e.message}`, 'err');
+  }
+};
+
+log('bankonminter ready — pick network, load registrar, connect wallet');
+</script>
+</body>
+</html>

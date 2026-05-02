@@ -1131,6 +1131,7 @@ _CABINET_HTML_PATH = Path(__file__).parent / "cabinet.html"
 _KEEPERHUB_HTML_PATH = Path(__file__).parent / "keeperhub.html"
 _UNISWAP_HTML_PATH = Path(__file__).parent / "uniswap.html"
 _BANKON_ENS_HTML_PATH = Path(__file__).parent / "bankon-ens.html"
+_BANKON_MINTER_HTML_PATH = Path(__file__).parent / "bankonminter.html"
 _ZEROG_HTML_PATH = Path(__file__).parent / "zerog.html"
 _CONCLAVE_HTML_PATH = Path(__file__).parent / "conclave.html"
 _AGENTREGISTRY_HTML_PATH = Path(__file__).parent / "agentregistry.html"
@@ -1257,6 +1258,36 @@ async def uniswap_page():
 async def bankon_ens_page():
     """BANKON ENS subname registrar UI."""
     return _serve_html(_BANKON_ENS_HTML_PATH, "BANKON ENS")
+
+
+@app.get("/bankonminter", response_class=_DashResponse, include_in_schema=False)
+@app.get("/bankonminter.html", response_class=_DashResponse, include_in_schema=False)
+async def bankon_minter_page():
+    """BANKON minter — direct registrar interaction for <label>.bankon.eth."""
+    return _serve_html(_BANKON_MINTER_HTML_PATH, "BANKON Minter")
+
+
+@app.get("/openagents/deployments/{network}.json", include_in_schema=False)
+async def openagents_deployments(network: str):
+    """Serve deployment JSON files for the BANKON minter UI auto-load.
+
+    Reads from openagents/deployments/<network>.json (written by the
+    deploy_*.sh scripts). Whitelists known network names to prevent
+    arbitrary file read.
+    """
+    from fastapi import HTTPException
+    from fastapi.responses import JSONResponse
+    allowed = {"sepolia", "ethereum_mainnet", "0g_mainnet", "anvil_bankon"}
+    if network not in allowed:
+        raise HTTPException(status_code=404, detail=f"unknown network: {network}")
+    repo_root = Path(__file__).parent.parent
+    target = repo_root / "openagents" / "deployments" / f"{network}.json"
+    if not target.exists():
+        raise HTTPException(status_code=404, detail=f"{network}.json not yet deployed")
+    try:
+        return JSONResponse(content=json.loads(target.read_text(encoding="utf-8")))
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"deployments JSON malformed: {e}")
 
 
 @app.get("/zerog", response_class=_DashResponse, include_in_schema=False)
@@ -1465,7 +1496,7 @@ app.add_middleware(
 
 _PUBLIC_EXACT = frozenset({
     "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html",
-    "/keeperhub", "/keeperhub.html", "/uniswap", "/uniswap.html", "/bankon-ens", "/bankon-ens.html", "/zerog", "/zerog.html", "/conclave", "/conclave.html", "/agentregistry", "/agentregistry.html",
+    "/keeperhub", "/keeperhub.html", "/uniswap", "/uniswap.html", "/bankon-ens", "/bankon-ens.html", "/bankonminter", "/bankonminter.html", "/zerog", "/zerog.html", "/conclave", "/conclave.html", "/agentregistry", "/agentregistry.html",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/diagnostics/live", "/activity/stream", "/activity/recent", "/activity/stats",
     "/thesis", "/thesis/", "/thesis/evidence", "/thesis/summary",
