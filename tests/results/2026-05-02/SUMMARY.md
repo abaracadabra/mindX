@@ -22,7 +22,9 @@
 
 ---
 
-## Coverage (Cabinet code · captured 2026-05-02)
+## Coverage
+
+### Python — Cabinet code (80% line · CI-gated at 75%)
 
 ```
 Module                                                    Stmts   Miss  Cover
@@ -37,7 +39,22 @@ TOTAL                                                       476     78    80%
 
 Full report: [`cabinet_coverage.txt`](cabinet_coverage.txt). Reproduce: `pytest --cov=mindx_backend_service.bankon_vault.{shadow_overlord,cabinet,admin_routes,sign_routes} --cov-report=term-missing`. CI gate: 75% minimum.
 
-The uncovered lines are mostly defensive error paths (rollback in `cabinet.provision`, JWT secret-missing in `shadow_overlord._jwt_secret()`) — exercised manually in fault-injection but not in the green-path test suite.
+### Solidity — all 6 submission contracts
+
+```
+Contract                                                Line %  Func %
+─────────────────────────────────────────────────────────────────────
+daio/contracts/inft/iNFT_7857.sol                       95.65%  91.67%
+daio/contracts/ens/v1/BankonSubnameRegistrar.sol        94.85%  94.74%
+daio/contracts/THOT/v1/THOT.sol                         93.75%  85.71%
+daio/contracts/agentregistry/AgentRegistry.sol          89.86%  76.92%
+openagents/conclave/contracts/src/Conclave.sol          84.00%  81.82%
+openagents/conclave/contracts/src/ConclaveBond.sol      54.29%  66.67%
+```
+
+Full report: [`solidity_coverage.txt`](solidity_coverage.txt). Reproduce: `forge coverage --report summary` per profile.
+
+The four daio contracts all clear 89% line. Conclave.sol clears 84%. ConclaveBond at 54% is an honest test gap (the on-chain slashing recovery paths are exercised only on the AXL-mesh side); Slither found 0 findings on this contract.
 
 ---
 
