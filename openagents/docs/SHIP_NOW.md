@@ -97,7 +97,7 @@ Tight script (verbatim, time-coded):
   Conclave 8-node mesh and the Cabinet bonus (BANKON Vault signing oracle).
 
 0:50 — 1:00  CLOSE
-  "Repo: github.com/<your-canonical-url>. Live demo: mindx.pythai.net/
+  "Repo: github.com/AgenticPlace/openagents. Live demo: mindx.pythai.net/
    openagents. Submission docs: openagents/docs/SUBMISSIONS.md. Thanks."
 ```
 

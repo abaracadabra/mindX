@@ -407,7 +407,7 @@ These are the architectural points that distinguish the eight submissions as **o
 ## Submission checklist (for you, before clicking submit)
 
 - [ ] Repo URL is the canonical public mirror (verify; locally configured remotes don't include `Professor-Codephreak/mindX`)
-- [ ] Demo video URL is filled in (TBD — record per `docs/SHIP_48H.md` §2.5)
+- [ ] Demo video URL is filled in (TBD — record per `docs/SHIP_NOW.md` §Block B)
 - [ ] FEEDBACK.md contact handles populated (currently `Telegram: TBD, X: TBD` in both keeperhub/FEEDBACK.md and uniswap/FEEDBACK.md)
 - [ ] If submitting Forms 4 + 5 (both ENS), confirm with ETHGlobal that double-submission of the same project to Best Integration + Most Creative is permitted on this hackathon (the README implies yes; verify on the form)
 - [ ] Form 7 (KeeperHub Builder Bounty) is filed alongside Form 6 — they're separate prizes

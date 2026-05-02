@@ -1,5 +1,8 @@
 # mindX × Open Agents — eight agnostic, composable modules
 
+[![tests](https://github.com/AgenticPlace/openagents/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/AgenticPlace/openagents/actions/workflows/test.yml)
+&nbsp;**158/158 tests** &middot; 9 live consoles &middot; ETHGlobal Open Agents 2026
+
 > Submission for **ETHGlobal Open Agents** · Apr 24 → May 3 2026 · BANKON × mindX
 > Live console: [https://mindx.pythai.net/openagents](https://mindx.pythai.net/openagents) — composition page with links to **9 live module consoles**
 > Repo: [github.com/AgenticPlace/openagents](https://github.com/AgenticPlace/openagents)
