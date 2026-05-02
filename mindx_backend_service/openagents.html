@@ -151,7 +151,8 @@ main{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px 22p
 footer{margin-top:48px;padding:24px 20px;text-align:center;color:var(--text3);font-size:11.5px;border-top:1px solid var(--border);font-family:var(--mono);letter-spacing:.6px}
 footer a{color:var(--ice)}
 footer a:hover{color:var(--soul)}
-footer .punk{color:var(--soul);font-weight:700;letter-spacing:2.5px;text-transform:uppercase}
+footer a.punk,footer .punk{color:var(--soul);font-weight:700;letter-spacing:2.5px;text-transform:uppercase;text-decoration:none;transition:all .18s ease}
+footer a.punk:hover{color:var(--gold);text-shadow:0 0 12px rgba(255,200,51,.5)}
 ::selection{background:rgba(230,168,23,.4);color:var(--void)}
 </style>
 </head>
@@ -312,7 +313,7 @@ root, tx  = await provider.upload(b"persona-bytes")      # 0G Storage
   <footer>
     <div>Submission for <a href="https://ethglobal.com/events/openagents" target="_blank">ETHGlobal Open Agents</a> · Apr 24 – May 6 2026 · BANKON × mindX</div>
     <div style="margin-top:8px"><a href="https://github.com/AgenticPlace/openagents" target="_blank">github.com/AgenticPlace/openagents</a> · <a href="/feedback.html">/feedback.html</a> · <a href="https://agenticplace.pythai.net" target="_blank">agenticplace.pythai.net</a></div>
-    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">© BANKON · <span class="punk">cypherpunk2048</span> standard · GPL-3.0</div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">© BANKON · <a href="https://github.com/cypherpunk2048" target="_blank" rel="noopener" class="punk">cypherpunk2048</a> standard · GPL-3.0</div>
   </footer>
 </main>
 

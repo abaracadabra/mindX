@@ -170,7 +170,8 @@ button.bw:hover:not(:disabled){background:rgba(255,255,255,.10);border-color:var
 
 /* cypherpunk2048 footer signature */
 .signature{margin-top:36px;padding:18px 0 0;border-top:1px solid var(--border);text-align:center;font-family:'Fira Code',monospace;font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase}
-.signature .punk{color:var(--soul);font-weight:700;letter-spacing:3px}
+.signature a.punk,.signature .punk{color:var(--soul);font-weight:700;letter-spacing:3px;text-decoration:none;transition:all .18s ease}
+.signature a.punk:hover{color:var(--gold);text-shadow:0 0 12px rgba(255,200,51,.5)}
 .signature a{color:var(--ice);text-decoration:none;margin:0 8px}
 .signature a:hover{color:var(--soul)}
 
@@ -397,7 +398,7 @@ button.bw:hover:not(:disabled){background:rgba(255,255,255,.10);border-color:var
       <a href="/cabinet">cabinet</a>·
       <a href="/boardroom">boardroom</a>
     </div>
-    <div style="margin-top:10px">© BANKON · <span class="punk">cypherpunk2048</span> standard · GPL-3.0</div>
+    <div style="margin-top:10px">© BANKON · <a href="https://github.com/cypherpunk2048" target="_blank" rel="noopener" class="punk">cypherpunk2048</a> standard · GPL-3.0</div>
   </div>
 </div>
 
