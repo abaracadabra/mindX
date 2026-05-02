@@ -154,7 +154,7 @@ FOUNDRY_PROFILE=inft forge test --gas-report     # with gas table
 FOUNDRY_PROFILE=inft forge test -vvv             # verbose traces
 ```
 
-The `inft` profile scopes the build to `inft/` + `test/inft/` and skips the legacy `iNFT.sol` files (preserved as Apr 11 2026 prior-art evidence; do not compile under the bundled OZ v5). See [docs/INFT_7857.md](../../docs/INFT_7857.md) for the full audit, design rationale, and per-tab UI guide.
+The `inft` profile scopes the build to `inft/` + `test/inft/`. See [docs/INFT_7857.md](../../docs/INFT_7857.md) for the full audit, design rationale, and per-tab UI guide.
 
 ## Verification matrix
 

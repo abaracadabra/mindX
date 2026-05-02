@@ -194,4 +194,3 @@ For per-track navigation, see [`docs/INDEX.md`](docs/INDEX.md).
 
 ---
 
-*Prior art: see `daio/contracts/inft/iNFT.sol`, `daio/contracts/inft/IntelligentNFT.sol`, `daio/contracts/THOT/core/THOT.sol`, `mindx_backend_service/inft.html`, committed Apr 11 2026 (`fff941a7`, `468de468`, `f07b025a`). Hardened standards-aligned variants (iNFT_7857, THOT v1, BANKON v1) live in their own paths; the Apr 11 contracts remain in the tree as committed.*
