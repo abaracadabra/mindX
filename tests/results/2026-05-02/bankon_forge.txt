@@ -1,0 +1,37 @@
+Compiling 54 files with Solc 0.8.24
+Solc 0.8.24 finished in 32.76s
+Compiler run successful!
+
+Ran 29 tests for ens/v1/test/BankonSubnameRegistrar.t.sol:BankonSubnameRegistrar_Test
+[PASS] testFuzz_PaidRegister_arbitraryReceiptAndExpiry(bytes32,uint16) (runs: 256, μ: 651947, ~: 651947)
+[PASS] test_Constructor_revertsOnZeroAddresses() (gas: 269264)
+[PASS] test_Constructor_setsRolesAndImmutables() (gas: 55085)
+[PASS] test_FreeRegister_allowsReputableAgent() (gas: 577090)
+[PASS] test_FreeRegister_revertsForUnreputableAgent() (gas: 41367)
+[PASS] test_FreeRegister_revertsOnShortLabel() (gas: 53633)
+[PASS] test_GrantGatewaySignerRole_letsNewSignerVouch() (gas: 679126)
+[PASS] test_PaidRegister_capsExpiryToParent() (gas: 659330)
+[PASS] test_PaidRegister_happyPath_emitsAndStores() (gas: 669253)
+[PASS] test_PaidRegister_revertsOnEmptyLabel() (gas: 28718)
+[PASS] test_PaidRegister_revertsOnExpiredDeadline() (gas: 29781)
+[PASS] test_PaidRegister_revertsOnLabelTooShort() (gas: 29286)
+[PASS] test_PaidRegister_revertsOnReplayedReceipt() (gas: 659837)
+[PASS] test_PaidRegister_revertsOnWrongSigner() (gas: 44059)
+[PASS] test_PaidRegister_revertsOnZeroOwner() (gas: 26863)
+[PASS] test_PaidRegister_revertsWhenAgentBanned() (gas: 66303)
+[PASS] test_PaidRegister_skipsErc8004WhenDisabled() (gas: 539051)
+[PASS] test_PaidRegister_writesAllResolverRecords() (gas: 678891)
+[PASS] test_Pause_blocksRegister() (gas: 55932)
+[PASS] test_Pause_revertsForNonOps() (gas: 16021)
+[PASS] test_Pause_unpauseRestoresRegister() (gas: 659421)
+[PASS] test_QuoteUSD_usesOracle() (gas: 15997)
+[PASS] test_Renew_extendsExpiry() (gas: 694700)
+[PASS] test_Renew_revertsOnReplayedReceipt() (gas: 695564)
+[PASS] test_SetErc8004Bundle_emits() (gas: 20156)
+[PASS] test_SetIdentityRegistry8004_byGov() (gas: 22153)
+[PASS] test_SetPriceOracle_byGov() (gas: 960308)
+[PASS] test_SetPriceOracle_revertsOnZero() (gas: 13745)
+[PASS] test_SetReputationGate_byGov() (gas: 676994)
+Suite result: ok. 29 passed; 0 failed; 0 skipped; finished in 322.60ms (348.11ms CPU time)
+
+Ran 1 test suite in 324.91ms (322.60ms CPU time): 29 tests passed, 0 failed, 0 skipped (29 total tests)

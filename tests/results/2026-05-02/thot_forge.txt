@@ -1,0 +1,22 @@
+Compiling 42 files with Solc 0.8.24
+Solc 0.8.24 finished in 8.98s
+Compiler run successful!
+
+Ran 14 tests for THOT/v1/test/THOT.t.sol:THOT_v1_Test
+[PASS] test_Commit_acceptsKnownParent() (gas: 394872)
+[PASS] test_Commit_emitsEvent() (gas: 210340)
+[PASS] test_Commit_idempotentOnDuplicate() (gas: 213273)
+[PASS] test_Commit_mintsTokenAndIndexesRoot() (gas: 213277)
+[PASS] test_Commit_revertsForNonPillar() (gas: 18028)
+[PASS] test_Commit_revertsOnUnknownParent() (gas: 23230)
+[PASS] test_Commit_revertsOnZeroAuthor() (gas: 16148)
+[PASS] test_Commit_revertsOnZeroChatID() (gas: 18514)
+[PASS] test_Commit_revertsOnZeroRootHash() (gas: 18605)
+[PASS] test_Constructor_revertsOnZeroAdmin() (gas: 83710)
+[PASS] test_Constructor_setsRolesAndName() (gas: 23832)
+[PASS] test_RevokePillarRole_blocksFurtherCommits() (gas: 28119)
+[PASS] test_RootIndex_pointsAtFirstCommit() (gas: 351890)
+[PASS] test_SupportsInterface_advertisesAll() (gas: 7728)
+Suite result: ok. 14 passed; 0 failed; 0 skipped; finished in 2.05ms (3.12ms CPU time)
+
+Ran 1 test suite in 9.69ms (2.05ms CPU time): 14 tests passed, 0 failed, 0 skipped (14 total tests)

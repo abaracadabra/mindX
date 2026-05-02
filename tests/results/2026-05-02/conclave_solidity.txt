@@ -1,0 +1,46 @@
+No files changed, compilation skipped
+
+Ran 10 tests for test/Conclave.t.sol:ConclaveTest
+[PASS] test_double_anchor_reverts() (gas: 872819)
+Logs:
+  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
+
+[PASS] test_only_convener_anchors() (gas: 784825)
+Logs:
+  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
+
+[PASS] test_record_resolution_with_quorum() (gas: 870703)
+Logs:
+  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
+
+[PASS] test_record_reverts_when_voter_unseated() (gas: 811622)
+Logs:
+  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
+
+[PASS] test_register_and_seated() (gas: 813610)
+Logs:
+  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
+
+[PASS] test_register_rejects_duplicate() (gas: 785733)
+Logs:
+  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
+
+[PASS] test_register_rejects_length_mismatch() (gas: 13661)
+Logs:
+  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
+
+[PASS] test_slash_unseats_and_burns_bond() (gas: 835292)
+Logs:
+  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
+
+[PASS] test_unseated_when_censura_below_min() (gas: 800716)
+Logs:
+  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
+
+[PASS] test_unseated_when_tessera_revoked() (gas: 806328)
+Logs:
+  computeCreateAddress is deprecated. Please use vm.computeCreateAddress instead.
+
+Suite result: ok. 10 passed; 0 failed; 0 skipped; finished in 15.14ms (7.88ms CPU time)
+
+Ran 1 test suite in 30.53ms (15.14ms CPU time): 10 tests passed, 0 failed, 0 skipped (10 total tests)

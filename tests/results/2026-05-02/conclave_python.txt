@@ -1,0 +1,23 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.0rc1, pytest-8.4.2, pluggy-1.6.0 -- /home/hacker/mindX/.mindx_env/bin/python
+cachedir: .pytest_cache
+rootdir: /dev
+configfile: null
+plugins: asyncio-1.3.0, anyio-4.10.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 9 items
+
+../../../../../dev/test_protocol.py::test_canonical_encoding_is_deterministic PASSED [ 11%]
+../../../../../dev/test_protocol.py::test_keypair_peer_id_is_stable_across_load PASSED [ 22%]
+../../../../../dev/test_protocol.py::test_envelope_sign_and_verify PASSED [ 33%]
+../../../../../dev/test_protocol.py::test_envelope_roundtrip_via_canonical_bytes PASSED [ 44%]
+../../../../../dev/test_protocol.py::test_manifest_envelope_sets_session_id_to_body_hash PASSED [ 55%]
+../../../../../dev/test_protocol.py::test_build_session_from_manifest PASSED [ 66%]
+../../../../../dev/test_protocol.py::test_quorum_passes_at_threshold PASSED [ 77%]
+../../../../../dev/test_protocol.py::test_trade_secret_treats_abstain_as_nay PASSED [ 88%]
+../../../../../dev/test_protocol.py::test_seq_replay_rejected PASSED     [100%]
+
+=============================== warnings summary ===============================
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+========================= 9 passed, 1 warning in 0.16s =========================

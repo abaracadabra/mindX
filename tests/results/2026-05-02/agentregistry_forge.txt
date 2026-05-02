@@ -1,0 +1,39 @@
+Compiling 48 files with Solc 0.8.24
+Solc 0.8.24 finished in 15.86s
+Compiler run successful with warnings:
+Warning (8760): This declaration has the same name as another declaration.
+   --> agentregistry/AgentRegistry.sol:212:49:
+    |
+212 |     function setSoulbound(uint256 agentTokenId, bool isSoulbound)
+    |                                                 ^^^^^^^^^^^^^^^^
+Note: The other declaration is here:
+   --> agentregistry/AgentRegistry.sol:295:5:
+    |
+295 |     function isSoulbound(uint256 agentTokenId) external view returns (bool) {
+    |     ^ (Relevant source part starts here and spans across multiple lines).
+
+
+Ran 20 tests for agentregistry/test/AgentRegistry.t.sol:AgentRegistry_Test
+[PASS] test_Attest_revertsOnNonAttestorSigner() (gas: 225480)
+[PASS] test_Attest_revertsOnTokenDoesNotExist() (gas: 18192)
+[PASS] test_Attest_sameAttestorTwice_doesNotDoubleCount() (gas: 311025)
+[PASS] test_Attest_validSignature_incrementsCount() (gas: 300620)
+[PASS] test_Constructor_revertsOnZeroAdmin() (gas: 86237)
+[PASS] test_Constructor_setsRolesAndName() (gas: 22481)
+[PASS] test_GrantMinterRole_byAdmin() (gas: 45002)
+[PASS] test_Register_byMinterForOwner() (gas: 195514)
+[PASS] test_Register_byOwnerSelf() (gas: 259387)
+[PASS] test_Register_revertsForRandomCallerNotOwnerNotMinter() (gas: 16745)
+[PASS] test_Register_revertsOnDuplicateAgentId() (gas: 195222)
+[PASS] test_Register_revertsOnEmptyAgentId() (gas: 12339)
+[PASS] test_Register_revertsOnTooLongAgentId() (gas: 19361)
+[PASS] test_Register_revertsOnZeroOwner() (gas: 11718)
+[PASS] test_SetCapabilities_byOwner() (gas: 218390)
+[PASS] test_SetCapabilities_revertsForNonOwner() (gas: 195145)
+[PASS] test_SetLinkedINFT_byMinter() (gas: 222684)
+[PASS] test_Soulbound_blocksTransfer() (gas: 221900)
+[PASS] test_Soulbound_unsetAllowsTransferAgain() (gas: 214373)
+[PASS] test_SupportsInterface_advertisesAll() (gas: 8666)
+Suite result: ok. 20 passed; 0 failed; 0 skipped; finished in 5.85ms (8.20ms CPU time)
+
+Ran 1 test suite in 9.57ms (5.85ms CPU time): 20 tests passed, 0 failed, 0 skipped (20 total tests)
