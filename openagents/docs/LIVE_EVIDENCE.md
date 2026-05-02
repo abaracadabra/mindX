@@ -7,16 +7,31 @@
 ## Quick smoke (run this first)
 
 ```bash
-# All 9 of these should return HTTP 200
-for ep in /openagents.html /inft7857 /feedback.html /feedback.txt \
-          /insight/boardroom/recent /insight/improvement/summary \
-          /insight/dreams/recent /insight/godel/recent /insight/storage/status; do
+# All 9 component consoles + 5 insight endpoints — all should return HTTP 200
+for ep in /openagents.html /inft7857 /cabinet /keeperhub /uniswap \
+          /bankon-ens /zerog /conclave /agentregistry \
+          /feedback.html /feedback.txt /insight/boardroom/recent \
+          /insight/improvement/summary /insight/dreams/recent; do
   printf "%-40s -> " "$ep"
   curl -s -o /dev/null -w "HTTP %{http_code}\n" "https://mindx.pythai.net${ep}"
 done
 ```
 
 Storage endpoints (`/storage/health`, `/storage/anchor/health`) are auth-gated and return **401** by design — they hold operator credentials.
+
+### Per-track console index (live now)
+
+| Track | Console | Notes |
+|---|---|---|
+| 0G iNFT-7857 | [`/inft7857`](https://mindx.pythai.net/inft7857) | 9-tab ethers v6 + MetaMask, 14 contract events |
+| 0G Adapter | [`/zerog`](https://mindx.pythai.net/zerog) | Sidecar /health probe + live Galileo RPC chainId/block |
+| Gensyn AXL | [`/conclave`](https://mindx.pythai.net/conclave) | 8-node mesh viz, FSM, 9+10 tests |
+| ENS BANKON | [`/bankon-ens`](https://mindx.pythai.net/bankon-ens) | Real ENS lookup (any name), text records, 29 tests |
+| KeeperHub | [`/keeperhub`](https://mindx.pythai.net/keeperhub) | Polls /info, dual-rail Base+Tempo, 30s auto-refresh |
+| Uniswap V4 | [`/uniswap`](https://mindx.pythai.net/uniswap) | MetaMask + live Sepolia V4 Quoter eth_call |
+| ERC-8004 | [`/agentregistry`](https://mindx.pythai.net/agentregistry) | Schema, 20-test list, MetaMask lookup |
+| Cabinet (bonus) | [`/cabinet`](https://mindx.pythai.net/cabinet) | Vault signing oracle, requires SHADOW_OVERLORD env |
+| Composition | [`/openagents.html`](https://mindx.pythai.net/openagents.html) | All-modules dashboard, links every panel to its console |
 
 ---
 

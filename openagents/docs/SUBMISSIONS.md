@@ -5,11 +5,24 @@
 >
 > **Common fields** (use the same value in every form):
 >
-> - **Repo:** `https://github.com/<your-public-mirror>/mindX` *(confirm the canonical URL before submitting; locally configured remotes don't include `Professor-Codephreak/mindX`)*
-> - **Live demo:** `https://mindx.pythai.net/openagents`
+> - **Repo:** `https://github.com/AgenticPlace/openagents` *(currently private — invite ETHGlobal judges or flip to public for submission)*
+> - **Live demo:** `https://mindx.pythai.net/openagents` (composition page with links to all 9 module consoles)
 > - **Marketplace:** `https://agenticplace.pythai.net`
-> - **Demo video:** `<TBD — record per docs/SHIP_48H.md §2.5>`
+> - **Demo video:** `<TBD — record per docs/SHIP_NOW.md §Block B>`
 > - **Team:** `codephreak` (registered for the hackathon by **BANKON**)
+>
+> **Live module consoles (per-track, all 200 OK on prod):**
+>
+> | Track | Console URL |
+> |---|---|
+> | 0G iNFT-7857 (Form 1) | https://mindx.pythai.net/inft7857 |
+> | 0G Adapter (Form 2) | https://mindx.pythai.net/zerog |
+> | Gensyn AXL (Form 3) | https://mindx.pythai.net/conclave |
+> | ENS BANKON (Forms 4 + 5) | https://mindx.pythai.net/bankon-ens |
+> | KeeperHub (Forms 6 + 7) | https://mindx.pythai.net/keeperhub |
+> | Uniswap V4 (Form 8) | https://mindx.pythai.net/uniswap |
+> | ERC-8004 (composable) | https://mindx.pythai.net/agentregistry |
+> | Cabinet (bonus) | https://mindx.pythai.net/cabinet |
 >
 > The eight forms below use the same project root but are independently judged. Each block is structured to fit the typical ETHGlobal form fields: short description, long description, how-it-works, what-problem, tech-stack.
 

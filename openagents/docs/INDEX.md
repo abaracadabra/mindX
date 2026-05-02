@@ -12,10 +12,25 @@ This is the master navigation hub. Each prize track has its own subfolder with a
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — system map, module diagram, data flows.
 - [`QUICKSTART.md`](QUICKSTART.md) — ten-minute reproduction (deps → forge test → demo).
 - [`EXPLANATION.md`](EXPLANATION.md) — design rationale and per-module narrative.
+- **[`JUDGE_TOUR.md`](JUDGE_TOUR.md)** — 5-minute verification path. If you only read one file, read this.
 - **[`LIVE_EVIDENCE.md`](LIVE_EVIDENCE.md)** — per-track verification page: curl commands, live endpoint status, and source-file pointers a judge can scan in one pass.
 - **[`SUBMISSIONS.md`](SUBMISSIONS.md)** — paste-ready text for all 8 ETHGlobal submission forms (tagline · long description · how-it-works · tech stack · test status). Use this when filing.
-- **[`SHIP_48H.md`](SHIP_48H.md)** — 48-hour deadline-aware execution roadmap (4 phases: critical fixes → content → submissions → buffer).
+- **[`SHIP_NOW.md`](SHIP_NOW.md)** — 24-hour deadline-aware execution roadmap (deadline moved up to May 3).
 - **[`boardroom/BOARDROOM.md`](boardroom/BOARDROOM.md)** — the deliberation engine that consumes every track. Live at `/insight/boardroom/recent` and `/boardroom/sessions`. See the dedicated section below.
+
+### Live module consoles (all 200 OK on prod, real wiring no mocks)
+
+| Track / Module | Console URL | What it shows |
+|---|---|---|
+| Composition demo | [`/openagents.html`](https://mindx.pythai.net/openagents.html) | All 8 panels with deep-links |
+| 0G iNFT-7857 | [`/inft7857`](https://mindx.pythai.net/inft7857) | 9-tab MetaMask console for ERC-7857 |
+| 0G Adapter | [`/zerog`](https://mindx.pythai.net/zerog) | Sidecar /health + live Galileo RPC probe |
+| Gensyn AXL | [`/conclave`](https://mindx.pythai.net/conclave) | 8-node mesh viz + FSM + tests |
+| ENS BANKON | [`/bankon-ens`](https://mindx.pythai.net/bankon-ens) | Real ENS lookup any-name |
+| KeeperHub | [`/keeperhub`](https://mindx.pythai.net/keeperhub) | Auto-polls dual-rail challenge envelope |
+| Uniswap V4 | [`/uniswap`](https://mindx.pythai.net/uniswap) | Live V4 Quoter `eth_call` on Sepolia |
+| ERC-8004 | [`/agentregistry`](https://mindx.pythai.net/agentregistry) | Schema + 20 tests + MetaMask lookup |
+| Cabinet (bonus) | [`/cabinet`](https://mindx.pythai.net/cabinet) | Vault signing oracle (operator-activated) |
 
 ## By hackathon track
 

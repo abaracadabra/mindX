@@ -1,10 +1,27 @@
 # mindX × Open Agents — eight agnostic, composable modules
 
-> Submission for **ETHGlobal Open Agents** · Apr 24 → May 6 2026 · BANKON × mindX
-> Live console: [https://mindx.pythai.net/openagents](https://mindx.pythai.net/openagents)
-> Repo: [github.com/Professor-Codephreak/mindX](https://github.com/Professor-Codephreak/mindX)
+> Submission for **ETHGlobal Open Agents** · Apr 24 → May 3 2026 · BANKON × mindX
+> Live console: [https://mindx.pythai.net/openagents](https://mindx.pythai.net/openagents) — composition page with links to **9 live module consoles**
+> Repo: [github.com/AgenticPlace/openagents](https://github.com/AgenticPlace/openagents)
 
-> **Documentation:** start at [`docs/INDEX.md`](docs/INDEX.md) for the full navigation tree (per-track READMEs, module briefs, FEEDBACK.md, architecture, quickstart). Judging? Jump to [`docs/LIVE_EVIDENCE.md`](docs/LIVE_EVIDENCE.md) — per-track curl-able verification page.
+> **Documentation:**
+> - **Judging?** Start at [`docs/JUDGE_TOUR.md`](docs/JUDGE_TOUR.md) — 5-minute verification path with click-by-click instructions.
+> - **Filing forms?** Use [`docs/SUBMISSIONS.md`](docs/SUBMISSIONS.md) — paste-ready blocks for all 8 ETHGlobal submission forms.
+> - **Curl-verifying claims?** [`docs/LIVE_EVIDENCE.md`](docs/LIVE_EVIDENCE.md) — every claim linked to a runnable check.
+> - **Full nav?** [`docs/INDEX.md`](docs/INDEX.md).
+
+## Live module consoles (all 200 OK on prod, real wiring)
+
+| Track | URL | Highlights |
+|---|---|---|
+| 0G iNFT-7857 | https://mindx.pythai.net/inft7857 | 9-tab ethers v6 console, 14 events |
+| 0G Adapter | https://mindx.pythai.net/zerog | Sidecar /health + live Galileo RPC |
+| Gensyn AXL | https://mindx.pythai.net/conclave | 8-node mesh viz |
+| ENS BANKON | https://mindx.pythai.net/bankon-ens | Real ENS lookup |
+| KeeperHub | https://mindx.pythai.net/keeperhub | Auto-polls dual-rail challenge |
+| Uniswap V4 | https://mindx.pythai.net/uniswap | Live V4 Quoter eth_call |
+| ERC-8004 | https://mindx.pythai.net/agentregistry | Schema + 20 tests + MetaMask |
+| Cabinet (bonus) | https://mindx.pythai.net/cabinet | Vault signing oracle |
 
 ## Architectural principle
 
