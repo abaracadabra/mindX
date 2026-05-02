@@ -17,6 +17,7 @@ This is the master navigation hub. Each prize track has its own subfolder with a
 - **[`SUBMISSIONS.md`](SUBMISSIONS.md)** — paste-ready text for all 8 ETHGlobal submission forms (tagline · long description · how-it-works · tech stack · test status). Use this when filing.
 - **[`SHIP_NOW.md`](SHIP_NOW.md)** — 24-hour deadline-aware execution roadmap (deadline moved up to May 3).
 - **[`SUBMIT_NOW.md`](SUBMIT_NOW.md)** — submission-day playbook: 9 user-action items walked step-by-step in optimal order. ~60 min if you follow it.
+- **[`DEPLOYMENT.md`](DEPLOYMENT.md)** — Anvil + 0G Galileo + Sepolia deployment plan with full contract inventory, dependency map, gas estimates, integration-gap audit, and reproduce-from-scratch judge sequence.
 - **[`boardroom/BOARDROOM.md`](boardroom/BOARDROOM.md)** — the deliberation engine that consumes every track. Live at `/insight/boardroom/recent` and `/boardroom/sessions`. See the dedicated section below.
 
 ### Live module consoles (all 200 OK on prod, real wiring no mocks)
