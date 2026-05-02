@@ -5,32 +5,34 @@ rootdir: /dev
 configfile: null
 plugins: asyncio-1.3.0, anyio-4.10.0
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
-collecting ... collected 20 items
+collecting ... collected 22 items
 
-../../../dev::test_challenge_well_formed PASSED                          [  5%]
-../../../dev::test_consume_signed_challenge_happy PASSED                 [ 10%]
-../../../dev::test_replay_rejected PASSED                                [ 15%]
-../../../dev::test_wrong_signer_rejected PASSED                          [ 20%]
-../../../dev::test_scope_mismatch_rejected PASSED                        [ 25%]
-../../../dev::test_params_tamper_rejected PASSED                         [ 30%]
-../../../dev::test_jwt_round_trip PASSED                                 [ 35%]
-../../../dev::test_jwt_wrong_scope_rejected PASSED                       [ 40%]
-../../../dev::test_jwt_subject_must_be_overlord PASSED                   [ 45%]
-../../../dev::test_concurrent_challenges_distinct PASSED                 [ 50%]
-../../../dev::test_auth_round_trip_issues_jwt PASSED                     [ 55%]
-../../../dev::test_provision_creates_8_wallets_and_registry_block PASSED [ 60%]
-../../../dev::test_public_read_strips_vault_pk_id PASSED                 [ 65%]
-../../../dev::test_sign_as_agent_returns_valid_sig_no_pk_leak PASSED     [ 70%]
-../../../dev::test_sign_message_tamper_rejected PASSED                   [ 75%]
-../../../dev::test_provision_idempotent PASSED                           [ 80%]
-../../../dev::test_clear_requires_destroy_string PASSED                  [ 85%]
-../../../dev::test_clear_with_correct_confirm_succeeds PASSED            [ 90%]
-../../../dev::test_no_jwt_blocked PASSED                                 [ 95%]
-../../../dev::test_addresses_match_pk_derivation PASSED                  [100%]
+../../../dev::test_challenge_well_formed PASSED                          [  4%]
+../../../dev::test_consume_signed_challenge_happy PASSED                 [  9%]
+../../../dev::test_replay_rejected PASSED                                [ 13%]
+../../../dev::test_wrong_signer_rejected PASSED                          [ 18%]
+../../../dev::test_scope_mismatch_rejected PASSED                        [ 22%]
+../../../dev::test_params_tamper_rejected PASSED                         [ 27%]
+../../../dev::test_jwt_round_trip PASSED                                 [ 31%]
+../../../dev::test_jwt_wrong_scope_rejected PASSED                       [ 36%]
+../../../dev::test_jwt_subject_must_be_overlord PASSED                   [ 40%]
+../../../dev::test_concurrent_challenges_distinct PASSED                 [ 45%]
+../../../dev::test_auth_round_trip_issues_jwt PASSED                     [ 50%]
+../../../dev::test_provision_creates_8_wallets_and_registry_block PASSED [ 54%]
+../../../dev::test_public_read_strips_vault_pk_id PASSED                 [ 59%]
+../../../dev::test_sign_as_agent_returns_valid_sig_no_pk_leak PASSED     [ 63%]
+../../../dev::test_sign_message_tamper_rejected PASSED                   [ 68%]
+../../../dev::test_provision_idempotent PASSED                           [ 72%]
+../../../dev::test_clear_requires_destroy_string PASSED                  [ 77%]
+../../../dev::test_clear_with_correct_confirm_succeeds PASSED            [ 81%]
+../../../dev::test_no_jwt_blocked PASSED                                 [ 86%]
+../../../dev::test_addresses_match_pk_derivation PASSED                  [ 90%]
+../../../dev::test_release_key_returns_pk_with_correct_confirm PASSED    [ 95%]
+../../../dev::test_release_key_rejects_wrong_confirm PASSED              [100%]
 
 =============================== warnings summary ===============================
 ::test_challenge_well_formed
 
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-======================== 20 passed, 2 warnings in 3.17s ========================
+======================== 22 passed, 2 warnings in 3.13s ========================

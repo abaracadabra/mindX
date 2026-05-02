@@ -8,11 +8,11 @@
 
 ## Aggregate
 
-**Total: 158 tests passing across 7 suites · 0 failures · 0 skips**
+**Total: 160 tests passing across 7 suites · 0 failures · 0 skips**
 
 | Suite | Tests | Result | Time | Output file |
 |---|---|---|---|---|
-| Cabinet pytest (Python) | 20 | ✅ pass | 3.17s | [`cabinet_pytest.txt`](cabinet_pytest.txt) |
+| Cabinet pytest (Python) | 22 | ✅ pass | 3.13s | [`cabinet_pytest.txt`](cabinet_pytest.txt) |
 | Conclave Python protocol | 9 | ✅ pass | 0.16s | [`conclave_python.txt`](conclave_python.txt) |
 | Conclave Solidity (Foundry) | 10 | ✅ pass | 30.5ms | [`conclave_solidity.txt`](conclave_solidity.txt) |
 | iNFT-7857 (Foundry) | 56 | ✅ pass | 80.5ms | [`inft_7857_forge.txt`](inft_7857_forge.txt) |
@@ -53,11 +53,13 @@ FOUNDRY_PROFILE=agentregistry  forge test  # 20
 
 ## Per-suite headlines
 
-### Cabinet pytest (20/20 — `cabinet_pytest.txt`)
+### Cabinet pytest (22/22 — `cabinet_pytest.txt`)
 
-The headline test for the BANKON Vault shadow-overlord admin tier:
+The headline tests for the BANKON Vault shadow-overlord admin tier:
 - `test_sign_as_agent_returns_valid_sig_no_pk_leak` — proves the vault signs on the agent's behalf without leaking the private key
 - `test_addresses_match_pk_derivation` — proves every public address in the registry derives from the matching vault-stored pk
+- `test_release_key_returns_pk_with_correct_confirm` — emergency-release path returns plaintext pk; derives back to the same address
+- `test_release_key_rejects_wrong_confirm` — confirms the literal-string confirm gate prevents accidental release
 - `test_provision_creates_8_wallets_and_registry_block` — 16 vault entries (8 pk + 8 addr) per cabinet
 - `test_replay_rejected`, `test_wrong_signer_rejected`, `test_scope_mismatch_rejected`, `test_params_tamper_rejected` — replay/tamper guards
 

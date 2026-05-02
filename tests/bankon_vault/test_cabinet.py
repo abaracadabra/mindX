@@ -221,3 +221,52 @@ def test_addresses_match_pk_derivation(env):
             assert addr.lower() == body["address"].lower(), f"role {role} mismatch"
     finally:
         vault.lock()
+
+
+def test_release_key_returns_pk_with_correct_confirm(env):
+    """The emergency release-key path returns plaintext pk only with the literal
+    RELEASE-PRIVATE-KEY confirm + a fresh shadow signature on a release.key
+    scope challenge bound to the agent_id."""
+    _provision(env)
+    public = env["client"].get("/cabinet/PYTHAI").json()
+    cfo_addr = public["soldiers"]["cfo_finance"]["address"]
+    jwt = _auth(env)
+    H = {"Authorization": f"Bearer {jwt}"}
+    agent_id = "company:PYTHAI:cabinet:cfo_finance"
+
+    ch = env["client"].post("/admin/shadow/challenge", json={
+        "scope": "release.key", "params": {"agent_id": agent_id},
+    }).json()
+    sig = _sign(env["overlord"], ch["message"])
+    r = env["client"].post(
+        f"/admin/shadow/release-key/{agent_id}", headers=H,
+        json={"nonce": ch["nonce"], "signature": sig, "confirm": "RELEASE-PRIVATE-KEY"},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    pk_hex = body["private_key_hex"]
+    # Accept both with and without 0x prefix (eth_account.Account.from_key handles either)
+    pk_normalized = pk_hex if pk_hex.startswith("0x") else "0x" + pk_hex
+    assert len(pk_normalized) == 66  # 0x + 32 bytes hex
+    # The released key, derived back to its address, MUST match the CFO's published address.
+    derived = Account.from_key(pk_normalized).address
+    assert derived.lower() == cfo_addr.lower()
+
+
+def test_release_key_rejects_wrong_confirm(env):
+    """Without the literal 'RELEASE-PRIVATE-KEY' string, the release path 400s."""
+    _provision(env)
+    jwt = _auth(env)
+    H = {"Authorization": f"Bearer {jwt}"}
+    agent_id = "company:PYTHAI:cabinet:cfo_finance"
+
+    ch = env["client"].post("/admin/shadow/challenge", json={
+        "scope": "release.key", "params": {"agent_id": agent_id},
+    }).json()
+    sig = _sign(env["overlord"], ch["message"])
+    r = env["client"].post(
+        f"/admin/shadow/release-key/{agent_id}", headers=H,
+        json={"nonce": ch["nonce"], "signature": sig, "confirm": "wrong-string"},
+    )
+    assert r.status_code == 400, r.text
+    assert "RELEASE-PRIVATE-KEY" in r.text
