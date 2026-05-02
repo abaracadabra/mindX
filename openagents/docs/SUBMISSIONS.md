@@ -392,7 +392,7 @@ These are the architectural points that distinguish the eight submissions as **o
 
 1. **Eight agnostic, composable peer modules.** Every module ships with its own README, tests, and Solidity contracts. Each exposes one clean interface (Solidity ABI or Python/TS API) — other frameworks call it without importing internals. The "agnostic-module statement" in each module's docs names only the assumed primitives (e.g. *"ed25519 + an EVM chain"*).
 
-2. **164 passing tests across the stack.** iNFT-7857: 57 (incl. cross-function reentrancy regression). BANKON: 29 fuzz. THOT: 14. AgentRegistry: 20. Conclave Solidity: 10. Conclave Python: 9. Cabinet (the bonus): 25 (incl. cryptographic invariant proof). All green in CI.
+2. **193 passing tests across the stack.** iNFT-7857: 57 (incl. cross-function reentrancy regression). BANKON: 29 fuzz. THOT: 14. AgentRegistry: 20. Conclave Solidity: 35. Conclave Python: 9. Cabinet (the bonus): 29 (incl. cryptographic invariant proof). All green in CI.
 
 3. **Hard evidence on three axes per contract.** Tests pass + green CI · 89-96% line coverage on the 4 daio contracts (95.65% on iNFT, 94.85% on BANKON, 93.75% on THOT, 89.86% on AgentRegistry) · Slither-audited (1 reentrancy finding fixed + active-exploit regression test that proves the fix; 3 of 6 contracts scan completely clean). Slither runs in CI on every push as a permanent gate (`--fail-high`).
 

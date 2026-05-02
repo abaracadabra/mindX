@@ -39,7 +39,7 @@ cd mindX
     tests/bankon_vault/test_shadow_overlord.py \
     tests/bankon_vault/test_cabinet.py \
     -c /dev/null -v
-# Expected: 25 passed in ~3s
+# Expected: 29 passed in ~3s
 
 # Solidity tests (every track + composable primitives)
 cd daio/contracts
@@ -53,7 +53,7 @@ cd ../../openagents/conclave/contracts
 forge test                                  # 35/35 — Conclave + ConclaveBond
 ```
 
-**Combined: 155 tests, all green.** (120 forge + 9 Conclave-Python + 25 Cabinet-Python + 10 Conclave-Solidity = 164, with 9 of those being Conclave Python protocol tests counted separately.)
+**Combined: 184 tests, all green (193 total).** (120 forge + 9 Conclave-Python + 29 Cabinet-Python + 35 Conclave-Solidity = 193, with 9 of those being Conclave Python protocol tests counted separately.)
 
 ## Stop 5 — Verify the composability claim
 
