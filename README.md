@@ -1,7 +1,7 @@
 # mindX
 
 [![tests](https://github.com/AgenticPlace/openagents/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/AgenticPlace/openagents/actions/workflows/test.yml)
-&nbsp;**163/163 tests passing** in clean CI
+&nbsp;**163/163 tests passing** in clean CI · **80% line coverage** on Cabinet code
 
 > 🏆 **ETHGlobal Open Agents submission lives at [`openagents/`](openagents/) — start with [`openagents/README.md`](openagents/README.md).**
 > If you're a judge: jump directly to **[`openagents/docs/JUDGE_TOUR.md`](openagents/docs/JUDGE_TOUR.md)** for the 5-minute verification path. Live demo: [https://mindx.pythai.net/openagents](https://mindx.pythai.net/openagents).
