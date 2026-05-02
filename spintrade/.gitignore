@@ -1,0 +1,16 @@
+# Foundry
+out/
+cache/
+broadcast/
+lib/
+
+# Anvil
+anvil/.log/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Local dev
+.DS_Store
