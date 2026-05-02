@@ -8,11 +8,11 @@
 
 ## Aggregate
 
-**Total: 160 tests passing across 7 suites · 0 failures · 0 skips**
+**Total: 163 tests passing across 7 suites · 0 failures · 0 skips**
 
 | Suite | Tests | Result | Time | Output file |
 |---|---|---|---|---|
-| Cabinet pytest (Python) | 22 | ✅ pass | 3.13s | [`cabinet_pytest.txt`](cabinet_pytest.txt) |
+| Cabinet pytest (Python) | 25 | ✅ pass | 3.13s | [`cabinet_pytest.txt`](cabinet_pytest.txt) |
 | Conclave Python protocol | 9 | ✅ pass | 0.16s | [`conclave_python.txt`](conclave_python.txt) |
 | Conclave Solidity (Foundry) | 10 | ✅ pass | 30.5ms | [`conclave_solidity.txt`](conclave_solidity.txt) |
 | iNFT-7857 (Foundry) | 56 | ✅ pass | 80.5ms | [`inft_7857_forge.txt`](inft_7857_forge.txt) |

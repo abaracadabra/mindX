@@ -26,7 +26,7 @@ The dashboard. Eight panels for the eight modules + a bonus Cabinet panel. Each 
 
 **[https://mindx.pythai.net/cabinet](https://mindx.pythai.net/cabinet)**
 
-If the operator has activated it (sets `SHADOW_OVERLORD_ADDRESS` + `SHADOW_JWT_SECRET`), this is a fully-functional shadow-overlord admin tier. Otherwise it shows the UI but the auth flow returns 503. The cryptographic property — *the vault signs on the agent's behalf without ever leaking the private key* — is proven in 22 passing tests; see [`docs/operations/SHADOW_OVERLORD_GUIDE.md`](../../docs/operations/SHADOW_OVERLORD_GUIDE.md) Appendix C for the captured runtime transcript.
+If the operator has activated it (sets `SHADOW_OVERLORD_ADDRESS` + `SHADOW_JWT_SECRET`), this is a fully-functional shadow-overlord admin tier. Otherwise it shows the UI but the auth flow returns 503. The cryptographic property — *the vault signs on the agent's behalf without ever leaking the private key* — is proven in 25 passing tests; see [`docs/operations/SHADOW_OVERLORD_GUIDE.md`](../../docs/operations/SHADOW_OVERLORD_GUIDE.md) Appendix C for the captured runtime transcript.
 
 ## Stop 4 — Run the test suites yourself (3 minutes)
 
@@ -39,7 +39,7 @@ cd mindX
     tests/bankon_vault/test_shadow_overlord.py \
     tests/bankon_vault/test_cabinet.py \
     -c /dev/null -v
-# Expected: 22 passed in ~3s
+# Expected: 25 passed in ~3s
 
 # Solidity tests (every track + composable primitives)
 cd daio/contracts
@@ -53,7 +53,7 @@ cd ../../openagents/conclave/contracts
 forge test                                  # 10/10 — Conclave + ConclaveBond
 ```
 
-**Combined: 151 tests, all green.** (119 forge + 9 Conclave-Python + 22 Cabinet-Python + 10 Conclave-Solidity = 160, with 9 of those being Conclave Python protocol tests counted separately.)
+**Combined: 154 tests, all green.** (119 forge + 9 Conclave-Python + 25 Cabinet-Python + 10 Conclave-Solidity = 163, with 9 of those being Conclave Python protocol tests counted separately.)
 
 ## Stop 5 — Verify the composability claim
 

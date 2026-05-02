@@ -4,7 +4,7 @@ All notable changes for the ETHGlobal Open Agents submission window are document
 
 ## [1.0.0-ethglobal] — 2026-05-02
 
-> ETHGlobal Open Agents submission cut. **160 tests passing** across 7 suites; **9 live consoles** at `https://mindx.pythai.net/`; CI green on every job.
+> ETHGlobal Open Agents submission cut. **163 tests passing** across 7 suites; **9 live consoles** at `https://mindx.pythai.net/`; CI green on every job.
 
 ### Added — Component UIs (no mocks, real backend wiring)
 
@@ -22,7 +22,7 @@ All notable changes for the ETHGlobal Open Agents submission window are document
 - `mindx_backend_service/bankon_vault/cabinet.py` (231 LOC) — `CabinetProvisioner.provision/read_public/clear` for an 8-wallet executive cabinet (1 CEO + 7 soldiers per company); atomic snapshot/rollback under `_vault_dir_lock()`
 - `mindx_backend_service/bankon_vault/admin_routes.py` (250 LOC) — 6 routes: shadow/challenge, shadow/verify, cabinet/preflight, cabinet/provision, cabinet/clear, shadow/release-key
 - `mindx_backend_service/bankon_vault/sign_routes.py` (90 LOC) — vault-as-signing-oracle: signs on agent's behalf; private key never leaves the vault, never appears in any response
-- 22 pytest cases (`tests/bankon_vault/test_shadow_overlord.py` + `test_cabinet.py`) — including the headline `test_sign_as_agent_returns_valid_sig_no_pk_leak` that proves the cryptographic invariant
+- 25 pytest cases (`tests/bankon_vault/test_shadow_overlord.py` + `test_cabinet.py`) — including the headline `test_sign_as_agent_returns_valid_sig_no_pk_leak` that proves the cryptographic invariant
 - `agents/catalogue/events.py` — three new EventKinds for forensic audit of shadow-overlord operations
 
 ### Added — Documentation
@@ -40,7 +40,7 @@ All notable changes for the ETHGlobal Open Agents submission window are document
 
 ### Added — Infrastructure
 
-- `.github/workflows/test.yml` — GitHub Actions CI running all 7 test suites in parallel; 160/160 tests green in clean environment
+- `.github/workflows/test.yml` — GitHub Actions CI running all 7 test suites in parallel; 163/163 tests green in clean environment
 - CI badge on root `README.md` + `openagents/README.md`
 - Repo description + 11 topics on `github.com/AgenticPlace/openagents`
 - Tag `v1.0.0-ethglobal`
@@ -62,14 +62,14 @@ All notable changes for the ETHGlobal Open Agents submission window are document
 
 | Suite | Tests | Result |
 |---|---|---|
-| Cabinet pytest (Python) | 22 | ✅ 3.17s |
+| Cabinet pytest (Python) | 25 | ✅ 3.17s |
 | Conclave Python protocol | 9 | ✅ 0.16s |
 | Conclave Solidity (Foundry) | 10 | ✅ 30.5ms |
 | iNFT-7857 (Foundry) | 56 | ✅ 80.5ms |
 | BANKON v1 ENS (Foundry) | 29 | ✅ 324.9ms |
 | THOT v1 (Foundry) | 14 | ✅ 9.7ms |
 | AgentRegistry ERC-8004 (Foundry) | 20 | ✅ 9.6ms |
-| **Total** | **160** | **all green** |
+| **Total** | **163** | **all green** |
 
 ### Cryptographic property (proven)
 

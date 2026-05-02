@@ -270,3 +270,71 @@ def test_release_key_rejects_wrong_confirm(env):
     )
     assert r.status_code == 400, r.text
     assert "RELEASE-PRIVATE-KEY" in r.text
+
+
+def test_public_read_404_for_unprovisioned_company(env):
+    """GET /cabinet/<company> must return 404 when no cabinet exists for that name."""
+    r = env["client"].get("/cabinet/NEVER_PROVISIONED_CO")
+    assert r.status_code == 404, r.text
+
+
+def test_two_companies_coexist_with_isolated_namespaces(env):
+    """Provision PYTHAI and ALICE; vault entries and registry blocks must not collide."""
+    # First company
+    r1 = _provision(env, "PYTHAI")
+    assert r1.status_code == 200
+    pythai_ceo = r1.json()["ceo"]
+
+    # Second company — gets its own JWT + challenges
+    r2 = _provision(env, "ALICE")
+    assert r2.status_code == 200
+    alice_ceo = r2.json()["ceo"]
+
+    # CEOs must be distinct (probability of collision ~ 1/2^160)
+    assert pythai_ceo != alice_ceo
+
+    # Both public reads succeed
+    pythai_pub = env["client"].get("/cabinet/PYTHAI").json()
+    alice_pub = env["client"].get("/cabinet/ALICE").json()
+    assert pythai_pub["ceo"]["address"] == pythai_ceo
+    assert alice_pub["ceo"]["address"] == alice_ceo
+
+    # Vault entries: 16 per company × 2 companies = ≥32 cabinet entries
+    info = env["vault"].info()
+    assert info["entries"] >= 32
+
+    # Each company's CEO entity_id is namespaced
+    assert pythai_pub["ceo"]["entity_id"] == "company:PYTHAI:cabinet:ceo"
+    assert alice_pub["ceo"]["entity_id"] == "company:ALICE:cabinet:ceo"
+
+
+def test_agent_map_soldiers_backfilled_after_provision(env):
+    """Provisioning PYTHAI must backfill the 7 soldier eth_address fields in
+    daio/agents/agent_map.json (if the file exists on the test fixture path)."""
+    import json as _json
+    from pathlib import Path
+
+    # Seed an agent_map.json with the 7 soldier slots having null addresses
+    agent_map_path = Path(env["tmp"] / "agent_map.json")
+    seed = {
+        "version": "test",
+        "soldiers": {
+            role: {"role": role, "eth_address": None, "weight": 1.0}
+            for role in [
+                "coo_operations", "cfo_finance", "cto_technology",
+                "ciso_security", "clo_legal", "cpo_product", "cro_risk",
+            ]
+        },
+    }
+    agent_map_path.write_text(_json.dumps(seed), encoding="utf-8")
+
+    _provision(env, "PYTHAI")
+    public = env["client"].get("/cabinet/PYTHAI").json()
+
+    after = _json.loads(agent_map_path.read_text(encoding="utf-8"))
+    for role in ["coo_operations", "cfo_finance", "cto_technology",
+                 "ciso_security", "clo_legal", "cpo_product", "cro_risk"]:
+        addr_in_map = after["soldiers"][role]["eth_address"]
+        addr_in_registry = public["soldiers"][role]["address"]
+        assert addr_in_map is not None
+        assert addr_in_map.lower() == addr_in_registry.lower(), f"role {role}: map {addr_in_map} ≠ registry {addr_in_registry}"
