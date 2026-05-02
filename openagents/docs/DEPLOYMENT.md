@@ -1,9 +1,11 @@
 ---
-name: Deployment Plan — Anvil → 0G Galileo
+name: Deployment Plan — Anvil → 0G Mainnet
 description: Honest contract inventory + per-network deployment sequence + dependency map. Includes integration gaps that need closing before livenet.
 ---
 
-# Deployment Plan — Anvil → 0G Galileo Livenet
+# Deployment Plan — Anvil → 0G Mainnet
+
+> **Network choice.** We deploy directly to **0G mainnet (chainId 16661)**. The 0G Galileo testnet is not on the deploy path — testing happens locally on Anvil, then mainnet. Real OG funds required (no faucet).
 
 > **Honest status first.** Three integration gaps were found during this audit and should be acknowledged before deploy:
 >
@@ -15,7 +17,7 @@ description: Honest contract inventory + per-network deployment sequence + depen
 
 ## Per-track deployment matrix
 
-| Track / Module | Contracts | Anvil | Sepolia | 0G Galileo | Mainnet |
+| Track / Module | Contracts | Anvil | Sepolia | 0G Mainnet | Eth Mainnet |
 |---|---|:-:|:-:|:-:|:-:|
 | 0G iNFT-7857 | `iNFT_7857.sol` | ✓ | ✓ | ✓ | ✓ |
 | ERC-8004 (composable) | `AgentRegistry.sol` | ✓ | ✓ | ✓ | ✓ |
@@ -23,13 +25,13 @@ description: Honest contract inventory + per-network deployment sequence + depen
 | ENS BANKON v1 | `BankonSubnameRegistrar.sol` + 3 siblings | ⚠ needs ENS mocks | ✓ | ✗ no ENS | ✓ |
 | AXL Conclave | `Tessera.sol`, `Censura.sol`, `Conclave.sol`, `ConclaveBond.sol` | ✓ | ✓ | ✓ | ✓ |
 
-**0G Galileo can host 4 modules natively** (iNFT-7857, AgentRegistry, THOT, Conclave-stack). **BANKON v1 cannot deploy to 0G** because its constructor requires the ENS NameWrapper + PublicResolver addresses, which don't exist on 0G. BANKON deploys to Ethereum mainnet, Sepolia, or Holesky.
+**0G mainnet hosts 4 modules natively** (iNFT-7857, AgentRegistry, THOT, Conclave-stack). **BANKON v1 cannot deploy to 0G** because its constructor requires the ENS NameWrapper + PublicResolver addresses, which don't exist on 0G. BANKON deploys to Ethereum mainnet or Sepolia.
 
 ---
 
 ## Contract inventory (the actual list to deploy)
 
-### Group A — 0G Galileo native (4 contracts in deploy order)
+### Group A — 0G mainnet native (4 contracts in deploy order)
 
 | # | Contract | Path | Constructor args | Tests | Coverage |
 |---|---|---|---|---|---|
@@ -110,25 +112,54 @@ forge script script/Deploy.s.sol:Deploy \
 # and Censura.setScore(holder, score) — see runbook section below
 ```
 
-## 0G Galileo livenet sequence
+## 0G mainnet livenet sequence
+
+> **Mainnet, not testnet.** Real OG required. No faucet. Verified live: chain id 16661, RPC `https://evmrpc.0g.ai`, ~4 gwei gas, current block ~32.1M.
+
+### Pre-flight checklist
+
+- [ ] **Funded deployer.** ≥ 0.1 OG at the deployer address (full Group A deploy ≈ 0.045 OG; keep margin).
+- [ ] **Wallet hygiene.** Use a one-shot deploy key, not a key with funds you care about.
+- [ ] **Constructor args reviewed.** `cloneFeeWei`, `royaltyBps`, oracle pubkey, treasury are mainnet-correct (NOT the Anvil deployer).
+- [ ] **Algorand bridge address known** (or deliberately deployed with `0x0` and patched later).
+- [ ] **No reorg expectations.** Wait for 12 confirmations after each forge create before depending on the address.
+- [ ] **Save broadcast files.** `openagents/conclave/contracts/broadcast/Deploy.s.sol/16661/` is the source of truth for address extraction.
+
+### One-shot script (recommended)
+
+Use the bundled wrapper — verifies chain ID, balance, gas price, prompts before sending:
 
 ```bash
-# Galileo testnet RPC + chain
-export GALILEO_RPC=https://evmrpc-testnet.0g.ai
-export GALILEO_CHAIN_ID=16601                # confirm with /openapi or 0G docs
+export ZEROG_PRIVATE_KEY=0x<funded-key>
+# Optional overrides:
+export ROYALTY_RECEIVER=0x...   # default: deployer
+export TREASURY_ADDR=0x...      # default: deployer
+export ORACLE_ADDR=0x...        # EIP-712 oracle pubkey for iNFT-7857 sealed-key proofs
+export ALGO_BRIDGE_ADDR=0x...   # optional; defaults to 0x0
+export CLONE_FEE_WEI=10000000000000000   # 0.01 OG
+export ROYALTY_BPS=250                    # 2.5%
+
+bash openagents/deploy/deploy_0g_mainnet.sh
+# → deploys 7 contracts (Group A), writes openagents/deployments/0g_mainnet.json
+```
+
+### Manual sequence (if you prefer cast directly)
+
+```bash
+# 0G mainnet
+export ZEROG_RPC=https://evmrpc.0g.ai
+export ZEROG_CHAIN_ID=16661
+export ZEROG_EXPLORER=https://chainscan.0g.ai
 export DEPLOYER_PK=$YOUR_FUNDED_KEY
-export DEPLOYER=0x...
+export DEPLOYER=$(cast wallet address --private-key $DEPLOYER_PK)
 
-# Verify connectivity
-cast chain-id --rpc-url $GALILEO_RPC
-cast balance $DEPLOYER --rpc-url $GALILEO_RPC
+# Sanity-check connectivity + chain
+[ "$(cast chain-id --rpc-url $ZEROG_RPC)" = "$ZEROG_CHAIN_ID" ] || { echo "wrong chain"; exit 1; }
+cast balance $DEPLOYER --rpc-url $ZEROG_RPC   # must be ≥ 0.1 OG (1e17 wei)
 
-# Faucet: Galileo testnet faucet at https://faucet.0g.ai (Discord-gated)
-# You need ~0.5 ETH-equivalent for the full deploy
-
-# Deploy in the same order as Anvil. Replace ANVIL_RPC with GALILEO_RPC.
+# Deploy in the same order as Anvil. Replace ANVIL_RPC with ZEROG_RPC.
 cd /home/hacker/mindX/daio/contracts
-forge create --rpc-url $GALILEO_RPC --private-key $DEPLOYER_PK \
+forge create --rpc-url $ZEROG_RPC --private-key $DEPLOYER_PK --broadcast \
     agentregistry/AgentRegistry.sol:AgentRegistry \
     --constructor-args $DEPLOYER
 
@@ -136,12 +167,12 @@ forge create --rpc-url $GALILEO_RPC --private-key $DEPLOYER_PK \
 
 cd /home/hacker/mindX/openagents/conclave/contracts
 forge script script/Deploy.s.sol:Deploy \
-    --rpc-url $GALILEO_RPC --private-key $DEPLOYER_PK \
-    --sig 'runFresh(address)' 0x0000000000000000000000000000000000000000 \
-    --broadcast --verify  # if Galileo has a verifier endpoint
+    --rpc-url $ZEROG_RPC --private-key $DEPLOYER_PK \
+    --sig 'runFresh(address)' $ALGO_BRIDGE_ADDR \
+    --broadcast
 ```
 
-Save the deployed addresses to `openagents/deployments/galileo.json`. The existing `openagents/deploy/deploy_galileo.sh` script can be the wrapper.
+Save deployed addresses to `openagents/deployments/0g_mainnet.json`. The bundled wrapper writes this file automatically.
 
 ---
 
@@ -242,14 +273,14 @@ Approximate, on Anvil with default settings:
 | Censura | ~0.4M | Minimal placeholder |
 | Conclave | ~2.0M | Member arrays + slash logic |
 | ConclaveBond | ~0.9M | Bond accounting + Algorand bridge |
-| **Total Group A** | **~11.2M** | All on 0G Galileo |
+| **Total Group A** | **~11.2M** | All on 0G mainnet |
 | BankonPriceOracle | ~1.0M | Oracle only |
 | BankonReputationGate | ~0.6M | Gate logic |
 | BankonPaymentRouter | ~1.5M | x402 routing |
 | BankonSubnameRegistrar | ~3.5M | ENS + EIP-712 + price/gate |
 | **Total Group B** | **~6.6M** | Sepolia |
 
-Galileo gas price is currently sub-cent; total deploy < $0.05 USD.
+0G mainnet gas (probed 2026-05-02): ~4 gwei. Group A total ≈ 0.045 OG.
 Sepolia 4-deploy ENS suite < $0.50 USD at low gwei.
 
 ---
@@ -259,11 +290,13 @@ Sepolia 4-deploy ENS suite < $0.50 USD at low gwei.
 The 9 component consoles read deployment addresses from a JSON file. Update:
 
 ```bash
-# After 0G Galileo deploys
-cat > openagents/deployments/galileo.json <<EOF
+# Generated automatically by deploy_0g_mainnet.sh, but the schema is:
+cat > openagents/deployments/0g_mainnet.json <<EOF
 {
-  "chain_id": 16601,
-  "rpc": "https://evmrpc-testnet.0g.ai",
+  "network": "0g-mainnet",
+  "chain_id": 16661,
+  "rpc": "https://evmrpc.0g.ai",
+  "explorer": "https://chainscan.0g.ai",
   "deployed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "contracts": {
     "AgentRegistry": "0x...",
@@ -278,7 +311,7 @@ cat > openagents/deployments/galileo.json <<EOF
 EOF
 ```
 
-The `/agentregistry`, `/inft7857`, `/conclave`, `/zerog` UIs all read this file via `fetch('/openagents/deployments/galileo.json')` to populate live contract addresses.
+The `/agentregistry`, `/inft7857`, `/conclave`, `/zerog` UIs all read this file via `fetch('/openagents/deployments/0g_mainnet.json')` to populate live contract addresses.
 
 ---
 
