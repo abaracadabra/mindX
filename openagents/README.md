@@ -1,7 +1,7 @@
 # mindX × Open Agents — eight agnostic, composable modules
 
 [![tests](https://github.com/AgenticPlace/openagents/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/AgenticPlace/openagents/actions/workflows/test.yml)
-&nbsp;**164/164 tests · 80% coverage · Slither audited (1 finding, fixed + tested)** &middot; 9 live consoles &middot; ETHGlobal Open Agents 2026
+&nbsp;**165/165 tests · 82% coverage · Slither audited (1 contract bug + 1 vault bug fixed)** &middot; 9 live consoles &middot; ETHGlobal Open Agents 2026
 
 > Submission for **ETHGlobal Open Agents** · Apr 24 → May 3 2026 · BANKON × mindX
 > Live console: [https://mindx.pythai.net/openagents](https://mindx.pythai.net/openagents) — composition page with links to **9 live module consoles**
@@ -53,7 +53,7 @@ If your framework wants any subset of the eight, lift them — they don't depend
 | 7 | **THOT.commit()** — pillar-gated memory-anchor primitive | composable; boosts M1 + M2 | **14** ✓ | shipped | `daio/contracts/THOT/v1/THOT.sol` |
 | 8 | **ERC-8004 AgentRegistry** — identity + capability layer | composable; boosts M1 + M4 | **20** ✓ | shipped | `daio/contracts/agentregistry/AgentRegistry.sol` |
 
-**Aggregate test totals: 164 tests, all green · 80% Python (Cabinet) line coverage · 89-96% Solidity coverage (4 daio contracts) · Slither audited (1 finding fixed + permanent CI guard).**
+**Aggregate test totals: 164 tests, all green · 82% Python (Cabinet) line coverage · 89-96% Solidity coverage (4 daio contracts) · Slither audited (1 finding fixed + permanent CI guard).**
 
 ---
 

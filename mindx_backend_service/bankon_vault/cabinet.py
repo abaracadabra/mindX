@@ -224,6 +224,13 @@ class CabinetProvisioner:
                     shutil.copy2(agent_map_snap, self._agent_map_path)
                 if entries_snap.exists():
                     shutil.copy2(entries_snap, entries_path)
+                # Critical: reload the vault's in-memory entry map from the
+                # restored file. Clear first because _load_entries only
+                # appends. Without this, the BankonVault instance still holds
+                # the partially-written entries in memory, and the next
+                # store() call would re-corrupt the file on flush.
+                self._vault._entries.clear()
+                self._vault._load_entries()
                 raise
 
     def read_public(self, company: str) -> Dict[str, Any]:

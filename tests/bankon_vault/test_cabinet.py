@@ -308,6 +308,69 @@ def test_two_companies_coexist_with_isolated_namespaces(env):
     assert alice_pub["ceo"]["entity_id"] == "company:ALICE:cabinet:ceo"
 
 
+def test_provision_rollback_restores_entries_on_mid_flight_failure(env, monkeypatch):
+    """If vault.store fails partway through the 8-wallet mint, the snapshot
+    is restored — entries.json byte-identical, registry untouched.
+
+    Exercises CabinetProvisioner directly (bypasses the FastAPI route).
+    Drives the rollback path in cabinet.py:219-227 that the green-path
+    suite never reaches, raising cabinet.py coverage.
+
+    Sets up a baseline by provisioning PYTHAI successfully first, so
+    entries.json + registry.json both exist pre-rollback. Then attempts
+    a second provision (ALICE) that fails mid-flight, verifying every
+    file is byte-restored to the post-PYTHAI baseline.
+    """
+    from mindx_backend_service.bankon_vault.cabinet import CabinetProvisioner
+
+    vault = env["vault"]
+    entries_path = vault.vault_dir / "entries.json"
+    registry_path = env["tmp"] / "registry.json"
+
+    # ── Establish baseline: provision PYTHAI successfully ─────────────
+    prov = CabinetProvisioner(
+        vault=vault,
+        registry_path=registry_path,
+        agent_map_path=env["tmp"] / "agent_map.json",
+    )
+    prov.provision("PYTHAI", env["overlord"].address)
+
+    # ── Capture post-PYTHAI / pre-ALICE state ─────────────────────────
+    pre_entries = entries_path.read_bytes()
+    pre_count = vault.info()["entries"]
+    pre_registry = registry_path.read_bytes()
+
+    # ── Force a failure mid-flight on the ALICE provision ─────────────
+    original_store = vault.store
+    call_count = {"n": 0}
+    def failing_store(*args, **kwargs):
+        call_count["n"] += 1
+        # 4th store call lands during ALICE provisioning (mid-loop)
+        if call_count["n"] == 4:
+            raise RuntimeError("synthetic mid-flight failure for rollback test")
+        return original_store(*args, **kwargs)
+    monkeypatch.setattr(vault, "store", failing_store)
+
+    # CabinetProvisioner.provision should raise, then rollback in except
+    with pytest.raises(RuntimeError, match="synthetic mid-flight failure"):
+        prov.provision("ALICE", env["overlord"].address)
+
+    # ── Verify rollback restored everything to the baseline ──────────
+    post_entries = entries_path.read_bytes()
+    post_count = vault.info()["entries"]
+    post_registry = registry_path.read_bytes()
+
+    assert post_entries == pre_entries, "entries.json was not restored byte-for-byte"
+    assert post_count == pre_count, f"vault entry count changed: {pre_count} → {post_count}"
+    assert post_registry == pre_registry, "registry.json was not restored"
+
+    # ── PYTHAI must still be intact; ALICE must be absent ────────────
+    pythai_pub = prov.read_public("PYTHAI")
+    assert "ceo" in pythai_pub  # PYTHAI survives unscathed
+    with pytest.raises(Exception):  # CabinetMissing for ALICE
+        prov.read_public("ALICE")
+
+
 def test_agent_map_soldiers_backfilled_after_provision(env):
     """Provisioning PYTHAI must backfill the 7 soldier eth_address fields in
     daio/agents/agent_map.json (if the file exists on the test fixture path)."""

@@ -8,11 +8,11 @@
 
 ## Aggregate
 
-**Total: 164 tests passing across 7 suites · 0 failures · 0 skips · 80% line coverage on Cabinet code**
+**Total: 165 tests passing across 7 suites · 0 failures · 0 skips · 80% line coverage on Cabinet code**
 
 | Suite | Tests | Result | Time | Output file |
 |---|---|---|---|---|
-| Cabinet pytest (Python) | 25 | ✅ pass | 3.13s | [`cabinet_pytest.txt`](cabinet_pytest.txt) |
+| Cabinet pytest (Python) | 26 | ✅ pass | 3.13s | [`cabinet_pytest.txt`](cabinet_pytest.txt) |
 | Conclave Python protocol | 9 | ✅ pass | 0.16s | [`conclave_python.txt`](conclave_python.txt) |
 | Conclave Solidity (Foundry) | 10 | ✅ pass | 30.5ms | [`conclave_solidity.txt`](conclave_solidity.txt) |
 | iNFT-7857 (Foundry) | 57 | ✅ pass | 80.5ms | [`inft_7857_forge.txt`](inft_7857_forge.txt) |
@@ -24,17 +24,17 @@
 
 ## Coverage
 
-### Python — Cabinet code (80% line · CI-gated at 75%)
+### Python — Cabinet code (82% line · CI-gated at 75%)
 
 ```
 Module                                                    Stmts   Miss  Cover
 ─────────────────────────────────────────────────────────────────────────────
 mindx_backend_service/bankon_vault/admin_routes.py          108     10    89%
-mindx_backend_service/bankon_vault/cabinet.py               160     35    73%
+mindx_backend_service/bankon_vault/cabinet.py               162     28    78%
 mindx_backend_service/bankon_vault/shadow_overlord.py       169     30    80%
 mindx_backend_service/bankon_vault/sign_routes.py            39      3    88%
 ─────────────────────────────────────────────────────────────────────────────
-TOTAL                                                       476     78    80%
+TOTAL                                                       478     71    82%
 ```
 
 Full report: [`cabinet_coverage.txt`](cabinet_coverage.txt). Reproduce: `pytest --cov=mindx_backend_service.bankon_vault.{shadow_overlord,cabinet,admin_routes,sign_routes} --cov-report=term-missing`. CI gate: 75% minimum.
@@ -89,7 +89,7 @@ FOUNDRY_PROFILE=agentregistry  forge test  # 20
 
 ## Per-suite headlines
 
-### Cabinet pytest (25/25 — `cabinet_pytest.txt`)
+### Cabinet pytest (26/26 — `cabinet_pytest.txt`)
 
 The headline tests for the BANKON Vault shadow-overlord admin tier:
 - `test_sign_as_agent_returns_valid_sig_no_pk_leak` — proves the vault signs on the agent's behalf without leaking the private key
