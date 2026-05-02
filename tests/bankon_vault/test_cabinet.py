@@ -308,6 +308,89 @@ def test_two_companies_coexist_with_isolated_namespaces(env):
     assert alice_pub["ceo"]["entity_id"] == "company:ALICE:cabinet:ceo"
 
 
+def test_preflight_reports_state_correctly(env):
+    """Direct provisioner.preflight() call exercises cabinet.py:138-146.
+    Reports: exists, vault_unlocked, registry_writable, soldiers_with_existing_addresses."""
+    from mindx_backend_service.bankon_vault.cabinet import CabinetProvisioner
+    import json as _json
+
+    # Seed an agent_map with one soldier already having an eth_address
+    agent_map_path = env["tmp"] / "agent_map.json"
+    seed = {
+        "soldiers": {
+            "cfo_finance": {"eth_address": "0xAAAA"},
+            "ciso_security": {"eth_address": None},
+        }
+    }
+    agent_map_path.write_text(_json.dumps(seed))
+
+    prov = CabinetProvisioner(
+        vault=env["vault"],
+        registry_path=env["tmp"] / "registry.json",
+        agent_map_path=agent_map_path,
+    )
+    pre = prov.preflight("PYTHAI")
+    assert pre["exists"] is False
+    assert pre["vault_unlocked"] is True
+    assert pre["registry_writable"] is True
+    assert "cfo_finance" in pre["soldiers_with_existing_addresses"]
+    assert "ciso_security" not in pre["soldiers_with_existing_addresses"]
+
+    # After provision, exists flips to True
+    prov.provision("PYTHAI", env["overlord"].address)
+    post = prov.preflight("PYTHAI")
+    assert post["exists"] is True
+
+
+def test_provision_on_locked_vault_raises(env):
+    """Calling provision() with a locked vault raises RuntimeError (cabinet.py:161)."""
+    from mindx_backend_service.bankon_vault.cabinet import CabinetProvisioner
+
+    env["vault"].lock()
+    prov = CabinetProvisioner(
+        vault=env["vault"],
+        registry_path=env["tmp"] / "registry.json",
+        agent_map_path=env["tmp"] / "agent_map.json",
+    )
+    with pytest.raises(RuntimeError, match="vault must be unlocked"):
+        prov.provision("PYTHAI", env["overlord"].address)
+
+
+def test_clear_nulls_out_matching_soldier_addresses(env):
+    """clear() should null out soldier eth_address fields whose addresses
+    match the cleared cabinet (cabinet.py:345-362)."""
+    from mindx_backend_service.bankon_vault.cabinet import CabinetProvisioner
+    import json as _json
+
+    agent_map_path = env["tmp"] / "agent_map.json"
+    # Seed with empty soldier slots that will be backfilled by provision
+    agent_map_path.write_text(_json.dumps({
+        "soldiers": {
+            role: {"eth_address": None}
+            for role in ["coo_operations", "cfo_finance", "cto_technology",
+                         "ciso_security", "clo_legal", "cpo_product", "cro_risk"]
+        }
+    }))
+
+    prov = CabinetProvisioner(
+        vault=env["vault"],
+        registry_path=env["tmp"] / "registry.json",
+        agent_map_path=agent_map_path,
+    )
+    prov.provision("PYTHAI", env["overlord"].address)
+
+    # Verify soldier addresses are populated
+    after_provision = _json.loads(agent_map_path.read_text())
+    assert all(after_provision["soldiers"][role]["eth_address"] is not None
+               for role in after_provision["soldiers"])
+
+    # Clear and verify they're nulled out
+    prov.clear("PYTHAI")
+    after_clear = _json.loads(agent_map_path.read_text())
+    assert all(after_clear["soldiers"][role]["eth_address"] is None
+               for role in after_clear["soldiers"])
+
+
 def test_provision_rollback_restores_entries_on_mid_flight_failure(env, monkeypatch):
     """If vault.store fails partway through the 8-wallet mint, the snapshot
     is restored — entries.json byte-identical, registry untouched.

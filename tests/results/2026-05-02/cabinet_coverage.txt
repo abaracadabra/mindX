@@ -1,4 +1,4 @@
-..........................                                               [100%]
+.............................                                            [100%]
 =============================== warnings summary ===============================
 ::test_challenge_well_formed
 ::test_challenge_well_formed
@@ -11,10 +11,10 @@ _____________ coverage: platform linux, python 3.11.0-candidate-1 ______________
 Name                                                    Stmts   Miss Branch BrPart  Cover   Missing
 ---------------------------------------------------------------------------------------------------
 mindx_backend_service/bankon_vault/admin_routes.py        108     10     14      3    89%   114, 136-137, 178->184, 181-182, 186-187, 220->225, 223-224, 230
-mindx_backend_service/bankon_vault/cabinet.py             162     28     62     12    78%   138-146, 161, 221->223, 224, 225->232, 262, 266, 273->271, 275-277, 280->282, 330, 336->332, 339->exit, 345-362
+mindx_backend_service/bankon_vault/cabinet.py             162      8     62     13    91%   221->223, 224, 225->232, 262, 266, 273->271, 275-277, 280->282, 330, 339->exit, 348, 356, 358->354, 361->exit
 mindx_backend_service/bankon_vault/shadow_overlord.py     169     30     44      9    80%   70-80, 92-101, 113, 122, 124, 133, 170, 193, 208-209, 259, 269, 292-295, 333-335
 mindx_backend_service/bankon_vault/sign_routes.py          39      3      4      2    88%   69->75, 72-73, 78
 ---------------------------------------------------------------------------------------------------
-TOTAL                                                     478     71    124     26    82%
-Required test coverage of 70.0% reached. Total coverage: 81.56%
-26 passed, 5 warnings in 6.81s
+TOTAL                                                     478     51    124     27    86%
+Required test coverage of 70.0% reached. Total coverage: 86.38%
+29 passed, 5 warnings in 7.63s
