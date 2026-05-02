@@ -1253,6 +1253,81 @@ async def uniswap_page():
     return _serve_html(_UNISWAP_HTML_PATH, "Uniswap V4 Trader")
 
 
+# ─── Uniswap Trading API proxy (vault-aware; never exposes the key) ──
+@app.post("/api/uniswap/quote", include_in_schema=False)
+async def api_uniswap_quote(payload: Dict[str, Any] = Body(...)):
+    """Proxy to https://trade-api.gateway.uniswap.org/v1/quote.
+
+    Key is read from vault (UNISWAP_TRADE_API_KEY env, populated at startup).
+    Browser never sees it. For read-only browse mode, defaults `swapper` to
+    a well-known address (vitalik.eth) — caller can override.
+    """
+    from fastapi.responses import JSONResponse
+    try:
+        from tools.uniswap_api_tool import UniswapAPITool, UniswapAPIConfig
+        cfg = UniswapAPIConfig(
+            chain_id=int(payload.get("chain_id", 1)),
+            rpc_url=payload.get("rpc_url", "https://eth.drpc.org"),
+        )
+        tool = UniswapAPITool(config=cfg)
+        # Default swapper for read-only quote browsing; caller can override
+        if not payload.get("swapper"):
+            payload["swapper"] = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+        result = await tool.execute("quote", payload)
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+@app.post("/api/uniswap/check_approval", include_in_schema=False)
+async def api_uniswap_check_approval(payload: Dict[str, Any] = Body(...)):
+    """Proxy to /v1/check_approval — returns Permit2 approve calldata."""
+    from fastapi.responses import JSONResponse
+    try:
+        from tools.uniswap_api_tool import UniswapAPITool, UniswapAPIConfig
+        cfg = UniswapAPIConfig(chain_id=int(payload.get("chain_id", 1)))
+        tool = UniswapAPITool(config=cfg)
+        result = await tool.execute("approval", payload)
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+@app.get("/api/uniswap/decisions", include_in_schema=False)
+async def api_uniswap_decisions(limit: int = 20):
+    """Recent BDI trader cycles from data/logs/uniswap_decisions.jsonl."""
+    from fastapi.responses import JSONResponse
+    log_path = Path(__file__).parent.parent / "data" / "logs" / "uniswap_decisions.jsonl"
+    if not log_path.exists():
+        return JSONResponse({"ok": True, "log": str(log_path), "rows": [], "exists": False})
+    rows: List[Dict[str, Any]] = []
+    try:
+        sz = log_path.stat().st_size
+        with log_path.open("rb") as fh:
+            if sz > 800_000:
+                fh.seek(sz - 800_000)
+                fh.readline()
+            for line in reversed(fh.read().decode("utf-8", errors="ignore").splitlines()):
+                if not line.strip():
+                    continue
+                try:
+                    rows.append(json.loads(line))
+                except Exception:
+                    continue
+                if len(rows) >= limit:
+                    break
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+    summary = {
+        "quote": sum(1 for r in rows if r.get("action") == "quote" or r.get("decision", {}).get("action") == "quote"),
+        "swap":  sum(1 for r in rows if r.get("action") == "swap"  or r.get("decision", {}).get("action") == "swap"),
+        "hold":  sum(1 for r in rows if r.get("action") == "hold"  or r.get("decision", {}).get("action") == "hold"),
+        "executed": sum(1 for r in rows if r.get("executed") or r.get("result", {}).get("executed")),
+    }
+    return JSONResponse({"ok": True, "log": str(log_path), "exists": True,
+                         "count": len(rows), "summary": summary, "rows": rows})
+
+
 @app.get("/bankon-ens", response_class=_DashResponse, include_in_schema=False)
 @app.get("/bankon-ens.html", response_class=_DashResponse, include_in_schema=False)
 async def bankon_ens_page():
@@ -1497,6 +1572,7 @@ app.add_middleware(
 _PUBLIC_EXACT = frozenset({
     "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html",
     "/keeperhub", "/keeperhub.html", "/uniswap", "/uniswap.html", "/bankon-ens", "/bankon-ens.html", "/bankonminter", "/bankonminter.html", "/zerog", "/zerog.html", "/conclave", "/conclave.html", "/agentregistry", "/agentregistry.html",
+    "/api/uniswap/quote", "/api/uniswap/check_approval", "/api/uniswap/decisions",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/diagnostics/live", "/activity/stream", "/activity/recent", "/activity/stats",
     "/thesis", "/thesis/", "/thesis/evidence", "/thesis/summary",
