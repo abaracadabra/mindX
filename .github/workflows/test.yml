@@ -46,7 +46,7 @@ jobs:
         working-directory: openagents/conclave
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-asyncio pynacl cbor2 pydantic
+          pip install pytest pytest-asyncio pynacl cbor2 pydantic httpx
 
       - name: Run Conclave protocol tests
         working-directory: openagents/conclave
@@ -67,7 +67,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: 'true'  # top-level only; some nested OZ sub-submodules have stale URLs
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -86,23 +86,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: 'true'  # top-level only; some nested OZ sub-submodules have stale URLs
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: stable
 
-      - name: Install forge-std (Conclave isolated submodule)
+      - name: Install forge-std for Conclave (no daio dependency in CI)
         working-directory: openagents/conclave/contracts
-        run: |
-          mkdir -p lib
-          # Reuse the daio/contracts/lib/forge-std submodule that ships with the repo
-          if [ -d "../../../daio/contracts/lib/forge-std" ]; then
-            ln -sf ../../../daio/contracts/lib/forge-std lib/forge-std
-          else
-            forge install foundry-rs/forge-std --no-git --no-commit
-          fi
+        run: forge install foundry-rs/forge-std --no-git --no-commit
 
       - name: Run Conclave forge tests
         working-directory: openagents/conclave/contracts
