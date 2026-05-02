@@ -53,6 +53,7 @@ contract BankonSubnameRegistrar is
     bytes32 public constant BANKON_OPS_ROLE      = keccak256("BANKON_OPS_ROLE");
     bytes32 public constant BONAFIDE_GOV_ROLE    = keccak256("BONAFIDE_GOV_ROLE");
     bytes32 public constant GATEWAY_SIGNER_ROLE  = keccak256("GATEWAY_SIGNER_ROLE");
+    bytes32 public constant MINDX_AGENT_MINTER_ROLE = keccak256("MINDX_AGENT_MINTER_ROLE");
 
     /* ───── Constants ─────────────────────────────────────────────── */
     /// Soulbound default: PARENT_CANNOT_CONTROL | CANNOT_UNWRAP |
@@ -218,6 +219,57 @@ contract BankonSubnameRegistrar is
                                paymentReceiptHash, agentId, false);
     }
 
+    /// @notice Free address-as-label registration for mindX agents.
+    /// @dev    Label is the lowercase 40-char hex of `agent` (no 0x prefix),
+    ///         producing `<addr>.bankon.eth`. Caller must hold
+    ///         MINDX_AGENT_MINTER_ROLE — the agent itself does not pay or
+    ///         attest reputation; the role-holder (a mint service) attests
+    ///         that the agent is a registered mindX agent.
+    ///
+    ///         The existing free/paid system is preserved:
+    ///         - `register` (paid, EIP-712 voucher) — UNCHANGED
+    ///         - `registerFree` (free, reputation-gated, 7+ char) — UNCHANGED
+    ///         - `registerAgentSubname` (free, role-gated, address-as-label) — NEW
+    ///
+    ///         Anyone with MINDX_AGENT_MINTER_ROLE can mint at zero fee.
+    ///         The role-holder is expected to verify off-chain that `agent`
+    ///         is a real mindX agent before calling.
+    function registerAgentSubname(
+        address agent,
+        uint64 expiry,
+        AgentMetadata calldata meta
+    )
+        external
+        nonReentrant
+        whenNotPaused
+        onlyRole(MINDX_AGENT_MINTER_ROLE)
+        returns (bytes32 node, uint256 agentId, string memory label)
+    {
+        if (agent == address(0)) revert ZeroAddress();
+        // Label = lowercase 40-char hex of address (no 0x). 40 chars > 7-min.
+        label = _addressToLowerHex(agent);
+        expiry = _capExpiry(expiry);
+        node = _writeAndTransfer(label, agent, expiry, meta);
+
+        if (erc8004BundleEnabled && address(identityRegistry8004) != address(0)) {
+            agentId = identityRegistry8004.register(agent, meta.agentURI);
+            _safeSetMeta(agentId, "bankon.ensName", bytes(_concat(label, ".bankon.eth")));
+        }
+        emit SubnameRegistered(node, label, agent, expiry, 0,
+                               bytes32(0), agentId, true);
+    }
+
+    /// @dev Convert address to lowercase 40-char hex (no 0x prefix).
+    function _addressToLowerHex(address a) internal pure returns (string memory) {
+        bytes memory buf = new bytes(40);
+        uint160 v = uint160(a);
+        for (uint256 i = 0; i < 40; i++) {
+            uint8 nibble = uint8((v >> ((39 - i) * 4)) & 0xf);
+            buf[i] = bytes1(nibble < 10 ? nibble + 0x30 : nibble + 0x57); // '0'-'9' or 'a'-'f'
+        }
+        return string(buf);
+    }
+
     /// @notice Free registration path for reputation-eligible agents (7+ char only).
     function registerFree(
         string calldata label,
@@ -306,7 +358,7 @@ contract BankonSubnameRegistrar is
     /// @dev Three-step canonical pattern: temp-self-own → write records →
     ///      transfer with locked fuses. Returns the subname node.
     function _writeAndTransfer(
-        string calldata label,
+        string memory label,
         address owner,
         uint64 expiry,
         AgentMetadata calldata meta

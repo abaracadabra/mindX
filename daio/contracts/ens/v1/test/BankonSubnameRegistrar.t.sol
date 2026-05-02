@@ -549,4 +549,87 @@ contract BankonSubnameRegistrar_Test is Test {
         assertEq(reg.ownerOfLabel(_node(label)), alice);
         assertTrue(reg.usedReceipts(receipt));
     }
+
+    /* ════════════════════════════════════════════════════════════════ */
+    /*  registerAgentSubname — mindX agent free address-as-label mint    */
+    /* ════════════════════════════════════════════════════════════════ */
+
+    address internal mindxMinter = address(0xCA51EFE);
+
+    function _grantMindxMinter() internal {
+        bytes32 role = reg.MINDX_AGENT_MINTER_ROLE();
+        vm.prank(admin);
+        reg.grantRole(role, mindxMinter);
+    }
+
+    function test_AgentSubname_revertsWithoutRole() public {
+        // alice (no role) tries to mint for herself
+        vm.prank(alice);
+        vm.expectRevert();  // OZ AccessControl reverts with selector
+        reg.registerAgentSubname(alice, uint64(block.timestamp + 365 days), _meta());
+    }
+
+    function test_AgentSubname_mintsWithRole_freeAddressAsLabel() public {
+        _grantMindxMinter();
+        uint64 expiry = uint64(block.timestamp + 365 days);
+
+        vm.prank(mindxMinter);
+        (bytes32 node, uint256 agentId, string memory label) =
+            reg.registerAgentSubname(alice, expiry, _meta());
+
+        // Label must be lowercase 40-char hex of alice (no 0x).
+        // alice = 0xa1, so label is "00...0a1" (40 chars, lowercase).
+        assertEq(bytes(label).length, 40);
+        // Node matches namehash(label, parentNode)
+        assertEq(node, _node(label));
+        // ERC-8004 bundle still happens
+        assertGt(agentId, 0);
+        // alice is the owner of the subname
+        assertEq(reg.ownerOfLabel(node), alice);
+    }
+
+    function test_AgentSubname_labelIsLowercaseHexNoPrefix() public {
+        _grantMindxMinter();
+        // Cast a non-trivial address to test the hex encoding
+        address agent = 0xDEaDBeEFcAfe1234567890aBCDEF1234567890AB;
+
+        vm.prank(mindxMinter);
+        (, , string memory label) =
+            reg.registerAgentSubname(agent, uint64(block.timestamp + 365 days), _meta());
+
+        // Expected: deadbeefcafe1234567890abcdef1234567890ab (lowercased, no 0x)
+        assertEq(label, "deadbeefcafe1234567890abcdef1234567890ab");
+        assertEq(bytes(label).length, 40);
+    }
+
+    function test_AgentSubname_revertsOnZeroAddress() public {
+        _grantMindxMinter();
+        vm.prank(mindxMinter);
+        vm.expectRevert(BankonSubnameRegistrar.ZeroAddress.selector);
+        reg.registerAgentSubname(address(0), uint64(block.timestamp + 365 days), _meta());
+    }
+
+    function test_AgentSubname_paidAndFreePathsStillWork() public {
+        // Verify the existing paid + reputation-gated free paths are unchanged
+        // after adding the new role-gated agent path.
+        _grantMindxMinter();
+
+        // Paid path
+        bytes32 receipt = keccak256("paid-receipt-1");
+        uint64 expiry = uint64(block.timestamp + 365 days);
+        uint256 deadline = block.timestamp + 1 hours;
+        bytes memory sig = _signRegistration("paidalice", alice, expiry, receipt, deadline, gatewayPk);
+        reg.register("paidalice", alice, expiry, receipt, deadline, sig, _meta());
+        assertEq(reg.ownerOfLabel(_node("paidalice")), alice);
+
+        // Reputation-gated free path
+        gate.setAdminScore(bob, 200);
+        reg.registerFree("longbob123", bob, expiry, _meta());
+        assertEq(reg.ownerOfLabel(_node("longbob123")), bob);
+
+        // New agent path
+        vm.prank(mindxMinter);
+        reg.registerAgentSubname(carol, expiry, _meta());
+        // (label = lowercase hex of carol address)
+    }
 }
