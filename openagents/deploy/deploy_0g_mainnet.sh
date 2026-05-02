@@ -8,15 +8,16 @@
 #   - RPC: https://evmrpc.0g.ai (testnet was https://evmrpc-testnet.0g.ai).
 #   - Explorer: https://chainscan.0g.ai (testnet was chainscan-galileo.0g.ai).
 #
-# WHAT THIS DEPLOYS:
-#   1. AgentRegistry         (~2.1M gas)
-#   2. THOT v1                (~1.5M gas)
-#   3. iNFT_7857              (~3.8M gas)
-#   4. Tessera                (~0.5M gas)
-#   5. Censura                (~0.4M gas)
-#   6. Conclave               (~2.0M gas)
-#   7. ConclaveBond           (~0.9M gas)
-#   Total: ~11.2M gas. At 4 gwei = ~0.045 OG (call it 0.1 OG with safety margin).
+# WHAT THIS DEPLOYS (Group A — 8 contracts):
+#   1. AgentRegistry         (~2.1M gas)   ERC-8004 composable identity
+#   2. THOT v1                (~1.5M gas)   memory anchor (commit/reveal)
+#   3. iNFT_7857              (~3.8M gas)   intelligent NFT (sealed-key transfer)
+#   4. DatasetRegistry        (~0.7M gas)   IPFS/0G storage offload anchor
+#   5. Tessera                (~0.5M gas)   BONAFIDE credential placeholder
+#   6. Censura                (~0.4M gas)   reputation registry placeholder
+#   7. Conclave               (~2.0M gas)   AXL deliberation mesh
+#   8. ConclaveBond           (~0.9M gas)   slash bond + Algorand bridge
+#   Total: ~11.9M gas. At 4 gwei ≈ 0.048 OG (keep ≥ 0.1 OG for margin).
 #
 # WHAT THIS DOES NOT DEPLOY (reasons):
 #   - BANKON v1 ENS (4 contracts): requires ENS NameWrapper + PublicResolver.
@@ -140,21 +141,21 @@ deploy_contract() {
 
 # ─── deploy ─────────────────────────────────────────────────────────
 echo
-echo ">>> 1/7 AgentRegistry"
+echo ">>> 1/8 AgentRegistry"
 AGENT_REG=$(deploy_contract "AgentRegistry" \
   "agentregistry/AgentRegistry.sol:AgentRegistry" \
   "$DAIO_DIR" \
   --constructor-args "$DEPLOYER" | tail -1 | awk '{print $NF}')
 
 echo
-echo ">>> 2/7 THOT v1"
+echo ">>> 2/8 THOT v1"
 THOT=$(deploy_contract "THOT" \
   "THOT/v1/THOT.sol:THOT" \
   "$DAIO_DIR" \
   --constructor-args "$DEPLOYER" "$DEPLOYER" | tail -1 | awk '{print $NF}')
 
 echo
-echo ">>> 3/7 iNFT_7857"
+echo ">>> 3/8 iNFT_7857"
 INFT=$(deploy_contract "iNFT_7857" \
   "inft/iNFT_7857.sol:iNFT_7857" \
   "$DAIO_DIR" \
@@ -163,7 +164,13 @@ INFT=$(deploy_contract "iNFT_7857" \
                      "$ORACLE_ADDR" "$TREASURY_ADDR" "$CLONE_FEE_WEI" | tail -1 | awk '{print $NF}')
 
 echo
-echo ">>> 4-7/7 Conclave stack (Tessera + Censura + Conclave + ConclaveBond)"
+echo ">>> 4/8 DatasetRegistry"
+DATASET_REG=$(deploy_contract "DatasetRegistry" \
+  "arc/DatasetRegistry.sol:DatasetRegistry" \
+  "$DAIO_DIR" | tail -1 | awk '{print $NF}')
+
+echo
+echo ">>> 5-8/8 Conclave stack (Tessera + Censura + Conclave + ConclaveBond)"
 pushd "$CONCLAVE_DIR" > /dev/null
 SCRIPT_OUT=$(forge script script/Deploy.s.sol:Deploy \
   --rpc-url "$RPC" --private-key "$ZEROG_PRIVATE_KEY" \
@@ -201,6 +208,7 @@ cat > "$OUT_FILE" <<EOF
     "AgentRegistry": "$AGENT_REG",
     "THOT": "$THOT",
     "iNFT_7857": "$INFT",
+    "DatasetRegistry": "$DATASET_REG",
     "Tessera": "$TESSERA",
     "Censura": "$CENSURA",
     "Conclave": "$CONCLAVE",
@@ -229,6 +237,7 @@ echo " Verify on explorer:"
 echo "   $EXPLORER/address/$AGENT_REG"
 echo "   $EXPLORER/address/$THOT"
 echo "   $EXPLORER/address/$INFT"
+echo "   $EXPLORER/address/$DATASET_REG"
 echo "   $EXPLORER/address/$TESSERA"
 echo "   $EXPLORER/address/$CENSURA"
 echo "   $EXPLORER/address/$CONCLAVE"
