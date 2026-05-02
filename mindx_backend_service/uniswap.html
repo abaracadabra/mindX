@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Uniswap V4 Trader — mindX</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#060810;--surface:rgba(14,16,28,.92);--surface2:rgba(20,22,36,.92);--accent:#56d364;--accent-dim:rgba(86,211,100,.06);--pink:#ff007a;--warn:#e3b341;--err:#f85149;--blue:#79c0ff;--violet:#d2a8ff;--text:#e6edf3;--text2:#b1bac4;--text3:#6e7681;--white:#f0f6fc;--border:rgba(121,192,255,.1);--glass-border:rgba(121,192,255,.08)}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% -10%,rgba(255,0,122,.04) 0%,transparent 50%);pointer-events:none;z-index:0}
+.page{position:relative;z-index:1;min-height:100vh;padding:20px 20px 40px;max-width:1200px;margin:0 auto}
+.hdr{text-align:center;margin-bottom:24px}
+.hdr h1{font-family:'Orbitron',sans-serif;font-size:clamp(22px,3.5vw,32px);font-weight:700;color:var(--white);letter-spacing:8px;text-transform:uppercase;text-shadow:0 0 20px rgba(255,0,122,.15)}
+.hdr .sub{font-size:12px;color:var(--text2);letter-spacing:3px;margin-top:10px;padding-bottom:16px;border-bottom:1px solid var(--glass-border)}
+.status-bar{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+.badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 12px;border:1px solid var(--border);border-radius:3px;color:var(--text2)}
+.badge.ok{color:var(--accent);border-color:rgba(86,211,100,.3)}
+.badge.warn{color:var(--warn);border-color:rgba(227,179,65,.3)}
+.badge.err{color:var(--err);border-color:rgba(248,81,73,.3)}
+.badge.pink{color:var(--pink);border-color:rgba(255,0,122,.3)}
+.panel{background:var(--surface);border:1px solid var(--glass-border);border-radius:6px;padding:22px;margin:14px 0}
+.panel h2{font-family:'Orbitron',sans-serif;font-size:14px;color:var(--white);letter-spacing:4px;text-transform:uppercase;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--glass-border)}
+.panel .desc{font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.5}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:8px 0}
+input,select,textarea,button{background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px 10px}
+input:focus,textarea:focus{outline:none;border-color:var(--pink)}
+button{cursor:pointer;background:var(--accent-dim);border-color:var(--accent);color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;padding:8px 16px;transition:.18s}
+button:hover:not(:disabled){background:var(--accent);color:#000}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.pink{background:rgba(255,0,122,.06);border-color:var(--pink);color:var(--pink)}
+button.pink:hover:not(:disabled){background:var(--pink);color:#fff}
+.constraint-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:10px}
+.constraint{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--pink);border-radius:3px;padding:10px 12px}
+.constraint .name{font-family:'Orbitron',sans-serif;font-size:10px;color:var(--white);text-transform:uppercase;letter-spacing:2px;margin-bottom:4px}
+.constraint .val{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent)}
+.kv{display:grid;grid-template-columns:160px 1fr;gap:8px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;margin:6px 0}
+.kv .k{color:var(--text3)}.kv .v{color:var(--text)}
+.muted{color:var(--text3);font-size:11px}
+.kbd{font-family:'JetBrains Mono',monospace;background:var(--surface2);padding:2px 6px;border-radius:2px;border:1px solid var(--border);font-size:11px}
+.log{background:#020308;border:1px solid var(--glass-border);border-radius:4px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);max-height:240px;overflow-y:auto;line-height:1.6}
+.log .line{margin:2px 0}
+.log .ok{color:var(--accent)}.log .warn{color:var(--warn)}.log .err{color:var(--err)}
+.log .ts{color:var(--text3);margin-right:8px}
+pre{background:#020308;border:1px solid var(--glass-border);border-radius:4px;padding:12px;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);line-height:1.5;max-height:300px;overflow-y:auto}
+.bdi-step{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--glass-border);font-size:12px}
+.bdi-step:last-child{border-bottom:none}
+.bdi-step .stage{font-family:'Orbitron',sans-serif;font-size:10px;color:var(--pink);text-transform:uppercase;letter-spacing:2px;width:80px;flex-shrink:0;padding-top:2px}
+.bdi-step .body{flex:1;color:var(--text2)}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hdr">
+    <h1>UNISWAP V4</h1>
+    <div class="sub">BDI-REASONING SWAP AGENT — SEPOLIA · PERSONA-CONSTRAINED</div>
+  </div>
+
+  <div class="status-bar">
+    <span class="badge pink" id="badge-network">NETWORK: ?</span>
+    <span class="badge" id="badge-wallet">WALLET: not connected</span>
+    <span class="badge ok" id="badge-tool">TOOL: tools/uniswap_v4_tool.py</span>
+    <span class="badge ok" id="badge-persona">PERSONA: trader.prompt</span>
+  </div>
+
+  <div class="panel">
+    <h2>1 · Persona Hard Constraints</h2>
+    <div class="desc">
+      The BDI cycle in <span class="kbd">core/bdi_agent.py</span> rejects any candidate trade that violates these constraints
+      from <span class="kbd">personas/trader.prompt</span>. No exceptions, no overrides.
+    </div>
+    <div class="constraint-grid">
+      <div class="constraint"><div class="name">Slippage budget</div><div class="val">≤ 0.5%</div></div>
+      <div class="constraint"><div class="name">Position size</div><div class="val">≤ $5 USDC equiv</div></div>
+      <div class="constraint"><div class="name">Reserve floor</div><div class="val">≥ 30% USDC after</div></div>
+      <div class="constraint"><div class="name">Decision freshness</div><div class="val">≤ 60 sec old</div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>2 · Connect to Sepolia</h2>
+    <div class="desc">
+      MetaMask must be on Sepolia (chainId 11155111). The trader operates against the live V4 Quoter for
+      read-only quotes; <span class="kbd">swap</span> requires Sepolia ETH + USDC balance.
+    </div>
+    <div class="row">
+      <button id="btn-connect">Connect MetaMask</button>
+      <button id="btn-switch" disabled>Switch to Sepolia</button>
+      <span class="muted" id="conn-msg"></span>
+    </div>
+    <div class="kv" id="wallet-kv"></div>
+  </div>
+
+  <div class="panel">
+    <h2>3 · Live V4 Quoter (read-only)</h2>
+    <div class="desc">
+      Calls <span class="kbd">quoteExactInputSingle</span> on the Sepolia V4 Quoter. No funds needed; pure on-chain
+      <span class="kbd">eth_call</span>. PoolKey ordering enforces <span class="kbd">currency0 &lt; currency1</span> per V4 spec.
+    </div>
+    <div class="row">
+      <input id="ti-token-in" value="0x" placeholder="token_in (or ETH = 0x000...000)" style="width:340px">
+      <input id="ti-token-out" value="0x" placeholder="token_out" style="width:340px">
+    </div>
+    <div class="row">
+      <input id="ti-amount" value="0.001" placeholder="amount_in (decimal)" style="width:140px">
+      <input id="ti-fee" value="3000" placeholder="fee tier (e.g. 3000)" style="width:140px">
+      <input id="ti-tickspacing" value="60" placeholder="tickSpacing" style="width:120px">
+      <button id="btn-quote">Get Quote</button>
+    </div>
+    <pre id="quote-output">paste pool params and click Get Quote.</pre>
+  </div>
+
+  <div class="panel">
+    <h2>4 · BDI Decision Trace (live)</h2>
+    <div class="desc">
+      The trader's last 5 deliberations from <span class="kbd">data/logs/uniswap_decisions.jsonl</span>
+      (or <span class="kbd">/insight/improvement/timeline?kind=uniswap</span> if catalogue events available).
+      Each step shows perception → orientation → decision → action.
+    </div>
+    <div class="row">
+      <button id="btn-trace">Refresh Trace</button>
+      <span class="muted" id="trace-msg"></span>
+    </div>
+    <div id="trace"><div class="muted">no trace loaded — click Refresh Trace.</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>5 · Module Status</h2>
+    <div class="kv">
+      <div class="k">Tool</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/tools/uniswap_v4_tool.py" style="color:var(--blue)">tools/uniswap_v4_tool.py</a> · ~200 LOC · 4 actions (info, quote, swap, balance)</div>
+      <div class="k">Persona</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/personas/trader.prompt" style="color:var(--blue)">personas/trader.prompt</a></div>
+      <div class="k">Demo</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/openagents/uniswap/demo_trader.py" style="color:var(--blue)">openagents/uniswap/demo_trader.py</a></div>
+      <div class="k">FEEDBACK (required artifact)</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/openagents/docs/uniswap/FEEDBACK.md" style="color:var(--blue)">openagents/docs/uniswap/FEEDBACK.md</a></div>
+      <div class="k">Track positioning</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/openagents/docs/uniswap/README.md" style="color:var(--blue)">openagents/docs/uniswap/README.md</a></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>· Activity Log</h2>
+    <div class="log" id="log"><div class="line muted">waiting…</div></div>
+  </div>
+
+  <div class="muted" style="text-align:center;margin-top:30px;font-size:10px;letter-spacing:2px">
+    UNISWAP V4 TRADER · ETHGlobal Open Agents · BDI persona-constrained
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.0/dist/ethers.umd.min.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const log = (m, c='') => { const d=document.createElement('div'); d.className='line '+c; d.innerHTML=`<span class="ts">${new Date().toISOString().split('T')[1].slice(0,8)}</span>${m}`; const l=$('log'); if(l.firstChild?.classList?.contains('muted')) l.innerHTML=''; l.insertBefore(d, l.firstChild); };
+const setBadge = (id, t, c='') => { const e=$(id); e.textContent=t; e.className='badge'+(c?' '+c:''); };
+
+const SEPOLIA_CHAIN_ID = 11155111;
+const V4_QUOTER_SEPOLIA = '0x61b3f2011a92d183c7dbadbda940a7555ccf9227'; // Sepolia V4 Quoter (verify before use)
+const QUOTER_ABI = [
+  'function quoteExactInputSingle(tuple(tuple(address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks) poolKey,bool zeroForOne,uint128 exactAmount,bytes hookData) params) external returns (uint256 amountOut, uint256 gasEstimate)'
+];
+
+let provider = null, signer = null, wallet = null;
+
+$('btn-connect').onclick = async () => {
+  if (!window.ethereum) { log('MetaMask not detected', 'err'); return; }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await window.ethereum.request({method: 'eth_requestAccounts'});
+    wallet = accounts[0];
+    signer = await provider.getSigner();
+    const network = await provider.getNetwork();
+    setBadge('badge-wallet', `WALLET: ${wallet.slice(0,6)}…${wallet.slice(-4)}`, 'ok');
+    setBadge('badge-network', `NETWORK: chain ${network.chainId}`, network.chainId === BigInt(SEPOLIA_CHAIN_ID) ? 'pink' : 'warn');
+    $('btn-switch').disabled = (network.chainId === BigInt(SEPOLIA_CHAIN_ID));
+    log(`connected ${wallet} on chain ${network.chainId}`, 'ok');
+    await loadBalances();
+  } catch (e) {
+    log(`connect failed: ${e.message}`, 'err');
+  }
+};
+
+$('btn-switch').onclick = async () => {
+  try {
+    await window.ethereum.request({method:'wallet_switchEthereumChain', params:[{chainId:'0x'+SEPOLIA_CHAIN_ID.toString(16)}]});
+    log('switched to Sepolia', 'ok');
+    location.reload();
+  } catch (e) {
+    if (e.code === 4902) {
+      log('Sepolia not in MetaMask — add manually: chainId 11155111', 'warn');
+    } else log(`switch failed: ${e.message}`, 'err');
+  }
+};
+
+async function loadBalances() {
+  if (!provider || !wallet) return;
+  try {
+    const ethBal = await provider.getBalance(wallet);
+    $('wallet-kv').innerHTML = `
+      <div class="k">address</div><div class="v">${wallet}</div>
+      <div class="k">ETH balance</div><div class="v">${ethers.formatEther(ethBal)} ETH</div>
+      <div class="k">network</div><div class="v">chain ${(await provider.getNetwork()).chainId}</div>
+    `;
+  } catch (e) {
+    log(`balance fetch failed: ${e.message}`, 'err');
+  }
+}
+
+$('btn-quote').onclick = async () => {
+  if (!provider) { log('connect MetaMask first', 'warn'); return; }
+  const tokenIn = $('ti-token-in').value.trim();
+  const tokenOut = $('ti-token-out').value.trim();
+  const amount = $('ti-amount').value.trim();
+  const fee = parseInt($('ti-fee').value);
+  const tickSpacing = parseInt($('ti-tickspacing').value);
+
+  if (!tokenIn.startsWith('0x') || !tokenOut.startsWith('0x')) {
+    log('token addresses must start with 0x', 'err');
+    return;
+  }
+
+  // PoolKey requires currency0 < currency1
+  const [currency0, currency1] = tokenIn.toLowerCase() < tokenOut.toLowerCase() ? [tokenIn, tokenOut] : [tokenOut, tokenIn];
+  const zeroForOne = currency0.toLowerCase() === tokenIn.toLowerCase();
+
+  $('quote-output').textContent = 'calling Sepolia V4 Quoter…';
+  log(`quoting ${amount} of ${tokenIn.slice(0,10)}… → ${tokenOut.slice(0,10)}…`);
+
+  try {
+    const quoter = new ethers.Contract(V4_QUOTER_SEPOLIA, QUOTER_ABI, provider);
+    const exactAmount = ethers.parseUnits(amount, 18); // assumes 18 decimals; real tool reads decimals
+    const params = {
+      poolKey: { currency0, currency1, fee, tickSpacing, hooks: ethers.ZeroAddress },
+      zeroForOne,
+      exactAmount,
+      hookData: '0x'
+    };
+    const result = await quoter.quoteExactInputSingle.staticCall(params);
+    const out = `amountOut: ${ethers.formatUnits(result[0], 18)}\ngasEstimate: ${result[1].toString()}\n\npoolKey:\n  currency0: ${currency0}\n  currency1: ${currency1}\n  fee: ${fee}\n  tickSpacing: ${tickSpacing}\n  hooks: 0x000…000\nzeroForOne: ${zeroForOne}\nexactAmount: ${exactAmount.toString()}`;
+    $('quote-output').textContent = out;
+    log(`quote OK — out=${ethers.formatUnits(result[0], 18)}`, 'ok');
+  } catch (e) {
+    let msg = e.message || String(e);
+    if (msg.includes('PoolNotInitialized')) msg = 'PoolNotInitialized — call PoolManager.initialize first for this (token0, token1, fee, tickSpacing) tuple';
+    if (msg.length > 300) msg = msg.slice(0, 300) + '…';
+    $('quote-output').textContent = `quote failed:\n${msg}`;
+    log(`quote failed: ${msg.slice(0, 80)}`, 'err');
+  }
+};
+
+$('btn-trace').onclick = async () => {
+  $('trace-msg').textContent = 'fetching…';
+  try {
+    // Try the catalogue insight endpoint
+    const r = await fetch('/insight/improvement/timeline?limit=10');
+    if (r.ok) {
+      const data = await r.json();
+      const uniswapEvents = (data.entries || data.events || []).filter(e =>
+        JSON.stringify(e).toLowerCase().includes('uniswap') ||
+        JSON.stringify(e).toLowerCase().includes('swap')
+      ).slice(0, 5);
+      if (uniswapEvents.length === 0) {
+        $('trace').innerHTML = '<div class="muted">no uniswap events in recent timeline yet — run <span class="kbd">openagents/uniswap/demo_trader.py</span> on Sepolia to populate.</div>';
+      } else {
+        $('trace').innerHTML = uniswapEvents.map((e, i) => `
+          <div class="bdi-step">
+            <div class="stage">step ${i+1}</div>
+            <div class="body"><pre style="margin:0;background:transparent;border:none;padding:0">${JSON.stringify(e, null, 2).slice(0,400)}</pre></div>
+          </div>`).join('');
+      }
+      log(`loaded ${uniswapEvents.length} uniswap events`, 'ok');
+    } else {
+      $('trace').innerHTML = '<div class="muted">/insight/improvement/timeline returned ' + r.status + ' — agent likely not running locally.</div>';
+    }
+    $('trace-msg').textContent = '';
+  } catch (e) {
+    $('trace-msg').textContent = '';
+    $('trace').innerHTML = `<div class="muted">trace fetch failed: ${e.message}</div>`;
+  }
+};
+
+// boot
+log('UI loaded — connect MetaMask to begin');
+</script>
+</body>
+</html>

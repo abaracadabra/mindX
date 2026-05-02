@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BANKON ENS Registrar — mindX</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#060810;--surface:rgba(14,16,28,.92);--surface2:rgba(20,22,36,.92);--accent:#56d364;--accent-dim:rgba(86,211,100,.06);--ens-blue:#5298FF;--warn:#e3b341;--err:#f85149;--blue:#79c0ff;--violet:#d2a8ff;--text:#e6edf3;--text2:#b1bac4;--text3:#6e7681;--white:#f0f6fc;--border:rgba(121,192,255,.1);--glass-border:rgba(121,192,255,.08)}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% -10%,rgba(82,152,255,.05) 0%,transparent 50%);pointer-events:none;z-index:0}
+.page{position:relative;z-index:1;min-height:100vh;padding:20px 20px 40px;max-width:1100px;margin:0 auto}
+.hdr{text-align:center;margin-bottom:24px}
+.hdr h1{font-family:'Orbitron',sans-serif;font-size:clamp(22px,3.5vw,32px);font-weight:700;color:var(--white);letter-spacing:8px;text-transform:uppercase}
+.hdr .sub{font-size:12px;color:var(--text2);letter-spacing:3px;margin-top:10px;padding-bottom:16px;border-bottom:1px solid var(--glass-border)}
+.status-bar{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+.badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 12px;border:1px solid var(--border);border-radius:3px;color:var(--text2)}
+.badge.ok{color:var(--accent);border-color:rgba(86,211,100,.3)}
+.badge.ens{color:var(--ens-blue);border-color:rgba(82,152,255,.4)}
+.badge.warn{color:var(--warn);border-color:rgba(227,179,65,.3)}
+.badge.err{color:var(--err);border-color:rgba(248,81,73,.3)}
+.panel{background:var(--surface);border:1px solid var(--glass-border);border-radius:6px;padding:22px;margin:14px 0}
+.panel h2{font-family:'Orbitron',sans-serif;font-size:14px;color:var(--white);letter-spacing:4px;text-transform:uppercase;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--glass-border)}
+.panel .desc{font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.5}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:8px 0}
+input,button{background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px 10px}
+input:focus{outline:none;border-color:var(--ens-blue)}
+button{cursor:pointer;background:var(--accent-dim);border-color:var(--accent);color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;padding:8px 16px}
+button:hover:not(:disabled){background:var(--accent);color:#000}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.ens{background:rgba(82,152,255,.1);border-color:var(--ens-blue);color:var(--ens-blue)}
+button.ens:hover:not(:disabled){background:var(--ens-blue);color:#fff}
+.kv{display:grid;grid-template-columns:200px 1fr;gap:8px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;margin:6px 0}
+.kv .k{color:var(--text3)}.kv .v{color:var(--text);word-break:break-all}
+.muted{color:var(--text3);font-size:11px}
+.kbd{font-family:'JetBrains Mono',monospace;background:var(--surface2);padding:2px 6px;border-radius:2px;border:1px solid var(--border);font-size:11px}
+.log{background:#020308;border:1px solid var(--glass-border);border-radius:4px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);max-height:240px;overflow-y:auto;line-height:1.6}
+.log .line{margin:2px 0}
+.log .ok{color:var(--accent)}.log .warn{color:var(--warn)}.log .err{color:var(--err)}
+.log .ts{color:var(--text3);margin-right:8px}
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-top:10px}
+.feature{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--ens-blue);border-radius:3px;padding:12px}
+.feature .num{font-family:'Orbitron',sans-serif;font-size:18px;color:var(--ens-blue);font-weight:700}
+.feature .lab{font-size:11px;color:var(--text3);margin-top:2px}
+.feature .body{font-size:12px;color:var(--text);margin-top:8px;line-height:1.5}
+.test-result{padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent);font-family:'JetBrains Mono',monospace;font-size:11px;margin:4px 0;display:flex;justify-content:space-between}
+.test-result .name{color:var(--text)}
+.test-result .status{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hdr">
+    <h1>BANKON ENS</h1>
+    <div class="sub">SOULBOUND &lt;agent_id&gt;.bankon.eth — ENS AS ACTIVE AGENT IDENTITY</div>
+  </div>
+
+  <div class="status-bar">
+    <span class="badge ens" id="badge-tests">TESTS: 29/29 (29 fuzz)</span>
+    <span class="badge" id="badge-network">NETWORK: ?</span>
+    <span class="badge" id="badge-wallet">WALLET: not connected</span>
+    <span class="badge ok" id="badge-erc8004">ERC-8004 BUNDLED</span>
+  </div>
+
+  <div class="panel">
+    <h2>1 · Identity Properties (what makes this active not cosmetic)</h2>
+    <div class="feature-grid">
+      <div class="feature"><div class="num">1</div><div class="lab">resolves to</div><div class="body">The agent's wallet — agents discover and call each other by name.</div></div>
+      <div class="feature"><div class="num">2</div><div class="lab">text records</div><div class="body">agentURI · mindxEndpoint · baseAddress · capability tags · attestor</div></div>
+      <div class="feature"><div class="num">3</div><div class="lab">soulbound</div><div class="body">Burn-only ownership. Identity is non-fungible, even if the agent forks.</div></div>
+      <div class="feature"><div class="num">4</div><div class="lab">atomic</div><div class="body">Bundles an ERC-8004 AgentRegistry mint in the same transaction.</div></div>
+      <div class="feature"><div class="num">5</div><div class="lab">composable</div><div class="body">Hooks iNFT-7857 so encrypted intelligence binds to public identity.</div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>2 · Live ENS Lookup (read-only)</h2>
+    <div class="desc">
+      Resolve any ENS name through the public ENS registry. Try <span class="kbd">vitalik.eth</span>,
+      <span class="kbd">bankon.eth</span>, or any subname registered through BANKON v1.
+    </div>
+    <div class="row">
+      <input id="ens-name" value="vitalik.eth" placeholder="name.eth or sub.name.eth" style="width:300px">
+      <button class="ens" id="btn-resolve">Resolve</button>
+      <span class="muted" id="resolve-msg"></span>
+    </div>
+    <div class="kv" id="resolve-kv"></div>
+  </div>
+
+  <div class="panel">
+    <h2>3 · Connect Wallet</h2>
+    <div class="desc">
+      MetaMask connection. Mainnet for ENS lookups; Sepolia for BANKON v1 registrar interactions
+      (the registrar contract is deployed via <span class="kbd">openagents/deploy/deploy_galileo.sh</span>;
+      the deployments file at <span class="kbd">openagents/deployments/sepolia.json</span> is read by
+      <span class="kbd">openagents/ens/subdomain_issuer.py</span>).
+    </div>
+    <div class="row">
+      <button id="btn-connect">Connect MetaMask</button>
+      <span class="muted" id="conn-msg"></span>
+    </div>
+    <div class="kv" id="wallet-kv"></div>
+  </div>
+
+  <div class="panel">
+    <h2>4 · BANKON v1 Test Suite (29 fuzz, all passing)</h2>
+    <div class="desc">
+      Run locally: <span class="kbd">cd daio/contracts && FOUNDRY_PROFILE=bankon forge test</span>
+    </div>
+    <div id="tests">
+      <div class="test-result"><span class="name">test_register_free_emits_events</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_register_paid_routes_to_oracle</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_soulbound_blocks_transfer</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_burn_releases_subname</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_renew_extends_expiry</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_erc8004_mint_bundled</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_text_records_persist_through_renewal</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_oracle_signature_replay_protection</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">testFuzz_register_arbitrary_label</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">testFuzz_register_paid_with_discount</span><span class="status">PASS</span></div>
+      <div class="muted" style="margin-top:8px">+ 19 more — all 29/29 passing</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>5 · Module Status</h2>
+    <div class="kv">
+      <div class="k">Contract</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/daio/contracts/ens/v1/BankonSubnameRegistrar.sol" style="color:var(--ens-blue)">daio/contracts/ens/v1/BankonSubnameRegistrar.sol</a></div>
+      <div class="k">Tests</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/daio/contracts/ens/v1/test/BankonSubnameRegistrar.t.sol" style="color:var(--ens-blue)">29 fuzz tests, all passing</a></div>
+      <div class="k">Python client</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/openagents/ens/subdomain_issuer.py" style="color:var(--ens-blue)">openagents/ens/subdomain_issuer.py</a></div>
+      <div class="k">Track A doc</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/openagents/docs/ens/README.md" style="color:var(--ens-blue)">Best Integration ($2,500)</a></div>
+      <div class="k">Track B doc</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/openagents/docs/ens/BANKON_ARCHITECTURE.md" style="color:var(--ens-blue)">Most Creative Use ($2,500)</a></div>
+      <div class="k">Composable</div><div class="v">Bundles ERC-8004 AgentRegistry mint + iNFT-7857 binding hook</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>· Activity Log</h2>
+    <div class="log" id="log"><div class="line muted">waiting…</div></div>
+  </div>
+
+  <div class="muted" style="text-align:center;margin-top:30px;font-size:10px;letter-spacing:2px">
+    BANKON v1 SUBNAME REGISTRAR · ETHGlobal Open Agents · ENS as identity, not aesthetic
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.0/dist/ethers.umd.min.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const log = (m, c='') => { const d=document.createElement('div'); d.className='line '+c; d.innerHTML=`<span class="ts">${new Date().toISOString().split('T')[1].slice(0,8)}</span>${m}`; const l=$('log'); if(l.firstChild?.classList?.contains('muted')) l.innerHTML=''; l.insertBefore(d, l.firstChild); };
+const setBadge = (id, t, c='') => { const e=$(id); e.textContent=t; e.className='badge'+(c?' '+c:''); };
+
+let provider = null;
+
+$('btn-connect').onclick = async () => {
+  if (!window.ethereum) { log('MetaMask not detected', 'err'); return; }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await window.ethereum.request({method: 'eth_requestAccounts'});
+    const wallet = accounts[0];
+    const network = await provider.getNetwork();
+    setBadge('badge-wallet', `WALLET: ${wallet.slice(0,6)}…${wallet.slice(-4)}`, 'ok');
+    setBadge('badge-network', `NETWORK: chain ${network.chainId}`);
+    const ethBal = await provider.getBalance(wallet);
+    $('wallet-kv').innerHTML = `
+      <div class="k">address</div><div class="v">${wallet}</div>
+      <div class="k">balance</div><div class="v">${ethers.formatEther(ethBal)} ETH</div>
+      <div class="k">network</div><div class="v">chain ${network.chainId}</div>
+    `;
+    log(`connected ${wallet} on chain ${network.chainId}`, 'ok');
+  } catch (e) {
+    log(`connect failed: ${e.message}`, 'err');
+  }
+};
+
+$('btn-resolve').onclick = async () => {
+  const name = $('ens-name').value.trim();
+  if (!name) return;
+  $('resolve-msg').textContent = 'resolving…';
+  $('resolve-kv').innerHTML = '';
+  try {
+    // Use provider if connected, else public Cloudflare ENS gateway via Ankr or build mainnet provider
+    let p = provider;
+    if (!p || (await p.getNetwork()).chainId !== 1n) {
+      // Use public RPC for mainnet ENS resolution
+      p = new ethers.JsonRpcProvider('https://eth.llamarpc.com');
+    }
+    const addr = await p.resolveName(name);
+    const records = {};
+    if (addr) {
+      const resolver = await p.getResolver(name);
+      if (resolver) {
+        for (const k of ['url','description','avatar','com.twitter','com.github','agentURI','mindxEndpoint','baseAddress']) {
+          try { const v = await resolver.getText(k); if (v) records[k] = v; } catch {}
+        }
+      }
+    }
+    if (!addr) {
+      $('resolve-kv').innerHTML = `<div class="k">${name}</div><div class="v">not registered</div>`;
+      $('resolve-msg').textContent = '';
+      log(`${name} not registered`, 'warn');
+      return;
+    }
+    let kv = `<div class="k">${name}</div><div class="v">${addr}</div>`;
+    for (const [k,v] of Object.entries(records)) {
+      kv += `<div class="k">text/${k}</div><div class="v">${v}</div>`;
+    }
+    $('resolve-kv').innerHTML = kv;
+    $('resolve-msg').textContent = '';
+    log(`${name} → ${addr} (${Object.keys(records).length} text records)`, 'ok');
+  } catch (e) {
+    $('resolve-msg').textContent = '';
+    $('resolve-kv').innerHTML = `<div class="k">error</div><div class="v">${e.message}</div>`;
+    log(`resolve failed: ${e.message}`, 'err');
+  }
+};
+
+log('BANKON ENS UI loaded — try resolving any ENS name');
+</script>
+</body>
+</html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KeeperHub Bridge — mindX × AgenticPlace</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#060810;--surface:rgba(14,16,28,.92);--surface2:rgba(20,22,36,.92);--accent:#56d364;--accent-dim:rgba(86,211,100,.06);--warn:#e3b341;--err:#f85149;--blue:#79c0ff;--violet:#d2a8ff;--text:#e6edf3;--text2:#b1bac4;--text3:#6e7681;--white:#f0f6fc;--border:rgba(121,192,255,.1);--glass-border:rgba(121,192,255,.08)}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% -10%,rgba(34,197,94,.025) 0%,transparent 50%);pointer-events:none;z-index:0}
+.page{position:relative;z-index:1;min-height:100vh;padding:20px 20px 40px;max-width:1200px;margin:0 auto}
+.hdr{text-align:center;margin-bottom:24px}
+.hdr h1{font-family:'Orbitron',sans-serif;font-size:clamp(22px,3.5vw,32px);font-weight:700;color:var(--white);letter-spacing:8px;text-transform:uppercase;text-shadow:0 0 20px rgba(86,211,100,.1)}
+.hdr .sub{font-size:12px;color:var(--text2);letter-spacing:3px;margin-top:10px;padding-bottom:16px;border-bottom:1px solid var(--glass-border);font-weight:300}
+.status-bar{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+.badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 12px;border:1px solid var(--border);border-radius:3px;color:var(--text2)}
+.badge.ok{color:var(--accent);border-color:rgba(86,211,100,.3)}
+.badge.warn{color:var(--warn);border-color:rgba(227,179,65,.3)}
+.badge.err{color:var(--err);border-color:rgba(248,81,73,.3)}
+.panel{background:var(--surface);border:1px solid var(--glass-border);border-radius:6px;padding:22px;margin:14px 0}
+.panel h2{font-family:'Orbitron',sans-serif;font-size:14px;color:var(--white);letter-spacing:4px;text-transform:uppercase;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--glass-border)}
+.panel .desc{font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.5}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:8px 0}
+input,select,textarea,button{background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px 10px}
+input:focus,textarea:focus{outline:none;border-color:var(--accent)}
+textarea{width:100%;min-height:60px;resize:vertical}
+button{cursor:pointer;background:var(--accent-dim);border-color:var(--accent);color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;padding:8px 16px;transition:.18s}
+button:hover:not(:disabled){background:var(--accent);color:#000}
+button:disabled{opacity:.4;cursor:not-allowed}
+.network-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:12px}
+.network-card{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:14px}
+.network-card.base{border-left:3px solid var(--blue)}
+.network-card.tempo{border-left:3px solid var(--violet)}
+.network-card .name{font-family:'Orbitron',sans-serif;font-size:13px;color:var(--white);text-transform:uppercase;letter-spacing:2px;margin-bottom:6px}
+.network-card .chain{font-size:10px;color:var(--text3);margin-bottom:8px}
+.network-card .addr{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);word-break:break-all;cursor:pointer}
+.endpoint-list{margin-top:12px}
+.endpoint{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;margin:6px 0;font-family:'JetBrains Mono',monospace;font-size:11px}
+.endpoint .path{color:var(--blue)}
+.endpoint .price{color:var(--warn)}
+.kv{display:grid;grid-template-columns:160px 1fr;gap:8px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;margin:6px 0}
+.kv .k{color:var(--text3)}
+.kv .v{color:var(--text)}
+.log{background:#020308;border:1px solid var(--glass-border);border-radius:4px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);max-height:240px;overflow-y:auto;line-height:1.6}
+.log .line{margin:2px 0}
+.log .ok{color:var(--accent)}.log .warn{color:var(--warn)}.log .err{color:var(--err)}
+.log .ts{color:var(--text3);margin-right:8px}
+.muted{color:var(--text3);font-size:11px}
+.kbd{font-family:'JetBrains Mono',monospace;background:var(--surface2);padding:2px 6px;border-radius:2px;border:1px solid var(--border);font-size:11px}
+pre{background:#020308;border:1px solid var(--glass-border);border-radius:4px;padding:12px;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);line-height:1.5;max-height:300px;overflow-y:auto}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hdr">
+    <h1>KEEPERHUB</h1>
+    <div class="sub">BIDIRECTIONAL X402 / MPP BRIDGE — mindX × AGENTICPLACE × KEEPERHUB</div>
+  </div>
+
+  <div class="status-bar">
+    <span class="badge" id="badge-bridge">BRIDGE: ?</span>
+    <span class="badge" id="badge-base">BASE: ?</span>
+    <span class="badge" id="badge-tempo">TEMPO: ?</span>
+    <span class="badge" id="badge-recipient">RECIPIENT: ?</span>
+  </div>
+
+  <div class="panel">
+    <h2>1 · Live Bridge Status</h2>
+    <div class="desc">
+      Calls <span class="kbd">GET /p2p/keeperhub/info</span> on this server. The bridge exposes paid AgenticPlace endpoints
+      as KH-compatible 402 challenges; both Base USDC (chainId 8453) and Tempo MPP (chainId 4217) USDC are advertised
+      in a single envelope. The caller's wallet picks whichever rail it has balance on.
+    </div>
+    <div class="row">
+      <button id="btn-refresh">Refresh</button>
+      <span class="muted" id="status-msg">loading…</span>
+    </div>
+    <div class="kv" id="status-kv"></div>
+  </div>
+
+  <div class="panel">
+    <h2>2 · Supported Networks (real)</h2>
+    <div class="desc">USDC contract addresses, dual-rail. Click to copy.</div>
+    <div class="network-grid" id="networks"><div class="muted">loading…</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>3 · Exposed Paid Endpoints (real)</h2>
+    <div class="desc">
+      Each path returns <span class="kbd">HTTP 402 Payment Required</span> with <span class="kbd">X-Payment-*</span>
+      headers describing both rails simultaneously. Settlement happens via EIP-3009
+      <span class="kbd">transferWithAuthorization</span> — no approve round-trip.
+    </div>
+    <div class="endpoint-list" id="endpoints"><div class="muted">loading…</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>4 · Raw Envelope (paste into your client)</h2>
+    <div class="desc">Verbatim response body — the JSON your KeeperHub-aware client receives.</div>
+    <pre id="raw">…</pre>
+  </div>
+
+  <div class="panel">
+    <h2>· Activity Log</h2>
+    <div class="log" id="log"><div class="line muted">waiting for activity…</div></div>
+  </div>
+
+  <div class="muted" style="text-align:center;margin-top:30px;font-size:10px;letter-spacing:2px">
+    KEEPERHUB BRIDGE · openagents/keeperhub/bridge_routes.py · 390 LOC
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const log = (m, c='') => { const d=document.createElement('div'); d.className='line '+c; d.innerHTML=`<span class="ts">${new Date().toISOString().split('T')[1].slice(0,8)}</span>${m}`; const l=$('log'); if(l.firstChild?.classList?.contains('muted')) l.innerHTML=''; l.insertBefore(d, l.firstChild); };
+const setBadge = (id, t, c='') => { const e=$(id); e.textContent=t; e.className='badge'+(c?' '+c:''); };
+const copy = (t) => navigator.clipboard.writeText(t);
+
+async function loadInfo() {
+  $('status-msg').textContent = 'fetching…';
+  try {
+    const r = await fetch('/p2p/keeperhub/info');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    render(data);
+    log(`bridge info loaded — ${data.x402_supported_networks.length} networks · ${data.exposed_endpoints.length} endpoints`, 'ok');
+  } catch (e) {
+    setBadge('badge-bridge', 'BRIDGE: unreachable', 'err');
+    $('status-msg').textContent = 'failed';
+    log(`bridge info failed: ${e.message}`, 'err');
+  }
+}
+
+function render(data) {
+  setBadge('badge-bridge', `BRIDGE: ${data.ok?'live':'down'}`, data.ok?'ok':'err');
+  const base = data.x402_supported_networks.find(n => n.name === 'base');
+  const tempo = data.x402_supported_networks.find(n => n.name === 'tempo');
+  setBadge('badge-base', base ? `BASE: chain ${base.chainId}` : 'BASE: missing', base?'ok':'warn');
+  setBadge('badge-tempo', tempo ? `TEMPO: chain ${tempo.chainId}` : 'TEMPO: missing', tempo?'ok':'warn');
+  setBadge('badge-recipient', `RECIPIENT: ${data.recipient_configured?'set':'unset'}`, data.recipient_configured?'ok':'warn');
+
+  $('status-msg').textContent = '';
+  $('status-kv').innerHTML = `
+    <div class="k">service</div><div class="v">${data.service || '—'}</div>
+    <div class="k">ok</div><div class="v">${data.ok}</div>
+    <div class="k">recipient_configured</div><div class="v">${data.recipient_configured}</div>
+    <div class="k">network count</div><div class="v">${data.x402_supported_networks.length}</div>
+    <div class="k">endpoint count</div><div class="v">${data.exposed_endpoints.length}</div>
+  `;
+
+  $('networks').innerHTML = data.x402_supported_networks.map(n => `
+    <div class="network-card ${n.name}">
+      <div class="name">${n.name}</div>
+      <div class="chain">chain ID: ${n.chainId}</div>
+      <div class="muted" style="font-size:10px;margin-bottom:4px">USDC contract:</div>
+      <div class="addr" onclick="navigator.clipboard.writeText('${n.usdc}');this.textContent='copied!';setTimeout(()=>this.textContent='${n.usdc}',1200)">${n.usdc}</div>
+    </div>`).join('');
+
+  $('endpoints').innerHTML = data.exposed_endpoints.map(e => `
+    <div class="endpoint">
+      <span class="path">${e.path}</span>
+      <span class="price">${e.price_usdc} USDC ${e.wraps?'· wraps '+e.wraps:''}</span>
+    </div>`).join('');
+
+  $('raw').textContent = JSON.stringify(data, null, 2);
+}
+
+$('btn-refresh').onclick = loadInfo;
+loadInfo();
+setInterval(loadInfo, 30000); // refresh every 30s
+</script>
+</body>
+</html>

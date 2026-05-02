@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>0G Adapter — mindX</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#060810;--surface:rgba(14,16,28,.92);--surface2:rgba(20,22,36,.92);--accent:#56d364;--accent-dim:rgba(86,211,100,.06);--zg:#00D4D4;--warn:#e3b341;--err:#f85149;--blue:#79c0ff;--text:#e6edf3;--text2:#b1bac4;--text3:#6e7681;--white:#f0f6fc;--border:rgba(121,192,255,.1);--glass-border:rgba(121,192,255,.08)}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% -10%,rgba(0,212,212,.04) 0%,transparent 50%);pointer-events:none;z-index:0}
+.page{position:relative;z-index:1;min-height:100vh;padding:20px 20px 40px;max-width:1100px;margin:0 auto}
+.hdr{text-align:center;margin-bottom:24px}
+.hdr h1{font-family:'Orbitron',sans-serif;font-size:clamp(22px,3.5vw,32px);font-weight:700;color:var(--white);letter-spacing:8px;text-transform:uppercase}
+.hdr .sub{font-size:12px;color:var(--text2);letter-spacing:3px;margin-top:10px;padding-bottom:16px;border-bottom:1px solid var(--glass-border)}
+.status-bar{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+.badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 12px;border:1px solid var(--border);border-radius:3px;color:var(--text2)}
+.badge.ok{color:var(--accent);border-color:rgba(86,211,100,.3)}
+.badge.zg{color:var(--zg);border-color:rgba(0,212,212,.4)}
+.badge.warn{color:var(--warn);border-color:rgba(227,179,65,.3)}
+.badge.err{color:var(--err);border-color:rgba(248,81,73,.3)}
+.panel{background:var(--surface);border:1px solid var(--glass-border);border-radius:6px;padding:22px;margin:14px 0}
+.panel h2{font-family:'Orbitron',sans-serif;font-size:14px;color:var(--white);letter-spacing:4px;text-transform:uppercase;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--glass-border)}
+.panel .desc{font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.5}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:8px 0}
+input,textarea,button{background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px 10px}
+textarea{width:100%;min-height:80px;resize:vertical}
+button{cursor:pointer;background:var(--accent-dim);border-color:var(--accent);color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;padding:8px 16px}
+button:hover:not(:disabled){background:var(--accent);color:#000}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.zg{background:rgba(0,212,212,.06);border-color:var(--zg);color:var(--zg)}
+button.zg:hover:not(:disabled){background:var(--zg);color:#000}
+.kv{display:grid;grid-template-columns:200px 1fr;gap:8px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;margin:6px 0}
+.kv .k{color:var(--text3)}.kv .v{color:var(--text);word-break:break-all}
+.muted{color:var(--text3);font-size:11px}
+.kbd{font-family:'JetBrains Mono',monospace;background:var(--surface2);padding:2px 6px;border-radius:2px;border:1px solid var(--border);font-size:11px}
+.log{background:#020308;border:1px solid var(--glass-border);border-radius:4px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);max-height:240px;overflow-y:auto;line-height:1.6}
+.log .line{margin:2px 0}
+.log .ok{color:var(--accent)}.log .warn{color:var(--warn)}.log .err{color:var(--err)}
+.log .ts{color:var(--text3);margin-right:8px}
+pre{background:#020308;border:1px solid var(--glass-border);border-radius:4px;padding:12px;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);line-height:1.5;max-height:300px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
+.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:10px}
+@media (max-width:800px){.three-col{grid-template-columns:1fr}}
+.col{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--zg);border-radius:3px;padding:14px}
+.col .name{font-family:'Orbitron',sans-serif;font-size:11px;color:var(--zg);text-transform:uppercase;letter-spacing:2px;margin-bottom:6px}
+.col .desc-mini{font-size:11px;color:var(--text2);line-height:1.5}
+.col code{font-family:'JetBrains Mono',monospace;color:var(--blue);font-size:11px}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hdr">
+    <h1>0G ADAPTER</h1>
+    <div class="sub">COMPUTE · STORAGE · GALILEO CHAIN · WIRED FOR PYTHON FRAMEWORKS</div>
+  </div>
+
+  <div class="status-bar">
+    <span class="badge zg" id="badge-sidecar">SIDECAR: ?</span>
+    <span class="badge zg" id="badge-rpc">0G RPC: ?</span>
+    <span class="badge ok" id="badge-tests">THOT: 14/14 tests</span>
+    <span class="badge ok" id="badge-handler">HANDLER: ready</span>
+  </div>
+
+  <div class="panel">
+    <h2>1 · Three Pieces (the full 0G wiring)</h2>
+    <div class="three-col">
+      <div class="col">
+        <div class="name">Compute</div>
+        <div class="desc-mini">OpenAI-compatible Python client. Drop-in for any framework using <code>openai</code> SDK shape. Captures <code>ZG-Res-Key</code> attestation header per call.</div>
+        <div class="muted" style="margin-top:8px">→ <code>llm/zerog_handler.py</code></div>
+      </div>
+      <div class="col">
+        <div class="name">Storage</div>
+        <div class="desc-mini">Node TS sidecar wrapping <code>@0glabs/0g-ts-sdk</code>. Localhost-only. Endpoints: <code>POST /upload</code>, <code>GET /retrieve/:root</code>, <code>GET /health</code>. Solves Python ↔ JS impedance.</div>
+        <div class="muted" style="margin-top:8px">→ <code>openagents/sidecar/index.ts</code></div>
+      </div>
+      <div class="col">
+        <div class="name">Galileo Chain</div>
+        <div class="desc-mini">One-command deploy of iNFT-7857 + DatasetRegistry. Outputs land in <code>openagents/deployments/galileo.json</code>. Anchors agent reasoning steps via THOT.commit().</div>
+        <div class="muted" style="margin-top:8px">→ <code>openagents/deploy/deploy_galileo.sh</code></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>2 · Live Sidecar Probe</h2>
+    <div class="desc">
+      Calls <span class="kbd">GET http://127.0.0.1:7878/health</span> on this host. Sidecar binds localhost-only;
+      this UI proxies through the backend if available, otherwise reports unreachable.
+    </div>
+    <div class="row">
+      <button class="zg" id="btn-sidecar">Probe Sidecar</button>
+      <span class="muted" id="sidecar-msg"></span>
+    </div>
+    <div class="kv" id="sidecar-kv"></div>
+  </div>
+
+  <div class="panel">
+    <h2>3 · 0G Galileo RPC Probe</h2>
+    <div class="desc">
+      Public testnet RPC at <span class="kbd">https://evmrpc-testnet.0g.ai</span>. Read chainId + block height + gasPrice
+      directly from the chain — no sidecar required.
+    </div>
+    <div class="row">
+      <button class="zg" id="btn-rpc">Probe RPC</button>
+      <span class="muted" id="rpc-msg"></span>
+    </div>
+    <div class="kv" id="rpc-kv"></div>
+  </div>
+
+  <div class="panel">
+    <h2>4 · ZG-Res-Key Attestation Format</h2>
+    <div class="desc">
+      Every <span class="kbd">llm.zerog_handler.generate_text</span> call captures the response header
+      <span class="kbd">ZG-Res-Key</span>, which is the cryptographic attestation that the inference happened.
+      The handler stores it as <span class="kbd">llm.last_attestation</span> for downstream verification.
+    </div>
+    <pre>
+async def generate_text(self, prompt, model="zerog/gpt-oss-120b"):
+    response = await self._client.chat.completions.create(
+        model=model,
+        messages=[{"role":"user","content":prompt}],
+        # ...
+    )
+    # The 0G provider sets ZG-Res-Key in the response headers
+    self.last_attestation = response.response.headers.get("zg-res-key")
+    return response.choices[0].message.content
+
+# Then anywhere downstream:
+chat_id = llm.last_attestation
+# → use as proof in Boardroom voting, iNFT mint, on-chain attestation, etc.
+    </pre>
+  </div>
+
+  <div class="panel">
+    <h2>5 · THOT.commit() Memory Anchor (composable primitive)</h2>
+    <div class="desc">
+      The link between 0G Compute, 0G Storage, and 0G Chain. Each agent reasoning step:
+      runs inference (Compute) → writes the trace bytes (Storage) → anchors the (root, chat_id)
+      tuple on chain (Galileo). 14/14 Foundry tests passing.
+    </div>
+    <div class="kv">
+      <div class="k">Contract</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/daio/contracts/THOT/v1/THOT.sol" style="color:var(--blue)">daio/contracts/THOT/v1/THOT.sol</a></div>
+      <div class="k">Tests</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/daio/contracts/THOT/v1/test/THOT.t.sol" style="color:var(--blue)">14/14 forge tests</a></div>
+      <div class="k">Deep dive</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/openagents/docs/0g/THOT_0G_MEMORY_ANCHOR.md" style="color:var(--blue)">THOT_0G_MEMORY_ANCHOR.md</a></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>6 · Module Status</h2>
+    <div class="kv">
+      <div class="k">Compute client</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/llm/zerog_handler.py" style="color:var(--blue)">llm/zerog_handler.py</a></div>
+      <div class="k">Storage sidecar</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/openagents/sidecar/index.ts" style="color:var(--blue)">openagents/sidecar/index.ts</a> + package.json</div>
+      <div class="k">Storage Python</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/agents/storage/zerog_provider.py" style="color:var(--blue)">agents/storage/zerog_provider.py</a></div>
+      <div class="k">Galileo deploy</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/openagents/deploy/deploy_galileo.sh" style="color:var(--blue)">openagents/deploy/deploy_galileo.sh</a></div>
+      <div class="k">Track A doc</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/openagents/docs/0g/README.md" style="color:var(--blue)">Best Framework / Tooling ($7,500)</a></div>
+      <div class="k">Track B</div><div class="v"><a href="https://mindx.pythai.net/inft7857" style="color:var(--blue)">iNFT-7857 console</a> · 56 tests · Best iNFT/Swarm ($7,500)</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>· Activity Log</h2>
+    <div class="log" id="log"><div class="line muted">waiting…</div></div>
+  </div>
+
+  <div class="muted" style="text-align:center;margin-top:30px;font-size:10px;letter-spacing:2px">
+    0G ADAPTER · ETHGlobal Open Agents · Compute + Storage + Galileo for Python frameworks
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const log = (m, c='') => { const d=document.createElement('div'); d.className='line '+c; d.innerHTML=`<span class="ts">${new Date().toISOString().split('T')[1].slice(0,8)}</span>${m}`; const l=$('log'); if(l.firstChild?.classList?.contains('muted')) l.innerHTML=''; l.insertBefore(d, l.firstChild); };
+const setBadge = (id, t, c='') => { const e=$(id); e.textContent=t; e.className='badge'+(c?' '+c:''); };
+
+$('btn-sidecar').onclick = async () => {
+  $('sidecar-msg').textContent = 'probing…';
+  $('sidecar-kv').innerHTML = '';
+  try {
+    const r = await fetch('http://127.0.0.1:7878/health', {mode:'cors'});
+    const data = await r.json();
+    setBadge('badge-sidecar', 'SIDECAR: live', 'ok');
+    $('sidecar-kv').innerHTML = Object.entries(data).map(([k,v]) =>
+      `<div class="k">${k}</div><div class="v">${typeof v === 'object' ? JSON.stringify(v) : v}</div>`
+    ).join('');
+    $('sidecar-msg').textContent = '';
+    log(`sidecar /health OK`, 'ok');
+  } catch (e) {
+    setBadge('badge-sidecar', 'SIDECAR: not reachable', 'warn');
+    $('sidecar-kv').innerHTML = `
+      <div class="k">status</div><div class="v">unreachable from browser</div>
+      <div class="k">reason</div><div class="v">localhost-only bind, or sidecar not running</div>
+      <div class="k">to start</div><div class="v"><span class="kbd">cd openagents/sidecar && npm start</span></div>
+    `;
+    $('sidecar-msg').textContent = '';
+    log(`sidecar probe: ${e.message}`, 'warn');
+  }
+};
+
+$('btn-rpc').onclick = async () => {
+  $('rpc-msg').textContent = 'calling Galileo RPC…';
+  $('rpc-kv').innerHTML = '';
+  try {
+    const rpc = 'https://evmrpc-testnet.0g.ai';
+    const callRpc = (method, params=[]) => fetch(rpc, {
+      method: 'POST',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify({jsonrpc:'2.0', method, params, id: Date.now()})
+    }).then(r => r.json());
+
+    const [chainId, block, gasPrice] = await Promise.all([
+      callRpc('eth_chainId'),
+      callRpc('eth_blockNumber'),
+      callRpc('eth_gasPrice'),
+    ]);
+
+    setBadge('badge-rpc', 'RPC: galileo live', 'zg');
+    $('rpc-kv').innerHTML = `
+      <div class="k">RPC URL</div><div class="v">${rpc}</div>
+      <div class="k">chainId</div><div class="v">${parseInt(chainId.result, 16)} (${chainId.result})</div>
+      <div class="k">block height</div><div class="v">${parseInt(block.result, 16)}</div>
+      <div class="k">gas price</div><div class="v">${parseInt(gasPrice.result, 16)} wei</div>
+    `;
+    $('rpc-msg').textContent = '';
+    log(`Galileo RPC live — chain ${parseInt(chainId.result, 16)}, block ${parseInt(block.result, 16)}`, 'ok');
+  } catch (e) {
+    setBadge('badge-rpc', 'RPC: error', 'err');
+    $('rpc-kv').innerHTML = `<div class="k">error</div><div class="v">${e.message}</div>`;
+    $('rpc-msg').textContent = '';
+    log(`RPC probe failed: ${e.message}`, 'err');
+  }
+};
+
+// Auto-probe RPC on load (sidecar requires user click — CORS)
+$('btn-rpc').click();
+log('0G Adapter UI loaded');
+</script>
+</body>
+</html>

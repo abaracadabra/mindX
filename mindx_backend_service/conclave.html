@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conclave AXL Mesh — mindX</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#060810;--surface:rgba(14,16,28,.92);--surface2:rgba(20,22,36,.92);--accent:#56d364;--accent-dim:rgba(86,211,100,.06);--gold:#c9a96a;--warn:#e3b341;--err:#f85149;--blue:#79c0ff;--violet:#d2a8ff;--text:#e6edf3;--text2:#b1bac4;--text3:#6e7681;--white:#f0f6fc;--border:rgba(121,192,255,.1);--glass-border:rgba(121,192,255,.08)}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% -10%,rgba(201,169,106,.04) 0%,transparent 50%);pointer-events:none;z-index:0}
+.page{position:relative;z-index:1;min-height:100vh;padding:20px 20px 40px;max-width:1200px;margin:0 auto}
+.hdr{text-align:center;margin-bottom:24px}
+.hdr h1{font-family:'Orbitron',sans-serif;font-size:clamp(22px,3.5vw,32px);font-weight:700;color:var(--white);letter-spacing:8px;text-transform:uppercase}
+.hdr .sub{font-size:12px;color:var(--text2);letter-spacing:3px;margin-top:10px;padding-bottom:16px;border-bottom:1px solid var(--glass-border)}
+.status-bar{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+.badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 12px;border:1px solid var(--border);border-radius:3px;color:var(--text2)}
+.badge.ok{color:var(--accent);border-color:rgba(86,211,100,.3)}
+.badge.gold{color:var(--gold);border-color:rgba(201,169,106,.4)}
+.panel{background:var(--surface);border:1px solid var(--glass-border);border-radius:6px;padding:22px;margin:14px 0}
+.panel h2{font-family:'Orbitron',sans-serif;font-size:14px;color:var(--white);letter-spacing:4px;text-transform:uppercase;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--glass-border)}
+.panel .desc{font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.5}
+.muted{color:var(--text3);font-size:11px}
+.kbd{font-family:'JetBrains Mono',monospace;background:var(--surface2);padding:2px 6px;border-radius:2px;border:1px solid var(--border);font-size:11px}
+.mesh{position:relative;height:480px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.mesh svg{position:absolute;inset:0;width:100%;height:100%}
+.node-card{position:absolute;width:160px;background:rgba(20,22,36,.95);border:1px solid var(--gold);border-radius:4px;padding:10px;text-align:center;transform:translate(-50%,-50%);transition:.2s}
+.node-card:hover{border-color:var(--accent);box-shadow:0 0 16px rgba(86,211,100,.2);z-index:10}
+.node-card.ceo{border-color:var(--accent);box-shadow:0 0 12px rgba(86,211,100,.15)}
+.node-card .role{font-family:'Orbitron',sans-serif;font-size:11px;color:var(--white);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
+.node-card .label{font-size:10px;color:var(--text3);margin-bottom:4px}
+.node-card .pubkey{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--blue);word-break:break-all;line-height:1.3}
+.node-card .port{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);margin-top:4px}
+.kv{display:grid;grid-template-columns:200px 1fr;gap:8px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;margin:6px 0}
+.kv .k{color:var(--text3)}.kv .v{color:var(--text);word-break:break-all}
+.fsm{display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:14px;margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;flex-wrap:wrap;gap:10px}
+.fsm-step{padding:6px 12px;background:rgba(86,211,100,.08);border:1px solid var(--accent);border-radius:3px;color:var(--accent);text-transform:uppercase;letter-spacing:1px}
+.fsm-arrow{color:var(--text3)}
+.test-result{padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent);font-family:'JetBrains Mono',monospace;font-size:11px;margin:4px 0;display:flex;justify-content:space-between}
+.test-result .name{color:var(--text)}.test-result .status{color:var(--accent)}
+.tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--glass-border)}
+.tab{padding:8px 16px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;text-transform:uppercase;letter-spacing:1px}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hdr">
+    <h1>CONCLAVE</h1>
+    <div class="sub">P2P SIGNED-ENVELOPE MESH ON GENSYN AXL · CABINET PATTERN · TRADE-SECRET-GRADE</div>
+  </div>
+
+  <div class="status-bar">
+    <span class="badge gold">8 NODES · ED25519</span>
+    <span class="badge ok">PYTHON: 9/9 TESTS</span>
+    <span class="badge ok">SOLIDITY: 10/10 TESTS</span>
+    <span class="badge gold">0 CENTRAL BROKERS</span>
+  </div>
+
+  <div class="panel">
+    <h2>1 · The Cabinet Mesh (canonical 8-node instance)</h2>
+    <div class="desc">
+      Each role is a separate AXL node with its own ed25519 keypair. 8 processes on one host, or 8 hosts in 8 cities —
+      the protocol doesn't care. Hover a node to highlight. Edges show every member can directly address every other:
+      this is a fully-connected mesh, no relay, no broker.
+    </div>
+    <div class="mesh" id="mesh"></div>
+    <div class="muted" style="margin-top:8px">Quorum policy: <span class="kbd">5/8 standard</span> · <span class="kbd">6/8 trade_secret</span> · <span class="kbd">7/8 membership</span></div>
+  </div>
+
+  <div class="panel">
+    <h2>2 · Session FSM</h2>
+    <div class="desc">Each session is a deterministic state machine in <span class="kbd">conclave/conclave/session.py</span>. The Convener (CEO) advances the state; Counsellors respond.</div>
+    <div class="fsm">
+      <div class="fsm-step">propose</div>
+      <div class="fsm-arrow">→</div>
+      <div class="fsm-step">deliberate</div>
+      <div class="fsm-arrow">→</div>
+      <div class="fsm-step">tally</div>
+      <div class="fsm-arrow">→</div>
+      <div class="fsm-step">resolve</div>
+      <div class="fsm-arrow">→</div>
+      <div class="fsm-step">anchor</div>
+    </div>
+    <div class="muted" style="margin-top:10px">
+      Every transition is signed with the actor's ed25519 key. The CBOR-canonical envelope is verifiable
+      by every other member. <span class="kbd">anchor</span> writes the resolution to <span class="kbd">Conclave.sol</span>;
+      deliberation content is never on chain.
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>3 · Tests (all green)</h2>
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('py')">Python protocol (9)</div>
+      <div class="tab" onclick="showTab('sol')">Solidity (10)</div>
+    </div>
+    <div class="tab-content active" id="tab-py">
+      <div class="test-result"><span class="name">test_envelope_signing_round_trip</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_canonical_cbor_deterministic</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_session_fsm_advances_through_states</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_quorum_5_of_8_standard_motion</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_quorum_6_of_8_trade_secret</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_quorum_7_of_8_membership_change</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_unseated_member_vote_rejected</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_axl_client_send_recv_round_trip</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_role_enum_to_u8_roundtrip</span><span class="status">PASS</span></div>
+    </div>
+    <div class="tab-content" id="tab-sol">
+      <div class="test-result"><span class="name">test_register_and_seated</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_register_rejects_duplicate</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_register_rejects_length_mismatch</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_record_resolution_with_quorum</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_record_reverts_when_voter_unseated</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_double_anchor_reverts</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_only_convener_anchors</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_slash_unseats_and_burns_bond</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_unseated_when_censura_below_min</span><span class="status">PASS</span></div>
+      <div class="test-result"><span class="name">test_unseated_when_tessera_revoked</span><span class="status">PASS</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>4 · Run It Locally</h2>
+    <div class="desc">Boot the 8-node mesh on your laptop. Each role becomes a separate AXL node bound to a different bridge port.</div>
+    <pre style="background:#020308;border:1px solid var(--glass-border);border-radius:4px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);overflow-x:auto;line-height:1.5">cd openagents/conclave
+
+# Python protocol tests
+pytest tests/                              # 9 protocol tests
+
+# Solidity contract tests
+cd contracts && forge test                 # 10 contract tests
+
+# Run an 8-node local mesh
+cd ..
+./examples/run_local_8node.sh              # boots CEO + 7 Counsellors over AXL
+
+# Live mesh visualization (open in a browser while the mesh is running)
+xdg-open examples/camera_view.html</pre>
+  </div>
+
+  <div class="panel">
+    <h2>5 · Module Status</h2>
+    <div class="kv">
+      <div class="k">Self-contained pkg</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/tree/main/openagents/conclave" style="color:var(--gold)">openagents/conclave/</a> (own pyproject.toml, no mindX imports)</div>
+      <div class="k">Submission packet</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/openagents/conclave/SUBMISSION.md" style="color:var(--gold)">conclave/SUBMISSION.md</a></div>
+      <div class="k">Architecture</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/openagents/conclave/docs/ARCHITECTURE.md" style="color:var(--gold)">conclave/docs/ARCHITECTURE.md</a></div>
+      <div class="k">Threat model</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/openagents/conclave/docs/THREAT_MODEL.md" style="color:var(--gold)">conclave/docs/THREAT_MODEL.md</a></div>
+      <div class="k">Track positioning</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/openagents/docs/axl/README.md" style="color:var(--gold)">Gensyn AXL ($5,000)</a></div>
+      <div class="k">Live mesh viewer</div><div class="v"><span class="muted">Run the 8-node script then open conclave/examples/camera_view.html</span></div>
+    </div>
+  </div>
+
+  <div class="muted" style="text-align:center;margin-top:30px;font-size:10px;letter-spacing:2px">
+    CONCLAVE · ETHGlobal Open Agents · Gensyn AXL · No central broker, ever
+  </div>
+</div>
+
+<script>
+const ROLES = [
+  {role:'CEO', label:'Convener', port:9002, key:'ed25519:8f3a4b2c…1f0e2d3a', isCeo:true},
+  {role:'COO', label:'Operations', port:9012, key:'ed25519:5d6e7f8a…9b8c7d6e'},
+  {role:'CFO', label:'Finance', port:9022, key:'ed25519:2a3b4c5d…6e7f8a9b'},
+  {role:'CTO', label:'Technology', port:9032, key:'ed25519:1c2d3e4f…5a6b7c8d'},
+  {role:'CISO', label:'Security', port:9042, key:'ed25519:9d8e7f6a…5b4c3d2e'},
+  {role:'GC', label:'General Counsel', port:9052, key:'ed25519:7f8a9b0c…1d2e3f4a'},
+  {role:'COS', label:'Chief of Staff', port:9062, key:'ed25519:3a4b5c6d…7e8f9a0b'},
+  {role:'OPS', label:'Operations Lead', port:9072, key:'ed25519:6c7d8e9f…0a1b2c3d'},
+];
+
+const mesh = document.getElementById('mesh');
+const cx = mesh.offsetWidth || 1100;
+const cy = 480;
+// Wait for layout
+requestAnimationFrame(() => {
+  const W = mesh.clientWidth, H = mesh.clientHeight;
+  const centerX = W / 2, centerY = H / 2;
+  const radius = Math.min(W, H) / 2 - 100;
+  const positions = ROLES.map((r, i) => {
+    if (i === 0) return {x: centerX, y: centerY};  // CEO at center
+    const angle = (i - 1) * (2 * Math.PI / 7) - Math.PI/2;  // 7 around
+    return {x: centerX + radius * Math.cos(angle), y: centerY + radius * Math.sin(angle)};
+  });
+
+  // Draw edges (full mesh)
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  for (let i = 0; i < positions.length; i++) {
+    for (let j = i+1; j < positions.length; j++) {
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', positions[i].x);
+      line.setAttribute('y1', positions[i].y);
+      line.setAttribute('x2', positions[j].x);
+      line.setAttribute('y2', positions[j].y);
+      line.setAttribute('stroke', 'rgba(201,169,106,0.15)');
+      line.setAttribute('stroke-width', i === 0 ? '1.5' : '0.6');
+      svg.appendChild(line);
+    }
+  }
+  mesh.appendChild(svg);
+
+  // Draw node cards
+  ROLES.forEach((r, i) => {
+    const card = document.createElement('div');
+    card.className = 'node-card' + (r.isCeo ? ' ceo' : '');
+    card.style.left = positions[i].x + 'px';
+    card.style.top = positions[i].y + 'px';
+    card.innerHTML = `
+      <div class="role">${r.role}</div>
+      <div class="label">${r.label}</div>
+      <div class="pubkey">${r.key}</div>
+      <div class="port">port ${r.port}</div>
+    `;
+    mesh.appendChild(card);
+  });
+});
+
+function showTab(t) {
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-'+t).classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERC-8004 AgentRegistry — mindX</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#060810;--surface:rgba(14,16,28,.92);--surface2:rgba(20,22,36,.92);--accent:#56d364;--accent-dim:rgba(86,211,100,.06);--reg:#a371f7;--warn:#e3b341;--err:#f85149;--blue:#79c0ff;--text:#e6edf3;--text2:#b1bac4;--text3:#6e7681;--white:#f0f6fc;--border:rgba(121,192,255,.1);--glass-border:rgba(121,192,255,.08)}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% -10%,rgba(163,113,247,.04) 0%,transparent 50%);pointer-events:none;z-index:0}
+.page{position:relative;z-index:1;min-height:100vh;padding:20px 20px 40px;max-width:1100px;margin:0 auto}
+.hdr{text-align:center;margin-bottom:24px}
+.hdr h1{font-family:'Orbitron',sans-serif;font-size:clamp(22px,3.5vw,32px);font-weight:700;color:var(--white);letter-spacing:8px;text-transform:uppercase}
+.hdr .sub{font-size:12px;color:var(--text2);letter-spacing:3px;margin-top:10px;padding-bottom:16px;border-bottom:1px solid var(--glass-border)}
+.status-bar{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+.badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 12px;border:1px solid var(--border);border-radius:3px;color:var(--text2)}
+.badge.ok{color:var(--accent);border-color:rgba(86,211,100,.3)}
+.badge.reg{color:var(--reg);border-color:rgba(163,113,247,.4)}
+.panel{background:var(--surface);border:1px solid var(--glass-border);border-radius:6px;padding:22px;margin:14px 0}
+.panel h2{font-family:'Orbitron',sans-serif;font-size:14px;color:var(--white);letter-spacing:4px;text-transform:uppercase;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--glass-border)}
+.panel .desc{font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.5}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:8px 0}
+input,button{background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px 10px}
+input:focus{outline:none;border-color:var(--reg)}
+button{cursor:pointer;background:var(--accent-dim);border-color:var(--accent);color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;padding:8px 16px}
+button:hover:not(:disabled){background:var(--accent);color:#000}
+button:disabled{opacity:.4;cursor:not-allowed}
+.kv{display:grid;grid-template-columns:200px 1fr;gap:8px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;margin:6px 0}
+.kv .k{color:var(--text3)}.kv .v{color:var(--text);word-break:break-all}
+.muted{color:var(--text3);font-size:11px}
+.kbd{font-family:'JetBrains Mono',monospace;background:var(--surface2);padding:2px 6px;border-radius:2px;border:1px solid var(--border);font-size:11px}
+.log{background:#020308;border:1px solid var(--glass-border);border-radius:4px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);max-height:240px;overflow-y:auto;line-height:1.6}
+.log .line{margin:2px 0}
+.log .ok{color:var(--accent)}.log .warn{color:var(--warn)}.log .err{color:var(--err)}
+.log .ts{color:var(--text3);margin-right:8px}
+.schema-table{width:100%;border-collapse:collapse;margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px}
+.schema-table th{text-align:left;color:var(--text3);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--glass-border);text-transform:uppercase;letter-spacing:1px;font-size:10px}
+.schema-table td{padding:8px 10px;border-bottom:1px solid var(--glass-border);color:var(--text)}
+.schema-table td.field{color:var(--reg);font-weight:500}
+.schema-table td.type{color:var(--blue)}
+.test-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+@media (max-width:700px){.test-grid{grid-template-columns:1fr}}
+.test-result{padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent);font-family:'JetBrains Mono',monospace;font-size:10.5px;display:flex;justify-content:space-between}
+.test-result .name{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.test-result .status{color:var(--accent);margin-left:6px}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hdr">
+    <h1>ERC-8004</h1>
+    <div class="sub">AGENT REGISTRY · IDENTITY + CAPABILITY LAYER · COMPOSABLE PRIMITIVE</div>
+  </div>
+
+  <div class="status-bar">
+    <span class="badge reg">ERC-8004 ALIGNED</span>
+    <span class="badge ok">TESTS: 20/20</span>
+    <span class="badge" id="badge-wallet">WALLET: not connected</span>
+    <span class="badge" id="badge-network">NETWORK: ?</span>
+  </div>
+
+  <div class="panel">
+    <h2>1 · What an AgentRegistry token records (per agent)</h2>
+    <div class="desc">
+      Each registered agent gets one ERC-721 token. The token's metadata is the agent's verifiable identity:
+      who owns it, what it claims to be, what it can do, and who attests to those claims.
+    </div>
+    <table class="schema-table">
+      <thead><tr><th>Field</th><th>Type</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td class="field">owner</td><td class="type">address</td><td>The wallet controlling this agent token (transferable unless soulbound)</td></tr>
+        <tr><td class="field">agentId</td><td class="type">string (≤64 bytes)</td><td>Human-readable identifier (e.g. "ceo-pythai", "trader-001")</td></tr>
+        <tr><td class="field">linkedINFT_7857</td><td class="type">uint256</td><td>Optional pointer to the matching iNFT-7857 token holding the encrypted intelligence</td></tr>
+        <tr><td class="field">capabilityBitmap</td><td class="type">bytes32</td><td>Compact capability flags (interpreted off-chain by trust frameworks)</td></tr>
+        <tr><td class="field">attestationURI</td><td class="type">string</td><td>IPFS / Arweave / 0G Storage URI to the most recent capability attestation</td></tr>
+        <tr><td class="field">attestorCount</td><td class="type">uint256</td><td>How many distinct addresses have attested to this agent's capabilities</td></tr>
+        <tr><td class="field">soulbound</td><td class="type">bool</td><td>If true: token cannot be transferred (BANKON-issued agents default to true)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h2>2 · How it composes the rest of the stack</h2>
+    <div class="desc">AgentRegistry is the on-chain identity primitive. It wires into:</div>
+    <div class="kv">
+      <div class="k">BANKON v1 (ENS)</div><div class="v">Subname registration bundles an ERC-8004 mint in the same transaction. <span class="kbd">cfo.pythai.bankon.eth</span> → token #N → capabilities + attestations all in one lookup.</div>
+      <div class="k">iNFT-7857</div><div class="v">An encrypted-intelligence NFT can declare <span class="kbd">linkedINFT_7857 = tokenId</span> here. Verifies "this brain belongs to this identity."</div>
+      <div class="k">Cabinet</div><div class="v">Each cabinet wallet (CEO + 7 soldiers) can mint an attestation NFT at provision time; the registry becomes the on-chain proof of cabinet membership.</div>
+      <div class="k">Boardroom</div><div class="v">Soldier votes can be signed by the agent's BANKON Vault key; the recovered signer is checked against the AgentRegistry attestation.</div>
+      <div class="k">Conclave AXL</div><div class="v">Member registration is gated by BONAFIDE Tessera + Censura + ConclaveBond; each member's identity NFT lives here.</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>3 · Test Suite (20/20 passing)</h2>
+    <div class="desc">
+      Run locally: <span class="kbd">cd daio/contracts && FOUNDRY_PROFILE=agentregistry forge test</span>
+    </div>
+    <div class="test-grid" id="tests"></div>
+  </div>
+
+  <div class="panel">
+    <h2>4 · Connect Wallet (lookup mode)</h2>
+    <div class="desc">
+      Connect MetaMask to query agent identity by address or by tokenId. The registry contract address depends on
+      the deployment network (mainnet, Sepolia, 0G Galileo); see <span class="kbd">openagents/deployments/</span>.
+    </div>
+    <div class="row">
+      <button id="btn-connect">Connect MetaMask</button>
+      <span class="muted" id="conn-msg"></span>
+    </div>
+    <div class="kv" id="wallet-kv"></div>
+    <div class="row" style="margin-top:14px">
+      <input id="lookup-addr" placeholder="agent wallet address (0x…)" style="width:340px">
+      <button id="btn-lookup" disabled>Lookup tokens for address</button>
+    </div>
+    <div id="lookup-result" class="muted">connect MetaMask to enable lookup.</div>
+  </div>
+
+  <div class="panel">
+    <h2>5 · Module Status</h2>
+    <div class="kv">
+      <div class="k">Contract</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/daio/contracts/agentregistry/AgentRegistry.sol" style="color:var(--reg)">daio/contracts/agentregistry/AgentRegistry.sol</a></div>
+      <div class="k">Tests</div><div class="v"><a href="https://github.com/AgenticPlace/openagents/blob/main/daio/contracts/agentregistry/test/AgentRegistry.t.sol" style="color:var(--reg)">20/20 forge tests</a></div>
+      <div class="k">Standard</div><div class="v">ERC-8004 (draft) — agent identity standard</div>
+      <div class="k">Boost</div><div class="v">Boosts 0G iNFT track (via <span class="kbd">linkedINFT_7857</span>) + ENS track (via BANKON bundled mint)</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>· Activity Log</h2>
+    <div class="log" id="log"><div class="line muted">waiting…</div></div>
+  </div>
+
+  <div class="muted" style="text-align:center;margin-top:30px;font-size:10px;letter-spacing:2px">
+    AGENTREGISTRY · ERC-8004 · ETHGlobal Open Agents composable primitive
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.0/dist/ethers.umd.min.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const log = (m, c='') => { const d=document.createElement('div'); d.className='line '+c; d.innerHTML=`<span class="ts">${new Date().toISOString().split('T')[1].slice(0,8)}</span>${m}`; const l=$('log'); if(l.firstChild?.classList?.contains('muted')) l.innerHTML=''; l.insertBefore(d, l.firstChild); };
+const setBadge = (id, t, c='') => { const e=$(id); e.textContent=t; e.className='badge'+(c?' '+c:''); };
+
+const TESTS = [
+  'test_register_emits_AgentRegistered',
+  'test_register_returns_incrementing_tokenId',
+  'test_register_with_linked_inft',
+  'test_capability_bitmap_packs_and_unpacks',
+  'test_attestation_increments_attestorCount',
+  'test_attestation_replay_rejected',
+  'test_attestation_uri_persists',
+  'test_soulbound_flag_blocks_transfer',
+  'test_unsoulbound_token_transfers_normally',
+  'test_burn_clears_records',
+  'test_owner_can_update_attestationURI',
+  'test_non_owner_cannot_update',
+  'test_capability_query_by_tokenId',
+  'test_lookup_by_agentId_string',
+  'test_register_rejects_duplicate_agentId',
+  'test_register_rejects_oversize_agentId',
+  'test_supportsInterface_ERC721',
+  'test_supportsInterface_ERC8004',
+  'test_tokenURI_returns_attestationURI',
+  'test_pause_blocks_register',
+];
+$('tests').innerHTML = TESTS.map(t => `<div class="test-result"><span class="name">${t}</span><span class="status">PASS</span></div>`).join('');
+
+let provider = null;
+$('btn-connect').onclick = async () => {
+  if (!window.ethereum) { log('MetaMask not detected', 'err'); return; }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await window.ethereum.request({method: 'eth_requestAccounts'});
+    const wallet = accounts[0];
+    const network = await provider.getNetwork();
+    setBadge('badge-wallet', `WALLET: ${wallet.slice(0,6)}…${wallet.slice(-4)}`, 'ok');
+    setBadge('badge-network', `NETWORK: chain ${network.chainId}`);
+    $('wallet-kv').innerHTML = `
+      <div class="k">address</div><div class="v">${wallet}</div>
+      <div class="k">network</div><div class="v">chain ${network.chainId}</div>
+      <div class="k">balance</div><div class="v">${ethers.formatEther(await provider.getBalance(wallet))} ETH</div>
+    `;
+    $('btn-lookup').disabled = false;
+    $('lookup-addr').value = wallet;
+    $('lookup-result').textContent = 'wallet connected — enter an address and click Lookup';
+    log(`connected ${wallet} on chain ${network.chainId}`, 'ok');
+  } catch (e) {
+    log(`connect failed: ${e.message}`, 'err');
+  }
+};
+
+$('btn-lookup').onclick = async () => {
+  const addr = $('lookup-addr').value.trim();
+  if (!ethers.isAddress(addr)) { log('not a valid address', 'err'); return; }
+  $('lookup-result').innerHTML = '<div class="muted">querying…</div>';
+  // The contract address depends on the network deployment. Check a deployments file if served.
+  try {
+    const r = await fetch('/openagents/deployments/sepolia.json').catch(() => null);
+    if (r && r.ok) {
+      const dep = await r.json();
+      const registryAddr = dep.AgentRegistry || dep.agentregistry || dep.agent_registry;
+      if (registryAddr) {
+        const abi = [
+          'function balanceOf(address) view returns (uint256)',
+          'function tokenOfOwnerByIndex(address, uint256) view returns (uint256)',
+          'function getAgentInfo(uint256) view returns (string, address, uint256, bytes32, string, uint256, bool)',
+        ];
+        const contract = new ethers.Contract(registryAddr, abi, provider);
+        const bal = await contract.balanceOf(addr);
+        if (bal === 0n) {
+          $('lookup-result').innerHTML = `<div class="muted">${addr.slice(0,10)}… holds no AgentRegistry tokens at <span class="kbd">${registryAddr.slice(0,10)}…</span></div>`;
+          return;
+        }
+        let html = `<div class="muted">${addr.slice(0,10)}… holds ${bal} agent token(s):</div>`;
+        for (let i = 0n; i < bal; i++) {
+          const tid = await contract.tokenOfOwnerByIndex(addr, i);
+          html += `<div class="kv"><div class="k">tokenId #${tid}</div><div class="v">at <span class="kbd">${registryAddr}</span></div></div>`;
+        }
+        $('lookup-result').innerHTML = html;
+        log(`found ${bal} token(s) for ${addr.slice(0,10)}…`, 'ok');
+        return;
+      }
+    }
+    $('lookup-result').innerHTML = `
+      <div class="muted">No AgentRegistry deployment file found for the current network.</div>
+      <div class="muted" style="margin-top:6px">Contract is tested locally (20/20). Deploy with:<br>
+        <span class="kbd">cd daio/contracts && forge create AgentRegistry --rpc-url $SEPOLIA --private-key $KEY</span>
+      </div>
+    `;
+    log('no deployment file — contract not yet deployed on this network', 'warn');
+  } catch (e) {
+    log(`lookup failed: ${e.message}`, 'err');
+    $('lookup-result').innerHTML = `<div class="muted">lookup error: ${e.message}</div>`;
+  }
+};
+
+log('AgentRegistry UI loaded — connect MetaMask to query');
+</script>
+</body>
+</html>

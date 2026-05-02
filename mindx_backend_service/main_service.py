@@ -1128,6 +1128,12 @@ _FEEDBACK_HTML_PATH = Path(__file__).parent / "feedback.html"
 _THOT_HTML_PATH = Path(__file__).parent / "THOT.html"
 _BOARDROOM_HTML_PATH = Path(__file__).parent / "boardroom.html"
 _CABINET_HTML_PATH = Path(__file__).parent / "cabinet.html"
+_KEEPERHUB_HTML_PATH = Path(__file__).parent / "keeperhub.html"
+_UNISWAP_HTML_PATH = Path(__file__).parent / "uniswap.html"
+_BANKON_ENS_HTML_PATH = Path(__file__).parent / "bankon-ens.html"
+_ZEROG_HTML_PATH = Path(__file__).parent / "zerog.html"
+_CONCLAVE_HTML_PATH = Path(__file__).parent / "conclave.html"
+_AGENTREGISTRY_HTML_PATH = Path(__file__).parent / "agentregistry.html"
 _DOJO_HTML_PATH = Path(__file__).parent / "dojo.html"
 _ALLCHAINZ_HTML_PATH = Path(__file__).parent / "allchainz.html"
 _ERROR_PAGES_DIR = Path(__file__).parent / "error_pages"
@@ -1224,6 +1230,54 @@ async def cabinet_page():
     if _CABINET_HTML_PATH.exists():
         return _DashResponse(content=_CABINET_HTML_PATH.read_text(encoding="utf-8"))
     return _DashResponse(content="<h1>Cabinet</h1><p>Page not deployed.</p>")
+
+
+def _serve_html(path: Path, fallback_title: str) -> _DashResponse:
+    if path.exists():
+        return _DashResponse(content=path.read_text(encoding="utf-8"))
+    return _DashResponse(content=f"<h1>{fallback_title}</h1><p>Page not deployed.</p>")
+
+
+@app.get("/keeperhub", response_class=_DashResponse, include_in_schema=False)
+@app.get("/keeperhub.html", response_class=_DashResponse, include_in_schema=False)
+async def keeperhub_page():
+    """KeeperHub bridge UI — bidirectional x402/MPP demo."""
+    return _serve_html(_KEEPERHUB_HTML_PATH, "KeeperHub")
+
+
+@app.get("/uniswap", response_class=_DashResponse, include_in_schema=False)
+@app.get("/uniswap.html", response_class=_DashResponse, include_in_schema=False)
+async def uniswap_page():
+    """Uniswap V4 Trader UI."""
+    return _serve_html(_UNISWAP_HTML_PATH, "Uniswap V4 Trader")
+
+
+@app.get("/bankon-ens", response_class=_DashResponse, include_in_schema=False)
+@app.get("/bankon-ens.html", response_class=_DashResponse, include_in_schema=False)
+async def bankon_ens_page():
+    """BANKON ENS subname registrar UI."""
+    return _serve_html(_BANKON_ENS_HTML_PATH, "BANKON ENS")
+
+
+@app.get("/zerog", response_class=_DashResponse, include_in_schema=False)
+@app.get("/zerog.html", response_class=_DashResponse, include_in_schema=False)
+async def zerog_page():
+    """0G Adapter UI — sidecar + inference."""
+    return _serve_html(_ZEROG_HTML_PATH, "0G Adapter")
+
+
+@app.get("/conclave", response_class=_DashResponse, include_in_schema=False)
+@app.get("/conclave.html", response_class=_DashResponse, include_in_schema=False)
+async def conclave_page():
+    """Conclave AXL mesh viewer UI."""
+    return _serve_html(_CONCLAVE_HTML_PATH, "Conclave AXL")
+
+
+@app.get("/agentregistry", response_class=_DashResponse, include_in_schema=False)
+@app.get("/agentregistry.html", response_class=_DashResponse, include_in_schema=False)
+async def agentregistry_page():
+    """ERC-8004 AgentRegistry UI."""
+    return _serve_html(_AGENTREGISTRY_HTML_PATH, "AgentRegistry")
 
 
 @app.get("/dojo", response_class=_DashResponse, include_in_schema=False)
@@ -1411,6 +1465,7 @@ app.add_middleware(
 
 _PUBLIC_EXACT = frozenset({
     "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html",
+    "/keeperhub", "/keeperhub.html", "/uniswap", "/uniswap.html", "/bankon-ens", "/bankon-ens.html", "/zerog", "/zerog.html", "/conclave", "/conclave.html", "/agentregistry", "/agentregistry.html",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/diagnostics/live", "/activity/stream", "/activity/recent", "/activity/stats",
     "/thesis", "/thesis/", "/thesis/evidence", "/thesis/summary",
