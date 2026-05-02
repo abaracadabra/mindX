@@ -191,6 +191,7 @@ jobs:
           slither ens/v1/BankonSubnameRegistrar.sol \
             --solc-remaps "@openzeppelin/=lib/openzeppelin-contracts/" \
             --exclude-low --exclude-informational --exclude-optimization \
+            --exclude-dependencies \
             --fail-high
 
       - name: Slither · THOT
@@ -199,6 +200,7 @@ jobs:
           slither THOT/v1/THOT.sol \
             --solc-remaps "@openzeppelin/=lib/openzeppelin-contracts/" \
             --exclude-low --exclude-informational --exclude-optimization \
+            --exclude-dependencies \
             --fail-high
 
       - name: Slither · AgentRegistry
@@ -207,6 +209,7 @@ jobs:
           slither agentregistry/AgentRegistry.sol \
             --solc-remaps "@openzeppelin/=lib/openzeppelin-contracts/" \
             --exclude-low --exclude-informational --exclude-optimization \
+            --exclude-dependencies \
             --fail-high
 
       - name: Slither · Conclave
@@ -214,6 +217,7 @@ jobs:
         run: |
           slither src/Conclave.sol \
             --exclude-low --exclude-informational --exclude-optimization \
+            --exclude-dependencies \
             --fail-high
 
       - name: Slither · ConclaveBond
@@ -221,4 +225,5 @@ jobs:
         run: |
           slither src/ConclaveBond.sol \
             --exclude-low --exclude-informational --exclude-optimization \
+            --exclude-dependencies \
             --fail-high

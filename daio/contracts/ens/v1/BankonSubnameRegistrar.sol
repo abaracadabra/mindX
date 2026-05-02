@@ -346,7 +346,7 @@ contract BankonSubnameRegistrar is
         if (meta.algoAddr.length > 0)             n++;
 
         bytes[] memory calls = new bytes[](n);
-        uint256 i;
+        uint256 i = 0;
 
         // setAddr(bytes32,address) — disambiguate from the multi-chain overload.
         calls[i++] = abi.encodeWithSignature("setAddr(bytes32,address)", node, owner);
