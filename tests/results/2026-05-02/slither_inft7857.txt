@@ -1,0 +1,25 @@
+	- denominator = denominator / twos (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#244)
+	- inverse *= 2 - denominator * inverse (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#267)
+Math.mulDiv(uint256,uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#206-277) performs a multiplication on the result of a division:
+	- denominator = denominator / twos (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#244)
+	- inverse *= 2 - denominator * inverse (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#268)
+Math.mulDiv(uint256,uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#206-277) performs a multiplication on the result of a division:
+	- low = low / twos (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#247)
+	- result = low * inverse (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#274)
+Math.invMod(uint256,uint256) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#317-363) performs a multiplication on the result of a division:
+	- quotient = gcd / remainder (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#339)
+	- (gcd,remainder) = (remainder,gcd - remainder * quotient) (lib/openzeppelin-contracts/contracts/utils/math/Math.sol#341-348)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#divide-before-multiply
+INFO:Detectors:
+Detector: reentrancy-no-eth
+Reentrancy in iNFT_7857.mintAgent(address,bytes32,string,bytes32,uint32,uint8,bytes32,string) (inft/iNFT_7857.sol#254-307):
+	External calls:
+	- _safeMint(to,tokenId) (inft/iNFT_7857.sol#300)
+		- retval = IERC721Receiver(to).onERC721Received(operator,from,tokenId,data) (lib/openzeppelin-contracts/contracts/token/ERC721/utils/ERC721Utils.sol#33-47)
+		- ERC721Utils.checkOnERC721Received(_msgSender(),address(0),to,tokenId,data) (lib/openzeppelin-contracts/contracts/token/ERC721/ERC721.sol#289)
+	State variables written after the call(s):
+	- _gateOpen = false (inft/iNFT_7857.sol#301)
+	iNFT_7857._gateOpen (inft/iNFT_7857.sol#158) can be used in cross function reentrancies:
+	- iNFT_7857._update(address,uint256,address) (inft/iNFT_7857.sol#607-620)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#reentrancy-vulnerabilities-2
+INFO:Slither:inft/iNFT_7857.sol analyzed (34 contracts with 58 detectors), 13 result(s) found

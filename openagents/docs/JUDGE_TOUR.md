@@ -13,7 +13,7 @@ The dashboard. Eight panels for the eight modules + a bonus Cabinet panel. Each 
 
 | Prize you care about | Click here |
 |---|---|
-| **0G — Best Autonomous Agents / iNFT** ($7,500) | [`/inft7857`](https://mindx.pythai.net/inft7857) — 9-tab ethers v6 console for the ERC-7857 contract. 56/56 forge tests. Sealed-key transfer, oracle-signed re-encryption. |
+| **0G — Best Autonomous Agents / iNFT** ($7,500) | [`/inft7857`](https://mindx.pythai.net/inft7857) — 9-tab ethers v6 console for the ERC-7857 contract. 56/57 forge tests. Sealed-key transfer, oracle-signed re-encryption. |
 | **0G — Best Framework, Tooling** ($7,500) | [`/zerog`](https://mindx.pythai.net/zerog) — three-piece adapter (Compute / Storage / Galileo). Click "Probe RPC" — live chainId, block height, gas price from `evmrpc-testnet.0g.ai`. |
 | **Gensyn AXL** ($5,000) | [`/conclave`](https://mindx.pythai.net/conclave) — 8-node mesh visualization (CEO at center + 7 Counsellors). 9 Python + 10 Solidity tests. |
 | **ENS — Best Integration** ($2,500) | [`/bankon-ens`](https://mindx.pythai.net/bankon-ens) — type any ENS name in the lookup box and click Resolve. 29 fuzz tests on the registrar. |
@@ -43,7 +43,7 @@ cd mindX
 
 # Solidity tests (every track + composable primitives)
 cd daio/contracts
-FOUNDRY_PROFILE=inft           forge test  # 56/56 — iNFT-7857
+FOUNDRY_PROFILE=inft           forge test  # 57/57 — iNFT-7857
 FOUNDRY_PROFILE=bankon         forge test  # 29/29 — BANKON ENS v1
 FOUNDRY_PROFILE=thot           forge test  # 14/14 — THOT memory anchor
 FOUNDRY_PROFILE=agentregistry  forge test  # 20/20 — ERC-8004
@@ -53,7 +53,7 @@ cd ../../openagents/conclave/contracts
 forge test                                  # 10/10 — Conclave + ConclaveBond
 ```
 
-**Combined: 154 tests, all green.** (119 forge + 9 Conclave-Python + 25 Cabinet-Python + 10 Conclave-Solidity = 163, with 9 of those being Conclave Python protocol tests counted separately.)
+**Combined: 155 tests, all green.** (120 forge + 9 Conclave-Python + 25 Cabinet-Python + 10 Conclave-Solidity = 164, with 9 of those being Conclave Python protocol tests counted separately.)
 
 ## Stop 5 — Verify the composability claim
 

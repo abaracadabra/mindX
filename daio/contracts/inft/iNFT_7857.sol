@@ -264,6 +264,7 @@ contract iNFT_7857 is
         external
         whenNotPaused
         onlyRole(MINTER_ROLE)
+        nonReentrant
         returns (uint256 tokenId)
     {
         if (to == address(0))                         revert ZeroAddress();
@@ -459,7 +460,7 @@ contract iNFT_7857 is
     }
 
     /* ───── Burn (ERC721Burnable + state cleanup) ─────────────────── */
-    function burn(uint256 tokenId) public override(ERC721Burnable) {
+    function burn(uint256 tokenId) public override(ERC721Burnable) nonReentrant {
         address tokenOwner = _ownerOf(tokenId);
         if (tokenOwner == address(0)) revert TokenDoesNotExist(tokenId);
         if (!_isAuthorized(tokenOwner, msg.sender, tokenId)) revert NotAuthorized(msg.sender);

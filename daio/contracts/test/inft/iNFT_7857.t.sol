@@ -712,4 +712,55 @@ contract iNFT_7857_Test is Test {
         assertFalse(nft.isUsageAuthorized(id, e1));
         assertTrue(nft.isUsageAuthorized(id, e2));
     }
+
+    /// @notice Slither-flagged regression: a malicious receiver tries to
+    ///         re-enter mintAgent during onERC721Received while _gateOpen
+    ///         is true. The nonReentrant modifier on mintAgent must block it.
+    function test_mintAgent_blocksReentrancyViaOnERC721Received() public {
+        ReentrantReceiver attacker = new ReentrantReceiver(nft);
+        vm.prank(minter);
+        // The attacker's onERC721Received calls mintAgent again. nonReentrant
+        // on the outer call should cause the re-entry to revert; _safeMint
+        // surfaces that revert through ERC721's standard receiver-rejection path.
+        vm.expectRevert();
+        nft.mintAgent(
+            address(attacker),
+            ROOT_A,
+            "ipfs://x",
+            bytes32(uint256(0xab)),
+            128,
+            1,
+            keccak256("sealed-key-A"),
+            "ipfs://uri"
+        );
+    }
+}
+
+/// @notice Malicious ERC-721 receiver that re-enters mintAgent during
+///         onERC721Received. Used by test_mintAgent_blocksReentrancyViaOnERC721Received.
+contract ReentrantReceiver is IERC721Receiver {
+    iNFT_7857 internal target;
+    constructor(iNFT_7857 _target) {
+        target = _target;
+    }
+    function onERC721Received(
+        address /* operator */,
+        address /* from */,
+        uint256 /* tokenId */,
+        bytes calldata /* data */
+    ) external returns (bytes4) {
+        // Attempt cross-function reentrancy. Will revert because of nonReentrant
+        // mutex held by the outer mintAgent call. The revert propagates up.
+        target.mintAgent(
+            address(this),
+            keccak256("re-entry-root"),
+            "ipfs://reentry",
+            bytes32(uint256(0xcd)),
+            128,
+            1,
+            keccak256("sealed-reentry"),
+            "ipfs://uri-reentry"
+        );
+        return IERC721Receiver.onERC721Received.selector;
+    }
 }

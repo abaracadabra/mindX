@@ -72,7 +72,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {profile: inft,           cwd: daio/contracts,           label: 'iNFT-7857 (56 tests)'}
+          - {profile: inft,           cwd: daio/contracts,           label: 'iNFT-7857 (57 tests)'}
           - {profile: bankon,         cwd: daio/contracts,           label: 'BANKON v1 (29 tests)'}
           - {profile: thot,           cwd: daio/contracts,           label: 'THOT v1 (14 tests)'}
           - {profile: agentregistry,  cwd: daio/contracts,           label: 'AgentRegistry (20 tests)'}

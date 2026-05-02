@@ -8,14 +8,14 @@
 
 ## Aggregate
 
-**Total: 163 tests passing across 7 suites · 0 failures · 0 skips · 80% line coverage on Cabinet code**
+**Total: 164 tests passing across 7 suites · 0 failures · 0 skips · 80% line coverage on Cabinet code**
 
 | Suite | Tests | Result | Time | Output file |
 |---|---|---|---|---|
 | Cabinet pytest (Python) | 25 | ✅ pass | 3.13s | [`cabinet_pytest.txt`](cabinet_pytest.txt) |
 | Conclave Python protocol | 9 | ✅ pass | 0.16s | [`conclave_python.txt`](conclave_python.txt) |
 | Conclave Solidity (Foundry) | 10 | ✅ pass | 30.5ms | [`conclave_solidity.txt`](conclave_solidity.txt) |
-| iNFT-7857 (Foundry) | 56 | ✅ pass | 80.5ms | [`inft_7857_forge.txt`](inft_7857_forge.txt) |
+| iNFT-7857 (Foundry) | 57 | ✅ pass | 80.5ms | [`inft_7857_forge.txt`](inft_7857_forge.txt) |
 | BANKON v1 ENS (Foundry) | 29 | ✅ pass | 324.9ms | [`bankon_forge.txt`](bankon_forge.txt) |
 | THOT v1 (Foundry) | 14 | ✅ pass | 9.7ms | [`thot_forge.txt`](thot_forge.txt) |
 | AgentRegistry ERC-8004 (Foundry) | 20 | ✅ pass | 9.6ms | [`agentregistry_forge.txt`](agentregistry_forge.txt) |
@@ -60,9 +60,9 @@ cd openagents/conclave
 cd contracts && forge test
 cd ../..
 
-# All four daio Solidity profiles (119 total)
+# All four daio Solidity profiles (120 total)
 cd ../daio/contracts
-FOUNDRY_PROFILE=inft           forge test  # 56
+FOUNDRY_PROFILE=inft           forge test  # 57
 FOUNDRY_PROFILE=bankon         forge test  # 29
 FOUNDRY_PROFILE=thot           forge test  # 14
 FOUNDRY_PROFILE=agentregistry  forge test  # 20
@@ -72,7 +72,7 @@ FOUNDRY_PROFILE=agentregistry  forge test  # 20
 
 ## Per-suite headlines
 
-### Cabinet pytest (22/22 — `cabinet_pytest.txt`)
+### Cabinet pytest (25/25 — `cabinet_pytest.txt`)
 
 The headline tests for the BANKON Vault shadow-overlord admin tier:
 - `test_sign_as_agent_returns_valid_sig_no_pk_leak` — proves the vault signs on the agent's behalf without leaking the private key
@@ -96,10 +96,10 @@ On-chain anchoring + slashing tests:
 - `test_record_resolution_with_quorum`, `test_double_anchor_reverts` — anchor mechanics
 - `test_slash_unseats_and_burns_bond` — punishment path
 
-### iNFT-7857 (56/56 — `inft_7857_forge.txt`)
+### iNFT-7857 (57/57 — `inft_7857_forge.txt`)
 
 ERC-7857 sealed-key transfer + re-encryption tests:
-- 53 unit tests + 3 fuzz tests @ 256 runs each
+- 54 unit tests + 3 fuzz tests @ 256 runs each
 - Headline: `test_TransferWithSealedKey_succeeds_andRotatesKey`, `test_TransferWithSealedKey_revertsWhenCallerNotApproved`
 
 ### BANKON v1 (29/29 — `bankon_forge.txt`)
