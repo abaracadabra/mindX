@@ -31,7 +31,7 @@ The following are **not** in scope:
 ## Test results
 
 The full test surface is at [`tests/results/<YYYY-MM-DD>/`](tests/results/) with verbatim output captured per run.
-The most recent run: [`tests/results/2026-05-02/SUMMARY.md`](tests/results/2026-05-02/SUMMARY.md) — **158/158 tests pass.**
+The most recent run: [`tests/results/2026-05-02/SUMMARY.md`](tests/results/2026-05-02/SUMMARY.md) — **160/160 tests pass.**
 
 ## Cryptographic guarantees
 

@@ -280,5 +280,17 @@
     "event_type": "startup",
     "timestamp": 1777714718.154688,
     "state_file": "states/startup_1777714718.json"
+  },
+  {
+    "event_id": "startup_1777714767",
+    "event_type": "startup",
+    "timestamp": 1777714767.8025079,
+    "state_file": "states/startup_1777714767.json"
+  },
+  {
+    "event_id": "startup_1777714781",
+    "event_type": "startup",
+    "timestamp": 1777714781.0241013,
+    "state_file": "states/startup_1777714781.json"
   }
 ]

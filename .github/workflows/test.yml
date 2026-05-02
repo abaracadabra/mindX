@@ -9,7 +9,7 @@ on:
 
 jobs:
   cabinet-pytest:
-    name: Cabinet · Python (20 tests)
+    name: Cabinet · Python (22 tests)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
