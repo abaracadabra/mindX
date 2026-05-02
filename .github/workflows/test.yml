@@ -1,0 +1,109 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  cabinet-pytest:
+    name: Cabinet · Python (20 tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install minimal deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-asyncio fastapi[all] httpx eth-account web3 pyjwt cryptography pydantic
+
+      - name: Run Cabinet test suite
+        run: |
+          python -m pytest \
+            tests/bankon_vault/test_shadow_overlord.py \
+            tests/bankon_vault/test_cabinet.py \
+            -c /dev/null -v
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+
+  conclave-pytest:
+    name: Conclave · Python (9 tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Conclave deps
+        working-directory: openagents/conclave
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-asyncio pynacl cbor2 pydantic
+
+      - name: Run Conclave protocol tests
+        working-directory: openagents/conclave
+        run: python -m pytest tests/ -c /dev/null -v
+
+  forge-tests:
+    name: Forge · Solidity (${{ matrix.label }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {profile: inft,           cwd: daio/contracts,           label: 'iNFT-7857 (56 tests)'}
+          - {profile: bankon,         cwd: daio/contracts,           label: 'BANKON v1 (29 tests)'}
+          - {profile: thot,           cwd: daio/contracts,           label: 'THOT v1 (14 tests)'}
+          - {profile: agentregistry,  cwd: daio/contracts,           label: 'AgentRegistry (20 tests)'}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Run forge tests
+        working-directory: ${{ matrix.cwd }}
+        env:
+          FOUNDRY_PROFILE: ${{ matrix.profile }}
+        run: forge test -vv
+
+  conclave-forge:
+    name: Forge · Conclave Solidity (10 tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Install forge-std (Conclave isolated submodule)
+        working-directory: openagents/conclave/contracts
+        run: |
+          mkdir -p lib
+          # Reuse the daio/contracts/lib/forge-std submodule that ships with the repo
+          if [ -d "../../../daio/contracts/lib/forge-std" ]; then
+            ln -sf ../../../daio/contracts/lib/forge-std lib/forge-std
+          else
+            forge install foundry-rs/forge-std --no-git --no-commit
+          fi
+
+      - name: Run Conclave forge tests
+        working-directory: openagents/conclave/contracts
+        run: forge test
