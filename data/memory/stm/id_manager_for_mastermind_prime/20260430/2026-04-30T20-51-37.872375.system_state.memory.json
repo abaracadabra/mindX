@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-04-30T20:51:37.872375",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "id_manager_for_mastermind_prime",
+  "content": {
+    "process_name": "id_manager_address_lookup",
+    "data": {
+      "entity_id": "mastermind_prime",
+      "address": "0x0a56d74eDaD0839E7F9278fc9A3907aB600969f7",
+      "source": "belief_system"
+    }
+  },
+  "context": {
+    "agent_id": "id_manager_for_mastermind_prime"
+  },
+  "tags": [
+    "id_manager_address_lookup",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "bcca398af2c7ea86"
+}

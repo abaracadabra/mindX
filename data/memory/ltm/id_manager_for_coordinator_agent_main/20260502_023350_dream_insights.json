@@ -1,0 +1,62 @@
+{
+  "agent_id": "id_manager_for_coordinator_agent_main",
+  "dream_timestamp": "2026-05-02T02:33:50.546843",
+  "source": "machine_dreaming",
+  "insights": [
+    {
+      "type": "behavioral",
+      "description": "Top processes: id_manager_wallet_exists(110), id_manager_address_derived(101), id_manager_address_lookup(9)",
+      "score": 0.3751,
+      "importance": 0.5,
+      "novelty": 0.4,
+      "confidence": 0.8,
+      "frequency": 220
+    },
+    {
+      "type": "performance",
+      "description": "Dominant memory type: system_state (220 occurrences)",
+      "score": 0.3751,
+      "importance": 0.4,
+      "novelty": 0.5,
+      "confidence": 0.8,
+      "frequency": 220
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hours: 21, 1, 2",
+      "score": 0.1698,
+      "importance": 0.3,
+      "novelty": 0.4,
+      "confidence": 0.7,
+      "frequency": 104
+    },
+    {
+      "type": "behavioral",
+      "description": "Active: 220 memories",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: id_manager_wallet_exists(110), id_manager_address_derived(101), id_manager_address_lookup(9)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hour: 21:00",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    }
+  ],
+  "total_insights": 6
+}

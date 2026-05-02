@@ -1127,6 +1127,7 @@ _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
 _FEEDBACK_HTML_PATH = Path(__file__).parent / "feedback.html"
 _THOT_HTML_PATH = Path(__file__).parent / "THOT.html"
 _BOARDROOM_HTML_PATH = Path(__file__).parent / "boardroom.html"
+_CABINET_HTML_PATH = Path(__file__).parent / "cabinet.html"
 _DOJO_HTML_PATH = Path(__file__).parent / "dojo.html"
 _ALLCHAINZ_HTML_PATH = Path(__file__).parent / "allchainz.html"
 _ERROR_PAGES_DIR = Path(__file__).parent / "error_pages"
@@ -1214,6 +1215,15 @@ async def boardroom_page():
     if _BOARDROOM_HTML_PATH.exists():
         return _DashResponse(content=_BOARDROOM_HTML_PATH.read_text(encoding="utf-8"))
     return _DashResponse(content="<h1>Boardroom</h1><p>Loading...</p>")
+
+
+@app.get("/cabinet", response_class=_DashResponse, include_in_schema=False)
+@app.get("/cabinet.html", response_class=_DashResponse, include_in_schema=False)
+async def cabinet_page():
+    """Cabinet — shadow-overlord admin UI for the BANKON Vault wallet roster."""
+    if _CABINET_HTML_PATH.exists():
+        return _DashResponse(content=_CABINET_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>Cabinet</h1><p>Page not deployed.</p>")
 
 
 @app.get("/dojo", response_class=_DashResponse, include_in_schema=False)
@@ -1400,7 +1410,7 @@ app.add_middleware(
 # Uses @app.middleware("http") which always fires regardless of import order.
 
 _PUBLIC_EXACT = frozenset({
-    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html",
+    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/diagnostics/live", "/activity/stream", "/activity/recent", "/activity/stats",
     "/thesis", "/thesis/", "/thesis/evidence", "/thesis/summary",
@@ -1421,6 +1431,10 @@ _PUBLIC_PREFIXES = (
     "/insight/",
     "/p2p/keeperhub/",
     "/openagents/deployments/",
+    "/admin/shadow/",     # shadow-overlord challenge/verify/release-key — gated by ECDSA sig + JWT, not session
+    "/admin/cabinet/",    # gated by require_shadow_jwt at handler level
+    "/cabinet/",          # public cabinet read (addresses only)
+    "/vault/sign/",       # vault-as-signing-oracle — gated by require_shadow_jwt + fresh sig
 )
 
 @app.middleware("http")
@@ -4706,6 +4720,22 @@ try:
     app.include_router(bankon_vault_router)
 except Exception as _vault_import_err:
     logger.warning(f"BANKON Vault routes not loaded: {_vault_import_err}")
+
+# Include shadow-overlord admin tier (challenge/verify, cabinet provisioning,
+# vault-as-signing-oracle, public cabinet read).
+try:
+    from mindx_backend_service.bankon_vault.admin_routes import (
+        admin_router as shadow_admin_router,
+        public_cabinet_router,
+    )
+    from mindx_backend_service.bankon_vault.sign_routes import sign_router as vault_sign_router
+
+    app.include_router(shadow_admin_router)
+    app.include_router(public_cabinet_router)
+    app.include_router(vault_sign_router)
+    logger.info("Shadow-overlord admin tier mounted at /admin/shadow/*, /admin/cabinet/*, /vault/sign/*")
+except Exception as _shadow_import_err:
+    logger.warning(f"Shadow-overlord routes not loaded: {_shadow_import_err}")
 
 command_handler: Optional[CommandHandler] = None
 

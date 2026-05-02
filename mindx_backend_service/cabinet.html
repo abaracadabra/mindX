@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mindX Cabinet — Shadow-Overlord Admin</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700;900&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#060810;--surface:rgba(14,16,28,.92);--surface2:rgba(20,22,36,.92);
+  --accent:#56d364;--accent2:#3fb950;--accent-dim:rgba(86,211,100,.06);
+  --warn:#e3b341;--err:#f85149;--violet:#d2a8ff;--blue:#79c0ff;
+  --text:#e6edf3;--text2:#b1bac4;--text3:#6e7681;--white:#f0f6fc;
+  --border:rgba(121,192,255,.1);--glass-border:rgba(121,192,255,.08);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% -10%,rgba(34,197,94,.025) 0%,transparent 50%);pointer-events:none;z-index:0}
+.page{position:relative;z-index:1;min-height:100vh;padding:20px 20px 40px;max-width:1200px;margin:0 auto}
+.hdr{text-align:center;margin-bottom:24px}
+.hdr h1{font-family:'Orbitron',sans-serif;font-size:clamp(22px,3.5vw,32px);font-weight:700;color:var(--white);letter-spacing:10px;text-transform:uppercase;text-shadow:0 0 20px rgba(86,211,100,.1)}
+.hdr .sub{font-size:12px;color:var(--text2);letter-spacing:3px;margin-top:10px;padding-bottom:16px;border-bottom:1px solid var(--glass-border);font-weight:300}
+.status-bar{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+.badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 12px;border:1px solid var(--border);border-radius:3px;color:var(--text2)}
+.badge.ok{color:var(--accent);border-color:rgba(86,211,100,.3)}
+.badge.warn{color:var(--warn);border-color:rgba(227,179,65,.3)}
+.badge.err{color:var(--err);border-color:rgba(248,81,73,.3)}
+
+.panel{background:var(--surface);border:1px solid var(--glass-border);border-radius:6px;padding:22px;margin:14px 0}
+.panel h2{font-family:'Orbitron',sans-serif;font-size:14px;color:var(--white);letter-spacing:4px;text-transform:uppercase;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--glass-border)}
+.panel .desc{font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.5}
+
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:8px 0}
+input,select,textarea,button{background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px 10px}
+input:focus,textarea:focus{outline:none;border-color:var(--accent)}
+textarea{width:100%;min-height:60px;resize:vertical}
+button{cursor:pointer;background:var(--accent-dim);border-color:var(--accent);color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;padding:8px 16px;transition:.18s}
+button:hover:not(:disabled){background:var(--accent);color:#000}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.danger{background:rgba(248,81,73,.06);border-color:var(--err);color:var(--err)}
+button.danger:hover:not(:disabled){background:var(--err);color:#fff}
+
+.cabinet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:12px}
+.role-card{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:14px}
+.role-card.ceo{border-color:var(--accent);box-shadow:0 0 12px rgba(86,211,100,.08)}
+.role-card .role{font-family:'Orbitron',sans-serif;font-size:12px;color:var(--white);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
+.role-card .label{font-size:11px;color:var(--text3);margin-bottom:8px}
+.role-card .addr{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--blue);word-break:break-all;cursor:pointer;transition:.15s}
+.role-card .addr:hover{color:var(--white)}
+.role-card .weight{font-size:10px;color:var(--text3);margin-top:6px}
+
+.log{background:#020308;border:1px solid var(--glass-border);border-radius:4px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);max-height:240px;overflow-y:auto;line-height:1.6}
+.log .line{margin:2px 0}
+.log .ok{color:var(--accent)}
+.log .warn{color:var(--warn)}
+.log .err{color:var(--err)}
+.log .ts{color:var(--text3);margin-right:8px}
+
+.muted{color:var(--text3);font-size:11px}
+.kbd{font-family:'JetBrains Mono',monospace;background:var(--surface2);padding:2px 6px;border-radius:2px;border:1px solid var(--border);font-size:11px}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hdr">
+    <h1>CABINET</h1>
+    <div class="sub">SHADOW-OVERLORD ADMIN — BANKON VAULT WALLET ROSTER</div>
+  </div>
+
+  <div class="status-bar">
+    <span class="badge" id="badge-wallet">WALLET: not connected</span>
+    <span class="badge" id="badge-overlord">OVERLORD: ?</span>
+    <span class="badge" id="badge-jwt">JWT: none</span>
+    <span class="badge" id="badge-vault">VAULT: ?</span>
+  </div>
+
+  <div class="panel">
+    <h2>1 · Authenticate</h2>
+    <div class="desc">
+      Connect MetaMask, then sign a server-issued challenge to obtain a 5-minute admin JWT. The JWT alone authorizes
+      only read-only ops; every state-changing op (provision / sign / clear) requires a fresh per-op signature.
+      The JWT is held in browser memory only — never localStorage.
+    </div>
+    <div class="row">
+      <button id="btn-connect">Connect Wallet</button>
+      <button id="btn-auth" disabled>Authenticate as Shadow-Overlord</button>
+      <span class="muted" id="auth-msg"></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>2 · Cabinet · Provision</h2>
+    <div class="desc">
+      Mint <strong>1 CEO + 7 soldier wallets</strong> for a company. Private keys are stored encrypted in the BANKON Vault
+      (AES-256-GCM + HKDF-SHA512); public addresses are written to <span class="kbd">production_registry.json</span>
+      and <span class="kbd">agent_map.json</span>. Idempotent — refuses if a cabinet for the company already exists.
+    </div>
+    <div class="row">
+      <input id="company" value="PYTHAI" placeholder="company namespace" style="text-transform:uppercase;width:200px">
+      <button id="btn-preflight" disabled>Preflight</button>
+      <button id="btn-provision" disabled>Provision Cabinet</button>
+      <button id="btn-clear" class="danger" disabled>Clear Cabinet</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>3 · Cabinet · Roster</h2>
+    <div class="desc">Public addresses of the cabinet. Click any to copy.</div>
+    <div class="cabinet-grid" id="roster"><div class="muted">No cabinet read yet — click <span class="kbd">Refresh</span>.</div></div>
+    <div class="row" style="margin-top:14px"><button id="btn-roster">Refresh Roster</button></div>
+  </div>
+
+  <div class="panel">
+    <h2>4 · Sign as Agent · Vault-as-Oracle</h2>
+    <div class="desc">
+      The vault signs a message on the agent's behalf. The private key is retrieved into memory only for the duration of
+      the signing operation; nothing in the response carries the key. Each sign requires a fresh shadow-overlord signature
+      bound to <span class="kbd">{agent_id, sha256(message)}</span>.
+    </div>
+    <div class="row">
+      <select id="agent-pick" style="width:300px"><option>(provision a cabinet first)</option></select>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <textarea id="msg" placeholder="Message to sign as the selected agent"></textarea>
+    </div>
+    <div class="row">
+      <button id="btn-sign" disabled>Sign as Agent</button>
+      <span class="muted" id="sig-display"></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>· Activity Log</h2>
+    <div class="log" id="log"><div class="line muted">waiting for activity…</div></div>
+  </div>
+
+  <div class="muted" style="text-align:center;margin-top:30px;font-size:10px;letter-spacing:2px">
+    BANKON VAULT · SHADOW-OVERLORD TIER · cypherpunk2048
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let WALLET = null;
+let JWT = null;
+let OVERLORD_ADDR = null;
+let CABINET = null;
+
+const log = (msg, cls='') => {
+  const div = document.createElement('div');
+  div.className = 'line ' + cls;
+  div.innerHTML = `<span class="ts">${new Date().toISOString().split('T')[1].slice(0,8)}</span>${msg}`;
+  const l = $('log');
+  if (l.firstChild?.classList?.contains('muted')) l.innerHTML = '';
+  l.insertBefore(div, l.firstChild);
+};
+
+const setBadge = (id, text, cls='') => {
+  const el = $(id);
+  el.textContent = text;
+  el.className = 'badge' + (cls ? ' ' + cls : '');
+};
+
+async function api(path, opts={}) {
+  const headers = {'content-type':'application/json', ...(opts.headers||{})};
+  if (JWT && !opts.skipAuth) headers['authorization'] = `Bearer ${JWT}`;
+  const res = await fetch(path, {...opts, headers});
+  const text = await res.text();
+  let body; try { body = JSON.parse(text); } catch { body = {raw: text}; }
+  if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status}`), {status: res.status, body});
+  return body;
+}
+
+async function refreshVaultBadge() {
+  try {
+    const s = await api('/vault/credentials/status', {skipAuth: true});
+    setBadge('badge-vault', `VAULT: ${s.locked ? 'locked' : 'unlocked'} · ${s.entries} entries`, s.locked ? 'warn' : 'ok');
+  } catch (e) {
+    setBadge('badge-vault', 'VAULT: ? (status unreachable)', 'warn');
+  }
+}
+
+async function fetchOverlordOnFirstChallenge() {
+  // The challenge endpoint will 503 if SHADOW_OVERLORD_ADDRESS isn't configured.
+  try {
+    await api('/admin/shadow/challenge', {skipAuth: true, method:'POST', body: JSON.stringify({scope: 'auth'})});
+    setBadge('badge-overlord', 'OVERLORD: configured', 'ok');
+  } catch (e) {
+    if (e.status === 503) setBadge('badge-overlord', 'OVERLORD: not configured', 'err');
+    else setBadge('badge-overlord', 'OVERLORD: ?', 'warn');
+  }
+}
+
+$('btn-connect').onclick = async () => {
+  if (!window.ethereum) { log('MetaMask not found', 'err'); return; }
+  const accounts = await window.ethereum.request({method: 'eth_requestAccounts'});
+  WALLET = accounts[0];
+  setBadge('badge-wallet', `WALLET: ${WALLET.slice(0,6)}…${WALLET.slice(-4)}`, 'ok');
+  $('btn-auth').disabled = false;
+  log(`Connected ${WALLET}`, 'ok');
+};
+
+async function signWithMetaMask(message) {
+  return await window.ethereum.request({method: 'personal_sign', params: [message, WALLET]});
+}
+
+$('btn-auth').onclick = async () => {
+  $('auth-msg').textContent = 'requesting challenge…';
+  try {
+    const ch = await api('/admin/shadow/challenge', {skipAuth: true, method:'POST', body: JSON.stringify({scope: 'auth'})});
+    $('auth-msg').textContent = 'sign in MetaMask…';
+    const sig = await signWithMetaMask(ch.message);
+    const res = await api('/admin/shadow/verify', {skipAuth: true, method:'POST', body: JSON.stringify({nonce: ch.nonce, signature: sig})});
+    JWT = res.jwt;
+    const expIn = res.exp - Math.floor(Date.now()/1000);
+    setBadge('badge-jwt', `JWT: active (${expIn}s)`, 'ok');
+    $('auth-msg').textContent = '';
+    $('btn-preflight').disabled = $('btn-provision').disabled = $('btn-clear').disabled = $('btn-sign').disabled = false;
+    log('Authenticated as shadow-overlord — JWT issued', 'ok');
+    // JWT auto-expire ticker
+    setTimeout(() => { JWT = null; setBadge('badge-jwt','JWT: expired','err'); log('JWT expired — re-authenticate','warn'); }, expIn * 1000);
+  } catch (e) {
+    log(`Auth failed: ${e.body?.detail || e.message}`, 'err');
+    $('auth-msg').textContent = '';
+  }
+};
+
+$('btn-preflight').onclick = async () => {
+  const co = $('company').value.trim().toUpperCase() || 'PYTHAI';
+  try {
+    const p = await api(`/admin/cabinet/${encodeURIComponent(co)}/preflight`);
+    log(`preflight ${co}: exists=${p.exists} · vault_unlocked=${p.vault_unlocked} · soldiers_with_addr=${p.soldiers_with_existing_addresses.length}`, p.exists ? 'warn' : 'ok');
+  } catch (e) {
+    log(`preflight failed: ${e.body?.detail || e.message}`, 'err');
+  }
+};
+
+$('btn-provision').onclick = async () => {
+  const co = $('company').value.trim().toUpperCase() || 'PYTHAI';
+  if (!confirm(`Provision a fresh 8-wallet cabinet for ${co}?`)) return;
+  try {
+    const ch = await api('/admin/shadow/challenge', {method:'POST', body: JSON.stringify({scope:'cabinet.provision', params:{company: co}})});
+    log(`Provisioning ${co} — sign in MetaMask…`);
+    const sig = await signWithMetaMask(ch.message);
+    const res = await api(`/admin/cabinet/${encodeURIComponent(co)}/provision`, {method:'POST', body: JSON.stringify({nonce: ch.nonce, signature: sig})});
+    log(`✓ ${co} provisioned — CEO ${res.ceo} · ${Object.keys(res.soldiers).length} soldiers`, 'ok');
+    await loadRoster(co);
+  } catch (e) {
+    log(`provision failed: ${e.body?.detail || e.message}`, 'err');
+  }
+};
+
+$('btn-clear').onclick = async () => {
+  const co = $('company').value.trim().toUpperCase() || 'PYTHAI';
+  const confirmStr = `DESTROY-${co}-CABINET`;
+  const typed = prompt(`This will WIPE the ${co} cabinet from the vault. To confirm, type:\n\n${confirmStr}`);
+  if (typed !== confirmStr) { log('clear cancelled — confirm string mismatch', 'warn'); return; }
+  try {
+    const ch = await api('/admin/shadow/challenge', {method:'POST', body: JSON.stringify({scope:'cabinet.clear', params:{company: co}})});
+    const sig = await signWithMetaMask(ch.message);
+    const res = await api(`/admin/cabinet/${encodeURIComponent(co)}/clear`, {method:'POST', body: JSON.stringify({nonce: ch.nonce, signature: sig, confirm: confirmStr})});
+    log(`✓ ${co} cleared — ${res.vault_entries_removed} vault entries removed`, 'ok');
+    CABINET = null;
+    $('roster').innerHTML = '<div class="muted">cabinet cleared</div>';
+    $('agent-pick').innerHTML = '<option>(no cabinet)</option>';
+  } catch (e) {
+    log(`clear failed: ${e.body?.detail || e.message}`, 'err');
+  }
+};
+
+async function loadRoster(co) {
+  try {
+    const r = await api(`/cabinet/${encodeURIComponent(co)}`, {skipAuth: true});
+    CABINET = r;
+    renderRoster(r);
+    populateAgentPicker(r);
+  } catch (e) {
+    if (e.status === 404) {
+      $('roster').innerHTML = `<div class="muted">no cabinet for ${co}</div>`;
+      $('agent-pick').innerHTML = '<option>(no cabinet)</option>';
+    } else log(`roster fetch failed: ${e.body?.detail || e.message}`, 'err');
+  }
+}
+
+$('btn-roster').onclick = () => loadRoster(($('company').value.trim().toUpperCase() || 'PYTHAI'));
+
+function renderRoster(r) {
+  const grid = $('roster');
+  grid.innerHTML = '';
+  const card = (role, body, isCeo=false) => `
+    <div class="role-card ${isCeo?'ceo':''}">
+      <div class="role">${role}</div>
+      <div class="label">${body.role_label}</div>
+      <div class="addr" onclick="navigator.clipboard.writeText('${body.address}');this.textContent='copied!';setTimeout(()=>this.textContent='${body.address}',1200)">${body.address}</div>
+      <div class="weight">weight: ${body.boardroom_weight ?? '1.0'}</div>
+    </div>`;
+  grid.insertAdjacentHTML('beforeend', card('CEO', r.ceo, true));
+  for (const [role, body] of Object.entries(r.soldiers)) {
+    grid.insertAdjacentHTML('beforeend', card(role.replace(/_/g,' '), body));
+  }
+}
+
+function populateAgentPicker(r) {
+  const pick = $('agent-pick');
+  pick.innerHTML = '';
+  const opt = (val, label) => { const o = document.createElement('option'); o.value = val; o.textContent = label; pick.appendChild(o); };
+  opt(r.ceo.entity_id, `CEO — ${r.ceo.address.slice(0,8)}…`);
+  for (const [role, body] of Object.entries(r.soldiers)) {
+    opt(body.entity_id, `${role} — ${body.address.slice(0,8)}…`);
+  }
+}
+
+$('btn-sign').onclick = async () => {
+  const agent_id = $('agent-pick').value;
+  const message = $('msg').value;
+  if (!message) { log('message empty', 'warn'); return; }
+  try {
+    // Compute sha256 client-side for the challenge params
+    const buf = new TextEncoder().encode(message);
+    const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+    const hashHex = '0x' + Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
+    const ch = await api('/admin/shadow/challenge', {method:'POST', body: JSON.stringify({scope:'vault.sign', params:{agent_id, message_sha256: hashHex}})});
+    log(`Signing as ${agent_id.split(':').pop()} — sign in MetaMask…`);
+    const sig = await signWithMetaMask(ch.message);
+    const res = await api(`/vault/sign/${agent_id}`, {method:'POST', body: JSON.stringify({nonce: ch.nonce, signature: sig, message})});
+    $('sig-display').innerHTML = `signed by <span style="color:var(--blue)">${res.address}</span> — sig: ${res.signature.slice(0,30)}…`;
+    log(`✓ ${agent_id.split(':').pop()} signed: ${res.signature.slice(0,30)}…`, 'ok');
+  } catch (e) {
+    log(`sign failed: ${e.body?.detail || e.message}`, 'err');
+  }
+};
+
+// boot
+refreshVaultBadge();
+fetchOverlordOnFirstChallenge();
+loadRoster('PYTHAI').catch(() => {});
+</script>
+</body>
+</html>

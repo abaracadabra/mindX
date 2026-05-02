@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-05-02T02:33:11.635706",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "process_name": "mindxagent_system_state_review_startup",
+    "data": {
+      "event_type": "startup",
+      "timestamp": 1777714391.6356826,
+      "insights": [
+        "CPU usage increased by 77.2% during startup"
+      ],
+      "improvement_opportunities": [
+        "Optimize resource usage during lifecycle events"
+      ],
+      "recommendations": []
+    }
+  },
+  "context": {
+    "agent_id": "mindx_meta_agent",
+    "reviewer": "mindxagent",
+    "event_type": "startup"
+  },
+  "tags": [
+    "mindxagent_system_state_review_startup",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "c8fc3f9bd6d0e956"
+}

@@ -1,0 +1,62 @@
+{
+  "agent_id": "mindx_meta_agent",
+  "dream_timestamp": "2026-05-02T02:33:40.905279",
+  "source": "machine_dreaming",
+  "insights": [
+    {
+      "type": "performance",
+      "description": "Dominant memory type: system_state (416 occurrences)",
+      "score": 0.4192,
+      "importance": 0.4,
+      "novelty": 0.5,
+      "confidence": 0.8,
+      "frequency": 416
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: ollama_model_discovered(210), godel_core_choice(147), mindxagent_identity_loaded(33), mindxagent_system_state_review_startup(6), mindxagent_startup_ollama_ready(4)",
+      "score": 0.4165,
+      "importance": 0.5,
+      "novelty": 0.4,
+      "confidence": 0.8,
+      "frequency": 400
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hours: 17, 21, 22",
+      "score": 0.1929,
+      "importance": 0.3,
+      "novelty": 0.4,
+      "confidence": 0.7,
+      "frequency": 197
+    },
+    {
+      "type": "behavioral",
+      "description": "Active: 464 memories",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: ollama_model_discovered(210), godel_core_choice(147), mindxagent_identity_loaded(33), mindxagent_system_state_review_startup(6), mindxagent_startup_ollama_ready(4)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hour: 17:00",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    }
+  ],
+  "total_insights": 6
+}

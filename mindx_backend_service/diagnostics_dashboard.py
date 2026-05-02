@@ -237,6 +237,65 @@ body { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; backgrou
 .pulse { animation: pulse 2s ease-in-out infinite; }
 @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
 .footer { padding: 12px 24px; border-top: 1px solid #1a1f2e; font-size: 10px; color: #484f58; text-align: center; }
+
+/* Insight sections — above-the-fold proof of thinking / improving / evolving */
+.insight { padding: 0 24px 12px; }
+.insight-section { border: 1px solid #1a1f2e; background: #0d1117; padding: 12px 14px; margin-top: 10px; }
+.insight-section[hidden] { display: none; }
+.insight-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #6e7681; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: baseline; }
+.insight-title .sub { font-size: 10px; color: #484f58; text-transform: none; letter-spacing: 0; }
+
+/* Now Thinking */
+.think-list { max-height: 140px; overflow-y: auto; }
+.think-row { display: grid; grid-template-columns: 72px 1fr 70px; gap: 8px; padding: 4px 0; border-bottom: 1px solid #161b22; font-size: 11px; align-items: start; }
+.think-row:last-child { border: none; }
+.think-room { font-weight: 600; font-size: 10px; padding: 2px 6px; border-radius: 3px; text-align: center; letter-spacing: 1px; }
+.room-thinking    { background: rgba(88,166,255,0.15);  color: #58a6ff; }
+.room-improvement { background: rgba(63,185,80,0.15);   color: #3fb950; }
+.room-godel       { background: rgba(210,168,255,0.15); color: #d2a8ff; }
+.room-boardroom   { background: rgba(210,153,34,0.18);  color: #d29922; }
+.think-body { color: #c9d1d9; line-height: 1.45; word-break: break-word; }
+.think-body .agent { color: #58a6ff; font-weight: 600; margin-right: 6px; }
+.think-time { color: #484f58; font-size: 10px; text-align: right; }
+.sse-state { font-size: 9px; color: #484f58; }
+.sse-state.live { color: #3fb950; }
+
+/* Improvement ledger */
+.ledger-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ledger-pill { width: 10px; height: 18px; border-radius: 2px; position: relative; cursor: help; }
+.ledger-pill.ok      { background: #3fb950; }
+.ledger-pill.failed  { background: #f85149; opacity: 0.75; }
+.ledger-pill.running { background: #d29922; animation: pulse 1.8s ease-in-out infinite; }
+.ledger-totals { margin-left: auto; font-size: 10px; color: #8b949e; }
+.ledger-totals .num { color: #e6edf3; font-weight: 600; }
+
+/* Fitness leaderboard */
+.fit-table { width: 100%; font-size: 11px; border-collapse: collapse; }
+.fit-table th { font-weight: 500; color: #6e7681; font-size: 9px; text-align: left; padding: 4px 6px; letter-spacing: 1px; text-transform: uppercase; }
+.fit-table td { padding: 4px 6px; border-top: 1px solid #161b22; vertical-align: middle; }
+.fit-rank { color: #484f58; width: 22px; }
+.fit-agent { color: #c9d1d9; font-weight: 500; }
+.fit-score { width: 60px; text-align: right; color: #e6edf3; font-variant-numeric: tabular-nums; }
+.fit-bar-wrap { width: 80px; height: 4px; background: #21262d; border-radius: 2px; overflow: hidden; }
+.fit-bar { height: 100%; border-radius: 2px; }
+.axes-heat { display: flex; gap: 2px; }
+.axis-dot { width: 8px; height: 8px; border-radius: 1px; }
+.fit-trend.up   { color: #3fb950; }
+.fit-trend.dn   { color: #f85149; }
+.fit-trend.flat { color: #6e7681; }
+
+/* Selection events */
+.sel-row { display: grid; grid-template-columns: 70px 1fr 80px; gap: 8px; padding: 4px 0; border-bottom: 1px solid #161b22; font-size: 11px; align-items: center; }
+.sel-row:last-child { border: none; }
+.sel-badge { font-size: 9px; letter-spacing: 1px; padding: 2px 6px; border-radius: 3px; font-weight: 600; text-align: center; }
+.sel-badge.shadow     { background: rgba(110,118,129,0.2); color: #8b949e; }
+.sel-badge.advisory   { background: rgba(210,153,34,0.2);  color: #d29922; }
+.sel-badge.autonomous { background: rgba(248,81,73,0.2);   color: #f85149; }
+.sel-event { color: #c9d1d9; }
+.sel-event.retire { color: #f85149; }
+.sel-event.spawn  { color: #3fb950; }
+.sel-time { color: #484f58; text-align: right; font-size: 10px; }
+.insight-empty { color: #484f58; font-size: 11px; padding: 6px 0; }
 </style>
 </head>
 <body>
@@ -249,6 +308,36 @@ body { font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; backgrou
     <span class="status-badge" id="status-badge">...</span>
     <span class="pulse" id="pulse" style="color:#3fb950;margin-left:8px;font-size:8px;">&#9679;</span>
   </div>
+</div>
+<div class="insight">
+  <section class="insight-section" id="sec-think" hidden>
+    <div class="insight-title">
+      <span>now thinking <span class="sub" id="think-stream-state">connecting...</span></span>
+      <span class="sub">SSE /insight/thinking/live &middot; rooms: thinking &middot; improvement &middot; godel &middot; boardroom</span>
+    </div>
+    <div class="think-list" id="think-list"></div>
+  </section>
+  <section class="insight-section" id="sec-ledger" hidden>
+    <div class="insight-title">
+      <span>self-improvement ledger</span>
+      <span class="sub">recent mastermind campaigns &middot; hover for directive</span>
+    </div>
+    <div class="ledger-row" id="ledger-row"></div>
+  </section>
+  <section class="insight-section" id="sec-fitness" hidden>
+    <div class="insight-title">
+      <span>per-agent fitness &middot; darwinian leaderboard</span>
+      <span class="sub">weighted rollup of 7 axes &middot; /insight/fitness every 30s</span>
+    </div>
+    <div id="fit-body"></div>
+  </section>
+  <section class="insight-section" id="sec-selection" hidden>
+    <div class="insight-title">
+      <span>selection events</span>
+      <span class="sub" id="sel-mode">mode: shadow</span>
+    </div>
+    <div id="sel-body"></div>
+  </section>
 </div>
 <div class="grid" id="grid">
   <div class="card"><div class="card-title">loading</div><div class="metric">...</div></div>
@@ -340,6 +429,177 @@ async function refresh() {
 
 refresh();
 setInterval(refresh, 8000);
+
+// ── Insight sections — each loads independently, hides itself on fail ──
+
+const ROOMS = {thinking:'room-thinking', improvement:'room-improvement', godel:'room-godel', boardroom:'room-boardroom'};
+const thinkMax = 3;
+let thinkBuf = [];
+
+function escapeHtml(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function tshort(ts){ const d = new Date(ts*1000); return d.toTimeString().slice(0,8); }
+
+function renderThink() {
+  const el = document.getElementById('think-list');
+  if (!thinkBuf.length) { el.innerHTML = '<div class="insight-empty">no thinking events yet</div>'; return; }
+  el.innerHTML = thinkBuf.slice(-thinkMax).reverse().map(ev => {
+    const roomCls = ROOMS[ev.room] || 'room-thinking';
+    return `<div class="think-row">
+      <div class="think-room ${roomCls}">${escapeHtml(ev.room||'')}</div>
+      <div class="think-body"><span class="agent">${escapeHtml(ev.agent||'')}</span>${escapeHtml(ev.content||'')}</div>
+      <div class="think-time">${tshort(ev.timestamp||(Date.now()/1000))}</div>
+    </div>`;
+  }).join('');
+}
+
+function connectThinkStream() {
+  const state = document.getElementById('think-stream-state');
+  const sec = document.getElementById('sec-think');
+  try {
+    const src = new EventSource('/insight/thinking/live');
+    src.addEventListener('activity', e => {
+      try {
+        const ev = JSON.parse(e.data);
+        thinkBuf.push(ev);
+        if (thinkBuf.length > 20) thinkBuf = thinkBuf.slice(-20);
+        sec.hidden = false;
+        state.textContent = 'live';
+        state.className = 'sub sse-state live';
+        renderThink();
+      } catch(_) {}
+    });
+    src.addEventListener('heartbeat', () => {
+      state.textContent = 'live';
+      state.className = 'sub sse-state live';
+    });
+    src.onerror = () => {
+      state.textContent = 'reconnecting...';
+      state.className = 'sub sse-state';
+      // Fallback: try the polled endpoint once.
+      fetch('/insight/dialogue/recent?room=thinking&limit=5').then(r => r.ok ? r.json() : null).then(d => {
+        if (d && Array.isArray(d.events) && d.events.length) {
+          thinkBuf = d.events.slice().reverse();
+          sec.hidden = false;
+          renderThink();
+        }
+      }).catch(() => {});
+    };
+  } catch(_) {
+    sec.hidden = true;
+  }
+}
+
+async function loadLedger() {
+  const sec = document.getElementById('sec-ledger');
+  try {
+    const r = await fetch('/insight/improvement/summary?window=24h');
+    if (!r.ok) throw new Error('http ' + r.status);
+    const d = await r.json();
+    if (d.fallback || d.status === 'warming_up') { sec.hidden = true; return; }
+    const c24 = d.campaigns_24h || {total:0,succeeded:0,failed:0,running:0};
+    const tl = await (await fetch('/insight/improvement/timeline?limit=50')).json().catch(()=>({campaigns:[]}));
+    const campaigns = (tl.campaigns || []).slice(0, 40);
+    if (!campaigns.length && !c24.total) { sec.hidden = true; return; }
+    sec.hidden = false;
+    const pills = campaigns.map(c => {
+      const status = (c.overall_campaign_status||'').toUpperCase();
+      const cls = status === 'SUCCESS' ? 'ok' : (status === 'IN_PROGRESS' || status === 'RUNNING') ? 'running' : 'failed';
+      const title = `${escapeHtml(c.directive||'')} — ${escapeHtml(status)} :: ${escapeHtml(c.final_bdi_message||'')}`;
+      return `<span class="ledger-pill ${cls}" title="${title}"></span>`;
+    }).join('');
+    const totals = `<span class="ledger-totals">24h: <span class="num" style="color:#3fb950">${c24.succeeded}</span> ok &middot; <span class="num" style="color:#d29922">${c24.running}</span> running &middot; <span class="num" style="color:#f85149">${c24.failed}</span> fail &middot; <span class="num">${c24.total}</span> total</span>`;
+    document.getElementById('ledger-row').innerHTML = pills + totals;
+  } catch(_) {
+    sec.hidden = true;
+  }
+}
+
+function heatColor(v) {
+  if (v >= 80) return '#3fb950';
+  if (v >= 60) return '#7ee787';
+  if (v >= 45) return '#d2a8ff';
+  if (v >= 30) return '#d29922';
+  return '#f85149';
+}
+function barColor(v){ return v>=70?'#3fb950':v>=50?'#58a6ff':v>=30?'#d29922':'#f85149'; }
+
+async function loadFitness() {
+  const sec = document.getElementById('sec-fitness');
+  try {
+    const r = await fetch('/insight/fitness');
+    if (!r.ok) throw new Error('http ' + r.status);
+    const d = await r.json();
+    if (d.fallback) { sec.hidden = true; return; }
+    const agents = (d.agents || []).slice(0, 8);
+    if (!agents.length) { sec.hidden = true; return; }
+    sec.hidden = false;
+    const axisOrder = ['campaign_success','trace_reliability','latency_score','consensus_alignment','reputation_momentum','learning_velocity','godel_selection_rate'];
+    const rows = agents.map((a,i) => {
+      const bar = `<div class="fit-bar-wrap"><div class="fit-bar" style="width:${a.fitness}%;background:${barColor(a.fitness)}"></div></div>`;
+      const dots = axisOrder.map(k => {
+        const v = (a.axes||{})[k] ?? 50;
+        return `<div class="axis-dot" title="${k}: ${v.toFixed(0)}" style="background:${heatColor(v)}"></div>`;
+      }).join('');
+      const td = a.trend_7d || 0;
+      const tcls = td > 1 ? 'up' : td < -1 ? 'dn' : 'flat';
+      const ts = td > 0 ? `+${td.toFixed(1)}` : td.toFixed(1);
+      return `<tr>
+        <td class="fit-rank">${i+1}</td>
+        <td class="fit-agent">${escapeHtml(a.agent_id||'')}</td>
+        <td class="fit-score">${a.fitness.toFixed(1)}</td>
+        <td>${bar}</td>
+        <td><div class="axes-heat">${dots}</div></td>
+        <td class="fit-trend ${tcls}">${ts}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('fit-body').innerHTML = `<table class="fit-table">
+      <thead><tr><th></th><th>agent</th><th style="text-align:right">fit</th><th></th><th>axes</th><th>&Delta;7d</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  } catch(_) {
+    sec.hidden = true;
+  }
+}
+
+async function loadSelection() {
+  const sec = document.getElementById('sec-selection');
+  try {
+    const r = await fetch('/insight/selection/events?limit=5');
+    if (!r.ok) throw new Error('http ' + r.status);
+    const d = await r.json();
+    if (d.fallback) { sec.hidden = true; return; }
+    document.getElementById('sel-mode').textContent = 'mode: ' + (d.mode || 'shadow');
+    const evs = d.events || [];
+    if (!evs.length) {
+      sec.hidden = false;
+      document.getElementById('sel-body').innerHTML = '<div class="insight-empty">no selection proposals yet — aggregator still warming up or no agents above/below thresholds</div>';
+      return;
+    }
+    sec.hidden = false;
+    const rows = evs.map(e => {
+      const m = (e.mode||'shadow').toLowerCase();
+      const ev = (e.event||'').toLowerCase();
+      const evClass = ev.indexOf('retire') >= 0 ? 'retire' : ev.indexOf('spawn') >= 0 ? 'spawn' : '';
+      const t = e.timestamp_utc ? e.timestamp_utc.slice(11,19) : '';
+      const extra = e.mutation ? ` &middot; mutation: ${escapeHtml(e.mutation)}` : (e.parent_agent_id ? ` &middot; parent: ${escapeHtml(e.parent_agent_id)}` : '');
+      return `<div class="sel-row">
+        <div class="sel-badge ${m}">${m.toUpperCase()}</div>
+        <div><span class="sel-event ${evClass}">${escapeHtml(e.event||'')}</span> &middot; ${escapeHtml(e.agent_id||'')} &middot; fit ${(e.fitness_before||0).toFixed?(e.fitness_before||0).toFixed(1):e.fitness_before}${extra}</div>
+        <div class="sel-time">${t}</div>
+      </div>`;
+    }).join('');
+    document.getElementById('sel-body').innerHTML = rows;
+  } catch(_) {
+    sec.hidden = true;
+  }
+}
+
+// Kick off insight sections. SSE reconnects itself; polled sections refresh on cadence.
+connectThinkStream();
+loadLedger();   setInterval(loadLedger,   60000);
+loadFitness();  setInterval(loadFitness,  30000);
+loadSelection();setInterval(loadSelection,60000);
+
 </script>
 </body>
 </html>"""

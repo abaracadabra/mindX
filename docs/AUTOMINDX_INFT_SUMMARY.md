@@ -1,9 +1,20 @@
-# iNFT — Intelligent NFT Smart Contract Reference
+# iNFT (legacy) — Original Intelligent NFT Smart Contract Reference
+
+> ⚠️ **Two implementations now exist.** This doc covers the **original Apr 11 2026** contracts (`iNFT.sol`, `IntelligentNFT.sol`, `IntelligentNFTFactory.sol`), preserved untouched as prior-art reference. For the **production hardened build** (ERC-7857, AccessControl, Pausable, EIP-712 oracle proof, AgenticPlace + BANKON hooks, 56 Foundry tests, interactive UI), see **[INFT_7857.md](INFT_7857.md)**.
+>
+> | | Legacy (this doc) | Hardened (production) |
+> |---|---|---|
+> | File | [`iNFT.sol`](../daio/contracts/inft/iNFT.sol) | [`iNFT_7857.sol`](../daio/contracts/inft/iNFT_7857.sol) |
+> | Standard | Plain ERC-721 + Ownable | ERC-7857 + ERC-2981 + AccessControl + Pausable + EIP-712 |
+> | UI | [/inft](https://mindx.pythai.net/inft) | [/inft7857](https://mindx.pythai.net/inft7857) |
+> | Tests | — | [56/56 pass](../daio/contracts/test/inft/iNFT_7857.t.sol) |
+> | Status | Reference / timestamp evidence | Production (Open Agents submission) |
 
 **Author:** [Professor Codephreak](https://github.com/Professor-Codephreak) | **Org:** [AgenticPlace](https://github.com/agenticplace) | [PYTHAI](https://pythai.net)
-**Contracts:** [`daio/contracts/inft/`](../daio/contracts/inft/) | **UI:** [mindx.pythai.net/inft](https://mindx.pythai.net/inft)
+**Contracts:** [`daio/contracts/inft/`](../daio/contracts/inft/) | **UI:** [mindx.pythai.net/inft](https://mindx.pythai.net/inft) (legacy console)
 **Standard:** ERC-721 (OpenZeppelin v5) | **Solidity:** ^0.8.20
-**See also:** [DAIO Governance](DAIO.md) | [CORE Architecture](CORE.md) | [Book of mindX](BOOK_OF_MINDX.md) | [Agent Registry](AGENTS.md)
+**Prior-art commits:** `fff941a7` · `468de468` · `f07b025a` (Apr 11 2026)
+**See also:** [iNFT-7857 (production)](INFT_7857.md) | [DAIO Governance](DAIO.md) | [CORE Architecture](CORE.md) | [Book of mindX](BOOK_OF_MINDX.md) | [Agent Registry](AGENTS.md)
 
 ---
 

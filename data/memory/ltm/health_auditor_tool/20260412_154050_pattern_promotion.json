@@ -1,0 +1,30 @@
+{
+  "agent_id": "health_auditor_tool",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 14,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Top processes: health_audit(14)",
+      "Peak activity hour: 14:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 14
+        },
+        "process_distribution": {
+          "health_audit": 14
+        },
+        "total_memories": 14,
+        "timestamp": "2026-04-12T15:40:50.562861"
+      }
+    ]
+  },
+  "promoted_at": "2026-04-12T15:40:50.562879",
+  "promotion_criteria": {
+    "pattern_threshold": 3,
+    "days_analyzed": 7
+  }
+}

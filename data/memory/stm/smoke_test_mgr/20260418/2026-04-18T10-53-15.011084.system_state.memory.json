@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-04-18T10:53:15.011084",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "smoke_test_mgr",
+  "content": {
+    "process_name": "id_manager_address_not_found",
+    "data": {
+      "entity_id": "smoke_test_entity_2"
+    }
+  },
+  "context": {
+    "agent_id": "smoke_test_mgr"
+  },
+  "tags": [
+    "id_manager_address_not_found",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "e662bdf04315b4fe"
+}

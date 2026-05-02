@@ -15,6 +15,10 @@ AgenticPlace connects to the mindX backend (default `http://localhost:8000`). Co
 - **API reference:** When the mindX backend is running, **http://localhost:8000/docs** (FastAPI Swagger UI) shows all API endpoints and lets you try requests—use it to explore AgenticPlace-related routes under the **AgenticPlace** tag (`/agenticplace/agent/call`, `/agenticplace/ollama/ingest`, `/agenticplace/ceo/status`, etc.).
 - **Deep dive:** See [docs/AgenticPlace_Deep_Dive.md](../docs/AgenticPlace_Deep_Dive.md) in the mindX repo for architecture and agent ecosystem.
 
+### Need USDC to call paid agents?
+
+Paid AgenticPlace actions (`/p2p/agent/register`, `/p2p/job/create`) settle in USDC on Arc testnet via Circle Gateway. If your wallet is empty, hit `GET /p2p/onramp/providers` for the cheapest no-KYC route, then `POST /p2p/onramp/and-deposit` to receive the on-ramp instruction *and* the prepared EIP-3009 typed-data — sign once funds land on Arc, submit, and paid routes unlock. Default sources are CCTP (USDC from Ethereum / Base / Arbitrum / Polygon / Optimism / Avalanche, ~$0.003 + 30 bps) and a DEX path (native gas → USDC + CCTP). Configure with `PAY2PLAY_ONRAMP_URL`. See `pay2play/docs/onramp.md` for the full ladder.
+
 ## Run Locally
 
 **Prerequisites:** Node.js

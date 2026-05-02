@@ -1,0 +1,41 @@
+{
+  "event_type": "startup",
+  "timestamp": 1777342895.7544572,
+  "event_id": "startup_1777342895",
+  "resource_snapshot": {
+    "timestamp": 1777342895.9596767,
+    "cpu_percent": 30.0,
+    "memory_percent": 71.3,
+    "memory_used": 4359391805,
+    "memory_total": 6120328396,
+    "disk_usage": {
+      "/": 92.08995867356566
+    },
+    "network_bytes_sent": 195957637,
+    "network_bytes_recv": 700990640,
+    "process_count": 277,
+    "load_average": [
+      2.24462890625,
+      2.61865234375,
+      2.63623046875
+    ]
+  },
+  "performance_snapshot": null,
+  "agents_registered": [
+    "coordinator_agent"
+  ],
+  "agents_active": [
+    "coordinator_agent"
+  ],
+  "tools_registered": [],
+  "system_version": null,
+  "improvement_count": 0,
+  "rollback_count": 0,
+  "last_improvement": null,
+  "last_rollback": null,
+  "errors": [],
+  "warnings": [],
+  "metadata": {
+    "phase": "before_startup"
+  }
+}

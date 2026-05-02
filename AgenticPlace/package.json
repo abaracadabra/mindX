@@ -10,6 +10,10 @@
   },
   "dependencies": {
     "@google/genai": "^1.7.0",
+    "@x402-avm/avm": "^2.6.1",
+    "@x402-avm/core": "^2.6.1",
+    "@x402-avm/fetch": "^2.6.1",
+    "@x402-avm/hono": "^2.6.1",
     "react": "^19.1.0",
     "marked": "^12.0.2",
     "highlight.js": "^11.9.0",

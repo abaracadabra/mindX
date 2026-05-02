@@ -1,0 +1,35 @@
+{
+  "timestamp": "2026-04-28T09:05:23.564821",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "startup_agent",
+  "content": {
+    "process_name": "startup_knowledge_loaded",
+    "data": {
+      "mindx_sh_commands": [
+        "commands",
+        "functions",
+        "variables",
+        "script_path",
+        "version"
+      ],
+      "startup_docs_loaded": [
+        "MINDX.md",
+        "mindx_evolution_startup_guide.md",
+        "AGENTS.md",
+        "ORCHESTRATION.md"
+      ],
+      "timestamp": 1777392323.5648065
+    }
+  },
+  "context": {
+    "agent_id": "startup_agent",
+    "event": "knowledge_loading"
+  },
+  "tags": [
+    "startup_knowledge_loaded",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "81f5705002b19e61"
+}

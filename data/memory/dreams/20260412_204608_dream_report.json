@@ -1,0 +1,310 @@
+{
+  "timestamp": "2026-04-12T20:46:08.781289",
+  "duration_seconds": "12.947849035263061523",
+  "timing": {
+    "consolidation_end_ms": 1776051968781.2568,
+    "duration_ms": 28813623.337890625,
+    "duration_seconds": 28813.623337890625,
+    "duration_minutes": 480.22705563151044,
+    "duration_hours": 8.003784260525174,
+    "consolidations_this_lunar_cycle": 2,
+    "shift_interval_hours": 8,
+    "shifts_per_day": 3.0,
+    "next_consolidation_in_hours": 8,
+    "next_consolidation_in_ms": 28800000,
+    "lunar": {
+      "phase": 0.854421927014239,
+      "phase_name": "last_quarter",
+      "days_into_cycle": 25.231582477286253,
+      "days_until_new_moon": 4.2990061927137475,
+      "days_until_full_moon": 19.064300527713748,
+      "synodic_period_days": 29.53058867,
+      "is_new_moon": false,
+      "is_full_moon": false
+    }
+  },
+  "lunar": {
+    "phase": 0.8544219270318442,
+    "phase_name": "last_quarter",
+    "days_into_cycle": 25.231582477806143,
+    "days_until_new_moon": 4.299006192193858,
+    "days_until_full_moon": 19.064300527193858,
+    "synodic_period_days": 29.53058867,
+    "is_new_moon": false,
+    "is_full_moon": false
+  },
+  "book_edition_triggered": false,
+  "agents_dreamed": 26,
+  "total_agents": 26,
+  "insights_generated": 135,
+  "memories_promoted_to_ltm": 165,
+  "memories_archived": 0,
+  "tuning_recommendations": [
+    {
+      "agent_id": "simple_coder_agent",
+      "parameter": "strategy",
+      "recommendation": "Low success rate observed. Consider alternative approaches.",
+      "priority": "medium"
+    },
+    {
+      "agent_id": "id_manager_for_mastermind_prime",
+      "parameter": "dream_frequency",
+      "recommendation": "High STM volume (206). Consider more frequent dream cycles.",
+      "priority": "low"
+    },
+    {
+      "agent_id": "mindx_meta_agent",
+      "parameter": "dream_frequency",
+      "recommendation": "High STM volume (431). Consider more frequent dream cycles.",
+      "priority": "low"
+    },
+    {
+      "agent_id": "admin",
+      "parameter": "dream_frequency",
+      "recommendation": "High STM volume (1000). Consider more frequent dream cycles.",
+      "priority": "low"
+    },
+    {
+      "agent_id": "coordinator_agent_main",
+      "parameter": "error_handling",
+      "recommendation": "High error frequency (4 patterns). Review failure modes.",
+      "priority": "high"
+    },
+    {
+      "agent_id": "id_manager_for_coordinator_agent_main",
+      "parameter": "dream_frequency",
+      "recommendation": "High STM volume (206). Consider more frequent dream cycles.",
+      "priority": "low"
+    },
+    {
+      "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+      "parameter": "dream_frequency",
+      "recommendation": "High STM volume (1000). Consider more frequent dream cycles.",
+      "priority": "low"
+    },
+    {
+      "agent_id": "mastermind_prime",
+      "parameter": "error_handling",
+      "recommendation": "High error frequency (4 patterns). Review failure modes.",
+      "priority": "high"
+    },
+    {
+      "agent_id": "mastermind_prime",
+      "parameter": "strategy",
+      "recommendation": "Low success rate observed. Consider alternative approaches.",
+      "priority": "medium"
+    },
+    {
+      "agent_id": "default_identity_manager",
+      "parameter": "dream_frequency",
+      "recommendation": "High STM volume (404). Consider more frequent dream cycles.",
+      "priority": "low"
+    }
+  ],
+  "cross_agent_patterns": {
+    "failure": 9,
+    "behavioral": 102,
+    "performance": 21,
+    "success": 3
+  },
+  "per_agent": [
+    {
+      "agent_id": "test",
+      "memories_analyzed": 1,
+      "patterns_extracted": 0,
+      "promoted_to_ltm": 0,
+      "duration_seconds": "0.026489734649658203",
+      "top_insight": null,
+      "top_score": null
+    },
+    {
+      "agent_id": "simple_coder_agent",
+      "memories_analyzed": 3,
+      "patterns_extracted": 9,
+      "promoted_to_ltm": 9,
+      "duration_seconds": "0.127601861953735352",
+      "top_insight": "coding_learning: ",
+      "top_score": "0.216741596878066461"
+    },
+    {
+      "agent_id": "id_manager_for_mastermind_prime",
+      "memories_analyzed": 206,
+      "patterns_extracted": 6,
+      "promoted_to_ltm": 8,
+      "duration_seconds": "0.555562257766723633",
+      "top_insight": "Top processes: id_manager_wallet_exists(103), id_manager_address_derived(101), id_manager_address_lo",
+      "top_score": "0.370555255273106843"
+    },
+    {
+      "agent_id": "agint_system",
+      "memories_analyzed": 160,
+      "patterns_extracted": 6,
+      "promoted_to_ltm": 6,
+      "duration_seconds": "0.333643436431884766",
+      "top_insight": "Top processes: agint_cycle_log(160)",
+      "top_score": "0.353092140165095991"
+    },
+    {
+      "agent_id": "id_manager_for_mindx_meta_agent",
+      "memories_analyzed": 30,
+      "patterns_extracted": 5,
+      "promoted_to_ltm": 5,
+      "duration_seconds": "0.147515296936035156",
+      "top_insight": "Top processes: id_manager_wallet_exists(15), id_manager_address_derived(15)",
+      "top_score": "0.238617871013483668"
+    },
+    {
+      "agent_id": "shutdown_agent",
+      "memories_analyzed": 37,
+      "patterns_extracted": 5,
+      "promoted_to_ltm": 5,
+      "duration_seconds": "0.159100294113159180",
+      "top_insight": "Top processes: shutdown_initiation(19), system_shutdown_complete(18)",
+      "top_score": "0.252765375458689656"
+    },
+    {
+      "agent_id": "mindx_meta_agent",
+      "memories_analyzed": 431,
+      "patterns_extracted": 6,
+      "promoted_to_ltm": 9,
+      "duration_seconds": "0.917450666427612305",
+      "top_insight": "Dominant memory type: system_state (383 occurrences)",
+      "top_score": "0.413492995898804949"
+    },
+    {
+      "agent_id": "admin",
+      "memories_analyzed": 1000,
+      "patterns_extracted": 4,
+      "promoted_to_ltm": 4,
+      "duration_seconds": "2.825289487838745117",
+      "top_insight": "Dominant memory type: performance (1000 occurrences)",
+      "top_score": "0.480069452396691021"
+    },
+    {
+      "agent_id": "automindx_agent_main",
+      "memories_analyzed": 103,
+      "patterns_extracted": 6,
+      "promoted_to_ltm": 8,
+      "duration_seconds": "0.272489070892333984",
+      "top_insight": "Top processes: automindx_get_persona(103)",
+      "top_score": "0.322725334287804921"
+    },
+    {
+      "agent_id": "coordinator_agent_main",
+      "memories_analyzed": 189,
+      "patterns_extracted": 12,
+      "promoted_to_ltm": 15,
+      "duration_seconds": "0.493392705917358398",
+      "top_insight": "Top processes: coordinator_interaction(171), coordinator_agent_creation_failed(6), coordinator_agent",
+      "top_score": "0.364600576152452671"
+    },
+    {
+      "agent_id": "github_agent_tool",
+      "memories_analyzed": 60,
+      "patterns_extracted": 5,
+      "promoted_to_ltm": 5,
+      "duration_seconds": "0.201717615127563477",
+      "top_insight": "Top processes: github_backup_created(60)",
+      "top_score": "0.285652773601722754"
+    },
+    {
+      "agent_id": "guardian_agent_main",
+      "memories_analyzed": 103,
+      "patterns_extracted": 6,
+      "promoted_to_ltm": 8,
+      "duration_seconds": "0.272701501846313477",
+      "top_insight": "Top processes: guardian_initialization(103)",
+      "top_score": "0.322725334287804921"
+    },
+    {
+      "agent_id": "machine_dreaming",
+      "memories_analyzed": 3,
+      "patterns_extracted": 5,
+      "promoted_to_ltm": 7,
+      "duration_seconds": "0.118620157241821289",
+      "top_insight": "Top processes: machine_dream_cycle(3)",
+      "top_score": "0.096329598612473991"
+    },
+    {
+      "agent_id": "health_auditor_tool",
+      "memories_analyzed": 34,
+      "patterns_extracted": 5,
+      "promoted_to_ltm": 7,
+      "duration_seconds": "0.185134887695312500",
+      "top_insight": "Top processes: health_audit(34)",
+      "top_score": "0.247050887096044114"
+    },
+    {
+      "agent_id": "main_service",
+      "memories_analyzed": 14,
+      "patterns_extracted": 5,
+      "promoted_to_ltm": 7,
+      "duration_seconds": "0.208268165588378906",
+      "top_insight": "Top processes: backend_startup_transcript(14)",
+      "top_score": "0.188174601448909018"
+    },
+    {
+      "agent_id": "blueprint_agent_mindx_v2",
+      "memories_analyzed": 114,
+      "patterns_extracted": 6,
+      "promoted_to_ltm": 9,
+      "duration_seconds": "0.343473911285400391",
+      "top_insight": "Top processes: blueprint_generated(114)",
+      "top_score": "0.329711654456577907"
+    },
+    {
+      "agent_id": "id_manager_for_coordinator_agent_main",
+      "memories_analyzed": 206,
+      "patterns_extracted": 6,
+      "promoted_to_ltm": 8,
+      "duration_seconds": "0.502962827682495117",
+      "top_insight": "Top processes: id_manager_wallet_exists(103), id_manager_address_derived(101), id_manager_address_lo",
+      "top_score": "0.370555255273106843"
+    },
+    {
+      "agent_id": "startup_agent",
+      "memories_analyzed": 166,
+      "patterns_extracted": 6,
+      "promoted_to_ltm": 8,
+      "duration_seconds": "0.367480993270874023",
+      "top_insight": "Dominant memory type: system_state (166 occurrences)",
+      "top_score": "0.355634635383613396"
+    },
+    {
+      "agent_id": "bdi_directive_handler",
+      "memories_analyzed": 40,
+      "patterns_extracted": 5,
+      "promoted_to_ltm": 5,
+      "duration_seconds": "0.168615579605102539",
+      "top_insight": "Top processes: godel_core_choice(40)",
+      "top_score": "0.258045417075157713"
+    },
+    {
+      "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+      "memories_analyzed": 1000,
+      "patterns_extracted": 6,
+      "promoted_to_ltm": 9,
+      "duration_seconds": "3.521256923675537109",
+      "top_insight": "Top processes: bdi_planning_start(489), bdi_deliberation(489), bdi_goal_set(22)",
+      "top_score": "0.480069452396691021"
+    },
+    {
+      "agent_id": "mastermind_prime",
+      "memories_analyzed": 22,
+      "patterns_extracted": 13,
+      "promoted_to_ltm": 13,
+      "duration_seconds": "0.147243738174438477",
+      "top_insight": "Success rate: 18.2%",
+      "top_score": "0.247586879275925986"
+    },
+    {
+      "agent_id": "default_identity_manager",
+      "memories_analyzed": 404,
+      "patterns_extracted": 8,
+      "promoted_to_ltm": 10,
+      "duration_seconds": "0.999238967895507812",
+      "top_insight": "Success rate: 100.0%",
+      "top_score": "2.607455023214668266"
+    }
+  ]
+}

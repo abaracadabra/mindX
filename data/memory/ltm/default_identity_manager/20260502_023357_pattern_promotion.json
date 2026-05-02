@@ -1,0 +1,31 @@
+{
+  "agent_id": "default_identity_manager",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 14,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Top processes: id_manager_wallet_exists(7), id_manager_address_lookup(7)",
+      "Peak activity hour: 18:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 14
+        },
+        "process_distribution": {
+          "id_manager_wallet_exists": 7,
+          "id_manager_address_lookup": 7
+        },
+        "total_memories": 14,
+        "timestamp": "2026-05-02T02:33:57.643176"
+      }
+    ]
+  },
+  "promoted_at": "2026-05-02T02:33:57.643187",
+  "promotion_criteria": {
+    "pattern_threshold": 2,
+    "days_analyzed": 7
+  }
+}

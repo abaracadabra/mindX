@@ -1,0 +1,75 @@
+{
+  "session_id": "br_1776055882",
+  "directive": "I hereby call this meeting to order. Each member acknowledge your role and vote to ratify.",
+  "importance": "standard",
+  "timestamp": "2026-04-13T04:51:22Z",
+  "outcome": "approved",
+  "weighted_score": 0.843,
+  "votes": [
+    {
+      "soldier": "coo_operations",
+      "vote": "approve",
+      "provider": "ollama-cloud/gpt-oss:120b-cloud",
+      "reasoning": "The directive is a simple procedural action\u2014calling a meeting to order and requesting role acknowledgment and a ratification vote. It requires no additional resources beyond the existing meeting participants, can be executed immediately, and fits within standard operational constraints. There are no",
+      "confidence": 0.98,
+      "latency_ms": 3121,
+      "weight": 1.0
+    },
+    {
+      "soldier": "cfo_finance",
+      "vote": "approve",
+      "provider": "ollama-cloud/gpt-oss:120b-cloud",
+      "reasoning": "The directive is purely procedural\u2014calling the meeting to order and requesting members to acknowledge their roles and vote to ratify. It incurs no expense, has zero budget impact, and does not affect treasury sustainability or allocation limits. As there is no cost, the cost/benefit ratio is trivial",
+      "confidence": 0.98,
+      "latency_ms": 3254,
+      "weight": 1.0
+    },
+    {
+      "soldier": "cto_technology",
+      "vote": "abstain",
+      "provider": "ollama-cloud/gpt-oss:120b-cloud",
+      "reasoning": "The directive is purely procedural\u2014calling a meeting to order and requesting acknowledgment\u2014without any technical proposal, architectural change, or infrastructure impact. As a technical evaluator, there is no substantive content to assess for feasibility, cost, or risk, so a vote of abstain is appr",
+      "confidence": 0.78,
+      "latency_ms": 4905,
+      "weight": 1.0
+    },
+    {
+      "soldier": "ciso_security",
+      "vote": "approve",
+      "provider": "ollama-cloud/gpt-oss:120b-cloud",
+      "reasoning": "The directive merely convenes a standard meeting and asks participants to acknowledge their roles before voting. It does not introduce new processes, change configurations, expose credentials, or modify the attack surface. Consequently, there is no negative impact on the security posture, and no mit",
+      "confidence": 0.94,
+      "latency_ms": 2758,
+      "weight": 1.2
+    },
+    {
+      "soldier": "clo_legal",
+      "vote": "approve",
+      "provider": "ollama-cloud/gpt-oss:120b-cloud",
+      "reasoning": "The directive is a routine procedural statement to commence a meeting and request members to acknowledge their roles and vote. It contains no content that raises legal, licensing, or attribution concerns, nor does it conflict with any policy. Therefore it poses no compliance exposure.",
+      "confidence": 0.97,
+      "latency_ms": 3172,
+      "weight": 0.8
+    },
+    {
+      "soldier": "cpo_product",
+      "vote": "reject",
+      "provider": "ollama-cloud/gpt-oss:120b-cloud",
+      "reasoning": "The directive is a procedural meeting call that does not define a product feature, user value, market fit, or measurable outcome. It lacks acceptance criteria, scope definition, and any mechanism to assess user impact. As such, it does not create measurable user value and fails the evaluation criter",
+      "confidence": 0.94,
+      "latency_ms": 5792,
+      "weight": 1.0
+    },
+    {
+      "soldier": "cro_risk",
+      "vote": "approve",
+      "provider": "ollama-cloud/gpt-oss:120b-cloud",
+      "reasoning": "The directive is a procedural meeting call with no operational, financial, or reputational impact. It does not introduce any irreversible changes, system\u2011wide effects, or cascading failures. Consequently, the risk magnitude, blast radius, and potential downside are effectively zero, making the actio",
+      "confidence": 0.99,
+      "latency_ms": 3937,
+      "weight": 1.2
+    }
+  ],
+  "dissent_branches": 0,
+  "dissent_branches_detail": []
+}

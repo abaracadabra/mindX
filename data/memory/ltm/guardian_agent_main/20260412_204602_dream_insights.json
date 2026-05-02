@@ -1,0 +1,62 @@
+{
+  "agent_id": "guardian_agent_main",
+  "dream_timestamp": "2026-04-12T20:46:02.082125",
+  "source": "machine_dreaming",
+  "insights": [
+    {
+      "type": "behavioral",
+      "description": "Top processes: guardian_initialization(103)",
+      "score": 0.3227,
+      "importance": 0.5,
+      "novelty": 0.4,
+      "confidence": 0.8,
+      "frequency": 103
+    },
+    {
+      "type": "performance",
+      "description": "Dominant memory type: system_state (103 occurrences)",
+      "score": 0.3227,
+      "importance": 0.4,
+      "novelty": 0.5,
+      "confidence": 0.8,
+      "frequency": 103
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hours: 21, 1, 16",
+      "score": 0.1448,
+      "importance": 0.3,
+      "novelty": 0.4,
+      "confidence": 0.7,
+      "frequency": 52
+    },
+    {
+      "type": "behavioral",
+      "description": "Active: 103 memories",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: guardian_initialization(103)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hour: 21:00",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    }
+  ],
+  "total_insights": 6
+}

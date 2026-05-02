@@ -1,0 +1,75 @@
+{
+  "session_id": "br_1776022600",
+  "directive": "Inaugural session. CEO calls first board meeting to order. Each member acknowledges role and confirms inference tier assignment. Vote to ratify executive board charter and 3-tier model governance.",
+  "importance": "standard",
+  "timestamp": "2026-04-12T19:36:40Z",
+  "outcome": "rejected",
+  "weighted_score": 0.0,
+  "votes": [
+    {
+      "soldier": "coo_operations",
+      "vote": "abstain",
+      "provider": "vllm/gemini-3-flash-preview",
+      "reasoning": "Could not parse response",
+      "confidence": 0.3,
+      "latency_ms": 64,
+      "weight": 1.0
+    },
+    {
+      "soldier": "cfo_finance",
+      "vote": "abstain",
+      "provider": "vllm/qwen3.5:9b",
+      "reasoning": "Could not parse response",
+      "confidence": 0.3,
+      "latency_ms": 61,
+      "weight": 1.0
+    },
+    {
+      "soldier": "cto_technology",
+      "vote": "abstain",
+      "provider": "vllm/qwen3-coder-next",
+      "reasoning": "Could not parse response",
+      "confidence": 0.3,
+      "latency_ms": 60,
+      "weight": 1.0
+    },
+    {
+      "soldier": "ciso_security",
+      "vote": "abstain",
+      "provider": "vllm/nemotron-3-super",
+      "reasoning": "Could not parse response",
+      "confidence": 0.3,
+      "latency_ms": 64,
+      "weight": 1.2
+    },
+    {
+      "soldier": "clo_legal",
+      "vote": "abstain",
+      "provider": "vllm/devstral-small-2:24b",
+      "reasoning": "Could not parse response",
+      "confidence": 0.3,
+      "latency_ms": 58,
+      "weight": 0.8
+    },
+    {
+      "soldier": "cpo_product",
+      "vote": "abstain",
+      "provider": "vllm/gemma4:31b",
+      "reasoning": "Could not parse response",
+      "confidence": 0.3,
+      "latency_ms": 58,
+      "weight": 1.0
+    },
+    {
+      "soldier": "cro_risk",
+      "vote": "abstain",
+      "provider": "vllm/deepseek-v3.2",
+      "reasoning": "Could not parse response",
+      "confidence": 0.3,
+      "latency_ms": 53,
+      "weight": 1.2
+    }
+  ],
+  "dissent_branches": 0,
+  "dissent_branches_detail": []
+}

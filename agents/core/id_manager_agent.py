@@ -55,6 +55,25 @@ except ImportError:
     BANKON_VAULT_AVAILABLE = False
     BankonVault = None
 
+# agentID unified issuance: ERC-8004 mint + BANKON IDNFT + Algorand bonafide opt-in
+# in one call. Optional — mindX continues to work without it.
+try:
+    from agentid_identity import (
+        issue_agent_identity,
+        IssueIdentityOptions,
+        IssueRuntime,
+        AgentIdentity as AgentIdIdentity,
+    )
+    from .agentid_bridge import BankonVaultAgentIDAdapter
+    AGENTID_AVAILABLE = True
+except ImportError:
+    AGENTID_AVAILABLE = False
+    issue_agent_identity = None
+    IssueIdentityOptions = None
+    IssueRuntime = None
+    AgentIdIdentity = None
+    BankonVaultAgentIDAdapter = None
+
 logger = get_logger(__name__)
 
 class IDManagerAgent:
@@ -80,6 +99,13 @@ class IDManagerAgent:
         key_store_dir_rel_str = self.config.get("id_manager.key_store_dir_relative_to_project", "data/identity")
         self.key_store_dir: Path = PROJECT_ROOT / key_store_dir_rel_str
         self.env_file_path: Path = self.key_store_dir / ".wallet_keys.env"
+
+        # Sync-readable cache: entity_id → agentID agent-wallet vault ref.
+        # Populated on create_new_agent_identity; the async belief_system is the
+        # canonical store, but sync callers (get_private_key_for_guardian) need
+        # an in-memory shortcut.
+        self._entity_to_agent_vault_ref: Dict[str, str] = {}
+        self._entity_to_operator_vault_ref: Dict[str, str] = {}
         
         # BANKON Vault — primary encrypted key storage (AES-256-GCM + HKDF-SHA512)
         self.bankon_vault = None
@@ -211,16 +237,134 @@ class IDManagerAgent:
             )
             return None
 
+    async def create_new_agent_identity(
+        self,
+        entity_id: str,
+        role: str = "user",
+        chain: str = "baseSepolia",
+        dry_run: bool = True,
+        algorand: bool = False,
+    ) -> "AgentIdIdentity":
+        """
+        Full two-wallet agent identity issuance via agentID.
+
+        Generates operator + agent EVM keypairs stored under HKDF-domain-separated
+        refs in BANKON Vault (NO hardcoded salts — that path belonged to the
+        deleted coral_id_agent.py). When `dry_run=False` and RPC config is
+        available, also mints an ERC-8004 identity NFT on-chain; when `algorand=True`,
+        opts the Algorand side into the bonafide app.
+
+        `dry_run=True` (default) skips all on-chain calls — keys are still
+        generated and stored in the vault, so this is safe to call from any
+        mindX bootstrap path where funded deployer keys aren't configured.
+
+        Returns the full `AgentIdentity` record. For legacy callers needing only
+        `(address, env_var_name)`, use `create_new_wallet()`.
+        """
+        if not AGENTID_AVAILABLE:
+            raise RuntimeError(
+                "create_new_agent_identity requires agentid_identity. "
+                "Install via: pip install -e /home/hacker/agentID/packages/identity/python"
+            )
+        if not self.bankon_vault:
+            raise RuntimeError(
+                "create_new_agent_identity requires an unlocked BANKON Vault — "
+                "no other vault backend satisfies the HKDF-SHA512 key derivation "
+                "guarantee that replaces coral_id_agent's hardcoded salt."
+            )
+
+        adapter = BankonVaultAgentIDAdapter(self.bankon_vault, context=f"agentid:{entity_id}")
+        runtime = IssueRuntime(
+            vault=adapter,
+            evm_rpc_url=os.environ.get("BASE_SEPOLIA_RPC", "https://sepolia.base.org"),
+            algod_url=os.environ.get("ALGOD_TESTNET_URL"),
+            algod_token=os.environ.get("ALGOD_TESTNET_TOKEN", ""),
+            pinata_jwt=os.environ.get("PINATA_JWT"),
+            discovery_api_url=os.environ.get("DISCOVERY_API_URL"),
+        )
+        identity = await issue_agent_identity(
+            IssueIdentityOptions(
+                role=role,
+                chain=chain,
+                dry_run=dry_run,
+                algorand=algorand,
+                publish_to_discovery=not dry_run,
+                metadata={"mindx_entity_id": entity_id},
+            ),
+            runtime,
+        )
+
+        # Sync cache for guardian key lookup.
+        self._entity_to_agent_vault_ref[entity_id] = identity.agent.vault_ref
+        self._entity_to_operator_vault_ref[entity_id] = identity.operator.vault_ref
+
+        # Belief system entries so downstream callers can resolve by entity_id.
+        await self.belief_system.add_belief(
+            f"identity.map.entity_to_address.{entity_id}",
+            identity.agent.address, 1.0, BeliefSource.DERIVED,
+        )
+        await self.belief_system.add_belief(
+            f"identity.map.address_to_entity.{identity.agent.address}",
+            entity_id, 1.0, BeliefSource.DERIVED,
+        )
+        await self.belief_system.add_belief(
+            f"identity.map.entity_to_operator.{entity_id}",
+            identity.operator.address, 1.0, BeliefSource.DERIVED,
+        )
+        await self.belief_system.add_belief(
+            f"identity.map.entity_to_agent_vault_ref.{entity_id}",
+            identity.agent.vault_ref, 1.0, BeliefSource.DERIVED,
+        )
+        await self.belief_system.add_belief(
+            f"identity.map.entity_to_operator_vault_ref.{entity_id}",
+            identity.operator.vault_ref, 1.0, BeliefSource.DERIVED,
+        )
+        if identity.algorand:
+            await self.belief_system.add_belief(
+                f"identity.map.entity_to_algorand.{entity_id}",
+                identity.algorand.address, 1.0, BeliefSource.DERIVED,
+            )
+        if identity.agent_id >= 0:
+            await self.belief_system.add_belief(
+                f"identity.map.entity_to_erc8004_id.{entity_id}",
+                str(identity.agent_id), 1.0, BeliefSource.DERIVED,
+            )
+
+        await self.memory_agent.log_process(
+            process_name="id_manager_agent_identity_created",
+            data={
+                "entity_id": entity_id,
+                "role": role,
+                "chain": chain,
+                "operator": identity.operator.address,
+                "agent": identity.agent.address,
+                "agent_id_erc8004": str(identity.agent_id) if identity.agent_id >= 0 else None,
+                "algorand": identity.algorand.address if identity.algorand else None,
+                "bankon_idnft": None if not identity.bankon_idnft else {
+                    "contract": identity.bankon_idnft.contract,
+                    "token_id": str(identity.bankon_idnft.token_id),
+                },
+                "dry_run": dry_run,
+            },
+            metadata={"agent_id": self.agent_id},
+        )
+        return identity
+
     async def create_new_wallet(self, entity_id: str) -> Tuple[str, str]:
         """
-        Creates a new wallet for an entity, ONLY if one does not already exist.
+        Create a new wallet for an entity, ONLY if one does not already exist.
+
+        Backward-compatible façade. When `agentid_identity` + BANKON Vault are
+        available, routes through the two-wallet `create_new_agent_identity`
+        flow — the agent (hot) address is what's returned, operator key is
+        stored alongside in the vault, no `.wallet_keys.env` write. When the
+        modern stack isn't available, falls back to the legacy single-wallet
+        flow for compatibility with environments pre-agentID.
         """
         existing_address = await self.get_public_address(entity_id)
         if existing_address:
             logger.warning(f"{self.log_prefix} Wallet already exists for entity '{entity_id}'. Creation skipped.")
             env_var_name = self._generate_env_var_name(entity_id)
-            
-            # Log wallet already exists
             await self.memory_agent.log_process(
                 process_name="id_manager_wallet_exists",
                 data={"entity_id": entity_id, "address": existing_address, "env_var": env_var_name},
@@ -228,17 +372,35 @@ class IDManagerAgent:
             )
             return existing_address, env_var_name
 
-        logger.info(f"{self.log_prefix} Creating new wallet for entity '{entity_id}'.")
+        env_var_name = self._generate_env_var_name(entity_id)
+
+        # Modern path: agentID unified issuance (two-wallet, vault-stored,
+        # optional on-chain ERC-8004 mint). Requires BANKON Vault unlocked.
+        if AGENTID_AVAILABLE and self.bankon_vault:
+            logger.info(f"{self.log_prefix} Creating new wallet for entity '{entity_id}' via agentID (two-wallet, BANKON Vault).")
+            try:
+                identity = await self.create_new_agent_identity(
+                    entity_id,
+                    role="user",
+                    chain="baseSepolia",
+                    dry_run=True,           # keys only; no on-chain mint from this legacy entry point
+                    algorand=False,
+                )
+                return identity.agent.address, env_var_name
+            except Exception as e:
+                logger.warning(
+                    f"{self.log_prefix} agentID issuance failed for '{entity_id}': {e}. "
+                    "Falling through to legacy single-wallet path."
+                )
+
+        # Legacy fallback: single Ethereum wallet, vault → .env.
+        logger.info(f"{self.log_prefix} Creating new wallet for entity '{entity_id}' (legacy single-wallet path).")
         try:
             account = Account.create()
             private_key_hex = account.key.hex()
             public_address = account.address
-            env_var_name = self._generate_env_var_name(entity_id)
-            
-            # Store in vault: BANKON Vault → legacy vault → .env file
-            stored = False
 
-            # 1. BANKON Vault (production primary — AES-256-GCM encrypted)
+            stored = False
             if not stored and self.bankon_vault:
                 try:
                     vault_id = f"agent_pk_{entity_id}"
@@ -248,41 +410,35 @@ class IDManagerAgent:
                 except Exception as e:
                     logger.warning(f"{self.log_prefix} BANKON Vault store failed for '{entity_id}': {e}")
 
-            # 2. Legacy vault manager
             if not stored and self.use_vault and self.vault_manager:
                 stored = self.vault_manager.store_agent_private_key(entity_id, private_key_hex)
                 if stored:
                     logger.info(f"{self.log_prefix} Stored private key for '{entity_id}' in legacy vault.")
 
-            # 3. Legacy .env file (last resort)
             if not stored:
                 stored = set_key(self.env_file_path, env_var_name, private_key_hex, quote_mode='never')
                 if stored:
                     logger.info(f"{self.log_prefix} Stored private key for '{entity_id}' in {self.env_file_path} (plaintext — migrate to vault).")
-            
+
             if stored:
                 await self.belief_system.add_belief(f"identity.map.entity_to_address.{entity_id}", public_address, 1.0, BeliefSource.DERIVED)
                 await self.belief_system.add_belief(f"identity.map.address_to_entity.{public_address}", entity_id, 1.0, BeliefSource.DERIVED)
-                
-                # Log successful wallet creation
                 await self.memory_agent.log_process(
                     process_name="id_manager_wallet_created",
                     data={
-                        "entity_id": entity_id, 
-                        "address": public_address, 
+                        "entity_id": entity_id,
+                        "address": public_address,
                         "env_var": env_var_name,
                         "success": True,
-                        "key_stored": True
+                        "key_stored": True,
+                        "path": "legacy",
                     },
                     metadata={"agent_id": self.agent_id}
                 )
                 return account.address, env_var_name
-            else:
-                raise RuntimeError(f"Failed to store private key for {entity_id} using set_key.")
+            raise RuntimeError(f"Failed to store private key for {entity_id} using any available backend.")
         except Exception as e:
             logger.critical(f"{self.log_prefix} Failed to create and store new wallet for '{entity_id}': {e}", exc_info=True)
-            
-            # Log wallet creation failure
             await self.memory_agent.log_process(
                 process_name="id_manager_wallet_creation_failed",
                 data={"entity_id": entity_id, "error": str(e)},
@@ -291,14 +447,26 @@ class IDManagerAgent:
             raise
 
     def get_private_key_for_guardian(self, entity_id: str) -> Optional[str]:
-        # Key retrieval chain: BANKON Vault → legacy vault → .env file
+        # Key retrieval chain:
+        #   0. agentID vault_ref (from belief_system) — two-wallet scheme
+        #   1. BANKON Vault with legacy agent_pk_<entity_id> ref
+        #   2. Legacy vault manager
+        #   3. .env file (last resort)
         private_key = None
 
-        # 1. BANKON Vault (production primary)
-        if not private_key and self.bankon_vault:
-            vault_id = f"agent_pk_{entity_id}"
+        # 0. agentID scheme — look up the per-entity agent vault ref from the
+        #    sync cache populated by create_new_agent_identity.
+        agent_ref = self._entity_to_agent_vault_ref.get(entity_id)
+        if agent_ref and self.bankon_vault:
             try:
-                private_key = self.bankon_vault.retrieve(vault_id)
+                private_key = self.bankon_vault.retrieve(agent_ref)
+            except Exception:
+                pass
+
+        # 1. Legacy BANKON Vault ref (agent_pk_<entity_id>)
+        if not private_key and self.bankon_vault:
+            try:
+                private_key = self.bankon_vault.retrieve(f"agent_pk_{entity_id}")
             except Exception:
                 pass
 

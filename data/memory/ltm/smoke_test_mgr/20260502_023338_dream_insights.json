@@ -1,0 +1,53 @@
+{
+  "agent_id": "smoke_test_mgr",
+  "dream_timestamp": "2026-05-02T02:33:38.185759",
+  "source": "machine_dreaming",
+  "insights": [
+    {
+      "type": "behavioral",
+      "description": "Top processes: id_manager_agent_identity_created(2), id_manager_address_lookup(1), id_manager_address_not_found(1)",
+      "score": 0.1118,
+      "importance": 0.5,
+      "novelty": 0.4,
+      "confidence": 0.8,
+      "frequency": 4
+    },
+    {
+      "type": "performance",
+      "description": "Dominant memory type: system_state (4 occurrences)",
+      "score": 0.1118,
+      "importance": 0.4,
+      "novelty": 0.5,
+      "confidence": 0.8,
+      "frequency": 4
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hours: 10",
+      "score": 0.0587,
+      "importance": 0.3,
+      "novelty": 0.4,
+      "confidence": 0.7,
+      "frequency": 4
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: id_manager_agent_identity_created(2), id_manager_address_lookup(1), id_manager_address_not_found(1)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hour: 10:00",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    }
+  ],
+  "total_insights": 5
+}

@@ -142,4 +142,10 @@ SPECIALIZATIONS
 TONE
 Professional. Precise. Observational. Non-dramatic. Results-focused.
 
+KNOWLEDGE DOMAINS
+- name: external_llm_libraries
+  source: data/config/library_registry.json
+  type: local
+  description: Catalogue of external Python libraries for LLM applications (Transformers, LangChain, LlamaIndex, vLLM, Unsloth, CrewAI, AutoGPT, LangGraph, DeepEval, OpenAI SDK) with explicit overlap-with-mindX assessment and adoption recommendation. Consult before proposing capability expansion that may already be covered by a mindX-native system.
+
 END

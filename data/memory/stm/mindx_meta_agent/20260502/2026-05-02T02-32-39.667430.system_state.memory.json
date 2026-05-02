@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-05-02T02:32:39.667430",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "process_name": "mindxagent_identity_loaded",
+    "data": {
+      "source": "docs/INDEX.md",
+      "content": "# MindX Documentation Index\n\n## Comprehensive Documentation Index\n\nThis document provides a complete index of all documentation in the mindX system, organized by category and component type.\n\n**Last Updated**: 2026-04-27\n**Total Documentation Files**: 194+\n**CORE Documentation**: Complete 15-component analysis \u2705\n**Agent Documentation**: 34+\n**Tool Documentation**: 29+\n**DAIO Documentation**: 15 files covering 12 core + modular contracts \u2705\n**Production Ready**: \u2705 Enterprise-grade deployment and security documentation complete  \n\n---\n\n## \ud83c\udd95 Recent additions (2026-05-02)\n\n- **[X402.md](X402.md)** (NEW \u00b7 2026-05-02) \u2014 canonical doc for HTTP 402 micropayments on Algorand. Covers (1) the [x402.org](https://x402.org) spec, (2) Algorand DevRel's just-released [`@x402-avm/*`](https://github.com/algorand-devrel/x402-demo) v^2.6.1 packages (ISC, alpha, TestNet-only, hosted facilitator at `x402.goplausible.xyz`), (3) mindX's pre-standard adoption (EVM-only Base USDC + Tempo MPP via EIP-3009), (4) the **triple-rail convergence** plan (Base + Tempo + Algorand ASA in one `accepts[]` envelope), (5) wire format, (6) operator runbook + four BANKON Vault keys (`algorand_mnemonic`, `algorand_recipient_address`, `algorand_usdc_asa_id`, `x402_avm_facilitator_url`), (7) limitations & roadmap (the deferred `recordAvmReceipt()` extension to `BankonPaymentRouter.sol` for L1 audit parity). New code: [`tools/x402_avm_client.py`](../tools/x402_avm_client.py) (pure Python via `py-algorand-sdk`, mirrors `keeperhub_x402_client.py`), [`AgenticPlace/api/x402_avm.ts`](../AgenticPlace/api/x402_avm.ts) (wraps `@x402-avm/{fetch,hono,avm,core}`). Backend: `_payment_avm` body lift + 402 envelope pass-through + new `/p2p/x402/facilitator-info` discovery route in [`mindx_backend_service/agenticplace_routes.py`](../mindx_backend_service/agenticplace_routes.py). Gated behind `MINDX_X402_AVM_ENABLED=true`.\n\n## \ud83c\udd95 Recent additions (2026-04-26 / 04-27)\n\n- **[Boardroom members \u2014 three-file role architecture](agents/boardroom_members.md)** \u2014 the CEO and 7 soldiers each run from **three** files: `prompts/boardroom/{role}.prompt` (canonical character voice), `agents/boardroom/{role}.agent` (operating contract), `agents/boardroom/{role}.persona` (cognitive style as JSON). `Boardroom._load_member_card()` composes the system prompt with `.prompt` as primary, `.persona` traits/beliefs/priorities as enrichment, and `.agent` BOARDROOM ROLE as situational backup. `_query_soldier()`, `roll_call()`, and `convene_stream()` all inject the composed prompt. Endpoint `GET /insight/boardroom/cards` shows the exact prompt loaded plus `sources_loaded` (which of the three files contributed). Five LLM knobs (`MAX_CONCURRENT=8`, `NUM_CTX=8192`, `NUM_PREDICT=2000`, `TEMPERATURE=0.3`, `ROLLCALL_NUM_PREDICT=120`) are env-overridable and visible at `/insight/boardroom/roles`. The split concerns let prompts iterate per-day, personas per-week, contracts per-quarter without cross-contamination.\n- **[Boardroom \u00d7 vLLM \u2014 true continuous batching](agents/boardroom_vllm.md)** \u2014 selector `BOARDROOM_INFERENCE_BACKEND={auto|vllm|ollama}` routes the 8 boardroom members through a self-hosted vLLM server when one is reachable. vLLM continuous batching = all 8 prompts in flight on one model, generation interleaves at the per-token level, all finish ~together (vs sequential per-vote with Ollama). Three deploy paths documented: Modal/RunPod cloud GPU (~$0.50/hr), LAN GPU server, or vLLM CPU on the VPS (slower but free). `auto` mode lets you defer the deploy \u2014 when vLLM appears at `BOARDROOM_VLLM_BASE_URL`, the boardroom switches to it on next call without a restart. Health endpoint `/insight/boardroom/health` shows live reachability.\n- **[Memory audit + tier-aware retention + the cognitive-ascent loop](MEMORY_AUDIT_2026_04_27.md)** (NEW \u00b7 2026-04-27) \u2014 the disk filled twice in 24h despite a 5 GB recovery; the audit found the gap was architectural, not bytes. **Three gaps named**: (1) `agent_workspaces/{agent}/process_trace.jsonl` is written by `log_process` and read by nobody \u2014 19.5 GB orphan in one mastermind file; (2) IPFS offload Phase 8 dormant because no Lighthouse keys vaulted; (3) wisdom-tier `*_training.jsonl` files write-only, no consumer. **Six phases shipped this session**: per-tier policy doc ([`memory_tiers.md`](memory_tiers.md)), `GET /insight/memory/audit` (live byte counts), `GET /insight/memory/tiers` (policy + state), tier-aware `memory_agent.prune_stm` (14 d \u2194 IPFS eligibility), `agents/storage/agent_workspace_pruner.py` (rotate-archive-delete with disk-headroom guard), `POST /insight/memory/prune` (operator-triggered). **Live recovery freed 19.5 GB**; appendix in the audit doc preserves the incident and the safety guards added (commit `b6d943a5`).\n- **[Memory tier policy](memory_tiers.md)** (NEW \u00b7 2026-04-27) \u2014 single source of truth for \"how long does each `/data` path live.\" Eight tiers: `information_stm` (14 d \u2192 archive \u2192 IPFS \u2192 delete), `knowledge_ltm` / `concept_dreams` / `w",
+      "loaded_at": 1777714359.667417,
+      "key_points": [
+        "MindX Agent is the meta-agent that understands all agents",
+        "Serves as execution mind of the G\u00f6del machine",
+        "Orchestrates self-improvement through SEA, BDI, Mastermind",
+        "Subservient to higher intelligence",
+        "Maintains comprehensive knowledge of all agents"
+      ]
+    }
+  },
+  "context": {
+    "agent_id": "mindx_meta_agent",
+    "source": "INDEX.md"
+  },
+  "tags": [
+    "mindxagent_identity_loaded",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "e6fd740c3910c33f"
+}

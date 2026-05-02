@@ -7,8 +7,22 @@
       "title": "Predictions",
       "phase": "waning crescent",
       "timestamp": "2026-04-12T19:29:55.943081+00:00"
+    },
+    {
+      "date": "2026-05-01",
+      "day": 14,
+      "title": "Security",
+      "phase": "full moon",
+      "timestamp": "2026-05-01T03:53:48.599832+00:00"
+    },
+    {
+      "date": "2026-05-02",
+      "day": 15,
+      "title": "Cognition",
+      "phase": "full moon",
+      "timestamp": "2026-05-02T09:34:35.325219+00:00"
     }
   ],
-  "current_day": 24,
+  "current_day": 15,
   "full_moons": []
 }

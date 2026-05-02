@@ -46,6 +46,7 @@ psutil>=5.9.0
 cryptography>=41.0.0
 eth-account>=0.8.0     # Ethereum wallet derivation, signing
 pycryptodome>=3.20.0   # BANKON Vault AES-256-GCM + HKDF-SHA512
+py-algorand-sdk>=2.6.0 # Algorand AVM signing for tools/x402_avm_client.py (x402-AVM rail)
 
 # ── File processing ──
 pathspec>=0.11.0

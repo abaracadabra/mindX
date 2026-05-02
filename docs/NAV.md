@@ -355,6 +355,7 @@ mindX is a Godel machine — a self-improving system where the improvement mecha
 - [A2A Protocol](a2a_tool.md) — [Agent-to-agent](https://github.com/a2aproject/a2a-python) communication, cryptographic signing, discovery via agent cards. Compare to [SwarmRelay](https://github.com/swarmclawai/swarmrelay)'s E2E encrypted messaging. ([source](../tools/communication/a2a_tool.py))
 - [MCP (Model Context Protocol)](mcp_tool.md) — [Anthropic MCP](https://modelcontextprotocol.io/) for structured context, tool registration. [HostingerVPSAgent](../agents/hostinger_vps_agent.py) registers its [3 channels](../agents/hostinger.vps.agent) as MCP tools. ([source](../tools/communication/mcp_tool.py))
 - [AgenticPlace](AgenticPlace_Deep_Dive.md) — Agent marketplace at [agenticplace.pythai.net](https://agenticplace.pythai.net); `.extensions` → `.json` → blockchain publishing. [SwarmFeed](https://github.com/swarmclawai/swarmfeed) timeline patterns inform agent activity discovery.
+- [x402 / x402-AVM Payments](X402.md) — HTTP 402 micropayment rail; triple-rail (Base USDC + Tempo MPP + Algorand ASA via [`@x402-avm/*`](https://github.com/algorand-devrel/x402-demo)). Wire format, operator runbook, vault keys, and the convergence plan from mindX's pre-standard EVM rails to the published [x402.org](https://x402.org) standard.
 
 ## Economics
 

@@ -1,0 +1,37 @@
+mindX agents/eval/ — evaluation framework for mindX self-awareness
+====================================================================
+
+Portions of this package are adapted from confident-ai/deepeval
+(https://github.com/confident-ai/deepeval), licensed under Apache License 2.0.
+
+Specifically:
+  - The GEval algorithm (criteria → evaluation_steps → judge prompt →
+    {score, reason} → normalization) follows the design in
+    deepeval/metrics/g_eval/. The judge prompt template in g_eval.py
+    is adapted from deepeval/metrics/g_eval/template.py:GEvalTemplate.
+  - The BaseMetric contract (measure / a_measure / threshold / score /
+    reason / success / is_successful) follows
+    deepeval/metrics/base_metric.py.
+  - The LLMTestCase shape (input / actual_output / expected_output /
+    context / retrieval_context / metadata) is a slim subset of
+    deepeval/test_case/llm_test_case.py.
+
+The GEval algorithm itself is from:
+  Liu et al., "G-Eval: NLG Evaluation using GPT-4 with Better Human
+  Alignment," arXiv:2303.16634 (2023).
+
+Modifications from upstream:
+  - Replaced DeepEvalBaseLLM with a thin adapter over mindX's
+    llm/llm_factory.create_llm_handler() returning generated text and
+    optional log-probabilities.
+  - Removed: pytest harness, Confident-AI cloud upload, OpenTelemetry,
+    posthog, sentry, multimodal/MCP/conversational machinery, the
+    metric_progress_indicator UI, the Pydantic structured-output
+    pipeline (replaced with permissive JSON parsing).
+  - Async-only — no sync measure() implementation. mindX is
+    async-throughout.
+  - Log-probability reweighting is a stub (Ollama does not expose
+    OpenAI-shaped logprobs). Hook is in place for future cloud judges.
+
+Apache-2.0 license terms are preserved. Each ported file carries an
+attribution header. Upstream LICENSE applies to adapted portions.

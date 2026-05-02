@@ -1,0 +1,80 @@
+{
+  "agent_id": "default_identity_manager",
+  "dream_timestamp": "2026-04-30T20:53:14.030230",
+  "source": "machine_dreaming",
+  "insights": [
+    {
+      "type": "success",
+      "description": "Success rate: 100.0%",
+      "score": 2.6201,
+      "importance": 1.0,
+      "novelty": 1.0,
+      "confidence": 1.0,
+      "frequency": 416
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: id_manager_wallet_exists(205), id_manager_address_derived(140), id_manager_address_lookup(65), id_manager_wallet_created(3), id_manager_address_not_found(3)",
+      "score": 0.4192,
+      "importance": 0.5,
+      "novelty": 0.4,
+      "confidence": 0.8,
+      "frequency": 416
+    },
+    {
+      "type": "performance",
+      "description": "Dominant memory type: system_state (416 occurrences)",
+      "score": 0.4192,
+      "importance": 0.4,
+      "novelty": 0.5,
+      "confidence": 0.8,
+      "frequency": 416
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hours: 21, 1, 16",
+      "score": 0.2103,
+      "importance": 0.3,
+      "novelty": 0.4,
+      "confidence": 0.7,
+      "frequency": 318
+    },
+    {
+      "type": "behavioral",
+      "description": "Active: 416 memories",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Success rate: 100.0% (3 success, 0 failure)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: id_manager_wallet_exists(205), id_manager_address_derived(140), id_manager_address_lookup(65), id_manager_wallet_created(3), id_manager_address_not_found(3)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hour: 21:00",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    }
+  ],
+  "total_insights": 8
+}

@@ -87,6 +87,76 @@
     "confidence": 0.95,
     "source": "self_analysis",
     "timestamp": 1776022239.3365555,
-    "last_updated": 1776022299.3372688
+    "last_updated": 1777714678.7723181
+  },
+  "identity.map.entity_to_address.smoke_test_entity_1": {
+    "value": "0x5eCdc30df01030Aee83BF339617f5809bE26C8d9",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1776534795.0015063,
+    "last_updated": 1776534795.0015063
+  },
+  "identity.map.address_to_entity.0x5eCdc30df01030Aee83BF339617f5809bE26C8d9": {
+    "value": "smoke_test_entity_1",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1776534795.0024974,
+    "last_updated": 1776534795.0024974
+  },
+  "identity.map.entity_to_operator.smoke_test_entity_1": {
+    "value": "0x756Cd38f066526887Dc03F6A91E0eFDaB6B2b912",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1776534795.0032854,
+    "last_updated": 1776534795.0032854
+  },
+  "identity.map.entity_to_agent_vault_ref.smoke_test_entity_1": {
+    "value": "agent/trading:1776534794986/0x5ecdc30df01030aee83bf339617f5809be26c8d9",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1776534795.0038972,
+    "last_updated": 1776534795.0038972
+  },
+  "identity.map.entity_to_operator_vault_ref.smoke_test_entity_1": {
+    "value": "op/trading:1776534794986/0x756cd38f066526887dc03f6a91e0efdab6b2b912",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1776534795.0045106,
+    "last_updated": 1776534795.0045106
+  },
+  "identity.map.entity_to_address.smoke_test_entity_2": {
+    "value": "0x19367b4f1F190361f41102E8EDAd8FcdA1B201EC",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1776534795.0204802,
+    "last_updated": 1776534795.0204802
+  },
+  "identity.map.address_to_entity.0x19367b4f1F190361f41102E8EDAd8FcdA1B201EC": {
+    "value": "smoke_test_entity_2",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1776534795.0212212,
+    "last_updated": 1776534795.0212212
+  },
+  "identity.map.entity_to_operator.smoke_test_entity_2": {
+    "value": "0xE565acc2d6bFdaE193c5142656d1022f021651d6",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1776534795.0218046,
+    "last_updated": 1776534795.0218046
+  },
+  "identity.map.entity_to_agent_vault_ref.smoke_test_entity_2": {
+    "value": "agent/user:1776534795013/0x19367b4f1f190361f41102e8edad8fcda1b201ec",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1776534795.0223985,
+    "last_updated": 1776534795.0223985
+  },
+  "identity.map.entity_to_operator_vault_ref.smoke_test_entity_2": {
+    "value": "op/user:1776534795013/0xe565acc2d6bfdae193c5142656d1022f021651d6",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1776534795.0229723,
+    "last_updated": 1776534795.0229723
   }
 }

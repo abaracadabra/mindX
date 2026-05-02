@@ -1,0 +1,125 @@
+{
+  "agent_id": "mastermind_prime",
+  "dream_timestamp": "2026-05-02T02:33:55.757855",
+  "source": "machine_dreaming",
+  "insights": [
+    {
+      "type": "success",
+      "description": "Success rate: 18.2%",
+      "score": 0.2476,
+      "importance": 0.18181818181818182,
+      "novelty": 1.0,
+      "confidence": 1.0,
+      "frequency": 22
+    },
+    {
+      "type": "performance",
+      "description": "Dominant memory type: system_state (22 occurrences)",
+      "score": 0.2179,
+      "importance": 0.4,
+      "novelty": 0.5,
+      "confidence": 0.8,
+      "frequency": 22
+    },
+    {
+      "type": "failure",
+      "description": "mastermind_agent_deletion_completed: Agent with ID 'nonexistent_agent' not found in registry",
+      "score": 0.2167,
+      "importance": 0.8,
+      "novelty": 1.0,
+      "confidence": 0.9,
+      "frequency": 1
+    },
+    {
+      "type": "failure",
+      "description": "mastermind_agent_creation_completed: Exception during agent creation: name 'IDManagerAgent' is not defined",
+      "score": 0.2167,
+      "importance": 0.8,
+      "novelty": 1.0,
+      "confidence": 0.9,
+      "frequency": 1
+    },
+    {
+      "type": "failure",
+      "description": "mastermind_agent_deletion_completed: Agent with ID 'test_lifecycle_1770352906' not found in registry",
+      "score": 0.2167,
+      "importance": 0.8,
+      "novelty": 1.0,
+      "confidence": 0.9,
+      "frequency": 1
+    },
+    {
+      "type": "failure",
+      "description": "mastermind_agent_deletion_completed: Agent with ID 'test_delete_1770352844' not found in registry",
+      "score": 0.2167,
+      "importance": 0.8,
+      "novelty": 1.0,
+      "confidence": 0.9,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: mastermind_agent_creation_completed(6), mastermind_agent_creation_start(6), mastermind_agent_deletion_completed(3), mastermind_agent_deletion_start(3), mastermind_agent_evolution_completed(2)",
+      "score": 0.2116,
+      "importance": 0.5,
+      "novelty": 0.4,
+      "confidence": 0.8,
+      "frequency": 20
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hours: 21",
+      "score": 0.1144,
+      "importance": 0.3,
+      "novelty": 0.4,
+      "confidence": 0.7,
+      "frequency": 22
+    },
+    {
+      "type": "behavioral",
+      "description": "Success rate: 18.2% (2 success, 9 failure)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Low success rate \u2014 review failure patterns for recurring issues",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "High error rate: 40.9% (9 errors)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: mastermind_agent_creation_completed(6), mastermind_agent_creation_start(6), mastermind_agent_deletion_completed(3), mastermind_agent_deletion_start(3), mastermind_agent_evolution_comple",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hour: 21:00",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    }
+  ],
+  "total_insights": 13
+}

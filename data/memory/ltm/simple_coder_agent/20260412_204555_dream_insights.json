@@ -1,0 +1,89 @@
+{
+  "agent_id": "simple_coder_agent",
+  "dream_timestamp": "2026-04-12T20:45:55.890443",
+  "source": "machine_dreaming",
+  "insights": [
+    {
+      "type": "failure",
+      "description": "coding_learning: ",
+      "score": 0.2167,
+      "importance": 0.8,
+      "novelty": 1.0,
+      "confidence": 0.9,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: coding_learning(3)",
+      "score": 0.0963,
+      "importance": 0.5,
+      "novelty": 0.4,
+      "confidence": 0.8,
+      "frequency": 3
+    },
+    {
+      "type": "performance",
+      "description": "Dominant memory type: system_state (3 occurrences)",
+      "score": 0.0963,
+      "importance": 0.4,
+      "novelty": 0.5,
+      "confidence": 0.8,
+      "frequency": 3
+    },
+    {
+      "type": "success",
+      "description": "Success rate: 33.3%",
+      "score": 0.0602,
+      "importance": 0.3333333333333333,
+      "novelty": 1.0,
+      "confidence": 0.3,
+      "frequency": 3
+    },
+    {
+      "type": "behavioral",
+      "description": "Success rate: 33.3% (1 success, 2 failure)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "High error rate: 66.7% (2 errors)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: coding_learning(3)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hour: 18:00",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hours: 18",
+      "score": 0.0506,
+      "importance": 0.3,
+      "novelty": 0.4,
+      "confidence": 0.7,
+      "frequency": 3
+    }
+  ],
+  "total_insights": 9
+}

@@ -281,6 +281,58 @@ def render_godel_recent(d: dict) -> str:
     )
 
 
+def render_eval_recent(d: dict) -> str:
+    rows = d.get("events") or []
+    def _reason(p: Any) -> str:
+        s = str((p or {}).get("reason") or "").replace("\n", " ")
+        return s[:80] + "…" if len(s) > 80 else s
+    def _score(p: Any) -> str:
+        s = (p or {}).get("score")
+        return f"{s:.2f}" if isinstance(s, (int, float)) else "—"
+    def _metric(p: Any) -> str:
+        return human_hash(((p or {}).get("metric") or ""), 28)
+    def _src(p: Any) -> str:
+        return human_hash(((p or {}).get("source_kind") or ""), 18)
+    return render_table(
+        rows,
+        [
+            ("ts",      "ts",      lambda v: human_rel_ts(v) if v else ""),
+            ("actor",   "actor",   lambda v: human_hash(v, 22)),
+            ("metric",  "payload", _metric),
+            ("source",  "payload", _src),
+            ("score",   "payload", _score),
+            ("reason",  "payload", _reason),
+        ],
+    )
+
+
+def render_eval_summary(d: dict) -> str:
+    n = d.get("count", 0)
+    mean = d.get("mean_score")
+    hist = d.get("histogram") or []
+    by_src = d.get("by_source_kind") or {}
+    by_metric = d.get("by_metric") or {}
+    lines = []
+    lines.append(f"alignment events: {n}")
+    lines.append(f"mean score:       {mean:.3f}" if isinstance(mean, (int, float)) else "mean score:       —")
+    if hist:
+        lines.append("histogram (0.0 → 1.0, 10 bins):")
+        max_h = max(hist) or 1
+        for i, c in enumerate(hist):
+            bar = "█" * int(round(20 * c / max_h)) if c else ""
+            lo, hi = i / 10.0, (i + 1) / 10.0
+            lines.append(f"  {lo:.1f}-{hi:.1f}  {c:>4}  {bar}")
+    if by_src:
+        lines.append("by source_kind:")
+        for k, v in sorted(by_src.items(), key=lambda kv: -kv[1]):
+            lines.append(f"  {k:<24} {v}")
+    if by_metric:
+        lines.append("by metric:")
+        for k, v in sorted(by_metric.items(), key=lambda kv: -kv[1]):
+            lines.append(f"  {k:<32} {v}")
+    return "\n".join(lines) + "\n"
+
+
 def render_boardroom_recent(d: dict) -> str:
     rows = d.get("sessions") or []
     def _votes(votes: Any) -> str:
@@ -907,6 +959,8 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/cognition":           render_cognition,
     "/insight/system":              render_system,
     "/insight/godel/recent":        render_godel_recent,
+    "/insight/eval/recent":         render_eval_recent,
+    "/insight/eval/summary":        render_eval_summary,
     "/insight/boardroom/recent":    render_boardroom_recent,
     "/insight/boardroom/session":   render_boardroom_session,
     "/insight/boardroom/roles":     render_boardroom_roles,

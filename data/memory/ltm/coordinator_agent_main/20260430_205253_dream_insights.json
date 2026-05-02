@@ -1,0 +1,116 @@
+{
+  "agent_id": "coordinator_agent_main",
+  "dream_timestamp": "2026-04-30T20:52:53.731038",
+  "source": "machine_dreaming",
+  "insights": [
+    {
+      "type": "behavioral",
+      "description": "Top processes: coordinator_interaction(181), coordinator_agent_creation_failed(6), coordinator_agent_creation_request(6), coordinator_agent_deregistration_failed(3), coordinator_agent_deregistration_request(3)",
+      "score": 0.3682,
+      "importance": 0.5,
+      "novelty": 0.4,
+      "confidence": 0.8,
+      "frequency": 199
+    },
+    {
+      "type": "performance",
+      "description": "Dominant memory type: system_state (199 occurrences)",
+      "score": 0.3682,
+      "importance": 0.4,
+      "novelty": 0.5,
+      "confidence": 0.8,
+      "frequency": 199
+    },
+    {
+      "type": "failure",
+      "description": "coordinator_agent_deregistration_failed: Agent with ID 'nonexistent_agent' not found in registry",
+      "score": 0.2167,
+      "importance": 0.8,
+      "novelty": 1.0,
+      "confidence": 0.9,
+      "frequency": 1
+    },
+    {
+      "type": "failure",
+      "description": "coordinator_agent_creation_failed: Exception during agent creation: name 'IDManagerAgent' is not defined",
+      "score": 0.2167,
+      "importance": 0.8,
+      "novelty": 1.0,
+      "confidence": 0.9,
+      "frequency": 1
+    },
+    {
+      "type": "failure",
+      "description": "coordinator_agent_deregistration_failed: Agent with ID 'test_lifecycle_1770352906' not found in registry",
+      "score": 0.2167,
+      "importance": 0.8,
+      "novelty": 1.0,
+      "confidence": 0.9,
+      "frequency": 1
+    },
+    {
+      "type": "failure",
+      "description": "coordinator_agent_deregistration_failed: Agent with ID 'test_delete_1770352844' not found in registry",
+      "score": 0.2167,
+      "importance": 0.8,
+      "novelty": 1.0,
+      "confidence": 0.9,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hours: 19, 21, 18",
+      "score": 0.1701,
+      "importance": 0.3,
+      "novelty": 0.4,
+      "confidence": 0.7,
+      "frequency": 105
+    },
+    {
+      "type": "behavioral",
+      "description": "Active: 199 memories",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Success rate: 0.0% (0 success, 9 failure)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Low success rate \u2014 review failure patterns for recurring issues",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: coordinator_interaction(181), coordinator_agent_creation_failed(6), coordinator_agent_creation_request(6), coordinator_agent_deregistration_failed(3), coordinator_agent_deregistration_r",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hour: 19:00",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    }
+  ],
+  "total_insights": 12
+}

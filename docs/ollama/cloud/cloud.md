@@ -12,15 +12,21 @@ ollama signin
 export OLLAMA_API_KEY=your_api_key
 ```
 
-## Tiers
+## Tiers ([ollama.com/pricing](https://ollama.com/pricing))
 
 | Tier | Price | Cloud Usage | Concurrent Models |
 |------|-------|-------------|-------------------|
-| **Free** | $0 | Light (session + weekly limits) | 1 |
+| **Free** | $0 | Light (session + weekly limits) | **1** |
 | **Pro** | $20/mo | 50x free | 3 |
 | **Max** | $100/mo | 5x Pro | 10 |
 
 Free tier limits reset: **session limits every 5 hours**, **weekly limits every 7 days**.
+
+**Critical constraint — Free tier = 1 concurrent model.** This means:
+- The boardroom MUST use a **single cloud model** for all soldiers (no model switching between queries)
+- If soldier A uses `deepseek-v3.2-cloud` and soldier B requests `qwen3-coder-next-cloud`, the second request must wait for the first model to unload
+- **Recommended**: Use one strong general model (e.g. `gpt-oss:120b-cloud` at 65 tok/s) for all boardroom cloud queries
+- Local models are unlimited — mix freely on the VPS
 
 ## API Endpoints
 

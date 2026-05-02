@@ -1,0 +1,132 @@
+{
+  "schema_version": "1.0",
+  "last_updated": "2026-04-28",
+  "source": "https://www.kdnuggets.com/10-python-libraries-for-building-llm-applications",
+  "description": "Catalogue of external Python libraries for building LLM applications. mindX consults this registry when planning capability expansion. Awareness != adoption: each library carries an explicit overlap-with-mindX assessment and a recommendation. Per the Agnostic Modules Principle, mindX does not silently take dependencies on these libraries — entries marked 'investigate' may become improvement-backlog items; entries marked 'skip' overlap with mindX-native systems.",
+  "taxonomy": {
+    "mindx_overlap": {
+      "none": "No mindX-native equivalent.",
+      "partial": "mindX has overlapping capability but the library covers ground mindX does not.",
+      "full": "mindX has a native system that fully covers this library's purpose."
+    },
+    "adoption_recommendation": {
+      "adopted": "Already a direct or transitive dependency.",
+      "adopted_forked": "Source code adapted into mindX (license-compliant fork of select files). No runtime dep added. See module README for what was ported.",
+      "investigate": "Worth a focused evaluation; backlog item likely.",
+      "monitor": "Watch for upstream changes; revisit later.",
+      "skip": "Overlaps with mindX-native systems; adopting would invert architecture."
+    }
+  },
+  "libraries": {
+    "transformers": {
+      "name": "Transformers",
+      "category": "model_runtime",
+      "homepage": "https://huggingface.co/docs/transformers/index",
+      "purpose": "Hugging Face core library for loading, tokenizing, generating with, and fine-tuning open-source LLMs.",
+      "mindx_overlap": "partial",
+      "mindx_status": "in_use",
+      "adoption_recommendation": "adopted",
+      "rationale": "Already used in mindx_backend_service/rage/deeprage/ for embedding models. mindX is a downstream consumer of HF artifacts via Ollama/vLLM in production.",
+      "tags": ["transformers", "huggingface", "embeddings", "fine_tune"]
+    },
+    "langchain": {
+      "name": "LangChain",
+      "category": "orchestration",
+      "homepage": "https://www.langchain.com/",
+      "purpose": "Wires prompts, retrievers, tools, APIs, and model calls into multi-step chains for chatbots, RAG, and agents.",
+      "mindx_overlap": "full",
+      "mindx_status": "not_installed",
+      "adoption_recommendation": "skip",
+      "rationale": "mindX has its own BDI/AGInt orchestration substrate. Adopting LangChain would invert the architecture and re-implement what BDI plus the tool registry already provide. Watch for ideas, do not adopt.",
+      "tags": ["orchestration", "agents", "rag"]
+    },
+    "llamaindex": {
+      "name": "LlamaIndex",
+      "category": "rag_data",
+      "homepage": "https://www.llamaindex.ai/",
+      "purpose": "Connects LLM apps to external data (docs, PDFs, DBs) for RAG-style grounded answers.",
+      "mindx_overlap": "full",
+      "mindx_status": "not_installed",
+      "adoption_recommendation": "skip",
+      "rationale": "mindX uses RAGE (Retrieval Augmented Generation Engine) backed by pgvector and Ollama embeddings. RAGE is the mindX-native equivalent and the operational standard.",
+      "tags": ["rag", "data", "indexing"]
+    },
+    "vllm": {
+      "name": "vLLM",
+      "category": "inference_serving",
+      "homepage": "https://docs.vllm.ai/en/stable/",
+      "purpose": "High-throughput, memory-efficient inference server for open-source LLMs (PagedAttention, continuous batching).",
+      "mindx_overlap": "partial",
+      "mindx_status": "wrapper_present",
+      "adoption_recommendation": "investigate",
+      "rationale": "mindX has agents/vllm_agent.py as a wrapper, but vLLM itself is not deployed (4GB VPS cannot host it). Tracked in OLLAMA_VLLM_CLOUD_RESEARCH.md for the future GPU server. Already the planned upgrade path beyond Ollama.",
+      "tags": ["inference", "serving", "gpu"]
+    },
+    "unsloth": {
+      "name": "Unsloth",
+      "category": "fine_tuning",
+      "homepage": "https://unsloth.ai/",
+      "purpose": "Resource-efficient fine-tuning via LoRA/QLoRA, optimized for low VRAM.",
+      "mindx_overlap": "none",
+      "mindx_status": "not_installed",
+      "adoption_recommendation": "investigate",
+      "rationale": "mindX has no fine-tuning pipeline today. Unsloth is the natural choice once GPU budget exists. Pair with Modelfile-as-schema to fold tuned models back into the Ollama pillar.",
+      "tags": ["fine_tune", "lora", "qlora"]
+    },
+    "crewai": {
+      "name": "CrewAI",
+      "category": "multi_agent",
+      "homepage": "https://crewai.com/",
+      "purpose": "Multi-agent framework for role-based agent teams that collaborate, use tools, and split work.",
+      "mindx_overlap": "full",
+      "mindx_status": "not_installed",
+      "adoption_recommendation": "skip",
+      "rationale": "mindX has Mastermind/Coordinator/CEO orchestration plus the Boardroom (8-soldier consensus). The role-based-team pattern is already covered by the boardroom roster (CISO, CFO, CRO, CLO, CPO, CTO, COO, CEO).",
+      "tags": ["multi_agent", "roles", "collaboration"]
+    },
+    "autogpt": {
+      "name": "AutoGPT",
+      "category": "autonomous_agent",
+      "homepage": "https://github.com/Significant-Gravitas/AutoGPT",
+      "purpose": "Early autonomous agent system for goal-driven, multi-step task execution.",
+      "mindx_overlap": "full",
+      "mindx_status": "not_installed",
+      "adoption_recommendation": "skip",
+      "rationale": "Historical reference for the AGInt/BDI lineage. mindX's autonomous loop (mindXagent + 5-min improvement cycle + machine.dreaming) is the contemporary equivalent. Not a candidate for adoption.",
+      "tags": ["autonomous", "historical"]
+    },
+    "langgraph": {
+      "name": "LangGraph",
+      "category": "agent_orchestration",
+      "homepage": "https://github.com/langchain-ai/langgraph",
+      "purpose": "Stateful, branching agent workflows with memory and multi-step control flow.",
+      "mindx_overlap": "full",
+      "mindx_status": "not_installed",
+      "adoption_recommendation": "skip",
+      "rationale": "BDI is the stateful-graph substrate in mindX. Beliefs persist, intentions branch, plans replan. Adopting LangGraph would duplicate the cognitive layer.",
+      "tags": ["graph", "stateful", "orchestration"]
+    },
+    "deepeval": {
+      "name": "DeepEval",
+      "category": "evaluation",
+      "homepage": "https://github.com/confident-ai/deepeval",
+      "purpose": "Pytest-style evaluation for LLM apps: relevance, hallucination, faithfulness, task success.",
+      "mindx_overlap": "none",
+      "mindx_status": "metrics_layer_ported",
+      "adoption_recommendation": "adopted_forked",
+      "rationale": "Fork of the GEval algorithm + BaseMetric + LLMTestCase shape lives at agents/eval/ (Apache-2.0, attribution in agents/eval/NOTICE). Phase 1 wired to log_godel_choice() — gated by MINDX_EVAL_GODEL_ENABLED=1. Default judge is CPU-pillar Ollama (qwen3:1.7b), zero new runtime deps. Phases 2 (boardroom soldier confidence) and 3 (reasoning_quality fitness axis) tracked in improvement_backlog.json at priority 6.",
+      "tags": ["eval", "testing", "godel", "geval", "self_awareness"]
+    },
+    "openai_python": {
+      "name": "OpenAI Python SDK",
+      "category": "provider_sdk",
+      "homepage": "https://github.com/openai/openai-python",
+      "purpose": "Official client for hosted OpenAI models (chat, reasoning, multimodal).",
+      "mindx_overlap": "partial",
+      "mindx_status": "in_use",
+      "adoption_recommendation": "adopted",
+      "rationale": "Direct dependency in requirements.txt, wired via llm/llm_factory.py and the OpenAI handler. Also the compatibility surface for Ollama Cloud's /v1/chat/completions route.",
+      "tags": ["openai", "sdk", "provider"]
+    }
+  }
+}

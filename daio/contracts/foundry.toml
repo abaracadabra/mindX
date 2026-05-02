@@ -2,14 +2,78 @@
 src = "."
 out = "out"
 libs = ["lib"]
-remappings = [
-    "@openzeppelin/=lib/openzeppelin-contracts/",
-    "forge-std/=lib/forge-std/src/",
-    "ds-test/=lib/forge-std/lib/ds-test/src/",
-    "erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/"
-]
+auto_detect_remappings = false
 solc = "0.8.24"
-evm_version = "shanghai"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+
+# Scoped profile for the iNFT_7857 test suite (Open Agents hackathon).
+# Avoids compiling the rest of the broken-by-default tree (bonding/lib/prb-math
+# vendored test file with a malformed forge-std import; the OZ-v4-era prior-art
+# iNFT.sol / IntelligentNFT.sol that no longer build under the v5 OZ in lib/
+# but are preserved for Apr 11 2026 timestamp evidence).
+[profile.inft]
+src = "inft"
+test = "test/inft"
+libs = ["lib"]
+auto_detect_remappings = false
+skip = ["inft/iNFT.sol", "inft/IntelligentNFT.sol", "inft/IntelligentNFTFactory.sol", "inft/interfaces/**"]
+solc = "0.8.24"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+
+# Scoped profile for the BANKON v1 ENS subname registrar suite.
+# Compiles only ens/v1/* + its tests, sidesteps the rest of the legacy tree.
+[profile.bankon]
+src = "ens/v1"
+test = "ens/v1/test"
+libs = ["lib"]
+auto_detect_remappings = false
+solc = "0.8.24"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+
+# THOT v1 — memory-anchoring primitive for 0G + agent reasoning loops.
+# Lives in THOT/v1/, sidesteps the legacy core/THOT.sol that doesn't compile
+# under OZ v5 (preserved as Apr 11 2026 prior art).
+[profile.thot]
+src = "THOT/v1"
+test = "THOT/v1/test"
+libs = ["lib"]
+auto_detect_remappings = false
+solc = "0.8.24"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+
+# AgentRegistry (ERC-8004-aligned) — agnostic identity + capability registry.
+[profile.agentregistry]
+src = "agentregistry"
+test = "agentregistry/test"
+libs = ["lib"]
+auto_detect_remappings = false
+solc = "0.8.24"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+
+# X402Receipt — canonical on-chain attestation for HTTP 402 settlements (mindX).
+# Sister to algorand/x402_receipt.algo.ts; same logical ABI cross-chain.
+[profile.x402]
+src = "x402"
+test = "x402/test"
+libs = ["lib"]
+auto_detect_remappings = false
+solc = "0.8.24"
+evm_version = "cancun"
 optimizer = true
 optimizer_runs = 200
 via_ir = true

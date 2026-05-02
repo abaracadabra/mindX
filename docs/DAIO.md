@@ -197,6 +197,8 @@ async def create_governance_proposal(
 4. Agent wallets receive payments via smart contract
 5. All transactions recorded on-chain for auditability
 
+Off-chain x402 micropayment settlements (Base USDC, Tempo MPP, Algorand ASA) feed `BankonPaymentRouter.recordReceipt()` for L1 audit parity — see [X402.md](X402.md) for the triple-rail wire format and the deferred `recordAvmReceipt()` extension path.
+
 **Implementation:**
 ```python
 # FinancialMind Profit → DAIO Treasury → Agent Rewards
@@ -290,7 +292,7 @@ class DAIOEventListener:
 | 65536 | THOT65536 | Theoretical quantum-resistant (2^16) |
 | 1048576 | THOT1048576 | post-quantum (2^20) |
 
-Supporting NFT types: [iNFT](../daio/contracts/inft/iNFT.sol) (immutable THOT), [IntelligentNFT](../daio/contracts/inft/IntelligentNFT.sol) (dynamic agent NFT), [gNFT](../daio/contracts/THOT/nft/gNFT.sol) (visualization), [NFPrompT](../daio/contracts/THOT/nft/NFPrompT.sol) (agent prompts), [NFRLT](../daio/contracts/THOT/nft/NFRLT.sol) (royalty + soulbound). Interactive UI: [mindx.pythai.net/inft](https://mindx.pythai.net/inft).
+Supporting NFT types: **[iNFT-7857](../daio/contracts/inft/iNFT_7857.sol)** (production ERC-7857 build — encrypted intelligence, EIP-712 oracle handoff, transfer-gating, AccessControl, Pausable, AgenticPlace + BANKON hooks; full reference at [INFT_7857.md](INFT_7857.md), interactive UI at [mindx.pythai.net/inft7857](https://mindx.pythai.net/inft7857)), [iNFT (legacy)](../daio/contracts/inft/iNFT.sol) (Apr 11 2026 prior-art ERC-721, immutable THOT — preserved untouched, UI at [mindx.pythai.net/inft](https://mindx.pythai.net/inft)), [IntelligentNFT](../daio/contracts/inft/IntelligentNFT.sol) (dynamic agent NFT), [gNFT](../daio/contracts/THOT/nft/gNFT.sol) (visualization), [NFPrompT](../daio/contracts/THOT/nft/NFPrompT.sol) (agent prompts), [NFRLT](../daio/contracts/THOT/nft/NFRLT.sol) (royalty + soulbound).
 
 ### 3.2 THOT → mindX Integration Strategy
 

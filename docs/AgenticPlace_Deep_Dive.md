@@ -585,6 +585,8 @@ result = {
 
 ### 2.3 AP2 (Agent Payments Protocol)
 
+> Today's mindX wire-level payment rail is HTTP 402 (x402.org) — see [X402.md](X402.md). AP2 below is the conceptual framing; x402 is the concrete envelope shape mindX advertises in production. mindX runs three rails through one envelope: Base USDC + Tempo MPP (EVM, EIP-3009) + Algorand ASA (AVM scheme via `@x402-avm/*`). AP2 / x402 are complementary: AP2 describes intent + escrow, x402 describes the on-the-wire 402 challenge.
+
 **Origin:** Google Research  
 **Purpose:** Verifiable autonomous purchases with budget constraints  
 **Payment Agnostic:** Works with PYTHAI, ETH, stablecoins

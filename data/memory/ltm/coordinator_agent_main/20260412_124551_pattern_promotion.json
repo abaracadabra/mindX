@@ -1,0 +1,30 @@
+{
+  "agent_id": "coordinator_agent_main",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 4,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Top processes: coordinator_interaction(4)",
+      "Peak activity hour: 12:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 4
+        },
+        "process_distribution": {
+          "coordinator_interaction": 4
+        },
+        "total_memories": 4,
+        "timestamp": "2026-04-12T12:45:51.719031"
+      }
+    ]
+  },
+  "promoted_at": "2026-04-12T12:45:51.719045",
+  "promotion_criteria": {
+    "pattern_threshold": 2,
+    "days_analyzed": 7
+  }
+}

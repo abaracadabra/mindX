@@ -42,6 +42,10 @@ EventKind = Literal[
     "improvement.proposed",  # backlog item added
     "improvement.executed",  # campaign run
     "agent.interact",        # explicit cross-agent call
+    "library.discover",      # external library awareness / adoption decision
+    "admin.shadow_overlord_action",  # bankon_vault.shadow_overlord — privileged op (auth/provision/clear/sign/release)
+    "admin.cabinet.provisioned",     # 8-wallet cabinet minted under company namespace
+    "admin.cabinet.cleared",         # cabinet wiped under shadow-overlord authority
 ]
 
 EVENT_KINDS: tuple[str, ...] = tuple(EventKind.__args__)  # type: ignore[attr-defined]

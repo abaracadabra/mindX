@@ -11,11 +11,25 @@
   "groups": {
     "core_command": {
       "description": "The structural substrate — rarely intervenes, always watching",
-      "members": ["pythai_root", "savante_sagi", "suntsu_dojo", "rage_intelligence"]
+      "members": [
+        "pythai_root",
+        "savante_sagi",
+        "suntsu_dojo",
+        "rage_intelligence"
+      ]
     },
     "executive_board": {
       "description": "CEO + Seven Soldiers — strategic decision-making with weighted consensus",
-      "members": ["ceo_agent_main", "coo_operations", "cfo_finance", "cto_technology", "ciso_security", "clo_legal", "cpo_product", "cro_risk"],
+      "members": [
+        "ceo_agent_main",
+        "coo_operations",
+        "cfo_finance",
+        "cto_technology",
+        "ciso_security",
+        "clo_legal",
+        "cpo_product",
+        "cro_risk"
+      ],
       "consensus": {
         "type": "weighted_supermajority",
         "threshold": 0.666,
@@ -34,23 +48,47 @@
     },
     "orchestration": {
       "description": "Core coordination and execution layer",
-      "members": ["mastermind_prime", "coordinator_agent_main", "mindx_agint", "inference_agent_main"]
+      "members": [
+        "mastermind_prime",
+        "coordinator_agent_main",
+        "mindx_agint",
+        "inference_agent_main"
+      ]
     },
     "operational": {
       "description": "Day-to-day system operations",
-      "members": ["guardian_agent_main", "memory_agent_main", "system_state_tracker", "validator_agent_main", "resource_governor"]
+      "members": [
+        "guardian_agent_main",
+        "memory_agent_main",
+        "system_state_tracker",
+        "validator_agent_main",
+        "resource_governor"
+      ]
     },
     "learning": {
       "description": "Self-improvement and evolution",
-      "members": ["sea_for_mastermind", "automindx_agent_main", "blueprint_agent_mindx_v2", "author_agent", "prediction_agent"]
+      "members": [
+        "sea_for_mastermind",
+        "automindx_agent_main",
+        "blueprint_agent_mindx_v2",
+        "author_agent",
+        "prediction_agent"
+      ]
     },
     "lifecycle": {
       "description": "System boot, replication, and shutdown",
-      "members": ["startup_agent", "replication_agent", "shutdown_agent"]
+      "members": [
+        "startup_agent",
+        "replication_agent",
+        "shutdown_agent"
+      ]
     },
     "infrastructure": {
       "description": "Inference and resource management",
-      "members": ["vllm_agent", "inference_discovery"]
+      "members": [
+        "vllm_agent",
+        "inference_discovery"
+      ]
     }
   },
   "agents": {
@@ -63,7 +101,12 @@
       "reputation_score": 5000,
       "bona_fide_balance": 1,
       "inference_provider": null,
-      "capabilities": ["identity_verification", "challenge_response", "access_control", "threat_detection"]
+      "capabilities": [
+        "identity_verification",
+        "challenge_response",
+        "access_control",
+        "threat_detection"
+      ]
     },
     "coordinator_agent_main": {
       "role": "Service Bus Kernel — pub/sub routing, task queues, rate limiting",
@@ -74,7 +117,12 @@
       "reputation_score": 6000,
       "bona_fide_balance": 1,
       "inference_provider": null,
-      "capabilities": ["pub_sub", "task_routing", "rate_limiting", "agent_registry"]
+      "capabilities": [
+        "pub_sub",
+        "task_routing",
+        "rate_limiting",
+        "agent_registry"
+      ]
     },
     "mastermind_prime": {
       "role": "Strategic Executive — orchestration center, directive management",
@@ -85,7 +133,12 @@
       "reputation_score": 8000,
       "bona_fide_balance": 1,
       "inference_provider": null,
-      "capabilities": ["strategic_planning", "campaign_execution", "agent_creation", "directive_management"]
+      "capabilities": [
+        "strategic_planning",
+        "campaign_execution",
+        "agent_creation",
+        "directive_management"
+      ]
     },
     "mindx_agint": {
       "role": "Cognitive Core — P-O-D-A loop, perception-orientation-decision-action",
@@ -96,7 +149,13 @@
       "reputation_score": 7500,
       "bona_fide_balance": 1,
       "inference_provider": null,
-      "capabilities": ["cognitive_loop", "perception", "orientation", "decision", "action"]
+      "capabilities": [
+        "cognitive_loop",
+        "perception",
+        "orientation",
+        "decision",
+        "action"
+      ]
     },
     "ceo_agent_main": {
       "role": "Board-Level Governance — strategic planning, resource allocation, shutdown authority",
@@ -109,8 +168,15 @@
       "inference_provider": "ollama",
       "local_model": "qwen3:0.6b",
       "cloud_model": "glm-5.1",
-      "cloud_fallback": ["glm-5"],
-      "capabilities": ["strategic_oversight", "resource_allocation", "emergency_halt", "boardroom_chair"]
+      "cloud_fallback": [
+        "glm-5"
+      ],
+      "capabilities": [
+        "strategic_oversight",
+        "resource_allocation",
+        "emergency_halt",
+        "boardroom_chair"
+      ]
     },
     "sea_for_mastermind": {
       "role": "Strategic Evolution — 4-phase audit-driven self-improvement campaigns",
@@ -121,7 +187,12 @@
       "reputation_score": 6500,
       "bona_fide_balance": 1,
       "inference_provider": null,
-      "capabilities": ["audit", "blueprint", "improvement_execution", "validation"]
+      "capabilities": [
+        "audit",
+        "blueprint",
+        "improvement_execution",
+        "validation"
+      ]
     },
     "blueprint_agent_mindx_v2": {
       "role": "Architecture Planning — system design, blueprint generation",
@@ -132,7 +203,11 @@
       "reputation_score": 6000,
       "bona_fide_balance": 1,
       "inference_provider": null,
-      "capabilities": ["blueprint_generation", "architecture_design", "code_generation"]
+      "capabilities": [
+        "blueprint_generation",
+        "architecture_design",
+        "code_generation"
+      ]
     },
     "inference_agent_main": {
       "role": "Inference Optimization — model selection, provider routing, performance tuning",
@@ -143,7 +218,12 @@
       "reputation_score": 5500,
       "bona_fide_balance": 1,
       "inference_provider": null,
-      "capabilities": ["model_selection", "provider_routing", "budget_tracking", "performance_tuning"]
+      "capabilities": [
+        "model_selection",
+        "provider_routing",
+        "budget_tracking",
+        "performance_tuning"
+      ]
     },
     "memory_agent_main": {
       "role": "Persistent Memory — STM/LTM promotion, belief system integration",
@@ -154,7 +234,12 @@
       "reputation_score": 6000,
       "bona_fide_balance": 1,
       "inference_provider": null,
-      "capabilities": ["memory_storage", "stm_ltm_promotion", "belief_integration", "godel_logging"]
+      "capabilities": [
+        "memory_storage",
+        "stm_ltm_promotion",
+        "belief_integration",
+        "godel_logging"
+      ]
     },
     "validator_agent_main": {
       "role": "Validation Authority — output verification, quality assurance",
@@ -165,7 +250,11 @@
       "reputation_score": 5500,
       "bona_fide_balance": 1,
       "inference_provider": null,
-      "capabilities": ["output_validation", "quality_assurance", "schema_verification"]
+      "capabilities": [
+        "output_validation",
+        "quality_assurance",
+        "schema_verification"
+      ]
     },
     "system_state_tracker": {
       "role": "State Observer — system snapshots, health monitoring, metrics",
@@ -176,7 +265,11 @@
       "reputation_score": 5000,
       "bona_fide_balance": 1,
       "inference_provider": null,
-      "capabilities": ["state_capture", "health_monitoring", "metrics_collection"]
+      "capabilities": [
+        "state_capture",
+        "health_monitoring",
+        "metrics_collection"
+      ]
     },
     "automindx_agent_main": {
       "role": "Autonomous Operations — self-directed task execution",
@@ -187,14 +280,18 @@
       "reputation_score": 5500,
       "bona_fide_balance": 1,
       "inference_provider": null,
-      "capabilities": ["autonomous_execution", "persona_management", "inft_export"]
+      "capabilities": [
+        "autonomous_execution",
+        "persona_management",
+        "inft_export"
+      ]
     }
   },
   "soldiers": {
     "coo_operations": {
       "role": "Chief Operating Officer — operational feasibility, timelines, resources",
       "group": "executive_board",
-      "eth_address": null,
+      "eth_address": "0x87de19D162Ff39de0487F4B8DEaEec84c3Dda112",
       "algo_address": null,
       "verification_tier": 1,
       "reputation_score": 6000,
@@ -202,14 +299,20 @@
       "inference_provider": "gemini",
       "local_model": "qwen3:0.6b",
       "cloud_model": "gemini-3-flash-preview",
-      "cloud_fallback": ["ministral-3:14b"],
+      "cloud_fallback": [
+        "ministral-3:14b"
+      ],
       "weight": 1.0,
-      "capabilities": ["operational_assessment", "resource_planning", "timeline_analysis"]
+      "capabilities": [
+        "operational_assessment",
+        "resource_planning",
+        "timeline_analysis"
+      ]
     },
     "cfo_finance": {
       "role": "Chief Financial Officer — cost/benefit, budget, treasury (18dp precision)",
       "group": "executive_board",
-      "eth_address": null,
+      "eth_address": "0x2B9A615348D97Dd9222e44ACE24BBA197d54a8C1",
       "algo_address": null,
       "verification_tier": 1,
       "reputation_score": 6000,
@@ -217,14 +320,20 @@
       "inference_provider": "groq",
       "local_model": "deepseek-coder:1.3b",
       "cloud_model": "qwen3.5:9b",
-      "cloud_fallback": ["minimax-m2"],
+      "cloud_fallback": [
+        "minimax-m2"
+      ],
       "weight": 1.0,
-      "capabilities": ["financial_analysis", "cost_estimation", "treasury_management"]
+      "capabilities": [
+        "financial_analysis",
+        "cost_estimation",
+        "treasury_management"
+      ]
     },
     "cto_technology": {
       "role": "Chief Technology Officer — technical feasibility, architecture, infrastructure",
       "group": "executive_board",
-      "eth_address": null,
+      "eth_address": "0x1e35307804A570Ac4f021f1093C7b785b490A249",
       "algo_address": null,
       "verification_tier": 1,
       "reputation_score": 6000,
@@ -232,14 +341,21 @@
       "inference_provider": "ollama",
       "local_model": "qwen3:1.7b",
       "cloud_model": "qwen3-coder-next",
-      "cloud_fallback": ["devstral-2", "glm-4.7"],
+      "cloud_fallback": [
+        "devstral-2",
+        "glm-4.7"
+      ],
       "weight": 1.0,
-      "capabilities": ["architecture_review", "infrastructure_assessment", "technical_feasibility"]
+      "capabilities": [
+        "architecture_review",
+        "infrastructure_assessment",
+        "technical_feasibility"
+      ]
     },
     "ciso_security": {
       "role": "Chief Information Security Officer — security posture, attack surface, zero trust (1.2x veto)",
       "group": "executive_board",
-      "eth_address": null,
+      "eth_address": "0xABCb28E8d1C1f37BDD5d1514a3899db826f98044",
       "algo_address": null,
       "verification_tier": 1,
       "reputation_score": 6000,
@@ -247,14 +363,21 @@
       "inference_provider": "anthropic",
       "local_model": "deepseek-r1:1.5b",
       "cloud_model": "nemotron-3-super",
-      "cloud_fallback": ["qwen3-next", "nemotron-3-nano:30b"],
+      "cloud_fallback": [
+        "qwen3-next",
+        "nemotron-3-nano:30b"
+      ],
       "weight": 1.2,
-      "capabilities": ["security_assessment", "threat_modeling", "access_control"]
+      "capabilities": [
+        "security_assessment",
+        "threat_modeling",
+        "access_control"
+      ]
     },
     "clo_legal": {
       "role": "Chief Legal Officer — legal risk, licensing, attribution (0.8x advisory)",
       "group": "executive_board",
-      "eth_address": null,
+      "eth_address": "0x34C733C33C7c00737b9aF98cf86F22d691ec72dF",
       "algo_address": null,
       "verification_tier": 1,
       "reputation_score": 6000,
@@ -262,14 +385,20 @@
       "inference_provider": "mistral",
       "local_model": "qwen3:0.6b",
       "cloud_model": "devstral-small-2:24b",
-      "cloud_fallback": ["cogito-2.1"],
+      "cloud_fallback": [
+        "cogito-2.1"
+      ],
       "weight": 0.8,
-      "capabilities": ["legal_analysis", "compliance_review", "licensing_assessment"]
+      "capabilities": [
+        "legal_analysis",
+        "compliance_review",
+        "licensing_assessment"
+      ]
     },
     "cpo_product": {
       "role": "Chief Product Officer — user value, market fit, scope impact across PYTHAI properties",
       "group": "executive_board",
-      "eth_address": null,
+      "eth_address": "0x0a8901744795D621Cfb8e66510D3AeAac48Fa2C3",
       "algo_address": null,
       "verification_tier": 1,
       "reputation_score": 6000,
@@ -277,14 +406,21 @@
       "inference_provider": "together",
       "local_model": "qwen3.5:2b",
       "cloud_model": "gemma4:31b",
-      "cloud_fallback": ["kimi-k2.5", "minimax-m2.5"],
+      "cloud_fallback": [
+        "kimi-k2.5",
+        "minimax-m2.5"
+      ],
       "weight": 1.0,
-      "capabilities": ["product_assessment", "market_analysis", "scope_evaluation"]
+      "capabilities": [
+        "product_assessment",
+        "market_analysis",
+        "scope_evaluation"
+      ]
     },
     "cro_risk": {
       "role": "Chief Risk Officer — risk magnitude, reversibility, blast radius, cascading failures (1.2x veto)",
       "group": "executive_board",
-      "eth_address": null,
+      "eth_address": "0x3b4bca3F7dA596aeba1a78E5bd31728777C127a9",
       "algo_address": null,
       "verification_tier": 1,
       "reputation_score": 6000,
@@ -292,9 +428,16 @@
       "inference_provider": "deepseek",
       "local_model": "qwen3:4b",
       "cloud_model": "deepseek-v3.2",
-      "cloud_fallback": ["minimax-m2.7", "rnj-1"],
+      "cloud_fallback": [
+        "minimax-m2.7",
+        "rnj-1"
+      ],
       "weight": 1.2,
-      "capabilities": ["risk_assessment", "blast_radius_analysis", "rollback_planning"]
+      "capabilities": [
+        "risk_assessment",
+        "blast_radius_analysis",
+        "rollback_planning"
+      ]
     }
   },
   "soldier_provider_map": {

@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AUTOMINDx — The Origin of mindX | Augmentic General Language Model</title>
+<meta name="description" content="AUTOMINDx is the origin of mindX — an autonomous multi-agent intelligence system implementing AGLM (Augmentic General Language Model) with machine dreaming, auto-tuning, and digital long-term memory. NFT provenance on Polygon.">
+<meta name="keywords" content="AUTOMINDx, mindX, augmentic, AGLM, agenticplace, BANKON, pythai, autonomous AI, machine dreaming, auto-tuning, digital long-term memory, NFT, Polygon, Godel machine, multi-agent">
+<meta name="author" content="Professor Codephreak">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://mindx.pythai.net/automindx">
+<meta property="og:type" content="website">
+<meta property="og:title" content="AUTOMINDx — The Origin of mindX">
+<meta property="og:description" content="AUTOMINDx: machine dreaming, auto-tuning, digital long-term memory. The AGLM that became mindX — 20+ sovereign agents, BANKON vault, DAIO governance, augmentic intelligence.">
+<meta property="og:url" content="https://mindx.pythai.net/automindx">
+<meta property="og:site_name" content="mindX">
+<meta property="og:image" content="https://mindx.pythai.net/favicon-32.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="AUTOMINDx — The Origin of mindX">
+<meta name="twitter:description" content="Machine dreaming, auto-tuning, digital long-term memory. The AGLM that became mindX — autonomous multi-agent intelligence with NFT provenance on Polygon.">
+<meta name="twitter:image" content="https://mindx.pythai.net/favicon-32.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"AUTOMINDx — The Origin of mindX","url":"https://mindx.pythai.net/automindx","description":"AUTOMINDx: the Augmentic General Language Model (AGLM) origin of mindX autonomous multi-agent intelligence system.","isPartOf":{"@type":"WebSite","name":"mindX","url":"https://mindx.pythai.net"}}</script>
+<link rel="icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter','SF Pro Text','Segoe UI',system-ui,-apple-system,sans-serif;background:#030608;color:#b0b8c4;min-height:100vh;overflow-x:hidden}
+canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
+.scanlines{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);mix-blend-mode:multiply}
+.page{position:relative;z-index:2;pointer-events:none}
+.page .nav,.page .section,.page .hero,.page .links,.page .footer,.page .nft-badge,.page a,.page button,.page .card,.page .nft-card{pointer-events:auto}
+.nav{display:flex;align-items:center;justify-content:center;gap:16px;padding:16px 28px;font-size:14px;border-bottom:1px solid rgba(210,168,255,.12);background:rgba(3,6,8,.94);position:sticky;top:0;z-index:10;backdrop-filter:blur(16px);flex-wrap:wrap}
+.nav .brand{color:#e6edf3;font-weight:700;font-family:'SF Mono',monospace;font-size:22px;margin-right:20px;letter-spacing:1.5px;text-shadow:0 0 24px rgba(210,168,255,.3)}.nav .brand b{color:#d2a8ff}
+.nav a{color:#8b949e;text-decoration:none;transition:all .2s;padding:6px 14px;border-radius:4px;border:1px solid transparent;font-size:13px}.nav a:hover{color:#d2a8ff;background:rgba(210,168,255,.08);border-color:rgba(210,168,255,.2);text-shadow:0 0 10px rgba(210,168,255,.3)}
+.hero{display:flex;flex-direction:column;align-items:center;padding:60px 20px 40px;text-align:center}
+.brain-wrap{position:relative;margin-bottom:24px;filter:drop-shadow(0 0 40px rgba(210,168,255,.15)) drop-shadow(0 0 80px rgba(88,166,255,.08));transition:transform .1s ease-out;transform-style:preserve-3d;perspective:800px}
+canvas#brain{display:block}
+.hero h1{font-size:52px;font-weight:700;letter-spacing:3px;font-family:'SF Mono','Fira Code',monospace;margin-bottom:8px;text-shadow:0 0 30px rgba(210,168,255,.2),0 0 60px rgba(88,166,255,.1)}
+.hero h1 .auto{color:#d2a8ff}.hero h1 .mind{color:#e6edf3}.hero h1 .x{color:#58a6ff}
+.hero .tagline{font-size:14px;color:#6e7681;max-width:600px;line-height:1.7;margin-bottom:12px}
+.hero .nft-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(210,168,255,.04);border:1px solid rgba(210,168,255,.15);border-radius:16px;font-size:9px;color:#d2a8ff;margin-top:8px;backdrop-filter:blur(8px);transition:all .3s}
+.hero .nft-badge:hover{border-color:rgba(210,168,255,.4);box-shadow:0 0 20px rgba(210,168,255,.1)}
+.hero .nft-badge a{color:#d2a8ff}
+.section{max-width:820px;margin:0 auto;padding:36px 24px}
+.section h2{font-size:20px;color:#e6edf3;margin-bottom:14px;font-weight:700;letter-spacing:.5px;text-shadow:0 0 12px rgba(210,168,255,.1)}.section h2 .accent{color:#d2a8ff}
+.section p{font-size:12px;line-height:1.9;margin-bottom:14px;color:#8b949e}
+.section p strong{color:#e6edf3;text-shadow:0 0 6px rgba(210,168,255,.15)}
+.divider{border:none;height:1px;background:linear-gradient(90deg,transparent,rgba(210,168,255,.15),rgba(88,166,255,.1),transparent);margin:40px auto;max-width:820px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:24px 0}
+@media(max-width:700px){.cards{grid-template-columns:1fr}}
+.card{background:rgba(8,12,18,.8);border:1px solid rgba(210,168,255,.08);border-radius:8px;padding:22px;position:relative;overflow:hidden;transition:all .3s;backdrop-filter:blur(4px)}
+.card:hover{border-color:rgba(210,168,255,.3);transform:translateY(-3px);box-shadow:0 8px 32px rgba(0,0,0,.4),0 0 20px rgba(210,168,255,.05)}
+.card h3{font-size:13px;color:#e6edf3;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.card h3 .ic{font-size:18px;filter:drop-shadow(0 0 6px rgba(210,168,255,.4))}
+.card p{font-size:10px;color:#6e7681;line-height:1.7}
+.card .shimmer{position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(210,168,255,.02),transparent);animation:shimmer 5s ease-in-out infinite}
+.card .circuit{position:absolute;bottom:0;right:0;width:60px;height:60px;opacity:.03;background:repeating-linear-gradient(45deg,#d2a8ff 0px,#d2a8ff 1px,transparent 1px,transparent 8px)}
+@keyframes shimmer{0%{left:-100%}40%{left:100%}100%{left:100%}}
+.card:nth-child(2) .shimmer{animation-delay:1.8s}.card:nth-child(3) .shimmer{animation-delay:3.6s}
+.nft-card{background:rgba(8,12,18,.8);border:1px solid rgba(210,153,34,.15);border-radius:8px;padding:24px;margin:24px 0;position:relative;overflow:hidden;backdrop-filter:blur(4px);transition:all .3s}
+.nft-card:hover{border-color:rgba(210,153,34,.4);box-shadow:0 0 30px rgba(210,153,34,.06)}
+.nft-card h3{color:#d29922;font-size:14px;margin-bottom:10px;text-shadow:0 0 10px rgba(210,153,34,.2)}
+.nft-card .field{font-size:9px;color:#4a5060;margin:5px 0;font-family:'SF Mono',monospace;word-break:break-all}
+.nft-card .field span{color:#8b949e}
+.nft-card a{color:#d29922;text-decoration:none;font-size:10px;transition:text-shadow .2s}.nft-card a:hover{text-decoration:underline;text-shadow:0 0 8px rgba(210,153,34,.3)}
+.nft-card .badge{display:inline-block;padding:3px 10px;border-radius:4px;font-size:7px;font-weight:700;background:rgba(210,153,34,.08);color:#d29922;border:1px solid rgba(210,153,34,.15);margin-top:10px;letter-spacing:.5px}
+.nft-card .circuit{position:absolute;top:0;left:0;width:80px;height:80px;opacity:.02;background:repeating-linear-gradient(-45deg,#d29922 0px,#d29922 1px,transparent 1px,transparent 6px)}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:10px}
+th{text-align:left;padding:8px 10px;border-bottom:2px solid rgba(210,168,255,.12);color:#d2a8ff;font-size:9px;text-transform:uppercase;letter-spacing:.8px}
+td{padding:6px 10px;border-bottom:1px solid rgba(26,31,46,.2);color:#8b949e}
+tr:hover td{background:rgba(210,168,255,.02)}
+td:first-child{color:#6e7681}td:last-child{color:#e6edf3}
+.links{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;padding:40px 20px 60px}
+.links a{padding:10px 22px;background:rgba(210,168,255,.04);border:1px solid rgba(210,168,255,.12);border-radius:6px;color:#d2a8ff;font-size:11px;text-decoration:none;transition:all .3s;backdrop-filter:blur(4px)}
+.links a:hover{background:rgba(210,168,255,.1);border-color:#d2a8ff;box-shadow:0 0 24px rgba(210,168,255,.08);text-shadow:0 0 8px rgba(210,168,255,.3)}
+.links a.green{color:#3fb950;border-color:rgba(63,185,80,.12)}.links a.green:hover{border-color:#3fb950;box-shadow:0 0 24px rgba(63,185,80,.08)}
+.links a.cyan{color:#58a6ff;border-color:rgba(88,166,255,.12)}.links a.cyan:hover{border-color:#58a6ff;box-shadow:0 0 24px rgba(88,166,255,.08)}
+.footer{text-align:center;padding:24px;font-size:8px;color:#3d424d;border-top:1px solid rgba(210,168,255,.05)}
+.footer a{color:#d2a8ff;text-decoration:none}
+.interact-hint{position:fixed;bottom:50px;left:0;right:0;text-align:center;font-size:9px;color:#3d424d;z-index:3;transition:opacity 2s;letter-spacing:.5px}
+code{background:rgba(22,27,34,.85);padding:2px 6px;border-radius:3px;color:#7ee787;font-size:10px;font-family:'SF Mono','Fira Code',monospace}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="scanlines"></div>
+<div class="page">
+<div class="nav">
+  <span class="brand">AUTO<b>MIND</b>x</span>
+  <a href="/">dashboard</a><a href="/docs.html">docs</a><a href="/book">book</a><a href="/journal">journal</a><a href="/redoc">api</a><a href="/dojo/standings">dojo</a><a href="/inference/status">inference</a>
+</div>
+<div class="hero">
+  <div class="brain-wrap"><canvas id="brain" width="380" height="475"></canvas></div>
+  <h1><span class="auto">AUTO</span><span class="mind">MIND</span><span class="x">x</span></h1>
+  <div class="tagline">Executable autonomy. On-chain verified. The origin of mindX.</div>
+  <div class="nft-badge">
+    <span>&#x2b22;</span> Minted on Polygon
+    <a href="https://opensea.io/item/polygon/0x2953399124f0cbb46d2cbacd8a89cf0599974963/7675060345879017836756807061815685501584179421371855056758523065871282208769" target="_blank">OpenSea &rarr;</a>
+  </div>
+</div>
+<hr class="divider">
+<div class="section">
+  <h2>The <span class="accent">Vision</span></h2>
+  <p>Imagine a world where complex deployment procedures become a word, a gesture or an utterance. Where intricate systems are effortlessly deployed as a singular event instance. <strong>AUTOMINDx</strong> integrates Automated Intelligent Machine Learning (AIML) technology with Automated Intelligent Machine Learning (AIMLx) deployment workflow. Embrace the future of software deployment unlocking new levels of productivity, scalability, integrity, and reliability.</p>
+  <p>Powered by cutting-edge machine learning models, AUTOMINDx optimizes the deployment process autonomously adapting to diverse environments ensuring efficiency at scale. Gone are tedious tasks replaced by custom configurations provided by the <strong>AUTOMINDx UIUX AIML interop technology stack</strong>. Empower yourself with a team of machine learning agents focusing your innovation while driving your project forward.</p>
+</div>
+<hr class="divider">
+<div class="section">
+  <h2>AGLM — <span class="accent">A General Learning Model</span></h2>
+  <div class="cards">
+    <div class="card"><div class="shimmer"></div><div class="circuit"></div><h3><span class="ic">&#x2728;</span> Machine Dreaming</h3><p>Enables AI systems to generate imaginative and creative outputs beyond their training data distribution. Applications in art, music, design, and autonomous architecture.</p></div>
+    <div class="card"><div class="shimmer"></div><div class="circuit"></div><h3><span class="ic">&#x2699;</span> Auto-Tuning</h3><p>Optimises hyper-parameters and model architectures autonomously, leading to enhanced performance without manual tuning.</p></div>
+    <div class="card"><div class="shimmer"></div><div class="circuit"></div><h3><span class="ic">&#x1f9e0;</span> Digital Long-Term Memory</h3><p>AI systems store and retrieve learned knowledge, enabling continual learning and retention over time. Powered by pgvectorscale and blockchain trust.</p></div>
+  </div>
+</div>
+<hr class="divider">
+<div class="section">
+  <h2>NFT <span class="accent">Provenance</span></h2>
+  <div class="nft-card"><div class="circuit"></div>
+    <h3>&#x2b22; AUTOMINDx — Original Visual Identity</h3>
+    <div class="field">Contract: <span>0x2953399124f0cbb46d2cbacd8a89cf0599974963</span></div>
+    <div class="field">Token ID: <span>76750603458790178367568...282208769</span></div>
+    <div class="field">Network: <span>Polygon (PoS)</span></div>
+    <a href="https://opensea.io/item/polygon/0x2953399124f0cbb46d2cbacd8a89cf0599974963/7675060345879017836756807061815685501584179421371855056758523065871282208769" target="_blank">View on OpenSea &rarr;</a>&ensp;
+    <a href="https://polygonscan.com/token/0x2953399124f0cbb46d2cbacd8a89cf0599974963" target="_blank">PolygonScan &rarr;</a>
+    <div class="badge">POLYGON NFT</div>
+  </div>
+</div>
+<hr class="divider">
+<div class="section">
+  <h2>From AUTOMINDx <span class="accent">to mindX</span></h2>
+  <table>
+    <tr><th>AUTOMINDx Concept</th><th>mindX Implementation</th></tr>
+    <tr><td>Automated deployment as utterance</td><td>BDI cognitive architecture — directive &rarr; execution</td></tr>
+    <tr><td>Machine learning agent teams</td><td>20 sovereign agents with BANKON vault identities</td></tr>
+    <tr><td>AGLM general learning</td><td>Strategic Evolution Agent + Improvement Journal</td></tr>
+    <tr><td>Machine dreaming</td><td>Autonomous improvement loop — mindX imagines its own future</td></tr>
+    <tr><td>Auto-tuning</td><td>Resource Governor + vLLM/Ollama inference optimization</td></tr>
+    <tr><td>Digital long-term memory</td><td>pgvectorscale + RAGE semantic search (1500+ memories)</td></tr>
+    <tr><td>Blockchain trust</td><td>Ethereum-compatible wallets, ECDSA challenge-response</td></tr>
+    <tr><td>UIUX interop</td><td>DAIO governance — Boardroom, Dojo, CEO Agent consensus</td></tr>
+    <tr><td>Deployment workflow</td><td>AuthorAgent — The Book of mindX, lunar publishing cycle</td></tr>
+  </table>
+</div>
+<hr class="divider">
+<div class="section">
+  <h2>time.<span class="accent">oracle</span></h2>
+  <div class="cards">
+    <div class="card"><div class="shimmer"></div><div class="circuit"></div><h3><span class="ic">&#x1f319;</span> lunar.oracle</h3><p>Moon phase from astronomical calculation, verified against timeanddate.com. Drives the 28-day Book publishing cycle.</p></div>
+    <div class="card"><div class="shimmer"></div><div class="circuit"></div><h3><span class="ic">&#x26d3;</span> blocktime.oracle</h3><p>Blockchain block timestamps via JSON-RPC. Immutable, decentralized, correlated against CPU time.</p></div>
+    <div class="card"><div class="shimmer"></div><div class="circuit"></div><h3><span class="ic">&#x2600;</span> solar + cpu</h3><p>Solar position for the server location. CPU monotonic clock as the heartbeat baseline.</p></div>
+  </div>
+</div>
+<div class="links">
+  <a href="/">dashboard</a><a href="/docs.html">documentation</a><a href="/book" class="cyan">the book</a><a href="/doc/AUTOMINDX_ORIGIN">origin story</a>
+  <a href="https://agenticplace.pythai.net" target="_blank" class="green">AgenticPlace</a><a href="/redoc">API reference</a>
+  <a href="https://opensea.io/item/polygon/0x2953399124f0cbb46d2cbacd8a89cf0599974963/7675060345879017836756807061815685501584179421371855056758523065871282208769" target="_blank">OpenSea NFT</a>
+  <a href="https://github.com/cypherpunk2048" target="_blank">cypherpunk2048</a>
+</div>
+<div class="footer"><a href="/">mind<b>X</b></a> &middot; <a href="/automindx">AUTOMINDx</a> &middot; <a href="https://github.com/cypherpunk2048" target="_blank">cypherpunk2048</a> &middot; mindx.pythai.net &middot; &copy; Professor Codephreak</div>
+</div>
+<div class="interact-hint" id="hint">click &middot; drag &middot; scroll &middot; double-click &middot; shift+click</div>
+
+<script>
+// ── Constants ──
+const PHI = (1 + Math.sqrt(5)) / 2;
+const TAU = Math.PI * 2;
+const FIB = [1,1,2,3,5,8,13,21,34,55,89,144,233,377];
+const GOLDEN_ANGLE = TAU / (PHI * PHI); // ~137.5 degrees
+
+// ── Inline brain renderer (no external dependency) ──
+(function(){
+const bc = document.getElementById('brain');
+if (!bc) return;
+const BW = 380, BH = 475;
+bc.width = BW; bc.height = BH;
+const b = bc.getContext('2d'), sc = BW / 256;
+const bCenter = {x: BW/2, y: BH*.36}, bRX = 90*sc, bRY = 65*sc;
+const sulci = [
+  [{x:0,y:-55},{x:-5,y:-30},{x:5,y:-5},{x:-3,y:20},{x:0,y:45}],
+  [{x:-70,y:0},{x:-50,y:-15},{x:-25,y:-10},{x:-10,y:5},{x:5,y:15}],
+  [{x:70,y:0},{x:50,y:-15},{x:25,y:-10},{x:10,y:5},{x:-5,y:15}],
+  [{x:-60,y:-30},{x:-40,y:-40},{x:-15,y:-45},{x:0,y:-40}],
+  [{x:60,y:-30},{x:40,y:-40},{x:15,y:-45},{x:0,y:-40}],
+  [{x:-55,y:20},{x:-35,y:10},{x:-20,y:25},{x:-5,y:35}],
+  [{x:55,y:20},{x:35,y:10},{x:20,y:25},{x:5,y:35}],
+  [{x:-40,y:35},{x:-15,y:45},{x:15,y:45},{x:40,y:35}],
+].map(p=>p.map(v=>({x:v.x*sc,y:v.y*sc})));
+const circuits = [
+  [{x:-10,y:-50},{x:-20,y:-30},{x:-35,y:-15},{x:-55,y:-5},{x:-65,y:10},{x:-50,y:25},{x:-30,y:35}],
+  [{x:10,y:-50},{x:25,y:-25},{x:40,y:-10},{x:55,y:5},{x:45,y:20},{x:25,y:30}],
+  [{x:-30,y:0},{x:-10,y:5},{x:10,y:5},{x:30,y:0}],
+  [{x:-45,y:-25},{x:-30,y:-20},{x:-20,y:-5},{x:-25,y:15}],
+  [{x:45,y:-25},{x:30,y:-20},{x:20,y:-5},{x:25,y:15}],
+  [{x:0,y:-55},{x:0,y:-30},{x:0,y:0},{x:0,y:30},{x:0,y:50}],
+].map(p=>p.map(v=>({x:v.x*sc,y:v.y*sc})));
+const cNodes = [{x:-35,y:-15},{x:35,y:-15},{x:0,y:-30},{x:-55,y:5},{x:55,y:5},{x:0,y:0},{x:-25,y:25},{x:25,y:25},{x:0,y:45},{x:-45,y:-30},{x:45,y:-30}].map(p=>({x:p.x*sc,y:p.y*sc,ph:Math.random()*TAU}));
+function brainFrame(t){
+  b.clearRect(0,0,BW,BH);
+  const bx=bCenter.x,by=bCenter.y;
+  // Neck
+  b.beginPath();b.moveTo(bx-28*sc,by+65*sc);b.quadraticCurveTo(bx-30*sc,BH*.85,bx-22*sc,BH*.95);
+  b.lineTo(bx+22*sc,BH*.95);b.quadraticCurveTo(bx+30*sc,BH*.85,bx+28*sc,by+65*sc);b.closePath();
+  const ng=b.createLinearGradient(bx,by+65*sc,bx,BH);ng.addColorStop(0,'rgba(180,195,215,.25)');ng.addColorStop(1,'rgba(140,155,175,.08)');
+  b.fillStyle=ng;b.fill();
+  // Face
+  b.beginPath();b.ellipse(bx,by+35*sc,38*sc,42*sc,0,0,TAU);
+  const fg=b.createRadialGradient(bx,by+25*sc,0,bx,by+35*sc,42*sc);fg.addColorStop(0,'rgba(195,210,230,.2)');fg.addColorStop(.7,'rgba(170,185,205,.12)');fg.addColorStop(1,'rgba(140,155,175,.04)');
+  b.fillStyle=fg;b.fill();
+  // Eyes
+  b.globalAlpha=.15;b.beginPath();b.ellipse(bx-14*sc,by+28*sc,6*sc,2.5*sc,0,0,TAU);b.fillStyle='#58a6ff';b.fill();
+  b.beginPath();b.ellipse(bx+14*sc,by+28*sc,6*sc,2.5*sc,0,0,TAU);b.fill();b.globalAlpha=1;
+  // Nose+lips
+  b.beginPath();b.moveTo(bx,by+35*sc);b.lineTo(bx-2*sc,by+45*sc);b.strokeStyle='rgba(170,185,205,.08)';b.lineWidth=sc;b.stroke();
+  b.beginPath();b.moveTo(bx-10*sc,by+52*sc);b.quadraticCurveTo(bx,by+49*sc,bx+10*sc,by+52*sc);b.strokeStyle='rgba(180,195,215,.1)';b.lineWidth=1.2*sc;b.stroke();
+  // Brain glow
+  const glR=bRX*1.4+Math.sin(t*.002)*4*sc;
+  const bg=b.createRadialGradient(bx,by,bRX*.3,bx,by,glR);bg.addColorStop(0,'rgba(88,166,255,.06)');bg.addColorStop(.5,'rgba(100,220,230,.03)');bg.addColorStop(1,'transparent');
+  b.fillStyle=bg;b.beginPath();b.ellipse(bx,by,glR,glR*.75,0,0,TAU);b.fill();
+  // Brain body
+  b.beginPath();b.ellipse(bx,by,bRX,bRY,0,0,TAU);
+  const brg=b.createRadialGradient(bx-10*sc,by-15*sc,0,bx,by,bRX);brg.addColorStop(0,'rgba(140,210,220,.35)');brg.addColorStop(.4,'rgba(120,190,210,.25)');brg.addColorStop(.7,'rgba(100,170,200,.18)');brg.addColorStop(1,'rgba(80,140,180,.1)');
+  b.fillStyle=brg;b.fill();b.strokeStyle='rgba(100,200,220,.2)';b.lineWidth=1.5*sc;b.stroke();
+  // Sulci
+  b.lineCap='round';b.lineJoin='round';
+  for(const p of sulci){b.beginPath();b.moveTo(bx+p[0].x,by+p[0].y);for(let i=1;i<p.length-1;i++){const xm=(p[i].x+p[i+1].x)/2,ym=(p[i].y+p[i+1].y)/2;b.quadraticCurveTo(bx+p[i].x,by+p[i].y,bx+xm,by+ym)}b.lineTo(bx+p[p.length-1].x,by+p[p.length-1].y);b.strokeStyle='rgba(80,160,190,.2)';b.lineWidth=2*sc;b.stroke();b.strokeStyle='rgba(120,210,230,.08)';b.lineWidth=4*sc;b.stroke()}
+  // Circuits
+  for(let ci=0;ci<circuits.length;ci++){const p=circuits[ci];const pp=((t*.001+ci*1.2)%3)/3;
+  b.beginPath();b.moveTo(bx+p[0].x,by+p[0].y);for(let i=1;i<p.length-1;i++){const xm=(p[i].x+p[i+1].x)/2,ym=(p[i].y+p[i+1].y)/2;b.quadraticCurveTo(bx+p[i].x,by+p[i].y,bx+xm,by+ym)}b.lineTo(bx+p[p.length-1].x,by+p[p.length-1].y);
+  b.strokeStyle='rgba(0,255,120,.15)';b.lineWidth=1.5*sc;b.stroke();b.strokeStyle='rgba(50,255,140,.08)';b.lineWidth=4*sc;b.stroke();
+  const idx=Math.floor(pp*(p.length-1)),fr=pp*(p.length-1)-idx;
+  if(idx<p.length-1){const px=bx+p[idx].x+(p[idx+1].x-p[idx].x)*fr,py=by+p[idx].y+(p[idx+1].y-p[idx].y)*fr;
+  const pg=b.createRadialGradient(px,py,0,px,py,12*sc);pg.addColorStop(0,'rgba(0,255,120,.4)');pg.addColorStop(.5,'rgba(0,255,120,.1)');pg.addColorStop(1,'transparent');
+  b.fillStyle=pg;b.beginPath();b.arc(px,py,12*sc,0,TAU);b.fill();b.beginPath();b.arc(px,py,2*sc,0,TAU);b.fillStyle='rgba(150,255,200,.6)';b.fill()}}
+  // Junction nodes
+  for(const n of cNodes){const nx=bx+n.x,ny=by+n.y,pl=.4+Math.sin(t*.003+n.ph)*.2;b.beginPath();b.arc(nx,ny,6*sc,0,TAU);b.fillStyle=`rgba(0,255,120,${pl*.15})`;b.fill();b.beginPath();b.arc(nx,ny,2.5*sc,0,TAU);b.fillStyle=`rgba(100,255,180,${pl})`;b.fill()}
+  // Top glow
+  const tg=b.createRadialGradient(bx,by-bRY*.5,0,bx,by-bRY,bRX*.8);tg.addColorStop(0,`rgba(88,166,255,${.03+Math.sin(t*.0015)*.015})`);tg.addColorStop(1,'transparent');
+  b.fillStyle=tg;b.beginPath();b.ellipse(bx,by-bRY*.5,bRX*.8,bRY*.5,0,0,TAU);b.fill();
+}
+let baf=0;function bloop(t){if(baf%3===0||!window.matchMedia('(prefers-reduced-motion:reduce)').matches)brainFrame(t);baf++;requestAnimationFrame(bloop)}
+requestAnimationFrame(bloop);
+})();
+
+// ── Canvas + 3D perspective engine ──
+const cv = document.getElementById('bg'), c = cv.getContext('2d');
+let W, H, CX, CY; // center
+let particles = [], spiralNodes = [], edges = [], hexGrid = [], dataDrops = [];
+let mouseX = -1, mouseY = -1, pmouseX = -1, pmouseY = -1;
+let dragging = false, forceRadius = 200, glowI = 0;
+const wells = [], shockwaves = [], trails = [];
+const RM = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+// ── 3D Perspective projection ──
+// z: 0 = deepest (behind screen), 127 = screen plane, 254 = emerging toward viewer
+// Mouse position shifts the virtual camera — creating parallax that reveals depth
+const FOV = 600; // field of view (lower = more dramatic perspective)
+let camX = 0, camY = 0; // camera offset from mouse (smoothed)
+
+function project(x3d, y3d, z3d) {
+  // z3d: 0-254, mapped to depth. 127 = screen plane.
+  // Objects at z>127 come TOWARD the viewer (larger, brighter)
+  // Objects at z<127 recede (smaller, dimmer)
+  const depth = (254 - z3d) / 127; // 2 (far) to 0 (at viewer) — 1 = screen plane
+  const scale = FOV / (FOV + (depth - 1) * 300);
+
+  // Parallax: camera offset shifts objects based on their depth
+  // Near objects shift MORE than far objects (real parallax)
+  const parallaxFactor = (z3d - 127) / 127; // -1 (far) to +1 (near)
+  const px = (x3d - CX + camX * parallaxFactor) * scale + CX;
+  const py = (y3d - CY + camY * parallaxFactor * .6) * scale + CY;
+
+  return {
+    x: px, y: py,
+    scale: scale,
+    opacity: Math.max(0, Math.min(1, .15 + (z3d / 254) * .85)), // far=dim, near=bright
+    z: z3d,
+  };
+}
+
+// ── Hex grid (cyberpunk floor, at z=30 — deep behind screen) ──
+function mkHexGrid() {
+  hexGrid = [];
+  const s = 40, h = s * Math.sqrt(3);
+  for (let row = 0; row * h * .5 < H + h; row++) {
+    for (let col = 0; col * s * 1.5 < W + s * 2; col++) {
+      const x = col * s * 1.5;
+      const y = row * h * .5 + (col % 2 ? h * .25 : 0);
+      hexGrid.push({x3d: x, y3d: y, z3d: 25 + Math.random() * 15, s: s * .5, glow: 0});
+    }
+  }
+}
+
+// ── Fibonacci spiral nodes (full z range: 40-220) ──
+function mkSpiralNodes() {
+  spiralNodes = [];
+  for (let i = 0; i < 55; i++) {
+    const angle = i * GOLDEN_ANGLE;
+    const r = Math.sqrt(i) * 24;
+    // Z depth: inner nodes emerge toward viewer, outer recede
+    const zBase = 127 + Math.cos(i * .4) * 80; // 47 to 207
+    spiralNodes.push({
+      x3d: CX + Math.cos(angle) * r,
+      y3d: CY * .7 + Math.sin(angle) * r * .7,
+      z3d: zBase, zBase,
+      angle, baseR: r,
+      r: 1.5 + (FIB[i % FIB.length] % 5),
+      ph: i * PHI,
+      c: zBase > 170 ? '#d2a8ff' : zBase > 127 ? '#58a6ff' : zBase > 80 ? '#3fb950' : '#d29922',
+      act: 0, idx: i,
+    });
+  }
+}
+
+// ── Particles across full z-depth (0-254) ──
+function mkParticles() {
+  particles = [];
+  const n = Math.min(200, Math.floor(W * H / 4500));
+  for (let i = 0; i < n; i++) {
+    const z = Math.floor(Math.random() * 255); // full 0-254 range
+    particles.push({
+      x3d: Math.random() * W, y3d: Math.random() * H, z3d: z,
+      s: .4 + Math.random() * 1.5,
+      vx: (Math.random() - .5) * .2, vy: (Math.random() - .5) * .15,
+      vz: (Math.random() - .5) * .3, // z-velocity: particles drift in depth
+      ph: Math.random() * TAU,
+      cl: ['rgba(210,168,255,','rgba(88,166,255,','rgba(63,185,80,','rgba(210,153,34,','rgba(0,212,255,'][Math.floor(Math.random()*5)],
+    });
+  }
+}
+
+// ── Data rain at various depths ──
+function mkDataDrops() {
+  dataDrops = [];
+  const cols = Math.floor(W / 18);
+  for (let i = 0; i < Math.min(cols, 50); i++) {
+    dataDrops.push({
+      x3d: Math.random() * W, y3d: Math.random() * H,
+      z3d: 10 + Math.random() * 100, // behind screen
+      speed: .3 + Math.random() * .8,
+      chars: '01アイウエオカキクケコ'.split(''),
+      charIdx: Math.floor(Math.random() * 11),
+      size: 8 + Math.random() * 4,
+    });
+  }
+}
+
+function flashEdge() {
+  if (spiralNodes.length < 2) return;
+  const a = Math.floor(Math.random() * spiralNodes.length);
+  const fibStep = FIB[Math.floor(Math.random() * 7)];
+  const b = (a + fibStep) % spiralNodes.length;
+  edges.push({a, b, l: 1});
+}
+
+function rsz() {
+  W = cv.width = innerWidth; H = cv.height = innerHeight;
+  CX = W / 2; CY = H / 2;
+  mkParticles(); mkSpiralNodes(); mkHexGrid(); mkDataDrops();
+}
+addEventListener('resize', rsz); rsz();
+
+// ── Zone-based interaction engine ──
+// Different screen zones produce different effects:
+//   Top zone (brain area): attraction + node connections, gentle
+//   Middle zone: Fibonacci spiral burst, golden ratio force
+//   Bottom zone: hex grid lighting, repulsion, gravity wells
+//   Edges: vortex pull toward center
+// The zone blending uses golden ratio proportions.
+
+cv.style.pointerEvents = 'auto';
+
+function getZone(x, y) {
+  // Zones divided at golden ratio proportions of screen height
+  const yPct = y / H;
+  if (yPct < 1/PHI/PHI) return 'brain';    // top ~38%
+  if (yPct < 1/PHI) return 'spiral';        // middle ~24%
+  return 'grid';                             // bottom ~38%
+  // Edge detection
+}
+function isEdge(x, y) { return x < 50 || x > W-50 || y < 50 || y > H-50; }
+
+// Event listeners on DOCUMENT so interactions work even over page content
+document.addEventListener('mousemove', e => {
+  pmouseX = mouseX; pmouseY = mouseY; mouseX = e.clientX; mouseY = e.clientY;
+  glowI = Math.min(glowI + .04, 1);
+  if (dragging) addTrail();
+});
+document.addEventListener('mouseleave', () => { mouseX=-1; mouseY=-1; glowI=0; dragging=false; });
+document.addEventListener('touchmove', e => { mouseX=e.touches[0].clientX; mouseY=e.touches[0].clientY; if(dragging)addTrail(); }, {passive:true});
+document.addEventListener('touchstart', e => { dragging=true; mouseX=e.touches[0].clientX; mouseY=e.touches[0].clientY; }, {passive:true});
+document.addEventListener('touchend', () => { dragging=false; });
+document.addEventListener('mousedown', () => { dragging=true; });
+document.addEventListener('mouseup', () => { dragging=false; });
+document.addEventListener('wheel', e => { forceRadius=Math.max(60,Math.min(500,forceRadius-e.deltaY*.4)); }, {passive:true});
+
+document.addEventListener('dblclick', e => {
+  const zone = getZone(e.clientX, e.clientY);
+  if (zone === 'brain') {
+    // Brain zone: burst of thinking edges
+    for (let i = 0; i < 12; i++) setTimeout(flashEdge, i*30);
+    for (const n of spiralNodes) n.act = Math.max(n.act, .8);
+  } else {
+    // Other zones: gravity well
+    wells.push({x:e.clientX, y:e.clientY, life:1});
+  }
+  shockwaves.push({x:e.clientX, y:e.clientY, r:0, life:1, col:zone==='grid'?'rgba(210,153,34,':'rgba(210,168,255,'});
+  for (const h of hexGrid) {
+    const dx=h.x-e.clientX, dy=h.y-e.clientY;
+    if(dx*dx+dy*dy<40000) h.glow=1;
+  }
+  if(wells.length>6)wells.shift();
+});
+
+function addTrail() {
+  if(mouseX>0)trails.push({x:mouseX,y:mouseY,life:1});
+  if(trails.length>60)trails.shift();
+}
+
+document.addEventListener('click', e => {
+  const zone = getZone(e.clientX, e.clientY);
+  const edge = isEdge(e.clientX, e.clientY);
+
+  // Zone-specific shockwave color
+  const cols = {brain:'rgba(88,166,255,', spiral:'rgba(210,168,255,', grid:'rgba(63,185,80,'};
+  shockwaves.push({x:e.clientX, y:e.clientY, r:0, life:1,
+    col: e.shiftKey ? 'rgba(248,81,73,' : (cols[zone]||'rgba(210,168,255,')});
+
+  // Zone-specific particle burst pattern
+  const dir = e.shiftKey ? -1 : 1;
+  if (zone === 'brain') {
+    // Brain zone: circular burst (8 particles, gentle)
+    for (let i = 0; i < 8; i++) {
+      const a = i/8*TAU;
+      particles.push({x:e.clientX+Math.cos(a)*15, y:e.clientY+Math.sin(a)*15, z:.7,
+        s:Math.random()*2+.5, vx:Math.cos(a)*.8*dir, vy:Math.sin(a)*.8*dir,
+        ph:Math.random()*TAU, cl:'rgba(88,166,255,', baseOp:.12});
+    }
+  } else if (zone === 'spiral') {
+    // Spiral zone: golden-angle Fibonacci burst (16 particles, structured)
+    for (let i = 0; i < 16; i++) {
+      const angle = i * GOLDEN_ANGLE;
+      const dist = Math.sqrt(i/16) * 50;
+      const speed = .8 + Math.random()*2;
+      particles.push({x:e.clientX+Math.cos(angle)*dist, y:e.clientY+Math.sin(angle)*dist,
+        z:.5+Math.random()*.5, s:Math.random()*3+.5,
+        vx:Math.cos(angle)*speed*dir, vy:Math.sin(angle)*speed*dir,
+        ph:Math.random()*TAU,
+        cl:['rgba(210,168,255,','rgba(88,166,255,','rgba(63,185,80,','rgba(0,212,255,'][i%4], baseOp:.15});
+    }
+  } else {
+    // Grid zone: hex-pattern burst (Fibonacci count, outward)
+    const count = FIB[6]; // 13 particles
+    for (let i = 0; i < count; i++) {
+      const a = i/count*TAU;
+      const speed = 1 + Math.random()*1.5;
+      particles.push({x:e.clientX, y:e.clientY, z:.3+Math.random()*.4,
+        s:Math.random()*2+.3, vx:Math.cos(a)*speed*dir, vy:Math.sin(a)*speed*dir,
+        ph:Math.random()*TAU, cl:i%2?'rgba(63,185,80,':'rgba(210,153,34,', baseOp:.12});
+    }
+  }
+
+  // Edge vortex: if clicking near edges, pull toward center
+  if (edge) {
+    for (const p of particles) {
+      const dx=W/2-p.x, dy=H/2-p.y, d=Math.sqrt(dx*dx+dy*dy);
+      if(d>1) { p.vx += dx/d*.3; p.vy += dy/d*.3; }
+    }
+  }
+
+  // Activate nodes within zone-scaled radius
+  const zoneRadius = zone==='brain' ? forceRadius*1.5 : zone==='spiral' ? forceRadius : forceRadius*.7;
+  for (const n of spiralNodes) {
+    const dx=e.clientX-n.x, dy=e.clientY-n.y;
+    if(Math.sqrt(dx*dx+dy*dy)<zoneRadius) n.act=1;
+  }
+  for (let i = 0; i < 5; i++) setTimeout(flashEdge, i*40);
+  for (const h of hexGrid) {
+    const dx=h.x-e.clientX, dy=h.y-e.clientY;
+    if(dx*dx+dy*dy<25000) h.glow=Math.max(h.glow,.6);
+  }
+  while(particles.length>350)particles.shift();
+
+  // Shift+click repulsion in any zone
+  if (e.shiftKey) {
+    for (const p of particles) {
+      const dx=p.x-e.clientX, dy=p.y-e.clientY, d=Math.sqrt(dx*dx+dy*dy);
+      if(d<350&&d>1){p.vx+=dx/d*2;p.vy+=dy/d*2}
+    }
+  }
+});
+
+// Fibonacci-timed flashes
+setInterval(flashEdge, 700);
+setInterval(() => { for (let i = 0; i < 8; i++) setTimeout(flashEdge, i * FIB[3] * 10); }, 5000);
+
+// ── Draw ──
+function drawHex(x, y, r) {
+  c.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a = TAU / 6 * i - Math.PI/6;
+    c[i?'lineTo':'moveTo'](x + Math.cos(a)*r, y + Math.sin(a)*r);
+  }
+  c.closePath();
+}
+
+function draw(t) {
+  c.fillStyle = 'rgba(3,6,8,.09)'; c.fillRect(0, 0, W, H);
+
+  // Smooth camera from mouse (parallax viewpoint)
+  if (mouseX > 0) {
+    const targetCamX = (mouseX - CX) * .15;
+    const targetCamY = (mouseY - CY) * .1;
+    camX += (targetCamX - camX) * .04;
+    camY += (targetCamY - camY) * .04;
+  } else {
+    camX *= .98; camY *= .98;
+  }
+
+  // Radial glow (golden ratio proportioned, parallax-shifted)
+  const glowX = CX - camX * .1, glowY = CY * .7 - camY * .1;
+  const gr = c.createRadialGradient(glowX, glowY, 0, glowX, glowY, H/PHI);
+  gr.addColorStop(0, 'rgba(210,168,255,.012)');
+  gr.addColorStop(1/PHI, 'rgba(88,166,255,.006)');
+  gr.addColorStop(1, 'transparent');
+  c.fillStyle = gr; c.fillRect(0, 0, W, H);
+
+  // ── Hex grid floor (projected from z=25-40, deep behind screen) ──
+  for (const h of hexGrid) {
+    h.glow *= .97;
+    const hp = project(h.x3d, h.y3d, h.z3d);
+    if (mouseX > 0) {
+      const dx = hp.x - mouseX, dy = hp.y - mouseY, d2 = dx*dx+dy*dy;
+      if (d2 < forceRadius*forceRadius) h.glow = Math.max(h.glow, .3*(1-d2/(forceRadius*forceRadius)));
+    }
+    if (h.glow > .005) {
+      drawHex(hp.x, hp.y, h.s * hp.scale);
+      c.strokeStyle = `rgba(210,168,255,${h.glow * hp.opacity * .15})`;
+      c.lineWidth = (.6 + h.glow*.5) * hp.scale; c.stroke();
+      if (h.glow > .15) { c.fillStyle = `rgba(210,168,255,${h.glow*.02})`; c.fill(); }
+    }
+  }
+
+  // ── Data rain (projected — deeper drops are smaller/dimmer) ──
+  for (const d of dataDrops) {
+    d.y3d += d.speed;
+    if (d.y3d > H + 20) { d.y3d = -20; d.x3d = Math.random() * W; }
+    if (Math.random() > .95) d.charIdx = Math.floor(Math.random() * d.chars.length);
+    const dp = project(d.x3d, d.y3d, d.z3d);
+    const dOp = dp.opacity * .04;
+    c.font = `${Math.max(6, d.size * dp.scale)}px SF Mono, monospace`;
+    c.fillStyle = `rgba(210,168,255,${dOp})`;
+    c.fillText(d.chars[d.charIdx], dp.x, dp.y);
+    c.fillStyle = `rgba(210,168,255,${dOp * .3})`;
+    c.fillText(d.chars[(d.charIdx+1)%d.chars.length], dp.x, dp.y - d.size*dp.scale);
+  }
+
+  // ── Golden spiral guide (projected at z=127 — screen plane) ──
+  c.beginPath();
+  for (let a = 0; a < TAU * 5; a += .04) {
+    const r = Math.pow(PHI, a / (TAU/4)) * 2.5;
+    const sz = 127 + Math.sin(a * .2) * 30; // spiral undulates in z
+    const sp = project(CX + Math.cos(a+t*.00008)*r, CY*.7 + Math.sin(a+t*.00008)*r*.7, sz);
+    if (a === 0) c.moveTo(sp.x, sp.y); else c.lineTo(sp.x, sp.y);
+    if (r > Math.max(W,H)*.7) break;
+  }
+  c.strokeStyle = `rgba(210,168,255,${.012 + Math.sin(t*.0005)*.006})`; c.lineWidth = .5; c.stroke();
+
+  // ── Particle web + cursor connections drawn during particle pass above ──
+  // (moved into the sorted particle loop for correct depth ordering)
+
+  // ── Particles: 3D projected, zone-aware force ──
+  const curZone = mouseX > 0 ? getZone(mouseX, mouseY) : 'none';
+  // Sort by z for proper depth ordering (far first)
+  particles.sort((a, b) => a.z3d - b.z3d);
+  for (const p of particles) {
+    // Project to screen
+    const pp = project(p.x3d, p.y3d, p.z3d);
+
+    // Zone-aware force (applied in screen space)
+    if (mouseX > 0) {
+      const dx = mouseX-pp.x, dy = mouseY-pp.y, dist = Math.sqrt(dx*dx+dy*dy);
+      if (dist < forceRadius && dist > 1) {
+        let f = (forceRadius-dist)/forceRadius * .045;
+        if (curZone === 'grid') f *= -0.6;
+        else if (curZone === 'spiral') {
+          p.vx += -dy/dist * f * .8; p.vy += dx/dist * f * .8;
+          f *= .3;
+        }
+        p.vx += dx/dist*f; p.vy += dy/dist*f;
+        // Interaction pushes particles TOWARD the viewer (z increases)
+        p.vz += f * .5;
+      }
+    }
+    // Gravity wells
+    for (const w of wells) {
+      const dx = w.x-pp.x, dy = w.y-pp.y, d = Math.sqrt(dx*dx+dy*dy);
+      if (d < 250 && d > 1) { const f = w.life*.2/d; p.vx += dx/d*f; p.vy += dy/d*f; }
+    }
+    p.vx *= .997; p.vy *= .997; p.vz *= .99;
+    p.x3d += p.vx; p.y3d += p.vy; p.z3d += p.vz;
+    // Wrap in x/y, bounce in z
+    if (p.x3d < 0) p.x3d = W; if (p.x3d > W) p.x3d = 0;
+    if (p.y3d < 0) p.y3d = H; if (p.y3d > H) p.y3d = 0;
+    if (p.z3d < 0) { p.z3d = 0; p.vz = Math.abs(p.vz) * .5; }
+    if (p.z3d > 254) { p.z3d = 254; p.vz = -Math.abs(p.vz) * .5; }
+
+    // Draw: size and opacity from projection
+    const size = p.s * pp.scale * (1 + pp.opacity);
+    c.beginPath(); c.arc(pp.x, pp.y, Math.max(.3, size), 0, TAU);
+    const op = pp.opacity * (.08 + Math.sin(t*.0008+p.ph)*.04);
+    c.fillStyle = p.cl + op.toFixed(3) + ')'; c.fill();
+    // Near particles (z>200) get a glow halo — emerging from screen
+    if (p.z3d > 190) {
+      const nearGlow = (p.z3d - 190) / 64;
+      c.beginPath(); c.arc(pp.x, pp.y, size * 3, 0, TAU);
+      c.fillStyle = p.cl + (nearGlow * .03).toFixed(3) + ')'; c.fill();
+    }
+  }
+
+  // ── Fibonacci edges (projected) ──
+  for (let i = edges.length-1; i >= 0; i--) {
+    const e = edges[i]; e.l -= .005;
+    if (e.l <= 0) { edges.splice(i,1); continue; }
+    const na = spiralNodes[e.a], nb = spiralNodes[e.b];
+    if (!na||!nb) { edges.splice(i,1); continue; }
+    const pa = project(na.x3d, na.y3d, na.z3d);
+    const pb = project(nb.x3d, nb.y3d, nb.z3d);
+    const avgOp = (pa.opacity + pb.opacity) / 2;
+    const mx = (pa.x+pb.x)/2 + Math.sin(e.l*4)*25*pa.scale;
+    const my = (pa.y+pb.y)/2 + Math.cos(e.l*4)*18*pa.scale;
+    c.beginPath(); c.moveTo(pa.x,pa.y); c.quadraticCurveTo(mx,my,pb.x,pb.y);
+    c.globalAlpha = e.l * .3 * avgOp;
+    c.strokeStyle = e.l>.6 ? '#d2a8ff' : e.l>.3 ? '#58a6ff' : '#3fb950';
+    c.lineWidth = e.l*2*((pa.scale+pb.scale)/2); c.stroke();
+    if (e.l > .7) { c.lineWidth = e.l*6*pa.scale; c.globalAlpha = e.l*.04; c.stroke(); }
+    c.globalAlpha = 1;
+  }
+
+  // ── Spiral nodes (3D projected, sorted by depth) ──
+  spiralNodes.sort((a, b) => a.z3d - b.z3d);
+  for (const n of spiralNodes) {
+    // Animate position in 3D
+    const drift = Math.sin(t*.0002+n.ph)*3;
+    n.x3d = CX + Math.cos(n.angle+t*.00005)*n.baseR + drift;
+    n.y3d = CY*.7 + Math.sin(n.angle+t*.00005)*n.baseR*.7 + drift*.5;
+    // Z breathing: nodes pulse in and out of the screen
+    n.z3d = n.zBase + Math.sin(t*.0003+n.ph) * 30;
+
+    const np = project(n.x3d, n.y3d, n.z3d);
+    const pr = n.r * np.scale + Math.sin(t*.003+n.ph)*.5 + (n.act>.3 ? 3*np.scale : 0);
+
+    // Outer glow (larger for near nodes — emerging from screen)
+    c.beginPath(); c.arc(np.x, np.y, pr*6*np.scale, 0, TAU);
+    c.fillStyle = n.c + '04'; c.fill();
+    // Mid glow
+    c.beginPath(); c.arc(np.x, np.y, pr*3*np.scale, 0, TAU);
+    c.fillStyle = n.c + '08'; c.fill();
+    // Core
+    c.beginPath(); c.arc(np.x, np.y, Math.max(.5, pr), 0, TAU);
+    c.fillStyle = n.c;
+    c.globalAlpha = np.opacity * (.5 + n.act*.4); c.fill(); c.globalAlpha = 1;
+
+    // Emergent halo for nodes coming toward viewer (z > 170)
+    if (n.z3d > 170) {
+      const emerge = (n.z3d - 170) / 84;
+      c.beginPath(); c.arc(np.x, np.y, pr * 8 * np.scale, 0, TAU);
+      c.fillStyle = n.c.replace(')', '') ? `rgba(210,168,255,${(emerge*.015).toFixed(3)})` : 'rgba(210,168,255,.01)';
+      c.fillStyle = `rgba(210,168,255,${(emerge*.015).toFixed(3)})`; c.fill();
+    }
+
+    // Node-to-cursor connection (projected)
+    if (mouseX > 0) {
+      const dx = mouseX-np.x, dy = mouseY-np.y, dist = Math.sqrt(dx*dx+dy*dy);
+      if (dist < 280) {
+        const strength = (280-dist)/280;
+        c.beginPath(); c.moveTo(np.x,np.y); c.lineTo(mouseX,mouseY);
+        c.strokeStyle = `rgba(210,168,255,${(strength*np.opacity*.2).toFixed(3)})`;
+        c.lineWidth = strength*2*np.scale; c.stroke();
+        if (dist < 120) {
+          c.strokeStyle = `rgba(210,168,255,${(strength*.05).toFixed(3)})`;
+          c.lineWidth = strength*6*np.scale; c.stroke();
+          n.act = Math.max(n.act, (120-dist)/120*.7);
+        }
+      }
+    }
+    n.act *= .95;
+  }
+
+  // ── Central golden ratio pulse (projected at z=180 — emerging) ──
+  const cp = project(CX, CY*.7, 180 + Math.sin(t*.001)*20);
+  const pr2 = (28 + Math.sin(t*.002)*12) * cp.scale;
+  c.beginPath(); c.arc(cp.x, cp.y, pr2, 0, TAU);
+  c.fillStyle = 'rgba(210,168,255,.025)'; c.fill();
+  c.beginPath(); c.arc(cp.x, cp.y, pr2/PHI, 0, TAU);
+  c.fillStyle = 'rgba(88,166,255,.03)'; c.fill();
+  c.beginPath(); c.arc(cp.x, cp.y, pr2/(PHI*PHI), 0, TAU);
+  c.fillStyle = 'rgba(63,185,80,.035)'; c.fill();
+
+  // ── Gravity wells ──
+  for (let i = wells.length-1; i >= 0; i--) {
+    const w = wells[i]; w.life -= .0015;
+    if (w.life <= 0) { wells.splice(i,1); continue; }
+    const wr = 16+Math.sin(t*.003)*5;
+    // Orbital rings (golden ratio spaced)
+    for (let ring = 1; ring <= 3; ring++) {
+      c.beginPath(); c.arc(w.x,w.y, ring*35*w.life/PHI, 0, TAU);
+      c.strokeStyle = `rgba(210,153,34,${w.life*.04/ring})`; c.lineWidth = .5; c.stroke();
+    }
+    c.beginPath(); c.arc(w.x,w.y, wr*w.life, 0, TAU);
+    c.fillStyle = `rgba(210,153,34,${w.life*.05})`; c.fill();
+    c.beginPath(); c.arc(w.x,w.y, 3*w.life, 0, TAU);
+    c.fillStyle = `rgba(210,153,34,${w.life*.3})`; c.fill();
+  }
+
+  // ── Shockwaves ──
+  for (let i = shockwaves.length-1; i >= 0; i--) {
+    const s = shockwaves[i]; s.r += (280-s.r)*.05; s.life -= .015;
+    if (s.life <= 0) { shockwaves.splice(i,1); continue; }
+    c.beginPath(); c.arc(s.x,s.y, s.r, 0, TAU);
+    c.strokeStyle = s.col+(s.life*.3)+')'; c.lineWidth = 2*s.life; c.stroke();
+    // Inner ring
+    c.beginPath(); c.arc(s.x,s.y, s.r*.6, 0, TAU);
+    c.strokeStyle = s.col+(s.life*.1)+')'; c.lineWidth = 1; c.stroke();
+  }
+
+  // ── Drag trail ──
+  if (trails.length > 1) {
+    c.beginPath(); c.moveTo(trails[0].x, trails[0].y);
+    for (const pt of trails) c.lineTo(pt.x, pt.y);
+    c.strokeStyle = 'rgba(210,168,255,.1)'; c.lineWidth = 2; c.stroke();
+    // Neon bloom
+    c.strokeStyle = 'rgba(210,168,255,.03)'; c.lineWidth = 8; c.stroke();
+  }
+  for (let i = trails.length-1; i >= 0; i--) {
+    trails[i].life -= .025; if (trails[i].life <= 0) trails.splice(i,1);
+  }
+  // Drag particle spawn
+  if (dragging && mouseX > 0 && Math.random() > .4) {
+    particles.push({
+      x: mouseX+(Math.random()-.5)*12, y: mouseY+(Math.random()-.5)*12,
+      z: .6+Math.random()*.4,
+      s: Math.random()*1.5+.4, vx: (Math.random()-.5)*.6, vy: (Math.random()-.5)*.6,
+      ph: Math.random()*TAU, cl: 'rgba(210,168,255,', baseOp: .12,
+    });
+    while (particles.length > 350) particles.shift();
+  }
+
+  // ── Cursor aura (clearly visible) ──
+  if (mouseX > 0 && glowI > .01) {
+    const cg = c.createRadialGradient(mouseX,mouseY, 0, mouseX,mouseY, forceRadius);
+    cg.addColorStop(0, `rgba(210,168,255,${glowI*.06})`);
+    cg.addColorStop(.3, `rgba(88,166,255,${glowI*.03})`);
+    cg.addColorStop(.7, `rgba(63,185,80,${glowI*.01})`);
+    cg.addColorStop(1, 'transparent');
+    c.fillStyle = cg; c.beginPath(); c.arc(mouseX,mouseY, forceRadius, 0, TAU); c.fill();
+    // Force ring border
+    c.beginPath(); c.arc(mouseX,mouseY, forceRadius, 0, TAU);
+    c.strokeStyle = `rgba(210,168,255,${glowI*.06})`; c.lineWidth = .8; c.stroke();
+    // Inner core dot
+    c.beginPath(); c.arc(mouseX,mouseY, 3, 0, TAU);
+    c.fillStyle = `rgba(210,168,255,${glowI*.2})`; c.fill();
+  }
+  glowI *= .97;
+
+  // ── Occasional glitch ──
+  if (Math.random() > .997) {
+    const gy = Math.random()*H, gh = 2+Math.random()*6;
+    c.drawImage(cv, 0, gy, W, gh, Math.random()*8-4, gy, W, gh);
+  }
+
+  if (!RM || af%3===0) requestAnimationFrame(draw);
+  af++;
+}
+let af = 0;
+requestAnimationFrame(draw);
+
+// Hide hint
+let hh = false;
+document.addEventListener('click', () => { if (!hh) { document.getElementById('hint').style.opacity='0'; hh=true; }});
+
+// ── Brain parallax tilt — follows mouse to create 3D depth illusion ──
+const brainWrap = document.querySelector('.brain-wrap');
+if (brainWrap) {
+  document.addEventListener('mousemove', e => {
+    const rx = (e.clientY - CY) / CY * 8;  // tilt up/down (max 8deg)
+    const ry = -(e.clientX - CX) / CX * 12; // tilt left/right (max 12deg)
+    brainWrap.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
+  });
+  document.addEventListener('mouseleave', () => {
+    brainWrap.style.transform = 'rotateX(0) rotateY(0)';
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+{
+  "agent_id": "agint_system",
+  "dream_timestamp": "2026-05-02T02:33:37.650642",
+  "source": "machine_dreaming",
+  "insights": [
+    {
+      "type": "behavioral",
+      "description": "Top processes: agint_cycle_log(160)",
+      "score": 0.3531,
+      "importance": 0.5,
+      "novelty": 0.4,
+      "confidence": 0.8,
+      "frequency": 160
+    },
+    {
+      "type": "performance",
+      "description": "Dominant memory type: system_state (160 occurrences)",
+      "score": 0.3531,
+      "importance": 0.4,
+      "novelty": 0.5,
+      "confidence": 0.8,
+      "frequency": 160
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hours: 19, 22, 3",
+      "score": 0.1854,
+      "importance": 0.3,
+      "novelty": 0.4,
+      "confidence": 0.7,
+      "frequency": 160
+    },
+    {
+      "type": "behavioral",
+      "description": "Active: 160 memories",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: agint_cycle_log(160)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hour: 19:00",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    }
+  ],
+  "total_insights": 6
+}

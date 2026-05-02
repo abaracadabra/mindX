@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-04-18T10:53:15.005201",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "smoke_test_mgr",
+  "content": {
+    "process_name": "id_manager_agent_identity_created",
+    "data": {
+      "entity_id": "smoke_test_entity_1",
+      "role": "trading",
+      "chain": "baseSepolia",
+      "operator": "0x756Cd38f066526887Dc03F6A91E0eFDaB6B2b912",
+      "agent": "0x5eCdc30df01030Aee83BF339617f5809bE26C8d9",
+      "agent_id_erc8004": null,
+      "algorand": null,
+      "bankon_idnft": null,
+      "dry_run": true
+    }
+  },
+  "context": {
+    "agent_id": "smoke_test_mgr"
+  },
+  "tags": [
+    "id_manager_agent_identity_created",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "6cfe657fa579b8d7"
+}

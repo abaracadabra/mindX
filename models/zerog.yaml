@@ -1,0 +1,112 @@
+zerog/gpt-oss-120b:
+  task_scores:
+    reasoning: 0.93
+    code_generation: 0.88
+    writing: 0.92
+    simple_chat: 0.95
+    data_analysis: 0.90
+    speed_sensitive: 0.85
+  cost_per_kilo_input_tokens: 0.0001
+  cost_per_kilo_output_tokens: 0.00049
+  max_context_length: 131072
+  supports_streaming: true
+  supports_function_calling: true
+  supports_fim: false
+  supports_vision: false
+  supports_classification: false
+  supports_fine_tuning: false
+  supports_attestation: true
+  api_name: gpt-oss-120b
+  model_type: base
+  owned_by: openai-via-0g
+  serving_backend: TeeML
+  assessed_capabilities:
+  - text
+  - reasoning
+  - code_generation
+  - chat_completion
+  - function_calling
+  - streaming
+  - verifiable_inference
+
+zerog/qwen3.6-plus:
+  task_scores:
+    reasoning: 0.96
+    code_generation: 0.91
+    writing: 0.94
+    simple_chat: 0.96
+    data_analysis: 0.93
+    speed_sensitive: 0.78
+  cost_per_kilo_input_tokens: 0.0008
+  cost_per_kilo_output_tokens: 0.0048
+  max_context_length: 131072
+  supports_streaming: true
+  supports_function_calling: true
+  supports_attestation: true
+  api_name: qwen3.6-plus
+  model_type: base
+  owned_by: alibaba-via-0g
+  serving_backend: TeeTLS
+  assessed_capabilities:
+  - text
+  - reasoning
+  - code_generation
+  - multilingual
+  - chat_completion
+  - function_calling
+  - verifiable_inference
+
+zerog/GLM-5-FP8:
+  task_scores:
+    reasoning: 0.94
+    code_generation: 0.92
+    writing: 0.93
+    simple_chat: 0.95
+    data_analysis: 0.91
+    speed_sensitive: 0.82
+  cost_per_kilo_input_tokens: 0.001
+  cost_per_kilo_output_tokens: 0.0032
+  max_context_length: 131072
+  supports_streaming: true
+  supports_function_calling: true
+  supports_attestation: true
+  api_name: GLM-5-FP8
+  model_type: base
+  owned_by: zhipu-via-0g
+  serving_backend: TeeML
+  assessed_capabilities:
+  - text
+  - reasoning
+  - code_generation
+  - chat_completion
+  - function_calling
+  - verifiable_inference
+
+zerog/deepseek-chat-v3-0324:
+  task_scores:
+    reasoning: 0.92
+    code_generation: 0.94
+    writing: 0.90
+    simple_chat: 0.94
+    data_analysis: 0.91
+    speed_sensitive: 0.80
+  cost_per_kilo_input_tokens: 0.0003
+  cost_per_kilo_output_tokens: 0.001
+  max_context_length: 131072
+  supports_streaming: true
+  supports_function_calling: true
+  supports_attestation: true
+  api_name: deepseek-chat-v3-0324
+  model_type: base
+  owned_by: deepseek-via-0g
+  serving_backend: TeeML
+  assessed_capabilities:
+  - text
+  - reasoning
+  - code_generation
+  - chat_completion
+  - function_calling
+  - verifiable_inference
+
+zerog/default_model_for_zerog:
+  alias_for: zerog/gpt-oss-120b

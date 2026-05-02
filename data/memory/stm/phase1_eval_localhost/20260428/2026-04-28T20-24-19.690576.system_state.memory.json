@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-04-28T20:24:19.690576",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "phase1_eval_localhost",
+  "content": {
+    "process_name": "godel_core_choice",
+    "data": {
+      "source_agent": "phase1_eval_localhost",
+      "cycle_id": "phase1_localhost_001",
+      "perception": "BDI planning fails because LLM returns mock JSON instead of structured plan",
+      "options_considered": [
+        "pin a specific LLM model with verified JSON support",
+        "add fallback skeleton plan",
+        "disable BDI planning"
+      ],
+      "chosen_option": "add fallback skeleton plan",
+      "rationale": "Disabling BDI removes capability; pinning is brittle. Skeleton fallback maintains capability with graceful degradation.",
+      "timestamp_utc": "2026-04-29T03:23:49.649946Z"
+    }
+  },
+  "context": {
+    "agent_id": "phase1_eval_localhost"
+  },
+  "tags": [
+    "godel_core_choice",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "81c3775e00047156"
+}

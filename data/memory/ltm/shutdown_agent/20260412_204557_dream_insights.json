@@ -1,0 +1,53 @@
+{
+  "agent_id": "shutdown_agent",
+  "dream_timestamp": "2026-04-12T20:45:57.093336",
+  "source": "machine_dreaming",
+  "insights": [
+    {
+      "type": "behavioral",
+      "description": "Top processes: shutdown_initiation(19), system_shutdown_complete(18)",
+      "score": 0.2528,
+      "importance": 0.5,
+      "novelty": 0.4,
+      "confidence": 0.8,
+      "frequency": 37
+    },
+    {
+      "type": "performance",
+      "description": "Dominant memory type: system_state (37 occurrences)",
+      "score": 0.2528,
+      "importance": 0.4,
+      "novelty": 0.5,
+      "confidence": 0.8,
+      "frequency": 37
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hours: 21",
+      "score": 0.1327,
+      "importance": 0.3,
+      "novelty": 0.4,
+      "confidence": 0.7,
+      "frequency": 37
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: shutdown_initiation(19), system_shutdown_complete(18)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hour: 21:00",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    }
+  ],
+  "total_insights": 5
+}

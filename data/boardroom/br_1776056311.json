@@ -1,0 +1,75 @@
+{
+  "session_id": "br_1776056311",
+  "directive": "I hereby call this meeting to order.",
+  "importance": "standard",
+  "timestamp": "2026-04-13T04:58:31Z",
+  "outcome": "approved",
+  "weighted_score": 1.0,
+  "votes": [
+    {
+      "soldier": "coo_operations",
+      "vote": "approve",
+      "provider": "ollama-cloud/gpt-oss:120b-cloud",
+      "reasoning": "The directive is a simple procedural action\u2014calling a meeting to order. It requires no additional resources, timeline, or execution steps beyond the meeting facilitator's authority. Operational feasibility is trivial, there is no risk of scope creep, and it satisfies all governance gates. Therefore ",
+      "confidence": 0.99,
+      "latency_ms": 2532,
+      "weight": 1.0
+    },
+    {
+      "soldier": "cfo_finance",
+      "vote": "approve",
+      "provider": "ollama-cloud/gpt-oss:120b-cloud",
+      "reasoning": "The directive is purely procedural\u2014calling the meeting to order incurs no financial cost, generates no revenue, and has no impact on treasury allocations or budget. As there is no expense to evaluate against revenue potential, it satisfies the requirement of no spending without validated return. The",
+      "confidence": 0.99,
+      "latency_ms": 3127,
+      "weight": 1.0
+    },
+    {
+      "soldier": "cto_technology",
+      "vote": "approve",
+      "provider": "ollama-cloud/gpt-oss:120b-cloud",
+      "reasoning": "The directive is purely procedural, simply calling the meeting to order. It has no technical, architectural, or infrastructure implications, introduces no risk, and aligns with standard governance practices. Therefore it can be approved without concern.",
+      "confidence": 0.99,
+      "latency_ms": 1939,
+      "weight": 1.0
+    },
+    {
+      "soldier": "ciso_security",
+      "vote": "approve",
+      "provider": "ollama-cloud/gpt-oss:120b-cloud",
+      "reasoning": "The directive merely calls a meeting to order and carries no security implications, attack surface changes, or credential exposure. It does not introduce new risks, nor does it modify existing controls. Approving it maintains the current security posture without impact.",
+      "confidence": 0.99,
+      "latency_ms": 1773,
+      "weight": 1.2
+    },
+    {
+      "soldier": "clo_legal",
+      "vote": "approve",
+      "provider": "ollama-cloud/gpt-oss:120b-cloud",
+      "reasoning": "The directive is a benign procedural statement to start a meeting. It contains no content that could infringe on intellectual property, licensing, or regulatory requirements. There are no legal or compliance risks, and no attribution or licensing obligations apply. Therefore it can be approved witho",
+      "confidence": 0.99,
+      "latency_ms": 2099,
+      "weight": 0.8
+    },
+    {
+      "soldier": "cpo_product",
+      "vote": "abstain",
+      "provider": "ollama-cloud/gpt-oss:120b-cloud",
+      "reasoning": "The directive is a procedural statement to call a meeting to order. It does not propose a product feature, user value, market fit, scope impact, or acceptance criteria. As such, it falls outside the scope of product/feature evaluation criteria and cannot be meaningfully approved or rejected on those",
+      "confidence": 0.96,
+      "latency_ms": 3343,
+      "weight": 1.0
+    },
+    {
+      "soldier": "cro_risk",
+      "vote": "approve",
+      "provider": "ollama-cloud/gpt-oss:120b-cloud",
+      "reasoning": "The directive merely initiates a meeting with standard importance. It carries negligible risk, is fully reversible (the meeting can be adjourned or rescheduled), and has no blast radius or cascading effects. No irreversible actions or financial/reputational impact are involved, so it meets the accep",
+      "confidence": 0.99,
+      "latency_ms": 3204,
+      "weight": 1.2
+    }
+  ],
+  "dissent_branches": 0,
+  "dissent_branches_detail": []
+}

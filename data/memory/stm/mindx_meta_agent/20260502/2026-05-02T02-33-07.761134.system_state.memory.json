@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-05-02T02:33:07.761134",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "process_name": "mindxagent_startup_ollama_ready",
+    "data": {
+      "startup_command": "begin_ollama_interaction",
+      "ollama_connected": false,
+      "models_list": [],
+      "models_count": 0,
+      "chosen_model": null,
+      "ready_for_interaction": false
+    }
+  },
+  "context": {
+    "agent_id": "mindx_meta_agent",
+    "event": "startup_pipeline",
+    "source": "startup_agent"
+  },
+  "tags": [
+    "mindxagent_startup_ollama_ready",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "02619c44b284a77d"
+}

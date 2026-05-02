@@ -162,6 +162,7 @@ The defense-in-depth checks for stale `.rotation.ok` (>300 s) and candidate SHA 
 | Store a new API key | `python manage_credentials.py store <provider_id> <value>` |
 | List stored entries (no plaintexts) | `python manage_credentials.py list` |
 | Provision the deployer key for the iNFT campaign | `python manage_credentials.py store zerog_deployer_pk 0x...` |
+| Provision the x402-AVM (Algorand) buyer wallet — see [X402.md](X402.md) | `python manage_credentials.py store algorand_mnemonic "<25-word>"` ; also `algorand_recipient_address`, `algorand_usdc_asa_id`, `x402_avm_facilitator_url` |
 | Run the airgapped handoff ceremony | Follow [BANKON_VAULT_HANDOFF.md](BANKON_VAULT_HANDOFF.md) |
 | Recover after a service restart that came up with empty `os.environ` | `POST /vault/credentials/reunlock` (admin) or `python manage_custody.py` (SSH) |
 | Verify the rotation contract still holds before a deploy | `make test-vault` |

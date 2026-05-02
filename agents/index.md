@@ -79,13 +79,7 @@ This document provides a complete index of all agents in the mindX system, with 
    - **Location**: `agents/avatar_agent.py`
    - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
 
-10. **[Coral ID Agent](coral_id_agent.py)** - CrossMint-integrated identity management with multi-chain support
-    - **Type**: `identity_manager`
-    - **Complexity**: 0.85
-    - **Location**: `agents/coral_id_agent.py`
-    - **NFT Ready**: ✅ iNFT, dNFT, IDNFT
-
-11. **[Enhanced Simple Coder](enhanced_simple_coder.py)** - Advanced coding agent with multi-model intelligence
+10. **[Enhanced Simple Coder](enhanced_simple_coder.py)** - Advanced coding agent with multi-model intelligence
     - **Type**: `coding_tool`
     - **Complexity**: 0.90
     - **Location**: `agents/enhanced_simple_coder.py`
@@ -619,7 +613,6 @@ All agents are registered in the mindX system through:
 - [AutoMINDX Agent Documentation](automindx_agent.py)
 - [Persona Agent Documentation](persona_agent.py)
 - [Avatar Agent Documentation](avatar_agent.py)
-- [Coral ID Agent Documentation](coral_id_agent.py)
 - [Enhanced Simple Coder Documentation](enhanced_simple_coder.py)
 - [Simple Coder Agent Documentation](simple_coder_agent.py)
 - [Simple Coder Documentation](simple_coder.py)

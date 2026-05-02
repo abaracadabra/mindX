@@ -1,0 +1,66 @@
+{
+  "timestamp": "2026-04-30T20:51:43.442329",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "startup_agent",
+  "content": {
+    "process_name": "startup_environment_validation",
+    "data": {
+      "valid": true,
+      "checks": [
+        {
+          "check": "Directory exists: data",
+          "status": "pass"
+        },
+        {
+          "check": "Directory exists: data/logs",
+          "status": "pass"
+        },
+        {
+          "check": "Directory exists: data/config",
+          "status": "pass"
+        },
+        {
+          "check": "Directory exists: data/pids",
+          "status": "pass"
+        },
+        {
+          "check": "Directory exists: agents",
+          "status": "pass"
+        },
+        {
+          "check": "Directory exists: agents/orchestration",
+          "status": "pass"
+        },
+        {
+          "check": "File exists: mindX.sh",
+          "status": "pass"
+        },
+        {
+          "check": "File exists: requirements.txt",
+          "status": "pass"
+        },
+        {
+          "check": "File exists: .env",
+          "status": "pass"
+        },
+        {
+          "check": "Python version: 3.11",
+          "status": "pass"
+        }
+      ],
+      "warnings": [],
+      "errors": []
+    }
+  },
+  "context": {
+    "agent_id": "startup_agent",
+    "event": "environment_validation"
+  },
+  "tags": [
+    "startup_environment_validation",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "92c40ed839448da9"
+}

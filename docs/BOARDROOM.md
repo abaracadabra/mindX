@@ -41,7 +41,7 @@ The Boardroom wraps this hierarchy in a **deliberative consensus mechanism** whe
 | Reputation Registry | `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63` | CREATE2 all EVM |
 | BONAFIDE | Mainnet deployment this week | Constitutional substrate |
 | openBDK | 1 Relayer + 3 Validators, 2/3 approval | Consensus finality |
-| x402 | Algorand settlement via parsec-wallet | Micropayment for agent work |
+| [x402](X402.md) | Algorand settlement via parsec-wallet | Micropayment for agent work — triple-rail (Base USDC + Tempo MPP + Algorand ASA), see [X402.md](X402.md) |
 | Foundry | `forge test` / `forge script` | Contract testing and deployment |
 
 ---

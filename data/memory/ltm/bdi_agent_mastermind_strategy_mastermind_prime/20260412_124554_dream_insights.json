@@ -1,0 +1,62 @@
+{
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "dream_timestamp": "2026-04-12T12:45:54.341609",
+  "source": "machine_dreaming",
+  "insights": [
+    {
+      "type": "behavioral",
+      "description": "Top processes: bdi_planning_start(100), bdi_deliberation(100), bdi_goal_set(4)",
+      "score": 0.3699,
+      "importance": 0.5,
+      "novelty": 0.4,
+      "confidence": 0.8,
+      "frequency": 204
+    },
+    {
+      "type": "performance",
+      "description": "Dominant memory type: system_state (204 occurrences)",
+      "score": 0.3699,
+      "importance": 0.4,
+      "novelty": 0.5,
+      "confidence": 0.8,
+      "frequency": 204
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hours: 12",
+      "score": 0.1942,
+      "importance": 0.3,
+      "novelty": 0.4,
+      "confidence": 0.7,
+      "frequency": 204
+    },
+    {
+      "type": "behavioral",
+      "description": "Active: 204 memories",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: bdi_planning_start(100), bdi_deliberation(100), bdi_goal_set(4)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hour: 12:00",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    }
+  ],
+  "total_insights": 6
+}

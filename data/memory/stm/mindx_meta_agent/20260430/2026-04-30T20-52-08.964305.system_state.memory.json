@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-04-30T20:52:08.964305",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_meta_agent",
+  "content": {
+    "process_name": "mindxagent_system_state_review_startup",
+    "data": {
+      "event_type": "startup",
+      "timestamp": 1777607528.9642546,
+      "insights": [
+        "CPU usage decreased by 29.3% during startup"
+      ],
+      "improvement_opportunities": [],
+      "recommendations": []
+    }
+  },
+  "context": {
+    "agent_id": "mindx_meta_agent",
+    "reviewer": "mindxagent",
+    "event_type": "startup"
+  },
+  "tags": [
+    "mindxagent_system_state_review_startup",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "adbcc2fc24dc3913"
+}

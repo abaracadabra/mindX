@@ -1,0 +1,62 @@
+{
+  "agent_id": "blueprint_agent_mindx_v2",
+  "dream_timestamp": "2026-05-02T02:33:49.662645",
+  "source": "machine_dreaming",
+  "insights": [
+    {
+      "type": "behavioral",
+      "description": "Top processes: blueprint_generated(140)",
+      "score": 0.3439,
+      "importance": 0.5,
+      "novelty": 0.4,
+      "confidence": 0.8,
+      "frequency": 140
+    },
+    {
+      "type": "performance",
+      "description": "Dominant memory type: system_state (140 occurrences)",
+      "score": 0.3439,
+      "importance": 0.4,
+      "novelty": 0.5,
+      "confidence": 0.8,
+      "frequency": 140
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hours: 21, 20, 19",
+      "score": 0.1448,
+      "importance": 0.3,
+      "novelty": 0.4,
+      "confidence": 0.7,
+      "frequency": 52
+    },
+    {
+      "type": "behavioral",
+      "description": "Active: 140 memories",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: blueprint_generated(140)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hour: 21:00",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    }
+  ],
+  "total_insights": 6
+}

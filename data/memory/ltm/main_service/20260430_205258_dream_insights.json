@@ -1,0 +1,53 @@
+{
+  "agent_id": "main_service",
+  "dream_timestamp": "2026-04-30T20:52:58.703569",
+  "source": "machine_dreaming",
+  "insights": [
+    {
+      "type": "behavioral",
+      "description": "Top processes: backend_startup_transcript(20)",
+      "score": 0.2116,
+      "importance": 0.5,
+      "novelty": 0.4,
+      "confidence": 0.8,
+      "frequency": 20
+    },
+    {
+      "type": "performance",
+      "description": "Dominant memory type: system_state (20 occurrences)",
+      "score": 0.2116,
+      "importance": 0.4,
+      "novelty": 0.5,
+      "confidence": 0.8,
+      "frequency": 20
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hours: 19, 18, 16",
+      "score": 0.0936,
+      "importance": 0.3,
+      "novelty": 0.4,
+      "confidence": 0.7,
+      "frequency": 12
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: backend_startup_transcript(20)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hour: 19:00",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    }
+  ],
+  "total_insights": 5
+}

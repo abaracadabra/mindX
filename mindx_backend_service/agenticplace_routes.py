@@ -295,3 +295,305 @@ async def get_ceo_status():
     except Exception as e:
         logger.error(f"Error getting CEO status: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to get CEO status: {str(e)}")
+
+
+# =====================================================================
+# pay2play (p2p) proxy — gates AgenticPlace marketplace actions through
+# x402 settlements on Arc testnet via the C9 gateway. Free reads (info,
+# health, job lookup) pass through; paid actions (agent register, job
+# create) require a buyer-signed PAYMENT header upstream of mindX.
+#
+# Gateway URL is configured via env PAY2PLAY_GATEWAY_URL (default
+# http://localhost:3009). Hosted gateway lives at agenticplace.pythai.net
+# in production.
+#
+# Triple-rail x402: the existing EVM rails (Base USDC, Tempo MPP) coexist
+# with the Algorand AVM rail (`@x402-avm/*`, see docs/X402.md). When
+# MINDX_X402_AVM_ENABLED=true, callers can submit `_payment_avm` instead
+# of `_payment` and 402 envelopes pass through `accepts[]` so AVM clients
+# can pick the AVM leg.
+# =====================================================================
+
+import os as _os
+import httpx as _httpx
+
+_P2P_GATEWAY = _os.environ.get("PAY2PLAY_GATEWAY_URL", "http://localhost:3009")
+# C10 on-ramp lives either on its own host (port 3010) or inline at
+# c9:/onramp/* — clients hitting the c9 gateway can use either via /info.onramp.
+_P2P_ONRAMP = _os.environ.get("PAY2PLAY_ONRAMP_URL", "http://localhost:3010")
+
+_X402_AVM_ENABLED = _os.environ.get("MINDX_X402_AVM_ENABLED", "").lower() == "true"
+_X402_AVM_FACILITATOR = _os.environ.get(
+    "X402_AVM_FACILITATOR_URL", "https://mindx.pythai.net:4022"
+)
+
+
+def _lift_payment(request: Dict[str, Any], headers: Dict[str, str]) -> None:
+    """Lift `_payment` (EVM) or `_payment_avm` (AVM) body field to X-PAYMENT header.
+
+    If both are present, `_payment_scheme` selects which to use; default = EVM
+    for backward compat. Sets `X-PAYMENT-SCHEME` so upstream can route.
+    """
+    payment_evm = request.pop("_payment", None)
+    payment_avm = request.pop("_payment_avm", None)
+    explicit = (request.pop("_payment_scheme", None) or "").lower()
+
+    if payment_avm and (explicit == "exact-avm" or not payment_evm):
+        headers["X-PAYMENT"] = str(payment_avm)
+        headers["X-PAYMENT-SCHEME"] = "exact-avm"
+    elif payment_evm:
+        headers["X-PAYMENT"] = str(payment_evm)
+        if explicit:
+            headers["X-PAYMENT-SCHEME"] = explicit
+
+
+def _bubble_402(resp: "_httpx.Response") -> Dict[str, Any]:
+    """Re-emit upstream 402 in the standard x402 envelope shape.
+
+    Old behavior collapsed to a single PAYMENT-REQUIRED string. New behavior
+    preserves any upstream `accepts[]` array so AVM-aware clients can pick the
+    AVM rail. Falls back to the legacy header for older upstreams.
+    """
+    accepts: list = []
+    try:
+        body = resp.json()
+        accepts = body.get("accepts") or body.get("paymentRequirements") or []
+    except Exception:
+        body = {}
+
+    legacy_challenge = (
+        resp.headers.get("PAYMENT-REQUIRED")
+        or resp.headers.get("payment-required")
+        or ""
+    )
+
+    detail: Dict[str, Any] = {
+        "error": "payment required",
+        "PAYMENT-REQUIRED": legacy_challenge,
+        "hint": "sign the challenge and resubmit with X-PAYMENT header",
+    }
+    if accepts:
+        detail["accepts"] = accepts
+    if _X402_AVM_ENABLED and not any(
+        str(a.get("network", "")).startswith("algorand") for a in accepts
+    ):
+        # Append our own AVM advertisement if upstream didn't include one.
+        # Keeps existing rails primary; AVM is the new opt-in tail.
+        detail.setdefault("accepts", list(accepts))
+        detail["accepts"].append({
+            "scheme": "exact",
+            "network": "algorand-testnet",
+            "payTo": _os.environ.get("algorand_recipient_address", ""),
+            "asset": _os.environ.get("algorand_usdc_asa_id", ""),
+            "maxAmountRequired": detail["PAYMENT-REQUIRED"] or "0",
+            "resource": "",
+            "extra": {"facilitator": _X402_AVM_FACILITATOR},
+        })
+    return detail
+
+
+@router.get("/p2p/info", summary="pay2play gateway service info (free)")
+async def p2p_info():
+    try:
+        async with _httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(f"{_P2P_GATEWAY}/info")
+            resp.raise_for_status()
+            return resp.json()
+    except Exception as e:
+        logger.error(f"p2p_info failed: {e}")
+        raise HTTPException(status_code=502, detail=f"pay2play gateway unreachable: {e}")
+
+
+@router.get("/p2p/health", summary="pay2play contract health on Arc testnet (free)")
+async def p2p_health():
+    try:
+        async with _httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(f"{_P2P_GATEWAY}/health")
+            return resp.json()
+    except Exception as e:
+        logger.error(f"p2p_health failed: {e}")
+        raise HTTPException(status_code=502, detail=f"pay2play gateway unreachable: {e}")
+
+
+@router.get("/p2p/job/{job_id}", summary="Read ERC-8183 job state from Arc (free)")
+async def p2p_get_job(job_id: str):
+    try:
+        async with _httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(f"{_P2P_GATEWAY}/job/{job_id}")
+            resp.raise_for_status()
+            return resp.json()
+    except _httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
+    except Exception as e:
+        logger.error(f"p2p_get_job failed: {e}")
+        raise HTTPException(status_code=502, detail=f"pay2play gateway unreachable: {e}")
+
+
+@router.post("/p2p/agent/register", summary="ERC-8004 agent register ($0.002, paid)")
+async def p2p_register_agent(request: Dict[str, Any] = Body(...)):
+    """
+    Proxy to pay2play C9 /agent/register. Requires payment.
+    The caller must supply X-PAYMENT header (a signed EIP-3009 authorization)
+    in the request, OR include `_payment` in the body which we lift to header.
+    Without payment the upstream gateway returns 402 with PAYMENT-REQUIRED.
+    """
+    headers = {"Content-Type": "application/json"}
+    _lift_payment(request, headers)
+    try:
+        async with _httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(
+                f"{_P2P_GATEWAY}/agent/register", json=request, headers=headers
+            )
+            if resp.status_code == 402:
+                raise HTTPException(status_code=402, detail=_bubble_402(resp))
+            resp.raise_for_status()
+            return resp.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"p2p_register_agent failed: {e}")
+        raise HTTPException(status_code=502, detail=f"pay2play gateway error: {e}")
+
+
+@router.post("/p2p/job/create", summary="ERC-8183 full job lifecycle ($0.002, paid)")
+async def p2p_create_job(request: Dict[str, Any] = Body(...)):
+    """Proxy to pay2play C9 /job/create. Same payment semantics as /p2p/agent/register."""
+    headers = {"Content-Type": "application/json"}
+    _lift_payment(request, headers)
+    try:
+        async with _httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(
+                f"{_P2P_GATEWAY}/job/create", json=request, headers=headers
+            )
+            if resp.status_code == 402:
+                raise HTTPException(status_code=402, detail=_bubble_402(resp))
+            resp.raise_for_status()
+            return resp.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"p2p_create_job failed: {e}")
+        raise HTTPException(status_code=502, detail=f"pay2play gateway error: {e}")
+
+
+# =====================================================================
+# C10 on-ramp proxies — fund AgenticPlace from USDC at the lowest rate,
+# no KYC where possible. Free discovery + paid quote + paid composite.
+# Mirrors the /p2p/agent/register proxy pattern: pass-through 402 challenge.
+# =====================================================================
+
+
+@router.get("/p2p/onramp/providers", summary="On-ramp providers (free discovery)")
+async def p2p_onramp_providers(kyc: str | None = None, region: str | None = None):
+    """Proxy to pay2play C10 /providers (or c9-mounted /onramp/providers)."""
+    params: Dict[str, str] = {}
+    if kyc:
+        params["kyc"] = kyc
+    if region:
+        params["region"] = region
+    try:
+        async with _httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(f"{_P2P_ONRAMP}/providers", params=params)
+            resp.raise_for_status()
+            return resp.json()
+    except Exception as e:
+        logger.error(f"p2p_onramp_providers failed: {e}")
+        raise HTTPException(
+            status_code=502, detail=f"pay2play onramp unreachable: {e}"
+        )
+
+
+@router.post("/p2p/onramp/quote", summary="Cheapest no-KYC route ($0.001, paid)")
+async def p2p_onramp_quote(request: Dict[str, Any] = Body(...)):
+    """Proxy to pay2play C10 /quote. Same payment semantics as /p2p/agent/register."""
+    headers = {"Content-Type": "application/json"}
+    _lift_payment(request, headers)
+    try:
+        async with _httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.post(
+                f"{_P2P_ONRAMP}/quote", json=request, headers=headers
+            )
+            if resp.status_code == 402:
+                raise HTTPException(status_code=402, detail=_bubble_402(resp))
+            resp.raise_for_status()
+            return resp.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"p2p_onramp_quote failed: {e}")
+        raise HTTPException(status_code=502, detail=f"pay2play onramp error: {e}")
+
+
+@router.post(
+    "/p2p/onramp/and-deposit",
+    summary="On-ramp + EIP-3009 typed-data ($0.001, paid)",
+)
+async def p2p_onramp_and_deposit(request: Dict[str, Any] = Body(...)):
+    """Proxy to pay2play C10 /and-deposit. Returns the on-ramp instruction
+    plus the prepared EIP-3009 typed-data the caller signs to credit Gateway."""
+    headers = {"Content-Type": "application/json"}
+    _lift_payment(request, headers)
+    try:
+        async with _httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(
+                f"{_P2P_ONRAMP}/and-deposit", json=request, headers=headers
+            )
+            if resp.status_code == 402:
+                raise HTTPException(status_code=402, detail=_bubble_402(resp))
+            resp.raise_for_status()
+            return resp.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"p2p_onramp_and_deposit failed: {e}")
+        raise HTTPException(status_code=502, detail=f"pay2play onramp error: {e}")
+
+
+# =====================================================================
+# x402-AVM facilitator discovery — free passthrough so AgenticPlace
+# clients can learn that mindX advertises the Algorand AVM rail.
+# Returns the merged /info + /supported JSON from the configured
+# facilitator (default: https://mindx.pythai.net:4022). Gated by
+# MINDX_X402_AVM_ENABLED so the route is a no-op until the operator
+# vaults the AVM credentials. See docs/X402.md.
+# =====================================================================
+
+
+@router.get(
+    "/p2p/x402/facilitator-info",
+    summary="x402-AVM facilitator discovery (free)",
+)
+async def p2p_x402_facilitator_info():
+    if not _X402_AVM_ENABLED:
+        return {
+            "enabled": False,
+            "hint": "set MINDX_X402_AVM_ENABLED=true and seed AVM vault keys to activate",
+            "facilitator_url": _X402_AVM_FACILITATOR,
+        }
+    out: Dict[str, Any] = {
+        "enabled": True,
+        "facilitator_url": _X402_AVM_FACILITATOR,
+        "info": None,
+        "supported": None,
+    }
+    base = _X402_AVM_FACILITATOR.rstrip("/")
+    try:
+        async with _httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                r = await client.get(f"{base}/info")
+                if r.status_code == 200:
+                    out["info"] = r.json()
+            except Exception as e:
+                out["info_error"] = str(e)
+            try:
+                r = await client.get(f"{base}/supported")
+                if r.status_code == 200:
+                    out["supported"] = r.json()
+            except Exception as e:
+                out["supported_error"] = str(e)
+    except Exception as e:
+        logger.error(f"p2p_x402_facilitator_info failed: {e}")
+        raise HTTPException(
+            status_code=502, detail=f"x402-AVM facilitator unreachable: {e}"
+        )
+    return out

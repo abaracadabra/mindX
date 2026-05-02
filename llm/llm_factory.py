@@ -43,6 +43,11 @@ try:
 except ImportError as e:
     VLLMHandler = None
     logger.warning(f"Could not import VLLMHandler: {e}. vLLM provider will be unavailable.")
+try:
+    from .zerog_handler import ZeroGHandler
+except ImportError as e:
+    ZeroGHandler = None
+    logger.warning(f"Could not import ZeroGHandler: {e}. 0G Compute provider will be unavailable.")
 from .mock_llm_handler import MockLLMHandler
 
 
@@ -142,7 +147,7 @@ async def create_llm_handler(
 
     eff_api_key = api_key
     _keyed_providers = ["gemini", "openai", "anthropic", "groq", "mistral", "together", "deepseek",
-                        "cohere", "perplexity", "fireworks", "replicate", "stability"]
+                        "cohere", "perplexity", "fireworks", "replicate", "stability", "zerog"]
     if not eff_api_key and eff_provider_name in _keyed_providers:
         eff_api_key = factory_config.get(f"{eff_provider_name}_settings_for_factory", {}).get("api_key_override")
     if not eff_api_key and eff_provider_name in _keyed_providers:
@@ -155,6 +160,7 @@ async def create_llm_handler(
             "deepseek": "DEEPSEEK_API_KEY", "cohere": "COHERE_API_KEY",
             "perplexity": "PERPLEXITY_API_KEY", "fireworks": "FIREWORKS_API_KEY",
             "replicate": "REPLICATE_API_TOKEN", "stability": "STABILITY_API_KEY",
+            "zerog": "ZEROG_API_KEY",
         }
         env_var_name = _env_map.get(eff_provider_name, "")
         if env_var_name: eff_api_key = os.getenv(env_var_name)
@@ -163,12 +169,14 @@ async def create_llm_handler(
         eff_api_key = os.getenv("VLLM_API_KEY")
 
     eff_base_url = base_url
-    if not eff_base_url and eff_provider_name in ("ollama", "vllm"):
+    if not eff_base_url and eff_provider_name in ("ollama", "vllm", "zerog"):
         eff_base_url = factory_config.get(f"{eff_provider_name}_settings_for_factory", {}).get("base_url_override")
     if not eff_base_url and eff_provider_name == "ollama":
         eff_base_url = global_config.get(f"llm.ollama.base_url")
     if not eff_base_url and eff_provider_name == "vllm":
         eff_base_url = global_config.get(f"llm.vllm.base_url") or os.getenv("VLLM_BASE_URL")
+    if not eff_base_url and eff_provider_name == "zerog":
+        eff_base_url = global_config.get(f"llm.zerog.base_url") or os.getenv("ZEROG_BASE_URL")
 
     final_model_name_for_handler_constructor = factory_config.get("provider_specific_handler_config", {}).get(eff_provider_name, {}).get("default_model_for_api_call", eff_model_name_for_api)
     cache_key_model_name = final_model_name_for_handler_constructor or f"implicit_default_for_{eff_provider_name}"
@@ -272,6 +280,20 @@ async def create_llm_handler(
                 )
             else:
                 logger.error("LLMFactory (mindX): VLLMHandler not imported.")
+                handler_instance = MockLLMHandler(model_name=model_arg_for_handler)
+        elif eff_provider_name == "zerog":
+            if ZeroGHandler:
+                handler_instance = ZeroGHandler(
+                    model_name_for_api=model_arg_for_handler,
+                    api_key=eff_api_key,
+                    base_url=eff_base_url,
+                    rate_limiter=rate_limiter,
+                    execution_timeout_minutes=execution_timeout_minutes
+                )
+                if not eff_api_key:
+                    logger.warning("LLMFactory (mindX): 0G Compute API key not provided. Handler will operate in degraded mode.")
+            else:
+                logger.error("LLMFactory (mindX): ZeroGHandler not imported.")
                 handler_instance = MockLLMHandler(model_name=model_arg_for_handler)
         else: # pragma: no cover
             logger.warning(f"LLMFactory (mindX): Unknown provider '{eff_provider_name}'. Using MockLLMHandler for model '{model_arg_for_handler}'.")

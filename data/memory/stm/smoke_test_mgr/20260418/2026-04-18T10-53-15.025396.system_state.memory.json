@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-04-18T10:53:15.025396",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "smoke_test_mgr",
+  "content": {
+    "process_name": "id_manager_address_lookup",
+    "data": {
+      "entity_id": "smoke_test_entity_2",
+      "address": "0x19367b4f1F190361f41102E8EDAd8FcdA1B201EC",
+      "source": "belief_system"
+    }
+  },
+  "context": {
+    "agent_id": "smoke_test_mgr"
+  },
+  "tags": [
+    "id_manager_address_lookup",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "150dc6116a7b0997"
+}
