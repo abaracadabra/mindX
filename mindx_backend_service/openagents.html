@@ -79,6 +79,37 @@ main{max-width:1400px;margin:0 auto;padding:24px 20px 80px}
 .btn{font-family:var(--mono);font-size:11px;padding:6px 12px;border:1px solid rgba(121,192,255,.3);background:rgba(121,192,255,.06);color:var(--blue);border-radius:4px;cursor:pointer;text-decoration:none;display:inline-block}
 .btn:hover{background:rgba(121,192,255,.14)}
 
+/* Console navigation strip — elegant professional jump nav */
+.consoles{margin:18px 0 24px;padding:18px 22px;border-radius:10px;background:linear-gradient(135deg,rgba(10,14,20,.92),rgba(20,24,32,.78));border:1px solid var(--border)}
+.consoles .lbl{font-family:var(--mono);font-size:10px;letter-spacing:2.4px;text-transform:uppercase;color:var(--text3);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.consoles .lbl::before,.consoles .lbl::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(121,192,255,.16),transparent)}
+.console-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.console-link{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;background:rgba(16,20,28,.65);border:1px solid rgba(121,192,255,.08);text-decoration:none;color:var(--text);font-family:var(--mono);font-size:11.5px;transition:all .15s ease;position:relative;overflow:hidden}
+.console-link::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--accent-color,var(--blue));opacity:0;transition:opacity .15s ease}
+.console-link:hover{background:rgba(20,28,40,.85);border-color:rgba(121,192,255,.28);text-decoration:none;transform:translateX(2px)}
+.console-link:hover::before{opacity:1}
+.console-link .num{font-size:9.5px;color:var(--text3);letter-spacing:1.2px;font-weight:500}
+.console-link .name{flex:1;color:var(--text);font-weight:500}
+.console-link .arrow{color:var(--text3);font-size:13px;transition:transform .15s ease}
+.console-link:hover .arrow{transform:translateX(2px);color:var(--blue)}
+.console-link.green{--accent-color:var(--green)}
+.console-link.green:hover .arrow{color:var(--green)}
+.console-link.violet{--accent-color:var(--violet)}
+.console-link.violet:hover .arrow{color:var(--violet)}
+.console-link.amber{--accent-color:var(--amber)}
+.console-link.amber:hover .arrow{color:var(--amber)}
+.console-link.pink{--accent-color:var(--pink)}
+.console-link.pink:hover .arrow{color:var(--pink)}
+
+/* Per-panel console CTA — replaces inline links in sub paragraphs */
+.panel-cta{display:flex;gap:6px;flex-wrap:wrap;margin:auto 0 0;padding-top:12px;border-top:1px dashed rgba(110,118,129,.12)}
+.panel-cta a{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;font-family:var(--mono);font-size:11px;text-decoration:none;color:var(--text2);background:rgba(16,20,28,.5);border:1px solid var(--border);border-radius:5px;transition:all .15s ease}
+.panel-cta a:hover{background:rgba(121,192,255,.08);border-color:rgba(121,192,255,.3);color:var(--blue);text-decoration:none}
+.panel-cta a .arr{font-size:13px;color:var(--text3);transition:all .15s ease}
+.panel-cta a:hover .arr{color:var(--blue);transform:translateX(2px)}
+.panel-cta a.alt:hover{color:var(--green);border-color:rgba(86,211,100,.3);background:rgba(86,211,100,.06)}
+.panel-cta a.alt:hover .arr{color:var(--green)}
+
 footer{margin-top:40px;padding:20px;text-align:center;color:var(--text3);font-size:12px;border-top:1px solid var(--border)}
 footer a{color:var(--text2)}
 </style>
@@ -108,6 +139,25 @@ footer a{color:var(--text2)}
     <p>This page is the live console for the ETHGlobal <a href="https://ethglobal.com/events/openagents" target="_blank" rel="noopener">Open Agents</a> submission. Eight sibling modules, each a peer that <em>any</em> agent framework can compose. mindX is one canonical consumer. Every module lives at <code>openagents/&lt;name&gt;/</code>, has its own README + tests + (where relevant) Solidity contracts, and is designed for horizontal + vertical scaling from byte one.</p>
     <div class="tag-row" id="tags"></div>
     <div class="modules" id="modules"></div>
+  </section>
+
+  <!-- ─────── Component consoles — direct entry points ─────── -->
+  <section class="consoles">
+    <div class="lbl">interactive consoles</div>
+    <div class="console-grid">
+      <a href="/inft7857" class="console-link"><span class="num">M1</span><span class="name">iNFT-7857</span><span class="arrow">→</span></a>
+      <a href="/zerog" class="console-link green"><span class="num">M2</span><span class="name">0G Adapter</span><span class="arrow">→</span></a>
+      <a href="/conclave" class="console-link violet"><span class="num">M3</span><span class="name">Conclave AXL</span><span class="arrow">→</span></a>
+      <a href="/bankon-ens" class="console-link"><span class="num">M4·R</span><span class="name">BANKON ENS</span><span class="arrow">→</span></a>
+      <a href="/bankonminter" class="console-link green"><span class="num">M4·W</span><span class="name">BANKON Minter</span><span class="arrow">→</span></a>
+      <a href="/keeperhub" class="console-link amber"><span class="num">M5</span><span class="name">KeeperHub</span><span class="arrow">→</span></a>
+      <a href="/uniswap" class="console-link amber"><span class="num">M6</span><span class="name">Uniswap V4</span><span class="arrow">→</span></a>
+      <a href="/THOT" class="console-link"><span class="num">M7</span><span class="name">THOT.commit()</span><span class="arrow">→</span></a>
+      <a href="/agentregistry" class="console-link violet"><span class="num">M8</span><span class="name">AgentRegistry</span><span class="arrow">→</span></a>
+      <a href="/cabinet" class="console-link green"><span class="num">+</span><span class="name">Cabinet</span><span class="arrow">→</span></a>
+      <a href="/boardroom" class="console-link pink"><span class="num">+</span><span class="name">Boardroom</span><span class="arrow">→</span></a>
+      <a href="/feedback.html" class="console-link"><span class="num">+</span><span class="name">Feedback</span><span class="arrow">→</span></a>
+    </div>
   </section>
 
   <!-- ─────── Composition snippet ─────── -->
@@ -141,64 +191,79 @@ root, tx  = await provider.upload(b"persona-bytes")      # 0G Storage
     <!-- 1. iNFT_7857 -->
     <section class="panel">
       <h2><span class="name">iNFT-7857 <span class="module-num">M1</span></span><span class="badge" id="bg-inft">·</span></h2>
-      <div class="sub">ERC-7857 hardened build · transfer-gated · EIP-712 oracle handoff · AgentRegistry / BANKON / 0G Storage hooks. <a href="/inft7857">/inft7857 console →</a></div>
+      <div class="sub">ERC-7857 hardened build · transfer-gated · EIP-712 oracle handoff · AgentRegistry / BANKON / 0G Storage hooks.</div>
       <ul id="list-inft"><li class="empty">loading…</li></ul>
+      <div class="panel-cta"><a href="/inft7857">iNFT-7857 console <span class="arr">→</span></a></div>
     </section>
 
     <!-- 2. 0G Adapter -->
     <section class="panel">
       <h2><span class="name">0G Adapter <span class="module-num">M2</span></span><span class="badge" id="bg-compute">·</span></h2>
-      <div class="sub"><code>llm/zerog_handler.py</code> + sidecar (<code>@0gfoundation/0g-ts-sdk</code>). Captures <code>ZG-Res-Key</code> attestation per call. <code>X-Request-Id</code> replay protection. <a href="/zerog">/zerog console →</a></div>
+      <div class="sub"><code>llm/zerog_handler.py</code> + sidecar (<code>@0gfoundation/0g-ts-sdk</code>). Captures <code>ZG-Res-Key</code> attestation per call. <code>X-Request-Id</code> replay protection.</div>
       <ul id="list-compute"><li class="empty">loading…</li></ul>
+      <div class="panel-cta"><a href="/zerog">0G Adapter console <span class="arr">→</span></a></div>
     </section>
 
     <!-- 3. Conclave -->
     <section class="panel">
       <h2><span class="name">Conclave <span class="module-num">M3 · Gensyn AXL</span></span><span class="badge" id="bg-conclave">·</span></h2>
-      <div class="sub">P2P signed-envelope mesh deliberation. Cabinet pattern (CEO + 7 soldiers). Resolution anchored on chain; deliberation never leaves the chamber. <a href="/conclave">/conclave mesh viewer →</a></div>
+      <div class="sub">P2P signed-envelope mesh deliberation. Cabinet pattern (CEO + 7 soldiers). Resolution anchored on chain; deliberation never leaves the chamber.</div>
       <ul id="list-conclave"><li class="empty">loading…</li></ul>
+      <div class="panel-cta"><a href="/conclave">Conclave mesh viewer <span class="arr">→</span></a></div>
     </section>
 
     <!-- 4. BANKON v1 -->
     <section class="panel">
       <h2><span class="name">BANKON v1 <span class="module-num">M4 · ENS</span></span><span class="badge" id="bg-ens">·</span></h2>
-      <div class="sub">ENS NameWrapper subname registrar. Length-tiered pricing · EIP-712 voucher · multi-chain x402 · ERC-8004 bundle · soulbound fuses 0x50005. <a href="/bankon-ens">/bankon-ens console →</a></div>
+      <div class="sub">ENS NameWrapper subname registrar. Length-tiered pricing · EIP-712 voucher · multi-chain x402 · ERC-8004 bundle · soulbound fuses 0x50005.</div>
       <ul id="list-ens"><li class="empty">loading…</li></ul>
+      <div class="panel-cta">
+        <a href="/bankon-ens">BANKON ENS (read) <span class="arr">→</span></a>
+        <a href="/bankonminter" class="alt">BANKON Minter (write) <span class="arr">→</span></a>
+      </div>
     </section>
 
     <!-- 5. KeeperHub Bridge -->
     <section class="panel">
       <h2><span class="name">KeeperHub Bridge <span class="module-num">M5</span></span><span class="badge" id="bg-kh">·</span></h2>
-      <div class="sub">Bidirectional <code>x402</code> + <code>MPP</code> bridge between AgenticPlace and KeeperHub. Inbound + outbound. <a href="/keeperhub">/keeperhub console →</a> · <a href="/p2p/keeperhub/info" target="_blank">raw info →</a></div>
+      <div class="sub">Bidirectional <code>x402</code> + <code>MPP</code> bridge between AgenticPlace and KeeperHub. Inbound + outbound.</div>
       <ul id="list-kh"><li class="empty">loading…</li></ul>
+      <div class="panel-cta">
+        <a href="/keeperhub">KeeperHub console <span class="arr">→</span></a>
+        <a href="/p2p/keeperhub/info" target="_blank" class="alt">raw bridge info <span class="arr">↗</span></a>
+      </div>
     </section>
 
     <!-- 6. Uniswap Trader -->
     <section class="panel">
       <h2><span class="name">Uniswap V4 Trader <span class="module-num">M6</span></span><span class="badge" id="bg-uniswap">·</span></h2>
-      <div class="sub">BDI-style trader · perceive→deliberate→swap → log. Constraints from <code>personas/trader.prompt</code>. Sepolia for hackathon. <a href="/uniswap">/uniswap console →</a></div>
+      <div class="sub">BDI-style trader · perceive→deliberate→swap → log. Constraints from <code>personas/trader.prompt</code>. Sepolia for hackathon.</div>
       <ul id="list-uniswap"><li class="empty">loading…</li></ul>
+      <div class="panel-cta"><a href="/uniswap">Uniswap V4 console <span class="arr">→</span></a></div>
     </section>
 
     <!-- 7. THOT.commit() -->
     <section class="panel">
       <h2><span class="name">THOT.commit() <span class="module-num">M7</span></span><span class="badge" id="bg-thot">·</span></h2>
-      <div class="sub">Memory-anchoring primitive. Pillar-gated commit() with (rootHash, chatID, parentRootHash) → episodic-memory DAG. Content-addressed tokenIds. <a href="/THOT">/THOT console →</a></div>
+      <div class="sub">Memory-anchoring primitive. Pillar-gated commit() with (rootHash, chatID, parentRootHash) → episodic-memory DAG. Content-addressed tokenIds.</div>
       <ul id="list-thot"><li class="empty">loading…</li></ul>
+      <div class="panel-cta"><a href="/THOT">THOT console <span class="arr">→</span></a></div>
     </section>
 
     <!-- 8. AgentRegistry (ERC-8004) -->
     <section class="panel">
       <h2><span class="name">AgentRegistry <span class="module-num">M8 · ERC-8004</span></span><span class="badge" id="bg-agentregistry">·</span></h2>
-      <div class="sub">ERC-8004-aligned identity + capability registry. Linked iNFT_7857 · capability bitmap · attestor signatures · soulbound option. <a href="/agentregistry">/agentregistry console →</a></div>
+      <div class="sub">ERC-8004-aligned identity + capability registry. Linked iNFT_7857 · capability bitmap · attestor signatures · soulbound option.</div>
       <ul id="list-agentregistry"><li class="empty">loading…</li></ul>
+      <div class="panel-cta"><a href="/agentregistry">AgentRegistry console <span class="arr">→</span></a></div>
     </section>
 
     <!-- BONUS: Cabinet (composability demo) -->
     <section class="panel" style="border-color:rgba(86,211,100,.3)">
       <h2><span class="name">Cabinet <span class="module-num" style="background:rgba(86,211,100,.1);color:#56d364">BONUS · composes M2+M4+M8</span></span><span class="badge">·</span></h2>
-      <div class="sub">Shadow-overlord admin tier. Provisions 1 CEO + 7 soldiers per company; vault signs on agent's behalf without leaking the key. 20 tests; cryptographic invariant proven. <a href="/cabinet">/cabinet console →</a></div>
+      <div class="sub">Shadow-overlord admin tier. Provisions 1 CEO + 7 soldiers per company; vault signs on agent's behalf without leaking the key. 20 tests; cryptographic invariant proven.</div>
       <ul><li>BANKON Vault + IDManagerAgent + Boardroom roster + ERC-8004</li><li>Vault-as-signing-oracle endpoint</li><li>Offline shadow-overlord ECDSA gate</li></ul>
+      <div class="panel-cta"><a href="/cabinet" class="alt">Cabinet console <span class="arr">→</span></a></div>
     </section>
 
   </div>
