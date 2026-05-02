@@ -98,17 +98,23 @@ pre{background:#020308;border:1px solid var(--glass-border);border-radius:4px;pa
       Calls <span class="kbd">quoteExactInputSingle</span> on the Sepolia V4 Quoter. No funds needed; pure on-chain
       <span class="kbd">eth_call</span>. PoolKey ordering enforces <span class="kbd">currency0 &lt; currency1</span> per V4 spec.
     </div>
+    <div class="row" style="font-size:11px;color:var(--text3);margin-bottom:6px">
+      Pre-filled with Sepolia WETH ↔ USDC at 0.30% fee. Adjust as needed.
+    </div>
     <div class="row">
-      <input id="ti-token-in" value="0x" placeholder="token_in (or ETH = 0x000...000)" style="width:340px">
-      <input id="ti-token-out" value="0x" placeholder="token_out" style="width:340px">
+      <input id="ti-token-in" value="0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14" placeholder="token_in (Sepolia WETH default)" style="width:380px">
+      <input id="ti-token-out" value="0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238" placeholder="token_out (Sepolia USDC default)" style="width:380px">
     </div>
     <div class="row">
       <input id="ti-amount" value="0.001" placeholder="amount_in (decimal)" style="width:140px">
-      <input id="ti-fee" value="3000" placeholder="fee tier (e.g. 3000)" style="width:140px">
+      <input id="ti-fee" value="3000" placeholder="fee tier (3000 = 0.30%)" style="width:140px">
       <input id="ti-tickspacing" value="60" placeholder="tickSpacing" style="width:120px">
       <button id="btn-quote">Get Quote</button>
     </div>
-    <pre id="quote-output">paste pool params and click Get Quote.</pre>
+    <div class="row" style="font-size:10px;color:var(--text3);margin-top:6px;font-family:'JetBrains Mono',monospace">
+      Sepolia addresses · Quoter: 0x61B3...9227 · UniversalRouter: 0x3A9D...F98b · PoolManager: 0xE03A...3543
+    </div>
+    <pre id="quote-output">click Get Quote — calls Sepolia V4 Quoter via eth_call (read-only, no funds).</pre>
   </div>
 
   <div class="panel">
