@@ -93,20 +93,45 @@ def select_free_tier_provider(task_kind: str = "agentic_general") -> Tuple[Optio
     """
     Choose a free-tier provider+model for a given task class.
 
-    Strategy:
-      1. Honor the `task_routing` table in `data/config/ollama_cloud_models.json`
-         (preferred — operator-curated "best model per job").
-      2. Fall back to `free_tier_pool` from llm_factory_config.json.
-      3. Skip providers without an API key in the env (we don't probe them).
-      4. Caller is expected to feed the result into create_llm_handler();
-         actual rate-limit headroom is enforced inside the handler's limiter.
+    Strategy (in order):
+      1. Live model catalogue (data/catalogue/ollama_library.json) — picks the
+         best concrete model on disk or in Ollama Cloud whose `skills` match
+         the task class. This is the "best model for the job" router.
+      2. Operator-curated task_routing in data/config/ollama_cloud_models.json
+         (manual override / fallback when catalogue is missing).
+      3. free_tier_pool from llm_factory_config.json — provider-only fallback
+         (model picked downstream from defaults).
 
     Returns (provider_name, model_name) or (None, None) if no candidate is available.
     """
     factory_cfg = _load_llm_factory_config_json()
     registry = _load_provider_registry()
+    have_ollama_cloud = bool(os.getenv("OLLAMA_API_KEY"))
 
-    # Task → model preference list (Ollama-cloud + local mix).
+    # 1) Live catalogue.
+    try:
+        from agents.model_catalogue import ModelCatalogue
+        cat = ModelCatalogue()
+        candidates = cat.get_for_task(task_kind, prefer_local=True, cloud_ok=have_ollama_cloud)
+        for m in candidates:
+            name = m.get("name") or ""
+            tags = m.get("tags") or []
+            if m.get("is_cloud"):
+                if not have_ollama_cloud:
+                    continue
+                tag = next((t for t in tags if t.endswith("cloud")), "cloud")
+                return ("ollama_cloud", f"{name}:{tag}")
+            # Pick the smallest concrete tag for local models.
+            sized = sorted(
+                (t for t in tags if any(c.isdigit() for c in t)),
+                key=lambda x: x,
+            )
+            tag = sized[0] if sized else (tags[0] if tags else "latest")
+            return ("ollama", f"{name}:{tag}")
+    except Exception as e:
+        logger.debug(f"LLMFactory: catalogue routing skipped: {e}")
+
+    # 2) Static operator-curated task_routing.
     task_routing: Dict[str, List[str]] = {}
     try:
         ocm_path = PROJECT_ROOT / "data" / "config" / "ollama_cloud_models.json"
@@ -122,16 +147,13 @@ def select_free_tier_provider(task_kind: str = "agentic_general") -> Tuple[Optio
                 if os.getenv("VLLM_BASE_URL"):
                     return ("vllm", None)
                 continue
-            # Cloud-suffixed model belongs to Ollama Cloud.
             if candidate.endswith(":cloud"):
-                if os.getenv("OLLAMA_API_KEY"):
+                if have_ollama_cloud:
                     return ("ollama_cloud", candidate)
                 continue
-            # Otherwise treat as a local Ollama model tag.
             return ("ollama", candidate)
 
-    # Fallback: rotate through free_tier_pool, picking the first one whose
-    # API key env var is populated.
+    # 3) Provider-only pool fallback.
     pool: List[str] = factory_cfg.get("free_tier_pool", []) or []
     for prov in pool:
         info = registry.get(prov, {})
