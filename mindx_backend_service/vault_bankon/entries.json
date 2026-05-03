@@ -3,5 +3,15 @@
   "cipher": "aes-256-gcm",
   "kdf": "hkdf-sha512",
   "pbkdf2_iterations": 600000,
-  "entries": []
+  "entries": [
+    {
+      "id": "uniswap_trade_api_key",
+      "ciphertext": "2467542950dc7137db1813eb72e70d6d37877736784c1b438aeeefbbb854f53ffedd6c62bc0bcc8c0094c584414ed6044d75736721fd4213a37913",
+      "iv": "9f498fcc1e052244e6eb1824",
+      "context": "provider",
+      "created_at": 1777758500.7155077,
+      "updated_at": 1777758500.7155077,
+      "access_count": 0
+    }
+  ]
 }

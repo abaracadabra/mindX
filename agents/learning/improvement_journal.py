@@ -57,7 +57,7 @@ class ImprovementJournal:
 
     def _read_journal(self) -> str:
         if self.journal_path.exists():
-            return self.journal_path.read_text(encoding="utf-8")
+            return self.journal_path.read_text(encoding="utf-8", errors="replace")
         return JOURNAL_HEADER
 
     def _append_entry(self, entry: str):

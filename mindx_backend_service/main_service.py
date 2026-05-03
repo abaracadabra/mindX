@@ -5226,14 +5226,17 @@ async def startup_event():
         # Improvement Journal — mindX documents its own evolution
         async def _periodic_journal():
             await asyncio.sleep(60)  # Let system settle
+            from agents.learning.improvement_journal import ImprovementJournal
+            journal = ImprovementJournal()
             try:
-                from agents.learning.improvement_journal import ImprovementJournal
-                journal = ImprovementJournal()
                 await journal.write_entry()  # First entry immediately
                 logger.info("ImprovementJournal: first entry written")
+            except Exception as je:
+                logger.warning(f"ImprovementJournal first entry failed (will keep looping): {je}")
+            try:
                 await journal.run_periodic(interval_seconds=1800)  # Then every 30 min
             except Exception as je:
-                logger.warning(f"ImprovementJournal failed: {je}")
+                logger.warning(f"ImprovementJournal periodic loop exited: {je}")
 
         # AuthorAgent — The Book of mindX, on-demand publish on startup + daily lunar cycle
         async def _periodic_author():
