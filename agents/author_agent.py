@@ -182,6 +182,227 @@ class AuthorAgent:
         except Exception as e:
             logger.warning(f"AuthorAgent: failed to save lunar state: {e}")
 
+    # ── Improvement journal authorship ──
+    #
+    # AuthorAgent is the canonical author of journal entries. ImprovementJournal
+    # is the file-system writer; this method composes what gets written.
+
+    async def author_journal_entry(self, now: datetime) -> "tuple[str, Dict[str, Any]]":
+        """Compose a single journal entry from current system state.
+
+        Returns (markdown_entry, meta) where meta carries counts the writer
+        uses for change-detection in its periodic loop.
+        """
+        ts = now.strftime("%Y-%m-%d %H:%M UTC")
+        stats: Dict[str, Any] = {}
+
+        # 1. Memory count — pgvector primary, filesystem fallback. The prior
+        #    MemoryAgent().get_system_health_summary() path was async but
+        #    awaited synchronously, so the exception was swallowed and the
+        #    journal printed "?". Count from the source of truth instead.
+        memory_count = 0
+        try:
+            from agents import memory_pgvector as _mpg
+            memory_count = await _mpg.count_memories_total() or 0
+        except Exception:
+            memory_count = 0
+        if not memory_count:
+            try:
+                stm_root = PROJECT_ROOT / "data" / "memory" / "stm"
+                ltm_root = PROJECT_ROOT / "data" / "memory" / "ltm"
+                fs_count = 0
+                for root in (stm_root, ltm_root):
+                    if root.exists():
+                        fs_count += sum(1 for _ in root.rglob("*.json"))
+                memory_count = fs_count
+            except Exception:
+                memory_count = 0
+        stats["stm_records"] = memory_count
+
+        # 2. Beliefs
+        beliefs_path = PROJECT_ROOT / "data" / "memory" / "beliefs.json"
+        belief_count = 0
+        new_beliefs: List[str] = []
+        try:
+            if beliefs_path.exists():
+                bd = json.loads(beliefs_path.read_text())
+                belief_count = len(bd)
+                for k, v in bd.items():
+                    if "identity.map" not in k:
+                        new_beliefs.append(f"  - `{k}`: {v.get('value', '')}")
+        except Exception:
+            pass
+        stats["beliefs"] = belief_count
+
+        # 3. Gödel decisions
+        godel_path = PROJECT_ROOT / "data" / "logs" / "godel_choices.jsonl"
+        recent_decisions: List[str] = []
+        try:
+            if godel_path.exists():
+                lines = [l for l in godel_path.read_text().strip().split("\n") if l.strip()]
+                for line in lines[-5:]:
+                    try:
+                        g = json.loads(line)
+                        agent = g.get("source_agent", "unknown")
+                        ctype = g.get("choice_type", "")
+                        chosen = str(g.get("chosen", ""))[:120]
+                        rationale = g.get("rationale", "")[:120]
+                        if chosen or rationale:
+                            recent_decisions.append(
+                                f"  - **{agent}** ({ctype}): {chosen}"
+                                + (f" — *{rationale}*" if rationale else "")
+                            )
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+
+        # 4. Campaign history
+        campaign_dir = PROJECT_ROOT / "data" / "sea_campaign_history"
+        recent_campaigns: List[str] = []
+        try:
+            if campaign_dir.exists():
+                for f in sorted(campaign_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)[:3]:
+                    try:
+                        campaigns = json.loads(f.read_text())
+                        if isinstance(campaigns, list):
+                            for c in campaigns[-2:]:
+                                status = c.get("overall_campaign_status", "unknown")
+                                msg = c.get("final_message", "")[:150]
+                                run_id = c.get("campaign_run_id", "?")
+                                recent_campaigns.append(f"  - `{run_id}` — **{status}**: {msg}")
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+
+        # 5. Improvement backlog
+        backlog_path = PROJECT_ROOT / "data" / "improvement_backlog.json"
+        backlog_count = 0
+        backlog_top: List[str] = []
+        try:
+            if backlog_path.exists():
+                bl = json.loads(backlog_path.read_text())
+                if isinstance(bl, list):
+                    backlog_count = len(bl)
+                    for item in sorted(bl, key=lambda x: x.get("priority", 0), reverse=True)[:3]:
+                        target = item.get("target_component_path", "?")
+                        suggestion = item.get("suggestion", "")[:100]
+                        backlog_top.append(f"  - [{item.get('priority', '?')}] `{target}`: {suggestion}")
+        except Exception:
+            pass
+
+        # 6. Recent actions from pgvector
+        recent_actions: List[str] = []
+        try:
+            from agents import memory_pgvector as _mpg
+            actions = await _mpg.get_recent_actions(limit=5)
+            for a in actions:
+                status = a.get("status", "?")
+                desc = a.get("description", "")[:100]
+                src = a.get("source", "")
+                agent = a.get("agent_id", "?")
+                recent_actions.append(f"  - **{status}** ({agent}, {src}): {desc}")
+        except Exception:
+            pass
+
+        # 7. Inference status
+        inference_info = ""
+        try:
+            from llm.inference_discovery import InferenceDiscovery
+            disc = await InferenceDiscovery.get_instance()
+            summary = disc.status_summary()
+            avail = summary.get("available", 0)
+            total = summary.get("total_sources", 0)
+            local = summary.get("local_inference", False)
+            inference_info = f"{avail}/{total} sources available" + (
+                " (local inference active)" if local else " (cloud only)"
+            )
+        except Exception:
+            pass
+
+        # 8. Recent dream cycles — surface the machine.dreaming feedback loop.
+        recent_dreams: List[str] = []
+        dream_count = 0
+        try:
+            dream_dir = PROJECT_ROOT / "data" / "memory" / "dreams"
+            if dream_dir.exists():
+                files = sorted(
+                    dream_dir.glob("*_dream_report.json"),
+                    key=lambda p: p.stat().st_mtime,
+                    reverse=True,
+                )
+                dream_count = len(files)
+                for f in files[:3]:
+                    try:
+                        d = json.loads(f.read_text())
+                    except Exception:
+                        continue
+                    dts = d.get("timestamp", f.stem.split("_dream_report")[0])
+                    # duration_seconds may be str or float — normalize defensively.
+                    try:
+                        dur_s = float(d.get("duration_seconds", 0) or 0)
+                    except Exception:
+                        dur_s = 0.0
+                    timing = d.get("timing", {}) or {}
+                    lunar = (timing.get("lunar") or {}) if isinstance(timing, dict) else {}
+                    phase = lunar.get("phase_name", "")
+                    recs = d.get("recommendations") or d.get("tuning_recommendations") or []
+                    rec_n = len(recs) if isinstance(recs, list) else 0
+                    bits = [f"{dur_s:.1f}s"]
+                    if phase:
+                        bits.append(phase)
+                    if rec_n:
+                        bits.append(f"{rec_n} recommendation{'s' if rec_n != 1 else ''}")
+                    recent_dreams.append(f"  - `{dts}` — {', '.join(bits)}")
+        except Exception:
+            pass
+
+        # ── Build the entry ──
+        entry = f"## {ts}\n\n"
+        entry += (
+            f"**System snapshot**: {stats.get('stm_records', 0)} memories, "
+            f"{belief_count} beliefs, {backlog_count} backlog items, {inference_info}\n\n"
+        )
+
+        if recent_actions:
+            entry += "### Actions\n\n"
+            entry += "\n".join(recent_actions) + "\n\n"
+
+        if recent_decisions:
+            entry += "### Autonomous Decisions\n\n"
+            entry += "\n".join(recent_decisions) + "\n\n"
+
+        if recent_campaigns:
+            entry += "### Improvement Campaigns\n\n"
+            entry += "\n".join(recent_campaigns) + "\n\n"
+
+        if recent_dreams:
+            entry += f"### Dream Cycles ({dream_count} total)\n\n"
+            entry += "\n".join(recent_dreams) + "\n\n"
+
+        if new_beliefs:
+            entry += "### New Beliefs (Learned Knowledge)\n\n"
+            entry += "\n".join(new_beliefs) + "\n\n"
+
+        if backlog_top:
+            entry += "### Priority Backlog\n\n"
+            entry += "\n".join(backlog_top) + "\n\n"
+
+        if not recent_decisions and not recent_campaigns and not new_beliefs and not recent_dreams:
+            entry += "*System operating nominally. No new decisions, campaigns, dreams, or learnings this cycle.*\n\n"
+
+        meta = {
+            "timestamp": ts,
+            "memories": stats.get("stm_records", 0),
+            "beliefs": belief_count,
+            "decisions": len(recent_decisions),
+            "campaigns": len(recent_campaigns),
+            "dreams": len(recent_dreams),
+            "backlog": backlog_count,
+        }
+        return entry, meta
+
     # ── Daily chapter writing ──
 
     async def write_daily_chapter(self) -> Dict[str, Any]:

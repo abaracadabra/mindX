@@ -1111,7 +1111,67 @@ async def improvement_journal_page():
         md_truncated = '\n'.join(md_lines[:2000]) + '\n\n---\n\n*Showing most recent 2000 lines. Full journal: ' + f'{round(journal_path.stat().st_size/1024,1)}KB, {len(md_lines)} lines.*'
     else:
         md_truncated = md
-    body = _render_md(md_truncated)
+
+    # Group entries by YYYY-MM. Each entry starts with `## YYYY-MM-DD HH:MM UTC`.
+    # Current month renders inline open; prior months collapse into <details>.
+    import re as _re
+    _month_re = _re.compile(r'^## (\d{4})-(\d{2})-\d{2}\b')
+    preamble_lines: list = []
+    entries: list = []   # [{"month": "YYYY-MM", "lines": [...]}]
+    current = None
+    for line in md_truncated.split('\n'):
+        m = _month_re.match(line)
+        if m:
+            if current is not None:
+                entries.append(current)
+            current = {"month": f"{m.group(1)}-{m.group(2)}", "lines": [line]}
+        else:
+            (current["lines"] if current is not None else preamble_lines).append(line)
+    if current is not None:
+        entries.append(current)
+
+    # Bucket consecutive same-month entries (file is newest-first, so this is stable).
+    buckets: list = []
+    for e in entries:
+        if buckets and buckets[-1]["month"] == e["month"]:
+            buckets[-1]["entries"].append(e)
+        else:
+            buckets.append({"month": e["month"], "entries": [e]})
+
+    if buckets:
+        accordion_css = (
+            "<style>"
+            ".journal-month{margin:14px 0;border:1px solid rgba(88,166,255,.18);"
+            "border-radius:6px;background:rgba(13,17,23,.4)}"
+            ".journal-month>summary{cursor:pointer;padding:10px 14px;font-weight:600;"
+            "color:#79c0ff;list-style:none;user-select:none}"
+            ".journal-month>summary::-webkit-details-marker{display:none}"
+            ".journal-month>summary::before{content:'\\25B8';display:inline-block;"
+            "margin-right:8px;color:#4a5060;transition:transform .15s}"
+            ".journal-month[open]>summary::before{transform:rotate(90deg)}"
+            ".journal-month>summary .count{color:#4a5060;font-weight:400;margin-left:8px;"
+            "font-size:12px}"
+            ".journal-month>div.month-body{padding:0 14px 8px}"
+            "</style>"
+        )
+        parts: list = [accordion_css]
+        if preamble_lines:
+            parts.append(_render_md('\n'.join(preamble_lines)))
+        for i, b in enumerate(buckets):
+            md_chunk = '\n'.join('\n'.join(e["lines"]) for e in b["entries"])
+            rendered = _render_md(md_chunk)
+            n = len(b["entries"])
+            label = f"{b['month']} <span class=\"count\">— {n} {'entries' if n != 1 else 'entry'}</span>"
+            open_attr = ' open' if i == 0 else ''
+            parts.append(
+                f'<details class="journal-month"{open_attr}>'
+                f'<summary>{label}</summary>'
+                f'<div class="month-body">{rendered}</div>'
+                f'</details>'
+            )
+        body = '\n'.join(parts)
+    else:
+        body = _render_md(md_truncated)
     # Find related docs from recent journal content
     related = _find_related_docs('\n'.join(md_lines[:500]), "IMPROVEMENT_JOURNAL")
     related_html = ""

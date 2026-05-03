@@ -73,23 +73,48 @@ class ImprovementJournal:
 
     async def write_entry(self) -> Dict[str, Any]:
         """
-        Generate and write a journal entry from current system state.
-        Pulls from all available data sources.
+        Generate and write a journal entry. AuthorAgent is the canonical author —
+        we delegate composition to it and only handle the file write here. If
+        AuthorAgent is unavailable we fall back to a minimal in-process composer
+        so the journal is never silently empty.
         """
         now = datetime.now(timezone.utc)
         ts = now.strftime("%Y-%m-%d %H:%M UTC")
+
+        # AuthorAgent owns journal authorship. Try it first.
+        try:
+            from agents.author_agent import AuthorAgent
+            author = await AuthorAgent.get_instance()
+            entry, meta = await author.author_journal_entry(now)
+            self._append_entry(entry)
+            logger.info(f"ImprovementJournal: AuthorAgent entry written at {ts}")
+            return meta
+        except Exception as e:
+            logger.warning(f"AuthorAgent unavailable, using fallback composer: {e}")
+
+        # Fallback path — minimal composer if AuthorAgent breaks.
         sections = []
         stats = {}
 
-        # 1. System health
+        # 1. Memory count — pgvector primary, filesystem fallback.
+        memory_count = None
         try:
-            from agents.memory_agent import MemoryAgent
-            ma = MemoryAgent()
-            health = ma.get_system_health_summary()
-            stats["stm_records"] = health.get("total_memories", 0)
-            stats["agents_active"] = health.get("active_agents", 0)
+            from agents import memory_pgvector as _mpg
+            memory_count = await _mpg.count_memories_total()
         except Exception:
-            pass
+            memory_count = None
+        if not memory_count:
+            try:
+                stm_root = PROJECT_ROOT / "data" / "memory" / "stm"
+                ltm_root = PROJECT_ROOT / "data" / "memory" / "ltm"
+                fs_count = 0
+                for root in (stm_root, ltm_root):
+                    if root.exists():
+                        fs_count += sum(1 for _ in root.rglob("*.json"))
+                memory_count = fs_count
+            except Exception:
+                memory_count = 0
+        stats["stm_records"] = memory_count or 0
 
         # 2. Beliefs
         beliefs_path = PROJECT_ROOT / "data" / "memory" / "beliefs.json"
