@@ -74,6 +74,197 @@ async def init_offload_schema() -> bool:
         return False
 
 
+async def init_cost_ledger_schema() -> bool:
+    """
+    Per-call inference cost ledger. Idempotent — safe to call every boot.
+    Captures provider, model, token counts, latency, and an estimated cost in
+    USD so mindX can prove its return on inference spend (free calls record
+    cost_usd_est=0.0 but still occupy the ledger for ROI accounting).
+    """
+    pool = await get_pool()
+    if not pool:
+        return False
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS cost_ledger (
+                    id BIGSERIAL PRIMARY KEY,
+                    ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    agent_id TEXT,
+                    provider TEXT NOT NULL,
+                    model TEXT NOT NULL,
+                    task_kind TEXT,
+                    tokens_in INT NOT NULL DEFAULT 0,
+                    tokens_out INT NOT NULL DEFAULT 0,
+                    latency_ms INT,
+                    cost_usd_est NUMERIC(14,10) NOT NULL DEFAULT 0,
+                    free_tier BOOLEAN NOT NULL DEFAULT FALSE,
+                    success BOOLEAN NOT NULL DEFAULT TRUE,
+                    call_id UUID
+                );
+                CREATE INDEX IF NOT EXISTS idx_cost_ledger_ts       ON cost_ledger (ts DESC);
+                CREATE INDEX IF NOT EXISTS idx_cost_ledger_agent    ON cost_ledger (agent_id, ts DESC);
+                CREATE INDEX IF NOT EXISTS idx_cost_ledger_provider ON cost_ledger (provider, ts DESC);
+                """
+            )
+        logger.info("pgvector: cost_ledger schema ensured")
+        return True
+    except Exception as e:
+        logger.warning(f"pgvector init_cost_ledger_schema failed: {e}")
+        return False
+
+
+async def record_cost(
+    provider: str,
+    model: str,
+    tokens_in: int = 0,
+    tokens_out: int = 0,
+    latency_ms: Optional[int] = None,
+    cost_usd_est: float = 0.0,
+    agent_id: Optional[str] = None,
+    task_kind: Optional[str] = None,
+    free_tier: bool = False,
+    success: bool = True,
+    call_id: Optional[str] = None,
+) -> bool:
+    """Append one row to the cost ledger. Best-effort; failures are non-fatal."""
+    pool = await get_pool()
+    if not pool:
+        return False
+    try:
+        await pool.execute(
+            """INSERT INTO cost_ledger
+                (agent_id, provider, model, task_kind,
+                 tokens_in, tokens_out, latency_ms, cost_usd_est,
+                 free_tier, success, call_id)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)""",
+            agent_id, provider, model, task_kind,
+            int(tokens_in or 0), int(tokens_out or 0),
+            latency_ms,
+            float(cost_usd_est or 0.0),
+            bool(free_tier), bool(success), call_id,
+        )
+        return True
+    except Exception as e:
+        logger.debug(f"pgvector record_cost failed: {e}")
+        return False
+
+
+async def cost_summary(window: str = "24h") -> Dict[str, Any]:
+    """
+    Aggregate per-provider counts, tokens, $$ over a window.
+    `window` accepts: '1h', '24h', '7d', '30d'. Returns a totals row + per_provider rows.
+    """
+    pool = await get_pool()
+    if not pool:
+        return {"window": window, "totals": {}, "per_provider": []}
+    interval_map = {"1h": "1 hour", "24h": "24 hours", "7d": "7 days", "30d": "30 days"}
+    interval = interval_map.get(window, "24 hours")
+    try:
+        totals = await pool.fetchrow(
+            f"""SELECT
+                COUNT(*) AS calls,
+                COALESCE(SUM(tokens_in), 0) AS tokens_in,
+                COALESCE(SUM(tokens_out), 0) AS tokens_out,
+                COALESCE(SUM(cost_usd_est), 0) AS cost_usd,
+                COUNT(*) FILTER (WHERE free_tier) AS free_calls,
+                COUNT(*) FILTER (WHERE NOT success) AS errors
+              FROM cost_ledger
+              WHERE ts >= NOW() - INTERVAL '{interval}'"""
+        )
+        rows = await pool.fetch(
+            f"""SELECT provider,
+                       COUNT(*) AS calls,
+                       COALESCE(SUM(tokens_in), 0) AS tokens_in,
+                       COALESCE(SUM(tokens_out), 0) AS tokens_out,
+                       COALESCE(SUM(cost_usd_est), 0) AS cost_usd,
+                       COUNT(*) FILTER (WHERE free_tier) AS free_calls
+                FROM cost_ledger
+                WHERE ts >= NOW() - INTERVAL '{interval}'
+                GROUP BY provider
+                ORDER BY calls DESC"""
+        )
+        return {
+            "window": window,
+            "totals": {
+                "calls": int(totals["calls"] or 0) if totals else 0,
+                "tokens_in": int(totals["tokens_in"] or 0) if totals else 0,
+                "tokens_out": int(totals["tokens_out"] or 0) if totals else 0,
+                "tokens_total": int((totals["tokens_in"] or 0) + (totals["tokens_out"] or 0)) if totals else 0,
+                "cost_usd": float(totals["cost_usd"] or 0.0) if totals else 0.0,
+                "free_calls": int(totals["free_calls"] or 0) if totals else 0,
+                "errors": int(totals["errors"] or 0) if totals else 0,
+            },
+            "per_provider": [
+                {
+                    "provider": r["provider"],
+                    "calls": int(r["calls"]),
+                    "tokens_in": int(r["tokens_in"]),
+                    "tokens_out": int(r["tokens_out"]),
+                    "tokens_total": int(r["tokens_in"] + r["tokens_out"]),
+                    "cost_usd": float(r["cost_usd"] or 0.0),
+                    "free_calls": int(r["free_calls"]),
+                }
+                for r in rows
+            ],
+        }
+    except Exception as e:
+        logger.debug(f"pgvector cost_summary failed: {e}")
+        return {"window": window, "totals": {}, "per_provider": [], "error": str(e)}
+
+
+async def cost_recent(limit: int = 50) -> List[Dict[str, Any]]:
+    """Last `limit` rows of the ledger, newest first."""
+    pool = await get_pool()
+    if not pool:
+        return []
+    try:
+        rows = await pool.fetch(
+            """SELECT ts, agent_id, provider, model, task_kind,
+                      tokens_in, tokens_out, latency_ms,
+                      cost_usd_est, free_tier, success
+               FROM cost_ledger
+               ORDER BY ts DESC
+               LIMIT $1""",
+            int(limit),
+        )
+        return [
+            {
+                "ts": r["ts"].isoformat() if r["ts"] else None,
+                "agent_id": r["agent_id"],
+                "provider": r["provider"],
+                "model": r["model"],
+                "task_kind": r["task_kind"],
+                "tokens_in": int(r["tokens_in"] or 0),
+                "tokens_out": int(r["tokens_out"] or 0),
+                "tokens_total": int((r["tokens_in"] or 0) + (r["tokens_out"] or 0)),
+                "latency_ms": int(r["latency_ms"]) if r["latency_ms"] is not None else None,
+                "cost_usd_est": float(r["cost_usd_est"] or 0.0),
+                "free_tier": bool(r["free_tier"]),
+                "success": bool(r["success"]),
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        logger.debug(f"pgvector cost_recent failed: {e}")
+        return []
+
+
+async def tokens_total() -> int:
+    """All-time token count (in + out) across the ledger. Cheap for the dashboard."""
+    pool = await get_pool()
+    if not pool:
+        return 0
+    try:
+        row = await pool.fetchrow(
+            "SELECT COALESCE(SUM(tokens_in + tokens_out), 0) AS total FROM cost_ledger"
+        )
+        return int(row["total"]) if row else 0
+    except Exception:
+        return 0
+
+
 async def mark_memory_offloaded(
     memory_id: str,
     content_cid: str,

@@ -71,6 +71,78 @@ _llm_handler_cache_lock = asyncio.Lock()
 _factory_config_data: Optional[Dict[str, Any]] = None
 _factory_config_loaded_flag = False
 
+_provider_registry_cache: Optional[Dict[str, Any]] = None
+
+
+def _load_provider_registry() -> Dict[str, Any]:
+    """Read data/config/provider_registry.json once. Used by free-tier router."""
+    global _provider_registry_cache
+    if _provider_registry_cache is not None:
+        return _provider_registry_cache
+    try:
+        path = PROJECT_ROOT / "data" / "config" / "provider_registry.json"
+        with path.open("r", encoding="utf-8") as f:
+            _provider_registry_cache = json.load(f)
+    except Exception as e:
+        logger.warning(f"LLMFactory: provider_registry.json unreadable ({e}); free-tier routing disabled.")
+        _provider_registry_cache = {}
+    return _provider_registry_cache
+
+
+def select_free_tier_provider(task_kind: str = "agentic_general") -> Tuple[Optional[str], Optional[str]]:
+    """
+    Choose a free-tier provider+model for a given task class.
+
+    Strategy:
+      1. Honor the `task_routing` table in `data/config/ollama_cloud_models.json`
+         (preferred — operator-curated "best model per job").
+      2. Fall back to `free_tier_pool` from llm_factory_config.json.
+      3. Skip providers without an API key in the env (we don't probe them).
+      4. Caller is expected to feed the result into create_llm_handler();
+         actual rate-limit headroom is enforced inside the handler's limiter.
+
+    Returns (provider_name, model_name) or (None, None) if no candidate is available.
+    """
+    factory_cfg = _load_llm_factory_config_json()
+    registry = _load_provider_registry()
+
+    # Task → model preference list (Ollama-cloud + local mix).
+    task_routing: Dict[str, List[str]] = {}
+    try:
+        ocm_path = PROJECT_ROOT / "data" / "config" / "ollama_cloud_models.json"
+        if ocm_path.exists():
+            with ocm_path.open("r", encoding="utf-8") as f:
+                task_routing = (json.load(f) or {}).get("task_routing", {}) or {}
+    except Exception as e:
+        logger.debug(f"LLMFactory: task_routing read failed: {e}")
+
+    if task_kind in task_routing:
+        for candidate in task_routing[task_kind]:
+            if candidate == "vllm":
+                if os.getenv("VLLM_BASE_URL"):
+                    return ("vllm", None)
+                continue
+            # Cloud-suffixed model belongs to Ollama Cloud.
+            if candidate.endswith(":cloud"):
+                if os.getenv("OLLAMA_API_KEY"):
+                    return ("ollama_cloud", candidate)
+                continue
+            # Otherwise treat as a local Ollama model tag.
+            return ("ollama", candidate)
+
+    # Fallback: rotate through free_tier_pool, picking the first one whose
+    # API key env var is populated.
+    pool: List[str] = factory_cfg.get("free_tier_pool", []) or []
+    for prov in pool:
+        info = registry.get(prov, {})
+        env_var = info.get("api_key_env_var")
+        if env_var and not os.getenv(env_var):
+            continue
+        if not info.get("requires_api_key", True) or (env_var and os.getenv(env_var)):
+            return (prov, None)
+    return (None, None)
+
+
 def _load_llm_factory_config_json() -> Dict[str, Any]: # pragma: no cover
     global _factory_config_data, _factory_config_loaded_flag
     if _factory_config_loaded_flag:
@@ -207,12 +279,24 @@ async def create_llm_handler(
         max_retries = provider_config.get("rate_limit_max_retries", 5)
         initial_backoff = provider_config.get("rate_limit_initial_backoff_s", 1.0)
         
+        # Free-tier providers get the safety margin (cap at published-1) and
+        # TPM enforcement so we never crowd a published cap. Pulled from
+        # data/config/provider_registry.json so operators can tune per deploy.
+        registry_entry = _load_provider_registry().get(eff_provider_name, {}) or {}
+        ft_safety_margin = int(registry_entry.get("safety_margin_rpm", 0)) if registry_entry.get("free_tier") else 0
+        ft_tpm_limit = registry_entry.get("default_rate_limit_tpm") if registry_entry.get("free_tier") else None
+        if registry_entry.get("free_tier"):
+            # Honor the registry's published RPM (already at free-tier value).
+            requests_per_minute = registry_entry.get("default_rate_limit_rpm", requests_per_minute)
+
         # Use dual-layer rate limiter (minute + hourly)
         rate_limiter = DualLayerRateLimiter(
             requests_per_minute=requests_per_minute,
             requests_per_hour=requests_per_hour,
             max_retries=max_retries,
-            initial_backoff_s=initial_backoff
+            initial_backoff_s=initial_backoff,
+            safety_margin=ft_safety_margin,
+            tpm_limit=ft_tpm_limit,
         )
         
         # Get execution timeout from config

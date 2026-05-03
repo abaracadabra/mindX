@@ -951,9 +951,69 @@ def render_system(d: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def render_cost_summary(d: dict) -> str:
+    """Per-provider call counts, tokens, and $$ over a window."""
+    totals = d.get("totals") or {}
+    rows = d.get("per_provider") or []
+    head = render_kv(
+        {
+            "window":        d.get("window", "24h"),
+            "calls":         totals.get("calls", 0),
+            "tokens_in":     totals.get("tokens_in", 0),
+            "tokens_out":    totals.get("tokens_out", 0),
+            "tokens_total":  totals.get("tokens_total", 0),
+            "free_calls":    totals.get("free_calls", 0),
+            "errors":        totals.get("errors", 0),
+            "cost_usd":      f"${float(totals.get('cost_usd', 0.0)):.6f}",
+        },
+        formatters={
+            "calls":        lambda v: human_count(v),
+            "tokens_in":    lambda v: human_count(v),
+            "tokens_out":   lambda v: human_count(v),
+            "tokens_total": lambda v: human_count(v),
+            "free_calls":   lambda v: human_count(v),
+            "errors":       lambda v: human_count(v),
+        },
+    )
+    if not rows:
+        return head + "\n(no per-provider rows in window)\n"
+    table = render_table(
+        rows,
+        [
+            ("provider",   "provider",     None),
+            ("calls",      "calls",        lambda v: human_count(v)),
+            ("tok_in",     "tokens_in",    lambda v: human_count(v)),
+            ("tok_out",    "tokens_out",   lambda v: human_count(v)),
+            ("tok_total",  "tokens_total", lambda v: human_count(v)),
+            ("$ est",      "cost_usd",     lambda v: f"${float(v or 0.0):.6f}"),
+            ("free",       "free_calls",   lambda v: human_count(v)),
+        ],
+    )
+    return head + "\n" + table
+
+
+def render_cost_recent(d: dict) -> str:
+    rows = d.get("calls") or []
+    return render_table(
+        rows,
+        [
+            ("timestamp", "ts",           lambda v: human_ts_with_rel(v)),
+            ("provider",  "provider",     None),
+            ("model",     "model",        None),
+            ("tok_in",    "tokens_in",    lambda v: human_count(v)),
+            ("tok_out",   "tokens_out",   lambda v: human_count(v)),
+            ("ms",        "latency_ms",   lambda v: human_count(v)),
+            ("$ est",     "cost_usd_est", lambda v: f"${float(v or 0.0):.6f}"),
+            ("free",      "free_tier",    lambda v: "yes" if v else "no"),
+        ],
+    )
+
+
 RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/storage/status":      render_storage_status,
     "/insight/storage/recent":      render_storage_recent,
+    "/insight/cost/summary":        render_cost_summary,
+    "/insight/cost/recent":         render_cost_recent,
     "/insight/dreams/recent":       render_dreams_recent,
     "/insight/bdi/recent":          render_bdi_recent,
     "/insight/cognition":           render_cognition,

@@ -111,6 +111,16 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
             logger.warning(f"OllamaHandler: Rate limiter retries exhausted for '{model}'")
             return None  # Graceful — triggers BDI provider cascade
 
+        # Wall-clock for cost-ledger latency. Cloud-proxied models route
+        # through ollama.com via the local daemon and have tags ending in
+        # "cloud" (e.g. ":cloud", ":120b-cloud"). Record them under
+        # provider="ollama_cloud" so /insight/cost separates the tiers.
+        import time as _time
+        _t0 = _time.monotonic()
+        _model_tag = (model or "").split(":", 1)[-1].lower() if ":" in (model or "") else ""
+        _is_cloud = bool(_model_tag and _model_tag.endswith("cloud"))
+        _ledger_provider = "ollama_cloud" if _is_cloud else "ollama"
+
         response_content_full = ""
         try:
             async with session.post(generate_endpoint, json=payload) as response:
@@ -128,14 +138,38 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
                 response_data = await response.json(loads=json.loads) # Use standard json
 
                 # Record actual token counts at 18dp precision (cypherpunk2048 standard)
-                if response_data.get("eval_count", 0) > 0 or response_data.get("prompt_eval_count", 0) > 0:
+                _tokens_in = int(response_data.get("prompt_eval_count", 0) or 0)
+                _tokens_out = int(response_data.get("eval_count", 0) or 0)
+                if _tokens_out > 0 or _tokens_in > 0:
                     try:
                         from llm.precision_metrics import OllamaResponseMetrics, PrecisionMetricsTracker
                         metrics = OllamaResponseMetrics.from_api_response(response_data, model=model)
                         tracker = PrecisionMetricsTracker()
-                        tracker.record_with_cost(metrics, provider="ollama")
+                        tracker.record_with_cost(metrics, provider=_ledger_provider)
                     except Exception:
                         pass  # Metrics are observational — never block inference
+
+                # Cost ledger — best-effort, never blocks inference. Local
+                # Ollama is free; *:cloud goes through Ollama Cloud (also
+                # free-tier here). Cost-USD estimate stays 0.0 for both today;
+                # when the operator enables paid Ollama tiers, slot pricing in.
+                try:
+                    from agents import memory_pgvector as _mpg
+                    _latency_ms = int((_time.monotonic() - _t0) * 1000)
+                    asyncio.create_task(_mpg.record_cost(
+                        provider=_ledger_provider,
+                        model=str(model),
+                        tokens_in=_tokens_in,
+                        tokens_out=_tokens_out,
+                        latency_ms=_latency_ms,
+                        cost_usd_est=0.0,
+                        free_tier=True,
+                        success=True,
+                        agent_id=None,
+                        task_kind=None,
+                    ))
+                except Exception:
+                    pass
 
                 if "response" in response_data:
                     response_content_full = response_data["response"].strip()

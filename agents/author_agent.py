@@ -321,6 +321,30 @@ class AuthorAgent:
         except Exception:
             pass
 
+        # 7b. Inference spend — running cost ledger, free vs paid split,
+        #     running token total. ROI proof — see plan optimized-mixing-pike.md.
+        spend_line = ""
+        try:
+            from agents import memory_pgvector as _mpg
+            cs = await _mpg.cost_summary("24h")
+            tot = (cs or {}).get("totals") or {}
+            calls = int(tot.get("calls", 0) or 0)
+            tk_total = int(tot.get("tokens_total", 0) or 0)
+            free = int(tot.get("free_calls", 0) or 0)
+            cost = float(tot.get("cost_usd", 0.0) or 0.0)
+            tk_all_time = await _mpg.tokens_total()
+            if calls or tk_all_time:
+                provs = (cs or {}).get("per_provider") or []
+                top = ", ".join(p["provider"] for p in provs[:3]) or "-"
+                paid = max(0, calls - free)
+                spend_line = (
+                    f"24h: {calls} calls ({free} free / {paid} paid), "
+                    f"{tk_total:,} tokens, ${cost:.6f}. "
+                    f"Top: {top}. All-time tokens: {tk_all_time:,}."
+                )
+        except Exception:
+            pass
+
         # 8. Recent dream cycles — surface the machine.dreaming feedback loop.
         recent_dreams: List[str] = []
         dream_count = 0
@@ -364,6 +388,8 @@ class AuthorAgent:
             f"**System snapshot**: {stats.get('stm_records', 0)} memories, "
             f"{belief_count} beliefs, {backlog_count} backlog items, {inference_info}\n\n"
         )
+        if spend_line:
+            entry += f"**Inference spend**: {spend_line}\n\n"
 
         if recent_actions:
             entry += "### Actions\n\n"

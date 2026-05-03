@@ -3991,6 +3991,37 @@ async def insight_storage_recent(request: Request, limit: int = 30):
         return {"events": [], "count": 0, "error": str(e)}
 
 
+@app.get("/insight/cost/summary", tags=["insight"], summary="Per-provider inference cost + token totals (windowed)")
+@_insight_safe
+async def insight_cost_summary(request: Request, window: str = "24h"):
+    """Aggregate cost ledger over 1h/24h/7d/30d. Token counter for the dashboard."""
+    try:
+        from agents import memory_pgvector
+        return _maybe_h_text(
+            request,
+            await memory_pgvector.cost_summary(window),
+            route_path="/insight/cost/summary",
+        )
+    except Exception as e:
+        return {"error": str(e), "window": window, "totals": {}, "per_provider": []}
+
+
+@app.get("/insight/cost/recent", tags=["insight"], summary="Recent inference calls (provider, model, tokens, latency, cost)")
+@_insight_safe
+async def insight_cost_recent(request: Request, limit: int = 50):
+    """Tail of cost_ledger, newest first. Plain text via ?h=true."""
+    try:
+        from agents import memory_pgvector
+        rows = await memory_pgvector.cost_recent(min(max(1, int(limit)), 500))
+        return _maybe_h_text(
+            request,
+            {"calls": rows, "count": len(rows)},
+            route_path="/insight/cost/recent",
+        )
+    except Exception as e:
+        return {"calls": [], "count": 0, "error": str(e)}
+
+
 @app.get("/insight/cognition", tags=["insight"], summary="Information→knowledge→concept→wisdom→THOT→ingestion chain status")
 @_insight_safe
 async def insight_cognition(request: Request):

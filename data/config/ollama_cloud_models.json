@@ -32,7 +32,9 @@
     {"name": "glm-4.6", "params": null, "tags": ["tools", "thinking", "cloud"], "best_for": "Agentic, reasoning, coding", "pulls": 103500},
     {"name": "qwen3-vl", "params": "2B-235B", "tags": ["vision", "tools", "thinking", "cloud"], "best_for": "Vision-language, most powerful Qwen VL", "pulls": 3200000},
     {"name": "kimi-k2", "params": null, "tags": ["tools", "cloud"], "best_for": "MoE language model", "pulls": 59600},
-    {"name": "gemma3", "params": "270M-27B", "tags": ["vision", "cloud"], "best_for": "Single GPU capable, vision", "pulls": 35400000}
+    {"name": "gemma3", "params": "270M-27B", "tags": ["vision", "cloud"], "best_for": "Single GPU capable, vision", "pulls": 35400000},
+    {"name": "kimi-k2.6", "params": null, "tags": ["tools", "thinking", "cloud"], "best_for": "Open-source thinking — successor to k2.5", "pulls": null},
+    {"name": "deepseek-v4-pro", "params": null, "tags": ["tools", "thinking", "cloud", "long-context"], "best_for": "1M-token context window — long-document reasoning", "pulls": null}
   ],
   "boardroom_assignments": {
     "_note": "3 tiers per member. Tier 1=local (on VPS). Tier 2=cloud mid (routine/standard). Tier 3=cloud max (critical/constitutional).",
@@ -54,6 +56,17 @@
     {"name": "qwen3:1.7b", "size_gb": 1.4},
     {"name": "mxbai-embed-large:latest", "size_gb": 0.7},
     {"name": "nomic-embed-text:latest", "size_gb": 0.3},
-    {"name": "qwen3:0.6b", "size_gb": 0.5}
-  ]
+    {"name": "qwen3:0.6b", "size_gb": 0.5},
+    {"name": "granite4.1:3b", "size_gb": 2.0, "keep_alive": "0", "best_for": "General 3B-class local fallback (load on demand, unload after use)"}
+  ],
+  "task_routing": {
+    "_note": "Pick best model for the job from a max-return-per-token perspective. Order = preference. Selector falls through on rate-limit starvation.",
+    "code": ["vllm", "qwen3-coder-next:cloud", "glm-5.1:cloud", "devstral-2:cloud", "deepseek-coder:1.3b"],
+    "reasoning": ["vllm", "deepseek-r1:1.5b", "kimi-k2.6:cloud", "deepseek-v3.2:cloud", "glm-5:cloud"],
+    "long_context_1m": ["deepseek-v4-pro:cloud"],
+    "vision": ["qwen3-vl:cloud", "gemma4:cloud"],
+    "fast_general": ["qwen3:0.6b", "qwen3:1.7b", "granite4.1:3b", "gemini-3-flash-preview:cloud"],
+    "agentic_general": ["vllm", "granite4.1:3b", "kimi-k2.6:cloud", "glm-5.1:cloud", "minimax-m2.7:cloud"],
+    "embedding": ["mxbai-embed-large:latest", "nomic-embed-text:latest"]
+  }
 }

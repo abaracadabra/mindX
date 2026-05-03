@@ -8,11 +8,16 @@
     "base_url_env_var": null,
     "requires_api_key": true,
     "requires_base_url": false,
-    "default_rate_limit_rpm": 60,
+    "default_rate_limit_rpm": 15,
     "default_rate_limit_tpm": 1000000,
     "status": "disabled",
     "enabled": false,
-    "metadata": {}
+    "free_tier": true,
+    "safety_margin_rpm": 1,
+    "daily_request_cap": 1500,
+    "metadata": {
+      "tier_notes": "Gemini 2.0 Flash free: 15 RPM, 1M tokens/day. Cap at 14/min after safety_margin."
+    }
   },
   "openai": {
     "name": "openai",
@@ -27,6 +32,7 @@
     "default_rate_limit_tpm": 40000,
     "status": "disabled",
     "enabled": false,
+    "free_tier": false,
     "metadata": {}
   },
   "anthropic": {
@@ -42,6 +48,7 @@
     "default_rate_limit_tpm": 40000,
     "status": "disabled",
     "enabled": false,
+    "free_tier": false,
     "metadata": {}
   },
   "mistral": {
@@ -53,11 +60,15 @@
     "base_url_env_var": null,
     "requires_api_key": true,
     "requires_base_url": false,
-    "default_rate_limit_rpm": 10,
-    "default_rate_limit_tpm": 100000,
+    "default_rate_limit_rpm": 60,
+    "default_rate_limit_tpm": 500000,
     "status": "disabled",
     "enabled": false,
-    "metadata": {}
+    "free_tier": true,
+    "safety_margin_rpm": 1,
+    "metadata": {
+      "tier_notes": "Mistral free: 1 RPS = 60/min. Cap at 59/min after safety_margin."
+    }
   },
   "together": {
     "name": "together",
@@ -72,6 +83,7 @@
     "default_rate_limit_tpm": 1000000,
     "status": "disabled",
     "enabled": false,
+    "free_tier": false,
     "metadata": {}
   },
   "vllm": {
@@ -87,6 +99,8 @@
     "default_rate_limit_tpm": 10000000,
     "status": "enabled",
     "enabled": true,
+    "free_tier": false,
+    "preferred": true,
     "metadata": {
       "engine": "vllm",
       "api_compat": "openai",
@@ -106,7 +120,31 @@
     "default_rate_limit_tpm": 10000000,
     "status": "enabled",
     "enabled": true,
+    "free_tier": false,
     "metadata": {}
+  },
+  "ollama_cloud": {
+    "name": "ollama_cloud",
+    "display_name": "Ollama Cloud (Bearer-authenticated *:cloud models)",
+    "module_path": "api.ollama.ollama_url",
+    "factory_function": "create_ollama_api",
+    "api_key_env_var": "OLLAMA_API_KEY",
+    "base_url_env_var": null,
+    "requires_api_key": true,
+    "requires_base_url": false,
+    "default_rate_limit_rpm": 60,
+    "default_rate_limit_tpm": 100000,
+    "status": "enabled",
+    "enabled": true,
+    "free_tier": true,
+    "safety_margin_rpm": 1,
+    "metadata": {
+      "endpoint": "https://ollama.com",
+      "auth": "Bearer",
+      "tier_notes": "Defaults are conservative (60 RPM / 100k TPM). Operator should override per their account tier.",
+      "cloud_model_suffix": ":cloud",
+      "preferred_models": ["glm-5.1:cloud", "kimi-k2.6:cloud", "deepseek-v4-pro:cloud", "gpt-oss:120b-cloud"]
+    }
   },
   "grok": {
     "name": "grok",
@@ -121,6 +159,27 @@
     "default_rate_limit_tpm": 100000,
     "status": "disabled",
     "enabled": false,
+    "free_tier": false,
     "metadata": {}
+  },
+  "groq": {
+    "name": "groq",
+    "display_name": "Groq (free tier)",
+    "module_path": "llm.groq_handler",
+    "factory_function": "GroqHandler",
+    "api_key_env_var": "GROQ_API_KEY",
+    "base_url_env_var": null,
+    "requires_api_key": true,
+    "requires_base_url": false,
+    "default_rate_limit_rpm": 30,
+    "default_rate_limit_tpm": 12000,
+    "status": "disabled",
+    "enabled": false,
+    "free_tier": true,
+    "safety_margin_rpm": 1,
+    "daily_request_cap": 14400,
+    "metadata": {
+      "tier_notes": "llama-3.3-70b-versatile free: 30 RPM / 12k TPM / 14400 RPD. Cap at 29/min after safety_margin."
+    }
   }
 }

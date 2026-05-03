@@ -28,6 +28,9 @@ PROVIDER_ENV_MAP = {
     "vllm_api_key": "VLLM_API_KEY",
     # Ollama (base URL, not a secret but configurable)
     "ollama_base_url": "MINDX_LLM__OLLAMA__BASE_URL",
+    # Ollama Cloud (Bearer token used by both the mindX backend and the
+    # local Ollama daemon when proxying *:cloud model calls to ollama.com)
+    "ollama_api_key": "OLLAMA_API_KEY",
     # Replicate
     "replicate_api_key": "REPLICATE_API_TOKEN",
     # Stability AI

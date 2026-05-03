@@ -46,28 +46,62 @@ class RateLimiter:
         max_retries: int = 5,
         initial_backoff_s: float = 1.0,
         status_callback: Optional[Callable[[int, int, float], None]] = None,
-        monitoring_callback: Optional[Callable[[Dict[str, Any]], None]] = None
+        monitoring_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
+        # Free-tier safety: never touch the published cap. Default 0 preserves
+        # the original behavior; free-tier providers should pass safety_margin=1.
+        safety_margin: int = 0,
+        tpm_limit: Optional[int] = None,
+        slowdown_threshold: float = 0.80,
     ):
-        self.requests_per_minute = requests_per_minute
-        self.token_fill_rate = requests_per_minute / 60.0
-        self.max_tokens = float(requests_per_minute)
+        # Apply the safety margin once — `requests_per_minute` is what the rest
+        # of the limiter sees (and what shows in metrics).
+        self._published_rpm = requests_per_minute
+        self._safety_margin = max(0, int(safety_margin))
+        effective_rpm = max(1, requests_per_minute - self._safety_margin)
+        self.requests_per_minute = effective_rpm
+        self.token_fill_rate = effective_rpm / 60.0
+        self.max_tokens = float(effective_rpm)
         self.current_tokens = self.max_tokens
         self.last_fill_time = time.monotonic()
         self.lock = asyncio.Lock()
+
+        # Optional TPM (tokens-per-minute) bucket. Off by default for backwards
+        # compatibility — free-tier providers pass tpm_limit explicitly.
+        self.tpm_limit = tpm_limit
+        if tpm_limit is not None:
+            tpm_effective = max(1, int(tpm_limit * 0.99))  # 1% TPM headroom
+            self.tpm_max = float(tpm_effective)
+            self.tpm_current = self.tpm_max
+            self.tpm_fill_rate = tpm_effective / 60.0
+            self.tpm_last_fill = time.monotonic()
+        else:
+            self.tpm_max = 0.0
+            self.tpm_current = 0.0
+            self.tpm_fill_rate = 0.0
+            self.tpm_last_fill = 0.0
+
+        self.slowdown_threshold = max(0.0, min(0.99, slowdown_threshold))
 
         self.max_retries = max_retries
         self.initial_backoff_s = initial_backoff_s
         self.status_callback = status_callback
         self.monitoring_callback = monitoring_callback
-        
+
         # Enhanced metrics
         self.metrics = RateLimiterMetrics(
             max_tokens=self.max_tokens,
-            requests_per_minute=requests_per_minute,
+            requests_per_minute=effective_rpm,
             current_tokens=self.current_tokens
         )
-        
-        logger.info(f"RateLimiter initialized. Rate: {requests_per_minute}/min, Max Retries: {max_retries}.")
+
+        if self._safety_margin or self.tpm_limit:
+            logger.info(
+                f"RateLimiter initialized. Published: {self._published_rpm}/min, "
+                f"effective: {effective_rpm}/min (safety_margin={self._safety_margin}), "
+                f"TPM: {self.tpm_limit or 'off'}, slowdown@{self.slowdown_threshold:.0%}."
+            )
+        else:
+            logger.info(f"RateLimiter initialized. Rate: {requests_per_minute}/min, Max Retries: {max_retries}.")
 
     def get_metrics(self) -> Dict[str, Any]:
         """Get current rate limiter metrics."""
@@ -111,6 +145,99 @@ class RateLimiter:
         tokens_to_add = elapsed * self.token_fill_rate
         self.current_tokens = min(self.max_tokens, self.current_tokens + tokens_to_add)
         self.last_fill_time = now
+
+    async def _refill_tpm(self):
+        if self.tpm_limit is None:
+            return
+        now = time.monotonic()
+        elapsed = now - self.tpm_last_fill
+        self.tpm_current = min(self.tpm_max, self.tpm_current + elapsed * self.tpm_fill_rate)
+        self.tpm_last_fill = now
+
+    def headroom_pct(self) -> float:
+        """Min headroom across RPM and (if configured) TPM buckets, as a 0..1 fraction."""
+        rpm_h = self.current_tokens / self.max_tokens if self.max_tokens else 0.0
+        if self.tpm_limit is None:
+            return rpm_h
+        tpm_h = self.tpm_current / self.tpm_max if self.tpm_max else 0.0
+        return min(rpm_h, tpm_h)
+
+    async def reserve(self, estimated_tokens: int) -> bool:
+        """
+        Atomically debit one request from RPM and `estimated_tokens` from TPM.
+        Returns True when the reservation succeeds, False after retries exhausted.
+        At >=slowdown_threshold utilization on either axis, sleeps proactively
+        before debiting — we want to slow down well before the published cap.
+        """
+        if estimated_tokens < 0:
+            estimated_tokens = 0
+        start_time = time.monotonic()
+        now = time.time()
+        self.metrics.total_requests += 1
+        if self.metrics.first_request_time == 0:
+            self.metrics.first_request_time = now
+        self.metrics.last_request_time = now
+
+        for attempt in range(self.max_retries):
+            async with self.lock:
+                await self._refill_tokens()
+                await self._refill_tpm()
+
+                rpm_ok = self.current_tokens >= 1
+                tpm_ok = (
+                    self.tpm_limit is None
+                    or self.tpm_current >= max(1, estimated_tokens)
+                )
+                if rpm_ok and tpm_ok:
+                    # Proactive slowdown: sleep briefly when utilization is high
+                    # so we never crowd the published cap. Computed under lock
+                    # to keep the headroom check honest.
+                    rpm_util = 1.0 - (self.current_tokens / self.max_tokens)
+                    tpm_util = (
+                        1.0 - (self.tpm_current / self.tpm_max)
+                        if self.tpm_limit is not None and self.tpm_max
+                        else 0.0
+                    )
+                    util = max(rpm_util, tpm_util)
+                    proactive_sleep_s = 0.0
+                    if util >= self.slowdown_threshold:
+                        # Linear ramp from 0 at threshold to ~one fill-period at 100%.
+                        over = (util - self.slowdown_threshold) / max(0.01, 1.0 - self.slowdown_threshold)
+                        proactive_sleep_s = min(2.0, over * (60.0 / max(1.0, self.token_fill_rate * 60.0)))
+
+                    self.current_tokens -= 1
+                    if self.tpm_limit is not None:
+                        self.tpm_current -= max(0, estimated_tokens)
+
+            # Success path (we've reserved; sleep outside the lock if needed).
+            if rpm_ok and tpm_ok:
+                if proactive_sleep_s > 0:
+                    await asyncio.sleep(proactive_sleep_s)
+                self.metrics.successful_requests += 1
+                elapsed_ms = (time.monotonic() - start_time) * 1000
+                self.metrics.total_wait_time_ms += elapsed_ms
+                self.metrics.wait_times_ms.append(elapsed_ms)
+                self.metrics.retry_counts[attempt] = self.metrics.retry_counts.get(attempt, 0) + 1
+                if self.status_callback:
+                    self.status_callback(0, self.max_retries, 0)
+                await self._log_metrics(elapsed_ms, True, attempt)
+                return True
+
+            # Backoff and retry.
+            backoff_duration = self.initial_backoff_s * (2 ** attempt)
+            jitter = backoff_duration * random.uniform(-0.1, 0.1)
+            wait_time = backoff_duration + jitter
+            self.metrics.blocked_requests += 1
+            if self.status_callback:
+                self.status_callback(attempt + 1, self.max_retries, wait_time)
+            await asyncio.sleep(wait_time)
+
+        self.metrics.failed_requests += 1
+        elapsed_ms = (time.monotonic() - start_time) * 1000
+        self.metrics.total_wait_time_ms += elapsed_ms
+        self.metrics.wait_times_ms.append(elapsed_ms)
+        await self._log_metrics(elapsed_ms, False, self.max_retries)
+        return False
 
     async def _log_metrics(self, wait_time_ms: float = 0.0, success: bool = True, retries: int = 0):
         """Log metrics to monitoring system if callback is provided."""
@@ -337,21 +464,43 @@ class DualLayerRateLimiter:
         max_retries: int = 5,
         initial_backoff_s: float = 1.0,
         status_callback: Optional[Callable[[int, int, float], None]] = None,
-        monitoring_callback: Optional[Callable[[Dict[str, Any]], None]] = None
+        monitoring_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
+        # Free-tier safety knobs forwarded to the inner per-minute limiter.
+        # Defaults preserve existing behavior; pass safety_margin=1 for free
+        # providers so we never touch the published cap (cost = ban).
+        safety_margin: int = 0,
+        tpm_limit: Optional[int] = None,
+        slowdown_threshold: float = 0.80,
     ):
         self.minute_limiter = RateLimiter(
             requests_per_minute=requests_per_minute,
             max_retries=max_retries,
             initial_backoff_s=initial_backoff_s,
             status_callback=status_callback,
-            monitoring_callback=monitoring_callback
+            monitoring_callback=monitoring_callback,
+            safety_margin=safety_margin,
+            tpm_limit=tpm_limit,
+            slowdown_threshold=slowdown_threshold,
         )
         self.hourly_limiter = HourlyRateLimiter(requests_per_hour=requests_per_hour)
-        
+
         logger.info(
             f"DualLayerRateLimiter initialized. "
             f"Rate: {requests_per_minute}/min, {requests_per_hour}/hour"
+            + (f", TPM={tpm_limit}, safety_margin={safety_margin}" if (tpm_limit or safety_margin) else "")
         )
+
+    async def reserve(self, estimated_tokens: int = 0) -> bool:
+        """Token-aware reservation. Falls back to wait() when TPM is off."""
+        if not await self.hourly_limiter.check_and_record():
+            logger.warning("Hourly rate limit exceeded. Request blocked.")
+            return False
+        if self.minute_limiter.tpm_limit is None and estimated_tokens == 0:
+            return await self.minute_limiter.wait()
+        return await self.minute_limiter.reserve(estimated_tokens)
+
+    def headroom_pct(self) -> float:
+        return self.minute_limiter.headroom_pct()
     
     async def wait(self) -> bool:
         """

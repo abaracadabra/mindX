@@ -90,5 +90,6 @@
     "max_repeated_errors": 5,
     "circuit_breaker_threshold": 3
   },
-  "default_provider_preference_order": ["ollama", "gemini", "groq", "mistral", "grok", "vllm"]
+  "default_provider_preference_order": ["vllm", "ollama", "ollama_cloud", "groq", "gemini", "mistral", "grok"],
+  "free_tier_pool": ["ollama_cloud", "groq", "gemini", "mistral"]
 }
