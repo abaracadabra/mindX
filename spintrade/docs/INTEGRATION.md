@@ -1,98 +1,29 @@
-# SPINTRADE ↔ openagents BDI trader integration
+# SPINTRADE — Consumer integration guide
 
-## The two repos
+SPINTRADE is a standalone module. It does not import from, depend on, or
+assume the existence of any consuming framework. This doc explains how a
+*consumer* (mindX openagents is one example among many) can plug
+SpinTradeTool into its own BDI loop.
 
-```
-agenticplace/openagents     ← BDI trader, perceive/deliberate/execute loop
-agenticplace/spintrade      ← Local pair + tokens + foundry tests + trade test driver
-```
-
-Locally these are siblings:
+## SPINTRADE itself
 
 ```
-~/mindX/
-├── openagents/
-│   └── uniswap/
-│       └── demo_trader.py    ← perceive → LLM deliberate → execute
-└── spintrade/
-    ├── src/, test/, script/   ← Solidity (this repo)
-    ├── anvil/start.sh         ← boots local execution venue
-    ├── deployments/anvil.json ← addresses written here
-    └── trade_tests/
-        ├── spintrade_tool.py            ← real swap broadcaster
-        └── run_bdi_against_spintrade.py ← driver that runs the BDI loop
+spintrade/
+├── src/, test/, script/   ← Solidity (this repo)
+├── anvil/start.sh         ← boots local execution venue
+├── deployments/anvil.json ← addresses written here
+└── trade_tests/
+    ├── spintrade_tool.py            ← real swap broadcaster (zero framework deps)
+    └── run_bdi_against_spintrade.py ← self-contained BDI driver, deterministic
+                                        policy, runnable with no LLM
 ```
 
-## Where the BDI loop becomes real
+Everything above runs from `cd spintrade && …`. No sibling repos required.
 
-In `openagents/uniswap/demo_trader.py` the call chain is:
+## Action contract — adopt this verbatim
 
-```
-trading_loop()
-  → perceive()      reads pool state via tool.execute("info")
-  → deliberate()    LLM call returning {action, token_in, amount_in}
-  → execute_action() routes to tool.execute("quote") then tool.execute("swap")
-```
-
-When `tool` is `tools/uniswap_v4_tool.UniswapV4Tool`, the `swap` action
-returns a dry-run JSON envelope without broadcasting (the V4 calldata
-encoding for UniversalRouter is non-trivial without the official SDK).
-
-When `tool` is `spintrade.trade_tests.spintrade_tool.SpinTradeTool`, the
-`swap` action:
-1. Approves the pair to spend the input token (idempotent via `allowance`)
-2. Builds + signs + broadcasts `pair.swap(amountIn, tokenIn, minOut, to)`
-3. Waits for receipt, parses the `Swap` event, returns `{tx_hash, gas_used,
-   amount_out, block}`
-
-Same action surface, real execution.
-
-## Switching the BDI trader to SPINTRADE
-
-There are two paths:
-
-### A. Use the SPINTRADE driver directly (what we do today)
-
-```bash
-cd ~/mindX/spintrade
-bash anvil/start.sh           # boot venue
-python3 trade_tests/run_bdi_against_spintrade.py --cycles 5
-```
-
-This driver imports `spintrade_tool.SpinTradeTool` directly and runs a
-self-contained BDI loop (with a deterministic naive policy in place of the
-LLM call so the test is reproducible without an LLM dependency).
-
-### B. Plug SpinTradeTool into the existing demo_trader (one-line config)
-
-In `openagents/uniswap/demo_trader.py:214`:
-
-```python
-async def trading_loop(args):
-    if os.environ.get("SPINTRADE_DEPLOYMENTS"):
-        from spintrade.trade_tests.spintrade_tool import SpinTradeTool
-        tool = SpinTradeTool.from_deployments_json(
-            os.environ["SPINTRADE_DEPLOYMENTS"]
-        )
-    else:
-        from tools.uniswap_v4_tool import UniswapV4Tool
-        tool = UniswapV4Tool(...)
-    ...
-```
-
-Then:
-
-```bash
-export SPINTRADE_DEPLOYMENTS=~/mindX/spintrade/deployments/anvil.json
-python openagents/uniswap/demo_trader.py --cycles 4 --provider zerog
-```
-
-The BDI cycle is unchanged. Only the execution venue swaps from "Sepolia V4
-quoter, dry-run swap" to "anvil SPINTRADE, real swap".
-
-## Action contract (so other tools can replace SpinTradeTool)
-
-Both tools implement the same async surface:
+Any BDI trader integrates SPINTRADE by calling four async actions on the
+tool object:
 
 | Action | Input | Output |
 |---|---|---|
@@ -100,6 +31,35 @@ Both tools implement the same async surface:
 | `balance` | `{address?}` | `{bankon, pythai, lp}` (uint256 strings) |
 | `quote` | `{token_in, amount_in}` | `{amount_out, implied_rate}` |
 | `swap`  | `{token_in, amount_in, min_out?, to?}` | `{tx_hash, gas_used, amount_out, block}` |
+
+The standalone driver `trade_tests/run_bdi_against_spintrade.py` is the
+canonical reference implementation — copy `naive_decision()` into your own
+trader and replace it with an LLM-backed deliberate step.
+
+## Plugging SpinTradeTool into an external trader
+
+For a Python consumer, the integration is one import + one method call:
+
+```python
+import sys
+sys.path.insert(0, "/path/to/spintrade/trade_tests")
+from spintrade_tool import SpinTradeTool
+
+tool = SpinTradeTool.from_deployments_json(
+    "/path/to/spintrade/deployments/anvil.json",
+    trader_pk="0x...",   # optional; required only for swap action
+)
+
+# In your perceive/deliberate/execute loop:
+info  = await tool.execute("info")
+quote = await tool.execute("quote", {"token_in": "BANKON", "amount_in": 50 * 10**18})
+swap  = await tool.execute("swap",  {"token_in": "BANKON", "amount_in": 50 * 10**18, "min_out": 0})
+```
+
+mindX's openagents trader uses this exact pattern when invoked with
+`--backend spintrade` (see `openagents/uniswap/demo_trader.py`). That
+import is lazy — openagents doesn't load SPINTRADE unless the operator
+explicitly selects it.
 
 ## Trade-test evidence
 

@@ -5,8 +5,8 @@
 # SpinTradeFactory, creates the BANKON/PYTHAI pair, seeds 100k/400k initial
 # liquidity. Writes addresses to deployments/anvil.json.
 #
-# The openagents/uniswap BDI trader reads this file to know where to send
-# its swaps.
+# Any BDI consumer (mindX openagents, OpenClaw, NanoClaw, your stack) can
+# read deployments/anvil.json to discover the pair + token addresses.
 
 set -euo pipefail
 

@@ -1,19 +1,22 @@
-"""SpinTradeTool — Python wrapper around the SPINTRADE pair contract.
+"""SpinTradeTool — standalone Python wrapper around the SPINTRADE pair contract.
 
-Mirrors the action surface of openagents/uniswap/uniswap_v4_tool.py:
+Action surface (any BDI trader can adopt this verbatim):
     execute("info")    → reserves + addresses
-    execute("balance") → trader's BANKON / PYTHAI / LP balances
+    execute("balance") → caller's BANKON / PYTHAI / LP balances
     execute("quote")   → off-chain price calc via SpinTradePair.quote()
     execute("swap")    → REAL on-chain swap via SpinTradePair.swap()
 
-Unlike the Sepolia V4 tool, every action here is fully wired — including
-swap, which actually broadcasts and updates reserves. No dry-run stubs.
+Every action here is fully wired — including swap, which actually broadcasts
+and updates reserves. No dry-run stubs.
 
-Usage from openagents BDI trader:
+This module has zero dependencies on any caller (mindX, openagents, etc).
+Required: web3, eth_account. SPINTRADE is framework-agnostic.
 
-    from spintrade.trade_tests.spintrade_tool import SpinTradeTool
+Usage:
+
+    from spintrade_tool import SpinTradeTool
     tool = SpinTradeTool.from_deployments_json("spintrade/deployments/anvil.json")
-    info = await tool.execute("info")
+    info  = await tool.execute("info")
     quote = await tool.execute("quote", {"token_in": "BANKON", "amount_in": 100 * 10**18})
     swap  = await tool.execute("swap",  {"token_in": "BANKON", "amount_in": 100 * 10**18, "min_out": 0})
 """

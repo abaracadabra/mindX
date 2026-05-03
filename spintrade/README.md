@@ -1,13 +1,17 @@
 # SPINTRADE
 
-A local Uniswap V2-style constant product market maker (CPMM) with two test
-tokens — **BANKON** and **PYTHAI** — used as the live execution venue for the
-**openagents** Uniswap BDI trader.
+A standalone, framework-agnostic local Uniswap V2-style constant product
+market maker (CPMM) with two test tokens — **BANKON** and **PYTHAI**.
 
-The Sepolia Uniswap V4 trader path is real for quotes but its swap broadcast
-required encoding UniversalRouter v4 calldata. SPINTRADE replaces that with a
-self-contained, locally deployable pair where the BDI loop's swap action
-actually moves tokens, on a real chain, on every cycle.
+SPINTRADE is its own module. It deploys a complete swap venue on anvil
+(chain 31337) and exposes a Python tool with the canonical action surface
+(`info` / `balance` / `quote` / `swap`). Any BDI consumer — mindX
+openagents, OpenClaw, NanoClaw, your stack — can plug in by reading
+`deployments/anvil.json` and importing `trade_tests/spintrade_tool.py`.
+
+There is **no dependency on any specific framework** in either direction:
+the contracts, the Foundry tests, the Python tool, and the BDI driver all
+run from `cd spintrade && …` with nothing else checked out.
 
 ## What's in this repo
 
@@ -69,18 +73,22 @@ bash anvil/stop.sh
 
 ## Why this exists
 
-The openagents/uniswap module pairs a BDI deliberation loop (perceive → LLM
-decide → execute) with a Uniswap V4 tool. The V4 quoter on Sepolia is real,
-but the swap path was a dry-run stub because encoding UniversalRouter v4
-calldata without the official SDK is non-trivial. That meant zero live
-execution evidence in the openagents submission.
+A reusable execution venue that any BDI trader can use as its "real but
+deterministic" target — useful for unit tests, CI runs, repeatable demos,
+or as a stand-in when an external API path is gated, rate-limited, or down.
 
-SPINTRADE solves this by giving the trader a **real swap target**:
+SPINTRADE gives any consumer a **real swap target with no external
+dependencies**:
 - One Foundry command boots a chain
 - One bash command deploys the pair + seeds liquidity
-- The trader's existing `quote` and `swap` actions broadcast against this
-  pair, with real gas, real receipts, real reserve movement
+- The standard `info`/`balance`/`quote`/`swap` actions broadcast against
+  this pair, with real gas, real receipts, real reserve movement
 - `trade_tests/results/*.jsonl` is durable evidence per cycle
+
+For mindX, this is one of three execution venues the openagents Uniswap
+trader can target via `--backend`. The other two — `v4-stub` (Sepolia
+quoter, dry-run swap) and `trade-api` (the real Uniswap Trading API) — are
+defined inside openagents/. SPINTRADE doesn't know about any of them.
 
 ## How openagents uses it
 

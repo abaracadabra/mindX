@@ -213,14 +213,17 @@ async def trading_loop(args) -> dict:
     """Run perceive → deliberate → execute → log on a fixed cadence.
 
     Backend selection (via --backend flag or TRADER_BACKEND env var):
-      v4-stub    — original Sepolia V4 quoter, swap is dry-run (default for safety)
-      spintrade  — local Uniswap-style CPMM with BANKON/PYTHAI; real on-chain swaps
-                   on anvil (chain 31337). Reads spintrade/deployments/anvil.json.
-      trade-api  — real Uniswap Trading API gateway. Quote+swap broadcast on the
-                   chain selected by --chain-id. Requires UNISWAP_TRADE_API_KEY
-                   (env or vault) and (for swap) TRADER_PK funded on that chain.
+      trade-api  — DEFAULT: real Uniswap Trading API gateway. Quote+swap
+                   broadcast on the chain selected by --chain-id. Requires
+                   UNISWAP_TRADE_API_KEY (env or vault) and (for swap)
+                   TRADER_PK funded on that chain.
+      spintrade  — local Uniswap-style CPMM with BANKON/PYTHAI; real on-chain
+                   swaps on anvil (chain 31337). Reads
+                   spintrade/deployments/anvil.json. Requires SPINTRADE
+                   checked out as a sibling module (the import is lazy).
+      v4-stub    — original Sepolia V4 quoter, swap is dry-run (legacy).
     """
-    backend = args.backend or os.environ.get("TRADER_BACKEND", "v4-stub")
+    backend = args.backend or os.environ.get("TRADER_BACKEND", "trade-api")
 
     if backend == "spintrade":
         from spintrade.trade_tests.spintrade_tool import SpinTradeTool
@@ -354,8 +357,10 @@ def main():
                     help="skip the LLM step entirely (will hold every cycle)")
     ap.add_argument("--backend", choices=["v4-stub", "spintrade", "trade-api"],
                     default=os.environ.get("TRADER_BACKEND"),
-                    help="execution venue: v4-stub (default, dry-run), spintrade "
-                         "(local anvil CPMM), trade-api (real Uniswap gateway)")
+                    help="execution venue: trade-api (DEFAULT — real Uniswap "
+                         "API gateway), spintrade (local anvil CPMM, sibling "
+                         "module — lazy import), v4-stub (legacy Sepolia, "
+                         "dry-run swap)")
     ap.add_argument("--deployments",
                     help="(spintrade) path to deployments/anvil.json")
     ap.add_argument("--chain-id", type=int, default=1,

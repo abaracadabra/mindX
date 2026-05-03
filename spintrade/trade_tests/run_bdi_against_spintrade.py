@@ -1,21 +1,22 @@
-"""Drive the openagents BDI Uniswap trader against the local SPINTRADE pair.
+"""Self-contained BDI driver — runs perceive→deliberate→execute against SPINTRADE.
 
-This is the integration test the user asked for: the trader from
-`openagents/uniswap/demo_trader.py` runs its perceive → deliberate → execute
-loop, but every swap goes to a REAL local pair (no dry-run stub).
+Standalone integration test for the SPINTRADE pair: any BDI consumer (mindX
+openagents, OpenClaw, NanoClaw, your stack) can replicate the pattern by
+swapping the deterministic `naive_decision()` below for an LLM-backed
+deliberate step. SPINTRADE itself has zero dependencies on any caller —
+this script imports only `spintrade_tool` (sibling module) + standard lib.
 
 Pre-reqs:
   1. `bash spintrade/anvil/start.sh` running (anvil + SPINTRADE deployed)
   2. spintrade/deployments/anvil.json present
-  3. openagents/ checked out at ../openagents (or sibling repo)
 
 Usage:
-  python spintrade/trade-tests/run_bdi_against_spintrade.py --cycles 3
-  python spintrade/trade-tests/run_bdi_against_spintrade.py --cycles 5 --dry-run
+  python spintrade/trade_tests/run_bdi_against_spintrade.py --cycles 3
+  python spintrade/trade_tests/run_bdi_against_spintrade.py --cycles 5 --dry-run
 
 Output:
   - Each cycle's perceive/deliberate/execute output to stdout
-  - Cycle log appended to spintrade/trade-tests/results/<timestamp>.jsonl
+  - Cycle log appended to spintrade/trade_tests/results/<timestamp>.jsonl
   - Final reserves + price-impact summary
 """
 from __future__ import annotations
@@ -29,19 +30,16 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-# ─── path setup ────────────────────────────────────────────────────
+# ─── path setup — purely sibling resolution, no cross-repo coupling ─
 HERE = Path(__file__).resolve().parent
 SPINTRADE_ROOT = HERE.parent
-REPO_ROOT = SPINTRADE_ROOT.parent  # mindX/
-OPENAGENTS_ROOT = REPO_ROOT / "openagents"
 
 sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(REPO_ROOT))   # so `from openagents.uniswap...` resolves
 
 from spintrade_tool import SpinTradeTool  # noqa: E402
 
 DEPLOYMENTS = SPINTRADE_ROOT / "deployments" / "anvil.json"
-RESULTS_DIR = SPINTRADE_ROOT / "trade-tests" / "results"
+RESULTS_DIR = SPINTRADE_ROOT / "trade_tests" / "results"
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -52,8 +50,9 @@ def _now() -> str:
 async def naive_decision(perceived: dict, cycle: int) -> dict:
     """Tiny rule-based stand-in for the BDI deliberate step.
 
-    Real openagents trader would call an LLM here. This deterministic policy
-    lets the trade-test run without a network/LLM dependency:
+    A real BDI trader (mindX or any other framework) would call an LLM here.
+    This deterministic policy lets the trade test run without a network/LLM
+    dependency:
       - cycle 0: hold (warm-up, just observe)
       - even cycles: sell BANKON if BANKON balance > 0
       - odd cycles:  sell PYTHAI if PYTHAI balance > 0
