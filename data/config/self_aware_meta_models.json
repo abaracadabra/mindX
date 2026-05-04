@@ -1,0 +1,11 @@
+{
+  "_doc": "Operator-frozen meta-model list for ModelSelector tie-breaks. The selector NEVER chooses its own meta-model — that would be infinite regress. Order is fallback order: first reachable wins. All entries must be free or self-hosted.",
+  "_locked": true,
+  "_updated": "2026-05-04",
+  "models": [
+    "openai/gpt-oss-120b:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "inclusionai/ling-2.6-1t:free",
+    "ollama:gpt-oss:120b-cloud"
+  ]
+}

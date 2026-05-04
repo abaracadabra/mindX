@@ -2887,6 +2887,61 @@ async def insight_godel_recent(request: Request, limit: int = 50):
         return {"events": [], "count": 0, "error": str(e)}
 
 
+@app.get("/insight/model_selector/recent", tags=["insight"])
+@_insight_safe
+async def insight_model_selector_recent(request: Request, limit: int = 50):
+    """Last N self-aware model selections from data/logs/godel_choices.jsonl,
+    newest first. Filtered to rows where source_agent starts with
+    'mindx.self.improve.model_selector' or any *_improve_agent / SEA / mindXagent
+    self-aware path.
+
+    Each entry: source_agent, choice_type, task_class, importance, perception
+    (signals_consulted, weights, value_proven), options_considered, chosen_option,
+    rationale, confidence, eval_score (if MINDX_EVAL_GODEL_ENABLED), outcome.
+    """
+    from mindx_backend_service.insight_aggregator import GODEL_CHOICES
+    if not GODEL_CHOICES.exists():
+        return {"events": [], "count": 0}
+    try:
+        # Read the tail of the file (matches /insight/godel/recent pattern).
+        with open(GODEL_CHOICES, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            block = 256 * 1024
+            data = b""
+            pos = size
+            # Read enough lines to find ~limit selector entries (selector
+            # entries are a subset of all godel choices).
+            while pos > 0 and data.count(b"\n") <= max(1, limit) * 10:
+                read = min(block, pos)
+                pos -= read
+                f.seek(pos)
+                data = f.read(read) + data
+                if pos == 0:
+                    break
+        lines = [ln for ln in data.split(b"\n") if ln.strip()]
+        events = []
+        for ln in reversed(lines):
+            try:
+                row = json.loads(ln.decode("utf-8"))
+            except Exception:
+                continue
+            sa = row.get("source_agent") or ""
+            ct = row.get("choice_type") or ""
+            if (sa.startswith("mindx.self.improve")
+                    or ct == "self_aware_model_selection"):
+                events.append(row)
+                if len(events) >= max(1, min(limit, 500)):
+                    break
+        return _maybe_h_text(
+            request,
+            {"events": events, "count": len(events)},
+            route_path="/insight/model_selector/recent",
+        )
+    except Exception as e:
+        return {"events": [], "count": 0, "error": str(e)}
+
+
 def _read_alignment_events(limit: int = 50, source_kind: Optional[str] = None) -> List[Dict[str, Any]]:
     """Tail catalogue_events.jsonl and filter for kind='alignment.score'.
 

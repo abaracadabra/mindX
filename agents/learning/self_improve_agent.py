@@ -66,6 +66,7 @@ class SelfImprovementAgent:
         llm_provider = llm_provider_override or self.config.get("self_improvement_agent.llm.provider")
         llm_model_name = llm_model_name_override or self.config.get("self_improvement_agent.llm.model")
         self.llm_handler: LLMHandler = create_llm_handler(llm_provider, llm_model_name)
+        self._handler_source: str = "config"  # 'config' | 'self_aware' | 'override'
         
         self.max_self_improve_cycles = max_cycles_override if max_cycles_override is not None \
             else self.config.get("self_improvement_agent.default_max_cycles", 1)
@@ -86,6 +87,51 @@ class SelfImprovementAgent:
             f"Self-Test Timeout: {self.self_test_timeout_seconds}s. Critique Threshold: {self.critique_threshold}. "
             f"Is Iteration Instance: {self.is_iteration_instance}."
         )
+
+    async def reselect_handler(self, task_class: str = "codegen") -> bool:
+        """Opt-in: replace `self.llm_handler` with one chosen by the self-aware
+        model selector. Always logs the choice (godel.choice). Returns True if
+        the handler was swapped, False if the construction-time handler was kept.
+
+        Callers (typically the autonomous loop) invoke this before a campaign
+        when they want the loop to consult mindX's own logs for the pick. The
+        synchronous constructor stays cheap; this method is the async hook.
+
+        See mindx/self/improve/model_selector.py.
+        """
+        try:
+            from mindx.self.improve import choose_model
+            from mindx.self.improve.model_selector import TaskProfile
+            from mindx.self.improve.handler_resolver import (
+                classify_slug,
+                slug_to_provider_model,
+            )
+
+            choice = await choose_model(TaskProfile(
+                task_class=task_class,
+                importance="standard",
+                source_agent=f"self_improve_agent.{self.agent_id}",
+            ))
+            logger.info(
+                f"SIA self-aware selector: chosen={choice.chosen} "
+                f"confidence={choice.confidence}"
+            )
+            cls = classify_slug(choice.chosen)
+            if cls in ("ollama_local", "ollama_cloud"):
+                provider, model = slug_to_provider_model(choice.chosen)
+                try:
+                    new_handler = create_llm_handler(provider, model)
+                    self.llm_handler = new_handler
+                    self._handler_source = "self_aware"
+                    return True
+                except Exception as e:
+                    logger.warning(f"SIA could not create handler for {choice.chosen}: {e}")
+                    return False
+            # Non-Ollama-routable slug (OpenRouter etc.): keep config handler.
+            return False
+        except Exception as e:
+            logger.debug(f"SIA self-aware selector unavailable: {e}")
+            return False
 
     def _ensure_directories_exist(self): # pragma: no cover
         dirs_to_create = [SELF_IMPROVEMENT_BASE_DIR, IMPROVEMENT_ARCHIVE_DIR, 

@@ -1,0 +1,105 @@
+{
+  "_doc": "Per-task-class weights for ModelSelector. Mutable by MachineDreaming._phase_model_selector_retrain — the dream cycle joins recent godel.choice events with their outcomes and adjusts weights toward axes that predicted outcomes well. Hand-edits welcome but will be overwritten by the next dream cycle that runs after a campaign completes.",
+  "_updated": "2026-05-04",
+  "_axes": ["success_rate", "eval_alignment_mean", "latency_p50_inverse", "cost_per_invocation_inverse", "capability_match", "recency_bonus", "failure_penalty_inverse"],
+  "task_classes": {
+    "reasoning": {
+      "success_rate": 0.25,
+      "eval_alignment_mean": 0.20,
+      "latency_p50_inverse": 0.10,
+      "cost_per_invocation_inverse": 0.15,
+      "capability_match": 0.10,
+      "recency_bonus": 0.10,
+      "failure_penalty_inverse": 0.10
+    },
+    "codegen": {
+      "success_rate": 0.30,
+      "eval_alignment_mean": 0.15,
+      "latency_p50_inverse": 0.05,
+      "cost_per_invocation_inverse": 0.10,
+      "capability_match": 0.20,
+      "recency_bonus": 0.10,
+      "failure_penalty_inverse": 0.10
+    },
+    "planning": {
+      "success_rate": 0.30,
+      "eval_alignment_mean": 0.25,
+      "latency_p50_inverse": 0.05,
+      "cost_per_invocation_inverse": 0.10,
+      "capability_match": 0.10,
+      "recency_bonus": 0.10,
+      "failure_penalty_inverse": 0.10
+    },
+    "vision": {
+      "success_rate": 0.20,
+      "eval_alignment_mean": 0.15,
+      "latency_p50_inverse": 0.05,
+      "cost_per_invocation_inverse": 0.10,
+      "capability_match": 0.30,
+      "recency_bonus": 0.10,
+      "failure_penalty_inverse": 0.10
+    },
+    "ops": {
+      "success_rate": 0.20,
+      "eval_alignment_mean": 0.10,
+      "latency_p50_inverse": 0.20,
+      "cost_per_invocation_inverse": 0.20,
+      "capability_match": 0.10,
+      "recency_bonus": 0.10,
+      "failure_penalty_inverse": 0.10
+    },
+    "default": {
+      "success_rate": 0.25,
+      "eval_alignment_mean": 0.15,
+      "latency_p50_inverse": 0.15,
+      "cost_per_invocation_inverse": 0.15,
+      "capability_match": 0.10,
+      "recency_bonus": 0.10,
+      "failure_penalty_inverse": 0.10
+    }
+  },
+  "task_class_candidates": {
+    "_doc": "Bootstrap candidate list per task class — used when no historical signal exists for a (model, task_class) pair. Empirical map from data/config/board_openrouter_map.json + skill→model map in docs/OPENROUTER_mindX.md.",
+    "reasoning": [
+      "nvidia/nemotron-3-super-120b-a12b:free",
+      "openai/gpt-oss-120b:free",
+      "inclusionai/ling-2.6-1t:free"
+    ],
+    "codegen": [
+      "poolside/laguna-m.1:free",
+      "qwen/qwen3-coder:free",
+      "openai/gpt-oss-120b:free"
+    ],
+    "planning": [
+      "nvidia/nemotron-3-super-120b-a12b:free",
+      "inclusionai/ling-2.6-1t:free",
+      "openai/gpt-oss-120b:free"
+    ],
+    "vision": [
+      "nvidia/nemotron-nano-12b-v2-vl:free",
+      "google/gemma-4-26b-a4b-it:free",
+      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
+    ],
+    "ops": [
+      "nvidia/nemotron-3-nano-30b-a3b:free",
+      "openai/gpt-oss-20b:free",
+      "openai/gpt-oss-120b:free"
+    ],
+    "default": [
+      "openai/gpt-oss-120b:free",
+      "nvidia/nemotron-3-super-120b-a12b:free",
+      "openrouter/free"
+    ]
+  },
+  "tie_break": {
+    "_doc": "Top-2 within this fraction triggers tie-break path.",
+    "threshold_fraction": 0.05,
+    "confidence_floor": 0.4,
+    "_critical_importance_levels": ["critical", "constitutional"]
+  },
+  "free_first": {
+    "_doc": "Paid models are dropped from scoring unless value_proven returns True for the task class.",
+    "value_proven_multiplier": 1.5,
+    "rolling_window_days": 7
+  }
+}

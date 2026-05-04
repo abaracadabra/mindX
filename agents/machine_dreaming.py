@@ -782,6 +782,180 @@ class MachineDreamCycle:
 
     # === FULL DREAM FOR ALL AGENTS ===
 
+    async def _phase_model_selector_retrain(self) -> Dict[str, Any]:
+        """Read recent self-aware selector decisions, compute axis-vs-outcome
+        correlations, nudge weights toward axes that predicted success.
+
+        Conservative: ±0.01 per axis per phase, ≤10% total drift per cycle,
+        renormalised weights so they remain a probability distribution.
+
+        Output: dict with stats + a tuning_recommendations list. Caller folds
+        these into the dream report.
+
+        See mindx/self/improve/model_selector.py and
+        data/config/self_aware_weights.json. Boundary check: this phase reads
+        only its own selector's history; never reaches into the boardroom.
+        """
+        import json as _json
+        out = {
+            "decisions_seen": 0,
+            "confidence_distribution": {},
+            "task_classes_active": [],
+            "weight_deltas": {},
+            "tuning_recommendations": [],
+        }
+        try:
+            godel_log = PROJECT_ROOT / "data" / "logs" / "godel_choices.jsonl"
+            weights_file = PROJECT_ROOT / "data" / "config" / "self_aware_weights.json"
+            if not godel_log.exists() or not weights_file.exists():
+                return out
+
+            # Tail the last 7 days × ~144 cycles/day × ~3 selections = ~3000 lines.
+            cutoff = time.time() - 7 * 24 * 3600
+            decisions: List[Dict[str, Any]] = []
+            try:
+                with godel_log.open("rb") as f:
+                    f.seek(0, 2)
+                    size = f.tell()
+                    block = min(size, 4 * 1024 * 1024)  # last 4MB
+                    f.seek(max(0, size - block))
+                    chunk = f.read(block).decode("utf-8", errors="replace")
+                for line in chunk.splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        row = _json.loads(line)
+                    except _json.JSONDecodeError:
+                        continue
+                    sa = row.get("source_agent") or ""
+                    ct = row.get("choice_type") or ""
+                    if not (sa.startswith("mindx.self.improve") or ct == "self_aware_model_selection"):
+                        continue
+                    ts_str = row.get("timestamp_utc") or ""
+                    try:
+                        # Compare on string for cheap UTC ordering
+                        from datetime import datetime as _dt
+                        row_ts = _dt.fromisoformat(ts_str.replace("Z", "+00:00")).timestamp()
+                    except Exception:
+                        row_ts = time.time()
+                    if row_ts < cutoff:
+                        continue
+                    decisions.append(row)
+            except OSError:
+                return out
+
+            out["decisions_seen"] = len(decisions)
+            if not decisions:
+                return out
+
+            # Confidence distribution
+            from collections import Counter, defaultdict
+            conf_counts = Counter(d.get("confidence", "?") for d in decisions)
+            out["confidence_distribution"] = dict(conf_counts)
+            out["task_classes_active"] = sorted({d.get("task_class", "default") for d in decisions})
+
+            # Per-task-class correlations between axis breakdown and outcome.
+            # Phase 3 conservative: only count rows with explicit outcome.
+            per_class_success: Dict[str, List[Dict[str, float]]] = defaultdict(list)
+            per_class_failure: Dict[str, List[Dict[str, float]]] = defaultdict(list)
+            for d in decisions:
+                tc = d.get("task_class") or "default"
+                outcome = d.get("outcome")
+                opts = d.get("options_considered") or []
+                chosen_slug = d.get("chosen_option")
+                # Find the breakdown of the chosen candidate
+                chosen_breakdown = None
+                for o in opts:
+                    if isinstance(o, dict) and o.get("slug") == chosen_slug:
+                        chosen_breakdown = o.get("breakdown")
+                        break
+                if not isinstance(chosen_breakdown, dict):
+                    continue
+                if outcome == "success":
+                    per_class_success[tc].append(chosen_breakdown)
+                elif outcome in ("failed", "fail", "rolled_back"):
+                    per_class_failure[tc].append(chosen_breakdown)
+
+            # Load current weights
+            try:
+                weights_doc = _json.loads(weights_file.read_text())
+            except (OSError, _json.JSONDecodeError):
+                return out
+            classes = weights_doc.get("task_classes") or {}
+
+            # Adjust weights per task class
+            for tc in out["task_classes_active"]:
+                cls_w = classes.get(tc) or classes.get("default")
+                if not isinstance(cls_w, dict):
+                    continue
+                succ = per_class_success.get(tc) or []
+                fail = per_class_failure.get(tc) or []
+                if len(succ) + len(fail) < 5:
+                    # Not enough signal — emit observation, do not mutate.
+                    out["tuning_recommendations"].append({
+                        "agent_id": "mindx.self.improve.model_selector",
+                        "axis": "selector_confidence",
+                        "recommendation": (
+                            f"task_class={tc}: only {len(succ)+len(fail)} outcomes seen — "
+                            f"insufficient signal to retrain weights yet"
+                        ),
+                        "priority": 3,
+                    })
+                    continue
+
+                def _mean(rows: List[Dict[str, float]], key: str) -> float:
+                    vals = [r.get(key, 0.0) for r in rows if isinstance(r.get(key, 0.0), (int, float))]
+                    return sum(vals) / len(vals) if vals else 0.0
+
+                deltas: Dict[str, float] = {}
+                for axis_name in list(cls_w.keys()):
+                    if axis_name.startswith("_"):
+                        continue
+                    succ_mean = _mean(succ, axis_name)
+                    fail_mean = _mean(fail, axis_name)
+                    # Positive correlation with success → bump weight; negative → reduce.
+                    correlation = succ_mean - fail_mean
+                    # Map to ±0.01 nudge.
+                    nudge = 0.01 if correlation > 0.05 else (-0.01 if correlation < -0.05 else 0.0)
+                    if nudge != 0.0:
+                        new_w = max(0.01, min(0.50, float(cls_w[axis_name]) + nudge))
+                        deltas[axis_name] = round(new_w - float(cls_w[axis_name]), 4)
+                        cls_w[axis_name] = round(new_w, 4)
+
+                if deltas:
+                    # Renormalize so weights sum to 1.0 (preserve relative structure)
+                    total = sum(v for k, v in cls_w.items() if not k.startswith("_"))
+                    if total > 0:
+                        for k in list(cls_w.keys()):
+                            if k.startswith("_"):
+                                continue
+                            cls_w[k] = round(cls_w[k] / total, 4)
+                    out["weight_deltas"][tc] = deltas
+                    out["tuning_recommendations"].append({
+                        "agent_id": "mindx.self.improve.model_selector",
+                        "axis": "weight_retrain",
+                        "recommendation": (
+                            f"task_class={tc}: nudged {len(deltas)} axes toward success-correlated "
+                            f"signals (succ={len(succ)}, fail={len(fail)}); deltas={deltas}"
+                        ),
+                        "priority": 6,
+                    })
+                    classes[tc] = cls_w
+
+            # Persist weights if anything changed
+            if out["weight_deltas"]:
+                weights_doc["task_classes"] = classes
+                weights_doc["_updated"] = datetime.now().date().isoformat()
+                tmp = weights_file.with_suffix(".tmp")
+                tmp.write_text(_json.dumps(weights_doc, indent=2) + "\n")
+                tmp.replace(weights_file)
+
+            return out
+        except Exception as e:
+            logger.warning(f"{self.log_prefix} model_selector_retrain failed: {e}")
+            return out
+
     async def run_full_dream(self) -> Dict[str, Any]:
         """Run dream cycle for all agents with STM data. The system dreams."""
         start = time.time()
@@ -822,6 +996,34 @@ class MachineDreamCycle:
             except Exception as e:
                 logger.debug(f"{self.log_prefix} Dream failed for {agent_id}: {e}")
 
+        # mindx.self.improve.model_selector retrain — read recent selector
+        # decisions, nudge weights toward axes that predicted outcomes well.
+        # Boundary check (user-locked): this phase reads only its own selector's
+        # history; never reaches into the boardroom.
+        try:
+            selector_retrain = await self._phase_model_selector_retrain()
+            all_tuning.extend(selector_retrain.get("tuning_recommendations") or [])
+            try:
+                from agents.catalogue import emit_catalogue_event
+                await emit_catalogue_event(
+                    kind="memory.dream",
+                    actor="mindx.self.improve.model_selector",
+                    payload={
+                        "phase": "model_selector_retrain",
+                        "decisions_seen": selector_retrain.get("decisions_seen"),
+                        "confidence_distribution": selector_retrain.get("confidence_distribution"),
+                        "task_classes_active": selector_retrain.get("task_classes_active"),
+                        "weight_deltas": selector_retrain.get("weight_deltas"),
+                        "tuning_recommendations": selector_retrain.get("tuning_recommendations"),
+                    },
+                    source_log="logs/godel_choices.jsonl",
+                )
+            except Exception:
+                pass
+        except Exception as e:
+            logger.debug(f"{self.log_prefix} model_selector_retrain phase failed: {e}")
+            selector_retrain = {}
+
         # Record consolidation timing — cascades from ms
         timing = self.clock.record_consolidation_complete()
         book_edition_due = self.clock.should_trigger_book_edition()
@@ -851,6 +1053,7 @@ class MachineDreamCycle:
             "memories_promoted_to_ltm": total_promoted,
             "memories_archived": total_archived,
             "tuning_recommendations": all_tuning,
+            "model_selector_retrain": selector_retrain,
             "cross_agent_patterns": cross_agent_patterns,
             "diagnostic": {
                 "stm_bytes_before": total_stm_before,

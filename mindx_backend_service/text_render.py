@@ -281,6 +281,35 @@ def render_godel_recent(d: dict) -> str:
     )
 
 
+def render_model_selector_recent(d: dict) -> str:
+    """Compact table for /insight/model_selector/recent?h=true."""
+    rows = d.get("events") or []
+    def _conf(v: Any) -> str:
+        return human_hash(str(v or ""), 10)
+    def _task(v: Any) -> str:
+        return human_hash(str(v or ""), 12)
+    def _imp(v: Any) -> str:
+        return human_hash(str(v or ""), 12)
+    def _chosen(v: Any) -> str:
+        return human_hash(str(v or ""), 40)
+    def _rationale(v: Any) -> str:
+        if not v:
+            return ""
+        s = str(v).replace("\n", " ")
+        return s[:60] + "…" if len(s) > 60 else s
+    return render_table(
+        rows,
+        [
+            ("ts",        "timestamp_utc",  human_rel_ts),
+            ("task",      "task_class",     _task),
+            ("imp",       "importance",     _imp),
+            ("conf",      "confidence",     _conf),
+            ("chosen",    "chosen_option",  _chosen),
+            ("rationale", "rationale",      _rationale),
+        ],
+    )
+
+
 def render_eval_recent(d: dict) -> str:
     rows = d.get("events") or []
     def _reason(p: Any) -> str:
@@ -1019,6 +1048,7 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/cognition":           render_cognition,
     "/insight/system":              render_system,
     "/insight/godel/recent":        render_godel_recent,
+    "/insight/model_selector/recent": render_model_selector_recent,
     "/insight/eval/recent":         render_eval_recent,
     "/insight/eval/summary":        render_eval_summary,
     "/insight/boardroom/recent":    render_boardroom_recent,

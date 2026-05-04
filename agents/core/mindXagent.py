@@ -2128,12 +2128,60 @@ class MindXAgent:
             logger.warning(f"{self.log_prefix} Could not initialize Ollama Chat Manager: {e}")
             self.ollama_chat_manager = None
 
+    async def _self_aware_pick(self, task_class: str = "reasoning") -> Optional[str]:
+        """Tier 0 of the resolve chain: consult mindx.self.improve.model_selector.
+
+        The selector reads mindX's own logs (godel choices, catalogue events,
+        eval scores, fitness, dream tuning recs) and picks a slug. Every call
+        emits a `godel.choice` event regardless of whether the pick is honored
+        downstream — observability is unconditional.
+
+        Returns an Ollama-resolvable model name when the selector's pick is
+        routable today; returns None otherwise (caller falls through to the
+        existing 5-tier deterministic chain). OpenRouter slugs become routable
+        once the handler ships per docs/OPENROUTER_mindX.md backlog.
+        """
+        try:
+            from mindx.self.improve import choose_model
+            from mindx.self.improve.model_selector import TaskProfile
+            from mindx.self.improve.handler_resolver import slug_is_ollama_resolvable
+
+            choice = await choose_model(TaskProfile(
+                task_class=task_class,
+                importance="standard",
+                source_agent=f"mindXagent.{getattr(self, 'agent_id', 'unknown')}",
+                requires_tools=False,  # autonomous loop is not tool-driven yet
+                min_context=2048,
+            ))
+            logger.info(
+                f"{self.log_prefix} self-aware selector: "
+                f"chosen={choice.chosen} confidence={choice.confidence} "
+                f"rationale={choice.rationale[:160]}"
+            )
+            if choice.confidence == "bootstrap":
+                return None  # cold start — let existing chain run
+            if slug_is_ollama_resolvable(choice.chosen):
+                return choice.chosen
+            # Pick logged for audit; fall through to existing chain for routing.
+            return None
+        except Exception as e:
+            logger.debug(f"{self.log_prefix} self-aware selector unavailable: {e}")
+            return None
+
     async def _resolve_inference_model(self) -> Optional[str]:
         """
         Discover the best available inference model.
         Uses InferenceDiscovery for provider-level discovery, then OllamaChatManager for model selection.
         Returns model name string or None if no inference is available.
         """
+        # Tier 0: self-aware selector — preempts the deterministic chain when confident.
+        # Always runs (logs godel.choice for audit) but only returns when the pick is
+        # routable in the current build. See mindx/self/improve/model_selector.py.
+        chosen = await self._self_aware_pick(task_class="reasoning")
+        if chosen:
+            logger.info(f"{self.log_prefix} Tier 0 (self-aware): {chosen}")
+            return chosen
+
         # Step 1: InferenceDiscovery — probe all sources, find best provider
         try:
             if not self._inference_discovery:

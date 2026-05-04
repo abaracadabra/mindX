@@ -121,19 +121,58 @@ class StrategicEvolutionAgent:
         self._initialized = False
         logger.info(f"StrategicEvolutionAgent '{self.agent_id}' synchronous __init__ complete.")
 
+    async def _self_aware_handler(self, task_class: str = "planning"):
+        """Consult mindx.self.improve.model_selector and resolve the pick to a
+        concrete LLMHandler via the model_registry. Always logs godel.choice
+        for audit; returns None when the pick is not routable in the current
+        build, so the caller can fall through to the existing chain.
+        """
+        try:
+            from mindx.self.improve import choose_model
+            from mindx.self.improve.model_selector import TaskProfile
+            from mindx.self.improve.handler_resolver import classify_slug
+
+            choice = await choose_model(TaskProfile(
+                task_class=task_class,
+                importance="standard",
+                source_agent=f"strategic_evolution_agent.{self.agent_id}",
+            ))
+            logger.info(
+                f"{self.log_prefix} self-aware selector: chosen={choice.chosen} "
+                f"confidence={choice.confidence}"
+            )
+            cls = classify_slug(choice.chosen)
+            if cls in ("ollama_local", "ollama_cloud"):
+                try:
+                    return self.model_registry.get_handler("ollama")
+                except Exception:
+                    return None
+            # Other classes (openrouter) — handler not yet routable; caller falls through.
+            return None
+        except Exception as e:
+            logger.debug(f"{self.log_prefix} self-aware selector unavailable: {e}")
+            return None
+
     async def _async_init(self):
         """Asynchronously initialize components that require it."""
         if self._initialized:
             return
 
-        # Select the best model for reasoning (with Ollama fallback)
-        try:
-            self.llm_handler = self.model_registry.get_handler_for_purpose(
-                task_type=TaskType.REASONING,
-            )
-        except Exception as e:
-            logger.warning(f"{self.log_prefix} model_registry handler failed: {e}")
-            self.llm_handler = None
+        # Tier 0: self-aware selector — consult mindX's own logs to pick a model.
+        # The selector logs every choice via godel_choice; if the pick is routable
+        # via model_registry, we use it. Otherwise we fall through to the existing
+        # purpose-based lookup. See mindx/self/improve/model_selector.py.
+        self.llm_handler = await self._self_aware_handler(task_class="planning")
+
+        if not self.llm_handler:
+            # Existing path: purpose-based handler from registry.
+            try:
+                self.llm_handler = self.model_registry.get_handler_for_purpose(
+                    task_type=TaskType.REASONING,
+                )
+            except Exception as e:
+                logger.warning(f"{self.log_prefix} model_registry handler failed: {e}")
+                self.llm_handler = None
 
         if not self.llm_handler:
             try:

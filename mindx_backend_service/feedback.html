@@ -345,6 +345,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
   <button class="tab-chip" data-target="sec-live">live<span class="badge" id="bg-live">·</span></button>
   <button class="tab-chip" data-target="sec-bdi">bdi<span class="badge" id="bg-bdi">·</span></button>
   <button class="tab-chip" data-target="sec-improvements">improvements<span class="badge" id="bg-improvements">·</span></button>
+  <button class="tab-chip" data-target="sec-self-aware">self.aware<span class="badge" id="bg-self-aware">·</span></button>
   <button class="tab-chip" data-target="sec-boardroom">boardroom<span class="badge" id="bg-boardroom">·</span></button>
   <button class="tab-chip" data-target="sec-dreams">dreams<span class="badge" id="bg-dreams">·</span></button>
   <button class="tab-chip" data-target="sec-graph">graph<span class="badge" id="bg-graph">·</span></button>
@@ -433,6 +434,18 @@ tr:hover td{background:rgba(121,192,255,.02)}
     Each row is one autonomous campaign <a href="/doc/agents/mastermind_agent">mindX</a> attempted. Identical-failure rows collapse into one expandable cluster — 200 raw rows become 4 named failure modes with counts. The status histogram above the clusters shows the honest ratio. Click any run inside a cluster, then <code>show BDI →</code> to jump to its trace. <a href="/doc/insight_aggregator">how counts are bucketed</a>.
   </p>
   <div id="ledger" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<!-- 4b. Self-aware model selector — mindx.self.improve.model_selector -->
+<section id="sec-self-aware">
+  <div class="sec-head">
+    <h2>self.aware decisions <span id="selfAwarePill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/model_selector/recent · mindx.self.improve.model_selector reads its own logs to pick a model</span>
+  </div>
+  <p class="sec-desc">
+    Each row is one self-improvement cycle where mindX consulted its <abbr title="data/logs/godel_choices.jsonl + catalogue_events.jsonl + data/fitness/current_snapshot.json + alignment.score events + memory.dream tuning recommendations">own logs</abbr> to choose which model to use to improve itself. <code>confidence=high</code> = clear winner; <code>low</code> = top-2 within 5%, picked safer default + flagged for dream-cycle retraining; <code>reflected</code> = critical importance, single self-reflection LLM call from <abbr title="data/config/self_aware_meta_models.json — operator-frozen, never picked by the selector itself (recursion stop)">operator-frozen meta-list</abbr>; <code>bootstrap</code> = no signal yet, used operator-curated default. The boardroom is a <em>separate</em> downstream service; this section is mindX core's introspective layer. <a href="/insight/model_selector/recent?h=true" target="_blank" rel="noopener">view raw</a>
+  </p>
+  <div id="selfAware" class="card"><div class="empty">loading…</div></div>
 </section>
 
 <!-- 5. Boardroom decisions -->
@@ -1428,6 +1441,53 @@ async function refreshLedger() {
   }
 }
 
+// ── 4b. Self-aware model selector ──
+async function refreshSelfAware() {
+  const box = $('selfAware');
+  const pill = $('selfAwarePill');
+  try {
+    const r = await fetch('/insight/model_selector/recent?limit=20').then(x => x.json()).catch(() => ({events:[]}));
+    const events = r.events || [];
+    if (!events.length) {
+      pill.textContent = 'EMPTY';
+      pill.className = 'pill amber';
+      box.innerHTML = '<div class="empty">no self-aware selections yet — autonomous loop has not consulted the selector</div>';
+      _setBadge('self-aware', 0, '');
+      return;
+    }
+    const conf_class = (c) => c === 'high' ? 'green' : c === 'low' ? 'amber' : c === 'reflected' ? 'blue' : 'amber';
+    const rows = events.slice(0, 20).map(e => {
+      const ts = e.timestamp_utc || '';
+      const tc = e.task_class || 'default';
+      const imp = e.importance || 'standard';
+      const conf = e.confidence || '?';
+      const chosen = e.chosen_option || '?';
+      const rat = (e.rationale || '').replace(/\n/g, ' ').slice(0, 140);
+      const eval_score = (e.eval_score !== undefined && e.eval_score !== null) ? `<span class="pill" style="margin-left:6px">eval=${e.eval_score.toFixed(2)}</span>` : '';
+      return `
+        <div class="row" style="padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">
+            <span class="pill ${conf_class(conf)}">${escapeHtml(conf)}</span>
+            <span class="pill">${escapeHtml(tc)}</span>
+            <span class="sub">${escapeHtml(imp)}</span>
+            <code style="margin-left:auto;font-size:0.85em;opacity:0.7">${escapeHtml(ts.slice(11, 19))}</code>
+            ${eval_score}
+          </div>
+          <div style="margin-top:4px"><code>${escapeHtml(chosen)}</code></div>
+          <div class="sub" style="margin-top:4px">${escapeHtml(rat)}${rat.length >= 140 ? '…' : ''}</div>
+        </div>`;
+    }).join('');
+    pill.textContent = `last ${events.length}`;
+    pill.className = 'pill';
+    box.innerHTML = rows;
+    _setBadge('self-aware', events.length, '');
+  } catch (e) {
+    pill.textContent = 'ERROR';
+    pill.className = 'pill red';
+    box.innerHTML = '<div class="empty">selector log unavailable: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
 function _jumpToBDI(el) {
   const target = document.getElementById('sec-bdi');
   if (target) {
@@ -2178,12 +2238,13 @@ async function boot() {
   _initTabbar();
   await seedDialogue();
   startSSE();
-  await Promise.allSettled([refreshCognition(), refreshSysPulse(), refreshStuck(), refreshBDI(), refreshLedger(), refreshBoardroom(), refreshBoardRollcall(), refreshBoardLeaderboard(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
+  await Promise.allSettled([refreshCognition(), refreshSysPulse(), refreshStuck(), refreshBDI(), refreshLedger(), refreshSelfAware(), refreshBoardroom(), refreshBoardRollcall(), refreshBoardLeaderboard(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
   setInterval(refreshCognition, 30000);
   setInterval(refreshSysPulse, 15000);
   setInterval(refreshStuck, 30000);
   setInterval(refreshBDI, 20000);
   setInterval(refreshLedger, 45000);
+  setInterval(refreshSelfAware, 45000);
   setInterval(refreshBoardroom, 60000);
   setInterval(refreshBoardRollcall, 60000);
   setInterval(refreshBoardLeaderboard, 60000);
