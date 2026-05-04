@@ -1,66 +1,64 @@
 # MindX Minimal Dependencies — Essential Only
-# Pinned to ">=" floors that match what is currently installed in production
-# (.mindx_env). For exact reproducible builds, use `pip freeze > requirements.lock.txt`.
-#
-# Audit: 2026-04-27 — every line below corresponds to an `import` somewhere in
-# the mindX core (agents/, orchestration/, llm/, mindx_backend_service/, tools/).
-# Optional/dev deps are noted with leading "#".
+# ">=" floors track what is currently installed in production (.mindx_env on
+# the VPS). Floors are bumped to current installed versions so vulnerability
+# scanners stop flagging old advisories that no longer apply.
+# Audit: 2026-05-04. For exact reproducible builds run `pip freeze`.
 
 # ── Core async + HTTP ──
-aiohttp>=3.8.0
-aiofiles>=23.0.0
-httpx>=0.27.0          # tools/pay2play_metered_tool.py, agenticplace_routes.py
+aiohttp>=3.13.3        # CVE GHSA-fcr2-rgch-4cwq + zip-bomb fixes
+aiofiles>=25.1.0
+httpx>=0.28.1
 
 # ── Web framework ──
-fastapi>=0.100.0
-uvicorn>=0.20.0
-starlette>=0.40.0      # explicit pin (transitive via FastAPI; used directly in middleware)
-python-multipart>=0.0.20  # FastAPI UploadFile support — rage/routes.py
+fastapi>=0.135.0
+uvicorn>=0.42.0
+starlette>=0.49.1      # CVE GHSA-2c2j-9gv5-cj73 (Range header DoS)
+python-multipart>=0.0.22  # CVE GHSA-59g5-xgcq-4qw3 (arbitrary file write)
 
 # ── Data validation ──
-pydantic>=2.0.0
+pydantic>=2.12.0
 
 # ── LLM provider SDKs ──
-openai>=1.0.0
-anthropic>=0.30.0
-google-generativeai>=0.8.0
-mistralai>=1.0.0
+openai>=2.0.0
+anthropic>=0.88.0
+google-generativeai>=0.8.6
+mistralai>=2.2.0
 # ollama>=0.3.0        # OPTIONAL: official ollama python client (mindX has its own handler)
 
 # ── Configuration ──
-python-dotenv>=1.0.0
-pyyaml>=6.0.0
+python-dotenv>=1.2.0
+pyyaml>=6.0.3
 
 # ── HTTP / utils ──
-requests>=2.30.0
-colorama>=0.4.0
-tqdm>=4.66.0           # transitive via openai/anthropic; explicit for stability
+requests>=2.33.1
+colorama>=0.4.6
+tqdm>=4.67.0           # transitive via openai/anthropic; explicit for stability
 
 # ── Numeric / vector ──
-numpy>=1.26.0          # rage/indexing.py, embedding math, transitive via pgvector
+numpy>=2.2.0           # rage/indexing.py, embedding math, transitive via pgvector
 
 # ── System monitoring (BDI perceive(), /system/resources, /insight/system) ──
-psutil>=5.9.0
+psutil>=7.2.0
 
 # ── Cryptography / wallets / vault ──
-cryptography>=41.0.0
-eth-account>=0.8.0     # Ethereum wallet derivation, signing
-pycryptodome>=3.20.0   # BANKON Vault AES-256-GCM + HKDF-SHA512
-py-algorand-sdk>=2.6.0 # Algorand AVM signing for tools/x402_avm_client.py (x402-AVM rail)
+cryptography>=46.0.5   # CVE GHSA-79v4-65xg-pq4g (SECT subgroup attack)
+eth-account>=0.13.0    # Ethereum wallet derivation, signing
+pycryptodome>=3.23.0   # BANKON Vault AES-256-GCM + HKDF-SHA512
+py-algorand-sdk>=2.11.0 # Algorand AVM signing for tools/x402_avm_client.py (x402-AVM rail)
 
 # ── File processing ──
 pathspec>=0.11.0
 
 # ── pgvector memory tier ──
-psycopg2-binary>=2.9.0
-pgvector>=0.2.0
-asyncpg>=0.28.0
+psycopg2-binary>=2.9.11
+pgvector>=0.4.0
+asyncpg>=0.31.0
 SQLAlchemy>=2.0.0
 # sentence-transformers>=2.2.0  # OPTIONAL: requires torch (~1GB). Code is try/except guarded.
 #                                 # Install manually: pip install sentence-transformers
 
 # ── Testing ──
-pytest>=7.0.0
+pytest>=9.0.0
 pytest-asyncio>=0.23.0  # required for tests/lab/* async test suites
 
 # ── OPTIONAL / sub-component-only (NOT installed by default) ──
