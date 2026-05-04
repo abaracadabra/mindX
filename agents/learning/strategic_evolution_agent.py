@@ -123,14 +123,21 @@ class StrategicEvolutionAgent:
 
     async def _self_aware_handler(self, task_class: str = "planning"):
         """Consult mindx.self.improve.model_selector and resolve the pick to a
-        concrete LLMHandler via the model_registry. Always logs godel.choice
-        for audit; returns None when the pick is not routable in the current
-        build, so the caller can fall through to the existing chain.
+        concrete LLMHandler. Always logs godel.choice for audit; returns None
+        only when the pick is not routable today (no provider key, unknown
+        class), letting the caller fall through to the deterministic chain.
+
+        OpenRouter slugs route to llm.openrouter_handler.OpenRouterHandler,
+        which itself returns None when OPENROUTER_API_KEY is absent — that
+        cascades the fall-through, so the caller still gets a working handler.
         """
         try:
             from mindx.self.improve import choose_model
             from mindx.self.improve.model_selector import TaskProfile
-            from mindx.self.improve.handler_resolver import classify_slug
+            from mindx.self.improve.handler_resolver import (
+                classify_slug,
+                slug_is_openrouter_resolvable,
+            )
 
             choice = await choose_model(TaskProfile(
                 task_class=task_class,
@@ -147,7 +154,16 @@ class StrategicEvolutionAgent:
                     return self.model_registry.get_handler("ollama")
                 except Exception:
                     return None
-            # Other classes (openrouter) — handler not yet routable; caller falls through.
+            if cls == "openrouter" and slug_is_openrouter_resolvable(choice.chosen):
+                try:
+                    from llm.llm_factory import create_llm_handler
+                    return await create_llm_handler(
+                        provider_name="openrouter",
+                        model_name=choice.chosen,
+                    )
+                except Exception as e:
+                    logger.warning(f"{self.log_prefix} openrouter handler creation failed: {e}")
+                    return None
             return None
         except Exception as e:
             logger.debug(f"{self.log_prefix} self-aware selector unavailable: {e}")

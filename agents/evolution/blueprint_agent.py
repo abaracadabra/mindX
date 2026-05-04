@@ -82,6 +82,52 @@ class BlueprintAgent:
         
         self._initialized = True
 
+    async def _resolve_active_handler(self) -> Optional[LLMHandlerInterface]:
+        """Consult the self-aware selector and return a handler matching the pick.
+
+        Returns None on any failure so the caller falls back to self.llm_handler.
+        OpenRouter slugs route to the OpenRouterHandler when OPENROUTER_API_KEY
+        is present; otherwise None (cascades back to the init-time handler).
+        Ollama slugs route to the existing Ollama handler from the registry.
+        """
+        try:
+            from mindx.self.improve import choose_model
+            from mindx.self.improve.model_selector import TaskProfile
+            from mindx.self.improve.handler_resolver import (
+                classify_slug,
+                slug_is_openrouter_resolvable,
+            )
+
+            choice = await choose_model(TaskProfile(
+                task_class="planning",
+                importance="standard",
+                source_agent=f"blueprint_agent.{self.agent_id}",
+                requires_tools=False,
+                min_context=4096,
+            ))
+            cls = classify_slug(choice.chosen)
+            logger.debug(
+                f"{self.agent_id}: self-aware handler resolution: "
+                f"slug={choice.chosen} class={cls} confidence={choice.confidence}"
+            )
+            if cls == "openrouter" and slug_is_openrouter_resolvable(choice.chosen):
+                from llm.llm_factory import create_llm_handler
+                handler = await create_llm_handler(
+                    provider_name="openrouter",
+                    model_name=choice.chosen,
+                )
+                if handler and handler.provider_name == "openrouter":
+                    return handler
+            if cls in ("ollama_local", "ollama_cloud"):
+                try:
+                    return self.model_registry.get_handler("ollama")
+                except Exception:
+                    pass
+            return None
+        except Exception as e:
+            logger.debug(f"{self.agent_id}: self-aware handler unavailable: {e}")
+            return None
+
     async def _gather_mindx_system_state_summary(self) -> Dict[str, Any]:
         """Gathers a comprehensive summary of the current MindX system state for analysis."""
         summary = {"timestamp": time.time(), "mindx_version": self.config.get("system.version", "unknown")}
@@ -157,8 +203,14 @@ class BlueprintAgent:
         # PHASE 1: Build skeleton from patterns (always succeeds — structure from pattern)
         blueprint = self._build_skeleton()
 
-        # PHASE 2: Enrich with LLM strategic analysis (optional — skeleton exists regardless)
-        if self.llm_handler:
+        # PHASE 2a: Per-call self-aware handler resolution. The selector reads
+        # mindX's own logs and may pick an OpenRouter slug; if the OPENROUTER_API_KEY
+        # is present we route to the live OpenRouter handler instead of the
+        # init-time Ollama handler. Falls back to self.llm_handler on any failure.
+        active_handler = await self._resolve_active_handler() or self.llm_handler
+
+        # PHASE 2b: Enrich with LLM strategic analysis (optional — skeleton exists regardless)
+        if active_handler:
             try:
                 system_state = await self._gather_mindx_system_state_summary()
                 if context_override:
@@ -175,8 +227,8 @@ class BlueprintAgent:
                     "'key_performance_indicators', 'potential_risks'."
                 )
 
-                response_str = await self.llm_handler.generate_text(
-                    prompt, model=self.llm_handler.model_name_for_api,
+                response_str = await active_handler.generate_text(
+                    prompt, model=active_handler.model_name_for_api,
                     max_tokens=2000, temperature=0.2, json_mode=True
                 )
 

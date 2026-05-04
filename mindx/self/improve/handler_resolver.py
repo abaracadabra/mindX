@@ -10,13 +10,13 @@ This module classifies a slug and returns either:
 - a tuple `(provider, model)` consumable by `llm.llm_factory.create_llm_handler`, or
 - a simple Ollama model-name string for callers like `mindXagent._resolve_inference_model`.
 
-Phase 1: handles Ollama (local + cloud) and stubs OpenRouter (returns
-provider="openrouter" but the handler factory may not yet implement it; caller
-falls through). Phase 2 of OPENROUTER backlog adds the real handler.
+OpenRouter is now routable via `llm.openrouter_handler.OpenRouterHandler` —
+`slug_is_routable` returns True for both ollama and openrouter classes.
 """
 
 from __future__ import annotations
 
+import os
 from typing import Optional, Tuple
 
 
@@ -34,20 +34,36 @@ def classify_slug(slug: str) -> str:
 
 def slug_to_provider_model(slug: str) -> Tuple[Optional[str], Optional[str]]:
     """Return (provider, model) suitable for `create_llm_handler`. (None, None)
-    if the slug class is not yet routable in the current build.
+    if the slug class is unknown.
     """
     cls = classify_slug(slug)
     if cls == "ollama_local" or cls == "ollama_cloud":
         return ("ollama", slug)
     if cls == "openrouter":
-        return ("openrouter", slug)  # handler may not exist yet; caller falls through
+        return ("openrouter", slug)
     return (None, None)
 
 
 def slug_is_ollama_resolvable(slug: str) -> bool:
-    """True iff the slug can be routed to an Ollama daemon today.
+    """True iff the slug routes to an Ollama daemon (local or cloud-proxied).
 
-    Used by `mindXagent._resolve_inference_model` to decide whether to honor
-    the selector's pick or fall through to the deterministic chain.
+    Kept for backward compatibility with `mindXagent._resolve_inference_model`,
+    which returns a plain model-name string assumed to be Ollama-shaped.
     """
     return classify_slug(slug) in ("ollama_local", "ollama_cloud")
+
+
+def slug_is_openrouter_resolvable(slug: str) -> bool:
+    """True iff the slug routes to OpenRouter AND a key is present in env.
+
+    The vault-injected OPENROUTER_API_KEY is what makes OpenRouter routable in
+    practice; without it, the handler returns None and we should fall through.
+    """
+    if classify_slug(slug) != "openrouter":
+        return False
+    return bool(os.getenv("OPENROUTER_API_KEY"))
+
+
+def slug_is_routable(slug: str) -> bool:
+    """True iff the slug can be routed to ANY working handler today."""
+    return slug_is_ollama_resolvable(slug) or slug_is_openrouter_resolvable(slug)

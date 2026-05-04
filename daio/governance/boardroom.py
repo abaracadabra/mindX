@@ -180,6 +180,14 @@ SOLDIER_PERSONAS = {
 
 OLLAMA_URL = "http://localhost:11434"
 OLLAMA_CLOUD_URL = "https://ollama.com"
+OPENROUTER_URL = "https://openrouter.ai/api/v1"
+
+# Per-seat OpenRouter free-tier model map. Loaded from
+# data/config/board_openrouter_map.json once at first need; falls back to a
+# single workhorse free slug for any unmapped seat. The map is regenerated
+# empirically by scripts/test_openrouter_boardroom.py --write.
+OPENROUTER_MAP_PATH = PROJECT_ROOT / "data" / "config" / "board_openrouter_map.json"
+OPENROUTER_DEFAULT_FREE_MODEL = "openai/gpt-oss-120b:free"
 
 # Agent file path for loading extended personas
 BOARDROOM_AGENTS_DIR = PROJECT_ROOT / "agents" / "boardroom"
@@ -659,6 +667,25 @@ class Boardroom:
         "constitutional": "tier3",
     }
 
+    def _resolve_openrouter_model(self, soldier_id: str) -> Optional[str]:
+        """Pick the OpenRouter free-tier slug for this seat.
+
+        Reads data/config/board_openrouter_map.json once, caches on instance.
+        Returns None when no key is in env (caller skips the OpenRouter step).
+        For an unmapped seat we fall back to OPENROUTER_DEFAULT_FREE_MODEL so
+        every CEO + 7 soldiers always has a route to vote.
+        """
+        if not os.environ.get("OPENROUTER_API_KEY"):
+            return None
+        if not hasattr(self, "_openrouter_map_cache"):
+            self._openrouter_map_cache: Dict[str, str] = {}
+            try:
+                if OPENROUTER_MAP_PATH.exists():
+                    self._openrouter_map_cache = json.loads(OPENROUTER_MAP_PATH.read_text()) or {}
+            except Exception as e:
+                logger.debug(f"Boardroom: load board_openrouter_map.json failed: {e}")
+        return self._openrouter_map_cache.get(soldier_id) or OPENROUTER_DEFAULT_FREE_MODEL
+
     def _resolve_member_model(self, soldier_id: str, importance: str, model_mode: str) -> Optional[str]:
         """Pick the best model for this member at this importance.
 
@@ -806,6 +833,7 @@ class Boardroom:
         t0 = time.time()
         used_model = model
         is_cloud = False
+        provider_override: Optional[str] = None
         try:
             import aiohttp
             payload = {
@@ -848,8 +876,53 @@ class Boardroom:
                 except Exception as e:
                     logger.debug(f"Boardroom: vLLM path failed for {soldier_id}: {e}")
 
+            # Step 0.5: OpenRouter — per-seat free-tier diversity. When
+            # OPENROUTER_API_KEY is in env (loaded from BANKON Vault at
+            # service startup) and model_mode is "openrouter", "auto", or
+            # "cloud", we route the seat to its slug from the per-seat map.
+            # This is the only path today that gives genuine per-soldier
+            # model diversity at zero cost.
+            if not response and model_mode in ("openrouter", "auto", "cloud"):
+                or_model = self._resolve_openrouter_model(soldier_id)
+                if or_model:
+                    try:
+                        api_key = os.environ.get("OPENROUTER_API_KEY", "")
+                        headers = {
+                            "Authorization": f"Bearer {api_key}",
+                            "Content-Type": "application/json",
+                            "HTTP-Referer": "https://mindx.pythai.net",
+                            "X-Title": "mindX",
+                        }
+                        or_payload = {
+                            "model": or_model,
+                            "messages": [{"role": "user", "content": prompt}],
+                            "temperature": BOARDROOM_TEMPERATURE,
+                            "max_completion_tokens": BOARDROOM_NUM_PREDICT,
+                        }
+                        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=120)) as sess:
+                            async with sess.post(f"{OPENROUTER_URL}/chat/completions", json=or_payload, headers=headers) as resp:
+                                if resp.status == 200:
+                                    data = await resp.json()
+                                    choices = data.get("choices") or []
+                                    if choices:
+                                        msg = (choices[0] or {}).get("message") or {}
+                                        c = msg.get("content")
+                                        if isinstance(c, list):
+                                            c = "".join(p.get("text", "") for p in c if isinstance(p, dict) and p.get("type") == "text")
+                                        if c:
+                                            response = c.strip()
+                                            used_model = or_model
+                                            is_cloud = True
+                                            provider_override = f"openrouter/{data.get('provider', 'unknown')}"
+                                            logger.info(f"Boardroom: {soldier_id} responded via OpenRouter ({or_model})")
+                                else:
+                                    err_text = await resp.text()
+                                    logger.warning(f"Boardroom: OpenRouter error ({resp.status}) for {or_model}: {err_text[:200]}")
+                    except Exception as e:
+                        logger.warning(f"Boardroom: OpenRouter dispatch failed for {soldier_id}: {e}")
+
             # Step 1: Try local Ollama daemon (handles both local + cloud-proxied models)
-            # Skipped when vLLM already returned content above; also skipped
+            # Skipped when vLLM/OpenRouter already returned content above; also skipped
             # entirely when the operator forced backend=vllm (no Ollama fallback).
             ollama_skip = bool(response) or BOARDROOM_INFERENCE_BACKEND == "vllm"
             try:
@@ -958,9 +1031,13 @@ class Boardroom:
                     else:
                         vote_data = {"vote": "abstain", "reasoning": clean[:2000], "confidence": 0.3}
 
-            # Label: ollama/model for local, ollama-cloud/model for cloud
-            is_cloud = used_model != local_model and model_mode in ("auto", "cloud")
-            provider_label = f"ollama-cloud/{used_model}" if is_cloud else f"ollama/{used_model}"
+            # Label: respect provider_override when set by vLLM or OpenRouter
+            # paths above; otherwise infer ollama vs ollama-cloud from model.
+            if provider_override:
+                provider_label = provider_override
+            else:
+                is_cloud = used_model != local_model and model_mode in ("auto", "cloud")
+                provider_label = f"ollama-cloud/{used_model}" if is_cloud else f"ollama/{used_model}"
 
             vote_obj = SoldierVote(
                 soldier_id=soldier_id,
