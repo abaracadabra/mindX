@@ -37,17 +37,26 @@
     {"name": "deepseek-v4-pro", "params": null, "tags": ["tools", "thinking", "cloud", "long-context"], "best_for": "1M-token context window — long-document reasoning", "pulls": null}
   ],
   "boardroom_assignments": {
-    "_note": "3 tiers per member. Tier 1=local (on VPS). Tier 2=cloud mid (routine/standard). Tier 3=cloud max (critical/constitutional).",
-    "ceo_agent_main": {"tier1": "qwen3:0.6b", "tier2": "glm-5.1", "tier3": "glm-5", "role": "Strategic direction — SOTA to 744B"},
-    "coo_operations": {"tier1": "qwen3:0.6b", "tier2": "gemini-3-flash-preview", "tier3": "ministral-3:14b", "role": "Speed → edge depth"},
-    "cfo_finance": {"tier1": "deepseek-coder:1.3b", "tier2": "qwen3.5:9b", "tier3": "qwen3.5:122b", "role": "Quantitative → max depth"},
-    "cto_technology": {"tier1": "qwen3:1.7b", "tier2": "qwen3-coder-next", "tier3": "devstral-2", "role": "Architecture → 123B code agent"},
-    "ciso_security": {"tier1": "deepseek-r1:1.5b", "tier2": "nemotron-3-super", "tier3": "qwen3-next", "role": "Safety MoE → 80B deep thinking"},
-    "clo_legal": {"tier1": "qwen3:0.6b", "tier2": "devstral-small-2:24b", "tier3": "cogito-2.1", "role": "Structured → 671B reasoning"},
-    "cpo_product": {"tier1": "qwen3.5:2b", "tier2": "gemma4:31b", "tier3": "kimi-k2.5", "role": "Multimodal → native agentic"},
-    "cro_risk": {"tier1": "qwen3:4b", "tier2": "deepseek-v3.2", "tier3": "minimax-m2.7", "role": "Reasoning → agentic risk modeling"}
+    "_note": "3 tiers per member, verified working via local daemon proxy on 2026-05-04. Tier 1=local CPU (fallback ladder when cloud is starved). Tier 2=cloud mid (routine/standard). Tier 3=cloud max (critical/constitutional). Models that 403 on the free tier (glm-5.1, glm-5, kimi-k2.5, kimi-k2.6, deepseek-v4-pro, qwen3.5:122b) replaced with subscription-eligible peers.",
+    "ceo_agent_main": {"tier1": "qwen3:0.6b",        "tier2": "gpt-oss:120b-cloud",      "tier3": "cogito-2.1:671b-cloud",    "role": "Strategic direction — fast local → 120B → 671B MIT"},
+    "coo_operations": {"tier1": "qwen3:0.6b",        "tier2": "ministral-3:14b-cloud",   "tier3": "gpt-oss:120b-cloud",       "role": "Speed → edge → 120B reasoning"},
+    "cfo_finance":    {"tier1": "granite4.1:3b",     "tier2": "qwen3-next:80b-cloud",    "tier3": "deepseek-v3.1:671b-cloud", "role": "Quantitative — granite → 80B → 671B finance depth"},
+    "cto_technology": {"tier1": "qwen3:1.7b",        "tier2": "qwen3-coder-next:cloud",  "tier3": "qwen3-coder:480b-cloud",   "role": "Architecture → coder-next → 480B code agent"},
+    "ciso_security":  {"tier1": "deepseek-r1:1.5b",  "tier2": "nemotron-3-super:cloud",  "tier3": "deepseek-v3.2:cloud",      "role": "Safety thinking → 12B-active MoE → reasoning"},
+    "clo_legal":      {"tier1": "qwen3:0.6b",        "tier2": "devstral-small-2:24b-cloud", "tier3": "cogito-2.1:671b-cloud", "role": "Structured → 24B code → 671B reasoning (MIT)"},
+    "cpo_product":    {"tier1": "qwen3.5:2b",        "tier2": "gemma4:31b-cloud",        "tier3": "qwen3-vl:235b-cloud",      "role": "Multimodal → 31B Gemma → 235B vision-language"},
+    "cro_risk":       {"tier1": "qwen3:1.7b",        "tier2": "minimax-m2.5:cloud",      "tier3": "deepseek-v3.1:671b-cloud", "role": "Reasoning → agentic m2.5 → 671B max risk modeling"}
   },
-  "cloud_pool": ["nemotron-3-nano:30b", "minimax-m2.5", "minimax-m2", "glm-4.7", "rnj-1"],
+  "cloud_pool": [
+    "gpt-oss:120b-cloud", "cogito-2.1:671b-cloud", "deepseek-v3.1:671b-cloud", "deepseek-v3.2:cloud",
+    "devstral-small-2:24b-cloud", "gemma3:12b-cloud", "gemma4:31b-cloud",
+    "glm-4.6:cloud", "glm-4.7:cloud",
+    "minimax-m2:cloud", "minimax-m2.1:cloud", "minimax-m2.5:cloud",
+    "ministral-3:14b-cloud", "mistral-large-3:675b-cloud",
+    "nemotron-3-nano:30b-cloud", "nemotron-3-super:cloud",
+    "qwen3-coder-next:cloud", "qwen3-coder:480b-cloud", "qwen3-next:80b-cloud", "qwen3-vl:235b-cloud",
+    "rnj-1:8b-cloud"
+  ],
   "local_models_on_vps": [
     {"name": "qwen3:4b", "size_gb": 2.5},
     {"name": "deepseek-coder:1.3b", "size_gb": 0.8},
@@ -60,13 +69,13 @@
     {"name": "granite4.1:3b", "size_gb": 2.0, "keep_alive": "0", "best_for": "General 3B-class local fallback (load on demand, unload after use)"}
   ],
   "task_routing": {
-    "_note": "Pick best model for the job from a max-return-per-token perspective. Order = preference. Selector falls through on rate-limit starvation.",
-    "code": ["vllm", "qwen3-coder-next:cloud", "glm-5.1:cloud", "devstral-2:cloud", "deepseek-coder:1.3b"],
-    "reasoning": ["vllm", "deepseek-r1:1.5b", "kimi-k2.6:cloud", "deepseek-v3.2:cloud", "glm-5:cloud"],
-    "long_context_1m": ["deepseek-v4-pro:cloud"],
-    "vision": ["qwen3-vl:cloud", "gemma4:cloud"],
-    "fast_general": ["qwen3:0.6b", "qwen3:1.7b", "granite4.1:3b", "gemini-3-flash-preview:cloud"],
-    "agentic_general": ["vllm", "granite4.1:3b", "kimi-k2.6:cloud", "glm-5.1:cloud", "minimax-m2.7:cloud"],
+    "_note": "Pick best model for the job from a max-return-per-token perspective. Order = preference. Selector falls through on rate-limit starvation, then to local CPU. All cloud entries verified working via local daemon proxy on 2026-05-04.",
+    "code": ["vllm", "qwen3-coder-next:cloud", "qwen3-coder:480b-cloud", "devstral-small-2:24b-cloud", "rnj-1:8b-cloud", "qwen3:1.7b"],
+    "reasoning": ["vllm", "deepseek-r1:1.5b", "deepseek-v3.2:cloud", "deepseek-v3.1:671b-cloud", "cogito-2.1:671b-cloud", "qwen3:1.7b"],
+    "long_context": ["qwen3-coder:480b-cloud", "deepseek-v3.1:671b-cloud", "cogito-2.1:671b-cloud"],
+    "vision": ["qwen3-vl:235b-cloud", "gemma4:31b-cloud", "gemma3:12b-cloud"],
+    "fast_general": ["qwen3:0.6b", "qwen3:1.7b", "granite4.1:3b", "ministral-3:14b-cloud"],
+    "agentic_general": ["vllm", "granite4.1:3b", "minimax-m2.5:cloud", "minimax-m2:cloud", "nemotron-3-super:cloud", "gpt-oss:120b-cloud"],
     "embedding": ["mxbai-embed-large:latest", "nomic-embed-text:latest"]
   }
 }
