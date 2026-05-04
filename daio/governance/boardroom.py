@@ -328,28 +328,17 @@ class Boardroom:
             attending = self.soldier_providers
 
         try:
-            # Concurrency from BOARDROOM_MAX_CONCURRENT (default 8). With
-            # cloud routing through one shared model (gpt-oss:120b-cloud),
-            # all 8 members can be in flight simultaneously. With local
-            # routing, lower this to match OLLAMA_MAX_LOADED_MODELS.
-            semaphore = asyncio.Semaphore(BOARDROOM_MAX_CONCURRENT)
-
-            async def _limited_query(sid, prov, weight):
-                async with semaphore:
-                    return await self._query_soldier(sid, prov, directive, importance, weight, context, model_mode)
-
-            tasks = []
+            # Free-tier reality: one model in flight at a time. Serial dispatch
+            # avoids "1 concurrent model" rejection from cloud providers and lets
+            # us persist each vote as a memory + ledger row before the next call.
             for soldier_id, provider in attending.items():
                 weight = SOLDIER_WEIGHTS.get(soldier_id, 1.0)
-                tasks.append(_limited_query(soldier_id, provider, weight))
-
-            if tasks:
-                votes = await asyncio.gather(*tasks, return_exceptions=True)
-                for v in votes:
-                    if isinstance(v, SoldierVote):
-                        session.votes.append(v)
-                    elif isinstance(v, Exception):
-                        logger.warning(f"Boardroom: soldier query failed: {v}")
+                try:
+                    vote = await self._query_soldier(soldier_id, provider, directive, importance, weight, context, model_mode)
+                    session.votes.append(vote)
+                    await self._record_vote_artifacts(session.session_id, vote, directive, importance)
+                except Exception as e:
+                    logger.warning(f"Boardroom: soldier query failed: {e}")
 
             # Tally weighted votes against consensus threshold
             session = self._tally_votes(session, consensus)
@@ -430,6 +419,7 @@ class Boardroom:
                 try:
                     vote = await self._query_soldier(soldier_id, provider, directive, importance, weight, context, model_mode)
                     session.votes.append(vote)
+                    await self._record_vote_artifacts(session.session_id, vote, directive, importance)
                     yield {"event": "vote", "data": {
                         "soldier": vote.soldier_id, "vote": vote.vote,
                         "provider": vote.provider, "reasoning": vote.reasoning[:2000],
@@ -661,6 +651,115 @@ class Boardroom:
         """Backwards-compatible wrapper — returns just the system_prompt string."""
         return self._load_member_card(soldier_id).get("system_prompt") or SOLDIER_PERSONAS.get(soldier_id, f"You are {soldier_id}.")
 
+    # importance → tier_key. Operator can override via env.
+    _IMPORTANCE_TO_TIER = {
+        "routine": "tier1",
+        "standard": "tier2",
+        "critical": "tier3",
+        "constitutional": "tier3",
+    }
+
+    def _resolve_member_model(self, soldier_id: str, importance: str, model_mode: str) -> Optional[str]:
+        """Pick the best model for this member at this importance.
+
+        Reads `boardroom_assignments` from data/config/ollama_cloud_models.json
+        (loaded once, cached on instance). tier1 is local; tier2/tier3 are
+        cloud names — `:cloud` suffix appended automatically when missing.
+
+        Returns None if no assignment exists, letting _query_soldier fall through
+        to its legacy CLOUD_MODEL / SOLDIER_MODELS behavior.
+        """
+        if not hasattr(self, "_assignments_cache"):
+            self._assignments_cache: Dict[str, Dict[str, str]] = {}
+            try:
+                cfg_path = PROJECT_ROOT / "data" / "config" / "ollama_cloud_models.json"
+                if cfg_path.exists():
+                    cfg = json.loads(cfg_path.read_text())
+                    self._assignments_cache = cfg.get("boardroom_assignments") or {}
+            except Exception as e:
+                logger.debug(f"Boardroom: load boardroom_assignments failed: {e}")
+
+        if model_mode == "local":
+            tier_key = "tier1"
+        else:
+            tier_key = self._IMPORTANCE_TO_TIER.get(importance, "tier2")
+
+        member = self._assignments_cache.get(soldier_id)
+        if not member:
+            return None
+        model = member.get(tier_key) or member.get("tier2") or member.get("tier1")
+        if not model:
+            return None
+
+        # tier1 = local Ollama tag (already has size: e.g. "qwen3:0.6b").
+        # tier2/tier3 = cloud names — ensure :cloud suffix.
+        if tier_key != "tier1" and not model.endswith(":cloud") and ":cloud" not in model:
+            tag_part = model.split(":", 1)[1] if ":" in model else ""
+            if not tag_part.endswith("cloud"):
+                model = f"{model}:cloud" if ":" not in model else f"{model.split(':', 1)[0]}:{tag_part}-cloud"
+        return model
+
+    async def _record_vote_artifacts(self, session_id: str, vote: SoldierVote, directive: str, importance: str) -> None:
+        """Persist a single vote as a memory record AND a cost-ledger row.
+
+        Memory: timestamped under the soldier_id so the boardroom conversation
+        can be reconstructed by reading STM for each member.
+        Cost: appended to the cost_ledger pgvector table for ROI accounting.
+        Both calls are best-effort; failures are logged at debug level.
+        """
+        provider_label = vote.provider or ""
+        if "/" in provider_label:
+            prov_kind, model = provider_label.split("/", 1)
+        else:
+            prov_kind, model = provider_label, ""
+        is_cloud = "cloud" in prov_kind or model.endswith("cloud")
+        ledger_provider = "ollama_cloud" if is_cloud else (prov_kind or "ollama")
+
+        try:
+            from agents.memory_agent import MemoryAgent, MemoryType, MemoryImportance
+            mem = MemoryAgent()
+            await mem.save_timestamped_memory(
+                agent_id=vote.soldier_id,
+                memory_type=MemoryType.INTERACTION,
+                importance=MemoryImportance.HIGH if importance in ("critical", "constitutional") else MemoryImportance.MEDIUM,
+                content={
+                    "session_id": session_id,
+                    "directive": directive[:2000],
+                    "vote": vote.vote,
+                    "reasoning": vote.reasoning,
+                    "confidence": vote.confidence,
+                    "provider": vote.provider,
+                    "weight": vote.weight,
+                    "latency_ms": vote.latency_ms,
+                },
+                context={"domain": "boardroom", "session_id": session_id, "importance": importance},
+                tags=["boardroom_vote", vote.vote, importance, vote.soldier_id],
+            )
+        except Exception as e:
+            logger.debug(f"Boardroom: per-vote memory write failed: {e}")
+
+        try:
+            import uuid as _uuid
+            from agents import memory_pgvector as _mpg
+            # cost_ledger.call_id is UUID — derive deterministically from session_id
+            # so multiple votes from the same session share one call_id.
+            call_uuid = str(_uuid.uuid5(_uuid.NAMESPACE_URL, f"boardroom:{session_id}"))
+            await _mpg.record_cost(
+                provider=ledger_provider,
+                model=model or "unknown",
+                tokens_in=max(1, len(directive) // 4),
+                tokens_out=max(1, len(vote.reasoning) // 4),
+                latency_ms=vote.latency_ms,
+                cost_usd_est=0.0,
+                agent_id=vote.soldier_id,
+                task_kind="boardroom_vote",
+                free_tier=is_cloud,  # all current cloud routes are free-tier
+                success=(vote.vote != "abstain" or vote.confidence >= 0.6),
+                call_id=call_uuid,
+            )
+        except Exception as e:
+            logger.debug(f"Boardroom: per-vote cost ledger failed: {e}")
+
     async def _query_soldier(
         self,
         soldier_id: str,
@@ -693,8 +792,13 @@ class Boardroom:
             f"\"reasoning\": \"...\", \"confidence\": 0.0-1.0}}"
         )
 
-        # Select model — one cloud model for all members (free tier: 1 concurrent model)
-        if model_mode == "local":
+        # Select model — tier-based per importance when boardroom_assignments
+        # has an entry for this soldier; otherwise fall back to legacy behavior
+        # (one CLOUD_MODEL for all members, or per-soldier SOLDIER_MODELS in local).
+        tier_model = self._resolve_member_model(soldier_id, importance, model_mode)
+        if tier_model:
+            model = tier_model
+        elif model_mode == "local":
             model = local_model
         else:  # "cloud" or "auto" — single CLOUD_MODEL for all 8 board members
             model = CLOUD_MODEL
