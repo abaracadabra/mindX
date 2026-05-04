@@ -2008,24 +2008,28 @@ async def _heartbeat_resolve_handler() -> tuple:
 async def _heartbeat_query_local_model():
     """Self-aware introspection cycle. Consults the selector for the best model,
     cascades to local Ollama on cloud failure, and grounds every prompt in live
-    mindX state. Resource-governor-aware (skipped under memory pressure).
+    mindX state. Resource-governor-aware ONLY when routing locally — OpenRouter
+    cloud calls don't consume local RAM/CPU so the gate doesn't apply.
     """
     global _diag_heartbeat_count
-    try:
-        from agents.resource_governor import ResourceGovernor
-        gov = await ResourceGovernor.get_instance()
-        await gov.check_and_adjust()
-        if gov.should_skip_heartbeat():
-            logger.debug(f"Heartbeat skipped: resource governor mode={gov.mode}")
-            return
-    except Exception:
-        pass
 
-    # Resolve a handler (selector + cascade) and gather state context in parallel.
+    # Resolve a handler (selector + cascade) FIRST so we know if we're routing
+    # local or cloud, then apply the resource gate accordingly.
     handler, model_used, route_label = await _heartbeat_resolve_handler()
     if handler is None:
         logger.debug("Heartbeat: no handler resolvable, skipping cycle")
         return
+    is_local = bool(route_label and route_label.startswith("ollama/"))
+    if is_local:
+        try:
+            from agents.resource_governor import ResourceGovernor
+            gov = await ResourceGovernor.get_instance()
+            await gov.check_and_adjust()
+            if gov.should_skip_heartbeat():
+                logger.debug(f"Heartbeat skipped: resource governor mode={gov.mode} (local route)")
+                return
+        except Exception:
+            pass
     s = await _gather_heartbeat_substitutions()
 
     template = _HEARTBEAT_PROMPTS[_diag_heartbeat_count % len(_HEARTBEAT_PROMPTS)]
@@ -2038,27 +2042,37 @@ async def _heartbeat_query_local_model():
 
     t0 = time.time()
     response_text = None
+    # Heartbeat is non-critical — bound every LLM call with a hard 30s wait_for.
+    # Without this the cascade can hang for 5+ minutes when Ollama is busy
+    # serving the autonomous loop or the boardroom (proven failure mode 2026-05-04).
     try:
-        response_text = await handler.generate_text(
-            prompt, model=model_used, max_tokens=200, temperature=0.4
+        response_text = await asyncio.wait_for(
+            handler.generate_text(prompt, model=model_used, max_tokens=200, temperature=0.4),
+            timeout=30,
         )
+    except asyncio.TimeoutError:
+        logger.debug(f"Heartbeat: {route_label} primary timed out after 30s")
     except Exception as e:
         logger.debug(f"Heartbeat generate_text error on {route_label}: {e}")
 
-    # Cascade: if cloud handler returned None (rate limit, 401, network),
-    # retry once via local Ollama default.
+    # Cascade: cloud failed (None / timeout / 429) → fall to a small local
+    # model. Pin to qwen3:0.6b (~500MB) so it doesn't fight the autonomous
+    # loop's larger model for a runner slot. Also bounded at 30s.
     if not response_text and route_label and not route_label.startswith("ollama/"):
+        fallback_model = "qwen3:0.6b"
         try:
             from llm.llm_factory import create_llm_handler
-            fallback = await create_llm_handler(provider_name="ollama")
+            fallback = await create_llm_handler(provider_name="ollama", model_name=fallback_model)
             if fallback:
-                response_text = await fallback.generate_text(
-                    prompt, model=fallback.model_name_for_api or "qwen3:0.6b",
-                    max_tokens=200, temperature=0.4,
+                response_text = await asyncio.wait_for(
+                    fallback.generate_text(prompt, model=fallback_model, max_tokens=200, temperature=0.4),
+                    timeout=30,
                 )
                 if response_text:
-                    route_label = f"ollama/{fallback.model_name_for_api or 'qwen3:0.6b'} (fallback from {route_label})"
-                    model_used = fallback.model_name_for_api or "qwen3:0.6b"
+                    route_label = f"ollama/{fallback_model} (fallback from {route_label})"
+                    model_used = fallback_model
+        except asyncio.TimeoutError:
+            logger.debug(f"Heartbeat: ollama fallback ({fallback_model}) timed out after 30s")
         except Exception as e:
             logger.debug(f"Heartbeat fallback failed: {e}")
 

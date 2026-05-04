@@ -1223,6 +1223,34 @@ function render(d){
 }
 
 // ── Sidebar panel rendering ──
+// Helper: render the heartbeat state_context dict as a compact "INJECTED STATE"
+// chip-row above the response. This is the scientific evidence — it shows
+// exactly which live mindX facts grounded the prompt. Empty / missing keys
+// are hidden so the chip-row stays tight.
+function _renderStateCtx(ctx){
+  if(!ctx||typeof ctx!=='object')return '';
+  const pretty={
+    recent_godel:'recent gödel',top_agent:'top fitness',bot_agent:'bottom fitness',
+    blueprint_title:'last blueprint',backlog_total:'backlog',promoted:'dream promoted',
+    dream_ts:'last dream',stm_count:'stm',ok:'ok',total:'total',running:'running',
+    top_score:'',bot_score:'',  // already paired with top_agent/bot_agent
+  };
+  const skip=new Set(['top_score','bot_score']);
+  const chips=[];
+  for(const k in ctx){
+    if(skip.has(k))continue;
+    const v=ctx[k];
+    if(v===null||v===undefined||v===''||v==='?'||v==='(none)'||v==='(unknown)'||v===0)continue;
+    const label=pretty[k]||k;
+    let display=String(v);
+    if(k==='top_agent'&&ctx.top_score)display=`${v} (${ctx.top_score})`;
+    if(k==='bot_agent'&&ctx.bot_score)display=`${v} (${ctx.bot_score})`;
+    if(display.length>56)display=display.slice(0,56)+'…';
+    chips.push(`<span style="display:inline-block;background:rgba(121,192,255,.08);border:1px solid rgba(121,192,255,.25);border-radius:3px;padding:2px 6px;margin:1px 2px 1px 0;font-family:var(--mono);font-size:10px;color:var(--blue)"><span style="color:var(--text3)">${label}:</span> ${display.replace(/</g,'&lt;')}</span>`);
+  }
+  if(!chips.length)return '';
+  return `<div style="margin:4px 0 6px 0;font-size:10px"><span style="color:var(--text3);font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-right:4px">injected state</span>${chips.join('')}</div>`;
+}
 function rpnl(d){
   const p=document.getElementById('pnl');
   if(curT===0){
@@ -1238,10 +1266,29 @@ function rpnl(d){
       const promptShort=prompt.length>120?prompt.slice(0,120)+'...':prompt;
       const responseShort=response.length>200?response.slice(0,200)+'...':response;
       const hasMore=prompt.length>120||response.length>200;
+      // Scientific depth: when the entry has state_context (new heartbeat
+      // format), surface the injected facts as a chip-row above the response.
+      // Old entries (qwen3:0.6b platitudes) don't have state_context → no chips.
+      const stateChips=_renderStateCtx(m.state_context);
+      // Model badge: distinguish openrouter vs ollama vs fallback at a glance.
+      const modelLabel=m.model||'?';
+      const isOR=modelLabel.indexOf('openrouter')===0;
+      const isFallback=modelLabel.indexOf('fallback')!==-1;
+      const modelColor=isFallback?'var(--amber)':(isOR?'var(--violet)':'var(--green)');
       h+=`<div class="msg msg-usr${cls}"><div class="msg-hdr"><span style="color:var(--violet);font-weight:600">${m.agent||'mindX'}</span><span>${td}</span></div><div class="msg-txt">${promptShort}</div></div>`;
-      h+=`<div class="msg msg-ai${cls}"><div class="msg-hdr"><span style="color:var(--green);font-weight:600">${m.model||'?'}</span><span>${m.latency_ms?m.latency_ms+'ms':''} ${m.tokens_est?'&#183; '+m.tokens_est+' tok':''}</span></div><div class="msg-txt">${responseShort}</div>`;
-      if(hasMore){
-        h+=`<details style="margin-top:4px"><summary style="cursor:pointer;color:var(--blue);font-size:10px;font-family:var(--mono)">full dialogue</summary><div style="padding:6px 0;font-size:12px;line-height:1.6"><div style="color:var(--violet);font-weight:600;font-size:10px;margin-bottom:4px;font-family:var(--mono)">${m.agent||'mindX'} PROMPT</div><div style="color:var(--text);white-space:pre-wrap;word-break:break-word;padding:6px 8px;background:rgba(22,16,32,.3);border-left:2px solid var(--violet);border-radius:2px;margin-bottom:8px">${prompt}</div><div style="color:var(--green);font-weight:600;font-size:10px;margin-bottom:4px;font-family:var(--mono)">${m.model||'?'} RESPONSE</div><div style="color:var(--text);white-space:pre-wrap;word-break:break-word;padding:6px 8px;background:rgba(10,32,18,.3);border-left:2px solid var(--green);border-radius:2px">${response}</div></div></details>`;
+      h+=`<div class="msg msg-ai${cls}"><div class="msg-hdr"><span style="color:${modelColor};font-weight:600;font-family:var(--mono);font-size:10px">${modelLabel}</span><span>${m.latency_ms?m.latency_ms+'ms':''} ${m.tokens_est?'&#183; '+m.tokens_est+' tok':''}</span></div>${stateChips}<div class="msg-txt">${responseShort}</div>`;
+      if(hasMore||m.state_context){
+        let detailsBody=`<div style="padding:6px 0;font-size:12px;line-height:1.6">`;
+        detailsBody+=`<div style="color:var(--violet);font-weight:600;font-size:10px;margin-bottom:4px;font-family:var(--mono)">${m.agent||'mindX'} PROMPT (rendered with injected state)</div>`;
+        detailsBody+=`<div style="color:var(--text);white-space:pre-wrap;word-break:break-word;padding:6px 8px;background:rgba(22,16,32,.3);border-left:2px solid var(--violet);border-radius:2px;margin-bottom:8px">${prompt}</div>`;
+        if(m.state_context&&typeof m.state_context==='object'){
+          detailsBody+=`<div style="color:var(--blue);font-weight:600;font-size:10px;margin-bottom:4px;font-family:var(--mono)">STATE CONTEXT (mindX facts injected at heartbeat time)</div>`;
+          detailsBody+=`<pre style="font-size:10px;line-height:1.5;background:rgba(10,18,32,.3);border-left:2px solid var(--blue);border-radius:2px;padding:6px 8px;margin-bottom:8px;white-space:pre-wrap;word-break:break-word">${(JSON.stringify(m.state_context,null,1)||'').replace(/</g,'&lt;')}</pre>`;
+        }
+        detailsBody+=`<div style="color:${modelColor};font-weight:600;font-size:10px;margin-bottom:4px;font-family:var(--mono)">${modelLabel} RESPONSE</div>`;
+        detailsBody+=`<div style="color:var(--text);white-space:pre-wrap;word-break:break-word;padding:6px 8px;background:rgba(10,32,18,.3);border-left:2px solid ${modelColor};border-radius:2px">${response}</div>`;
+        detailsBody+=`</div>`;
+        h+=`<details style="margin-top:4px"><summary style="cursor:pointer;color:var(--blue);font-size:10px;font-family:var(--mono)">full dialogue${m.state_context?' + injected state':''}</summary>${detailsBody}</details>`;
       }
       h+=`</div>`;
     });p.innerHTML=h;p.scrollTop=p.scrollHeight;
