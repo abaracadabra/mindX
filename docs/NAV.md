@@ -89,6 +89,11 @@ python3 scripts/test_ollama_connection.py                 # Connection test
 The boardroom is mindX's multi-agent consensus mechanism — deeper than SwarmClaw's estops, this is on-chain governance bridged to off-chain execution.
 
 - [Boardroom Implementation](../daio/governance/boardroom.py) — CEO presents directive → 7 soldiers evaluate in parallel (diversity via different LLM providers) → weighted voting (CISO & CRO at 1.2x veto weight) → supermajority (0.666) executes → minority dissent creates exploration branches → session logged to improvement journal
+- [Boardroom Specification](BOARDROOM.md) — full spec, model selection policy (free-first / value > cost), three-pillar inference strategy
+- [Boardroom × OpenRouter](agents/boardroom_openrouter.md) — per-soldier free model diversity via OpenRouter `:free` catalogue
+- [Boardroom × vLLM](agents/boardroom_vllm.md) — sovereignty pillar with true continuous batching (8 members, one model)
+- [Boardroom Self-Adaptation](agents/boardroom_self_adaptation.md) — pattern→action recovery registry (5 patterns)
+- [Boardroom Members](agents/boardroom_members.md) — three-file role architecture
 - **Agent Roster**: [`ceo.agent`](../agents/boardroom/ceo.agent), [`ciso.agent`](../agents/boardroom/ciso.agent), [`cfo.agent`](../agents/boardroom/cfo.agent), [`cro.agent`](../agents/boardroom/cro.agent), [`clo.agent`](../agents/boardroom/clo.agent), [`cpo.agent`](../agents/boardroom/cpo.agent), [`cto.agent`](../agents/boardroom/cto.agent), [`coo.agent`](../agents/boardroom/coo.agent)
 
 ### Dojo
@@ -317,6 +322,7 @@ Priority: Environment variables (`MINDX_` prefix) > [BANKON Vault](vault_system.
 
 - [Ollama Configuration](ollama/mindx/configuration.md) — `MINDX_LLM__OLLAMA__BASE_URL`, `OLLAMA_API_KEY`, `models/ollama.yaml`
 - [Provider Registry](../data/config/provider_registry.json) — All LLM providers
+- [OpenRouter Integration](OPENROUTER_mindX.md) — Free-first model policy, skill→model map, vault provisioning, boardroom + improvement-cycle integration
 - [LLM Factory Config](../data/config/llm_factory_config.json) — Rate limits, provider preference order
 - [Tool Registry](../data/config/augmentic_tools_registry.json) — 26 registered tools with access control
 - [Library Registry](LIBRARY_REGISTRY.md) — Awareness catalogue of external LLM libraries (Transformers, vLLM, DeepEval, Unsloth, et al.) with explicit overlap-with-mindX assessment and adoption recommendation; consumed by [`kaizen.agent`](../agents/kaizen.agent)

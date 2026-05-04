@@ -1,0 +1,10 @@
+{
+  "ceo": "openai/gpt-oss-120b:free",
+  "ciso_security": "nvidia/nemotron-3-super-120b-a12b:free",
+  "cfo_finance": "z-ai/glm-4.5-air:free",
+  "cto_technology": "poolside/laguna-m.1:free",
+  "cro_risk": "nvidia/nemotron-3-super-120b-a12b:free",
+  "clo_legal": "inclusionai/ling-2.6-1t:free",
+  "cpo_product": "nvidia/nemotron-nano-12b-v2-vl:free",
+  "coo_operations": "nvidia/nemotron-3-nano-30b-a3b:free"
+}

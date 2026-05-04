@@ -665,6 +665,83 @@ async def escalate(self, proposal: Proposal, escalation_type: str):
 
 ---
 
+## 3.X MODEL SELECTION POLICY
+
+> mindX prefers free inference. mindX earns its way into paid inference only when the value created exceeds the cost of inference. Free-tier maximisation is the best value-add until value is proven.
+
+This section codifies how the boardroom picks LLMs for soldier votes. It is the operational answer to the cost question — when, why, and which model — and ties the inaugural-meeting evidence at [`boardroom.py:156-167`](../daio/governance/boardroom.py) to a forward strategy that restores per-soldier diversity at zero cost.
+
+### 3.X.1 The free-first principle
+
+The first session (br_1776022554, 2026-04-12) ran on local Ollama: 6/7 soldiers abstained because qwen3:0.6b–4b couldn't parse JSON vote envelopes. The second (br_1776022600) ran on per-soldier Ollama Cloud: 7/7 abstained because Ollama Cloud's free tier permits exactly **one concurrent model**, so seven different cloud models couldn't all load at once. **Per-soldier model diversity is aspirational on Ollama Cloud free tier** — the comment at [`boardroom.py:156-167`](../daio/governance/boardroom.py) records this as standing fact.
+
+The policy that emerges:
+
+1. **Free first, always.** Every directive routes to free inference. Free tier is not a fallback; it is the default substrate.
+2. **Paid is earned.** A directive class upgrades to a paid slug only when its 7-day approved-and-executed value exceeds the projected 7-day inference cost on that paid slug × 1.5 (safety margin). Until the predicate fires, that class stays on free. See [§3.X.3](#3x3-value--cost-upgrade-trigger).
+3. **Diversity matters more than capability.** Where free options exist that give per-soldier diversity (OpenRouter), prefer them over a single shared paid model. Diversity of thought is the boardroom's reason to exist.
+4. **Sovereignty escalates with budget.** vLLM (self-hosted continuous batching) > OpenRouter (commodity routing) > Ollama Cloud (single-vendor) > Ollama local (capability-limited). When `auto` mode picks the first reachable, it picks in this order.
+
+### 3.X.2 Three-pillar inference strategy
+
+The boardroom runs on three inference pillars, selected via `BOARDROOM_INFERENCE_BACKEND`:
+
+| Pillar | Backend | Diversity | Capability | Cost | Best for |
+|---|---|---|---|---|---|
+| **Local Ollama** | qwen3:0.6b–4b per soldier ([map](../daio/governance/boardroom.py)) | ✅ per-soldier | ❌ small models choke on JSON envelopes | Zero | Routine rehearsal, offline work |
+| **Ollama Cloud** | Single shared `gpt-oss:120b-cloud` ([benchmark](ollama/INDEX.md#latest-benchmark-2026-04-11)) | ❌ all 8 share one model | ✅ 65 tok/s, 120B params | Zero (free tier: 50 req/5h) | Critical directives where vote quality matters more than diversity |
+| **OpenRouter** | Per-soldier `:free` slugs from [skill→model map](OPENROUTER_mindX.md#skill--model-map-which-free-slug-for-which-mindx-task) | ✅ per-soldier diversity restored | ✅ 70B–120B reasoning models | Zero (free tier: 50 RPD; 1000 RPD after [$10 unlock](OPENROUTER_mindX.md#rate-limits-the-10-unlock-and-what-429-actually-means)) | Constitutional directives where both quality and diversity matter |
+| **vLLM** (sovereignty tier) | Self-hosted [continuous batching](agents/boardroom_vllm.md), per-port model diversity | ✅ per-port diversity | ✅ true concurrent attention across 8 prompts | Self-hosted (free CPU or ~$0.50/h GPU) | Sovereignty audits, full-stack self-hosted operations |
+
+Selection rule under `BOARDROOM_INFERENCE_BACKEND=auto`:
+
+```
+vLLM (if reachable at BOARDROOM_VLLM_BASE_URL)
+    ↓ if no vLLM
+OpenRouter (if openrouter_api_key in BANKON Vault)
+    ↓ if no OpenRouter
+Ollama Cloud (if signed in)
+    ↓ if no signin
+Ollama local (always available, capability-limited)
+```
+
+First reachable wins. The `BANKON_VAULT` lookup for `openrouter_api_key` is what gates the OpenRouter pillar — see [vault provisioning](OPENROUTER_mindX.md#vault-provisioning--the-mindx-way-to-hold-this-key) for the operator runbook.
+
+**Per-soldier mapping** comes from [`OPENROUTER_mindX.md` §Skill→model map](OPENROUTER_mindX.md#skill--model-map-which-free-slug-for-which-mindx-task) and persists as `data/config/board_openrouter_map.json`. Operators adjust slugs without code edits.
+
+**Convene rate caps** (free-tier discipline):
+
+- 50 RPD free tier: ≤6 sessions/hour (8 votes × 6 = 48 requests, leaves headroom).
+- 1000 RPD after $10 unlock: ≤120 sessions/hour, per-soldier diversity becomes routine.
+- Critical/constitutional directives bypass the cap; 429 fallback to Ollama Cloud is the safety net.
+
+Operator runbook: [`agents/boardroom_openrouter.md`](agents/boardroom_openrouter.md). vLLM equivalent: [`agents/boardroom_vllm.md`](agents/boardroom_vllm.md). Self-adaptation patterns (including the `openrouter_rate_limited` recovery): [`agents/boardroom_self_adaptation.md`](agents/boardroom_self_adaptation.md).
+
+### 3.X.3 Value > cost upgrade trigger
+
+The formal predicate for promoting a directive class from free to paid:
+
+```
+upgrade_to_paid(class) ⟺
+    rolling_7d_value(class) × success_rate(class)
+    > rolling_7d_paid_inference_cost(class) × 1.5
+```
+
+Where:
+
+- `rolling_7d_value(class)` = sum of (treasury impact + improvement-journal success deltas + downstream agent productivity gains) attributable to directives in this class over the last 7 days.
+- `success_rate(class)` = (executed and not rolled back) / (proposed) for this class.
+- `rolling_7d_paid_inference_cost(class)` = projected inference cost if every directive in `class` had run on the paid slug instead of the free slug. Computed from the [precision metrics](ollama/mindx/precision_metrics.md) ledger × paid `cost_per_kilo_*_tokens` from [`models/*.yaml`](../models/).
+- The 1.5 multiplier is a safety margin against measurement noise.
+
+Until the predicate fires for a given class, that class stays on `:free`. **Paid inference is earned, not spent speculatively.** This is the operational cash-out of the free-first principle in [§3.X.1](#3x1-the-free-first-principle).
+
+The trigger evaluates per-class, not globally. Constitutional class might justify paid Claude Sonnet while routine class stays on `meta-llama/llama-3.3-70b-instruct:free` indefinitely — that asymmetry is the policy working as intended.
+
+When the predicate does fire, the cleanest paid-escalation shape is the [Claude Agent SDK pointed at OpenRouter](OPENROUTER_mindX.md#openrouter-in-the-improvement-cycle), not a hand-rolled tool loop. That pathway is forward-flagged; adoption is a separate PR.
+
+---
+
 ## 4. CONSENSUS MECHANISM
 
 ### 4.1 Primary Consensus (openBDK-derived)

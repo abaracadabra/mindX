@@ -73,6 +73,23 @@ The recovery surfaces a diagnosis pointing at `/insight/boardroom/cards` for pro
 
 **Auto-action:** none. The recovery names the affected seats and points at [`docs/agents/boardroom_members.md`](boardroom_members.md) for the file layout.
 
+### 5. `openrouter_rate_limited`  (severity: high)
+
+**Trigger:** ≥ 4/7 soldiers errored with HTTP 429 from the OpenRouter API. The shape that matches: error body has `error.code == 429` AND `error.metadata.headers["X-RateLimit-Reset"]` is present (epoch milliseconds, parsed as such — **not** seconds, **not** delta-seconds, see [OPENROUTER_mindX.md §Rate limits](../OPENROUTER_mindX.md#rate-limits-the-10-unlock-and-what-429-actually-means)).
+
+**Auto-action:** none today (matcher is in the [boardroom_openrouter backlog](boardroom_openrouter.md#backlog)). When implemented, the auto-action will be a 60-second account-wide dispatch deny on OpenRouter, with the boardroom falling through to Ollama Cloud or local for the remainder of the session — the existing `auto` mode in `BOARDROOM_INFERENCE_BACKEND` already handles the fallback once OpenRouter is marked unreachable.
+
+**Why this fires reliably**: OpenRouter free tier permits **50 requests per day** until the [$10 unlock](../OPENROUTER_mindX.md#rate-limits-the-10-unlock-and-what-429-actually-means) lifts the cap to 1000. At 8 votes per session, that is ~6 convene sessions before exhaustion. After exhaustion, every soldier on OpenRouter 429s until 00:00 UTC reset.
+
+**Two operator remediations** (recovery surfaces both as `remediation_hints`):
+
+- **Preferred**: deposit $10 once at openrouter.ai/credits to lift the daily cap from 50 → 1000. Persistent — survives later balance drops. Documented as the highest-leverage reliability lever in [OPENROUTER_mindX.md](../OPENROUTER_mindX.md#rate-limits-the-10-unlock-and-what-429-actually-means).
+- **Alt**: stay on free tier and reduce convene rate to ≤6 sessions/hour (per the table in [boardroom_openrouter §Convene rate discipline](boardroom_openrouter.md#convene-rate-discipline)).
+
+A subtler 429 shape — `{error: {code: 429, message: "Provider returned error", metadata: {raw: "<slug> is temporarily rate-limited upstream...", provider_name: "Chutes"}}}` — signals an **upstream provider** cap rather than the OpenRouter account hitting the global cap. The matcher should distinguish these: upstream caps are fixed by injecting `provider.ignore: ["Chutes"]` (or whichever provider) on the next request, not by sleeping the account. Backlog item.
+
+**Where the operator hits it first**: `/insight/boardroom/recent` shows soldiers with `provider=openrouter/<slug>` and `error.code=429`; `/feedback.html#sec-board` shows the recovery banner once the matcher ships. Until then, manual diagnosis via `curl /insight/boardroom/recent | jq '.sessions[0].votes[] | select(.error.code == 429)'`.
+
 ## Adding a new pattern
 
 The registry lives in `Boardroom._diagnose_recovery()` at `daio/governance/boardroom.py`. Adding a fifth pattern is one entry:
@@ -150,4 +167,6 @@ Each tier reuses the same `recovery` shape and the same UI dispatcher; only the 
 - [`mindx_backend_service/boardroom.html`](../../mindx_backend_service/boardroom.html) — the dialogue dispatcher + `maybeAutoRecover()`
 - [Boardroom members — three-file role architecture](boardroom_members.md) — what fails when `persona_files_missing` triggers
 - [Boardroom × vLLM](boardroom_vllm.md) — what `cold_load_storm` recommends as alternatives
+- [Boardroom × OpenRouter](boardroom_openrouter.md) — what `openrouter_rate_limited` recovers from
+- [`docs/OPENROUTER_mindX.md`](../OPENROUTER_mindX.md) — the canonical OpenRouter reference, including the JSON-body 429 shape
 - [`docs/ollama/cloud/cloud.md`](../ollama/cloud/cloud.md) — the canonical signin doc the recovery message points at

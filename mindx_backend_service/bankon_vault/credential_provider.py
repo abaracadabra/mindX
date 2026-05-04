@@ -43,6 +43,8 @@ PROVIDER_ENV_MAP = {
     "deepseek_api_key": "DEEPSEEK_API_KEY",
     # Fireworks AI
     "fireworks_api_key": "FIREWORKS_API_KEY",
+    # OpenRouter — universal LLM backplane (free + paid catalogue, OpenAI-compatible)
+    "openrouter_api_key": "OPENROUTER_API_KEY",
     # mindX service API keys (for Bearer auth)
     "mindx_api_keys": "MINDX_SECURITY_API_KEYS",
     # Admin wallet addresses
