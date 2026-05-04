@@ -1384,13 +1384,87 @@ fetch('/thesis/evidence').then(function(r){return r.json()}).then(function(ev){
     }
     clEl.innerHTML=clH;
   }
-  // Populate thesis numbers
+  // Populate thesis numbers \u2014 tiles are clickable; click toggles drill-in panel
   var tnEl=document.getElementById('thesis-nums');
   if(tnEl&&th.aggregate){
     var a=th.aggregate;
-    tnEl.innerHTML='<div class="tn"><div class="tn-val" style="color:var(--violet)">'+(a.total_godel_choices||0).toLocaleString()+'</div><div class="tn-lbl">G\u00F6del choices</div></div><div class="tn"><div class="tn-val" style="color:var(--green)">'+(th.claims?.godel_self_reference?.evidence?.self_referential_choices||0)+'</div><div class="tn-lbl">self-referential</div></div><div class="tn"><div class="tn-val" style="color:var(--blue)">'+(a.total_memories||0).toLocaleString()+'</div><div class="tn-lbl">memories</div></div><div class="tn"><div class="tn-val" style="color:var(--amber)">'+(a.total_actions||0)+'</div><div class="tn-lbl">actions</div></div>';
+    var sr=th.claims?.godel_self_reference?.evidence?.self_referential_choices||0;
+    tnEl.innerHTML=
+      '<div class="tn" onclick="tnExpand(\'godel\')" style="cursor:pointer" title="Click for breakdown"><div class="tn-val" style="color:var(--violet)">'+(a.total_godel_choices||0).toLocaleString()+'</div><div class="tn-lbl">G\u00F6del choices</div></div>'+
+      '<div class="tn" onclick="tnExpand(\'self_ref\')" style="cursor:pointer" title="Click for breakdown"><div class="tn-val" style="color:var(--green)">'+sr.toLocaleString()+'</div><div class="tn-lbl">self-referential</div></div>'+
+      '<div class="tn" onclick="tnExpand(\'memory\')" style="cursor:pointer" title="Click for breakdown"><div class="tn-val" style="color:var(--blue)">'+(a.total_memories||0).toLocaleString()+'</div><div class="tn-lbl">memories</div></div>'+
+      '<div class="tn" onclick="tnExpand(\'actions\')" style="cursor:pointer" title="Click for breakdown"><div class="tn-val" style="color:var(--amber)">'+(a.total_actions||0).toLocaleString()+'</div><div class="tn-lbl">actions</div></div>';
   }
 }).catch(function(){});
+
+// Click-expand for the 4 thesis tiles. Toggles a panel below the grid; renders
+// the JSON breakdown from /insight/{topic}/breakdown with a Source line.
+var _tnPanel=null;
+function tnEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function tnRender(title, sourceLine, data){
+  function kv(obj, max){
+    if(!obj||typeof obj!=='object')return '<i style="color:var(--text3)">none</i>';
+    var keys=Object.keys(obj);
+    if(max&&keys.length>max)keys=keys.slice(0,max);
+    return '<table style="width:100%;font-family:var(--mono);font-size:11px"><tbody>'+
+      keys.map(function(k){return '<tr><td style="padding:2px 8px;color:var(--text2)">'+tnEsc(k)+'</td><td style="text-align:right;color:var(--green)">'+tnEsc(obj[k]).toLocaleString?obj[k].toLocaleString():tnEsc(obj[k])+'</td></tr>'}).join('')+
+      '</tbody></table>';
+  }
+  var html='<div style="border-top:1px solid rgba(255,255,255,.08);padding:14px 0;margin-top:10px">'+
+    '<div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:8px">SOURCE: '+tnEsc(sourceLine)+'</div>'+
+    '<h3 style="margin:0 0 10px 0;font-size:14px;color:var(--blue)">'+tnEsc(title)+'</h3>';
+  if(data.error){html+='<div style="color:var(--amber)">error: '+tnEsc(data.error)+'</div>';}
+  // Total
+  if(data.total!=null){html+='<div style="font-family:var(--mono);font-size:13px;margin-bottom:10px">total: <b style="color:var(--green)">'+(data.total||0).toLocaleString()+'</b>'+(data.completion_rate!=null?' &middot; completion: <b>'+(data.completion_rate*100).toFixed(1)+'%</b>':'')+'</div>';}
+  // Discrepancy explanation (memory)
+  if(data.discrepancy_explanation){html+='<div style="background:rgba(227,179,65,.1);border:1px solid rgba(227,179,65,.3);padding:8px;margin-bottom:10px;font-size:11px;color:var(--amber)">'+tnEsc(data.discrepancy_explanation)+'</div>';}
+  // Counts (memory has multiple sources)
+  if(data.counts){html+='<div style="margin-bottom:10px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">COUNTS BY SOURCE</div>'+kv(data.counts)+'</div>';}
+  // by_status
+  if(data.by_status){html+='<div style="margin-bottom:10px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">BY STATUS</div>'+kv(data.by_status)+'</div>';}
+  // by_agent
+  if(data.by_agent){html+='<div style="margin-bottom:10px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">BY AGENT (top 15)</div>'+kv(data.by_agent,15)+'</div>';}
+  // by_choice_type
+  if(data.by_choice_type){html+='<div style="margin-bottom:10px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">BY CHOICE TYPE</div>'+kv(data.by_choice_type)+'</div>';}
+  // by_memory_type
+  if(data.by_memory_type){html+='<div style="margin-bottom:10px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">BY MEMORY TYPE</div>'+kv(data.by_memory_type)+'</div>';}
+  // Self-ref rule + counts + examples
+  if(data.rule){html+='<div style="font-size:11px;color:var(--text3);margin-bottom:6px">RULE</div><div style="font-family:var(--mono);font-size:11px;background:rgba(255,255,255,.04);padding:8px;margin-bottom:10px">'+tnEsc(data.rule)+'</div>';}
+  if(data.self_referential!=null){html+='<div style="font-family:var(--mono);font-size:12px;margin-bottom:10px">self-ref: <b style="color:var(--green)">'+data.self_referential.toLocaleString()+'</b> &middot; non-self-ref: <b style="color:var(--text2)">'+data.non_self_referential.toLocaleString()+'</b> &middot; ratio: <b>'+(data.ratio?(data.ratio*100).toFixed(2):'0')+'%</b></div>';}
+  if(data.examples_self_ref&&data.examples_self_ref.length){html+='<div style="font-size:11px;color:var(--text3);margin-bottom:4px">EXAMPLES: SELF-REFERENTIAL</div><pre style="font-size:10px;background:rgba(86,211,100,.06);padding:8px;border-left:2px solid var(--green);white-space:pre-wrap;word-break:break-word;max-height:140px;overflow:auto;margin-bottom:10px">'+tnEsc(JSON.stringify(data.examples_self_ref,null,1))+'</pre>';}
+  if(data.examples_non_self_ref&&data.examples_non_self_ref.length){html+='<div style="font-size:11px;color:var(--text3);margin-bottom:4px">EXAMPLES: NON-SELF-REFERENTIAL</div><pre style="font-size:10px;background:rgba(255,255,255,.04);padding:8px;border-left:2px solid var(--text3);white-space:pre-wrap;word-break:break-word;max-height:140px;overflow:auto;margin-bottom:10px">'+tnEsc(JSON.stringify(data.examples_non_self_ref,null,1))+'</pre>';}
+  // Recent
+  if(data.recent&&data.recent.length){html+='<div style="font-size:11px;color:var(--text3);margin-bottom:4px">RECENT '+data.recent.length+'</div><pre style="font-size:10px;background:rgba(255,255,255,.04);padding:8px;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow:auto">'+tnEsc(JSON.stringify(data.recent,null,1))+'</pre>';}
+  html+='</div>';
+  return html;
+}
+function tnExpand(topic){
+  var tnEl=document.getElementById('thesis-nums');
+  if(!tnEl)return;
+  // Toggle: re-clicking the same topic closes
+  if(_tnPanel&&_tnPanel.topic===topic){
+    _tnPanel.div.remove();_tnPanel=null;return;
+  }
+  if(_tnPanel){_tnPanel.div.remove();_tnPanel=null;}
+  var div=document.createElement('div');
+  div.style.gridColumn='1/-1';
+  div.innerHTML='<div style="padding:10px;color:var(--text3);font-family:var(--mono);font-size:11px">loading '+topic+' breakdown...</div>';
+  tnEl.parentNode.insertBefore(div, tnEl.nextSibling);
+  _tnPanel={topic:topic, div:div};
+  var URLS={
+    godel:    {url:'/insight/godel/breakdown',     title:'G\u00F6del Choices Breakdown',         src:'data/logs/godel_choices.jsonl'},
+    self_ref: {url:'/insight/godel/self_reference',title:'Self-Referential Choice Audit',        src:'data/logs/godel_choices.jsonl + rule'},
+    memory:   {url:'/insight/memory/breakdown',    title:'Memory Breakdown (all sources)',       src:'pgvector + STM/LTM/dreams disk'},
+    actions:  {url:'/insight/actions/breakdown',   title:'Actions Ledger Breakdown',             src:'pgvector actions table'},
+  };
+  var u=URLS[topic];
+  if(!u){div.innerHTML='<div style="color:var(--amber)">unknown topic '+topic+'</div>';return;}
+  fetch(u.url).then(function(r){return r.json()}).then(function(d){
+    div.innerHTML=tnRender(u.title, u.src, d);
+  }).catch(function(e){
+    div.innerHTML='<div style="color:var(--amber);padding:10px">error loading '+topic+': '+tnEsc(String(e))+'</div>';
+  });
+}
 
 // Session timer — updates every second, no API needed
 var _sessionStart=Date.now();

@@ -1855,26 +1855,162 @@ except Exception:
 _diag_cpu_samples: list = []  # Rolling CPU % samples
 _ps.cpu_percent()  # Prime the counter (first call always returns 0)
 
-# Heartbeat prompts — mindX queries the local model for self-reflection
+# Heartbeat prompts — state-grounded introspection. Each prompt is a Python
+# format string that takes a single `s` argument: a dict of substitutions
+# assembled from live mindX state at heartbeat time. The {s[...]} fields are
+# what makes the response actual evidence rather than generic LLM filler.
 _HEARTBEAT_PROMPTS = [
-    "You are mindX, an autonomous multi-agent system. In one sentence, describe your current operational state.",
-    "As a self-improving AI system, what is one thing you would optimize about your current architecture?",
-    "You are the cognitive core of mindX. What patterns do you observe in the system logs?",
-    "mindX runs 12 sovereign agents with cryptographic identities. What does agent sovereignty mean to you?",
-    "You are part of a Godel machine. In one sentence, describe what self-improvement means for an autonomous system.",
-    "mindX uses a Belief-Desire-Intention architecture. What belief would you add to improve system resilience?",
-    "As inference_agent_main, evaluate the current inference source availability. What would you recommend?",
-    "You are memory_agent_main with wallet 0x7CC5...27Ca. Why is verified identity important for a memory keeper?",
-    "mindX serves at mindx.pythai.net. What does it mean for an AI system to have a public presence?",
-    "The Strategic Evolution Agent runs 4-phase audit campaigns. Describe the ideal self-improvement cycle in one sentence.",
+    "You are mindX. Your last 3 Gödel choices were: {s[recent_godel]}. Your campaigns_24h success rate is {s[ok]}/{s[total]}. In one sentence — what does this say about you right now?",
+    "You are mindX. Your top-fitness agent is {s[top_agent]} (score={s[top_score]}); your bottom is {s[bot_agent]} (score={s[bot_score]}). What evolutionary pressure is currently active?",
+    "You are mindX. The last blueprint you generated was '{s[blueprint_title]}'. Backlog has {s[backlog_total]} items, {s[running]} campaigns running. In one sentence — what is the next legitimate improvement target?",
+    "You are mindX. Your dream cycle last promoted {s[promoted]} memories at {s[dream_ts]}. STM has {s[stm_count]} entries. What did you learn that you didn't know yesterday?",
 ]
 
 _diag_model_perf: list = []  # Model task performance log (last 30)
 
+
+async def _gather_heartbeat_substitutions() -> Dict[str, Any]:
+    """Build the substitution dict that grounds heartbeat prompts in live state.
+
+    Every key has a sensible default so a missing data source still produces a
+    valid prompt. No exception escapes — heartbeat must never block on context.
+    """
+    s: Dict[str, Any] = {
+        "recent_godel": "(none)",
+        "ok": 0, "total": 0,
+        "top_agent": "(unknown)", "top_score": "?",
+        "bot_agent": "(unknown)", "bot_score": "?",
+        "blueprint_title": "(none)",
+        "backlog_total": "?", "running": "?",
+        "promoted": "?", "dream_ts": "(none)",
+        "stm_count": "?",
+    }
+    # Recent Gödel choices — tail the JSONL for last 3
+    try:
+        gp = PROJECT_ROOT / "data" / "logs" / "godel_choices.jsonl"
+        if gp.exists():
+            lines = gp.read_text().strip().split("\n")[-3:]
+            recent = []
+            for line in lines:
+                try:
+                    obj = json.loads(line)
+                    recent.append(f"{obj.get('choice_type','?')}→{str(obj.get('chosen_option',''))[:40]}")
+                except Exception:
+                    continue
+            if recent:
+                s["recent_godel"] = "; ".join(recent)
+    except Exception:
+        pass
+    # Improvement summary
+    try:
+        from mindx_backend_service.insight_aggregator import InsightAggregator
+        agg = InsightAggregator.get_instance()
+        summ = agg.improvement_summary()
+        c24 = summ.get("campaigns_24h") or {}
+        s["ok"] = int(c24.get("ok", 0))
+        s["total"] = int(c24.get("total", 0))
+        s["running"] = int(c24.get("running", 0))
+        # Fitness top/bottom
+        agents = agg.snapshot() or []
+        if agents:
+            ranked = sorted(agents, key=lambda a: a.get("fitness", 50.0), reverse=True)
+            top = ranked[0]
+            bot = ranked[-1]
+            s["top_agent"] = top.get("agent_id", "?")
+            s["top_score"] = f"{top.get('fitness', 0):.1f}"
+            s["bot_agent"] = bot.get("agent_id", "?")
+            s["bot_score"] = f"{bot.get('fitness', 0):.1f}"
+    except Exception:
+        pass
+    # Latest blueprint title from belief or runtime log
+    try:
+        from agents.belief_system import BeliefSystem
+        bs = BeliefSystem()
+        b = await bs.get_belief("mindx.evolution.blueprint.latest")
+        if b and isinstance(b.value, dict):
+            s["blueprint_title"] = b.value.get("blueprint_title", s["blueprint_title"])
+    except Exception:
+        pass
+    # Backlog total
+    try:
+        bp = PROJECT_ROOT / "data" / "improvement_backlog.json"
+        if bp.exists():
+            data = json.loads(bp.read_text())
+            if isinstance(data, list):
+                s["backlog_total"] = len(data)
+    except Exception:
+        pass
+    # Latest dream cycle
+    try:
+        dd = PROJECT_ROOT / "data" / "memory" / "dreams"
+        if dd.exists():
+            dreams = sorted(dd.glob("*_dream_report.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+            if dreams:
+                latest = json.loads(dreams[0].read_text())
+                s["promoted"] = int(latest.get("memories_promoted_to_ltm", 0))
+                ts = latest.get("timestamp_utc") or datetime.utcfromtimestamp(dreams[0].stat().st_mtime).strftime("%Y-%m-%dT%H:%M:%SZ")
+                s["dream_ts"] = str(ts)[:19]
+    except Exception:
+        pass
+    # STM count
+    try:
+        stm = PROJECT_ROOT / "data" / "memory" / "stm"
+        if stm.exists():
+            s["stm_count"] = sum(1 for _ in stm.rglob("*.json"))
+    except Exception:
+        pass
+    return s
+
+
+async def _heartbeat_resolve_handler() -> tuple:
+    """Consult the self.aware selector and return (handler, model, route_label).
+
+    Pattern mirrors agents/evolution/blueprint_agent._resolve_active_handler:
+    selector → handler_resolver → create_llm_handler → cascade to local Ollama
+    if cloud route is unroutable. Heartbeat is non-critical — task_class
+    'reasoning', importance 'routine' so the selector prefers safer-free defaults.
+    """
+    try:
+        from mindx.self.improve import choose_model
+        from mindx.self.improve.model_selector import TaskProfile
+        from mindx.self.improve.handler_resolver import classify_slug, slug_is_openrouter_resolvable
+        from llm.llm_factory import create_llm_handler
+
+        choice = await choose_model(TaskProfile(
+            task_class="reasoning",
+            importance="routine",
+            source_agent="mindx_heartbeat",
+            requires_tools=False,
+            min_context=2048,
+        ))
+        cls = classify_slug(choice.chosen)
+        if cls == "openrouter" and slug_is_openrouter_resolvable(choice.chosen):
+            h = await create_llm_handler(provider_name="openrouter", model_name=choice.chosen)
+            if h:
+                return (h, choice.chosen, f"openrouter/{choice.chosen}")
+        if cls in ("ollama_local", "ollama_cloud"):
+            h = await create_llm_handler(provider_name="ollama", model_name=choice.chosen)
+            if h:
+                return (h, choice.chosen, f"ollama/{choice.chosen}")
+    except Exception as e:
+        logger.debug(f"heartbeat selector unavailable: {e}")
+    # Cascade to local Ollama default
+    try:
+        from llm.llm_factory import create_llm_handler
+        h = await create_llm_handler(provider_name="ollama")
+        if h:
+            return (h, h.model_name_for_api or "default", f"ollama/{h.model_name_for_api or 'default'}")
+    except Exception as e:
+        logger.debug(f"heartbeat ollama fallback failed: {e}")
+    return (None, None, None)
+
+
 async def _heartbeat_query_local_model():
-    """Query local Ollama with a self-reflection prompt. Resource-governor-aware."""
+    """Self-aware introspection cycle. Consults the selector for the best model,
+    cascades to local Ollama on cloud failure, and grounds every prompt in live
+    mindX state. Resource-governor-aware (skipped under memory pressure).
+    """
     global _diag_heartbeat_count
-    # Resource governor: skip if system is under pressure
     try:
         from agents.resource_governor import ResourceGovernor
         gov = await ResourceGovernor.get_instance()
@@ -1884,69 +2020,96 @@ async def _heartbeat_query_local_model():
             return
     except Exception:
         pass
-    prompt = _HEARTBEAT_PROMPTS[_diag_heartbeat_count % len(_HEARTBEAT_PROMPTS)]
+
+    # Resolve a handler (selector + cascade) and gather state context in parallel.
+    handler, model_used, route_label = await _heartbeat_resolve_handler()
+    if handler is None:
+        logger.debug("Heartbeat: no handler resolvable, skipping cycle")
+        return
+    s = await _gather_heartbeat_substitutions()
+
+    template = _HEARTBEAT_PROMPTS[_diag_heartbeat_count % len(_HEARTBEAT_PROMPTS)]
     _diag_heartbeat_count += 1
     try:
-        t0 = time.time()
-        timeout = _aio.ClientTimeout(total=30)
-        async with _aio.ClientSession(timeout=timeout) as sess:
-            payload = {"model": "qwen3:0.6b", "messages": [{"role": "user", "content": prompt}], "stream": False}
-            async with sess.post("http://localhost:11434/api/chat", json=payload) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    response_text = data.get("message", {}).get("content", "")
-                    latency = int((time.time() - t0) * 1000)
-                    tokens_est = len(response_text.split())  # rough estimate
-                    tps = round(tokens_est / max(latency / 1000, 0.1), 1)
-                    entry = {
-                        "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
-                        "agent": "mindx_heartbeat",
-                        "model": "qwen3:0.6b",
-                        "prompt": prompt,
-                        "response": response_text[:500],
-                        "latency_ms": latency,
-                    }
-                    _diag_interactions.append(entry)
-                    if len(_diag_interactions) > 20:
-                        _diag_interactions.pop(0)
-                    # Track model performance (memory + DB)
-                    cpu_at = _ps.cpu_percent(interval=None)
-                    _diag_model_perf.append({
-                        "ts": datetime.utcnow().strftime("%H:%M:%S"),
-                        "model": "qwen3:0.6b",
-                        "latency_ms": latency,
-                        "tokens_est": tokens_est,
-                        "tps": tps,
-                        "cpu_at_query": cpu_at,
-                    })
-                    if len(_diag_model_perf) > 30:
-                        _diag_model_perf.pop(0)
-                    # Persist to pgvector
-                    try:
-                        from agents import memory_pgvector as _mpf
-                        await _mpf.store_model_perf("qwen3:0.6b", latency, tokens_est, tps, cpu_at)
-                    except Exception:
-                        pass
+        prompt = template.format(s=s)
+    except (KeyError, IndexError) as e:
+        logger.debug(f"Heartbeat prompt format error: {e} — falling back to template")
+        prompt = template
 
-                    # Persist to disk — all logs are memories in data
-                    try:
-                        _INTERACTIONS_LOG.parent.mkdir(parents=True, exist_ok=True)
-                        with open(_INTERACTIONS_LOG, "a", encoding="utf-8") as f:
-                            f.write(json.dumps(entry) + "\n")
-                    except Exception:
-                        pass
+    t0 = time.time()
+    response_text = None
+    try:
+        response_text = await handler.generate_text(
+            prompt, model=model_used, max_tokens=200, temperature=0.4
+        )
+    except Exception as e:
+        logger.debug(f"Heartbeat generate_text error on {route_label}: {e}")
 
-                    # Log through MemoryAgent — the canonical memory path
-                    try:
-                        from agents.memory_agent import MemoryAgent
-                        ma = MemoryAgent()
-                        await ma.log_process(
-                            process_name="heartbeat_dialogue",
-                            data=entry,
-                            metadata={"agent_id": "mindx_heartbeat", "model": "auto", "type": "self_reflection"},
-                        )
-                    except Exception:
-                        pass
+    # Cascade: if cloud handler returned None (rate limit, 401, network),
+    # retry once via local Ollama default.
+    if not response_text and route_label and not route_label.startswith("ollama/"):
+        try:
+            from llm.llm_factory import create_llm_handler
+            fallback = await create_llm_handler(provider_name="ollama")
+            if fallback:
+                response_text = await fallback.generate_text(
+                    prompt, model=fallback.model_name_for_api or "qwen3:0.6b",
+                    max_tokens=200, temperature=0.4,
+                )
+                if response_text:
+                    route_label = f"ollama/{fallback.model_name_for_api or 'qwen3:0.6b'} (fallback from {route_label})"
+                    model_used = fallback.model_name_for_api or "qwen3:0.6b"
+        except Exception as e:
+            logger.debug(f"Heartbeat fallback failed: {e}")
+
+    if not response_text:
+        return
+
+    latency = int((time.time() - t0) * 1000)
+    tokens_est = len(response_text.split())
+    tps = round(tokens_est / max(latency / 1000, 0.1), 1)
+    entry = {
+        "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "agent": "mindx_heartbeat",
+        "model": route_label or model_used,
+        "prompt": prompt,
+        "response": response_text[:500],
+        "latency_ms": latency,
+        "state_context": s,  # the scientific depth — what state was injected
+    }
+    _diag_interactions.append(entry)
+    if len(_diag_interactions) > 20:
+        _diag_interactions.pop(0)
+    cpu_at = _ps.cpu_percent(interval=None)
+    _diag_model_perf.append({
+        "ts": datetime.utcnow().strftime("%H:%M:%S"),
+        "model": model_used,
+        "latency_ms": latency,
+        "tokens_est": tokens_est,
+        "tps": tps,
+        "cpu_at_query": cpu_at,
+    })
+    if len(_diag_model_perf) > 30:
+        _diag_model_perf.pop(0)
+    try:
+        from agents import memory_pgvector as _mpf
+        await _mpf.store_model_perf(model_used, latency, tokens_est, tps, cpu_at)
+    except Exception:
+        pass
+    try:
+        _INTERACTIONS_LOG.parent.mkdir(parents=True, exist_ok=True)
+        with open(_INTERACTIONS_LOG, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry) + "\n")
+    except Exception:
+        pass
+    try:
+        from agents.memory_agent import MemoryAgent
+        ma = MemoryAgent()
+        await ma.log_process(
+            process_name="heartbeat_dialogue",
+            data=entry,
+            metadata={"agent_id": "mindx_heartbeat", "model": model_used, "type": "self_reflection_grounded"},
+        )
     except Exception:
         pass
 
@@ -2081,6 +2244,213 @@ async def insight_improvement_summary(request: Request, window: str = "24h"):
     from mindx_backend_service.insight_aggregator import InsightAggregator
     agg = InsightAggregator.get_instance()
     return _maybe_h_text(request, agg.improvement_summary(), route_path="/insight/improvement/summary")
+
+
+@app.get("/insight/godel/breakdown", tags=["insight"])
+@_insight_safe
+async def insight_godel_breakdown(request: Request, hours: int = 24):
+    """Breakdown of Gödel choices: by source_agent, choice_type, hourly bucket.
+    Source: data/logs/godel_choices.jsonl (full file scan).
+    """
+    gp = PROJECT_ROOT / "data" / "logs" / "godel_choices.jsonl"
+    out = {
+        "source": "data/logs/godel_choices.jsonl",
+        "source_query": "len(file) + group by source_agent / choice_type",
+        "total": 0, "by_agent": {}, "by_choice_type": {},
+        "recent": [],
+    }
+    if not gp.exists():
+        return _maybe_h_text(request, out, route_path="/insight/godel/breakdown")
+    try:
+        lines = gp.read_text().strip().split("\n")
+        out["total"] = len(lines)
+        agent_counts: Dict[str, int] = {}
+        type_counts: Dict[str, int] = {}
+        recent = []
+        for line in lines:
+            if not line.strip():
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            agent = obj.get("source_agent") or obj.get("agent_id") or "unknown"
+            ctype = obj.get("choice_type") or "unknown"
+            agent_counts[agent] = agent_counts.get(agent, 0) + 1
+            type_counts[ctype] = type_counts.get(ctype, 0) + 1
+            recent.append({
+                "ts": obj.get("timestamp_utc", ""),
+                "agent": agent,
+                "type": ctype,
+                "chosen": str(obj.get("chosen_option", ""))[:80],
+            })
+        out["by_agent"] = dict(sorted(agent_counts.items(), key=lambda kv: -kv[1])[:15])
+        out["by_choice_type"] = dict(sorted(type_counts.items(), key=lambda kv: -kv[1])[:15])
+        out["recent"] = recent[-10:]
+    except Exception as e:
+        out["error"] = str(e)
+    return _maybe_h_text(request, out, route_path="/insight/godel/breakdown")
+
+
+@app.get("/insight/godel/self_reference", tags=["insight"])
+@_insight_safe
+async def insight_godel_self_reference(request: Request):
+    """Self-referential rule + counts of self-ref vs non-self-ref + examples."""
+    gp = PROJECT_ROOT / "data" / "logs" / "godel_choices.jsonl"
+    self_ref_types = {"mindx_improvement_selection", "mindx_improvement_execution",
+                      "ollama_model_selection", "startup_ollama_bootstrap",
+                      "self_aware_model_selection"}
+    out = {
+        "source": "data/logs/godel_choices.jsonl",
+        "rule": "A choice is self-referential if its choice_type is in: " + ", ".join(sorted(self_ref_types)),
+        "self_ref_types": sorted(self_ref_types),
+        "self_referential": 0,
+        "non_self_referential": 0,
+        "total": 0,
+        "examples_self_ref": [],
+        "examples_non_self_ref": [],
+    }
+    if not gp.exists():
+        return _maybe_h_text(request, out, route_path="/insight/godel/self_reference")
+    try:
+        for line in gp.read_text().strip().split("\n"):
+            if not line.strip():
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            out["total"] += 1
+            ctype = obj.get("choice_type", "")
+            sample = {"ts": obj.get("timestamp_utc", ""), "type": ctype,
+                      "chosen": str(obj.get("chosen_option", ""))[:80]}
+            if ctype in self_ref_types:
+                out["self_referential"] += 1
+                if len(out["examples_self_ref"]) < 5:
+                    out["examples_self_ref"].append(sample)
+            else:
+                out["non_self_referential"] += 1
+                if len(out["examples_non_self_ref"]) < 5:
+                    out["examples_non_self_ref"].append(sample)
+        if out["total"] > 0:
+            out["ratio"] = round(out["self_referential"] / out["total"], 4)
+    except Exception as e:
+        out["error"] = str(e)
+    return _maybe_h_text(request, out, route_path="/insight/godel/self_reference")
+
+
+@app.get("/insight/memory/breakdown", tags=["insight"])
+@_insight_safe
+async def insight_memory_breakdown(request: Request):
+    """Memory breakdown across all sources (resolves the dashboard discrepancy).
+    Counts: pgvector rows, STM disk files, LTM agent files, dream reports.
+    """
+    out = {
+        "source_query": "pgvector memory_records + filesystem rglob",
+        "counts": {},
+        "discrepancy_explanation": (
+            "STM disk count = one file per memory event (raw). "
+            "pgvector rows = consolidated entries (after dedup + dream cycle promotion). "
+            "Both are real, just different layers."
+        ),
+    }
+    # STM disk
+    try:
+        stm = PROJECT_ROOT / "data" / "memory" / "stm"
+        if stm.exists():
+            out["counts"]["stm_disk_files"] = sum(1 for _ in stm.rglob("*.json"))
+    except Exception:
+        pass
+    # LTM agent files
+    try:
+        ltm = PROJECT_ROOT / "data" / "memory" / "ltm"
+        if ltm.exists():
+            out["counts"]["ltm_disk_files"] = sum(1 for _ in ltm.rglob("*.json"))
+    except Exception:
+        pass
+    # Dream reports
+    try:
+        dreams = PROJECT_ROOT / "data" / "memory" / "dreams"
+        if dreams.exists():
+            out["counts"]["dream_reports"] = sum(1 for _ in dreams.glob("*.json"))
+    except Exception:
+        pass
+    # pgvector
+    try:
+        from agents import memory_pgvector as _mpg
+        pool = await _mpg.get_pool()
+        if pool:
+            row = await pool.fetchrow("SELECT COUNT(*) AS n FROM memory_records")
+            out["counts"]["pgvector_rows"] = int(row["n"]) if row else 0
+            # By memory_type
+            type_rows = await pool.fetch(
+                "SELECT memory_type, COUNT(*) AS n FROM memory_records GROUP BY memory_type ORDER BY n DESC LIMIT 10"
+            )
+            out["by_memory_type"] = {r["memory_type"]: int(r["n"]) for r in type_rows}
+            # By agent_id
+            agent_rows = await pool.fetch(
+                "SELECT agent_id, COUNT(*) AS n FROM memory_records GROUP BY agent_id ORDER BY n DESC LIMIT 10"
+            )
+            out["by_agent"] = {r["agent_id"] or "unknown": int(r["n"]) for r in agent_rows}
+    except Exception as e:
+        out["pgvector_error"] = str(e)
+    return _maybe_h_text(request, out, route_path="/insight/memory/breakdown")
+
+
+@app.get("/insight/actions/breakdown", tags=["insight"])
+@_insight_safe
+async def insight_actions_breakdown(request: Request):
+    """Actions breakdown — total + by status + by agent + recent.
+    Source: pgvector `actions` table (the canonical action ledger).
+    Resolves the long-standing dashboard discrepancy: tile shows array length
+    of recent-N sample, evidence shows broken self-fetch result. This endpoint
+    queries the table directly, so the count is authoritative.
+    """
+    out = {
+        "source": "pgvector actions table",
+        "source_query": "SELECT COUNT(*) FROM actions; GROUP BY status; GROUP BY agent_id",
+        "total": 0,
+        "by_status": {},
+        "by_agent": {},
+        "recent": [],
+    }
+    try:
+        from agents import memory_pgvector as _mpg
+        pool = await _mpg.get_pool()
+        if not pool:
+            out["error"] = "pgvector pool unavailable"
+            return _maybe_h_text(request, out, route_path="/insight/actions/breakdown")
+        # Total
+        row = await pool.fetchrow("SELECT COUNT(*) AS n FROM actions")
+        out["total"] = int(row["n"]) if row else 0
+        # By status
+        srows = await pool.fetch("SELECT status, COUNT(*) AS n FROM actions GROUP BY status ORDER BY n DESC")
+        out["by_status"] = {r["status"] or "null": int(r["n"]) for r in srows}
+        # By agent (top 15)
+        arows = await pool.fetch(
+            "SELECT agent_id, COUNT(*) AS n FROM actions GROUP BY agent_id ORDER BY n DESC LIMIT 15"
+        )
+        out["by_agent"] = {r["agent_id"] or "unknown": int(r["n"]) for r in arows}
+        # Recent 10
+        rrows = await pool.fetch(
+            "SELECT id, agent_id, action_type, status, description, created_at "
+            "FROM actions ORDER BY created_at DESC LIMIT 10"
+        )
+        out["recent"] = [
+            {
+                "id": r["id"], "agent": r["agent_id"], "type": r["action_type"],
+                "status": r["status"], "desc": (r["description"] or "")[:120],
+                "ts": str(r["created_at"]),
+            }
+            for r in rrows
+        ]
+        # Completion rate
+        completed = out["by_status"].get("completed", 0) + out["by_status"].get("success", 0)
+        if out["total"] > 0:
+            out["completion_rate"] = round(completed / out["total"], 4)
+    except Exception as e:
+        out["error"] = str(e)
+    return _maybe_h_text(request, out, route_path="/insight/actions/breakdown")
 
 
 @app.get("/insight/improvement/timeline", tags=["insight"])
@@ -4752,6 +5122,12 @@ async def thesis_evidence():
     """Collect and return empirical evidence for each thesis claim."""
     from mindx_backend_service.thesis_evidence import ThesisEvidenceCollector
     collector = ThesisEvidenceCollector.get_instance()
+    # Refresh actions count from pgvector first (writes actions_count.json),
+    # then collect_all() picks it up via _collect_actions().
+    try:
+        await collector.collect_actions_async()
+    except Exception:
+        pass
     return collector.collect_all()
 
 @app.get("/thesis/summary", tags=["thesis"], summary="Human-readable thesis evidence summary", response_model=ThesisSummaryResponse)
@@ -4759,6 +5135,10 @@ async def thesis_summary():
     """Quick verdict for each thesis claim."""
     from mindx_backend_service.thesis_evidence import ThesisEvidenceCollector
     collector = ThesisEvidenceCollector.get_instance()
+    try:
+        await collector.collect_actions_async()
+    except Exception:
+        pass
     evidence = collector.collect_all()
     lines = [f"Darwin-Godel Machine Evidence ({evidence['collected_at']})"]
     lines.append(f"Evidence span: {evidence['evidence_span_hours']} hours")
