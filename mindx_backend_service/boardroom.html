@@ -341,6 +341,249 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
   border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* ────────────────────────────────────────────────────────────────────
+   Boardroom v2 — cinematic upgrade. New CSS added below.
+   - SVG vote-arrow layer + speaking pulse
+   - Chip enrichment (skill badge / latency / tier dot)
+   - 4-tab agent modal
+   - History right-rail + deep history modal
+   - Marketing Cabinet pipeline panel
+   - Status grid
+   - Visual polish + reduced-motion guard
+   ──────────────────────────────────────────────────────────────────── */
+
+/* SVG vote-arrow overlay — drawn from each chip to the CEO seat */
+#vote-fx-layer{position:fixed;inset:0;pointer-events:none;z-index:5;width:100%;height:100%}
+#vote-fx-layer line{stroke-dasharray:4 6;stroke-dashoffset:0;opacity:0;
+  transition:opacity .25s ease,stroke-dashoffset .8s ease-out}
+#vote-fx-layer line.draw{opacity:.85}
+#vote-fx-layer circle{opacity:0;transition:opacity .35s ease,r .8s cubic-bezier(.2,.8,.2,1)}
+#vote-fx-layer circle.draw{opacity:.55}
+
+/* Speaking pulse — subtle ring while a soldier's model is mid-inference */
+.chip.speaking{animation:speak 1.1s ease-in-out infinite}
+.chip.speaking::before{content:'';position:absolute;inset:-3px;border-radius:6px;
+  border:1px solid var(--accent);opacity:.45;animation:speakRing 1.4s ease-out infinite;pointer-events:none}
+@keyframes speak{0%,100%{box-shadow:0 0 8px var(--accent-glow)}50%{box-shadow:0 0 22px var(--accent)}}
+@keyframes speakRing{0%{inset:-3px;opacity:.55}100%{inset:-12px;opacity:0}}
+
+/* Enriched chip — skill badge + latency pill + tier dot */
+.chip .chip-skill{font-size:7px;color:var(--violet);margin-top:3px;letter-spacing:.5px;
+  font-family:'JetBrains Mono',monospace;text-transform:uppercase;opacity:.85}
+.chip .chip-skill.veto-skill{color:var(--veto)}
+.chip .chip-latency{position:absolute;top:4px;right:5px;font-size:7px;color:var(--text3);
+  font-family:'JetBrains Mono',monospace;letter-spacing:.5px;opacity:.7}
+.chip .chip-tier{position:absolute;top:4px;left:5px;width:5px;height:5px;border-radius:50%;
+  background:var(--text3);box-shadow:0 0 6px transparent}
+.chip .chip-tier.local{background:var(--accent)}
+.chip .chip-tier.cloud{background:var(--blue)}
+.chip .chip-tier.cloud-pro{background:var(--violet);box-shadow:0 0 6px var(--violet)}
+
+/* Vote-tally counter — subtle number animation */
+.outcome .tally{display:inline-block;font-variant-numeric:tabular-nums;
+  font-family:'JetBrains Mono',monospace}
+
+/* ── 4-tab agent modal ─────────────────────────────────────────────── */
+.modal-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);padding:0 18px;
+  background:var(--bg2);border-radius:6px 6px 0 0}
+.modal-tabs button{background:none;border:none;color:var(--text3);font-family:'Orbitron',sans-serif;
+  font-size:9px;font-weight:600;letter-spacing:2px;padding:14px 18px;cursor:pointer;
+  text-transform:uppercase;border-bottom:2px solid transparent;transition:all .2s}
+.modal-tabs button:hover{color:var(--text)}
+.modal-tabs button.active{color:var(--accent);border-bottom-color:var(--accent)}
+.acp-tab{display:none}
+.acp-tab.active{display:block;animation:fadeIn .25s ease}
+
+/* Sparkline (last-50 latencies) */
+.sparkline{width:100%;height:36px;margin-top:8px;background:var(--bg);border-radius:3px}
+.sparkline path{fill:none;stroke:var(--accent);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.sparkline .gridline{stroke:var(--glass-border);stroke-width:.5}
+
+/* Provider distribution donut */
+.donut{display:flex;align-items:center;gap:14px;margin-top:8px}
+.donut svg{flex-shrink:0}
+.donut .legend{font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--text2);line-height:1.7}
+.donut .legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:middle}
+
+/* Identity binding rows */
+.acp-identity{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:10px;
+  font-family:'JetBrains Mono',monospace;padding:8px 10px;background:var(--bg);border-radius:3px}
+.acp-identity .ik{color:var(--text2)}
+.acp-identity .iv{color:var(--accent);text-align:right;letter-spacing:1px;font-weight:600}
+.acp-identity .iv.pending{color:var(--advisory)}
+.acp-identity .iv.faded{color:var(--veto)}
+
+/* Vote-history table inside Skills/History tab */
+.acp-history-table{width:100%;border-collapse:collapse;font-size:10px;font-family:'JetBrains Mono',monospace}
+.acp-history-table th{font-family:'Orbitron',sans-serif;font-size:8px;color:var(--text3);
+  letter-spacing:1px;text-transform:uppercase;padding:6px 8px;text-align:left;border-bottom:1px solid var(--glass-border)}
+.acp-history-table td{padding:6px 8px;border-bottom:1px solid var(--glass-border);color:var(--text2)}
+.acp-history-table td.vote-approve{color:var(--approve);font-weight:600}
+.acp-history-table td.vote-reject{color:var(--reject);font-weight:600}
+.acp-history-table td.vote-abstain{color:var(--abstain)}
+.acp-history-table tr:hover td{background:var(--bg2)}
+
+/* Fitness gauge — semi-circle bar */
+.fitness-gauge{display:flex;align-items:center;gap:14px;padding:10px 12px;background:var(--bg);border-radius:3px}
+.fitness-gauge .gauge-num{font-family:'Orbitron',sans-serif;font-size:24px;font-weight:700;color:var(--white);
+  font-variant-numeric:tabular-nums;letter-spacing:1px}
+.fitness-gauge .gauge-bar{flex:1;height:6px;background:var(--bg2);border-radius:3px;position:relative;overflow:hidden}
+.fitness-gauge .gauge-bar .fill{height:100%;background:linear-gradient(90deg,var(--reject) 0%,var(--advisory) 50%,var(--approve) 100%);
+  transition:width .8s cubic-bezier(.2,.8,.2,1);width:0}
+
+/* ── History right-rail ─────────────────────────────────────────────── */
+.hist-rail{position:fixed;right:0;top:0;width:330px;height:100vh;background:var(--bg);
+  border-left:1px solid var(--border);z-index:50;transform:translateX(330px);
+  transition:transform .3s ease;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--text3) var(--bg);
+  display:flex;flex-direction:column}
+.hist-rail.open{transform:translateX(0)}
+.hist-toggle{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:51;
+  background:var(--surface);border:1px solid var(--border);border-right:none;
+  padding:10px 6px;cursor:pointer;writing-mode:vertical-rl;
+  font-family:'Orbitron',sans-serif;font-size:8px;color:var(--text3);letter-spacing:2px;
+  transition:all .3s;border-radius:3px 0 0 3px;font-weight:500}
+.hist-toggle:hover{color:var(--accent);border-color:var(--accent)}
+.hist-toggle.shifted{right:330px}
+.hist-rail .hr-hdr{padding:16px 14px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;
+  background:var(--bg);z-index:2}
+.hist-rail .hr-hdr .label{font-family:'Orbitron',sans-serif;font-size:9px;color:var(--white);
+  letter-spacing:3px;text-transform:uppercase;font-weight:600}
+.hist-rail .hr-hdr .sub{font-size:9px;color:var(--text3);margin-top:3px;letter-spacing:.5px}
+.hist-filters{display:flex;flex-wrap:wrap;gap:4px;padding:10px 14px;border-bottom:1px solid var(--glass-border)}
+.hist-filter{font-size:8px;font-family:'Orbitron',sans-serif;letter-spacing:1px;text-transform:uppercase;
+  padding:4px 8px;background:var(--surface);border:1px solid var(--glass-border);
+  cursor:pointer;color:var(--text3);border-radius:2px;font-weight:500;transition:all .2s}
+.hist-filter:hover{color:var(--text);border-color:var(--text2)}
+.hist-filter.active{color:var(--accent);border-color:var(--accent);background:var(--accent-dim)}
+.hist-rows{flex:1;overflow-y:auto;padding:8px 10px}
+.hist-row{padding:9px 10px;border:1px solid var(--glass-border);border-radius:3px;
+  margin-bottom:5px;cursor:pointer;transition:all .2s;background:var(--surface)}
+.hist-row:hover{border-color:var(--accent);transform:translateX(-2px)}
+.hist-row .hr-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.hist-row .hr-out{font-size:8px;font-weight:700;letter-spacing:1px;font-family:'Orbitron',sans-serif;
+  padding:2px 6px;border-radius:2px}
+.hist-row .hr-out.approved{color:var(--approve);background:rgba(86,211,100,.08)}
+.hist-row .hr-out.rejected{color:var(--reject);background:rgba(239,68,68,.08)}
+.hist-row .hr-out.exploration{color:var(--advisory);background:rgba(227,179,65,.08)}
+.hist-row .hr-dir{font-size:10px;color:var(--text);flex:1;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:400}
+.hist-row .hr-meta{font-size:8px;color:var(--text3);margin-top:4px;letter-spacing:.3px;
+  font-family:'JetBrains Mono',monospace}
+.hist-row .hr-bars{display:flex;gap:2px;margin-top:5px}
+.hist-row .hr-bars i{flex:1;height:3px;border-radius:1px;background:var(--abstain)}
+.hist-row .hr-bars i.a{background:var(--approve)}
+.hist-row .hr-bars i.r{background:var(--reject)}
+
+/* ── Deep history modal ─────────────────────────────────────────────── */
+.hist-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:120;display:none;
+  align-items:flex-start;justify-content:center;padding:5vh 4vw;backdrop-filter:blur(6px)}
+.hist-modal-overlay.show{display:flex;animation:fadeIn .2s ease-out}
+.hist-modal{background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  max-width:880px;width:100%;max-height:90vh;overflow-y:auto;
+  scrollbar-width:thin;scrollbar-color:var(--text3) var(--bg)}
+.hm-hdr{padding:18px 22px 14px;border-bottom:1px solid var(--glass-border);position:sticky;top:0;
+  background:var(--bg);z-index:2}
+.hm-hdr .hm-id{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:1px}
+.hm-hdr .hm-dir{font-family:'Orbitron',sans-serif;font-size:13px;color:var(--white);margin-top:6px;
+  letter-spacing:1px;font-weight:600;line-height:1.4}
+.hm-hdr .hm-meta{display:flex;gap:14px;font-size:9px;color:var(--text2);margin-top:8px;flex-wrap:wrap;
+  font-family:'JetBrains Mono',monospace;letter-spacing:.5px}
+.hm-hdr .hm-meta .ok{color:var(--accent)}
+.hm-hdr .hm-actions{position:absolute;top:14px;right:18px;display:flex;gap:6px}
+.hm-hdr .hm-actions button{background:var(--surface);border:1px solid var(--border);color:var(--text2);
+  padding:5px 12px;font-family:'Orbitron',sans-serif;font-size:8px;letter-spacing:1.5px;cursor:pointer;
+  border-radius:2px;transition:all .2s;font-weight:600;text-transform:uppercase}
+.hm-hdr .hm-actions button:hover{color:var(--accent);border-color:var(--accent)}
+.hm-body{padding:16px 22px}
+.hm-banner{padding:12px 16px;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;
+  letter-spacing:3px;text-transform:uppercase;border-radius:3px;margin-bottom:14px;text-align:center}
+.hm-banner.approved{background:rgba(86,211,100,.08);color:var(--approve);border:1px solid var(--approve)}
+.hm-banner.rejected{background:rgba(239,68,68,.08);color:var(--reject);border:1px solid var(--reject)}
+.hm-banner.exploration{background:rgba(227,179,65,.08);color:var(--advisory);border:1px solid var(--advisory)}
+.hm-vote{padding:10px 14px;background:var(--surface);border:1px solid var(--glass-border);
+  border-radius:3px;margin-bottom:6px;border-left:3px solid var(--text3);transition:all .2s}
+.hm-vote:hover{border-color:var(--accent)}
+.hm-vote.approve{border-left-color:var(--approve)}
+.hm-vote.reject{border-left-color:var(--reject)}
+.hm-vote.abstain{border-left-color:var(--abstain)}
+.hm-vote .hm-v-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.hm-vote .hm-v-soldier{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;
+  color:var(--white);letter-spacing:1.5px;text-transform:uppercase}
+.hm-vote .hm-v-vote{font-family:'Orbitron',sans-serif;font-size:9px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:2px}
+.hm-vote .hm-v-vote.approve{color:var(--approve);background:rgba(86,211,100,.08)}
+.hm-vote .hm-v-vote.reject{color:var(--reject);background:rgba(239,68,68,.08)}
+.hm-vote .hm-v-vote.abstain{color:var(--abstain);background:rgba(139,148,158,.08)}
+.hm-vote .hm-v-meta{font-size:9px;color:var(--text3);font-family:'JetBrains Mono',monospace;letter-spacing:.5px}
+.hm-vote .hm-v-reason{font-size:11px;color:var(--text);margin-top:6px;line-height:1.55;font-weight:300}
+
+/* ── Marketing Cabinet pipeline ─────────────────────────────────────── */
+.mkt-panel{max-width:960px;margin:18px auto 0;padding:0 12px;display:none}
+.mkt-panel.active{display:block;animation:fadeIn .3s ease}
+.mkt-toggle{display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;
+  background:rgba(210,168,255,.04);border:1px solid rgba(210,168,255,.18);border-radius:3px;
+  transition:all .2s}
+.mkt-toggle:hover{border-color:var(--violet)}
+.mkt-toggle .label{font-family:'Orbitron',sans-serif;font-size:10px;color:var(--violet);
+  letter-spacing:3px;text-transform:uppercase;flex:1;font-weight:600}
+.mkt-toggle .chevron{color:var(--text3);font-size:12px;transition:transform .3s}
+.mkt-toggle.open .chevron{transform:rotate(180deg)}
+.mkt-body{max-height:0;overflow:hidden;transition:max-height .4s ease-out}
+.mkt-body.open{max-height:600px;padding:14px 0}
+.mkt-pipeline{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;justify-content:center;padding:6px 0}
+.mkt-node{flex:1;min-width:88px;background:var(--surface);border:1px solid var(--glass-border);
+  padding:10px 8px;text-align:center;position:relative;transition:all .3s;border-radius:3px;margin:0 1px}
+.mkt-node::after{content:'→';position:absolute;right:-10px;top:50%;transform:translateY(-50%);
+  font-size:14px;color:var(--text3);font-weight:300;z-index:1}
+.mkt-node:last-child::after{display:none}
+.mkt-node.veto{border-bottom:2px solid var(--veto)}
+.mkt-node.running{border-color:var(--violet);box-shadow:0 0 12px rgba(210,168,255,.2);animation:speak 1.4s ease-in-out infinite}
+.mkt-node.produced{border-color:var(--approve);background:rgba(86,211,100,.05)}
+.mkt-node.refused{border-color:var(--reject);background:rgba(239,68,68,.05)}
+.mkt-node .mn-soldier{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;
+  color:var(--white);letter-spacing:1.5px;text-transform:uppercase}
+.mkt-node .mn-skill{font-size:8px;color:var(--violet);margin-top:4px;letter-spacing:.5px;
+  font-family:'JetBrains Mono',monospace;text-transform:uppercase}
+.mkt-node .mn-status{font-size:8px;font-family:'Orbitron',sans-serif;letter-spacing:1px;
+  margin-top:5px;font-weight:600;text-transform:uppercase}
+.mkt-node .mn-status.idle{color:var(--text3)}
+.mkt-node .mn-status.running{color:var(--violet)}
+.mkt-node .mn-status.produced{color:var(--approve)}
+.mkt-node .mn-status.refused{color:var(--reject)}
+.mkt-ceo-seal{padding:10px 16px;background:var(--accent-dim);border:1px solid var(--accent);
+  border-radius:3px;margin-left:8px;font-family:'Orbitron',sans-serif;font-size:9px;color:var(--accent);
+  letter-spacing:2px;font-weight:700;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+
+/* ── Status grid (per-soldier 4-dot health) ─────────────────────────── */
+.status-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;padding:8px 10px;
+  background:var(--bg);border-radius:3px;margin-top:6px}
+.sg-cell{padding:5px 4px;text-align:center;background:var(--surface);border:1px solid var(--glass-border);
+  border-radius:2px;cursor:pointer;transition:all .2s}
+.sg-cell:hover{border-color:var(--accent)}
+.sg-cell .sg-name{font-family:'Orbitron',sans-serif;font-size:7px;color:var(--text3);
+  letter-spacing:.8px;font-weight:600;text-transform:uppercase}
+.sg-cell .sg-dots{display:flex;gap:2px;justify-content:center;margin-top:3px}
+.sg-cell .sg-dot{width:5px;height:5px;border-radius:50%;background:var(--text3);transition:all .3s}
+.sg-cell .sg-dot.ok{background:var(--accent);box-shadow:0 0 4px var(--accent-glow)}
+.sg-cell .sg-dot.warn{background:var(--advisory)}
+.sg-cell .sg-dot.crit{background:var(--veto)}
+
+/* Inference latency sparkline (status panel) */
+.diag-sparkline{width:100%;height:28px;margin-top:6px;background:var(--bg);border-radius:2px}
+.diag-sparkline path.p50{fill:none;stroke:var(--accent);stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+.diag-sparkline path.p95{fill:none;stroke:var(--advisory);stroke-width:1;stroke-linecap:round;stroke-dasharray:2 2}
+
+/* Animated number counter */
+.counter{font-variant-numeric:tabular-nums;font-family:'JetBrains Mono',monospace}
+
+/* Reduced motion — disable new SVG arrows + speaking pulse only */
+@media (prefers-reduced-motion: reduce){
+  #vote-fx-layer{display:none}
+  .chip.speaking{animation:none}
+  .chip.speaking::before{animation:none;opacity:.25}
+  .mkt-node.running{animation:none}
+}
+
 /* Responsive */
 @media(max-width:900px){
   .board-wrap{max-width:100%;padding:0 8px}
@@ -350,10 +593,51 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
   .toolbar{gap:5px;padding:8px}
   .input-area{flex-wrap:wrap}
   .input-area input{min-width:200px}
+  .hist-rail{width:280px;transform:translateX(280px)}
+  .hist-toggle.shifted{right:280px}
+  .status-grid{grid-template-columns:repeat(4,1fr)}
+  .mkt-pipeline{gap:6px}
+  .mkt-node{min-width:72px}
 }
 </style>
 </head>
 <body>
+<!-- Vote-arrow SVG overlay — drawn from each chip to the CEO seat during convene. Above canvas, below chips. -->
+<svg id="vote-fx-layer" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"></svg>
+
+<!-- Deep history modal (distinct from the agent card) -->
+<div class="hist-modal-overlay" id="hist-modal-overlay" onclick="if(event.target===this)closeHistModal()">
+  <div class="hist-modal" id="hist-modal">
+    <div class="hm-hdr">
+      <div class="hm-id" id="hm-id"></div>
+      <div class="hm-dir" id="hm-dir"></div>
+      <div class="hm-meta" id="hm-meta"></div>
+      <div class="hm-actions">
+        <button onclick="histReplayInChamber()">Replay in chamber</button>
+        <button onclick="histDownloadJSON()">Download JSON</button>
+        <button onclick="closeHistModal()">Close</button>
+      </div>
+    </div>
+    <div class="hm-body" id="hm-body"></div>
+  </div>
+</div>
+
+<!-- History right-rail toggle + panel -->
+<div class="hist-toggle" id="hist-toggle" onclick="toggleHistRail()">HISTORY</div>
+<div class="hist-rail" id="hist-rail">
+  <div class="hr-hdr">
+    <div class="label">Session History</div>
+    <div class="sub">last 50 sessions · click for deep view</div>
+  </div>
+  <div class="hist-filters" id="hist-filters">
+    <span class="hist-filter active" data-out="all" onclick="histFilter(event,'out','all')">All</span>
+    <span class="hist-filter" data-out="approved" onclick="histFilter(event,'out','approved')">Approved</span>
+    <span class="hist-filter" data-out="rejected" onclick="histFilter(event,'out','rejected')">Rejected</span>
+    <span class="hist-filter" data-out="exploration" onclick="histFilter(event,'out','exploration')">Exploration</span>
+  </div>
+  <div class="hist-rows" id="hist-rows"></div>
+</div>
+
 <div class="page">
   <!-- Agent card popup overlay -->
   <div class="card-overlay" id="card-overlay" onclick="if(event.target===this)closeCard()">
@@ -363,6 +647,12 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
         <div class="acp-short" id="acp-short"></div>
         <div class="acp-name" id="acp-name"></div>
         <div class="acp-weight" id="acp-weight"></div>
+      </div>
+      <div class="modal-tabs" id="modal-tabs">
+        <button class="active" data-tab="doctrine" onclick="switchTab(event,'doctrine')">Doctrine</button>
+        <button data-tab="models" onclick="switchTab(event,'models')">Models</button>
+        <button data-tab="skills" onclick="switchTab(event,'skills')">Skills</button>
+        <button data-tab="history" onclick="switchTab(event,'history')">History</button>
       </div>
       <div class="acp-body" id="acp-body"></div>
     </div>
@@ -421,6 +711,24 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
       <div class="diag-row"><span class="dk">Wallets</span><span class="dv warn">NOT ISSUED</span></div>
       <div class="diag-row"><span class="dk">BONA FIDE</span><span class="dv warn">PENDING</span></div>
       <div class="diag-row"><span class="dk">Verification</span><span class="dv warn">Tier 1</span></div>
+    </div>
+
+    <div class="diag-section">
+      <div class="ds-label">Per-Soldier Health</div>
+      <div style="font-size:7px;color:var(--text3);margin-bottom:5px;letter-spacing:.5px">
+        pulled · loaded · cloud · identity
+      </div>
+      <div class="status-grid" id="status-grid"></div>
+    </div>
+
+    <div class="diag-section">
+      <div class="ds-label">Latency p50 / p95 (last 24h)</div>
+      <svg class="diag-sparkline" id="diag-latency-spark" viewBox="0 0 240 28" preserveAspectRatio="none">
+        <path class="p50" d=""></path>
+        <path class="p95" d=""></path>
+      </svg>
+      <div class="diag-row" style="margin-top:4px"><span class="dk">p50</span><span class="dv ok counter" id="d-p50">— ms</span></div>
+      <div class="diag-row"><span class="dk">p95</span><span class="dv warn counter" id="d-p95">— ms</span></div>
     </div>
 
     <div style="padding:10px 12px;font-size:8px;color:var(--text3);letter-spacing:1px">
@@ -524,6 +832,12 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
             <option value="1.000">3/3 Unilateral</option>
           </select>
           <div class="sep"></div>
+          <span class="label">Brief:</span>
+          <select id="brief-type" title="Brief type — flips Marketing Cabinet pipeline panel" onchange="onBriefTypeChange()">
+            <option value="general" selected>General</option>
+            <option value="marketing">Marketing</option>
+          </select>
+          <div class="sep"></div>
           <button onclick="copyDeliberation()" id="copy-btn" title="Copy to clipboard">COPY</button>
           <button onclick="exportToMd()" title="Export as Markdown">MD</button>
         </div>
@@ -545,6 +859,24 @@ body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
       </div>
     </div>
 
+    </div>
+  </div>
+
+  <!-- Marketing Cabinet pipeline (collapsible; auto-shows on marketing-tagged directives) -->
+  <div class="mkt-panel" id="mkt-panel">
+    <div class="mkt-toggle" id="mkt-toggle" onclick="toggleMktPanel()">
+      <span class="label">Marketing Cabinet · soldier-skill pipeline</span>
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="mkt-body" id="mkt-body">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <div class="mkt-pipeline" id="mkt-pipeline"></div>
+        <div class="mkt-ceo-seal">CEO seals · MarketingAttributionReceipt</div>
+      </div>
+      <div style="font-size:9px;color:var(--text3);padding:8px 0 0;letter-spacing:.5px;line-height:1.5">
+        Dispatch order: CISO (voice + identity hard-veto) → CLO (regulatory) → CPO (HBR L1 content) → CTO (HBR L2 experimentation) → COO (HBR L3 distribution) → CFO (HBR L4 reporting + treasury) → CRO (spend hard-veto) → CEO seals.
+        Each soldier's `approve` vote runs its skill; CISO/CRO `reject` short-circuits.
+      </div>
     </div>
   </div>
 
@@ -1096,6 +1428,17 @@ async function convene() {
   const members = document.getElementById('members-select').value;
   const consensus = document.getElementById('consensus-select').value;
 
+  // v2: prime the marketing pipeline if the directive looks marketing-tagged
+  const briefType = (document.getElementById('brief-type') || {}).value || 'general';
+  const looksMarketing = briefType === 'marketing' || /\b(?:campaign|marketing|brand|press|kol|farcaster|launch)\b/i.test(directive);
+  if (looksMarketing) primeMarketingPipeline(directive);
+
+  // v2: enable speaking pulse on every attending soldier (will clear on each vote)
+  attendingSoldierIds(members).forEach(id => {
+    const c = document.getElementById('chip-'+id);
+    if (c) c.classList.add('speaking');
+  });
+
   try {
     // Stream votes via SSE — each soldier's response appears as it arrives
     const url = `/boardroom/convene/stream?directive=${encodeURIComponent(directive)}&importance=${importance}&model_mode=${modelMode}&priority=${currentPriority}&members=${encodeURIComponent(members)}&consensus=${consensus}`;
@@ -1139,7 +1482,10 @@ async function convene() {
 
           // Update chip
           const chip = document.getElementById('chip-'+v.soldier);
-          if (chip) chip.classList.add('voted-'+v.vote);
+          if (chip) {
+            chip.classList.remove('speaking');
+            chip.classList.add('voted-'+v.vote);
+          }
           const voteEl = document.getElementById('vote-'+v.soldier);
           if (voteEl) {
             voteEl.textContent = v.vote.toUpperCase();
@@ -1149,6 +1495,13 @@ async function convene() {
           if (confEl) confEl.textContent = `${(v.confidence*100).toFixed(0)}%`;
           const modelEl = document.getElementById('model-'+v.soldier);
           if (modelEl) modelEl.textContent = v.provider || '';
+
+          // v2: draw vote arrow chip → CEO seat
+          const weight = (soldier && soldier.weight) || 1.0;
+          drawVoteArrow(v.soldier, v.vote, weight, v.confidence || 0.5);
+
+          // v2: tick marketing pipeline if active
+          if (mktState.active) markMktNode(v.soldier, v.vote === 'approve' ? 'produced' : 'refused');
 
           // Add message — appears immediately as soldier responds
           addMessage(short, v.reasoning || v.vote, v.vote);
@@ -1188,7 +1541,15 @@ async function convene() {
 
           btn.disabled = false;
           btn.textContent = 'CONVENE';
-          setTimeout(loadHistory, 1000);
+          setTimeout(() => {
+            loadHistory();
+            renderHistoryRail();
+            // clear speaking pulses (idempotent — they may already be off)
+            SOLDIERS.forEach(s => {
+              const c = document.getElementById('chip-'+s.id);
+              if (c) c.classList.remove('speaking');
+            });
+          }, 1000);
         }
       }
     }
@@ -1506,6 +1867,21 @@ initDropZone();
 syncSeatsFromDropdown();
 loadHistory();
 
+// v2 cinematic upgrade — load insight + marketing data, enrich chips, populate rails
+loadAllInsights().then(() => {
+  enrichAllChips();
+  renderHistoryRail();
+  renderStatusGrid();
+  renderMarketingPipeline();
+  renderLatencySparkline();
+});
+// Refresh the insight pool every 60s
+setInterval(() => loadAllInsights().then(() => {
+  enrichAllChips();
+  renderStatusGrid();
+  renderLatencySparkline();
+}), 60000);
+
 // CEO roll call — each soldier acknowledges presence
 async function bdRollcall() {
   const box = document.getElementById('bd-rollcall-result');
@@ -1554,6 +1930,705 @@ async function bdRollcall() {
     box.innerHTML = '<div style="color:#ff5e62">roll call failed: ' + e.message + '</div>';
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Roll Call'; }
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Boardroom v2 — cinematic upgrade JS
+// Insight cache · chip enrichment · 4-tab modal · vote-arrow layer
+// History rail + deep modal · marketing pipeline · status grid · sparkline
+// ────────────────────────────────────────────────────────────────────
+
+const INSIGHT = {
+  cards: null,            // /insight/boardroom/cards
+  members: null,          // /insight/boardroom/members
+  health: null,           // /insight/boardroom/health
+  roles: null,            // /insight/boardroom/roles
+  marketing: null,        // /marketing/status
+  identity: null,         // /marketing/identity
+  recent: [],             // /boardroom/sessions list (already loaded)
+};
+
+const ATTENDANCE_PRESETS = {
+  'all':              SOLDIERS.map(s => s.id),
+  'ciso,cro,cto':     ['ciso_security','cro_risk','cto_technology'],
+  'ciso,cro':         ['ciso_security','cro_risk'],
+  'ciso':             ['ciso_security'],
+  'cfo':              ['cfo_finance'],
+  'cto':              ['cto_technology'],
+  'cro':              ['cro_risk'],
+  'coo':              ['coo_operations'],
+  'clo':              ['clo_legal'],
+  'cpo':              ['cpo_product'],
+};
+function attendingSoldierIds(members) {
+  if (ATTENDANCE_PRESETS[members]) return ATTENDANCE_PRESETS[members];
+  // Custom: comma-separated prefixes from dynamic option
+  const prefixes = String(members).toLowerCase().split(',').map(p => p.trim()).filter(Boolean);
+  const ids = [];
+  SOLDIERS.forEach(s => {
+    for (const p of prefixes) { if (s.id.startsWith(p) || s.id === p) { ids.push(s.id); break; } }
+  });
+  return ids.length ? ids : SOLDIERS.map(s => s.id);
+}
+
+async function _safeJson(url) {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) { return null; }
+}
+
+async function loadAllInsights() {
+  const [cards, members, health, roles, marketing, identity] = await Promise.all([
+    _safeJson('/insight/boardroom/cards'),
+    _safeJson('/insight/boardroom/members'),
+    _safeJson('/insight/boardroom/health'),
+    _safeJson('/insight/boardroom/roles'),
+    _safeJson('/marketing/status'),
+    _safeJson('/marketing/identity'),
+  ]);
+  INSIGHT.cards = cards; INSIGHT.members = members; INSIGHT.health = health;
+  INSIGHT.roles = roles; INSIGHT.marketing = marketing; INSIGHT.identity = identity;
+}
+
+// ── Chip enrichment ───────────────────────────────────────────────
+function _skillForSoldier(soldierId) {
+  if (!INSIGHT.marketing || !INSIGHT.marketing.soldier_skills) return null;
+  return INSIGHT.marketing.soldier_skills.find(s => s.soldier_id === soldierId);
+}
+function _avgLatency(soldierId) {
+  const m = INSIGHT.members && INSIGHT.members.members && INSIGHT.members.members[soldierId];
+  if (!m || !m.last_votes || !m.last_votes.length) return null;
+  const xs = m.last_votes.map(v => v.latency_ms || 0).filter(x => x > 0);
+  if (!xs.length) return null;
+  return Math.round(xs.reduce((a,b)=>a+b,0) / xs.length);
+}
+function _modelTier(soldierId) {
+  const h = INSIGHT.health;
+  if (!h) return 'local';
+  const id = soldierId;
+  // Heuristic: cloud-pro if cloud-pro model present in roles, else cloud if loaded, else local
+  if (INSIGHT.roles && INSIGHT.roles.soldiers && INSIGHT.roles.soldiers[id]) {
+    const r = INSIGHT.roles.soldiers[id];
+    if (r.cloud_pro_model) return 'cloud-pro';
+    if (r.cloud_model) return 'cloud';
+  }
+  return 'local';
+}
+function enrichChip(soldierId) {
+  const chip = document.getElementById('chip-'+soldierId);
+  if (!chip) return;
+  // Skill badge
+  let skillEl = chip.querySelector('.chip-skill');
+  if (!skillEl) {
+    skillEl = document.createElement('div');
+    skillEl.className = 'chip-skill';
+    chip.insertBefore(skillEl, chip.querySelector('.chip-detail'));
+  }
+  const sk = _skillForSoldier(soldierId);
+  if (sk && sk.skill_name) {
+    skillEl.textContent = sk.skill_name.replace(/_/g,' ').slice(0, 14);
+    if (sk.weight === 1.2) skillEl.classList.add('veto-skill');
+    skillEl.title = `Marketing skill: ${sk.skill_name} · HBR L${sk.hbr_layer}`;
+  }
+  // Latency pill
+  const lat = _avgLatency(soldierId);
+  let latEl = chip.querySelector('.chip-latency');
+  if (lat != null) {
+    if (!latEl) {
+      latEl = document.createElement('div');
+      latEl.className = 'chip-latency';
+      chip.appendChild(latEl);
+    }
+    latEl.textContent = lat < 1000 ? lat + 'ms' : (lat/1000).toFixed(1) + 's';
+    latEl.title = `Avg latency over last ${(INSIGHT.members && INSIGHT.members.members && INSIGHT.members.members[soldierId] && INSIGHT.members.members[soldierId].last_votes && INSIGHT.members.members[soldierId].last_votes.length) || 0} votes`;
+  }
+  // Tier dot
+  let tierEl = chip.querySelector('.chip-tier');
+  if (!tierEl) {
+    tierEl = document.createElement('div');
+    tierEl.className = 'chip-tier';
+    chip.appendChild(tierEl);
+  }
+  const tier = _modelTier(soldierId);
+  tierEl.classList.remove('local','cloud','cloud-pro');
+  tierEl.classList.add(tier);
+  tierEl.title = `Inference tier: ${tier}`;
+}
+function enrichAllChips() {
+  SOLDIERS.forEach(s => enrichChip(s.id));
+}
+
+// ── Vote arrow SVG layer ──────────────────────────────────────────
+function _chipCenter(id) {
+  const chip = document.getElementById('chip-'+id);
+  if (!chip) return null;
+  const r = chip.getBoundingClientRect();
+  return { x: r.left + r.width/2, y: r.top + r.height/2 };
+}
+function _ceoCenter() {
+  const seat = document.getElementById('ceo-seat');
+  if (!seat) return null;
+  const r = seat.getBoundingClientRect();
+  return { x: r.left + r.width/2, y: r.top + r.height/2 };
+}
+function _voteColor(vote) {
+  return vote === 'approve' ? 'rgba(86,211,100,.85)' :
+         vote === 'reject'  ? 'rgba(248,81,73,.85)'  :
+                              'rgba(139,148,158,.65)';
+}
+function drawVoteArrow(soldierId, vote, weight, confidence) {
+  const layer = document.getElementById('vote-fx-layer');
+  if (!layer) return;
+  const a = _chipCenter(soldierId), b = _ceoCenter();
+  if (!a || !b) return;
+  // Pool one <line> per soldier (recycled across votes)
+  let line = layer.querySelector(`line[data-soldier="${soldierId}"]`);
+  if (!line) {
+    line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('data-soldier', soldierId);
+    layer.appendChild(line);
+  }
+  const color = _voteColor(vote);
+  const sw = Math.max(1, Math.min(5, (weight||1) * (confidence||0.5) * 4)).toFixed(1);
+  line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
+  line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
+  line.setAttribute('stroke', color);
+  line.setAttribute('stroke-width', sw);
+  line.classList.remove('draw');
+  // forced reflow to re-trigger transition
+  void line.getBoundingClientRect();
+  line.classList.add('draw');
+  // Pulsing endpoint dot at CEO seat
+  let dot = layer.querySelector(`circle[data-soldier="${soldierId}"]`);
+  if (!dot) {
+    dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    dot.setAttribute('data-soldier', soldierId);
+    layer.appendChild(dot);
+  }
+  dot.setAttribute('cx', b.x); dot.setAttribute('cy', b.y); dot.setAttribute('r', 3);
+  dot.setAttribute('fill', color);
+  dot.classList.remove('draw');
+  void dot.getBoundingClientRect();
+  dot.classList.add('draw');
+  setTimeout(() => { dot.setAttribute('r', 9); }, 30);
+  // Fade after 1.4s
+  setTimeout(() => {
+    line.classList.remove('draw');
+    dot.classList.remove('draw');
+    dot.setAttribute('r', 3);
+  }, 1400);
+}
+// Reposition arrows on resize
+window.addEventListener('resize', () => {
+  const layer = document.getElementById('vote-fx-layer');
+  if (!layer) return;
+  layer.setAttribute('viewBox', `0 0 ${innerWidth} ${innerHeight}`);
+});
+document.addEventListener('DOMContentLoaded', () => {
+  const layer = document.getElementById('vote-fx-layer');
+  if (layer) layer.setAttribute('viewBox', `0 0 ${innerWidth} ${innerHeight}`);
+});
+
+// ── 4-tab agent modal ─────────────────────────────────────────────
+let _currentAgentId = null;
+function switchTab(e, tabName) {
+  document.querySelectorAll('#modal-tabs button').forEach(b => b.classList.remove('active'));
+  if (e && e.target) e.target.classList.add('active');
+  if (_currentAgentId) renderTab(_currentAgentId, tabName);
+}
+function renderTab(id, tabName) {
+  let agent = AGENTS[id]; if (!agent) agent = SOLDIERS.find(s => s.id === id);
+  if (!agent) return;
+  const body = document.getElementById('acp-body');
+  if (tabName === 'doctrine') {
+    const card = INSIGHT.cards && INSIGHT.cards.cards && INSIGHT.cards.cards[id];
+    const persona = card && card.persona;
+    const sysPrompt = card && card.system_prompt;
+    const personaTxt = persona && (persona.description || persona.communication_style || persona.role) || agent.persona;
+    const promptExcerpt = sysPrompt ? String(sysPrompt).slice(0, 320) + (sysPrompt.length > 320 ? '…' : '') : '';
+    body.innerHTML = `
+      <div class="acp-tab active">
+        <div class="acp-section">
+          <div class="acp-label">Doctrine</div>
+          <div class="acp-doctrine">${(agent.doctrine || agent.desc || '').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</div>
+        </div>
+        <div class="acp-section">
+          <div class="acp-label">Persona (boardroom)</div>
+          <div style="font-size:11px;color:var(--text);line-height:1.6">${(personaTxt || '—').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</div>
+        </div>
+        ${promptExcerpt ? `<div class="acp-section">
+          <div class="acp-label">System Prompt (excerpt)</div>
+          <div style="font-size:10px;color:var(--text2);line-height:1.55;font-family:'JetBrains Mono',monospace;padding:8px 10px;background:var(--bg);border-radius:3px;white-space:pre-wrap">${promptExcerpt.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</div>
+        </div>` : ''}
+        <div class="acp-section">
+          <div class="acp-grid">
+            <div class="acp-stat"><div class="sl">Weight</div><div class="sv ${agent.weight===1.2?'veto':agent.weight===0.8?'advisory':'accent'}">${agent.weight}x</div></div>
+            <div class="acp-stat"><div class="sl">Veto holder</div><div class="sv ${agent.veto?'veto':''}">${agent.veto?'YES':'NO'}</div></div>
+            <div class="acp-stat"><div class="sl">Tier</div><div class="sv">${agent.tier || '—'}</div></div>
+            <div class="acp-stat"><div class="sl">Persona file</div><div class="sv">${card && card.loaded_from_files ? '✓' : '—'}</div></div>
+          </div>
+        </div>
+      </div>`;
+  }
+  else if (tabName === 'models') {
+    const m = INSIGHT.members && INSIGHT.members.members && INSIGHT.members.members[id];
+    const lats = (m && m.last_votes || []).map(v => v.latency_ms || 0);
+    const providers = (m && m.last_votes || []).map(v => v.provider).filter(Boolean);
+    const provCounts = providers.reduce((acc, p) => (acc[p]=(acc[p]||0)+1, acc), {});
+    body.innerHTML = `
+      <div class="acp-tab active">
+        <div class="acp-section">
+          <div class="acp-label">Inference Tiers</div>
+          <div class="acp-grid">
+            <div class="acp-stat"><div class="sl">Tier 1 — Local</div><div class="sv accent">${agent.localModel || '—'}</div></div>
+            <div class="acp-stat"><div class="sl">Tier 2 — Cloud</div><div class="sv">${agent.cloudModel || 'none'}</div></div>
+            <div class="acp-stat"><div class="sl">Tier 3 — Cloud Max</div><div class="sv" style="color:var(--advisory)">${agent.maxModel || 'none'}</div></div>
+            <div class="acp-stat"><div class="sl">Provider</div><div class="sv">${agent.provider || 'local only'}</div></div>
+          </div>
+        </div>
+        <div class="acp-section">
+          <div class="acp-label">Latency (last ${lats.length} votes)</div>
+          ${_renderSparkline(lats)}
+          <div class="acp-grid" style="margin-top:6px">
+            <div class="acp-stat"><div class="sl">Min</div><div class="sv counter">${lats.length?Math.min(...lats):'—'} ms</div></div>
+            <div class="acp-stat"><div class="sl">Avg</div><div class="sv counter accent">${lats.length?Math.round(lats.reduce((a,b)=>a+b,0)/lats.length):'—'} ms</div></div>
+            <div class="acp-stat"><div class="sl">Max</div><div class="sv counter ${lats.length && Math.max(...lats)>5000?'veto':''}">${lats.length?Math.max(...lats):'—'} ms</div></div>
+            <div class="acp-stat"><div class="sl">Samples</div><div class="sv counter">${lats.length}</div></div>
+          </div>
+        </div>
+        <div class="acp-section">
+          <div class="acp-label">Provider distribution</div>
+          ${_renderDonut(provCounts)}
+        </div>
+      </div>`;
+  }
+  else if (tabName === 'skills') {
+    const sk = _skillForSoldier(id);
+    const idr = INSIGHT.identity && INSIGHT.identity.bound;
+    const allBindings = idr ? Object.entries(idr) : [];
+    const isVetoSkill = sk && sk.weight === 1.2;
+    body.innerHTML = `
+      <div class="acp-tab active">
+        ${sk ? `<div class="acp-section">
+          <div class="acp-label">Marketing Skill</div>
+          <div class="acp-grid">
+            <div class="acp-stat"><div class="sl">Skill name</div><div class="sv ${isVetoSkill?'veto':'accent'}">${sk.skill_name || '—'}</div></div>
+            <div class="acp-stat"><div class="sl">HBR layer</div><div class="sv">${sk.hbr_layer == null ? '—' : 'L'+sk.hbr_layer}</div></div>
+            <div class="acp-stat"><div class="sl">Weight</div><div class="sv ${isVetoSkill?'veto':''}">${sk.weight}x</div></div>
+            <div class="acp-stat"><div class="sl">Hard veto</div><div class="sv ${isVetoSkill?'veto':''}">${isVetoSkill?'YES':'NO'}</div></div>
+          </div>
+        </div>` : `<div class="acp-section">
+          <div class="acp-label">Marketing Skill</div>
+          <div style="font-size:10px;color:var(--text3);padding:8px 10px;background:var(--bg);border-radius:3px">No skill mapped (CEO seals; not in dispatch order).</div>
+        </div>`}
+        <div class="acp-section">
+          <div class="acp-label">On-Chain Identity Binding</div>
+          <div class="acp-identity">
+            ${allBindings.map(([k,v]) => `
+              <div class="ik">${k.replace(/_/g,' ')}</div>
+              <div class="iv ${v?'':'pending'}">${v?'BOUND':'PENDING'}</div>
+            `).join('')}
+            ${!allBindings.length ? '<div class="ik">/marketing/identity</div><div class="iv pending">UNAVAILABLE</div>' : ''}
+          </div>
+          <div style="font-size:9px;color:var(--text3);margin-top:8px;letter-spacing:.3px">
+            Operator command: <code style="color:var(--text2)">python -m agents.marketing.onchain.bind_identity --execute</code>
+          </div>
+        </div>
+        <div class="acp-section">
+          <div class="acp-label">Capabilities</div>
+          <div class="acp-caps">
+            ${(agent.capabilities||[]).map(c => `<div class="acp-cap">${c.replace(/_/g,' ')}</div>`).join('')}
+          </div>
+        </div>
+      </div>`;
+  }
+  else if (tabName === 'history') {
+    const m = INSIGHT.members && INSIGHT.members.members && INSIGHT.members.members[id];
+    const fitness = m && (m.fitness != null ? m.fitness : 0);
+    const fitnessPct = Math.max(0, Math.min(100, Math.round((fitness || 0) * 100)));
+    const stats = soldierStats[id] || {sessions:0, approvals:0, rejections:0, abstentions:0, totalConf:0};
+    const avgConf = stats.sessions > 0 ? (stats.totalConf / stats.sessions * 100).toFixed(0) : '—';
+    const approveRate = stats.sessions > 0 ? (stats.approvals / stats.sessions * 100).toFixed(0) : '—';
+    const rows = (m && m.last_votes || []).slice(0, 10);
+    body.innerHTML = `
+      <div class="acp-tab active">
+        <div class="acp-section">
+          <div class="acp-label">Fitness Gauge</div>
+          <div class="fitness-gauge">
+            <div class="gauge-num counter">${fitnessPct}</div>
+            <div class="gauge-bar"><div class="fill" style="width:${fitnessPct}%"></div></div>
+            <div style="font-size:9px;color:var(--text3);font-family:'JetBrains Mono',monospace">/100</div>
+          </div>
+        </div>
+        <div class="acp-section">
+          <div class="acp-label">Track Record</div>
+          <div class="acp-grid">
+            <div class="acp-stat"><div class="sl">Sessions</div><div class="sv counter">${stats.sessions}</div></div>
+            <div class="acp-stat"><div class="sl">Approve Rate</div><div class="sv accent counter">${approveRate}%</div></div>
+            <div class="acp-stat"><div class="sl">Approvals</div><div class="sv counter">${stats.approvals}</div></div>
+            <div class="acp-stat"><div class="sl">Rejections</div><div class="sv counter ${stats.rejections>stats.approvals?'veto':''}">${stats.rejections}</div></div>
+            <div class="acp-stat"><div class="sl">Abstentions</div><div class="sv counter">${stats.abstentions}</div></div>
+            <div class="acp-stat"><div class="sl">Avg Confidence</div><div class="sv counter">${avgConf}%</div></div>
+          </div>
+        </div>
+        <div class="acp-section">
+          <div class="acp-label">Last ${rows.length} Votes</div>
+          ${rows.length ? `<table class="acp-history-table">
+            <thead><tr><th>session</th><th>vote</th><th>conf</th><th>lat</th><th>provider</th></tr></thead>
+            <tbody>
+              ${rows.map(r => `<tr>
+                <td title="${(r.directive||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]))}">${(r.session_id||'').slice(0,12)}</td>
+                <td class="vote-${r.vote||'abstain'}">${(r.vote||'?').toUpperCase()}</td>
+                <td>${r.confidence != null ? (r.confidence*100).toFixed(0)+'%' : '—'}</td>
+                <td>${r.latency_ms || '—'}ms</td>
+                <td>${(r.provider||'—').slice(0,10)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>` : '<div style="font-size:10px;color:var(--text3);padding:8px 10px">No vote history available yet.</div>'}
+        </div>
+      </div>`;
+  }
+}
+// Sparkline + donut helpers
+function _renderSparkline(vals) {
+  if (!vals || !vals.length) return '<div style="font-size:9px;color:var(--text3);padding:6px 0">No samples</div>';
+  const W = 360, H = 36;
+  const max = Math.max(...vals, 1);
+  const step = vals.length > 1 ? W / (vals.length - 1) : 0;
+  const pts = vals.map((v,i) => `${(i*step).toFixed(1)},${(H - (v/max)*H + 2).toFixed(1)}`);
+  return `<svg class="sparkline" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <line class="gridline" x1="0" y1="${H/2}" x2="${W}" y2="${H/2}" />
+    <path d="M${pts.join(' L')}"/>
+  </svg>`;
+}
+function _renderDonut(counts) {
+  const entries = Object.entries(counts);
+  if (!entries.length) return '<div style="font-size:9px;color:var(--text3);padding:6px 0">No samples</div>';
+  const total = entries.reduce((a,[,n]) => a+n, 0);
+  const palette = ['#56d364','#79c0ff','#d2a8ff','#e3b341','#f85149','#8b949e','#7ee787'];
+  let acc = 0;
+  const segments = entries.map(([p,n], i) => {
+    const start = acc / total * 100;
+    acc += n;
+    const len = n / total * 100;
+    return { p, n, color: palette[i % palette.length], start, len };
+  });
+  const r = 22, c = 28;
+  const circumference = 2 * Math.PI * r;
+  return `<div class="donut">
+    <svg width="${c*2}" height="${c*2}" viewBox="0 0 ${c*2} ${c*2}">
+      <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="rgba(255,255,255,.04)" stroke-width="6"/>
+      ${segments.map(s => `<circle cx="${c}" cy="${c}" r="${r}" fill="none"
+        stroke="${s.color}" stroke-width="6"
+        stroke-dasharray="${(s.len/100*circumference).toFixed(2)} ${circumference}"
+        stroke-dashoffset="${(-s.start/100*circumference).toFixed(2)}"
+        transform="rotate(-90 ${c} ${c})"/>`).join('')}
+    </svg>
+    <div class="legend">
+      ${segments.map(s => `<div><i style="background:${s.color}"></i> ${s.p} <span style="color:var(--text3)">×${s.n}</span></div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// Override showAgentCard to use the 4-tab layout
+const _origShowAgentCard = showAgentCard;
+showAgentCard = function(id) {
+  let agent = AGENTS[id]; if (!agent) agent = SOLDIERS.find(s => s.id === id);
+  if (!agent) return;
+  _currentAgentId = id;
+  document.getElementById('acp-short').textContent = agent.short;
+  document.getElementById('acp-name').textContent = agent.name;
+  const wEl = document.getElementById('acp-weight');
+  wEl.textContent = agent.weight + 'x';
+  wEl.style.color = agent.weight===1.2?'var(--veto)':agent.weight===0.8?'var(--advisory)':'var(--text3)';
+  // Reset to Doctrine tab
+  document.querySelectorAll('#modal-tabs button').forEach(b => b.classList.remove('active'));
+  const docBtn = document.querySelector('#modal-tabs button[data-tab="doctrine"]');
+  if (docBtn) docBtn.classList.add('active');
+  renderTab(id, 'doctrine');
+  document.getElementById('card-overlay').classList.add('show');
+};
+
+// ── History right-rail ────────────────────────────────────────────
+const HIST_STATE = { rows: [], filter: 'all', selectedSessionId: null };
+
+function toggleHistRail() {
+  const rail = document.getElementById('hist-rail');
+  const tab = document.getElementById('hist-toggle');
+  rail.classList.toggle('open');
+  tab.classList.toggle('shifted');
+  tab.textContent = rail.classList.contains('open') ? 'CLOSE' : 'HISTORY';
+  if (rail.classList.contains('open')) renderHistoryRail();
+}
+
+async function renderHistoryRail() {
+  // Use the existing /boardroom/sessions endpoint that loadHistory() pulls from.
+  let rows = [];
+  try {
+    const r = await fetch('/boardroom/sessions?limit=50');
+    const d = await r.json();
+    rows = d.sessions || [];
+  } catch(e) { rows = []; }
+  HIST_STATE.rows = rows;
+  const out = document.getElementById('hist-rows');
+  if (!out) return;
+  const filtered = rows.filter(s => HIST_STATE.filter === 'all' || s.outcome === HIST_STATE.filter);
+  out.innerHTML = filtered.map(s => {
+    const votes = s.votes || [];
+    const ap = votes.filter(v => v.vote === 'approve').length;
+    const rj = votes.filter(v => v.vote === 'reject').length;
+    const ab = votes.filter(v => v.vote === 'abstain').length;
+    const dirSafe = (s.directive || '—').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+    const sid = (s.session_id || '').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+    return `<div class="hist-row" onclick="openHistModal('${sid}')">
+      <div class="hr-top">
+        <div class="hr-dir">${dirSafe}</div>
+        <div class="hr-out ${s.outcome||''}">${(s.outcome||'?').toUpperCase()}</div>
+      </div>
+      <div class="hr-meta">${sid.slice(0,16)} · ${s.importance||'std'} · score ${(((s.weighted_score||0)*100)|0)}%</div>
+      <div class="hr-bars">
+        ${Array(ap).fill('<i class="a"></i>').join('') + Array(rj).fill('<i class="r"></i>').join('') + Array(ab).fill('<i></i>').join('')}
+      </div>
+    </div>`;
+  }).join('') || '<div style="font-size:10px;color:var(--text3);padding:14px 12px;text-align:center">No sessions match filter.</div>';
+}
+
+function histFilter(e, key, val) {
+  if (key === 'out') HIST_STATE.filter = val;
+  document.querySelectorAll('.hist-filter').forEach(el => el.classList.remove('active'));
+  if (e && e.target) e.target.classList.add('active');
+  renderHistoryRail();
+}
+
+// ── Deep history modal ────────────────────────────────────────────
+let _currentHistSession = null;
+function openHistModal(sessionId) {
+  // Try cached row first; else fetch /insight/boardroom/session/{id}
+  const row = HIST_STATE.rows.find(s => s.session_id === sessionId);
+  if (row) {
+    _currentHistSession = row;
+    _renderHistModalContent(row);
+    document.getElementById('hist-modal-overlay').classList.add('show');
+  } else {
+    fetch('/insight/boardroom/session/' + encodeURIComponent(sessionId))
+      .then(r => r.json())
+      .then(d => {
+        const s = (d && d.session) || d;
+        if (!s || !s.session_id) return;
+        _currentHistSession = s;
+        _renderHistModalContent(s);
+        document.getElementById('hist-modal-overlay').classList.add('show');
+      })
+      .catch(() => {});
+  }
+}
+function _renderHistModalContent(s) {
+  document.getElementById('hm-id').textContent = s.session_id || '—';
+  document.getElementById('hm-dir').textContent = s.directive || '—';
+  const meta = document.getElementById('hm-meta');
+  meta.innerHTML = `
+    <span>importance · <span class="ok">${s.importance||'std'}</span></span>
+    <span>score · <span class="ok">${((s.weighted_score||0)*100).toFixed(1)}%</span></span>
+    <span>votes · ${(s.votes||[]).length}</span>
+    <span>ts · ${s.timestamp || '—'}</span>
+  `;
+  const body = document.getElementById('hm-body');
+  const banner = `<div class="hm-banner ${s.outcome||''}">${(s.outcome||'?').toUpperCase()}${s.weighted_score!=null?' · '+(s.weighted_score*100).toFixed(1)+'%':''}</div>`;
+  // Sort by latency descending so the slowest reasoners are visible
+  const votes = (s.votes||[]).slice().sort((a,b) => (b.latency_ms||0) - (a.latency_ms||0));
+  const voteHtml = votes.map(v => {
+    const reason = (v.reasoning || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+    return `<div class="hm-vote ${v.vote||'abstain'}">
+      <div class="hm-v-top">
+        <div class="hm-v-soldier">${v.soldier || '—'}</div>
+        <div class="hm-v-vote ${v.vote||'abstain'}">${(v.vote||'?').toUpperCase()}</div>
+        <div class="hm-v-meta">conf ${v.confidence!=null?(v.confidence*100).toFixed(0)+'%':'—'} · ${v.latency_ms||0}ms · ${v.provider||'—'}</div>
+      </div>
+      ${reason ? `<div class="hm-v-reason">${reason}</div>` : ''}
+    </div>`;
+  }).join('');
+  const dissentHtml = (s.dissent_branches||[]).length ?
+    `<div class="acp-section" style="margin-top:14px">
+      <div class="acp-label">Dissent branches</div>
+      ${(s.dissent_branches||[]).map(d => `<div class="hm-vote reject"><div class="hm-v-top"><div class="hm-v-soldier">${d.soldier||'—'}</div></div><div class="hm-v-reason">${(d.reasoning||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</div></div>`).join('')}
+    </div>` : '';
+  body.innerHTML = banner + voteHtml + dissentHtml;
+}
+function closeHistModal() {
+  document.getElementById('hist-modal-overlay').classList.remove('show');
+}
+function histReplayInChamber() {
+  if (!_currentHistSession) return;
+  // Reuse existing replaySession by writing data into a synthetic element
+  const fake = { dataset: { session: JSON.stringify(_currentHistSession) } };
+  closeHistModal();
+  replaySession(fake);
+}
+function histDownloadJSON() {
+  if (!_currentHistSession) return;
+  const blob = new Blob([JSON.stringify(_currentHistSession, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `boardroom_${_currentHistSession.session_id || 'session'}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeHistModal();
+  }
+});
+
+// ── Status grid (per-soldier health) ──────────────────────────────
+function renderStatusGrid() {
+  const grid = document.getElementById('status-grid');
+  if (!grid) return;
+  const all = ['ceo'].concat(SOLDIERS.map(s => s.id));
+  const h = INSIGHT.health || {};
+  const idr = INSIGHT.identity || {};
+  const idBound = idr.bound || {};
+  const cloudOk = h.cloud_authenticated || h.ceo_green || false;
+  const pulled = new Set(h.pulled || []);
+  const loaded = new Set(h.loaded || []);
+  // Identity: bound for any of the marketing identity entries means partial OK
+  const anyIdBound = Object.values(idBound).some(Boolean);
+  grid.innerHTML = all.map(id => {
+    const short = id === 'ceo' ? 'CEO' : (SOLDIERS.find(s => s.id === id) || {}).short || id.split('_')[0].toUpperCase();
+    const isPulled = pulled.has(id) || pulled.size === 0;
+    const isLoaded = loaded.has(id);
+    const dot = (cls) => `<span class="sg-dot ${cls}"></span>`;
+    return `<div class="sg-cell" title="${id}" onclick="showAgentCard(id==='ceo'?'ceo_agent_main':'${id}')">
+      <div class="sg-name">${short}</div>
+      <div class="sg-dots">
+        ${dot(isPulled?'ok':'warn')}
+        ${dot(isLoaded?'ok':isPulled?'warn':'')}
+        ${dot(cloudOk?'ok':'warn')}
+        ${dot(anyIdBound?'ok':'warn')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Latency sparkline (status panel)
+function renderLatencySparkline() {
+  const svg = document.getElementById('diag-latency-spark');
+  if (!svg) return;
+  const sessions = (INSIGHT.recent && INSIGHT.recent.length ? INSIGHT.recent : []).slice(0, 30).reverse();
+  if (!sessions.length) return;
+  const lats = sessions.map(s => {
+    const xs = (s.votes||[]).map(v => v.latency_ms || 0).filter(x => x > 0);
+    if (!xs.length) return 0;
+    return xs.reduce((a,b)=>a+b,0) / xs.length;
+  });
+  if (!lats.length) return;
+  const W = 240, H = 28;
+  const max = Math.max(...lats, 1);
+  const step = lats.length > 1 ? W / (lats.length - 1) : 0;
+  const pts = lats.map((v,i) => `${(i*step).toFixed(1)},${(H - (v/max)*H + 2).toFixed(1)}`);
+  const p50 = lats.slice().sort((a,b) => a-b)[Math.floor(lats.length*0.5)] || 0;
+  const p95 = lats.slice().sort((a,b) => a-b)[Math.floor(lats.length*0.95)] || 0;
+  const path50 = svg.querySelector('path.p50');
+  const path95 = svg.querySelector('path.p95');
+  if (path50) path50.setAttribute('d', `M${pts.join(' L')}`);
+  if (path95) path95.setAttribute('d', `M0,${(H - (p95/max)*H + 2).toFixed(1)} L${W},${(H - (p95/max)*H + 2).toFixed(1)}`);
+  const p50El = document.getElementById('d-p50');
+  const p95El = document.getElementById('d-p95');
+  if (p50El) p50El.textContent = Math.round(p50) + ' ms';
+  if (p95El) p95El.textContent = Math.round(p95) + ' ms';
+  // Cache for use by multiple renderers
+  INSIGHT._latencyTimeseries = lats;
+}
+
+// Hook: also pull /boardroom/sessions into INSIGHT.recent for sparkline
+async function _refreshRecentSessions() {
+  try {
+    const r = await fetch('/boardroom/sessions?limit=50');
+    const d = await r.json();
+    INSIGHT.recent = d.sessions || [];
+  } catch(e) { INSIGHT.recent = []; }
+}
+_refreshRecentSessions().then(() => renderLatencySparkline());
+
+// ── Marketing Cabinet pipeline ────────────────────────────────────
+const MKT_NODES = [
+  { soldier_id:'ciso_security',  short:'CISO', skill:'voice_gate' },
+  { soldier_id:'clo_legal',      short:'CLO',  skill:'regulatory' },
+  { soldier_id:'cpo_product',    short:'CPO',  skill:'content' },
+  { soldier_id:'cto_technology', short:'CTO',  skill:'experimentation' },
+  { soldier_id:'coo_operations', short:'COO',  skill:'distribution' },
+  { soldier_id:'cfo_finance',    short:'CFO',  skill:'reporting' },
+  { soldier_id:'cro_risk',       short:'CRO',  skill:'spend_gate' },
+];
+const mktState = { active: false, statusBySoldier: {} };
+
+function renderMarketingPipeline() {
+  const pipeline = document.getElementById('mkt-pipeline');
+  if (!pipeline) return;
+  // Pull skill names from /marketing/status if available
+  const skillsBy = {};
+  if (INSIGHT.marketing && INSIGHT.marketing.soldier_skills) {
+    INSIGHT.marketing.soldier_skills.forEach(s => skillsBy[s.soldier_id] = s);
+  }
+  pipeline.innerHTML = MKT_NODES.map(n => {
+    const sk = skillsBy[n.soldier_id];
+    const isVeto = sk && sk.weight === 1.2;
+    const status = mktState.statusBySoldier[n.soldier_id] || 'idle';
+    return `<div class="mkt-node ${isVeto?'veto':''} ${status}" id="mkt-node-${n.soldier_id}" title="${(sk && sk.skill_name) || n.skill}">
+      <div class="mn-soldier">${n.short}</div>
+      <div class="mn-skill">${(sk && sk.skill_name) ? sk.skill_name.replace(/_/g,' ').slice(0,14) : n.skill}</div>
+      <div class="mn-status ${status}">${status.toUpperCase()}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleMktPanel() {
+  const t = document.getElementById('mkt-toggle');
+  const b = document.getElementById('mkt-body');
+  t.classList.toggle('open');
+  b.classList.toggle('open');
+}
+
+function primeMarketingPipeline(directive) {
+  mktState.active = true;
+  mktState.statusBySoldier = {};
+  MKT_NODES.forEach(n => mktState.statusBySoldier[n.soldier_id] = 'running');
+  document.getElementById('mkt-panel').classList.add('active');
+  document.getElementById('mkt-toggle').classList.add('open');
+  document.getElementById('mkt-body').classList.add('open');
+  renderMarketingPipeline();
+}
+
+function markMktNode(soldierId, status) {
+  if (!mktState.active) return;
+  mktState.statusBySoldier[soldierId] = status;
+  const node = document.getElementById('mkt-node-'+soldierId);
+  if (!node) return;
+  node.classList.remove('idle','running','produced','refused');
+  node.classList.add(status);
+  const statusEl = node.querySelector('.mn-status');
+  if (statusEl) {
+    statusEl.classList.remove('idle','running','produced','refused');
+    statusEl.classList.add(status);
+    statusEl.textContent = status.toUpperCase();
+  }
+}
+
+function onBriefTypeChange() {
+  const sel = document.getElementById('brief-type');
+  if (!sel) return;
+  if (sel.value === 'marketing') {
+    document.getElementById('mkt-panel').classList.add('active');
+    document.getElementById('mkt-toggle').classList.add('open');
+    document.getElementById('mkt-body').classList.add('open');
+    mktState.active = true;
+  } else {
+    // Keep panel rendered but collapsed
+    document.getElementById('mkt-toggle').classList.remove('open');
+    document.getElementById('mkt-body').classList.remove('open');
   }
 }
 
