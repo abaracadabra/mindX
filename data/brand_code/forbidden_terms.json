@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "last_reviewed": "2026-05-09",
+  "rationale": "Coinbase listing-review framework explicitly punishes 'going to the moon' copy. Token-shill language, ROI promises, price predictions, and exclusivity hooks all compound that punishment. The agent runs every draft through this regex before publish; a hit is a hard block, not a warning.",
+  "deny_patterns": [
+    "(?i)\\bto the moon\\b",
+    "(?i)\\bmoonshot\\b",
+    "(?i)\\bguaranteed\\b",
+    "(?i)\\bguaranteed\\s+returns?\\b",
+    "(?i)\\brisk[-\\s]?free\\b",
+    "(?i)\\b\\d{2,}\\s*x\\b",
+    "(?i)\\bgem\\b",
+    "(?i)\\bfud\\b",
+    "(?i)\\bwagmi\\b",
+    "(?i)\\bdiamond\\s+hands\\b",
+    "(?i)\\bape (?:in|into)\\b",
+    "(?i)\\bget\\s+rich\\b",
+    "(?i)\\binvestment\\s+advice\\b",
+    "(?i)\\bnot\\s+financial\\s+advice\\b",
+    "(?i)\\bguaranteed\\s+yield\\b",
+    "(?i)\\b(?:airdrop|airdrops?)\\s+farm(?:ing)?\\b",
+    "(?i)\\bpre[-\\s]?ico\\b",
+    "(?i)\\bpre[-\\s]?sale\\b.*\\b(?:guaranteed|exclusive)\\b",
+    "(?i)\\b(?:limited|exclusive)\\s+(?:offer|access)\\b.*\\b(?:invest|buy)\\b",
+    "(?i)\\bpump\\b",
+    "(?i)\\bdump\\b"
+  ],
+  "soft_warn_patterns": [
+    "(?i)\\brevolutionary\\b",
+    "(?i)\\bgame[-\\s]?chang(?:e|ing|er)\\b",
+    "(?i)\\bdisrupt(?:ive|ing|ion)?\\b",
+    "(?i)\\bunprecedented\\b",
+    "(?i)\\bthe\\s+future\\s+of\\b"
+  ],
+  "notes": [
+    "deny_patterns produce a hard block — agent will not publish, governance_a logs the refusal as a marketing.campaign_proposed event with status='REFUSED_VOICE'",
+    "soft_warn_patterns produce a warning surfaced in /marketing/campaigns; Convener can override per-campaign via marketinga.toml",
+    "The phrase 'not financial advice' is itself banned because its presence in copy is a strong signal that the surrounding copy contains financial advice",
+    "Numeric multipliers '10x', '100x' etc. are banned outright. If a 10x improvement is being claimed, write the underlying claim — not the multiplier"
+  ]
+}

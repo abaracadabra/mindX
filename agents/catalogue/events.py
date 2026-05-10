@@ -46,6 +46,12 @@ EventKind = Literal[
     "admin.shadow_overlord_action",  # bankon_vault.shadow_overlord — privileged op (auth/provision/clear/sign/release)
     "admin.cabinet.provisioned",     # 8-wallet cabinet minted under company namespace
     "admin.cabinet.cleared",         # cabinet wiped under shadow-overlord authority
+    "marketing.campaign_proposed",   # marketinga.agent — campaign envelope drafted, awaiting governance routing
+    "marketing.campaign_executed",   # marketinga.agent — campaign envelope executed, MarketingAttributionReceipt emitted
+    "marketing.geo_probe",           # cfo_finance — share-of-voice probe rollup across LLM engines
+    "marketing.tessera_attested",    # any soldier — per-action Tessera credential issuance
+    "marketing.boardroom_routed",    # marketinga.agent — campaign routed through Boardroom; outcome + per-soldier votes
+    "marketing.soldier_skill_executed",  # any soldier — per-soldier marketing skill ran post-vote
 ]
 
 EVENT_KINDS: tuple[str, ...] = tuple(EventKind.__args__)  # type: ignore[attr-defined]

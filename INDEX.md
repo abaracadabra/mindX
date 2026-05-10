@@ -157,6 +157,17 @@ Higher Intelligence → CEO.Agent → MastermindAgent → mindX Environment
 - **[agents/machine_dreaming.py](agents/machine_dreaming.py)**: [machine.dreaming](https://github.com/AION-NET/machinedream) — 7-phase STM→LTM consolidation cycle
 - **[docs/BOOK_OF_MINDX.md](docs/BOOK_OF_MINDX.md)**: The Book of mindX — 17 chapters, living chronicle
 
+#### 📣 **Marketing — boardroom-driven Counsellor cabinet**
+- **[docs/MARKETING_AGENT.md](docs/MARKETING_AGENT.md)**: Soldier ↔ skill mapping, BDI cycle, brand-code substrate, hard-veto contract
+- **[docs/MARKETING_RECEIPTS.md](docs/MARKETING_RECEIPTS.md)**: Three-receipt model — Tessera (identity) + X402Receipt (payment) + MarketingAttributionReceipt (campaign envelope, indexed `boardroomSessionId`)
+- **[docs/MARKETING_PLAYBOOK.md](docs/MARKETING_PLAYBOOK.md)**: 90-day operator runbook (not automated)
+- **[daio/contracts/marketing/README.md](daio/contracts/marketing/README.md)**: `MarketingAttributionReceipt.sol` (Base, EIP-712 v2) + `MarketingTreasury.sol` (Ethereum L1, 99/1 buyback)
+- **[agents/marketing/skills/](agents/marketing/skills/)**: Per-soldier skill modules (`{ceo,cpo,cto,coo,cfo,ciso,clo,cro}.py`) + registry
+- **[agents/marketing/boardroom_orchestrator.py](agents/marketing/boardroom_orchestrator.py)**: Drives `Boardroom.convene()`, dispatches per-soldier skills on approve votes, signs `MarketingAttributionReceipt`
+- **[data/brand_code/](data/brand_code/)**: Voice / pillars / forbidden_terms / competitor_map / regulatory / per-soldier onboarding cards
+- **[data/config/marketinga.toml](data/config/marketinga.toml)**: Thresholds, GEO probe set, feature flags
+- **Endpoints**: `/marketing/{status,campaigns,brand_code,geo,session/{id},identity}` — all support `?h=true` plain text
+
 #### ⛓️ **Blockchain / [DAIO](docs/DAIO.md)**
 - **[daio/docs/INDEX.md](daio/docs/INDEX.md)**: DAIO contract documentation
 - **[DAIO_Constitution.sol](daio/contracts/daio/constitution/DAIO_Constitution.sol)**: Immutable governance rules

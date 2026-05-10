@@ -1777,6 +1777,14 @@ except Exception as _inf_import_err:
 from mindx_backend_service.agenticplace_routes import router as agenticplace_router
 app.include_router(agenticplace_router)
 
+# Include Marketing Counsellor cabinet router
+try:
+    from mindx_backend_service.marketing_routes import router as marketing_router
+    app.include_router(marketing_router)
+    logger.info("Marketing routes mounted at /marketing/*")
+except Exception as _mkt_import_err:
+    logger.warning(f"Marketing routes not loaded: {_mkt_import_err}")
+
 # Include KeeperHub × AgenticPlace x402/MPP bridge (Open Agents hackathon)
 try:
     from openagents.keeperhub.bridge_routes import router as keeperhub_router

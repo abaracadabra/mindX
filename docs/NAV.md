@@ -96,6 +96,32 @@ The boardroom is mindX's multi-agent consensus mechanism — deeper than SwarmCl
 - [Boardroom Members](agents/boardroom_members.md) — three-file role architecture
 - **Agent Roster**: [`ceo.agent`](../agents/boardroom/ceo.agent), [`ciso.agent`](../agents/boardroom/ciso.agent), [`cfo.agent`](../agents/boardroom/cfo.agent), [`cro.agent`](../agents/boardroom/cro.agent), [`clo.agent`](../agents/boardroom/clo.agent), [`cpo.agent`](../agents/boardroom/cpo.agent), [`cto.agent`](../agents/boardroom/cto.agent), [`coo.agent`](../agents/boardroom/coo.agent)
 
+#### Soldier marketing capabilities
+
+The boardroom is also the marketing cabinet — each soldier carries a marketing skill (HBR layered-system pattern, instantiated on the existing 8-vote weighted consensus). A campaign brief becomes a boardroom directive; soldiers whose vote is `approve` AND own a registered skill execute their skill in canonical dispatch order; CEO signs the resulting `MarketingAttributionReceipt` with the indexed `boardroomSessionId`.
+
+| Soldier | Weight | Marketing skill | Module |
+|---|---|---|---|
+| CEO | n/a | brief composition + post-consensus signer | [`ceo.py`](../agents/marketing/skills/ceo.py) |
+| CPO | 1.0 | HBR L1 — content drafting | [`cpo.py`](../agents/marketing/skills/cpo.py) |
+| CTO | 1.0 | HBR L2 — experimentation | [`cto.py`](../agents/marketing/skills/cto.py) |
+| COO | 1.0 | HBR L3 — distribution | [`coo.py`](../agents/marketing/skills/coo.py) |
+| CFO | 1.0 | HBR L4 — reporting + treasury | [`cfo.py`](../agents/marketing/skills/cfo.py) |
+| CISO | 1.2× **veto** | identity + voice gate | [`ciso.py`](../agents/marketing/skills/ciso.py) |
+| CLO | 0.8 | regulatory + competitor | [`clo.py`](../agents/marketing/skills/clo.py) |
+| CRO | 1.2× **veto** | spend risk + hard-stop | [`cro.py`](../agents/marketing/skills/cro.py) |
+
+- [Marketing Counsellor architecture](MARKETING_AGENT.md) — soldier ↔ skill mapping, BDI cycle, brand-code substrate, dispatch order, CISO/CRO hard-veto contract
+- [Three-receipt model](MARKETING_RECEIPTS.md) — `Tessera.sol` (identity) + `X402Receipt.sol` (payment) + `MarketingAttributionReceipt.sol` (campaign envelope, EIP-712 v2 with indexed `boardroomSessionId`)
+- [90-day playbook](MARKETING_PLAYBOOK.md) — operator runbook (not automated)
+- [Marketing contracts](../daio/contracts/marketing/README.md) — `MarketingAttributionReceipt.sol` (Base) + `MarketingTreasury.sol` (Ethereum L1, 99/1 buyback rule)
+- [Brand code](../data/brand_code/) — voice / pillars / forbidden_terms / competitor_map / regulatory_constraints / per-soldier onboarding (8 files)
+- [Configuration](../data/config/marketinga.toml) — thresholds, GEO probe set, feature flags
+- [Skill registry](../agents/marketing/skills/registry.py) — single source of truth for `soldier_id → skill` binding
+- [Boardroom orchestrator](../agents/marketing/boardroom_orchestrator.py) — runs `Boardroom.convene()`, dispatches per-soldier skills, signs receipts
+- [Backend routes](../mindx_backend_service/marketing_routes.py) — `/marketing/{status,campaigns,brand_code,geo,session/{id},identity}` (all `?h=true` capable)
+- Agent manifests: [`agents/marketinga.agent`](../agents/marketinga.agent) (umbrella), [`agents/marketing.agent`](../agents/marketing.agent) (mindX-product face)
+
 ### Dojo
 
 Reputation-based privilege escalation — every agent earns rank through demonstrated competence:
