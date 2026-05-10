@@ -157,6 +157,34 @@ Higher Intelligence → CEO.Agent → MastermindAgent → mindX Environment
 - **[agents/machine_dreaming.py](agents/machine_dreaming.py)**: [machine.dreaming](https://github.com/AION-NET/machinedream) — 7-phase STM→LTM consolidation cycle
 - **[docs/BOOK_OF_MINDX.md](docs/BOOK_OF_MINDX.md)**: The Book of mindX — 17 chapters, living chronicle
 
+#### 📖 **Operations Manuals & Publications (May 2026)**
+Production-grade architectural deliverables. Markdown lives in [`docs/operations/`](docs/operations/); PDF mirrors in [`docs/publications/pdf/`](docs/publications/pdf/).
+
+**Stack-wide deployment**
+- **[PYTHAI / DELTAVERSE Deployment Guide](docs/operations/PYTHAI%20and%20DELTAVERSE%20Deployment%20Guide_%20Algorand%20Constitution,%20EVM%20Economy,%20and%20Agentic%20Architecture.md)**: Algorand constitutional + EVM economic + mindX cognition + AgenticPlace marketplace + BANKON identity/payment
+- **[PYTHAI / DELTAVERSE Zero-Knowledge Integration](docs/operations/PYTHAI_DELTAVERSE%20Zero-Knowledge%20Integration%20Architecture_%20Four-Layer%20Cryptographic%20Fabric.md)**: Four-layer cryptographic fabric (May 9 2026)
+- **DELTAVERSE Integration Spec** ([PDF](docs/publications/pdf/DELTAVERSE%20Integration%20Specification_%20Post-Quantum%20Agents,%20Identity,%20and%20Payments%20Stack.pdf)): Post-quantum agents/identity/payments stack
+- **[AgenticPlace Integration Blueprint](docs/operations/AgenticPlace%20Integration%20Blueprint_%20Parsec,%20x402,%20A2A,%20MCP,%20and%20AP2%20Source%20Code%20Analysis.md)**: Parsec / x402 / A2A / MCP / AP2 source-code analysis
+- **BANKON × KeeperHub Architecture** ([PDF](docs/publications/pdf/BANKON_KEEPERHUB_ARCHITECTURE.pdf)): bidirectional x402/MPP bridge
+
+**Storage and archival**
+- **[Lighthouse Integration](docs/operations/Lighthouse%20Storage%20Integration%20for%20mindX_%20Decentralized%20Permanent%20Storage%20for%20Autonomous%20Agents.md)**: `lighthouseweb3` SDK + `kavach` for autonomous agents
+- **[Arweave for the BANKON Stack](docs/operations/Arweave%20Integration%20for%20the%20BANKON%20Stack_%20A%20Senior%20Architect's%20Deep-Dive.md)**: Arweave + AO + Turbo bundler (May 2026 reality)
+- **[mindx_pay2store](docs/operations/mindx_pay2store_%20Production-Grade%20Autonomous%20Arweave%20Archival%20Module%20for%20mindX%20Agents.md)**: Production-grade autonomous Arweave archival module
+- **[shipping_pay2store](docs/operations/shipping_pay2store.md)**: How to ship pay2store as paid x402 service on AgenticPlace
+- **mindX Knowledge Catalogue Spec** ([PDF](docs/publications/pdf/mindX%20Knowledge%20Catalogue_%20A%20CQRS%20Projection%20Layer%20Subsystem%20Specification.pdf)): CQRS projection layer specification
+
+**Identity, governance, and observability**
+- **[THOT, THLNK, and ERC-7857 INFTs](docs/operations/THOT,%20THLNK,%20and%20ERC-7857%20INFTs_%20A%20Production%20Architecture%20for%20Agent%20Boardroom%20Governance.md)**: Embed THOT inside ERC-7857 INFT; THLNK as cross-chain pointer
+- **[mindX Observability Stack](docs/operations/mindX%20Observability%20Stack_%20Production-Grade%20Self-Hosted%20Blueprint.md)**: Production self-hosted blueprint, Apache-2.0 sovereignty-aligned
+- **[Shadow-Overlord Guide](docs/operations/SHADOW_OVERLORD_GUIDE.md)** + **[Runbook](docs/operations/SHADOW_OVERLORD_RUNBOOK.md)**: BANKON Vault admin tier
+
+**LLM and SDK integration**
+- **OpenRouter Integration Manual** ([PDF](docs/publications/pdf/OpenRouter%20Integration%20Manual%20for%20mindX_%20Production-Grade%20LLM%20Backplane%20Architecture.pdf)): LLM backplane architecture
+- **SkillForge — Pydantic AI for SKILL.md Authoring** ([PDF](docs/publications/pdf/SkillForge_%20A%20Pydantic%20AI%20Agent%20for%20Autonomous%20SKILL.md%20Authoring%20on%20mindX.pdf))
+- **Vercel AI SDK + mindX** ([PDF](docs/publications/pdf/vercel_AISDK_mindX.pdf))
+- **Quantum Machine Learning Compendium** ([PDF](docs/publications/pdf/Quantum%20Machine%20Learning%20Code%20Compendium_%20A%202026%20Reference%20and%20Recovery%20Atlas.pdf)): 2026 reference and recovery atlas
+
 #### 📣 **Marketing — boardroom-driven Counsellor cabinet**
 - **[docs/MARKETING_AGENT.md](docs/MARKETING_AGENT.md)**: Soldier ↔ skill mapping, BDI cycle, brand-code substrate, hard-veto contract
 - **[docs/MARKETING_RECEIPTS.md](docs/MARKETING_RECEIPTS.md)**: Three-receipt model — Tessera (identity) + X402Receipt (payment) + MarketingAttributionReceipt (campaign envelope, indexed `boardroomSessionId`)
