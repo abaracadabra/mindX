@@ -1681,6 +1681,7 @@ _PUBLIC_PREFIXES = (
     "/actions/export", "/diagnostics/export", "/api/rage/embed",
     "/users/challenge", "/users/register", "/error-pages/", "/static/",
     "/insight/",
+    "/marketing/",        # read-only diagnostic surface for the marketing Counsellor cabinet
     "/p2p/keeperhub/",
     "/openagents/deployments/",
     "/api/uniswap/",      # quote/approval/skills/decisions — vault-keyed proxy
