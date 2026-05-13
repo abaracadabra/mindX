@@ -204,7 +204,7 @@ Tests (`tests/test_taskboard.py`, 14 pass):
   contradicting claim; condition syntax handles `belief.x=true` / `x=true`
   / bare `x`; stats counts.
 
-**Loop closure inventory after Day-6:**
+**Loop closure inventory after Day-7:**
 
 ```
 Day-1: SKILL.md substrate + scanner + store      (the gate)
@@ -213,9 +213,69 @@ Day-3: LearningLog                                (the signal taxonomy)
 Day-4: Curator + distill helper + /insight/skills (the feedback substrate)
 Day-5: BDI hot-path hookup at COMPLETED_GOAL     (the loop closure)
 Day-6: TaskBoard + hallucination gate            (the multi-worker substrate)
+Day-7: /feedback.html skills + mastermind panels (the operator surface)
+       + mindx-curator.{service,timer} systemd   (the weekly cadence)
 ```
 
-Project-wide skill-substrate suite: **69 tests pass.**
+Project-wide skill-substrate suite: **73 tests pass.** (Day-6: 69 → Day-7
+adds 4 shim smoke tests.)
+
+## Day-7 — operator surface + weekly cadence (shipped 2026-05-13)
+
+The two pieces that turn Day-1..6 from a library into a feature an operator
+can actually see and run on a schedule.
+
+**`/feedback.html` skills + mastermind tabs.** Two new tabs on the
+diagnostics dashboard consume the existing `/insight/skills` and
+`/insight/mastermind/board` endpoints:
+
+- *Skills tab* — three-card row (SkillStore counts; LEARNINGS log;
+  ERRORS log), two-card row (FEATURE_REQUESTS; Curator last-run with
+  `started_at` / `mode` / `inspected` / `flagged_count` / `archived_count`
+  / `duration_seconds`), and a by-category table when ≥1 category
+  exists. The Curator card prints the operator hint
+  `no run yet — python scripts/run_curator.py --apply` when nothing has
+  ever run.
+- *Mastermind tab* — top summary line (`total · zombies · gate note`)
+  plus a 6-column Kanban grid (Triage / Todo / Ready / InProgress /
+  Blocked / Done) with top-6 titles per column and "+N more" overflow.
+  Responsive: 6 cols → 3 → 2 down to mobile. InProgress gets a cyan
+  accent; Blocked red; Done muted green at lower opacity.
+
+Both tabs poll every 25 s while active and badge their tab-chip with
+counts (skills total; mastermind total + `!` if zombies > 0). Errors
+render inline ("fetch failed: …") so a transient backend hiccup doesn't
+break the rest of the dashboard.
+
+**`scripts/systemd/mindx-curator.{service,timer}`.** The 7-day Hermes
+Curator cadence, dropped in as an operator-installable systemd pair:
+
+```bash
+sudo cp scripts/systemd/mindx-curator.service /etc/systemd/system/
+sudo cp scripts/systemd/mindx-curator.timer   /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now mindx-curator.timer
+```
+
+The service is a oneshot driver for `scripts/run_curator.py --apply
+--quiet` (already shipped Day-4). The timer fires `OnCalendar=Sun
+*-*-* 03:00:00 UTC` with `Persistent=true` (so a powered-off box catches
+up on next boot) and `RandomizedDelaySec=300` (so multiple mindX nodes
+don't all curate at the same second). Hardening matches the production
+`mindx.service`: `ProtectSystem=strict`, `ProtectHome=read-only`,
+`ReadWritePaths=data/ + ~/.mindx`, `MemoryDenyWriteExecute=true` (safe
+here because the Curator is pure-Python — Node's V8 JIT is what
+forced us to drop that flag on `mindx-frontend.service`).
+
+The cadence default matches Hermes §8.1 exactly. The shim is unchanged
+from Day-4; the timer is the operator's hands-off path. Full install /
+verify / disable steps in `scripts/systemd/README.md`.
+
+Smoke test: `tests/test_run_curator_shim.py` (4 tests) — empty-store
+dry-run exits 0, `--apply` on empty-store exits 0, stdout is valid
+JSON without `--quiet`, `--stale-days` / `--min-body-bytes` thread
+into the Curator constructor. Verifies the unit's `ExecStart=` won't
+crash on first boot.
 
 ## Day-5 — BDI hot-path hookup (shipped 2026-05-13)
 

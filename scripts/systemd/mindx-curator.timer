@@ -1,0 +1,25 @@
+[Unit]
+Description=mindX Curator — weekly Sunday 03:00 UTC trigger (Hermes §8.1 7-day cadence)
+Requires=mindx-curator.service
+
+[Timer]
+# Hermes Curator runs on a 7-day cadence. mindX picks Sundays 03:00 UTC for
+# the same reason Hermes picks low-traffic windows: this is when MASTERMIND
+# is least likely to be mid-campaign and the prompt cache least likely to
+# matter to a live session. Adjust OnCalendar=… to taste; only one occurrence
+# fires regardless of clock drift.
+OnCalendar=Sun *-*-* 03:00:00 UTC
+
+# Catch up if the box was off when the timer should have fired. Aligns with
+# Hermes' "never miss a week" expectation.
+Persistent=true
+
+# Spread the load slightly so multiple mindX nodes don't all curate at the
+# same exact second on shared infrastructure.
+RandomizedDelaySec=300
+
+AccuracySec=1min
+Unit=mindx-curator.service
+
+[Install]
+WantedBy=timers.target
