@@ -1331,16 +1331,25 @@
       "source_commit": "1fe4ebadd95671b8f81b813299edb0fe8349b4ed",
       "created_at": "2026-05-13T08:26:05.183723",
       "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_083322",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "40090b725135e78a18a47edc1dcdedc9be2c56eb",
+      "created_at": "2026-05-13T08:33:28.066495",
+      "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/pre-architectural-up-20260513_082558",
+    "branch_name": "backup/pre-architectural-up-20260513_083322",
     "backup_type": "pre_architectural_upgrade",
-    "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+    "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
     "source_branch": "shadow-overlord-handoff-2026-05-13",
-    "source_commit": "1fe4ebadd95671b8f81b813299edb0fe8349b4ed",
-    "created_at": "2026-05-13T08:26:05.183723",
+    "source_commit": "40090b725135e78a18a47edc1dcdedc9be2c56eb",
+    "created_at": "2026-05-13T08:33:28.066495",
     "status": "created"
   },
-  "last_backup_at": "2026-05-13T08:26:05.183752"
+  "last_backup_at": "2026-05-13T08:33:28.066526"
 }
