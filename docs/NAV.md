@@ -224,6 +224,7 @@ mindX uses RAGE (Retrieval Augmented Generation Engine) — not RAG. RAGE is sem
 
 - [AGInt / RAGE](AGINT.md) — Augmented Intelligence reasoning and retrieval architecture, origin of the [BDI cognitive loop](agents/bdi_agent.md)
 - [Memory Architecture](mindx_memory_architecture_scalable.md) — Scalable memory design documented in the [Thesis](THESIS.md)
+- [Hermes Integration — Day-1 (SKILL.md procedural memory)](HERMES_INTEGRATION.md) — Hermes-format skill files (`agents/skills/`) with screen-before-persist scanner; learns from the OpenClaw ClawHub-malware vector + Hermes ALLOW-ALL default. Companion research: [Hermes Integration Patterns](operations/Hermes%20Agent%20Integration%20Patterns%20for%20mindX_%20Self-Improving%20Architecture%20Analysismd).
 - [pgvector Integration](pgvectorscale_memory_integration.md) — [PostgreSQL 16](https://www.postgresql.org/) + [pgvector](https://github.com/pgvector/pgvector) (157K+ memories in [production](DEPLOYMENT_MINDX_PYTHAI_NET.md))
 
 ### Memory Tiers
@@ -430,7 +431,7 @@ Production-grade architectural deliverables. PDF mirrors live in [`docs/publicat
 - [SkillForge — Pydantic AI Agent for SKILL.md Authoring](publications/pdf/SkillForge_%20A%20Pydantic%20AI%20Agent%20for%20Autonomous%20SKILL.md%20Authoring%20on%20mindX.pdf) — Autonomous SKILL.md authoring on mindX (PDF only).
 - [Vercel AI SDK + mindX](publications/pdf/vercel_AISDK_mindX.pdf) — Vercel AI SDK integration with mindX (PDF only).
 - [Quantum Machine Learning Compendium](publications/pdf/Quantum%20Machine%20Learning%20Code%20Compendium_%20A%202026%20Reference%20and%20Recovery%20Atlas.pdf) — 2026 reference and recovery atlas (PDF only).
-- [Shadow-Overlord Guide](operations/SHADOW_OVERLORD_GUIDE.md) — BANKON Vault admin tier complete guide.
+- [Shadow-Overlord Guide](operations/SHADOW_OVERLORD_GUIDE.md) — BANKON Vault admin tier complete guide. Browser login at [`/shadow-overlord`](../mindx_frontend_ui/shadow-overlord.html) — EIP-6963 wallet detection, `personal_sign` → 5-minute JWT (in-memory only). WebGL background shader (extrapolated from `live/allchain.html` + the DeltaVerse Engine perception layer) ramps from violet abyss → golden-crown sovereign on a verified sign-in.
 - [Shadow-Overlord Runbook](operations/SHADOW_OVERLORD_RUNBOOK.md) — One-page operator manual.
 
 ## PYTHAI Ecosystem
