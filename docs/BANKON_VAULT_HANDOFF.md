@@ -161,6 +161,52 @@ If the JWT comes back you are shadow-overlord. The much longer
 [`docs/operations/SHADOW_OVERLORD_GUIDE.md`](operations/SHADOW_OVERLORD_GUIDE.md)
 documents every route you can now reach.
 
+### 3a. Or do the whole flow in the browser
+
+The `/login` page also exposes a **Shadow-Overlord** card in the launcher grid;
+clicking it sends you to the dedicated sign-in page. Once you complete the
+sovereign sign-in there, returning to `/login` (or any other tab) shows the
+**BANKON Vault**, **Cabinet**, and **Publish to Rage** tiles unlocked with a
+golden ring — and the tier badge in the hero reads `SHADOW OVERLORD`.
+
+`mindx_frontend_ui/shadow-overlord.html` is the browser version of the same
+flow. Opens at:
+
+- local:  http://localhost:3000/shadow-overlord
+- prod:   https://mindx.pythai.net/shadow-overlord *(once the frontend route is
+  reverse-proxied; see `mindx_frontend_ui/server.js:22`)*
+
+What it does:
+1. **EIP-6963 wallet detection** — picks up MetaMask, Phantom, Coinbase, etc.
+   (Pattern lifted verbatim from `live/allchain.html` so it behaves like the
+   agenticplace pages.)
+2. **Connect Wallet** → reads your active account.
+3. **Sign in as shadow-overlord** → calls `POST /admin/shadow/challenge` with
+   `scope=auth`, hands the returned `message` to `personal_sign`, posts the
+   resulting 65-byte signature to `POST /admin/shadow/verify`. The 5-minute
+   HS256 JWT comes back and is held **only in JavaScript memory** — never
+   `localStorage`, never a cookie. Re-auth = re-sign.
+4. **Identity assertion is server-side.** If the recovered signer ≠ the
+   configured `SHADOW_OVERLORD_ADDRESS` you get a red `403 not shadow-overlord:
+   …your-wallet-short-hash…` banner — the negative path is real auth, not UI
+   theatre.
+
+The page has two visual states:
+
+- **Idle / denied:** dim violet abyss (WebGL fragment shader extrapolated from
+  `live/allchain.html` + `mindx.pythai.net/automindx`'s DeltaVerse perception
+  layer — animated fbm-noise tendrils, mouse-parallax, slow ominous pulse).
+- **Sovereign:** after a verified JWT arrives, `body.is-overlord` flips on, the
+  shader's `u_state` uniform ramps to 1 (tendrils gain a golden crown ring,
+  central eye opens, palette saturates), the `WELCOME, OVERLORD` banner
+  appears, the logo glow brightens, and a "Sovereign — privileged routes
+  unlocked" panel lists the admin routes you can now reach
+  (`/admin/cabinet/*`, `/vault/sign/*`, `/admin/shadow/release-key/*`,
+  `/admin/vault/credentials/*`, `/admin/publish-to-rage`).
+
+Logout clears the JWT from memory, drops `is-overlord`, and ramps the shader
+back. Closing the tab also clears everything (in-memory only).
+
 ---
 
 ## Take vault custody (airgap ceremony — 15 minutes)

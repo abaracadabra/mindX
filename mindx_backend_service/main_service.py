@@ -1706,6 +1706,11 @@ async def api_access_gate(request: Request, call_next):
     for pfx in _PUBLIC_PREFIXES:
         if path.startswith(pfx):
             return await call_next(request)
+    # Public: GET /users/{wallet}/permissions — the /login card-grid launcher
+    # asks this for any wallet (including "anonymous"). The reply is a UX hint;
+    # actual privileged endpoints still self-enforce auth.
+    if request.method == "GET" and path.startswith("/users/") and path.endswith("/permissions"):
+        return await call_next(request)
 
     # Auth: X-Session-Token OR Authorization: Bearer <key>
     session_token = request.headers.get("X-Session-Token")
@@ -6829,6 +6834,61 @@ async def logout_session(request: Request):
     vault = get_vault_manager()
     invalidated = vault.invalidate_user_session(token)
     return {"logged_out": invalidated}
+
+
+@app.get("/users/{wallet_address}/permissions", tags=["users"], summary="Tier + can_access[] for /login card grid")
+async def get_user_permissions(wallet_address: str):
+    """Compute what `wallet_address` can access, for the /login card-grid launcher.
+
+    Public endpoint: anonymous callers may ask for any wallet's permissions. The
+    response is a UX hint — every privileged feature endpoint (`/admin/*`,
+    `/vault/sign/*`, …) re-enforces its own auth server-side. Three explicit
+    gates: public · logged-in · shadow-overlord. Token-balance / NFT holdings
+    are surfaced as **badges**, not gates (this pass).
+    """
+    wallet = (wallet_address or "").strip().lower()
+    admin_set = {a.strip().lower() for a in os.environ.get(
+        "MINDX_SECURITY_ADMIN_ADDRESSES", "").split(",") if a.strip()}
+    shadow_addr = os.environ.get("SHADOW_OVERLORD_ADDRESS", "").strip().lower()
+    is_shadow = bool(wallet) and wallet not in ("anonymous",) and (wallet == shadow_addr or wallet in admin_set)
+
+    can_access = ["automindx", "docs", "shadow_overlord_login", "login"]
+    tier = "public"
+    if wallet and wallet not in ("", "anonymous"):
+        tier = "logged_in"
+        can_access += ["dashboard", "feedback", "journal", "dojo", "boardroom"]
+    if is_shadow:
+        tier = "shadow_overlord"
+        can_access += ["bankon_vault", "cabinet", "publish_to_rage", "vault_sign"]
+
+    # Best-effort badges — Dojo rank + BONA FIDE balance from local agent_map.json.
+    # Non-fatal; never blocks the permissions reply.
+    dojo_rank, bona_fide_balance = "novice", 0
+    try:
+        import json as _json
+        am = PROJECT_ROOT / "daio" / "agents" / "agent_map.json"
+        if am.exists() and wallet:
+            data = _json.loads(am.read_text(encoding="utf-8"))
+            agents = data.get("agents", {}) if isinstance(data, dict) else {}
+            for agent in agents.values() if isinstance(agents, dict) else []:
+                if isinstance(agent, dict) and str(agent.get("eth_address", "")).lower() == wallet:
+                    dojo_rank = str(agent.get("dojo_rank", "novice"))
+                    try:
+                        bona_fide_balance = int(agent.get("bona_fide_balance", 0))
+                    except (TypeError, ValueError):
+                        bona_fide_balance = 0
+                    break
+    except Exception:
+        pass
+
+    return {
+        "wallet_address": wallet,
+        "tier": tier,
+        "is_shadow_overlord": is_shadow,
+        "dojo_rank": dojo_rank,
+        "bona_fide_balance": bona_fide_balance,
+        "can_access": can_access,
+    }
 
 async def require_session_wallet(request: Request) -> str:
     """Dependency: validate session and return wallet address. Use for vault user folder access (folder = public key)."""

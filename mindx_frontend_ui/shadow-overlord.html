@@ -35,10 +35,16 @@
             min-height: 100vh;
         }
 
-        /* Background — radial purple/black, vignette, and the shadow-overlord watermark */
-        .bg {
+        /* Background — WebGL shadow-overlord shader (extrapolated from the
+           allchain.html / bankon dashboard / automindx canvas + DeltaVerse
+           perception field). Animated violet abyss with mouse-parallax
+           tendrils and an awakening gold crown ring on successful auth. */
+        #gl {
             position: fixed;
             inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
             z-index: 0;
             background: radial-gradient(circle at center, #1a1030 0%, #000 70%);
         }
@@ -48,9 +54,15 @@
             inset: 0;
             z-index: 0;
             background: url('/gfx/shadow_overlord.png') center center / contain no-repeat;
-            opacity: 0.07;
+            opacity: 0.06;
             pointer-events: none;
             filter: grayscale(0.2);
+            mix-blend-mode: screen;
+            transition: opacity 1.2s ease, filter 1.2s ease;
+        }
+        body.is-overlord .bg-mark {
+            opacity: 0.14;
+            filter: grayscale(0) saturate(1.4) drop-shadow(0 0 40px rgba(255, 215, 0, .35));
         }
 
         .vignette {
@@ -99,6 +111,61 @@
             margin: 0 auto 18px;
             background: url('/gfx/shadow_overlord.png') center center / contain no-repeat;
             filter: drop-shadow(0 0 22px rgba(139,92,246,.55));
+            transition: filter 1.6s ease, transform 1.6s ease;
+        }
+        body.is-overlord .logo-mark {
+            filter: drop-shadow(0 0 36px rgba(255, 215, 0, .65))
+                    drop-shadow(0 0 80px rgba(139, 92, 246, .55));
+            transform: scale(1.05);
+        }
+
+        /* Sovereign-mode hero accents — only visible after a verified sign-in */
+        .crown-banner {
+            display: none;
+            margin: 22px auto 8px;
+            padding: 14px 26px;
+            border: 1px solid rgba(255, 215, 0, .55);
+            border-radius: 999px;
+            background: linear-gradient(135deg, rgba(255, 215, 0, .14), rgba(139, 92, 246, .14));
+            color: #ffd166;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            font-size: 0.95rem;
+            box-shadow: 0 0 40px rgba(255, 215, 0, .25), inset 0 0 24px rgba(139, 92, 246, .2);
+        }
+        body.is-overlord .crown-banner { display: inline-block; animation: crown-rise 1.4s ease-out; }
+        @keyframes crown-rise {
+            from { opacity: 0; transform: translateY(20px) scale(.85); letter-spacing: 12px; }
+            to   { opacity: 1; transform: translateY(0)    scale(1);    letter-spacing: 3px;  }
+        }
+
+        .admin-routes {
+            display: none;
+            margin-top: 18px;
+            padding: 16px;
+            border: 1px solid rgba(255, 215, 0, .35);
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(255, 215, 0, .05), rgba(139, 92, 246, .08));
+        }
+        body.is-overlord .admin-routes { display: block; animation: panel-fade 1.0s ease-out .3s both; }
+        @keyframes panel-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .admin-routes h2 {
+            font-size: 0.78rem; letter-spacing: 1.5px; text-transform: uppercase;
+            color: #ffd166; margin-bottom: 10px;
+        }
+        .admin-routes a {
+            display: block; padding: 8px 12px; margin: 4px 0;
+            color: var(--accent2); text-decoration: none;
+            border-left: 2px solid rgba(255, 215, 0, .4);
+            font-family: monospace; font-size: 0.85rem;
+            transition: var(--transition);
+        }
+        .admin-routes a:hover {
+            background: rgba(255, 215, 0, .08);
+            color: #ffd166;
+            border-left-color: #ffd166;
+            padding-left: 16px;
         }
 
         .hero .slogan {
@@ -312,7 +379,7 @@
     </style>
 </head>
 <body>
-    <div class="bg"></div>
+    <canvas id="gl" aria-hidden="true"></canvas>
     <div class="bg-mark"></div>
     <div class="vignette"></div>
 
@@ -323,6 +390,7 @@
             <div class="logo-mark" aria-hidden="true"></div>
             <h1 class="slogan"><span class="accent-text">Shadow-Overlord</span></h1>
             <p>EIP-191 wallet signature → 5-minute JWT for the mindX admin tier. One wallet. No password. No cookies. Your private key never leaves your device.</p>
+            <div class="crown-banner" id="crownBanner">welcome, overlord</div>
         </section>
 
         <div class="container">
@@ -356,6 +424,16 @@
                 <button class="logout" onclick="logout()">Logout</button>
             </div>
 
+            <div class="admin-routes" id="adminRoutes">
+                <h2>Sovereign — privileged routes unlocked</h2>
+                <a href="/admin/cabinet/" target="_blank" rel="noopener">/admin/cabinet/{company}/{preflight,provision,clear} — executive wallet management</a>
+                <a href="/vault/sign/" target="_blank" rel="noopener">/vault/sign/{agent_id} — vault-as-signing-oracle (per-request shadow-JWT + fresh nonce)</a>
+                <a href="/admin/shadow/release-key/" target="_blank" rel="noopener">/admin/shadow/release-key/{agent_id} — emergency plaintext key release (audited)</a>
+                <a href="/admin/vault/credentials/list" target="_blank" rel="noopener">/admin/vault/credentials/{list,store,delete,reunlock} — vault CRUD</a>
+                <a href="/admin/publish-to-rage" target="_blank" rel="noopener">/admin/publish-to-rage — operator publish to rage.pythai.net</a>
+                <a href="/doc/operations/SHADOW_OVERLORD_GUIDE" target="_blank" rel="noopener">SHADOW_OVERLORD_GUIDE — full reference</a>
+            </div>
+
             <details class="help">
                 <summary>What this does — and what it doesn't</summary>
                 <p>This page is the browser-side login for the shadow-overlord admin tier. It implements the public half of the challenge → signature → JWT flow defined in
@@ -379,6 +457,197 @@ POST /admin/shadow/verify      { nonce, signature }   → { jwt, exp }</pre>
     let connectedAddress = null;
     let session = null;          // { jwt, exp, sub, scope } — in-memory only
     let sessionTimer = null;
+
+    // ─── WebGL shadow-overlord shader ──────────────────────────────────
+    // Pattern extrapolated from live/allchain.html + bankon-dashboard +
+    // mindx.pythai.net/automindx (DeltaVerse Engine perception layer):
+    // full-screen fragment shader, hash-noise nebula, mouse parallax, slow
+    // ominous pulse. `u_state` (0→1) ramps when shadow-overlord auth lands:
+    // tendrils gain a gold crown, ring brightens, eye opens fully.
+    const shadowOverlordShader = (() => {
+        const cv = document.getElementById('gl');
+        if (!cv) return { setState: () => {} };
+        const gl = cv.getContext('webgl', { alpha: false, antialias: false, preserveDrawingBuffer: false });
+        if (!gl) return { setState: () => {} };
+
+        const vs = `attribute vec2 a_pos; varying vec2 v_uv;
+            void main() { v_uv = (a_pos * 0.5) + 0.5; gl_Position = vec4(a_pos, 0.0, 1.0); }`;
+
+        const fs = `precision highp float;
+        varying vec2 v_uv;
+        uniform vec2  u_res;
+        uniform float u_time;
+        uniform vec2  u_mouse;   // -1..1 from screen center
+        uniform float u_state;   // 0 (denied/idle) → 1 (sovereign)
+
+        // hash + value noise (allchain pattern) + a 4-octave fbm for the abyss
+        float hash(vec2 p) {
+            p = fract(p * vec2(123.34, 456.21));
+            p += dot(p, p + 45.32);
+            return fract(p.x * p.y);
+        }
+        float noise(vec2 p) {
+            vec2 i = floor(p), f = fract(p);
+            float a = hash(i);
+            float b = hash(i + vec2(1.0, 0.0));
+            float c = hash(i + vec2(0.0, 1.0));
+            float d = hash(i + vec2(1.0, 1.0));
+            vec2 u = f * f * (3.0 - 2.0 * f);
+            return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+        }
+        float fbm(vec2 p) {
+            float v = 0.0, a = 0.55;
+            for (int i = 0; i < 4; i++) {
+                v += a * noise(p);
+                p *= 2.03;
+                a *= 0.55;
+            }
+            return v;
+        }
+
+        void main() {
+            vec2 uv = v_uv;
+            vec2 p  = (uv * u_res - 0.5 * u_res) / min(u_res.x, u_res.y);
+
+            // mouse parallax — gentle pull on the field (DeltaVerse-style)
+            vec2 m = u_mouse * 0.35;
+            vec2 q = p + m * (0.12 + 0.08 * length(p));
+
+            float t = u_time * 0.07;
+
+            // Abyss base — deep indigo → black
+            vec3 col = mix(vec3(0.05, 0.025, 0.10), vec3(0.0), smoothstep(0.0, 1.25, length(p)));
+
+            // Roaming nebula (fbm-warped) — violet/magenta tendrils
+            float n  = fbm(q * 1.7 + vec2(t, -t * 1.3));
+            float n2 = fbm(q * 3.4 + vec2(-t * 0.8, t * 1.4) + n * 1.2);
+
+            // Tendril ridges radiating from center
+            float ang = atan(q.y, q.x);
+            float radial = length(q);
+            float tendrils = pow(1.0 - abs(sin(ang * 5.0 + radial * 4.0 + n2 * 3.5 + t * 1.8)), 7.0);
+            tendrils *= smoothstep(0.0, 0.6, n);
+
+            // Violet → magenta palette, warm when sovereign
+            vec3 violet  = vec3(0.55, 0.27, 0.95);
+            vec3 magenta = vec3(0.95, 0.30, 0.75);
+            vec3 nebula  = mix(violet, magenta, smoothstep(0.15, 0.95, n));
+            col += nebula * (tendrils * 0.45);
+            col += nebula * (n * n * 0.12);
+
+            // The eye — central vortex that "opens" with auth
+            float eyeR = 0.28 - u_state * 0.06;
+            float irisD = length(q);
+            float iris  = smoothstep(eyeR + 0.005, eyeR - 0.02, irisD) * (0.35 + 0.65 * u_state);
+            col += iris * mix(vec3(0.30, 0.10, 0.60), vec3(0.95, 0.75, 0.20), u_state);
+            // Pupil
+            float pupil = smoothstep(0.08, 0.06, irisD);
+            col = mix(col, vec3(0.0), pupil * 0.85);
+
+            // Crown ring — the sovereign crest. Dim when denied/idle, golden when sovereign.
+            float ringD  = abs(length(p) - (0.62 + 0.02 * sin(u_time * 0.4)));
+            float ring   = smoothstep(0.012, 0.0, ringD);
+            vec3  crown  = mix(vec3(0.30, 0.12, 0.55), vec3(1.0, 0.84, 0.20), u_state);
+            col += crown * ring * (0.18 + 0.55 * u_state);
+
+            // Slow ominous breathing pulse
+            float pulse = 0.35 + 0.18 * sin(u_time * 0.55) + 0.10 * sin(u_time * 0.18);
+            col *= (0.75 + pulse * 0.30);
+
+            // Scanline shimmer (subtle)
+            col += vec3(0.20, 0.15, 0.45) * (0.5 + 0.5 * sin(uv.y * 1100.0 + u_time * 1.8)) * 0.004;
+
+            // Vignette
+            col *= 1.0 - smoothstep(0.62, 1.18, length(p)) * 0.65;
+
+            // Saturate slightly when sovereign
+            float lum = dot(col, vec3(0.299, 0.587, 0.114));
+            col = mix(vec3(lum), col, 1.0 + u_state * 0.35);
+
+            gl_FragColor = vec4(col, 1.0);
+        }`;
+
+        function compile(type, src) {
+            const o = gl.createShader(type);
+            gl.shaderSource(o, src);
+            gl.compileShader(o);
+            if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) {
+                console.warn('shadow-overlord shader compile failed:', gl.getShaderInfoLog(o));
+                return null;
+            }
+            return o;
+        }
+        const vsh = compile(gl.VERTEX_SHADER, vs);
+        const fsh = compile(gl.FRAGMENT_SHADER, fs);
+        if (!vsh || !fsh) return { setState: () => {} };
+
+        const pr = gl.createProgram();
+        gl.attachShader(pr, vsh);
+        gl.attachShader(pr, fsh);
+        gl.linkProgram(pr);
+        if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) {
+            console.warn('shadow-overlord shader link failed:', gl.getProgramInfoLog(pr));
+            return { setState: () => {} };
+        }
+        gl.useProgram(pr);
+
+        const buf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
+        const pl = gl.getAttribLocation(pr, 'a_pos');
+        gl.enableVertexAttribArray(pl);
+        gl.vertexAttribPointer(pl, 2, gl.FLOAT, false, 0, 0);
+
+        const uTime  = gl.getUniformLocation(pr, 'u_time');
+        const uRes   = gl.getUniformLocation(pr, 'u_res');
+        const uMouse = gl.getUniformLocation(pr, 'u_mouse');
+        const uState = gl.getUniformLocation(pr, 'u_state');
+
+        function resize() {
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const w = Math.floor(window.innerWidth  * dpr);
+            const h = Math.floor(window.innerHeight * dpr);
+            if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+            gl.viewport(0, 0, cv.width, cv.height);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Mouse perception (the smallest possible DeltaVerse: position only)
+        let mx = 0, my = 0, tmx = 0, tmy = 0;
+        window.addEventListener('mousemove', (e) => {
+            tmx = (e.clientX / window.innerWidth)  * 2 - 1;
+            tmy = -((e.clientY / window.innerHeight) * 2 - 1);
+        }, { passive: true });
+
+        let stateTarget = 0, stateCurrent = 0;
+        function setState(v) { stateTarget = Math.max(0, Math.min(1, v)); }
+
+        const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const start = performance.now();
+        let lastFrame = start;
+        function draw(now) {
+            const t  = (now - start) / 1000;
+            const dt = Math.min((now - lastFrame) / 1000, 1 / 30);
+            lastFrame = now;
+
+            // Smooth mouse + state (DeltaVerse-style easing)
+            mx += (tmx - mx) * Math.min(1, dt * 6);
+            my += (tmy - my) * Math.min(1, dt * 6);
+            stateCurrent += (stateTarget - stateCurrent) * Math.min(1, dt * 2.2);
+
+            gl.uniform1f(uTime, t);
+            gl.uniform2f(uRes, cv.width, cv.height);
+            gl.uniform2f(uMouse, mx, my);
+            gl.uniform1f(uState, stateCurrent);
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+            if (!reduceMotion) requestAnimationFrame(draw);
+        }
+        requestAnimationFrame(draw);
+
+        return { setState };
+    })();
 
     // Set a sensible default backend URL — same-origin first, common fallbacks otherwise.
     (function setDefaultApiUrl() {
@@ -585,6 +854,13 @@ POST /admin/shadow/verify      { nonce, signature }   → { jwt, exp }</pre>
     // ─── Session display ───────────────────────────────────────────────
     function startSession(s) {
         session = s;
+        // Sovereign mode — body flag + WebGL state ramp + crown banner + admin routes.
+        document.body.classList.add('is-overlord');
+        shadowOverlordShader.setState(1);
+        // Cross-page signal: /login reads localStorage.mindx_shadow_address to
+        // unlock its sovereign-tier cards (UX hint only — every privileged endpoint
+        // still self-enforces shadow-JWT). Address-only; never the JWT.
+        try { localStorage.setItem('mindx_shadow_address', s.sub || connectedAddress || ''); } catch {}
         document.getElementById('session').classList.remove('hidden');
         document.getElementById('sessSub').textContent = s.sub;
         document.getElementById('sessScope').textContent = s.scope;
@@ -614,6 +890,10 @@ POST /admin/shadow/verify      { nonce, signature }   → { jwt, exp }</pre>
     function clearSession() {
         session = null;
         if (sessionTimer) { clearInterval(sessionTimer); sessionTimer = null; }
+        // Dim back from sovereign — body flag off + shader state → 0.
+        document.body.classList.remove('is-overlord');
+        shadowOverlordShader.setState(0);
+        try { localStorage.removeItem('mindx_shadow_address'); } catch {}
         const el = document.getElementById('session');
         el.classList.add('hidden');
         ['sessSub','sessScope','sessExp','sessJwt'].forEach(id => document.getElementById(id).textContent = '—');
