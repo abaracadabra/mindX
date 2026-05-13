@@ -146,6 +146,43 @@ Covers codec round-trip, slug derivation, all five scanner classes (positive
 and negative paths), store write/read/list/search, Curator's
 no-archive-pinned-or-human policy, and the human+pinned warning-override.
 
+## Day-5 — BDI hot-path hookup (shipped 2026-05-13)
+
+`agents/core/bdi_agent.py` now calls `agents.skills.distill_from_intention`
+**at the moment of `COMPLETED_GOAL_ACHIEVED`**. The loop closes end-to-end:
+a successful primary goal becomes a SKILL.md draft under
+`$MINDX_SKILLS_DIR/.drafts/<bdi-domain>/<slug>/SKILL.md` for operator review.
+
+Contract:
+
+- **Opt-in via `MINDX_BDI_DISTILL_ENABLED=1`.** Off by default so existing
+  deploys see no behaviour change.
+- **Best-effort.** The hook is wrapped in `try/except`; any failure inside it
+  is logged and discarded so the BDI loop never breaks. Errors in
+  `_snapshot_belief_keys` return `{}` rather than raising.
+- **Always draft-only from BDI.** Promotion to the live `SkillStore` remains
+  an operator decision and still runs through the Day-1 scanner gate.
+- **Step capture** is appended in `BDIAgent.action_completed` (each successful
+  action records `{tool, args, result}`). On run start, `actions_this_run` is
+  initialised to `[]` and `beliefs_before_run` snapshots the current Belief
+  surface. On success, beliefs are snapshotted again and the diff (keys that
+  flipped truthy) becomes the Skill's `postconditions[]`.
+- **Logged** as `bdi_skill_distilled` in the memory-agent process trace, with
+  the draft path + step count + postcondition list — visible in the catalogue.
+
+Tests (`tests/test_bdi_distill_hook.py`, 6 tests): off-by-default no-op,
+on-+-thresholds writes a draft, below-threshold skips, `_snapshot_belief_keys`
+handles missing/malformed belief systems, error containment (a corrupt
+`actions_this_run` does not raise).
+
+**Project-wide suite: 96 tests pass.** (15 store + 9 index + 7 learning_log +
+10 curator + 8 distill + 6 bdi-hookup + autotune + wordpress + shadow vault.)
+
+Live demo: `export MINDX_BDI_DISTILL_ENABLED=1` before starting the backend.
+Run a normal BDI cycle to a primary-goal completion. Inspect
+`$MINDX_SKILLS_DIR/.drafts/bdi-<domain>/<slug>/SKILL.md`. Open `/insight/skills`
+on the dashboard to see the draft counted in the substrate read-out.
+
 ## Day-4 — Curator + `skill_distill` + diagnostics (shipped 2026-05-13)
 
 The fourth and fifth absorptions from the Hermes/OpenClaw research stack —
