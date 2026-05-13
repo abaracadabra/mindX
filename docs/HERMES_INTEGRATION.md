@@ -146,6 +146,42 @@ Covers codec round-trip, slug derivation, all five scanner classes (positive
 and negative paths), store write/read/list/search, Curator's
 no-archive-pinned-or-human policy, and the human+pinned warning-override.
 
+## Day-2 — hybrid 70/30 BM25 + vector retrieval (shipped 2026-05-13)
+
+Per the OpenClaw research doc (`docs/operations/openclaw_mindx_research.md`
+§1.5) the second concrete absorption is **the Active Memory sub-agent's
+retrieval contract**: BM25 + vector with a default **70/30** mix, fused by
+**union** (not intersection) so a chunk that scores high on vectors but zero
+on keywords still surfaces. `candidate_multiplier = 4` (OpenClaw's documented
+constant). FTS5 fallback to vector-only without hard failure.
+
+**`agents/skills/index.py` — `SkillIndex`:**
+
+- **BM25 side** — `sqlite_fts5(slug, category, name, description, body, tags)`
+  on the local SQLite that ships with Python. Tokenizer `unicode61 remove_diacritics 2`. Token prefix-match (`term*`) preserves the partial-keyword UX
+  the legacy substring fallback had.
+- **Vector side** — best-effort embedding via the existing Ollama server
+  (`$MINDX_LLM__OLLAMA__BASE_URL`, model `mxbai-embed-large` — the same one
+  `memory_pgvector` uses). Vector stored as a JSON float array per row in
+  the same SQLite file. Cosine over the candidate set.
+- **Fusion** — min-max normalise each side over the candidates, then
+  `final = vector_weight × v + text_weight × t`. Default `vector_weight = 0.7`.
+- **Graceful degradation** — embedder unreachable ⇒ `vector_weight` forced
+  to 0 (pure BM25). FTS5 missing (unusual) ⇒ vector-only. Both unreachable ⇒
+  the SkillStore falls back to the original substring search; nothing breaks.
+- **`PRAGMA integrity_check` on every open**, with auto-rebuild via
+  `INSERT INTO skills_fts(skills_fts) VALUES('rebuild')` on corruption —
+  the small mindX-side improvement called out in the Hermes integration doc §10.
+
+**Wired automatically:**
+- `SkillStore.write()` mirrors each newly-persisted skill into the index.
+- `SkillStore.archive()` drops the row so search() no longer returns it.
+- `SkillStore.search(query, limit=10, vector_weight=0.7)` is now hybrid.
+
+**Tests:** `tests/test_skill_index.py` — 9 tests covering BM25-only, hybrid,
+weight extremes, archive-removes-from-index, empty-query-returns-recent,
+rebuild-from-disk. All 24 skill tests (15 store + 9 index) pass CPU-only.
+
 ## What's deferred (the rest of the Hermes-doc Day-1 list)
 
 This module is the **storage substrate**. The agent-side wiring sits in

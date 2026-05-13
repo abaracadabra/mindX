@@ -47,6 +47,19 @@ from agents.skills.scanner import (
 )
 from agents.skills.store import SkillRef, SkillStore
 
+# Hybrid 70/30 BM25 + vector retrieval lives in `index`. Lazy import — the
+# rest of the module is useable even if sqlite3 / httpx are missing.
+try:
+    from agents.skills.index import (
+        CANDIDATE_MULTIPLIER,
+        DEFAULT_VECTOR_WEIGHT,
+        SkillIndex,
+    )
+except Exception:  # pragma: no cover
+    SkillIndex = None  # type: ignore
+    DEFAULT_VECTOR_WEIGHT = 0.7
+    CANDIDATE_MULTIPLIER = 4
+
 __all__ = [
     "Skill",
     "SkillFrontmatter",
@@ -57,4 +70,7 @@ __all__ = [
     "scan_skill",
     "SkillRef",
     "SkillStore",
+    "SkillIndex",
+    "DEFAULT_VECTOR_WEIGHT",
+    "CANDIDATE_MULTIPLIER",
 ]

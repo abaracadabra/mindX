@@ -33,6 +33,13 @@ from agents.skills.skill_schema import (
     serialize_skill_md,
 )
 
+# Hybrid 70/30 BM25 + vector index, lazy-imported so the store still works
+# when sqlite3 / httpx aren't available in a constrained environment.
+try:
+    from agents.skills.index import SkillIndex as _SkillIndex
+except Exception:  # pragma: no cover - defensive
+    _SkillIndex = None  # type: ignore
+
 
 @dataclass(frozen=True)
 class SkillRef:
@@ -53,13 +60,20 @@ class SkillStoreError(Exception):
 class SkillStore:
     """On-disk repository of SKILL.md files."""
 
-    def __init__(self, root: Optional[Path | str] = None):
+    def __init__(self, root: Optional[Path | str] = None, *, index: bool = True):
         if root is None:
             env = os.environ.get("MINDX_SKILLS_DIR")
             root = Path(env) if env else Path.home() / ".mindx" / "skills"
         self.root = Path(root)
         self.archive_root = self.root / ".archive"
         self.root.mkdir(parents=True, exist_ok=True)
+        # Hybrid 70/30 BM25 + vector index — best-effort, never raises.
+        self._index = None
+        if index and _SkillIndex is not None:
+            try:
+                self._index = _SkillIndex(skills_root=self.root)
+            except Exception:  # pragma: no cover
+                self._index = None
 
     # ─── path helpers ──────────────────────────────────────────────
     def _path_for(self, category: str, slug: str) -> Path:
@@ -119,6 +133,13 @@ class SkillStore:
         except Exception:
             pass
 
+        # Mirror into the hybrid index (best-effort, never raises into the caller).
+        if self._index is not None:
+            try:
+                self._index.index_skill(skill, category=fm.category)
+            except Exception:  # pragma: no cover
+                pass
+
         return path, scan
 
     # ─── list / search ──────────────────────────────────────────────
@@ -147,12 +168,44 @@ class SkillStore:
                 ))
         return refs
 
-    def search(self, query: str, limit: int = 10) -> list[SkillRef]:
-        """Substring-match across name + description + tags + intention_template."""
+    def search(self, query: str, limit: int = 10, vector_weight: float = 0.7) -> list[SkillRef]:
+        """Hybrid 70/30 BM25 + vector retrieval (OpenClaw §1.5 contract).
+
+        * Falls back to pure BM25 when the embedder is unreachable.
+        * Falls back to substring match when the SQLite index is absent.
+
+        ``vector_weight`` defaults to 0.7 (OpenClaw's documented constant).
+        """
+        if self._index is not None:
+            try:
+                hits = self._index.search(query, limit=limit, vector_weight=vector_weight)
+                refs: list[SkillRef] = []
+                for _score, row in hits:
+                    p = self._path_for(row["category"], row["slug"])
+                    if not p.exists():
+                        continue
+                    try:
+                        sk = parse_skill_md(p)
+                    except Exception:
+                        continue
+                    refs.append(SkillRef(
+                        category=row["category"],
+                        slug=row["slug"],
+                        name=sk.frontmatter.name,
+                        description=sk.frontmatter.description,
+                        created_by=sk.frontmatter.created_by,
+                        pinned=sk.frontmatter.pinned,
+                        path=p,
+                    ))
+                return refs
+            except Exception:
+                pass
+
+        # Substring fallback — preserves prior behaviour.
         q = (query or "").strip().lower()
         if not q:
             return self.list()[:limit]
-        hits: list[SkillRef] = []
+        hits_legacy: list[SkillRef] = []
         for ref in self.list():
             try:
                 sk = parse_skill_md(ref.path)
@@ -165,10 +218,10 @@ class SkillStore:
                 (sk.frontmatter.intention_template or "").lower(),
             ])
             if q in hay:
-                hits.append(ref)
-            if len(hits) >= limit:
+                hits_legacy.append(ref)
+            if len(hits_legacy) >= limit:
                 break
-        return hits
+        return hits_legacy
 
     # ─── archive (Curator-friendly) ────────────────────────────────
     def archive(
@@ -202,6 +255,13 @@ class SkillStore:
         dst_root.mkdir(parents=True, exist_ok=True)
         dst = dst_root / slug
         shutil.move(str(src), str(dst))
+
+        # Drop the indexed row so search() stops returning the archived skill.
+        if self._index is not None:
+            try:
+                self._index.remove(category, slug)
+            except Exception:  # pragma: no cover
+                pass
 
         meta = {
             "archived_at": time.time(),
