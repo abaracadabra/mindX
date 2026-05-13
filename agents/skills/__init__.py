@@ -46,6 +46,11 @@ from agents.skills.scanner import (
     scan_skill,
 )
 from agents.skills.store import SkillRef, SkillStore
+from agents.skills.learning_log import (
+    LOG_FILES,
+    LearningEntry,
+    LearningLog,
+)
 
 # Hybrid 70/30 BM25 + vector retrieval lives in `index`. Lazy import — the
 # rest of the module is useable even if sqlite3 / httpx are missing.
@@ -73,4 +78,7 @@ __all__ = [
     "SkillIndex",
     "DEFAULT_VECTOR_WEIGHT",
     "CANDIDATE_MULTIPLIER",
+    "LearningLog",
+    "LearningEntry",
+    "LOG_FILES",
 ]

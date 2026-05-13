@@ -146,6 +146,40 @@ Covers codec round-trip, slug derivation, all five scanner classes (positive
 and negative paths), store write/read/list/search, Curator's
 no-archive-pinned-or-human policy, and the human+pinned warning-override.
 
+## Day-3 — `self-improving-agent` log substrate (shipped 2026-05-13)
+
+Third concrete absorption — this one from the **OpenClaw research doc §3.1**
+(the `peterskoett/self-improving-agent` widely-forked skill). mindX inherits
+the three append-only logs and the promotion lifecycle verbatim, routed
+through Python so they're catalogue-friendly and operator-checkable.
+
+**`agents/skills/learning_log.py` — `LearningLog`**:
+
+- Three log files under `$MINDX_LEARNINGS_DIR` (default `data/learnings/`):
+  - `LEARNINGS.md` — corrections, knowledge updates, better approaches.
+  - `ERRORS.md` — tool failures, external-API failures.
+  - `FEATURE_REQUESTS.md` — missing capabilities the agent (or user) wanted.
+- Six triggers (per OpenClaw §3.1): `tool_failed`, `user_correction`,
+  `missing_capability`, `external_api_failed`, `knowledge_stale`,
+  `better_approach_found`.
+- Status lifecycle: `pending → validated → promoted` (plus `withdrawn`).
+  `promote_to_skill(...)` writes a `Skill` into the `SkillStore` via the
+  normal scanner gate — a learning that contains prompt-injection or
+  destructive commands **cannot promote**, by design. On success the entry
+  is marked `promoted`, `promoted_at` is set, and `related_skill` points to
+  the new `Skill`'s `category/slug`.
+- Markdown format: one `---\n## <kind>:<id>\n` block per entry, with per-entry
+  YAML frontmatter (id/kind/trigger/status/agent_id/related_skill/tags/timestamps)
+  and the first-person body. File-level atomic rewrite on status change.
+- `summary()` returns `{kind → {status → count, total}}` — ready to surface
+  on the diagnostics dashboard.
+
+**Tests (`tests/test_learning_log.py`):** 7 tests covering append into each
+log, status transitions, promotion path (creates a `Skill` and marks the
+entry), promotion-refused-when-scanner-blocks (destructive-command learning
+stays pending), and the summary counts. Combined skill suite: **31 tests
+pass** (15 store + 9 index + 7 learning_log).
+
 ## Day-2 — hybrid 70/30 BM25 + vector retrieval (shipped 2026-05-13)
 
 Per the OpenClaw research doc (`docs/operations/openclaw_mindx_research.md`
