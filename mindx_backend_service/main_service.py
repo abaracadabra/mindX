@@ -2301,6 +2301,22 @@ async def insight_skills():
     return out
 
 
+@app.get("/insight/mastermind/board", tags=["insight"])
+@_insight_safe
+async def insight_mastermind_board():
+    """Kanban task board read-out — counts by column, zombies, board contents.
+
+    Backing store: ``$MINDX_MASTERMIND_DB`` (default ``~/.mindx/mastermind.db``).
+    The hallucination gate at task completion is described in
+    `docs/HERMES_INTEGRATION.md` Day-6 and `agents/mastermind/taskboard.py`."""
+    try:
+        from agents.mastermind.taskboard import TaskBoard
+        tb = TaskBoard()
+        return {"stats": tb.stats(), "board": tb.board()}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.get("/insight/fitness", tags=["insight"])
 @_insight_safe
 async def insight_fitness():

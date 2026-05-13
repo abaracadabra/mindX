@@ -146,6 +146,77 @@ Covers codec round-trip, slug derivation, all five scanner classes (positive
 and negative paths), store write/read/list/search, Curator's
 no-archive-pinned-or-human policy, and the human+pinned warning-override.
 
+## Day-6 — Kanban TaskBoard + hallucination gate (shipped 2026-05-13)
+
+Sixth absorption from the Hermes/OpenClaw research stack (Hermes integration
+doc §8.3). Hermes v0.13.0 "Tenacity" introduced a SQLite-backed durable
+multi-agent task board with per-task heartbeat monitoring, zombie detection,
+and a hallucination gate at completion. mindX inherits the operational
+primitive at the cognitive tier — a task here is a BDI Intention with
+explicit pre/postconditions, a retry budget, and a worker assignment. The
+hallucination gate verifies the worker's claim of completion against actual
+Belief state + the postconditions declared on the task.
+
+**`agents/mastermind/taskboard.py` — `TaskBoard`:**
+
+- **Six columns** (verbatim from Hermes so the dashboard pattern is
+  familiar): `Triage → Todo → Ready → InProgress → Blocked → Done`.
+- **SQLite backing store** at `$MINDX_MASTERMIND_DB`
+  (default `~/.mindx/mastermind.db`), WAL mode, `PRAGMA integrity_check` on
+  first open per process (the mindX-side improvement over Hermes per §10
+  of the integration doc).
+- **Task schema** carries: `id`, `title`, `column`, `intention_template`,
+  `preconditions[]`, `postconditions[]`, `worker`, `retry_budget`,
+  `retries_used`, `ttl_s`, `heartbeat_at`, `started_at`, `finished_at`,
+  `notes`, `created_at`, `updated_at`.
+- **Heartbeat**: `tb.heartbeat(task_id, worker)` returns False if the task
+  was reclaimed or the worker doesn't match. `reclaim_zombies()` moves any
+  `InProgress` task whose heartbeat is older than `ttl_s` back to `Triage`
+  with the reason appended to `notes` and `retries_used += 1`.
+- **Hallucination gate** at `tb.complete(task_id, claim=…, belief_state=…)`:
+  every declared postcondition is checked against `belief_state` (truthy =
+  holds); every entry in `claim` is checked for contradiction with
+  `belief_state`. On match → `Done`. On any miss or contradiction →
+  `Triage` (or `Blocked` if retries exhausted) with the gate findings
+  appended to `notes` so the next worker sees the prior attempt + reason.
+  This is the demo moment per §8.3 — *"mindX caught a subagent that
+  claimed done but didn't actually update the Belief."*
+
+**Condition syntax** (intentionally tiny — future passes can extend):
+  `belief.key=true` · `belief.key=false` · `belief.key` (truthy presence) ·
+  bare `key` (truthy presence on `belief_state[key]`).
+
+**`GET /insight/mastermind/board`** — public read-only diagnostic surface:
+
+```json
+{
+  "stats": {"columns": {"Triage": 3, "Todo": 1, "InProgress": 2, "Blocked": 0, "Ready": 0, "Done": 7}, "zombies": 0, "total": 13, "now": …},
+  "board": {"Triage": [task_dict, …], "Todo": […], "Ready": […], "InProgress": […], "Blocked": […], "Done": […]}
+}
+```
+
+Tests (`tests/test_taskboard.py`, 14 pass):
+  add/get round-trip; board grouping; transition to unknown column raises;
+  InProgress stamps worker + heartbeat; heartbeat rejects non-owner;
+  zombie reclaim bounces stale tasks; zombie reclaim leaves fresh tasks
+  alone; gate accepts matching postconditions; gate bounces on missing
+  postcondition; gate blocks after retries exhausted; gate detects
+  contradicting claim; condition syntax handles `belief.x=true` / `x=true`
+  / bare `x`; stats counts.
+
+**Loop closure inventory after Day-6:**
+
+```
+Day-1: SKILL.md substrate + scanner + store      (the gate)
+Day-2: hybrid 70/30 BM25+vector retrieval        (the recall surface)
+Day-3: LearningLog                                (the signal taxonomy)
+Day-4: Curator + distill helper + /insight/skills (the feedback substrate)
+Day-5: BDI hot-path hookup at COMPLETED_GOAL     (the loop closure)
+Day-6: TaskBoard + hallucination gate            (the multi-worker substrate)
+```
+
+Project-wide skill-substrate suite: **69 tests pass.**
+
 ## Day-5 — BDI hot-path hookup (shipped 2026-05-13)
 
 `agents/core/bdi_agent.py` now calls `agents.skills.distill_from_intention`
