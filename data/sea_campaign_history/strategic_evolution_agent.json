@@ -9308,5 +9308,13 @@
       }
     },
     "timestamp": 1778689853.4711552
-  }
-]
+  },
+  {
+    "campaign_run_id": "sea_enhanced_run_4fd39fbe",
+    "agent_id": "strategic_evolution_agent",
+    "overall_campaign_status": "SUCCESS",
+    "final_message": "Enhanced blueprint campaign completed. 0 tasks created.",
+    "campaign_data": {
+      "blueprint": {
+        "blueprint_title": "Structural Blueprint (skeleton from improvement backlog)",
+        "target_mindx_version_incr
