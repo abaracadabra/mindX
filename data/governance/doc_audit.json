@@ -1,6 +1,6 @@
 {
-  "timestamp": 1778664027.4751334,
-  "total_docs": 227,
+  "timestamp": 1778692921.0240288,
+  "total_docs": 228,
   "archived": 6,
   "deprecated": 1,
   "recently_modified": [
@@ -8,12 +8,12 @@
     "BANKON_VAULT",
     "BANKON_VAULT_HANDOFF",
     "BOOK_OF_MINDX",
+    "HERMES_INTEGRATION",
     "IMPROVEMENT_JOURNAL",
+    "INDEX",
     "MARKETING",
     "MARKETING_AGENT",
-    "MARKETING_PLAYBOOK",
-    "MARKETING_RECEIPTS",
-    "NAV"
+    "MARKETING_PLAYBOOK"
   ],
   "conflicts": [
     "TECHNICAL: MindXAgent is meta-agent",
