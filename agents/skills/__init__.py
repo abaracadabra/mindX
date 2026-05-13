@@ -51,6 +51,13 @@ from agents.skills.learning_log import (
     LearningEntry,
     LearningLog,
 )
+from agents.skills.curator import AuditFinding, AuditReport, Curator
+from agents.skills.distill import (
+    DEFAULT_MIN_STEPS,
+    DEFAULT_MIN_UNIQUE_TOOLS,
+    DistillationResult,
+    distill_from_intention,
+)
 
 # Hybrid 70/30 BM25 + vector retrieval lives in `index`. Lazy import — the
 # rest of the module is useable even if sqlite3 / httpx are missing.
@@ -81,4 +88,11 @@ __all__ = [
     "LearningLog",
     "LearningEntry",
     "LOG_FILES",
+    "Curator",
+    "AuditReport",
+    "AuditFinding",
+    "distill_from_intention",
+    "DistillationResult",
+    "DEFAULT_MIN_STEPS",
+    "DEFAULT_MIN_UNIQUE_TOOLS",
 ]

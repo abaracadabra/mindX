@@ -21,8 +21,15 @@
       "title": "Cognition",
       "phase": "full moon",
       "timestamp": "2026-05-02T09:34:35.325219+00:00"
+    },
+    {
+      "date": "2026-05-13",
+      "day": 25,
+      "title": "The Network",
+      "phase": "waning crescent",
+      "timestamp": "2026-05-13T07:42:34.782602+00:00"
     }
   ],
-  "current_day": 15,
+  "current_day": 25,
   "full_moons": []
 }

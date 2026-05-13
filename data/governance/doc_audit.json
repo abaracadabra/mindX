@@ -1,19 +1,19 @@
 {
-  "timestamp": 1777714475.2529042,
-  "total_docs": 222,
+  "timestamp": 1778664027.4751334,
+  "total_docs": 227,
   "archived": 6,
   "deprecated": 1,
   "recently_modified": [
-    "AUTOMINDX_INFT_SUMMARY",
-    "AgenticPlace_Deep_Dive",
+    "AUTHOR_AGENT",
     "BANKON_VAULT",
     "BANKON_VAULT_HANDOFF",
-    "BOARDROOM",
     "BOOK_OF_MINDX",
-    "DAIO",
     "IMPROVEMENT_JOURNAL",
-    "INDEX",
-    "INFT_7857"
+    "MARKETING",
+    "MARKETING_AGENT",
+    "MARKETING_PLAYBOOK",
+    "MARKETING_RECEIPTS",
+    "NAV"
   ],
   "conflicts": [
     "TECHNICAL: MindXAgent is meta-agent",

@@ -241,6 +241,67 @@
             letter-spacing: 0.5px;
         }
 
+        /* Chain chip — current active chain after connect. Lifted from live/allchain.html. */
+        .chain-chip {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 3px 12px;
+            border-radius: 999px;
+            background: rgba(139, 92, 246, .15);
+            border: 1px solid rgba(139, 92, 246, .55);
+            color: var(--accent2);
+            font-size: .75rem;
+            font-family: monospace;
+            letter-spacing: .5px;
+        }
+        .chain-chip[hidden] { display: none; }
+
+        /* Network tabs — horizontal pill strip, scrolls on narrow viewports. */
+        .net-tabs {
+            display: flex;
+            gap: 8px;
+            margin: 14px auto 0;
+            padding: 6px;
+            overflow-x: auto;
+            max-width: 760px;
+            border-radius: 12px;
+            background: rgba(0,0,0,.35);
+            border: 1px solid var(--border);
+            scrollbar-width: thin;
+        }
+        .net-tab {
+            flex: 0 0 auto;
+            padding: 6px 14px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: transparent;
+            color: var(--muted);
+            font-size: .82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .net-tab:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+        .net-tab.active {
+            background: rgba(139, 92, 246, .25);
+            border-color: var(--accent);
+            color: var(--text);
+            box-shadow: 0 0 12px rgba(139, 92, 246, .35);
+        }
+        .net-tab .id {
+            font-family: monospace;
+            color: rgba(255,255,255,.4);
+            font-size: .68rem;
+        }
+
         .signin-btn {
             display: inline-flex; align-items: center; gap: 10px;
             padding: 14px 32px;
@@ -405,6 +466,13 @@
                     <span id="walletBtnLabel">Connect Wallet</span>
                 </button>
                 <div class="wallet-address" id="walletAddress"></div>
+                <div class="chain-chip" id="chainChip" hidden></div>
+            </div>
+
+            <!-- Network tab strip (pattern lifted from live/allchain.html + chainmarketcap.html).
+                 Click a tab → wallet_switchEthereumChain if already added, else wallet_addEthereumChain. -->
+            <div class="net-tabs" id="netTabs" role="tablist" aria-label="EVM network">
+                <!-- populated by JS from CHAINS[] -->
             </div>
 
             <div style="text-align:center; margin-top: 18px;">
@@ -900,8 +968,176 @@ POST /admin/shadow/verify      { nonce, signature }   → { jwt, exp }</pre>
     }
     function logout() { clearSession(); clearStatus(); }
 
+    // ─── EVM network tabs — chain add + chain switch ──────────────────
+    // Pattern lifted from live/allchain.html (`addToMetaMask`) + chainmarketcap.html
+    // (`wallet_switchEthereumChain` chain-change handler). Curated set of chains
+    // that matter for mindX: governance + DAIO economy + memory anchor + testnets.
+    const CHAINS = [
+        { chainId: 1,         name: 'Ethereum',      symbol: 'ETH',   tag: 'mainnet',
+          rpcUrls: ['https://eth.llamarpc.com', 'https://rpc.ankr.com/eth'],
+          blockExplorerUrls: ['https://etherscan.io'],
+          nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 } },
+        { chainId: 8453,      name: 'Base',          symbol: 'ETH',   tag: 'L2',
+          rpcUrls: ['https://mainnet.base.org', 'https://base.llamarpc.com'],
+          blockExplorerUrls: ['https://basescan.org'],
+          nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 } },
+        { chainId: 137,       name: 'Polygon',       symbol: 'POL',   tag: 'sidechain',
+          rpcUrls: ['https://polygon-rpc.com', 'https://rpc.ankr.com/polygon'],
+          blockExplorerUrls: ['https://polygonscan.com'],
+          nativeCurrency: { name: 'Polygon', symbol: 'POL', decimals: 18 } },
+        { chainId: 42161,     name: 'Arbitrum One',  symbol: 'ETH',   tag: 'L2',
+          rpcUrls: ['https://arb1.arbitrum.io/rpc'],
+          blockExplorerUrls: ['https://arbiscan.io'],
+          nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 } },
+        { chainId: 10,        name: 'Optimism',      symbol: 'ETH',   tag: 'L2',
+          rpcUrls: ['https://mainnet.optimism.io'],
+          blockExplorerUrls: ['https://optimistic.etherscan.io'],
+          nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 } },
+        // mindX memory-anchor chain (per memory_anchor_treasury_pk vault key + agents/storage/anchor.py)
+        { chainId: 5042002,   name: 'ARC',           symbol: 'ARC',   tag: 'mindx',
+          rpcUrls: ['https://rpc.arc.network'],
+          blockExplorerUrls: ['https://explorer.arc.network'],
+          nativeCurrency: { name: 'ARC', symbol: 'ARC', decimals: 18 } },
+        // Testnets — useful for shadow-overlord ops without burning gas
+        { chainId: 11155111,  name: 'Sepolia',       symbol: 'ETH',   tag: 'testnet',
+          rpcUrls: ['https://rpc.sepolia.org', 'https://ethereum-sepolia.publicnode.com'],
+          blockExplorerUrls: ['https://sepolia.etherscan.io'],
+          nativeCurrency: { name: 'SepoliaETH', symbol: 'ETH', decimals: 18 } },
+        { chainId: 84532,     name: 'Base Sepolia',  symbol: 'ETH',   tag: 'testnet',
+          rpcUrls: ['https://sepolia.base.org'],
+          blockExplorerUrls: ['https://sepolia.basescan.org'],
+          nativeCurrency: { name: 'SepoliaETH', symbol: 'ETH', decimals: 18 } },
+    ];
+
+    let currentChainId = null;
+
+    function renderNetTabs() {
+        const root = document.getElementById('netTabs');
+        if (!root) return;
+        root.innerHTML = '';
+        for (const ch of CHAINS) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'net-tab' + (currentChainId === ch.chainId ? ' active' : '');
+            btn.role = 'tab';
+            btn.dataset.chainId = String(ch.chainId);
+            btn.title = `${ch.name} (chainId ${ch.chainId}) · ${ch.tag}`;
+            btn.innerHTML = `<span>${ch.name}</span><span class="id">${ch.chainId}</span>`;
+            btn.onclick = () => addOrSwitchChain(ch.chainId);
+            root.appendChild(btn);
+        }
+    }
+
+    function updateChainChip() {
+        const el = document.getElementById('chainChip');
+        if (!el) return;
+        if (!walletConnected || !currentChainId) {
+            el.hidden = true;
+            el.textContent = '';
+            return;
+        }
+        const ch = CHAINS.find(c => c.chainId === currentChainId);
+        const label = ch ? ch.name : `Chain ${currentChainId}`;
+        el.textContent = `⛓ ${label}  (${currentChainId} · 0x${currentChainId.toString(16)})`;
+        el.hidden = false;
+    }
+
+    async function refreshCurrentChain() {
+        const provider = getWalletProvider();
+        if (!provider) return;
+        try {
+            const hex = await provider.request({ method: 'eth_chainId' });
+            currentChainId = parseInt(hex, 16);
+        } catch {}
+        renderNetTabs();
+        updateChainChip();
+    }
+
+    /** Switch to a chain or add it if MetaMask doesn't have it yet.
+     *  Strategy: try `wallet_switchEthereumChain` first (faster if already added),
+     *  fall back to `wallet_addEthereumChain` on error code 4902. Mirrors
+     *  live/allchain.html `addToMetaMask`. */
+    async function addOrSwitchChain(chainId) {
+        if (!walletsReady) await setupEIP6963WalletDetection();
+        const provider = getWalletProvider();
+        if (!provider) {
+            showStatus('error', 'MetaMask or a compatible EVM wallet is required.');
+            return;
+        }
+        if (!walletConnected) {
+            await connectWallet();
+            if (!walletConnected) return;
+        }
+        const chain = CHAINS.find(c => c.chainId === chainId);
+        if (!chain) { showStatus('error', `Chain ${chainId} not in the curated set`); return; }
+
+        if (currentChainId === chainId) {
+            showStatus('ok', `Already on ${chain.name}.`);
+            return;
+        }
+
+        const hex = '0x' + chainId.toString(16);
+        try {
+            await provider.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: hex }],
+            });
+            // `chainChanged` event will refresh state; meanwhile optimistic update.
+            currentChainId = chainId;
+            renderNetTabs(); updateChainChip();
+            showStatus('ok', `Switched to ${chain.name}.`);
+            return;
+        } catch (err) {
+            if (err && err.code === 4001) { showStatus('warn', 'Network switch cancelled.'); return; }
+            // 4902 = unrecognized chain → fall through to add
+            if (err && err.code !== 4902) {
+                console.warn('switch failed, will attempt add:', err);
+            }
+        }
+
+        // Add the chain.
+        const params = {
+            chainId: hex,
+            chainName: chain.name,
+            nativeCurrency: chain.nativeCurrency,
+            rpcUrls: chain.rpcUrls,
+            blockExplorerUrls: chain.blockExplorerUrls,
+        };
+        try {
+            await provider.request({ method: 'wallet_addEthereumChain', params: [params] });
+            currentChainId = chainId;
+            renderNetTabs(); updateChainChip();
+            showStatus('ok', `${chain.name} added.`);
+        } catch (err) {
+            const msg = err?.message || String(err);
+            showStatus('error', `Failed to add ${chain.name}: ${msg}`);
+        }
+    }
+
+    // After connectWallet succeeds we still need to wire chainChanged + read
+    // the current chain. The existing connectWallet hooks accountsChanged
+    // already; extend it without rewriting the function.
+    const _origConnect = connectWallet;
+    async function connectWalletWithChain() {
+        await _origConnect();
+        if (walletConnected) {
+            const provider = getWalletProvider();
+            try {
+                provider.on('chainChanged', (hex) => {
+                    currentChainId = parseInt(hex, 16);
+                    renderNetTabs();
+                    updateChainChip();
+                });
+            } catch {}
+            await refreshCurrentChain();
+        }
+    }
+    // Replace the window-scoped reference so the button's onclick=connectWallet() uses the upgraded one.
+    window.connectWallet = connectWalletWithChain;
+
     // ─── Bootstrap ─────────────────────────────────────────────────────
     setupEIP6963WalletDetection();
+    renderNetTabs();
     </script>
 </body>
 </html>

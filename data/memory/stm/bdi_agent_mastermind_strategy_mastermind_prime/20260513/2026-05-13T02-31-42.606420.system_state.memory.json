@@ -1,0 +1,182 @@
+{
+  "timestamp": "2026-05-13T02:31:42.606420",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "content": {
+    "process_name": "bdi_deliberation",
+    "data": {
+      "selected_goal": {
+        "id": "e59e29ec",
+        "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+        "priority": 1,
+        "status": "pending",
+        "added_at": 1778664151.9320421,
+        "is_primary": true
+      },
+      "full_desire_queue": [
+        {
+          "id": "e59e29ec",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664151.9320421,
+          "is_primary": true
+        },
+        {
+          "id": "01021d59",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664155.127676,
+          "is_primary": true
+        },
+        {
+          "id": "64707dcd",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664158.2328565,
+          "is_primary": true
+        },
+        {
+          "id": "69bc0189",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664161.4670205,
+          "is_primary": true
+        },
+        {
+          "id": "7e3432e8",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664164.6752288,
+          "is_primary": true
+        },
+        {
+          "id": "31d02a26",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664190.5523236,
+          "is_primary": true
+        },
+        {
+          "id": "d237a490",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664193.7882342,
+          "is_primary": true
+        },
+        {
+          "id": "9b37321f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664197.1883254,
+          "is_primary": true
+        },
+        {
+          "id": "2ad0862a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664200.4474185,
+          "is_primary": true
+        },
+        {
+          "id": "e1d446a2",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664203.6439986,
+          "is_primary": true
+        },
+        {
+          "id": "bf413218",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664329.1520283,
+          "is_primary": true
+        },
+        {
+          "id": "e2825683",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664332.4610133,
+          "is_primary": true
+        },
+        {
+          "id": "d64308ef",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664335.674872,
+          "is_primary": true
+        },
+        {
+          "id": "602517d7",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664338.889186,
+          "is_primary": true
+        },
+        {
+          "id": "0fb5cac3",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664342.0825624,
+          "is_primary": true
+        },
+        {
+          "id": "53de8430",
+          "goal": "{\"error\": \"ConnectionError\", \"message\": \"Cannot connect to Ollama at http://10.0.0.155:18080\"}",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664342.1844146
+        },
+        {
+          "id": "4ccca597",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664696.0568044,
+          "is_primary": true
+        },
+        {
+          "id": "e1c3d99a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664699.337352,
+          "is_primary": true
+        },
+        {
+          "id": "28507f14",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664702.6056063,
+          "is_primary": true
+        }
+      ]
+    }
+  },
+  "context": {
+    "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+    "run_id": "d8f0f59d"
+  },
+  "tags": [
+    "bdi_deliberation",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "0869105cde314438"
+}

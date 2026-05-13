@@ -10,5 +10,12 @@ out/
 # Docs
 docs/
 
-# Dotenv file
+# Dotenv files — every variant; deploy keys must never land in git.
+# Sample templates are explicitly tracked.
 .env
+.env.*
+!.env.*.sample
+
+# Deployments dir tracks committed receipts but not local broadcast metadata.
+deployments/dry-run/
+deployments/**/run-*.json

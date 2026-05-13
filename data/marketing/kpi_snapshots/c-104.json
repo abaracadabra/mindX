@@ -1,0 +1,13 @@
+{
+  "campaign_id": "c-104",
+  "geo_share_of_voice": {},
+  "paid_actions_completed": 1,
+  "tessera_credentials_issued": 0,
+  "distribution_outcomes": {
+    "llms_txt": 1
+  },
+  "holdout_lift_proxy": null,
+  "diminished_share": 0.0,
+  "error_share": 0.0,
+  "cached_share": 0.0
+}

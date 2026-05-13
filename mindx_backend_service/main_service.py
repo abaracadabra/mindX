@@ -2238,6 +2238,69 @@ def _insight_safe(fn):
     return wrapper
 
 
+@app.get("/insight/skills", tags=["insight"])
+@_insight_safe
+async def insight_skills():
+    """Skill substrate read-out: SkillStore counts + LearningLog summary +
+    last Curator run. Public, read-only, no secrets — for the diagnostics
+    dashboard. Loaded from `agents/skills/` (Hermes/OpenClaw Day-1..3 substrate)."""
+    out: dict = {"skills": {}, "learnings": {}, "curator": None}
+    try:
+        from agents.skills.store import SkillStore
+        store = SkillStore()
+        refs = store.list()
+        by_cat: dict[str, int] = {}
+        agent_count = 0
+        human_count = 0
+        pinned_count = 0
+        for r in refs:
+            by_cat[r.category] = by_cat.get(r.category, 0) + 1
+            if r.created_by == "human":
+                human_count += 1
+            else:
+                agent_count += 1
+            if r.pinned:
+                pinned_count += 1
+        out["skills"] = {
+            "total": len(refs),
+            "agent_authored": agent_count,
+            "human_authored": human_count,
+            "pinned": pinned_count,
+            "by_category": by_cat,
+        }
+    except Exception as e:
+        out["skills"] = {"error": str(e)}
+
+    try:
+        from agents.skills.learning_log import LearningLog
+        out["learnings"] = LearningLog().summary()
+    except Exception as e:
+        out["learnings"] = {"error": str(e)}
+
+    # Most recent Curator run, if any.
+    try:
+        from pathlib import Path as _P
+        import json as _json
+        cdir = PROJECT_ROOT / "data" / "learnings" / "curator"
+        if cdir.exists():
+            reports = sorted(cdir.glob("*.json"), reverse=True)
+            if reports:
+                latest = _json.loads(reports[0].read_text(encoding="utf-8"))
+                out["curator"] = {
+                    "started_at": latest.get("started_at"),
+                    "apply": latest.get("apply"),
+                    "inspected": latest.get("inspected"),
+                    "flagged_count": latest.get("flagged_count"),
+                    "archived_count": latest.get("archived_count"),
+                    "duration_seconds": latest.get("duration_seconds"),
+                    "report_file": str(reports[0].name),
+                }
+    except Exception as e:
+        out["curator"] = {"error": str(e)}
+
+    return out
+
+
 @app.get("/insight/fitness", tags=["insight"])
 @_insight_safe
 async def insight_fitness():

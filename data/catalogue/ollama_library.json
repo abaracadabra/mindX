@@ -1,0 +1,285 @@
+{
+  "fetched_at": 1777850990.669763,
+  "model_count": 8,
+  "models": {
+    "alfred": {
+      "capabilities": [],
+      "description": "A robust conversational model designed to be used for both chat and instruct use cases.",
+      "fetched_at": 1777850990.0513453,
+      "is_cloud": false,
+      "name": "alfred",
+      "pulls": null,
+      "sizes_b": [
+        40.0
+      ],
+      "skills": [
+        "heavy"
+      ],
+      "strengths": [
+        "highest-capability deliberation"
+      ],
+      "tags": [
+        "40b",
+        "latest"
+      ],
+      "updated": "2 years ago",
+      "weaknesses": [
+        "high latency / heavy memory load",
+        "typical 8k\u201332k context window \u2014 not a long-doc model",
+        "text-only (no image input)"
+      ]
+    },
+    "all-minilm": {
+      "capabilities": [
+        "embedding"
+      ],
+      "description": "Embedding models on very large sentence level datasets.",
+      "fetched_at": 1777850990.4232812,
+      "is_cloud": false,
+      "name": "all-minilm",
+      "pulls": null,
+      "sizes_b": [
+        0.022,
+        0.033
+      ],
+      "skills": [
+        "edge",
+        "embedding",
+        "fast"
+      ],
+      "strengths": [
+        "vector embeddings (no chat completion)",
+        "low latency and small memory footprint"
+      ],
+      "tags": [
+        "22m",
+        "33m",
+        "latest"
+      ],
+      "updated": "1 year ago",
+      "weaknesses": [
+        "limited multi-step reasoning depth",
+        "not a chat model \u2014 completions will be empty"
+      ]
+    },
+    "athene-v2": {
+      "capabilities": [
+        "tools"
+      ],
+      "description": "Athene-V2 is a 72B parameter model which excels at code completion, mathematics, and log extraction tasks.",
+      "fetched_at": 1777850990.4289424,
+      "is_cloud": false,
+      "name": "athene-v2",
+      "pulls": null,
+      "sizes_b": [
+        72.0
+      ],
+      "skills": [
+        "agentic",
+        "heavy",
+        "reasoning"
+      ],
+      "strengths": [
+        "multi-step reasoning",
+        "tool use and agentic workflows",
+        "highest-capability deliberation"
+      ],
+      "tags": [
+        "72b",
+        "latest"
+      ],
+      "updated": "1 year ago",
+      "weaknesses": [
+        "high latency / heavy memory load",
+        "typical 8k\u201332k context window \u2014 not a long-doc model",
+        "text-only (no image input)"
+      ]
+    },
+    "aya": {
+      "capabilities": [],
+      "description": "Aya 23, released by Cohere, is a new family of state-of-the-art, multilingual models that support 23 languages.",
+      "fetched_at": 1777850990.426751,
+      "is_cloud": false,
+      "name": "aya",
+      "pulls": null,
+      "sizes_b": [
+        8.0,
+        35.0
+      ],
+      "skills": [
+        "heavy",
+        "multilingual"
+      ],
+      "strengths": [
+        "highest-capability deliberation",
+        "multilingual generation"
+      ],
+      "tags": [
+        "35b",
+        "8b",
+        "latest"
+      ],
+      "updated": "1 year ago",
+      "weaknesses": [
+        "high latency / heavy memory load",
+        "typical 8k\u201332k context window \u2014 not a long-doc model",
+        "text-only (no image input)"
+      ]
+    },
+    "aya-expanse": {
+      "capabilities": [
+        "tools"
+      ],
+      "description": "Cohere For AI&#39;s language models trained to perform well across 23 different languages.",
+      "fetched_at": 1777850990.4655867,
+      "is_cloud": false,
+      "name": "aya-expanse",
+      "pulls": null,
+      "sizes_b": [
+        8.0,
+        32.0
+      ],
+      "skills": [
+        "agentic",
+        "heavy",
+        "multilingual"
+      ],
+      "strengths": [
+        "tool use and agentic workflows",
+        "highest-capability deliberation",
+        "multilingual generation"
+      ],
+      "tags": [
+        "32b",
+        "8b",
+        "latest"
+      ],
+      "updated": "1 year ago",
+      "weaknesses": [
+        "high latency / heavy memory load",
+        "typical 8k\u201332k context window \u2014 not a long-doc model",
+        "text-only (no image input)"
+      ]
+    },
+    "bakllava": {
+      "capabilities": [
+        "vision"
+      ],
+      "description": "BakLLaVA is a multimodal model consisting of the Mistral 7B base model augmented with the LLaVA  architecture.",
+      "fetched_at": 1777850990.4338715,
+      "is_cloud": false,
+      "name": "bakllava",
+      "pulls": null,
+      "sizes_b": [
+        7.0
+      ],
+      "skills": [
+        "vision"
+      ],
+      "strengths": [
+        "image and document understanding"
+      ],
+      "tags": [
+        "7b",
+        "latest"
+      ],
+      "updated": "2 years ago",
+      "weaknesses": [
+        "typical 8k\u201332k context window \u2014 not a long-doc model"
+      ]
+    },
+    "bespoke-minicheck": {
+      "capabilities": [],
+      "description": "A state-of-the-art fact-checking model developed by Bespoke Labs.",
+      "fetched_at": 1777850990.4318786,
+      "is_cloud": false,
+      "name": "bespoke-minicheck",
+      "pulls": null,
+      "sizes_b": [
+        7.0
+      ],
+      "skills": [
+        "general"
+      ],
+      "strengths": [],
+      "tags": [
+        "7b",
+        "latest"
+      ],
+      "updated": "1 year ago",
+      "weaknesses": [
+        "typical 8k\u201332k context window \u2014 not a long-doc model",
+        "text-only (no image input)"
+      ]
+    },
+    "bge-large": {
+      "capabilities": [
+        "embedding"
+      ],
+      "description": "Embedding model from BAAI mapping texts to vectors.",
+      "fetched_at": 1777850990.6611993,
+      "is_cloud": false,
+      "name": "bge-large",
+      "pulls": null,
+      "sizes_b": [
+        0.335
+      ],
+      "skills": [
+        "edge",
+        "embedding",
+        "fast"
+      ],
+      "strengths": [
+        "vector embeddings (no chat completion)",
+        "low latency and small memory footprint"
+      ],
+      "tags": [
+        "335m",
+        "latest"
+      ],
+      "updated": "1 year ago",
+      "weaknesses": [
+        "limited multi-step reasoning depth",
+        "not a chat model \u2014 completions will be empty"
+      ]
+    }
+  },
+  "skill_index": {
+    "agentic": [
+      "athene-v2",
+      "aya-expanse"
+    ],
+    "edge": [
+      "all-minilm",
+      "bge-large"
+    ],
+    "embedding": [
+      "all-minilm",
+      "bge-large"
+    ],
+    "fast": [
+      "all-minilm",
+      "bge-large"
+    ],
+    "general": [
+      "bespoke-minicheck"
+    ],
+    "heavy": [
+      "alfred",
+      "athene-v2",
+      "aya",
+      "aya-expanse"
+    ],
+    "multilingual": [
+      "aya",
+      "aya-expanse"
+    ],
+    "reasoning": [
+      "athene-v2"
+    ],
+    "vision": [
+      "bakllava"
+    ]
+  },
+  "source": "https://ollama.com/library"
+}

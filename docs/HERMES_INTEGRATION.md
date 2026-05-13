@@ -146,6 +146,53 @@ Covers codec round-trip, slug derivation, all five scanner classes (positive
 and negative paths), store write/read/list/search, Curator's
 no-archive-pinned-or-human policy, and the human+pinned warning-override.
 
+## Day-4 — Curator + `skill_distill` + diagnostics (shipped 2026-05-13)
+
+The fourth and fifth absorptions from the Hermes/OpenClaw research stack —
+both bounded, both substrate-only (no BDI hot-path edits yet).
+
+**`agents/skills/curator.py` — `Curator`** (Hermes integration doc §8.1).
+Audit-only by default (`apply=False`); operator runs `scripts/run_curator.py
+--apply` (or wires a 7-day systemd timer) to actually archive. Four signals:
+
+1. *Scanner re-run* — if the scanner policy tightened since the skill landed,
+   it gets flagged. Day-1's scanner is the gate; the Curator is the second
+   pass with the same gate.
+2. *Empty body / no postconditions* — skills below `min_body_bytes` (default
+   40) or without declared `postconditions`. mindX-specific signal: the BDI
+   layer can't verify completion without postconditions, so an
+   intention-less skill is degenerate.
+3. *Staleness* — `updated_at` older than `--stale-days` (default 90).
+4. *Near-duplicate by embedding cosine* — agent-authored pairs with cosine ≥
+   0.985 → older one flagged, newer wins. Uses the Day-2 vector column.
+
+Authority: `SkillStore.archive(actor="curator")` already refuses pinned +
+human-authored. The Curator inherits that single-source policy and lists
+its skips in the report. Per-run JSON report at `data/learnings/curator/<ts>.json`.
+
+10 tests pin every clause (pinned never archived, human never archived,
+dry-run mutates nothing, etc.).
+
+**`agents/skills/distill.py` — `distill_from_intention`** (Hermes
+integration doc §8.1, item 3). The library entry point the BDI agent will
+eventually call from its completion handler. Today any caller can invoke
+it. Trigger thresholds: `min_steps=5`, `min_unique_tools=2`. With
+`draft_only=True` (default) the skill lands under `$MINDX_SKILLS_DIR/.drafts/`
+for operator review; with `draft_only=False` it goes through `SkillStore.write`
+and the scanner gate. Body is composed from the step list in first-person
+voice; postconditions are derived from belief diffs (keys that flipped
+True). 8 tests, including a malicious-distilled-body case that the
+scanner refuses.
+
+**`GET /insight/skills`** — new public read-only endpoint surfacing:
+- `skills.{total, agent_authored, human_authored, pinned, by_category}`
+- `learnings.{learning, error, feature_request} → {pending, validated, promoted, withdrawn, total}`
+- `curator.{started_at, apply, inspected, flagged_count, archived_count, duration_seconds, report_file}`
+  (the most recent run, if any)
+
+Targeted for the `/feedback.html` dashboard's "memories on chain" neighborhood —
+shows the substrate is alive at a glance.
+
 ## Day-3 — `self-improving-agent` log substrate (shipped 2026-05-13)
 
 Third concrete absorption — this one from the **OpenClaw research doc §3.1**

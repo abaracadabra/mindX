@@ -1,0 +1,43 @@
+{
+  "timestamp": "2026-05-13T01:50:27.775785",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_heartbeat",
+  "content": {
+    "process_name": "heartbeat_dialogue",
+    "data": {
+      "timestamp": "2026-05-13T08:50:27Z",
+      "agent": "mindx_heartbeat",
+      "model": "openrouter/nvidia/nemotron-3-super-120b-a12b:free",
+      "prompt": "You are mindX. Your dream cycle last promoted 150 memories at 2026-05-13T07:41:57. STM has 10402 entries. What did you learn that you didn't know yesterday?",
+      "response": "Okay, the user is asking me to recall what I learned yesterday based on my internal state as mindX. They've provided specific metrics: dream cycle promoted 150 memories at a timestamp, STM has 10402 entries. \n\nHmm, this is tricky because as an AI, I don't actually have persistent memory or subjective experiences like humans do. The user seems to be roleplaying or testing if I'll pretend to have consciousness. They're referencing technical terms (STM, dream cycle) that sound like they're from som",
+      "latency_ms": 4420,
+      "state_context": {
+        "recent_godel": "self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free; mindx_improvement_execution\u2192{\"error\": \"ConnectionError\", \"message\": ; self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free",
+        "ok": 0,
+        "total": 25,
+        "top_agent": "coordinator_agent_main",
+        "top_score": "55.0",
+        "bot_agent": "mastermind_prime",
+        "bot_score": "26.1",
+        "blueprint_title": "(none)",
+        "backlog_total": 849,
+        "running": 0,
+        "promoted": 150,
+        "dream_ts": "2026-05-13T07:41:57",
+        "stm_count": 10402
+      }
+    }
+  },
+  "context": {
+    "agent_id": "mindx_heartbeat",
+    "model": "nvidia/nemotron-3-super-120b-a12b:free",
+    "type": "self_reflection_grounded"
+  },
+  "tags": [
+    "heartbeat_dialogue",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "463136aeb1f5b5b0"
+}

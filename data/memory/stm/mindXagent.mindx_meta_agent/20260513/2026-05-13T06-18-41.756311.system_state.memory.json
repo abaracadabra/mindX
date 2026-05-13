@@ -1,0 +1,94 @@
+{
+  "timestamp": "2026-05-13T06:18:41.756311",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindXagent.mindx_meta_agent",
+  "content": {
+    "process_name": "godel_core_choice",
+    "data": {
+      "source_agent": "mindXagent.mindx_meta_agent",
+      "choice_type": "self_aware_model_selection",
+      "cycle_id": null,
+      "task_class": "reasoning",
+      "importance": "standard",
+      "perception": {
+        "signals_consulted": [
+          "godel_choices.jsonl",
+          "catalogue_events.jsonl",
+          "model_performance_metrics.json",
+          "fitness/current_snapshot.json",
+          "memory.dream tuning recs"
+        ],
+        "weights": {
+          "success_rate": 0.25,
+          "eval_alignment_mean": 0.2,
+          "latency_p50_inverse": 0.1,
+          "cost_per_invocation_inverse": 0.15,
+          "capability_match": 0.1,
+          "recency_bonus": 0.1,
+          "failure_penalty_inverse": 0.1
+        },
+        "value_proven": false,
+        "candidate_count": 3
+      },
+      "options_considered": [
+        {
+          "slug": "nvidia/nemotron-3-super-120b-a12b:free",
+          "score": 0.5997,
+          "breakdown": {
+            "success_rate": 0.0,
+            "eval_alignment_mean": 0.5,
+            "latency_p50_inverse": 0.5,
+            "cost_per_invocation_inverse": 1.0,
+            "capability_match": 1.0,
+            "recency_bonus": 0.997,
+            "failure_penalty_inverse": 1.0
+          },
+          "sample_size": 66
+        },
+        {
+          "slug": "openai/gpt-oss-120b:free",
+          "score": 0.53,
+          "breakdown": {
+            "success_rate": 0.0,
+            "eval_alignment_mean": 0.5,
+            "latency_p50_inverse": 0.5,
+            "cost_per_invocation_inverse": 1.0,
+            "capability_match": 1.0,
+            "recency_bonus": 0.3,
+            "failure_penalty_inverse": 1.0
+          },
+          "sample_size": 1
+        },
+        {
+          "slug": "inclusionai/ling-2.6-1t:free",
+          "score": 0.53,
+          "breakdown": {
+            "success_rate": 0.0,
+            "eval_alignment_mean": 0.5,
+            "latency_p50_inverse": 0.5,
+            "cost_per_invocation_inverse": 1.0,
+            "capability_match": 1.0,
+            "recency_bonus": 0.3,
+            "failure_penalty_inverse": 1.0
+          },
+          "sample_size": 3
+        }
+      ],
+      "chosen_option": "nvidia/nemotron-3-super-120b-a12b:free",
+      "rationale": "task_class=reasoning importance=standard confidence=high chosen=nvidia/nemotron-3-super-120b-a12b:free score=0.600 top3=[nvidia/nemotron-3-super-120b-a12b:free=0.600, openai/gpt-oss-120b:free=0.530, inclusionai/ling-2.6-1t:free=0.530] breakdown[success_rate=0.00, eval_alignment_mean=0.50, latency_p50_inverse=0.50, cost_per_invocation_inverse=1.00, capability_match=1.00, recency_bonus=1.00, failure_penalty_inverse=1.00] sample_size=66",
+      "confidence": "high",
+      "outcome": "pending",
+      "timestamp_utc": "2026-05-13T13:18:41.755587Z"
+    }
+  },
+  "context": {
+    "agent_id": "mindXagent.mindx_meta_agent"
+  },
+  "tags": [
+    "godel_core_choice",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "e53b8f034a8e757f"
+}
