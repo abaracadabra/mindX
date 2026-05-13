@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: Apache-2.0
+# (c) 2026 BANKON — all rights reserved.
+# Podman-compose / docker-compose definition for the VPS deployment.
+#
+# Usage:
+#   podman-compose -f deploy/compose.yml up -d
+#   podman-compose -f deploy/compose.yml logs -f wordpress-agent
+#   podman-compose -f deploy/compose.yml down
+
+version: "3.9"
+
+services:
+  wordpress-agent:
+    build:
+      context: ..
+      dockerfile: deploy/Containerfile
+    image: localhost/wordpress-agent:0.1.0
+    container_name: wordpress-agent
+    restart: unless-stopped
+    env_file:
+      - /etc/wordpress-agent/wordpress-agent.env
+    environment:
+      WP_SERVER_HOST: "0.0.0.0"
+      WP_SERVER_PORT: "8765"
+    ports:
+      # Loopback-only by design. AuthorAgent runs on the same VPS host
+      # and reaches the agent through 127.0.0.1:8765. Do not expose publicly.
+      - "127.0.0.1:8765:8765"
+    networks:
+      - mindx_internal
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  mindx_internal:
+    driver: bridge

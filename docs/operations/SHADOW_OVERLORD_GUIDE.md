@@ -194,7 +194,19 @@ The recommended approach is a systemd drop-in:
 sudo systemctl edit mindx.service
 ```
 
-Editor opens. Add:
+**Canonical path (recommended): store in the BANKON vault.** Both variables are
+in `PROVIDER_ENV_MAP` (see [`docs/BANKON_VAULT_HANDOFF.md`](../BANKON_VAULT_HANDOFF.md#2-store-the-3-values-in-the-bankon-vault-canonical-path) §2)
+and decrypted into `os.environ` at backend startup. Single command per value:
+
+```bash
+.mindx_env/bin/python manage_credentials.py store shadow_overlord_address '0xAbC123...'
+.mindx_env/bin/python manage_credentials.py store shadow_jwt_secret "$(openssl rand -hex 32)"
+.mindx_env/bin/python manage_credentials.py store mindx_admin_addresses '0xAbC123...'   # vault-write allowlist
+sudo systemctl restart mindx.service
+```
+
+If you can't use the vault (fresh box; ceremony failure; rotation override),
+fall back to the systemd drop-in below. Editor opens. Add:
 
 ```ini
 [Service]

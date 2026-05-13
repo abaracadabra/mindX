@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: Apache-2.0
+# (c) 2026 BANKON — all rights reserved.
+#
+# Systemd unit for the WordPress.agent loopback service inside mindX.
+#
+# Runs under the `mindx` user so it shares mindX's BANKON vault — the
+# wordpress-agent unlocks the vault on each /publish, retrieves the WP
+# Application Password (and the wordpress.agent wallet pk for provenance
+# signing) from the isolated `wordpress.agent.keys` namespace, then locks.
+# **No WP_APP_PASSWORD env var lives in production.**
+#
+# Install:
+#   sudo cp /home/mindx/mindX/agents/wordpress_agent/deploy/systemd/wordpress-agent.service \
+#           /etc/systemd/system/wordpress-agent.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now wordpress-agent.service
+#   sudo systemctl status wordpress-agent.service
+#   curl -s http://127.0.0.1:8765/healthz | jq
+
+[Unit]
+Description=WordPress.agent — mindX publishing service (vault-backed, decrypt-on-demand)
+Documentation=file:///home/mindx/mindX/docs/WORDPRESS_PUBLISHING.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mindx
+Group=mindx
+WorkingDirectory=/home/mindx/mindX
+# Dev-only fallbacks (server_host / server_port and any non-secret bits) may be in this file.
+# Secrets MUST NOT live here — they're in the vault under context=wordpress.agent.keys.
+EnvironmentFile=-/etc/wordpress-agent/wordpress-agent.env
+ExecStart=/home/mindx/mindX/.mindx_env/bin/python -m agents.wordpress_agent.server
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+KillMode=mixed
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+# The vault dir must be readable+writable by this service (it shares mindX's vault).
+# ProtectHome=read-only above keeps /home read-only; the explicit ReadWritePaths re-opens
+# only the directories the service legitimately touches.
+ReadWritePaths=/home/mindx/mindX/mindx_backend_service/vault_bankon /home/mindx/mindX/data
+ReadOnlyPaths=/etc/wordpress-agent
+
+# Resource limits
+LimitNOFILE=65536
+MemoryMax=256M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

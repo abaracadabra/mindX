@@ -44,6 +44,17 @@
         "allowed_agents": ["mastermind_prime", "strategic_evolution_agent", "blueprint_agent"]
       }
     },
+    "autotune": {
+      "enabled": true,
+      "class_name": "AutotuneTool",
+      "module_path": "tools.autotune_tool",
+      "description": "Agnostic ahead-of-time tuner: probes hardware (AMD/ROCm, NVIDIA/CUDA, CPU) and emits a reproducible AutotunePlan (attention backend, GEMM heuristic, collective topology)",
+      "priority": 6,
+      "category": "development",
+      "access_control": {
+        "allowed_agents": ["mastermind_prime", "strategic_evolution_agent", "blueprint_agent", "coordinator_agent"]
+      }
+    },
     "strategic_analysis_tool": {
       "enabled": true,
       "class_name": "StrategicAnalysisTool",

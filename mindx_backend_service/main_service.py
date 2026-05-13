@@ -1689,6 +1689,7 @@ _PUBLIC_PREFIXES = (
     "/admin/cabinet/",    # gated by require_shadow_jwt at handler level
     "/cabinet/",          # public cabinet read (addresses only)
     "/vault/sign/",       # vault-as-signing-oracle — gated by require_shadow_jwt + fresh sig
+    "/publish/rage/",     # wallet-authorized publish — gated by EIP-191 sig + allowlist (challenge → authorize)
 )
 
 @app.middleware("http")
@@ -5393,6 +5394,12 @@ async def diagnostics_live_endpoint():
     except Exception:
         pass
     author_data = {}
+    def _wp_last_authorized_by():
+        try:
+            from agents.wordpress_agent.publish_auth import get_last_authorized_by
+            return get_last_authorized_by()
+        except Exception:
+            return None
     try:
         from agents.author_agent import AuthorAgent
         aa = await _safe_await(AuthorAgent.get_instance(), default=None)
@@ -5402,6 +5409,9 @@ async def diagnostics_live_endpoint():
                 "last_chapter": getattr(aa, '_last_chapter_title', None),
                 "lunar_day": getattr(aa, '_current_lunar_day', None),
                 "editions_published": getattr(aa, '_editions_published', 0),
+                "rage_publishes": getattr(aa, '_rage_publishes', 0),
+                "last_rage_url": getattr(aa, '_last_rage_url', None),
+                "last_rage_authorized_by": _wp_last_authorized_by(),
             }
     except Exception:
         pass
@@ -5478,6 +5488,15 @@ try:
     logger.info("Shadow-overlord admin tier mounted at /admin/shadow/*, /admin/cabinet/*, /vault/sign/*")
 except Exception as _shadow_import_err:
     logger.warning(f"Shadow-overlord routes not loaded: {_shadow_import_err}")
+
+# Public, wallet-authorized publish to rage.pythai.net (WordPress).
+# /publish/rage/challenge → /publish/rage/authorize — see agents/wordpress_agent/publish_auth.py.
+try:
+    from agents.wordpress_agent.publish_auth import router as wordpress_publish_router
+    app.include_router(wordpress_publish_router)
+    logger.info("WordPress publish-authorization mounted at /publish/rage/*")
+except Exception as _wp_publish_import_err:
+    logger.warning(f"WordPress publish-authorization not loaded: {_wp_publish_import_err}")
 
 command_handler: Optional[CommandHandler] = None
 
@@ -9007,6 +9026,55 @@ async def trigger_book_publish():
         return {"status": "published", "edition": result["edition"], "bytes": result["bytes"], "path": result["path"]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Book publish failed: {str(e)}")
+
+
+class PublishToRageRequest(BaseModel):
+    """Body for POST /admin/publish-to-rage. Provide exactly one content source."""
+    title: str = Field(..., min_length=1)
+    status: str = Field(default="draft")  # draft | publish | future | pending | private
+    markdown: Optional[str] = Field(default=None, description="Markdown body; rendered to HTML before publishing.")
+    html: Optional[str] = Field(default=None, description="Pre-rendered HTML body.")
+    doc_path: Optional[str] = Field(default=None, description="Path under docs/ to a markdown file to publish.")
+    excerpt: Optional[str] = None
+    slug: Optional[str] = None
+
+
+@app.post("/admin/publish-to-rage", summary="Publish an article to rage.pythai.net (WordPress) via the wordpress-agent", tags=["admin"])
+async def publish_to_rage(req: PublishToRageRequest, _wallet: str = Depends(require_admin_access)):
+    """Render an article (markdown → HTML) and hand it to AuthorAgent.publish_to_rage,
+    which POSTs to the loopback wordpress-agent service. Defaults to status='draft'."""
+    # Resolve content source.
+    md_text: Optional[str] = req.markdown
+    if req.doc_path:
+        from utils.config import PROJECT_ROOT
+        safe = (PROJECT_ROOT / "docs" / req.doc_path).resolve()
+        docs_root = (PROJECT_ROOT / "docs").resolve()
+        if docs_root not in safe.parents and safe != docs_root:
+            raise HTTPException(status_code=400, detail="doc_path must resolve under docs/")
+        if not safe.is_file():
+            raise HTTPException(status_code=404, detail=f"docs/{req.doc_path} not found")
+        md_text = safe.read_text(encoding="utf-8")
+
+    if req.html is not None:
+        content_html = req.html
+    elif md_text is not None:
+        content_html = _render_md(md_text)
+    else:
+        raise HTTPException(status_code=400, detail="Provide one of: markdown, html, doc_path")
+
+    try:
+        from agents.author_agent import AuthorAgent
+        author = await AuthorAgent.get_instance()
+        result = await author.publish_to_rage(
+            title=req.title, content_html=content_html, status=req.status,
+            excerpt=req.excerpt, slug=req.slug,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"publish_to_rage failed: {e}")
+
+    if result is None:
+        raise HTTPException(status_code=502, detail="wordpress-agent unreachable or rejected the post; see logs")
+    return {"status": "ok", "wordpress": result}
 
 
 @app.get("/core/agent-activity", summary="Get agent activity")

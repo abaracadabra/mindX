@@ -282,11 +282,40 @@ class AuthorAgent:
         # Daily loop with CancelledError handling
 ```
 
+## External publishing — rage.pythai.net (WordPress)
+
+AuthorAgent is the canonical caller of the **wordpress-agent** loopback service
+(`agents/wordpress_agent/`, descriptor `agents/wordpress.publish.agent`). It
+renders an article's markdown to HTML, attaches a `_mindx_content_hash`
+(sha256[:16]) for provenance, and POSTs it:
+
+```python
+await author.publish_to_rage(
+    title="How I Turn Logs Into Memory",
+    content_html=html,            # already rendered
+    status="draft",               # draft|publish|future|pending|private
+    excerpt=None, slug=None, tags=None, categories=None, featured_media=None,
+)  # → {"post_id", "url", "status", "slug", "date_gmt"}  or  None if the service is unreachable
+```
+
+It never raises into the author loop — an unreachable service is logged and
+returns `None`. The wordpress-agent itself retries 5xx with backoff.
+
+- Endpoint: `POST /admin/publish-to-rage` (admin-gated) — body takes one of
+  `doc_path` (a markdown file under `docs/`, rendered to HTML), `markdown`, or
+  `html`; `status` defaults to `draft`.
+- Diagnostics: `GET /diagnostics/live` → `author.rage_publishes`,
+  `author.last_rage_url`.
+- Full guide: [`docs/WORDPRESS_PUBLISHING.md`](WORDPRESS_PUBLISHING.md).
+
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `agents/author_agent.py` | Book compilation, lunar cycle, publishing |
+| `agents/author_agent.py` | Book compilation, lunar cycle, publishing (incl. `publish_to_rage`) |
+| `agents/wordpress_agent/` | Loopback WordPress REST service AuthorAgent calls (ported from mindXtrain) |
+| `agents/wordpress.publish.agent` | Agent extension descriptor for the wordpress-agent |
+| `docs/WORDPRESS_PUBLISHING.md` | AuthorAgent → wordpress-agent → rage.pythai.net guide |
 | `agents/learning/improvement_journal.py` | Journal entries (feeds Chapter VI) |
 | `docs/BOOK_OF_MINDX.md` | Current book edition (auto-generated) |
 | `docs/publications/` | Timestamped archived on-demand editions |

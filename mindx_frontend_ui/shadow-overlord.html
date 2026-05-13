@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadow-Overlord — login · mindX</title>
+    <meta name="description" content="Shadow-overlord login for mindX. EIP-191 wallet signature → 5-minute JWT for the privileged admin tier. MetaMask / EIP-6963 wallet detection.">
+    <meta name="robots" content="noindex,nofollow">
+    <link rel="icon" type="image/png" href="/gfx/shadow_overlord.png">
+    <style>
+        :root {
+            --bg0: #000000;
+            --bg1: #080a16;
+            --accent: #8b5cf6;            /* violet — shadow-overlord tone */
+            --accent2: #c4b5fd;
+            --text: #ffffff;
+            --muted: rgba(255,255,255,.72);
+            --border: #30363d;
+            --card-bg: rgba(20, 12, 30, 0.92);
+            --shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            --transition: all 0.3s ease;
+            --success: #00cc00;
+            --warning: #ff6b35;
+            --danger:  #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body { background: var(--bg0); }
+
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Background — radial purple/black, vignette, and the shadow-overlord watermark */
+        .bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background: radial-gradient(circle at center, #1a1030 0%, #000 70%);
+        }
+
+        .bg-mark {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background: url('/gfx/shadow_overlord.png') center center / contain no-repeat;
+            opacity: 0.07;
+            pointer-events: none;
+            filter: grayscale(0.2);
+        }
+
+        .vignette {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+            background:
+                linear-gradient(to bottom, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 30%, rgba(0,0,0,0.1) 55%, rgba(0,0,0,0.0) 70%, rgba(0,0,0,0.55) 100%),
+                radial-gradient(1200px 700px at 50% 45%, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 70%, rgba(0,0,0,.92) 100%);
+        }
+
+        .page { position: relative; z-index: 2; }
+        .container { max-width: 760px; margin: 0 auto; padding: 20px; }
+
+        .nav-back {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+
+        .nav-back a {
+            display: inline-flex;
+            align-items: center;
+            padding: 10px 20px;
+            background: var(--card-bg);
+            color: var(--text);
+            text-decoration: none;
+            border-radius: 25px;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            transition: var(--transition);
+        }
+
+        .nav-back a:hover {
+            background: var(--accent);
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        .hero { text-align: center; padding: 80px 20px 24px; }
+
+        .logo-mark {
+            width: 160px; height: 160px;
+            margin: 0 auto 18px;
+            background: url('/gfx/shadow_overlord.png') center center / contain no-repeat;
+            filter: drop-shadow(0 0 22px rgba(139,92,246,.55));
+        }
+
+        .hero .slogan {
+            font-size: 2.4rem;
+            font-weight: 800;
+            color: #fff;
+            line-height: 1.2;
+            margin: 0 0 10px;
+            text-shadow: 0 0 30px rgba(139, 92, 246, 0.45), 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .hero .slogan .accent-text {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 12px rgba(139, 92, 246, 0.4));
+        }
+
+        .hero p {
+            font-size: 1rem;
+            color: var(--muted);
+            max-width: 540px;
+            margin: 0 auto 18px;
+        }
+
+        /* Wallet connect button (copied from allchain.html style, recoloured) */
+        .wallet-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 36px;
+            border: 2px solid var(--success);
+            border-radius: 30px;
+            background: transparent;
+            color: var(--success);
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+            letter-spacing: 0.5px;
+        }
+        .wallet-btn:hover {
+            background: var(--success);
+            color: #000;
+            box-shadow: 0 0 20px rgba(0, 204, 0, 0.3);
+        }
+        .wallet-btn.connected {
+            background: rgba(0, 204, 0, 0.15);
+            border-color: var(--success);
+            color: var(--success);
+            padding: 10px 22px;
+            font-size: 0.95rem;
+        }
+        .wallet-btn .dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+        .wallet-btn.connected .dot {
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+        .wallet-address {
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: var(--accent2);
+            margin-top: 8px;
+            min-height: 1.2em;
+            letter-spacing: 0.5px;
+        }
+
+        .signin-btn {
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 14px 32px;
+            border-radius: 30px;
+            border: 2px solid var(--accent);
+            background: linear-gradient(135deg, rgba(139,92,246,.25), rgba(139,92,246,.05));
+            color: #fff;
+            font-size: 1.05rem; font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+        .signin-btn:hover {
+            box-shadow: 0 0 24px rgba(139, 92, 246, 0.5);
+            transform: translateY(-1px);
+        }
+        .signin-btn:disabled {
+            opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none;
+        }
+
+        .config-bar {
+            display: flex; align-items: center; gap: 10px;
+            margin: 24px 0 8px;
+            padding: 10px 14px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            font-size: 0.82rem;
+        }
+        .config-bar label { color: var(--muted); white-space: nowrap; }
+        .config-bar input[type="text"] {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 10px;
+            color: var(--text);
+            font-family: monospace;
+            font-size: 0.82rem;
+        }
+
+        .panel {
+            margin-top: 16px;
+            padding: 18px 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+        .panel h2 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+        .panel .row {
+            display: flex; justify-content: space-between; gap: 12px;
+            padding: 6px 0;
+            font-size: 0.9rem;
+        }
+        .panel .row .k { color: var(--muted); }
+        .panel .row .v { font-family: monospace; color: var(--text); word-break: break-all; }
+
+        .status {
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 0.92rem;
+            margin-top: 14px;
+            display: none;
+        }
+        .status.show { display: block; }
+        .status.ok    { background: rgba(0,204,0,.12);  color: #88ffa0; border: 1px solid rgba(0,204,0,.4); }
+        .status.warn  { background: rgba(255,107,53,.12); color: #ffb38a; border: 1px solid rgba(255,107,53,.4); }
+        .status.error { background: rgba(239,68,68,.12); color: #fca5a5; border: 1px solid rgba(239,68,68,.5); }
+
+        .session {
+            margin-top: 16px;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(139,92,246,.45);
+            background: linear-gradient(135deg, rgba(139,92,246,.18), rgba(80,40,140,.08));
+        }
+        .session.hidden { display: none; }
+        .session .countdown {
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: var(--accent2);
+        }
+        .session button.logout {
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.85rem;
+        }
+        .session button.logout:hover { background: rgba(239,68,68,.15); }
+
+        .ft {
+            margin-top: 32px; padding: 16px;
+            text-align: center; color: rgba(255,255,255,.4); font-size: 0.78rem;
+        }
+        .ft a { color: var(--accent2); text-decoration: none; }
+        .ft a:hover { text-decoration: underline; }
+
+        details.help {
+            margin-top: 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 14px;
+            background: rgba(0,0,0,.35);
+            font-size: 0.85rem;
+        }
+        details.help summary {
+            cursor: pointer; color: var(--accent2);
+            list-style: none;
+        }
+        details.help summary::-webkit-details-marker { display: none; }
+        details.help summary::after { content: ' ▾'; opacity: .6; }
+        details.help[open] summary::after { content: ' ▴'; }
+        details.help code { font-family: monospace; color: var(--text); }
+        details.help pre {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(0,0,0,.45);
+            border-radius: 6px;
+            white-space: pre-wrap;
+            color: var(--muted);
+            font-size: 0.78rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg"></div>
+    <div class="bg-mark"></div>
+    <div class="vignette"></div>
+
+    <div class="nav-back"><a href="/">← back</a></div>
+
+    <div class="page">
+        <section class="hero">
+            <div class="logo-mark" aria-hidden="true"></div>
+            <h1 class="slogan"><span class="accent-text">Shadow-Overlord</span></h1>
+            <p>EIP-191 wallet signature → 5-minute JWT for the mindX admin tier. One wallet. No password. No cookies. Your private key never leaves your device.</p>
+        </section>
+
+        <div class="container">
+            <div class="config-bar">
+                <label for="apiUrl">Backend API:</label>
+                <input type="text" id="apiUrl" value="" autocomplete="off" spellcheck="false">
+            </div>
+
+            <div style="text-align:center; margin-top: 12px;">
+                <button class="wallet-btn" id="walletBtn" onclick="connectWallet()">
+                    <span class="dot"></span>
+                    <span id="walletBtnLabel">Connect Wallet</span>
+                </button>
+                <div class="wallet-address" id="walletAddress"></div>
+            </div>
+
+            <div style="text-align:center; margin-top: 18px;">
+                <button class="signin-btn" id="signinBtn" onclick="signInAsShadowOverlord()" disabled>
+                    🗝️ Sign in as shadow-overlord
+                </button>
+            </div>
+
+            <div class="status" id="statusMsg"></div>
+
+            <div class="session hidden" id="session">
+                <h2 style="font-size:0.85rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px">Authenticated session</h2>
+                <div class="row"><span class="k">JWT (subject)</span><span class="v" id="sessSub">—</span></div>
+                <div class="row"><span class="k">Scope</span><span class="v" id="sessScope">—</span></div>
+                <div class="row"><span class="k">Expires in</span><span class="v countdown" id="sessExp">—</span></div>
+                <div class="row"><span class="k">Bearer token</span><span class="v" id="sessJwt" style="font-size:.72rem">—</span></div>
+                <button class="logout" onclick="logout()">Logout</button>
+            </div>
+
+            <details class="help">
+                <summary>What this does — and what it doesn't</summary>
+                <p>This page is the browser-side login for the shadow-overlord admin tier. It implements the public half of the challenge → signature → JWT flow defined in
+                <code>mindx_backend_service/bankon_vault/shadow_overlord.py</code>.</p>
+                <p style="margin-top:8px">It calls two endpoints on the configured backend:</p>
+                <pre>POST /admin/shadow/challenge   { "scope": "auth" }   → { nonce, message, expires_at }
+POST /admin/shadow/verify      { nonce, signature }   → { jwt, exp }</pre>
+                <p style="margin-top:8px">The JWT lives only in JavaScript memory (never <code>localStorage</code>) and expires in ≤5 min. Reauth = re-sign.</p>
+                <p style="margin-top:8px">Verifying the recovered signer happens server-side — you'll get a 403 if your wallet isn't <code>SHADOW_OVERLORD_ADDRESS</code>.</p>
+            </details>
+        </div>
+
+        <div class="ft">
+            <a href="/doc/BANKON_VAULT_HANDOFF">vault handoff guide</a> · <a href="/doc/operations/SHADOW_OVERLORD_GUIDE">shadow-overlord guide</a> · <a href="/">dashboard</a>
+        </div>
+    </div>
+
+    <script>
+    // ─── State ─────────────────────────────────────────────────────────
+    let walletConnected = false;
+    let connectedAddress = null;
+    let session = null;          // { jwt, exp, sub, scope } — in-memory only
+    let sessionTimer = null;
+
+    // Set a sensible default backend URL — same-origin first, common fallbacks otherwise.
+    (function setDefaultApiUrl() {
+        const here = window.location;
+        const apiInput = document.getElementById('apiUrl');
+        // Same-host on the canonical mindX domain ⇒ point at it.
+        if (here.host.endsWith('pythai.net')) {
+            apiInput.value = 'https://mindx.pythai.net';
+        } else if (here.host.includes('localhost') || here.host.startsWith('127.')) {
+            apiInput.value = 'http://localhost:8000';
+        } else {
+            apiInput.value = here.origin;
+        }
+    })();
+
+    function getApiUrl() {
+        return document.getElementById('apiUrl').value.trim().replace(/\/+$/, '');
+    }
+
+    function showStatus(kind, msg) {
+        const el = document.getElementById('statusMsg');
+        el.className = `status show ${kind}`;
+        el.textContent = msg;
+    }
+    function clearStatus() {
+        const el = document.getElementById('statusMsg');
+        el.className = 'status'; el.textContent = '';
+    }
+
+    // ─── EIP-6963 wallet detection (Chainlist pattern) ─────────────────
+    let detectedWallets = [];
+    let walletsReady = false;
+
+    function setupEIP6963WalletDetection() {
+        return new Promise((resolve) => {
+            function onAnnouncement(event) {
+                const { info, provider } = event.detail;
+                if (detectedWallets.some(w => w.uuid === info.uuid)) return;
+                detectedWallets.push({ name: info.name, provider, icon: info.icon, id: info.walletId, uuid: info.uuid });
+            }
+            window.addEventListener('eip6963:announceProvider', onAnnouncement);
+            window.dispatchEvent(new Event('eip6963:requestProvider'));
+            setTimeout(() => {
+                window.removeEventListener('eip6963:announceProvider', onAnnouncement);
+                const legacy = detectLegacyWallets();
+                for (const w of legacy) if (!detectedWallets.some(d => d.id === w.id)) detectedWallets.push(w);
+                walletsReady = true;
+                resolve(detectedWallets);
+            }, 800);
+        });
+    }
+
+    function detectLegacyWallets() {
+        const wallets = [];
+        // window.ethereum.providers[] first — accessing window.ethereum directly can throw on multi-wallet boxes
+        if (window.ethereum && Array.isArray(window.ethereum.providers)) {
+            window.ethereum.providers.forEach((p) => {
+                if (p.isMetaMask && !wallets.some(w => w.id === 'metamask'))
+                    wallets.push({ name: 'MetaMask', provider: p, icon: '🦊', id: 'metamask', uuid: 'metamask-from-providers' });
+                if (p.isCoinbaseWallet && !wallets.some(w => w.id === 'coinbase'))
+                    wallets.push({ name: 'Coinbase Wallet', provider: p, icon: '🔵', id: 'coinbase', uuid: 'coinbase-from-providers' });
+            });
+        }
+        if (!wallets.some(w => w.id === 'metamask') && window.ethereum && window.ethereum.isMetaMask)
+            wallets.push({ name: 'MetaMask', provider: window.ethereum, icon: '🦊', id: 'metamask', uuid: 'metamask-legacy' });
+        if (window.phantom && window.phantom.ethereum)
+            wallets.push({ name: 'Phantom', provider: window.phantom.ethereum, icon: '👻', id: 'phantom', uuid: 'phantom-legacy' });
+        if (!wallets.some(w => w.id === 'coinbase') && window.ethereum && window.ethereum.isCoinbaseWallet)
+            wallets.push({ name: 'Coinbase Wallet', provider: window.ethereum, icon: '🔵', id: 'coinbase', uuid: 'coinbase-legacy' });
+        if (wallets.length === 0 && window.ethereum)
+            wallets.push({ name: 'Ethereum Wallet', provider: window.ethereum, icon: '💎', id: 'ethereum', uuid: 'ethereum-legacy' });
+        return wallets;
+    }
+
+    async function detectWallets() {
+        if (!walletsReady) await setupEIP6963WalletDetection();
+        return detectedWallets;
+    }
+
+    function getWalletProvider() {
+        const pool = detectedWallets.length ? detectedWallets : detectLegacyWallets();
+        if (!pool.length) return null;
+        const mm = pool.find(w => w.id === 'metamask' || w.name === 'MetaMask');
+        return mm ? mm.provider : pool[0].provider;
+    }
+
+    // ─── Connect / Disconnect ──────────────────────────────────────────
+    async function connectWallet() {
+        const btn = document.getElementById('walletBtn');
+        const label = document.getElementById('walletBtnLabel');
+        if (walletConnected) { await disconnectWallet(); return; }
+
+        if (!walletsReady) await detectWallets();
+        const provider = getWalletProvider();
+        if (!provider) {
+            showStatus('error', 'MetaMask or a compatible EVM wallet is required. Install from https://metamask.io');
+            return;
+        }
+
+        try {
+            label.textContent = 'Connecting...';
+            const accounts = await provider.request({ method: 'eth_requestAccounts' });
+            if (accounts && accounts.length > 0) {
+                connectedAddress = accounts[0];
+                walletConnected = true;
+                btn.classList.add('connected');
+                const short = connectedAddress.slice(0, 6) + '...' + connectedAddress.slice(-4);
+                label.textContent = short;
+                document.getElementById('walletAddress').textContent = connectedAddress;
+                document.getElementById('signinBtn').disabled = false;
+                clearStatus();
+
+                try {
+                    provider.on('accountsChanged', (accts) => {
+                        if (!accts.length) disconnectWallet();
+                        else { connectedAddress = accts[0]; document.getElementById('walletAddress').textContent = connectedAddress; clearSession(); }
+                    });
+                } catch {}
+            }
+        } catch (err) {
+            label.textContent = 'Connect Wallet';
+            if (err && err.code === 4001) return; // user rejected
+            showStatus('error', 'Wallet connect failed: ' + (err?.message || err));
+        }
+    }
+
+    async function disconnectWallet() {
+        const provider = getWalletProvider();
+        if (provider) {
+            try { await provider.request({ method: 'wallet_revokePermissions', params: [{ eth_accounts: {} }] }); } catch {}
+            try { provider.removeAllListeners?.('accountsChanged'); } catch {}
+        }
+        walletConnected = false;
+        connectedAddress = null;
+        const btn = document.getElementById('walletBtn');
+        btn.classList.remove('connected');
+        document.getElementById('walletBtnLabel').textContent = 'Connect Wallet';
+        document.getElementById('walletAddress').textContent = '';
+        document.getElementById('signinBtn').disabled = true;
+        clearSession();
+        clearStatus();
+    }
+
+    // ─── Shadow-overlord login: challenge → personal_sign → verify ────
+    async function signInAsShadowOverlord() {
+        if (!walletConnected) { await connectWallet(); if (!walletConnected) return; }
+        clearStatus();
+        const signinBtn = document.getElementById('signinBtn');
+        signinBtn.disabled = true;
+        const original = signinBtn.innerHTML;
+
+        try {
+            // 1. Challenge
+            signinBtn.innerHTML = '⏳ Requesting challenge...';
+            const apiBase = getApiUrl();
+            const chResp = await fetch(`${apiBase}/admin/shadow/challenge`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ scope: 'auth' }),
+            });
+            if (!chResp.ok) {
+                const txt = await chResp.text();
+                throw new Error(`challenge ${chResp.status}: ${txt}`);
+            }
+            const challenge = await chResp.json();
+            console.log('challenge:', challenge);
+
+            // 2. Sign — EIP-191 personal_sign — the *exact* server-provided message bytes
+            signinBtn.innerHTML = '✍️ Sign in MetaMask...';
+            const provider = getWalletProvider();
+            const signature = await provider.request({
+                method: 'personal_sign',
+                params: [challenge.message, connectedAddress],
+            });
+
+            // 3. Verify
+            signinBtn.innerHTML = '🔐 Verifying...';
+            const verResp = await fetch(`${apiBase}/admin/shadow/verify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nonce: challenge.nonce, signature }),
+            });
+            if (!verResp.ok) {
+                const txt = await verResp.text();
+                let detail = txt;
+                try { detail = JSON.parse(txt).detail || txt; } catch {}
+                if (verResp.status === 403) {
+                    throw new Error(`Not shadow-overlord: ${detail}. Your wallet (${connectedAddress.slice(0,6)}…${connectedAddress.slice(-4)}) is not the configured SHADOW_OVERLORD_ADDRESS on this backend.`);
+                }
+                throw new Error(`verify ${verResp.status}: ${detail}`);
+            }
+            const out = await verResp.json();
+            startSession({ jwt: out.jwt, exp: out.exp, sub: connectedAddress, scope: 'auth' });
+            showStatus('ok', '✅ Signed in. JWT valid for ≤5 minutes — keep this tab open or re-sign to extend.');
+        } catch (err) {
+            console.error(err);
+            showStatus('error', err?.message || String(err));
+        } finally {
+            signinBtn.innerHTML = original;
+            signinBtn.disabled = !walletConnected;
+        }
+    }
+
+    // ─── Session display ───────────────────────────────────────────────
+    function startSession(s) {
+        session = s;
+        document.getElementById('session').classList.remove('hidden');
+        document.getElementById('sessSub').textContent = s.sub;
+        document.getElementById('sessScope').textContent = s.scope;
+        const jwtShort = s.jwt.slice(0, 24) + '…' + s.jwt.slice(-12);
+        const jwtEl = document.getElementById('sessJwt');
+        jwtEl.textContent = jwtShort;
+        jwtEl.title = 'Click to copy full JWT';
+        jwtEl.style.cursor = 'pointer';
+        jwtEl.onclick = async () => {
+            try { await navigator.clipboard.writeText(s.jwt); jwtEl.textContent = '✓ copied'; setTimeout(()=>{jwtEl.textContent = jwtShort;}, 1200); } catch {}
+        };
+        if (sessionTimer) clearInterval(sessionTimer);
+        const tick = () => {
+            const left = s.exp - Math.floor(Date.now()/1000);
+            if (left <= 0) {
+                document.getElementById('sessExp').textContent = 'EXPIRED — re-sign to renew';
+                document.getElementById('sessExp').style.color = '#fca5a5';
+                clearInterval(sessionTimer);
+                return;
+            }
+            const m = Math.floor(left/60), s2 = left%60;
+            document.getElementById('sessExp').textContent = `${m}:${String(s2).padStart(2,'0')}`;
+        };
+        tick();
+        sessionTimer = setInterval(tick, 1000);
+    }
+    function clearSession() {
+        session = null;
+        if (sessionTimer) { clearInterval(sessionTimer); sessionTimer = null; }
+        const el = document.getElementById('session');
+        el.classList.add('hidden');
+        ['sessSub','sessScope','sessExp','sessJwt'].forEach(id => document.getElementById(id).textContent = '—');
+    }
+    function logout() { clearSession(); clearStatus(); }
+
+    // ─── Bootstrap ─────────────────────────────────────────────────────
+    setupEIP6963WalletDetection();
+    </script>
+</body>
+</html>

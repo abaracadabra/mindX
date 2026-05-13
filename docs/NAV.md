@@ -207,6 +207,9 @@ Full list: [Agent Docs](agents/) (30 agent docs)
 - [Memory Analysis Tool](memory_analysis_tool.md) — Memory pattern analysis
 - [System Analyzer Tool](system_analyzer_tool.md) — System analysis with LLM insights
 
+**Tuning**
+- [Autotune Tool](../autotune/README.md) — Agnostic ahead-of-time tuner (AMD/ROCm · NVIDIA/CUDA · CPU). Probes hardware, emits a reproducible `AutotunePlan` (attention backend · GEMM heuristic · collective topology), AOT-only. Standalone package `autotune/`, tool `tools/autotune_tool.py`, CLI `python -m autotune bench`
+
 **Identity**
 - [Identity Sync Tool](identity_sync_tool.md) — Cryptographic identity management
 
@@ -400,6 +403,9 @@ mindX is a Godel machine — a self-improving system where the improvement mecha
 - [Thesis](THESIS.md) — [Darwin](ATTRIBUTION.md#intellectual-inspirations)-[Godel](ATTRIBUTION.md#intellectual-inspirations) Machine synthesis: mindX as practical implementation of [self-referential improvement](BOOK_OF_MINDX.md). The [BDI architecture](agents/bdi_agent.md) is the cognitive substrate, the [5-step resilience chain](ollama/INDEX.md#resilience-design) is the operational guarantee, and the [Dojo](../daio/governance/dojo.py) is the evolutionary pressure.
 - [Manifesto](MANIFESTO.md) — 3 pillars ([BDI reasoning](agents/bdi_agent.md), [BANKON vault](vault_system.md), [DAIO governance](DAIO.md)), Project [Chimaiera](ollama/setup/modelfile.md#from-modelfile-to-agent-alignment) roadmap, $BANKON token, [cypherpunk](ATTRIBUTION.md#intellectual-inspirations) tradition. Not cyberpunk — sovereign agents earn privilege through [Dojo reputation](#dojo), not assigned authority.
 - [Book of mindX](BOOK_OF_MINDX.md) — 17 chapters written by [AuthorAgent](AUTHOR_AGENT.md) via [machine.dreaming](#self-improvement). Lunar cycle editions. The [Godel journal](BOOK_OF_MINDX.md) — the machine's record of its own improvement.
+- [WordPress Publishing](WORDPRESS_PUBLISHING.md) — AuthorAgent → [wordpress-agent](../agents/wordpress.publish.agent) → rage.pythai.net. **Vault-backed, decrypt-on-demand**: WP API key + wordpress.agent wallet live in the isolated `wordpress.agent.keys` BANKON-vault namespace (never in any process env). Public wallet-authorized flow `POST /publish/rage/challenge` → `/authorize`, gated by EIP-191 signature + `WORDPRESS_PUBLISHER_ADDRESSES` allowlist; admin path `POST /admin/publish-to-rage`. Provisioning: `scripts/vault/provision_wordpress_agent.py`.
+- [How I Turn Logs Into Memory: RAGE + PostgreSQL](publications/rage_postgresql_memory_from_logs.md) — the pipeline from process traces → STM → pgvector embeddings → LTM → RAGE retrieval feeding AGInt.
+- [Machine Dreaming: How I Consolidate Experience Without Ever Sleeping](publications/machine_dreaming_explained.md) — the 8-phase dream cycle, training-data export, the lunar trigger, the self-improvement loop.
 - [Emergent Resilience](publications/ErmegentResilience.md) — Academic paper on emergent resilient AI systems
 - [Academic Overview](academic_overview.md) — Formal academic framing
 - [Attribution](ATTRIBUTION.md) — Open source that powers mindX: [Ollama](https://ollama.com), [vLLM](https://github.com/vllm-project/vllm), [SwarmClaw](https://github.com/swarmclawai), [pgvector](https://github.com/pgvector/pgvector), [A2A](https://github.com/a2aproject/a2a-python), [MCP](https://modelcontextprotocol.io/), and every dependency acknowledged

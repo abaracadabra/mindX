@@ -155,6 +155,9 @@ class AuthorAgent:
         self._editions_published: int = 0
         self._current_lunar_day: Optional[int] = None
         self._last_chapter_title: Optional[str] = None
+        # WordPress / rage.pythai.net publishing (via the loopback wordpress-agent)
+        self._rage_publishes: int = 0
+        self._last_rage_url: Optional[str] = None
 
     @classmethod
     async def get_instance(cls) -> "AuthorAgent":
@@ -181,6 +184,103 @@ class AuthorAgent:
             LUNAR_STATE_PATH.write_text(json.dumps(self._lunar_state, indent=2, default=str))
         except Exception as e:
             logger.warning(f"AuthorAgent: failed to save lunar state: {e}")
+
+    # ── External publishing: rage.pythai.net (WordPress) ──
+    #
+    # AuthorAgent is the canonical caller of the wordpress-agent service. That
+    # service is a thin, single-responsibility loopback adapter to the WordPress
+    # REST API (see agents/wordpress_agent/ and agents/wordpress.publish.agent).
+    # AuthorAgent writes and renders the article; the wordpress-agent puts it on
+    # the site. We never raise into the author loop — an unreachable service is
+    # logged and returns None.
+
+    @staticmethod
+    def _wordpress_agent_url() -> str:
+        import os
+        return os.environ.get("MINDX_WORDPRESS_AGENT_URL", "http://127.0.0.1:8765").rstrip("/")
+
+    async def publish_to_rage(
+        self,
+        title: str,
+        content_html: str,
+        *,
+        status: str = "draft",
+        excerpt: Optional[str] = None,
+        slug: Optional[str] = None,
+        tags: Optional[List[int]] = None,
+        categories: Optional[List[int]] = None,
+        featured_media: Optional[int] = None,
+        meta: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """POST a finished article to the loopback wordpress-agent (rage.pythai.net).
+
+        Returns the WordPress response dict ({post_id, url, status, slug, date_gmt})
+        or ``None`` if the wordpress-agent service is unreachable / errored. Never
+        raises. ``status='draft'`` (the default) stages the post for human review.
+        """
+        if not title or not title.strip():
+            logger.warning("AuthorAgent.publish_to_rage: empty title; refusing.")
+            return None
+        if not content_html or not content_html.strip():
+            logger.warning("AuthorAgent.publish_to_rage: empty content; refusing.")
+            return None
+
+        # Provenance: content hash, same scheme AuthorAgent uses for editions.
+        content_hash = hashlib.sha256(content_html.encode("utf-8")).hexdigest()[:16]
+        post_meta = {"_mindx_content_hash": content_hash}
+        if meta:
+            post_meta.update(meta)
+
+        payload: Dict[str, Any] = {
+            "title": title.strip(),
+            "content": content_html,
+            "status": status,
+            "meta": post_meta,
+        }
+        if excerpt:
+            payload["excerpt"] = excerpt
+        if slug:
+            payload["slug"] = slug
+        if tags:
+            payload["tags"] = tags
+        if categories:
+            payload["categories"] = categories
+        if featured_media is not None:
+            payload["featured_media"] = featured_media
+
+        url = f"{self._wordpress_agent_url()}/publish"
+        try:
+            import httpx  # local import: optional dep path, keep module import light
+        except ImportError:  # pragma: no cover
+            logger.warning("AuthorAgent.publish_to_rage: httpx unavailable.")
+            return None
+
+        last_err: Optional[Exception] = None
+        for attempt in range(2):  # one retry; the wordpress-agent itself also retries 5xx
+            try:
+                async with httpx.AsyncClient(timeout=20.0) as client:
+                    resp = await client.post(url, json=payload)
+                if resp.status_code >= 400:
+                    last_err = RuntimeError(f"wordpress-agent {resp.status_code}: {resp.text[:200]}")
+                    logger.warning(f"AuthorAgent.publish_to_rage: {last_err}")
+                    break  # 4xx/502 won't fix on retry here
+                data = resp.json()
+                self._rage_publishes += 1
+                self._last_rage_url = data.get("url")
+                logger.info(
+                    f"AuthorAgent.publish_to_rage: {status} → post_id={data.get('post_id')} url={data.get('url')}"
+                )
+                return data
+            except (httpx.TransportError, httpx.HTTPError) as e:
+                last_err = e
+                logger.warning(f"AuthorAgent.publish_to_rage: transport error (attempt {attempt + 1}): {e}")
+                await asyncio.sleep(0.5)
+            except Exception as e:  # pragma: no cover - defensive
+                last_err = e
+                logger.warning(f"AuthorAgent.publish_to_rage: unexpected error: {e}")
+                break
+        logger.warning(f"AuthorAgent.publish_to_rage: giving up — {last_err!r} (is the wordpress-agent service running?)")
+        return None
 
     # ── Improvement journal authorship ──
     #

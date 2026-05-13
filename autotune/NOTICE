@@ -1,0 +1,15 @@
+autotune — agnostic ahead-of-time tuner
+Copyright 2026 BANKON
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+This package was extracted and generalized from the mindXtrain project
+(https://github.com/Professor-Codephreak/mindXtrain), specifically the
+`mindxtrain/autotune/` package and the consumer-side helpers in
+`mindxtrain/train/sft.py` and `mindxtrain/train/axolotl_compile.py`. The
+original was MI300X / ROCm `gfx942`-only; this version carries a
+HardwareProfile and supports AMD/ROCm, NVIDIA/CUDA, and CPU.
