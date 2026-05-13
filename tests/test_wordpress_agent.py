@@ -30,6 +30,13 @@ def _isolate_env(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     monkeypatch.setenv("WP_APP_PASSWORD", "test-pass-1234-5678")
     monkeypatch.setenv("WP_RETRY_COUNT", "1")
     monkeypatch.setenv("WP_RETRY_BACKOFF", "0")
+    # Disable the mindX wallet-signature auth path for these tests —
+    # they exercise the BasicAuth fallback. The new mindx-publish-auth
+    # path is covered by tests/test_mindx_auth.py.
+    monkeypatch.setattr(
+        "agents.wordpress_agent.mindx_auth.sign_with_agent_wallet",
+        lambda _msg: None,
+    )
 
 
 @pytest.fixture
@@ -152,12 +159,31 @@ async def test_health_check_ok(httpx_mock, agent: WordpressAgent) -> None:
 
 
 # --- FastAPI server surface ------------------------------------------------
-def test_healthz_endpoint_responds(httpx_mock) -> None:
+def test_healthz_endpoint_responds(httpx_mock, _server_uses_env_credentials) -> None:
     httpx_mock.add_response(method="GET", url=f"{_BASE}/wp-json/wp/v2/users/me", status_code=200, json={"id": 1, "name": "codephreak"})
     with TestClient(app) as client:
         response = client.get("/healthz")
     assert response.status_code == 200
     assert response.json()["ok"] is True
+
+
+@pytest.fixture
+def _server_uses_env_credentials(monkeypatch):
+    """Force the FastAPI server's credential resolver to skip the vault
+    and pick up the env-var Settings the test fixture defines. The vault
+    on a developer box may contain real wordpress.agent entries (provisioned
+    during real publish work) — we don't want those to leak into the test."""
+    # Patch at both the source AND the server's import alias, since the
+    # server does `from .vault_creds import load_wp_settings_from_vault`
+    # and that binds a local name that won't see a patch at the source.
+    monkeypatch.setattr(
+        "agents.wordpress_agent.vault_creds.load_wp_settings_from_vault",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        "agents.wordpress_agent.server.load_wp_settings_from_vault",
+        lambda: None,
+    )
 
 
 def test_publish_endpoint_validates_payload() -> None:
@@ -166,7 +192,7 @@ def test_publish_endpoint_validates_payload() -> None:
     assert response.status_code == 422
 
 
-def test_publish_endpoint_success(httpx_mock) -> None:
+def test_publish_endpoint_success(httpx_mock, _server_uses_env_credentials) -> None:
     httpx_mock.add_response(method="GET", url=f"{_BASE}/wp-json/wp/v2/users/me", status_code=200, json={"id": 1, "name": "codephreak"})
     httpx_mock.add_response(
         method="POST",

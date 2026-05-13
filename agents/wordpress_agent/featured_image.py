@@ -21,6 +21,7 @@ existing assertions so nothing rotates by accident.
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -29,7 +30,26 @@ import httpx
 logger = logging.getLogger("wordpress_agent.featured_image")
 
 
-GFX_ROOT = Path("/home/hacker/mindX/gfx")
+def _default_gfx_root() -> Path:
+    """Resolve gfx/ relative to PROJECT_ROOT (works on laptop + VPS) with
+    an env-var override for unusual deployments."""
+    env = os.environ.get("MINDX_GFX_ROOT")
+    if env:
+        return Path(env)
+    try:
+        from utils.config import PROJECT_ROOT
+        return Path(PROJECT_ROOT) / "gfx"
+    except Exception:
+        # Last resort: walk up from this file looking for a `gfx/` dir.
+        here = Path(__file__).resolve()
+        for parent in here.parents:
+            candidate = parent / "gfx"
+            if candidate.is_dir():
+                return candidate
+        return Path.cwd() / "gfx"
+
+
+GFX_ROOT = _default_gfx_root()
 
 
 # Topic keywords (lowercased, substring-matched against title + tags) →

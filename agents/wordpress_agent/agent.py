@@ -67,20 +67,66 @@ class WordpressAgent:
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
+        # JWT auth via the mindx-publish-auth plugin (preferred path).
+        # Constructed lazily so test fixtures don't need vault access.
+        self._mindx_auth: Any = None
         self._client = self._build_client()
 
     def _build_client(self) -> httpx.AsyncClient:
         transport = httpx.AsyncHTTPTransport(retries=0)
         return httpx.AsyncClient(
             base_url=f"{self.settings.base_url_str}/wp-json/wp/v2",
-            auth=httpx.BasicAuth(
-                self.settings.user,
-                self.settings.app_password_value,
-            ),
+            # No default `auth=`; we add the right header per request in
+            # `_auth_headers` so the JWT path can take precedence over
+            # Basic Auth when the mindx-publish-auth plugin is installed.
             timeout=self.settings.timeout,
             headers={"User-Agent": self.settings.user_agent},
             transport=transport,
         )
+
+    def _get_mindx_auth_client(self):
+        """Lazy-construct the mindX-Auth client (which reads vault entries).
+
+        Returns ``None`` if the wordpress_agent.mindx_auth module is
+        missing or the vault entries aren't provisioned — caller falls
+        back to Basic Auth.
+        """
+        if self._mindx_auth is False:
+            return None
+        if self._mindx_auth is None:
+            try:
+                from .mindx_auth import MindXAuthClient
+                self._mindx_auth = MindXAuthClient(
+                    base_url=self.settings.base_url_str,
+                    user_agent=self.settings.user_agent,
+                )
+            except Exception:
+                self._mindx_auth = False
+                return None
+        return self._mindx_auth
+
+    async def _auth_headers(self) -> dict:
+        """Pick the best available auth header for the current request.
+
+        Order:
+          1. Bearer JWT from mindx-publish-auth (preferred — no password
+             on the wire)
+          2. HTTP Basic Auth via WordPress Application Password
+             (fallback — works when the plugin isn't installed)
+        """
+        client = self._get_mindx_auth_client()
+        if client is not None:
+            headers = await client.bearer_headers()
+            if headers:
+                return headers
+        # Basic-Auth fallback: build the header manually so we don't have
+        # to swap the AsyncClient's `auth=` attribute (which would not
+        # apply per-request anyway).
+        import base64
+        token = base64.b64encode(
+            f"{self.settings.user}:{self.settings.app_password_value}".encode("utf-8")
+        ).decode("ascii")
+        return {"Authorization": f"Basic {token}"}
 
     async def __aenter__(self) -> WordpressAgent:
         return self
@@ -97,7 +143,19 @@ class WordpressAgent:
         path: str,
         **kwargs: Any,
     ) -> httpx.Response:
-        """Send a request with exponential backoff on transient failures."""
+        """Send a request with exponential backoff on transient failures.
+
+        Per-request auth: we pick a header (JWT preferred, Basic Auth
+        fallback) and merge it into the request's headers. Callers that
+        supply their own ``Authorization`` header win.
+        """
+        auth_headers = await self._auth_headers()
+        if auth_headers:
+            req_headers = dict(kwargs.pop("headers", {}) or {})
+            for k, v in auth_headers.items():
+                req_headers.setdefault(k, v)
+            kwargs["headers"] = req_headers
+
         last_exc: Exception | None = None
         for attempt in range(self.settings.retry_count + 1):
             try:
