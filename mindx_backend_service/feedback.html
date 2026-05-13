@@ -583,6 +583,17 @@ tr:hover td{background:rgba(121,192,255,.02)}
       <div class="kvline"><span>archived</span><b>${n(c.archived_count)}</b></div>
       <div class="kvline"><span>duration</span><b>${(c.duration_seconds || 0).toFixed(2)}s</b></div>
     ` : `<div class="empty">no run yet — <code>python scripts/run_curator.py --apply</code></div>`;
+    const mf = d.manifest;
+    const manifestBlock = mf && !mf.error ? `
+      <div class="kvline"><span>built at</span><b>${mf.generated_at ? new Date(mf.generated_at*1000).toISOString().slice(0,19).replace("T"," ") : "—"}</b></div>
+      <div class="kvline"><span>version</span><b>${esc(mf.manifest_version || "—")}</b></div>
+      <div class="kvline"><span>skills</span><b>${n(mf.skill_count)}</b></div>
+      <div class="kvline"><span>sha256</span><b title="${esc(mf.sha256 || "")}">${esc((mf.sha256 || "—").slice(0,16))}…</b></div>
+      <div class="kvline"><span>0G root</span><b title="${esc(mf.zg_root || "")}">${mf.zg_root ? esc(mf.zg_root.slice(0,12)) + "…" : "<span class=\"muted\">not uploaded</span>"}</b></div>
+      <div class="kvline"><span>chain anchor</span><b><span class="muted">Phase B (deferred)</span></b></div>
+    ` : (mf && mf.error)
+        ? `<div class="empty">unavailable: ${esc(mf.error)}</div>`
+        : `<div class="empty">no manifest built yet — <code>python scripts/build_skill_manifest.py</code></div>`;
     return `
       <div class="grid3">
         <div class="kvcol">
@@ -606,6 +617,22 @@ tr:hover td{background:rgba(121,192,255,.02)}
         <div class="kvcol">
           <div class="kvtitle">curator (last run)</div>
           ${curatorBlock}
+        </div>
+      </div>
+      <div class="grid2" style="margin-top:14px">
+        <div class="kvcol">
+          <div class="kvtitle">content-addressable manifest <span class="muted" style="font-size:.65rem">(0G Storage)</span></div>
+          ${manifestBlock}
+        </div>
+        <div class="kvcol">
+          <div class="kvtitle">how this composes</div>
+          <div class="kvline" style="font-size:.78rem;color:rgba(255,255,255,.7);line-height:1.45">
+            Every SKILL.md sha256 + name lives in a deterministic JSON manifest.
+            Uploading the manifest to <b>0G Storage</b> yields a merkle root —
+            anyone holding that root can fetch and verify the exact bytes.
+            The next phase anchors the root on 0G Chain via a <code>SkillRegistry</code>
+            contract so the registry chain is auditable end-to-end.
+          </div>
         </div>
       </div>
       ${catRows ? `<table class="tbl"><thead><tr><th>category</th><th class="num">count</th></tr></thead><tbody>${catRows}</tbody></table>` : ""}

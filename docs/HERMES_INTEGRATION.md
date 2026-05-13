@@ -204,7 +204,7 @@ Tests (`tests/test_taskboard.py`, 14 pass):
   contradicting claim; condition syntax handles `belief.x=true` / `x=true`
   / bare `x`; stats counts.
 
-**Loop closure inventory after Day-7:**
+**Loop closure inventory after Day-8:**
 
 ```
 Day-1: SKILL.md substrate + scanner + store      (the gate)
@@ -215,10 +215,83 @@ Day-5: BDI hot-path hookup at COMPLETED_GOAL     (the loop closure)
 Day-6: TaskBoard + hallucination gate            (the multi-worker substrate)
 Day-7: /feedback.html skills + mastermind panels (the operator surface)
        + mindx-curator.{service,timer} systemd   (the weekly cadence)
+Day-8: content-addressable SkillManifest         (the registry, Phase A)
+       + 0G Storage upload + dashboard card      (chain anchor deferred)
 ```
 
-Project-wide skill-substrate suite: **73 tests pass.** (Day-6: 69 → Day-7
-adds 4 shim smoke tests.)
+Project-wide skill-substrate suite: **91 tests pass.** (Day-7: 73 → Day-8
+adds 18 manifest tests.)
+
+## Day-8 — content-addressable SkillManifest (shipped 2026-05-13)
+
+`agents/skills/manifest.py` turns the SkillStore into a deterministic,
+verifiable registry. Each SKILL.md is content-addressable as a file
+(sha256 over UTF-8 bytes); the manifest is the canonical roll-up: every
+active skill keyed by `<category>/<slug>`, with sha256, size, scanner
+verdict, `created_by`, and `pinned`. Byte-stable canonical JSON encoding
+(sorted keys, no whitespace) → byte-stable manifest sha256 →
+deterministic 0G Storage merkle root.
+
+**`build_manifest(store)`** walks the store, computes sha256s, returns
+a `SkillManifest`. Archived skills are excluded by the SkillStore's
+`list()` already; `include_pinned=False` adds an extra filter.
+
+**`manifest.canonical_bytes()`** is the byte-stable encoding —
+`json.dumps(..., sort_keys=True, separators=(",", ":"))`. Same store
+contents → same bytes → same sha256. This is the registry's whole
+point: anyone can replay `build_manifest` against an identical
+SkillStore and reach the same root, without coordination.
+
+**`upload_manifest(manifest, provider=ZeroGProvider())`** ships the
+canonical bytes to 0G Storage via the existing Node sidecar
+(`openagents/sidecar`) — same path the iNFT demo and storage offload
+already use. Returns the 0G merkle root (`0x` + 64 hex chars) as a
+string. Optional — without a provider it's a no-op returning `None`.
+
+**`verify_skill(manifest, category, slug, store)`** re-sha256s the
+on-disk SKILL.md against the manifest entry. Detects local tampering,
+partial writes, and "file missing on disk". `verify_all(manifest, store)`
+runs it against every entry.
+
+**`persist(manifest, dest, zg_root)`** writes the canonical JSON to
+disk plus a sidecar `<dest>.meta.json` with `{sha256, size_bytes,
+zg_root, previous_manifest_root, generated_at, ...}`. The `/insight`
+endpoint reads only the sidecar so it doesn't have to parse the full
+manifest.
+
+**`anchor_manifest(root)`** — Phase B stub. Today returns
+`("not_anchored", None)`. Will be filled in when the `SkillRegistry`
+contract is deployed on 0G Chain. Same staging pattern as
+`agents/storage/anchor.py:anchor_thot` per CLAUDE.md.
+
+**`scripts/build_skill_manifest.py`** — operator-facing CLI shim:
+build + persist by default; `--upload` ships to 0G Storage;
+`--verify CATEGORY/SLUG` re-sha256s a specific skill against the
+latest persisted manifest and exits 1 on mismatch.
+
+**`GET /insight/skills`** now includes a `manifest:` block when one
+has been persisted: `{manifest_version, generated_at, skill_count,
+sha256, size_bytes, zg_root, previous_manifest_root, manifest_path}`.
+
+**`/feedback.html` skills tab** gets a new "content-addressable
+manifest" card next to a "how this composes" explainer pointing at the
+0G Storage → 0G Chain pipeline. Shows manifest sha256 (truncated),
+0G root (truncated, hover for full), and a muted "Phase B (deferred)"
+for the chain anchor.
+
+Tests: `tests/test_skill_manifest.py` (18 tests). Empty-store
+determinism; two stores with byte-identical SKILL.md → byte-identical
+manifest sha256; sha256 changes when a body changes by one character;
+verify detects tampering / missing files / unknown skills;
+`upload_manifest` returns None without a provider; mocked provider
+records the canonical bytes it received; persist round-trips through
+load_meta; `anchor_manifest` is a stub returning `not_anchored`.
+
+Phase B (deferred): a tiny `SkillRegistry.sol` contract on 0G Chain
+exposing `registerManifest(bytes32 root, uint64 skill_count, uint32
+version)` plus a `latestManifest()` view. Mirrors `DatasetRegistry`
+from the storage-offload work. One transaction per manifest revision
+— not per skill — so cost is bounded regardless of substrate size.
 
 ## Day-7 — operator surface + weekly cadence (shipped 2026-05-13)
 

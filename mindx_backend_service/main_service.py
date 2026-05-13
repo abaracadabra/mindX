@@ -2298,6 +2298,27 @@ async def insight_skills():
     except Exception as e:
         out["curator"] = {"error": str(e)}
 
+    # Most recent SkillManifest sidecar, if any. Phase A — content-addressable
+    # registry with 0G Storage upload; Phase B (chain anchor) still stubbed.
+    try:
+        from agents.skills.manifest import load_meta as _load_manifest_meta
+        meta = _load_manifest_meta()
+        if meta is not None:
+            out["manifest"] = {
+                "manifest_version": meta.get("manifest_version"),
+                "generated_at": meta.get("generated_at"),
+                "skill_count": meta.get("skill_count"),
+                "sha256": meta.get("sha256"),
+                "size_bytes": meta.get("size_bytes"),
+                "zg_root": meta.get("zg_root"),
+                "previous_manifest_root": meta.get("previous_manifest_root"),
+                "manifest_path": meta.get("manifest_path"),
+            }
+        else:
+            out["manifest"] = None
+    except Exception as e:
+        out["manifest"] = {"error": str(e)}
+
     return out
 
 

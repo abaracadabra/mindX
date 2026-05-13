@@ -58,6 +58,20 @@ from agents.skills.distill import (
     DistillationResult,
     distill_from_intention,
 )
+from agents.skills.manifest import (
+    DEFAULT_MANIFEST_PATH,
+    MANIFEST_VERSION,
+    ManifestEntry,
+    SkillManifest,
+    VerificationResult,
+    anchor_manifest,
+    build_manifest,
+    load_meta,
+    persist,
+    upload_manifest,
+    verify_all,
+    verify_skill,
+)
 
 # Hybrid 70/30 BM25 + vector retrieval lives in `index`. Lazy import — the
 # rest of the module is useable even if sqlite3 / httpx are missing.
@@ -95,4 +109,16 @@ __all__ = [
     "DistillationResult",
     "DEFAULT_MIN_STEPS",
     "DEFAULT_MIN_UNIQUE_TOOLS",
+    "DEFAULT_MANIFEST_PATH",
+    "MANIFEST_VERSION",
+    "ManifestEntry",
+    "SkillManifest",
+    "VerificationResult",
+    "anchor_manifest",
+    "build_manifest",
+    "load_meta",
+    "persist",
+    "upload_manifest",
+    "verify_all",
+    "verify_skill",
 ]
