@@ -211,12 +211,39 @@ class AuthorAgent:
         categories: Optional[List[int]] = None,
         featured_media: Optional[int] = None,
         meta: Optional[Dict[str, Any]] = None,
+        # ── SEO maximization ───────────────────────────────────────
+        # Merged into the WordPress ``meta`` dict using the namespaced
+        # keys rendered by the wp_head hook in HOSTINGER_SETUP.md §7.
+        seo_description: Optional[str] = None,
+        seo_keywords: Optional[List[str]] = None,
+        og_title: Optional[str] = None,
+        og_description: Optional[str] = None,
+        og_image_url: Optional[str] = None,
+        twitter_card: str = "summary_large_image",
+        twitter_creator: Optional[str] = "@mindX_ai",
+        schema_article: Optional[Dict[str, Any]] = None,
+        # ── Featured image automation ─────────────────────────────
+        # If ``featured_media`` is None and ``auto_featured_image`` is
+        # True, FeaturedImagePicker chooses an asset from /gfx/ based on
+        # title+tags+topic, uploads it via wordpress-agent /media, and
+        # uses the returned id. Upload failure is non-fatal — publish
+        # proceeds without a featured image (logged warning).
+        auto_featured_image: bool = True,
+        topic: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """POST a finished article to the loopback wordpress-agent (rage.pythai.net).
 
         Returns the WordPress response dict ({post_id, url, status, slug, date_gmt})
         or ``None`` if the wordpress-agent service is unreachable / errored. Never
         raises. ``status='draft'`` (the default) stages the post for human review.
+
+        SEO metadata is merged into the WordPress ``meta`` dict using the
+        plugin-less namespace (``_seo_*``, ``_og_*``, ``_twitter_*``,
+        ``_schema_article_json``). The active theme on rage.pythai.net
+        reads these keys in a ``wp_head`` hook (see
+        ``agents/wordpress_agent/docs/HOSTINGER_SETUP.md`` §7) and emits
+        the ``<meta>`` + JSON-LD tags. Yoast/Rank Math compatibility can
+        be added later by aliasing the keys.
         """
         if not title or not title.strip():
             logger.warning("AuthorAgent.publish_to_rage: empty title; refusing.")
@@ -227,9 +254,34 @@ class AuthorAgent:
 
         # Provenance: content hash, same scheme AuthorAgent uses for editions.
         content_hash = hashlib.sha256(content_html.encode("utf-8")).hexdigest()[:16]
-        post_meta = {"_mindx_content_hash": content_hash}
+        post_meta: Dict[str, Any] = {"_mindx_content_hash": content_hash}
         if meta:
             post_meta.update(meta)
+
+        # ── Featured image (auto-pick if not supplied) ────────────
+        if featured_media is None and auto_featured_image:
+            featured_media, og_image_url = await self._auto_featured_image(
+                title=title.strip(),
+                tags=[str(t) for t in (tags or [])],
+                topic=topic,
+                existing_og_image_url=og_image_url,
+            )
+
+        # ── SEO meta merge ────────────────────────────────────────
+        post_meta.update(
+            self._build_seo_meta(
+                title=title.strip(),
+                excerpt=excerpt,
+                seo_description=seo_description,
+                seo_keywords=seo_keywords,
+                og_title=og_title,
+                og_description=og_description,
+                og_image_url=og_image_url,
+                twitter_card=twitter_card,
+                twitter_creator=twitter_creator,
+                schema_article=schema_article,
+            )
+        )
 
         payload: Dict[str, Any] = {
             "title": title.strip(),
@@ -281,6 +333,131 @@ class AuthorAgent:
                 break
         logger.warning(f"AuthorAgent.publish_to_rage: giving up — {last_err!r} (is the wordpress-agent service running?)")
         return None
+
+    # ── SEO + featured-image helpers (used by publish_to_rage) ─────
+
+    @staticmethod
+    def _build_seo_meta(
+        *,
+        title: str,
+        excerpt: Optional[str],
+        seo_description: Optional[str],
+        seo_keywords: Optional[List[str]],
+        og_title: Optional[str],
+        og_description: Optional[str],
+        og_image_url: Optional[str],
+        twitter_card: str,
+        twitter_creator: Optional[str],
+        schema_article: Optional[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """Compose the namespaced SEO meta dict the wp_head hook renders.
+
+        All keys are strings (WordPress meta stores everything as strings;
+        the hook ``esc_attr``s on render). Missing inputs default
+        conservatively — never emit empty meta tags."""
+        meta: Dict[str, Any] = {}
+
+        desc = (seo_description or excerpt or "").strip()
+        if desc:
+            # SERP snippet length cap. 160 chars is the Google guideline.
+            meta["_seo_description"] = desc[:160]
+
+        if seo_keywords:
+            meta["_seo_keywords"] = ", ".join(
+                k.strip() for k in seo_keywords if k and k.strip()
+            )
+
+        meta["_og_title"] = (og_title or title).strip()
+        if og_description or desc:
+            meta["_og_description"] = (og_description or desc).strip()[:160]
+        if og_image_url:
+            meta["_og_image_url"] = og_image_url
+
+        if twitter_card:
+            meta["_twitter_card"] = twitter_card
+        if twitter_creator:
+            meta["_twitter_creator"] = twitter_creator
+
+        # schema.org Article JSON-LD. Default constructed from the other
+        # fields; explicit ``schema_article`` overrides.
+        if schema_article is None:
+            schema_article = {
+                "@context": "https://schema.org",
+                "@type": "Article",
+                "headline": title.strip(),
+                "datePublished": datetime.now(timezone.utc).isoformat(),
+                "author": {
+                    "@type": "Organization",
+                    "name": "mindX",
+                    "url": "https://mindx.pythai.net",
+                },
+                "publisher": {
+                    "@type": "Organization",
+                    "name": "rage.pythai.net",
+                },
+            }
+            if desc:
+                schema_article["description"] = desc[:300]
+            if og_image_url:
+                schema_article["image"] = og_image_url
+        meta["_schema_article_json"] = json.dumps(
+            schema_article, separators=(",", ":"), ensure_ascii=False
+        )
+        return meta
+
+    async def _auto_featured_image(
+        self,
+        *,
+        title: str,
+        tags: List[str],
+        topic: Optional[str],
+        existing_og_image_url: Optional[str],
+    ) -> tuple[Optional[int], Optional[str]]:
+        """Pick a /gfx/ asset, upload via wordpress-agent /media, return
+        (media_id, og_image_url). On any failure returns (None, existing).
+
+        Both return slots are best-effort; the calling publish proceeds
+        either way."""
+        try:
+            from agents.wordpress_agent.featured_image import (
+                FeaturedImagePicker,
+                attach_featured_image,
+            )
+        except Exception as e:  # pragma: no cover — defensive
+            logger.warning(f"AuthorAgent: featured_image helpers unavailable: {e}")
+            return None, existing_og_image_url
+
+        try:
+            image_path = FeaturedImagePicker().pick(
+                title=title, tags=tags, topic=topic
+            )
+        except Exception as e:  # pragma: no cover — picker never raises in practice
+            logger.warning(f"AuthorAgent: pick failed: {e}")
+            return None, existing_og_image_url
+
+        alt = title[:120] if title else image_path.stem
+        try:
+            media_id = await attach_featured_image(
+                self._wordpress_agent_url(),
+                image_path,
+                alt_text=alt,
+                caption=title[:200] if title else None,
+                title=image_path.stem,
+            )
+        except Exception as e:  # pragma: no cover — attach is itself defensive
+            logger.warning(f"AuthorAgent: featured-image upload failed: {e}")
+            return None, existing_og_image_url
+
+        if media_id is None:
+            return None, existing_og_image_url
+
+        # Best-effort og_image_url: WordPress returns the URL alongside
+        # the id, but the wordpress-agent /media wrapper currently only
+        # surfaces the id. We pass existing_og_image_url through unchanged
+        # — the og:image tag remains valid if the caller already supplied one,
+        # otherwise the rendered post relies on featured_media to populate
+        # og:image via the theme.
+        return media_id, existing_og_image_url
 
     # ── Improvement journal authorship ──
     #

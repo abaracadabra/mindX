@@ -6024,6 +6024,27 @@ async def startup_event():
         asyncio.create_task(_periodic_health_audit())
         asyncio.create_task(_start_mastermind_loop())
 
+        # Publication orchestrator — improvement-event-driven publishing
+        # to rage.pythai.net. Watches SEA campaign SUCCESS + full-moon
+        # dream cycles; debounced 30 min ± 40 % jitter; 6 h hard rate
+        # limit; persistent ledger at data/governance/published_triggers.json.
+        # See agents/publication_orchestrator.py + docs/publications/README.md
+        # for the contract. Defensive — failures inside the watchers are
+        # logged and the loop continues.
+        try:
+            from agents.publication_orchestrator import PublicationOrchestrator
+            _pub_orchestrator = PublicationOrchestrator(author_agent=author)
+            asyncio.create_task(_pub_orchestrator.watch_sea())
+            asyncio.create_task(_pub_orchestrator.watch_dreams())
+            logger.info(
+                "PublicationOrchestrator started "
+                "(watching SEA campaign history + full-moon dreams)"
+            )
+        except Exception as pub_err:
+            logger.warning(
+                f"PublicationOrchestrator failed to start: {pub_err}"
+            )
+
         # Insight aggregator: per-agent fitness + system improvement metrics.
         # Plan: /home/hacker/.claude/plans/glimmering-growing-scroll.md §"mindX Diagnostics"
         try:

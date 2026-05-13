@@ -365,6 +365,67 @@ Scheduled and event-driven publishing are handled by AuthorAgent and
 WordPress's own cron, not by this tool. WordPress.agent is intentionally
 stateless.
 
+### SEO maximization (v0.4+)
+
+`AuthorAgent.publish_to_rage()` accepts SEO kwargs that get merged into
+the `meta` dict using a plugin-less namespace:
+
+| AuthorAgent kwarg | meta key | Renders as |
+|---|---|---|
+| `seo_description` | `_seo_description` | `<meta name="description">` |
+| `seo_keywords` (list) | `_seo_keywords` (joined) | `<meta name="keywords">` |
+| `og_title` (defaults to `title`) | `_og_title` | `<meta property="og:title">` |
+| `og_description` (defaults to excerpt) | `_og_description` | `<meta property="og:description">` |
+| `og_image_url` | `_og_image_url` | `<meta property="og:image">` |
+| `twitter_card` (default `summary_large_image`) | `_twitter_card` | `<meta name="twitter:card">` |
+| `twitter_creator` (default `@mindX_ai`) | `_twitter_creator` | `<meta name="twitter:creator">` |
+| `schema_article` (dict, auto-built if None) | `_schema_article_json` | `<script type="application/ld+json">` |
+
+The renderer is a PHP `wp_head` hook documented in
+[`docs/HOSTINGER_SETUP.md`](docs/HOSTINGER_SETUP.md) §9. No Yoast,
+no Rank Math — the wp.agent stays plugin-agnostic.
+
+If `seo_description` is omitted, the excerpt is reused (truncated to
+160 chars for SERP). If `schema_article` is omitted, a sensible default
+Article schema is constructed from title, description, og_image_url,
+and the publication time.
+
+### Featured-image rotation (v0.4+)
+
+`AuthorAgent.publish_to_rage()` now picks a featured image automatically
+when the caller doesn't supply `featured_media`. The picker
+(`agents/wordpress_agent/featured_image.py`) maps article topics to
+assets under `/home/hacker/mindX/gfx/`:
+
+- *competition / competitive / boardroom / council* → `war_council_*.png`
+- *AgenticPlace / marketplace / distribution* → `AgenticPlace*.png`, `mysticalmarketplace.webp`
+- *BANKON / vault / identity / bona fide* → `bankonvault.png`, `BONAFIDE.png`
+- *OpenClaw / Hermes / swarmclaw / peers* → `sevensoldiers.png`
+- *THOT / iNFT / Merkle / Matryoshka* → `THOTH.png`
+- *self-healing / machine dreaming / skill / dojo* → `doorway*.webp`, `mysticalmarketplace.webp`, `war_council_green.png`
+- *anything else* → `doorway1.webp`
+
+Pass `auto_featured_image=False` to opt out. Pass `topic="bankon"`
+(or any curated keyword) to force a specific pick.
+
+### Improvement-event publishing (v0.4+)
+
+`agents/publication_orchestrator.py` watches the SEA campaign history
+and the dream-cycle reports. When either fires a *real* improvement
+signal (SEA `SUCCESS` or `book_edition_triggered=true` on a full/new
+moon), it schedules a publish through AuthorAgent with:
+
+- 30-min base delay ± 40 % jitter (so two adjacent successes don't land
+  at the same wall-clock minute);
+- 6-hour hard rate limit (`MIN_GAP_S` — bursty events coalesce);
+- idempotent via `data/governance/published_triggers.json` (no duplicate
+  publishes, even across mindX restarts);
+- always `status="draft"` so an operator reviews on rage.pythai.net
+  before any reader sees it.
+
+This is the "regular but not predictable" loop: mindX publishes when
+the system improves, not when the clock says to.
+
 ## Hostinger-specific setup
 
 The `rage.pythai.net` site runs on Hostinger's managed PHP/Apache stack.
