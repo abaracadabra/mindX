@@ -87,7 +87,7 @@
     "confidence": 0.95,
     "source": "self_analysis",
     "timestamp": 1776022239.3365555,
-    "last_updated": 1778689749.3552392
+    "last_updated": 1778690191.740557
   },
   "identity.map.entity_to_address.smoke_test_entity_1": {
     "value": "0x5eCdc30df01030Aee83BF339617f5809bE26C8d9",
@@ -161,7 +161,7 @@
   },
   "evolution.blueprint_conversion.latest": {
     "value": {
-      "timestamp": 1778689323.505798,
+      "timestamp": 1778689853.215841,
       "blueprint_title": "Structural Blueprint (skeleton from improvement backlog)",
       "blueprint_version": "0.0.1",
       "actions_count": 3,
@@ -178,11 +178,11 @@
         "CHECK_METRICS",
         "CREATE_ROLLBACK_PLAN"
       ],
-      "conversion_id": "24975e7f-3bfb-4e7f-89e7-c1898371caf3"
+      "conversion_id": "075bd2db-15b9-4fa1-a2ec-ff92effe5156"
     },
     "confidence": 0.9,
     "source": "self_analysis",
     "timestamp": 1778665500.0558453,
-    "last_updated": 1778689323.651538
+    "last_updated": 1778689853.3670666
   }
 }
