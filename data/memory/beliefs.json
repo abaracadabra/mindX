@@ -43,63 +43,64 @@
   },
   "mindx.evolution.blueprint.latest": {
     "value": {
-      "blueprint_title": "Resilient Perpetual Evolution v0.5",
-      "target_mindx_version_increment": "0.5.0",
+      "blueprint_title": "Resilient Perpetual Evolution v0.5.0",
+      "target_mindx_version_increment": "0.1.0",
       "focus_areas": [
-        "Resilient LLM Provider Orchestration",
-        "Robust Input Validation & Security",
-        "Self-Improvement Loop Automation",
-        "Long-Term Knowledge Persistence",
-        "Observability & Adaptive Governance"
+        "Provider Resilience & Fallback",
+        "Input Validation & Security",
+        "Automated Improvement Loop",
+        "Knowledge Persistence & Versioning",
+        "Observability & Self-Healing",
+        "Resource Efficiency & Scalability"
       ],
       "bdi_todo_list": [
         {
-          "goal_description": "Implement dynamic fallback provider selection with health checks",
+          "goal_description": "Implement dynamic provider health monitoring with automatic failover to secondary LLMs",
           "priority": 9
         },
         {
-          "goal_description": "Deploy comprehensive input validation middleware for all API endpoints",
+          "goal_description": "Deploy comprehensive schema-based validation for all inbound API requests and internal messages",
           "priority": 9
         },
         {
-          "goal_description": "Create automated backlog grooming agent that prioritizes items based on impact and effort",
+          "goal_description": "Create a self\u2011triggered improvement pipeline that pulls high\u2011priority backlog items, tests them in sandbox, and merges on success",
           "priority": 8
         },
         {
-          "goal_description": "Design and integrate a persistent memory store (vector DB) for agent experiences and learned patterns",
+          "goal_description": "Design a persistent knowledge store (versioned beliefs, experiences, and model performance) to enable perpetuity across restarts",
+          "priority": 7
+        },
+        {
+          "goal_description": "Add distributed tracing, metrics, and automated remediation actions (e.g., restart, scale) for core services",
           "priority": 8
         },
         {
-          "goal_description": "Establish real-time monitoring dashboard with alerts for latency, error rates, and provider health",
-          "priority": 7
-        },
-        {
-          "goal_description": "Develop a self\u2011audit mechanism that validates belief consistency and triggers revision cycles",
-          "priority": 7
+          "goal_description": "Optimize model loading and inference caching to reduce latency and resource usage while maintaining availability",
+          "priority": 6
         }
       ],
       "key_performance_indicators": {
-        "mean_time_to_recovery_mttr": "<5 min",
-        "system_uptime_percentage": ">=99.9%",
-        "backlog_reduction_rate_per_week": ">=10%",
-        "average_inference_latency_ms": "<200ms",
-        "self_improvement_cycle_time_hours": "<24",
-        "validation_error_rate": "<0.1%"
+        "mean_time_to_recovery_seconds": 30,
+        "provider_switch_latency_ms": 200,
+        "validation_error_rate_percent": 0.1,
+        "improvement_throughput_items_per_day": 15,
+        "system_uptime_percent": 99.9,
+        "average_inference_latency_ms": 500
       },
       "potential_risks": [
-        "Dependency on external LLM APIs causing latency or cost spikes",
-        "Model drift or degradation affecting decision quality",
-        "Increased complexity leading to harder debugging",
-        "Security vulnerabilities from input validation gaps",
-        "Resource exhaustion due to uncontrolled self\u2011improvement loops",
-        "Data privacy concerns with persistent memory storage"
+        "Over\u2011dependence on external API keys leading to service disruption",
+        "Model drift or degradation causing inaccurate outputs",
+        "Increased complexity introducing new failure points",
+        "Security vulnerabilities from insufficient input validation",
+        "Resource exhaustion due to uncontrolled model scaling",
+        "Knowledge store corruption affecting perpetuity"
       ],
       "source": "llm_enriched"
     },
     "confidence": 0.95,
     "source": "self_analysis",
     "timestamp": 1776022239.3365555,
-    "last_updated": 1778721466.166275
+    "last_updated": 1778722107.2690804
   },
   "identity.map.entity_to_address.smoke_test_entity_1": {
     "value": "0x5eCdc30df01030Aee83BF339617f5809bE26C8d9",
