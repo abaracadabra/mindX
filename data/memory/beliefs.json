@@ -43,62 +43,51 @@
   },
   "mindx.evolution.blueprint.latest": {
     "value": {
-      "blueprint_title": "Resilient & Perpetual MindX Evolution v0.5",
-      "target_mindx_version_increment": "0.5.0",
+      "blueprint_title": "Structural Blueprint (skeleton from improvement backlog)",
+      "target_mindx_version_increment": "0.0.1",
       "focus_areas": [
-        "Fault Tolerance & Fallback Mechanisms",
-        "Comprehensive Input Validation & Security",
-        "Self-Healing & Autonomous Recovery",
-        "Model Diversity & Perpetual Knowledge Retention",
-        "Observability, Metrics & Adaptive Governance"
+        "system"
       ],
       "bdi_todo_list": [
         {
-          "goal_description": "Design and implement a dynamic fallback provider selection algorithm that ranks providers by health, latency, and cost, with automatic switch\u2011over on failure",
-          "priority": 9
+          "goal_description": "Install Ollama and pull required models for local AI inference",
+          "priority": 8,
+          "target_component": "system"
         },
         {
-          "goal_description": "Add schema\u2011based validation and sanitization for all inbound API requests, including rate\u2011limiting and injection protection",
-          "priority": 9
+          "goal_description": "Implement fallback provider selection when primary LLM fails",
+          "priority": 7,
+          "target_component": "system"
         },
         {
-          "goal_description": "Create a self\u2011diagnostic health\u2011check service that can restart failed components, clear stale states, and trigger model re\u2011loads without manual intervention",
-          "priority": 8
+          "goal_description": "Implement comprehensive input validation for API requests",
+          "priority": 9,
+          "target_component": "system"
         },
         {
-          "goal_description": "Implement a model\u2011registry with version pinning, automated pull\u2011testing, and rollback capability to ensure perpetual availability of working models",
-          "priority": 7
+          "goal_description": "Add output validation checks to ensure expected formats and data types",
+          "priority": 8,
+          "target_component": "system"
         },
         {
-          "goal_description": "Deploy centralized logging, tracing, and alerting (Prometheus/Grafana) with SLA\u2011based KPIs and automated anomaly detection",
-          "priority": 7
-        },
-        {
-          "goal_description": "Introduce chaos\u2011testing harness to periodically inject faults and validate resilience mechanisms",
-          "priority": 6
+          "goal_description": "Enhance model input validation with specific checks for LLM providers",
+          "priority": 7,
+          "target_component": "system"
         }
       ],
-      "key_performance_indicators": {
-        "mean_time_to_recovery_seconds": 15,
-        "fallback_success_rate_percent": 99.5,
-        "validation_error_rate_percent": 0.1,
-        "system_uptime_percent": 99.9,
-        "average_model_latency_ms": 250,
-        "backlog_growth_rate_items_per_day": 5
-      },
-      "potential_risks": [
-        "Over\u2011dependence on a single external API provider leading to cascading failures",
-        "Model drift or degradation causing reduced answer quality",
-        "Security vulnerabilities introduced by overly permissive validation schemas",
-        "Resource exhaustion due to uncontrolled fallback retries or model loading",
-        "Configuration drift across environments causing inconsistent behavior"
+      "key_performance_indicators": [
+        "Improvement cycle completion rate",
+        "Agent health score"
       ],
-      "source": "llm_enriched"
+      "potential_risks": [
+        "Skeleton requires LLM enrichment for strategic depth"
+      ],
+      "source": "skeleton"
     },
     "confidence": 0.95,
     "source": "self_analysis",
     "timestamp": 1776022239.3365555,
-    "last_updated": 1778735852.3331885
+    "last_updated": 1778736531.1520078
   },
   "identity.map.entity_to_address.smoke_test_entity_1": {
     "value": "0x5eCdc30df01030Aee83BF339617f5809bE26C8d9",
