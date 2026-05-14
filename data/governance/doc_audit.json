@@ -1,19 +1,19 @@
 {
-  "timestamp": 1778692921.0240288,
-  "total_docs": 228,
+  "timestamp": 1778726766.975085,
+  "total_docs": 229,
   "archived": 6,
   "deprecated": 1,
   "recently_modified": [
     "AUTHOR_AGENT",
     "BANKON_VAULT",
     "BANKON_VAULT_HANDOFF",
+    "BEST_PRACTICES",
     "BOOK_OF_MINDX",
     "HERMES_INTEGRATION",
     "IMPROVEMENT_JOURNAL",
     "INDEX",
     "MARKETING",
-    "MARKETING_AGENT",
-    "MARKETING_PLAYBOOK"
+    "MARKETING_AGENT"
   ],
   "conflicts": [
     "TECHNICAL: MindXAgent is meta-agent",
@@ -49,8 +49,8 @@
     "Arc_Testnet_Deployment_Guide",
     "BANKON_VAULT",
     "BANKON_VAULT_HANDOFF",
+    "BEST_PRACTICES",
     "BOARDROOM",
-    "BOOK_OF_MINDX",
-    "Blueprint"
+    "BOOK_OF_MINDX"
   ]
 }

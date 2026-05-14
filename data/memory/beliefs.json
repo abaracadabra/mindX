@@ -43,51 +43,69 @@
   },
   "mindx.evolution.blueprint.latest": {
     "value": {
-      "blueprint_title": "Structural Blueprint (skeleton from improvement backlog)",
-      "target_mindx_version_increment": "0.0.1",
+      "blueprint_title": "Resilient Perpetual Evolution Framework",
+      "target_mindx_version_increment": "0.5.0",
       "focus_areas": [
-        "system"
+        "Robustness & Fault Tolerance",
+        "Automated Self\u2011Improvement Loop",
+        "Knowledge Persistence & Model Evolution",
+        "Secure & Validated I/O",
+        "Scalable Provider Orchestration"
       ],
       "bdi_todo_list": [
         {
-          "goal_description": "Install Ollama and pull required models for local AI inference",
-          "priority": 8,
-          "target_component": "system"
+          "goal_description": "Implement dynamic fallback provider selection with health\u2011checking and latency\u2011aware routing for all LLM calls",
+          "priority": 9
         },
         {
-          "goal_description": "Implement fallback provider selection when primary LLM fails",
-          "priority": 7,
-          "target_component": "system"
+          "goal_description": "Deploy comprehensive input validation and sanitization middleware for all API endpoints (schema\u2011based, type\u2011safe, injection\u2011proof)",
+          "priority": 9
         },
         {
-          "goal_description": "Implement comprehensive input validation for API requests",
-          "priority": 9,
-          "target_component": "system"
+          "goal_description": "Create an automated backlog\u2011processing agent that prioritizes, executes, and validates improvement suggestions using a sandboxed test harness",
+          "priority": 8
         },
         {
-          "goal_description": "Add output validation checks to ensure expected formats and data types",
-          "priority": 8,
-          "target_component": "system"
+          "goal_description": "Design a belief\u2011storage subsystem that persistently logs agent decisions, outcomes, and learned heuristics for long\u2011term knowledge retention",
+          "priority": 7
         },
         {
-          "goal_description": "Enhance model input validation with specific checks for LLM providers",
-          "priority": 7,
-          "target_component": "system"
+          "goal_description": "Introduce model versioning and continuous fine\u2011tuning pipeline that retrains local models on approved interaction data while preserving previous checkpoints",
+          "priority": 6
+        },
+        {
+          "goal_description": "Add observability stack (metrics, tracing, alerting) to measure MTTR, request success rates, and resource utilization",
+          "priority": 7
+        },
+        {
+          "goal_description": "Implement role\u2011based access control and API key vault integration for the coordinator_agent and future agents",
+          "priority": 5
         }
       ],
-      "key_performance_indicators": [
-        "Improvement cycle completion rate",
-        "Agent health score"
-      ],
+      "key_performance_indicators": {
+        "mean_time_to_recover_mttr_seconds": 45,
+        "input_validation_pass_rate_percent": 99.5,
+        "backlog_items_processed_per_week": 120,
+        "knowledge_base_growth_entries_per_day": 25,
+        "model_update_latency_hours": 6,
+        "system_uptime_percent": 99.9,
+        "agent_authorization_compliance_percent": 100
+      },
       "potential_risks": [
-        "Skeleton requires LLM enrichment for strategic depth"
+        "Over\u2011dependence on external LLM providers causing cascading fallback failures",
+        "Validation overhead increasing latency beyond acceptable thresholds",
+        "Sandboxed improvement agent could inadvertently execute harmful code if not properly isolated",
+        "Model drift or catastrophic forgetting during continuous fine\u2011tuning",
+        "Backlog growth outpacing processing capacity leading to stale improvements",
+        "Security misconfiguration in vault or RBAC exposing API keys",
+        "Observability blind spots causing delayed detection of degradation"
       ],
-      "source": "skeleton"
+      "source": "llm_enriched"
     },
     "confidence": 0.95,
     "source": "self_analysis",
     "timestamp": 1776022239.3365555,
-    "last_updated": 1778726168.897686
+    "last_updated": 1778726854.67171
   },
   "identity.map.entity_to_address.smoke_test_entity_1": {
     "value": "0x5eCdc30df01030Aee83BF339617f5809bE26C8d9",
@@ -183,6 +201,6 @@
     "confidence": 0.9,
     "source": "self_analysis",
     "timestamp": 1778665500.0558453,
-    "last_updated": 1778695913.9248307
+    "last_updated": 1778665500.0558453
   }
 }

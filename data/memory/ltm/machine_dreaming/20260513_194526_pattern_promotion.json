@@ -1,0 +1,30 @@
+{
+  "agent_id": "machine_dreaming",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 5,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Top processes: machine_dream_cycle(5)",
+      "Peak activity hour: 19:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 5
+        },
+        "process_distribution": {
+          "machine_dream_cycle": 5
+        },
+        "total_memories": 5,
+        "timestamp": "2026-05-13T19:45:26.302716"
+      }
+    ]
+  },
+  "promoted_at": "2026-05-13T19:45:26.302726",
+  "promotion_criteria": {
+    "pattern_threshold": 2,
+    "days_analyzed": 7
+  }
+}

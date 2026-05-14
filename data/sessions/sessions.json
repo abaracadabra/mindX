@@ -53,5 +53,18 @@
     "metadata": {
       "autonomous_mode": true
     }
+  },
+  "mindx_meta_agent_2e48c7b8": {
+    "session_id": "mindx_meta_agent_2e48c7b8",
+    "agent_id": "mindx_meta_agent",
+    "created_at": 1778726725.3501408,
+    "last_activity": 1778726725.3501408,
+    "expires_at": 1778813125.3501408,
+    "cycle_count": 0,
+    "circuit_breaker_trips": 0,
+    "last_reset_reason": null,
+    "metadata": {
+      "autonomous_mode": true
+    }
   }
 }
