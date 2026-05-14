@@ -309,15 +309,45 @@ async def require_valid_session(request: Request) -> str:
 
     return session["wallet_address"]
 
-async def require_admin_access(wallet_address: str = Depends(require_valid_session)) -> str:
-    """Dependency to require admin access"""
-    config = Config()
-    admin_addresses = set(config.get("security.admin_addresses", "").split(","))
+async def require_admin_access(request: Request) -> str:
+    """Dependency that requires a shadow-overlord JWT (SCOPE_AUTH).
 
-    if wallet_address not in admin_addresses:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    Compatibility shim: every caller still gets a wallet-address string back,
+    but the underlying gate is now the shadow-overlord ECDSA challenge → JWT
+    flow (`bankon_vault.shadow_overlord`), not the legacy session-token +
+    ``security.admin_addresses`` allowlist. The pivot eliminates the two
+    sources-of-truth inconsistency (admin_addresses env vs config) and folds
+    all sovereign operations into one signing primitive.
 
-    return wallet_address
+    Tier model (locked 2026-05-13):
+      - public: no gate
+      - logged_in: session token (X-Session-Token)
+      - shadow_overlord: ECDSA + scope-bound 5-min JWT (this dependency)
+
+    See docs/operations/HARD_GATE_RUNBOOK.md and
+    docs/services/mindx_as_a_service.md §4 for the full contract.
+    """
+    # Lazy import to avoid pulling the shadow-overlord module into modules
+    # that don't actually need it (e.g. early bootstrap).
+    try:
+        from mindx_backend_service.bankon_vault.shadow_overlord import (
+            verify_jwt,
+            SCOPE_AUTH,
+        )
+    except Exception as exc:  # pragma: no cover — bankon_vault always present
+        raise HTTPException(
+            status_code=503,
+            detail=f"shadow-overlord gate unavailable: {exc}",
+        )
+
+    authorization = request.headers.get("Authorization", "")
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail="Shadow-overlord JWT required (Authorization: Bearer <jwt>)",
+        )
+    claims = verify_jwt(authorization[7:], required_scope=SCOPE_AUTH)
+    return str(claims.get("sub", ""))
 
 def create_api_key_auth() -> HTTPBearer:
     """Create API key authentication scheme"""

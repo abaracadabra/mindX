@@ -43,51 +43,57 @@
   },
   "mindx.evolution.blueprint.latest": {
     "value": {
-      "blueprint_title": "Structural Blueprint (skeleton from improvement backlog)",
-      "target_mindx_version_increment": "0.0.1",
+      "blueprint_title": "Resilient Multi-Provider Orchestration and Secure Input Handling",
+      "target_mindx_version_increment": "0.5.0",
       "focus_areas": [
-        "system"
+        "Provider Fallback Mechanism",
+        "Comprehensive Input Validation & Sanitization",
+        "Local Model Deployment (Ollama)",
+        "Observability & Monitoring",
+        "Security Hardening"
       ],
       "bdi_todo_list": [
         {
-          "goal_description": "Install Ollama and pull required models for local AI inference",
-          "priority": 8,
-          "target_component": "system"
+          "goal_description": "Implement automatic fallback provider selection when primary LLM fails",
+          "priority": 7
         },
         {
-          "goal_description": "Implement fallback provider selection when primary LLM fails",
-          "priority": 7,
-          "target_component": "system"
+          "goal_description": "Deploy and configure Ollama with required models for local inference",
+          "priority": 8
         },
         {
-          "goal_description": "Implement comprehensive input validation for API requests",
-          "priority": 9,
-          "target_component": "system"
+          "goal_description": "Add comprehensive input validation and sanitization for all API endpoints",
+          "priority": 9
         },
         {
-          "goal_description": "Add output validation checks to ensure expected formats and data types",
-          "priority": 8,
-          "target_component": "system"
+          "goal_description": "Integrate metrics collection for request success rate, latency, and fallback events",
+          "priority": 6
         },
         {
-          "goal_description": "Enhance model input validation with specific checks for LLM providers",
-          "priority": 7,
-          "target_component": "system"
+          "goal_description": "Conduct security review and apply least\u2011privilege configurations for API keys and service accounts",
+          "priority": 5
         }
       ],
-      "key_performance_indicators": [
-        "Improvement cycle completion rate",
-        "Agent health score"
-      ],
+      "key_performance_indicators": {
+        "llm_request_success_rate_percent": 99.5,
+        "average_latency_ms": 250,
+        "fallback_triggers_per_hour": 2,
+        "input_validation_error_rate_percent": 0.1,
+        "system_uptime_percent": 99.9
+      },
       "potential_risks": [
-        "Skeleton requires LLM enrichment for strategic depth"
+        "Increased operational cost from excessive external API fallbacks",
+        "Complexity bugs introduced by retry/fallback logic",
+        "Resource exhaustion on host running Ollama models",
+        "Misconfiguration leading to exposure of API keys",
+        "Version drift between local models and expected capabilities"
       ],
-      "source": "skeleton"
+      "source": "llm_enriched"
     },
     "confidence": 0.95,
     "source": "self_analysis",
     "timestamp": 1776022239.3365555,
-    "last_updated": 1778718188.3154275
+    "last_updated": 1778718859.2495022
   },
   "identity.map.entity_to_address.smoke_test_entity_1": {
     "value": "0x5eCdc30df01030Aee83BF339617f5809bE26C8d9",

@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException, Request, Body, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 
 # Add project root to path to allow imports
 import sys
@@ -1658,8 +1658,40 @@ app.add_middleware(
 )
 # ── API Access Gate: all non-public routes require auth ──
 # Uses @app.middleware("http") which always fires regardless of import order.
+#
+# Two modes, selected per-request via MINDX_HARD_GATE_ENABLED:
+#   "1" (default)  — STRICT: only /login, /docs*, /automindx, /shadow-overlord,
+#                    /users handshake routes, /wp-json/* and static assets are
+#                    public. Everything else requires a session token (or a
+#                    valid Bearer API key). HTML requests for gated paths 302
+#                    to /login?from=<original-path>; API requests get 401 JSON.
+#                    Contract documented in docs/operations/HARD_GATE_RUNBOOK.md.
+#   "0"            — LEGACY: the pre-2026-05-13 wide-open public surface.
+#                    Provided so the gate is rollback-safe (set the env var to
+#                    "0" and restart; no code change needed).
 
-_PUBLIC_EXACT = frozenset({
+_PUBLIC_EXACT_STRICT = frozenset({
+    "/", "/health",
+    "/login", "/login.html",
+    "/docs.html",
+    "/automindx", "/automindx.html",
+    "/shadow-overlord", "/shadow-overlord.html",
+    "/openapi.json", "/docs", "/redoc",
+    "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
+})
+_PUBLIC_PREFIXES_STRICT = (
+    "/doc/", "/docs", "/redoc",
+    "/static/", "/error-pages/", "/mindterm/static/",
+    "/automindx/",                     # automindx subpages
+    "/admin/shadow/",                  # shadow-overlord ECDSA + JWT (gated at handler level)
+    "/users/challenge",                # auth handshake — challenge issuance
+    "/users/register",                 # auth handshake — register-with-signature
+    "/users/session/",                 # auth handshake — session/validate
+    "/wp-json/",                       # WordPress plugin callbacks (signature-authed at plugin layer)
+    "/publish/rage/",                  # external WordPress publish webhook (EIP-191 sig + allowlist)
+)
+
+_PUBLIC_EXACT_LEGACY = frozenset({
     "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html",
     "/keeperhub", "/keeperhub.html", "/uniswap", "/uniswap.html", "/bankon-ens", "/bankon-ens.html", "/bankonminter", "/bankonminter.html", "/zerog", "/zerog.html", "/conclave", "/conclave.html", "/agentregistry", "/agentregistry.html",
     "/api/uniswap/quote", "/api/uniswap/check_approval", "/api/uniswap/decisions", "/api/uniswap/skills",
@@ -1675,40 +1707,64 @@ _PUBLIC_EXACT = frozenset({
     "/resources/status", "/agents/interactions", "/agents/interaction-matrix",
     "/governance/status",
 })
-_PUBLIC_PREFIXES = (
+_PUBLIC_PREFIXES_LEGACY = (
     "/doc/", "/docs", "/redoc", "/thesis/", "/mindterm/static/", "/boardroom/", "/dojo/",
     "/dojo/agent/", "/bankon", "/agenticplace/", "/chat/docs",
     "/actions/export", "/diagnostics/export", "/api/rage/embed",
     "/users/challenge", "/users/register", "/error-pages/", "/static/",
     "/insight/",
-    "/marketing/",        # read-only diagnostic surface for the marketing Counsellor cabinet
+    "/marketing/",
     "/p2p/keeperhub/",
     "/openagents/deployments/",
-    "/api/uniswap/",      # quote/approval/skills/decisions — vault-keyed proxy
-    "/admin/shadow/",     # shadow-overlord challenge/verify/release-key — gated by ECDSA sig + JWT, not session
-    "/admin/cabinet/",    # gated by require_shadow_jwt at handler level
-    "/cabinet/",          # public cabinet read (addresses only)
-    "/vault/sign/",       # vault-as-signing-oracle — gated by require_shadow_jwt + fresh sig
-    "/publish/rage/",     # wallet-authorized publish — gated by EIP-191 sig + allowlist (challenge → authorize)
+    "/api/uniswap/",
+    "/admin/shadow/",
+    "/admin/cabinet/",
+    "/cabinet/",
+    "/vault/sign/",
+    "/publish/rage/",
 )
+
+
+def _arrival_gate_mode() -> str:
+    """Return 'strict' or 'legacy' depending on the runtime flag.
+
+    Read on every request so an operator can toggle the gate without a
+    service restart (HARD_GATE_RUNBOOK § Rollback).
+    """
+    return "legacy" if os.environ.get("MINDX_HARD_GATE_ENABLED", "1").strip() == "0" else "strict"
+
+
+def _current_public_sets() -> Tuple[frozenset, Tuple[str, ...]]:
+    if _arrival_gate_mode() == "strict":
+        return _PUBLIC_EXACT_STRICT, _PUBLIC_PREFIXES_STRICT
+    return _PUBLIC_EXACT_LEGACY, _PUBLIC_PREFIXES_LEGACY
+
+
+# Public symbols kept for any external introspection that imports them.
+_PUBLIC_EXACT = _PUBLIC_EXACT_STRICT
+_PUBLIC_PREFIXES = _PUBLIC_PREFIXES_STRICT
 
 @app.middleware("http")
 async def api_access_gate(request: Request, call_next):
     path = request.url.path
 
-    # OPTIONS always pass (CORS preflight)
+    # OPTIONS always pass (CORS preflight). The CORS middleware adds the
+    # response headers regardless of which middleware actually handles
+    # the OPTIONS.
     if request.method == "OPTIONS":
         return await call_next(request)
 
+    public_exact, public_prefixes = _current_public_sets()
+
     # Public routes
-    if path in _PUBLIC_EXACT:
+    if path in public_exact:
         return await call_next(request)
-    for pfx in _PUBLIC_PREFIXES:
+    for pfx in public_prefixes:
         if path.startswith(pfx):
             return await call_next(request)
     # Public: GET /users/{wallet}/permissions — the /login card-grid launcher
-    # asks this for any wallet (including "anonymous"). The reply is a UX hint;
-    # actual privileged endpoints still self-enforce auth.
+    # asks this for any wallet (including "anonymous") before the user has a
+    # session. The reply is a UX hint; privileged endpoints re-enforce auth.
     if request.method == "GET" and path.startswith("/users/") and path.endswith("/permissions"):
         return await call_next(request)
 
@@ -1732,16 +1788,47 @@ async def api_access_gate(request: Request, call_next):
         if bearer_key in valid_keys:
             return await call_next(request)
 
-    # Browsers get the interactive identity gate; API clients get JSON
+    # Best-effort observability: count gated redirects via the catalogue.
+    try:
+        from agents.catalogue.events import emit_catalogue_event
+        import hashlib as _h
+        client_ip = (request.client.host if request.client else "") or ""
+        ip_hash = "sha256:" + _h.sha256(client_ip.encode()).hexdigest()[:32] if client_ip else ""
+        await emit_catalogue_event(
+            kind="auth.gate.redirect",
+            actor="mindx.gateway",
+            payload={
+                "path": path,
+                "reason": "no_session",
+                "mode": _arrival_gate_mode(),
+                "ip_hash": ip_hash,
+            },
+            source_log="mindx_backend_service.api_access_gate",
+        )
+    except Exception:
+        pass
+
+    # HTML clients in strict mode: 302 to /login?from=<orig>. Round-tripped
+    # back after the user signs in.
+    from starlette.responses import RedirectResponse as _Redir, JSONResponse as _GR
     accept = request.headers.get("accept", "")
+    if _arrival_gate_mode() == "strict" and "text/html" in accept and request.method == "GET":
+        from urllib.parse import quote as _q
+        qs = ("?" + request.url.query) if request.url.query else ""
+        # Open-redirect guard: only round-trip a same-origin relative path.
+        safe_from = path if path.startswith("/") and not path.startswith("//") else "/"
+        return _Redir(url=f"/login?from={_q(safe_from + qs, safe='/')}", status_code=302)
+
+    # HTML in legacy mode falls back to the gate page (same behavior as before).
     if "text/html" in accept:
         gate_page = _ERR_PAGES_PATH / "gate.html"
         if gate_page.exists():
             from starlette.responses import HTMLResponse as _GateR
             return _GateR(content=gate_page.read_text(encoding="utf-8"), status_code=401)
-    from starlette.responses import JSONResponse as _GR
     return _GR(status_code=401, content={
+        "code": "auth_required",
         "detail": "Authentication required. Provide X-Session-Token or Authorization: Bearer <api_key>",
+        "from": path,
         "docs": "https://mindx.pythai.net/docs.html",
     })
 
@@ -6963,9 +7050,22 @@ async def get_user_permissions(wallet_address: str):
 
     Public endpoint: anonymous callers may ask for any wallet's permissions. The
     response is a UX hint — every privileged feature endpoint (`/admin/*`,
-    `/vault/sign/*`, …) re-enforces its own auth server-side. Three explicit
-    gates: public · logged-in · shadow-overlord. Token-balance / NFT holdings
-    are surfaced as **badges**, not gates (this pass).
+    `/vault/sign/*`, …) re-enforces its own auth server-side.
+
+    Two-tier model (locked 2026-05-13):
+      - ``public``: only the four public surfaces (login, docs, automindx,
+        shadow_overlord_login)
+      - ``logged_in``: everything reachable through the dashboard (feedback,
+        journal, dojo, boardroom). Cost-bearing endpoints are gated separately
+        by x402 (see docs/services/x402_as_a_service.md).
+
+    ``is_shadow_overlord: true`` is surfaced as a flag for the frontend, but
+    shadow-overlord operations are accessed exclusively through the
+    /shadow-overlord page (not as separate cards in the card grid). Therefore
+    no extra ``can_access`` entries are appended for the shadow tier.
+
+    Token holdings (Dojo rank, BONA FIDE balance) are surfaced as **badges**,
+    not gates. See docs/operations/HARD_GATE_RUNBOOK.md.
     """
     wallet = (wallet_address or "").strip().lower()
     admin_set = {a.strip().lower() for a in os.environ.get(
@@ -6979,8 +7079,9 @@ async def get_user_permissions(wallet_address: str):
         tier = "logged_in"
         can_access += ["dashboard", "feedback", "journal", "dojo", "boardroom"]
     if is_shadow:
+        # Tier label flips, but no extra can_access entries — shadow operations
+        # go through /shadow-overlord, not standalone cards.
         tier = "shadow_overlord"
-        can_access += ["bankon_vault", "cabinet", "publish_to_rage", "vault_sign"]
 
     # Best-effort badges — Dojo rank + BONA FIDE balance from local agent_map.json.
     # Non-fatal; never blocks the permissions reply.

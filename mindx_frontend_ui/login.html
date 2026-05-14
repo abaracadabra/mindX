@@ -385,23 +385,22 @@
     document.getElementById('apiLink').href  = apiBase + '/redoc';
 
     // ─── Cards inventory ────────────────────────────────────────────────
+    // Two-tier model (locked 2026-05-13). Shadow-overlord operations are
+    // reached exclusively through the public "Shadow-Overlord" card →
+    // /shadow-overlord page; no separate admin-tier cards live here. See
+    // docs/operations/HARD_GATE_RUNBOOK.md.
     const CARDS = [
         // PUBLIC — visible to everyone
-        { id:'automindx',             title:'AUTOMINDx',          sub:'the origin · AGLM',                tier:'public',          gfx:'/gfx/mindX2d.webp',                href: apiBase + '/automindx' },
-        { id:'docs',                  title:'Documentation',      sub:'NAV · BOOK · JOURNAL · TOOLS',     tier:'public',          gfx:'/gfx/doorway1.webp',               href: apiBase + '/docs.html' },
-        { id:'shadow_overlord_login', title:'Shadow-Overlord',    sub:'admin tier sign-in',               tier:'public',          gfx:'/gfx/shadow_overlord.png',         href: '/shadow-overlord' },
+        { id:'automindx',             title:'AUTOMINDx',          sub:'the origin · AGLM',                tier:'public',    gfx:'/gfx/mindX2d.webp',                  href: apiBase + '/automindx' },
+        { id:'docs',                  title:'Documentation',      sub:'NAV · BOOK · JOURNAL · TOOLS',     tier:'public',    gfx:'/gfx/doorway1.webp',                 href: apiBase + '/docs.html' },
+        { id:'shadow_overlord_login', title:'Shadow-Overlord',    sub:'sovereign sign-in',                tier:'public',    gfx:'/gfx/shadow_overlord.png',           href: '/shadow-overlord' },
 
         // LOGGED-IN — any wallet that completed sign-in
-        { id:'dashboard',             title:'Dashboard',          sub:'live diagnostics',                 tier:'logged_in',       gfx:'/gfx/doorway2.webp',               href: '/app' },
-        { id:'feedback',              title:'Mind-of-mindX',      sub:'live agent dialogue',              tier:'logged_in',       gfx:'/gfx/doorway3.webp',               href: apiBase + '/feedback.html' },
-        { id:'journal',               title:'Improvement Journal',sub:'30-min cadence',                   tier:'logged_in',       gfx:'/gfx/doorway4.webp',               href: apiBase + '/journal' },
-        { id:'dojo',                  title:'Dojo',               sub:'agent reputation',                 tier:'logged_in',       gfx:'/gfx/doorway5.webp',               href: apiBase + '/dojo/standings' },
-        { id:'boardroom',             title:'Boardroom',          sub:'governance sessions',              tier:'logged_in',       gfx:'/gfx/AgenticPlaceboardmeeting.jpeg', href: apiBase + '/boardroom' },
-
-        // SHADOW-OVERLORD — admin tier only
-        { id:'bankon_vault',          title:'BANKON Vault',       sub:'credential management',            tier:'shadow_overlord', gfx:'/gfx/bankonvault.png',             href: apiBase + '/admin/vault/credentials/list' },
-        { id:'cabinet',               title:'Cabinet',            sub:'executive wallets (CEO + 7)',      tier:'shadow_overlord', gfx:'/gfx/war_council_gold.png',        href: apiBase + '/cabinet' },
-        { id:'publish_to_rage',       title:'Publish to Rage',    sub:'rage.pythai.net (operator)',       tier:'shadow_overlord', gfx:'/gfx/doorway1.png',                href: apiBase + '/admin/publish-to-rage' },
+        { id:'dashboard',             title:'Dashboard',          sub:'live diagnostics',                 tier:'logged_in', gfx:'/gfx/doorway2.webp',                 href: '/app' },
+        { id:'feedback',              title:'Mind-of-mindX',      sub:'live agent dialogue',              tier:'logged_in', gfx:'/gfx/doorway3.webp',                 href: apiBase + '/feedback.html' },
+        { id:'journal',               title:'Improvement Journal',sub:'30-min cadence',                   tier:'logged_in', gfx:'/gfx/doorway4.webp',                 href: apiBase + '/journal' },
+        { id:'dojo',                  title:'Dojo',               sub:'agent reputation',                 tier:'logged_in', gfx:'/gfx/doorway5.webp',                 href: apiBase + '/dojo/standings' },
+        { id:'boardroom',             title:'Boardroom',          sub:'governance sessions',              tier:'logged_in', gfx:'/gfx/AgenticPlaceboardmeeting.jpeg', href: apiBase + '/boardroom' },
     ];
 
     // ─── Quote rotator — mindX speaks (thesis · manifesto · CEO · civilization · DeltaVerse) ───
