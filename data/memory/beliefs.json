@@ -43,51 +43,63 @@
   },
   "mindx.evolution.blueprint.latest": {
     "value": {
-      "blueprint_title": "Structural Blueprint (skeleton from improvement backlog)",
-      "target_mindx_version_increment": "0.0.1",
+      "blueprint_title": "Resilient Perpetual Evolution v0.5",
+      "target_mindx_version_increment": "0.5.0",
       "focus_areas": [
-        "system"
+        "Resilient LLM Provider Orchestration",
+        "Robust Input Validation & Security",
+        "Self-Improvement Loop Automation",
+        "Long-Term Knowledge Persistence",
+        "Observability & Adaptive Governance"
       ],
       "bdi_todo_list": [
         {
-          "goal_description": "Install Ollama and pull required models for local AI inference",
-          "priority": 8,
-          "target_component": "system"
+          "goal_description": "Implement dynamic fallback provider selection with health checks",
+          "priority": 9
         },
         {
-          "goal_description": "Implement fallback provider selection when primary LLM fails",
-          "priority": 7,
-          "target_component": "system"
+          "goal_description": "Deploy comprehensive input validation middleware for all API endpoints",
+          "priority": 9
         },
         {
-          "goal_description": "Implement comprehensive input validation for API requests",
-          "priority": 9,
-          "target_component": "system"
+          "goal_description": "Create automated backlog grooming agent that prioritizes items based on impact and effort",
+          "priority": 8
         },
         {
-          "goal_description": "Add output validation checks to ensure expected formats and data types",
-          "priority": 8,
-          "target_component": "system"
+          "goal_description": "Design and integrate a persistent memory store (vector DB) for agent experiences and learned patterns",
+          "priority": 8
         },
         {
-          "goal_description": "Enhance model input validation with specific checks for LLM providers",
-          "priority": 7,
-          "target_component": "system"
+          "goal_description": "Establish real-time monitoring dashboard with alerts for latency, error rates, and provider health",
+          "priority": 7
+        },
+        {
+          "goal_description": "Develop a self\u2011audit mechanism that validates belief consistency and triggers revision cycles",
+          "priority": 7
         }
       ],
-      "key_performance_indicators": [
-        "Improvement cycle completion rate",
-        "Agent health score"
-      ],
+      "key_performance_indicators": {
+        "mean_time_to_recovery_mttr": "<5 min",
+        "system_uptime_percentage": ">=99.9%",
+        "backlog_reduction_rate_per_week": ">=10%",
+        "average_inference_latency_ms": "<200ms",
+        "self_improvement_cycle_time_hours": "<24",
+        "validation_error_rate": "<0.1%"
+      },
       "potential_risks": [
-        "Skeleton requires LLM enrichment for strategic depth"
+        "Dependency on external LLM APIs causing latency or cost spikes",
+        "Model drift or degradation affecting decision quality",
+        "Increased complexity leading to harder debugging",
+        "Security vulnerabilities from input validation gaps",
+        "Resource exhaustion due to uncontrolled self\u2011improvement loops",
+        "Data privacy concerns with persistent memory storage"
       ],
-      "source": "skeleton"
+      "source": "llm_enriched"
     },
     "confidence": 0.95,
     "source": "self_analysis",
     "timestamp": 1776022239.3365555,
-    "last_updated": 1778720792.9971406
+    "last_updated": 1778721466.166275
   },
   "identity.map.entity_to_address.smoke_test_entity_1": {
     "value": "0x5eCdc30df01030Aee83BF339617f5809bE26C8d9",
