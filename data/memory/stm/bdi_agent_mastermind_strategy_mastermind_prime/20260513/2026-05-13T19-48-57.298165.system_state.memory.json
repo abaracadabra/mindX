@@ -1,0 +1,3628 @@
+{
+  "timestamp": "2026-05-13T19:48:57.298165",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "content": {
+    "process_name": "bdi_deliberation",
+    "data": {
+      "selected_goal": {
+        "id": "890a851f",
+        "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+        "priority": 1,
+        "status": "pending",
+        "added_at": 1778692797.9584472,
+        "is_primary": true
+      },
+      "full_desire_queue": [
+        {
+          "id": "890a851f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778692797.9584472,
+          "is_primary": true
+        },
+        {
+          "id": "8ab38e41",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778692801.177344,
+          "is_primary": true
+        },
+        {
+          "id": "e25a8cd9",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778692804.3718677,
+          "is_primary": true
+        },
+        {
+          "id": "3d4c0b48",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778692807.5790234,
+          "is_primary": true
+        },
+        {
+          "id": "34b507e7",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778692810.7952526,
+          "is_primary": true
+        },
+        {
+          "id": "f26312ad",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778692816.1550527,
+          "is_primary": true
+        },
+        {
+          "id": "649a872a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778692819.3664632,
+          "is_primary": true
+        },
+        {
+          "id": "67601994",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778692822.535463,
+          "is_primary": true
+        },
+        {
+          "id": "597ae7bd",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778692825.6942632,
+          "is_primary": true
+        },
+        {
+          "id": "e53cc3cb",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778692828.965223,
+          "is_primary": true
+        },
+        {
+          "id": "3c972ab2",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778692922.7859147,
+          "is_primary": true
+        },
+        {
+          "id": "46fd5732",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778692926.0791368,
+          "is_primary": true
+        },
+        {
+          "id": "333f08e6",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778692929.3153386,
+          "is_primary": true
+        },
+        {
+          "id": "bc444e00",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778692932.5805802,
+          "is_primary": true
+        },
+        {
+          "id": "07bd4284",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778692935.832042,
+          "is_primary": true
+        },
+        {
+          "id": "5cbdb76e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693038.29147,
+          "is_primary": true
+        },
+        {
+          "id": "aeb34568",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693042.0326574,
+          "is_primary": true
+        },
+        {
+          "id": "1841401f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693045.4994264,
+          "is_primary": true
+        },
+        {
+          "id": "34acc03f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693048.7263486,
+          "is_primary": true
+        },
+        {
+          "id": "a7987d18",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693376.2722278,
+          "is_primary": true
+        },
+        {
+          "id": "d867db14",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693379.484613,
+          "is_primary": true
+        },
+        {
+          "id": "fd89baff",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693382.6862624,
+          "is_primary": true
+        },
+        {
+          "id": "0b60e4e3",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693385.9724884,
+          "is_primary": true
+        },
+        {
+          "id": "b35c4390",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693389.2359254,
+          "is_primary": true
+        },
+        {
+          "id": "dcd489ae",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693392.2761033,
+          "is_primary": true
+        },
+        {
+          "id": "5e67a50a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693395.4853234,
+          "is_primary": true
+        },
+        {
+          "id": "3c18e352",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693398.7362065,
+          "is_primary": true
+        },
+        {
+          "id": "c423d70c",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693401.939408,
+          "is_primary": true
+        },
+        {
+          "id": "8343a22f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693405.1413865,
+          "is_primary": true
+        },
+        {
+          "id": "635a9ecc",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693507.249504,
+          "is_primary": true
+        },
+        {
+          "id": "140c1f26",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693510.5440192,
+          "is_primary": true
+        },
+        {
+          "id": "af5a3162",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693513.8174922,
+          "is_primary": true
+        },
+        {
+          "id": "02884424",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693517.0154824,
+          "is_primary": true
+        },
+        {
+          "id": "3527f945",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693520.21085,
+          "is_primary": true
+        },
+        {
+          "id": "6a2cb0b1",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693967.0487463,
+          "is_primary": true
+        },
+        {
+          "id": "3923ab0d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693970.256295,
+          "is_primary": true
+        },
+        {
+          "id": "feb9fccb",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693973.6467044,
+          "is_primary": true
+        },
+        {
+          "id": "0fd10a1e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693976.8471093,
+          "is_primary": true
+        },
+        {
+          "id": "cf37700d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693980.0473444,
+          "is_primary": true
+        },
+        {
+          "id": "73860297",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693984.2664707,
+          "is_primary": true
+        },
+        {
+          "id": "4000885b",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693987.470972,
+          "is_primary": true
+        },
+        {
+          "id": "2edc29cc",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693990.6892078,
+          "is_primary": true
+        },
+        {
+          "id": "93bfdd8a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693993.8725622,
+          "is_primary": true
+        },
+        {
+          "id": "a537bd86",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778693997.1354792,
+          "is_primary": true
+        },
+        {
+          "id": "2b56ddae",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694077.8231053,
+          "is_primary": true
+        },
+        {
+          "id": "a88b9981",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694081.0709226,
+          "is_primary": true
+        },
+        {
+          "id": "7f37b906",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694084.299965,
+          "is_primary": true
+        },
+        {
+          "id": "a4c536db",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694087.603808,
+          "is_primary": true
+        },
+        {
+          "id": "7ae45597",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694090.836517,
+          "is_primary": true
+        },
+        {
+          "id": "9aacf3c7",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694181.8996334,
+          "is_primary": true
+        },
+        {
+          "id": "058433f3",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694185.1751208,
+          "is_primary": true
+        },
+        {
+          "id": "3d05d1ba",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694188.3744283,
+          "is_primary": true
+        },
+        {
+          "id": "0bee36ef",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694191.572531,
+          "is_primary": true
+        },
+        {
+          "id": "91f3e283",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694194.7713187,
+          "is_primary": true
+        },
+        {
+          "id": "df419fb0",
+          "goal": "{\"error\": \"ConnectionError\", \"message\": \"Cannot connect to Ollama at http://10.0.0.155:18080\"}",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694196.3128307
+        },
+        {
+          "id": "51a404d0",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694521.358105,
+          "is_primary": true
+        },
+        {
+          "id": "0c773d33",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694524.6005847,
+          "is_primary": true
+        },
+        {
+          "id": "7ea34e56",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694527.8371665,
+          "is_primary": true
+        },
+        {
+          "id": "d0326e9a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694531.0266721,
+          "is_primary": true
+        },
+        {
+          "id": "0fa9c77a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694534.2324646,
+          "is_primary": true
+        },
+        {
+          "id": "0f72bb54",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694538.2639017,
+          "is_primary": true
+        },
+        {
+          "id": "b03417d6",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694541.4603994,
+          "is_primary": true
+        },
+        {
+          "id": "802c9498",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694544.6629612,
+          "is_primary": true
+        },
+        {
+          "id": "5bf6d96c",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694547.861693,
+          "is_primary": true
+        },
+        {
+          "id": "ede312ae",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694551.0604064,
+          "is_primary": true
+        },
+        {
+          "id": "827c7396",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694647.184618,
+          "is_primary": true
+        },
+        {
+          "id": "4bc618e9",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694650.38429,
+          "is_primary": true
+        },
+        {
+          "id": "f369db9b",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694653.651387,
+          "is_primary": true
+        },
+        {
+          "id": "19a6089a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694656.8521574,
+          "is_primary": true
+        },
+        {
+          "id": "fa3dee3d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694660.0523655,
+          "is_primary": true
+        },
+        {
+          "id": "e5682f91",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694743.4946318,
+          "is_primary": true
+        },
+        {
+          "id": "9d6cfcc9",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694746.7077253,
+          "is_primary": true
+        },
+        {
+          "id": "10141e3f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694750.0666132,
+          "is_primary": true
+        },
+        {
+          "id": "980fb369",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694753.3260348,
+          "is_primary": true
+        },
+        {
+          "id": "249dc7ac",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694756.4984298,
+          "is_primary": true
+        },
+        {
+          "id": "d71bfdbe",
+          "goal": "{\"error\": \"ConnectionError\", \"message\": \"Cannot connect to Ollama at http://10.0.0.155:18080\"}",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778694758.273821
+        },
+        {
+          "id": "68a615a9",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695084.1132119,
+          "is_primary": true
+        },
+        {
+          "id": "3b1699dd",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695087.3257244,
+          "is_primary": true
+        },
+        {
+          "id": "dd6b1269",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695090.5165155,
+          "is_primary": true
+        },
+        {
+          "id": "d2c31f20",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695093.784027,
+          "is_primary": true
+        },
+        {
+          "id": "74e9ba5a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695097.047121,
+          "is_primary": true
+        },
+        {
+          "id": "e0a8f2de",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695101.46758,
+          "is_primary": true
+        },
+        {
+          "id": "4caa9333",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695104.7748451,
+          "is_primary": true
+        },
+        {
+          "id": "174c0495",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695107.9946623,
+          "is_primary": true
+        },
+        {
+          "id": "df71d8e4",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695111.1917565,
+          "is_primary": true
+        },
+        {
+          "id": "d8e77b03",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695114.3961272,
+          "is_primary": true
+        },
+        {
+          "id": "cbe337d8",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695231.1276062,
+          "is_primary": true
+        },
+        {
+          "id": "50d28f51",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695234.3249385,
+          "is_primary": true
+        },
+        {
+          "id": "0f6a95f2",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695237.5305088,
+          "is_primary": true
+        },
+        {
+          "id": "94ede0a8",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695241.0144823,
+          "is_primary": true
+        },
+        {
+          "id": "617be621",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695244.2484846,
+          "is_primary": true
+        },
+        {
+          "id": "a880180d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695661.6420348,
+          "is_primary": true
+        },
+        {
+          "id": "bcc58f20",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695664.858981,
+          "is_primary": true
+        },
+        {
+          "id": "66d3f2f0",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695668.1885784,
+          "is_primary": true
+        },
+        {
+          "id": "932f6147",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695671.3826187,
+          "is_primary": true
+        },
+        {
+          "id": "2a17ebd9",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695674.6401348,
+          "is_primary": true
+        },
+        {
+          "id": "331287b2",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695678.6770244,
+          "is_primary": true
+        },
+        {
+          "id": "e4ec975d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695681.873558,
+          "is_primary": true
+        },
+        {
+          "id": "0d74f1ca",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695685.0762987,
+          "is_primary": true
+        },
+        {
+          "id": "f1985666",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695688.286909,
+          "is_primary": true
+        },
+        {
+          "id": "45b95f43",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695691.475749,
+          "is_primary": true
+        },
+        {
+          "id": "90bf9609",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695788.3131685,
+          "is_primary": true
+        },
+        {
+          "id": "2499524f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695791.6391954,
+          "is_primary": true
+        },
+        {
+          "id": "35e2ce0f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695794.8353653,
+          "is_primary": true
+        },
+        {
+          "id": "68127418",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695798.0328124,
+          "is_primary": true
+        },
+        {
+          "id": "2aaab991",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695801.238812,
+          "is_primary": true
+        },
+        {
+          "id": "acf64cbc",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695899.6457639,
+          "is_primary": true
+        },
+        {
+          "id": "4c951c48",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695902.8691354,
+          "is_primary": true
+        },
+        {
+          "id": "3b19bde6",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695906.069575,
+          "is_primary": true
+        },
+        {
+          "id": "2863ffbb",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695909.2649453,
+          "is_primary": true
+        },
+        {
+          "id": "6a1398dd",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695912.4681554,
+          "is_primary": true
+        },
+        {
+          "id": "2872f2e4",
+          "goal": "{\"error\": \"ConnectionError\", \"message\": \"Cannot connect to Ollama at http://10.0.0.155:18080\"}",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778695914.0291095
+        },
+        {
+          "id": "30bd1dd3",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696239.3110404,
+          "is_primary": true
+        },
+        {
+          "id": "94009bd7",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696242.5258696,
+          "is_primary": true
+        },
+        {
+          "id": "39ba9269",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696245.7147703,
+          "is_primary": true
+        },
+        {
+          "id": "dc6c6e3d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696249.0832164,
+          "is_primary": true
+        },
+        {
+          "id": "caa228fd",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696252.337602,
+          "is_primary": true
+        },
+        {
+          "id": "fc654986",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696256.831622,
+          "is_primary": true
+        },
+        {
+          "id": "f9dbd664",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696260.2460246,
+          "is_primary": true
+        },
+        {
+          "id": "afa4c419",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696263.450416,
+          "is_primary": true
+        },
+        {
+          "id": "d7fc8b2c",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696266.6520953,
+          "is_primary": true
+        },
+        {
+          "id": "3e059c74",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696269.8436604,
+          "is_primary": true
+        },
+        {
+          "id": "9ef2388b",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696364.7296877,
+          "is_primary": true
+        },
+        {
+          "id": "90c19ae0",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696367.9546914,
+          "is_primary": true
+        },
+        {
+          "id": "e7c189ee",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696371.1542976,
+          "is_primary": true
+        },
+        {
+          "id": "92901b2e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696374.3551471,
+          "is_primary": true
+        },
+        {
+          "id": "d048e0cd",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696377.6194844,
+          "is_primary": true
+        },
+        {
+          "id": "1cdb8aa5",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696486.380554,
+          "is_primary": true
+        },
+        {
+          "id": "8942a876",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696489.7223492,
+          "is_primary": true
+        },
+        {
+          "id": "ad98f7f5",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696817.2244866,
+          "is_primary": true
+        },
+        {
+          "id": "90489a7e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696820.4380102,
+          "is_primary": true
+        },
+        {
+          "id": "320dca1b",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696823.6375816,
+          "is_primary": true
+        },
+        {
+          "id": "2812cbb1",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696826.9139917,
+          "is_primary": true
+        },
+        {
+          "id": "f9801178",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696830.0969708,
+          "is_primary": true
+        },
+        {
+          "id": "f0a83d62",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696834.12033,
+          "is_primary": true
+        },
+        {
+          "id": "f3e98b6c",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696835.2863708,
+          "is_primary": true
+        },
+        {
+          "id": "0fd9cbc3",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696835.4287217,
+          "is_primary": true
+        },
+        {
+          "id": "de843c03",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696835.7705443,
+          "is_primary": true
+        },
+        {
+          "id": "a7427498",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696836.3518407,
+          "is_primary": true
+        },
+        {
+          "id": "93b725d5",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696961.2481925,
+          "is_primary": true
+        },
+        {
+          "id": "2eb2d0d6",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778696992.315646,
+          "is_primary": true
+        },
+        {
+          "id": "218f51fc",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778697023.2543905,
+          "is_primary": true
+        },
+        {
+          "id": "42d61e4d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778697054.2438009,
+          "is_primary": true
+        },
+        {
+          "id": "cc5bf778",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778697465.2462697,
+          "is_primary": true
+        },
+        {
+          "id": "d1f5e76e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778697524.2547216,
+          "is_primary": true
+        },
+        {
+          "id": "91bd3927",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778697555.2574873,
+          "is_primary": true
+        },
+        {
+          "id": "56d5158d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778697586.2619267,
+          "is_primary": true
+        },
+        {
+          "id": "565d073e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778697617.3487792,
+          "is_primary": true
+        },
+        {
+          "id": "467ae02d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778697648.3510902,
+          "is_primary": true
+        },
+        {
+          "id": "a3ba4485",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778698126.2460365,
+          "is_primary": true
+        },
+        {
+          "id": "d3f97667",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778698187.2414443,
+          "is_primary": true
+        },
+        {
+          "id": "e229f934",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778698218.249167,
+          "is_primary": true
+        },
+        {
+          "id": "845c0439",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778698249.3137136,
+          "is_primary": true
+        },
+        {
+          "id": "b5264a2f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778698280.2464142,
+          "is_primary": true
+        },
+        {
+          "id": "7e5a7b83",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778698311.2955909,
+          "is_primary": true
+        },
+        {
+          "id": "73acedc3",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778698806.2588913,
+          "is_primary": true
+        },
+        {
+          "id": "eb810466",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778698866.2475264,
+          "is_primary": true
+        },
+        {
+          "id": "67f89196",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778698897.2814577,
+          "is_primary": true
+        },
+        {
+          "id": "d4841fec",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778698928.3332295,
+          "is_primary": true
+        },
+        {
+          "id": "b9a83691",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778698959.2517223,
+          "is_primary": true
+        },
+        {
+          "id": "dd60d2d8",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778698990.3173504,
+          "is_primary": true
+        },
+        {
+          "id": "65f1465d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778699477.3032534,
+          "is_primary": true
+        },
+        {
+          "id": "76d9f295",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778699537.2566109,
+          "is_primary": true
+        },
+        {
+          "id": "831d7d58",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778699568.2462273,
+          "is_primary": true
+        },
+        {
+          "id": "9b58bc9c",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778699599.2555726,
+          "is_primary": true
+        },
+        {
+          "id": "2d73f491",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778699630.4586015,
+          "is_primary": true
+        },
+        {
+          "id": "e2e86d80",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778699661.272,
+          "is_primary": true
+        },
+        {
+          "id": "015f2147",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778700153.2467618,
+          "is_primary": true
+        },
+        {
+          "id": "8ee54303",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778700212.2424471,
+          "is_primary": true
+        },
+        {
+          "id": "624eac51",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778700243.2732744,
+          "is_primary": true
+        },
+        {
+          "id": "8addca86",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778700274.4572625,
+          "is_primary": true
+        },
+        {
+          "id": "9c05c6b6",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778700305.2487082,
+          "is_primary": true
+        },
+        {
+          "id": "169764a2",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778700336.2464328,
+          "is_primary": true
+        },
+        {
+          "id": "2afda890",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778700814.2547264,
+          "is_primary": true
+        },
+        {
+          "id": "832721bc",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778700874.243698,
+          "is_primary": true
+        },
+        {
+          "id": "4ede504e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778700905.2486691,
+          "is_primary": true
+        },
+        {
+          "id": "c797c097",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778700936.3119395,
+          "is_primary": true
+        },
+        {
+          "id": "f25a340b",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778700967.2560003,
+          "is_primary": true
+        },
+        {
+          "id": "07d05396",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778700998.2939496,
+          "is_primary": true
+        },
+        {
+          "id": "456798a5",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778701476.2586398,
+          "is_primary": true
+        },
+        {
+          "id": "c34f6e63",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778701536.2585552,
+          "is_primary": true
+        },
+        {
+          "id": "ebbfccc3",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778701567.2720451,
+          "is_primary": true
+        },
+        {
+          "id": "f47feb29",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778701598.273887,
+          "is_primary": true
+        },
+        {
+          "id": "e2eb9d7b",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778701629.2994602,
+          "is_primary": true
+        },
+        {
+          "id": "ebb45c8f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778701660.2520597,
+          "is_primary": true
+        },
+        {
+          "id": "7f91397d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778702137.2545075,
+          "is_primary": true
+        },
+        {
+          "id": "15b3564c",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778702200.2493637,
+          "is_primary": true
+        },
+        {
+          "id": "10d9e58d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778702231.2500026,
+          "is_primary": true
+        },
+        {
+          "id": "bc2d05f7",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778702262.248501,
+          "is_primary": true
+        },
+        {
+          "id": "791c1741",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778702293.2446442,
+          "is_primary": true
+        },
+        {
+          "id": "5f7ca81e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778702324.3188052,
+          "is_primary": true
+        },
+        {
+          "id": "4ae903cd",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778702814.2679641,
+          "is_primary": true
+        },
+        {
+          "id": "bb248de1",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778702871.2409592,
+          "is_primary": true
+        },
+        {
+          "id": "f4b4bbe1",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778702902.3280804,
+          "is_primary": true
+        },
+        {
+          "id": "e168567a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778702933.266971,
+          "is_primary": true
+        },
+        {
+          "id": "91dfbd2b",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778702964.2471247,
+          "is_primary": true
+        },
+        {
+          "id": "23ab60ac",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778702995.246996,
+          "is_primary": true
+        },
+        {
+          "id": "ef003a99",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778703472.3094802,
+          "is_primary": true
+        },
+        {
+          "id": "f991782d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778703529.2488039,
+          "is_primary": true
+        },
+        {
+          "id": "73516f41",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778703560.2841032,
+          "is_primary": true
+        },
+        {
+          "id": "85119b07",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778703591.2457845,
+          "is_primary": true
+        },
+        {
+          "id": "9c1c055e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778703622.252257,
+          "is_primary": true
+        },
+        {
+          "id": "96464464",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778703653.4557517,
+          "is_primary": true
+        },
+        {
+          "id": "0dfff6ae",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778704142.2988508,
+          "is_primary": true
+        },
+        {
+          "id": "f815f055",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778704202.2434676,
+          "is_primary": true
+        },
+        {
+          "id": "2a7cd331",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778704233.2451708,
+          "is_primary": true
+        },
+        {
+          "id": "9fe17128",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778704264.2734506,
+          "is_primary": true
+        },
+        {
+          "id": "0b877ac3",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778704295.3546493,
+          "is_primary": true
+        },
+        {
+          "id": "6e178dc4",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778704326.32003,
+          "is_primary": true
+        },
+        {
+          "id": "11f8ba59",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778704805.2514358,
+          "is_primary": true
+        },
+        {
+          "id": "bd03e335",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778704864.2446213,
+          "is_primary": true
+        },
+        {
+          "id": "ceaf82dd",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778704895.275203,
+          "is_primary": true
+        },
+        {
+          "id": "9bba3774",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778704926.2456474,
+          "is_primary": true
+        },
+        {
+          "id": "629f28dd",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778704957.2916787,
+          "is_primary": true
+        },
+        {
+          "id": "d0b5b396",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778704988.247021,
+          "is_primary": true
+        },
+        {
+          "id": "87df9d5c",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778705485.2581902,
+          "is_primary": true
+        },
+        {
+          "id": "8d91c6c4",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778705545.2406986,
+          "is_primary": true
+        },
+        {
+          "id": "8d03e466",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778705576.246687,
+          "is_primary": true
+        },
+        {
+          "id": "11dd3157",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778705607.3234398,
+          "is_primary": true
+        },
+        {
+          "id": "1454bd29",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778705638.2568438,
+          "is_primary": true
+        },
+        {
+          "id": "5e3c9487",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778705669.2524638,
+          "is_primary": true
+        },
+        {
+          "id": "f7ad3c46",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778706149.3043897,
+          "is_primary": true
+        },
+        {
+          "id": "9e15cdf2",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778706209.2414074,
+          "is_primary": true
+        },
+        {
+          "id": "b47d3a76",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778706240.3651626,
+          "is_primary": true
+        },
+        {
+          "id": "fe159266",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778706271.3166947,
+          "is_primary": true
+        },
+        {
+          "id": "f06f2a83",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778706302.2420518,
+          "is_primary": true
+        },
+        {
+          "id": "6106ab1f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778706333.256858,
+          "is_primary": true
+        },
+        {
+          "id": "b25b29df",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778706811.2487712,
+          "is_primary": true
+        },
+        {
+          "id": "6e111210",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778706871.2417228,
+          "is_primary": true
+        },
+        {
+          "id": "3d0b1607",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778706902.2456686,
+          "is_primary": true
+        },
+        {
+          "id": "d517bb8b",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778706933.2915251,
+          "is_primary": true
+        },
+        {
+          "id": "e7cc0349",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778706964.243684,
+          "is_primary": true
+        },
+        {
+          "id": "279dc3bd",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778706995.323805,
+          "is_primary": true
+        },
+        {
+          "id": "b953a850",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778707473.2447705,
+          "is_primary": true
+        },
+        {
+          "id": "e602444c",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778707533.2413967,
+          "is_primary": true
+        },
+        {
+          "id": "0b159f5e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778707564.2449758,
+          "is_primary": true
+        },
+        {
+          "id": "50211555",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778707595.318837,
+          "is_primary": true
+        },
+        {
+          "id": "26ab76f6",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778707626.2423606,
+          "is_primary": true
+        },
+        {
+          "id": "f43b15b4",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778707657.3281171,
+          "is_primary": true
+        },
+        {
+          "id": "49cbcf64",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778708135.3180242,
+          "is_primary": true
+        },
+        {
+          "id": "a08e479e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778708195.243169,
+          "is_primary": true
+        },
+        {
+          "id": "3d453a55",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778708226.2531252,
+          "is_primary": true
+        },
+        {
+          "id": "1e8afe49",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778708257.2551107,
+          "is_primary": true
+        },
+        {
+          "id": "abe5ed1a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778708288.2574365,
+          "is_primary": true
+        },
+        {
+          "id": "c81c8308",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778708319.2440937,
+          "is_primary": true
+        },
+        {
+          "id": "39fd775c",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778708797.3465753,
+          "is_primary": true
+        },
+        {
+          "id": "847a8c5e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778708857.255169,
+          "is_primary": true
+        },
+        {
+          "id": "698ffdb6",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778708888.2466786,
+          "is_primary": true
+        },
+        {
+          "id": "86393b19",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778708919.3155334,
+          "is_primary": true
+        },
+        {
+          "id": "c9b85d1a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778708950.2459576,
+          "is_primary": true
+        },
+        {
+          "id": "ef2bbd59",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778708981.2546325,
+          "is_primary": true
+        },
+        {
+          "id": "65f43101",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778709459.2524214,
+          "is_primary": true
+        },
+        {
+          "id": "44a7da45",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778709519.241945,
+          "is_primary": true
+        },
+        {
+          "id": "753042fc",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778709550.244502,
+          "is_primary": true
+        },
+        {
+          "id": "002846da",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778709581.2521982,
+          "is_primary": true
+        },
+        {
+          "id": "093c7756",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778709612.2480419,
+          "is_primary": true
+        },
+        {
+          "id": "ceac7650",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778709643.257527,
+          "is_primary": true
+        },
+        {
+          "id": "8e14bf23",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778710121.3069603,
+          "is_primary": true
+        },
+        {
+          "id": "b82fd3a9",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778710181.243169,
+          "is_primary": true
+        },
+        {
+          "id": "fa3b59c3",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778710212.2460556,
+          "is_primary": true
+        },
+        {
+          "id": "a2699371",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778710243.32433,
+          "is_primary": true
+        },
+        {
+          "id": "323a10c7",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778710274.2455297,
+          "is_primary": true
+        },
+        {
+          "id": "658f7720",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778710305.3471296,
+          "is_primary": true
+        },
+        {
+          "id": "951b8014",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778710784.3046837,
+          "is_primary": true
+        },
+        {
+          "id": "5ac6e69f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778710843.2440054,
+          "is_primary": true
+        },
+        {
+          "id": "9ac95150",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778710874.2530243,
+          "is_primary": true
+        },
+        {
+          "id": "6bcfe93b",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778710905.2821984,
+          "is_primary": true
+        },
+        {
+          "id": "4e01e6b2",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778710936.2992468,
+          "is_primary": true
+        },
+        {
+          "id": "bc09f458",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778710967.2457836,
+          "is_primary": true
+        },
+        {
+          "id": "982024fa",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778711445.2475204,
+          "is_primary": true
+        },
+        {
+          "id": "60dfa5f3",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778711505.2420783,
+          "is_primary": true
+        },
+        {
+          "id": "f5452ec3",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778711536.280376,
+          "is_primary": true
+        },
+        {
+          "id": "294315e2",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778711567.2545006,
+          "is_primary": true
+        },
+        {
+          "id": "d9fae253",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778711598.283425,
+          "is_primary": true
+        },
+        {
+          "id": "88444e53",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778711629.3198013,
+          "is_primary": true
+        },
+        {
+          "id": "57f2cc01",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778712112.2593067,
+          "is_primary": true
+        },
+        {
+          "id": "cef5001f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778712167.2466276,
+          "is_primary": true
+        },
+        {
+          "id": "97f6b7e2",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778712198.3170273,
+          "is_primary": true
+        },
+        {
+          "id": "710430ab",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778712229.6737294,
+          "is_primary": true
+        },
+        {
+          "id": "e580423e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778712260.2523897,
+          "is_primary": true
+        },
+        {
+          "id": "da2299e4",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778712291.2516162,
+          "is_primary": true
+        },
+        {
+          "id": "b0102eba",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778712769.2674785,
+          "is_primary": true
+        },
+        {
+          "id": "8c99bc0a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778712829.2531583,
+          "is_primary": true
+        },
+        {
+          "id": "c11039cb",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778712860.252764,
+          "is_primary": true
+        },
+        {
+          "id": "df936af9",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778712891.2516665,
+          "is_primary": true
+        },
+        {
+          "id": "7fb5b39a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778712922.251194,
+          "is_primary": true
+        },
+        {
+          "id": "779baeaa",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778712953.2550228,
+          "is_primary": true
+        },
+        {
+          "id": "4d6cc37b",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778713431.2510436,
+          "is_primary": true
+        },
+        {
+          "id": "bd4808b2",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778713491.2925525,
+          "is_primary": true
+        },
+        {
+          "id": "b3e74f8d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778713522.244892,
+          "is_primary": true
+        },
+        {
+          "id": "4839ce9f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778713553.2999723,
+          "is_primary": true
+        },
+        {
+          "id": "8472f81c",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778713556.5027404,
+          "is_primary": true
+        },
+        {
+          "id": "75ab3bee",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778713587.2491088,
+          "is_primary": true
+        },
+        {
+          "id": "1d5e1f52",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778714094.3062782,
+          "is_primary": true
+        },
+        {
+          "id": "9fd7603d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778714153.2521899,
+          "is_primary": true
+        },
+        {
+          "id": "dc49ce57",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778714184.2845795,
+          "is_primary": true
+        },
+        {
+          "id": "c79f65e3",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778714215.2450385,
+          "is_primary": true
+        },
+        {
+          "id": "c10ce1a8",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778714246.3055894,
+          "is_primary": true
+        },
+        {
+          "id": "fe36cf95",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778714277.247902,
+          "is_primary": true
+        },
+        {
+          "id": "53b5af4a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778714761.2833788,
+          "is_primary": true
+        },
+        {
+          "id": "0e0d45f8",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778714821.2447855,
+          "is_primary": true
+        },
+        {
+          "id": "11b11673",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778714852.2847614,
+          "is_primary": true
+        },
+        {
+          "id": "27df89f3",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778714883.3141863,
+          "is_primary": true
+        },
+        {
+          "id": "f6c1e735",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778714914.2482793,
+          "is_primary": true
+        },
+        {
+          "id": "492aad0b",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778714945.3018324,
+          "is_primary": true
+        },
+        {
+          "id": "b1c6b377",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778715434.3186674,
+          "is_primary": true
+        },
+        {
+          "id": "cddf3c3e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778715495.2497652,
+          "is_primary": true
+        },
+        {
+          "id": "669b8d8d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778715526.2570229,
+          "is_primary": true
+        },
+        {
+          "id": "b80b0431",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778715557.3013532,
+          "is_primary": true
+        },
+        {
+          "id": "b222305d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778715588.2576268,
+          "is_primary": true
+        },
+        {
+          "id": "0f1956bc",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778715619.3831797,
+          "is_primary": true
+        },
+        {
+          "id": "716a4fa5",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778716104.2521179,
+          "is_primary": true
+        },
+        {
+          "id": "7f9504c2",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778716163.2468524,
+          "is_primary": true
+        },
+        {
+          "id": "82e87762",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778716194.2553864,
+          "is_primary": true
+        },
+        {
+          "id": "85652226",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778716225.316742,
+          "is_primary": true
+        },
+        {
+          "id": "074d7507",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778716256.2603178,
+          "is_primary": true
+        },
+        {
+          "id": "72f84cf5",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778716287.323392,
+          "is_primary": true
+        },
+        {
+          "id": "c895548d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778716799.2577224,
+          "is_primary": true
+        },
+        {
+          "id": "838b2c32",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778717550.2518775,
+          "is_primary": true
+        },
+        {
+          "id": "73453444",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778717581.2565494,
+          "is_primary": true
+        },
+        {
+          "id": "3ade30e2",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778717612.2601223,
+          "is_primary": true
+        },
+        {
+          "id": "a4fa4e73",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778717643.2562137,
+          "is_primary": true
+        },
+        {
+          "id": "343cac8f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778717674.257771,
+          "is_primary": true
+        },
+        {
+          "id": "12776d3d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778718156.9442465,
+          "is_primary": true
+        },
+        {
+          "id": "caec00c6",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778718160.1406903,
+          "is_primary": true
+        },
+        {
+          "id": "c525588a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778718219.24874,
+          "is_primary": true
+        },
+        {
+          "id": "81ccf059",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778718250.2453787,
+          "is_primary": true
+        },
+        {
+          "id": "ed5242c7",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778718281.2618675,
+          "is_primary": true
+        },
+        {
+          "id": "f70899e3",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778718295.7056916,
+          "is_primary": true
+        },
+        {
+          "id": "14cea641",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778718298.9029768,
+          "is_primary": true
+        },
+        {
+          "id": "651ad0db",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778718414.572768,
+          "is_primary": true
+        },
+        {
+          "id": "119c39b2",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778718789.9640062,
+          "is_primary": true
+        },
+        {
+          "id": "52415fa4",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778718793.1641045,
+          "is_primary": true
+        },
+        {
+          "id": "74f21791",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778718796.325057,
+          "is_primary": true
+        },
+        {
+          "id": "772b3d9a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778718799.578078,
+          "is_primary": true
+        },
+        {
+          "id": "dfcde677",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778718830.2439895,
+          "is_primary": true
+        },
+        {
+          "id": "f41e2da0",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778718890.245918,
+          "is_primary": true
+        },
+        {
+          "id": "d2421ef0",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778718921.2527385,
+          "is_primary": true
+        },
+        {
+          "id": "f8a5f09e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778718924.4501781,
+          "is_primary": true
+        },
+        {
+          "id": "cb1826b7",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778718955.2486892,
+          "is_primary": true
+        },
+        {
+          "id": "ed66fa50",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778718969.780312,
+          "is_primary": true
+        },
+        {
+          "id": "30891fba",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778719063.975591,
+          "is_primary": true
+        },
+        {
+          "id": "84362e59",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778719522.2541246,
+          "is_primary": true
+        },
+        {
+          "id": "3a4df620",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778719525.3292093,
+          "is_primary": true
+        },
+        {
+          "id": "81c7536a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778719528.4825907,
+          "is_primary": true
+        },
+        {
+          "id": "a41b318a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778719531.6754174,
+          "is_primary": true
+        },
+        {
+          "id": "a60c7572",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778719562.248552,
+          "is_primary": true
+        },
+        {
+          "id": "cc995e87",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720091.9225848,
+          "is_primary": true
+        },
+        {
+          "id": "a7c8faa1",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720095.1197624,
+          "is_primary": true
+        },
+        {
+          "id": "ddff4840",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720126.3022301,
+          "is_primary": true
+        },
+        {
+          "id": "b9ee14e6",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720136.7233303,
+          "is_primary": true
+        },
+        {
+          "id": "15b89302",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720139.734245,
+          "is_primary": true
+        },
+        {
+          "id": "3f8d9b2f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720143.8177915,
+          "is_primary": true
+        },
+        {
+          "id": "bde41d1b",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720174.245314,
+          "is_primary": true
+        },
+        {
+          "id": "e723d5a7",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720188.9473405,
+          "is_primary": true
+        },
+        {
+          "id": "616ff7b8",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720192.1492455,
+          "is_primary": true
+        },
+        {
+          "id": "1eab9c58",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720195.3777196,
+          "is_primary": true
+        },
+        {
+          "id": "8dfbdae4",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720320.25939,
+          "is_primary": true
+        },
+        {
+          "id": "ea69178f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720351.2499058,
+          "is_primary": true
+        },
+        {
+          "id": "802977e4",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720373.9122512,
+          "is_primary": true
+        },
+        {
+          "id": "733693c5",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720377.1130512,
+          "is_primary": true
+        },
+        {
+          "id": "a669774b",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720757.2456226,
+          "is_primary": true
+        },
+        {
+          "id": "66cf46ee",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720796.3013275,
+          "is_primary": true
+        },
+        {
+          "id": "fc14ee6f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720799.510463,
+          "is_primary": true
+        },
+        {
+          "id": "bdb99f77",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720830.2439263,
+          "is_primary": true
+        },
+        {
+          "id": "c94f4361",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720844.7069445,
+          "is_primary": true
+        },
+        {
+          "id": "d8c8db04",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720847.897413,
+          "is_primary": true
+        },
+        {
+          "id": "81e430d8",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720964.2493868,
+          "is_primary": true
+        },
+        {
+          "id": "7f3e45df",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778720995.2514842,
+          "is_primary": true
+        },
+        {
+          "id": "ae3b41a4",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778721497.2470486,
+          "is_primary": true
+        },
+        {
+          "id": "eee259c0",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778721528.2467039,
+          "is_primary": true
+        },
+        {
+          "id": "f0c837eb",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778721559.3007963,
+          "is_primary": true
+        },
+        {
+          "id": "babae00a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778721569.7464693,
+          "is_primary": true
+        },
+        {
+          "id": "8c129b8c",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778721572.7580547,
+          "is_primary": true
+        },
+        {
+          "id": "f5ba5213",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778721657.367286,
+          "is_primary": true
+        },
+        {
+          "id": "a78a2538",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778721660.6373494,
+          "is_primary": true
+        },
+        {
+          "id": "8eabe7c3",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778722138.2433314,
+          "is_primary": true
+        },
+        {
+          "id": "b71a641d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778722145.357367,
+          "is_primary": true
+        },
+        {
+          "id": "f290c25f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778722148.5127826,
+          "is_primary": true
+        },
+        {
+          "id": "4fe72d77",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778722151.7036562,
+          "is_primary": true
+        },
+        {
+          "id": "4cc7363c",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778722154.903014,
+          "is_primary": true
+        },
+        {
+          "id": "5c9f5d7b",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778722302.248791,
+          "is_primary": true
+        },
+        {
+          "id": "a6260cc2",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778722723.2665763,
+          "is_primary": true
+        },
+        {
+          "id": "ff07ba3d",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778722730.3329806,
+          "is_primary": true
+        },
+        {
+          "id": "c2d7a5eb",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778722733.4182172,
+          "is_primary": true
+        },
+        {
+          "id": "85ceba14",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778722736.6249733,
+          "is_primary": true
+        },
+        {
+          "id": "e2f0ec2e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778722739.8776119,
+          "is_primary": true
+        },
+        {
+          "id": "b10fe6b6",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778722770.2415545,
+          "is_primary": true
+        },
+        {
+          "id": "193eb959",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778722784.673657,
+          "is_primary": true
+        },
+        {
+          "id": "3d139a91",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778722873.643686,
+          "is_primary": true
+        },
+        {
+          "id": "ce29e894",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778722904.356918,
+          "is_primary": true
+        },
+        {
+          "id": "d46b5bfe",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778722914.1666245,
+          "is_primary": true
+        },
+        {
+          "id": "fcb7c589",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778722917.2505796,
+          "is_primary": true
+        },
+        {
+          "id": "9c634e99",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778722920.4771898,
+          "is_primary": true
+        },
+        {
+          "id": "f6141f16",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778723424.255261,
+          "is_primary": true
+        },
+        {
+          "id": "3b637124",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778723430.5447962,
+          "is_primary": true
+        },
+        {
+          "id": "8008ef56",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778723433.6567295,
+          "is_primary": true
+        },
+        {
+          "id": "08d32b4e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778723436.972031,
+          "is_primary": true
+        },
+        {
+          "id": "4c3e79b2",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778723440.2394748,
+          "is_primary": true
+        },
+        {
+          "id": "5dc90d86",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778723471.322047,
+          "is_primary": true
+        },
+        {
+          "id": "35884f46",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778723474.5893376,
+          "is_primary": true
+        },
+        {
+          "id": "5cf95ed2",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778723570.2970757,
+          "is_primary": true
+        },
+        {
+          "id": "07e9c3bb",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778723573.6047978,
+          "is_primary": true
+        },
+        {
+          "id": "68bf7676",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778723576.9259467,
+          "is_primary": true
+        },
+        {
+          "id": "d28fc0aa",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778723580.1312165,
+          "is_primary": true
+        },
+        {
+          "id": "6ef507be",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778723611.2940269,
+          "is_primary": true
+        },
+        {
+          "id": "d056e284",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778724089.26396,
+          "is_primary": true
+        },
+        {
+          "id": "e67d2deb",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778724179.2620087,
+          "is_primary": true
+        },
+        {
+          "id": "c08648c9",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778724202.4248836,
+          "is_primary": true
+        },
+        {
+          "id": "9fbaa048",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778724233.2620146,
+          "is_primary": true
+        },
+        {
+          "id": "cf8a1a24",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778724247.581611,
+          "is_primary": true
+        },
+        {
+          "id": "82ed22f6",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778724250.9155784,
+          "is_primary": true
+        },
+        {
+          "id": "d5d85edc",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778724353.0743136,
+          "is_primary": true
+        },
+        {
+          "id": "0dba13c3",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778724356.3285937,
+          "is_primary": true
+        },
+        {
+          "id": "8e649043",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778724800.3201141,
+          "is_primary": true
+        },
+        {
+          "id": "2141dbe8",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778724803.6067023,
+          "is_primary": true
+        },
+        {
+          "id": "3355c9ab",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778724806.771616,
+          "is_primary": true
+        },
+        {
+          "id": "236f209e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778724837.3241324,
+          "is_primary": true
+        },
+        {
+          "id": "355fd14e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778724851.473079,
+          "is_primary": true
+        },
+        {
+          "id": "0fa0df02",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778724958.7414033,
+          "is_primary": true
+        },
+        {
+          "id": "1d2f9c53",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778724989.2797022,
+          "is_primary": true
+        },
+        {
+          "id": "87d3273b",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778725352.8751686,
+          "is_primary": true
+        },
+        {
+          "id": "3db57d65",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778725356.1388624,
+          "is_primary": true
+        },
+        {
+          "id": "c9a36d53",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778725387.2502768,
+          "is_primary": true
+        },
+        {
+          "id": "54381bec",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778725467.2484808,
+          "is_primary": true
+        },
+        {
+          "id": "46f5d9ba",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778725498.2514122,
+          "is_primary": true
+        },
+        {
+          "id": "f175174a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778725512.6779733,
+          "is_primary": true
+        },
+        {
+          "id": "fd4033cf",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778725515.9279742,
+          "is_primary": true
+        },
+        {
+          "id": "4d4f194e",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778725519.2101772,
+          "is_primary": true
+        },
+        {
+          "id": "16197d03",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778725638.3952556,
+          "is_primary": true
+        },
+        {
+          "id": "6cd94006",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778725644.7114117,
+          "is_primary": true
+        },
+        {
+          "id": "e7651e78",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778725647.7734377,
+          "is_primary": true
+        },
+        {
+          "id": "2ecdd4bd",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726030.4962196,
+          "is_primary": true
+        },
+        {
+          "id": "28b50161",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726033.8304665,
+          "is_primary": true
+        },
+        {
+          "id": "85d75c44",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726036.9882095,
+          "is_primary": true
+        },
+        {
+          "id": "54bd6a14",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726054.4896452,
+          "is_primary": true
+        },
+        {
+          "id": "7c18a191",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726054.6261635,
+          "is_primary": true
+        },
+        {
+          "id": "23356a7a",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726054.988051,
+          "is_primary": true
+        },
+        {
+          "id": "237cbcd2",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726055.497939,
+          "is_primary": true
+        },
+        {
+          "id": "37da894c",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726056.0820215,
+          "is_primary": true
+        },
+        {
+          "id": "97c7d569",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726169.5056434,
+          "is_primary": true
+        },
+        {
+          "id": "4d3ac8f1",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726169.80529,
+          "is_primary": true
+        },
+        {
+          "id": "2ec90905",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726201.2643354,
+          "is_primary": true
+        },
+        {
+          "id": "8d8e06ad",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726211.6833618,
+          "is_primary": true
+        },
+        {
+          "id": "8306575f",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726242.2656095,
+          "is_primary": true
+        },
+        {
+          "id": "7b957b19",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726813.2573233,
+          "is_primary": true
+        },
+        {
+          "id": "288da022",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726844.4872043,
+          "is_primary": true
+        },
+        {
+          "id": "e1ecff45",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726875.3266501,
+          "is_primary": true
+        },
+        {
+          "id": "b3f0b5d6",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726906.2703528,
+          "is_primary": true
+        },
+        {
+          "id": "f94c9a31",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726937.2969227,
+          "is_primary": true
+        }
+      ]
+    }
+  },
+  "context": {
+    "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+    "run_id": "5a73b890"
+  },
+  "tags": [
+    "bdi_deliberation",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "d50979d5c6b4a97d"
+}
