@@ -43,57 +43,62 @@
   },
   "mindx.evolution.blueprint.latest": {
     "value": {
-      "blueprint_title": "Resilient Perpetual Evolution v0.5.0",
+      "blueprint_title": "Resilient Perpetual Evolution v0.5",
       "target_mindx_version_increment": "0.5.0",
       "focus_areas": [
-        "Provider Resilience & Fallback Mechanisms",
-        "Input Validation & Security Hardening",
-        "Self-Healing Infrastructure",
-        "Continuous Learning & Knowledge Retention",
-        "Observability & Metrics"
+        "Fault Tolerance & Fallback Mechanisms",
+        "Comprehensive Input Validation & Security",
+        "Automated Model Lifecycle Management",
+        "Persistent Knowledge & Learning Retention",
+        "Observability, Metrics & Self-Healing"
       ],
       "bdi_todo_list": [
         {
-          "goal_description": "Implement dynamic provider health monitoring and automatic failover for all LLM endpoints",
+          "goal_description": "Implement dynamic fallback provider selection with circuit breaker and health checks",
           "priority": 9
         },
         {
-          "goal_description": "Deploy comprehensive schema-based input validation middleware for all API ingress points",
+          "goal_description": "Deploy schema-based input validation for all API endpoints using Pydantic/JSON Schema",
           "priority": 9
         },
         {
-          "goal_description": "Create self\u2011healing service supervisor that restarts crashed components and re\u2011provisions missing dependencies",
+          "goal_description": "Create automated Ollama model pull/update service with version pinning and rollback",
           "priority": 8
         },
         {
-          "goal_description": "Integrate a knowledge\u2011retention loop where improvement backlog items are fed back into belief updates for perpetual learning",
+          "goal_description": "Design a persistent belief/knowledge store (vector DB) for agent experiences and self-improvement logs",
           "priority": 7
         },
         {
-          "goal_description": "Instrument system with Prometheus\u2011compatible metrics and Grafana dashboards for MTTR, error rates, and resource utilization",
+          "goal_description": "Integrate distributed tracing, metrics (Prometheus) and automated alerting for MTTR <5min",
+          "priority": 8
+        },
+        {
+          "goal_description": "Establish a self\u2011improvement loop that reviews improvement backlog, proposes code changes, and runs safety\u2011checked canary deployments",
           "priority": 6
         }
       ],
       "key_performance_indicators": {
-        "mean_time_to_recovery_seconds": 15,
-        "provider_failover_success_rate_percent": 99.5,
-        "input_validation_coverage_percent": 100,
-        "system_uptime_percent": 99.9,
-        "average_improvement_backlog_latency_hours": 4
+        "system_uptime_percent": "99.9",
+        "fallback_success_rate_percent": "99.5",
+        "input_validation_coverage_percent": "98",
+        "mean_time_to_recovery_minutes": "5",
+        "model_update_latency_minutes": "10",
+        "knowledge_base_growth_items_per_week": "200"
       },
       "potential_risks": [
-        "Over\u2011reliance on external API keys leading to quota exhaustion",
-        "Complexity increase causing debugging overhead",
-        "Potential latency introduced by validation and fallback layers",
-        "Risk of circular belief updates causing knowledge drift",
-        "Dependency on monitoring stack stability"
+        "Over\u2011dependence on external LLM APIs causing latency or cost spikes",
+        "Model drift or degradation if automated updates lack validation",
+        "Increased attack surface from complex validation and fallback logic",
+        "Resource exhaustion (GPU/CPU) due to uncontrolled model pulls",
+        "Complexity leading to harder debugging and potential cascading failures"
       ],
       "source": "llm_enriched"
     },
     "confidence": 0.95,
     "source": "self_analysis",
     "timestamp": 1776022239.3365555,
-    "last_updated": 1778724769.0332031
+    "last_updated": 1778725436.2522943
   },
   "identity.map.entity_to_address.smoke_test_entity_1": {
     "value": "0x5eCdc30df01030Aee83BF339617f5809bE26C8d9",
