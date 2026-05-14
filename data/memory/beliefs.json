@@ -46,58 +46,67 @@
       "blueprint_title": "Resilient Perpetual Evolution v0.5.0",
       "target_mindx_version_increment": "0.5.0",
       "focus_areas": [
-        "Robust Provider Fallback & Load Balancing",
-        "Input Validation & Security Hardening",
-        "Local Model Provisioning & Auto\u2011Update",
-        "Observability & Self\u2011Healing",
-        "Perpetual Knowledge Retention & Versioning"
+        "Robust Fallback & Error Handling",
+        "Comprehensive Input Validation & Security",
+        "Self-Healing Adaptive Learning",
+        "Long\u2011Term Knowledge Persistence (Belief & Memory Systems)",
+        "Scalable Multi\u2011Provider Management & Cost Optimization",
+        "Observability & Autonomous Governance"
       ],
       "bdi_todo_list": [
         {
-          "goal_description": "Implement dynamic fallback provider selection with health\u2011checking and latency\u2011aware routing",
+          "goal_description": "Implement dynamic fallback provider selection with health\u2011checking and latency\u2011aware routing for all LLM calls",
           "priority": 9
         },
         {
-          "goal_description": "Add comprehensive input validation schema for all API endpoints (JSON Schema + sanitization)",
+          "goal_description": "Add schema\u2011based input validation and sanitization middleware for all API endpoints (including agent\u2011to\u2011agent messages)",
           "priority": 9
         },
         {
-          "goal_description": "Automate Ollama installation, model pulling, and version\u2011pinning via startup script",
+          "goal_description": "Deploy a lightweight belief\u2011revision module that logs contradictions and triggers self\u2011improvement proposals when confidence drops below threshold",
           "priority": 8
         },
         {
-          "goal_description": "Deploy centralized logging, metrics, and automated self\u2011healing alerts (circuit breaker, restart on failure)",
+          "goal_description": "Design a persistent knowledge store (vector\u2011backed + relational) for agent experiences, enabling perpetual learning across restarts",
+          "priority": 8
+        },
+        {
+          "goal_description": "Create provider quota\u2011aware load balancer that rotates usage, tracks cost, and automatically switches to local Ollama models when limits approached",
           "priority": 7
         },
         {
-          "goal_description": "Design immutable knowledge\u2011base snapshots linked to MindX version for perpetual roll\u2011forward/rollback",
-          "priority": 6
+          "goal_description": "Instrument system with Prometheus\u2011compatible metrics (MTTR, fallback hit\u2011rate, validation error rate, belief\u2011update frequency) and automated alerting",
+          "priority": 7
         },
         {
-          "goal_description": "Create automated backlog grooming pipeline that converts high\u2011priority suggestions into versioned tickets",
-          "priority": 5
+          "goal_description": "Run a chaos\u2011engineering test suite (simulated provider failures, malformed inputs) to verify resilience guarantees before release",
+          "priority": 6
         }
       ],
       "key_performance_indicators": {
-        "provider_failover_latency_ms": "<200",
-        "input_validation_coverage_percent": "100",
-        "local_model_success_rate": ">=95%",
-        "system_uptime_percent": ">=99.9",
-        "improvement_backlog_resolution_rate": ">=10 items/week"
+        "mean_time_to_recovery_seconds": "<30",
+        "fallback_success_rate": ">0.95",
+        "input_validation_error_rate": "<0.001",
+        "belief_update_frequency_per_hour": ">2",
+        "knowledge_store_retention_days": ">365",
+        "provider_cost_vs_budget_variance": "<5%",
+        "system_uptime_percentage": ">99.9"
       },
       "potential_risks": [
-        "Dependency on external API keys leading to service disruption",
-        "Model drift causing degraded reasoning",
-        "Resource exhaustion from local model inference",
-        "Security vulnerabilities from insufficient input validation",
-        "Version incompatibility during perpetual updates"
+        "Over\u2011reliance on external API providers leading to quota exhaustion or service degradation",
+        "Latency introduced by health\u2011checking and fallback logic impacting real\u2011time agent interactions",
+        "Validation overhead could become a bottleneck if not optimized",
+        "Belief revision mechanisms may drift or produce inconsistent ontologies without proper governance",
+        "Persistent knowledge store growth could exceed storage capacity if not pruned",
+        "Complex multi\u2011provider orchestration increases surface for configuration errors",
+        "Chaos testing might inadvertently affect production\u2011like environments if not isolated"
       ],
       "source": "llm_enriched"
     },
     "confidence": 0.95,
     "source": "self_analysis",
     "timestamp": 1776022239.3365555,
-    "last_updated": 1778733042.919051
+    "last_updated": 1778733733.8457203
   },
   "identity.map.entity_to_address.smoke_test_entity_1": {
     "value": "0x5eCdc30df01030Aee83BF339617f5809bE26C8d9",
