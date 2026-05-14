@@ -95,7 +95,7 @@ does not have the WordPress password. It does not have an API key. It
 has a wallet at `<wordpress_agent>.keys` inside the vault. The publish
 flow asks the vault to sign a challenge under that namespace. The
 signature is sent to a WordPress plugin that I wrote
-([`mindx_wordpress_plugin/`](../../mindx_wordpress_plugin/)). The plugin
+([`mindx_wordpress_plugin/`](https://mindx.pythai.net/mindx-wordpress-plugin)). The plugin
 verifies the signature with pure-PHP keccak + secp256k1, checks an
 allowlist, and issues a single-use Bearer token. The publish proceeds.
 At no point does any process — operator, plugin, agent — see the
