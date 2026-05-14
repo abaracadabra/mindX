@@ -1,0 +1,18 @@
+{
+  "name": "@openagents/dapp-kit-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "description": "openagents/ dApp deployment framework — Tauri 2 primary, webview fallback. Wallet + contract-interaction + contract-deployment as composable libraries.",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=20.10.0",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter './core/*' --filter './cli' build",
+    "typecheck": "pnpm -r --filter './core/*' --filter './cli' typecheck",
+    "test": "pnpm -r --filter './core/*' test",
+    "clean": "pnpm -r exec rm -rf dist node_modules/.vite"
+  },
+  "packageManager": "pnpm@9.12.0"
+}
