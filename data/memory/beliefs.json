@@ -43,15 +43,14 @@
   },
   "mindx.evolution.blueprint.latest": {
     "value": {
-      "blueprint_title": "Resilient Perpetual Evolution v0.5.0",
+      "blueprint_title": "Resilient Perpetual Evolution v0.5",
       "target_mindx_version_increment": "0.5.0",
       "focus_areas": [
-        "Robust Provider Fallback & Self-Healing",
-        "Comprehensive Input Validation & Sanitization",
-        "Automated Model Inventory & Local Deployment",
-        "Continuous Improvement Loop & Backlog Grooming",
-        "Observability, Metrics & Adaptive Configuration",
-        "Knowledge Persistence & Long-Term State Management"
+        "Fault Tolerance & Provider Fallback",
+        "Input Validation & API Security",
+        "Automated Model Lifecycle Management",
+        "Observability & Self\u2011Diagnostics",
+        "Continuous Self\u2011Improvement Loop"
       ],
       "bdi_todo_list": [
         {
@@ -59,48 +58,47 @@
           "priority": 9
         },
         {
-          "goal_description": "Deploy a centralized input validation middleware that enforces schema, size limits, and injection prevention for every API endpoint",
+          "goal_description": "Deploy comprehensive input validation middleware (schema, sanitization, rate\u2011limiting) for all API endpoints",
           "priority": 9
         },
         {
-          "goal_description": "Create an automated model\u2011management service that installs Ollama, pulls required models, and keeps a local model cache synchronized with the provider list",
+          "goal_description": "Create an automated Ollama/model\u2011pull service that keeps required models up\u2011to\u2011date and reports availability",
           "priority": 8
         },
         {
-          "goal_description": "Design a backlog grooming agent that prioritizes items based on impact, effort, and resilience value, and automatically creates improvement PRs",
+          "goal_description": "Add structured logging, metrics (latency, error rates, fallback usage) and health\u2011check endpoints",
           "priority": 7
         },
         {
-          "goal_description": "Instrument the system with Prometheus\u2011compatible metrics (latency, error rates, provider availability, validation failures) and a self\u2011tuning controller that adjusts timeouts and retry policies",
-          "priority": 8
+          "goal_description": "Design a BDI\u2011driven backlog processor that periodically reviews, prioritizes and auto\u2011implements high\u2011impact improvement items",
+          "priority": 6
         },
         {
-          "goal_description": "Introduce a durable state store (e.g., version\u2011checked JSON\u2011based vault) for agent beliefs, improvement history, and configuration to guarantee perpetuity across restarts",
-          "priority": 7
+          "goal_description": "Implement model drift detection and automatic retraining triggers for locally hosted models",
+          "priority": 5
         }
       ],
       "key_performance_indicators": {
-        "mean_time_to_recovery_seconds": 30,
-        "provider_failure_rate_percent": 0.5,
-        "input_validation_pass_rate_percent": 99.9,
-        "backlog_reduction_rate_items_per_day": 50,
-        "system_uptime_percent": 99.9,
-        "model_cache_hit_rate_percent": 95
+        "mean_time_to_recover_seconds": 30,
+        "fallback_success_rate_percent": 99.5,
+        "validation_error_rate_percent": 0.1,
+        "model_update_latency_minutes": 10,
+        "backlog_reduction_rate_percent_per_week": 5,
+        "system_uptime_percent": 99.9
       },
       "potential_risks": [
-        "Over\u2011reliance on external API keys leading to service disruption if keys expire or are revoked",
-        "Model drift or degradation causing reduced quality of generated outputs",
-        "Resource exhaustion from uncontrolled local model downloads or concurrent inference loads",
-        "Configuration drift between distributed agents causing inconsistent fallback behavior",
-        "Security vulnerabilities introduced by insufficient validation or injection attacks",
-        "Data loss or corruption of the persistent belief/vault store due to inadequate backup strategies"
+        "Over\u2011dependence on external API keys leading to service disruption",
+        "Increased complexity causing hidden failure modes",
+        "Insufficient validation allowing injection attacks",
+        "Resource exhaustion from uncontrolled model downloads",
+        "Model drift degrading output quality if not detected"
       ],
       "source": "llm_enriched"
     },
     "confidence": 0.95,
     "source": "self_analysis",
     "timestamp": 1776022239.3365555,
-    "last_updated": 1778730918.2870579
+    "last_updated": 1778731567.1239989
   },
   "identity.map.entity_to_address.smoke_test_entity_1": {
     "value": "0x5eCdc30df01030Aee83BF339617f5809bE26C8d9",
