@@ -2411,16 +2411,25 @@
       "source_commit": "b740a052c259eae5d592e14e6086a053c4f37f42",
       "created_at": "2026-05-14T02:18:47.977490",
       "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_022955",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "acbec7d0c8760e199fb0e73b90b656ec4b7fcb91",
+      "created_at": "2026-05-14T02:30:00.902150",
+      "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/pre-architectural-up-20260514_021842",
+    "branch_name": "backup/pre-architectural-up-20260514_022955",
     "backup_type": "pre_architectural_upgrade",
     "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
     "source_branch": "backup/pre-architectural-up-20260513_095635",
-    "source_commit": "b740a052c259eae5d592e14e6086a053c4f37f42",
-    "created_at": "2026-05-14T02:18:47.977490",
+    "source_commit": "acbec7d0c8760e199fb0e73b90b656ec4b7fcb91",
+    "created_at": "2026-05-14T02:30:00.902150",
     "status": "created"
   },
-  "last_backup_at": "2026-05-14T02:18:47.977515"
+  "last_backup_at": "2026-05-14T02:30:00.902179"
 }
