@@ -43,51 +43,76 @@
   },
   "mindx.evolution.blueprint.latest": {
     "value": {
-      "blueprint_title": "Structural Blueprint (skeleton from improvement backlog)",
-      "target_mindx_version_increment": "0.0.1",
+      "blueprint_title": ": Resilient Perpetual Evolution: Provider Redundancy & Secure Foundations",
+      "target_mindx_version_increment": "0.5.0",
       "focus_areas": [
-        "system"
+        "Provider Resilience",
+        "Input Validation & Security",
+        "Local Inference Enablement",
+        "Observability & Self-Healing",
+        "Configuration Management"
       ],
       "bdi_todo_list": [
         {
-          "goal_description": "Install Ollama and pull required models for local AI inference",
-          "priority": 8,
-          "target_component": "system"
+          "goal_description": "Implement intelligent fallback provider selection with health\u2011checking and latency\u2011aware routing",
+          "priority": 9
         },
         {
-          "goal_description": "Implement fallback provider selection when primary LLM fails",
-          "priority": 7,
-          "target_component": "system"
+          "goal_description": "Deploy comprehensive input validation schema for all API endpoints (JSON schema + sanitization)",
+          "priority": 9
         },
         {
-          "goal_description": "Implement comprehensive input validation for API requests",
-          "priority": 9,
-          "target_component": "system"
+          "goal_description": "Automate Ollama installation and pre\u2011pull of essential models (llama3:8b, mistral-nemo) for local inference",
+          "priority": 8
         },
         {
-          "goal_description": "Add output validation checks to ensure expected formats and data types",
-          "priority": 8,
-          "target_component": "system"
+          "goal_description": "Add self\u2011healing monitoring: detect provider failures, trigger fallback, and auto\u2011restart unhealthy services",
+          "priority": 7
         },
         {
-          "goal_description": "Enhance model input validation with specific checks for LLM providers",
-          "priority": 7,
-          "target_component": "system"
+          "goal_description": "Standardize configuration via mindx_config.json with validation and versioned schema",
+          "priority": 6
+        },
+        {
+          "goal_description": "Create automated backlog grooming pipeline that prioritizes items based on impact vs effort and updates priority dynamically",
+          "priority": 5
         }
       ],
-      "key_performance_indicators": [
-        "Improvement cycle completion rate",
-        "Agent health score"
-      ],
+      "key_performance_indicators": {
+        "provider_failover_latency_ms": {
+          "target": "<200",
+          "unit": "ms"
+        },
+        "input_validation_error_rate": {
+          "target": "<0.1%",
+          "unit": "%"
+        },
+        "local_inference_success_rate": {
+          "target": "99.5%",
+          "unit": "%"
+        },
+        "mean_time_to_recovery_MTTR": {
+          "target": "<30",
+          "unit": "seconds"
+        },
+        "backlog_resolution_rate": {
+          "target": "15 items/day",
+          "unit": "items/day"
+        }
+      },
       "potential_risks": [
-        "Skeleton requires LLM enrichment for strategic depth"
+        "Over\u2011reliance on external API keys leading to quota exhaustion",
+        "Configuration drift causing mismatched expectations across services",
+        "Resource exhaustion (CPU/GPU) when running large local models concurrently",
+        "Insufficient validation opening injection or DoS vectors",
+        "Version incompatibility between updated models and existing agent code"
       ],
-      "source": "skeleton"
+      "source": "llm_enriched"
     },
     "confidence": 0.95,
     "source": "self_analysis",
     "timestamp": 1776022239.3365555,
-    "last_updated": 1778716132.9121478
+    "last_updated": 1778717519.272359
   },
   "identity.map.entity_to_address.smoke_test_entity_1": {
     "value": "0x5eCdc30df01030Aee83BF339617f5809bE26C8d9",
