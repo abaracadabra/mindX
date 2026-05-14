@@ -43,62 +43,51 @@
   },
   "mindx.evolution.blueprint.latest": {
     "value": {
-      "blueprint_title": "Resilient Perpetual Evolution v0.5",
-      "target_mindx_version_increment": "0.5.0",
+      "blueprint_title": "Structural Blueprint (skeleton from improvement backlog)",
+      "target_mindx_version_increment": "0.0.1",
       "focus_areas": [
-        "Fault Tolerance & Fallback Mechanisms",
-        "Comprehensive Input Validation & Security",
-        "Automated Model Lifecycle Management",
-        "Persistent Knowledge & Learning Retention",
-        "Observability, Metrics & Self-Healing"
+        "system"
       ],
       "bdi_todo_list": [
         {
-          "goal_description": "Implement dynamic fallback provider selection with circuit breaker and health checks",
-          "priority": 9
+          "goal_description": "Install Ollama and pull required models for local AI inference",
+          "priority": 8,
+          "target_component": "system"
         },
         {
-          "goal_description": "Deploy schema-based input validation for all API endpoints using Pydantic/JSON Schema",
-          "priority": 9
+          "goal_description": "Implement fallback provider selection when primary LLM fails",
+          "priority": 7,
+          "target_component": "system"
         },
         {
-          "goal_description": "Create automated Ollama model pull/update service with version pinning and rollback",
-          "priority": 8
+          "goal_description": "Implement comprehensive input validation for API requests",
+          "priority": 9,
+          "target_component": "system"
         },
         {
-          "goal_description": "Design a persistent belief/knowledge store (vector DB) for agent experiences and self-improvement logs",
-          "priority": 7
+          "goal_description": "Add output validation checks to ensure expected formats and data types",
+          "priority": 8,
+          "target_component": "system"
         },
         {
-          "goal_description": "Integrate distributed tracing, metrics (Prometheus) and automated alerting for MTTR <5min",
-          "priority": 8
-        },
-        {
-          "goal_description": "Establish a self\u2011improvement loop that reviews improvement backlog, proposes code changes, and runs safety\u2011checked canary deployments",
-          "priority": 6
+          "goal_description": "Enhance model input validation with specific checks for LLM providers",
+          "priority": 7,
+          "target_component": "system"
         }
       ],
-      "key_performance_indicators": {
-        "system_uptime_percent": "99.9",
-        "fallback_success_rate_percent": "99.5",
-        "input_validation_coverage_percent": "98",
-        "mean_time_to_recovery_minutes": "5",
-        "model_update_latency_minutes": "10",
-        "knowledge_base_growth_items_per_week": "200"
-      },
-      "potential_risks": [
-        "Over\u2011dependence on external LLM APIs causing latency or cost spikes",
-        "Model drift or degradation if automated updates lack validation",
-        "Increased attack surface from complex validation and fallback logic",
-        "Resource exhaustion (GPU/CPU) due to uncontrolled model pulls",
-        "Complexity leading to harder debugging and potential cascading failures"
+      "key_performance_indicators": [
+        "Improvement cycle completion rate",
+        "Agent health score"
       ],
-      "source": "llm_enriched"
+      "potential_risks": [
+        "Skeleton requires LLM enrichment for strategic depth"
+      ],
+      "source": "skeleton"
     },
     "confidence": 0.95,
     "source": "self_analysis",
     "timestamp": 1776022239.3365555,
-    "last_updated": 1778725436.2522943
+    "last_updated": 1778726054.2049108
   },
   "identity.map.entity_to_address.smoke_test_entity_1": {
     "value": "0x5eCdc30df01030Aee83BF339617f5809bE26C8d9",
