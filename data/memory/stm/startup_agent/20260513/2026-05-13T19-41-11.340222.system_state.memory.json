@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-05-13T19:41:11.340222",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "startup_agent",
+  "content": {
+    "process_name": "startup_initiation",
+    "data": {
+      "timestamp": 1778726471.3402102,
+      "previous_state": {
+        "event_id": "startup_1778692763",
+        "timestamp": 1778692763.2292094,
+        "improvement_count": 0,
+        "rollback_count": 0
+      },
+      "improvement_count": 0,
+      "rollback_count": 0,
+      "restore_from_blockchain": false
+    }
+  },
+  "context": {
+    "agent_id": "startup_agent",
+    "event": "startup_initiation"
+  },
+  "tags": [
+    "startup_initiation",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "92742afdac950220"
+}

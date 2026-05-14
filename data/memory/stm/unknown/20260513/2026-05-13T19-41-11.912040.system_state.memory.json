@@ -1,0 +1,59 @@
+{
+  "timestamp": "2026-05-13T19:41:11.912040",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "unknown",
+  "content": {
+    "process_name": "system_state_startup",
+    "data": {
+      "event_type": "startup",
+      "timestamp": 1778726471.702623,
+      "event_id": "startup_1778726471",
+      "resource_snapshot": {
+        "timestamp": 1778726471.9097157,
+        "cpu_percent": 10.5,
+        "memory_percent": 70.1,
+        "memory_used": 4294967296,
+        "memory_total": 6120328396,
+        "disk_usage": {
+          "/": 94.42785877570591
+        },
+        "network_bytes_sent": 2920769905,
+        "network_bytes_recv": 2736319190,
+        "process_count": 292,
+        "load_average": [
+          1.330078125,
+          2.2119140625,
+          1.7568359375
+        ]
+      },
+      "performance_snapshot": null,
+      "agents_registered": [
+        "coordinator_agent"
+      ],
+      "agents_active": [
+        "coordinator_agent"
+      ],
+      "tools_registered": [],
+      "system_version": null,
+      "improvement_count": 0,
+      "rollback_count": 0,
+      "last_improvement": null,
+      "last_rollback": null,
+      "errors": [],
+      "warnings": [],
+      "metadata": {
+        "phase": "before_startup"
+      }
+    }
+  },
+  "context": {
+    "tracker": "system_state_tracker"
+  },
+  "tags": [
+    "system_state_startup",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "bbad936dd88c6164"
+}
