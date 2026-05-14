@@ -1,17 +1,17 @@
 {
   "total_cycles": 0,
-  "total_improvements_attempted": 373,
+  "total_improvements_attempted": 375,
   "total_improvements_succeeded": 71,
-  "total_improvements_failed": 302,
-  "improvement_success_rate": 0.1903485254691689,
-  "total_godel_choices": 4448,
-  "godel_self_referential": 386,
+  "total_improvements_failed": 304,
+  "improvement_success_rate": 0.18933333333333333,
+  "total_godel_choices": 4463,
+  "godel_self_referential": 389,
   "total_actions": 0,
   "actions_completed": 0,
   "actions_failed": 0,
   "action_completion_rate": 0.0,
-  "total_memories": 21423,
-  "memory_growth_rate": 9.150054239727584,
+  "total_memories": 21615,
+  "memory_growth_rate": 9.229722513104422,
   "total_dream_cycles": 13,
   "total_insights_extracted": 1798,
   "total_patterns_stored": 2174,
@@ -20,15 +20,15 @@
   "uptime_seconds": 0,
   "autonomous_cycles_without_human": 0,
   "first_evidence_timestamp": 1770298054.00348,
-  "last_evidence_timestamp": 1778726725.351148,
-  "evidence_span_hours": 2341.2975965744445,
+  "last_evidence_timestamp": 1778728860.009784,
+  "evidence_span_hours": 2341.8905573066663,
   "thesis_verdicts": {
-    "self_improvement": "PARTIAL \u2014 71/373 succeeded (19%) [95% CI 15.4%-23.3%, n=373]",
-    "godel_self_reference": "SUPPORTED \u2014 386/4448 choices are self-referential (9%) [CI 7.89%-9.54%]",
+    "self_improvement": "PARTIAL \u2014 71/375 succeeded (19%) [95% CI 15.3%-23.2%, n=375]",
+    "godel_self_reference": "SUPPORTED \u2014 389/4463 choices are self-referential (9%) [CI 7.92%-9.58%]",
     "darwinian_selection": "PARTIAL \u2014 top quartile 51.7 vs bottom 40.4 fitness (\u0394=11.3pts, n=12 agents)",
-    "resilience": "SUPPORTED \u2014 system recovered from 302 failures, continued to achieve 71 successes",
-    "autonomy": "SUPPORTED \u2014 4448 autonomous decisions across 2341.3h (1.9/hr steady-state)",
-    "knowledge_accumulation": "SUPPORTED \u2014 21,423 memories, 13 dream cycles, 2174 patterns extracted"
+    "resilience": "SUPPORTED \u2014 system recovered from 304 failures, continued to achieve 71 successes",
+    "autonomy": "SUPPORTED \u2014 4463 autonomous decisions across 2341.9h (1.9/hr steady-state)",
+    "knowledge_accumulation": "SUPPORTED \u2014 21,615 memories, 13 dream cycles, 2174 patterns extracted"
   },
-  "_saved_at": 1778726766.7308521
+  "_saved_at": 1778728970.2231967
 }
