@@ -44,16 +44,23 @@ def test_topic_map_files_exist_on_disk():
 # ─── pick() — explicit topic mode ────────────────────────────
 
 
+# The picker prefers the CDN-safe ``gfx/jpg/<stem>.jpg`` variant when one
+# exists (added 2026-05-13 — Hostinger CDN 504s on uploads > ~1.6MB).
+# Assertions therefore pin the *stem* of the returned file rather than the
+# full filename, so they pass for either the original PNG/WEBP asset or its
+# converted JPG variant.
+
+
 def test_pick_explicit_topic_competition():
     p = FeaturedImagePicker()
     out = p.pick(topic="competition")
-    assert out.name == "war_council_gold.png"
+    assert out.stem == "war_council_gold"
 
 
 def test_pick_explicit_topic_agenticplace():
     p = FeaturedImagePicker()
     out = p.pick(topic="agenticplace")
-    assert out.name == "AgenticPlace.png"
+    assert out.stem == "AgenticPlace"
 
 
 def test_pick_explicit_topic_is_case_insensitive():
@@ -68,7 +75,7 @@ def test_pick_unknown_topic_falls_back_to_keyword_scan():
     """Unknown explicit topic + recognizable title keyword → keyword match."""
     p = FeaturedImagePicker()
     out = p.pick(topic="not-a-real-topic", title="A piece on AgenticPlace listings")
-    assert out.name == "AgenticPlace.png"
+    assert out.stem == "AgenticPlace"
 
 
 # ─── pick() — keyword scan mode ──────────────────────────────
@@ -77,13 +84,13 @@ def test_pick_unknown_topic_falls_back_to_keyword_scan():
 def test_pick_title_keyword_competition():
     p = FeaturedImagePicker()
     out = p.pick(title="Competition is the substrate")
-    assert out.name == "war_council_gold.png"
+    assert out.stem == "war_council_gold"
 
 
 def test_pick_title_keyword_openclaw_routes_to_peers_image():
     p = FeaturedImagePicker()
     out = p.pick(title="What OpenClaw pioneered")
-    assert out.name == "sevensoldiers.png"
+    assert out.stem == "sevensoldiers"
 
 
 def test_pick_inaugural_article_uses_competition_image():
@@ -94,19 +101,19 @@ def test_pick_inaugural_article_uses_competition_image():
         tags=["openclaw", "agenticplace", "bankon"],
     )
     # 'competition' appears in the title and comes before 'openclaw' in dict order.
-    assert out.name == "war_council_gold.png"
+    assert out.stem == "war_council_gold"
 
 
 def test_pick_tag_keyword_bankon():
     p = FeaturedImagePicker()
     out = p.pick(title="Untitled draft", tags=["bankon"])
-    assert out.name == "bankonvault.png"
+    assert out.stem == "bankonvault"
 
 
 def test_pick_tag_keyword_hermes():
     p = FeaturedImagePicker()
     out = p.pick(title="Curator cadence", tags=["hermes"])
-    assert out.name == "sevensoldiers.png"
+    assert out.stem == "sevensoldiers"
 
 
 def test_pick_keyword_match_is_case_insensitive():
@@ -122,13 +129,37 @@ def test_pick_keyword_match_is_case_insensitive():
 def test_pick_no_match_returns_default_doorway1():
     p = FeaturedImagePicker()
     out = p.pick(title="a completely unmatched article")
-    assert out.name == "doorway1.webp"
+    assert out.stem == "doorway1"
 
 
 def test_pick_with_no_inputs_returns_default():
     p = FeaturedImagePicker()
     out = p.pick()
-    assert out.name == "doorway1.webp"
+    assert out.stem == "doorway1"
+
+
+# ─── pick() — JPG variant preference (2026-05-13) ────────────
+
+
+def test_pick_prefers_jpg_variant_when_present():
+    """If gfx/jpg/<stem>.jpg exists, it must be preferred over the
+    original PNG/WEBP for CDN-safety."""
+    p = FeaturedImagePicker()
+    out = p.pick(topic="bankon")
+    # bankonvault.jpg was batch-converted under gfx/jpg/ — picker should pick it.
+    if (GFX_ROOT / "jpg" / "bankonvault.jpg").exists():
+        assert out.suffix == ".jpg"
+        assert out.parent.name == "jpg"
+    else:
+        # Fallback path: no JPG variant on disk → original PNG returned.
+        assert out.name == "bankonvault.png"
+
+
+def test_pick_cypherpunk2048_topic_routes_to_bankonvault():
+    """Phase D mapping: cypherpunk2048 → bankonvault asset."""
+    p = FeaturedImagePicker()
+    out = p.pick(topic="cypherpunk2048")
+    assert out.stem == "bankonvault"
 
 
 def test_pick_returns_existing_path():

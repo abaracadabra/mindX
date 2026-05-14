@@ -104,6 +104,12 @@ TOPIC_TO_FILE: dict[str, str] = {
     "shadow-overlord":  "shadow_overlord.png",
     "shadow overlord":  "shadow_overlord.png",
 
+    # cypherpunk2048 standard / sovereignty / cypherpunk.
+    "cypherpunk2048":   "bankonvault.png",
+    "cypherpunk":       "bankonvault.png",
+    "sovereignty":      "bankonvault.png",
+    "standard":         "bankonvault.png",
+
     # Generic fallback.
     "default":          "doorway1.webp",
 }
@@ -164,7 +170,21 @@ class FeaturedImagePicker:
         return self._resolve(self.topic_map["default"]) or self._first_doorway()
 
     def _resolve(self, filename: str) -> Optional[Path]:
-        """Return the Path if the file exists under gfx_root, else None."""
+        """Return the Path under ``gfx_root`` for ``filename``, preferring the
+        CDN-safe JPG variant under ``gfx/jpg/<stem>.jpg`` when one exists.
+
+        The JPG variants were batch-converted (PIL, quality≈85, max-width 1280)
+        for the Hostinger CDN, which 504s on uploads larger than ~1.6MB. The
+        TOPIC_TO_FILE map keeps the original PNG/WEBP filenames as the canonical
+        keys; this resolver transparently substitutes the JPG variant when
+        present, so existing tests that pin specific mappings keep working.
+
+        Returns the resolved Path, or ``None`` if neither variant exists.
+        """
+        stem = Path(filename).stem
+        jpg_variant = self.gfx_root / "jpg" / f"{stem}.jpg"
+        if jpg_variant.exists():
+            return jpg_variant
         p = self.gfx_root / filename
         return p if p.exists() else None
 
