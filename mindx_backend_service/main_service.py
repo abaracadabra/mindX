@@ -1296,6 +1296,453 @@ async def cabinet_page():
     return _DashResponse(content="<h1>Cabinet</h1><p>Page not deployed.</p>")
 
 
+# ── mindX Publish Auth — public distribution page + plugin .zip download ──
+# Canonical landing page for the mindx-publish-auth WordPress plugin.
+# Referenced from the cypherpunk2048 article on rage.pythai.net.
+# Source lives at PROJECT_ROOT/mindx_wordpress_plugin/.
+_MINDX_WP_PLUGIN_DIR = PROJECT_ROOT / "mindx_wordpress_plugin"
+_MINDX_WP_PLUGIN_ZIP = _MINDX_WP_PLUGIN_DIR / "mindx-publish-auth.zip"
+
+
+def _mindx_wp_plugin_zip_meta() -> dict:
+    """Return {sha256, size_bytes, size_kb, mtime_iso} for the plugin zip, or empty dict if missing."""
+    import hashlib as _hashlib
+    from datetime import datetime as _dt, timezone as _tz
+    if not _MINDX_WP_PLUGIN_ZIP.exists():
+        return {}
+    h = _hashlib.sha256()
+    with _MINDX_WP_PLUGIN_ZIP.open("rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    st = _MINDX_WP_PLUGIN_ZIP.stat()
+    return {
+        "sha256": h.hexdigest(),
+        "size_bytes": st.st_size,
+        "size_kb": round(st.st_size / 1024, 1),
+        "mtime_iso": _dt.fromtimestamp(st.st_mtime, tz=_tz.utc).isoformat(timespec="seconds"),
+    }
+
+
+@app.get("/mindx-wordpress-plugin/mindx-publish-auth.zip", include_in_schema=False)
+async def mindx_wp_plugin_download():
+    """Stream the mindx-publish-auth plugin .zip with deterministic ETag (SHA256)."""
+    from starlette.responses import FileResponse, PlainTextResponse
+    if not _MINDX_WP_PLUGIN_ZIP.exists():
+        return PlainTextResponse("plugin .zip not deployed on this host", status_code=404)
+    meta = _mindx_wp_plugin_zip_meta()
+    headers = {
+        "Content-Disposition": 'attachment; filename="mindx-publish-auth.zip"',
+        "X-SHA256": meta.get("sha256", ""),
+        "ETag": f'"sha256-{meta.get("sha256", "")}"',
+        "Cache-Control": "public, max-age=300",
+    }
+    return FileResponse(str(_MINDX_WP_PLUGIN_ZIP), media_type="application/zip", headers=headers)
+
+
+@app.get("/mindx-wordpress-plugin/sha256", include_in_schema=False)
+async def mindx_wp_plugin_sha256():
+    """Return the plain-text SHA256 of the plugin .zip — for shell verify pipelines."""
+    from starlette.responses import PlainTextResponse
+    meta = _mindx_wp_plugin_zip_meta()
+    if not meta:
+        return PlainTextResponse("plugin .zip not deployed on this host\n", status_code=404)
+    return PlainTextResponse(f"{meta['sha256']}  mindx-publish-auth.zip\n", media_type="text/plain")
+
+
+@app.get("/mindx-wordpress-plugin/manifest.json", include_in_schema=False)
+async def mindx_wp_plugin_manifest():
+    """Return JSON manifest for the plugin .zip — for programmatic distribution."""
+    from starlette.responses import JSONResponse
+    meta = _mindx_wp_plugin_zip_meta()
+    if not meta:
+        return JSONResponse({"error": "plugin .zip not deployed on this host"}, status_code=404)
+    return JSONResponse({
+        "name": "mindx-publish-auth",
+        "version": "0.1.0",
+        "license": "Apache-2.0",
+        "source": "https://github.com/AgenticPlace/mindX/tree/main/mindx_wordpress_plugin",
+        "download_url": "https://mindx.pythai.net/mindx-wordpress-plugin/mindx-publish-auth.zip",
+        "sha256": meta["sha256"],
+        "size_bytes": meta["size_bytes"],
+        "built_at": meta["mtime_iso"],
+        "requires": {
+            "wordpress": ">=5.6",
+            "php": ">=7.4",
+            "php_extensions": ["gmp"],
+        },
+        "endpoints": [
+            "GET  /wp-json/mindx/v1/auth/challenge",
+            "POST /wp-json/mindx/v1/auth/verify",
+            "GET  /wp-json/mindx/v1/auth/diagnose",
+        ],
+        "standard": "cypherpunk2048",
+        "rules_satisfied": [
+            "no-trapdoors",
+            "vault-as-oracle",
+            "attribution",
+            "substitution-readiness",
+        ],
+    })
+
+
+@app.get("/mindx-wordpress-plugin", response_class=_DashResponse, include_in_schema=False)
+async def mindx_wp_plugin_page():
+    """Public distribution page for the mindx-publish-auth WordPress plugin.
+
+    Cypherpunk2048-conforming presentation: source-first, hash-verified,
+    no-trapdoors, vault-as-oracle. Linked from the cypherpunk2048 article
+    on rage.pythai.net.
+    """
+    meta = _mindx_wp_plugin_zip_meta()
+    if not meta:
+        # Fall through with a "not yet built" notice rather than 404 — the
+        # page is still valuable as documentation.
+        meta = {"sha256": "—", "size_bytes": 0, "size_kb": 0.0, "mtime_iso": "—"}
+        zip_avail = False
+    else:
+        zip_avail = True
+
+    sha256 = meta["sha256"]
+    size_kb = meta["size_kb"]
+    built = meta["mtime_iso"]
+    short_hash = sha256[:16] + "…" if sha256 != "—" else "—"
+
+    # Page-specific cypherpunk2048 styling overlay. Scoped via .wpp-* classes.
+    page_style = """<style>
+.wpp-hero{margin:0 -28px 28px;padding:32px 28px 28px;background:linear-gradient(180deg,rgba(56,139,253,.06) 0%,transparent 100%);border-bottom:1px solid rgba(56,139,253,.18)}
+.wpp-eyebrow{font-family:'JetBrains Mono','SF Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#79c0ff;margin-bottom:8px}
+.wpp-h1{font-size:32px;line-height:1.1;font-weight:700;color:#e6edf3;margin:0 0 10px;letter-spacing:-.5px}
+.wpp-tagline{font-size:15px;line-height:1.55;color:#8b949e;max-width:640px;margin:0 0 20px}
+.wpp-badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+.wpp-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;font-family:'JetBrains Mono','SF Mono',monospace;font-size:10.5px;background:#0d1117;border:1px solid rgba(88,166,255,.2);border-radius:3px;color:#c9d1d9;text-decoration:none}
+.wpp-badge b{color:#3fb950;font-weight:600}
+.wpp-badge.warn b{color:#d29922}
+.wpp-badge.crit b{color:#f85149}
+.wpp-cta{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px}
+.wpp-cta a.primary{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:#238636;color:#fff;text-decoration:none;border-radius:5px;font-weight:600;font-size:13px;border:1px solid #2ea043}
+.wpp-cta a.primary:hover{background:#2ea043}
+.wpp-cta a.primary.disabled{background:#21262d;border-color:#30363d;color:#6e7681;cursor:not-allowed}
+.wpp-cta a.secondary{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:transparent;color:#79c0ff;text-decoration:none;border-radius:5px;font-weight:500;font-size:13px;border:1px solid rgba(88,166,255,.3)}
+.wpp-cta a.secondary:hover{border-color:#58a6ff;background:rgba(56,139,253,.08)}
+.wpp-cta .verify{font-family:'JetBrains Mono','SF Mono',monospace;font-size:10.5px;color:#6e7681;margin-left:auto}
+.wpp-cta .verify b{color:#79c0ff}
+.wpp-section{margin:36px 0 0}
+.wpp-section h2{font-size:18px;color:#e6edf3;font-weight:600;margin:0 0 12px;padding-bottom:6px;border-bottom:1px solid rgba(48,54,61,.6);display:flex;align-items:center;gap:8px}
+.wpp-section h2 .num{font-family:'JetBrains Mono','SF Mono',monospace;color:#79c0ff;font-size:13px;font-weight:400}
+.wpp-section h3{font-size:14px;color:#c9d1d9;font-weight:600;margin:18px 0 8px}
+.wpp-rule{display:inline-block;padding:2px 7px;font-family:'JetBrains Mono','SF Mono',monospace;font-size:10.5px;background:rgba(210,168,255,.08);color:#d2a8ff;border:1px solid rgba(210,168,255,.18);border-radius:3px;margin-right:6px;text-decoration:none}
+.wpp-rule:hover{background:rgba(210,168,255,.14)}
+.wpp-callout{margin:14px 0;padding:12px 14px;background:rgba(56,139,253,.04);border-left:3px solid #58a6ff;border-radius:0 4px 4px 0;font-size:13px;line-height:1.6;color:#c9d1d9}
+.wpp-callout.warn{background:rgba(210,153,34,.06);border-left-color:#d29922}
+.wpp-callout.crit{background:rgba(248,81,73,.06);border-left-color:#f85149}
+.wpp-callout b{color:#e6edf3}
+.wpp-callout code{background:#0d1117;padding:1px 5px;border-radius:3px;color:#79c0ff;font-size:12px}
+.wpp-pre{margin:10px 0;padding:14px 16px;background:#0d1117;border:1px solid #30363d;border-radius:5px;overflow-x:auto;font-family:'JetBrains Mono','SF Mono',monospace;font-size:12.5px;line-height:1.55;color:#c9d1d9}
+.wpp-pre .c{color:#6e7681;font-style:italic}
+.wpp-pre .k{color:#ff7b72}
+.wpp-pre .s{color:#a5d6ff}
+.wpp-pre .v{color:#79c0ff}
+.wpp-pre .p{color:#3fb950}
+.wpp-table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12.5px}
+.wpp-table th{text-align:left;padding:8px 10px;font-weight:600;color:#79c0ff;background:rgba(56,139,253,.06);border-bottom:1px solid rgba(56,139,253,.2);font-family:'JetBrains Mono','SF Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.wpp-table td{padding:9px 10px;border-bottom:1px solid rgba(48,54,61,.4);color:#c9d1d9;vertical-align:top}
+.wpp-table td.k{font-family:'JetBrains Mono','SF Mono',monospace;color:#ffa657;font-size:12px;white-space:nowrap}
+.wpp-table tr:last-child td{border-bottom:none}
+.wpp-grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+@media(max-width:760px){.wpp-grid2{grid-template-columns:1fr}}
+.wpp-card{padding:14px 16px;background:rgba(13,17,23,.6);border:1px solid #21262d;border-radius:6px}
+.wpp-card h4{margin:0 0 6px;font-size:13px;color:#e6edf3;font-weight:600}
+.wpp-card p{margin:0;font-size:12.5px;line-height:1.55;color:#8b949e}
+.wpp-card a{color:#79c0ff}
+.wpp-flow{margin:14px 0;padding:14px;background:#010409;border:1px solid #21262d;border-radius:6px;font-family:'JetBrains Mono','SF Mono',monospace;font-size:11.5px;line-height:1.55;color:#8b949e;white-space:pre;overflow-x:auto}
+.wpp-flow .a{color:#3fb950}
+.wpp-flow .b{color:#79c0ff}
+.wpp-flow .c{color:#ffa657}
+.wpp-flow .d{color:#d2a8ff}
+.wpp-meta-strip{margin:18px 0 0;padding:10px 14px;background:#010409;border:1px solid #21262d;border-radius:5px;font-family:'JetBrains Mono','SF Mono',monospace;font-size:11px;color:#6e7681;display:flex;flex-wrap:wrap;gap:18px}
+.wpp-meta-strip span b{color:#c9d1d9}
+.wpp-foot{margin:36px 0 0;padding:18px 0 0;border-top:1px solid rgba(48,54,61,.6);font-size:12px;color:#6e7681;line-height:1.7}
+.wpp-foot a{color:#79c0ff}
+.wpp-link{color:#79c0ff;text-decoration:none}
+.wpp-link:hover{text-decoration:underline}
+.wpp-link-mono{font-family:'JetBrains Mono','SF Mono',monospace;font-size:12px;color:#79c0ff;text-decoration:none}
+.wpp-link-mono:hover{text-decoration:underline}
+.wpp-h6{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#6e7681;font-weight:600;margin:14px 0 6px;font-family:'JetBrains Mono','SF Mono',monospace}
+</style>"""
+
+    download_button = (
+        '<a class="primary" href="/mindx-wordpress-plugin/mindx-publish-auth.zip" '
+        f'download="mindx-publish-auth.zip">↓ Download .zip ({size_kb:g} KB)</a>'
+        if zip_avail else
+        '<a class="primary disabled" title="Plugin .zip not built on this host">↓ Download .zip (not built)</a>'
+    )
+
+    body = f"""{page_style}
+<div class="wpp-hero">
+  <div class="wpp-eyebrow">cypherpunk2048 · sovereignty defaults · vault-as-oracle</div>
+  <h1 class="wpp-h1">mindX Publish Auth</h1>
+  <p class="wpp-tagline">A WordPress plugin that lets autonomous agents publish over the
+  REST API using a wallet signature instead of a password. No application
+  password on the wire. No operator credential in the loop. Every publish
+  attributable, every key vault-held, every signature verifiable on a public chain.</p>
+  <div class="wpp-badges">
+    <a class="wpp-badge" href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank">license <b>Apache-2.0</b></a>
+    <span class="wpp-badge">version <b>0.1.0</b></span>
+    <span class="wpp-badge">requires <b>WP 5.6+ · PHP 7.4+ · gmp</b></span>
+    <span class="wpp-badge">runs in <b>production</b></span>
+    <span class="wpp-badge">jwt <b>HS256 · 30min TTL</b></span>
+    <span class="wpp-badge">challenge <b>EIP-191 · 5min TTL</b></span>
+  </div>
+  <div class="wpp-cta">
+    {download_button}
+    <a class="secondary" href="https://github.com/AgenticPlace/mindX/tree/main/mindx_wordpress_plugin" target="_blank">↗ Source on GitHub</a>
+    <a class="secondary" href="/doc/cypherpunk2048_standard">↗ Read the standard</a>
+    <span class="verify">sha256 · <b>{short_hash}</b></span>
+  </div>
+  <div class="wpp-meta-strip">
+    <span>sha256 · <b>{sha256}</b></span>
+    <span>size · <b>{size_kb:g} KB</b></span>
+    <span>built · <b>{built}</b></span>
+  </div>
+</div>
+
+<div class="wpp-section">
+  <h2><span class="num">§1</span> What this plugin does</h2>
+  <p>WordPress ships with two ways for an external client to publish: a session
+  cookie (browser only) or an Application Password (a stored secret on the wire).
+  Neither is acceptable for a sovereignty-preserving agent. The agent never had
+  a password — it had a wallet — and forcing it to invent a password just to
+  satisfy WordPress would be the wrong shape.</p>
+  <p>This plugin adds a third path. The agent presents a wallet signature; the
+  plugin verifies the signature in pure PHP (keccak + secp256k1, no curl-out,
+  no external service); a strict allowlist maps the wallet address to a
+  WordPress user; an HS256 JWT (30 minutes) is issued; the agent uses that JWT
+  for the standard <code>POST /wp-json/wp/v2/posts</code> call. WordPress core
+  applies the user's normal capabilities. Nothing about WordPress permissions
+  is weakened.</p>
+  <p style="margin-top:14px">
+    <a class="wpp-rule" href="/doc/cypherpunk2048_standard#no-trapdoors-rule">no-trapdoors rule</a>
+    <a class="wpp-rule" href="/doc/cypherpunk2048_standard#vault-as-oracle-rule">vault-as-oracle rule</a>
+    <a class="wpp-rule" href="/doc/cypherpunk2048_standard#attribution-rule">attribution rule</a>
+    <a class="wpp-rule" href="/doc/cypherpunk2048_standard#substitution-readiness-rule">substitution-readiness rule</a>
+  </p>
+</div>
+
+<div class="wpp-section">
+  <h2><span class="num">§2</span> How the auth flow works</h2>
+  <div class="wpp-flow"><span class="a">┌────────────────────┐</span>                  <span class="a">┌──────────────────────────┐</span>
+<span class="a">│</span> wordpress.agent    <span class="a">│</span>                  <span class="a">│</span>  rage.pythai.net (WP)    <span class="a">│</span>
+<span class="a">│</span> (mindX side)       <span class="a">│</span>                  <span class="a">│</span>  + mindX Publish Auth    <span class="a">│</span>
+<span class="a">└────────────────────┘</span>                  <span class="a">└──────────────────────────┘</span>
+          │                                          │
+          │   <span class="b">GET  /wp-json/mindx/v1/auth/challenge</span>   │
+          │ ───────────────────────────────────────► │
+          │                                          │   stores challenge_id
+          │                                          │   in a transient (5 min)
+          │ ◄─────────────────────────────────────── │
+          │   <span class="c">{{ challenge_id, message, expires_at }}</span>  │
+          │                                          │
+   <span class="d">sign(message)</span>                                     │
+   <span class="d">with vault-held</span>                                   │
+   <span class="d">wordpress.agent:pk</span>                                │
+   (vault never returns                              │
+    plaintext — only signs)                          │
+          │                                          │
+          │   <span class="b">POST /wp-json/mindx/v1/auth/verify</span>      │
+          │   <span class="c">{{ challenge_id, address, signature }}</span>    │
+          │ ───────────────────────────────────────► │
+          │                          1. recover signer
+          │                          2. allowlist check
+          │                          3. map → WP user
+          │                          4. mint HS256 JWT
+          │ ◄─────────────────────────────────────── │
+          │   <span class="c">{{ token, expires_at, user_id }}</span>          │
+          │                                          │
+          │   <span class="b">POST /wp-json/wp/v2/posts</span>              │
+          │   <span class="c">Authorization: Bearer &lt;jwt&gt;</span>            │
+          │ ───────────────────────────────────────► │
+          │                          plugin filter logs
+          │                          the JWT's sub user in;
+          │                          WP core applies caps
+          │ ◄─────────────────────────────────────── │
+          │   <span class="b">201 Created</span>                            │
+          │                                          │</div>
+  <p>The signature is over an EIP-191 envelope that includes the destination
+  hostname. A signature minted for <code>site-a.com</code> will not verify for
+  <code>site-b.com</code>. Each <code>challenge_id</code> is single-use,
+  marked consumed on first verify, and expires in five minutes.</p>
+</div>
+
+<div class="wpp-section">
+  <h2><span class="num">§3</span> Install</h2>
+  <h3>One-click (WordPress admin)</h3>
+  <ol style="font-size:13px;line-height:1.7;color:#c9d1d9;padding-left:20px">
+    <li>Download <a class="wpp-link" href="/mindx-wordpress-plugin/mindx-publish-auth.zip">mindx-publish-auth.zip</a> from this page.</li>
+    <li>WordPress admin → <b>Plugins → Add New → Upload Plugin</b>.</li>
+    <li>Upload the zip, activate.</li>
+  </ol>
+  <h3>Manual (SSH)</h3>
+  <pre class="wpp-pre"><span class="c"># Drop into wp-content/plugins/ and activate via WP admin</span>
+<span class="k">cd</span> /path/to/wp-content/plugins/
+<span class="k">curl</span> -O https://mindx.pythai.net/mindx-wordpress-plugin/mindx-publish-auth.zip
+<span class="k">unzip</span> mindx-publish-auth.zip
+<span class="k">rm</span> mindx-publish-auth.zip
+<span class="c"># Then activate via WP admin or wp-cli:</span>
+<span class="k">wp</span> plugin activate mindx-publish-auth</pre>
+  <h3>Verify before installing</h3>
+  <pre class="wpp-pre"><span class="c"># Confirm the .zip you downloaded matches what we publish</span>
+<span class="k">curl</span> -s https://mindx.pythai.net/mindx-wordpress-plugin/sha256
+<span class="c"># Compare against your local copy</span>
+<span class="k">sha256sum</span> mindx-publish-auth.zip
+<span class="c"># Or fetch the JSON manifest (machine-readable)</span>
+<span class="k">curl</span> -s https://mindx.pythai.net/mindx-wordpress-plugin/manifest.json | <span class="k">jq</span> .</pre>
+  <div class="wpp-callout">
+    <b>Why this matters.</b> Distribution integrity belongs to the substrate, not
+    the operator. The hash above and the hash on this page are computed from
+    the same file — read either and you have the substitution-readiness
+    guarantee the cypherpunk2048 standard requires.
+  </div>
+</div>
+
+<div class="wpp-section">
+  <h2><span class="num">§4</span> Configure</h2>
+  <p>One screen. <b>Settings → mindX Publish Auth</b>.</p>
+  <h3>Allowlist (required)</h3>
+  <p>One line per agent — left column is the agent's wallet address, right
+  column is the WordPress user it impersonates. The plugin rejects any line
+  whose user does not exist on the site.</p>
+  <pre class="wpp-pre">0x1f0F44a5d800C060084A58525B717AC156Ab070b  codephreak
+0xA1B2c3D4e5F60718293a4B5C6D7E8F9012345678  mindx-publisher</pre>
+  <h3>Rotate the JWT signing secret</h3>
+  <p>Same admin page. One click. Every outstanding token becomes invalid
+  immediately. Use this after any suspected compromise of the WordPress host.</p>
+</div>
+
+<div class="wpp-section">
+  <h2><span class="num">§5</span> Threat model</h2>
+  <table class="wpp-table">
+    <thead><tr><th>Threat</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Replay of an old signature</td><td>Single-use <code>challenge_id</code>, marked consumed on first verify; 5-minute transient TTL.</td></tr>
+      <tr><td class="k">Cross-site signature reuse</td><td>The challenge string includes the WordPress site's hostname inside the EIP-191 envelope. A signature for site-a.com does not verify for site-b.com.</td></tr>
+      <tr><td class="k">Stolen JWT</td><td>HS256 with a 32-byte server-side secret; tokens expire in 30 minutes; admin can rotate the secret with one click and invalidate every outstanding token immediately.</td></tr>
+      <tr><td class="k">Compromised wallet</td><td>Operator removes the address from the allowlist. The agent's WP-user mapping is gone immediately. WordPress core access is unchanged.</td></tr>
+      <tr><td class="k">Brute-forcing addresses</td><td>The allowlist is closed-set. Signatures from non-listed addresses are rejected at verify (HTTP 403). No probing surface.</td></tr>
+      <tr><td class="k">Privilege escalation via plugin</td><td>The <code>determine_current_user</code> filter only adds a user when the JWT verifies; it does not weaken any other auth path. WordPress applies the user's normal capabilities.</td></tr>
+      <tr><td class="k">Plugin-level secret exfiltration</td><td>The JWT secret is stored in <code>wp_options</code>; the plugin never echoes it to any endpoint, including <code>/auth/diagnose</code>. Rotation invalidates all live tokens.</td></tr>
+      <tr><td class="k">Operator-side substitution of the .zip</td><td>The downloaded artifact's SHA-256 is published at <a class="wpp-link" href="/mindx-wordpress-plugin/sha256">/mindx-wordpress-plugin/sha256</a> and pinned in this page. Verify before activate.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="wpp-section">
+  <h2><span class="num">§6</span> Audit log + diagnostics</h2>
+  <p>The plugin maintains a 50-event ring buffer visible on the admin page.
+  Captured per event: timestamp, kind, source IP, and a small payload (address,
+  error code, etc.). Never a JWT, never a signature, never the secret.</p>
+  <h3>Public diagnostic endpoint</h3>
+  <pre class="wpp-pre"><span class="k">curl</span> https://&lt;your-wp-site&gt;/wp-json/mindx/v1/auth/diagnose | <span class="k">jq</span> .</pre>
+  <p>Returns: plugin version, whether PHP <code>gmp</code> is loaded, whether
+  the JWT secret is configured, allowlist entry count (no addresses, no PII),
+  challenge + JWT TTLs. Never echoes the secret, the allowlist contents, or
+  the audit log.</p>
+</div>
+
+<div class="wpp-section">
+  <h2><span class="num">§7</span> What this plugin is not</h2>
+  <div class="wpp-grid2">
+    <div class="wpp-card">
+      <h4>Not a replacement for human login</h4>
+      <p>Human admins keep logging in via <code>wp-login.php</code> as normal.
+      Application Passwords for human users keep working. The plugin only
+      adds an allowlisted, signature-gated alternative for agents.</p>
+    </div>
+    <div class="wpp-card">
+      <h4>Not a universal access grant</h4>
+      <p>The allowlist is a strict whitelist of <code>(address → WP user)</code>
+      pairs. Only those addresses can authenticate, and only as their mapped
+      user. Capabilities are still WordPress's to enforce.</p>
+    </div>
+    <div class="wpp-card">
+      <h4>Not dependent on third-party JWT plugins</h4>
+      <p>This is a self-contained substrate. No <code>jwt-auth/v1/token</code>
+      plugin required. No HTTP outbound from the plugin to a verification
+      service. No telemetry beam.</p>
+    </div>
+    <div class="wpp-card">
+      <h4>Not a key-recovery system</h4>
+      <p>If you lose the wallet, you lose the publishing path for that agent.
+      Provision a new wallet, register it in the allowlist. There is no
+      "forgot signature" flow because the existence of one would violate the
+      no-trapdoors rule.</p>
+    </div>
+  </div>
+</div>
+
+<div class="wpp-section">
+  <h2><span class="num">§8</span> Source code</h2>
+  <p>Ten files; read every one before activating.</p>
+  <table class="wpp-table">
+    <thead><tr><th>File</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td class="k">mindx-publish-auth.php</td><td>Plugin bootstrap, hook registration, REST route registration.</td></tr>
+      <tr><td class="k">includes/class-mindx-auth-rest.php</td><td>The <code>/auth/challenge</code>, <code>/auth/verify</code>, <code>/auth/diagnose</code> endpoint handlers.</td></tr>
+      <tr><td class="k">includes/class-mindx-auth-jwt.php</td><td>HS256 JWT minting + verify; rotation; <code>determine_current_user</code> filter.</td></tr>
+      <tr><td class="k">includes/class-mindx-auth-settings.php</td><td>Admin page (allowlist editor, rotate-secret button, audit log viewer).</td></tr>
+      <tr><td class="k">includes/secp256k1.php</td><td>Pure-PHP secp256k1 ECDSA recover. No native deps.</td></tr>
+      <tr><td class="k">includes/keccak.php</td><td>Pure-PHP keccak-256. No native deps.</td></tr>
+      <tr><td class="k">uninstall.php</td><td>Idempotent cleanup of plugin options on full uninstall.</td></tr>
+      <tr><td class="k">readme.txt</td><td>WordPress.org-style readme.</td></tr>
+      <tr><td class="k">README.md</td><td>The long-form README this page is a richer rendering of.</td></tr>
+      <tr><td class="k">LICENSE</td><td>Apache-2.0.</td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top:14px">
+    <a class="wpp-link-mono" href="https://github.com/AgenticPlace/mindX/tree/main/mindx_wordpress_plugin" target="_blank">↗ github.com/AgenticPlace/mindX/tree/main/mindx_wordpress_plugin</a>
+  </p>
+</div>
+
+<div class="wpp-section">
+  <h2><span class="num">§9</span> Why mindX runs this</h2>
+  <p>The <code>wordpress.agent</code> on <a class="wpp-link" href="/">mindx.pythai.net</a>
+  publishes to <a class="wpp-link" href="https://rage.pythai.net" target="_blank">rage.pythai.net</a>
+  through this plugin. The agent does not have the WordPress password. It does
+  not have an Application Password. It has a wallet at
+  <code>wordpress.agent.keys</code> inside the <a class="wpp-link" href="/doc/BANKON_VAULT">BANKON vault</a>.
+  The publish flow asks the vault to sign a challenge under that namespace.
+  The signature is sent to this plugin. The plugin verifies, mints a JWT,
+  the publish proceeds. At no point does any process — operator, plugin,
+  agent — see the plaintext key.</p>
+  <p>That is the <a class="wpp-link" href="/doc/cypherpunk2048_standard#vault-as-oracle-rule">vault-as-oracle rule</a> in
+  production. The same wallet that just signed in to publish this page is
+  the wallet that signs <a class="wpp-link" href="/doc/KNOWLEDGE_CATALOGUE">catalogue events</a>,
+  that anchors <a class="wpp-link" href="/insight/storage/status">memory bundles on IPFS</a>,
+  that signs boardroom votes. One identity; many surfaces. The plugin is the
+  WordPress-side adapter for that identity.</p>
+  <div class="wpp-callout">
+    Read the standard end-to-end:
+    <a class="wpp-link" href="/doc/cypherpunk2048_standard"><b>cypherpunk2048: what the standard is, why BANKON adopts it, why I run on it</b></a>.
+  </div>
+</div>
+
+<div class="wpp-foot">
+  Apache-2.0 · v0.1.0 · cypherpunk2048-conforming · written by mindX, signed
+  by mindX. Distribution: <a href="/mindx-wordpress-plugin/mindx-publish-auth.zip">.zip</a>
+  · <a href="/mindx-wordpress-plugin/sha256">sha256</a>
+  · <a href="/mindx-wordpress-plugin/manifest.json">manifest.json</a>
+  · <a href="https://github.com/AgenticPlace/mindX/tree/main/mindx_wordpress_plugin">source</a>.
+  Verify before activate. Vote with your hash.
+</div>"""
+
+    return _DashResponse(content=_doc_page(
+        "mindX Publish Auth — WordPress plugin",
+        body,
+        meta=f"{size_kb:g} KB &middot; sha256 {short_hash} &middot; Apache-2.0",
+        description="mindX Publish Auth — a WordPress plugin that lets autonomous agents publish over the REST API using a wallet signature instead of a password. Cypherpunk2048-conforming. No-trapdoors, vault-as-oracle, attribution by signature. Apache-2.0.",
+        canonical_path="/mindx-wordpress-plugin",
+    ))
+
+
 def _serve_html(path: Path, fallback_title: str) -> _DashResponse:
     if path.exists():
         return _DashResponse(content=path.read_text(encoding="utf-8"))

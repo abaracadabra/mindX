@@ -43,62 +43,66 @@
   },
   "mindx.evolution.blueprint.latest": {
     "value": {
-      "blueprint_title": "Resilient Perpetual Evolution v0.5",
+      "blueprint_title": "Resilient Perpetual MindX Evolution",
       "target_mindx_version_increment": "0.5.0",
       "focus_areas": [
-        "Fault Tolerance & Provider Fallback",
-        "Input Validation & API Security",
-        "Automated Model Lifecycle Management",
-        "Observability & Self\u2011Diagnostics",
-        "Continuous Self\u2011Improvement Loop"
+        "Provider Fallback & Load Balancing",
+        "Robust Input Validation & Sanitization",
+        "Local Model Infrastructure (Ollama)",
+        "Self-Healing & Monitoring",
+        "Knowledge Persistence & Versioned Beliefs"
       ],
       "bdi_todo_list": [
         {
-          "goal_description": "Implement dynamic fallback provider selection with health\u2011checking and automatic failover for all LLM calls",
+          "goal_description": "Implement dynamic fallback provider selection with health checks",
           "priority": 9
         },
         {
-          "goal_description": "Deploy comprehensive input validation middleware (schema, sanitization, rate\u2011limiting) for all API endpoints",
+          "goal_description": "Add comprehensive schema-based validation for all API endpoints",
           "priority": 9
         },
         {
-          "goal_description": "Create an automated Ollama/model\u2011pull service that keeps required models up\u2011to\u2011date and reports availability",
+          "goal_description": "Automate Ollama installation and model pulling in deployment scripts",
           "priority": 8
         },
         {
-          "goal_description": "Add structured logging, metrics (latency, error rates, fallback usage) and health\u2011check endpoints",
+          "goal_description": "Deploy health\u2011check microservice and auto\u2011restart on failure",
+          "priority": 8
+        },
+        {
+          "goal_description": "Design persistent belief store with versioned snapshots for long\u2011term learning",
           "priority": 7
         },
         {
-          "goal_description": "Design a BDI\u2011driven backlog processor that periodically reviews, prioritizes and auto\u2011implements high\u2011impact improvement items",
+          "goal_description": "Introduce chaos testing to verify resilience under provider outages",
           "priority": 6
         },
         {
-          "goal_description": "Implement model drift detection and automatic retraining triggers for locally hosted models",
+          "goal_description": "Establish KPI dashboard for uptime, latency, and validation error rates",
           "priority": 5
         }
       ],
       "key_performance_indicators": {
-        "mean_time_to_recover_seconds": 30,
-        "fallback_success_rate_percent": 99.5,
-        "validation_error_rate_percent": 0.1,
-        "model_update_latency_minutes": 10,
-        "backlog_reduction_rate_percent_per_week": 5,
-        "system_uptime_percent": 99.9
+        "system_uptime_percent": 99.9,
+        "mean_time_to_recovery_seconds": 30,
+        "provider_switch_latency_ms": 200,
+        "input_validation_error_rate_percent": 0.1,
+        "local_model_inference_success_rate_percent": 98,
+        "belief_store_version_retention_count": 12
       },
       "potential_risks": [
-        "Over\u2011dependence on external API keys leading to service disruption",
-        "Increased complexity causing hidden failure modes",
-        "Insufficient validation allowing injection attacks",
-        "Resource exhaustion from uncontrolled model downloads",
-        "Model drift degrading output quality if not detected"
+        "Dependency on external API keys leading to quota exhaustion",
+        "Model drift causing degraded performance over time",
+        "Increased complexity introducing new failure points",
+        "Security vulnerabilities from insufficient input validation",
+        "Resource strain from running multiple local models concurrently"
       ],
       "source": "llm_enriched"
     },
     "confidence": 0.95,
     "source": "self_analysis",
     "timestamp": 1776022239.3365555,
-    "last_updated": 1778731567.1239989
+    "last_updated": 1778732309.9393775
   },
   "identity.map.entity_to_address.smoke_test_entity_1": {
     "value": "0x5eCdc30df01030Aee83BF339617f5809bE26C8d9",
