@@ -1681,6 +1681,7 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/shadow-overlord", "/shadow-overlord.html",
     "/openapi.json", "/docs", "/redoc",
     "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
+    "/mindx-wordpress-plugin",         # public distribution page for mindx-publish-auth WP plugin
 })
 _PUBLIC_PREFIXES_STRICT = (
     "/doc/", "/docs", "/redoc",
@@ -1692,6 +1693,7 @@ _PUBLIC_PREFIXES_STRICT = (
     "/users/session/",                 # auth handshake — session/validate
     "/wp-json/",                       # WordPress plugin callbacks (signature-authed at plugin layer)
     "/publish/rage/",                  # external WordPress publish webhook (EIP-191 sig + allowlist)
+    "/mindx-wordpress-plugin/",        # plugin .zip download + sub-resources
 )
 
 _PUBLIC_EXACT_LEGACY = frozenset({
