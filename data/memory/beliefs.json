@@ -43,100 +43,51 @@
   },
   "mindx.evolution.blueprint.latest": {
     "value": {
-      "blueprint_title": "Resilient & Perpetual MindX Evolution",
-      "target_mindx_version_increment": "0.5.0",
+      "blueprint_title": "Structural Blueprint (skeleton from improvement backlog)",
+      "target_mindx_version_increment": "0.0.1",
       "focus_areas": [
-        "Resilient Provider Orchestration",
-        "Input Validation & Security Hardening",
-        "Automated Self-Healing & Recovery",
-        "Continuous Learning & Knowledge Persistence",
-        "Observability & Monitoring",
-        "Scalable Deployment & Configuration Management"
+        "system"
       ],
       "bdi_todo_list": [
         {
-          "goal_description": "Implement dynamic fallback provider selection with health\u2011checking and latency\u2011aware routing",
-          "priority": 9
+          "goal_description": "Install Ollama and pull required models for local AI inference",
+          "priority": 8,
+          "target_component": "system"
         },
         {
-          "goal_description": "Deploy comprehensive schema\u2011based input validation for all API endpoints using Pydantic/variants",
-          "priority": 9
+          "goal_description": "Implement fallback provider selection when primary LLM fails",
+          "priority": 7,
+          "target_component": "system"
         },
         {
-          "goal_description": "Create self\u2011healing service supervisor that restarts failed components and triggers provider failover",
-          "priority": 8
+          "goal_description": "Implement comprehensive input validation for API requests",
+          "priority": 9,
+          "target_component": "system"
         },
         {
-          "goal_description": "Establish a persistent knowledge store (vector DB + versioned beliefs) to enable long\u2011term learning across sessions",
-          "priority": 7
+          "goal_description": "Add output validation checks to ensure expected formats and data types",
+          "priority": 8,
+          "target_component": "system"
         },
         {
-          "goal_description": "Integrate centralized logging, metrics (Prometheus) and alerting for MTTR and provider SLA tracking",
-          "priority": 7
-        },
-        {
-          "goal_description": "Containerize MindX services with Helm charts and enable zero\u2011downtime rolling updates",
-          "priority": 6
-        },
-        {
-          "goal_description": "Run regular chaos\u2011engineering experiments to validate resilience under provider outages and network partitions",
-          "priority": 5
+          "goal_description": "Enhance model input validation with specific checks for LLM providers",
+          "priority": 7,
+          "target_component": "system"
         }
       ],
       "key_performance_indicators": [
-        {
-          "name": "Mean Time To Recovery (MTTR)",
-          "target": "<2 minutes"
-        },
-        {
-          "name": "Provider Failover Success Rate",
-          "target": "99.9%"
-        },
-        {
-          "name": "Input Validation Error Rate (production)",
-          "target": "<0.1%"
-        },
-        {
-          "name": "System Uptime (monthly)",
-          "target": "99.95%"
-        },
-        {
-          "name": "Knowledge Retention Recall@10",
-          "target": "0.85"
-        },
-        {
-          "name": "Improvement Backlog Reduction Rate (items/week)",
-          "target": "50"
-        }
+        "Improvement cycle completion rate",
+        "Agent health score"
       ],
       "potential_risks": [
-        {
-          "description": "Increased complexity may introduce new failure modes in the orchestration layer",
-          "mitigation": "Gradual rollout with feature flags and extensive integration tests"
-        },
-        {
-          "description": "Over\u2011reliance on external LLM APIs could lead to vendor lock\u2011in or cost spikes",
-          "mitigation": "Prioritize local model usage and enforce cost\u2011aware routing policies"
-        },
-        {
-          "description": "Validation schemas might become outdated as API contracts evolve",
-          "mitigation": "Automated schema generation from OpenAPI specs and CI validation"
-        },
-        {
-          "description": "Persistent knowledge store could grow unbounded, affecting performance",
-          "mitigation": "Implement retention policies, pruning, and hierarchical summarization"
-        },
-        {
-          "description": "Chaos experiments could inadvertently impact production stability",
-          "mitigation": "Run experiments in isolated staging environments first, then limited canary production runs"
-        }
+        "Skeleton requires LLM enrichment for strategic depth"
       ],
-      "source": "llm_enriched"
+      "source": "skeleton"
     },
     "confidence": 0.95,
     "source": "self_analysis",
     "timestamp": 1776022239.3365555,
-    "last_updated": 1778729508.2673378
+    "last_updated": 1778729681.3802636
   },
   "identity.map.entity_to_address.smoke_test_entity_1": {
     "value": "0x5eCdc30df01030Aee83BF339617f5809bE26C8d9",
