@@ -36,6 +36,9 @@ from utils.logging_config import setup_logging, get_logger, LOG_DIR, LOG_FILENAM
 from mindx_backend_service.vault_manager import get_vault_manager
 # require_admin_access: session-token gated by security.admin_addresses
 from mindx_backend_service.security_middleware import require_admin_access
+# x402_required: per-endpoint paywall dependency. Contract documented in
+# docs/services/x402_as_a_service.md. Applied on cost-center routes below.
+from mindx_backend_service.x402_middleware import x402_required
 from agents.monitoring.rate_limit_dashboard import RateLimitDashboard
 
 # Setup logging
@@ -6566,17 +6569,20 @@ async def audit_gemini(payload: AuditGeminiPayload):
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
     return await command_handler.handle_audit_gemini(payload.test_all, payload.update_config)
 
-@app.post("/coordinator/query", summary="Query the Coordinator")
+@app.post("/coordinator/query", summary="Query the Coordinator",
+          dependencies=[Depends(x402_required("/coordinator/query"))])
 async def coord_query(payload: CoordQueryPayload):
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
     return await command_handler.handle_coord_query(payload.query)
 
-@app.post("/coordinator/analyze", summary="Trigger system analysis")
+@app.post("/coordinator/analyze", summary="Trigger system analysis",
+          dependencies=[Depends(x402_required("/coordinator/analyze"))])
 async def coord_analyze(payload: CoordAnalyzePayload):
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
     return await command_handler.handle_coord_analyze(payload.context)
 
-@app.post("/coordinator/improve", summary="Request a component improvement")
+@app.post("/coordinator/improve", summary="Request a component improvement",
+          dependencies=[Depends(x402_required("/coordinator/improve"))])
 async def coord_improve(payload: CoordImprovePayload):
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
     return await command_handler.handle_coord_improve(payload.component_id, payload.context)
@@ -6586,7 +6592,8 @@ async def coord_backlog():
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
     return await command_handler.handle_coord_backlog()
 
-@app.post("/coordinator/backlog/process", summary="Process a backlog item")
+@app.post("/coordinator/backlog/process", summary="Process a backlog item",
+          dependencies=[Depends(x402_required("/coordinator/backlog/process"))])
 async def coord_process_backlog():
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
     return await command_handler.handle_coord_process_backlog()
@@ -6943,7 +6950,8 @@ async def list_all_agents():
             "agents": []
         }
 
-@app.post("/agents/{agent_id}/evolve", summary="Evolve a specific agent")
+@app.post("/agents/{agent_id}/evolve", summary="Evolve a specific agent",
+          dependencies=[Depends(x402_required("/agents/{agent_id}/evolve"))])
 async def agent_evolve(agent_id: str, payload: DirectivePayload):
     if not command_handler: raise HTTPException(status_code=503, detail="mindX is not available.")
     return await command_handler.handle_agent_evolve(agent_id, payload.directive)
@@ -7459,7 +7467,8 @@ async def governance_status():
         "agents_with_wallets": 20,
     }
 
-@app.post("/boardroom/convene", tags=["governance"], summary="Convene boardroom — CEO + Seven Soldiers evaluate directive")
+@app.post("/boardroom/convene", tags=["governance"], summary="Convene boardroom — CEO + Seven Soldiers evaluate directive",
+          dependencies=[Depends(x402_required("/boardroom/convene"))])
 async def boardroom_convene(directive: str, importance: str = "standard", model_mode: str = "auto", priority: str = "standard", members: str = "all", consensus: float = 0.666):
     try:
         from daio.governance.boardroom import Boardroom
