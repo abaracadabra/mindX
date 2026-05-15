@@ -10835,6 +10835,129 @@ async def update_mindxagent_ollama_settings(payload: MindXagentOllamaSettingsPay
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# --- /v1/config/fallback-model ---------------------------------------------
+# Runtime swap for the per-provider default ("fallback") model. Lets the
+# mindXtrain training loop publish a freshly fine-tuned checkpoint and then
+# point production at it without a source edit. See
+# /home/hacker/Desktop/mindXtrain/HANDOFF.md for the producer side.
+
+class FallbackModelPayload(BaseModel):
+    """Payload for PATCH /v1/config/fallback-model."""
+
+    provider: str = Field(
+        default="ollama",
+        description="LLM provider whose default_model should be swapped (ollama, vllm, ...).",
+        min_length=1,
+        max_length=32,
+    )
+    model: str = Field(
+        ...,
+        description="New default model identifier (e.g. 'qwen3:1.7b' or 'pythai/mindx-fallback-qwen3-1.5b').",
+        min_length=1,
+        max_length=256,
+    )
+
+    @field_validator("provider")
+    @classmethod
+    def _provider_known(cls, v: str) -> str:
+        models_dir = PROJECT_ROOT / "models"
+        if not (models_dir / f"{v}.yaml").exists():
+            raise ValueError(f"unknown provider {v!r}; no models/{v}.yaml present")
+        return v
+
+
+def _write_fallback_override(provider: str, model: str) -> Path:
+    """Mutate `models/<provider>.yaml` so the new default_model survives Config reload.
+
+    Why YAML, not JSON: `utils.config.Config._load_model_capability_configs`
+    runs AFTER `_load_config_files`, so any JSON override under
+    `llm.<provider>.default_model` is clobbered by the corresponding
+    `default_model:` field in models/<provider>.yaml. The YAML *is* the
+    source of truth for the per-provider default. We update it in place
+    via an atomic rename, preserving the rest of the file.
+
+    Returns the path written.
+    """
+    import yaml as _yaml  # local import; module-level yaml shadowed elsewhere
+
+    yaml_path = PROJECT_ROOT / "models" / f"{provider}.yaml"
+    if not yaml_path.exists():
+        raise FileNotFoundError(f"models/{provider}.yaml not found; refusing to fabricate it")
+
+    with yaml_path.open("r", encoding="utf-8") as fh:
+        data = _yaml.safe_load(fh) or {}
+
+    data["default_model"] = model
+
+    tmp_path = yaml_path.with_suffix(".yaml.tmp")
+    with tmp_path.open("w", encoding="utf-8") as fh:
+        _yaml.safe_dump(data, fh, sort_keys=False, default_flow_style=False)
+    tmp_path.replace(yaml_path)
+    return yaml_path
+
+
+@app.patch(
+    "/v1/config/fallback-model",
+    summary="Swap the per-provider default (fallback) model at runtime",
+    tags=["config"],
+)
+async def patch_fallback_model(payload: FallbackModelPayload = Body(...)):
+    """Atomically rewrite the mindxtrain fallback override + reload Config.
+
+    Returns `previous` and `current` so the caller (mindXtrain's publish
+    step, or an operator) can confirm the swap. Subsequent LLM handler
+    creations resolve the new default via `llm.<provider>.default_model`.
+    """
+    try:
+        from utils.config import Config
+
+        config_key = f"llm.{payload.provider}.default_model"
+        previous = Config().get(config_key)
+
+        target = _write_fallback_override(payload.provider, payload.model)
+
+        # Reload singleton so the new override is merged on next .get()
+        Config.reset_instance()
+        Config()
+        current = Config().get(config_key)
+
+        logger.info(
+            f"Fallback model swap: provider={payload.provider} "
+            f"{previous!r} -> {current!r} (written to {target})"
+        )
+        return {
+            "success": True,
+            "provider": payload.provider,
+            "previous": previous,
+            "current": current,
+            "config_file": str(target.relative_to(PROJECT_ROOT)),
+            "note": "Subsequent LLM handler creations resolve via llm.<provider>.default_model.",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error swapping fallback model: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get(
+    "/v1/config/fallback-model",
+    summary="Read the current per-provider default (fallback) model",
+    tags=["config"],
+)
+async def get_fallback_model(provider: str = "ollama"):
+    """Return the current `llm.<provider>.default_model`."""
+    try:
+        from utils.config import Config
+        return {
+            "provider": provider,
+            "default_model": Config().get(f"llm.{provider}.default_model"),
+        }
+    except Exception as e:
+        logger.error(f"Error reading fallback model: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/mindxagent/ollama/models/refresh", summary="Refresh Ollama model list (manual)")
 async def refresh_mindxagent_ollama_models():
     """Force refresh of the Ollama model list. Periodic refresh runs once per day; use this to update sooner."""

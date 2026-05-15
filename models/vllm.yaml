@@ -87,6 +87,22 @@ models:
       data_analysis: 0.82
       writing: 0.86
       speed_sensitive: 0.70
+  # mindXtrain self-training output. Fine-tuned LoRA of Qwen3-1.5B on mindX's
+  # own dream-cycle JSONL corpus. Becomes selectable here so the runtime
+  # fallback-swap endpoint (/v1/config/fallback-model) can point production
+  # at it. Scores are conservative defaults until first eval lands.
+  - name: pythai/mindx-fallback-qwen3-1.5b
+    display_name: mindX Fallback (Qwen3-1.5B, dream-tuned)
+    context_size: 32768
+    recommended: false
+    notes: "Self-trained local fallback; updated each mindXtrain cycle."
+    task_scores:
+      reasoning: 0.72
+      code_generation: 0.68
+      simple_chat: 0.80
+      data_analysis: 0.70
+      writing: 0.75
+      speed_sensitive: 0.90
 
 # Model selection preferences
 model_selection:
