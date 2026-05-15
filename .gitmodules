@@ -25,3 +25,7 @@
 [submodule "daio/contracts/lib/openzeppelin-contracts-upgradeable"]
 	path = daio/contracts/lib/openzeppelin-contracts-upgradeable
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable
+[submodule "mindx_observability/vendor/netdata"]
+	path = mindx_observability/vendor/netdata
+	url = https://github.com/netdata/netdata.git
+	branch = master
