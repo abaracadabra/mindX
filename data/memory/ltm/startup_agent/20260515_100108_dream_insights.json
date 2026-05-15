@@ -1,0 +1,62 @@
+{
+  "agent_id": "startup_agent",
+  "dream_timestamp": "2026-05-15T10:01:08.618100",
+  "source": "machine_dreaming",
+  "insights": [
+    {
+      "type": "performance",
+      "description": "Dominant memory type: system_state (278 occurrences)",
+      "score": 0.3913,
+      "importance": 0.4,
+      "novelty": 0.5,
+      "confidence": 0.8,
+      "frequency": 278
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: startup_knowledge_loaded(105), startup_agent_initialized(89), startup_initiation(26), godel_core_choice(15), startup_environment_validation(15)",
+      "score": 0.3839,
+      "importance": 0.5,
+      "novelty": 0.4,
+      "confidence": 0.8,
+      "frequency": 250
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hours: 2, 21, 19",
+      "score": 0.1781,
+      "importance": 0.3,
+      "novelty": 0.4,
+      "confidence": 0.7,
+      "frequency": 131
+    },
+    {
+      "type": "behavioral",
+      "description": "Active: 278 memories",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: startup_knowledge_loaded(105), startup_agent_initialized(89), startup_initiation(26), godel_core_choice(15), startup_environment_validation(15)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hour: 2:00",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    }
+  ],
+  "total_insights": 6
+}

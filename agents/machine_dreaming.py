@@ -286,6 +286,8 @@ class DreamResult:
     archive_bytes_after: int = 0
     training_examples_written: int = 0
     training_file: str = ""
+    evolution_proposals_written: int = 0
+    evolution_file: str = ""
 
     @property
     def stm_bytes_freed(self) -> int:
@@ -690,6 +692,21 @@ class MachineDreamCycle:
             except Exception as _te:
                 logger.debug(f"{self.log_prefix} training-data write failed for {agent_id}: {_te}")
 
+            # Phase 5c: evolution proposals. Distinct file alongside the
+            # consolidation JSONL — mindXtrain's `mindx_dreams` source
+            # picks both up when `data.include_evolutions: true`.
+            try:
+                evo_count, evo_file = await self._write_evolution_proposals(
+                    agent_id, scored_insights,
+                )
+                result.evolution_proposals_written = evo_count
+                result.evolution_file = evo_file
+            except Exception as _ee:
+                logger.debug(
+                    f"{self.log_prefix} evolution-proposals write failed "
+                    f"for {agent_id}: {_ee}"
+                )
+
             # Phase 6: Parameter Tuning
             tuning = self._generate_tuning(agent_id, scored_insights, state)
             result.tuning_recommendations = tuning
@@ -779,6 +796,119 @@ class MachineDreamCycle:
                 examples += 1
 
         return examples, str(training_file.relative_to(PROJECT_ROOT))
+
+    async def _write_evolution_proposals(
+        self,
+        agent_id: str,
+        insights: List[DreamInsight],
+    ) -> tuple:
+        """Write a `*_evolutions.jsonl` file with synthesized evolution proposals.
+
+        Phase 5c. For each high-scoring failure/behavioral/performance insight,
+        synthesize one evolution proposal in the same OpenAI-chat shape as
+        phase 5b's consolidation rows. mindXtrain's `mindx_dreams` data
+        adapter consumes both files when a recipe sets
+        `data.include_evolutions: true`, so the trained fallback model
+        learns the *insight → evolution* mapping alongside *STM → insight*.
+
+        Synthesis is deterministic — no LLM call. We treat each insight as
+        a structured signal and project it into the evolution-proposal
+        schema. This keeps the cycle cheap (no extra LLM cost), avoids
+        nondeterminism in the training corpus, and is enough to teach the
+        fine-tuned model the shape. A future iteration can swap in an LLM
+        synthesizer for richer proposals.
+
+        Schema of the assistant turn:
+            {"type": "strategy|configuration|prompt_change|tool_change|rollback",
+             "target_agent": "<agent_id>",
+             "proposal": "<short directive>",
+             "rationale": "refs:[<insight types and scores>]",
+             "expected_outcome": "<short text>",
+             "confidence": 0.NN}
+        """
+        if len(insights) < 3:
+            return 0, ""
+
+        # Pick the top-N actionable insights. Success patterns yield
+        # low-signal proposals ("keep doing X"), and cross_agent needs
+        # multi-agent context we don't have here.
+        actionable = [
+            ins for ins in insights
+            if ins.pattern_type in {"failure", "behavioral", "performance"}
+        ]
+        if not actionable:
+            return 0, ""
+        actionable.sort(key=lambda ins: ins.score, reverse=True)
+        top_n = actionable[:3]
+
+        # Project each insight into the proposal schema. Type mapping
+        # encodes our hypothesis about what KIND of evolution the pattern
+        # most naturally implies.
+        type_map = {
+            "failure":     "rollback",      # something went wrong; consider reverting
+            "performance": "configuration",  # tune knobs (timeouts, batch sizes, etc.)
+            "behavioral":  "strategy",       # change which action to prefer
+        }
+
+        ltm_path = PROJECT_ROOT / "data" / "memory" / "ltm" / agent_id
+        ltm_path.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        evo_file = ltm_path / f"{ts}_evolutions.jsonl"
+
+        system_prompt = (
+            f"You are the evolution-proposal engine for mindX agent {agent_id}. "
+            f"Given the agent's most durable insights, propose a single concrete "
+            f"self-improvement. Output JSON only."
+        )
+
+        proposals = 0
+        with evo_file.open("w", encoding="utf-8") as fh:
+            for ins in top_n:
+                # Compact the supporting insights for the user turn — the
+                # model needs to see the pattern that justifies the proposal.
+                ctx = [
+                    {
+                        "type": i.pattern_type,
+                        "description": i.description[:160],
+                        "score": round(i.score, 4),
+                        "frequency": i.frequency,
+                    }
+                    for i in top_n
+                ]
+                user_msg = (
+                    f"Top insights for {agent_id}:\n"
+                    f"{json.dumps(ctx, ensure_ascii=False)}\n\n"
+                    f"Propose one evolution this agent should consider applying to itself."
+                )
+                proposal_type = type_map.get(ins.pattern_type, "strategy")
+                # Confidence is a function of the insight's own confidence
+                # tempered by how much of the top-N supports the same pattern.
+                pattern_support = sum(
+                    1 for i in top_n if i.pattern_type == ins.pattern_type
+                ) / max(1, len(top_n))
+                proposal_confidence = round(ins.confidence * pattern_support, 2)
+                assistant_msg = json.dumps({
+                    "type": proposal_type,
+                    "target_agent": agent_id,
+                    "proposal": f"address {ins.pattern_type} pattern: {ins.description[:120]}",
+                    "rationale": (
+                        f"refs:[{','.join(f'{i.pattern_type}@{round(i.score,3)}' for i in top_n)}]"
+                    ),
+                    "expected_outcome": (
+                        f"reduce {ins.pattern_type} frequency below current "
+                        f"{ins.frequency}"
+                    ),
+                    "confidence": proposal_confidence,
+                }, ensure_ascii=False)
+                row = {"messages": [
+                    {"role": "system",    "content": system_prompt},
+                    {"role": "user",      "content": user_msg},
+                    {"role": "assistant", "content": assistant_msg},
+                ]}
+                fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+                proposals += 1
+
+        return proposals, str(evo_file.relative_to(PROJECT_ROOT))
 
     # === FULL DREAM FOR ALL AGENTS ===
 
@@ -1037,6 +1167,9 @@ class MachineDreamCycle:
         total_stm_freed = max(0, total_stm_before - total_stm_after)
         total_ltm_growth = max(0, total_ltm_after - total_ltm_before)
         total_training = sum(r.training_examples_written for r in all_results)
+        total_evolution_proposals = sum(
+            r.evolution_proposals_written for r in all_results
+        )
         compression_ratio = round(total_stm_freed / max(1, total_ltm_growth), 2)
 
         # Store dream report — cypherpunk2048 precision
@@ -1065,6 +1198,7 @@ class MachineDreamCycle:
                 "archive_bytes_after": total_archive_after,
                 "compression_ratio": compression_ratio,
                 "training_examples_written": total_training,
+                "evolution_proposals_written": total_evolution_proposals,
             },
             "per_agent": [
                 {

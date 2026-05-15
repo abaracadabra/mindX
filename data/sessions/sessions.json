@@ -1,52 +1,24 @@
 {
-  "mindx_meta_agent_d9366302": {
-    "session_id": "mindx_meta_agent_d9366302",
+  "mindx_meta_agent_578d9c27": {
+    "session_id": "mindx_meta_agent_578d9c27",
     "agent_id": "mindx_meta_agent",
-    "created_at": 1778658259.980756,
-    "last_activity": 1778663447.4132597,
-    "expires_at": 1778744659.980756,
-    "cycle_count": 6,
+    "created_at": 1778864460.7504222,
+    "last_activity": 1778867650.2520347,
+    "expires_at": 1778950860.7504222,
+    "cycle_count": 5,
     "circuit_breaker_trips": 0,
     "last_reset_reason": null,
     "metadata": {
       "autonomous_mode": true,
-      "last_improvement": "{\"error\": \"ConnectionError\", \"message\": \"Cannot connect to Ollama at http://10.0.0.155:18080\"}"
+      "last_improvement": "{\"error\": \"TimeoutError\", \"message\": \"Request timed out after 120s. Model may be too large or server overloaded.\"}"
     }
   },
-  "mindx_meta_agent_8ab06141": {
-    "session_id": "mindx_meta_agent_8ab06141",
+  "mindx_meta_agent_b1d9db14": {
+    "session_id": "mindx_meta_agent_b1d9db14",
     "agent_id": "mindx_meta_agent",
-    "created_at": 1778664104.9412344,
-    "last_activity": 1778692628.3003256,
-    "expires_at": 1778750504.9412344,
-    "cycle_count": 54,
-    "circuit_breaker_trips": 0,
-    "last_reset_reason": null,
-    "metadata": {
-      "autonomous_mode": true,
-      "last_improvement": "Improve improvement success rate"
-    }
-  },
-  "mindx_meta_agent_c21c7669": {
-    "session_id": "mindx_meta_agent_c21c7669",
-    "agent_id": "mindx_meta_agent",
-    "created_at": 1778692777.583709,
-    "last_activity": 1778726344.9692557,
-    "expires_at": 1778779177.583709,
-    "cycle_count": 52,
-    "circuit_breaker_trips": 0,
-    "last_reset_reason": null,
-    "metadata": {
-      "autonomous_mode": true,
-      "last_improvement": "Improve improvement success rate"
-    }
-  },
-  "mindx_meta_agent_dea9ae4b": {
-    "session_id": "mindx_meta_agent_dea9ae4b",
-    "agent_id": "mindx_meta_agent",
-    "created_at": 1778726597.2122276,
-    "last_activity": 1778726597.2122276,
-    "expires_at": 1778812997.2122276,
+    "created_at": 1778869461.6416192,
+    "last_activity": 1778869461.6416192,
+    "expires_at": 1778955861.6416192,
     "cycle_count": 0,
     "circuit_breaker_trips": 0,
     "last_reset_reason": null,
@@ -54,26 +26,13 @@
       "autonomous_mode": true
     }
   },
-  "mindx_meta_agent_2e48c7b8": {
-    "session_id": "mindx_meta_agent_2e48c7b8",
+  "mindx_meta_agent_398565ac": {
+    "session_id": "mindx_meta_agent_398565ac",
     "agent_id": "mindx_meta_agent",
-    "created_at": 1778726725.3501408,
-    "last_activity": 1778726725.3501408,
-    "expires_at": 1778813125.3501408,
-    "cycle_count": 0,
-    "circuit_breaker_trips": 0,
-    "last_reset_reason": null,
-    "metadata": {
-      "autonomous_mode": true
-    }
-  },
-  "mindx_meta_agent_c23a0688": {
-    "session_id": "mindx_meta_agent_c23a0688",
-    "agent_id": "mindx_meta_agent",
-    "created_at": 1778728814.8634577,
-    "last_activity": 1778771907.1696312,
-    "expires_at": 1778815214.8634577,
-    "cycle_count": 64,
+    "created_at": 1778870456.7532206,
+    "last_activity": 1778872544.9437175,
+    "expires_at": 1778956856.7532206,
+    "cycle_count": 3,
     "circuit_breaker_trips": 0,
     "last_reset_reason": null,
     "metadata": {

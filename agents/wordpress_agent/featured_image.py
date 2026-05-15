@@ -110,6 +110,14 @@ TOPIC_TO_FILE: dict[str, str] = {
     "sovereignty":      "bankonvault.png",
     "standard":         "bankonvault.png",
 
+    # RAGE / pgvector / memory substrate — THOTH (the memory-and-writing god) fits.
+    "rage":             "THOTH.png",
+    "pgvector":         "THOTH.png",
+    "postgres":         "THOTH.png",
+    "postgresql":       "THOTH.png",
+    "retrieval":        "THOTH.png",
+    "memory":           "mysticalmarketplace.webp",
+
     # Generic fallback.
     "default":          "doorway1.webp",
 }
