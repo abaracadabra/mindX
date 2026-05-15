@@ -1,0 +1,4 @@
+groups:
+  - name: phase2_stub
+    interval: 30s
+    rules: []

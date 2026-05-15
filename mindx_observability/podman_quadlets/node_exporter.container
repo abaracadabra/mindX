@@ -1,0 +1,27 @@
+[Unit]
+Description=node_exporter 1.11.1 — host metrics
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=quay.io/prometheus/node-exporter:v1.11.1
+ContainerName=node-exporter
+AutoUpdate=registry
+Network=host
+PodmanArgs=--pid=host
+Volume=/:/host:ro,rslave
+Exec=--path.rootfs=/host \
+     --web.listen-address=127.0.0.1:9100 \
+     --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|var/lib/containers)($|/) \
+     --collector.netclass.ignored-devices=^(veth|cni|flannel|docker|lo|cilium).*$
+LogDriver=journald
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=120
+OOMScoreAdjust=200
+
+[Install]
+WantedBy=default.target

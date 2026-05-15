@@ -1,0 +1,16 @@
+# Runtime state, never commit
+*_data/
+prometheus_data/
+alertmanager_data/
+grafana_data/
+
+# Secrets
+*.htpasswd
+smtp_app_password
+*.pem
+*.key
+
+# Local dev
+.venv/
+__pycache__/
+*.pyc

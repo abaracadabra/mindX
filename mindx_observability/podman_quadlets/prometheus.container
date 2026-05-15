@@ -1,0 +1,35 @@
+[Unit]
+Description=Prometheus 3.11.1 — mindX TSDB
+After=network-online.target obs-network.service
+Wants=network-online.target obs-network.service
+
+[Container]
+Image=quay.io/prometheus/prometheus:v3.11.1
+ContainerName=prometheus
+AutoUpdate=registry
+Network=obs.network
+Volume=%h/obs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:Z,ro
+Volume=%h/obs/prometheus/rules:/etc/prometheus/rules:Z,ro
+Volume=%h/obs/prometheus_data:/prometheus:Z
+PublishPort=127.0.0.1:9090:9090
+Environment=GOMEMLIMIT=512MiB
+Environment=GOGC=40
+Exec=--config.file=/etc/prometheus/prometheus.yml \
+     --storage.tsdb.path=/prometheus \
+     --storage.tsdb.retention.time=7d \
+     --storage.tsdb.retention.size=8GB \
+     --web.enable-lifecycle \
+     --web.enable-admin-api \
+     --web.external-url=https://prom.pythai.net/ \
+     --web.route-prefix=/
+LogDriver=journald
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=900
+OOMScoreAdjust=500
+
+[Install]
+WantedBy=default.target
