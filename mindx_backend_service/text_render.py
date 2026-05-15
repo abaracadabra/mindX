@@ -1111,6 +1111,41 @@ def render_host_disk(d: dict) -> str:
     })
 
 
+def render_host_htop(d: dict) -> str:
+    """htop-header-style plaintext for ?h=true clients."""
+    cores = d.get("cpu_percent_per_core") or []
+    ram = d.get("ram", {})
+    sw = d.get("swap", {})
+    stat = d.get("task_statuses", {})
+    width = 30
+
+    def bar(pct: float) -> str:
+        pct = max(0.0, min(100.0, float(pct or 0)))
+        n = int((pct / 100) * width)
+        return "[" + "|" * n + " " * (width - n) + "]"
+
+    lines: list[str] = []
+    for i, c in enumerate(cores, start=1):
+        lines.append(f"  {i:>2}  {bar(c)}  {c:5.1f}%")
+    used = ram.get("used_mb", 0) or 0
+    total = ram.get("total_mb", 0) or 1
+    lines.append(f"  Mem  {bar((used/total)*100)}  {used/1024:.1f}G / {total/1024:.1f}G")
+    su = sw.get("used_mb", 0) or 0
+    st = sw.get("total_mb", 0) or 1
+    lines.append(f"  Swp  {bar((su/st)*100)}  {su/1024:.2f}G / {st/1024:.1f}G")
+    lines.append("")
+    lines.append(f"  Tasks      {d.get('task_count', 0)}, {d.get('threads_total', 0)} thr ({d.get('kthreads', 0)} kthr); {stat.get('running', 0)} running")
+    la = d.get("load_avg") or [0, 0, 0]
+    lines.append(f"  Load avg   {la[0]:.2f}  {la[1]:.2f}  {la[2]:.2f}")
+    up_s = int(d.get("uptime_seconds") or 0)
+    days, rem = divmod(up_s, 86400)
+    hrs, rem = divmod(rem, 3600)
+    mins, secs = divmod(rem, 60)
+    up_str = f"{days}d {hrs:02d}:{mins:02d}:{secs:02d}" if days else f"{hrs:02d}:{mins:02d}:{secs:02d}"
+    lines.append(f"  Uptime     {up_str}")
+    return "\n".join(lines) + "\n"
+
+
 def render_host_probes(d: dict) -> str:
     if d.get("prom") == "off":
         return render_kv({
@@ -1161,6 +1196,7 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/host/memory":         render_host_memory,
     "/insight/host/disk":           render_host_disk,
     "/insight/host/probes":         render_host_probes,
+    "/insight/host/htop":           render_host_htop,
 }
 
 

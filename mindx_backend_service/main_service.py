@@ -1188,6 +1188,7 @@ async def improvement_journal_page():
 
 _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
 _FEEDBACK_HTML_PATH = Path(__file__).parent / "feedback.html"
+_NETSTAT_HTML_PATH = Path(__file__).parent / "netstat.html"
 _THOT_HTML_PATH = Path(__file__).parent / "THOT.html"
 _BOARDROOM_HTML_PATH = Path(__file__).parent / "boardroom.html"
 _CABINET_HTML_PATH = Path(__file__).parent / "cabinet.html"
@@ -1951,6 +1952,15 @@ async def public_dashboard():
     return _DashResponse(content="<h1>mindX</h1><p>Dashboard loading...</p>")
 
 
+@app.get("/netstat", response_class=_DashResponse, include_in_schema=False)
+@app.get("/netstat.html", response_class=_DashResponse, include_in_schema=False)
+async def netstat_page():
+    """/netstat — single-pane VPS vitals (Phase 1.2 host endpoints + diagnostics)."""
+    if _NETSTAT_HTML_PATH.exists():
+        return _DashResponse(content=_NETSTAT_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX netstat</h1><p>Page not deployed.</p>")
+
+
 @app.get("/feedback", response_class=_DashResponse, include_in_schema=False)
 @app.get("/feedback.html", response_class=_DashResponse, include_in_schema=False)
 async def feedback_page():
@@ -2129,6 +2139,7 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/openapi.json", "/docs", "/redoc",
     "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/mindx-wordpress-plugin",         # public distribution page for mindx-publish-auth WP plugin
+    "/netstat", "/netstat.html",       # Phase 1.2+ — smartphone-class VPS vitals (public diagnostics)
 })
 _PUBLIC_PREFIXES_STRICT = (
     "/doc/", "/docs", "/redoc",
@@ -2144,7 +2155,7 @@ _PUBLIC_PREFIXES_STRICT = (
 )
 
 _PUBLIC_EXACT_LEGACY = frozenset({
-    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html", "/mindx-wordpress-plugin",
+    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/netstat", "/netstat.html", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html", "/mindx-wordpress-plugin",
     "/keeperhub", "/keeperhub.html", "/uniswap", "/uniswap.html", "/bankon-ens", "/bankon-ens.html", "/bankonminter", "/bankonminter.html", "/zerog", "/zerog.html", "/conclave", "/conclave.html", "/agentregistry", "/agentregistry.html",
     "/api/uniswap/quote", "/api/uniswap/check_approval", "/api/uniswap/decisions", "/api/uniswap/skills",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
@@ -5221,6 +5232,65 @@ async def insight_host_probes(request: Request):
         "target_count": len(targets),
         "up_count": sum(1 for t in targets if t["up"]),
     }, route_path="/insight/host/probes")
+
+
+@app.get("/insight/host/htop", tags=["insight"], summary="htop-header-strip snapshot (per-core CPU + RAM segments + tasks/load/uptime)")
+@_insight_safe
+async def insight_host_htop(request: Request):
+    """One-shot snapshot in htop-header shape. Pure psutil; no netdata/Prom dependency."""
+    import psutil, time
+    cpu_per_core = psutil.cpu_percent(interval=0.2, percpu=True)
+    vm = psutil.virtual_memory()
+    sm = psutil.swap_memory()
+    boot_time = psutil.boot_time()
+
+    # Process statuses + thread/kthread counts in one walk
+    statuses = {"running": 0, "sleeping": 0, "stopped": 0, "zombie": 0, "other": 0}
+    threads_total = 0
+    kthreads = 0
+    for p in psutil.process_iter(["status", "num_threads", "ppid"]):
+        try:
+            s = (p.info.get("status") or "").lower()
+            if "run" in s:
+                statuses["running"] += 1
+            elif "sleep" in s:
+                statuses["sleeping"] += 1
+            elif "stop" in s:
+                statuses["stopped"] += 1
+            elif "zomb" in s:
+                statuses["zombie"] += 1
+            else:
+                statuses["other"] += 1
+            threads_total += p.info.get("num_threads") or 0
+            if p.info.get("ppid") == 2:
+                kthreads += 1
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+
+    return _maybe_h_text(request, {
+        "cpu_percent_per_core": cpu_per_core,
+        "load_avg": list(psutil.getloadavg()),
+        "ram": {
+            "total_mb": vm.total / (1 << 20),
+            "used_mb": vm.used / (1 << 20),
+            "available_mb": vm.available / (1 << 20),
+            "buffers_mb": getattr(vm, "buffers", 0) / (1 << 20),
+            "cached_mb": getattr(vm, "cached", 0) / (1 << 20),
+            "shared_mb": getattr(vm, "shared", 0) / (1 << 20),
+            "percent": vm.percent,
+        },
+        "swap": {
+            "total_mb": sm.total / (1 << 20),
+            "used_mb": sm.used / (1 << 20),
+            "percent": sm.percent,
+        },
+        "uptime_seconds": time.time() - boot_time,
+        "boot_time": boot_time,
+        "task_count": sum(statuses.values()),
+        "task_statuses": statuses,
+        "threads_total": threads_total,
+        "kthreads": kthreads,
+    }, route_path="/insight/host/htop")
 
 
 @app.get("/insight/cost/summary", tags=["insight"], summary="Per-provider inference cost + token totals (windowed)")
