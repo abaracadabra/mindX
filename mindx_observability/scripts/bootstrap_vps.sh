@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# bootstrap_vps.sh — idempotent VPS prep for mindX observability Phase 1
+# bootstrap_vps.sh — idempotent VPS prep for mindX observability
 # Run as root on 168.231.126.58.
-# Side effects: apt install podman + apache2-utils, 4 GB swap, enable lingering for mindx, mkdir /home/mindx/obs/*
+# Side effects: apt install obs deps (via install_deps.sh), 4 GB swap, enable lingering for mindx, mkdir /home/mindx/obs/*
+# Phase 1.1: package installs delegated to install_deps.sh wrapper (adds htop/jq/dnsutils/python3-psutil for text tools)
 set -euo pipefail
 
 REQUIRE_ROOT() { [ "$(id -u)" = "0" ] || { echo "must run as root"; exit 1; }; }
@@ -11,9 +12,15 @@ MINDX_USER="${MINDX_USER:-mindx}"
 MINDX_UID="$(id -u "$MINDX_USER" 2>/dev/null || echo)"
 [ -n "$MINDX_UID" ] || { echo "user $MINDX_USER not found"; exit 1; }
 
-echo "==> apt install podman + apache2-utils"
-apt-get update -qq
-apt-get install -y -qq podman apache2-utils
+echo "==> apt install obs deps"
+# Phase 1.1: defer to install_deps.sh if present, else minimal fallback
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -x "$HERE/install_deps.sh" ]; then
+    "$HERE/install_deps.sh" --skip-bootstrap   # avoid recursion
+else
+    apt-get update -qq
+    apt-get install -y -qq podman apache2-utils jq dnsutils htop python3-psutil
+fi
 
 echo "==> verify Podman >= 4.4"
 PODMAN_VER="$(podman --version | awk '{print $3}')"

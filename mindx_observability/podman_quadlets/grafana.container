@@ -26,11 +26,14 @@ LogDriver=journald
 NoNewPrivileges=true
 
 [Service]
-Restart=always
+Restart=no
 RestartSec=5
 TimeoutStartSec=300
-MemoryMax=512M
+MemoryMax=192M
+CPUQuota=15%
 OOMScoreAdjust=400
 
-[Install]
-WantedBy=default.target
+# NOTE (Phase 1.1): Grafana is OFF BY DEFAULT.
+# No [Install] section = no auto-start at boot.
+# Operator brings it up on demand via `scripts/grafana_on.sh` for deep-dive sessions.
+# Daily monitoring uses `mindx-stat` shell tool or `/insight/host/*` endpoints instead.

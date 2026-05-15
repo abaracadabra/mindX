@@ -22,6 +22,8 @@ NoNewPrivileges=true
 Restart=always
 RestartSec=5
 TimeoutStartSec=300
+MemoryMax=48M
+CPUQuota=5%
 OOMScoreAdjust=300
 
 [Install]

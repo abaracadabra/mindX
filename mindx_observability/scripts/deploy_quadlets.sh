@@ -40,15 +40,24 @@ if [ ! -f "$SMTP_FILE" ]; then
     echo "  Place a Gmail app-password (single-line, no newline) and chmod 600."
 fi
 
-echo "==> start units"
-for u in obs-network prometheus node-exporter blackbox-exporter alertmanager grafana; do
+echo "==> start units (Phase 1.1: Grafana intentionally OFF by default)"
+# Phase 1.1: Grafana is off-by-default. Bring it up on demand with scripts/grafana_on.sh.
+# Set WITH_GRAFANA=1 to start Grafana as part of the initial deploy.
+UNITS="obs-network prometheus node-exporter blackbox-exporter alertmanager"
+[ "${WITH_GRAFANA:-0}" = "1" ] && UNITS="$UNITS grafana"
+for u in $UNITS; do
     sudo -u "$MINDX_USER" XDG_RUNTIME_DIR="/run/user/$MINDX_UID" \
         systemctl --user start "${u}.service" 2>&1 | sed "s/^/    [$u] /"
 done
+echo "    Grafana: $(if [ "${WITH_GRAFANA:-0}" = "1" ]; then echo started; else echo SKIPPED — run scripts/grafana_on.sh when needed; fi)"
 
 echo "==> status"
 sudo -u "$MINDX_USER" XDG_RUNTIME_DIR="/run/user/$MINDX_UID" \
-    systemctl --user status prometheus grafana alertmanager node-exporter blackbox-exporter --no-pager -l \
-    | head -40
+    systemctl --user status prometheus alertmanager node-exporter blackbox-exporter --no-pager -l \
+    | head -32
+if [ "${WITH_GRAFANA:-0}" = "1" ]; then
+    sudo -u "$MINDX_USER" XDG_RUNTIME_DIR="/run/user/$MINDX_UID" \
+        systemctl --user status grafana --no-pager -l | head -8
+fi
 
 echo "==> deploy complete. Next: install Apache vhosts + certbot (see runbook)."
