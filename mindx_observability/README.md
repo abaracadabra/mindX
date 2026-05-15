@@ -19,6 +19,17 @@ scripts/           bootstrap_vps.sh · deploy_quadlets.sh · verify_pipeline.sh 
 docs/              runbook_phase1.md · rollback.md · adding_new_blackbox_target.md
 ```
 
+## Lint (local, before any deploy)
+
+```bash
+bash scripts/lint.sh
+```
+
+Runs `promtool check config`, `promtool check rules`, `amtool check-config`,
+blackbox `--config.check`, plus YAML/JSON/bash syntax over the whole tree using the same
+image versions pinned in `podman_quadlets/`. Requires Docker on the local machine.
+Should print `RESULT: 7 pass, 0 fail` and exit 0.
+
 ## Deploy
 
 Full plan: `/home/hacker/.claude/plans/breezy-strolling-anchor.md`
