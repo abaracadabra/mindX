@@ -18,12 +18,12 @@ LogDriver=journald
 NoNewPrivileges=true
 
 [Service]
-Restart=always
+Restart=no
 RestartSec=5
 TimeoutStartSec=120
 MemoryMax=64M
 CPUQuota=5%
 OOMScoreAdjust=200
 
-[Install]
-WantedBy=default.target
+# Phase 1.2: node_exporter is OFF BY DEFAULT (netdata collects host metrics directly).
+# Started by `scripts/prom_on.sh` when Prom needs scrape targets.

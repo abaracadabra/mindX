@@ -36,10 +36,11 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
     jq \
     dnsutils \
     htop \
-    python3-psutil
+    python3-psutil \
+    git
 
 echo "==> verify versions"
-for cmd in podman htpasswd jq dig htop; do
+for cmd in podman htpasswd jq dig htop git; do
     if command -v "$cmd" >/dev/null 2>&1; then
         printf "    %-12s %s\n" "$cmd" "$("$cmd" --version 2>&1 | head -1)"
     else

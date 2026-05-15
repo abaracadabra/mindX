@@ -18,6 +18,8 @@ rsync -av --delete \
     --exclude='apache' \
     --exclude='scripts' \
     --exclude='docs' \
+    --exclude='vendor' \
+    --exclude='cli' \
     --exclude='*.md' \
     --exclude='LICENSE' \
     "$SRC/" "$MINDX_HOME/obs/"
@@ -40,21 +42,39 @@ if [ ! -f "$SMTP_FILE" ]; then
     echo "  Place a Gmail app-password (single-line, no newline) and chmod 600."
 fi
 
-echo "==> start units (Phase 1.1: Grafana intentionally OFF by default)"
-# Phase 1.1: Grafana is off-by-default. Bring it up on demand with scripts/grafana_on.sh.
-# Set WITH_GRAFANA=1 to start Grafana as part of the initial deploy.
-UNITS="obs-network prometheus node-exporter blackbox-exporter alertmanager"
+echo "==> start units (Phase 1.2: netdata only by default — Prom stack OFF)"
+# Phase 1.2: netdata is the always-on monitoring UI. Prom + AM + node + blackbox
+# + Grafana are all off-by-default; bring them up via scripts/prom_on.sh.
+# Set WITH_PROM=1 (and optionally WITH_GRAFANA=1) to start the full stack.
+[ "${WITH_GRAFANA:-0}" = "1" ] && WITH_PROM=1
+
+UNITS="obs-network netdata"
+if [ "${WITH_PROM:-0}" = "1" ]; then
+    UNITS="$UNITS prometheus node-exporter blackbox-exporter alertmanager"
+fi
 [ "${WITH_GRAFANA:-0}" = "1" ] && UNITS="$UNITS grafana"
+
 for u in $UNITS; do
     sudo -u "$MINDX_USER" XDG_RUNTIME_DIR="/run/user/$MINDX_UID" \
         systemctl --user start "${u}.service" 2>&1 | sed "s/^/    [$u] /"
 done
-echo "    Grafana: $(if [ "${WITH_GRAFANA:-0}" = "1" ]; then echo started; else echo SKIPPED — run scripts/grafana_on.sh when needed; fi)"
+
+echo
+echo "==> default state: netdata https://netdata.pythai.net (Basic Auth)"
+if [ "${WITH_PROM:-0}" = "1" ]; then
+    echo "    Prom stack ALSO started — https://prom.pythai.net + alerts.pythai.net"
+else
+    echo "    Prom stack OFF — run scripts/prom_on.sh when needed for PromQL"
+fi
 
 echo "==> status"
 sudo -u "$MINDX_USER" XDG_RUNTIME_DIR="/run/user/$MINDX_UID" \
-    systemctl --user status prometheus alertmanager node-exporter blackbox-exporter --no-pager -l \
-    | head -32
+    systemctl --user status netdata --no-pager -l | head -10
+if [ "${WITH_PROM:-0}" = "1" ]; then
+    sudo -u "$MINDX_USER" XDG_RUNTIME_DIR="/run/user/$MINDX_UID" \
+        systemctl --user status prometheus alertmanager node-exporter blackbox-exporter --no-pager -l \
+        | head -32
+fi
 if [ "${WITH_GRAFANA:-0}" = "1" ]; then
     sudo -u "$MINDX_USER" XDG_RUNTIME_DIR="/run/user/$MINDX_UID" \
         systemctl --user status grafana --no-pager -l | head -8

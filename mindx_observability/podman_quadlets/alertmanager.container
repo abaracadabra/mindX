@@ -19,12 +19,12 @@ LogDriver=journald
 NoNewPrivileges=true
 
 [Service]
-Restart=always
+Restart=no
 RestartSec=5
 TimeoutStartSec=300
 MemoryMax=48M
 CPUQuota=5%
 OOMScoreAdjust=300
 
-[Install]
-WantedBy=default.target
+# Phase 1.2: Alertmanager is OFF BY DEFAULT (only useful with Prometheus running).
+# Auto-armed when `scripts/prom_on.sh` brings the Prom stack up.

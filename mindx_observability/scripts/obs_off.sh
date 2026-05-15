@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # obs_off.sh — single canonical kill switch for the entire obs stack
-# Stops ALL 5 obs units (including Grafana if running). Returns within 10s.
-# Configs + data left intact — restart with scripts/obs_on.sh.
+# Phase 1.2: stops ALL 6 obs units (netdata + Prom + AM + node + blackbox + Grafana).
+# Returns within 10s. Configs + data left intact — restart with scripts/obs_on.sh.
 set -euo pipefail
 
 MINDX_USER="${MINDX_USER:-mindx}"
 MINDX_UID="$(id -u "$MINDX_USER")"
 RUN_AS_MINDX="sudo -u $MINDX_USER XDG_RUNTIME_DIR=/run/user/$MINDX_UID"
 
-# All 5 units including grafana — kill switch is total.
-UNITS="prometheus alertmanager node-exporter blackbox-exporter grafana"
+# All 6 units — kill switch is total. netdata FIRST so the daily UI goes dark fast.
+UNITS="netdata prometheus alertmanager node-exporter blackbox-exporter grafana"
 
 echo "==> stopping obs stack (kill switch — all 5 units)"
 $RUN_AS_MINDX systemctl --user stop $(printf "%s.service " $UNITS) 2>&1 \

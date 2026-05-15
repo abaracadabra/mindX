@@ -1,7 +1,10 @@
-# Phase 1 ops runbook
+# Phase 1 → 1.1 → 1.2 ops runbook
 
 VPS: `168.231.126.58` (Hostinger) · user `mindx` (uid 1002) · mindX path `/home/mindx/mindX/`
 Plan: `/home/hacker/.claude/plans/breezy-strolling-anchor.md`
+
+> **Phase 1.2 is current.** netdata is the always-on monitoring UI; Prom stack is on-demand.
+> Substitutions to Phase 1+1.1 below are called out at the end of this file.
 
 ## Prerequisites (operator does once, before any of this)
 
@@ -99,6 +102,70 @@ See `rollback.md`. Quick reference:
 
 ## Disk + RAM watchpoints
 
-- `du -sh /home/mindx/obs/prometheus_data` should stay <8 GB (Prometheus hard-cap)
-- `free -h` available should stay ≥500 MB after swap is in play
+- `du -sh /home/mindx/obs/prometheus_data` should stay <4 GB (Phase 1.1 hard-cap)
+- `free -h` available should stay ≥1.5 GB in Phase 1.2 default-on state
 - `swapon --show` should show <2 GB used (>2 GB = thrashing warning)
+
+---
+
+# Phase 1.2 — substitutions to the above
+
+## DNS (one more A record)
+
+```
+netdata.pythai.net. A 168.231.126.58 TTL 3600
+```
+
+(In addition to prom/grafana/alerts.pythai.net from Phase 1.)
+
+## Bootstrap step deltas
+
+- **Step 3** (apt) → use `bash scripts/install_deps.sh` (adds `git` for the netdata submodule + the Phase 1.1 text-tool deps).
+- **Step 8** (rsync) → before rsync: `git submodule update --init --recursive` to populate `mindx_observability/vendor/netdata/`.
+- **Step 12** (systemctl start) → `bash scripts/obs_on.sh` (starts netdata only). The Prom stack stays off.
+- **NEW step 13**: install netdata Apache vhost.
+  ```bash
+  cp /root/mindx_observability/apache/netdata.pythai.net*.conf /etc/apache2/sites-available/
+  htpasswd -cB /etc/apache2/htpasswd/netdata.htpasswd ops    # set 24+ char pw
+  a2ensite netdata.pythai.net
+  apachectl configtest && systemctl reload apache2
+  certbot --apache -d netdata.pythai.net --redirect
+  # Verify post-certbot vhost retained ProxyPass + WebSocket rewrite blocks
+  ```
+- **NEW step 14**: verify daily UI. Visit `https://netdata.pythai.net` → Basic Auth → real-time CPU/MEM/DISK/NET charts.
+
+## When to summon Prom
+
+Run `bash scripts/prom_on.sh` (4 containers come up: prometheus, alertmanager, node-exporter, blackbox-exporter):
+
+- An incident — you want 3 days of historical PromQL queries.
+- A synthetic alert test — `prom_on.sh`, simulate failure, verify email lands, `prom_off.sh`.
+- Grafana dashboards — `bash scripts/grafana_on.sh` (auto-implies `prom_on`).
+- Pushing eval scores (Phase 2 work) — Pushgateway lives next to Prom.
+
+Run `bash scripts/prom_off.sh` when done — frees ~416 MB. netdata keeps running.
+
+## Phase 1.2 verification
+
+After deploy:
+```bash
+# Default state
+sudo -u mindx XDG_RUNTIME_DIR=/run/user/1002 systemctl --user list-units --type=service --state=active \
+  | grep -E "(netdata|prom|grafana|alert|node-exp|blackbox)"
+# Expect: only netdata.service active
+
+# netdata reachable
+curl -fsSL -u ops:PASS https://netdata.pythai.net/api/v1/info | jq .version
+
+# /insight/host/* endpoints reachable from public mindX backend
+curl -s "https://mindx.pythai.net/insight/host/cpu?h=true"      # netdata-backed
+curl -s "https://mindx.pythai.net/insight/host/memory?h=true"   # netdata-backed
+curl -s "https://mindx.pythai.net/insight/host/disk?h=true"     # local psutil + walk
+curl -s "https://mindx.pythai.net/insight/host/probes?h=true"   # "prom: off" if Prom stack down
+
+# Prom on/off cycle
+bash scripts/prom_on.sh
+sleep 10
+curl -fsSL -u ops:PASS https://prom.pythai.net/api/v1/targets | jq '.data.activeTargets | length'
+bash scripts/prom_off.sh
+```

@@ -15,12 +15,12 @@ LogDriver=journald
 NoNewPrivileges=true
 
 [Service]
-Restart=always
+Restart=no
 RestartSec=5
 TimeoutStartSec=120
 MemoryMax=48M
 CPUQuota=5%
 OOMScoreAdjust=200
 
-[Install]
-WantedBy=default.target
+# Phase 1.2: blackbox_exporter is OFF BY DEFAULT (probes only useful with Prom).
+# Started by `scripts/prom_on.sh` when needed.

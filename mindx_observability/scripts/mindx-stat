@@ -8,6 +8,7 @@
 #   mindx-stat probes    — blackbox probe status for all 5 pythai.net targets
 #   mindx-stat alerts    — currently-firing Prometheus alerts
 #   mindx-stat all       — all of the above (designed for `watch -n 5 mindx-stat all`)
+#   mindx-stat netdata   — print the netdata UI URL + local API status
 #   mindx-stat help      — this help
 set -euo pipefail
 
@@ -98,11 +99,30 @@ cmd_alerts() {
     fi
 }
 
+cmd_netdata() {
+    hdr "NETDATA — daily monitoring UI"
+    NETDATA_LOCAL="${NETDATA_LOCAL:-http://localhost:19999}"
+    echo "  UI:    https://netdata.pythai.net (Basic Auth)"
+    echo "  Local: $NETDATA_LOCAL"
+    if out=$(curl -fsS --max-time 3 "$NETDATA_LOCAL/api/v1/info" 2>&1); then
+        if command -v jq >/dev/null 2>&1; then
+            ver=$(echo "$out" | jq -r '.version // "?"')
+            uid=$(echo "$out" | jq -r '.mirrored_hosts[0] // .machine_guid // "?"')
+            printf "${G}  state: UP${N}   version=%s   host=%s\n" "$ver" "$uid"
+        else
+            printf "${G}  state: UP${N}   (install jq for version detail)\n"
+        fi
+    else
+        printf "${R}  state: DOWN${N}   bash scripts/netdata_on.sh\n"
+    fi
+}
+
 cmd_all() {
     cmd_top; echo
     cmd_disk; echo
     cmd_probes; echo
-    cmd_alerts
+    cmd_alerts; echo
+    cmd_netdata
 }
 
 cmd_help() {
@@ -114,6 +134,7 @@ case "$SUBCMD" in
     disk)    cmd_disk ;;
     probes)  cmd_probes ;;
     alerts)  cmd_alerts ;;
+    netdata) cmd_netdata ;;
     all)     cmd_all ;;
     help|-h|--help) cmd_help ;;
     *)

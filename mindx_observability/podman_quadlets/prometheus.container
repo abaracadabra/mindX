@@ -25,12 +25,16 @@ LogDriver=journald
 NoNewPrivileges=true
 
 [Service]
-Restart=always
+Restart=no
 RestartSec=5
 TimeoutStartSec=900
 MemoryMax=256M
 CPUQuota=20%
 OOMScoreAdjust=500
 
-[Install]
-WantedBy=default.target
+# Phase 1.2: Prometheus is OFF BY DEFAULT.
+# No [Install] section = no auto-start at boot.
+# netdata is the always-on monitoring UI (https://netdata.pythai.net).
+# Bring the full Prom stack up on demand via `scripts/prom_on.sh` for PromQL
+# sessions or to arm email alerts. `scripts/prom_off.sh` shuts it back down,
+# freeing ~416 MB resident.

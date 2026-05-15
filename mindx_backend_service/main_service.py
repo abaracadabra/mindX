@@ -5085,6 +5085,144 @@ async def insight_storage_recent(request: Request, limit: int = 30):
         return {"events": [], "count": 0, "error": str(e)}
 
 
+# ------------------------------------------------------------------------
+# Phase 1.2 — /insight/host/* endpoints
+# Smartphone-class host monitoring. Primary data source: netdata at :19999
+# (always-on per Phase 1.2). Probes fall through to Prom at :9090 only when
+# the Prom stack is on (off-default per Phase 1.2 — bash scripts/prom_on.sh).
+# Pattern: aiohttp inline client (mirrors main_service.py:4254 Ollama path).
+# First renderers in mindX to call remote HTTP endpoints.
+# ------------------------------------------------------------------------
+
+_NETDATA_LOCAL = "http://localhost:19999"
+_PROM_LOCAL = "http://localhost:9090"
+
+
+async def _netdata_query(path: str, params: dict | None = None, timeout: float = 5.0) -> dict:
+    import aiohttp
+    url = f"{_NETDATA_LOCAL}{path}"
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as s:
+            async with s.get(url, params=params) as r:
+                if r.status != 200:
+                    return {"_error": f"netdata HTTP {r.status}"}
+                return await r.json()
+    except Exception as e:
+        return {"_error": f"netdata unreachable: {type(e).__name__}: {e}"}
+
+
+async def _prom_local_query(query: str, timeout: float = 5.0) -> dict:
+    import aiohttp
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as s:
+            async with s.get(f"{_PROM_LOCAL}/api/v1/query", params={"query": query}) as r:
+                if r.status != 200:
+                    return {"_error": f"prom HTTP {r.status}"}
+                return await r.json()
+    except Exception as e:
+        return {"_error": f"prom unreachable: {type(e).__name__}: {e}"}
+
+
+@app.get("/insight/host/cpu", tags=["insight"], summary="CPU breakdown from netdata (last N seconds)")
+@_insight_safe
+async def insight_host_cpu(request: Request, points: int = 60):
+    nd = await _netdata_query("/api/v1/data", {"chart": "system.cpu", "points": str(points), "after": f"-{points}", "format": "json"})
+    if nd.get("_error"):
+        import psutil
+        return _maybe_h_text(request, {
+            "source": "psutil_fallback",
+            "netdata_error": nd["_error"],
+            "cpu_percent": psutil.cpu_percent(interval=0.5, percpu=False),
+            "cpu_percent_per_core": psutil.cpu_percent(interval=0.5, percpu=True),
+            "load_avg": list(psutil.getloadavg()),
+        }, route_path="/insight/host/cpu")
+    return _maybe_h_text(request, {
+        "source": "netdata",
+        "chart": "system.cpu",
+        "labels": nd.get("labels", []),
+        "data": nd.get("data", [])[:points],
+        "view_update_every": nd.get("view_update_every"),
+    }, route_path="/insight/host/cpu")
+
+
+@app.get("/insight/host/memory", tags=["insight"], summary="Memory + swap breakdown from netdata")
+@_insight_safe
+async def insight_host_memory(request: Request, points: int = 60):
+    ram = await _netdata_query("/api/v1/data", {"chart": "system.ram", "points": str(points), "after": f"-{points}", "format": "json"})
+    swap = await _netdata_query("/api/v1/data", {"chart": "system.swap", "points": str(points), "after": f"-{points}", "format": "json"})
+    if ram.get("_error") and swap.get("_error"):
+        import psutil
+        vm = psutil.virtual_memory()
+        sm = psutil.swap_memory()
+        return _maybe_h_text(request, {
+            "source": "psutil_fallback",
+            "netdata_error": ram.get("_error") or swap.get("_error"),
+            "ram_total_mb": vm.total / (1 << 20),
+            "ram_used_mb": vm.used / (1 << 20),
+            "ram_available_mb": vm.available / (1 << 20),
+            "ram_percent": vm.percent,
+            "swap_total_mb": sm.total / (1 << 20),
+            "swap_used_mb": sm.used / (1 << 20),
+            "swap_percent": sm.percent,
+        }, route_path="/insight/host/memory")
+    return _maybe_h_text(request, {
+        "source": "netdata",
+        "ram": {"labels": ram.get("labels", []), "data": ram.get("data", [])[:points]},
+        "swap": {"labels": swap.get("labels", []), "data": swap.get("data", [])[:points]},
+    }, route_path="/insight/host/memory")
+
+
+@app.get("/insight/host/disk", tags=["insight"], summary="Disk usage + Prometheus TSDB size")
+@_insight_safe
+async def insight_host_disk(request: Request):
+    import shutil
+    import os
+    usage = shutil.disk_usage("/")
+    prom_data_dir = "/home/mindx/obs/prometheus_data"
+    prom_size = 0
+    if os.path.isdir(prom_data_dir):
+        for dirpath, _, fnames in os.walk(prom_data_dir):
+            for f in fnames:
+                try:
+                    prom_size += os.path.getsize(os.path.join(dirpath, f))
+                except OSError:
+                    pass
+    return _maybe_h_text(request, {
+        "root": {
+            "total_gb": usage.total / (1 << 30),
+            "used_gb": usage.used / (1 << 30),
+            "free_gb": usage.free / (1 << 30),
+            "percent": (usage.used / usage.total) * 100,
+        },
+        "prometheus_data_mb": prom_size / (1 << 20),
+        "prometheus_data_cap_gb": 4.0,
+    }, route_path="/insight/host/disk")
+
+
+@app.get("/insight/host/probes", tags=["insight"], summary="Blackbox probe status (requires Prom stack running)")
+@_insight_safe
+async def insight_host_probes(request: Request):
+    result = await _prom_local_query("probe_success")
+    if result.get("_error"):
+        return _maybe_h_text(request, {
+            "prom": "off",
+            "hint": "Prom stack is off-default in Phase 1.2. Run `bash scripts/prom_on.sh` to enable probe scraping.",
+            "error": result["_error"],
+        }, route_path="/insight/host/probes")
+    targets = []
+    for r in result.get("data", {}).get("result", []) or []:
+        targets.append({
+            "instance": r.get("metric", {}).get("instance", "?"),
+            "up": r.get("value", [None, "0"])[1] == "1",
+        })
+    return _maybe_h_text(request, {
+        "prom": "on",
+        "targets": targets,
+        "target_count": len(targets),
+        "up_count": sum(1 for t in targets if t["up"]),
+    }, route_path="/insight/host/probes")
+
+
 @app.get("/insight/cost/summary", tags=["insight"], summary="Per-provider inference cost + token totals (windowed)")
 @_insight_safe
 async def insight_cost_summary(request: Request, window: str = "24h"):

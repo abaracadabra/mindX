@@ -1038,6 +1038,99 @@ def render_cost_recent(d: dict) -> str:
     )
 
 
+# ------------------------------------------------------------------------
+# Phase 1.2 — /insight/host/* renderers (netdata-primary, psutil fallback).
+# ------------------------------------------------------------------------
+
+def render_host_cpu(d: dict) -> str:
+    if d.get("source") == "psutil_fallback":
+        return render_kv({
+            "source":              d["source"],
+            "netdata":             d.get("netdata_error", "?"),
+            "cpu_percent":         f"{d.get('cpu_percent', 0):.1f}%",
+            "per_core":            ", ".join(f"{x:.0f}%" for x in (d.get("cpu_percent_per_core") or [])),
+            "load_1m_5m_15m":      ", ".join(f"{x:.2f}" for x in (d.get("load_avg") or [])),
+        })
+    labels = d.get("labels") or []
+    data = d.get("data") or []
+    n = len(data)
+    if not data:
+        return f"source: netdata\nchart : system.cpu\nno data\n"
+    latest = data[-1] if data else []
+    return render_kv({
+        "source":         d.get("source", "netdata"),
+        "chart":          d.get("chart", "system.cpu"),
+        "samples":        n,
+        "labels":         ", ".join(labels[1:]) if len(labels) > 1 else "?",
+        "latest_at_t":    latest[0] if latest else "?",
+        "latest_values":  ", ".join(f"{v:.1f}" for v in latest[1:]) if len(latest) > 1 else "?",
+        "interval_s":     d.get("view_update_every", "?"),
+    })
+
+
+def render_host_memory(d: dict) -> str:
+    if d.get("source") == "psutil_fallback":
+        return render_kv({
+            "source":          d["source"],
+            "netdata":         d.get("netdata_error", "?"),
+            "ram_total":       f"{d.get('ram_total_mb', 0):.0f} MB",
+            "ram_used":        f"{d.get('ram_used_mb', 0):.0f} MB  ({d.get('ram_percent', 0):.0f}%)",
+            "ram_available":   f"{d.get('ram_available_mb', 0):.0f} MB",
+            "swap_total":      f"{d.get('swap_total_mb', 0):.0f} MB",
+            "swap_used":       f"{d.get('swap_used_mb', 0):.0f} MB  ({d.get('swap_percent', 0):.0f}%)",
+        })
+    ram = d.get("ram", {})
+    swap = d.get("swap", {})
+    ram_data = ram.get("data") or []
+    swap_data = swap.get("data") or []
+    out = ["source: netdata", ""]
+    if ram_data:
+        latest = ram_data[-1]
+        out.append("RAM (latest):")
+        for i, lbl in enumerate(ram.get("labels", [])[1:], start=1):
+            if i < len(latest):
+                out.append(f"  {lbl:15s}  {latest[i]:.0f}")
+    out.append("")
+    if swap_data:
+        latest = swap_data[-1]
+        out.append("SWAP (latest):")
+        for i, lbl in enumerate(swap.get("labels", [])[1:], start=1):
+            if i < len(latest):
+                out.append(f"  {lbl:15s}  {latest[i]:.0f}")
+    return "\n".join(out) + "\n"
+
+
+def render_host_disk(d: dict) -> str:
+    r = d.get("root", {})
+    return render_kv({
+        "root_total":         f"{r.get('total_gb', 0):.1f} GB",
+        "root_used":          f"{r.get('used_gb', 0):.1f} GB  ({r.get('percent', 0):.0f}%)",
+        "root_free":          f"{r.get('free_gb', 0):.1f} GB",
+        "prom_tsdb_size":     f"{d.get('prometheus_data_mb', 0):.1f} MB",
+        "prom_tsdb_cap":      f"{d.get('prometheus_data_cap_gb', 4):.1f} GB  (Phase 1.1 retention)",
+    })
+
+
+def render_host_probes(d: dict) -> str:
+    if d.get("prom") == "off":
+        return render_kv({
+            "prom":   "off (Phase 1.2 default)",
+            "hint":   d.get("hint", "bash scripts/prom_on.sh"),
+            "error":  d.get("error", "?"),
+        })
+    targets = d.get("targets") or []
+    lines = [
+        f"prom        : on",
+        f"target_count: {d.get('target_count', 0)}",
+        f"up_count    : {d.get('up_count', 0)}",
+        "",
+    ]
+    for t in targets:
+        state = "UP  " if t.get("up") else "DOWN"
+        lines.append(f"  {state}  {t.get('instance', '?')}")
+    return "\n".join(lines) + "\n"
+
+
 RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/storage/status":      render_storage_status,
     "/insight/storage/recent":      render_storage_recent,
@@ -1064,6 +1157,10 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/stuck_loops":         render_stuck_loops,
     "/storage/eligible":            render_eligible,
     "/storage/anchor/health":       render_anchor_health,
+    "/insight/host/cpu":            render_host_cpu,
+    "/insight/host/memory":         render_host_memory,
+    "/insight/host/disk":           render_host_disk,
+    "/insight/host/probes":         render_host_probes,
 }
 
 
