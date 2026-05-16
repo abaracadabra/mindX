@@ -424,5 +424,41 @@
     "event_type": "startup",
     "timestamp": 1778870410.9992783,
     "state_file": "states/startup_1778870410.json"
+  },
+  {
+    "event_id": "startup_1778906207",
+    "event_type": "startup",
+    "timestamp": 1778906207.277461,
+    "state_file": "states/startup_1778906207.json"
+  },
+  {
+    "event_id": "startup_1778906241",
+    "event_type": "startup",
+    "timestamp": 1778906241.1261787,
+    "state_file": "states/startup_1778906241.json"
+  },
+  {
+    "event_id": "startup_1778907131",
+    "event_type": "startup",
+    "timestamp": 1778907131.3410711,
+    "state_file": "states/startup_1778907131.json"
+  },
+  {
+    "event_id": "startup_1778907164",
+    "event_type": "startup",
+    "timestamp": 1778907164.0821638,
+    "state_file": "states/startup_1778907164.json"
+  },
+  {
+    "event_id": "startup_1778956706",
+    "event_type": "startup",
+    "timestamp": 1778956706.703757,
+    "state_file": "states/startup_1778956706.json"
+  },
+  {
+    "event_id": "startup_1778956739",
+    "event_type": "startup",
+    "timestamp": 1778956739.180018,
+    "state_file": "states/startup_1778956739.json"
   }
 ]

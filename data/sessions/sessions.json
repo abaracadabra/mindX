@@ -1,31 +1,4 @@
 {
-  "mindx_meta_agent_578d9c27": {
-    "session_id": "mindx_meta_agent_578d9c27",
-    "agent_id": "mindx_meta_agent",
-    "created_at": 1778864460.7504222,
-    "last_activity": 1778867650.2520347,
-    "expires_at": 1778950860.7504222,
-    "cycle_count": 5,
-    "circuit_breaker_trips": 0,
-    "last_reset_reason": null,
-    "metadata": {
-      "autonomous_mode": true,
-      "last_improvement": "{\"error\": \"TimeoutError\", \"message\": \"Request timed out after 120s. Model may be too large or server overloaded.\"}"
-    }
-  },
-  "mindx_meta_agent_b1d9db14": {
-    "session_id": "mindx_meta_agent_b1d9db14",
-    "agent_id": "mindx_meta_agent",
-    "created_at": 1778869461.6416192,
-    "last_activity": 1778869461.6416192,
-    "expires_at": 1778955861.6416192,
-    "cycle_count": 0,
-    "circuit_breaker_trips": 0,
-    "last_reset_reason": null,
-    "metadata": {
-      "autonomous_mode": true
-    }
-  },
   "mindx_meta_agent_398565ac": {
     "session_id": "mindx_meta_agent_398565ac",
     "agent_id": "mindx_meta_agent",
@@ -38,6 +11,46 @@
     "metadata": {
       "autonomous_mode": true,
       "last_improvement": "{\"error\": \"TimeoutError\", \"message\": \"Request timed out after 120s. Model may be too large or server overloaded.\"}"
+    }
+  },
+  "mindx_meta_agent_12160d1a": {
+    "session_id": "mindx_meta_agent_12160d1a",
+    "agent_id": "mindx_meta_agent",
+    "created_at": 1778906286.8033793,
+    "last_activity": 1778906286.8033793,
+    "expires_at": 1778992686.8033793,
+    "cycle_count": 0,
+    "circuit_breaker_trips": 0,
+    "last_reset_reason": null,
+    "metadata": {
+      "autonomous_mode": true
+    }
+  },
+  "mindx_meta_agent_614b5a08": {
+    "session_id": "mindx_meta_agent_614b5a08",
+    "agent_id": "mindx_meta_agent",
+    "created_at": 1778907209.725168,
+    "last_activity": 1778908456.410054,
+    "expires_at": 1778993609.725168,
+    "cycle_count": 2,
+    "circuit_breaker_trips": 0,
+    "last_reset_reason": null,
+    "metadata": {
+      "autonomous_mode": true,
+      "last_improvement": "{\"error\": \"TimeoutError\", \"message\": \"Request timed out after 120s. Model may be too large or server overloaded.\"}"
+    }
+  },
+  "mindx_meta_agent_f4b30d62": {
+    "session_id": "mindx_meta_agent_f4b30d62",
+    "agent_id": "mindx_meta_agent",
+    "created_at": 1778956784.7248843,
+    "last_activity": 1778956784.7248843,
+    "expires_at": 1779043184.7248843,
+    "cycle_count": 0,
+    "circuit_breaker_trips": 0,
+    "last_reset_reason": null,
+    "metadata": {
+      "autonomous_mode": true
     }
   }
 }

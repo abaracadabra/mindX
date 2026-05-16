@@ -1,0 +1,31 @@
+{
+  "agent_id": "blueprint_agent_mindx_v2",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 557,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "High activity: 557 memories",
+      "Top processes: blueprint_generated(557)",
+      "Peak activity hour: 6:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 557
+        },
+        "process_distribution": {
+          "blueprint_generated": 557
+        },
+        "total_memories": 557,
+        "timestamp": "2026-05-16T11:39:55.903292"
+      }
+    ]
+  },
+  "promoted_at": "2026-05-16T11:39:55.903308",
+  "promotion_criteria": {
+    "pattern_threshold": 2,
+    "days_analyzed": 7
+  }
+}

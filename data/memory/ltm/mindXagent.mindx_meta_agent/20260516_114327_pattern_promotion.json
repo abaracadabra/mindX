@@ -1,0 +1,31 @@
+{
+  "agent_id": "mindXagent.mindx_meta_agent",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 207,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Active: 207 memories",
+      "Top processes: godel_core_choice(207)",
+      "Peak activity hour: 10:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 207
+        },
+        "process_distribution": {
+          "godel_core_choice": 207
+        },
+        "total_memories": 207,
+        "timestamp": "2026-05-16T11:43:27.374875"
+      }
+    ]
+  },
+  "promoted_at": "2026-05-16T11:43:27.374919",
+  "promotion_criteria": {
+    "pattern_threshold": 3,
+    "days_analyzed": 7
+  }
+}
