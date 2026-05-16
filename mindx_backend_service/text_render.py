@@ -1111,6 +1111,34 @@ def render_host_disk(d: dict) -> str:
     })
 
 
+def render_narrative_recent(d: dict) -> str:
+    """※-prefixed plaintext recap stream (top 10) for ?h=true clients."""
+    import time as _t
+    items = d.get("recaps") or []
+    if not items:
+        return "  no narrative recaps yet\n"
+    now = _t.time()
+    lines: list[str] = []
+    for r in items[:10]:
+        ts = float(r.get("ts") or 0)
+        delta = max(0.0, now - ts)
+        if delta < 60:
+            ago = f"{int(delta)}s ago"
+        elif delta < 3600:
+            ago = f"{int(delta/60)}m ago"
+        elif delta < 86400:
+            ago = f"{int(delta/3600)}h ago"
+        else:
+            ago = f"{int(delta/86400)}d ago"
+        src = (r.get("source") or "?")[:9].ljust(9)
+        author = (r.get("author") or "?")[:24]
+        body = (r.get("body") or "").strip().split("\n")[0][:200]
+        lines.append(f"  ※ {ago:>10}  [{src}] {author}")
+        lines.append(f"      {body}")
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def render_host_htop(d: dict) -> str:
     """htop-header-style plaintext for ?h=true clients."""
     cores = d.get("cpu_percent_per_core") or []
@@ -1197,6 +1225,7 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/host/disk":           render_host_disk,
     "/insight/host/probes":         render_host_probes,
     "/insight/host/htop":           render_host_htop,
+    "/insight/narrative/recent":    render_narrative_recent,
 }
 
 

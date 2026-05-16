@@ -129,6 +129,21 @@ td b{color:var(--text)}
 .foot{margin-top:48px;padding:18px 0;border-top:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--text3);text-align:center}
 .foot a{color:var(--text2)}
 
+/* Narrative — recap stream */
+.narrative-list{display:flex;flex-direction:column;gap:6px;font-family:var(--mono)}
+.narrative-row{padding:10px 12px;border-left:2px solid var(--violet);background:rgba(210,168,255,.04);font-size:12px;line-height:1.55;animation:row-in .5s ease-out}
+.narrative-row.from-narrator{border-left-color:var(--blue);background:rgba(121,192,255,.04)}
+.narrative-row.from-operator{border-left-color:var(--green);background:rgba(86,211,100,.04)}
+.narrative-row .head{display:flex;justify-content:space-between;font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin-bottom:5px;flex-wrap:wrap;gap:6px}
+.narrative-row .head .src{font-weight:700;color:var(--violet)}
+.narrative-row.from-narrator .head .src{color:var(--blue)}
+.narrative-row.from-operator .head .src{color:var(--green)}
+.narrative-row .body{color:var(--text);white-space:pre-wrap;word-break:break-word}
+.narrative-row .body::before{content:'※ ';color:var(--violet);font-weight:700}
+.narrative-row.from-narrator .body::before{color:var(--blue)}
+.narrative-row.from-operator .body::before{color:var(--green)}
+.activity-row .room.narrative{background:rgba(210,168,255,.18);color:var(--violet)}
+
 /* Activity stream */
 .activity-list{max-height:280px;overflow-y:auto;font-family:var(--mono);font-size:11.5px}
 .activity-row{display:grid;grid-template-columns:62px 130px 90px 1fr;gap:8px;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.03);animation:row-in .4s ease-out}
@@ -219,6 +234,16 @@ td b{color:var(--text)}
       <a class="btn" href="/docs">api docs</a>
     </div>
   </div>
+
+  <!-- 0.0 NARRATIVE — recap stream from agent.narrator + operator pins -->
+  <section id="sec-narrative">
+    <div class="sec-head">
+      <h2>※ narrative <span id="narrativePill" class="pill">loading…</span></h2>
+      <span class="sub">/insight/narrative/recent · 60s + live pulse via DeltaVerse</span>
+    </div>
+    <p class="sec-desc">mindX's voice. Operator-pinned recaps (wallet-signed, green) and autonomous narrator summaries (blue) of the catalogue's last hour. New recaps pulse the DeltaVerse substrate.</p>
+    <div id="narrativeCard" class="card"><div class="empty">loading…</div></div>
+  </section>
 
   <!-- 0. HTOP HEADER STRIP (top of page, htop-style) -->
   <section id="sec-htop">
@@ -331,6 +356,20 @@ td b{color:var(--text)}
   </div>
 </div>
 
+<!-- DeltaVerse Engine — the fabric of the mindX participant experience.
+     Recap pulses lift the substrate via dv.pulseNarrative(). v4.2+ exposes
+     dv.narrative perception channel; the activity-stream bridge calls it
+     when room='narrative' events arrive. -->
+<script src="/static/deltaverse.js"></script>
+<script>
+  try {
+    if (typeof DeltaVerse !== 'undefined' && !window.dv) {
+      window.dv = new DeltaVerse({});  // headless — no target/canvas; substrate only
+      if (typeof window.dv.start === 'function') window.dv.start();
+    }
+  } catch (e) { /* graceful — page works without substrate */ }
+</script>
+
 <script>
 // ============================================================
 // Helpers copied from feedback.html:556-894 (verbatim where applicable)
@@ -411,6 +450,44 @@ function unavailable(box, d) {
 }
 
 // ============================================================
+// 0.0 NARRATIVE — recap stream (DeltaVerse narrative perception channel)
+// ============================================================
+async function refreshNarrative() {
+  const d = await fetchJSON('/insight/narrative/recent?limit=10');
+  const card = $('narrativeCard');
+  if (d._httpError || d._fetchError) { unavailable(card, d); setPill('narrativePill', 'err', 'warn'); return; }
+  const recaps = d.recaps || [];
+  if (recaps.length === 0) {
+    setPill('narrativePill', 'quiet', 'amber');
+    card.innerHTML = '<div class="empty">no recaps yet — narrator summarizes recent catalogue activity on demand. Operators pin via POST /admin/narrator/recap (wallet-signed). Shadow-overlord forces an autonomous cycle via /admin/narrator/run-now.</div>';
+    return;
+  }
+  setPill('narrativePill', recaps.length + ' recent', 'ok');
+  card.innerHTML = '<div class="narrative-list">' + recaps.slice(0, 10).map(r => {
+    const src = (r.source || 'narrator').toLowerCase();
+    const author = escapeHtml(r.author || '?');
+    const body = escapeHtml(r.body || '');
+    const span = Human.duration(r.span_seconds || 0);
+    return `<div class="narrative-row from-${escapeHtml(src)}">
+      <div class="head">
+        <span><span class="src">${escapeHtml(src)}</span> · ${author}</span>
+        <span>${escapeHtml(relAgo(r.ts))} ago · span ${escapeHtml(span)}</span>
+      </div>
+      <div class="body">${body}</div>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+// Refetch shortly after each DeltaVerse narrative pulse (page already loaded
+// substrate via static/deltaverse.js; the activity-stream bridge fires
+// dv.pulseNarrative which dispatches the 'dv:narrative' window event).
+if (typeof window !== 'undefined') {
+  window.addEventListener('dv:narrative', () => {
+    setTimeout(refreshNarrative, 500);
+  });
+}
+
+// ============================================================
 // 0.5 ACTIVITY — SSE live feed
 // ============================================================
 let _activityCount = 0;
@@ -446,6 +523,12 @@ function appendActivity(ev) {
   }
   _activityCount++;
   setPill('activityPill', _activityCount + ' live', 'ok');
+  // Narrative bridge — when a narrative.recap arrives via the activity SSE,
+  // raise it into the DeltaVerse substrate so dv.narrative.intensity lifts.
+  const room = (ev.room || '').toLowerCase();
+  if (room === 'narrative' && typeof window !== 'undefined' && window.dv && window.dv.pulseNarrative) {
+    try { window.dv.pulseNarrative(ev.detail || ev); } catch (e) {}
+  }
 }
 
 async function refreshActivityInitial() {
@@ -951,6 +1034,7 @@ async function refreshNetdata() {
 // Refresh schedule + first-paint
 // ============================================================
 function startTimers() {
+  refreshNarrative();   setInterval(refreshNarrative,    60_000);
   refreshActivityInitial();
   startActivityStream();
   refreshHtop();        setInterval(refreshHtop,         2_000);

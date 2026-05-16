@@ -52,6 +52,7 @@ EventKind = Literal[
     "marketing.tessera_attested",    # any soldier — per-action Tessera credential issuance
     "marketing.boardroom_routed",    # marketinga.agent — campaign routed through Boardroom; outcome + per-soldier votes
     "marketing.soldier_skill_executed",  # any soldier — per-soldier marketing skill ran post-vote
+    "narrative.recap",               # NarratorAgent autonomous summary OR operator-pinned recap (DeltaVerse narrative channel)
 ]
 
 EVENT_KINDS: tuple[str, ...] = tuple(EventKind.__args__)  # type: ignore[attr-defined]

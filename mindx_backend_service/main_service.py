@@ -2140,6 +2140,7 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/mindx-wordpress-plugin",         # public distribution page for mindx-publish-auth WP plugin
     "/netstat", "/netstat.html",       # Phase 1.2+ — smartphone-class VPS vitals (public diagnostics)
+    "/insight/narrative/recent",       # DeltaVerse narrative recap stream (public read)
 })
 _PUBLIC_PREFIXES_STRICT = (
     "/doc/", "/docs", "/redoc",
@@ -2155,7 +2156,7 @@ _PUBLIC_PREFIXES_STRICT = (
 )
 
 _PUBLIC_EXACT_LEGACY = frozenset({
-    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/netstat", "/netstat.html", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html", "/mindx-wordpress-plugin",
+    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/netstat", "/netstat.html", "/insight/narrative/recent", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html", "/mindx-wordpress-plugin",
     "/keeperhub", "/keeperhub.html", "/uniswap", "/uniswap.html", "/bankon-ens", "/bankon-ens.html", "/bankonminter", "/bankonminter.html", "/zerog", "/zerog.html", "/conclave", "/conclave.html", "/agentregistry", "/agentregistry.html",
     "/api/uniswap/quote", "/api/uniswap/check_approval", "/api/uniswap/decisions", "/api/uniswap/skills",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
@@ -5291,6 +5292,116 @@ async def insight_host_htop(request: Request):
         "threads_total": threads_total,
         "kthreads": kthreads,
     }, route_path="/insight/host/htop")
+
+
+# ------------------------------------------------------------------------
+# DeltaVerse narrative substrate — recap stream + wallet/shadow-overlord admin
+# ------------------------------------------------------------------------
+
+@app.get("/insight/narrative/recent", tags=["insight"], summary="Last N narrative recap messages")
+@_insight_safe
+async def insight_narrative_recent(request: Request, limit: int = 30):
+    """Tail of data/logs/recaps.jsonl. NarratorAgent autonomous summaries
+    + operator-pinned recaps. Public; routed through ?h=true humanizer."""
+    from agents.narrator import get_narrator
+    recaps = get_narrator().read_recent(limit=max(1, min(limit, 200)))
+    return _maybe_h_text(
+        request,
+        {"recaps": recaps, "count": len(recaps)},
+        route_path="/insight/narrative/recent",
+    )
+
+
+@app.post("/admin/narrator/recap", tags=["admin"], summary="Operator-pinned recap (wallet-gated)")
+async def admin_narrator_recap(request: Request):
+    """Operator pin endpoint. Body: {body: str, span_seconds?: int}.
+
+    Auth: X-Session-Token header (wallet session) — required. Mirrors the
+    auth pattern used by /admin/cabinet/* + /vault/sign/*.
+    """
+    token = request.headers.get("X-Session-Token")
+    if not token:
+        return JSONResponse(status_code=401, content={
+            "code": "auth_required",
+            "detail": "X-Session-Token header required for operator-pin recap",
+        })
+    try:
+        vm = get_vault_manager()
+        session = vm.get_user_session(token)
+    except Exception as e:
+        return JSONResponse(status_code=503, content={"detail": f"vault unavailable: {e}"})
+    if not session:
+        return JSONResponse(status_code=401, content={
+            "code": "session_invalid",
+            "detail": "session token invalid or expired",
+        })
+
+    try:
+        body_json = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"detail": "JSON body required"})
+    body = (body_json or {}).get("body") or ""
+    if not isinstance(body, str) or not body.strip():
+        return JSONResponse(status_code=400, content={"detail": "body.body (str) required"})
+    span = int((body_json or {}).get("span_seconds") or 0)
+
+    wallet = session.get("wallet_address") or session.get("wallet") or "anonymous"
+    from agents.narrator import get_narrator
+    rec = await get_narrator().emit_recap(
+        body=body,
+        author=str(wallet),
+        source="operator",
+        span_seconds=span,
+    )
+    return {"ok": True, "recap": rec}
+
+
+@app.post("/admin/narrator/run-now", tags=["admin"], summary="Force narrator autonomous cycle (shadow-overlord)")
+async def admin_narrator_run_now(request: Request, hours: float = 1.0):
+    """Force the narrator to summarize last `hours` of catalogue now.
+
+    Auth: shadow-overlord JWT (Authorization: Bearer <jwt>). Reuses the
+    require_shadow_jwt dep from bankon_vault.shadow_overlord. High-impact
+    operation: emits both a narrative.recap event AND an
+    admin.shadow_overlord_action event for audit.
+    """
+    # Shadow-overlord JWT verification — inline to avoid Depends import order issues
+    auth_hdr = request.headers.get("Authorization", "")
+    if not auth_hdr.startswith("Bearer "):
+        return JSONResponse(status_code=401, content={
+            "code": "shadow_jwt_required",
+            "detail": "Authorization: Bearer <shadow-overlord-jwt> required",
+        })
+    try:
+        from mindx_backend_service.bankon_vault.shadow_overlord import verify_jwt as _verify_shadow_jwt
+        claims = _verify_shadow_jwt(auth_hdr[7:])
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"detail": str(e.detail)})
+    except Exception as e:
+        return JSONResponse(status_code=503, content={"detail": f"shadow verifier unavailable: {e}"})
+
+    hours = max(0.1, min(float(hours or 1.0), 24.0))
+    from agents.narrator import get_narrator
+    rec = await get_narrator().run_autonomous_cycle(hours=hours)
+
+    # Audit — admin.shadow_overlord_action so the privileged trigger is recorded
+    try:
+        from agents.catalogue.events import emit_catalogue_event
+        await emit_catalogue_event(
+            kind="admin.shadow_overlord_action",
+            actor=claims.get("sub", "shadow-overlord"),
+            source_log="mindx_backend_service.main_service:/admin/narrator/run-now",
+            payload={
+                "action": "narrator.run_now",
+                "hours": hours,
+                "recap_id": rec.get("recap_id"),
+                "jti": claims.get("jti"),
+            },
+        )
+    except Exception:
+        pass
+
+    return {"ok": True, "recap": rec, "hours": hours}
 
 
 @app.get("/insight/cost/summary", tags=["insight"], summary="Per-provider inference cost + token totals (windowed)")
