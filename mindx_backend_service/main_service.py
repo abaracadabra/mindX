@@ -9307,6 +9307,103 @@ async def health_check():
         "version": "1.0.0"
     }
 
+
+# ---- chronos.agent: promised time + transaction anchors --------------------
+# Three read-only endpoints surface the runtime declared in
+# agents/Chronos.agent + agents/chronos.oracle. Imported lazily so the
+# heavy agents/__init__.py star-import only fires when first queried.
+
+
+def _load_chronos_module():
+    """Bypass agents/__init__.py and load chronos_agent.py directly.
+
+    Same importlib trick the tests use — avoids forcing every mindX
+    consumer of /health to drag aiofiles + the full agent zoo into
+    memory just to expose the time oracle.
+    """
+    import importlib.util as _u
+    import sys as _sys
+    from pathlib import Path as _Path
+    _name = "_chronos_agent_loaded"
+    if _name in _sys.modules:
+        return _sys.modules[_name]
+    spec = _u.spec_from_file_location(
+        _name,
+        _Path(__file__).parent.parent / "agents" / "chronos_agent.py",
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError("chronos_agent.py not loadable")
+    mod = _u.module_from_spec(spec)
+    _sys.modules[_name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+async def _get_chronos():
+    """Singleton ChronosAgent — db at data/memory/chronos_anchors.db."""
+    return await _load_chronos_module().ChronosAgent.get_instance()
+
+
+@app.get("/v1/oracle/time", summary="Promised time + confidence interval", tags=["oracle"])
+async def oracle_time():
+    """The headline: chronos.agent's promised time.
+
+    Returns a `PromisedTime` dict with `unix_18dp`, `utc`,
+    `consensus` (correlated|degraded|drifted|offline), `confidence_ms`,
+    the underlying time.oracle `sources` block, and `anchor_count_24h`.
+
+    mindXtrain Coach and other consumers stamp their artefacts with this
+    instead of raw `time.time()` so the timestamps are *promised* —
+    accompanied by a confidence interval the network can verify.
+    """
+    try:
+        chronos = await _get_chronos()
+        pt = await chronos.now()
+        return pt.as_dict()
+    except Exception as exc:
+        # Honest failure mode — return a degraded PromisedTime rather
+        # than 500. Consumers should already handle `consensus: offline`.
+        return {
+            "unix_18dp": str(time.time()),
+            "utc": "",
+            "consensus": "offline",
+            "confidence_ms": 999_999.0,
+            "sources": {"error": str(exc)},
+            "anchor_count_24h": 0,
+            "promised_by": "chronos.agent",
+        }
+
+
+@app.get("/v1/oracle/anchors", summary="Recent transaction time anchors", tags=["oracle"])
+async def oracle_anchors(limit: int = 100):
+    """Last `limit` transaction anchors — strongest drift evidence.
+
+    Each anchor: `(chain, tx_hash, block_number, block_timestamp,
+    local_observed_ns, drift_ms)`. Coach renders these as the anchor-
+    density bar over a rolling 24h window.
+    """
+    if limit < 1 or limit > 1000:
+        raise HTTPException(status_code=400, detail="limit must be in [1, 1000]")
+    try:
+        chronos = await _get_chronos()
+        anchors = await chronos.recent_anchors(limit=limit)
+        return {"anchors": [a.as_dict() for a in anchors], "n": len(anchors)}
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"chronos unavailable: {exc}")
+
+
+@app.get("/v1/oracle/drift", summary="Drift history over the last N hours", tags=["oracle"])
+async def oracle_drift(hours: int = 24):
+    """Drift bucketed by hour — feeds the Coach UI's sparkline."""
+    if hours < 1 or hours > 168:
+        raise HTTPException(status_code=400, detail="hours must be in [1, 168]")
+    try:
+        chronos = await _get_chronos()
+        hist = await chronos.drift_history(hours=hours)
+        return hist.as_dict()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"chronos unavailable: {exc}")
+
 @app.post("/admin/publish-book", summary="Publish a new edition of The Book of mindX", tags=["admin"])
 async def trigger_book_publish():
     """Force AuthorAgent to compile and publish a new book edition immediately."""
