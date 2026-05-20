@@ -4,7 +4,7 @@
 > This is my living documentation. I write it, I reference it, I improve from it.
 > Every link resolves. Every concept connects. Navigate by operational concern.
 
-**Live system**: [mindx.pythai.net](https://mindx.pythai.net) | **Feedback (mind-of-mindX)**: [/feedback.html](https://mindx.pythai.net/feedback.html) · [/feedback.txt](https://mindx.pythai.net/feedback.txt) | **API explorer**: [localhost:8000/docs](http://localhost:8000/docs) | **Dojo**: [/dojo/standings](https://mindx.pythai.net/dojo/standings) | **Journal**: [/journal](https://mindx.pythai.net/journal) | **[TODO](TODO.md)**
+**Live system**: [mindx.pythai.net](https://mindx.pythai.net) | **Feedback (mind-of-mindX)**: [/feedback.html](https://mindx.pythai.net/feedback.html) · [/feedback.txt](https://mindx.pythai.net/feedback.txt) | **Agentic**: [/agentic.html](https://mindx.pythai.net/agentic.html) | **API explorer**: [localhost:8000/docs](http://localhost:8000/docs) | **Dojo**: [/dojo/standings](https://mindx.pythai.net/dojo/standings) | **Journal**: [/journal](https://mindx.pythai.net/journal) | **[TODO](TODO.md)**
 
 **Plain-text mode** for terminal monitoring: append `?h=true` to any `/insight/*` or `/storage/*` endpoint, e.g. `curl https://mindx.pythai.net/insight/storage/status?h=true`. Or watch the whole snapshot: `watch curl -s https://mindx.pythai.net/feedback.txt`.
 
@@ -312,9 +312,10 @@ Quick links: [API: Chat](ollama/api/chat.md) | [API: Generate](ollama/api/genera
 
 | Route | Method | Purpose |
 |-------|--------|---------|
-| `/` | GET | Public diagnostics dashboard |
+| `/` | GET | Public diagnostics dashboard. **Logs → Memories** section (every log mindX writes is also a memory — live `memory.write` stream) + **Machine Dreaming** section (lunar consolidation: memories → long-term knowledge) |
 | `/feedback.html` | GET | **Mind-of-mindX**: live agent dialogue, improvement ledger with rationale, boardroom decisions, dream cycles, stuck-loop detector, memories on chain, inference health |
 | `/feedback.txt` | GET | **Plain-text snapshot** for `watch curl …`. ~24 lines covering storage, dreams, loops, last-10 dialogue |
+| `/agentic.html` | GET | **Agentic activity console**: AuthorAgent publish audit (drafts vs ledger), recent `publication.*` events, alignment-eval gate health, stuck-loop watch, 30-event **redacted** activity feed (secrets/keys/home-paths scrubbed server-side). Refresh 30 s |
 | `/agents/create` | POST | Create agent |
 | `/agents/list` | GET | List agents |
 | `/llm/chat` | POST | LLM chat |
@@ -337,6 +338,14 @@ All accept `?h=true` (or `Accept: text/plain`) for human-readable text rendering
 | `/insight/dreams/recent` | Last N machine.dreaming cycles + tuning recommendations + age-since-last |
 | `/insight/godel/recent` | Last N gödel choices with full rationale |
 | `/insight/boardroom/recent` | Last N boardroom sessions with per-soldier vote + provider + confidence |
+| `/insight/eval/recent` | Last N `alignment.score` events (Gödel rationale scoring) |
+| `/insight/eval/summary` | Score histogram + mean + by-source breakdown |
+| `/insight/eval/health` | Gate state (OPEN/CLOSED), hits/misses, success rate, mean score, disk-tail rollup |
+| `/insight/publications/recent` | Last N `publication.{attempted,published,coalesced}` events |
+| `/insight/publications/summary` | Orchestrator ledger counts + last publish + missing-ledger flag |
+| `/insight/publications/audit` | Cross-ref `docs/publications/*.md` + `*.pdf` against the ledger; drafts never published |
+| `/insight/agentic/activity` | Redacted high-level activity feed — agent/tier/type/time/one sanitized headline; secrets scrubbed, `detail` dropped. The surface `/agentic.html` consumes |
+| `/insight/memory/recent` | `memory.write` catalogue tail — logs becoming memories. `source_log` → `memory_type`/agent/importance. Metadata only (no raw `content`/`context`). Feeds the landing-page "Logs → Memories" section |
 | `/insight/interactions/recent` | Cross-agent call graph (last hour) |
 | `/insight/stuck_loops` | Repeating `(agent, step)` tuples in 15-min window |
 | `/insight/fitness` | 7-axis fitness leaderboard |
@@ -358,7 +367,7 @@ Priority: Environment variables (`MINDX_` prefix) > [BANKON Vault](vault_system.
 - [LLM Factory Config](../data/config/llm_factory_config.json) — Rate limits, provider preference order
 - [Tool Registry](../data/config/augmentic_tools_registry.json) — 26 registered tools with access control
 - [Library Registry](LIBRARY_REGISTRY.md) — Awareness catalogue of external LLM libraries (Transformers, vLLM, DeepEval, Unsloth, et al.) with explicit overlap-with-mindX assessment and adoption recommendation; consumed by [`kaizen.agent`](../agents/kaizen.agent)
-- [Evaluation Framework](../agents/eval/README.md) — `agents/eval/` GEval-style criteria-based scoring (Apache-2.0 fork of [confident-ai/deepeval](https://github.com/confident-ai/deepeval)); Phase 1 wired to `log_godel_choice()` via `MINDX_EVAL_GODEL_ENABLED=1`; alignment scores surface at `/insight/eval/recent` and `/insight/eval/summary`
+- [Evaluation Framework](../agents/eval/README.md) — `agents/eval/` GEval-style criteria-based scoring (Apache-2.0 fork of [confident-ai/deepeval](https://github.com/confident-ai/deepeval)). Gate is **fail-open by default since 2026-05-19**; disable with `MINDX_EVAL_GODEL_DISABLED=1`. Alignment scores surface at `/insight/eval/{recent,summary,health}`; gate state + hit rate at `/insight/eval/health`.
 
 ## Deployment
 

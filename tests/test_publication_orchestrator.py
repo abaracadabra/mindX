@@ -29,6 +29,21 @@ from agents.publication_orchestrator import (
 )
 
 
+# ─── Test isolation ──────────────────────────────────────────────
+#
+# Since 2026-05-19 PublicationOrchestrator emits publication.* catalogue
+# events. Without this fixture every orchestrator test would append fake
+# publication events to the real data/logs/catalogue_events.jsonl — which
+# then surface on /agentic.html and /insight/publications/*. Disable the
+# emitter for the duration of each test.
+
+
+@pytest.fixture(autouse=True)
+def _no_catalogue_pollution(monkeypatch):
+    import agents.catalogue.events as cat_events
+    monkeypatch.setattr(cat_events, "_emit_disabled", True)
+
+
 # ─── A no-op AuthorAgent stand-in for the orchestrator ───────────
 
 

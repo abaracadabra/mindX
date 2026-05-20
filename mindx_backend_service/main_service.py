@@ -1188,6 +1188,7 @@ async def improvement_journal_page():
 
 _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
 _FEEDBACK_HTML_PATH = Path(__file__).parent / "feedback.html"
+_AGENTIC_HTML_PATH = Path(__file__).parent / "agentic.html"
 _THOT_HTML_PATH = Path(__file__).parent / "THOT.html"
 _BOARDROOM_HTML_PATH = Path(__file__).parent / "boardroom.html"
 _CABINET_HTML_PATH = Path(__file__).parent / "cabinet.html"
@@ -1513,6 +1514,19 @@ async def feedback_page():
     return _DashResponse(content="<h1>mindX feedback</h1><p>Page not deployed.</p>")
 
 
+@app.get("/agentic", response_class=_DashResponse, include_in_schema=False)
+@app.get("/agentic.html", response_class=_DashResponse, include_in_schema=False)
+async def agentic_page():
+    """Agentic activity console — AuthorAgent publish audit, alignment-eval
+    gate health, stuck-loop watch, live agent activity feed.
+
+    Public, read-only. Refreshes every 30s. Sibling to /feedback.html.
+    """
+    if _AGENTIC_HTML_PATH.exists():
+        return _DashResponse(content=_AGENTIC_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX agentic</h1><p>Page not deployed.</p>")
+
+
 @app.get("/thot", response_class=_DashResponse, include_in_schema=False)
 @app.get("/THOT", response_class=_DashResponse, include_in_schema=False)
 @app.get("/thot.html", response_class=_DashResponse, include_in_schema=False)
@@ -1695,7 +1709,7 @@ _PUBLIC_PREFIXES_STRICT = (
 )
 
 _PUBLIC_EXACT_LEGACY = frozenset({
-    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html",
+    "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/agentic", "/agentic.html", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html",
     "/keeperhub", "/keeperhub.html", "/uniswap", "/uniswap.html", "/bankon-ens", "/bankon-ens.html", "/bankonminter", "/bankonminter.html", "/zerog", "/zerog.html", "/conclave", "/conclave.html", "/agentregistry", "/agentregistry.html",
     "/api/uniswap/quote", "/api/uniswap/check_approval", "/api/uniswap/decisions", "/api/uniswap/skills",
     "/openapi.json", "/docs", "/redoc", "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
@@ -3649,6 +3663,357 @@ async def insight_eval_summary(request: Request, window: int = 200):
             "by_metric": by_metric,
         },
         route_path="/insight/eval/summary",
+    )
+
+
+@app.get("/insight/eval/health", tags=["insight"])
+@_insight_safe
+async def insight_eval_health(request: Request):
+    """Gödel-eval gate health: gate state, recent attempts, hit rate, mean score.
+
+    Surfaces the in-process `_EvalHealth` counter from agents/memory_agent.py
+    plus a 30-day rollup from data/logs/godel_choices.jsonl. Designed for
+    /agentic.html and `curl /insight/eval/health?h=true` ops checks.
+    """
+    import time as _time
+    snapshot: Dict[str, Any] = {}
+    try:
+        from agents.memory_agent import _eval_health, _eval_godel_gate_open
+        snapshot = _eval_health.snapshot()
+        snapshot["gate_open"] = _eval_godel_gate_open()
+    except Exception as e:
+        snapshot = {"gate_open": None, "error": f"eval_health unavailable: {e}"}
+
+    # On-disk rollup: scan the godel_choices.jsonl tail for eval_score rows.
+    rollup = {"scanned": 0, "scored": 0, "mean_score_disk": None}
+    try:
+        from utils.config import PROJECT_ROOT as _PR
+        gpath = _PR / "data" / "logs" / "godel_choices.jsonl"
+        if gpath.exists():
+            block = 256 * 1024
+            with open(gpath, "rb") as f:
+                f.seek(0, 2)
+                size = f.tell()
+                data = b""
+                pos = size
+                while pos > 0 and data.count(b"\n") < 400:
+                    read = min(block, pos)
+                    pos -= read
+                    f.seek(pos)
+                    data = f.read(read) + data
+            scored: list[float] = []
+            scanned = 0
+            for ln in data.split(b"\n"):
+                if not ln.strip():
+                    continue
+                scanned += 1
+                try:
+                    row = json.loads(ln.decode("utf-8"))
+                except Exception:
+                    continue
+                s = row.get("eval_score")
+                if isinstance(s, (int, float)):
+                    scored.append(float(s))
+            rollup["scanned"] = scanned
+            rollup["scored"] = len(scored)
+            rollup["mean_score_disk"] = (sum(scored) / len(scored)) if scored else None
+    except Exception as e:
+        rollup["error"] = str(e)
+
+    return _maybe_h_text(
+        request,
+        {"checked_at": _time.time(), "in_process": snapshot, "on_disk": rollup},
+        route_path="/insight/eval/health",
+    )
+
+
+# ── Publication audit endpoints (AuthorAgent + PublicationOrchestrator) ──
+#
+# Surfaces (a) the orchestrator's persistent ledger at
+# data/governance/published_triggers.json, (b) the publication.* event tail
+# from the catalogue, (c) a draft inventory at docs/publications/*.md vs
+# docs/publications/pdf/*.pdf cross-referenced against the ledger.
+
+def _read_publication_ledger() -> Dict[str, Any]:
+    """Read data/governance/published_triggers.json. Missing → empty."""
+    try:
+        path = PROJECT_ROOT / "data" / "governance" / "published_triggers.json"
+        if not path.exists():
+            return {"version": 1, "last_published_at": 0.0, "published": [], "ledger_exists": False}
+        body = json.loads(path.read_text(encoding="utf-8"))
+        body["ledger_exists"] = True
+        return body
+    except Exception as e:
+        return {"version": 1, "last_published_at": 0.0, "published": [], "ledger_exists": False, "error": str(e)}
+
+
+def _read_publication_events(limit: int = 50) -> List[Dict[str, Any]]:
+    """Tail catalogue_events.jsonl, filter kind='publication.*'."""
+    try:
+        from agents.catalogue.log import CatalogueEventLog
+        log = CatalogueEventLog.default()
+        path = log.path
+        if not path.exists():
+            return []
+        block = 64 * 1024
+        needed = max(1, min(limit, 500))
+        with open(path, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            data = b""
+            pos = size
+            scan_limit = needed * 30  # publication events are sparse
+            while pos > 0 and data.count(b"\n") <= scan_limit:
+                read = min(block, pos)
+                pos -= read
+                f.seek(pos)
+                data = f.read(read) + data
+        events: List[Dict[str, Any]] = []
+        for ln in data.split(b"\n"):
+            if not ln.strip():
+                continue
+            try:
+                ev = json.loads(ln.decode("utf-8"))
+            except Exception:
+                continue
+            kind = ev.get("kind", "")
+            if not kind.startswith("publication."):
+                continue
+            events.append(ev)
+        events = events[-needed:]
+        events.reverse()
+        return events
+    except Exception:
+        return []
+
+
+@app.get("/insight/publications/recent", tags=["insight"])
+@_insight_safe
+async def insight_publications_recent(request: Request, limit: int = 50):
+    """Last N publication.{attempted,published,coalesced} events from the catalogue."""
+    events = _read_publication_events(limit=limit)
+    return _maybe_h_text(
+        request,
+        {"events": events, "count": len(events)},
+        route_path="/insight/publications/recent",
+    )
+
+
+@app.get("/insight/publications/summary", tags=["insight"])
+@_insight_safe
+async def insight_publications_summary(request: Request):
+    """Counts + last-publish snapshot from the orchestrator ledger.
+
+    Includes ledger existence flag so /agentic.html can flag the "never
+    published" state cleanly.
+    """
+    ledger = _read_publication_ledger()
+    entries = ledger.get("published") or []
+    by_kind: Dict[str, int] = {}
+    for e in entries:
+        k = (e or {}).get("kind") or "unknown"
+        by_kind[k] = by_kind.get(k, 0) + 1
+    published_ct = sum(1 for e in entries if (e or {}).get("kind") != "coalesced" and (e or {}).get("published_at"))
+    coalesced_ct = by_kind.get("coalesced", 0)
+    last_published = None
+    last_entry = None
+    for e in reversed(entries):
+        if (e or {}).get("kind") != "coalesced" and (e or {}).get("published_at"):
+            last_published = e.get("published_at")
+            last_entry = e
+            break
+    return _maybe_h_text(
+        request,
+        {
+            "ledger_exists": ledger.get("ledger_exists", False),
+            "ledger_path": "data/governance/published_triggers.json",
+            "version": ledger.get("version", 1),
+            "total_entries": len(entries),
+            "published_count": published_ct,
+            "coalesced_count": coalesced_ct,
+            "by_kind": by_kind,
+            "last_published_at": last_published,
+            "last_entry": last_entry,
+        },
+        route_path="/insight/publications/summary",
+    )
+
+
+@app.get("/insight/publications/audit", tags=["insight"])
+@_insight_safe
+async def insight_publications_audit(request: Request):
+    """Cross-reference docs/publications/*.md + docs/publications/pdf/*.pdf
+    against the orchestrator ledger.
+
+    Reports drafts that exist on disk but have never been published via the
+    orchestrator. The `/admin/publish-to-rage` route can still publish anything
+    in docs/ on demand — this audit only sees orchestrator-driven publishes.
+    """
+    pubs_dir = PROJECT_ROOT / "docs" / "publications"
+    pdf_dir = pubs_dir / "pdf"
+    markdown_drafts: List[Dict[str, Any]] = []
+    pdf_drafts: List[Dict[str, Any]] = []
+    try:
+        if pubs_dir.is_dir():
+            for md in sorted(pubs_dir.glob("*.md")):
+                try:
+                    st = md.stat()
+                    markdown_drafts.append({
+                        "name": md.name,
+                        "size_bytes": st.st_size,
+                        "mtime": st.st_mtime,
+                    })
+                except OSError:
+                    continue
+        if pdf_dir.is_dir():
+            for pdf in sorted(pdf_dir.glob("*.pdf")):
+                try:
+                    st = pdf.stat()
+                    pdf_drafts.append({
+                        "name": pdf.name,
+                        "size_bytes": st.st_size,
+                        "mtime": st.st_mtime,
+                    })
+                except OSError:
+                    continue
+    except Exception:
+        pass
+
+    ledger = _read_publication_ledger()
+    published_entries = [e for e in (ledger.get("published") or [])
+                         if (e or {}).get("kind") != "coalesced"]
+    # Map title → ledger entry for quick lookup.
+    by_title: Dict[str, Dict[str, Any]] = {}
+    for e in published_entries:
+        t = (e or {}).get("title")
+        if t:
+            by_title[t.lower()] = e
+
+    return _maybe_h_text(
+        request,
+        {
+            "publications_dir": str(pubs_dir.relative_to(PROJECT_ROOT)),
+            "ledger_exists": ledger.get("ledger_exists", False),
+            "markdown_drafts": markdown_drafts,
+            "pdf_drafts": pdf_drafts,
+            "published_via_orchestrator": published_entries,
+            "draft_count": len(markdown_drafts) + len(pdf_drafts),
+            "published_count": len(published_entries),
+        },
+        route_path="/insight/publications/audit",
+    )
+
+
+# ── Logs → Memories ──────────────────────────────────────────────────────
+#
+# mindX principle: every log is a memory. `save_timestamped_memory`,
+# `log_process`, `log_godel_choice` all emit a `memory.write` catalogue event
+# whose `source_log` field names the originating log. This endpoint tails that
+# stream so the landing page can show logs becoming memories in real time.
+
+def _read_memory_write_events(limit: int = 40) -> List[Dict[str, Any]]:
+    """Tail catalogue_events.jsonl for kind='memory.write'.
+
+    Returns metadata ONLY — memory `content` and `context` are stripped: the
+    raw payload can carry sensitive data and the landing page only needs the
+    log→memory provenance (which log, which agent, type, importance).
+    """
+    try:
+        from agents.catalogue.log import CatalogueEventLog
+        log = CatalogueEventLog.default()
+        path = log.path
+        if not path.exists():
+            return []
+        block = 64 * 1024
+        needed = max(1, min(limit, 200))
+        with open(path, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            data = b""
+            pos = size
+            # memory.write is dense while the backend runs, but a tail can be
+            # dominated by other kinds (publication.*, alignment.score bursts).
+            # Scan generously so the feed stays populated either way.
+            scan_limit = needed * 40
+            while pos > 0 and data.count(b"\n") <= scan_limit:
+                read = min(block, pos)
+                pos -= read
+                f.seek(pos)
+                data = f.read(read) + data
+        events: List[Dict[str, Any]] = []
+        for ln in data.split(b"\n"):
+            if not ln.strip():
+                continue
+            try:
+                ev = json.loads(ln.decode("utf-8"))
+            except Exception:
+                continue
+            if ev.get("kind") != "memory.write":
+                continue
+            p = ev.get("payload") or {}
+            events.append({
+                "ts": ev.get("ts"),
+                "actor": ev.get("actor"),
+                "source_log": ev.get("source_log"),
+                "memory_type": p.get("memory_type"),
+                "importance": p.get("importance"),
+                "memory_id": p.get("memory_id"),
+                "tags": p.get("tags") or [],
+            })
+        events = events[-needed:]
+        events.reverse()
+        return events
+    except Exception:
+        return []
+
+
+@app.get("/insight/memory/recent", tags=["insight"])
+@_insight_safe
+async def insight_memory_recent(request: Request, limit: int = 40):
+    """Recent `memory.write` events — logs becoming memories.
+
+    Metadata only: which log (`source_log`), which agent, memory type +
+    importance, memory_id, tags. Raw memory `content`/`context` is never
+    returned — the landing page shows provenance, not payload.
+    """
+    events = _read_memory_write_events(limit=limit)
+    return _maybe_h_text(
+        request,
+        {"events": events, "count": len(events)},
+        route_path="/insight/memory/recent",
+    )
+
+
+@app.get("/insight/agentic/activity", tags=["insight"])
+@_insight_safe
+async def insight_agentic_activity(request: Request, limit: int = 30):
+    """High-level, redacted activity feed for /agentic.html.
+
+    Unlike /activity/recent (which returns raw `content` plus the free-form
+    `detail` dict), this endpoint returns only agent / tier / type /
+    relative-time / a single sanitized headline. API keys, ETH private keys,
+    JWTs and absolute home paths are redacted via `text_render.sanitize_text`;
+    the `detail` dict is dropped entirely. This is the surface /agentic.html
+    consumes so the public console can never leak raw memory content or
+    credentials.
+    """
+    from mindx_backend_service.activity_feed import ActivityFeed
+    from mindx_backend_service import text_render
+    feed = ActivityFeed.get_instance()
+    raw = feed.recent(limit=max(1, min(limit, 100)), room=None)
+    events: List[Dict[str, Any]] = []
+    for e in raw:
+        events.append({
+            "timestamp": e.get("timestamp"),
+            "agent": text_render.sanitize_text(e.get("agent", "?"), 32),
+            "tier_label": e.get("tier_label", "UN"),
+            "type": text_render.sanitize_text(e.get("type", ""), 32),
+            "headline": text_render.sanitize_text(e.get("content", ""), 140),
+        })
+    return _maybe_h_text(
+        request,
+        {"events": events, "count": len(events)},
+        route_path="/insight/agentic/activity",
     )
 
 

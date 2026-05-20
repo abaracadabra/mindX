@@ -85,15 +85,56 @@ Phase 1 emits an `alignment.score` event (`agents/catalogue/events.py:EventKind`
 for each scored Gödel choice. The catalogue is the unified substrate; downstream
 projectors (insight aggregator, dashboard) read scores from there.
 
+## Gate semantics (since 2026-05-19)
+
+The Gödel-eval gate is **fail-open**: by default every `log_godel_choice()` call
+runs the judge. Before 2026-05-19 the gate was fail-closed and prod ran 4971
+Gödel choices with 0 alignment scores — flipping it brings the eval surface to
+life. Two kill switches:
+
+| Env var | Effect |
+|---------|--------|
+| `MINDX_EVAL_GODEL_DISABLED=1` | Preferred. Disable the gate entirely. |
+| `MINDX_EVAL_GODEL_ENABLED=0` | Legacy form, also disables. |
+
+If neither is set (or `MINDX_EVAL_GODEL_ENABLED=1`), eval runs. Judge timeout
+remains a hard 30 s; on failure the row is written without eval fields and a
+miss is recorded against `_EvalHealth` (`agents/memory_agent.py`).
+
+Operational visibility lives at `GET /insight/eval/health` (gate state, recent
+hits/misses, success rate, mean score, 30-day disk-tail rollup) and the
+agentic dashboard at `/agentic.html`.
+
 ## Phase roadmap
 
 This module ships as Phase 1 of a three-phase rollout (see plan):
 
 | Phase | Consumer | Status |
 |-------|----------|--------|
-| 1 | Gödel choice scoring (this PR) | Shipped |
+| 1 | Gödel choice scoring | Shipped (gate flipped fail-open 2026-05-19) |
 | 2 | Boardroom soldier confidence calibration | Backlog priority 6 |
 | 3 | `reasoning_quality` 8th fitness axis | Backlog priority 6 |
+
+## Backfilling historical choices
+
+Rows written before the 2026-05-19 gate flip carry no `eval_score`.
+`scripts/eval_backfill.py` scores them retroactively:
+
+```bash
+# Preview the first 20 unscored rows (dry-run, no writes):
+python scripts/eval_backfill.py --max 20
+
+# Score 100 rows, write back, emit alignment.score catalogue events:
+python scripts/eval_backfill.py --max 100 --apply
+
+# Backfill everything (long-running — ~22 s/row on CPU pillar):
+python scripts/eval_backfill.py --max 0 --apply
+```
+
+The script probes `localhost:11434` → `127.0.0.1:11434` → the GPU server for
+a reachable Ollama and auto-picks the first pulled model from
+`qwen3:1.7b / qwen3:0.6b / deepseek-r1:1.5b` — it does not depend on the
+`.env` Ollama URL (which often points at an unreachable GPU box).
 
 ## Files
 
@@ -106,3 +147,4 @@ This module ships as Phase 1 of a three-phase rollout (see plan):
 | `metrics_utils.py` | Permissive JSON parser for small-judge outputs |
 | `llm_adapter.py` | `MindXJudgeLLM` — wraps `llm/llm_factory` |
 | `NOTICE` | Upstream attribution (Apache-2.0) |
+| `../../scripts/eval_backfill.py` | Retroactively score pre-2026-05-19 Gödel choices |

@@ -637,9 +637,24 @@ class StrategicEvolutionAgent:
                 logger.error(f"{self.log_prefix} Failed to create coordinator task for action: {e}")
 
         logger.info(f"{self.log_prefix} Enhanced blueprint campaign created {coordinator_tasks_created} coordinator tasks")
-        
+
         campaign_data["coordinator_tasks_created"] = coordinator_tasks_created
-        return self._conclude_campaign("SUCCESS", f"Enhanced blueprint campaign completed. {coordinator_tasks_created} tasks created.", campaign_data)
+        # Vacuous-SUCCESS guard (2026-05-19): logging SUCCESS for 0 tasks created
+        # turned `data/sea_campaign_history` into a 54-entry liar's ledger and
+        # would have fired PublicationOrchestrator on every cycle. NO_OP keeps
+        # the run in history (audit evidence) but excludes it from SUCCESS
+        # consumers (publication trigger, /insight/improvement/summary).
+        if coordinator_tasks_created == 0:
+            return self._conclude_campaign(
+                "NO_OP",
+                "Enhanced blueprint campaign produced 0 actionable tasks.",
+                campaign_data,
+            )
+        return self._conclude_campaign(
+            "SUCCESS",
+            f"Enhanced blueprint campaign completed. {coordinator_tasks_created} tasks created.",
+            campaign_data,
+        )
 
     async def run_audit_driven_campaign(self, audit_scope: str = "system", target_components: Optional[List[str]] = None) -> Dict[str, Any]:
         """
@@ -687,9 +702,23 @@ class StrategicEvolutionAgent:
             audit_results = await self._run_comprehensive_audit(audit_scope, target_components)
             
             if not audit_results.get("success", False):
-                return self._conclude_campaign("FAILURE", f"Audit phase failed: {audit_results.get('message', 'Unknown error')}", 
+                return self._conclude_campaign("FAILURE", f"Audit phase failed: {audit_results.get('message', 'Unknown error')}",
                                              {"audit_scope": audit_scope, "audit_results": audit_results})
-            
+
+            # No-actionable-findings short-circuit (2026-05-19): when the audit
+            # ran cleanly but turned up nothing, skip blueprint/improvement
+            # phases entirely. Avoids the duplicate-write pathology where the
+            # downstream campaign returned SUCCESS and the wrong key check at
+            # the PARTIAL_SUCCESS branch made every audit run write twice.
+            findings = audit_results.get("findings") or []
+            suggestions = audit_results.get("improvement_suggestions") or []
+            if not findings and not suggestions:
+                return self._conclude_campaign(
+                    "NO_WORK",
+                    "Audit completed with no actionable findings; nothing to improve this cycle.",
+                    {"audit_scope": audit_scope, "audit_results": audit_results},
+                )
+
             # Step 2: Convert audit findings to strategic blueprint
             logger.info(f"{self.log_prefix} Phase 2: Converting audit findings to strategic blueprint")
             blueprint = await self._generate_audit_driven_blueprint(audit_results, audit_scope)
@@ -704,12 +733,21 @@ class StrategicEvolutionAgent:
             logger.info(f"{self.log_prefix} Phase 3: Executing improvement actions")
             improvement_results = await self.run_enhanced_blueprint_campaign(f"Audit-driven improvements: {audit_scope}")
             
-            if improvement_results.get("status") != "SUCCESS":
-                return self._conclude_campaign("PARTIAL_SUCCESS", "Improvements partially completed", {
-                    "audit_results": audit_results,
-                    "blueprint": blueprint,
-                    "improvement_results": improvement_results
-                })
+            # Key fix (2026-05-19): _conclude_campaign returns
+            # `overall_campaign_status`, not `status`. The old `.get("status")`
+            # always returned None, so every audit-driven campaign double-wrote
+            # PARTIAL_SUCCESS no matter what the inner campaign returned.
+            inner_status = improvement_results.get("overall_campaign_status")
+            if inner_status not in ("SUCCESS",):
+                return self._conclude_campaign(
+                    "PARTIAL_SUCCESS",
+                    f"Improvements partially completed (inner status: {inner_status or 'unknown'})",
+                    {
+                        "audit_results": audit_results,
+                        "blueprint": blueprint,
+                        "improvement_results": improvement_results,
+                    },
+                )
             
             # Step 4: Validate improvements with re-audit
             logger.info(f"{self.log_prefix} Phase 4: Validating improvements")

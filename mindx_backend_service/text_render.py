@@ -11,9 +11,50 @@ Plan: ~/.claude/plans/luminous-humming-knuth.md
 from __future__ import annotations
 
 import math
+import re
 import time
 from datetime import datetime, timezone
 from typing import Any, Callable, Iterable
+
+
+# ── Secret redaction ──────────────────────────────────────────────────────
+#
+# Activity-feed `content` and memory snippets are free text — they can carry
+# API keys, private keys, JWTs or absolute home paths. Any public surface
+# (agentic.html, feedback.html) MUST run user-visible free text through
+# `sanitize_text` first so a leaked credential never reaches a browser.
+
+_SECRET_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\bsk-[A-Za-z0-9_-]{16,}"), "<key>"),                 # OpenAI-style
+    (re.compile(r"\bAIza[A-Za-z0-9_-]{20,}"), "<key>"),                # Google
+    (re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}"), "<key>"),            # GitHub
+    (re.compile(r"\bxox[bap]-[A-Za-z0-9-]{10,}"), "<key>"),            # Slack
+    (re.compile(r"\b0x[a-fA-F0-9]{64}\b"), "<privkey>"),               # ETH private key
+    (re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}"), "<jwt>"),
+    (re.compile(
+        r"(?i)\b(api[_-]?key|secret|password|passwd|token|bearer|private[_-]?key|"
+        r"mnemonic|seed[_-]?phrase)\b\s*[=:]\s*[\"']?[^\s\"',;]{6,}"
+    ), r"\1=<redacted>"),
+    (re.compile(r"/home/[A-Za-z0-9_.-]+"), "~"),                       # absolute home paths
+)
+
+
+def sanitize_text(s: Any, max_len: int = 160) -> str:
+    """Redact secrets + collapse whitespace + truncate. Safe for public HTML.
+
+    ETH wallet *addresses* (0x + 40 hex) are intentionally NOT redacted —
+    in mindX the wallet address is the agent's public identity. Only 64-hex
+    private keys are scrubbed.
+    """
+    if not s:
+        return ""
+    out = str(s)
+    for pat, repl in _SECRET_PATTERNS:
+        out = pat.sub(repl, out)
+    out = " ".join(out.split())  # collapse newlines / runs of whitespace
+    if len(out) > max_len:
+        out = out[: max_len - 1].rstrip() + "…"
+    return out
 
 
 # ── Humanizer primitives ──────────────────────────────────────────────────
@@ -1038,6 +1079,155 @@ def render_cost_recent(d: dict) -> str:
     )
 
 
+def render_eval_health(d: dict) -> str:
+    in_p = d.get("in_process") or {}
+    on_d = d.get("on_disk") or {}
+    gate = in_p.get("gate_open")
+    gate_s = "OPEN" if gate else ("CLOSED" if gate is False else "?")
+    mean = in_p.get("mean_score")
+    mean_s = f"{mean:.3f}" if isinstance(mean, (int, float)) else "—"
+    disk_mean = on_d.get("mean_score_disk")
+    disk_mean_s = f"{disk_mean:.3f}" if isinstance(disk_mean, (int, float)) else "—"
+    sr = in_p.get("success_rate")
+    sr_s = f"{sr * 100:.1f}%" if isinstance(sr, (int, float)) else "—"
+    lines = [
+        f"eval gate:       {gate_s}",
+        f"in-process:      hits={human_count(in_p.get('hits', 0))} "
+        f"misses={human_count(in_p.get('misses', 0))} "
+        f"rate={sr_s} "
+        f"window_n={human_count(in_p.get('scores_in_window', 0))} "
+        f"mean={mean_s}",
+        f"last score:      {human_ts_with_rel(in_p.get('last_score_ts'))}",
+        f"last miss:       {human_ts_with_rel(in_p.get('last_miss_ts'))}",
+        f"on-disk (tail):  scanned={human_count(on_d.get('scanned', 0))} "
+        f"scored={human_count(on_d.get('scored', 0))} "
+        f"mean={disk_mean_s}",
+    ]
+    err = in_p.get("error") or on_d.get("error")
+    if err:
+        lines.append(f"error:           {err}")
+    return "\n".join(lines) + "\n"
+
+
+def render_publications_summary(d: dict) -> str:
+    by_kind = d.get("by_kind") or {}
+    last = d.get("last_entry") or {}
+    lines = [
+        f"ledger:          {'present' if d.get('ledger_exists') else 'MISSING (no orchestrator publish yet)'}",
+        f"path:            {d.get('ledger_path', '?')}",
+        f"total entries:   {human_count(d.get('total_entries', 0))}",
+        f"published:       {human_count(d.get('published_count', 0))}",
+        f"coalesced:       {human_count(d.get('coalesced_count', 0))}",
+    ]
+    if by_kind:
+        lines.append("by kind:")
+        for k, v in sorted(by_kind.items(), key=lambda kv: -kv[1]):
+            lines.append(f"  {k:<26} {v}")
+    lp = d.get("last_published_at")
+    lines.append(f"last published: {human_ts_with_rel(lp) if lp else '—'}")
+    if last:
+        lines.append(f"  trigger:       {human_hash(last.get('trigger_id', '?'), 32)}")
+        lines.append(f"  kind:          {last.get('kind', '?')}")
+        lines.append(f"  post_id:       {last.get('post_id', '—')}")
+        lines.append(f"  url:           {last.get('url', '—')}")
+        if last.get("title"):
+            lines.append(f"  title:         {last.get('title')[:60]}")
+    return "\n".join(lines) + "\n"
+
+
+def render_publications_recent(d: dict) -> str:
+    rows = d.get("events") or []
+    return render_table(
+        rows,
+        [
+            ("ts",       "ts",      lambda v: human_rel_ts(v) if v else ""),
+            ("kind",     "kind",    lambda v: (v or "").replace("publication.", "")[:14]),
+            ("trigger",  "payload", lambda p: human_hash((p or {}).get("trigger_id", ""), 26)),
+            ("from",     "payload", lambda p: ((p or {}).get("kind") or "")[:18]),
+            ("post_id",  "payload", lambda p: str((p or {}).get("post_id") or "—")),
+            ("note",     "payload", lambda p: (
+                f"url={(p or {}).get('url')}" if (p or {}).get("url")
+                else f"reason={(p or {}).get('reason') or ''}"
+            )[:42]),
+        ],
+        max_col=80,
+    )
+
+
+def render_publications_audit(d: dict) -> str:
+    md = d.get("markdown_drafts") or []
+    pdfs = d.get("pdf_drafts") or []
+    pub = d.get("published_via_orchestrator") or []
+    pub_titles = {(e or {}).get("title", "").lower() for e in pub if (e or {}).get("title")}
+    lines = [
+        f"publications dir: {d.get('publications_dir', '?')}",
+        f"ledger:           {'present' if d.get('ledger_exists') else 'MISSING'}",
+        f"markdown drafts:  {human_count(len(md))}",
+        f"pdf drafts:       {human_count(len(pdfs))}",
+        f"published (orch): {human_count(len(pub))}",
+        "",
+        "markdown:",
+    ]
+    for f in md[:40]:
+        size = human_bytes(f.get("size_bytes", 0))
+        mtime = human_rel_ts(f.get("mtime"))
+        match = "  ✓pub" if any(f["name"].lower().startswith(t.split()[0].lower()[:20])
+                                for t in pub_titles) else ""
+        lines.append(f"  {f.get('name', '?')[:42]:<42} {size:>8}  {mtime:>10}{match}")
+    if len(md) > 40:
+        lines.append(f"  … +{len(md) - 40} more")
+    lines.append("")
+    lines.append("pdf:")
+    for f in pdfs[:40]:
+        size = human_bytes(f.get("size_bytes", 0))
+        mtime = human_rel_ts(f.get("mtime"))
+        lines.append(f"  {f.get('name', '?')[:42]:<42} {size:>8}  {mtime:>10}")
+    if len(pdfs) > 40:
+        lines.append(f"  … +{len(pdfs) - 40} more")
+    return "\n".join(lines) + "\n"
+
+
+def render_memory_recent(d: dict) -> str:
+    """Plain-text for /insight/memory/recent — logs becoming memories."""
+    rows = d.get("events") or []
+
+    def _src(v: Any) -> str:
+        # Show the leaf of the source-log path — "godel_choices.jsonl",
+        # "…/2026-…system_state.memory.json" → "system_state.memory.json".
+        s = str(v or "")
+        return (s.rsplit("/", 1)[-1] or s)[:34]
+
+    def _imp(v: Any) -> str:
+        return {1: "CRIT", 2: "HIGH", 3: "MED", 4: "LOW"}.get(v, str(v or "?"))
+
+    return render_table(
+        rows,
+        [
+            ("ts",     "ts",          lambda v: human_rel_ts(v) if v else ""),
+            ("agent",  "actor",       lambda v: human_hash(v, 20)),
+            ("from log", "source_log", _src),
+            ("mem type", "memory_type", lambda v: str(v or "?")[:16]),
+            ("imp",    "importance",  _imp),
+        ],
+        max_col=80,
+    )
+
+
+def render_agentic_activity(d: dict) -> str:
+    rows = d.get("events") or []
+    return render_table(
+        rows,
+        [
+            ("ts",       "timestamp", lambda v: human_rel_ts(v) if v else ""),
+            ("tier",     "tier_label", None),
+            ("agent",    "agent",     lambda v: human_hash(v, 20)),
+            ("type",     "type",      lambda v: (v or "")[:18]),
+            ("headline", "headline",  lambda v: (v or "")[:64]),
+        ],
+        max_col=80,
+    )
+
+
 RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/storage/status":      render_storage_status,
     "/insight/storage/recent":      render_storage_recent,
@@ -1064,6 +1254,12 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/stuck_loops":         render_stuck_loops,
     "/storage/eligible":            render_eligible,
     "/storage/anchor/health":       render_anchor_health,
+    "/insight/eval/health":         render_eval_health,
+    "/insight/publications/recent": render_publications_recent,
+    "/insight/publications/summary": render_publications_summary,
+    "/insight/publications/audit":  render_publications_audit,
+    "/insight/agentic/activity":    render_agentic_activity,
+    "/insight/memory/recent":       render_memory_recent,
 }
 
 

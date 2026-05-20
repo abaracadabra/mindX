@@ -49,6 +49,26 @@ from utils.config import PROJECT_ROOT
 logger = logging.getLogger("agents.publication_orchestrator")
 
 
+async def _emit_pub_event(
+    kind: str,
+    payload: Dict[str, Any],
+    *,
+    source_ref: Optional[str] = None,
+) -> None:
+    """Emit one publication.* catalogue event. Never raises."""
+    try:
+        from agents.catalogue import emit_catalogue_event
+        await emit_catalogue_event(
+            kind=kind,
+            actor="publication_orchestrator",
+            payload=payload,
+            source_log="governance/published_triggers.json",
+            source_ref=source_ref,
+        )
+    except Exception:
+        pass
+
+
 # Defaults — overridable via constructor for tests / dev.
 DEFAULT_BASE_DELAY_S    = 1800     # 30 min
 DEFAULT_JITTER_FRACTION = 0.4      # ± 40 % → effective window 18-42 min
@@ -260,6 +280,12 @@ class PublicationOrchestrator:
         """Debounced + jittered publish. Honors MIN_GAP_S rate limit."""
         detected_at = time.time()
 
+        await _emit_pub_event(
+            "publication.attempted",
+            {"trigger_id": trigger_id, "kind": kind, "detected_at": detected_at},
+            source_ref=trigger_id,
+        )
+
         # Rate-limit BEFORE we burn jitter. If the last publish was too
         # recent, coalesce this trigger into the ledger and skip.
         time_since_last = detected_at - self.ledger.last_published_at
@@ -275,6 +301,18 @@ class PublicationOrchestrator:
                 kind=kind,
                 detected_at=detected_at,
                 note=f"within MIN_GAP_S={int(self.min_gap_s)}s",
+            )
+            await _emit_pub_event(
+                "publication.coalesced",
+                {
+                    "trigger_id": trigger_id,
+                    "kind": kind,
+                    "detected_at": detected_at,
+                    "reason": "within_min_gap_s",
+                    "min_gap_s": int(self.min_gap_s),
+                    "seconds_since_last": int(time_since_last),
+                },
+                source_ref=trigger_id,
             )
             return
 
@@ -300,6 +338,17 @@ class PublicationOrchestrator:
                 kind=kind,
                 detected_at=detected_at,
                 note=f"raced past delay; MIN_GAP_S={int(self.min_gap_s)}s",
+            )
+            await _emit_pub_event(
+                "publication.coalesced",
+                {
+                    "trigger_id": trigger_id,
+                    "kind": kind,
+                    "detected_at": detected_at,
+                    "reason": "raced_past_delay",
+                    "min_gap_s": int(self.min_gap_s),
+                },
+                source_ref=trigger_id,
             )
             return
 
@@ -342,18 +391,33 @@ class PublicationOrchestrator:
             return
 
         published_at = time.time()
+        post_id_val = int(result.get("post_id")) if result.get("post_id") else None
         self.ledger.append_published(LedgerEntry(
             trigger_id=trigger_id,
             kind=kind,
             detected_at=detected_at,
             published_at=published_at,
-            post_id=int(result.get("post_id")) if result.get("post_id") else None,
+            post_id=post_id_val,
             url=result.get("url"),
             title=title,
         ))
         logger.info(
             f"PublicationOrchestrator: published {trigger_id} → "
             f"post_id={result.get('post_id')} url={result.get('url')}"
+        )
+        await _emit_pub_event(
+            "publication.published",
+            {
+                "trigger_id": trigger_id,
+                "kind": kind,
+                "detected_at": detected_at,
+                "published_at": published_at,
+                "post_id": post_id_val,
+                "url": result.get("url"),
+                "title": title,
+                "status": result.get("status"),
+            },
+            source_ref=trigger_id,
         )
 
     def _compute_delay(self) -> float:
