@@ -1,0 +1,30 @@
+{
+  "agent_id": "main_service",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 5,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Top processes: backend_startup_transcript(5)",
+      "Peak activity hour: 2:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 5
+        },
+        "process_distribution": {
+          "backend_startup_transcript": 5
+        },
+        "total_memories": 5,
+        "timestamp": "2026-05-13T11:24:16.601866"
+      }
+    ]
+  },
+  "promoted_at": "2026-05-13T11:24:16.601879",
+  "promotion_criteria": {
+    "pattern_threshold": 3,
+    "days_analyzed": 7
+  }
+}

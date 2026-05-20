@@ -1077,6 +1077,66 @@ The end-to-end flow runs left-to-right and top-to-bottom along seven well-define
 
 For **Ethereum mainnet**, deploy in this order on a session where base fee is below the 0.2 gwei threshold confirmed for April 2026: deploy `MindXCheckpointRegistry` (no constructor args), then the `Verifier` UUPS proxy with `BaseVerifier` semantics and `attestationContract[OracleType.TEE] = automataDcapVerifier`, then `THOT_INFT` UUPS proxy initialized with `(name, symbol, "ipfs://thot/", verifier, registry, admin)`, then `DatasetRegistry`, then `ChainMapRegistry` with `guardian = openBDK relayer`, then `BoardroomVoteVerifier`, then `DAIOBoardroom(thotInft, registry, voteVerifier)`, then `TesseraExecutor` parameterized with the boardroom address. After deployment, run `forge verify-contract` against Etherscan for every contract, transfer `DEFAULT_ADMIN_ROLE` of every contract to a 3-of-5 multisig, and run a full end-to-end Foundry fork-test against mainnet to confirm gas estimates remain under the budget. For **Algorand mainnet**, deploy the GoPlausible x402-avm facilitator pinning to commit hash on `branch-algorand-v2`, fund the `feePayer` with 100 ALGO (covers ~50,000 sponsored x402 settlements), opt the resource server account into ASA `31566704` (USDC), and register the resource server's `payTo` address with the BANKON AlgoIDNFT issuer so identity-gated routes can verify ownership in real time. For the **openBDK testnet sequence**, bring up one Relayer and three Validators in a 1+3 topology with a 2-of-3 quorum, configure each to subscribe to `Tallied` events on the boardroom and `Set` events on the chainmap, and run a 14-day soak that includes at least three boardroom-passed test resolutions, two cross-chain xERC20 mint-burn round-trips, and one censure path; then expand to 1+6 and 1+21 only after each prior topology has cleared 30 days without consensus failure. Across all three deployments, every Solidity artifact under cypherpunk2048 license header, every Python module under `python ≥ 3.12` with Google-style docstrings and tenacity retries on every external I/O, every secret resolved via Google Cloud ADC and Secret Manager (no environment-variable secrets in containers), and every server stateless so horizontal scale is a deployment knob rather than an architectural rewrite.
 
+## Implementation status (May 2026)
+
+This document was authored as a forward-looking architectural treatise.
+The first concrete deployment cherry-picks the **load-bearing
+cryptographic substrate** and leaves the speculative components for
+follow-up phases. The deployable artifacts as of 2026-05-13 are:
+
+**Shipped this round** (`daio/contracts/THOT/` + `daio/contracts/inft/`):
+
+| Component (this doc) | Deployable artifact | Notes |
+|---|---|---|
+| §A — THOT data model + Merkle commitment | `THOT/libraries/THOTLib.sol` + `THOT/python/thot/merkle.py` | Adopted with RFC-6962 internal-node `0x01` prefix patch and prefix-leaves length assertion. Python ↔ Solidity byte parity pinned by `test/thot/THOTLib.t.sol`. |
+| §C — ERC-7857 INFT wrapper for THOT | `inft/iNFT_7857.sol` (extended) | iNFT_7857 is the canonical wrapper; `attachThotRoot` + transfer revoke gate added. |
+| §C — `MindXCheckpointRegistry` (isRegistered + isRevoked) | `THOT/commitment/THOTCommitmentRegistry.sol` | Renamed to `THOTCommitmentRegistry` to coexist with the existing discovery `ITHOTRegistry` interface. Implements the `isRegistered`/`isRevoked` contract this doc relies on. |
+| §A — Matryoshka prefix-binding theorem | `THOT/libraries/THOTLib.sol:verifyPrefix` | Verbatim from THOTS.md §9.5. Three modes (A/B/C) implemented. |
+
+**Deferred to follow-up phases**:
+
+- **Multi-attestor quorum** (§C, TDX + SEV-SNP + ZK) — single
+  `ORACLE_ROLE` on `iNFT_7857` remains canonical. ZK is `// TODO` even
+  in 0G's reference implementation.
+- **DAIOBoardroom** (§D, 13 seats, SMT-anchored tallies, censure) — a
+  separate `BoardroomExtension.sol` exists in `daio/contracts/daio/`
+  for governance voting; the §D 13-seat boardroom + SMT tally is a
+  later integration.
+- **x402 + Parsec paywall** (§G) and **chainmap routing** (§H) — belong
+  to the BANKON/AgenticPlace layers, not the on-chain commitment
+  substrate.
+- **Algorand mainnet** — Solidity only this round. Algorand requires
+  PyTeal/Reach + its own deployment plan.
+- **THLNK transport pointer** (§B) — pure off-chain. Can ship later as
+  `daio/contracts/THOT/python/thot/thlnk.py`. Not blocking the on-chain
+  deployment.
+
+### Endian-ness correction (replaces §3.2 of THOTS.md)
+
+THOTS.md §3.2 describes the ternary codon layout as "packed
+**big-endian** into a `bytes2`". The actual canonical implementation in
+both `THOT/libraries/THOTLib.sol:_validateTernary` and
+`THOT/python/thot/thot8_cpu.py:THOT8.pack` is **LSB-first within the
+word** (i.e. dimension 0 occupies bits 0-1, dimension 7 occupies bits
+14-15, with `byteorder="little"` on the final `uint16 → bytes2` cast).
+The two implementations are aligned; THOTS.md was the only source that
+disagreed. Future interop tooling should follow the code, not §3.2.
+
+### What changed vs the original zip
+
+Three contracts were dropped before adoption: `THOT4096.sol` (duplicated
+the more sophisticated `inft/iNFT_7857.sol`), `IERC7857.sol` (name
+clash with the canonical interface inside `inft/iNFT_7857.sol`), and
+`MockTEEAttestor.sol` (already covered by `ORACLE_ROLE` on iNFT_7857).
+Three test bugs were fixed:
+`THOTRegistry.t.sol:registerPrefix` was called with 5 args instead of
+the contract's 6-arg signature; the Solidity ↔ Python parity case was
+missing entirely; and the THOT768 with-co-witness path had no end-to-end
+test against a synthetic 64-leaf parent. All three are fixed in
+`test/thot/`.
+
+---
+
 ## Conclusion
 
 The architecture above resolves the brief by treating ERC-7857 as the canonical wrapper, THOT as the canonical inner format, THLNK as the canonical pointer, and the boardroom-Tessera-openBDK chain as the canonical execution path, with x402 + Parsec/Pera-fork as the canonical paywall and chainid.network-derived chainmap as the canonical cross-chain router. Three findings deserve emphasis on the way out. **First, the public PYTHAI surface area is much smaller than the user's prior context implies**: `THOT` in the public PYTHAI codebase means "thought," not "Transferable Hyper Optimized Tensor"; `did:nfd` is not a registered W3C DID method; `BANKON AlgoIDNFT` and `MindXCheckpointRegistry` have no public artifacts as of May 2026 — the architecture above gives them rigorous on-chain definitions, but a PYTHAI-side reconciliation is needed before mainnet. **Second, ERC-7857 is draft, unaudited, and reference-stub**: production deployment requires its own audit, a real ZK verifier (the 0G reference still ships `// TODO`), and a multi-attestor quorum to defend against the Plundervolt/ÆPIC/Sigy class of TEE attacks. **Third, the strongest Sybil defense in the 13-seat boardroom is not any single primitive but the Tandfonline 2024 trilemma applied as defense-in-depth**: BONAFIDE Fides reputation, BANKON AlgoIDNFT KYC, lineage gating through the registry, and Curia's break-glass — none individually sufficient, all together hard. The deployment runbook is conservative for a reason: when the canonical reference is stub-ware and the auditor pool is empty, the only honest path to mainnet is exhaustive Foundry coverage, fork-tests against current mainnet state, multisig-administered upgrades, and a 14-day testnet soak before each topology expansion. The pieces compose cleanly; what remains is the work.

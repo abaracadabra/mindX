@@ -1,0 +1,33 @@
+{
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 168,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Active: 168 memories",
+      "Top processes: bdi_planning_start(56), bdi_goal_set(56), bdi_deliberation(56)",
+      "Peak activity hour: 1:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 168
+        },
+        "process_distribution": {
+          "bdi_planning_start": 56,
+          "bdi_goal_set": 56,
+          "bdi_deliberation": 56
+        },
+        "total_memories": 168,
+        "timestamp": "2026-05-13T02:10:27.928956"
+      }
+    ]
+  },
+  "promoted_at": "2026-05-13T02:10:27.928973",
+  "promotion_criteria": {
+    "pattern_threshold": 3,
+    "days_analyzed": 7
+  }
+}

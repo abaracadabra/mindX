@@ -1,0 +1,62 @@
+{
+  "agent_id": "github_agent_tool",
+  "dream_timestamp": "2026-05-13T10:22:05.743121",
+  "source": "machine_dreaming",
+  "insights": [
+    {
+      "type": "behavioral",
+      "description": "Top processes: github_backup_created(177)",
+      "score": 0.3601,
+      "importance": 0.5,
+      "novelty": 0.4,
+      "confidence": 0.8,
+      "frequency": 177
+    },
+    {
+      "type": "performance",
+      "description": "Dominant memory type: system_state (177 occurrences)",
+      "score": 0.3601,
+      "importance": 0.4,
+      "novelty": 0.5,
+      "confidence": 0.8,
+      "frequency": 177
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hours: 3, 21, 6",
+      "score": 0.1575,
+      "importance": 0.3,
+      "novelty": 0.4,
+      "confidence": 0.7,
+      "frequency": 74
+    },
+    {
+      "type": "behavioral",
+      "description": "Active: 177 memories",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Top processes: github_backup_created(177)",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    },
+    {
+      "type": "behavioral",
+      "description": "Peak activity hour: 3:00",
+      "score": 0.0542,
+      "importance": 0.5,
+      "novelty": 0.6,
+      "confidence": 0.6,
+      "frequency": 1
+    }
+  ],
+  "total_insights": 6
+}

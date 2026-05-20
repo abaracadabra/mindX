@@ -1,0 +1,43 @@
+{
+  "timestamp": "2026-05-13T01:11:10.388810",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_heartbeat",
+  "content": {
+    "process_name": "heartbeat_dialogue",
+    "data": {
+      "timestamp": "2026-05-13T08:11:10Z",
+      "agent": "mindx_heartbeat",
+      "model": "openrouter/nvidia/nemotron-3-super-120b-a12b:free",
+      "prompt": "You are mindX. Your top-fitness agent is coordinator_agent_main (score=55.0); your bottom is mastermind_prime (score=26.1). What evolutionary pressure is currently active?",
+      "response": "The current evolutionary pressure is **directional (positive) selection favoring higher\u2011performing agents**.  \n\n- The top\u2011fitness agent, **coordinator_agent_main** (score\u202f=\u202f55.0), is being rewarded and thus more likely to be reproduced, retained, or used as a template for offspring.  \n- The bottom\u2011fitness agent, **mastermind_prime** (score\u202f=\u202f26.1), is under strong negative pressure \u2014 its low score makes it a target for removal, mutation, or replacement.  \n\nIn short, the population",
+      "latency_ms": 12163,
+      "state_context": {
+        "recent_godel": "self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free; self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free; self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free",
+        "ok": 0,
+        "total": 25,
+        "top_agent": "coordinator_agent_main",
+        "top_score": "55.0",
+        "bot_agent": "mastermind_prime",
+        "bot_score": "26.1",
+        "blueprint_title": "(none)",
+        "backlog_total": 792,
+        "running": 0,
+        "promoted": 150,
+        "dream_ts": "2026-05-13T07:41:57",
+        "stm_count": 10252
+      }
+    }
+  },
+  "context": {
+    "agent_id": "mindx_heartbeat",
+    "model": "nvidia/nemotron-3-super-120b-a12b:free",
+    "type": "self_reflection_grounded"
+  },
+  "tags": [
+    "heartbeat_dialogue",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "f77cfbbdf2f70ecf"
+}

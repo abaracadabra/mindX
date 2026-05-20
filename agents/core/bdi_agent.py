@@ -3,6 +3,7 @@
 from __future__ import annotations
 import asyncio
 import json
+import os
 import re
 import importlib
 import inspect
@@ -1080,6 +1081,11 @@ class BDIAgent:
         run_id = str(uuid.uuid4())[:8]
         self.logger.info(f"Starting run ID '{run_id}'. Max cycles: {max_cycles}.")
         self._internal_state.update({"current_run_id": run_id, "cycle_count": 0, "status": "RUNNING", "current_failure_reason": None})
+        # Track step history for the Hermes/OpenClaw distill hook (§8.1 of the
+        # research doc). Cleared per-run; never raises if the import isn't
+        # available. Opt-in via MINDX_BDI_DISTILL_ENABLED.
+        self._internal_state["actions_this_run"] = []
+        self._internal_state["beliefs_before_run"] = await self._snapshot_belief_keys()
         if external_input: await self.perceive(external_input)
 
         while self._internal_state["cycle_count"] < max_cycles:
@@ -1139,6 +1145,13 @@ class BDIAgent:
                     if goal_entry: goal_entry["status"] = "completed_success"
                     if goal_id == self.desires.get("primary_goal_id"):
                         self._internal_state["status"] = "COMPLETED_GOAL_ACHIEVED"
+                        # Skill distillation hook (Hermes/OpenClaw §8.1, item 3).
+                        # Opt-in via MINDX_BDI_DISTILL_ENABLED. Best-effort —
+                        # never raises into the BDI loop.
+                        try:
+                            await self._maybe_distill_skill(goal_entry, run_id)
+                        except Exception as _e:  # pragma: no cover - defensive
+                            self.logger.warning(f"distill hook failed (non-fatal): {_e}")
                         break
 
                 await asyncio.sleep(self.config.get("bdi.agent_cycle_delay_seconds", 0.1))
@@ -1164,6 +1177,87 @@ class BDIAgent:
                 {'key': namespaced_key, 'value': value, 'confidence': confidence, 'source': source.name},
                 {'agent_id': self.agent_id}
             )
+
+    # ── Hermes/OpenClaw skill_distill hook (research doc §8.1) ──────────
+    # Best-effort capture of the agent's belief surface so distill can derive
+    # postconditions from belief diffs. Never raises into the run loop.
+    async def _snapshot_belief_keys(self) -> dict:
+        """Return a shallow dict {key: truthy?} of the agent's beliefs.
+        Defensive: returns {} on any failure."""
+        try:
+            if hasattr(self.belief_system, "get_all_beliefs"):
+                beliefs = await self.belief_system.get_all_beliefs()
+            elif hasattr(self.belief_system, "list_beliefs"):
+                beliefs = await self.belief_system.list_beliefs()
+            else:
+                return {}
+            out: dict = {}
+            prefix = f"bdi.{self.domain}.beliefs."
+            for b in beliefs or []:
+                k = b.get("key") if isinstance(b, dict) else None
+                v = b.get("value") if isinstance(b, dict) else None
+                if not k:
+                    continue
+                short = k[len(prefix):] if k.startswith(prefix) else k
+                out[short] = bool(v) if not isinstance(v, (int, float)) else bool(v)
+            return out
+        except Exception:
+            return {}
+
+    async def _maybe_distill_skill(self, goal_entry: Optional[Dict[str, Any]], run_id: str) -> None:
+        """Opt-in: when a primary goal completes successfully, hand the action
+        history + belief diff to ``agents.skills.distill_from_intention``. The
+        helper enforces step thresholds (default min_steps=5, min_unique_tools=2)
+        and writes a draft under ``$MINDX_SKILLS_DIR/.drafts/`` for operator
+        review. The Day-1 scanner is the final gate on any future promotion."""
+        if os.environ.get("MINDX_BDI_DISTILL_ENABLED", "").lower() not in ("1", "true", "yes"):
+            return
+        try:
+            from agents.skills.distill import distill_from_intention
+        except Exception as e:
+            self.logger.debug(f"distill helper unavailable: {e}")
+            return
+
+        steps = list(self._internal_state.get("actions_this_run", []) or [])
+        beliefs_before = dict(self._internal_state.get("beliefs_before_run", {}) or {})
+        beliefs_after = await self._snapshot_belief_keys()
+
+        title = (goal_entry or {}).get("goal") if goal_entry else None
+        result = distill_from_intention(
+            intention_id=run_id,
+            intention_template=(goal_entry or {}).get("intention_template") if goal_entry else None,
+            title=(title[:120] if isinstance(title, str) else None),
+            success_signal=True,
+            beliefs_before=beliefs_before,
+            beliefs_after=beliefs_after,
+            steps=steps,
+            agent_id=self.agent_id,
+            category=f"bdi-{self.domain}",
+            draft_only=True,   # always draft from BDI; promotion is an operator decision
+        )
+        if result.skill is not None:
+            self.logger.info(
+                f"distill: drafted skill '{result.skill.slug}' under {result.draft_path} "
+                f"({len(steps)} steps · {len(result.skill.frontmatter.postconditions)} postconditions)"
+            )
+            if self.memory_agent:
+                try:
+                    await self.memory_agent.log_process(
+                        "bdi_skill_distilled",
+                        {
+                            "slug": result.skill.slug,
+                            "category": result.skill.frontmatter.category,
+                            "intention_template": result.skill.frontmatter.intention_template,
+                            "postconditions": list(result.skill.frontmatter.postconditions),
+                            "steps": len(steps),
+                            "draft_path": str(result.draft_path) if result.draft_path else None,
+                        },
+                        {"agent_id": self.agent_id, "run_id": run_id},
+                    )
+                except Exception:
+                    pass
+        else:
+            self.logger.debug(f"distill skipped: {result.reason}")
 
     def set_goal(self, goal_description: str, priority: int = 1, **kwargs):
         goal_id = kwargs.get("goal_id", str(uuid.uuid4())[:8])
@@ -1227,6 +1321,17 @@ class BDIAgent:
         
         if success:
             self.logger.info(f"Action '{completed_action.get('type')}' success. Result: {str(result)[:100]}...")
+            # Distill hook: record the action so we can compose a SKILL.md
+            # draft on COMPLETED_GOAL_ACHIEVED. Best-effort, never raises.
+            try:
+                if "actions_this_run" in self._internal_state:
+                    self._internal_state["actions_this_run"].append({
+                        "tool": completed_action.get("type") or completed_action.get("tool"),
+                        "args": completed_action.get("params") or completed_action.get("args") or {},
+                        "result": str(result)[:200] if result is not None else None,
+                    })
+            except Exception:
+                pass
             if not self.intentions["current_plan_actions"]:
                 self.intentions["plan_status"] = "COMPLETED"
         else:

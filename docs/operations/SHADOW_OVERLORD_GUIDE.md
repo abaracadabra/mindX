@@ -151,6 +151,12 @@ If any of these checks fail, the handler raises an HTTPException before ever cal
 
 ## 5. End-to-end workflow
 
+> **Browser path:** day-to-day, most operators use the
+> [`shadow-overlord.html`](#5f-browser-login-page) page — §5f below. It
+> implements steps 4–5 (challenge → personal_sign → JWT) in the browser with
+> MetaMask / EIP-6963 wallets. The curl walkthrough that follows is for
+> headless / scripted contexts.
+
 ### 5a. One-time server setup
 
 This is performed once per server, by whoever has root access.
@@ -194,7 +200,19 @@ The recommended approach is a systemd drop-in:
 sudo systemctl edit mindx.service
 ```
 
-Editor opens. Add:
+**Canonical path (recommended): store in the BANKON vault.** Both variables are
+in `PROVIDER_ENV_MAP` (see [`docs/BANKON_VAULT_HANDOFF.md`](../BANKON_VAULT_HANDOFF.md#2-store-the-3-values-in-the-bankon-vault-canonical-path) §2)
+and decrypted into `os.environ` at backend startup. Single command per value:
+
+```bash
+.mindx_env/bin/python manage_credentials.py store shadow_overlord_address '0xAbC123...'
+.mindx_env/bin/python manage_credentials.py store shadow_jwt_secret "$(openssl rand -hex 32)"
+.mindx_env/bin/python manage_credentials.py store mindx_admin_addresses '0xAbC123...'   # vault-write allowlist
+sudo systemctl restart mindx.service
+```
+
+If you can't use the vault (fresh box; ceremony failure; rotation override),
+fall back to the systemd drop-in below. Editor opens. Add:
 
 ```ini
 [Service]
@@ -352,6 +370,60 @@ This is useful for:
 - Counterparties verifying that they have the correct CFO address before sending funds.
 - Smart contracts that need to know the cabinet's addresses for access-control rules.
 - Dashboards displaying organizational identity.
+
+---
+
+### 5f. Browser login page
+
+`mindx_frontend_ui/shadow-overlord.html` (clean URL `/shadow-overlord`) is the
+front door for the admin tier. It implements the challenge → `personal_sign`
+→ verify flow against any EIP-6963 wallet (MetaMask, Phantom, Coinbase, Ledger
+via its browser extension, …). No server-side state, no localStorage; the JWT
+is held in JavaScript memory only and expires in ≤5 minutes.
+
+It is reached from the **`/login` launcher** as the *Shadow-Overlord* tile
+(always public; the admin features it unlocks are not). After a verified
+sovereign sign-in here, this page writes the recovered wallet address (and
+nothing else — no JWT, no signature, no secret) into
+`localStorage.mindx_shadow_address` so the launcher at `/login` can flip the
+BANKON Vault / Cabinet / Publish-to-Rage tiles to their unlocked-golden state
+when you return to that tab. Logout clears it; all actual privileged endpoints
+still self-enforce `require_shadow_jwt` on every call.
+
+**Flow inside the page:**
+
+1. *Connect Wallet* — uses the EIP-6963 announcement protocol (same code path
+   as `live/allchain.html`'s `setupEIP6963WalletDetection`) and falls back to
+   the legacy `window.ethereum.providers[]` enumeration.
+2. *Sign in as shadow-overlord* — `POST {api}/admin/shadow/challenge {scope:"auth"}`,
+   passes the returned `message` to `provider.request({method:"personal_sign", params:[message, address]})`,
+   then `POST {api}/admin/shadow/verify {nonce, signature}`. On 200 the JWT
+   panel reveals (subject, scope, mm:ss countdown, click-to-copy bearer).
+3. *Negative path:* if the recovered signer ≠ `SHADOW_OVERLORD_ADDRESS`, the
+   verify endpoint returns 403 and the page surfaces "Not shadow-overlord: your
+   wallet (…short hash…) is not the configured SHADOW_OVERLORD_ADDRESS on this
+   backend." This negative path was operator-verified before the visual upgrade
+   landed.
+
+**Visual states (the WebGL background shader does the work):**
+
+| State | When | What you see |
+|---|---|---|
+| **Idle / denied** | Page load; no JWT; or after a `403` from `/verify` | Dim violet abyss — fbm-noise nebula tendrils, mouse-parallax field, slow ominous breathing pulse. Pattern extrapolated from `live/allchain.html`'s `#gl` shader + the `mindx.pythai.net/automindx` canvas + the DeltaVerse Engine perception layer. |
+| **Sovereign** | A 200 from `/admin/shadow/verify` is in hand | `body.is-overlord` flips; the shader's `u_state` uniform ramps 0→1 (the central eye opens, the crown ring goes golden, palette saturates, tendrils gold-tipped); `WELCOME, OVERLORD` banner crowns the hero; the logo gains an outer gold drop-shadow; a "Sovereign — privileged routes unlocked" panel appears with deep-links to `/admin/cabinet/*`, `/vault/sign/*`, `/admin/shadow/release-key/*`, `/admin/vault/credentials/*`, `/admin/publish-to-rage`, and this guide. |
+
+Logout (button in the JWT panel) clears the in-memory token, drops
+`is-overlord`, and ramps the shader back to the idle palette. Closing or
+refreshing the tab also clears the session — there's nothing on disk.
+
+**`prefers-reduced-motion`** is honored: the page detects the media query and
+stops the shader's `requestAnimationFrame` loop after the first frame
+(consistent with how `live/allchain.html` handles it).
+
+**Configurable backend** — a small config bar at the top of the page lets the
+operator point the page at a different `mindx_backend` (default: same origin
+on `*.pythai.net`, `http://localhost:8000` for local dev). CORS is already
+allowed for both from `mindx_backend_service/main_service.py:1643`.
 
 ---
 

@@ -3,6 +3,7 @@
 pragma solidity ^0.8.20;
 
 import "./DAIOGovernance.sol";
+import "./Errors.sol";
 
 /**
  * @title BoardroomExtension
@@ -115,7 +116,8 @@ contract BoardroomExtension {
         treasury.balance -= allocation.amount;
         
         if (allocation.token == address(0)) {
-            payable(allocation.recipient).transfer(allocation.amount);
+            (bool ok, ) = payable(allocation.recipient).call{value: allocation.amount}("");
+            if (!ok) revert NativeTransferFailed(allocation.recipient, allocation.amount);
         } else {
             // ERC20 transfer would go here
         }

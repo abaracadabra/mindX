@@ -1,0 +1,30 @@
+{
+  "agent_id": "blueprint_to_action_converter",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 33,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Top processes: blueprint_to_action_conversion(33)",
+      "Peak activity hour: 6:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 33
+        },
+        "process_distribution": {
+          "blueprint_to_action_conversion": 33
+        },
+        "total_memories": 33,
+        "timestamp": "2026-05-13T07:24:58.778034"
+      }
+    ]
+  },
+  "promoted_at": "2026-05-13T07:24:58.778052",
+  "promotion_criteria": {
+    "pattern_threshold": 3,
+    "days_analyzed": 7
+  }
+}

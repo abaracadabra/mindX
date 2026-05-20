@@ -1,0 +1,39 @@
+[Unit]
+Description=mindX Curator — weekly archive-only audit of the SkillStore (Hermes §8.1)
+After=network-online.target mindx.service
+Wants=mindx.service
+
+# The Curator is a library; this unit is the one-shot driver. It writes a
+# JSON report to data/learnings/curator/<timestamp>.json and exits.
+# Pinned + human-authored skills are off-limits by the SkillStore contract;
+# this unit's --apply only archives (never deletes) what the auditor flags.
+
+[Service]
+Type=oneshot
+User=mindx
+Group=mindx
+WorkingDirectory=/home/mindx/mindX
+Environment="PYTHONUNBUFFERED=1"
+ExecStart=/home/mindx/mindX/.mindx_env/bin/python /home/mindx/mindX/scripts/run_curator.py --apply --quiet
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mindx-curator
+TimeoutStartSec=600
+
+# Hardening — Curator only needs to read the SkillStore and write a JSON
+# report under data/learnings/curator/ (and to archive flagged SKILL.md
+# entries under ~/.mindx/skills/.archive/).
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/mindx/mindX/data /home/mindx/.mindx
+PrivateTmp=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+MemoryMax=512M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

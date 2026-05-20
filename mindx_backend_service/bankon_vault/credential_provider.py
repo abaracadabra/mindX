@@ -49,6 +49,12 @@ PROVIDER_ENV_MAP = {
     "mindx_api_keys": "MINDX_SECURITY_API_KEYS",
     # Admin wallet addresses
     "mindx_admin_addresses": "MINDX_SECURITY_ADMIN_ADDRESSES",
+    # Shadow-overlord admin tier (gates /admin/shadow/*, /vault/sign/*, etc.).
+    # Both are vault-stored; decrypted into env at backend startup. The address
+    # is public information but lives in the vault for rotation hygiene and to
+    # keep .env free of operator identity. The HMAC secret must be ≥32 chars.
+    "shadow_overlord_address": "SHADOW_OVERLORD_ADDRESS",
+    "shadow_jwt_secret": "SHADOW_JWT_SECRET",
     # IPFS storage providers — for memory offload (plan: whispering-floating-merkle.md)
     "lighthouse_api_key": "LIGHTHOUSE_API_KEY",
     "nftstorage_api_key": "NFTSTORAGE_API_KEY",
@@ -59,6 +65,11 @@ PROVIDER_ENV_MAP = {
     "memory_anchor_treasury_pk": "MEMORY_ANCHOR_TREASURY_PK",
     # Uniswap Trading API (https://trade-api.gateway.uniswap.org/v1/*)
     "uniswap_trade_api_key": "UNISWAP_TRADE_API_KEY",
+    # rage.pythai.net publish authorization — comma-separated 0x EOAs that may
+    # request a wordpress.agent publish. The wordpress.agent's *own* secrets
+    # (wallet pk, WP API key) live OFF env in the isolated wordpress.agent.keys
+    # vault namespace and are read on-demand by the wordpress-agent service.
+    "wordpress_publisher_addresses": "WORDPRESS_PUBLISHER_ADDRESSES",
 }
 
 
@@ -107,18 +118,29 @@ class CredentialProvider:
         return list(self._loaded_keys)
 
     def store_credential(self, vault_id: str, value: str,
-                         key_file: Optional[Path] = None) -> bool:
-        """Store a credential in the vault."""
-        if vault_id not in PROVIDER_ENV_MAP:
-            raise ValueError(
-                f"Unknown provider: {vault_id}. "
-                f"Valid: {', '.join(sorted(PROVIDER_ENV_MAP.keys()))}"
-            )
+                         key_file: Optional[Path] = None,
+                         context: Optional[str] = None) -> bool:
+        """Store a credential in the vault.
+
+        When ``context`` is None and the vault_id is in ``PROVIDER_ENV_MAP``,
+        the entry is stored with ``context="provider"`` (the default for
+        startup-env-mapped credentials). When ``context`` is supplied, the
+        vault_id need NOT be in ``PROVIDER_ENV_MAP`` — this is how isolated
+        namespaces like ``wordpress.agent.keys`` are populated.
+        """
+        if context is None:
+            if vault_id not in PROVIDER_ENV_MAP:
+                raise ValueError(
+                    f"Unknown provider: {vault_id}. "
+                    f"Pass --context to store in a non-PROVIDER_ENV_MAP namespace, "
+                    f"or use one of: {', '.join(sorted(PROVIDER_ENV_MAP.keys()))}"
+                )
+            context = "provider"
 
         if not self.vault.is_unlocked():
             self.vault.unlock_with_key_file(key_file)
 
-        result = self.vault.store(vault_id, value, context="provider")
+        result = self.vault.store(vault_id, value, context=context)
         self.vault.lock()
         return result
 

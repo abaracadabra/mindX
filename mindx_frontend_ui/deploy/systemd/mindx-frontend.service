@@ -1,0 +1,33 @@
+[Unit]
+Description=mindX Frontend — Express static + clean URLs (login, app, shadow-overlord)
+After=network.target mindx.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mindx
+Group=mindx
+WorkingDirectory=/home/mindx/mindX/mindx_frontend_ui
+Environment="FRONTEND_PORT=3000"
+ExecStart=/usr/bin/node /home/mindx/mindX/mindx_frontend_ui/server.js
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mindx-frontend
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/mindx/mindX/mindx_frontend_ui
+PrivateTmp=true
+LockPersonality=true
+# Note: MemoryDenyWriteExecute is incompatible with Node's V8 JIT (causes SIGTRAP on startup).
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+MemoryMax=256M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

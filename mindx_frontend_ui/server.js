@@ -19,6 +19,11 @@ app.get('/login', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'login.html'));
 });
 
+// Route /shadow-overlord (clean URL) to shadow-overlord.html — wallet login for the admin tier
+app.get('/shadow-overlord', (req, res) => {
+  res.sendFile(path.resolve(__dirname, 'shadow-overlord.html'));
+});
+
 // Route /app to app.html (protected - client-side auth check)
 app.get('/app', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'app.html'));

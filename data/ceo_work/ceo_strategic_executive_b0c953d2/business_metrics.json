@@ -1,0 +1,24 @@
+{
+  "revenue": {
+    "monthly_recurring": 0.0,
+    "total_lifetime": 0.0,
+    "by_stream": {},
+    "growth_rate": 0.0
+  },
+  "costs": {
+    "operational": 0.0,
+    "llm_tokens": 0.0,
+    "infrastructure": 0.0,
+    "total": 0.0
+  },
+  "profitability": {
+    "gross_margin": 0.0,
+    "net_margin": 0.0,
+    "profit_per_operation": 0.0
+  },
+  "efficiency": {
+    "revenue_per_agent": 0.0,
+    "cost_per_client": 0.0,
+    "automation_ratio": 0.0
+  }
+}

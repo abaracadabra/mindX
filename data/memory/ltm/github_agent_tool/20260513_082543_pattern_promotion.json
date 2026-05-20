@@ -1,0 +1,30 @@
+{
+  "agent_id": "github_agent_tool",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 95,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Top processes: github_backup_created(95)",
+      "Peak activity hour: 3:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 95
+        },
+        "process_distribution": {
+          "github_backup_created": 95
+        },
+        "total_memories": 95,
+        "timestamp": "2026-05-13T08:25:43.959522"
+      }
+    ]
+  },
+  "promoted_at": "2026-05-13T08:25:43.959539",
+  "promotion_criteria": {
+    "pattern_threshold": 3,
+    "days_analyzed": 7
+  }
+}

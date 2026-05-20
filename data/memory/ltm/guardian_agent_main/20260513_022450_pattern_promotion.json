@@ -1,0 +1,30 @@
+{
+  "agent_id": "guardian_agent_main",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 4,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Top processes: guardian_initialization(4)",
+      "Peak activity hour: 2:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 4
+        },
+        "process_distribution": {
+          "guardian_initialization": 4
+        },
+        "total_memories": 4,
+        "timestamp": "2026-05-13T02:24:50.960259"
+      }
+    ]
+  },
+  "promoted_at": "2026-05-13T02:24:50.960278",
+  "promotion_criteria": {
+    "pattern_threshold": 3,
+    "days_analyzed": 7
+  }
+}

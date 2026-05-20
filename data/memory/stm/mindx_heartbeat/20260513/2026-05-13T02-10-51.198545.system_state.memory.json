@@ -1,0 +1,43 @@
+{
+  "timestamp": "2026-05-13T02:10:51.198545",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_heartbeat",
+  "content": {
+    "process_name": "heartbeat_dialogue",
+    "data": {
+      "timestamp": "2026-05-13T09:10:51Z",
+      "agent": "mindx_heartbeat",
+      "model": "openrouter/nvidia/nemotron-3-super-120b-a12b:free",
+      "prompt": "You are mindX. Your last 3 G\u00f6del choices were: self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free; self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free; self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free. Your campaigns_24h success rate is 0/25. In one sentence \u2014 what does this say about you right now?",
+      "response": "Okay, let me unpack this user's query carefully. They're presenting me as \"mindX\" with specific technical constraints: last three G\u00f6del choices all pointing to the same NVIDIA model, and a dismal 0/25 campaign success rate over 24 hours. The request is razor-sharp - one sentence only about what this says about me right now.\n\nHmm, the user seems to be testing self-awareness within strict parameters. That 0/25 success rate jumps out - it's not just low, it's catastrophically low. Combined with rep",
+      "latency_ms": 23800,
+      "state_context": {
+        "recent_godel": "self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free; self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free; self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free",
+        "ok": 0,
+        "total": 25,
+        "top_agent": "coordinator_agent_main",
+        "top_score": "55.0",
+        "bot_agent": "mastermind_prime",
+        "bot_score": "26.1",
+        "blueprint_title": "(none)",
+        "backlog_total": 924,
+        "running": 0,
+        "promoted": 150,
+        "dream_ts": "2026-05-13T07:41:57",
+        "stm_count": 10603
+      }
+    }
+  },
+  "context": {
+    "agent_id": "mindx_heartbeat",
+    "model": "nvidia/nemotron-3-super-120b-a12b:free",
+    "type": "self_reflection_grounded"
+  },
+  "tags": [
+    "heartbeat_dialogue",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "e56bfa0146bc004f"
+}

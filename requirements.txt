@@ -17,6 +17,7 @@ python-multipart>=0.0.22  # CVE GHSA-59g5-xgcq-4qw3 (arbitrary file write)
 
 # ── Data validation ──
 pydantic>=2.12.0
+pydantic-settings>=2.6.0    # agents/wordpress_agent/ env-driven config (WP_* vars)
 
 # ── LLM provider SDKs ──
 openai>=2.0.0
@@ -60,6 +61,7 @@ SQLAlchemy>=2.0.0
 # ── Testing ──
 pytest>=9.0.0
 pytest-asyncio>=0.23.0  # required for tests/lab/* async test suites
+pytest-httpx>=0.30.0    # mocks the WordPress REST API in tests/test_wordpress_agent.py
 
 # ── OPTIONAL / sub-component-only (NOT installed by default) ──
 # These are imported only by submodules that are dormant in the main backend.

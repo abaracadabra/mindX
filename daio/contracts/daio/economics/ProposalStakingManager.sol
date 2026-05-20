@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../governance/TriumvirateGovernance.sol";
 import "../treasury/TreasuryFeeCollector.sol";
+import "../Errors.sol";
 
 /**
  * @title ProposalStakingManager
@@ -371,7 +372,8 @@ contract ProposalStakingManager is AccessControl, ReentrancyGuard {
 
         if (withdrawAmount > 0) {
             totalValueLocked -= supporterStakeAmount;
-            payable(msg.sender).transfer(withdrawAmount);
+            (bool ok, ) = payable(msg.sender).call{value: withdrawAmount}("");
+            if (!ok) revert NativeTransferFailed(msg.sender, withdrawAmount);
 
             if (stake.status == StakeStatus.WON) {
                 totalRewardsEarned[msg.sender] += (withdrawAmount - supporterStakeAmount);
@@ -604,7 +606,9 @@ contract ProposalStakingManager is AccessControl, ReentrancyGuard {
      * @notice Emergency withdrawal for contract admin
      */
     function emergencyWithdraw() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        payable(msg.sender).transfer(address(this).balance);
+        uint256 bal = address(this).balance;
+        (bool ok, ) = payable(msg.sender).call{value: bal}("");
+        if (!ok) revert NativeTransferFailed(msg.sender, bal);
     }
 
     /**

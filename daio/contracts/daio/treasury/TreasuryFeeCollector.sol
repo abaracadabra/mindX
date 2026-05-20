@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./Treasury.sol";
+import "../Errors.sol";
 
 /**
  * @title TreasuryFeeCollector
@@ -291,7 +292,8 @@ contract TreasuryFeeCollector is AccessControl, ReentrancyGuard {
         totalGasRefundedGlobal += refundAmount;
         totalGasRefunded[recipient] += refundAmount;
 
-        payable(recipient).transfer(refundAmount);
+        (bool refundOk, ) = payable(recipient).call{value: refundAmount}("");
+        if (!refundOk) revert NativeTransferFailed(recipient, refundAmount);
 
         emit GasRefundProcessed(refundCount, recipient, gasUsed, refundAmount, operation);
 
@@ -402,7 +404,8 @@ contract TreasuryFeeCollector is AccessControl, ReentrancyGuard {
         allocation.lastAllocation = block.timestamp;
 
         // Transfer to treasury contract
-        payable(address(treasury)).transfer(treasuryShare);
+        (bool ok, ) = payable(address(treasury)).call{value: treasuryShare}("");
+        if (!ok) revert NativeTransferFailed(address(treasury), treasuryShare);
     }
 
     /**
@@ -418,7 +421,8 @@ contract TreasuryFeeCollector is AccessControl, ReentrancyGuard {
         require(bytes(reason).length > 0, "Reason required");
 
         emergencyReserve -= amount;
-        payable(msg.sender).transfer(amount);
+        (bool ok, ) = payable(msg.sender).call{value: amount}("");
+        if (!ok) revert NativeTransferFailed(msg.sender, amount);
 
         emit EmergencyWithdrawal(msg.sender, amount, reason);
     }

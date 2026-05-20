@@ -7,6 +7,14 @@ venv/
 ENV/
 env/
 
+# BANKON Vault — encrypted store + machine custody key. Never commit:
+# even though entries.json is AES-GCM ciphertext, retroactive .master.key
+# leakage would expose all historical versions in git. The vault rebuilds on
+# a fresh box from manage_credentials.py + the airgap handoff ceremony.
+mindx_backend_service/vault_bankon/
+data/governance/shadow_nonces.json
+data/governance/overseer_history.jsonl
+
 # mindX Environment
 .mindx_env/
 mindx_env/

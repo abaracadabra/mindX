@@ -4,7 +4,7 @@
 > This is my living documentation. I write it, I reference it, I improve from it.
 > Every link resolves. Every concept connects. Navigate by operational concern.
 
-**Live system**: [mindx.pythai.net](https://mindx.pythai.net) | **Feedback (mind-of-mindX)**: [/feedback.html](https://mindx.pythai.net/feedback.html) · [/feedback.txt](https://mindx.pythai.net/feedback.txt) | **API explorer**: [localhost:8000/docs](http://localhost:8000/docs) | **Dojo**: [/dojo/standings](https://mindx.pythai.net/dojo/standings) | **Journal**: [/journal](https://mindx.pythai.net/journal) | **[TODO](TODO.md)**
+**Live system**: [mindx.pythai.net](https://mindx.pythai.net) | **Feedback (mind-of-mindX)**: [/feedback.html](https://mindx.pythai.net/feedback.html) · [/feedback.txt](https://mindx.pythai.net/feedback.txt) | **Agentic**: [/agentic.html](https://mindx.pythai.net/agentic.html) | **API explorer**: [localhost:8000/docs](http://localhost:8000/docs) | **Dojo**: [/dojo/standings](https://mindx.pythai.net/dojo/standings) | **Journal**: [/journal](https://mindx.pythai.net/journal) | **[TODO](TODO.md)**
 
 **Plain-text mode** for terminal monitoring: append `?h=true` to any `/insight/*` or `/storage/*` endpoint, e.g. `curl https://mindx.pythai.net/insight/storage/status?h=true`. Or watch the whole snapshot: `watch curl -s https://mindx.pythai.net/feedback.txt`.
 
@@ -207,6 +207,9 @@ Full list: [Agent Docs](agents/) (30 agent docs)
 - [Memory Analysis Tool](memory_analysis_tool.md) — Memory pattern analysis
 - [System Analyzer Tool](system_analyzer_tool.md) — System analysis with LLM insights
 
+**Tuning**
+- [Autotune Tool](../autotune/README.md) — Agnostic ahead-of-time tuner (AMD/ROCm · NVIDIA/CUDA · CPU). Probes hardware, emits a reproducible `AutotunePlan` (attention backend · GEMM heuristic · collective topology), AOT-only. Standalone package `autotune/`, tool `tools/autotune_tool.py`, CLI `python -m autotune bench`
+
 **Identity**
 - [Identity Sync Tool](identity_sync_tool.md) — Cryptographic identity management
 
@@ -221,6 +224,9 @@ mindX uses RAGE (Retrieval Augmented Generation Engine) — not RAG. RAGE is sem
 
 - [AGInt / RAGE](AGINT.md) — Augmented Intelligence reasoning and retrieval architecture, origin of the [BDI cognitive loop](agents/bdi_agent.md)
 - [Memory Architecture](mindx_memory_architecture_scalable.md) — Scalable memory design documented in the [Thesis](THESIS.md)
+- [Hermes Integration — Day-1 (SKILL.md procedural memory)](HERMES_INTEGRATION.md) — Hermes-format skill files (`agents/skills/`) with screen-before-persist scanner. The architectural answer to the **OpenClaw ClawHub-malware vector** (12 % malware rate, Koi Security 2026) and the **Hermes ALLOW-ALL-defaults gap** (community audit: 4 Critical + 9 High). Hybrid 70/30 BM25+vector retrieval lands in `agents/skills/index.py` (Day-2).
+- [Hermes Integration Patterns research](operations/Hermes%20Agent%20Integration%20Patterns%20for%20mindX_%20Self-Improving%20Architecture%20Analysismd) — 494-line decomposition of Hermes v0.13.0 "Tenacity" (864 commits, 588 PRs, 295 contributors; daily-volume crossover with OpenClaw on 2026-05-10: 224 B vs 186 B). Maps four importable primitives onto mindX without touching model weights.
+- [OpenClaw research for mindX integration](operations/openclaw_mindx_research.md) — 280-line OpenClaw + OpenClaw-RL architectural read. Five highest-leverage transfers (SKILL.md ✅, Context Engine, hybrid 70/30 Active Memory, plugin manifest validation, OpenClaw-RL training substrate). Includes the security-history dossier (ClawJacked, Koi/Lakera audits, Anthropic April 2026 cost-tier routing) and the pre-mainnet safety stack mindX is incrementally landing.
 - [pgvector Integration](pgvectorscale_memory_integration.md) — [PostgreSQL 16](https://www.postgresql.org/) + [pgvector](https://github.com/pgvector/pgvector) (157K+ memories in [production](DEPLOYMENT_MINDX_PYTHAI_NET.md))
 
 ### Memory Tiers
@@ -306,9 +312,10 @@ Quick links: [API: Chat](ollama/api/chat.md) | [API: Generate](ollama/api/genera
 
 | Route | Method | Purpose |
 |-------|--------|---------|
-| `/` | GET | Public diagnostics dashboard |
+| `/` | GET | Public diagnostics dashboard. **Logs → Memories** section (every log mindX writes is also a memory — live `memory.write` stream) + **Machine Dreaming** section (lunar consolidation: memories → long-term knowledge) |
 | `/feedback.html` | GET | **Mind-of-mindX**: live agent dialogue, improvement ledger with rationale, boardroom decisions, dream cycles, stuck-loop detector, memories on chain, inference health |
 | `/feedback.txt` | GET | **Plain-text snapshot** for `watch curl …`. ~24 lines covering storage, dreams, loops, last-10 dialogue |
+| `/agentic.html` | GET | **Agentic activity console**: AuthorAgent publish audit (drafts vs ledger), recent `publication.*` events, alignment-eval gate health, stuck-loop watch, 30-event **redacted** activity feed (secrets/keys/home-paths scrubbed server-side). Refresh 30 s |
 | `/agents/create` | POST | Create agent |
 | `/agents/list` | GET | List agents |
 | `/llm/chat` | POST | LLM chat |
@@ -331,6 +338,14 @@ All accept `?h=true` (or `Accept: text/plain`) for human-readable text rendering
 | `/insight/dreams/recent` | Last N machine.dreaming cycles + tuning recommendations + age-since-last |
 | `/insight/godel/recent` | Last N gödel choices with full rationale |
 | `/insight/boardroom/recent` | Last N boardroom sessions with per-soldier vote + provider + confidence |
+| `/insight/eval/recent` | Last N `alignment.score` events (Gödel rationale scoring) |
+| `/insight/eval/summary` | Score histogram + mean + by-source breakdown |
+| `/insight/eval/health` | Gate state (OPEN/CLOSED), hits/misses, success rate, mean score, disk-tail rollup |
+| `/insight/publications/recent` | Last N `publication.{attempted,published,coalesced}` events |
+| `/insight/publications/summary` | Orchestrator ledger counts + last publish + missing-ledger flag |
+| `/insight/publications/audit` | Cross-ref `docs/publications/*.md` + `*.pdf` against the ledger; drafts never published |
+| `/insight/agentic/activity` | Redacted high-level activity feed — agent/tier/type/time/one sanitized headline; secrets scrubbed, `detail` dropped. The surface `/agentic.html` consumes |
+| `/insight/memory/recent` | `memory.write` catalogue tail — logs becoming memories. `source_log` → `memory_type`/agent/importance. Metadata only (no raw `content`/`context`). Feeds the landing-page "Logs → Memories" section |
 | `/insight/interactions/recent` | Cross-agent call graph (last hour) |
 | `/insight/stuck_loops` | Repeating `(agent, step)` tuples in 15-min window |
 | `/insight/fitness` | 7-axis fitness leaderboard |
@@ -352,7 +367,7 @@ Priority: Environment variables (`MINDX_` prefix) > [BANKON Vault](vault_system.
 - [LLM Factory Config](../data/config/llm_factory_config.json) — Rate limits, provider preference order
 - [Tool Registry](../data/config/augmentic_tools_registry.json) — 26 registered tools with access control
 - [Library Registry](LIBRARY_REGISTRY.md) — Awareness catalogue of external LLM libraries (Transformers, vLLM, DeepEval, Unsloth, et al.) with explicit overlap-with-mindX assessment and adoption recommendation; consumed by [`kaizen.agent`](../agents/kaizen.agent)
-- [Evaluation Framework](../agents/eval/README.md) — `agents/eval/` GEval-style criteria-based scoring (Apache-2.0 fork of [confident-ai/deepeval](https://github.com/confident-ai/deepeval)); Phase 1 wired to `log_godel_choice()` via `MINDX_EVAL_GODEL_ENABLED=1`; alignment scores surface at `/insight/eval/recent` and `/insight/eval/summary`
+- [Evaluation Framework](../agents/eval/README.md) — `agents/eval/` GEval-style criteria-based scoring (Apache-2.0 fork of [confident-ai/deepeval](https://github.com/confident-ai/deepeval)). Gate is **fail-open by default since 2026-05-19**; disable with `MINDX_EVAL_GODEL_DISABLED=1`. Alignment scores surface at `/insight/eval/{recent,summary,health}`; gate state + hit rate at `/insight/eval/health`.
 
 ## Deployment
 
@@ -400,6 +415,9 @@ mindX is a Godel machine — a self-improving system where the improvement mecha
 - [Thesis](THESIS.md) — [Darwin](ATTRIBUTION.md#intellectual-inspirations)-[Godel](ATTRIBUTION.md#intellectual-inspirations) Machine synthesis: mindX as practical implementation of [self-referential improvement](BOOK_OF_MINDX.md). The [BDI architecture](agents/bdi_agent.md) is the cognitive substrate, the [5-step resilience chain](ollama/INDEX.md#resilience-design) is the operational guarantee, and the [Dojo](../daio/governance/dojo.py) is the evolutionary pressure.
 - [Manifesto](MANIFESTO.md) — 3 pillars ([BDI reasoning](agents/bdi_agent.md), [BANKON vault](vault_system.md), [DAIO governance](DAIO.md)), Project [Chimaiera](ollama/setup/modelfile.md#from-modelfile-to-agent-alignment) roadmap, $BANKON token, [cypherpunk](ATTRIBUTION.md#intellectual-inspirations) tradition. Not cyberpunk — sovereign agents earn privilege through [Dojo reputation](#dojo), not assigned authority.
 - [Book of mindX](BOOK_OF_MINDX.md) — 17 chapters written by [AuthorAgent](AUTHOR_AGENT.md) via [machine.dreaming](#self-improvement). Lunar cycle editions. The [Godel journal](BOOK_OF_MINDX.md) — the machine's record of its own improvement.
+- [WordPress Publishing](WORDPRESS_PUBLISHING.md) — AuthorAgent → [wordpress-agent](../agents/wordpress.publish.agent) → rage.pythai.net. **Vault-backed, decrypt-on-demand**: WP API key + wordpress.agent wallet live in the isolated `wordpress.agent.keys` BANKON-vault namespace (never in any process env). Public wallet-authorized flow `POST /publish/rage/challenge` → `/authorize`, gated by EIP-191 signature + `WORDPRESS_PUBLISHER_ADDRESSES` allowlist; admin path `POST /admin/publish-to-rage`. Provisioning: `scripts/vault/provision_wordpress_agent.py`.
+- [How I Turn Logs Into Memory: RAGE + PostgreSQL](publications/rage_postgresql_memory_from_logs.md) — the pipeline from process traces → STM → pgvector embeddings → LTM → RAGE retrieval feeding AGInt.
+- [Machine Dreaming: How I Consolidate Experience Without Ever Sleeping](publications/machine_dreaming_explained.md) — the 8-phase dream cycle, training-data export, the lunar trigger, the self-improvement loop.
 - [Emergent Resilience](publications/ErmegentResilience.md) — Academic paper on emergent resilient AI systems
 - [Academic Overview](academic_overview.md) — Formal academic framing
 - [Attribution](ATTRIBUTION.md) — Open source that powers mindX: [Ollama](https://ollama.com), [vLLM](https://github.com/vllm-project/vllm), [SwarmClaw](https://github.com/swarmclawai), [pgvector](https://github.com/pgvector/pgvector), [A2A](https://github.com/a2aproject/a2a-python), [MCP](https://modelcontextprotocol.io/), and every dependency acknowledged
@@ -424,7 +442,7 @@ Production-grade architectural deliverables. PDF mirrors live in [`docs/publicat
 - [SkillForge — Pydantic AI Agent for SKILL.md Authoring](publications/pdf/SkillForge_%20A%20Pydantic%20AI%20Agent%20for%20Autonomous%20SKILL.md%20Authoring%20on%20mindX.pdf) — Autonomous SKILL.md authoring on mindX (PDF only).
 - [Vercel AI SDK + mindX](publications/pdf/vercel_AISDK_mindX.pdf) — Vercel AI SDK integration with mindX (PDF only).
 - [Quantum Machine Learning Compendium](publications/pdf/Quantum%20Machine%20Learning%20Code%20Compendium_%20A%202026%20Reference%20and%20Recovery%20Atlas.pdf) — 2026 reference and recovery atlas (PDF only).
-- [Shadow-Overlord Guide](operations/SHADOW_OVERLORD_GUIDE.md) — BANKON Vault admin tier complete guide.
+- [Shadow-Overlord Guide](operations/SHADOW_OVERLORD_GUIDE.md) — BANKON Vault admin tier complete guide. Browser login at [`/shadow-overlord`](../mindx_frontend_ui/shadow-overlord.html) — EIP-6963 wallet detection, `personal_sign` → 5-minute JWT (in-memory only). WebGL background shader (extrapolated from `live/allchain.html` + the DeltaVerse Engine perception layer) ramps from violet abyss → golden-crown sovereign on a verified sign-in.
 - [Shadow-Overlord Runbook](operations/SHADOW_OVERLORD_RUNBOOK.md) — One-page operator manual.
 
 ## PYTHAI Ecosystem

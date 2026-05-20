@@ -282,11 +282,74 @@ class AuthorAgent:
         # Daily loop with CancelledError handling
 ```
 
+## External publishing — rage.pythai.net (WordPress)
+
+AuthorAgent is the canonical caller of the **wordpress-agent** loopback service
+(`agents/wordpress_agent/`, descriptor `agents/wordpress.publish.agent`). It
+renders an article's markdown to HTML, attaches a `_mindx_content_hash`
+(sha256[:16]) for provenance, and POSTs it:
+
+```python
+await author.publish_to_rage(
+    title="How I Turn Logs Into Memory",
+    content_html=html,            # already rendered
+    status="draft",               # draft|publish|future|pending|private
+    excerpt=None, slug=None, tags=None, categories=None, featured_media=None,
+)  # → {"post_id", "url", "status", "slug", "date_gmt"}  or  None if the service is unreachable
+```
+
+It never raises into the author loop — an unreachable service is logged and
+returns `None`. The wordpress-agent itself retries 5xx with backoff.
+
+- Endpoint: `POST /admin/publish-to-rage` (admin-gated) — body takes one of
+  `doc_path` (a markdown file under `docs/`, rendered to HTML), `markdown`, or
+  `html`; `status` defaults to `draft`.
+- Diagnostics: `GET /diagnostics/live` → `author.rage_publishes`,
+  `author.last_rage_url`.
+- Full guide: [`docs/WORDPRESS_PUBLISHING.md`](WORDPRESS_PUBLISHING.md).
+
+### Improvement-event-driven publishing — PublicationOrchestrator
+
+`agents/publication_orchestrator.py` watches `data/sea_campaign_history/*.json`
++ `data/memory/dreams/*_dream_report.json` for actual-improvement signals and
+calls `AuthorAgent.publish_to_rage()` on each new trigger. Persistent ledger at
+`data/governance/published_triggers.json`; 30 min ± 40 % jitter; 6 h `MIN_GAP_S`
+rate limit.
+
+Each decision point emits a typed catalogue event
+(`agents/catalogue/events.py`):
+
+| Event kind | When |
+|------------|------|
+| `publication.attempted` | Orchestrator picks a trigger and starts the publish path |
+| `publication.published` | `wordpress-agent` returns `post_id` + `url` |
+| `publication.coalesced` | Publish suppressed by `MIN_GAP_S` or raced past delay |
+
+### Publication audit endpoints (since 2026-05-19)
+
+All public, read-only; all support `?h=true` plain-text rendering.
+
+| Endpoint | Returns |
+|----------|---------|
+| `GET /insight/publications/recent` | Last N `publication.*` events from the catalogue |
+| `GET /insight/publications/summary` | Ledger counts (published / coalesced), last publish, by-kind histogram, `ledger_exists` flag |
+| `GET /insight/publications/audit` | Cross-reference of `docs/publications/*.md` + `docs/publications/pdf/*.pdf` against the orchestrator ledger — surfaces drafts never published |
+
+Operational dashboard: [`/agentic.html`](https://mindx.pythai.net/agentic.html)
+(sibling to `/feedback.html`) renders the audit + draft inventory + live
+activity feed + eval-gate health on one page; refreshes every 30 s.
+
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `agents/author_agent.py` | Book compilation, lunar cycle, publishing |
+| `agents/author_agent.py` | Book compilation, lunar cycle, publishing (incl. `publish_to_rage`) |
+| `agents/wordpress_agent/` | Loopback WordPress REST service AuthorAgent calls (ported from mindXtrain) |
+| `agents/wordpress.publish.agent` | Agent extension descriptor for the wordpress-agent |
+| `agents/publication_orchestrator.py` | SEA-success + dream-cycle watcher; emits `publication.*` catalogue events |
+| `mindx_backend_service/agentic.html` | `/agentic.html` operator console — publish audit, draft inventory, eval health, activity feed |
+| `data/governance/published_triggers.json` | Orchestrator ledger (created on first publish) |
+| `docs/WORDPRESS_PUBLISHING.md` | AuthorAgent → wordpress-agent → rage.pythai.net guide |
 | `agents/learning/improvement_journal.py` | Journal entries (feeds Chapter VI) |
 | `docs/BOOK_OF_MINDX.md` | Current book edition (auto-generated) |
 | `docs/publications/` | Timestamped archived on-demand editions |

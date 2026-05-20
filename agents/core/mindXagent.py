@@ -2754,11 +2754,18 @@ class MindXAgent:
                             except Exception as e:
                                 logger.warning(f"{self.log_prefix} Error using Blueprint Agent: {e}")
 
-                        # Orchestrate improvement (with timeout to prevent hang)
+                        # Orchestrate improvement (with timeout to prevent hang).
+                        # 240s headroom: blueprint via OpenRouter is ~1s, but
+                        # the downstream SEA campaign + BDI plan execution
+                        # chain legitimately needs >120s on free-tier inference.
+                        # Cancelling at 120s prevents the SEA from writing the
+                        # campaign's terminal status, leaving it stuck in
+                        # `running` forever. Cycle interval is 300s, so 240s
+                        # leaves 60s breathing room before the next fire.
                         try:
                             result = await asyncio.wait_for(
                                 self.orchestrate_self_improvement(top_priority['goal']),
-                                timeout=120
+                                timeout=240
                             )
                             if result.success:
                                 logger.info(f"{self.log_prefix} Improvement cycle {cycle_count} completed successfully")

@@ -1,249 +1,470 @@
-# BANKON Vault — operator runbook for the airgapped custody handoff
+# BANKON Vault — operator handoff
 
-## What this is
+The shortest path from *"my mindX has a vault somewhere and I don't really know
+how to use it"* to *"I am the shadow-overlord, my keys are vault-encrypted, and
+each participant is in its own isolated namespace."*
 
-mindX's BANKON Vault holds every API key and agent private key the running service depends on. By default it lives in **machine custody** — a 64-byte file `.master.key` on the same box as the service. This runbook walks through transferring custody to a **human overseer** (you) using a wallet whose private key never touches the connected machine.
+> **Audit status (snapshot at the time of writing):** machine custody
+> (`.master.key` present, no `.human_overseer_active` sentinel, no
+> `.overseer_proof.json`). Entries currently in vault: 3 — all in the
+> `provider` context: `uniswap_trade_api_key`, `openrouter_api_key`,
+> `gemini_api_key`. No `wordpress.agent.keys` entries provisioned yet. No
+> overseer-history rows. Permissions are correct (`vault_dir` 0700,
+> `entries.json` 0600, `.master.key` 0400, `.salt` 0600).
+>
+> See [§Audit findings](#audit-findings) for the full read of what *is* and
+> *isn't* isolated today and the recommended next steps.
 
-The cryptography is implemented in `mindx_backend_service/bankon_vault/{vault,overseer}.py` and is overseer-agnostic: the same flow described here will move custody from human → DAIO when a Governor contract is live (Stage 2). The end of this doc explains that path.
+---
 
-## Threat model
+## 30-second mental model
 
-You're protecting the vault from these attackers:
+```
+                    ┌─────────────────────────────────────────────┐
+                    │ BANKON Vault — mindx_backend_service/vault_bankon/ │
+                    │                                             │
+                    │   .salt      (32 bytes, never rotated)      │
+                    │   .master.key  ──┐  (machine custody today) │
+                    │                  │                          │
+                    │   entries.json ──┴── AES-256-GCM ciphertext │
+                    │                       per-entry HKDF key    │
+                    │                       info = bankon-entry:  │
+                    │                              <id>:<context> │
+                    └─────────────────────────────────────────────┘
+                                       │
+                            unlock                lock()
+                                       │            │
+                                       ▼            ▲
+                              ┌───────────────────────┐
+                              │  in-process: only the │
+                              │  decrypted entries    │
+                              │  the caller asked for │
+                              └───────────────────────┘
+```
 
-- **VPS root compromise.** Today, root on the VPS reads `.master.key` and decrypts everything. After handoff, root can read `entries.json` ciphertext and `.salt` and `.overseer_proof.json` — but cannot rotate without your wallet's private key.
-- **Service code path leak.** The vault is unlocked in-process for ~50 ms at startup. A bug that dumps `_vault_key` would still lose the vault. Handoff doesn't fix this; it stops the long-tail risk where `.master.key` lives on disk indefinitely.
-- **Host filesystem snapshot.** Once `.master.key` is deleted, snapshots of the disk are no longer sufficient to compromise the vault. They are sufficient if a snapshot exists from before the handoff — wipe old backups.
-- **Connected machine compromise during ceremony.** Mitigated by signing on the airgap. The connected machine sees only the public address and the signature — not the private key.
+- **One file**, `entries.json`, holds every credential as AES-256-GCM ciphertext.
+- **One root key**, `.master.key` (machine custody) or your wallet signature
+  (human custody), unlocks the vault.
+- **Per-entry HKDF**: each entry has its *own* derived AES key. The HKDF info
+  string is `bankon-entry:<entry_id>:<context>` — `context` is a real
+  cryptographic namespace, not a label.
+- **You only decrypt what you ask for**, via `retrieve(entry_id)` or
+  `CredentialProvider.load_from_vault()`. The vault is then `lock()`ed.
 
-You're **not** protected from:
+---
 
-- Phishing attacks that get you to sign a malicious challenge. Read the challenge text before signing — it includes the vault fingerprint and the address it commits to.
-- Loss of your wallet's seed phrase. Recovery section below.
-- Loss of the proof file (`.overseer_proof.json`). Recovery section below — RFC 6979 deterministic ECDSA means re-signing the same challenge produces the same signature.
+## Use your vault — the 5 commands you'll actually run
 
-## Pre-flight (connected machine)
+All from the repo root, all with the project venv.
 
 ```bash
-cd /home/hacker/mindX
-.mindx_env/bin/python manage_credentials.py list  # sanity check vault is reachable
+# 1. What's in the vault? (metadata only, no secrets)
+.mindx_env/bin/python manage_credentials.py list
+
+# 2. What providers does the vault know how to map to env vars at startup?
+.mindx_env/bin/python manage_credentials.py providers
+
+# 3. Store a credential — env-mapped (loaded into os.environ at backend start)
+.mindx_env/bin/python manage_credentials.py store gemini_api_key 'AIzaSy...'
+
+# 4. Store a credential — isolated participant namespace (NOT env-mapped;
+#    only retrievable on demand by code that knows the entry_id + context)
+.mindx_env/bin/python manage_credentials.py store wordpress.agent:wp_app_password \
+    'xxxx xxxx xxxx xxxx xxxx xxxx' --context wordpress.agent.keys
+
+# 5. Delete one
+.mindx_env/bin/python manage_credentials.py delete openrouter_api_key
+```
+
+That's the day-to-day surface. Every other operation is one of: provisioning a
+participant ([§Add a new participant](#add-a-new-participant)), becoming
+shadow-overlord ([§below](#become-shadow-overlord-admin-tier--5-minutes)),
+or taking custody of the vault
+([§Human Overseer](#take-vault-custody-airgap-ceremony--15-minutes)).
+
+---
+
+## Become shadow-overlord (admin tier — 5 minutes)
+
+Shadow-overlord is the **operator wallet** that signs requests for the
+privileged HTTP routes (`/admin/cabinet/*`, `/admin/shadow/*`, `/vault/sign/*`,
+`/publish/rage/authorize`, etc.). It is **not** the wallet that unlocks the
+vault — that's [Human Overseer](#take-vault-custody-airgap-ceremony--15-minutes)
+below. They *can* be the same wallet; you get to choose.
+
+Everything here is just env config. No airgap, no key rotation.
+
+### 1. Make a wallet — never exposed to this server
+
+Use whatever you trust: MetaMask, hardware wallet, foundry's `cast wallet new`,
+etc. Write down the seed phrase **offline**. You'll need the **address** here
+and the **private key** only when signing challenges later.
+
+### 2. Store the 3 values in the BANKON vault (canonical path)
+
+All three are in `PROVIDER_ENV_MAP` (see `credential_provider.py`), so the vault
+decrypts them into `os.environ` at backend startup. **Nothing in plain `.env`**:
+
+```bash
+SECRET=$(openssl rand -hex 32)   # 64 hex chars; fresh, per-environment
+
+.mindx_env/bin/python manage_credentials.py store shadow_overlord_address '0xYourPublicAddressHere'
+.mindx_env/bin/python manage_credentials.py store shadow_jwt_secret "$SECRET"
+.mindx_env/bin/python manage_credentials.py store mindx_admin_addresses '0xYourPublicAddressHere'   # comma-separated for multiple
+unset SECRET
+```
+
+`shadow_overlord_address` gates `/admin/shadow/*` + `/vault/sign/*`;
+`mindx_admin_addresses` gates `/admin/*` + `/vault/credentials/{store,delete}`.
+They almost always match. `shadow_jwt_secret` is the HMAC key for the 5-minute
+JWTs the verify endpoint issues — must be ≥32 chars, and should be **different**
+between dev and prod (compromise isolation).
+
+Escape hatch — plain `.env` (if you can't reach the vault, e.g. fresh box):
+
+```ini
+SHADOW_OVERLORD_ADDRESS=0xYourPublicAddressHere
+SHADOW_JWT_SECRET=<32+ random chars>
+MINDX_SECURITY_ADMIN_ADDRESSES=0xYourPublicAddressHere
+```
+
+Env wins over vault when both are set (per the Config priority order documented
+in `CLAUDE.md`), so `.env` is also the rotation override path.
+
+### 3. Restart and verify
+
+```bash
+sudo systemctl restart mindx.service     # on the VPS
+# or local:
+./mindX.sh --frontend
+```
+
+Verify you can sign a challenge end-to-end:
+
+```bash
+# A. request a challenge for the "auth" scope
+curl -s -X POST https://mindx.pythai.net/admin/shadow/challenge \
+     -H 'Content-Type: application/json' -d '{"scope":"auth"}'
+# → {"nonce":"0x…","message":"MINDX-SHADOW-OVERLORD scope=auth\nnonce: 0x…", ...}
+
+# B. sign `message` with your wallet (MetaMask "personal_sign", or
+#    `cast wallet sign --private-key 0x… "<message>"`, or airgap_sign.py)
+
+# C. exchange for a 5-minute JWT
+curl -s -X POST https://mindx.pythai.net/admin/shadow/verify \
+     -H 'Content-Type: application/json' \
+     -d '{"nonce":"0x…","signature":"0x…"}'
+# → {"jwt":"eyJ…","exp":1715567890}
+```
+
+If the JWT comes back you are shadow-overlord. The much longer
+[`docs/operations/SHADOW_OVERLORD_GUIDE.md`](operations/SHADOW_OVERLORD_GUIDE.md)
+documents every route you can now reach.
+
+### 3a. Or do the whole flow in the browser
+
+The `/login` page also exposes a **Shadow-Overlord** card in the launcher grid;
+clicking it sends you to the dedicated sign-in page. Once you complete the
+sovereign sign-in there, returning to `/login` (or any other tab) shows the
+**BANKON Vault**, **Cabinet**, and **Publish to Rage** tiles unlocked with a
+golden ring — and the tier badge in the hero reads `SHADOW OVERLORD`.
+
+`mindx_frontend_ui/shadow-overlord.html` is the browser version of the same
+flow. Opens at:
+
+- local:  http://localhost:3000/shadow-overlord
+- prod:   https://mindx.pythai.net/shadow-overlord *(once the frontend route is
+  reverse-proxied; see `mindx_frontend_ui/server.js:22`)*
+
+What it does:
+1. **EIP-6963 wallet detection** — picks up MetaMask, Phantom, Coinbase, etc.
+   (Pattern lifted verbatim from `live/allchain.html` so it behaves like the
+   agenticplace pages.)
+2. **Connect Wallet** → reads your active account.
+3. **Sign in as shadow-overlord** → calls `POST /admin/shadow/challenge` with
+   `scope=auth`, hands the returned `message` to `personal_sign`, posts the
+   resulting 65-byte signature to `POST /admin/shadow/verify`. The 5-minute
+   HS256 JWT comes back and is held **only in JavaScript memory** — never
+   `localStorage`, never a cookie. Re-auth = re-sign.
+4. **Identity assertion is server-side.** If the recovered signer ≠ the
+   configured `SHADOW_OVERLORD_ADDRESS` you get a red `403 not shadow-overlord:
+   …your-wallet-short-hash…` banner — the negative path is real auth, not UI
+   theatre.
+
+The page has two visual states:
+
+- **Idle / denied:** dim violet abyss (WebGL fragment shader extrapolated from
+  `live/allchain.html` + `mindx.pythai.net/automindx`'s DeltaVerse perception
+  layer — animated fbm-noise tendrils, mouse-parallax, slow ominous pulse).
+- **Sovereign:** after a verified JWT arrives, `body.is-overlord` flips on, the
+  shader's `u_state` uniform ramps to 1 (tendrils gain a golden crown ring,
+  central eye opens, palette saturates), the `WELCOME, OVERLORD` banner
+  appears, the logo glow brightens, and a "Sovereign — privileged routes
+  unlocked" panel lists the admin routes you can now reach
+  (`/admin/cabinet/*`, `/vault/sign/*`, `/admin/shadow/release-key/*`,
+  `/admin/vault/credentials/*`, `/admin/publish-to-rage`).
+
+Logout clears the JWT from memory, drops `is-overlord`, and ramps the shader
+back. Closing the tab also clears everything (in-memory only).
+
+---
+
+## Take vault custody (airgap ceremony — 15 minutes)
+
+This is the bigger upgrade: **delete `.master.key` from the server and replace
+it with your wallet signature** as the unlock secret. After this, root on the
+box can read the ciphertext but cannot decrypt it without you signing a
+challenge.
+
+It is fully scripted by `manage_custody.py` (connected machine) +
+`scripts/vault/airgap_sign.py` (airgapped machine). The ceremony is
+**atomic-or-rollback** with a two-phase commit.
+
+Pre-flight (on the VPS):
+
+```bash
+cd /home/mindx/mindX
 .mindx_env/bin/python manage_custody.py preflight
 ```
 
-Confirm:
-- `vault_dir` resolves to `mindx_backend_service/vault_bankon/`
-- `.master.key` is present (you're in machine custody — expected pre-handoff)
-- `.human_overseer_active` is **absent** (sentinel not yet written)
-- `MINDX_VAULT_ALLOW_OVERSEER_ROTATION` is unset (you'll set it in step 4)
+You should see `.master.key: exists=True`, `sentinel .human_overseer_active:
+False`, `.overseer_proof.json: False`. If `.overseer_proof.json` already
+exists, you're already in human custody — skip to recovery below.
 
-Also: deploy the `/admin/vault/{keys,migrate}` auth-gate patches before this ceremony if running against production. Until those land, attackers can enumerate your private-key IDs over HTTP.
-
-## Step 1 — Generate the challenge (connected)
+### 1. Issue the challenge (connected)
 
 ```bash
-.mindx_env/bin/python manage_custody.py challenge --address 0xYOUR_OVERSEER
+.mindx_env/bin/python manage_custody.py challenge --address 0xYourOverseerAddress
+# writes ./handoff_challenge.txt
 ```
 
-Writes `./handoff_challenge.txt` containing six lines binding:
-- The vault fingerprint (`sha256(salt || entries.json[:4096])[:16]`).
-- The overseer address you're claiming.
-- An ISO-8601 timestamp.
-- A 32-character random nonce.
-- A custody acceptance statement.
+The challenge text includes the vault salt fingerprint and the address it
+commits to. Read it before signing it.
 
-**Read it.** Anyone who tricks you into signing a different challenge gets your vault.
+### 2. Sign on the airgap
 
-Optional — encode for camera transfer:
+Move `handoff_challenge.txt` to an airgapped machine (USB / QR / paper).
+There, with the seed/key that never touched the connected box:
 
 ```bash
-qrencode -o handoff_challenge.qr.png -r handoff_challenge.txt
-```
-
-(`qrencode` is in most distros; if not, copy the text via USB or paper. Treating challenge text as public is fine — it's not secret.)
-
-## Step 2 — Move challenge to airgap
-
-Use one of:
-
-- **Camera + QR.** Display `handoff_challenge.qr.png` on a phone or laptop, scan from the airgap with `zbarcam` or any QR reader. Most paranoid path.
-- **Read-only USB.** Mount one-way; do not write anything from the airgap back to the same stick. Reformat after.
-- **Paper.** The challenge fits on one printed page. Type it back in.
-
-The challenge is **not** secret — it's just a bound message. Confidentiality of the transfer doesn't matter; integrity does. (Hash the file on both sides if you're paranoid.)
-
-## Step 3 — Sign on the airgap
-
-The airgapped machine needs:
-
-- Python 3.9+
-- `pip install eth-account>=0.13`
-- Optional: `pip install mnemonic` for `--mnemonic-file`, `pip install 'qrcode[pil]' pillow` for `--out-qr`
-- `scripts/vault/airgap_sign.py` from this repo (single file, no mindX imports)
-
-Pick one signer mode:
-
-```bash
-# (A) Hex private key from memorized prompt (no shell history)
-python airgap_sign.py \
+python scripts/vault/airgap_sign.py \
     --challenge-file handoff_challenge.txt \
-    --privkey-prompt \
     --out handoff_sig.json \
-    --out-qr handoff_sig.qr.png
-
-# (B) BIP39 mnemonic + standard Ethereum derivation
-python airgap_sign.py \
-    --challenge-file handoff_challenge.txt \
-    --mnemonic-file ~/.airgap/seed.txt \
-    --derivation-path "m/44'/60'/0'/0/0" \
-    --out handoff_sig.json
-
-# (C) Encrypted keystore JSON (geth/MyCrypto V3) with password prompt
-python airgap_sign.py \
-    --challenge-file handoff_challenge.txt \
-    --keystore ~/.airgap/keystore-utc.json \
-    --out handoff_sig.json
-
-# (D) External signer — Ledger/Trezor: produce the sig elsewhere, then
-#     verify-and-package with airgap_sign.py:
-python airgap_sign.py \
-    --challenge-file handoff_challenge.txt \
-    --paste-sig 0xabc... --address 0xYOUR_OVERSEER \
-    --out handoff_sig.json
+    --privkey-prompt              # or --keystore PATH, --mnemonic, --ledger, etc.
+# writes {address, signature, message}
 ```
 
-`airgap_sign.py` post-verifies the signature recovers to the expected EOA before writing anything. It refuses to emit if the signature is wrong shape (must be 65 bytes) or fails recovery.
+`airgap_sign.py` has no dependency on mindX — it's a single Python file with
+only `eth_account`. Move `handoff_sig.json` back to the connected machine.
 
-Output JSON shape (matches what the rotation consumes):
-
-```json
-{
-  "address": "0xYOUR_OVERSEER",
-  "signature": "0x<130 hex chars = 65 bytes>",
-  "message": "<the original challenge text, byte-for-byte>"
-}
-```
-
-## Step 4 — Move signature back to connected machine
-
-Either return the QR PNG (`handoff_sig.qr.png`) or the JSON file. The signature is **not** secret either — it can only be replayed against this exact challenge text on this exact vault, and the vault will have already used it.
-
-## Step 5 — Dry-run the rotation (connected)
+### 3. Dry-run (connected — non-destructive)
 
 ```bash
 export MINDX_VAULT_ALLOW_OVERSEER_ROTATION=1
-SIG=$(jq -r .signature handoff_sig.json)
-ADDR=$(jq -r .address handoff_sig.json)
-
 .mindx_env/bin/python manage_custody.py dry-run \
-    --address "$ADDR" --signature "$SIG"
+    --address 0xYourOverseerAddress \
+    --signature 0x<130-hex-chars>
 ```
 
-Expected output:
+This re-encrypts every entry under the new key into `entries.json.candidate`,
+verifies every plaintext SHA round-trips, and writes `.rotation.ok` with a
+freshness mark. **`.master.key` is still there.** The vault has not changed
+yet.
 
-```json
-{
-  "status": "dry_run_ok",
-  "entries": <N>,
-  "new_fingerprint": "human:<last 8 of address>",
-  ...
-}
-```
+### 4. Commit (connected — atomic swap)
 
-The dry-run writes:
-
-- `entries.json.candidate` — re-encrypted under the new key (does **not** replace the live `entries.json`).
-- `.rotation.ok` — sha256 of the candidate, must be <300 s old at commit.
-
-It also takes a snapshot of the entire vault directory under `/tmp/mindx-vault-snapshot-*`. If anything goes wrong before commit, restore from there.
-
-If `dry_run_ok` doesn't print, **stop**. Read the error. Re-sign the challenge if the signature is malformed. Do not proceed to commit.
-
-## Step 6 — Commit (connected, irreversible-ish)
+Within 5 minutes of the dry-run:
 
 ```bash
 .mindx_env/bin/python manage_custody.py commit \
-    --address "$ADDR" --signature "$SIG" --i-am-sure
+    --address 0xYourOverseerAddress \
+    --signature 0x<same-signature> \
+    --i-am-sure
 ```
 
-What happens, in order (vault.py:516-633):
+What happens, in order, atomically:
+1. `os.replace(entries.json.candidate, entries.json)` — re-encrypted entries are now live.
+2. `.overseer_proof.json` is written (the persisted signature, so the service can
+   re-unlock on restart without you re-signing).
+3. `.human_overseer_active` sentinel is written.
+4. `.master.key` is overwritten with zeros, then deleted, then `fsync`'d.
+5. One row appended to `data/governance/overseer_history.jsonl`.
 
-1. Re-runs the dry-run to refresh `.rotation.ok` and `entries.json.candidate`.
-2. POSIX-atomic `os.replace(candidate, entries.json)`.
-3. fsync's the file and the directory.
-4. Writes `.overseer_proof.json` (so future restarts can re-unlock without re-signing).
-5. Writes the sentinel `.human_overseer_active` (blocks any future machine-key regeneration).
-6. fsync's the directory.
-7. Overwrites `.master.key` with `\x00` × 64, then unlinks it.
-8. Swaps in-memory state to the new key.
-9. Appends one row to `data/governance/overseer_history.jsonl`.
-10. Deletes `.rotation.ok`.
+You are now Human Overseer. `manage_credentials.py list` should still work
+(the service re-unlocks transparently via the proof file).
 
-After this:
-- `unlock_with_key_file()` raises `RuntimeError` if anything ever tries to fall back to machine custody (vault.py:191-197).
-- Service restarts will load the proof file via `load_human_from_proof()` and call `unlock_with_overseer()` automatically (manage_custody.py:71-79).
-
-## Step 7 — Lock down + smoke-test (connected)
+### 5. Verify
 
 ```bash
-.mindx_env/bin/python manage_custody.py lock-routes --address "$ADDR"
-.mindx_env/bin/python manage_custody.py smoke-test
+.mindx_env/bin/python manage_custody.py smoke-test --base-url http://localhost:8000
+ls -la mindx_backend_service/vault_bankon/        # .master.key should be GONE
+                                                   # .human_overseer_active should EXIST
+                                                   # .overseer_proof.json should EXIST
+cat data/governance/overseer_history.jsonl        # one row
 ```
 
-`lock-routes` adds your overseer address to `security.admin_addresses` so the existing `require_admin_access` gate now considers you admin.
+---
 
-`smoke-test` confirms: anonymous `/vault/credentials/list` is rejected, sentinel present, master.key absent, audit log non-empty.
+## Participant isolation — how it works today
 
-Restart the service:
+This is the answer to *"is wordpress.agent's WP API key isolated from
+gemini_api_key, isolated from the cabinet wallets?"*
 
-```bash
-sudo systemctl restart mindx     # if on the VPS
-# or, locally:
-./mindX.sh
+| Layer | Mechanism | What it gives you |
+|---|---|---|
+| Per-entry cryptographic isolation | HKDF info = `bankon-entry:<entry_id>:<context>`. Each entry has its own AES key. | Compromising one entry's derived key does **not** disclose any other entry. |
+| Namespace-level isolation | `context=` is part of the HKDF info string. Entries sharing a context are domain-separated as a group from entries in any other context. | Listing entries in your own namespace is fine; deriving someone else's key requires both their entry_id *and* their context as an unguessed string. |
+| Process-level isolation | Filesystem permissions on `.master.key` (mode 0400, owner `mindx`). After Human Overseer takeover, the master key is your wallet signature. | Only processes running as the vault owner can unlock. Cross-agent isolation today relies on **all participants running as `mindx`** — which means cryptographic separation, not process separation. |
+
+### Known participant namespaces
+
+| Context | Holder | Entry ids (examples) | Loaded into env at startup? |
+|---|---|---|---|
+| `provider` | LLM provider keys, RPC URLs, treasury PK, allowlists — see `PROVIDER_ENV_MAP` in `credential_provider.py` | `gemini_api_key`, `openai_api_key`, `memory_anchor_treasury_pk`, `wordpress_publisher_addresses` | **yes** |
+| `cabinet_provision` / `cabinet_public` | Executive cabinet wallets (8/company) | `company:<co>:cabinet:<role>:pk`, `…:address` | no — signed on demand via `/vault/sign/{agent_id}` |
+| `wordpress.agent.keys` | wordpress.agent's wallet + WP API key | `wordpress.agent:pk`, `wordpress.agent:address`, `wordpress.agent:wp_app_password`, `wordpress.agent:wp_base_url`, `wordpress.agent:wp_user` | no — read on demand by the wordpress-agent service per /publish |
+| `default` | fallback if no context supplied | — | — |
+
+The rule going forward: **anything not in `PROVIDER_ENV_MAP` lives in a named
+participant namespace** (`<participant>.keys`) and is decrypted on demand. Only
+provider-style env-mapped secrets get `context="provider"`.
+
+### Add a new participant
+
+1. Pick a namespace name: `<participant>.keys` (lower-case, dot-suffixed).
+2. Store its entries with `--context <namespace>`:
+   ```bash
+   .mindx_env/bin/python manage_credentials.py store myagent:api_key 'sk-...' \
+       --context myagent.keys
+   .mindx_env/bin/python manage_credentials.py store myagent:pk '0x...' \
+       --context myagent.keys
+   ```
+3. The participant's loader code does
+   ```python
+   from mindx_backend_service.bankon_vault.vault import BankonVault
+   v = BankonVault(); v.unlock_with_key_file()
+   try:
+       api_key = v.retrieve("myagent:api_key")
+       pk = v.retrieve("myagent:pk")
+   finally:
+       v.lock()
+   ```
+   For agents that also need to sign things, the existing `/vault/sign/<agent_id>`
+   oracle works for any `<agent_id>:pk` entry (shadow-JWT gated).
+
+For a fuller worked example see
+[`docs/WORDPRESS_PUBLISHING.md`](WORDPRESS_PUBLISHING.md) and
+`agents/wordpress_agent/vault_creds.py` — the canonical pattern for a participant
+that holds both an API key and a wallet key in one isolated namespace.
+
+---
+
+## Restart / recovery
+
+| Situation | What to do |
+|---|---|
+| Service restarted, machine custody | Nothing — `CredentialProvider.load_from_vault()` runs at startup, reads `.master.key`, populates env, locks. |
+| Service restarted, **human custody, proof file present** | Nothing — `agents/wordpress_agent/vault_creds.py` and (todo) `credential_provider.py` use `load_human_from_proof()` to re-unlock transparently. |
+| Service restarted, human custody, **proof file missing** | `POST /vault/credentials/reunlock` (admin) with `{address, signature, message}` body, or SSH and re-issue a challenge + re-sign and write the proof. |
+| You lost your overseer seed phrase | The vault is gone. Mitigate ahead of time: provision a **second** overseer address as a hot-spare via `rotate_overseer(HumanOverseer(spare))`. |
+| `.rotation.ok` exists but commit hasn't run within 5 minutes | Re-run dry-run; the freshness mark expires. The candidate file is overwritten safely. |
+| Pre-handoff backup snapshot of the disk exists | Wipe it. It contains the old `.master.key`. |
+
+---
+
+## Audit findings
+
+What's protected, today:
+
+- ✅ Entries are AES-256-GCM with random per-write 12-byte IVs. AAD binds
+  ciphertext to its entry id (renaming = decrypt fails).
+- ✅ Each entry has its own HKDF-derived key. Cross-entry compromise resistance.
+- ✅ Each *context* is its own HKDF namespace. wordpress.agent's keys are
+  cryptographically isolated from gemini_api_key and from the cabinet.
+- ✅ `entries.json` mode 0600, `.master.key` mode 0400, `vault_dir` mode 0700.
+- ✅ `list_entries()` returns metadata only — no plaintexts ever cross the API.
+- ✅ Rotation is atomic-or-rollback with a two-phase commit, scratch-verify, and
+  a 5-minute freshness window on `.rotation.ok`.
+
+What's **not** protected today:
+
+- ⚠️ **One root key unlocks everything.** Machine custody (`.master.key`) yields
+  the master key, which yields every per-entry HKDF key. Cryptographic
+  isolation is between entries, **not** between callers. The wordpress-agent
+  service running as `User=mindx` shares the same unlock surface as everything
+  else running as `mindx`. Mitigation now: keep all vault-using services under
+  one well-audited user; treat `.master.key` like an SSH host key. Mitigation
+  later: see "v3" below.
+- ⚠️ **`list_entries()` is global to anyone who unlocked.** A process that
+  unlocked the vault can enumerate all entry ids in every namespace (the
+  per-entry AES keys it can't derive without the right `context`, but it knows
+  the ids exist). Acceptable today because the only unlocker is mindX itself;
+  worth filtering by context once we have per-participant subdirs.
+- ⚠️ **`SHADOW_JWT_SECRET` is plain env, not vaulted.** Add it to
+  `PROVIDER_ENV_MAP` (with `provider_id="shadow_jwt_secret"`) and vault-store
+  it for consistency. Minor.
+- ⚠️ **No backup story.** `entries.json` + `.salt` + `.master.key` (or
+  `.overseer_proof.json` under human custody) is the entire vault. Lose any
+  and the vault is unrecoverable. Mitigation: encrypted off-site backup of
+  `entries.json` + `.salt` only — the proof file should never be backed up to
+  a location an attacker might reach.
+
+**v3 — "every participant in its own encrypted folder" (deferred design):**
+
+Today `context=` is cryptographic isolation; v3 promotes it to physical
+isolation. Each participant gets its own subdirectory with its own master key:
+
+```
+mindx_backend_service/vault_bankon/
+├── entries.json   .salt   .master.key             ← provider/system credentials
+└── participants/
+    ├── wordpress.agent/
+    │   entries.json   .salt   .master.key            ← only mindx (or wpagent) can read
+    └── cabinet/
+        └── pythai/
+            entries.json   .salt   .master.key        ← only mindx (or cabinet user) can read
 ```
 
-Expected: clean startup, `os.environ` populated with the 21 provider keys (the proof-file re-unlock path runs automatically).
+Caller passes a `participant=` to `BankonVault(...)` — opens the right subdir,
+derives a *participant-specific* master key, and only sees the entries inside.
+Different OS users can each be granted read access to their own subdir without
+seeing the rest.
 
-```bash
-unset MINDX_VAULT_ALLOW_OVERSEER_ROTATION  # don't leave the rotation flag set
-```
+This is a real refactor (about a day's work — `vault.py:__init__` +
+`store/retrieve/list_entries` + `manage_credentials.py --participant` +
+migration tool). Not done yet. The current `context=` mechanism is the
+operating-today equivalent and is good for everything except adversarial OS
+users on the same box.
 
-## Recovery — lost proof file
+---
 
-If `.overseer_proof.json` is deleted, the service can't auto-unlock. Two paths to recover, neither destructive:
+## Reference — files and what they do
 
-1. **Re-sign.** Because EIP-191 personal_sign uses RFC 6979 deterministic ECDSA, the same wallet signing the same challenge text produces the same 65-byte signature. Re-run Step 3 with the original `handoff_challenge.txt` (find it in your secure storage), repackage the JSON, and pass it to `manage_custody.py dry-run` — the vault unlocks without writing a new proof, then you can drop the JSON back as `.overseer_proof.json` manually.
+- `mindx_backend_service/bankon_vault/vault.py` — core `BankonVault` class,
+  `rotate_overseer` (the atomic ceremony's machinery).
+- `mindx_backend_service/bankon_vault/overseer.py` —
+  `MachineOverseer`/`HumanOverseer`/`DAIOOverseer`, `load_human_from_proof`.
+- `mindx_backend_service/bankon_vault/credential_provider.py` — `PROVIDER_ENV_MAP`,
+  `CredentialProvider.load_from_vault()`.
+- `mindx_backend_service/bankon_vault/shadow_overlord.py` — challenge / nonce /
+  JWT plumbing for the admin tier.
+- `mindx_backend_service/bankon_vault/{routes,admin_routes,sign_routes}.py` — the
+  HTTP surfaces.
+- `manage_credentials.py` — the everyday CLI.
+- `manage_custody.py` — connected-side CLI for the airgap handoff.
+- `scripts/vault/airgap_sign.py` — single-file offline signer.
+- `data/governance/overseer_history.jsonl` — append-only custody audit log.
 
-2. **Snapshot restore.** Every dry-run snapshots the vault under `/tmp/mindx-vault-snapshot-*`. If you have a snapshot from immediately after the original commit, copy the proof file out of there.
+Companion docs:
 
-If you've also lost the original challenge text, you can regenerate it deterministically only if the vault salt and entries are unchanged — `manage_custody.py challenge --address 0xYOUR` produces a new challenge with a fresh nonce and timestamp, so re-signing that yields a different signature. That's fine — the vault rotates the proof on the next dry-run + commit. As long as you control the same wallet, the vault is recoverable.
-
-## Recovery — lost wallet seed
-
-You can't. The vault key is derived from the EIP-191 signature; the signature is derived from the wallet seed. Lose the seed, lose the vault.
-
-Mitigations before you need them:
-- Store the seed phrase in two physically separate locations (paper + metal stamp, etc.).
-- Use a hardware wallet on the airgap so the seed never touches a screen.
-- After this ceremony, repeat the same ceremony with a **second** wallet to a hot-spare overseer, and run the equivalent of `rotate_overseer(HumanOverseer(spare_addr, ...))`. Two valid overseer addresses in your control = redundancy.
-
-## Stage 2 — DAIO custody
-
-`overseer.py:200-244` already declares `DAIOOverseer(registry, threshold, chain_id)` as a stub. When the Governor contract is live:
-
-1. Replace the IKM source. Where `HumanOverseer.produce_raw_key` reads a 65-byte signature, `DAIOOverseer.produce_raw_key` will read an on-chain attestation digest from the executed proposal and HKDF it under `DAIO_INFO_PREFIX + registry + chain_id`.
-2. `verify_evidence` will eth_call the Governor: `proposalState(id) == Executed` AND `hashProposal` matches the digest in evidence AND the weighted vote ≥ threshold.
-3. Run the same ceremony — `manage_custody.py` is overseer-agnostic. Replace `--address` with the proposal id; the script will need a thin extension to construct `DAIOOverseer` instead of `HumanOverseer`. Same `vault.rotate_overseer(...)` call. Same `.salt`. Same audit log row, just `to_kind == "daio"`.
-
-The two-stage HKDF in `overseer.py` (per-overseer `_INFO_PREFIX` for IKM, then unified `b"bankon-vault-master-key"` for the vault key) is deliberate — both human and DAIO end up at the same 32-byte vault key from a different root of trust, with no `entries.json` re-encryption beyond what `rotate_overseer` already does.
-
-When the time comes you can run Human → DAIO with the same atomic-swap two-phase commit, and the audit log records the transition. Or revert: DAIO → Human if the Governor needs to be unwound.
-
-## Reference
-
-- `mindx_backend_service/bankon_vault/vault.py` — core vault, `rotate_overseer`.
-- `mindx_backend_service/bankon_vault/overseer.py` — `HumanOverseer`, `DAIOOverseer`, `load_human_from_proof`.
-- `manage_custody.py` — connected-side CLI: preflight, challenge, dry-run, commit, transfer-agents, update-agent-map, lock-routes, smoke-test.
-- `scripts/vault/airgap_sign.py` — airgap-side signer.
-- `tests/bankon_vault/test_rotate_overseer.py` — rotation contract test (`make test-vault`).
-- `data/governance/overseer_history.jsonl` — append-only audit log.
-- `/home/hacker/.claude/plans/glimmering-growing-scroll.md` — original overseer design plan.
-- `/home/hacker/.claude/plans/jolly-baking-wilkinson.md` — full vault audit including the security findings remediated alongside this toolkit.
+- [`docs/BANKON_VAULT.md`](BANKON_VAULT.md) — canonical reference (crypto stack,
+  on-disk layout, route inventory).
+- [`docs/operations/SHADOW_OVERLORD_GUIDE.md`](operations/SHADOW_OVERLORD_GUIDE.md)
+  — full theory + every privileged route.
+- [`docs/operations/SHADOW_OVERLORD_RUNBOOK.md`](operations/SHADOW_OVERLORD_RUNBOOK.md)
+  — terse operator cheat-sheet.
+- [`docs/LEGACY_VAULT_MIGRATION.md`](LEGACY_VAULT_MIGRATION.md) — retiring the
+  old `vault_manager` + `encrypted_vault_manager` (audit-blocker for the
+  handoff).
+- [`docs/WORDPRESS_PUBLISHING.md`](WORDPRESS_PUBLISHING.md) — the worked example
+  of an isolated participant namespace (`wordpress.agent.keys`).

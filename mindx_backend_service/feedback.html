@@ -351,6 +351,8 @@ tr:hover td{background:rgba(121,192,255,.02)}
   <button class="tab-chip" data-target="sec-graph">graph<span class="badge" id="bg-graph">·</span></button>
   <button class="tab-chip" data-target="sec-storage">memory<span class="badge" id="bg-storage">·</span></button>
   <button class="tab-chip" data-target="sec-inference">inference<span class="badge" id="bg-inference">·</span></button>
+  <button class="tab-chip" data-target="sec-skills">skills<span class="badge" id="bg-skills">·</span></button>
+  <button class="tab-chip" data-target="sec-mastermind">mastermind<span class="badge" id="bg-mastermind">·</span></button>
 </nav>
 
 <main class="wrap">
@@ -517,6 +519,250 @@ tr:hover td{background:rgba(121,192,255,.02)}
   </p>
   <div id="sources" class="card"><div class="empty">loading…</div></div>
 </section>
+
+<section id="sec-skills">
+  <div class="sec-head">
+    <h2>skills substrate</h2>
+    <span class="sub">/insight/skills · agents/skills/</span>
+  </div>
+  <p class="sec-desc">
+    The Hermes/OpenClaw-format procedural memory layer. SKILL.md files screened by a five-class scanner
+    before persist; agent-distilled drafts under <code>~/.mindx/skills/.drafts/</code> awaiting operator
+    review; LearningLog tracks <code>LEARNINGS</code> / <code>ERRORS</code> / <code>FEATURE_REQUESTS</code>
+    with <code>pending → validated → promoted</code> lifecycle; Curator runs archive-only audits.
+    See <a href="/doc/HERMES_INTEGRATION">HERMES_INTEGRATION.md</a>.
+  </p>
+  <div id="skills-panel" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<section id="sec-mastermind">
+  <div class="sec-head">
+    <h2>mastermind task board</h2>
+    <span class="sub">/insight/mastermind/board · agents/mastermind/taskboard.py</span>
+  </div>
+  <p class="sec-desc">
+    Kanban-style durable task board: <code>Triage → Todo → Ready → InProgress → Blocked → Done</code>.
+    Per-task heartbeat with zombie reclaim. Hallucination gate at completion — every claim of <em>done</em>
+    is verified against the actual Belief state before the task transitions to <code>Done</code>;
+    mismatch bounces back to <code>Triage</code> with the findings in the task notes.
+  </p>
+  <div id="mastermind-panel" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<script>
+// Skills + mastermind dashboard panels — small, dependency-free.
+// Read /insight/skills + /insight/mastermind/board on tab focus; render and badge.
+(function() {
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+  function n(v) { return typeof v === "number" ? v : 0; }
+
+  function renderSkills(d) {
+    if (!d || d.error) return `<div class="empty">unavailable${d && d.error ? ": " + esc(d.error) : ""}</div>`;
+    const s = d.skills || {};
+    const L = d.learnings || {};
+    const c = d.curator;
+    const cats = s.by_category || {};
+    const catRows = Object.keys(cats).sort().map(k =>
+      `<tr><td>${esc(k)}</td><td class="num">${n(cats[k])}</td></tr>`).join("");
+    function logCard(name, key) {
+      const r = L[key] || {};
+      return `<div class="kvcol">
+        <div class="kvtitle">${esc(name)}</div>
+        <div class="kvline"><span>pending</span><b>${n(r.pending)}</b></div>
+        <div class="kvline"><span>validated</span><b>${n(r.validated)}</b></div>
+        <div class="kvline"><span>promoted</span><b>${n(r.promoted)}</b></div>
+        <div class="kvline"><span>withdrawn</span><b>${n(r.withdrawn)}</b></div>
+        <div class="kvline tot"><span>total</span><b>${n(r.total)}</b></div>
+      </div>`;
+    }
+    const curatorBlock = c ? `
+      <div class="kvline"><span>last run</span><b>${c.started_at ? new Date(c.started_at*1000).toISOString().slice(0,19).replace("T"," ") : "—"}</b></div>
+      <div class="kvline"><span>mode</span><b>${c.apply ? "apply" : "dry-run"}</b></div>
+      <div class="kvline"><span>inspected</span><b>${n(c.inspected)}</b></div>
+      <div class="kvline"><span>flagged</span><b>${n(c.flagged_count)}</b></div>
+      <div class="kvline"><span>archived</span><b>${n(c.archived_count)}</b></div>
+      <div class="kvline"><span>duration</span><b>${(c.duration_seconds || 0).toFixed(2)}s</b></div>
+    ` : `<div class="empty">no run yet — <code>python scripts/run_curator.py --apply</code></div>`;
+    const mf = d.manifest;
+    const manifestBlock = mf && !mf.error ? `
+      <div class="kvline"><span>built at</span><b>${mf.generated_at ? new Date(mf.generated_at*1000).toISOString().slice(0,19).replace("T"," ") : "—"}</b></div>
+      <div class="kvline"><span>version</span><b>${esc(mf.manifest_version || "—")}</b></div>
+      <div class="kvline"><span>skills</span><b>${n(mf.skill_count)}</b></div>
+      <div class="kvline"><span>sha256</span><b title="${esc(mf.sha256 || "")}">${esc((mf.sha256 || "—").slice(0,16))}…</b></div>
+      <div class="kvline"><span>0G root</span><b title="${esc(mf.zg_root || "")}">${mf.zg_root ? esc(mf.zg_root.slice(0,12)) + "…" : "<span class=\"muted\">not uploaded</span>"}</b></div>
+      <div class="kvline"><span>chain anchor</span><b><span class="muted">Phase B (deferred)</span></b></div>
+    ` : (mf && mf.error)
+        ? `<div class="empty">unavailable: ${esc(mf.error)}</div>`
+        : `<div class="empty">no manifest built yet — <code>python scripts/build_skill_manifest.py</code></div>`;
+    return `
+      <div class="grid3">
+        <div class="kvcol">
+          <div class="kvtitle">skills</div>
+          <div class="kvline"><span>total</span><b>${n(s.total)}</b></div>
+          <div class="kvline"><span>agent-authored</span><b>${n(s.agent_authored)}</b></div>
+          <div class="kvline"><span>human-authored</span><b>${n(s.human_authored)}</b></div>
+          <div class="kvline tot"><span>pinned</span><b>${n(s.pinned)}</b></div>
+        </div>
+        ${logCard("LEARNINGS", "learning")}
+        ${logCard("ERRORS", "error")}
+      </div>
+      <div class="grid2" style="margin-top:14px">
+        <div class="kvcol">
+          <div class="kvtitle">FEATURE_REQUESTS</div>
+          <div class="kvline"><span>pending</span><b>${n((L.feature_request||{}).pending)}</b></div>
+          <div class="kvline"><span>validated</span><b>${n((L.feature_request||{}).validated)}</b></div>
+          <div class="kvline"><span>promoted</span><b>${n((L.feature_request||{}).promoted)}</b></div>
+          <div class="kvline tot"><span>total</span><b>${n((L.feature_request||{}).total)}</b></div>
+        </div>
+        <div class="kvcol">
+          <div class="kvtitle">curator (last run)</div>
+          ${curatorBlock}
+        </div>
+      </div>
+      <div class="grid2" style="margin-top:14px">
+        <div class="kvcol">
+          <div class="kvtitle">content-addressable manifest <span class="muted" style="font-size:.65rem">(0G Storage)</span></div>
+          ${manifestBlock}
+        </div>
+        <div class="kvcol">
+          <div class="kvtitle">how this composes</div>
+          <div class="kvline" style="font-size:.78rem;color:rgba(255,255,255,.7);line-height:1.45">
+            Every SKILL.md sha256 + name lives in a deterministic JSON manifest.
+            Uploading the manifest to <b>0G Storage</b> yields a merkle root —
+            anyone holding that root can fetch and verify the exact bytes.
+            The next phase anchors the root on 0G Chain via a <code>SkillRegistry</code>
+            contract so the registry chain is auditable end-to-end.
+          </div>
+        </div>
+      </div>
+      ${catRows ? `<table class="tbl"><thead><tr><th>category</th><th class="num">count</th></tr></thead><tbody>${catRows}</tbody></table>` : ""}
+    `;
+  }
+
+  function renderMastermind(d) {
+    if (!d || d.error) return `<div class="empty">unavailable${d && d.error ? ": " + esc(d.error) : ""}</div>`;
+    const stats = d.stats || {};
+    const cols = stats.columns || {};
+    const board = d.board || {};
+    const order = ["Triage","Todo","Ready","InProgress","Blocked","Done"];
+    const colCards = order.map(c => {
+      const tasks = (board[c] || []).slice(0, 6);
+      const items = tasks.map(t =>
+        `<li title="${esc(t.id)}"><span class="t-title">${esc(t.title || "—").slice(0,60)}</span>` +
+        (t.worker ? `<span class="t-worker">${esc(t.worker)}</span>` : "") +
+        (t.retries_used ? `<span class="t-retry">${t.retries_used}/${t.retry_budget}</span>` : "") +
+        `</li>`).join("");
+      const more = (board[c] || []).length > 6 ? `<li class="more">+${(board[c]||[]).length - 6} more</li>` : "";
+      return `
+        <div class="kbcol ${c.toLowerCase()}">
+          <div class="kbhead"><span>${esc(c)}</span><b>${n(cols[c])}</b></div>
+          <ul class="kblist">${items || "<li class=\"empty\">—</li>"}${more}</ul>
+        </div>`;
+    }).join("");
+    const zombieChip = stats.zombies > 0
+      ? `<span class="alert">⚠ ${stats.zombies} zombie${stats.zombies===1?"":"s"}</span>`
+      : `<span class="ok">✓ no zombies</span>`;
+    return `
+      <div class="kb-summary">
+        <span>total: <b>${n(stats.total)}</b></span>
+        ${zombieChip}
+        <span class="muted">heartbeat ttl + hallucination gate enforced server-side</span>
+      </div>
+      <div class="kanban">${colCards}</div>
+    `;
+  }
+
+  async function loadSkills() {
+    const el = document.getElementById("skills-panel");
+    try {
+      const r = await fetch("/insight/skills", { cache: "no-store" });
+      const d = await r.json();
+      el.innerHTML = renderSkills(d);
+      const sb = document.getElementById("bg-skills");
+      if (sb) sb.textContent = String((d.skills && d.skills.total) || 0);
+    } catch (e) {
+      el.innerHTML = `<div class="empty">fetch failed: ${esc(e.message || e)}</div>`;
+    }
+  }
+  async function loadMastermind() {
+    const el = document.getElementById("mastermind-panel");
+    try {
+      const r = await fetch("/insight/mastermind/board", { cache: "no-store" });
+      const d = await r.json();
+      el.innerHTML = renderMastermind(d);
+      const total = (d.stats && d.stats.total) || 0;
+      const z = (d.stats && d.stats.zombies) || 0;
+      const sb = document.getElementById("bg-mastermind");
+      if (sb) sb.textContent = z > 0 ? `${total}!` : String(total);
+    } catch (e) {
+      el.innerHTML = `<div class="empty">fetch failed: ${esc(e.message || e)}</div>`;
+    }
+  }
+
+  // Bind to the tabbar: load when a tab is opened. Also load once at startup.
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest && e.target.closest("[data-target=\"sec-skills\"]");
+    if (t) loadSkills();
+    const m = e.target.closest && e.target.closest("[data-target=\"sec-mastermind\"]");
+    if (m) loadMastermind();
+  });
+
+  function boot() {
+    if (document.getElementById("skills-panel")) loadSkills();
+    if (document.getElementById("mastermind-panel")) loadMastermind();
+    // Periodic light refresh.
+    setInterval(() => {
+      const tab = document.querySelector(".tab-chip.active");
+      if (!tab) return;
+      const t = tab.getAttribute("data-target");
+      if (t === "sec-skills") loadSkills();
+      if (t === "sec-mastermind") loadMastermind();
+    }, 25000);
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else { boot(); }
+})();
+</script>
+
+<style>
+/* Skills + mastermind panels — small dependency-free styles */
+#skills-panel .grid3, #skills-panel .grid2 { display:grid; gap:14px; }
+#skills-panel .grid3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+#skills-panel .grid2 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+#skills-panel .kvcol { background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.08); border-radius: 8px; padding: 12px 14px; }
+#skills-panel .kvtitle { font-size: .72rem; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,.55); margin-bottom: 8px; }
+#skills-panel .kvline { display:flex; justify-content: space-between; align-items:baseline; padding: 3px 0; font-size: .88rem; }
+#skills-panel .kvline span { color: rgba(255,255,255,.55); }
+#skills-panel .kvline b { font-family: monospace; font-weight: 500; }
+#skills-panel .kvline.tot { margin-top:4px; padding-top:6px; border-top:1px dashed rgba(255,255,255,.1); }
+#skills-panel .tbl { width: 100%; margin-top: 14px; font-size: .85rem; border-collapse: collapse; }
+#skills-panel .tbl th { text-align: left; color: rgba(255,255,255,.55); padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,.1); }
+#skills-panel .tbl td { padding: 5px 8px; border-bottom: 1px solid rgba(255,255,255,.04); }
+#skills-panel .tbl .num, #skills-panel th.num { text-align:right; font-family:monospace; }
+
+#mastermind-panel .kb-summary { display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-bottom: 12px; font-size: .9rem; color: rgba(255,255,255,.7); }
+#mastermind-panel .kb-summary b { color: #fff; font-family: monospace; font-weight: 500; }
+#mastermind-panel .kb-summary .alert { color: #fca5a5; }
+#mastermind-panel .kb-summary .ok    { color: #88ffa0; }
+#mastermind-panel .kb-summary .muted { color: rgba(255,255,255,.4); font-size: .8rem; }
+#mastermind-panel .kanban { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+@media (max-width: 980px) { #mastermind-panel .kanban { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px) { #mastermind-panel .kanban { grid-template-columns: repeat(2, 1fr); } }
+#mastermind-panel .kbcol { background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.08); border-radius: 8px; padding: 8px; min-height: 80px; }
+#mastermind-panel .kbhead { display:flex; justify-content:space-between; padding: 2px 4px 6px; font-size: .72rem; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,.6); border-bottom: 1px solid rgba(255,255,255,.08); }
+#mastermind-panel .kbhead b { font-family: monospace; color: #fff; }
+#mastermind-panel .kblist { list-style: none; padding: 6px 0 0; margin: 0; }
+#mastermind-panel .kblist li { padding: 3px 4px; font-size: .76rem; line-height: 1.35; color: rgba(255,255,255,.85); display: flex; justify-content: space-between; gap: 4px; align-items:center; }
+#mastermind-panel .kblist li.empty { color: rgba(255,255,255,.25); font-style: italic; }
+#mastermind-panel .kblist li.more { color: rgba(255,255,255,.4); font-size: .7rem; }
+#mastermind-panel .t-title { overflow:hidden; text-overflow:ellipsis; }
+#mastermind-panel .t-worker { font-family:monospace; color: rgba(86,204,242,.85); font-size: .68rem; }
+#mastermind-panel .t-retry { font-family:monospace; color: #ffb38a; font-size: .68rem; }
+#mastermind-panel .kbcol.inprogress { border-color: rgba(86,204,242,.4); }
+#mastermind-panel .kbcol.blocked    { border-color: rgba(239,68,68,.5); }
+#mastermind-panel .kbcol.done       { border-color: rgba(0,204,0,.35); opacity:.85; }
+</style>
 
 <div class="foot">
   mindX · Darwin-Godel machine · live at <a href="https://mindx.pythai.net">mindx.pythai.net</a> ·
