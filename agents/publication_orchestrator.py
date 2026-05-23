@@ -130,12 +130,26 @@ class Ledger:
 
 class PublicationOrchestrator:
     """Listens to improvement events; publishes via AuthorAgent on a
-    debounced, jittered, rate-limited cadence."""
+    debounced, jittered, rate-limited cadence.
+
+    Two trigger paths:
+      * direct callbacks via coordinator pub/sub (``sea.campaign.concluded``,
+        ``dream.report.written``) — fires within the same async tick;
+      * file-polling watchers (``watch_sea``, ``watch_dreams``) — resilient
+        fallback for restart-recovery and any callback that gets dropped.
+
+    Hybrid status policy: SEA campaign articles default to ``publish``
+    (mindX reporting its own milestones, public by default); dream-cycle
+    book editions default to ``draft`` (deeper material, reviewable).
+    Both overridable via env vars ``MINDX_PUBLICATION_SEA_STATUS`` and
+    ``MINDX_PUBLICATION_DREAM_STATUS``.
+    """
 
     def __init__(
         self,
         author_agent: Any,                                # AuthorAgent (avoid circular import)
         *,
+        coordinator: Optional[Any] = None,                # CoordinatorAgent (avoid circular import)
         sea_history_path: Optional[Path] = None,
         dream_dir: Optional[Path] = None,
         ledger_path: Optional[Path] = None,
@@ -145,6 +159,7 @@ class PublicationOrchestrator:
         poll_interval_s: float = DEFAULT_POLL_INTERVAL_S,
     ):
         self.author = author_agent
+        self.coordinator = coordinator
         self.sea_history_path = Path(
             sea_history_path
             if sea_history_path is not None
@@ -166,6 +181,182 @@ class PublicationOrchestrator:
         self.poll_interval_s = float(poll_interval_s)
         self.ledger = Ledger.load(self.ledger_path)
 
+        # Per-source publish-status policy. Hybrid by default; operator
+        # flips via env once accuracy is proven, no code change required.
+        #   sea_campaign_success  → publish  (routine milestone reports)
+        #   dream_book_edition    → draft    (deeper / reviewable)
+        #   sea_milestone         → publish  (SEA-flagged evolution moments,
+        #                                     authored by AuthorAgent)
+        #   book_edition          → draft    (lunar Book of mindX, reviewable)
+        #   journal_lunar_digest  → publish  (mindX's milestone-style digest)
+        self._sea_status        = os.getenv("MINDX_PUBLICATION_SEA_STATUS",       "publish").strip().lower() or "publish"
+        self._dream_status      = os.getenv("MINDX_PUBLICATION_DREAM_STATUS",     "draft").strip().lower()   or "draft"
+        self._milestone_status  = os.getenv("MINDX_PUBLICATION_MILESTONE_STATUS", "publish").strip().lower() or "publish"
+        self._book_status       = os.getenv("MINDX_PUBLICATION_BOOK_STATUS",      "draft").strip().lower()   or "draft"
+        self._journal_status    = os.getenv("MINDX_PUBLICATION_JOURNAL_STATUS",   "publish").strip().lower() or "publish"
+
+        # Liveness diagnostics — populated by the watchers each scan.
+        self._last_sea_scan_at: Optional[float]    = None
+        self._last_dream_scan_at: Optional[float]  = None
+        self._first_sea_scan_logged: bool          = False
+        self._first_dream_scan_logged: bool        = False
+
+        # Wire direct callbacks if a coordinator was passed.
+        if self.coordinator is not None:
+            try:
+                self.coordinator.subscribe("sea.campaign.concluded",     self.on_sea_campaign_success)
+                self.coordinator.subscribe("dream.report.written",       self.on_dream_book_edition)
+                self.coordinator.subscribe("book.edition.published",     self.on_book_edition_published)
+                self.coordinator.subscribe("journal.lunar.digest.ready", self.on_journal_lunar_digest)
+                logger.info(
+                    "PublicationOrchestrator: subscribed to "
+                    "'sea.campaign.concluded' + 'dream.report.written' + "
+                    "'book.edition.published' + 'journal.lunar.digest.ready' via coordinator"
+                )
+            except Exception as e:
+                logger.warning(f"PublicationOrchestrator: coordinator subscribe failed: {e}")
+
+    def _default_status_for_source(self, kind: str) -> str:
+        """Per-source publish-status policy. Hybrid by default; env-overridable."""
+        if kind == "sea_campaign_success":
+            return self._sea_status
+        if kind == "sea_milestone":
+            return self._milestone_status
+        if kind == "dream_book_edition":
+            return self._dream_status
+        if kind == "book_edition":
+            return self._book_status
+        if kind == "journal_lunar_digest":
+            return self._journal_status
+        return "draft"  # unknown kinds default to safe
+
+    # Lunar-cadence kinds fire at most ~1/day each by construction
+    # (full moons + SEA milestones are rare). They are exempt from the
+    # 6-hour MIN_GAP_S rate limit that protects against bursty routine
+    # SUCCESS / dream-cycle events.
+    _EXEMPT_FROM_MIN_GAP = frozenset({"sea_milestone", "book_edition", "journal_lunar_digest"})
+
+    # ─── Direct callback entry points (coordinator pub/sub) ──────
+
+    async def on_sea_campaign_success(self, data: Dict[str, Any]) -> None:
+        """Coordinator subscriber for 'sea.campaign.concluded' (SUCCESS only).
+
+        Routes is_milestone=True payloads through the 'sea_milestone' kind
+        so the orchestrator delegates composition to AuthorAgent's richer
+        compose_milestone_article. Routine successes keep the existing
+        'sea_campaign_success' generic-template path.
+        """
+        if not isinstance(data, dict):
+            return
+        if data.get("overall_campaign_status") != "SUCCESS":
+            return
+        campaign_id = str(data.get("campaign_run_id") or "")
+        if not campaign_id:
+            return
+        is_milestone = bool(data.get("is_milestone"))
+        kind = "sea_milestone" if is_milestone else "sea_campaign_success"
+        # Distinct trigger_id prefix per kind keeps the ledger greppable
+        # and prevents collision if both kinds were ever attempted on the
+        # same campaign (impossible today but cheap insurance).
+        trigger_id = f"{kind}_{campaign_id}" if is_milestone else campaign_id
+        if self.ledger.has(trigger_id):
+            return
+        await self._schedule_publish(
+            trigger_id=trigger_id,
+            kind=kind,
+            payload=data,
+        )
+
+    async def on_dream_book_edition(self, data: Dict[str, Any]) -> None:
+        """Coordinator subscriber for 'dream.report.written'. Only acts on
+        reports that triggered a book edition (full/new moon)."""
+        if not isinstance(data, dict):
+            return
+        if not data.get("book_edition_triggered"):
+            return
+        trigger_id = str(data.get("timestamp") or "")
+        if not trigger_id or self.ledger.has(trigger_id):
+            return
+        await self._schedule_publish(
+            trigger_id=trigger_id,
+            kind="dream_book_edition",
+            payload=data,
+        )
+
+    async def on_book_edition_published(self, data: Dict[str, Any]) -> None:
+        """Coordinator subscriber for 'book.edition.published' — emitted by
+        AuthorAgent._full_moon_publish after the lunar Book of mindX edition
+        is written to disk. The orchestrator publishes a rage article composed
+        by AuthorAgent.compose_book_edition_article (canonical authorship)."""
+        if not isinstance(data, dict):
+            return
+        edition = str(data.get("edition") or "")
+        edition_hash = str(data.get("edition_hash") or "")[:16]
+        if not edition:
+            return
+        trigger_id = f"book_edition_{edition}" + (f"_{edition_hash}" if edition_hash else "")
+        if self.ledger.has(trigger_id):
+            return
+        await self._schedule_publish(
+            trigger_id=trigger_id,
+            kind="book_edition",
+            payload=data,
+        )
+
+    async def on_journal_lunar_digest(self, data: Dict[str, Any]) -> None:
+        """Coordinator subscriber for 'journal.lunar.digest.ready' — emitted
+        by AuthorAgent on the full-moon write alongside the book edition.
+        The orchestrator reads docs/IMPROVEMENT_JOURNAL.md and asks
+        AuthorAgent.compose_journal_digest_article to summarise the cycle."""
+        if not isinstance(data, dict):
+            return
+        lunar = data.get("lunar") or {}
+        is_full = bool(lunar.get("is_full_moon"))
+        is_new = bool(lunar.get("is_new_moon"))
+        phase = "full" if is_full else "new" if is_new else "lunar"
+        edition_id = str(data.get("edition_id") or "")
+        # Date-only id so clock skew within a lunar day can't double-fire.
+        date_part = edition_id.split("_")[0] if edition_id else time.strftime("%Y%m%d")
+        trigger_id = f"journal_digest_{date_part}_{phase}"
+        if self.ledger.has(trigger_id):
+            return
+        await self._schedule_publish(
+            trigger_id=trigger_id,
+            kind="journal_lunar_digest",
+            payload=data,
+        )
+
+    # ─── Diagnostics ─────────────────────────────────────────────
+
+    def get_health(self) -> Dict[str, Any]:
+        """Snapshot for /insight/publications/health. Cheap, mutable attrs only."""
+        last = self.ledger.published[-1] if self.ledger.published else None
+        return {
+            "watch_sea_alive":     self._last_sea_scan_at is not None,
+            "watch_dreams_alive":  self._last_dream_scan_at is not None,
+            "last_sea_scan_at":    self._last_sea_scan_at,
+            "last_dream_scan_at":  self._last_dream_scan_at,
+            "ledger_path":         str(self.ledger_path),
+            "ledger_entries":      len(self.ledger.published),
+            "last_publish_at":     self.ledger.last_published_at or None,
+            "last_publish_url":    (last.url if last else None),
+            "last_publish_post_id":(last.post_id if last else None),
+            "last_publish_title":  (last.title if last else None),
+            "sea_status_default":       self._sea_status,
+            "dream_status_default":     self._dream_status,
+            "milestone_status_default": self._milestone_status,
+            "book_status_default":      self._book_status,
+            "journal_status_default":   self._journal_status,
+            "exempt_from_min_gap":      sorted(self._EXEMPT_FROM_MIN_GAP),
+            "coordinator_wired":   self.coordinator is not None,
+            "min_gap_s":           int(self.min_gap_s),
+            "base_delay_s":        int(self.base_delay_s),
+            "jitter_fraction":     self.jitter_fraction,
+            "poll_interval_s":     int(self.poll_interval_s),
+            "sea_history_exists":  self.sea_history_path.exists(),
+            "dream_dir_exists":    self.dream_dir.exists(),
+        }
+
     # ─── Public watchers (start via asyncio.create_task) ─────────
 
     async def watch_sea(self) -> None:
@@ -178,6 +369,13 @@ class PublicationOrchestrator:
         while True:
             try:
                 await self._scan_sea_once()
+                self._last_sea_scan_at = time.time()
+                if not self._first_sea_scan_logged:
+                    self._first_sea_scan_logged = True
+                    logger.info(
+                        f"watch_sea: first scan complete, ledger has "
+                        f"{len(self.ledger.published)} entries"
+                    )
             except Exception as e:  # pragma: no cover — never let the watcher die
                 logger.warning(f"watch_sea: scan failed: {e}")
             await asyncio.sleep(self.poll_interval_s)
@@ -192,6 +390,13 @@ class PublicationOrchestrator:
         while True:
             try:
                 await self._scan_dreams_once()
+                self._last_dream_scan_at = time.time()
+                if not self._first_dream_scan_logged:
+                    self._first_dream_scan_logged = True
+                    logger.info(
+                        f"watch_dreams: first scan complete, ledger has "
+                        f"{len(self.ledger.published)} entries"
+                    )
             except Exception as e:  # pragma: no cover
                 logger.warning(f"watch_dreams: scan failed: {e}")
             await asyncio.sleep(self.poll_interval_s)
@@ -257,13 +462,18 @@ class PublicationOrchestrator:
         kind: str,
         payload: Dict[str, Any],
     ) -> None:
-        """Debounced + jittered publish. Honors MIN_GAP_S rate limit."""
+        """Debounced + jittered publish. Honors MIN_GAP_S rate limit except
+        for lunar-cadence kinds (see _EXEMPT_FROM_MIN_GAP)."""
         detected_at = time.time()
+        exempt = kind in self._EXEMPT_FROM_MIN_GAP
 
         # Rate-limit BEFORE we burn jitter. If the last publish was too
         # recent, coalesce this trigger into the ledger and skip.
+        # Lunar-cadence kinds skip this guard — they fire at most ~1/day
+        # by construction and would otherwise be coalesced into oblivion
+        # when bursting from a single full-moon emit point.
         time_since_last = detected_at - self.ledger.last_published_at
-        if self.ledger.last_published_at > 0 and time_since_last < self.min_gap_s:
+        if not exempt and self.ledger.last_published_at > 0 and time_since_last < self.min_gap_s:
             wait_more = int(self.min_gap_s - time_since_last)
             logger.info(
                 f"PublicationOrchestrator: coalescing {trigger_id} "
@@ -282,7 +492,8 @@ class PublicationOrchestrator:
         delay = self._compute_delay()
         logger.info(
             f"PublicationOrchestrator: scheduling {kind} {trigger_id} in {int(delay)}s "
-            f"(base={int(self.base_delay_s)} ± {self.jitter_fraction:.0%})"
+            f"(base={int(self.base_delay_s)} ± {self.jitter_fraction:.0%}"
+            f"{'; exempt from MIN_GAP_S' if exempt else ''})"
         )
         await asyncio.sleep(delay)
 
@@ -292,9 +503,9 @@ class PublicationOrchestrator:
             return
 
         # Re-check rate limit after the delay too — another publish may
-        # have happened in the meantime.
+        # have happened in the meantime. Exempt kinds still bypass.
         now = time.time()
-        if now - self.ledger.last_published_at < self.min_gap_s:
+        if not exempt and now - self.ledger.last_published_at < self.min_gap_s:
             self.ledger.append_coalesced(
                 trigger_id=trigger_id,
                 kind=kind,
@@ -319,11 +530,12 @@ class PublicationOrchestrator:
             "_mindx_trigger_kind": kind,
         }
 
+        publish_status = self._default_status_for_source(kind)
         try:
             result = await self.author.publish_to_rage(
                 title=title,
                 content_html=content_html,
-                status="draft",            # always draft from the orchestrator — operator reviews
+                status=publish_status,     # per-source policy: SEA→publish, dreams→draft (env-overridable)
                 excerpt=excerpt,
                 topic=topic,
                 meta=meta,
@@ -352,7 +564,7 @@ class PublicationOrchestrator:
             title=title,
         ))
         logger.info(
-            f"PublicationOrchestrator: published {trigger_id} → "
+            f"PublicationOrchestrator: published {trigger_id} (status={publish_status}) → "
             f"post_id={result.get('post_id')} url={result.get('url')}"
         )
 
@@ -368,12 +580,66 @@ class PublicationOrchestrator:
     def _compose_article(
         self, kind: str, payload: Dict[str, Any]
     ) -> tuple[str, str, Optional[str], Optional[str]]:
-        """Return (title, content_html, excerpt, topic) for the publish."""
+        """Return (title, content_html, excerpt, topic) for the publish.
+
+        Routine kinds (sea_campaign_success, dream_book_edition) use the
+        orchestrator's internal terse templates. Rich kinds (sea_milestone,
+        book_edition, journal_lunar_digest) delegate to AuthorAgent — the
+        canonical writer — so the framing is mindX's own voice rather than
+        the orchestrator's generic template. Established pattern at
+        agents/learning/improvement_journal.py:76-87.
+        """
         if kind == "sea_campaign_success":
             return self._compose_sea_article(payload)
         if kind == "dream_book_edition":
             return self._compose_dream_article(payload)
+        if kind == "sea_milestone":
+            return self._delegate_to_author("compose_milestone_article", payload)
+        if kind == "book_edition":
+            return self._delegate_to_author("compose_book_edition_article", payload)
+        if kind == "journal_lunar_digest":
+            return self._compose_journal_digest(payload)
         return "", "", None, None
+
+    def _delegate_to_author(
+        self, method_name: str, payload: Dict[str, Any]
+    ) -> tuple[str, str, Optional[str], Optional[str]]:
+        """Call an AuthorAgent compose_* method and normalise the return."""
+        method = getattr(self.author, method_name, None)
+        if method is None:
+            logger.warning(
+                f"PublicationOrchestrator: AuthorAgent missing {method_name}; "
+                f"falling back to empty article (publish will be skipped)"
+            )
+            return "", "", None, None
+        try:
+            return method(payload)
+        except Exception as e:
+            logger.warning(
+                f"PublicationOrchestrator: AuthorAgent.{method_name} raised: {e}; "
+                f"falling back to empty article"
+            )
+            return "", "", None, None
+
+    def _compose_journal_digest(
+        self, event: Dict[str, Any]
+    ) -> tuple[str, str, Optional[str], Optional[str]]:
+        """Read docs/IMPROVEMENT_JOURNAL.md, delegate to AuthorAgent.
+        compose_journal_digest_article to summarise the cycle."""
+        journal_path = PROJECT_ROOT / "docs" / "IMPROVEMENT_JOURNAL.md"
+        try:
+            journal_text = journal_path.read_text(encoding="utf-8") if journal_path.exists() else ""
+        except Exception as e:
+            logger.warning(f"PublicationOrchestrator: could not read journal: {e}")
+            journal_text = ""
+        method = getattr(self.author, "compose_journal_digest_article", None)
+        if method is None:
+            return "", "", None, None
+        try:
+            return method(journal_text, event.get("lunar") or {})
+        except Exception as e:
+            logger.warning(f"PublicationOrchestrator: compose_journal_digest_article raised: {e}")
+            return "", "", None, None
 
     def _compose_sea_article(
         self, entry: Dict[str, Any]

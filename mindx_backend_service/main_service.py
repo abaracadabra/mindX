@@ -4925,6 +4925,34 @@ async def insight_stuck_loops(request: Request, window: int = 900, min_repeats: 
     }, route_path="/insight/stuck_loops")
 
 
+@app.get("/insight/publications/health", tags=["insight"])
+@_insight_safe
+async def insight_publications_health(request: Request):
+    """Liveness + state for the PublicationOrchestrator (rage.pythai.net
+    autopublish pipeline).
+
+    Reports watcher-task aliveness, last scan timestamps, ledger entry
+    count, last publish (URL + post_id + title), per-source status defaults
+    (SEA→publish, dreams→draft by default; env-overridable), and whether
+    the coordinator pub/sub fast-path is wired.
+
+    Returns 503-shaped payload (orchestrator_started=false) if the spawn
+    block at startup did not produce an orchestrator — that is the
+    diagnostic for a silent spawn failure.
+    """
+    orch = getattr(app.state, "publication_orchestrator", None)
+    if orch is None:
+        return {
+            "orchestrator_started": False,
+            "note": "PublicationOrchestrator was not constructed at startup. "
+                    "Check journalctl for 'PublicationOrchestrator failed to start'.",
+        }
+    health = orch.get_health()
+    health["orchestrator_started"] = True
+    health["computed_at"] = time.time()
+    return _maybe_h_text(request, health, route_path="/insight/publications/health")
+
+
 # ── ?h=true plain-text rendering for /insight/* and /storage/* ──
 # Plan: ~/.claude/plans/luminous-humming-knuth.md
 
@@ -6710,7 +6738,7 @@ async def startup_event():
             await asyncio.sleep(60)  # Short warmup so a restart produces a dream within a minute
             dreamer = None
             try:
-                dreamer = MachineDreamCycle(memory_agent=memory_agent, days_back=180)
+                dreamer = MachineDreamCycle(memory_agent=memory_agent, days_back=180, coordinator=coordinator_instance)
                 feed.emit("memory", "machine_dreaming", "loop_started",
                           f"Dream loop online (interval={CONSOLIDATION_INTERVAL_HOURS}h)",
                           detail={"interval_hours": CONSOLIDATION_INTERVAL_HOURS}, agent_tier=2)
@@ -6723,7 +6751,7 @@ async def startup_event():
                     # Re-attempt init on next cycle rather than dying.
                     await asyncio.sleep(300)
                     try:
-                        dreamer = MachineDreamCycle(memory_agent=memory_agent, days_back=180)
+                        dreamer = MachineDreamCycle(memory_agent=memory_agent, days_back=180, coordinator=coordinator_instance)
                         feed.emit("memory", "machine_dreaming", "loop_recovered",
                                   "Dreamer re-initialized", agent_tier=2)
                     except Exception as re_e:
@@ -6884,23 +6912,58 @@ async def startup_event():
         asyncio.create_task(_start_mastermind_loop())
 
         # Publication orchestrator — improvement-event-driven publishing
-        # to rage.pythai.net. Watches SEA campaign SUCCESS + full-moon
-        # dream cycles; debounced 30 min ± 40 % jitter; 6 h hard rate
-        # limit; persistent ledger at data/governance/published_triggers.json.
-        # See agents/publication_orchestrator.py + docs/publications/README.md
-        # for the contract. Defensive — failures inside the watchers are
-        # logged and the loop continues.
+        # to rage.pythai.net. Two trigger paths:
+        #   * direct callbacks via coordinator pub/sub
+        #     (sea.campaign.concluded, dream.report.written) — same-tick;
+        #   * file-polling watchers — resilient fallback ≤60s.
+        # Hybrid status: SEA→publish (public milestones),
+        # dreams→draft (reviewable). Env-overridable via
+        # MINDX_PUBLICATION_{SEA,DREAM}_STATUS.
+        # Debounced 30 min ± 40 % jitter; 6 h hard rate limit;
+        # persistent ledger at data/governance/published_triggers.json.
+        # Tasks anchored on app.state.background_tasks to prevent silent GC.
         try:
             from agents.publication_orchestrator import PublicationOrchestrator
-            _pub_orchestrator = PublicationOrchestrator(author_agent=author)
-            asyncio.create_task(_pub_orchestrator.watch_sea())
-            asyncio.create_task(_pub_orchestrator.watch_dreams())
+            from agents.author_agent import AuthorAgent
+            # AuthorAgent is a singleton — get-or-construct here so the
+            # orchestrator has a real reference. The nested _periodic_author
+            # task will reuse the same instance via get_instance().
+            _author_for_pub = await AuthorAgent.get_instance()
+            # Hand AuthorAgent a coordinator handle so _full_moon_publish can
+            # emit book.edition.published + journal.lunar.digest.ready events
+            # the orchestrator subscribes to. Post-construction attribute
+            # assignment avoids touching the singleton's get_instance() contract.
+            _author_for_pub.coordinator = coordinator_instance
+            _pub_orchestrator = PublicationOrchestrator(
+                author_agent=_author_for_pub,
+                coordinator=coordinator_instance,
+            )
+            if not hasattr(app.state, "background_tasks"):
+                app.state.background_tasks = []
+            app.state.background_tasks.append(
+                asyncio.create_task(_pub_orchestrator.watch_sea())
+            )
+            app.state.background_tasks.append(
+                asyncio.create_task(_pub_orchestrator.watch_dreams())
+            )
+            app.state.publication_orchestrator = _pub_orchestrator
             logger.info(
                 "PublicationOrchestrator started "
                 "(watching SEA campaign history + full-moon dreams)"
             )
+            logger.info(
+                "PublicationOrchestrator state: "
+                f"ledger={_pub_orchestrator.ledger_path} (exists={_pub_orchestrator.ledger_path.exists()}); "
+                f"sea_history={_pub_orchestrator.sea_history_path} (exists={_pub_orchestrator.sea_history_path.exists()}); "
+                f"dream_dir={_pub_orchestrator.dream_dir} "
+                f"(exists={_pub_orchestrator.dream_dir.exists()}, "
+                f"reports={len(list(_pub_orchestrator.dream_dir.glob('*_dream_report.json'))) if _pub_orchestrator.dream_dir.exists() else 0}); "
+                f"sea_status_default={_pub_orchestrator._sea_status}; "
+                f"dream_status_default={_pub_orchestrator._dream_status}; "
+                f"coordinator_wired={_pub_orchestrator.coordinator is not None}"
+            )
         except Exception as pub_err:
-            logger.warning(
+            logger.exception(
                 f"PublicationOrchestrator failed to start: {pub_err}"
             )
 

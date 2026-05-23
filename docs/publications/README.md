@@ -45,26 +45,49 @@ on rage.pythai.net as a draft for human review before going live.
 
 ### 2. Improvement-event-triggered (autonomous, regular but unpredictable)
 
-`agents/publication_orchestrator.py` watches two improvement signals:
+`agents/publication_orchestrator.py` subscribes to four coordinator events
+(fast-path) and also runs two file-polling watchers (resilient fallback).
+Per-source hybrid status: routine reports go public; deep / curated material
+lands as draft for review. Operator flips defaults via env vars without code
+change once accuracy is proven.
 
-- **SEA campaign SUCCESS** in `data/sea_campaign_history/strategic_evolution_agent.json`
-- **Full / new moon dream cycle** (`book_edition_triggered=true`) in `data/memory/dreams/`
+| Trigger event | `kind` in ledger | Default status | Env override | Composer |
+|---|---|---|---|---|
+| `sea.campaign.concluded` (routine SUCCESS) | `sea_campaign_success` | `publish` | `MINDX_PUBLICATION_SEA_STATUS` | orchestrator template |
+| `sea.campaign.concluded` (`is_milestone=true`) | `sea_milestone` | `publish` | `MINDX_PUBLICATION_MILESTONE_STATUS` | `AuthorAgent.compose_milestone_article` |
+| `dream.report.written` (`book_edition_triggered=true`) | `dream_book_edition` | `draft` | `MINDX_PUBLICATION_DREAM_STATUS` | orchestrator template |
+| `book.edition.published` (AuthorAgent full-moon write) | `book_edition` | `draft` | `MINDX_PUBLICATION_BOOK_STATUS` | `AuthorAgent.compose_book_edition_article` |
+| `journal.lunar.digest.ready` (full-moon co-fire) | `journal_lunar_digest` | `publish` | `MINDX_PUBLICATION_JOURNAL_STATUS` | `AuthorAgent.compose_journal_digest_article` |
 
-When either fires, the orchestrator composes an article from the real
-telemetry of that event (campaign run-id, validation counts, lunar phase,
-consolidation totals, tuning recommendations) and publishes it.
-Cadence:
+**Authorship principle**: PublicationOrchestrator owns publishing (ledger,
+debounce, rate-limit, status policy). AuthorAgent owns *authorship* for the
+rich surfaces (milestone / book / journal) — it is the canonical writer.
+Precedent: `agents/learning/improvement_journal.py:76-87` already delegates
+entry composition to AuthorAgent.
+
+**Cadence + safeguards:**
 
 - 30-min base delay ± 40 % jitter (publish times never repeat on the clock)
-- 6-hour hard rate limit (bursty improvement events coalesce; the next
-  publish reflects the cumulative learning)
-- idempotent via `data/governance/published_triggers.json` — every
-  trigger publishes at most once, even across mindX restarts
-- always `status="draft"` — operator reviews on rage.pythai.net before
-  anyone reads it
+- 6-hour hard rate limit (`MIN_GAP_S`) for routine kinds (`sea_campaign_success`,
+  `dream_book_edition`): bursty events coalesce; the next publish reflects
+  the cumulative learning
+- Lunar-cadence kinds (`book_edition`, `journal_lunar_digest`, `sea_milestone`)
+  are EXEMPT from `MIN_GAP_S` — they fire at most ~1/day by construction
+  and would otherwise coalesce into oblivion when a full-moon emits all three
+  back-to-back
+- Idempotent via `data/governance/published_triggers.json` — every trigger
+  publishes at most once, even across mindX restarts. Trigger-id prefixes
+  per kind keep the ledger greppable:
+  - `<campaign_run_id>` — routine SEA SUCCESS
+  - `sea_milestone_<campaign_run_id>` — SEA-flagged milestone
+  - `<dream_timestamp>` — dream book-edition trigger
+  - `book_edition_<edition>_<hash16>` — AuthorAgent full-moon edition
+  - `journal_digest_<YYYYMMDD>_<phase>` — full-moon journal digest
 
 That is the "regular but not predictable" loop: mindX publishes when the
-system actually improves, not when the clock decides.
+system actually improves, not when the clock decides. SEA decides what
+counts as a milestone (see `docs/SEA_MILESTONES.md`); AuthorAgent decides
+how to frame it; PublicationOrchestrator decides when and whether it ships.
 
 ## The `pdf/` bibliography
 
@@ -103,10 +126,10 @@ and `competitive_landscape_2026.md` for the canonical shape.
 Every published article carries:
 
 - `_mindx_content_hash` — sha256 of the body for tamper-evidence
-- `_mindx_trigger_id` (orchestrator-only) — the campaign_run_id or dream
-  timestamp that caused this article
-- `_mindx_trigger_kind` (orchestrator-only) — `sea_campaign_success` or
-  `dream_book_edition`
+- `_mindx_trigger_id` (orchestrator-only) — the campaign_run_id, dream
+  timestamp, book edition id, or journal digest id that caused this article
+- `_mindx_trigger_kind` (orchestrator-only) — one of `sea_campaign_success`,
+  `sea_milestone`, `dream_book_edition`, `book_edition`, `journal_lunar_digest`
 - `_mindx_signature` — EIP-191 signature from the wordpress.agent wallet
   (set by `agents/wordpress_agent/server.py`)
 - `_mindx_signer` — the wordpress.agent's checksum address

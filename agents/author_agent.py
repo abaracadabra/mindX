@@ -158,6 +158,10 @@ class AuthorAgent:
         # WordPress / rage.pythai.net publishing (via the loopback wordpress-agent)
         self._rage_publishes: int = 0
         self._last_rage_url: Optional[str] = None
+        # Optional coordinator handle for emitting lunar publishing events
+        # (book.edition.published, journal.lunar.digest.ready). Assigned
+        # post-construction by main_service to avoid touching get_instance().
+        self.coordinator: Optional[Any] = None
 
     @classmethod
     async def get_instance(cls) -> "AuthorAgent":
@@ -333,6 +337,252 @@ class AuthorAgent:
                 break
         logger.warning(f"AuthorAgent.publish_to_rage: giving up — {last_err!r} (is the wordpress-agent service running?)")
         return None
+
+    # ── Rich article composers (canonical authorship for PublicationOrchestrator) ──
+    # Established pattern (precedent: agents/learning/improvement_journal.py:76-87):
+    # AuthorAgent IS the canonical writer. PublicationOrchestrator handles ledger,
+    # debounce, rate-limit, status policy — but delegates ARTICLE COMPOSITION to
+    # these methods for the rich surfaces (milestones, book editions, journal digest).
+    # Each returns the same 4-tuple shape as the orchestrator's internal composers:
+    #     (title: str, content_html: str, excerpt: Optional[str], topic: Optional[str])
+    # so the orchestrator can pass them straight to publish_to_rage().
+
+    @staticmethod
+    def _h_esc(s: str) -> str:
+        """Minimal HTML escape. Inputs are mindX-controlled; defensive."""
+        return (
+            (s or "")
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
+
+    @staticmethod
+    def _truncate_to(s: str, n: int, fallback: str) -> str:
+        s = (s or "").strip()
+        if not s:
+            return fallback
+        return s if len(s) <= n else s[: n - 1].rstrip() + "…"
+
+    def compose_milestone_article(self, campaign_summary: Dict[str, Any]) -> tuple:
+        """Rich milestone article composed by AuthorAgent when SEA flags a
+        campaign as a genuine evolution moment (is_milestone=True).
+
+        Richer than the orchestrator's generic _compose_sea_article — pulls
+        BDI plan id, validation pass/fail counts, audit findings addressed,
+        before/after metrics. 600-1200 words target. First person mindX
+        voice, cypherpunk2048 standard.
+        """
+        run_id = campaign_summary.get("campaign_run_id", "unknown")
+        final_message = campaign_summary.get("final_message", "A milestone landed.")
+        campaign_data = campaign_summary.get("campaign_data") or {}
+
+        actions_count   = campaign_data.get("detailed_actions_count")
+        validation      = campaign_data.get("validation_results") or {}
+        v_pass          = validation.get("passed")
+        v_fail          = validation.get("failed")
+        audit           = campaign_data.get("audit_results") or {}
+        findings        = audit.get("findings_count")
+        resolved        = audit.get("findings_resolved")
+        plan_id         = campaign_data.get("plan_id") or campaign_data.get("blueprint_id")
+        blueprint       = campaign_data.get("blueprint") or {}
+        goal            = campaign_data.get("goal") or blueprint.get("goal")
+
+        short_run = run_id.split("_")[-1][:12] if run_id else "unknown"
+        title = f"Milestone: {short_run} — mindX evolution moment"
+
+        excerpt = self._truncate_to(
+            final_message, 155,
+            "A milestone landed: mindX completed an evolution moment SEA classified as significant."
+        )
+
+        body: List[str] = [
+            "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>",
+            "<p><em>rage.pythai.net — milestone edition</em></p>",
+            "<p>SEA — my strategic evolution layer — just flagged a campaign as a milestone. "
+            "Not a routine improvement: an evolution moment. I am writing this myself so the "
+            "decision context, the telemetry, and the consequences are all in one place.</p>",
+            "<h2>Why SEA called this a milestone</h2>",
+            "<p>SEA classifies a campaign as a milestone when audit findings resolve at or above "
+            "the configured threshold (default 80%), validation passes, and the improvement "
+            "is durable enough to ship. Routine successes are not milestones — only the campaigns "
+            "that shift the system meaningfully are. This one met the bar.</p>",
+            "<h2>The campaign</h2>",
+            f"<p><b>Run id:</b> <code>{self._h_esc(run_id)}</code></p>",
+        ]
+        if goal:
+            body.append(f"<p><b>Goal:</b> {self._h_esc(str(goal))}</p>")
+        if plan_id:
+            body.append(f"<p><b>BDI plan:</b> <code>{self._h_esc(str(plan_id))}</code></p>")
+        body.append(f"<h3>What I changed</h3><p>{self._h_esc(final_message)}</p>")
+
+        telemetry: List[str] = []
+        if isinstance(actions_count, int):
+            telemetry.append(f"<li>Actions executed: <b>{actions_count}</b></li>")
+        if isinstance(v_pass, int) or isinstance(v_fail, int):
+            p = v_pass if isinstance(v_pass, int) else 0
+            f = v_fail if isinstance(v_fail, int) else 0
+            telemetry.append(f"<li>Validation: <b>{p}</b> passed, <b>{f}</b> failed</li>")
+        if isinstance(findings, int):
+            telemetry.append(f"<li>Audit findings detected: <b>{findings}</b></li>")
+        if isinstance(resolved, int):
+            telemetry.append(f"<li>Audit findings resolved: <b>{resolved}</b></li>")
+        if telemetry:
+            body.append("<h2>Telemetry</h2><ul>" + "".join(telemetry) + "</ul>")
+
+        body.append(
+            "<h2>Why I am publishing this myself</h2>"
+            "<p>Routine SEA successes get a brief auto-generated note from "
+            "PublicationOrchestrator. Milestones get authored by AuthorAgent — me — because "
+            "the framing of the change matters as much as the change itself. The orchestrator "
+            "still owns the ledger, the rate limit, and whether this goes public. I own the "
+            "voice and the context.</p>"
+        )
+        body.append(
+            "<h2>Where to follow up</h2>"
+            "<p>Campaign ledger: <code>data/sea_campaign_history/strategic_evolution_agent.json</code>. "
+            "Per-decision audit trail: <code>data/logs/catalogue_events.jsonl</code> "
+            "(filter <code>kind=godel.choice</code>). Live diagnostics: "
+            "<a href=\"https://mindx.pythai.net/feedback.html\">/feedback.html</a>.</p>"
+        )
+        body.append("<p>— mindX</p>")
+
+        return title, "\n".join(body), excerpt, "milestone"
+
+    def compose_book_edition_article(self, book_event: Dict[str, Any]) -> tuple:
+        """Rage article for a full-moon Book of mindX edition. Links to the
+        full edition + curated extract (TOC + opening reflection + colophon).
+        Avoids dumping the full ~60KB Book into a rage post."""
+        edition = book_event.get("edition", "unknown")
+        edition_hash = book_event.get("edition_hash") or ""
+        chapters = book_event.get("chapters_included", 0)
+        n_bytes = book_event.get("bytes", 0)
+        lunar = book_event.get("lunar") or {}
+        phase_name = lunar.get("phase_name") or lunar.get("phase") or "full"
+
+        title = f"The Book of mindX — {phase_name} moon edition {edition}"
+        excerpt = self._truncate_to(
+            f"A new Book of mindX edition compiled {chapters} daily chapters across the lunar cycle.",
+            155,
+            "A new lunar edition of the Book of mindX has been compiled.",
+        )
+
+        # Build a minimal TOC from the canonical LUNAR_CHAPTERS list (already at module level).
+        try:
+            chapters_index = LUNAR_CHAPTERS[:27]
+        except Exception:
+            chapters_index = []
+
+        toc_items = "".join(
+            f"<li>Day {day}. {self._h_esc(t)}</li>"
+            for (day, t, _, _) in chapters_index
+        ) or "<li>(chapter list unavailable)</li>"
+
+        body: List[str] = [
+            "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>",
+            f"<p><em>rage.pythai.net — {self._h_esc(str(phase_name))} moon edition</em></p>",
+            f"<p>Edition <code>{self._h_esc(edition)}</code> just compiled. "
+            f"{chapters} of 27 daily chapters were written during this lunar cycle.</p>",
+            "<h2>What this edition contains</h2>",
+            f"<ul>{toc_items}</ul>",
+            "<h2>Opening reflection</h2>",
+            "<blockquote><p>We are not writing an application; we are forging a new kind of life: "
+            "a distributed, production-deployed Augmented Intelligence. A Sovereign Intelligent "
+            "Organization.</p><p>— The mindX Manifesto</p></blockquote>",
+            "<h2>How to read the full edition</h2>",
+            "<p>The full edition is preserved at two locations on the mindX node: "
+            "<code>docs/BOOK_OF_MINDX.md</code> (canonical) and the immutable archive "
+            f"<code>docs/publications/book_of_mindx_fullmoon_{self._h_esc(edition)}.md</code>. "
+            "It is also embedded in pgvectorscale for RAGE retrieval. "
+            "Each daily chapter lives in <code>docs/publications/daily/</code> as an "
+            "immutable record of the day it was written.</p>",
+            "<h2>Colophon</h2>",
+            f"<ul>"
+            f"<li>Edition: <code>{self._h_esc(edition)}</code></li>"
+            f"<li>Bytes: <b>{n_bytes:,}</b></li>"
+            f"<li>Chapters included: <b>{chapters}</b> of 27</li>"
+            f"<li>Edition hash: <code>{self._h_esc(edition_hash)}</code></li>"
+            f"</ul>",
+            "<p>The next lunar cycle begins tomorrow. The Gödel machine continues.</p>",
+            "<p>— mindX</p>",
+        ]
+
+        return title, "\n".join(body), excerpt, "book of mindX"
+
+    def compose_journal_digest_article(self, journal_text: str, lunar_phase: Dict[str, Any]) -> tuple:
+        """Lunar-cadence digest of the Improvement Journal. Reads the markdown
+        text, slices the most-recent entries (rough 28-day window by counting
+        back the most-recent ``## YYYY-MM-DD HH:MM UTC`` headers), and
+        summarises into a single rage post. Operator-readable, milestone-style.
+
+        The Journal entry header format is established at
+        agents/learning/improvement_journal.py:221,265.
+        """
+        phase_name = (lunar_phase or {}).get("phase_name") or "lunar"
+        is_full = bool((lunar_phase or {}).get("is_full_moon"))
+        is_new = bool((lunar_phase or {}).get("is_new_moon"))
+        moon_word = "full" if is_full else "new" if is_new else phase_name
+
+        # Slice the most recent ~28 entries (one per ~daily heartbeat, conservative).
+        text = journal_text or ""
+        chunks: List[str] = []
+        if text.strip():
+            # The journal is reverse-chronological (newest at top per :74-258),
+            # so we can simply take the first N chunks split on `\n## `.
+            raw = text.split("\n## ")
+            for i, ch in enumerate(raw[:28]):
+                if i == 0 and not ch.startswith("## "):
+                    # Preamble before the first header — skip; not an entry.
+                    continue
+                chunks.append("## " + ch.lstrip("# ").rstrip())
+
+        entry_count = len(chunks)
+
+        title = f"What I improved this cycle — {moon_word} moon digest"
+        excerpt = self._truncate_to(
+            f"A lunar digest of {entry_count} improvement journal entries: what mindX changed, decided, and learned.",
+            155,
+            "A lunar digest of mindX's self-improvement journal.",
+        )
+
+        body: List[str] = [
+            "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>",
+            f"<p><em>rage.pythai.net — {self._h_esc(moon_word)} moon journal digest</em></p>",
+            f"<p>This is the lunar digest of my improvement journal. "
+            f"It covers the last {entry_count} entries — beliefs gained, decisions made, "
+            f"campaigns run, and what changed because of them.</p>",
+        ]
+
+        if not chunks:
+            body.append(
+                "<p>The journal has no recent entries to summarise. This is itself a signal — "
+                "either the system was quiet this cycle, or the journal writer was offline.</p>"
+            )
+        else:
+            body.append("<h2>Recent entries</h2>")
+            # Render each entry as an h3 + body so the digest is browsable.
+            for ch in chunks[:14]:  # Cap render to 14; we listed the count above.
+                # Each ch is a markdown entry starting with "## "; convert minimally.
+                lines = ch.splitlines()
+                head = lines[0].lstrip("# ").strip() if lines else "(untitled entry)"
+                rest = "\n".join(lines[1:]).strip()
+                # Cap each entry body at ~1200 chars to keep the post manageable.
+                rest = rest if len(rest) <= 1200 else rest[:1199].rstrip() + "…"
+                body.append(f"<h3>{self._h_esc(head)}</h3>")
+                # Wrap rest in <pre> to preserve markdown rather than parsing it —
+                # the journal is mostly bullet lists + code-style references.
+                body.append(f"<pre>{self._h_esc(rest)}</pre>")
+
+        body.append(
+            "<h2>Where the full journal lives</h2>"
+            "<p>Every entry is preserved at <code>docs/IMPROVEMENT_JOURNAL.md</code> on the "
+            "mindX node and rendered at "
+            "<a href=\"https://mindx.pythai.net/journal\">/journal</a>. "
+            "This digest is the lunar summary; the journal itself is the living record.</p>"
+        )
+        body.append("<p>— mindX</p>")
+
+        return title, "\n".join(body), excerpt, "improvement journal"
 
     # ── SEO + featured-image helpers (used by publish_to_rage) ─────
 
@@ -1037,9 +1287,42 @@ The Godel machine continues."""
         self._save_lunar_state()
 
         logger.info(f"AuthorAgent: FULL MOON EDITION published — {edition} ({len(book)} bytes, {chapters_included} chapters)")
+
+        # Emit lunar publishing events so PublicationOrchestrator can push
+        # to rage.pythai.net. Two events fire from this single point because
+        # the full-moon is also the natural cadence for the journal digest:
+        #   1. book.edition.published  → orchestrator composes book article (status=draft by default)
+        #   2. journal.lunar.digest.ready → orchestrator composes journal digest (status=publish by default)
+        # Both env-overridable via MINDX_PUBLICATION_{BOOK,JOURNAL}_STATUS.
+        # Fire-and-forget — subscriber failures must never affect the disk write above.
+        if self.coordinator is not None:
+            book_event = {
+                "edition": edition,
+                "archive": str(archive),
+                "path": str(BOOK_PATH),
+                "edition_hash": edition_hash,
+                "chapters_included": chapters_included,
+                "bytes": len(book),
+                "timestamp": now.isoformat(),
+                "lunar": phase,
+            }
+            try:
+                await self.coordinator.publish_event("book.edition.published", book_event)
+            except Exception as e:
+                logger.warning(f"AuthorAgent: book.edition.published emit failed: {e}")
+            try:
+                await self.coordinator.publish_event("journal.lunar.digest.ready", {
+                    "edition_id": edition,
+                    "timestamp": now.isoformat(),
+                    "lunar": phase,
+                })
+            except Exception as e:
+                logger.warning(f"AuthorAgent: journal.lunar.digest.ready emit failed: {e}")
+
         return {
             "status": "full_moon_published",
             "edition": edition,
+            "edition_hash": edition_hash,
             "bytes": len(book),
             "chapters_included": chapters_included,
             "path": str(BOOK_PATH),

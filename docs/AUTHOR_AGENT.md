@@ -305,8 +305,50 @@ returns `None`. The wordpress-agent itself retries 5xx with backoff.
   `doc_path` (a markdown file under `docs/`, rendered to HTML), `markdown`, or
   `html`; `status` defaults to `draft`.
 - Diagnostics: `GET /diagnostics/live` → `author.rage_publishes`,
-  `author.last_rage_url`.
+  `author.last_rage_url`. `GET /insight/publications/health` → orchestrator
+  liveness + per-source status defaults + ledger state.
 - Full guide: [`docs/WORDPRESS_PUBLISHING.md`](WORDPRESS_PUBLISHING.md).
+
+### Autonomous publishing — AuthorAgent is the canonical writer
+
+`publish_to_rage()` is the low-level transport. The autonomous publishing
+pipeline (see [`docs/publications/README.md`](publications/README.md) and
+[`docs/SEA_MILESTONES.md`](SEA_MILESTONES.md)) calls it via
+PublicationOrchestrator, which owns ledger / debounce / rate-limit /
+status policy and **delegates article composition to AuthorAgent** for the
+rich surfaces. Established pattern: `agents/learning/improvement_journal.py:76-87`
+already delegates journal entry authorship to AuthorAgent.
+
+Three rich composers live alongside `publish_to_rage`:
+
+| Method | Triggered by | Default rage status |
+|---|---|---|
+| `compose_milestone_article(campaign_summary)` | SEA campaign with `is_milestone=true` (event `sea.campaign.concluded`) | `publish` |
+| `compose_book_edition_article(book_event)` | AuthorAgent's own `_full_moon_publish` (event `book.edition.published`) | `draft` |
+| `compose_journal_digest_article(journal_text, lunar_phase)` | Full-moon co-fire from AuthorAgent (event `journal.lunar.digest.ready`) | `publish` |
+
+Each returns the `(title, content_html, excerpt, topic)` tuple shape the
+orchestrator passes to `publish_to_rage`. All env-overridable via
+`MINDX_PUBLICATION_{MILESTONE,BOOK,JOURNAL}_STATUS`.
+
+### Lunar events emitted by `_full_moon_publish()`
+
+When the full-moon compilation writes the new Book of mindX edition,
+AuthorAgent emits two coordinator events (`self.coordinator.publish_event`)
+back-to-back:
+
+1. `book.edition.published` → PublicationOrchestrator composes a rage post
+   linking to the published edition with a curated TOC + colophon
+2. `journal.lunar.digest.ready` → PublicationOrchestrator reads
+   `docs/IMPROVEMENT_JOURNAL.md` and asks AuthorAgent's journal-digest
+   composer to summarise the lunar cycle
+
+`self.coordinator` is set by `mindx_backend_service/main_service.py` right
+after `AuthorAgent.get_instance()` in the orchestrator spawn block. If
+the coordinator is missing (e.g., dev harness with no event bus),
+AuthorAgent's lunar disk writes still happen — the events are simply not
+emitted, and the file-polling watcher will pick up the dream-cycle book
+edition trigger as a fallback.
 
 ## Key Files
 

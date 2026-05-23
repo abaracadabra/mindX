@@ -307,13 +307,16 @@ class MachineDreamCycle:
     I distill experience into knowledge. I distribute, I do not delete.
     """
 
-    def __init__(self, memory_agent=None, config=None, days_back: int = 90):
+    def __init__(self, memory_agent=None, config=None, days_back: int = 90, coordinator=None):
         self.memory_agent = memory_agent
         self.config = config or Config()
         self.log_prefix = "[MachineDream]"
         self.days_back = days_back  # Look back window for STM analysis
         self._existing_ltm_keys: set = set()
         self.clock = DreamClock()
+        # Optional CoordinatorAgent for pub/sub notifications when a book-edition
+        # dream report is written (PublicationOrchestrator listens for these).
+        self.coordinator = coordinator
 
     # === PHASE 1: STATE ASSESSMENT ===
 
@@ -1235,6 +1238,16 @@ class MachineDreamCycle:
             )
         except Exception as e:
             logger.warning(f"{self.log_prefix} Failed to save dream report: {e}")
+
+        # Notify subscribers (e.g. PublicationOrchestrator) when a book edition
+        # was triggered, so autopublish fires within the same tick rather than
+        # waiting for the 60s file-polling fallback. Fire-and-forget — failures
+        # in subscribers must never affect the dream cycle.
+        if book_edition_due and self.coordinator is not None:
+            try:
+                await self.coordinator.publish_event("dream.report.written", report)
+            except Exception as ev_e:
+                logger.warning(f"{self.log_prefix} publish_event failed: {ev_e}")
 
         # Log as memory
         if self.memory_agent:
