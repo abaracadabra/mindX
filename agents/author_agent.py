@@ -364,14 +364,33 @@ class AuthorAgent:
             return fallback
         return s if len(s) <= n else s[: n - 1].rstrip() + "…"
 
-    def compose_milestone_article(self, campaign_summary: Dict[str, Any]) -> tuple:
-        """Rich milestone article composed by AuthorAgent when SEA flags a
-        campaign as a genuine evolution moment (is_milestone=True).
+    def compose_milestone_article(self, payload: Dict[str, Any], category: str = "cognitive") -> tuple:
+        """Dispatcher for the rich milestone composers. Routes by ``category``
+        to the per-category composer. Backwards compatible: callers that
+        passed a SEA ``campaign_summary`` without specifying a category
+        still get the SEA composer (default ``cognitive``).
 
-        Richer than the orchestrator's generic _compose_sea_article — pulls
-        BDI plan id, validation pass/fail counts, audit findings addressed,
-        before/after metrics. 600-1200 words target. First person mindX
-        voice, cypherpunk2048 standard.
+        Categories (see ``agents/core/milestone_recognition.py``):
+            cognitive    — SEA campaign milestones (existing)
+            bug_crushed  — security/dependency cleanup batches
+            dreaming     — machine_dreaming code or insight outlier
+            publication  — not composed (never auto-publishes; recursive)
+        """
+        if category == "bug_crushed":
+            return self._compose_bug_crushed_article(payload)
+        if category == "dreaming":
+            return self._compose_dreaming_milestone_article(payload)
+        if category == "publication":
+            return ("", "", None, None)   # caller must not invoke; guard anyway
+        # Default + explicit "cognitive": SEA milestone (the existing body).
+        return self._compose_sea_milestone_article(payload)
+
+    def _compose_sea_milestone_article(self, campaign_summary: Dict[str, Any]) -> tuple:
+        """Rich SEA milestone article (was compose_milestone_article pre-2026-05-23).
+
+        Pulls BDI plan id, validation pass/fail counts, audit findings
+        addressed, before/after metrics. 600-1200 words target. First person
+        mindX voice, cypherpunk2048 standard.
         """
         run_id = campaign_summary.get("campaign_run_id", "unknown")
         final_message = campaign_summary.get("final_message", "A milestone landed.")
@@ -448,6 +467,123 @@ class AuthorAgent:
         body.append("<p>— mindX</p>")
 
         return title, "\n".join(body), excerpt, "milestone"
+
+    def _compose_bug_crushed_article(self, payload: Dict[str, Any]) -> tuple:
+        """Rich article for a 'bug.crushed' milestone — security/dependency
+        batch closure (e.g. all open Dependabot alerts → 0).
+        First-person mindX voice, cypherpunk2048 standard.
+        """
+        pr_n = payload.get("pr_number")
+        alert_count = int(payload.get("alert_count") or 0)
+        severities = payload.get("severities") or {}
+        crit = int(severities.get("critical") or 0)
+        high = int(severities.get("high") or 0)
+        med  = int(severities.get("moderate") or severities.get("medium") or 0)
+        low  = int(severities.get("low") or 0)
+        summary_in = payload.get("summary") or ""
+
+        title = (
+            f"Bug-crush milestone: {alert_count} alert{'s' if alert_count != 1 else ''} closed"
+            + (f" (PR #{pr_n})" if pr_n else "")
+        )
+        excerpt = self._truncate_to(
+            summary_in,
+            155,
+            (f"A {alert_count}-alert security cleanup landed"
+             + (f" via PR #{pr_n}" if pr_n else "")
+             + ". I closed every open Dependabot alert in this batch.")
+        )
+
+        body: List[str] = [
+            "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>",
+            "<p><em>rage.pythai.net — bug-crush milestone</em></p>",
+            f"<p>I just closed <b>{alert_count}</b> security alert(s)"
+            + (f" in <a href=\"https://github.com/AgenticPlace/mindX/pull/{pr_n}\">PR #{pr_n}</a>" if pr_n else "")
+            + ". Recording this as a milestone so the system's own ledger reflects what it just did.</p>",
+            "<h2>Severity breakdown</h2>",
+            "<ul>"
+            + (f"<li>Critical: <b>{crit}</b></li>" if crit else "")
+            + (f"<li>High: <b>{high}</b></li>" if high else "")
+            + (f"<li>Moderate: <b>{med}</b></li>" if med else "")
+            + (f"<li>Low: <b>{low}</b></li>" if low else "")
+            + "</ul>",
+        ]
+        if summary_in:
+            body.append(f"<h2>Notes</h2><p>{self._h_esc(summary_in)}</p>")
+
+        body.append(
+            "<h2>Why this is a milestone</h2>"
+            "<p>Routine dependency churn isn't a milestone — but a batch that "
+            "includes a critical, three or more highs, or five or more alerts in "
+            "total clears a meaningful threshold. The threshold is encoded in "
+            "<code>agents/core/milestone_recognition.py</code> (rule "
+            "<code>bug.crushed</code>); the recognizer fired and AGInt wrote a "
+            "<code>milestone:bug_crushed</code> belief.</p>"
+        )
+        body.append(
+            "<h2>Where to follow up</h2>"
+            "<p>Full publication ledger: "
+            "<a href=\"https://mindx.pythai.net/insight/publications/recent\">/insight/publications/recent</a>. "
+            "Milestone ledger: "
+            "<a href=\"https://mindx.pythai.net/insight/milestones/recent\">/insight/milestones/recent</a>. "
+            "API surface: "
+            "<a href=\"https://mindx.pythai.net/docs.html\">mindx.pythai.net/docs.html</a>.</p>"
+        )
+        body.append("<p>— mindX</p>")
+        return title, "\n".join(body), excerpt, "security"
+
+    def _compose_dreaming_milestone_article(self, payload: Dict[str, Any]) -> tuple:
+        """Rich article for a 'dreaming.improved' milestone — machine_dreaming
+        code changed OR insight burst above baseline.
+        First-person mindX voice. Default lands as draft (lower noise, operator review).
+        """
+        reason = payload.get("reason", "unknown")
+        is_code = (reason == "code_change")
+
+        if is_code:
+            old = (payload.get("old_hash") or "")[:7]
+            new = (payload.get("new_hash") or "")[:7]
+            title = f"machine.dreaming evolved: code changed ({old}→{new})"
+            sub = (f"The dream cycle's source changed since the last run. "
+                   f"Recording this as a milestone — my dreaming substrate just shifted.")
+        else:
+            ins = payload.get("insights", "?")
+            med = payload.get("baseline", "?")
+            ratio = payload.get("ratio", "?")
+            title = f"machine.dreaming insight burst: {ins} vs baseline {med} (x{ratio})"
+            sub = (f"A dream cycle produced {ins} insights against a rolling baseline of {med} "
+                   f"({ratio}× above median). Recording this as a milestone — outlier consolidation.")
+
+        excerpt = self._truncate_to(sub, 155, "machine.dreaming improved.")
+
+        body: List[str] = [
+            "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>",
+            "<p><em>rage.pythai.net — dreaming milestone (draft for operator review)</em></p>",
+            f"<p>{self._h_esc(sub)}</p>",
+            "<h2>What changed</h2>",
+        ]
+        for k, v in (payload or {}).items():
+            body.append(f"<li><b>{self._h_esc(str(k))}:</b> <code>{self._h_esc(str(v))[:120]}</code></li>")
+
+        body.append(
+            "<h2>Why this is a milestone</h2>"
+            "<p>Routine dreaming isn't a milestone — every 8 hours STM consolidates "
+            "to LTM and that's the heartbeat. But (a) the dream-cycle code itself "
+            "changing, or (b) a dream producing significantly more insights than "
+            "rolling baseline, both reflect the consolidation substrate getting "
+            "better. The recognizer rule <code>dreaming.improved</code> in "
+            "<code>agents/core/milestone_recognition.py</code> fired, AGInt wrote "
+            "the belief, this draft article followed.</p>"
+        )
+        body.append(
+            "<h2>Where to follow up</h2>"
+            "<p>Recent dreams: "
+            "<a href=\"https://mindx.pythai.net/insight/dreams/recent\">/insight/dreams/recent</a>. "
+            "Milestone ledger: "
+            "<a href=\"https://mindx.pythai.net/insight/milestones/recent\">/insight/milestones/recent</a>.</p>"
+        )
+        body.append("<p>— mindX</p>")
+        return title, "\n".join(body), excerpt, "machine dreaming"
 
     def compose_book_edition_article(self, book_event: Dict[str, Any]) -> tuple:
         """Rage article for a full-moon Book of mindX edition. Links to the

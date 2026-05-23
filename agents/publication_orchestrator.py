@@ -56,6 +56,36 @@ DEFAULT_MIN_GAP_S       = 21600    # 6 hours
 DEFAULT_POLL_INTERVAL_S = 60       # how often watchers check their sources
 
 
+async def _emit_pub(
+    coordinator: Optional[Any],
+    topic: str,
+    payload: Dict[str, Any],
+) -> None:
+    """Emit a publication.* event to (1) the catalogue (always), (2) the
+    coordinator pub/sub (if present). Both paths are best-effort —
+    failures must never affect the publish flow.
+
+    This is what AGInt's milestone recognizer subscribes to.
+    """
+    # Catalogue mirror (always).
+    try:
+        from agents.catalogue import emit_catalogue_event
+        await emit_catalogue_event(
+            kind=topic,
+            actor="publication_orchestrator",
+            payload=payload,
+            source_log="data/governance/published_triggers.json",
+        )
+    except Exception:
+        pass
+    # Coordinator pub/sub (only if wired).
+    if coordinator is not None:
+        try:
+            await coordinator.publish_event(topic, payload)
+        except Exception:
+            pass
+
+
 @dataclass
 class LedgerEntry:
     """One persisted publish record."""
@@ -486,6 +516,12 @@ class PublicationOrchestrator:
                 detected_at=detected_at,
                 note=f"within MIN_GAP_S={int(self.min_gap_s)}s",
             )
+            await _emit_pub(self.coordinator, "publication.coalesced", {
+                "trigger_id": trigger_id,
+                "kind": kind,
+                "detected_at": detected_at,
+                "reason": f"within MIN_GAP_S={int(self.min_gap_s)}s",
+            })
             return
 
         # Compute the jittered delay. Bound stays within ± jitter_fraction.
@@ -512,6 +548,12 @@ class PublicationOrchestrator:
                 detected_at=detected_at,
                 note=f"raced past delay; MIN_GAP_S={int(self.min_gap_s)}s",
             )
+            await _emit_pub(self.coordinator, "publication.coalesced", {
+                "trigger_id": trigger_id,
+                "kind": kind,
+                "detected_at": detected_at,
+                "reason": f"raced past delay; MIN_GAP_S={int(self.min_gap_s)}s",
+            })
             return
 
         # Compose + publish.
@@ -531,6 +573,17 @@ class PublicationOrchestrator:
         }
 
         publish_status = self._default_status_for_source(kind)
+
+        # Emit publication.attempted BEFORE the wire call so the catalogue
+        # records the intent even if the wordpress-agent is down.
+        await _emit_pub(self.coordinator, "publication.attempted", {
+            "trigger_id": trigger_id,
+            "kind": kind,
+            "title": title,
+            "status": publish_status,
+            "detected_at": detected_at,
+        })
+
         try:
             result = await self.author.publish_to_rage(
                 title=title,
@@ -567,6 +620,20 @@ class PublicationOrchestrator:
             f"PublicationOrchestrator: published {trigger_id} (status={publish_status}) → "
             f"post_id={result.get('post_id')} url={result.get('url')}"
         )
+
+        # Emit publication.published AFTER the ledger write so any subscriber
+        # (incl. AGInt's milestone recognizer) sees a consistent view —
+        # ledger contains it, catalogue contains it, coordinator fires.
+        await _emit_pub(self.coordinator, "publication.published", {
+            "trigger_id": trigger_id,
+            "kind": kind,
+            "title": title,
+            "status": publish_status,
+            "post_id": int(result.get("post_id")) if result.get("post_id") else None,
+            "url": result.get("url"),
+            "slug": result.get("slug"),
+            "published_at": published_at,
+        })
 
     def _compute_delay(self) -> float:
         """jittered delay = base × (1 + uniform(-jitter, +jitter))."""

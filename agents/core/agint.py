@@ -38,6 +38,7 @@ class DecisionType(Enum):
     PERFORM_TASK = "PERFORM_TASK"
     SELF_IMPROVEMENT = "SELF_IMPROVEMENT"
     STRATEGIC_EVOLUTION = "STRATEGIC_EVOLUTION"
+    RECOGNIZE_MILESTONE = "RECOGNIZE_MILESTONE"   # reserved for Q-learning over milestone classification
 
 class AGInt:
     def __init__(self,
@@ -64,6 +65,17 @@ class AGInt:
         self.coordinator_agent = coordinator_agent
         self.memory_agent = memory_agent or MemoryAgent(config=self.config)
         self.tools: Dict[str, Any] = kwargs.get('tools', {})
+
+        # Keep a reference to the BeliefSystem so milestone recognition can
+        # persist `milestone:*` beliefs (see _on_milestone_candidate_event).
+        # The BeliefSystem is a singleton — same instance everywhere.
+        self.belief_system = belief_system
+
+        # Milestone-recognition liveness diagnostics (read by
+        # /insight/milestones/health). Bumped on every successful classify.
+        self._milestones_classified_total: int = 0
+        self._last_milestone_classified_at: Optional[float] = None
+        self._milestones_per_category: Dict[str, int] = {}
         
         self.status = AgentStatus.INACTIVE
         self.primary_directive: Optional[str] = None
@@ -86,6 +98,142 @@ class AGInt:
             require_file_changes=True,
             require_tests_pass=False
         )
+
+        # ─── Milestone recognition — subscribe to coordinator topics ───
+        # The cognitive-core layer (AGInt) recognizes system milestones from
+        # coordinator pub/sub events. Pure-function classifier rules live in
+        # agents/core/milestone_recognition.py; this hook persists positive
+        # classifications into BeliefSystem + mirrors to catalogue + fires
+        # `milestone.recognized` for downstream consumers (autopublish, /insight).
+        if self.coordinator_agent is not None:
+            try:
+                from agents.core import milestone_recognition as _mr
+                for topic in _mr.topics_to_subscribe():
+                    self.coordinator_agent.subscribe(topic, self._on_milestone_candidate_event)
+                logger.info(
+                    f"{self.log_prefix} milestone recognizer subscribed to "
+                    f"{_mr.topics_to_subscribe()}"
+                )
+            except Exception as e:
+                logger.warning(f"{self.log_prefix} milestone recognizer subscribe failed: {e}")
+
+    async def _on_milestone_candidate_event(self, payload: Dict[str, Any]) -> None:
+        """Coordinator subscriber for ALL milestone-candidate topics.
+        Classifies via pure-function rules; persists positive results.
+        Never raises — failures here must not block the publisher."""
+        # Coordinator delivers (payload). We infer the topic from the rule chain
+        # by trying each: classify() iterates rules and returns the first hit.
+        # In practice we re-derive topic from payload heuristics; but since
+        # each rule is one-topic, classify(topic, payload) is the contract —
+        # so we route by trying all known topics until one matches.
+        try:
+            from agents.core import milestone_recognition as _mr
+            milestone = None
+            for topic in _mr.topics_to_subscribe():
+                m = _mr.classify(topic, payload)
+                if m is not None:
+                    milestone = m
+                    break
+            if milestone is None:
+                return
+            await self._record_milestone(milestone, source_topic=milestone.recognizer)
+        except Exception as e:
+            logger.warning(f"{self.log_prefix} milestone classify failed: {e}")
+
+    async def _record_milestone(self, milestone, *, source_topic: str) -> None:
+        """Persist + mirror + emit a recognized milestone.
+        Three side effects, each independently safe-fail:
+          1. BeliefSystem.add_belief(key, value, BeliefSource.DERIVED, confidence)
+          2. catalogue emit_catalogue_event(kind='milestone.recognized', ...)
+          3. coordinator.publish_event('milestone.recognized', ...)
+        """
+        from agents.core.belief_system import BeliefSource
+        # 1. Belief persistence (skip if already recorded — idempotent)
+        try:
+            existing = await self.belief_system.get_belief(milestone.key)
+            if existing is None:
+                await self.belief_system.add_belief(
+                    key=milestone.key,
+                    value=milestone.belief_value(),
+                    confidence=milestone.confidence,
+                    source=BeliefSource.DERIVED,
+                    metadata={
+                        "recognizer": milestone.recognizer,
+                        "category": milestone.category,
+                        "source_topic": source_topic,
+                    },
+                )
+                logger.info(
+                    f"{self.log_prefix} milestone recognized: {milestone.category} → "
+                    f"{milestone.key} (confidence={milestone.confidence})"
+                )
+            else:
+                # Already known; bump nothing.
+                return
+        except Exception as e:
+            logger.warning(f"{self.log_prefix} milestone belief write failed: {e}")
+            return
+
+        # 2. Catalogue mirror
+        try:
+            from agents.catalogue import emit_catalogue_event
+            await emit_catalogue_event(
+                kind="milestone.recognized",
+                actor=f"agint.{self.agent_id}",
+                payload={
+                    "category": milestone.category,
+                    "key": milestone.key,
+                    "summary": milestone.summary,
+                    "confidence": milestone.confidence,
+                    "recognizer": milestone.recognizer,
+                    "autopublish_status": milestone.autopublish_status,
+                    "evidence": milestone.evidence,
+                },
+                source_log="data/memory/beliefs.json",
+            )
+        except Exception:
+            pass
+
+        # 3. Coordinator event for downstream consumers (autopublish, /feedback, …)
+        if self.coordinator_agent is not None:
+            try:
+                await self.coordinator_agent.publish_event("milestone.recognized", {
+                    "category": milestone.category,
+                    "key": milestone.key,
+                    "summary": milestone.summary,
+                    "confidence": milestone.confidence,
+                    "recognizer": milestone.recognizer,
+                    "autopublish_status": milestone.autopublish_status,
+                    "evidence": milestone.evidence,
+                })
+            except Exception:
+                pass
+
+        # Diagnostics
+        import time as _t
+        self._milestones_classified_total += 1
+        self._last_milestone_classified_at = _t.time()
+        self._milestones_per_category[milestone.category] = (
+            self._milestones_per_category.get(milestone.category, 0) + 1
+        )
+
+    def get_milestone_health(self) -> Dict[str, Any]:
+        """Snapshot for /insight/milestones/health — recognizer liveness."""
+        try:
+            from agents.core import milestone_recognition as _mr
+            categories = list(_mr.ALL_CATEGORIES)
+            topics = _mr.topics_to_subscribe()
+        except Exception:
+            categories = []
+            topics = []
+        return {
+            "recognizer_alive": self.coordinator_agent is not None,
+            "subscribed_topics": topics,
+            "categories": categories,
+            "last_classified_at": self._last_milestone_classified_at,
+            "classified_total": self._milestones_classified_total,
+            "per_category_counts": dict(self._milestones_per_category),
+        }
 
     def start(self, directive: str):
         if self.status == AgentStatus.RUNNING: return

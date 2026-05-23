@@ -4953,6 +4953,110 @@ async def insight_publications_health(request: Request):
     return _maybe_h_text(request, health, route_path="/insight/publications/health")
 
 
+# ── Milestone recognition surfaces ─────────────────────────────────
+# Read directly from BeliefSystem (the singleton AGInt's recognizer writes
+# to). Decoupled from any specific AGInt instance; persists across restarts.
+
+async def _query_milestones(prefix: str = "milestone:", limit: int = 50, min_confidence: float = 0.0):
+    """Shared helper — pulls milestone beliefs in reverse chronological order."""
+    try:
+        from agents.core.belief_system import BeliefSystem
+        bs = BeliefSystem()
+        rows = await bs.query_beliefs(prefix, min_confidence=min_confidence)
+    except Exception as e:
+        return [], str(e)
+    # rows: List[Tuple[str, Belief]]; sort by Belief.last_updated desc
+    items = []
+    for key, belief in rows:
+        items.append({
+            "key": key,
+            "category": (belief.value or {}).get("category") if isinstance(belief.value, dict) else None,
+            "summary":  (belief.value or {}).get("summary")  if isinstance(belief.value, dict) else None,
+            "confidence": belief.confidence,
+            "recognized_at": belief.last_updated,
+            "evidence": (belief.value or {}).get("evidence") if isinstance(belief.value, dict) else None,
+            "autopublish_status": (belief.value or {}).get("autopublish_status") if isinstance(belief.value, dict) else None,
+        })
+    items.sort(key=lambda x: (x.get("recognized_at") or 0), reverse=True)
+    return items[:max(1, min(limit, 200))], None
+
+
+@app.get("/insight/milestones/recent", tags=["insight"])
+@_insight_safe
+async def insight_milestones_recent(request: Request, limit: int = 20):
+    """Most-recently recognized milestones across all categories.
+
+    Reads BeliefSystem keys with prefix ``milestone:`` written by AGInt's
+    milestone recognizer (``agents/core/milestone_recognition.py``).
+    Reverse chronological. ``limit`` clamped to [1, 200].
+    """
+    items, err = await _query_milestones(limit=limit)
+    return _maybe_h_text(request, {
+        "milestones": items,
+        "count": len(items),
+        "error": err,
+        "computed_at": time.time(),
+    }, route_path="/insight/milestones/recent")
+
+
+@app.get("/insight/milestones/health", tags=["insight"])
+@_insight_safe
+async def insight_milestones_health(request: Request):
+    """Liveness + counts for the milestone recognizer.
+
+    Reports the four configured categories, per-category counts (from
+    BeliefSystem), env-resolved autopublish defaults, and the latest
+    recognition timestamp. Does NOT depend on a running AGInt instance —
+    queries the persistent BeliefSystem singleton directly.
+    """
+    import os as _os
+    from agents.core import milestone_recognition as _mr
+    items, err = await _query_milestones(limit=200)
+    per_cat: Dict[str, int] = {}
+    last_ts = 0.0
+    for m in items:
+        c = m.get("category") or "unknown"
+        per_cat[c] = per_cat.get(c, 0) + 1
+        ts = m.get("recognized_at") or 0
+        if ts > last_ts:
+            last_ts = ts
+    payload = {
+        "recognizer_categories":     list(_mr.ALL_CATEGORIES),
+        "subscribed_topics":         _mr.topics_to_subscribe(),
+        "milestones_total":          len(items),
+        "per_category_counts":       per_cat,
+        "last_recognized_at":        last_ts or None,
+        "autopublish_defaults": {
+            "publication":  _os.environ.get("MINDX_MILESTONE_PUBLICATION_STATUS",  "none"),
+            "bug_crushed":  _os.environ.get("MINDX_MILESTONE_BUG_CRUSHED_STATUS",  "publish"),
+            "cognitive":    _os.environ.get("MINDX_MILESTONE_COGNITIVE_STATUS",    "publish"),
+            "dreaming":     _os.environ.get("MINDX_MILESTONE_DREAMING_STATUS",     "draft"),
+        },
+        "error": err,
+        "computed_at": time.time(),
+    }
+    return _maybe_h_text(request, payload, route_path="/insight/milestones/health")
+
+
+@app.get("/insight/milestones/{category}/recent", tags=["insight"])
+@_insight_safe
+async def insight_milestones_by_category(request: Request, category: str, limit: int = 20):
+    """Filtered view: only milestones in ``category`` (one of publication,
+    bug_crushed, cognitive, dreaming)."""
+    from agents.core import milestone_recognition as _mr
+    if category not in _mr.ALL_CATEGORIES:
+        return {"error": f"unknown category '{category}'; valid: {list(_mr.ALL_CATEGORIES)}"}
+    prefix = f"milestone:{category}:"
+    items, err = await _query_milestones(prefix=prefix, limit=limit)
+    return _maybe_h_text(request, {
+        "category": category,
+        "milestones": items,
+        "count": len(items),
+        "error": err,
+        "computed_at": time.time(),
+    }, route_path="/insight/milestones/{category}/recent")
+
+
 # ── ?h=true plain-text rendering for /insight/* and /storage/* ──
 # Plan: ~/.claude/plans/luminous-humming-knuth.md
 
@@ -10198,6 +10302,56 @@ async def publish_to_rage(req: PublishToRageRequest, _wallet: str = Depends(requ
     if result is None:
         raise HTTPException(status_code=502, detail="wordpress-agent unreachable or rejected the post; see logs")
     return {"status": "ok", "wordpress": result}
+
+
+# ── Bug-crushed milestone trigger ──────────────────────────────────
+# Operator-callable endpoint that fires a 'bug.crushed' coordinator event
+# (security/dependency batch closed). AGInt's milestone recognizer picks it
+# up, classifies, and — if it meets the major threshold (>=5 alerts, OR 1+
+# critical, OR 3+ high) — composes a milestone article via AuthorAgent.
+
+class BugCrushedRequest(BaseModel):
+    """Body for POST /admin/recognize/bug-crushed."""
+    pr_number: Optional[int] = Field(default=None, description="GitHub PR number, if any")
+    alert_count: int = Field(..., ge=0, description="Total security alerts closed in this batch")
+    severities: Dict[str, int] = Field(
+        default_factory=dict,
+        description="Severity breakdown, e.g. {\"critical\": 1, \"high\": 11, \"moderate\": 12, \"low\": 1}",
+    )
+    summary: Optional[str] = Field(default=None, description="One-line summary (for the rage article if it autopublishes)")
+
+
+@app.post(
+    "/admin/recognize/bug-crushed",
+    summary="Fire a bug.crushed coordinator event for milestone recognition",
+    tags=["admin"],
+)
+async def recognize_bug_crushed(
+    req: BugCrushedRequest,
+    _wallet: str = Depends(require_admin_access),
+):
+    """Operator-callable trigger for the 'bug.crushed' milestone category.
+    AGInt's recognizer classifies + persists + (if major) autopublishes via
+    the existing PublicationOrchestrator chain.
+
+    Use after merging a security-batch PR. Idempotent on (pr_number, batch).
+    """
+    coord = getattr(app.state, "coordinator", None) or getattr(app.state, "coordinator_instance", None)
+    payload = req.model_dump()
+    if coord is None:
+        # Fall back: try to import the coordinator singleton.
+        try:
+            from agents.orchestration.coordinator_agent import get_coordinator_agent_mindx_async
+            coord = await get_coordinator_agent_mindx_async()
+        except Exception as e:
+            raise HTTPException(status_code=503, detail=f"coordinator not reachable: {e}")
+    if coord is None:
+        raise HTTPException(status_code=503, detail="coordinator not constructed at startup")
+    try:
+        await coord.publish_event("bug.crushed", payload)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"publish_event failed: {e}")
+    return {"status": "ok", "event": "bug.crushed", "payload": payload}
 
 
 @app.get("/core/agent-activity", summary="Get agent activity")

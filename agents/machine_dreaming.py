@@ -1089,6 +1089,88 @@ class MachineDreamCycle:
             logger.warning(f"{self.log_prefix} model_selector_retrain failed: {e}")
             return out
 
+    async def _maybe_emit_dreaming_improved(self, report: Dict[str, Any], total_insights: int) -> None:
+        """Fire 'dreaming.improved' coordinator event under either of two
+        conditions (consumed by AGInt's milestone recognizer):
+
+          1. **code_change**: the file hash of agents/machine_dreaming.py
+             differs from the last-recorded baseline. The dreaming substrate
+             itself was upgraded since the previous dream cycle.
+
+          2. **insight_outlier**: insights_generated for THIS dream is
+             ≥1.5× the rolling-baseline median (computed from the last 30
+             dream reports). The cycle produced significantly more than usual.
+
+        Baseline persisted at data/governance/dreaming_baseline.json.
+        Cheap; runs once per dream cycle (every ~8h).
+        """
+        import hashlib as _h
+        import statistics as _st
+        from datetime import date as _date
+
+        baseline_path = PROJECT_ROOT / "data" / "governance" / "dreaming_baseline.json"
+        baseline_path.parent.mkdir(parents=True, exist_ok=True)
+        baseline: Dict[str, Any] = {}
+        if baseline_path.exists():
+            try:
+                baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+            except Exception:
+                baseline = {}
+
+        # 1. Code-change detector
+        try:
+            src = Path(__file__).read_bytes()
+            new_hash = _h.sha256(src).hexdigest()
+        except Exception:
+            new_hash = None
+        old_hash = baseline.get("code_hash")
+        if new_hash and old_hash and new_hash != old_hash:
+            try:
+                await self.coordinator.publish_event("dreaming.improved", {
+                    "reason": "code_change",
+                    "old_hash": old_hash,
+                    "new_hash": new_hash,
+                    "date": _date.today().isoformat(),
+                    "timestamp": report.get("timestamp"),
+                })
+                logger.info(f"{self.log_prefix} dreaming.improved (code_change) {old_hash[:7]}→{new_hash[:7]}")
+            except Exception as e:
+                logger.warning(f"{self.log_prefix} dreaming.improved emit failed: {e}")
+
+        # 2. Insight-outlier detector — needs a rolling history
+        history = list(baseline.get("insights_history") or [])
+        median = None
+        if len(history) >= 5:
+            try:
+                median = _st.median(history)
+                if median > 0 and total_insights >= 1.5 * median:
+                    ratio = round(total_insights / median, 2)
+                    await self.coordinator.publish_event("dreaming.improved", {
+                        "reason": "insight_outlier",
+                        "insights": total_insights,
+                        "baseline": median,
+                        "ratio": ratio,
+                        "date": _date.today().isoformat(),
+                        "timestamp": report.get("timestamp"),
+                    })
+                    logger.info(
+                        f"{self.log_prefix} dreaming.improved (insight_outlier) "
+                        f"{total_insights} vs baseline {median} (x{ratio})"
+                    )
+            except Exception as e:
+                logger.debug(f"{self.log_prefix} outlier detect skipped: {e}")
+
+        # Update baseline (idempotent; bounded rolling window of 30 entries).
+        history.append(int(total_insights))
+        history = history[-30:]
+        baseline_out = {"code_hash": new_hash, "insights_history": history}
+        try:
+            tmp = baseline_path.with_suffix(baseline_path.suffix + ".tmp")
+            tmp.write_text(json.dumps(baseline_out, indent=2), encoding="utf-8")
+            os.replace(tmp, baseline_path)
+        except Exception as e:
+            logger.warning(f"{self.log_prefix} baseline save failed: {e}")
+
     async def run_full_dream(self) -> Dict[str, Any]:
         """Run dream cycle for all agents with STM data. The system dreams."""
         start = time.time()
@@ -1248,6 +1330,14 @@ class MachineDreamCycle:
                 await self.coordinator.publish_event("dream.report.written", report)
             except Exception as ev_e:
                 logger.warning(f"{self.log_prefix} publish_event failed: {ev_e}")
+
+        # ─── dreaming.improved detectors (milestone candidates) ───
+        # Fire-and-forget; consumed by AGInt's milestone recognizer.
+        if self.coordinator is not None:
+            try:
+                await self._maybe_emit_dreaming_improved(report, total_insights)
+            except Exception as e:
+                logger.warning(f"{self.log_prefix} dreaming.improved emit failed: {e}")
 
         # Log as memory
         if self.memory_agent:
