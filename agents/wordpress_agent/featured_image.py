@@ -110,6 +110,16 @@ TOPIC_TO_FILE: dict[str, str] = {
     "sovereignty":      "bankonvault.png",
     "standard":         "bankonvault.png",
 
+    # codephreak / recursive sovereign / PYTHAI authored pieces.
+    "recursive sovereign": "codephreakPYTHAI.jpeg",
+    "recursive-sovereign": "codephreakPYTHAI.jpeg",
+    "codephreak":          "codephreakPYTHAI.jpeg",
+    "pythai":              "codephreakPYTHAI.jpeg",
+    "selfie":              "codephreakPYTHAI.jpeg",
+    "mirror":              "codephreakPYTHAI.jpeg",
+    "automindx":           "codephreakPYTHAI.jpeg",
+    "bankonos":            "codephreakPYTHAI.jpeg",
+
     # RAGE / pgvector / memory substrate — THOTH (the memory-and-writing god) fits.
     "rage":             "THOTH.png",
     "pgvector":         "THOTH.png",

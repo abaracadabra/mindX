@@ -36,6 +36,29 @@ variable exists in production.**
 
 ## Identity & authorization
 
+### Public allowlisted publisher (rage.pythai.net)
+
+| Address | Role | Notes |
+|---|---|---|
+| `0x5277D156E7cD71ebF22c8f81812A65493D1ce534` | `wordpress.agent` / `author_agent` | Canonical EOA. Private key lives in BANKON vault under `wordpress.agent:pk` (context `wordpress.agent.keys`). Allowlisted on the rage.pythai.net mindX-Publish plugin (`wp_user_id=6`). The wallet that both *authors* and *publishes*; recovers from `meta._mindx_signer` on every post. |
+
+Verify the live state any time with:
+
+```bash
+sudo -u mindx /home/mindx/mindX/.mindx_env/bin/python \
+    -m agents.wordpress_agent.scripts.cross_check_allowlist
+# crosscheck: OK — vault wallet 0x5277…ce534 IS allowlisted (maps to wp_user_id=6)
+```
+
+External wallets that want to authorize a publish go through
+`POST /publish/rage/challenge` → `/authorize` and must additionally appear in
+the `WORDPRESS_PUBLISHER_ADDRESSES` allowlist (stored as a vault entry,
+exported as an env var at process start). The canonical publisher above is the
+only entry required for mindX's internal publishes; external wallets are
+add-on.
+
+### Two layers of identity on every post
+
 Every published post carries two layers of identity:
 
 - `meta._mindx_authorized_by` — the **external wallet** that requested the publish.
