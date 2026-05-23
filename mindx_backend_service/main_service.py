@@ -5020,12 +5020,26 @@ async def insight_milestones_health(request: Request):
         ts = m.get("recognized_at") or 0
         if ts > last_ts:
             last_ts = ts
+    # Live recognizer (if MilestoneRecognizer was constructed at startup):
+    recognizer = getattr(app.state, "milestone_recognizer", None)
+    live = recognizer.health() if recognizer is not None else {
+        "recognizer_alive": False,
+        "subscribed_topics": _mr.topics_to_subscribe(),
+        "categories": list(_mr.ALL_CATEGORIES),
+        "classified_total": 0,
+        "last_classified_at": None,
+        "per_category_counts": {},
+    }
     payload = {
-        "recognizer_categories":     list(_mr.ALL_CATEGORIES),
-        "subscribed_topics":         _mr.topics_to_subscribe(),
+        "recognizer_alive":          live["recognizer_alive"],
+        "recognizer_categories":     live["categories"],
+        "subscribed_topics":         live["subscribed_topics"],
         "milestones_total":          len(items),
-        "per_category_counts":       per_cat,
+        "per_category_counts_in_belief": per_cat,
+        "live_classified_total":     live["classified_total"],
+        "live_per_category_counts":  live["per_category_counts"],
         "last_recognized_at":        last_ts or None,
+        "live_last_classified_at":   live["last_classified_at"],
         "autopublish_defaults": {
             "publication":  _os.environ.get("MINDX_MILESTONE_PUBLICATION_STATUS",  "none"),
             "bug_crushed":  _os.environ.get("MINDX_MILESTONE_BUG_CRUSHED_STATUS",  "publish"),
@@ -7014,6 +7028,29 @@ async def startup_event():
         asyncio.create_task(_periodic_embedding())
         asyncio.create_task(_periodic_health_audit())
         asyncio.create_task(_start_mastermind_loop())
+
+        # Milestone recognizer — coordinator subscriber that classifies
+        # publication.published / bug.crushed / sea.campaign.concluded /
+        # dreaming.improved events into BeliefSystem milestone:* entries.
+        # Recognition is observational + independent of AGInt's lifecycle
+        # (AGInt is constructed on-demand for directives, not at boot).
+        # See agents/core/milestone_recognition.py for classifier rules.
+        try:
+            from agents.core.milestone_recognition import MilestoneRecognizer
+            from agents.core.belief_system import BeliefSystem as _BS
+            _milestone_recognizer = MilestoneRecognizer(
+                coordinator=coordinator_instance,
+                belief_system=_BS(),
+                actor="milestone_recognizer",
+            )
+            app.state.milestone_recognizer = _milestone_recognizer
+            logger.info(
+                "MilestoneRecognizer subscribed to %s (categories: %s)",
+                _milestone_recognizer.health()["subscribed_topics"],
+                _milestone_recognizer.health()["categories"],
+            )
+        except Exception as mr_err:
+            logger.exception(f"MilestoneRecognizer failed to start: {mr_err}")
 
         # Publication orchestrator — improvement-event-driven publishing
         # to rage.pythai.net. Two trigger paths:

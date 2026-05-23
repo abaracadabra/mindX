@@ -326,8 +326,138 @@ def topics_to_subscribe() -> List[str]:
     return seen
 
 
+# ─── MilestoneRecognizer — the active subscriber + recorder ─────────
+# A small always-on helper construct'd at backend startup. Independent of
+# AGInt's lifecycle (AGInt is constructed on-demand for directives, not at
+# boot, so a subscriber wired into AGInt.__init__ would never fire for
+# system events that happen before any directive is handled).
+#
+# AGInt can STILL hold a reference to the same MilestoneRecognizer when it
+# starts — that gives the cognitive layer the option to enrich recognition
+# with LLM judgment for borderline events, and reserves the Q-learning
+# integration point (DecisionType.RECOGNIZE_MILESTONE).
+
+class MilestoneRecognizer:
+    """Always-on coordinator subscriber: classifies inbound events and
+    persists positive results into BeliefSystem + mirrors to catalogue +
+    re-emits as ``milestone.recognized``.
+
+    Construct ONCE at backend startup with coordinator + belief_system.
+    Idempotent on the BeliefSystem (check-then-write).
+    """
+
+    def __init__(self, coordinator: Any, belief_system: Any, actor: str = "milestone_recognizer"):
+        self.coordinator = coordinator
+        self.belief_system = belief_system
+        self.actor = actor
+
+        # Liveness diagnostics — read by /insight/milestones/health.
+        self._classified_total: int = 0
+        self._last_classified_at: Optional[float] = None
+        self._per_category_counts: Dict[str, int] = {}
+
+        # Wire subscriptions if a coordinator was passed.
+        if self.coordinator is not None:
+            try:
+                for topic in topics_to_subscribe():
+                    self.coordinator.subscribe(topic, self._on_event)
+            except Exception:
+                pass
+
+    async def _on_event(self, payload: Dict[str, Any]) -> None:
+        """Subscriber callback for every milestone-candidate topic.
+        The coordinator delivers payloads only — we iterate rules and
+        return the first hit. Never raises (failures here must not
+        affect the publisher)."""
+        try:
+            milestone = None
+            for topic in topics_to_subscribe():
+                m = classify(topic, payload)
+                if m is not None:
+                    milestone = m
+                    break
+            if milestone is None:
+                return
+            await self._record(milestone)
+        except Exception:
+            pass
+
+    async def _record(self, milestone: "Milestone") -> None:
+        """Persist + mirror + re-emit. Three independently safe-fail steps."""
+        # Avoid lazy import deadlock — only import what we need.
+        from agents.core.belief_system import BeliefSource
+        # 1. Belief — idempotent.
+        try:
+            existing = await self.belief_system.get_belief(milestone.key)
+            if existing is not None:
+                return
+            await self.belief_system.add_belief(
+                key=milestone.key,
+                value=milestone.belief_value(),
+                confidence=milestone.confidence,
+                source=BeliefSource.DERIVED,
+                metadata={
+                    "recognizer": milestone.recognizer,
+                    "category": milestone.category,
+                },
+            )
+        except Exception:
+            return   # if belief can't be written, no point firing downstream
+        # 2. Catalogue mirror.
+        try:
+            from agents.catalogue import emit_catalogue_event
+            await emit_catalogue_event(
+                kind="milestone.recognized",
+                actor=self.actor,
+                payload={
+                    "category": milestone.category,
+                    "key": milestone.key,
+                    "summary": milestone.summary,
+                    "confidence": milestone.confidence,
+                    "recognizer": milestone.recognizer,
+                    "autopublish_status": milestone.autopublish_status,
+                    "evidence": milestone.evidence,
+                },
+                source_log="data/memory/beliefs.json",
+            )
+        except Exception:
+            pass
+        # 3. Coordinator re-emit (downstream: autopublish, /feedback, …).
+        if self.coordinator is not None:
+            try:
+                await self.coordinator.publish_event("milestone.recognized", {
+                    "category": milestone.category,
+                    "key": milestone.key,
+                    "summary": milestone.summary,
+                    "confidence": milestone.confidence,
+                    "recognizer": milestone.recognizer,
+                    "autopublish_status": milestone.autopublish_status,
+                    "evidence": milestone.evidence,
+                })
+            except Exception:
+                pass
+        # Diagnostics.
+        import time as _t
+        self._classified_total += 1
+        self._last_classified_at = _t.time()
+        self._per_category_counts[milestone.category] = (
+            self._per_category_counts.get(milestone.category, 0) + 1
+        )
+
+    def health(self) -> Dict[str, Any]:
+        return {
+            "recognizer_alive":    self.coordinator is not None,
+            "subscribed_topics":   topics_to_subscribe(),
+            "categories":          list(ALL_CATEGORIES),
+            "classified_total":    self._classified_total,
+            "last_classified_at":  self._last_classified_at,
+            "per_category_counts": dict(self._per_category_counts),
+        }
+
+
 __all__ = [
     "Milestone",
+    "MilestoneRecognizer",
     "RecognizerRule",
     "RECOGNIZERS",
     "ALL_CATEGORIES",
