@@ -138,6 +138,17 @@ WordPress stores these as post meta. The active theme can render them in
 the post footer (see `agents/wordpress_agent/docs/HOSTINGER_SETUP.md`
 §6 for the `register_post_meta` block that whitelists them).
 
+## Milestone recognition
+
+mindX additionally recognizes its own milestones — see
+[`docs/MILESTONE_RECOGNITION.md`](../MILESTONE_RECOGNITION.md). The
+`MilestoneRecognizer` subscribes to `publication.published`, `bug.crushed`,
+`sea.campaign.concluded`, and `dreaming.improved` topics, persists
+`milestone:*` beliefs into `BeliefSystem`, and (for major categories)
+drives the same `AuthorAgent` → `PublicationOrchestrator` autopublish
+chain documented here. Live ledger:
+[`mindx.pythai.net/insight/milestones/recent`](https://mindx.pythai.net/insight/milestones/recent).
+
 ## License
 
 Each article is published under the implicit license of `rage.pythai.net`

@@ -319,17 +319,22 @@ status policy and **delegates article composition to AuthorAgent** for the
 rich surfaces. Established pattern: `agents/learning/improvement_journal.py:76-87`
 already delegates journal entry authorship to AuthorAgent.
 
-Three rich composers live alongside `publish_to_rage`:
+Rich composers live alongside `publish_to_rage`:
 
 | Method | Triggered by | Default rage status |
 |---|---|---|
-| `compose_milestone_article(campaign_summary)` | SEA campaign with `is_milestone=true` (event `sea.campaign.concluded`) | `publish` |
+| `compose_milestone_article(payload, category=…)` | Dispatcher — routes to a per-category composer below | per category |
+| └ `_compose_sea_milestone_article(campaign_summary)` | SEA campaign with `is_milestone=true` (event `sea.campaign.concluded`) | `publish` |
+| └ `_compose_bug_crushed_article(payload)` | Operator-triggered (`POST /admin/recognize/bug-crushed`) when an alert batch closes | `publish` (major) |
+| └ `_compose_dreaming_milestone_article(payload)` | `machine_dreaming` code change OR insight outlier (event `dreaming.improved`) | `draft` |
 | `compose_book_edition_article(book_event)` | AuthorAgent's own `_full_moon_publish` (event `book.edition.published`) | `draft` |
 | `compose_journal_digest_article(journal_text, lunar_phase)` | Full-moon co-fire from AuthorAgent (event `journal.lunar.digest.ready`) | `publish` |
 
 Each returns the `(title, content_html, excerpt, topic)` tuple shape the
-orchestrator passes to `publish_to_rage`. All env-overridable via
-`MINDX_PUBLICATION_{MILESTONE,BOOK,JOURNAL}_STATUS`.
+orchestrator passes to `publish_to_rage`. All env-overridable. The
+milestone composers ride on the `MilestoneRecognizer` chain
+(see [`docs/MILESTONE_RECOGNITION.md`](MILESTONE_RECOGNITION.md));
+status defaults come from `MINDX_MILESTONE_<CATEGORY>_STATUS`.
 
 ### Lunar events emitted by `_full_moon_publish()`
 
