@@ -181,3 +181,106 @@ to `data/logs/catalogue_events.jsonl` (kind: `wordpress.publish.authorize`).
   next request will fetch the new one).
 - Promoting the vault from MachineOverseer to HumanOverseer rotates every
   `wordpress.agent.keys` entry with the rest of the vault, atomically.
+
+## Identity model + the May 2026 silent-403 incident
+
+**Canonical identity**: a single EOA on the plugin allowlist whose pk lives
+in `wordpress.agent:pk` under context `wordpress.agent.keys`. Today's prod
+runs as `author_agent` (`0x5277D156E7cD71ebF22c8f81812A65493D1ce534`) — the
+same wallet that authors the article also publishes it. One identity, one
+allowlist entry, one vault entry.
+
+### What broke (forensic)
+
+Through May 2026, autopublishing was silently broken in three concurrent layers:
+
+1. **Transport never installed**: `/home/mindx/mindX/agents/wordpress_agent/`
+   had only 2 of 10 package files; the systemd unit was never copied to
+   `/etc/systemd/system/`; the loopback at `127.0.0.1:8765` never ran.
+2. **PublicationOrchestrator silently crashed**: `main_service.py` spawn block
+   referenced an undefined `author` variable; the `try/except` logged
+   `WARNING` without `exc_info=True`, swallowing the traceback. Six restarts
+   in the prior week all silently failed; ledger never created.
+3. **Identity drift**: the WP plugin's allowlist had exactly 1 EOA but the
+   matching pk was nowhere in the prod BANKON vault. Whoever published posts
+   666 + 673 used an operator wallet held outside the vault (one-shot CLI
+   publish). The wordpress.agent's own vault namespace was never provisioned.
+
+All three are now fixed. The diagnostic at
+`agents/wordpress_agent/scripts/cross_check_allowlist.py` prevents layer 3
+from recurring — it runs as the systemd `ExecStartPre`, so a future
+vault/allowlist drift surfaces as a service-failed-to-start (visible in
+`systemctl status`) instead of as a silent 403 on the first publish.
+
+### Recovery runbook (if publishing breaks again)
+
+```bash
+# 0. Is the loopback alive?
+systemctl status wordpress-agent.service
+curl -s http://127.0.0.1:8765/healthz
+# (healthz being 401 is a known cosmetic bug — it skips _request_with_retry's
+# auth header. The /publish path uses _request_with_retry correctly. Trust
+# the cross-check, not healthz, for true auth verification.)
+
+# 1. Run the cross-check (exits 0 if vault wallet is allowlisted)
+cd /home/mindx/mindX
+sudo -u mindx /home/mindx/mindX/.mindx_env/bin/python -m agents.wordpress_agent.scripts.cross_check_allowlist
+# Prints: vault wallet address, allowlist_entries count, verify status.
+# Exit 1 → REMEDIATION line tells you to either add the address to the WP
+# allowlist OR restore the matching pk into vault.
+
+# 2. If allowlist mismatch — add the cross-check address to the plugin allowlist
+#    via rage.pythai.net WP admin → Settings → mindX Publish Auth → Allowlist.
+#    Then re-run step 1 until it exits 0.
+
+# 3. If vault is missing wordpress.agent:pk — re-provision:
+sudo -u mindx /home/mindx/mindX/.mindx_env/bin/python scripts/vault/provision_wordpress_agent.py \
+  --wp-base-url https://rage.pythai.net --wp-user codephreak \
+  --wp-app-password JWT_AUTH_ONLY_DO_NOT_USE_BASIC --no-mint
+# (--no-mint reuses the existing wordpress.agent wallet; drop the flag to mint a
+#  new one, which then needs to be added to the WP allowlist.)
+
+# 4. Restart and confirm
+systemctl restart wordpress-agent.service
+journalctl -u wordpress-agent.service -n 10 | grep crosscheck
+# Expect: "crosscheck: OK — vault wallet 0x... IS allowlisted"
+
+# 5. Publish (canonical example)
+cd /home/mindx/mindX && sudo -u mindx /home/mindx/mindX/.mindx_env/bin/python -c "
+import asyncio, sys; sys.path.insert(0, '/home/mindx/mindX')
+from pathlib import Path
+from agents.author_agent import AuthorAgent
+from mindx_backend_service.main_service import _render_md
+async def m():
+    md = Path('docs/publications/YOUR_ARTICLE.md').read_text()
+    body = md.split(chr(10) + '---', 2)[2] if md.startswith('---') else md
+    a = await AuthorAgent.get_instance()
+    print(await a.publish_to_rage(
+        title='Title here', content_html=_render_md(body),
+        status='publish', slug='your-slug',
+    ))
+asyncio.run(m())
+"
+```
+
+### How to verify it's working
+
+- `journalctl -u wordpress-agent.service -n 5 | grep crosscheck` — last
+  startup's pre-flight result (should end with `crosscheck: OK`).
+- `curl -A "Mozilla/5.0 ..." https://rage.pythai.net/wp-json/mindx/v1/auth/diagnose`
+  — confirms plugin v0.1.0 + `allowlist_entries >= 1` + `jwt_secret_present: true`.
+- `GET /insight/publications/health` on mindx.pythai.net — orchestrator state
+  + ledger + last publish post id/url + per-source status defaults.
+- After a real publish, the post should be live at `https://rage.pythai.net/<slug>/`
+  with `status: publish` in `/wp-json/wp/v2/posts/<id>`.
+
+### Privacy invariants of the cross-check
+
+The diagnostic prints only:
+- the derived **address** of `wordpress.agent:pk` (public, never the pk)
+- the plugin's `allowlist_entries` *count* (never the addresses)
+- the `/verify` HTTP status code (200 / 403 / etc.) and the plugin's `code`
+  field on failure (e.g. `mindx_auth_address_not_allowlisted`).
+
+No private key value ever appears in stdout, stderr, journal, or systemd
+status output.

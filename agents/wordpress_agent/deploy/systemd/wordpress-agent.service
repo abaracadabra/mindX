@@ -31,6 +31,11 @@ WorkingDirectory=/home/mindx/mindX
 # Dev-only fallbacks (server_host / server_port and any non-secret bits) may be in this file.
 # Secrets MUST NOT live here — they're in the vault under context=wordpress.agent.keys.
 EnvironmentFile=-/etc/wordpress-agent/wordpress-agent.env
+# Cross-check that the vault wallet is on the plugin's allowlist BEFORE the
+# main service starts. ExecStartPre non-zero blocks ExecStart, so a drift
+# between vault pk and WP allowlist surfaces as `systemctl status` failure
+# rather than as silent 403s on every publish.
+ExecStartPre=/home/mindx/mindX/.mindx_env/bin/python -m agents.wordpress_agent.scripts.cross_check_allowlist
 ExecStart=/home/mindx/mindX/.mindx_env/bin/python -m agents.wordpress_agent.server
 Restart=on-failure
 RestartSec=5s
