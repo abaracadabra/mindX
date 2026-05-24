@@ -12,6 +12,7 @@ import {
     INameWrapper, IPublicResolver, IBankonPriceOracle,
     IBankonReputationGate, IIdentityRegistry8004, IBankonPaymentRouter
 } from "./interfaces/IBankon.sol";
+import {IReverseRegistrar} from "./interfaces/IReverseRegistrar.sol";
 
 /// @notice Off-chain payment voucher payload — written to docs/INFT_7857-style
 ///         text records on the resolved subname. Field set is intentionally
@@ -485,6 +486,18 @@ contract BankonSubnameRegistrar is
 
     function pause()   external onlyRole(BANKON_OPS_ROLE) { _pause(); }
     function unpause() external onlyRole(BANKON_OPS_ROLE) { _unpause(); }
+
+    /// @notice ENSIP-15 contract-naming hook. Records `newName` as this
+    ///         contract's ENS primary via the canonical ReverseRegistrar
+    ///         (mainnet 0xa58E81fe…7Cb). Admin-only. Targets
+    ///         "registrar.bankon.eth" in the production deploy. See
+    ///         docs.ens.domains/web/naming-contracts and
+    ///         script/SetPrimaryNames.s.sol.
+    function setReverseName(IReverseRegistrar rr, string calldata newName)
+        external onlyRole(DEFAULT_ADMIN_ROLE) returns (bytes32)
+    {
+        return rr.setName(newName);
+    }
 
     /// @dev Compose ERC1155Holder + AccessControl interface support.
     function supportsInterface(bytes4 interfaceId)

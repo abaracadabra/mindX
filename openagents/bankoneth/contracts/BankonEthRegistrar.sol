@@ -7,6 +7,7 @@ import {Pausable}        from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {IBankonEthRegistrar, IBankonX402Attestor} from "./interfaces/IBankonExtensions.sol";
 import {IBankonPriceOracle, IBankonPaymentRouter} from "./interfaces/IBankon.sol";
+import {IReverseRegistrar}                        from "./interfaces/IReverseRegistrar.sol";
 
 /// @notice Subset of the canonical ENS ETHRegistrarController we call.
 ///         Reference: ensdomains/ens-contracts → ETHRegistrarController.sol
@@ -104,6 +105,18 @@ contract BankonEthRegistrar is
 
     function pause()   external onlyRole(DEFAULT_ADMIN_ROLE) { _pause(); }
     function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) { _unpause(); }
+
+    /// @notice ENSIP-15 contract-naming hook. Admin-only. Records `name` as
+    ///         the ENS primary name for this contract via the canonical
+    ///         ReverseRegistrar (mainnet 0xa58E81fe…7Cb). After this lands,
+    ///         block explorers + wallets that perform reverse resolution
+    ///         display `name` instead of the raw address. See
+    ///         docs.ens.domains/web/naming-contracts.
+    function setReverseName(IReverseRegistrar rr, string calldata newName)
+        external onlyRole(DEFAULT_ADMIN_ROLE) returns (bytes32)
+    {
+        return rr.setName(newName);
+    }
 
     // ── Quote ──────────────────────────────────────────────────────
 

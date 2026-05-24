@@ -386,5 +386,15 @@ export {
   type NameHistoryEvent,
 } from "./inventory";
 
+// ── v2 — SIWE / BankonAuthGate (Phase 2.4) ────────────────────────
+export {
+  siweMessage,
+  signInWithBankoneth,
+  recoverSiweSigner,
+  type SiweMessageArgs,
+  type SiweBundle,
+  type SignInArgs,
+} from "./auth";
+
 // Re-exports for convenience.
 export { namehash, labelhash };

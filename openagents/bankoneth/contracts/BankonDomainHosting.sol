@@ -7,6 +7,7 @@ import {Pausable}        from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {IBankonDomainHosting, IBankonX402Attestor} from "./interfaces/IBankonExtensions.sol";
 import {INameWrapper, IPublicResolver, IBankonPaymentRouter} from "./interfaces/IBankon.sol";
+import {IReverseRegistrar} from "./interfaces/IReverseRegistrar.sol";
 
 /// @title  BankonDomainHosting — Flow C: subdomain-minting-as-a-service.
 /// @notice External `.eth` holders enroll their domain (wrapping it into ENS
@@ -79,6 +80,15 @@ contract BankonDomainHosting is
 
     function pause()   external onlyRole(DEFAULT_ADMIN_ROLE) { _pause(); }
     function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) { _unpause(); }
+
+    /// @notice ENSIP-15 contract-naming hook. Records `name` as this
+    ///         contract's ENS primary via the canonical ReverseRegistrar
+    ///         (mainnet 0xa58E81fe…7Cb). Admin-only.
+    function setReverseName(IReverseRegistrar rr, string calldata newName)
+        external onlyRole(DEFAULT_ADMIN_ROLE) returns (bytes32)
+    {
+        return rr.setName(newName);
+    }
 
     // ── Enrollment ─────────────────────────────────────────────────
 

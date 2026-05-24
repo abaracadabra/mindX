@@ -7,7 +7,8 @@ import {BankonSubnameRegistrar} from "../contracts/BankonSubnameRegistrar.sol";
 import {BankonPriceOracle}      from "../contracts/BankonPriceOracle.sol";
 import {BankonReputationGate}   from "../contracts/BankonReputationGate.sol";
 import {BankonPaymentRouter}    from "../contracts/BankonPaymentRouter.sol";
-import {BankonSubnameResolver}  from "../contracts/BankonSubnameResolver.sol";
+import {BankonSubnameResolver}   from "../contracts/BankonSubnameResolver.sol";
+import {BankonSubnameResolverV2} from "../contracts/BankonSubnameResolverV2.sol";
 import {BankonInftAdapter}      from "../contracts/BankonInftAdapter.sol";
 import {BankonX402Attestor}     from "../contracts/BankonX402Attestor.sol";
 import {BankonAgenticPlaceHook} from "../contracts/BankonAgenticPlaceHook.sol";
@@ -41,7 +42,8 @@ contract DeployEthereum is Script {
     struct Deployed {
         address agentRegistry;
         address x402Receipt;
-        address resolver;
+        address resolver;       // V1 — legacy compatibility, BankonSubnameRegistrar binds to this
+        address resolverV2;     // V2 — ENSIP-10 wildcard + full profile (Phase 2.1)
         address inftAdapter;
         address x402Attestor;
         address agenticPlaceHook;
@@ -82,6 +84,11 @@ contract DeployEthereum is Script {
         d.inftAdapter = address(new BankonInftAdapter(treasury, IBankonSubnameResolver(d.resolver)));
         BankonSubnameResolver(d.resolver).setInftAdapter(IBankonInftAdapter(d.inftAdapter));
 
+        // V2 resolver — co-deployed (Phase 2.1). New registrations should bind
+        // here for ENSIP-10 wildcard + full profile interfaces; legacy names
+        // stay on V1 until explicit migration.
+        d.resolverV2 = address(new BankonSubnameResolverV2(treasury, IBankonInftAdapter(d.inftAdapter)));
+
         // BankonSubnameRegistrar takes plain addresses, not interface types.
         // Constructor: (nameWrapper, defaultResolver, parentNode, paymentRouter,
         //   priceOracle, reputationGate, identityRegistry8004, admin)
@@ -115,6 +122,11 @@ contract DeployEthereum is Script {
         // Grant roles — the resolver and the inftAdapter need to know who can call them.
         BankonSubnameResolver(d.resolver).grantRegistrar(d.subnameRegistrar);
         BankonSubnameResolver(d.resolver).grantRegistrar(d.domainHosting);
+
+        // Same grants on V2 so operators can flip the registrar pointer
+        // without re-granting roles in a separate transaction.
+        BankonSubnameResolverV2(d.resolverV2).grantRegistrar(d.subnameRegistrar);
+        BankonSubnameResolverV2(d.resolverV2).grantRegistrar(d.domainHosting);
         BankonInftAdapter(d.inftAdapter).grantRegistrar(d.subnameRegistrar);
         BankonAgenticPlaceHook(d.agenticPlaceHook).grantLister(d.subnameRegistrar);
         BankonAgenticPlaceHook(d.agenticPlaceHook).grantLister(d.ethRegistrar);
@@ -128,7 +140,8 @@ contract DeployEthereum is Script {
         console.log("BankonSubnameRegistrar deployed:", d.subnameRegistrar);
         console.log("BankonEthRegistrar deployed:",     d.ethRegistrar);
         console.log("BankonDomainHosting deployed:",    d.domainHosting);
-        console.log("BankonSubnameResolver deployed:",  d.resolver);
+        console.log("BankonSubnameResolver   (v1) :",   d.resolver);
+        console.log("BankonSubnameResolverV2 (v2) :",   d.resolverV2);
         console.log("BankonInftAdapter deployed:",      d.inftAdapter);
         console.log("BankonX402Attestor deployed:",     d.x402Attestor);
         console.log("BankonAgenticPlaceHook deployed:", d.agenticPlaceHook);
