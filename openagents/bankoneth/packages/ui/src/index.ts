@@ -22,6 +22,9 @@ export { BankonethClaim }       from "./claim-form";
 export { BankonethPurchase }    from "./eth-purchase-form";
 export { BankonethHost }        from "./host-domain-form";
 
+// ── Name card (beats app.ens.domains profile card) ──────────────
+export { BankonethNameCard } from "./primitives/b-name-card";
+
 // ── Secondary components ─────────────────────────────────────────
 export { BankonethPricing }     from "./pricing-panel";
 export { BankonethInftToggle }  from "./inft-toggle";

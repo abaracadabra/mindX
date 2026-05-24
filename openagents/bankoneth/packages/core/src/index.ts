@@ -324,6 +324,17 @@ export {
   type Suggestion,
   type SuggestionsArgs,
 } from "./suggestions";
+export {
+  lookupName,
+  hasFuse,
+  formatExpiry,
+  BANKON_RECORD_KEYS,
+  FUSE,
+  type NameLookup,
+  type LookupArgs,
+  type RecordKey,
+  type FuseName,
+} from "./lookup";
 
 // Re-exports for convenience.
 export { namehash, labelhash };
