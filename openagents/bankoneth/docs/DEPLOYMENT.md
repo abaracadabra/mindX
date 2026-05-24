@@ -19,6 +19,12 @@ other and the deploy bricks.
 | RPC endpoints | `MAINNET_RPC`, `SEPOLIA_RPC`, `ZEROG_RPC`, `BASE_RPC` |
 | Etherscan API key | `ETHERSCAN_API_KEY` |
 
+> **v2 note**: After Step 2 (deploy contracts), run
+> [`SetPrimaryNames.s.sol`](../script/SetPrimaryNames.s.sol) to wire each
+> registrar's primary name (`registrar.bankon.eth` etc.) — see
+> [`REVERSE_REGISTRATION.md`](REVERSE_REGISTRATION.md). The script is
+> idempotent and operator-broadcasted.
+
 ## Phase 1 — Sepolia rehearsal
 
 ```bash

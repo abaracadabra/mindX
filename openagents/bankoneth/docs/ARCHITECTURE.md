@@ -130,4 +130,40 @@ After this, the iNFT Mode A path is fully closed loop.
 - `tbaOfLabel(label)` → ERC-6551 wallet address
 - `isX402ReceiptSpent(receiptHash)` → bool
 
+v2 (Phase 1+) adds:
+
+- `resolveProfile({ client, name })` — full profile via Universal Resolver
+- `resolveReverse({ client, address })` — reverse-name lookup
+- `lookupName({ ... })` — name-card-ready bundle (records + fuses + TBA)
+- `getNamesForAddress({ client, address })` — inventory via ensjs subgraph
+- `getSubnames({ client, name })` / `getNameHistory({ client, name })`
+- `normalize(name)` / `normalizeLabel(label)` — ENSIP-15 wrapper
+- `evmCoinType(chainId)` / `COIN_TYPE` const map — ENSIP-11
+- `signInWithBankoneth(...)` / `siweMessage(...)` — EIP-4361 helpers
+- `MAINNET` / `SEPOLIA` / `ensAddressesFor(chainId)` — canonical addresses
+
 For exhaustive contract surfaces use `forge inspect <contract> abi`.
+
+## Reference implementations consulted
+
+The v2 plan drew directly from these canonical sources:
+
+- [`ensdomains/ens-contracts`](https://github.com/ensdomains/ens-contracts) — v1 contract surface, PublicResolver mixin chain
+- [`ensdomains/namechain`](https://github.com/ensdomains/namechain) (formerly `contracts-v2`) — ENSv2 architecture
+- [`ensdomains/ensjs`](https://github.com/ensdomains/ensjs) — canonical client lib (v4.2.2)
+- [`ensdomains/ens-app-v3`](https://github.com/ensdomains/ens-app-v3) — UI parity target (TransactionFlowProvider pattern)
+- [`ensdomains/subdomain-registrar`](https://github.com/ensdomains/subdomain-registrar) — sale-based registrar reference
+- [`gskril/ens-offchain-registrar`](https://github.com/gskril/ens-offchain-registrar) — CCIP-Read reference
+- [`mDeisen/ensauth`](https://github.com/mDeisen/ensauth) — ENS-gated auth inspiration
+
+## v2 doc map
+
+- [`ENSIP_COVERAGE.md`](ENSIP_COVERAGE.md) — exact ENSIP implementation matrix
+- [`V2_READINESS.md`](V2_READINESS.md) — ENSv2 / Namechain forward-compat
+- [`RECORD_EDITING.md`](RECORD_EDITING.md) — `<b-records-editor>` flow
+- [`RENEWAL.md`](RENEWAL.md) — `<b-renewal>` flow
+- [`TRANSFER.md`](TRANSFER.md) — `<b-transfer>` flow
+- [`REVERSE_REGISTRATION.md`](REVERSE_REGISTRATION.md) — primary names (contract + user)
+- [`FUSES.md`](FUSES.md) — `<b-permissions-panel>` flow
+- [`ENSAUTH_GATING.md`](ENSAUTH_GATING.md) — `BankonAuthGate` + SIWE
+- [`specs/CCIP_READ_REGISTRAR.md`](specs/CCIP_READ_REGISTRAR.md) — off-chain mode

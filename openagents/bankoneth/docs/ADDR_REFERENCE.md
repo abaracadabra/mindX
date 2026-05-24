@@ -63,3 +63,28 @@ parsers may need to widen the regex.
 ERC-7857 is still draft. Pin a specific commit hash when forking; subscribe
 to the EIPs RFC changes — selectors and the `TransferValidityProof` struct
 layout may change before finalization.
+
+## v2 — Universal Resolver + canonical ENS pins (Phase 1.3)
+
+| Contract | Mainnet | Sepolia |
+|---|---|---|
+| ENS Registry | `0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e` | `0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e` |
+| NameWrapper | `0xD4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401` | `0x0635513f179D50A207757E05759CbD106d7dFcE8` |
+| ETHRegistrarController | `0x59E16fcCd424Cc24e280Be16E11Bcd56fb0CE547` | `0xfb3cE5D01e0f33f41DbB39035dB9745962F1f968` |
+| PublicResolver | `0x231b0Ee14048e9dCcD1d247744d114a4EB5E8E63` | `0x8FADE66B79cC9f707aB26799354482EB93a5B7dD` |
+| ReverseRegistrar | `0xa58E81fe9b61B5c3fE2AFD33CF304c454AbFc7Cb` | `0xA0a1AbcDAe1a2a4A2EF8e9113Ff0e02DD81DC0C6` |
+| Universal Resolver | `0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe` | `0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe` |
+| BulkRenewal | `0xa12159e5131b1eEf6B4857EEE3e1954744b5033A` | `0x4EF77b90762Eddb33C8Eba5B5a19558DaE53D7a1` |
+| BaseRegistrarImplementation | `0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85` | `0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85` |
+
+The Universal Resolver is an **ENS-DAO-upgradable proxy**. Address stays
+constant across UR revisions — it'll be re-pointed at Namechain when
+ENSv2 ships, so bankoneth reads stay current without code changes. See
+[`V2_READINESS.md`](V2_READINESS.md).
+
+Source of truth: [`packages/core/src/addresses.ts`](../packages/core/src/addresses.ts) —
+sourced from
+[`ensdomains/ens-contracts/deployments/{mainnet,sepolia}/*.json`](https://github.com/ensdomains/ens-contracts/tree/staging/deployments).
+
+For chainId → coinType derivation (ENSIP-11), see
+[`packages/core/src/coin-types.ts`](../packages/core/src/coin-types.ts).

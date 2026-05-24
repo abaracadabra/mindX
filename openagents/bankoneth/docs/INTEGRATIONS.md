@@ -113,3 +113,61 @@ Any HTML page can drop in the Web Components:
   // ... construct client, set on the components ...
 </script>
 ```
+
+## v2 — ensjs interop (Phase 1.5)
+
+`@bankoneth/core` now depends on `@ensdomains/ensjs@^4.2.2`. Third-party
+integrators can use ensjs directly alongside bankoneth without conflict:
+
+```ts
+import { createEnsPublicClient } from "@ensdomains/ensjs";
+import { http } from "viem";
+import { mainnet } from "viem/chains";
+
+const ens = createEnsPublicClient({ chain: mainnet, transport: http() });
+
+// Standard ensjs methods Just Work — they hit the same Universal Resolver
+// (0xeEeEEEeE…14EeEe) that bankoneth pins.
+const profile = await ens.getName({ address: "0x..." });
+const subnames = await ens.getSubnames({ name: "bankon.eth" });
+```
+
+`@bankoneth/core` re-exports thin wrappers that pre-thread the canonical
+addresses + ENSIP-15 normalization:
+
+```ts
+import {
+  resolveProfile, resolveReverse,
+  getNamesForAddress, getSubnames, getNameHistory,
+  lookupName,
+  normalize,
+} from "@bankoneth/core";
+
+// All of the above accept a viem PublicClient as `client`; ensAddressesFor
+// (chainId) picks the right registry pin internally.
+```
+
+## v2 — sign-in with bankoneth
+
+For downstream services that want "must hold *.bankon.eth" gating, see
+[`ENSAUTH_GATING.md`](ENSAUTH_GATING.md) for the SIWE + `BankonAuthGate`
+recipe.
+
+```ts
+import { signInWithBankoneth } from "@bankoneth/core";
+
+const bundle = await signInWithBankoneth({
+  walletClient,
+  address,
+  statement: "Sign in to access AgenticPlace",
+});
+
+// Hand bundle to your backend, which verifies via BankonAuthGate.verifyOwnsLabel.
+```
+
+## v2 doc map
+
+- [`ENSIP_COVERAGE.md`](ENSIP_COVERAGE.md) — every ENSIP we implement
+- [`V2_READINESS.md`](V2_READINESS.md) — ENSv2/Namechain forward-compat
+- [`ENSAUTH_GATING.md`](ENSAUTH_GATING.md) — SIWE + `BankonAuthGate`
+- [`specs/CCIP_READ_REGISTRAR.md`](specs/CCIP_READ_REGISTRAR.md) — off-chain mode
