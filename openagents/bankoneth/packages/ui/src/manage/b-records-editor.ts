@@ -19,6 +19,7 @@ import { encodeFunctionData } from "viem";
 
 import { tokens } from "../tokens/tokens";
 import { motion } from "../tokens/motion";
+import { requestConnect } from "./_disconnected";
 
 interface ResolverClient {
   multicall(node: Hex, data: Hex[]): Promise<Hex>;
@@ -193,11 +194,15 @@ export class BankonethRecordsEditor extends LitElement {
         ${this._renderGroup("Agentic edge",  AGENTIC)}
         <div class="actions">
           <b-button variant="ghost" @click=${() => { this._draft = { ...this.records }; this._state = "idle"; }}>Reset</b-button>
-          <b-button
-            ?loading=${this._state === "loading"}
-            ?disabled=${!dirty || this._state === "loading"}
-            @click=${this._submit}
-          >Save records</b-button>
+          ${this.client ? html`
+            <b-button
+              ?loading=${this._state === "loading"}
+              ?disabled=${!dirty || this._state === "loading"}
+              @click=${this._submit}
+            >Save records</b-button>` : html`
+            <b-button variant="secondary" @click=${() => requestConnect(this)}>
+              Connect to save records
+            </b-button>`}
         </div>
         ${this._state === "idle" ? null : html`
           <div class="status" data-state=${this._state}>

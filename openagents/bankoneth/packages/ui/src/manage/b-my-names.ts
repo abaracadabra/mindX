@@ -10,6 +10,9 @@ import type { Address } from "viem";
 import { tokens } from "../tokens/tokens";
 import { motion } from "../tokens/motion";
 import { type OwnedName, formatExpiry, hasFuse } from "@bankoneth/core";
+import { requestConnect } from "./_disconnected";
+
+const ZERO_ADDR_LOWER = "0x0000000000000000000000000000000000000000";
 
 interface InventoryClient {
   getOwnedNames(address: Address): Promise<OwnedName[]>;
@@ -133,6 +136,19 @@ export class BankonethMyNames extends LitElement {
       ["wrapped",   "Wrapped"],
       ["soulbound", "Soulbound"],
     ];
+    const disconnected = this.address.toLowerCase() === ZERO_ADDR_LOWER;
+    if (disconnected) {
+      return html`
+        <div class="panel b-fade-in">
+          <h3>My Names</h3>
+          <div class="empty">
+            <p>Connect a wallet to see the names you own.</p>
+            <b-button variant="secondary" @click=${() => requestConnect(this)}>
+              Connect wallet
+            </b-button>
+          </div>
+        </div>`;
+    }
     return html`
       <div class="panel b-fade-in">
         <h3>My Names</h3>

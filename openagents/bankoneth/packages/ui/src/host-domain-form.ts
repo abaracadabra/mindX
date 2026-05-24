@@ -213,9 +213,14 @@ export class BankonethHost extends LitElement {
         </b-card>
         <div class="actions">
           <b-button variant="ghost" leadingIcon="arrowLeft" @click=${() => this._stepper?.back()}>Back</b-button>
-          <b-button variant="primary" leadingIcon="wallet" .loading=${this._issueSubmitting} @click=${this._issue}>
-            ${this._issueSubmitting ? "Submitting…" : `Claim ${this._issueLabel}.${this._issueParent}`}
-          </b-button>
+          ${this.client ? html`
+            <b-button variant="primary" leadingIcon="wallet" .loading=${this._issueSubmitting} @click=${this._issue}>
+              ${this._issueSubmitting ? "Submitting…" : `Claim ${this._issueLabel}.${this._issueParent}`}
+            </b-button>` : html`
+            <b-button variant="secondary" leadingIcon="wallet"
+                      @click=${() => this.dispatchEvent(new CustomEvent("request-connect", { bubbles: true, composed: true }))}>
+              Connect to claim
+            </b-button>`}
         </div>
         ${this._error
           ? html`<div style="color:var(--b-color-danger);font-size:var(--b-text-xs);font-family:var(--b-font-mono);">${this._error}</div>`

@@ -13,6 +13,7 @@ import type { Address, Hex } from "viem";
 import { tokens } from "../tokens/tokens";
 import { motion } from "../tokens/motion";
 import { formatExpiry } from "@bankoneth/core";
+import { requestConnect } from "./_disconnected";
 
 export type RenewalMode = "subname" | "eth2ld";
 
@@ -135,11 +136,15 @@ export class BankonethRenewal extends LitElement {
           <span><strong>$${(Number(this._quote) / 1_000_000).toFixed(2)}</strong></span>
         </div>
         <div class="actions">
-          <b-button
-            ?loading=${this._state === "loading"}
-            ?disabled=${this._state === "loading"}
-            @click=${this._submit}
-          >Renew ${this._years} ${this._years === 1 ? "year" : "years"}</b-button>
+          ${this.client ? html`
+            <b-button
+              ?loading=${this._state === "loading"}
+              ?disabled=${this._state === "loading"}
+              @click=${this._submit}
+            >Renew ${this._years} ${this._years === 1 ? "year" : "years"}</b-button>` : html`
+            <b-button variant="secondary" @click=${() => requestConnect(this)}>
+              Connect to renew
+            </b-button>`}
         </div>
         ${this._state === "idle" ? null : html`
           <div class="status" data-state=${this._state}>

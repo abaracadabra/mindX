@@ -10,6 +10,7 @@ import type { Hex } from "viem";
 
 import { tokens } from "../tokens/tokens";
 import { motion } from "../tokens/motion";
+import { requestConnect } from "./_disconnected";
 
 interface PrimaryNameClient {
   /** UR.reverse(addr, 60) → primary name or null. */
@@ -87,11 +88,15 @@ export class BankonethPrimaryName extends LitElement {
           <code>${this._current ?? "none"}</code>
         </div>
         <div class="actions">
-          <b-button
-            ?loading=${this._state === "loading"}
-            ?disabled=${isCurrent || this._state === "loading"}
-            @click=${this._submit}
-          >${isCurrent ? "Already primary" : `Use ${this.name} as primary`}</b-button>
+          ${this.client ? html`
+            <b-button
+              ?loading=${this._state === "loading"}
+              ?disabled=${isCurrent || this._state === "loading"}
+              @click=${this._submit}
+            >${isCurrent ? "Already primary" : `Use ${this.name} as primary`}</b-button>` : html`
+            <b-button variant="secondary" @click=${() => requestConnect(this)}>
+              Connect to set primary
+            </b-button>`}
         </div>
         ${this._state === "idle" ? null : html`
           <div class="status" data-state=${this._state}>

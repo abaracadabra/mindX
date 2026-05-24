@@ -11,3 +11,4 @@ export { BRailSwitcher, type Rail } from "./b-rail-switcher";
 export { BFuseBadges } from "./b-fuse-badges";
 export { BTbaChip } from "./b-tba-chip";
 export { BankonethNameCard } from "./b-name-card";
+export { BankonethConnectBar } from "./b-connect-bar";

@@ -12,6 +12,7 @@ import { isAddress } from "viem";
 import { tokens } from "../tokens/tokens";
 import { motion } from "../tokens/motion";
 import { hasFuse, type FuseName } from "@bankoneth/core";
+import { requestConnect } from "./_disconnected";
 
 interface TransferClient {
   /** Resolve an ENS name to an address via UR. Returns 0x… or null. */
@@ -127,12 +128,18 @@ export class BankonethTransfer extends LitElement {
         ${this._resolved ? html`<div class="resolved">→ ${this._resolved}</div>` : null}
 
         <div class="actions">
-          <b-button
-            variant="danger"
-            ?loading=${this._state === "loading"}
-            ?disabled=${cannotTransfer || !this._resolved || this._state === "loading"}
-            @click=${this._submit}
-          >Transfer name</b-button>
+          ${this.client ? html`
+            <b-button
+              variant="danger"
+              ?loading=${this._state === "loading"}
+              ?disabled=${cannotTransfer || !this._resolved || this._state === "loading"}
+              @click=${this._submit}
+            >Transfer name</b-button>` : html`
+            <b-button variant="secondary"
+                      ?disabled=${cannotTransfer}
+                      @click=${() => requestConnect(this)}>
+              Connect to transfer
+            </b-button>`}
         </div>
         ${this._state === "idle" || this._state === "resolving" ? null : html`
           <div class="status" data-state=${this._state}>

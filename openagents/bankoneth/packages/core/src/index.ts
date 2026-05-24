@@ -396,5 +396,12 @@ export {
   type SignInArgs,
 } from "./auth";
 
+// ── v2 — Session / connect-bar substrate ──────────────────────────
+export {
+  BankonethSession,
+  type SessionState,
+  type SessionConfig,
+} from "./session";
+
 // Re-exports for convenience.
 export { namehash, labelhash };

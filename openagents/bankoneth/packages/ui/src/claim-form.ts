@@ -369,9 +369,14 @@ export class BankonethClaim extends LitElement {
 
         <div class="actions">
           <b-button variant="ghost" leadingIcon="arrowLeft" ?disabled=${this._submitting} @click=${() => this._stepper.back()}>Back</b-button>
-          <b-button variant="primary" leadingIcon="wallet" .loading=${this._submitting} @click=${this._submit}>
-            ${this._submitting ? "Submitting…" : "Sign & claim"}
-          </b-button>
+          ${this.client ? html`
+            <b-button variant="primary" leadingIcon="wallet" .loading=${this._submitting} @click=${this._submit}>
+              ${this._submitting ? "Submitting…" : "Sign & claim"}
+            </b-button>` : html`
+            <b-button variant="secondary" leadingIcon="wallet"
+                      @click=${() => this.dispatchEvent(new CustomEvent("request-connect", { bubbles: true, composed: true }))}>
+              Connect to claim
+            </b-button>`}
         </div>
       </div>
     `;

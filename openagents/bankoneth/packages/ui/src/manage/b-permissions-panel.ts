@@ -11,6 +11,7 @@ import type { Hex } from "viem";
 import { tokens } from "../tokens/tokens";
 import { motion } from "../tokens/motion";
 import { FUSE, hasFuse, type FuseName } from "@bankoneth/core";
+import { requestConnect } from "./_disconnected";
 
 interface FuseClient {
   /** NameWrapper.setFuses(node, fuseMask). */
@@ -132,14 +133,19 @@ export class BankonethPermissionsPanel extends LitElement {
               </div>
               ${burned
                 ? html`<span class="badge" data-state="burned">burned</span>`
-                : html`
+                : this.client ? html`
                     <b-button
                       size="sm"
                       variant="danger"
                       ?disabled=${!s.ownerControllable || this._state === "loading"}
                       ?loading=${this._selecting === s.name}
                       @click=${() => this._burn(s.name)}
-                    >Burn</b-button>`}
+                    >Burn</b-button>` : html`
+                    <b-button size="sm" variant="secondary"
+                              ?disabled=${!s.ownerControllable}
+                              @click=${() => requestConnect(this)}>
+                      Connect
+                    </b-button>`}
             </div>`;
         })}
         <div class="warn">

@@ -13,6 +13,7 @@ import { tokens } from "../tokens/tokens";
 import { motion } from "../tokens/motion";
 import { signInWithBankoneth, type SiweBundle } from "@bankoneth/core";
 import type { WalletClient } from "viem";
+import { requestConnect } from "./_disconnected";
 
 interface SiweClient {
   walletClient: WalletClient;
@@ -101,11 +102,15 @@ export class BankonethSiweSignin extends LitElement {
         <h3>Sign in with bankoneth</h3>
         <div class="statement">${this.statement}</div>
         <div class="actions">
-          <b-button
-            ?loading=${this._state === "loading"}
-            ?disabled=${this._state === "loading"}
-            @click=${this._submit}
-          >${this._verifiedFor ? "Re-sign" : "Sign in"}</b-button>
+          ${this.client ? html`
+            <b-button
+              ?loading=${this._state === "loading"}
+              ?disabled=${this._state === "loading"}
+              @click=${this._submit}
+            >${this._verifiedFor ? "Re-sign" : "Sign in"}</b-button>` : html`
+            <b-button variant="secondary" @click=${() => requestConnect(this)}>
+              Connect to sign in
+            </b-button>`}
         </div>
         ${this._state === "idle" ? null : html`
           <div class="status" data-state=${this._state}>

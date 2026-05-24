@@ -248,9 +248,14 @@ export class BankonethPurchase extends LitElement {
         </b-card>
         <div class="actions">
           <b-button variant="ghost" leadingIcon="arrowLeft" @click=${() => this._stepper.back()}>Back</b-button>
-          <b-button variant="primary" leadingIcon="shield" .loading=${this._submitting} @click=${this._commit}>
-            ${this._submitting ? "Committing…" : "Commit"}
-          </b-button>
+          ${this.client ? html`
+            <b-button variant="primary" leadingIcon="shield" .loading=${this._submitting} @click=${this._commit}>
+              ${this._submitting ? "Committing…" : "Commit"}
+            </b-button>` : html`
+            <b-button variant="secondary" leadingIcon="wallet"
+                      @click=${() => this.dispatchEvent(new CustomEvent("request-connect", { bubbles: true, composed: true }))}>
+              Connect to commit
+            </b-button>`}
         </div>
       </div>
     `;
@@ -284,10 +289,15 @@ export class BankonethPurchase extends LitElement {
 
         <div class="actions">
           <b-button variant="ghost" leadingIcon="arrowLeft" ?disabled=${this._submitting} @click=${() => this._stepper.back()}>Cancel</b-button>
-          <b-button variant="primary" leadingIcon="wallet" .loading=${this._submitting}
-            ?disabled=${this._remainingS > 0} @click=${this._reveal}>
-            ${this._remainingS > 0 ? `Reveal in ${this._remainingS}s` : "Reveal & register"}
-          </b-button>
+          ${this.client ? html`
+            <b-button variant="primary" leadingIcon="wallet" .loading=${this._submitting}
+              ?disabled=${this._remainingS > 0} @click=${this._reveal}>
+              ${this._remainingS > 0 ? `Reveal in ${this._remainingS}s` : "Reveal & register"}
+            </b-button>` : html`
+            <b-button variant="secondary" leadingIcon="wallet"
+                      @click=${() => this.dispatchEvent(new CustomEvent("request-connect", { bubbles: true, composed: true }))}>
+              Connect to reveal
+            </b-button>`}
         </div>
       </div>
     `;
