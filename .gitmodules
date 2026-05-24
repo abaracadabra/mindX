@@ -29,3 +29,9 @@
 	path = mindx_observability/vendor/netdata
 	url = https://github.com/netdata/netdata.git
 	branch = master
+[submodule "openagents/bankoneth/lib/forge-std"]
+	path = openagents/bankoneth/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "openagents/bankoneth/lib/openzeppelin-contracts"]
+	path = openagents/bankoneth/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts

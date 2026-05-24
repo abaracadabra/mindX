@@ -1,0 +1,43 @@
+{
+  "name": "@bankoneth/core",
+  "version": "0.1.0",
+  "description": "viem v2 typed client for the bankoneth contracts. Zero UI dependencies. Drop-in for PARSEC, mindX, AgenticPlace, or any project that mints bankon.eth subnames.",
+  "license": "Apache-2.0",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./abis": {
+      "types": "./dist/abis.d.ts",
+      "import": "./dist/abis.mjs",
+      "require": "./dist/abis.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts src/abis.ts --format cjs,esm --dts --clean",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "typescript": "^5.4.0",
+    "viem": "^2.21.0",
+    "vitest": "^2.1.0"
+  },
+  "keywords": ["bankoneth", "ens", "viem", "bankon.eth", "subname", "erc-7857", "erc-6551", "x402"]
+}

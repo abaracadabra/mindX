@@ -1,0 +1,30 @@
+# Foundry
+out/
+out-zerog/
+cache/
+broadcast/
+*.pdb
+
+# Node / pnpm
+node_modules/
+**/dist/
+.pnpm-store/
+.vite/
+
+# Tauri
+src-tauri/target/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+.mindx_env/
+
+# OS
+.DS_Store
+
+# Env
+.env
+.env.local
+.env.*.local
