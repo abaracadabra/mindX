@@ -209,13 +209,13 @@ contract AgentRegistry is ERC721, ERC721URIStorage, AccessControl, EIP712, IAgen
         emit LinkedINFTSet(agentTokenId, inft);
     }
 
-    function setSoulbound(uint256 agentTokenId, bool isSoulbound)
+    function setSoulbound(uint256 agentTokenId, bool soulboundFlag)
         external onlyRole(DEFAULT_ADMIN_ROLE)
     {
         Agent storage a = _agents[agentTokenId];
         if (a.owner == address(0)) revert TokenDoesNotExist(agentTokenId);
-        a.soulbound = isSoulbound;
-        emit SoulboundSet(agentTokenId, isSoulbound);
+        a.soulbound = soulboundFlag;
+        emit SoulboundSet(agentTokenId, soulboundFlag);
     }
 
     /* ═══════════════════════════════════════════════════════════════ */

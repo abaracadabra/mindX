@@ -39,6 +39,40 @@ issuable without parent-lock — a silent griefable rug. Caught pre-mainnet.
 
 ---
 
+### HIGH-3 — `BankonEthRegistrar.sweep()` calls `paymentRouter.distribute` without funding the router (Phase 0.2)
+
+**File:** `contracts/BankonEthRegistrar.sol` (line 241 pre-fix)
+
+`sweep()` invoked `paymentRouter.distribute(address(0), bal)` directly,
+but `BankonPaymentRouter.distribute` is **not** `payable` — it fans out
+from its own balance, which is zero unless funded first. Every sweep
+would silently revert at the first `_send(treasury, …)` low-level call
+inside the router (the call uses `payable(...).call{value: …}("")`
+which reverts on insufficient balance).
+
+This is the same bug class as HIGH-2 (`BankonDomainHosting.issue()`
+ETH router-cut path). It was caught here by the new
+`test_Sweep_routesBalanceToRouter` test added in Phase 0.2.
+
+**Fix:** mirror the HIGH-2 pattern — top up the router with a raw
+`payable(address(paymentRouter)).call{value: bal}("")` before invoking
+`distribute()`. The new code:
+
+```solidity
+(bool ok,) = payable(address(paymentRouter)).call{value: bal}("");
+require(ok, "router fund failed");
+paymentRouter.distribute(address(0), bal);
+```
+
+**Impact:** every Flow B sweep would revert, leaving the BANKON markup
+trapped in the registrar contract indefinitely. The treasurer would
+have had to redeploy with a fixed `sweep()` post-mainnet to recover
+funds. Caught pre-mainnet by the new Phase 0.2 test.
+
+**Status:** CLOSED — Phase 0.2 (v2 plan).
+
+---
+
 ### HIGH-2 — `BankonDomainHosting.issue()` ETH rail accepts any `msg.value > 0`
 
 **File:** `contracts/BankonDomainHosting.sol` (line 146 pre-fix)
@@ -125,13 +159,17 @@ canonical `PublicResolver.multicall` shape; documented in the .md.
 
 ### LOW-2 — `BankonEthRegistrar.reveal` uses `this.quote(...)` (external self-call)
 
-**File:** `contracts/BankonEthRegistrar.sol` (line 181)
+**File:** `contracts/BankonEthRegistrar.sol` (line 181 pre-fix; now line 191)
 
 External self-call wastes ~700 gas per `reveal()` invocation and breaks
 view inlining. Could be `_quote(...)` internal helper.
 
-**Status:** Acknowledged. Not fixed in this pass — purely a gas
-optimisation, no correctness impact. Tracked for follow-up.
+**Fix:** added `_quote(string memory label, uint256 durationYears)`
+internal view at `BankonEthRegistrar.sol:122`. Both the public
+`quote()` external view and `reveal()` now call the internal helper.
+Saves ~700 gas per reveal; no behavioural change.
+
+**Status:** CLOSED — Phase 0.1 (v2 plan).
 
 ---
 
@@ -157,8 +195,10 @@ calling `setOracles`. Documented in `BankonReputationGate.md`.
 the public view function `isSoulbound(uint256)` at line 295. Solc emits
 a warning; no runtime effect.
 
-**Status:** Acknowledged. Cosmetic; would be addressed in the next DAIO
-sync of AgentRegistry.
+**Fix:** renamed the parameter to `soulboundFlag`; both usages updated.
+Solc warning gone.
+
+**Status:** CLOSED — Phase 0.1 (v2 plan).
 
 ---
 
@@ -168,6 +208,11 @@ sync of AgentRegistry.
 
 Solc suggests `view` mutability for two functions that read state but
 don't mutate. Cosmetic warnings only.
+
+**Fix:** added `view` to `Verify.run()` and
+`BankonAgenticPlaceHookTest.test_InitialWebhook()`. Solc warnings gone.
+
+**Status:** CLOSED — Phase 0.1 (v2 plan).
 
 ---
 
@@ -202,8 +247,8 @@ This is an internal first-pass audit. Things deliberately not covered:
 - **Treasury Safe operational security** — multisig signer rotation,
   hardware wallet hygiene, post-deploy address handoff. Not a contract
   concern.
-- **Gas optimisation** — focus was correctness + security. Several
-  contracts have low-hanging gas wins (e.g., LOW-2).
+- **Gas optimisation** — focus was correctness + security. LOW-2 was
+  the only material gas finding; closed in Phase 0.1.
 - **Fork tests** against live mainnet ENS — recommended before deploy.
   `vm.createSelectFork(MAINNET_RPC, ...)` boilerplate not in this pass.
 

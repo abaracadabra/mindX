@@ -114,6 +114,16 @@ contract BankonEthRegistrar is
         override
         returns (uint256 wei_, uint256 usd6)
     {
+        return _quote(label, durationYears);
+    }
+
+    /// @dev Internal quote — avoids the external self-call from reveal().
+    ///      Audit LOW-2: saves ~700 gas per reveal() and unblocks view-inlining.
+    function _quote(string memory label, uint256 durationYears)
+        internal
+        view
+        returns (uint256 wei_, uint256 usd6)
+    {
         if (!controller.valid(label)) revert LabelInvalid();
         uint256 durationSeconds = durationYears * 365 days;
         (uint256 base, uint256 premium) = controller.rentPrice(label, durationSeconds);
@@ -178,7 +188,7 @@ contract BankonEthRegistrar is
         if (block.timestamp < ts + controller.minCommitmentAge()) revert CommitmentTooYoung();
         if (block.timestamp > ts + controller.maxCommitmentAge()) revert CommitmentTooOld();
 
-        (uint256 weiOwed, uint256 usd6Owed) = this.quote(p.label, p.durationYears);
+        (uint256 weiOwed, uint256 usd6Owed) = _quote(p.label, p.durationYears);
 
         // Payment rails:
         //   - rail==0x00 → ETH (msg.value)
@@ -225,9 +235,15 @@ contract BankonEthRegistrar is
 
     /// @notice Sweep accumulated ETH balance (the BANKON markup) to the payment
     ///         router for the 5-bucket split.
+    /// @dev    Mirrors the fund-then-distribute pattern from
+    ///         BankonDomainHosting.issue() (HIGH-2 audit fix): `distribute()`
+    ///         is not `payable`, so the router needs its ETH topped up via a
+    ///         raw call before `distribute()` can fan it out.
     function sweep() external nonReentrant onlyRole(TREASURER_ROLE) {
         uint256 bal = address(this).balance;
         if (bal == 0) return;
+        (bool ok,) = payable(address(paymentRouter)).call{value: bal}("");
+        require(ok, "router fund failed");
         paymentRouter.distribute(address(0), bal);
     }
 

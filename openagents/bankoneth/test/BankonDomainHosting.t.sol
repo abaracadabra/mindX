@@ -8,6 +8,7 @@ import {BankonPaymentRouter} from "../contracts/BankonPaymentRouter.sol";
 
 import {MockNameWrapper} from "./mocks/MockNameWrapper.sol";
 import {MockResolver}    from "./mocks/MockResolver.sol";
+import {X402Sig}         from "./helpers/X402Sig.sol";
 
 import {INameWrapper, IPublicResolver, IBankonPaymentRouter}
     from "../contracts/interfaces/IBankon.sol";
@@ -103,5 +104,168 @@ contract BankonDomainHostingTest is Test {
         vm.prank(parentOwner);
         hosting.disenroll(PARENT_NODE);
         assertFalse(hosting.parentOf(PARENT_NODE).active);
+    }
+
+    // ── Phase 0.4a additions ───────────────────────────────────────
+
+    function test_SetPrices_updatesBothFloors_byOwner() public {
+        vm.prank(parentOwner);
+        hosting.enroll(PARENT_NODE, 5_000_000, 0.001 ether, 0, uint64(block.timestamp + 365 days), 5000);
+
+        vm.prank(parentOwner);
+        hosting.setPrices(PARENT_NODE, 7_500_000, 0.01 ether);
+
+        BankonDomainHosting.EnrolledParent memory p = hosting.parentOf(PARENT_NODE);
+        assertEq(p.pricePerLabel6, 7_500_000);
+        assertEq(p.priceEthWei,    0.01 ether);
+    }
+
+    function test_SetPrices_revertsForNonOwner() public {
+        vm.prank(parentOwner);
+        hosting.enroll(PARENT_NODE, 5_000_000, 0.001 ether, 0, uint64(block.timestamp + 365 days), 5000);
+
+        vm.prank(buyer);
+        vm.expectRevert(BankonDomainHosting.NotParentOwner.selector);
+        hosting.setPrices(PARENT_NODE, 1, 1);
+    }
+
+    function test_SetPrices_revertsOnUnenrolled() public {
+        vm.prank(parentOwner);
+        vm.expectRevert(BankonDomainHosting.ParentNotEnrolled.selector);
+        hosting.setPrices(PARENT_NODE, 1, 1);
+    }
+
+    function test_SetHostShareBps_byAdmin() public {
+        vm.prank(admin);
+        hosting.setHostShareBps(1_000);
+        assertEq(hosting.hostShareBps(), 1_000);
+    }
+
+    function test_SetHostShareBps_revertsOver5000() public {
+        vm.prank(admin);
+        vm.expectRevert(bytes("host share > 50%"));
+        hosting.setHostShareBps(5_001);
+    }
+
+    function test_SetHostShareBps_revertsForNonAdmin() public {
+        vm.expectRevert();
+        hosting.setHostShareBps(1_000);
+    }
+
+    function test_Pause_blocksEnroll() public {
+        vm.prank(admin);
+        hosting.pause();
+        vm.prank(parentOwner);
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        hosting.enroll(PARENT_NODE, 5_000_000, 0.001 ether, 0, uint64(block.timestamp + 365 days), 5000);
+    }
+
+    function test_Pause_blocksIssue() public {
+        vm.prank(parentOwner);
+        hosting.enroll(PARENT_NODE, 5_000_000, 0.001 ether, 0, uint64(block.timestamp + 365 days), 5000);
+        vm.prank(admin);
+        hosting.pause();
+
+        vm.deal(buyer, 1 ether);
+        vm.prank(buyer);
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        hosting.issue{value: 0.1 ether}(PARENT_NODE, "alice", buyer, "");
+    }
+
+    function test_Unpause_restoresEnroll() public {
+        vm.startPrank(admin);
+        hosting.pause();
+        hosting.unpause();
+        vm.stopPrank();
+
+        vm.prank(parentOwner);
+        hosting.enroll(PARENT_NODE, 5_000_000, 0.001 ether, 0, uint64(block.timestamp + 365 days), 5000);
+        assertTrue(hosting.parentOf(PARENT_NODE).active);
+    }
+
+    function test_Issue_emptyPaymentBytes_treatedAsEth() public {
+        vm.prank(parentOwner);
+        hosting.enroll(PARENT_NODE, 5_000_000, 0.001 ether, 0, uint64(block.timestamp + 365 days), 5000);
+
+        vm.deal(buyer, 1 ether);
+        vm.prank(buyer);
+        // Empty `payment` bytes — issue defaults to the ETH rail. priceEthWei
+        // is 0.001 ether, so 0.001 ether exactly is enough.
+        hosting.issue{value: 0.001 ether}(PARENT_NODE, "bob", buyer, "");
+
+        bytes32 expected = keccak256(abi.encodePacked(PARENT_NODE, keccak256("bob")));
+        (address subOwner,,) = wrapper.getData(uint256(expected));
+        assertEq(subOwner, buyer);
+    }
+
+    function test_Enroll_revertsOnDouble() public {
+        vm.startPrank(parentOwner);
+        hosting.enroll(PARENT_NODE, 5_000_000, 0.001 ether, 0, uint64(block.timestamp + 365 days), 5000);
+        vm.expectRevert(BankonDomainHosting.AlreadyEnrolled.selector);
+        hosting.enroll(PARENT_NODE, 5_000_000, 0.001 ether, 0, uint64(block.timestamp + 365 days), 5000);
+        vm.stopPrank();
+    }
+
+    function test_Issue_x402Rail() public {
+        // Configure facilitator + consumer role on the attestor.
+        uint256 facilitatorPk = uint256(keccak256("domain-hosting-facilitator"));
+        address facilitator   = vm.addr(facilitatorPk);
+        bytes32 consumerRole  = attestor.CONSUMER_ROLE();
+        vm.startPrank(admin);
+        attestor.setFacilitator(facilitator, true);
+        attestor.grantRole(consumerRole, address(hosting));
+        vm.stopPrank();
+
+        vm.prank(parentOwner);
+        hosting.enroll(PARENT_NODE, 5_000_000, 0.001 ether, 0, uint64(block.timestamp + 365 days), 5000);
+
+        // Build + sign the receipt.
+        IBankonX402Attestor.X402Receipt memory r = IBankonX402Attestor.X402Receipt({
+            receiptHash: keccak256("hosting-x402-1"),
+            claimant:    buyer,
+            usd6:        5_000_000,
+            nonce:       1,
+            expiresAt:   uint64(block.timestamp + 1 hours),
+            signature:   ""
+        });
+        r.signature = X402Sig.sign(vm, facilitatorPk, address(attestor), r);
+
+        bytes memory payment = abi.encodePacked(bytes1(0x02), abi.encode(r));
+
+        vm.prank(buyer);
+        hosting.issue(PARENT_NODE, "carol", buyer, payment);
+
+        bytes32 expected = keccak256(abi.encodePacked(PARENT_NODE, keccak256("carol")));
+        (address subOwner,,) = wrapper.getData(uint256(expected));
+        assertEq(subOwner, buyer);
+        assertTrue(attestor.isReceiptSpent(r.receiptHash));
+    }
+
+    function test_Issue_x402Rail_revertsOnUnderpaidUsd() public {
+        uint256 facilitatorPk = uint256(keccak256("domain-hosting-facilitator-underpay"));
+        address facilitator   = vm.addr(facilitatorPk);
+        bytes32 consumerRole  = attestor.CONSUMER_ROLE();
+        vm.startPrank(admin);
+        attestor.setFacilitator(facilitator, true);
+        attestor.grantRole(consumerRole, address(hosting));
+        vm.stopPrank();
+
+        vm.prank(parentOwner);
+        hosting.enroll(PARENT_NODE, 5_000_000, 0.001 ether, 0, uint64(block.timestamp + 365 days), 5000);
+
+        IBankonX402Attestor.X402Receipt memory r = IBankonX402Attestor.X402Receipt({
+            receiptHash: keccak256("hosting-x402-underpay"),
+            claimant:    buyer,
+            usd6:        4_999_999,   // 1 below floor
+            nonce:       2,
+            expiresAt:   uint64(block.timestamp + 1 hours),
+            signature:   ""
+        });
+        r.signature = X402Sig.sign(vm, facilitatorPk, address(attestor), r);
+        bytes memory payment = abi.encodePacked(bytes1(0x02), abi.encode(r));
+
+        vm.prank(buyer);
+        vm.expectRevert(bytes("x402 underpay"));
+        hosting.issue(PARENT_NODE, "dora", buyer, payment);
     }
 }

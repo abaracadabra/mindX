@@ -14,7 +14,7 @@ import {Script, console} from "forge-std/Script.sol";
 ///         operator-gated and lives in `docs/DEPLOYMENT.md`. The job here is
 ///         to print canonical commands so operators don't typo them.
 contract Verify is Script {
-    function run() external {
+    function run() external view {
         address subnameRegistrar = vm.envAddress("SUBNAME_REGISTRAR_ADDR");
         address ethRegistrar     = vm.envAddress("ETH_REGISTRAR_ADDR");
         address domainHosting    = vm.envAddress("DOMAIN_HOSTING_ADDR");

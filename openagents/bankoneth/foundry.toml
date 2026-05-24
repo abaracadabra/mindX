@@ -27,6 +27,26 @@ skip = ["contracts/inft/iNFT_7857.sol", "contracts/inft/interfaces/**"]
 # Galileo / 0G mainnet deploy. Avoid pulling in the rest of the tree.
 #   FOUNDRY_PROFILE=zerog forge build
 #   FOUNDRY_PROFILE=zerog forge script script/DeployZeroG.s.sol
+# Fork profile — runs the test/fork/* mainnet-fork integration tests
+# (Phase 0.3). Default profile skips them so CI stays fast. Use:
+#   MAINNET_RPC=https://… FOUNDRY_PROFILE=fork forge test -vv
+# Individual tests skip cleanly with vm.skip(true) if MAINNET_RPC is unset.
+[profile.fork]
+src              = "contracts"
+test             = "test/fork"
+script           = "script"
+out              = "out-fork"
+libs             = ["lib"]
+auto_detect_remappings = false
+solc             = "0.8.24"
+evm_version      = "cancun"
+optimizer        = true
+optimizer_runs   = 200
+via_ir           = true
+fuzz             = { runs = 32 }     # fewer fuzz runs — fork RPC latency
+skip             = ["contracts/inft/iNFT_7857.sol", "contracts/inft/interfaces/**"]
+gas_limit        = 30_000_000        # ENS controller register() touches many slots
+
 [profile.zerog]
 src              = "contracts/inft"
 test             = "test"

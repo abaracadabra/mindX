@@ -16,7 +16,7 @@ contract BankonAgenticPlaceHookTest is Test {
         hook.grantLister(lister);
     }
 
-    function test_InitialWebhook() public {
+    function test_InitialWebhook() public view {
         assertEq(hook.webhookURL(), "https://agenticplace.pythai.net/api/listings");
     }
 
