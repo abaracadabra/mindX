@@ -2,25 +2,31 @@
 //
 // lookupName — the read-many helper that powers <bankoneth-name-card>.
 //
-// Beats ENS's per-record sequential reads by batching:
-//   - NameWrapper.getData()    → owner + fuses + expiry
-//   - Resolver.addr(node)       → primary ETH address (or TBA override)
-//   - Resolver.text(node, k)    → text records for the BANKON keyset
-//   - InftAdapter.tbaAddressOf  → ERC-6551 wallet (if iNFT Mode A bound)
+// v2 changes (Phase 1.2):
+//   - resolver reads now route through the Universal Resolver (`resolveProfile`)
+//     so CCIP-Read offchain resolvers (`*.base.eth`, `*.cb.id`) Just Work
+//   - name input runs through ENSIP-15 `@adraffy/ens-normalize` first
+//   - `resolverAddr` argument is now OPTIONAL — UR discovers the resolver via
+//     the ENS Registry; explicit passing is only useful for testing
 //
-// All reads via viem multicall when the chain supports it; falls back to
-// sequential reads otherwise.
+// Three direct reads remain (NOT routed through UR):
+//   - NameWrapper.getData()    → owner + fuses + expiry (wrapper state, not a resolver call)
+//   - InftAdapter.tbaAddressOf → ERC-6551 wallet (bankoneth-specific, not standard ENS)
+//
+// Public API surface (preserved for <b-name-card> backwards-compat):
+//   NameLookup, LookupArgs, lookupName, hasFuse, formatExpiry,
+//   BANKON_RECORD_KEYS, FUSE, RecordKey, FuseName
 
 import {
   type Address,
   type Hex,
   type PublicClient,
-  keccak256,
-  encodePacked,
   labelhash,
   namehash,
-  pad,
 } from "viem";
+
+import { normalize } from "./normalize";
+import { resolveProfile } from "./universal-resolver";
 
 /** Standard BANKON text-record keys read by the name card. */
 export const BANKON_RECORD_KEYS = [
@@ -58,7 +64,7 @@ export type FuseName = keyof typeof FUSE;
 
 /** All info <bankoneth-name-card> needs to render. */
 export interface NameLookup {
-  /** Full subname queried, e.g. "alice.bankon.eth". */
+  /** Full subname queried, e.g. "alice.bankon.eth" (normalized). */
   name: string;
   /** Bytes32 namehash. */
   node: Hex;
@@ -74,9 +80,14 @@ export interface NameLookup {
   rawAddr: Address;
   /** Text records, key → value (empty string if unset). */
   records: Record<string, string>;
+  /** Multichain addresses, keyed by ENSIP-11/SLIP-44 coinType (sparse). */
+  coinAddr: Record<number, Hex>;
   /** ERC-6551 TBA from BankonInftAdapter (zero if iNFT not minted). */
   tba: Address;
-  /** True if all four soulbound fuses are burned (PARENT_CANNOT_CONTROL | CANNOT_UNWRAP | CANNOT_TRANSFER | CAN_EXTEND_EXPIRY). */
+  /**
+   * True if all four soulbound fuses are burned (PARENT_CANNOT_CONTROL |
+   * CANNOT_UNWRAP | CANNOT_TRANSFER | CAN_EXTEND_EXPIRY).
+   */
   isSoulbound: boolean;
   /** UNIX-ms timestamp of the lookup. */
   fetchedAt: number;
@@ -84,16 +95,25 @@ export interface NameLookup {
 
 export interface LookupArgs {
   publicClient:        PublicClient;
+  /** NameWrapper for the fuse + expiry + owner read. */
   nameWrapperAddr:     Address;
-  resolverAddr:        Address;
-  inftAdapterAddr?:    Address;     // optional — pass to fill `tba`
-  /** Optional override of the record keys to fetch. Defaults to BANKON_RECORD_KEYS. */
+  /**
+   * Optional explicit resolver address. v2: defaults to undefined — the
+   * Universal Resolver discovers the bound resolver via the ENS Registry.
+   * Pass explicitly only for tests or for resolvers not registered on chain.
+   */
+  resolverAddr?:       Address;
+  /** Optional iNFT adapter — pass to populate `tba`. */
+  inftAdapterAddr?:    Address;
+  /** Optional override of the text-record keys to fetch. */
   recordKeys?:         readonly string[];
+  /** Optional override of the multichain coinTypes to fetch. */
+  coinTypes?:          readonly number[];
   /** The full subname, e.g. "alice.bankon.eth". */
   name: string;
 }
 
-// ── Minimal inline ABIs (no JSON imports — keeps the bundle small) ──
+// ── Minimal inline ABIs ────────────────────────────────────────────
 
 const NAME_WRAPPER_ABI = [{
   type: "function",
@@ -107,26 +127,6 @@ const NAME_WRAPPER_ABI = [{
   ],
 }] as const;
 
-const RESOLVER_ABI = [
-  {
-    type: "function",
-    name: "addr",
-    stateMutability: "view",
-    inputs: [{ name: "node", type: "bytes32" }],
-    outputs: [{ name: "", type: "address" }],
-  },
-  {
-    type: "function",
-    name: "text",
-    stateMutability: "view",
-    inputs: [
-      { name: "node", type: "bytes32" },
-      { name: "key",  type: "string"  },
-    ],
-    outputs: [{ name: "", type: "string" }],
-  },
-] as const;
-
 const INFT_ADAPTER_ABI = [{
   type: "function",
   name: "tbaAddressOf",
@@ -139,63 +139,65 @@ const ZERO_ADDR: Address = "0x0000000000000000000000000000000000000000";
 
 /** Stitch together the full record + TBA + fuses dataset. */
 export async function lookupName(args: LookupArgs): Promise<NameLookup> {
-  const node = namehash(args.name) as Hex;
-  const lh   = labelhash(args.name.split(".")[0]!) as Hex;
-  const keys = args.recordKeys ?? BANKON_RECORD_KEYS;
+  const name = normalize(args.name);
+  const node = namehash(name) as Hex;
+  const lh   = labelhash(name.split(".")[0]!) as Hex;
 
-  // Run reads in parallel — viem batches under the hood when transport supports it.
-  const [
-    nwData,
-    addrVal,
-    ...textVals
-  ] = await Promise.all([
+  const recordKeys = args.recordKeys;
+  const coinTypes  = args.coinTypes;
+
+  // Three parallel branches:
+  //   1. NameWrapper.getData (owner / fuses / expiry) — direct
+  //   2. Universal Resolver profile (addr / text / contenthash / multichain)
+  //   3. iNFT adapter TBA — direct
+  const [nwData, profile, tba] = await Promise.all([
     args.publicClient.readContract({
       address: args.nameWrapperAddr,
       abi: NAME_WRAPPER_ABI,
       functionName: "getData",
       args: [BigInt(node)],
-    }) as Promise<readonly [Address, number, bigint]>,
-    args.publicClient.readContract({
-      address: args.resolverAddr,
-      abi: RESOLVER_ABI,
-      functionName: "addr",
-      args: [node],
-    }).catch(() => ZERO_ADDR) as Promise<Address>,
-    ...keys.map(k =>
-      args.publicClient.readContract({
-        address: args.resolverAddr,
-        abi: RESOLVER_ABI,
-        functionName: "text",
-        args: [node, k],
-      }).catch(() => "") as Promise<string>
-    ),
+    }).catch(() => [ZERO_ADDR, 0, 0n] as const) as Promise<readonly [Address, number, bigint]>,
+
+    resolveProfile({
+      client: args.publicClient,
+      name,
+      textKeys: recordKeys,
+      coinTypes,
+    }).catch(() => ({
+      name,
+      address: ZERO_ADDR,
+      resolver: ZERO_ADDR,
+      text: {} as Record<string, string>,
+      contenthash: null,
+      coinAddr: {} as Record<number, Hex>,
+      latencyMs: 0,
+      offchain: false,
+    })),
+
+    (async (): Promise<Address> => {
+      if (!args.inftAdapterAddr || args.inftAdapterAddr === ZERO_ADDR) return ZERO_ADDR;
+      try {
+        return (await args.publicClient.readContract({
+          address: args.inftAdapterAddr,
+          abi: INFT_ADAPTER_ABI,
+          functionName: "tbaAddressOf",
+          args: [lh],
+        })) as Address;
+      } catch {
+        return ZERO_ADDR;
+      }
+    })(),
   ]);
 
   const [owner, fuses, expiry] = nwData;
 
-  // The resolver's `addr` returns TBA when iNFT Mode A is active. To get the
-  // raw owner address we'd need a separate `_addr[]` getter, but the
-  // canonical resolver doesn't expose it, so we use the NameWrapper owner
-  // as the raw fallback.
-  const rawAddr = owner;
-
-  // Separate TBA lookup via the adapter (independent of resolver state).
-  let tba: Address = ZERO_ADDR;
-  if (args.inftAdapterAddr && args.inftAdapterAddr !== ZERO_ADDR) {
-    try {
-      tba = await args.publicClient.readContract({
-        address: args.inftAdapterAddr,
-        abi: INFT_ADAPTER_ABI,
-        functionName: "tbaAddressOf",
-        args: [lh],
-      }) as Address;
-    } catch { /* adapter missing or label unbound — leave zero */ }
-  }
-
+  // resolveProfile only returns the canonical BANKON_RECORD_KEYS subset by
+  // default plus any caller-provided keys. The name-card consumes records
+  // by exact key so we don't need to fill unset keys — but for stable iteration
+  // make sure every requested key has a string value (possibly empty).
+  const wantedKeys = recordKeys ?? BANKON_RECORD_KEYS;
   const records: Record<string, string> = {};
-  for (let i = 0; i < keys.length; i++) {
-    records[keys[i]!] = textVals[i] ?? "";
-  }
+  for (const k of wantedKeys) records[k] = profile.text[k] ?? "";
 
   const soulboundMask =
     FUSE.PARENT_CANNOT_CONTROL |
@@ -205,14 +207,19 @@ export async function lookupName(args: LookupArgs): Promise<NameLookup> {
   const isSoulbound = (fuses & soulboundMask) === soulboundMask;
 
   return {
-    name: args.name,
+    name,
     node,
     owner,
     fuses,
     expiry: Number(expiry),
-    addr: addrVal,
-    rawAddr,
+    // UR address read returns the resolver's `addr(node)`. For bankoneth
+    // subnames, our resolver's `addr` overrides to the TBA when bound; for
+    // ENS PublicResolver it returns the raw addr record. Same semantics.
+    addr: profile.address,
+    // Raw owner from the NameWrapper, regardless of TBA override.
+    rawAddr: owner,
     records,
+    coinAddr: profile.coinAddr,
     tba,
     isSoulbound,
     fetchedAt: Date.now(),

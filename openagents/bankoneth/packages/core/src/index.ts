@@ -336,5 +336,55 @@ export {
   type FuseName,
 } from "./lookup";
 
+// ── v2 — ENS foundations (Phase 1) ────────────────────────────────
+export {
+  MAINNET,
+  SEPOLIA,
+  ENS_BY_CHAIN,
+  ensAddressesFor,
+  ZERO_ADDR,
+  type EnsAddresses,
+} from "./addresses";
+
+export {
+  normalize,
+  normalizeLabel,
+  splitLabels,
+  isNormalized,
+  EnsNormalizeError,
+} from "./normalize";
+
+export {
+  evmCoinType,
+  chainIdFromCoinType,
+  isEvmCoinType,
+  COIN_TYPE,
+  COIN_TYPES,
+  metaFor,
+  metaForCoinType,
+  type CoinTypeName,
+  type CoinTypeMeta,
+} from "./coin-types";
+
+export {
+  UNIVERSAL_RESOLVER_MAINNET,
+  UNIVERSAL_RESOLVER_SEPOLIA,
+  resolveProfile,
+  resolveReverse,
+  type ProfileLookup,
+  type ProfileLookupArgs,
+  type ReverseLookup,
+  type ReverseLookupArgs,
+} from "./universal-resolver";
+
+export {
+  getNamesForAddress,
+  getSubnames,
+  getNameHistory,
+  type OwnedName,
+  type SubnameEntry,
+  type NameHistoryEvent,
+} from "./inventory";
+
 // Re-exports for convenience.
 export { namehash, labelhash };

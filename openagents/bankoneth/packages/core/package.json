@@ -31,12 +31,18 @@
     "lint": "tsc --noEmit"
   },
   "peerDependencies": {
-    "viem": "^2.21.0"
+    "viem": "^2.35.0"
+  },
+  "dependencies": {
+    "@adraffy/ens-normalize": "^1.10.1",
+    "@ensdomains/address-encoder": "^1.1.4",
+    "@ensdomains/content-hash": "^3.0.0",
+    "@ensdomains/ensjs": "^4.2.2"
   },
   "devDependencies": {
     "tsup": "^8.3.0",
     "typescript": "^5.4.0",
-    "viem": "^2.21.0",
+    "viem": "^2.35.0",
     "vitest": "^2.1.0"
   },
   "keywords": ["bankoneth", "ens", "viem", "bankon.eth", "subname", "erc-7857", "erc-6551", "x402"]
