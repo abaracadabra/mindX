@@ -136,7 +136,13 @@ contract BankonX402AttestorTest is Test {
         attestor.verify(r);
     }
 
-    function test_MonotonicNonce() public {
+    /// @dev Audit M-3: monotonic nonce enforcement was removed because it
+    ///      caused false rejects under parallel consumption by multiple
+    ///      registrars (Flow A + B + C all share this attestor). Replay
+    ///      protection is via `_spent[receiptHash]` alone. This test now
+    ///      asserts the OPPOSITE — an out-of-order nonce is accepted as long
+    ///      as the receiptHash is unique.
+    function test_OutOfOrderNonceAccepted() public {
         IBankonX402Attestor.X402Receipt memory r1 = IBankonX402Attestor.X402Receipt({
             receiptHash: keccak256("r1"),
             claimant:    claimant,
@@ -148,21 +154,21 @@ contract BankonX402AttestorTest is Test {
         r1.signature = _signReceipt(r1);
         vm.prank(consumer);
         attestor.verify(r1);
+        assertEq(attestor.lastNonce(facilitator), 5);
 
         IBankonX402Attestor.X402Receipt memory r2 = IBankonX402Attestor.X402Receipt({
             receiptHash: keccak256("r2"),
             claimant:    claimant,
             usd6:        1_000_000,
-            nonce:       4, // OLDER
+            nonce:       4, // OLDER — would have been rejected pre-audit fix
             expiresAt:   uint64(block.timestamp + 1 hours),
             signature:   ""
         });
         r2.signature = _signReceipt(r2);
-
         vm.prank(consumer);
-        vm.expectRevert(
-            abi.encodeWithSelector(BankonX402Attestor.NonceTooOld.selector, uint64(4), uint64(5))
-        );
-        attestor.verify(r2);
+        bool ok = attestor.verify(r2);
+        assertTrue(ok);
+        // lastNonce remains the highest seen — not the most recent.
+        assertEq(attestor.lastNonce(facilitator), 5);
     }
 }

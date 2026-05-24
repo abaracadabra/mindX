@@ -60,7 +60,7 @@ contract BankonDomainHostingTest is Test {
 
     function test_EnrollHappyPath() public {
         vm.prank(parentOwner);
-        hosting.enroll(PARENT_NODE, 5_000_000, 0, uint64(block.timestamp + 365 days), 5000);
+        hosting.enroll(PARENT_NODE, 5_000_000, 0.001 ether, 0, uint64(block.timestamp + 365 days), 5000);
 
         BankonDomainHosting.EnrolledParent memory p = hosting.parentOf(PARENT_NODE);
         assertTrue(p.active);
@@ -72,18 +72,18 @@ contract BankonDomainHostingTest is Test {
         wrapper.adminSetParent(PARENT_NODE, parentOwner, 0, type(uint64).max); // fuses=0
         vm.prank(parentOwner);
         vm.expectRevert(BankonDomainHosting.CannotUnwrapNotBurned.selector);
-        hosting.enroll(PARENT_NODE, 5_000_000, 0, uint64(block.timestamp + 365 days), 5000);
+        hosting.enroll(PARENT_NODE, 5_000_000, 0.001 ether, 0, uint64(block.timestamp + 365 days), 5000);
     }
 
     function test_OnlyParentOwnerCanEnroll() public {
         vm.prank(buyer);
         vm.expectRevert(BankonDomainHosting.NotParentOwner.selector);
-        hosting.enroll(PARENT_NODE, 5_000_000, 0, uint64(block.timestamp + 365 days), 5000);
+        hosting.enroll(PARENT_NODE, 5_000_000, 0.001 ether, 0, uint64(block.timestamp + 365 days), 5000);
     }
 
     function test_IssueSubname() public {
         vm.prank(parentOwner);
-        hosting.enroll(PARENT_NODE, 5_000_000, 0, uint64(block.timestamp + 365 days), 5000);
+        hosting.enroll(PARENT_NODE, 5_000_000, 0.001 ether, 0, uint64(block.timestamp + 365 days), 5000);
 
         vm.deal(buyer, 1 ether);
         vm.prank(buyer);
@@ -98,7 +98,7 @@ contract BankonDomainHostingTest is Test {
 
     function test_DisenrollByOwner() public {
         vm.prank(parentOwner);
-        hosting.enroll(PARENT_NODE, 5_000_000, 0, uint64(block.timestamp + 365 days), 5000);
+        hosting.enroll(PARENT_NODE, 5_000_000, 0.001 ether, 0, uint64(block.timestamp + 365 days), 5000);
 
         vm.prank(parentOwner);
         hosting.disenroll(PARENT_NODE);

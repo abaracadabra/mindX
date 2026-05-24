@@ -86,7 +86,8 @@ contract BankonDomainHosting is
     function enroll(
         bytes32 parentNode,
         uint256 pricePerLabel6,
-        uint16  childFuses,
+        uint256 priceEthWei,
+        uint32  childFuses,
         uint64  defaultExpiry,
         uint16  ownerShareBps
     ) external override whenNotPaused {
@@ -105,13 +106,30 @@ contract BankonDomainHosting is
         _parents[parentNode] = EnrolledParent({
             parentOwner:     msg.sender,
             pricePerLabel6:  pricePerLabel6,
-            childFuses:      childFuses == 0 ? uint16(DEFAULT_CHILD_FUSES) : childFuses,
+            priceEthWei:     priceEthWei,
+            // No more uint16 truncation — DEFAULT_CHILD_FUSES has bits at
+            // positions 0, 16 and 18 (CANNOT_UNWRAP | PARENT_CANNOT_CONTROL |
+            // CAN_EXTEND_EXPIRY). Casting to uint16 silently lost the latter
+            // two and broke the parent-lock + extend-expiry guarantees the
+            // doc promises. Storage + arg are now uint32.
+            childFuses:      childFuses == 0 ? DEFAULT_CHILD_FUSES : childFuses,
             defaultExpiry:   defaultExpiry,
             ownerShareBps:   ownerShareBps,
             active:          true
         });
 
         emit ParentEnrolled(parentNode, msg.sender, ownerShareBps);
+    }
+
+    /// @inheritdoc IBankonDomainHosting
+    function setPrices(bytes32 parentNode, uint256 pricePerLabel6, uint256 priceEthWei)
+        external override
+    {
+        EnrolledParent storage p = _parents[parentNode];
+        if (!p.active) revert ParentNotEnrolled();
+        if (p.parentOwner != msg.sender) revert NotParentOwner();
+        p.pricePerLabel6 = pricePerLabel6;
+        p.priceEthWei    = priceEthWei;
     }
 
     /// @inheritdoc IBankonDomainHosting
@@ -140,10 +158,12 @@ contract BankonDomainHosting is
             require(x402Attestor.verify(r), "x402 verify");
             require(r.usd6 >= p.pricePerLabel6, "x402 underpay");
         } else {
-            // ETH rail — we don't price-oracle the parent's USD; the parent set
-            // pricePerLabel6 as their declared USD; the front-end converts to ETH.
-            // For Flow C we accept the ETH amount as-is and let the router split it.
-            if (msg.value == 0) revert InsufficientPayment(0, p.pricePerLabel6);
+            // ETH rail — must meet the per-parent `priceEthWei` floor that the
+            // parent owner set at enrollment (and can update via setPrices()).
+            // priceEthWei=0 disables the ETH rail for this parent, forcing
+            // x402-avm.
+            if (p.priceEthWei == 0) revert InsufficientPayment(msg.value, 0);
+            if (msg.value < p.priceEthWei) revert InsufficientPayment(msg.value, p.priceEthWei);
         }
 
         // Compute label node and check availability via name wrapper getData.
@@ -158,7 +178,7 @@ contract BankonDomainHosting is
             owner,
             address(resolver),
             0,
-            uint32(p.childFuses),
+            p.childFuses,         // already uint32 — no truncation
             p.defaultExpiry
         );
 

@@ -115,9 +115,21 @@ export const BANKON_DOMAIN_HOSTING_ABI = [
     inputs: [
       { name: "parentNode", type: "bytes32" },
       { name: "pricePerLabel6", type: "uint256" },
-      { name: "childFuses", type: "uint16" },
+      { name: "priceEthWei", type: "uint256" },
+      { name: "childFuses", type: "uint32" },
       { name: "defaultExpiry", type: "uint64" },
       { name: "ownerShareBps", type: "uint16" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "setPrices",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "parentNode", type: "bytes32" },
+      { name: "pricePerLabel6", type: "uint256" },
+      { name: "priceEthWei", type: "uint256" },
     ],
     outputs: [],
   },
@@ -145,7 +157,8 @@ export const BANKON_DOMAIN_HOSTING_ABI = [
         components: [
           { name: "parentOwner", type: "address" },
           { name: "pricePerLabel6", type: "uint256" },
-          { name: "childFuses", type: "uint16" },
+          { name: "priceEthWei", type: "uint256" },
+          { name: "childFuses", type: "uint32" },
           { name: "defaultExpiry", type: "uint64" },
           { name: "ownerShareBps", type: "uint16" },
           { name: "active", type: "bool" },

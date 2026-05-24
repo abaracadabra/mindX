@@ -37,10 +37,15 @@ contract BankonInftAdapter is IBankonInftAdapter, ERC1155Holder, AccessControl {
     /// @dev ERC-6551 implementation contract address (the account contract).
     address public erc6551Implementation;
 
-    /// @dev labelhash → 0G tokenId
+    /// @dev labelhash → 0G tokenId. Independent of `_bound[labelhash]` because
+    ///      tokenId 0 is a legal value on some chains.
     mapping(bytes32 => uint256) private _tokenIdOf;
-    /// @dev labelhash → derived ERC-6551 TBA address (on the chain where iNFT lives)
+    /// @dev labelhash → derived ERC-6551 TBA address (on the chain where iNFT lives).
     mapping(bytes32 => address) private _tbaOf;
+    /// @dev labelhash → set once on first registerZeroGTokenId; subsequent calls
+    ///      revert with LabelAlreadyBound. Prevents WIRER from rebinding a label
+    ///      to a different (tokenId, TBA) silently.
+    mapping(bytes32 => bool)    private _bound;
 
     event ZeroGiNFTContractUpdated(address indexed contractAddr, uint256 chainId);
     event Erc6551ImplementationUpdated(address indexed implementation);
@@ -110,7 +115,9 @@ contract BankonInftAdapter is IBankonInftAdapter, ERC1155Holder, AccessControl {
         uint256 erc1155TokenId,
         string calldata metadataURI
     ) external override onlyRole(REGISTRAR_ROLE) {
-        if (_tokenIdOf[labelhash] != 0) revert LabelAlreadyBound(labelhash);
+        // Sentinel uses `_bound` rather than `_tokenIdOf != 0` so a legitimate
+        // tokenId 0 doesn't fool the duplicate check.
+        if (_bound[labelhash]) revert LabelAlreadyBound(labelhash);
         if (zeroGiNFTContract == address(0)) revert ZeroGiNFTContractUnset();
         if (erc6551Implementation == address(0)) revert Erc6551ImplementationUnset();
 
@@ -127,7 +134,13 @@ contract BankonInftAdapter is IBankonInftAdapter, ERC1155Holder, AccessControl {
     {
         if (zeroGiNFTContract == address(0)) revert ZeroGiNFTContractUnset();
         if (erc6551Implementation == address(0)) revert Erc6551ImplementationUnset();
+        // Rebinding is *not* allowed by the WIRER alone — a rebind would let a
+        // malicious / compromised wirer redirect the TBA pointer for an
+        // already-minted subname. Force a re-deploy + admin grant flow if a
+        // rebind is ever truly needed.
+        if (_bound[labelhash]) revert LabelAlreadyBound(labelhash);
 
+        _bound[labelhash]     = true;
         _tokenIdOf[labelhash] = zeroGTokenId;
         address tba = _computeTba(zeroGTokenId);
         _tbaOf[labelhash] = tba;

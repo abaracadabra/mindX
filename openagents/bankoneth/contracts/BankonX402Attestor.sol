@@ -24,15 +24,18 @@ contract BankonX402Attestor is IBankonX402Attestor, EIP712, AccessControl {
 
     /// @dev facilitator EOA → active?
     mapping(address => bool) private _facilitators;
-    /// @dev receiptHash → spent?
+    /// @dev receiptHash → spent? Primary replay guard.
     mapping(bytes32 => bool) private _spent;
-    /// @dev facilitator → highest consumed nonce
+    /// @dev facilitator → highest seen nonce. Tracked for off-chain monitoring
+    ///      ONLY — we no longer reject out-of-order nonces, because that
+    ///      caused false rejects under parallel consumption by multiple
+    ///      registrars (Flow A + B + C all share this attestor). Replay
+    ///      protection is provided by `_spent[receiptHash]` alone.
     mapping(address => uint64) public lastNonce;
 
     error ReceiptExpired();
     error ReceiptAlreadyConsumed(bytes32 receiptHash);
     error FacilitatorNotRegistered(address facilitator);
-    error NonceTooOld(uint64 supplied, uint64 last);
 
     constructor(address admin)
         EIP712("BankonX402Attestor", "1")
@@ -81,10 +84,9 @@ contract BankonX402Attestor is IBankonX402Attestor, EIP712, AccessControl {
 
         if (!_facilitators[signer]) revert FacilitatorNotRegistered(signer);
 
-        // Monotonic nonce per facilitator — defense in depth against replay.
-        uint64 last = lastNonce[signer];
-        if (r.nonce <= last) revert NonceTooOld(r.nonce, last);
-        lastNonce[signer] = r.nonce;
+        // Track highest-seen nonce per facilitator for off-chain monitoring;
+        // no longer enforced as monotonic (see lastNonce doc comment).
+        if (r.nonce > lastNonce[signer]) lastNonce[signer] = r.nonce;
 
         _spent[r.receiptHash] = true;
         emit ReceiptConsumed(r.receiptHash, r.claimant, r.nonce);

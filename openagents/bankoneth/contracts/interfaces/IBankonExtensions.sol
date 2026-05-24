@@ -125,8 +125,9 @@ interface IBankonEthRegistrar {
 interface IBankonDomainHosting {
     struct EnrolledParent {
         address parentOwner;
-        uint256 pricePerLabel6;   // USDC base units
-        uint16  childFuses;        // applied to every issued subname
+        uint256 pricePerLabel6;   // USDC base units (x402-avm rail floor)
+        uint256 priceEthWei;       // ETH wei floor (0 = ETH rail disabled for this parent)
+        uint32  childFuses;        // applied to every issued subname (uint32 — NameWrapper fuses use bit 16+)
         uint64  defaultExpiry;     // unix seconds for newly minted children
         uint16  ownerShareBps;     // basis points of revenue routed to parentOwner (10000 = 100%)
         bool    active;
@@ -138,10 +139,15 @@ interface IBankonDomainHosting {
     function enroll(
         bytes32 parentNode,
         uint256 pricePerLabel6,
-        uint16  childFuses,
+        uint256 priceEthWei,
+        uint32  childFuses,
         uint64  defaultExpiry,
         uint16  ownerShareBps
     ) external;
+
+    /// @notice Update the price floors for an enrolled parent without
+    ///         re-enrolling. Lets parents track ETH/USD movement off-chain.
+    function setPrices(bytes32 parentNode, uint256 pricePerLabel6, uint256 priceEthWei) external;
 
     function disenroll(bytes32 parentNode) external;
 
