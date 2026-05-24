@@ -25,6 +25,9 @@ export { BankonethHost }        from "./host-domain-form";
 // ── Name card (beats app.ens.domains profile card) ──────────────
 export { BankonethNameCard } from "./primitives/b-name-card";
 
+// ── Manage panels (Phase 3 — ens-app-v3 parity + agentic edge) ───
+export * from "./manage";
+
 // ── Secondary components ─────────────────────────────────────────
 export { BankonethPricing }     from "./pricing-panel";
 export { BankonethInftToggle }  from "./inft-toggle";

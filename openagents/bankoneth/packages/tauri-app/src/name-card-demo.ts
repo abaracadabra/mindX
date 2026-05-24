@@ -36,6 +36,7 @@ const MOCK: NameLookup = {
     "algoid.did":           "did:algo:UWGGI...J38ASE57862DE",
   },
   tba: "0x000000000000000000000000000000000000a91ce" as `0x${string}`,
+  coinAddr: {},
   isSoulbound: true,
   fetchedAt: Date.now(),
 };
