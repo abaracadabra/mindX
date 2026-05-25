@@ -298,6 +298,13 @@ class Boardroom:
         """
         Convene a boardroom session. CEO presents directive, Soldiers evaluate.
 
+        When ``MINDX_BOARDROOM_SERVICE_ENABLED=1`` (Phase E cutover flag), this
+        delegates to the standalone Node.js ``boardroom-service`` via
+        ``agents/boardroom_client.py`` rather than running the in-process
+        consensus engine below. The flag is OPT-IN — default behaviour is the
+        original local path. Operators flip after confirming parity on the
+        live JSONL substrate (both old and new write to the same path).
+
         model_mode: "local" (SOLDIER_MODELS only), "cloud" (single CLOUD_MODEL for all members),
                     "auto" (try CLOUD_MODEL, fall back to local — default)
         priority: "executive" (preempt autonomous), "elevated", "standard" (default), "deferred"
@@ -306,6 +313,14 @@ class Boardroom:
                  Shorthand: "ciso,cro,cto" etc (prefix match).
         consensus: weighted score threshold for approval (default 0.666 supermajority).
         """
+        # ── Phase E delegation gate ───────────────────────────────────────
+        # Cheap env check on every call so the operator can flip at runtime.
+        if os.environ.get("MINDX_BOARDROOM_SERVICE_ENABLED") == "1":
+            return await self._convene_via_service(
+                directive=directive, importance=importance, context=context,
+                model_mode=model_mode, priority=priority, members=members,
+                consensus=consensus,
+            )
         priority_cfg = self.PRIORITY_LEVELS.get(priority, self.PRIORITY_LEVELS["standard"])
         preempted = False
 
@@ -378,6 +393,90 @@ class Boardroom:
             # Resume autonomous loop after executive session
             if preempted:
                 await self._resume_autonomous()
+
+    # ── Phase E: service delegation ──────────────────────────────────────
+    async def _convene_via_service(
+        self,
+        *,
+        directive: str,
+        importance: str,
+        context: Optional[Dict[str, Any]],
+        model_mode: str,
+        priority: str,
+        members: Optional[str],
+        consensus: float,
+    ) -> BoardroomSession:
+        """Delegate to the standalone boardroom-service and coerce the response
+        into the BoardroomSession dataclass shape the callers expect."""
+        from agents.boardroom_client import BoardroomClient
+        client = await BoardroomClient.get_instance()
+        ctx_str = None
+        if context:
+            try:
+                ctx_str = json.dumps(context, default=str)
+            except Exception:
+                ctx_str = str(context)
+        result = await client.convene_in_default_room(
+            directive=directive, importance=importance, context=ctx_str,
+        )
+        # Coerce. The Node service returns:
+        #   { session_id, room_id, directive, importance, started_at, finished_at,
+        #     votes: [{seat, value, weight, veto, reasoning, provider, model, latency_ms}],
+        #     verdict: { value, accept_weight, reject_weight, ... } }
+        session = BoardroomSession(
+            session_id=result.get("session_id") or f"br_{int(time.time())}",
+            directive=directive,
+            importance=importance,
+            timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        )
+        verdict = result.get("verdict") or {}
+        verdict_value = verdict.get("value", "")
+        # Map Node verdict → Python outcome vocabulary.
+        outcome_map = {
+            "PASSED": "approved",
+            "REJECTED": "rejected",
+            "VETOED": "rejected",
+            "TIED": "approved",         # tied carries — same as Python tie rule
+            "NO_QUORUM": "exploration",
+        }
+        session.outcome = outcome_map.get(verdict_value, "pending")
+        total_w = (verdict.get("accept_weight", 0) +
+                   verdict.get("reject_weight", 0) +
+                   verdict.get("abstain_weight", 0)) or 1.0
+        session.weighted_score = (verdict.get("accept_weight", 0) / total_w) if total_w else 0.0
+        for raw in (result.get("votes") or []):
+            try:
+                session.votes.append(SoldierVote(
+                    soldier_id=raw.get("seat", "?"),
+                    role=raw.get("seat", "?"),
+                    provider=raw.get("provider", "?"),
+                    model=raw.get("model", "?"),
+                    decision=("approve" if raw.get("value") == "accept" else
+                              "reject" if raw.get("value") == "reject" else "abstain"),
+                    reasoning=raw.get("reasoning", "")[:2000],
+                    confidence=0.8,
+                    latency_ms=int(raw.get("latency_ms", 0)),
+                    weight=float(raw.get("weight", 1.0)),
+                ))
+            except Exception as e:
+                logger.warning(f"Boardroom: failed to coerce service vote: {e}")
+        session.model_report = {
+            "transport": "boardroom-service (Node.js)",
+            "consensus_threshold": consensus,
+            "priority": priority,
+            "model_mode": model_mode,
+            "members": members,
+            "verdict": verdict,
+        }
+        # Persist to local in-memory cache so /insight/boardroom/sessions reads it.
+        self.sessions.append(session)
+        if len(self.sessions) > 100:
+            self.sessions = self.sessions[-100:]
+        logger.info(
+            f"Boardroom (via service) session {session.session_id}: {session.outcome} "
+            f"(score={session.weighted_score:.3f}, votes={len(session.votes)})"
+        )
+        return session
 
     async def convene_stream(
         self,
