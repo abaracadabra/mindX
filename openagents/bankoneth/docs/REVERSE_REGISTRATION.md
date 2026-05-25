@@ -70,14 +70,89 @@ reverse record is recorded against `[walletAddr].addr.reverse`.
 
 Gas: ~95k (one resolver write + reverse record).
 
-## Story C — ENSIP-19 (multichain reverse, future)
+## Story C — ENSIP-19 multichain reverse (helpers shipped)
 
 [ENSIP-19](https://ensips.ethereum.org/ensips/19) introduces per-coinType
 reverse records (distinct names for Mainnet vs Base vs Optimism). The
-panel + script are designed for ENSIP-3 only today; extend with a
-`coinType` argument when ENSIP-19 stabilizes.
+namespace becomes `<addr>.<coinType-hex>.reverse` instead of
+`<addr>.addr.reverse`.
 
-See [`V2_READINESS.md`](V2_READINESS.md) for the migration plan.
+bankoneth ships the derivation helpers + ReverseRegistrar address pins
+in [`packages/core/src/contract-naming.ts`](../packages/core/src/contract-naming.ts):
+
+```ts
+import { reverseNamespace, l2ReverseRegistrarFor, evmCoinType } from "@bankoneth/core";
+
+const optimismCoinType = evmCoinType(10);            // 0x8000000a
+const { label, node } = reverseNamespace(addr, optimismCoinType);
+// label === "<addr-lower>.8000000a.reverse"
+
+const rr = l2ReverseRegistrarFor(10);                // L2 ReverseRegistrar on Optimism
+// rr === null when the chain isn't pinned; operators populate
+// L2_REVERSE_REGISTRARS against the canonical ensdomains/ens-contracts
+// deployment artifact before broadcasting on that chain.
+```
+
+When bankoneth deploys on an L2, the equivalent of
+`script/SetPrimaryNames.s.sol` is the same shape — only the
+ReverseRegistrar address changes, sourced from `l2ReverseRegistrarFor()`.
+
+L2 deploy + the L2 equivalent of `SetForwardNames` are out of scope for
+this pass (no bankoneth registrar runs on an L2 today). The helpers are
+forward-work-ready for the next phase. See
+[`CONTRACT_NAMING_AUDIT.md`](CONTRACT_NAMING_AUDIT.md) for the full
+status + the deferred items.
+
+## Story D — Forward record duality
+
+`setReverseName` records `<addr>.addr.reverse → name` but is only half
+the story. Canonical resolvers (Etherscan, Rainbow, viem's
+`getEnsName`) reject the reverse if the forward leg doesn't match —
+they require `PublicResolver.addr(namehash(name)) === addr`.
+
+bankoneth ships [`script/SetForwardNames.s.sol`](../script/SetForwardNames.s.sol)
+to close that gap. Run it immediately after `SetPrimaryNames.s.sol`:
+
+```bash
+forge script script/SetForwardNames.s.sol \
+  --rpc-url $RPC \
+  --broadcast \
+  -vvv
+```
+
+Idempotent — skips any `(name, addr)` pair already wired correctly.
+Same env-var convention as `SetPrimaryNames.s.sol`. Requires the
+deployer wallet to have REGISTRAR_ROLE on the PublicResolver (or own
+`bankon.eth` sufficiently to set its child records).
+
+## Story E — Round-trip verification
+
+After Stories A + D, audit the wire-up:
+
+```bash
+forge script script/VerifyContractNames.s.sol -vv
+```
+
+Read-only. Prints a per-contract table with ✓/✗ for reverse, forward,
+and round-trip. Reverts (non-zero exit) on any round-trip failure so
+CI / the Sepolia rehearsal runbook can gate on the result.
+
+In TypeScript:
+
+```ts
+import { verifyContractName } from "@bankoneth/core";
+
+const status = await verifyContractName({
+  client:       publicClient,
+  address:      REGISTRAR_ADDR,
+  expectedName: "registrar.bankon.eth",
+});
+console.log(status); // { reverseName, forwardAddr, roundTrip, gaps[] }
+```
+
+The `<b-contract-name-status>` Lit component mounted on
+`packages/tauri-app/admin.html` calls this for every bankoneth contract
+and renders the result as a status table. No wallet required.
 
 ## Failure modes
 

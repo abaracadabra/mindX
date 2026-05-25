@@ -19,3 +19,7 @@ export { BankonethPrimaryName }      from "./b-primary-name";
 export { BankonethMyNames }          from "./b-my-names";
 export { BankonethPermissionsPanel } from "./b-permissions-panel";
 export { BankonethSiweSignin }       from "./b-siwe-signin";
+export {
+  BankonethContractNameStatus,
+  type ContractRow,
+} from "./b-contract-name-status";

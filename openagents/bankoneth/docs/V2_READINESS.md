@@ -69,7 +69,7 @@ formerly `contracts-v2`).
 | Item | Action |
 |---|---|
 | Namechain L2 deploy | bankoneth currently deploys on L1. When ENSv2 ships an L2-native subname registrar pattern, fork the deploy script to target Namechain — the UR proxy will keep both sides working in parallel during the transition. |
-| ENSIP-19 multichain reverse | bankoneth currently sets ENSIP-3 reverse records (the `addr.reverse` namespace). When ENSIP-19 multichain reverse stabilizes, add per-coinType reverse setup to `SetPrimaryNames.s.sol`. |
+| ENSIP-19 multichain reverse | Partially shipped — TS helpers (`reverseNamespace`, `l2ReverseRegistrarFor`, `L2_REVERSE_REGISTRARS`) live in [`packages/core/src/contract-naming.ts`](../packages/core/src/contract-naming.ts) with Solidity-side derivation tests. When bankoneth deploys on an L2, fork `SetPrimaryNames.s.sol` against the per-chain ReverseRegistrar and the same helpers Just Work. Full status: [`CONTRACT_NAMING_AUDIT.md`](CONTRACT_NAMING_AUDIT.md). |
 | Subgraph migration | The hosted ENS subgraph will likely move to a Namechain indexer. ensjs v4 already speaks both; minimal change required. |
 | BankonInftAdapter cross-chain wiring | Currently L1 → 0G. Re-evaluate when Namechain bridging stabilizes — may simplify to L1 → Namechain → 0G via a single bridge. |
 

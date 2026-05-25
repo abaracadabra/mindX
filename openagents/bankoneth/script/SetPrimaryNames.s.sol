@@ -69,5 +69,15 @@ contract SetPrimaryNames is Script {
         console.log("subname reverse node :", uint256(n1));
         console.log("eth reverse node     :", uint256(n2));
         console.log("hosting reverse node :", uint256(n3));
+
+        // Post-flight runbook nudge — see docs/CONTRACT_NAMING_AUDIT.md.
+        // Reverse alone is not enough for canonical round-trip resolvers
+        // (Etherscan, viem.getEnsName). Pair with the forward-addr setter.
+        console.log("");
+        console.log("Next steps (see docs/CONTRACT_NAMING_AUDIT.md):");
+        console.log("  1. forge script script/SetForwardNames.s.sol --broadcast ...");
+        console.log("     (sets PublicResolver.addr(namehash(name)) for each name)");
+        console.log("  2. forge script script/VerifyContractNames.s.sol -vv");
+        console.log("     (asserts the reverse + forward round-trip)");
     }
 }

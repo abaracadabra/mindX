@@ -403,5 +403,15 @@ export {
   type SessionConfig,
 } from "./session";
 
+// ── Contract naming review + tooling (ENSIP-3/15/19) ──────────────
+export {
+  reverseNamespace,
+  getContractPrimary,
+  verifyContractName,
+  L2_REVERSE_REGISTRARS,
+  l2ReverseRegistrarFor,
+  type ContractNameStatus,
+} from "./contract-naming";
+
 // Re-exports for convenience.
 export { namehash, labelhash };
