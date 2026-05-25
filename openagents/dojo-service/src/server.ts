@@ -13,10 +13,18 @@ import { serve } from '@hono/node-server';
 import { CONFIG, rankFor } from './config.js';
 import { log } from './log.js';
 import { authRoutes } from './auth/routes.js';
+import { personhoodRoutes } from './personhood/routes.js';
+import { reputationRoutes } from './reputation/routes.js';
+import { oracle } from './personhood/oracle.js';
 
 const app = new Hono();
 
 app.route('/auth', authRoutes);
+app.route('/personhood', personhoodRoutes);
+app.route('/', reputationRoutes);  // mounts /agents/*, /standings, /privileges/*
+
+// Initialize personhood oracle on boot so the impl warning lands early.
+oracle();
 
 app.get('/healthz', (c) => c.json({
   status: 'ok',
