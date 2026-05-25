@@ -1,0 +1,40 @@
+[Unit]
+Description=mindX dojo-service — reputation + personhood ledger (no aisdk)
+After=network-online.target mindx.service
+Wants=network-online.target
+PartOf=multi-user.target
+
+[Service]
+Type=simple
+User=mindx
+Group=mindx
+WorkingDirectory=/home/mindx/mindX/openagents/dojo-service
+
+ExecStartPre=/usr/bin/node /home/mindx/mindX/openagents/dojo-service/scripts/cross_check.js
+ExecStart=/usr/bin/node /home/mindx/mindX/openagents/dojo-service/dist/server.js
+
+Environment=NODE_ENV=production
+Environment=DOJO_PORT=8772
+EnvironmentFile=-/home/mindx/mindX/.env
+
+Restart=on-failure
+RestartSec=5s
+StartLimitBurst=10
+StartLimitIntervalSec=60
+
+ReadWritePaths=/home/mindx/mindX/data/governance
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+LimitNOFILE=2048
+MemoryMax=256M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

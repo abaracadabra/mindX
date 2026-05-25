@@ -1,0 +1,30 @@
+{
+  "name": "@mindx/dojo-service",
+  "version": "0.1.0",
+  "description": "Standalone reputation + personhood service for mindX. K-of-N vouching pre-BONA-FIDE; Algorand ASA balance read post-mint. No aisdk — pure ledger logic.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "hono": "^4.6.0",
+    "@hono/node-server": "^1.13.0",
+    "@hono/node-ws": "^1.0.0",
+    "@hono/jwt": "^0.5.0",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
