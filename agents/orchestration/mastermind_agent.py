@@ -1001,9 +1001,35 @@ class MastermindAgent:
                             f"{self.log_prefix} Strategic campaign for backlog #{idx} → {status}"
                         )
                     except asyncio.TimeoutError:
+                        # Persist a TIMED_OUT entry so /insight/improvement/summary
+                        # coverage_ratio reflects the real attempt and so the loop's
+                        # 24h dedup window catches this item next cycle. Without
+                        # this persist, manage_mindx_evolution's append never runs
+                        # (we cancelled it mid-flight), so the loop would loop on
+                        # the same backlog item forever waiting for LLM bandwidth.
                         logger.warning(f"{self.log_prefix} Strategic campaign for backlog #{idx} timed out (>600s)")
+                        self.strategic_campaigns_history.append({
+                            "overall_campaign_status": "TIMED_OUT",
+                            "final_bdi_message": "Mastermind loop timeout (600s) — LLM bandwidth starved",
+                            "run_id": f"mastermind_timeout_{int(now_ts)}",
+                            "directive": directive,
+                            "ts": now_ts,
+                            "backlog_idx": idx,
+                        })
+                        self._save_json_file("mastermind_campaigns_history.json", self.strategic_campaigns_history)
                     except Exception as e:
                         logger.warning(f"{self.log_prefix} Strategic campaign for backlog #{idx} failed: {e}")
+                        # Same persistence logic for unexpected errors — keeps the
+                        # coverage_ratio honest about what was tried.
+                        self.strategic_campaigns_history.append({
+                            "overall_campaign_status": "ERROR",
+                            "final_bdi_message": f"Mastermind loop exception: {type(e).__name__}: {str(e)[:200]}",
+                            "run_id": f"mastermind_error_{int(now_ts)}",
+                            "directive": directive,
+                            "ts": now_ts,
+                            "backlog_idx": idx,
+                        })
+                        self._save_json_file("mastermind_campaigns_history.json", self.strategic_campaigns_history)
 
             except asyncio.CancelledError:
                 logger.info(f"{self.log_prefix} Autonomous strategic loop cancelled")

@@ -1,65 +1,72 @@
 # MindX Minimal Dependencies — Essential Only
-# ">=" floors track what is currently installed in production (.mindx_env on
-# the VPS). Floors are bumped to current installed versions so vulnerability
-# scanners stop flagging old advisories that no longer apply.
-# Audit: 2026-05-04. For exact reproducible builds run `pip freeze`.
+# Floors track currently installed versions on the production VPS
+# (/home/mindx/mindX/.mindx_env) so vulnerability scanners stop flagging
+# old advisories that no longer apply, and so a fresh `pip install -r
+# requirements.txt` reproduces the production runtime within a minor-version
+# tolerance. For an exact reproducible build run `pip freeze`.
+#
+# Audit: 2026-05-25. Python-side dependabot alerts: 0. All 26 open advisories
+# on AgenticPlace/mindX are in the npm dependency surface of openagents/,
+# daio/contracts/, and the frontend submodules — see
+# `agents/dependency_triage_agent.py` for the decision logic the system uses
+# when deciding which to address.
 
 # ── Core async + HTTP ──
-aiohttp>=3.13.3        # CVE GHSA-fcr2-rgch-4cwq + zip-bomb fixes
+aiohttp>=3.13.5        # CVE GHSA-fcr2-rgch-4cwq + zip-bomb fixes
 aiofiles>=25.1.0
 httpx>=0.28.1
 
 # ── Web framework ──
-fastapi>=0.135.0
+fastapi>=0.135.3
 uvicorn>=0.42.0
-starlette>=0.49.1      # CVE GHSA-2c2j-9gv5-cj73 (Range header DoS)
+starlette>=0.52.1      # CVE GHSA-2c2j-9gv5-cj73 (Range header DoS) — bumped 0.49→0.52
 python-multipart>=0.0.22  # CVE GHSA-59g5-xgcq-4qw3 (arbitrary file write)
 
 # ── Data validation ──
-pydantic>=2.12.0
-pydantic-settings>=2.6.0    # agents/wordpress_agent/ env-driven config (WP_* vars)
+pydantic>=2.12.5
+pydantic-settings>=2.13.1   # agents/wordpress_agent/ env-driven config (WP_* vars)
 
 # ── LLM provider SDKs ──
-openai>=2.0.0
+openai>=2.30.0
 anthropic>=0.88.0
 google-generativeai>=0.8.6
 mistralai>=2.2.0
 # ollama>=0.3.0        # OPTIONAL: official ollama python client (mindX has its own handler)
 
 # ── Configuration ──
-python-dotenv>=1.2.0
+python-dotenv>=1.2.2
 pyyaml>=6.0.3
 
 # ── HTTP / utils ──
 requests>=2.33.1
 colorama>=0.4.6
-tqdm>=4.67.0           # transitive via openai/anthropic; explicit for stability
+tqdm>=4.67.3           # transitive via openai/anthropic; explicit for stability
 
 # ── Numeric / vector ──
-numpy>=2.2.0           # rage/indexing.py, embedding math, transitive via pgvector
+numpy>=2.2.6           # rage/indexing.py, embedding math, transitive via pgvector
 
 # ── System monitoring (BDI perceive(), /system/resources, /insight/system) ──
-psutil>=7.2.0
+psutil>=7.2.2
 
 # ── Cryptography / wallets / vault ──
-cryptography>=46.0.5   # CVE GHSA-79v4-65xg-pq4g (SECT subgroup attack)
-eth-account>=0.13.0    # Ethereum wallet derivation, signing
+cryptography>=46.0.6   # CVE GHSA-79v4-65xg-pq4g (SECT subgroup attack) — bumped 46.0.5→46.0.6
+eth-account>=0.13.7    # Ethereum wallet derivation, signing
 pycryptodome>=3.23.0   # BANKON Vault AES-256-GCM + HKDF-SHA512
-py-algorand-sdk>=2.11.0 # Algorand AVM signing for tools/x402_avm_client.py (x402-AVM rail)
+py-algorand-sdk>=2.11.1 # Algorand AVM signing for tools/x402_avm_client.py (x402-AVM rail)
 
 # ── File processing ──
-pathspec>=0.11.0
+pathspec>=0.11.0       # gitignore-style glob matching; floor unchanged (existing API stable)
 
 # ── pgvector memory tier ──
 psycopg2-binary>=2.9.11
-pgvector>=0.4.0
+pgvector>=0.4.2
 asyncpg>=0.31.0
-SQLAlchemy>=2.0.0
+SQLAlchemy>=2.0.48
 # sentence-transformers>=2.2.0  # OPTIONAL: requires torch (~1GB). Code is try/except guarded.
 #                                 # Install manually: pip install sentence-transformers
 
 # ── Testing ──
-pytest>=9.0.0
+pytest>=9.0.2
 pytest-asyncio>=0.23.0  # required for tests/lab/* async test suites
 pytest-httpx>=0.30.0    # mocks the WordPress REST API in tests/test_wordpress_agent.py
 
