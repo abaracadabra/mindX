@@ -910,7 +910,7 @@ async def get_action_efficiency() -> Dict[str, Any]:
                 COUNT(*) FILTER (WHERE status='failed') as failed,
                 COUNT(*) FILTER (WHERE status='pending') as pending,
                 COUNT(DISTINCT LEFT(description,100)) as unique_descriptions,
-                EXTRACT(EPOCH FROM AVG(completed_at - created_at)) FILTER (WHERE completed_at IS NOT NULL) as avg_completion_secs
+                EXTRACT(EPOCH FROM AVG(completed_at - created_at) FILTER (WHERE completed_at IS NOT NULL)) as avg_completion_secs
             FROM actions
         """)
         total = row["total"] or 0

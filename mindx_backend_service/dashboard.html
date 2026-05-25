@@ -101,7 +101,8 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 .claim-verdict{font-size:15px;font-weight:700;font-family:var(--mono)}
 .claim-verdict.sup{color:var(--green)}.claim-verdict.par{color:var(--amber)}.claim-verdict.nos{color:var(--red)}.claim-verdict.ins{color:var(--text3)}
 .claim-detail{font-size:12px;color:var(--text);margin-top:6px;line-height:1.5}
-.thesis-nums{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}
+.thesis-nums{display:grid;grid-template-columns:repeat(6,1fr);gap:2px}
+@media(max-width:900px){.thesis-nums{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:600px){.thesis-nums{grid-template-columns:repeat(2,1fr)}}
 .tn{background:var(--surface);padding:12px;text-align:center}
 .tn-val{font-family:var(--mono);font-size:20px;font-weight:700;color:#e6edf3}
@@ -435,6 +436,8 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
       <div class="tn"><div class="tn-val" style="color:var(--text3)">--</div><div class="tn-lbl">self-referential</div></div>
       <div class="tn"><div class="tn-val" style="color:var(--text3)">--</div><div class="tn-lbl">memories</div></div>
       <div class="tn"><div class="tn-val" style="color:var(--text3)">--</div><div class="tn-lbl">actions</div></div>
+      <div class="tn" id="tn-coverage" title="Fraction of attempted directives matching real backlog items. 0.0 = stub directives only; >0 = Mastermind variation loop is binding to real backlog. Thesis proof surface (emergent.md)."><div class="tn-val" style="color:var(--text3)">--</div><div class="tn-lbl">backlog coverage</div></div>
+      <div class="tn" id="tn-succ-rate" title="Campaign success rate (7-day window). Manifesto Pillar II claim: 'the learning rate is non-zero'. This tile is the empirical witness."><div class="tn-val" style="color:var(--text3)">--</div><div class="tn-lbl">7d success rate</div></div>
     </div>
   </div>
 
@@ -488,6 +491,10 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
     <div class="section-hdr" onclick="toggleSec(this)"><span>Memory & Knowledge <span style="color:var(--text3);font-weight:400" id="mem-count"></span></span><span class="arrow">&#x25B8;</span></div>
     <div class="section-body" id="sec-memory"></div>
 
+    <!-- Machine Dreaming — memories consolidated into long-term knowledge -->
+    <div class="section-hdr" onclick="toggleSec(this)" id="hdr-dreams" style="display:none"><span>Machine Dreaming <span class="insight-sub">lunar consolidation &middot; memories &rarr; long-term knowledge</span></span><span class="arrow">&#x25B8;</span></div>
+    <div class="section-body" id="sec-dreams" style="display:none"></div>
+
     <!-- Godel Audit Trail -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>G&#246;del Audit Trail <span style="color:var(--text3);font-weight:400" id="godel-count"></span></span><span class="arrow">&#x25B8;</span></div>
     <div class="section-body" id="sec-godel"></div>
@@ -508,8 +515,8 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
     <div class="section-hdr" onclick="toggleSec(this)"><span>Endpoints & API</span><span class="arrow">&#x25B8;</span></div>
     <div class="section-body" id="sec-endpoints"></div>
 
-    <!-- System Logs -->
-    <div class="section-hdr" onclick="toggleSec(this)"><span>System Logs</span><span class="arrow">&#x25B8;</span></div>
+    <!-- Logs → Memories — every log mindX writes is also a memory -->
+    <div class="section-hdr" onclick="toggleSec(this)"><span>Logs &rarr; Memories <span class="insight-sub">every log is a memory</span></span><span class="arrow">&#x25B8;</span></div>
     <div class="section-body" id="sec-logs"></div>
 
   </div>
@@ -1141,7 +1148,7 @@ function render(d){
   auH+=`<div class="dr"><span class="dr-key"><span class="dot ${auth.periodic_active?'dot-g':'dot-x'}"></span><a href="/doc/AUTHOR_AGENT" class="dlink">author agent</a></span><span class="dr-val">${auth.last_chapter||'no chapters yet'}${auth.lunar_day?' &#183; day '+auth.lunar_day:''}</span></div>`;
   auH+=`<div class="dr"><span class="dr-key"><span class="dot ${au.restart_pending?'dot-y':'dot-x'}"></span>restart signal</span><span class="dr-val">${au.restart_pending?'PENDING':'none'}</span></div>`;
   const dreamActions=(d.actions||[]).filter(a=>a.agent_id==='machine_dreaming');
-  if(dreamActions.length)auH+=`<div class="dr"><span class="dr-key"><span class="dot dot-g"></span><a href="/doc/BOOK_OF_MINDX" class="dlink">machine.dreaming</a></span><span class="dr-val">${dreamActions.length} cycles</span></div>`;
+  if(dreamActions.length)auH+=`<div class="dr"><span class="dr-key"><span class="dot dot-g"></span><a href="#hdr-dreams" class="dlink">machine.dreaming</a></span><span class="dr-val">${dreamActions.length} cycles &#183; see Machine Dreaming &#8595;</span></div>`;
   if(au.stuck_cycles>0)auH+=`<div class="dr"><span class="dr-key">stuck cycles</span><span class="dr-val" style="color:var(--amber)">${au.stuck_cycles}</span></div>`;
   if(au.circuit_breaker_open)auH+=`<div class="dr"><span class="dr-key">circuit breaker</span><span class="dr-val" style="color:var(--red)">OPEN</span></div>`;
   if(gv.mode){
@@ -1212,11 +1219,9 @@ function render(d){
   });
   document.getElementById('sec-endpoints').innerHTML=epH;
 
-  // Logs
-  const logs=d.recent_logs||[];
-  let llH='';
-  logs.slice(0,12).forEach(l=>{llH+=`<div style="font-size:10px;color:var(--text3);padding:2px 0;border-bottom:1px solid rgba(5,8,16,.2);font-family:var(--mono);word-break:break-all;line-height:1.4">${l.replace(/</g,'&lt;')}</div>`});
-  document.getElementById('sec-logs').innerHTML=llH||'<div style="padding:8px;color:var(--text3)">No logs</div>';
+  // Logs → Memories is populated by loadMemoryStream() (own sub-fetch from
+  // /insight/memory/recent — the catalogue memory.write stream). Machine
+  // Dreaming by loadDreams(). Neither reads from /diagnostics/live.
 
   // Render sidebar panel
   rpnl(d);
@@ -1974,6 +1979,24 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
     ]).then(function(parts){
       var d=parts[0], tl=parts[1];
       if(!d || d.fallback || d.status==='warming_up'){ hideSec('sec-ledger','hdr-ledger'); return; }
+      // Populate thesis-proof tiles — the empirical witnesses from emergent.md.
+      // backlog coverage: fraction of attempted directives matching real backlog items
+      // 7d success rate: Manifesto Pillar II "learning rate is non-zero" — provable here
+      try {
+        var c7 = d.campaigns_7d || {total:0,succeeded:0};
+        var cov2 = d.directive_coverage || {};
+        var cvRatio = (typeof cov2.coverage_ratio === 'number') ? cov2.coverage_ratio : 0;
+        var cvPct = (cvRatio * 100).toFixed(cvRatio < 0.1 ? 2 : 1);
+        var cvColor = cvRatio > 0.01 ? 'var(--green)' : (cvRatio > 0 ? 'var(--amber)' : 'var(--red)');
+        var sr = (c7.total > 0) ? (c7.succeeded / c7.total) : 0;
+        var srPct = (sr * 100).toFixed(sr < 0.1 ? 2 : 1);
+        var srColor = sr > 0.01 ? 'var(--green)' : (c7.succeeded > 0 ? 'var(--amber)' : 'var(--red)');
+        var cvEl = document.querySelector('#tn-coverage .tn-val');
+        var srEl = document.querySelector('#tn-succ-rate .tn-val');
+        if (cvEl) { cvEl.textContent = cvPct + '%'; cvEl.style.color = cvColor; }
+        if (srEl) { srEl.textContent = srPct + '%'; srEl.style.color = srColor;
+                    srEl.title = c7.succeeded + ' / ' + c7.total + ' campaigns (7d)'; }
+      } catch (e) { /* non-fatal */ }
       var c24=d.campaigns_24h||{total:0,succeeded:0,failed:0,running:0};
       var campaigns=(tl && tl.campaigns)?tl.campaigns.slice(0,50):[];
       _ledgerCampaigns = campaigns;
@@ -2131,6 +2154,93 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
     }).catch(function(){ hideSec('sec-selection','hdr-selection'); });
   }
 
+  // Logs → Memories — the catalogue memory.write stream. mindX writes no log
+  // that is not also a memory; this shows each log becoming one.
+  function loadMemoryStream(){
+    fetch('/insight/memory/recent?limit=24').then(function(r){return r.ok?r.json():null;}).then(function(d){
+      var box=document.getElementById('sec-logs');
+      if(!box) return;
+      var evs=(d && d.events)||[];
+      if(!evs.length){
+        box.innerHTML='<div class="insight-empty">no memory writes in the catalogue yet</div>';
+        return;
+      }
+      var IMP={1:'CRIT',2:'HIGH',3:'MED',4:'LOW'};
+      var IMPC={1:'var(--red)',2:'var(--amber)',3:'var(--blue)',4:'var(--text3)'};
+      var rows=evs.map(function(e){
+        var src=String(e.source_log||'');
+        src=(src.split('/').pop()||src);
+        var imp=IMP[e.importance]||String(e.importance||'?');
+        var impc=IMPC[e.importance]||'var(--text3)';
+        var t=e.ts?ago(e.ts):'';
+        return '<div class="dr" style="align-items:baseline">'
+          +'<span style="font-family:var(--mono);font-size:10px">'
+          +'<span style="color:var(--text3)">'+esc(src)+'</span>'
+          +' <span style="color:var(--text3)">&rarr;</span> '
+          +'<span style="color:var(--blue)">'+esc(e.memory_type||'memory')+'</span>'
+          +' <span style="color:var(--text3)">&middot; '+esc(e.actor||'?')+'</span>'
+          +'</span>'
+          +'<span style="color:'+impc+';font-size:9px;font-family:var(--mono)">'+imp+' &middot; '+esc(t)+'</span>'
+          +'</div>';
+      }).join('');
+      box.innerHTML='<div style="font-size:10px;color:var(--text2);padding:4px 0 6px">'
+        +'Every log mindX writes is also stored as a memory. '+evs.length+' most recent &mdash; '
+        +'<a href="/insight/memory/recent?h=true" class="link">plain text</a></div>'+rows;
+    }).catch(function(){
+      var box=document.getElementById('sec-logs');
+      if(box) box.innerHTML='<div class="insight-empty">memory stream unavailable</div>';
+    });
+  }
+
+  // Machine Dreaming — lunar consolidation of memories into long-term knowledge.
+  function loadDreams(){
+    fetch('/insight/dreams/recent?limit=8').then(function(r){return r.ok?r.json():null;}).then(function(d){
+      if(!d || d.fallback){ hideSec('sec-dreams','hdr-dreams'); return; }
+      var dreams=(d && d.dreams)||[];
+      if(!dreams.length){ hideSec('sec-dreams','hdr-dreams'); return; }
+      showSec('sec-dreams','hdr-dreams');
+      var last=dreams[0]||{};
+      var lunar=last.lunar||{};
+      var head='<div style="font-family:var(--mono);font-size:11px;padding:6px 8px;background:rgba(121,192,255,.05);border-radius:4px;margin-bottom:8px;line-height:1.6">'
+        +'<b style="color:var(--violet)">last cycle</b> &middot; '
+        +esc(lunar.phase_name||'lunar')+' &middot; '
+        +'<span style="color:var(--green)">'+(last.agents_dreamed||0)+'</span> agents dreamed &middot; '
+        +'<span style="color:var(--blue)">'+(last.insights_generated||0)+'</span> insights &middot; '
+        +'<span style="color:var(--amber)">'+(last.memories_promoted_to_ltm||0)+'</span> &rarr; long-term memory';
+      if(last.last_dream_age_seconds!=null || d.last_dream_age_seconds!=null){
+        var age=d.last_dream_age_seconds!=null?d.last_dream_age_seconds:last.last_dream_age_seconds;
+        head+=' &middot; '+ago(Math.floor(Date.now()/1000-age));
+      }
+      head+='</div>';
+      var rows=dreams.map(function(dr){
+        var lp=(dr.lunar||{}).phase_name||'';
+        var ts=dr.timestamp?String(dr.timestamp).slice(0,16).replace('T',' '):'';
+        return '<div class="dr">'
+          +'<span style="font-family:var(--mono);font-size:10px">'
+          +'<span style="color:var(--text3)">'+esc(ts)+'</span> '
+          +'<span style="color:var(--violet)">'+esc(lp)+'</span></span>'
+          +'<span style="color:var(--text3);font-size:10px;font-family:var(--mono)">'
+          +(dr.agents_dreamed||0)+' agents &middot; '
+          +(dr.insights_generated||0)+' insights &middot; '
+          +(dr.memories_promoted_to_ltm||0)+' &rarr;ltm</span>'
+          +'</div>';
+      }).join('');
+      var recs=(last.tuning_recommendations||[]).slice(0,4);
+      var recH='';
+      if(recs.length){
+        recH='<div style="font-size:10px;color:var(--text2);padding:8px 0 2px"><b>tuning recommendations</b></div>';
+        recH+=recs.map(function(r){
+          var param=(r&&(r.parameter||r.name))||'(param)';
+          var dir=(r&&(r.recommendation||r.direction||r.change))||'adjust';
+          return '<div style="font-family:var(--mono);font-size:10px;color:var(--text3);padding:1px 0">'
+            +'<span style="color:var(--blue)">'+esc(param)+'</span> &middot; '+esc(String(dir).slice(0,60))+'</div>';
+        }).join('');
+      }
+      document.getElementById('sec-dreams').innerHTML=head+rows+recH
+        +'<div style="font-size:10px;padding:6px 0 0"><a href="/insight/dreams/recent?h=true" class="link">plain text</a> &middot; <a href="/feedback.html#sec-dreams" class="link">feedback console</a></div>';
+    }).catch(function(){ hideSec('sec-dreams','hdr-dreams'); });
+  }
+
   // Expose ledger handlers to global scope so inline onclick="..." works.
   // (Without this the IIFE-private functions throw ReferenceError on click.)
   window.onLedgerPillClick = onLedgerPillClick;
@@ -2138,9 +2248,11 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
 
   // Kick off — SSE reconnects itself; polled sections refresh on cadence.
   connectThinkStream();
-  loadLedger();    setInterval(loadLedger,   60000);
-  loadFitness();   setInterval(loadFitness,  30000);
-  loadSelection(); setInterval(loadSelection,60000);
+  loadLedger();       setInterval(loadLedger,      60000);
+  loadFitness();      setInterval(loadFitness,     30000);
+  loadSelection();    setInterval(loadSelection,   60000);
+  loadMemoryStream(); setInterval(loadMemoryStream,30000);
+  loadDreams();       setInterval(loadDreams,      60000);
 })();
 </script>
 

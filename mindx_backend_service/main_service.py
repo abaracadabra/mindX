@@ -2141,6 +2141,17 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/mindx-wordpress-plugin",         # public distribution page for mindx-publish-auth WP plugin
     "/netstat", "/netstat.html",       # Phase 1.2+ — smartphone-class VPS vitals (public diagnostics)
     "/insight/narrative/recent",       # DeltaVerse narrative recap stream (public read)
+    # Public diagnostics surface — the read-only data the landing page (/) renders.
+    # Without these the page loads but every widget hits 401.
+    "/diagnostics/live",
+    "/activity/stream", "/activity/recent", "/activity/stats",
+    "/thesis", "/thesis/", "/thesis/evidence", "/thesis/summary",
+    "/dojo/standings", "/inference/status", "/inference/preference",
+    "/godel/choices", "/governance/status", "/resources/status",
+    "/vllm/status", "/vllm/health", "/actions/efficiency",
+    "/agents/interactions", "/agents/interaction-matrix",
+    "/registry/agents", "/registry/tools",
+    "/vault/credentials/providers",
 })
 _PUBLIC_PREFIXES_STRICT = (
     "/doc/", "/docs", "/redoc",
@@ -2153,6 +2164,14 @@ _PUBLIC_PREFIXES_STRICT = (
     "/wp-json/",                       # WordPress plugin callbacks (signature-authed at plugin layer)
     "/publish/rage/",                  # external WordPress publish webhook (EIP-191 sig + allowlist)
     "/mindx-wordpress-plugin/",        # plugin .zip download + sub-resources
+    # Read-only insight surface — landing page + feedback.html consume these.
+    # All /insight/* endpoints are GET-only by design (no writes).
+    "/insight/",
+    "/thesis/",
+    "/dojo/",
+    "/boardroom/",
+    "/chat/docs",
+    "/diagnostics/export",
 )
 
 _PUBLIC_EXACT_LEGACY = frozenset({
@@ -2703,8 +2722,24 @@ async def _safe_await(coro, timeout_s: float = 3.0, default=None):
         return default
 
 
+_DISK_DETAIL_CACHE: dict = {}
+_DISK_DETAIL_CACHE_TS: float = 0.0
+_DISK_DETAIL_TTL: float = 300.0  # 5 min — `du` over ~28GB+ data/ takes seconds; size doesn't move that fast
+
+
 async def _disk_usage_detail() -> dict:
-    """Run 'du' in a thread so it never blocks the event loop."""
+    """Run 'du' in a thread so it never blocks the event loop.
+
+    Cached for 5 minutes — `du -sh data/` on the production tree (~28GB BDI STM
+    + 97MB catalogue + memory/dreams + governance ledgers) routinely runs 4-6s
+    and was the dominant cost in cold-cache /diagnostics/live. The numbers only
+    shift on the MB/min scale, so a 5-minute cache is invisible to a human
+    reader while making first-paint feel instant after a restart.
+    """
+    global _DISK_DETAIL_CACHE, _DISK_DETAIL_CACHE_TS
+    now = time.time()
+    if _DISK_DETAIL_CACHE and (now - _DISK_DETAIL_CACHE_TS) < _DISK_DETAIL_TTL:
+        return _DISK_DETAIL_CACHE
     def _run():
         import subprocess
         try:
@@ -2721,7 +2756,11 @@ async def _disk_usage_detail() -> dict:
             return detail
         except Exception:
             return {}
-    return await asyncio.to_thread(_run)
+    result = await asyncio.to_thread(_run)
+    if result:
+        _DISK_DETAIL_CACHE = result
+        _DISK_DETAIL_CACHE_TS = now
+    return result or _DISK_DETAIL_CACHE  # serve stale on failure if we ever had a hit
 
 
 # ── Activity Feed: SSE streaming + recent events ──
@@ -3132,6 +3171,75 @@ async def insight_actions_breakdown(request: Request):
     except Exception as e:
         out["error"] = str(e)
     return _maybe_h_text(request, out, route_path="/insight/actions/breakdown")
+
+
+@app.get("/insight/memory/recent", tags=["insight"])
+@_insight_safe
+async def insight_memory_recent(request: Request, limit: int = 24):
+    """Recent memory.write events from the unified catalogue.
+
+    Surfaces the LOG → MEMORY moment: every log mindX writes is also
+    persisted as a memory. Reads the tail of data/logs/catalogue_events.jsonl
+    (the catalogue event sink) and filters for kind='memory.write'. Cheap
+    tail-read — bounded by TAIL_BYTES so it stays fast even when the
+    catalogue is multi-gigabyte. The catalogue is the canonical merged
+    stream across all memory writers (memory_agent, machine_dreaming,
+    boardroom, storage offload), so this endpoint is the single source of
+    truth for 'what just became a memory'.
+    """
+    from utils.config import PROJECT_ROOT
+    cat = PROJECT_ROOT / "data" / "logs" / "catalogue_events.jsonl"
+    limit = max(1, min(int(limit or 24), 200))
+    events: list[dict] = []
+    if not cat.exists():
+        return _maybe_h_text(request, {"events": [], "count": 0, "source": "catalogue_events.jsonl absent"}, route_path="/insight/memory/recent")
+    try:
+        # memory.write rows are small (<2KB) but the catalogue interleaves
+        # multi-KB godel.choice payloads, so 512KB tail gives ~100 events
+        # of headroom while staying O(1) on file size.
+        TAIL_BYTES = 512 * 1024
+        with open(cat, "rb") as f:
+            f.seek(0, 2)
+            sz = f.tell()
+            start = max(0, sz - TAIL_BYTES)
+            f.seek(start)
+            chunk = f.read()
+        lines = chunk.splitlines()
+        if start > 0 and lines:
+            lines = lines[1:]
+        for raw in reversed(lines):
+            if len(events) >= limit:
+                break
+            if b'"kind":"memory.write"' not in raw:
+                continue
+            try:
+                obj = json.loads(raw.decode("utf-8", errors="replace"))
+            except Exception:
+                continue
+            if obj.get("kind") != "memory.write":
+                continue
+            payload = obj.get("payload") or {}
+            events.append({
+                "ts": obj.get("ts"),
+                "actor": obj.get("actor"),
+                "source_log": obj.get("source_log"),
+                "memory_type": payload.get("memory_type") or "memory",
+                "importance": payload.get("importance"),
+                "memory_id": payload.get("memory_id") or obj.get("source_ref"),
+                "tags": (payload.get("tags") or [])[:6],
+            })
+    except Exception as e:
+        return _maybe_h_text(request, {"events": [], "count": 0, "error": str(e)}, route_path="/insight/memory/recent")
+    return _maybe_h_text(
+        request,
+        {
+            "events": events,
+            "count": len(events),
+            "source": "data/logs/catalogue_events.jsonl",
+            "filter": "kind=memory.write",
+        },
+        route_path="/insight/memory/recent",
+    )
 
 
 @app.get("/insight/improvement/timeline", tags=["insight"])
@@ -6441,8 +6549,10 @@ async def diagnostics_live_endpoint():
             br_data = br.get_recent_sessions(5)
     except Exception as e: logger.debug(f"Diagnostics: boardroom data failed: {e}")
 
-    # Disk usage breakdown (async — never blocks event loop)
-    disk_detail = await _safe_await(_disk_usage_detail(), timeout_s=6.0, default={})
+    # Disk usage breakdown (async — never blocks event loop).
+    # 5-min cache inside _disk_usage_detail means cache hits return instantly;
+    # 2s ceiling keeps cold-path tail bounded even if `du` is slow on first run.
+    disk_detail = await _safe_await(_disk_usage_detail(), timeout_s=2.0, default={})
 
     # Actions
     actions_data = []

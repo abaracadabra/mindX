@@ -216,6 +216,24 @@ def render_storage_recent(d: dict) -> str:
     )
 
 
+def render_memory_recent(d: dict) -> str:
+    """Logs → Memories — recent memory.write events from the catalogue."""
+    rows = d.get("events") or []
+    if not rows:
+        return "(no memory writes in the catalogue yet)\n"
+    IMP = {1: "CRIT", 2: "HIGH", 3: "MED ", 4: "LOW "}
+    out = [f"logs → memories  ·  {len(rows)} most recent  ·  source: {d.get('source','catalogue')}"]
+    out.append("─" * 80)
+    for e in rows:
+        ts = human_rel_ts(e.get("ts"))
+        actor = (e.get("actor") or "?")[:32]
+        mtype = (e.get("memory_type") or "memory")[:18]
+        imp = IMP.get(e.get("importance"), str(e.get("importance") or "?"))
+        src = (e.get("source_log") or "").split("/")[-1][:36]
+        out.append(f"  {ts:>8}  {imp}  {actor:<32}  {mtype:<18}  {src}")
+    return "\n".join(out) + "\n"
+
+
 def render_dreams_recent(d: dict) -> str:
     rows = d.get("dreams") or []
     return render_table(
@@ -1200,6 +1218,7 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/cost/summary":        render_cost_summary,
     "/insight/cost/recent":         render_cost_recent,
     "/insight/dreams/recent":       render_dreams_recent,
+    "/insight/memory/recent":       render_memory_recent,
     "/insight/bdi/recent":          render_bdi_recent,
     "/insight/cognition":           render_cognition,
     "/insight/system":              render_system,

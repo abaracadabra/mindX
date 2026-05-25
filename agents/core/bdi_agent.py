@@ -833,7 +833,12 @@ class BDIAgent:
             except (json.JSONDecodeError, ValueError) as e:
                 self.logger.warning(f"Planning attempt {attempt} failed: {e}")
                 last_error = str(e)
-                if "RateLimit" in current_plan_str:
+                # current_plan_str can be None when the LLM returned an empty response
+                # (the path that raised the ValueError at line 777). Guard the membership
+                # test — without this every BDI cycle crashes with "argument of type
+                # 'NoneType' is not iterable", which is the load-bearing break that
+                # zero'd campaign success for 100 consecutive runs (see emergent.md).
+                if current_plan_str and "RateLimit" in current_plan_str:
                     self.logger.error("Rate limit hit during planning. Pausing for 5 seconds before retry...")
                     await asyncio.sleep(5.0)
                     continue
@@ -994,11 +999,20 @@ class BDIAgent:
         desc_lower = goal_description.lower()
         candidates_by_kind: list[tuple[list[str], list[tuple[str, dict]]]] = [
             (
+                # Improvement-class verbs — covers the synthesized directives
+                # Mastermind emits from improvement_backlog.json (which lead with
+                # "Implement…", "Add…", "Validate…", "Ensure…" — the omission of
+                # these previously dropped every mastermind campaign to NO_OP,
+                # masking that the cycle was alive (emergent.md break #2).
                 ["audit", "review", "analyze", "check", "inspect", "improve",
-                 "optimize", "enhance", "fix", "refactor"],
+                 "optimize", "enhance", "fix", "refactor", "implement", "add",
+                 "build", "create", "validate", "ensure", "secure", "harden",
+                 "integrate", "wire", "connect", "expose", "support"],
                 [
                     ("audit_and_improve",   {"target_path": ".", "scope": "quick"}),
                     ("system_analyzer",     {}),
+                    ("PROPOSE_TOOL_STRATEGY", {}),
+                    ("CONCEPTUALIZE_NEW_TOOL", {}),
                     ("base_gen_agent",      {"root_path_str": "."}),
                 ],
             ),
@@ -1006,6 +1020,7 @@ class BDIAgent:
                 ["deploy", "start", "launch", "run", "execute"],
                 [
                     ("system_analyzer",     {}),
+                    ("PROPOSE_TOOL_STRATEGY", {}),
                     ("shell_command",       {"command": "echo skeleton-plan-noop"}),
                 ],
             ),
