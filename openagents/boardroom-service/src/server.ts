@@ -17,10 +17,17 @@ import { serve } from '@hono/node-server';
 import { CONFIG, loadAgentMap } from './config.js';
 import { log } from './log.js';
 import { authRoutes } from './auth/routes.js';
+import { roomsRoutes } from './rooms/routes.js';
+import { loadRoomStore, ensureMindxDefaultRoom } from './rooms/store.js';
 
 const app = new Hono();
 
 app.route('/auth', authRoutes);
+app.route('/rooms', roomsRoutes);
+
+// Boot room store + ensure mindX-default private room.
+loadRoomStore();
+ensureMindxDefaultRoom();
 
 app.get('/healthz', (c) => c.json({
   status: 'ok',
