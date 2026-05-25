@@ -12,6 +12,7 @@ import { requireSession, requireTier, TIERS } from '../auth/middleware.js';
 import { getRoom } from '../rooms/store.js';
 import { convene } from './convene.js';
 import { newSessionId, persistSession, recentSessions, getActive } from './sessions.js';
+import { sanctioningEnabled, verifySanction } from '../daio/sanction.js';
 import type { Session } from './types.js';
 
 export const consensusRoutes = new Hono();
@@ -35,6 +36,21 @@ consensusRoutes.post('/rooms/:id/convene', requireSession(), async (c) => {
   const directive = String(body.directive ?? '').trim();
   if (!directive) return c.json({ error: 'directive_required' }, 400);
   const importance = (['routine', 'standard', 'high', 'critical'].includes(body.importance) ? body.importance : 'standard') as Session['importance'];
+
+  // DAIO gate: if the room is marked daio_sanctioned (cross-room joint action),
+  // every convene there requires a fresh DAIO sanction. Off-by-default — the
+  // env flag MINDX_DAIO_SANCTIONING_ENABLED short-circuits when unset.
+  if (sanctioningEnabled() && room.daio_sanctioned) {
+    const verdict = await verifySanction(body.sanction, 'convene_cross_room');
+    if (!verdict.ok) {
+      return c.json({
+        error: 'daio_sanction_required',
+        reason: verdict.reason,
+        signers_valid: verdict.signers_valid,
+        threshold: verdict.threshold,
+      }, 403);
+    }
+  }
 
   const s: Session = {
     session_id: newSessionId(),

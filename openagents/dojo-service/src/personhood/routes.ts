@@ -11,6 +11,7 @@ import { Hono } from 'hono';
 import { isAddress } from 'viem';
 import { requireSession, requireTier, TIERS } from '../auth/middleware.js';
 import { oracle } from './oracle.js';
+import { sanctioningEnabled, verifySanction } from '../daio/sanction.js';
 
 export const personhoodRoutes = new Hono();
 
@@ -41,6 +42,20 @@ personhoodRoutes.post('/grant', requireTier(TIERS.sovereign), async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const target = String(body.target ?? '').toLowerCase();
   if (!isAddress(target as `0x${string}`)) return c.json({ error: 'invalid_target' }, 400);
+  // DAIO gate — when sanctioning is on, sovereign grants require a DAIO
+  // multisig sanction, NOT just a tier-5 wallet. This is the safety against
+  // a single sovereign key going rogue and granting personhood unilaterally.
+  if (sanctioningEnabled()) {
+    const verdict = await verifySanction(body.sanction, 'grant_personhood');
+    if (!verdict.ok) {
+      return c.json({
+        error: 'daio_sanction_required',
+        reason: verdict.reason,
+        signers_valid: verdict.signers_valid,
+        threshold: verdict.threshold,
+      }, 403);
+    }
+  }
   const out = await oracle().grant(target, session.address);
   return c.json({ target, grantor: session.address, ...out });
 });

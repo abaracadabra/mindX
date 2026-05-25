@@ -21,12 +21,14 @@ import { roomsRoutes } from './rooms/routes.js';
 import { loadRoomStore, ensureMindxDefaultRoom } from './rooms/store.js';
 import { consensusRoutes } from './consensus/routes.js';
 import { wireWebSocket } from './ws/index.js';
+import { daioRoutes } from './daio/routes.js';
 
 const app = new Hono();
 
 app.route('/auth', authRoutes);
 app.route('/rooms', roomsRoutes);
 app.route('/', consensusRoutes);   // mounts /rooms/:id/convene, /rooms/:id/observe, /sessions/recent
+app.route('/daio', daioRoutes);    // sanction status + signer mgmt
 
 // WebSocket — must wire before serve() so the upgrade route is registered.
 const { injectWebSocket } = wireWebSocket(app);
