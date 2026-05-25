@@ -16,8 +16,11 @@ import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { CONFIG, loadAgentMap } from './config.js';
 import { log } from './log.js';
+import { authRoutes } from './auth/routes.js';
 
 const app = new Hono();
+
+app.route('/auth', authRoutes);
 
 app.get('/healthz', (c) => c.json({
   status: 'ok',

@@ -19,7 +19,6 @@
     "hono": "^4.6.0",
     "@hono/node-server": "^1.13.0",
     "@hono/node-ws": "^1.0.0",
-    "@hono/jwt": "^0.5.0",
     "viem": "^2.21.0",
     "ai": "^4.0.0",
     "@ai-sdk/openai": "^1.0.0",
