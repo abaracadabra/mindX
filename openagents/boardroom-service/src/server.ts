@@ -19,11 +19,17 @@ import { log } from './log.js';
 import { authRoutes } from './auth/routes.js';
 import { roomsRoutes } from './rooms/routes.js';
 import { loadRoomStore, ensureMindxDefaultRoom } from './rooms/store.js';
+import { consensusRoutes } from './consensus/routes.js';
+import { wireWebSocket } from './ws/index.js';
 
 const app = new Hono();
 
 app.route('/auth', authRoutes);
 app.route('/rooms', roomsRoutes);
+app.route('/', consensusRoutes);   // mounts /rooms/:id/convene, /rooms/:id/observe, /sessions/recent
+
+// WebSocket — must wire before serve() so the upgrade route is registered.
+const { injectWebSocket } = wireWebSocket(app);
 
 // Boot room store + ensure mindX-default private room.
 loadRoomStore();
@@ -62,7 +68,7 @@ log('info', 'boot', 'agent_map.json loaded', {
   warcouncil_size: Object.keys(agentMap.warcouncil ?? {}).length,
 });
 
-serve({
+const server = serve({
   fetch: app.fetch,
   port: CONFIG.port,
 }, (info) => {
@@ -71,6 +77,8 @@ serve({
     domain: CONFIG.domain,
   });
 });
+// Wire WebSocket upgrade onto the Node HTTP server created by @hono/node-server.
+injectWebSocket(server);
 
 // Graceful shutdown — important so systemd's stop signal lands cleanly.
 const shutdown = (sig: string) => {
