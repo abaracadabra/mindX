@@ -53,6 +53,10 @@ test             = "test"
 script           = "script"
 out              = "out-zerog"
 libs             = ["lib"]
+# Override the default profile's `skip` — this is the one profile whose whole
+# purpose is to compile iNFT_7857 (the default profile skips it). Without this
+# the documented `FOUNDRY_PROFILE=zerog forge build` produced no iNFT artifact.
+skip             = []
 auto_detect_remappings = false
 solc             = "0.8.24"
 evm_version      = "cancun"

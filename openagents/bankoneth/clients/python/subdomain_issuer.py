@@ -31,7 +31,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
-from utils.logging_config import get_logger
+try:
+    # When embedded in mindX, use its structured logger.
+    from utils.logging_config import get_logger
+except ImportError:
+    # Agnostic fallback — this client must not require mindX to be importable.
+    import logging
+
+    def get_logger(name: str) -> "logging.Logger":
+        return logging.getLogger(name)
 
 logger = get_logger(__name__)
 
@@ -187,7 +195,9 @@ EIP712_DOMAIN_NAME    = "BankonSubnameRegistrar"
 EIP712_DOMAIN_VERSION = "1"
 
 
-DEFAULT_DEPLOYMENTS_PATH = Path(__file__).resolve().parents[1] / "deployments" / "sepolia.json"
+# clients/python/subdomain_issuer.py → parents[2] == the bankoneth module root,
+# whose deployments/ dir is the consolidated address source (see docs/CONSOLIDATION.md).
+DEFAULT_DEPLOYMENTS_PATH = Path(__file__).resolve().parents[2] / "deployments" / "sepolia.json"
 
 
 # ───── AgentMetadata helper ──────────────────────────────────────────── #

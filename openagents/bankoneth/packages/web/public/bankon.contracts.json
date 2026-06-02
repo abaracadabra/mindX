@@ -1,0 +1,393 @@
+{
+  "generatedFrom": "forge build artifacts in out/ — regenerate with `node script/export-abis.mjs`",
+  "chains": [
+    {
+      "id": 1,
+      "key": "mainnet",
+      "label": "Ethereum",
+      "deployments": "deployments/1.json"
+    },
+    {
+      "id": 11155111,
+      "key": "sepolia",
+      "label": "Sepolia",
+      "deployments": "deployments/11155111.json"
+    },
+    {
+      "id": 31337,
+      "key": "local",
+      "label": "Anvil (local fork)",
+      "deployments": "deployments/local.json"
+    }
+  ],
+  "contracts": [
+    {
+      "name": "BankonSubnameRegistrar",
+      "deploymentKey": "subnameRegistrar",
+      "category": "registrar",
+      "title": "Subname Registrar",
+      "blurb": "Issues *.bankon.eth subnames (Flow A).",
+      "abi": "abis/BankonSubnameRegistrar.json",
+      "fnCount": 43
+    },
+    {
+      "name": "BankonEthRegistrar",
+      "deploymentKey": "ethRegistrar",
+      "category": "registrar",
+      "title": ".eth Registrar",
+      "blurb": "Buys new .eth 2LDs via ENS commit-reveal (Flow B).",
+      "abi": "abis/BankonEthRegistrar.json",
+      "fnCount": 23
+    },
+    {
+      "name": "BankonDomainHosting",
+      "deploymentKey": "domainHosting",
+      "category": "registrar",
+      "title": "Domain Hosting",
+      "blurb": "Subdomain-minting-as-a-service for any .eth (Flow C).",
+      "abi": "abis/BankonDomainHosting.json",
+      "fnCount": 27
+    },
+    {
+      "name": "BankonSubnameResolver",
+      "deploymentKey": "resolver",
+      "category": "resolver",
+      "title": "Resolver",
+      "blurb": "addr / text records; iNFT TBA binding.",
+      "abi": "abis/BankonSubnameResolver.json",
+      "fnCount": 22
+    },
+    {
+      "name": "BankonSubnameResolverV2",
+      "deploymentKey": "resolverV2",
+      "category": "resolver",
+      "title": "Resolver V2",
+      "blurb": "ENSv2 / Namechain forward-compatible resolver.",
+      "abi": "abis/BankonSubnameResolverV2.json",
+      "fnCount": 26
+    },
+    {
+      "name": "BankonPriceOracle",
+      "deploymentKey": "priceOracle",
+      "category": "pricing",
+      "title": "Price Oracle",
+      "blurb": "Length-tiered USD pricing + PYTHAI discount.",
+      "abi": "abis/BankonPriceOracle.json",
+      "fnCount": 28
+    },
+    {
+      "name": "BankonReputationGate",
+      "deploymentKey": "reputationGate",
+      "category": "access",
+      "title": "Reputation Gate",
+      "blurb": "Free-tier eligibility (BONAFIDE / stake / attestation).",
+      "abi": "abis/BankonReputationGate.json",
+      "fnCount": 21
+    },
+    {
+      "name": "BankonPaymentRouter",
+      "deploymentKey": "paymentRouter",
+      "category": "payment",
+      "title": "Payment Router",
+      "blurb": "x402 settlement + 5-bucket revenue split.",
+      "abi": "abis/BankonPaymentRouter.json",
+      "fnCount": 28
+    },
+    {
+      "name": "BankonInftAdapter",
+      "deploymentKey": "inftAdapter",
+      "category": "inft",
+      "title": "iNFT Adapter",
+      "blurb": "ERC-7857 Mode A glue; ENS labelhash → 0G tokenId / TBA.",
+      "abi": "abis/BankonInftAdapter.json",
+      "fnCount": 27
+    },
+    {
+      "name": "BankonX402Attestor",
+      "deploymentKey": "x402Attestor",
+      "category": "payment",
+      "title": "x402 Attestor",
+      "blurb": "EIP-712 x402 receipt verification + replay guard.",
+      "abi": "abis/BankonX402Attestor.json",
+      "fnCount": 15
+    },
+    {
+      "name": "BankonAgenticPlaceHook",
+      "deploymentKey": "agenticPlaceHook",
+      "category": "listing",
+      "title": "AgenticPlace Hook",
+      "blurb": "Emits marketplace listing events for agenticplace.pythai.net.",
+      "abi": "abis/BankonAgenticPlaceHook.json",
+      "fnCount": 12
+    },
+    {
+      "name": "AgentRegistry",
+      "deploymentKey": "agentRegistry",
+      "category": "identity",
+      "title": "Agent Registry",
+      "blurb": "ERC-8004-aligned agent identity + capability bitmap.",
+      "abi": "abis/AgentRegistry.json",
+      "fnCount": 35
+    },
+    {
+      "name": "BankonAuthGate",
+      "deploymentKey": "authGate",
+      "category": "identity",
+      "title": "Auth Gate",
+      "blurb": "On-chain SIWE / ENS-gated auth for downstream services.",
+      "abi": "abis/BankonAuthGate.json",
+      "fnCount": 6
+    },
+    {
+      "name": "SoulBadger",
+      "deploymentKey": "soulBadger",
+      "category": "identity",
+      "title": "SoulBadger",
+      "blurb": "Soulbound badge wrapper.",
+      "abi": "abis/SoulBadger.json",
+      "fnCount": 26
+    },
+    {
+      "name": "BankonOffchainRegistrar",
+      "deploymentKey": "offchainRegistrar",
+      "category": "offchain",
+      "title": "Offchain Registrar",
+      "blurb": "Gas-light CCIP-Read subname issuance (Phase 2.2).",
+      "abi": "abis/BankonOffchainRegistrar.json",
+      "fnCount": 22
+    },
+    {
+      "name": "BankonOffchainResolver",
+      "deploymentKey": "offchainResolver",
+      "category": "offchain",
+      "title": "Offchain Resolver",
+      "blurb": "EIP-3668 CCIP-Read resolver.",
+      "abi": "abis/BankonOffchainResolver.json",
+      "fnCount": 15
+    }
+  ],
+  "presets": [
+    {
+      "id": "claim",
+      "title": "Claim a subname",
+      "subtitle": "yourname.bankon.eth",
+      "contract": "subnameRegistrar",
+      "fn": "registerFree",
+      "mode": "write",
+      "note": "Free tier — requires a 7+ char label and reputation eligibility (BONAFIDE / PYTHAI stake / attestation). For shorter or paid names use the generic explorer's `register`.",
+      "fields": [
+        {
+          "name": "label",
+          "type": "string",
+          "label": "Label",
+          "placeholder": "yourname",
+          "help": "the part before .bankon.eth"
+        },
+        {
+          "name": "owner",
+          "type": "address",
+          "label": "Owner",
+          "fill": "account"
+        },
+        {
+          "name": "expiry",
+          "type": "uint64",
+          "label": "Expiry",
+          "control": "expiry",
+          "help": "defaults to 1 year from now"
+        },
+        {
+          "name": "meta",
+          "type": "tuple",
+          "label": "Agent metadata",
+          "control": "agentMeta",
+          "optional": true
+        }
+      ],
+      "agenticPlaceToggle": true
+    },
+    {
+      "id": "buy-eth",
+      "title": "Buy a .eth name",
+      "subtitle": "newname.eth",
+      "contract": "ethRegistrar",
+      "flow": "commit-reveal",
+      "mode": "write",
+      "note": "Two-step ENS commit→reveal. We quote the price, you commit, wait the min commit age, then reveal+pay.",
+      "fields": [
+        {
+          "name": "label",
+          "type": "string",
+          "label": "Label",
+          "placeholder": "newname",
+          "help": "the part before .eth"
+        },
+        {
+          "name": "owner",
+          "type": "address",
+          "label": "Owner",
+          "fill": "account"
+        },
+        {
+          "name": "durationYears",
+          "type": "uint256",
+          "label": "Years",
+          "default": "1"
+        }
+      ],
+      "paymentRail": true
+    },
+    {
+      "id": "host-enroll",
+      "title": "Host your .eth",
+      "subtitle": "enroll a domain you own",
+      "contract": "domainHosting",
+      "fn": "enroll",
+      "mode": "write",
+      "note": "Enroll an external .eth you own so bankon can issue subnames under it. You must have burned CANNOT_UNWRAP on the parent.",
+      "fields": [
+        {
+          "name": "parentNode",
+          "type": "bytes32",
+          "label": "Parent node",
+          "control": "namehash",
+          "help": "namehash of your .eth (we compute it from the name)"
+        },
+        {
+          "name": "pricePerLabel6",
+          "type": "uint256",
+          "label": "USD price / label (6dp)",
+          "default": "0"
+        },
+        {
+          "name": "priceEthWei",
+          "type": "uint256",
+          "label": "ETH price / label (wei)",
+          "default": "0"
+        },
+        {
+          "name": "childFuses",
+          "type": "uint32",
+          "label": "Child fuses",
+          "default": "327685",
+          "help": "0x50005 soulbound default"
+        },
+        {
+          "name": "defaultExpiry",
+          "type": "uint64",
+          "label": "Default expiry",
+          "control": "expiry"
+        },
+        {
+          "name": "ownerShareBps",
+          "type": "uint16",
+          "label": "Your share (bps)",
+          "default": "9000"
+        }
+      ]
+    },
+    {
+      "id": "host-issue",
+      "title": "Issue a hosted subname",
+      "subtitle": "label.yourdomain.eth",
+      "contract": "domainHosting",
+      "fn": "issue",
+      "mode": "write",
+      "payable": true,
+      "fields": [
+        {
+          "name": "parentNode",
+          "type": "bytes32",
+          "label": "Parent node",
+          "control": "namehash"
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "label": "Label",
+          "placeholder": "alice"
+        },
+        {
+          "name": "owner",
+          "type": "address",
+          "label": "Owner",
+          "fill": "account"
+        },
+        {
+          "name": "payment",
+          "type": "bytes",
+          "label": "Payment",
+          "default": "0x"
+        }
+      ],
+      "paymentRail": true
+    },
+    {
+      "id": "register-agent",
+      "title": "Register an agent",
+      "subtitle": "agent identity as a service",
+      "contract": "agentRegistry",
+      "fn": "register",
+      "mode": "write",
+      "note": "Mint an ERC-8004-aligned agent identity with a capability bitmap. Pair it with a bankon.eth subname for a fully-resolvable agent.",
+      "fields": [
+        {
+          "name": "owner",
+          "type": "address",
+          "label": "Owner",
+          "fill": "account"
+        },
+        {
+          "name": "agentId",
+          "type": "string",
+          "label": "Agent ID",
+          "placeholder": "my-agent"
+        },
+        {
+          "name": "linkedINFT_7857",
+          "type": "address",
+          "label": "Linked iNFT (optional)",
+          "default": "0x0000000000000000000000000000000000000000"
+        },
+        {
+          "name": "capabilityBitmap",
+          "type": "bytes32",
+          "label": "Capabilities",
+          "default": "0x0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        {
+          "name": "attestationURI",
+          "type": "string",
+          "label": "Attestation URI",
+          "optional": true
+        }
+      ],
+      "agenticPlaceToggle": true
+    },
+    {
+      "id": "resolve",
+      "title": "Resolve / lookup",
+      "subtitle": "read a name's records",
+      "contract": "resolver",
+      "flow": "resolve",
+      "mode": "read",
+      "note": "Read addr(node) and a text record for any bankon.eth name.",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "label": "Name",
+          "placeholder": "alice.bankon.eth",
+          "control": "namehashInput"
+        },
+        {
+          "name": "key",
+          "type": "string",
+          "label": "Text key",
+          "default": "agent.capabilities",
+          "optional": true
+        }
+      ]
+    }
+  ]
+}

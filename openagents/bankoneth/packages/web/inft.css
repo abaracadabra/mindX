@@ -1,0 +1,56 @@
+/* SPDX-License-Identifier: Apache-2.0
+   Shared dApp styling for inft.html (bankoneth.html inlines the same vars to
+   stay a single self-contained file). Same palette as allchain.html. */
+:root {
+  color-scheme: dark;
+  --bg: #0b0d12; --bg2: #11141c; --card: #161a24; --card2: #1c2230;
+  --border: #232a39; --text: #e8eaed; --muted: #9aa0a6;
+  --accent: #7c9cff; --accent2: #5b78e6; --success: #46d39a; --danger: #ff6b6b; --warn: #ffcc66;
+  --radius: 12px;
+}
+* { box-sizing: border-box; }
+body { background: radial-gradient(1200px 600px at 50% -200px, #1a2030 0%, var(--bg) 60%);
+  color: var(--text); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0 16px 64px; }
+a { color: var(--accent); text-decoration: none; }
+.wrap { max-width: 880px; margin: 0 auto; }
+header.hero { text-align: center; padding: 40px 0 18px; }
+header.hero h1 { margin: 0; font-size: 30px; letter-spacing: -0.02em;
+  background: linear-gradient(90deg, #fff, var(--accent)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+header.hero .tag { color: var(--muted); font-size: 13px; margin-top: 6px; }
+.connect-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--card);
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin: 8px 0 18px; position: sticky; top: 8px; z-index: 20; backdrop-filter: blur(8px); }
+.connect-bar .spacer { flex: 1; }
+.chip { font-size: 12px; color: var(--muted); background: var(--bg2); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
+.chip.live { color: var(--success); } .chip.warn { color: var(--warn); }
+button { font: inherit; cursor: pointer; border-radius: 9px; border: 1px solid var(--border); background: var(--card2); color: var(--text); padding: 8px 14px; transition: .12s; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent2); border-color: var(--accent2); color: #fff; font-weight: 600; }
+button.primary:hover { background: var(--accent); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button.connected { border-color: var(--success); color: var(--success); }
+nav.tabs { display: flex; gap: 6px; margin: 0 0 16px; flex-wrap: wrap; }
+nav.tabs button { background: transparent; border: 1px solid transparent; color: var(--muted); }
+nav.tabs button.active { color: var(--text); border-color: var(--border); background: var(--card); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.card h3 { margin: 0 0 4px; font-size: 16px; } .card .sub { color: var(--muted); font-size: 12px; }
+.card.click { cursor: pointer; } .card.click:hover { border-color: var(--accent); }
+.note { background: var(--bg2); border-left: 3px solid var(--accent); border-radius: 6px; padding: 8px 12px; color: var(--muted); font-size: 12.5px; margin: 10px 0; }
+label.field { display: block; margin: 12px 0; }
+label.field .lbl { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
+label.field .lbl code { color: var(--accent); }
+input[type=text], textarea, select { width: 100%; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 9px 11px; font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+textarea { min-height: 92px; resize: vertical; }
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.result { white-space: pre-wrap; word-break: break-all; background: #0d1017; border: 1px solid var(--border); border-radius: 8px; padding: 10px; font: 12.5px/1.5 ui-monospace, monospace; margin-top: 8px; }
+.result.ok { border-color: #244e3e; } .result.err { border-color: #4e2424; color: var(--danger); }
+.fn { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin: 10px 0; background: var(--card); }
+.fn .sig { font: 12.5px ui-monospace, monospace; color: var(--accent); margin-bottom: 6px; }
+.pill { display: inline-block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); margin-left: 6px; }
+.pill.read { color: var(--success); border-color: #244e3e; } .pill.write { color: var(--warn); border-color: #4e441f; } .pill.payable { color: var(--accent); border-color: #2a3a6e; }
+.back { background: transparent; border: none; color: var(--accent); padding: 6px 0; }
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--card2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px; font-size: 13px; z-index: 50; max-width: 90vw; }
+.toast.err { border-color: #4e2424; color: var(--danger); } .toast.ok { border-color: #244e3e; color: var(--success); }
+.muted { color: var(--muted); }
+.crosslink { text-align: center; margin: 18px 0 0; font-size: 13px; }

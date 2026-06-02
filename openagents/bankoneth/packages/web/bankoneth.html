@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>bankon.eth — subdomain minter &amp; contract explorer</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0d12;
+    --bg2: #11141c;
+    --card: #161a24;
+    --card2: #1c2230;
+    --border: #232a39;
+    --text: #e8eaed;
+    --muted: #9aa0a6;
+    --accent: #7c9cff;
+    --accent2: #5b78e6;
+    --success: #46d39a;
+    --danger: #ff6b6b;
+    --warn: #ffcc66;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: radial-gradient(1200px 600px at 50% -200px, #1a2030 0%, var(--bg) 60%);
+    color: var(--text);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    margin: 0; padding: 0 16px 64px;
+  }
+  a { color: var(--accent); }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  header.hero { text-align: center; padding: 40px 0 18px; }
+  header.hero h1 { margin: 0; font-size: 30px; letter-spacing: -0.02em;
+    background: linear-gradient(90deg, #fff, var(--accent)); -webkit-background-clip: text;
+    background-clip: text; -webkit-text-fill-color: transparent; }
+  header.hero .tag { color: var(--muted); font-size: 13px; margin-top: 6px; }
+  /* connect bar */
+  .connect-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 10px 14px; margin: 8px 0 18px; position: sticky; top: 8px; z-index: 20;
+    backdrop-filter: blur(8px);
+  }
+  .connect-bar .spacer { flex: 1; }
+  .chip { font-size: 12px; color: var(--muted); background: var(--bg2);
+    border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
+  .chip.live { color: var(--success); }
+  .chip.warn { color: var(--warn); }
+  button {
+    font: inherit; cursor: pointer; border-radius: 9px; border: 1px solid var(--border);
+    background: var(--card2); color: var(--text); padding: 8px 14px; transition: .12s;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent2); border-color: var(--accent2); color: #fff; font-weight: 600; }
+  button.primary:hover { background: var(--accent); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button.connected { border-color: var(--success); color: var(--success); }
+  /* tabs */
+  nav.tabs { display: flex; gap: 6px; margin: 0 0 16px; flex-wrap: wrap; }
+  nav.tabs button { background: transparent; border: 1px solid transparent; color: var(--muted); }
+  nav.tabs button.active { color: var(--text); border-color: var(--border); background: var(--card); }
+  /* cards / grid */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px; }
+  .card h3 { margin: 0 0 4px; font-size: 16px; }
+  .card .sub { color: var(--muted); font-size: 12px; }
+  .card.click { cursor: pointer; }
+  .card.click:hover { border-color: var(--accent); }
+  .note { background: var(--bg2); border-left: 3px solid var(--accent); border-radius: 6px;
+    padding: 8px 12px; color: var(--muted); font-size: 12.5px; margin: 10px 0; }
+  /* forms */
+  label.field { display: block; margin: 12px 0; }
+  label.field .lbl { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
+  label.field .lbl code { color: var(--accent); }
+  input[type=text], textarea, select {
+    width: 100%; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); padding: 9px 11px; font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  textarea { min-height: 92px; resize: vertical; }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .result { white-space: pre-wrap; word-break: break-all; background: #0d1017; border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px; font: 12.5px/1.5 ui-monospace, monospace; margin-top: 8px; }
+  .result.ok { border-color: #244e3e; }
+  .result.err { border-color: #4e2424; color: var(--danger); }
+  .fn { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin: 10px 0; background: var(--card); }
+  .fn .sig { font: 12.5px ui-monospace, monospace; color: var(--accent); margin-bottom: 6px; }
+  .pill { display: inline-block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em;
+    padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); margin-left: 6px; }
+  .pill.read { color: var(--success); border-color: #244e3e; }
+  .pill.write { color: var(--warn); border-color: #4e441f; }
+  .pill.payable { color: var(--accent); border-color: #2a3a6e; }
+  .back { background: transparent; border: none; color: var(--accent); padding: 6px 0; }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    background: var(--card2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px;
+    font-size: 13px; z-index: 50; max-width: 90vw; }
+  .toast.err { border-color: #4e2424; color: var(--danger); }
+  .toast.ok { border-color: #244e3e; color: var(--success); }
+  .muted { color: var(--muted); }
+  .crosslink { text-align: center; margin: 18px 0 0; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <h1>bankon.eth</h1>
+    <div class="tag">subdomain minter · .eth purchase · domain hosting · agent registry · generic ABI explorer</div>
+  </header>
+
+  <div class="connect-bar">
+    <button id="walletBtn"><span id="walletBtnLabel">Connect Wallet</span></button>
+    <span id="acctChip" class="chip" hidden></span>
+    <span id="chainChip" class="chip" hidden></span>
+    <span class="spacer"></span>
+    <button id="switchBtn" hidden>Switch network</button>
+  </div>
+
+  <nav class="tabs">
+    <button data-tab="presets" class="active">Mint &amp; flows</button>
+    <button data-tab="explorer">Contract explorer</button>
+    <button data-tab="inft" id="inftTabBtn">iNFT →</button>
+  </nav>
+
+  <main id="view"></main>
+
+  <div class="crosslink muted">
+    Agnostic module · works standalone or embedded · prototype build (.js).
+    Production view: <code>packages/parsec-view</code> (.ts).
+  </div>
+</div>
+
+<script type="module">
+import { ethers } from "./vendor/ethers.min.js";
+import * as F from "./bankon-forms.js";
+
+const PUBLIC_BASE = "./public";
+const CHAINS = {
+  1:        { hex: "0x1",        name: "Ethereum" },
+  11155111: { hex: "0xaa36a7",   name: "Sepolia" },
+  31337:    { hex: "0x7a69",     name: "Anvil (local)" },
+};
+
+// ── State ──────────────────────────────────────────────────────────────────
+let detectedWallets = [];
+let walletsReady = false;
+let provider = null;            // raw EIP-1193
+let browserProvider = null;     // ethers BrowserProvider
+let connectedAddress = null;
+let connectedChainId = null;
+let manifest = null;
+let deployments = null;
+let activeTab = "presets";
+
+// ── Wallet detection (EIP-6963 + legacy) — pattern from allchain.html ───────
+function setupEIP6963() {
+  return new Promise((resolve) => {
+    detectedWallets = [];
+    const onAnnounce = (e) => {
+      const { info, provider: p } = e.detail;
+      if (!detectedWallets.some((w) => w.uuid === info.uuid)) {
+        detectedWallets.push({ name: info.name, provider: p, id: (info.rdns || info.name || "").toLowerCase(), uuid: info.uuid });
+      }
+    };
+    window.addEventListener("eip6963:announceProvider", onAnnounce);
+    window.dispatchEvent(new Event("eip6963:requestProvider"));
+    setTimeout(() => { walletsReady = true; resolve(detectedWallets); }, 350);
+  });
+}
+function detectLegacy() {
+  const out = [];
+  if (window.ethereum) out.push({ name: "Injected Wallet", provider: window.ethereum, id: "injected", uuid: "legacy" });
+  return out;
+}
+function pickProvider() {
+  const pool = detectedWallets.length ? detectedWallets : detectLegacy();
+  if (!pool.length) return null;
+  const mm = pool.find((w) => w.id.includes("metamask") || w.name === "MetaMask");
+  return (mm || pool[0]).provider;
+}
+
+async function connectWallet() {
+  if (connectedAddress) return disconnectWallet();
+  if (!walletsReady) await setupEIP6963();
+  provider = pickProvider();
+  if (!provider) { toast("MetaMask or a compatible EVM wallet is required. Install from metamask.io", "err"); return; }
+  setWalletLabel("Connecting…");
+  try {
+    const accounts = await provider.request({ method: "eth_requestAccounts" });
+    connectedAddress = accounts[0];
+    connectedChainId = parseInt(await provider.request({ method: "eth_chainId" }), 16);
+    browserProvider = new ethers.BrowserProvider(provider);
+    try {
+      provider.on("accountsChanged", (a) => { if (!a.length) return disconnectWallet(); connectedAddress = a[0]; refreshConnUI(); render(); });
+      provider.on("chainChanged", async (c) => { connectedChainId = parseInt(c, 16); browserProvider = new ethers.BrowserProvider(provider); await loadDeploymentsForChain(); refreshConnUI(); render(); });
+    } catch {}
+    await loadDeploymentsForChain();
+    refreshConnUI();
+    render();
+  } catch (e) {
+    setWalletLabel("Connect Wallet");
+    if (e?.code !== 4001) toast("Connect failed: " + (e?.message || e), "err");
+  }
+}
+async function disconnectWallet() {
+  try { await provider?.request({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] }); } catch {}
+  connectedAddress = null; connectedChainId = null; browserProvider = null; deployments = null;
+  refreshConnUI(); render();
+}
+async function switchTo(chainId) {
+  if (!provider) { await connectWallet(); if (!provider) return; }
+  const c = CHAINS[chainId];
+  try {
+    await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: c.hex }] });
+  } catch (e) {
+    toast("Switch failed: " + (e?.message || e), "err");
+  }
+}
+
+function setWalletLabel(t) { document.getElementById("walletBtnLabel").textContent = t; }
+function refreshConnUI() {
+  const btn = document.getElementById("walletBtn");
+  const acct = document.getElementById("acctChip");
+  const chain = document.getElementById("chainChip");
+  const sw = document.getElementById("switchBtn");
+  if (connectedAddress) {
+    btn.classList.add("connected");
+    setWalletLabel(connectedAddress.slice(0, 6) + "…" + connectedAddress.slice(-4));
+    acct.hidden = false; acct.textContent = "🟢 connected";
+    chain.hidden = false;
+    const known = CHAINS[connectedChainId];
+    chain.textContent = known ? known.name : `chain ${connectedChainId}`;
+    chain.className = "chip " + (known ? "live" : "warn");
+    sw.hidden = false;
+  } else {
+    btn.classList.remove("connected"); setWalletLabel("Connect Wallet");
+    acct.hidden = true; chain.hidden = true; sw.hidden = true;
+  }
+}
+
+// ── Deployments / manifest ───────────────────────────────────────────────────
+async function loadDeploymentsForChain() {
+  if (!connectedChainId) return;
+  try { deployments = await F.loadDeployments(PUBLIC_BASE, connectedChainId); }
+  catch { deployments = null; }
+}
+function requireAddress(deploymentKey, contractTitle) {
+  const a = deployments ? F.addressFor(deployments, deploymentKey) : null;
+  if (!a) throw new Error(`${contractTitle} is not deployed on ${CHAINS[connectedChainId]?.name || "this chain"} yet (address is zero in deployments/${F.constants.deploymentFileFor(connectedChainId)}). Deploy it, fill the slot, and reload.`);
+  return a;
+}
+
+// ── Rendering ────────────────────────────────────────────────────────────────
+const view = () => document.getElementById("view");
+function render() {
+  if (activeTab === "presets") return renderPresets();
+  if (activeTab === "explorer") return renderExplorer();
+  if (activeTab === "inft") { window.location.href = "./inft.html"; return; }
+}
+
+function el(tag, opts = {}, kids = []) {
+  const e = document.createElement(tag);
+  if (opts.cls) e.className = opts.cls;
+  if (opts.html != null) e.innerHTML = opts.html;
+  if (opts.text != null) e.textContent = opts.text;
+  if (opts.attrs) for (const [k, v] of Object.entries(opts.attrs)) e.setAttribute(k, v);
+  if (opts.on) for (const [k, v] of Object.entries(opts.on)) e.addEventListener(k, v);
+  for (const k of [].concat(kids)) e.appendChild(typeof k === "string" ? document.createTextNode(k) : k);
+  return e;
+}
+
+function renderPresets() {
+  const root = view(); root.innerHTML = "";
+  if (!manifest) { root.appendChild(el("div", { cls: "note", text: "Loading manifest…" })); return; }
+  const grid = el("div", { cls: "grid" });
+  for (const p of manifest.presets) {
+    grid.appendChild(el("div", { cls: "card click", on: { click: () => openPreset(p) } }, [
+      el("h3", { text: p.title }),
+      el("div", { cls: "sub", text: p.subtitle || "" }),
+    ]));
+  }
+  root.appendChild(grid);
+}
+
+function openPreset(p) {
+  const root = view(); root.innerHTML = "";
+  root.appendChild(el("button", { cls: "back", text: "← all flows", on: { click: renderPresets } }));
+  root.appendChild(el("h2", { text: p.title }));
+  if (p.note) root.appendChild(el("div", { cls: "note", html: p.note }));
+  if (!connectedAddress) root.appendChild(el("div", { cls: "note", html: "⚠️ Connect a wallet to submit. You can still fill the form." }));
+
+  const form = el("div");
+  const inputs = {};
+  for (const f of p.fields) {
+    const wrap = el("label", { cls: "field" });
+    const lbl = el("span", { cls: "lbl", html: `${f.label || f.name} <code>${f.type}</code>${f.optional ? " · optional" : ""}` });
+    wrap.appendChild(lbl);
+    let input;
+    if (f.control === "agentMeta") {
+      input = el("textarea", { attrs: { placeholder: '{"agentURI":"ipfs://…","mindxEndpoint":"https://…"}  (leave blank for empty metadata)' } });
+    } else {
+      input = el("input", { attrs: { type: "text", placeholder: f.placeholder || (f.default ?? "") } });
+      if (f.fill === "account" && connectedAddress) input.value = connectedAddress;
+      else if (f.default !== undefined) input.value = f.default;
+    }
+    if (f.help) wrap.appendChild(el("span", { cls: "lbl muted", text: f.help }));
+    wrap.appendChild(input);
+    inputs[f.name] = input;
+    form.appendChild(wrap);
+  }
+  root.appendChild(form);
+
+  // payment-rail selector (informational; ETH default)
+  if (p.paymentRail) {
+    const wrap = el("label", { cls: "field" }, [el("span", { cls: "lbl", text: "Payment rail" })]);
+    const sel = el("select");
+    for (const r of ["ETH (native)", "USDC (permit)", "x402-avm (Algorand USDC)"]) sel.appendChild(el("option", { text: r }));
+    wrap.appendChild(sel); root.appendChild(wrap);
+  }
+  if (p.agenticPlaceToggle) {
+    const wrap = el("label", { cls: "field row" });
+    const cb = el("input", { attrs: { type: "checkbox" } }); cb.style.width = "auto";
+    wrap.appendChild(cb); wrap.appendChild(el("span", { cls: "lbl", text: " List on AgenticPlace after mint (emits BankonAgenticPlaceHook)" }));
+    root.appendChild(wrap); inputs.__agenticPlace = cb;
+  }
+
+  const out = el("div");
+  const submit = el("button", { cls: "primary", text: p.mode === "read" ? "Query" : "Submit transaction" });
+  submit.addEventListener("click", () => runPreset(p, inputs, out, submit));
+  root.appendChild(el("div", { cls: "row" }, [submit]));
+  root.appendChild(out);
+
+  if (p.flow === "commit-reveal") buildCommitReveal(p, inputs, out, submit, root);
+}
+
+function valuesOf(inputs) {
+  const v = {};
+  for (const [k, input] of Object.entries(inputs)) { if (k.startsWith("__")) continue; v[k] = input.value; }
+  return v;
+}
+
+async function runPreset(p, inputs, out, btn) {
+  out.className = "result"; out.textContent = "";
+  try {
+    const values = valuesOf(inputs);
+    if (p.flow === "resolve") return runResolve(p, values, out);
+    if (p.flow === "commit-reveal") { out.textContent = "Use the Quote → Commit → Reveal buttons below."; return; }
+
+    const address = requireAddress(manifest.contracts.find((c) => c.deploymentKey === p.contract).deploymentKey, p.title);
+    const abi = await F.loadAbi(PUBLIC_BASE, manifest.contracts.find((c) => c.deploymentKey === p.contract));
+    const args = F.buildPresetArgs(p, values, { ethers, account: connectedAddress });
+
+    if (p.mode === "read") {
+      const r = await F.readContract({ provider: browserProvider, address, abi, fn: p.fn, args, ethers });
+      out.className = "result ok"; out.textContent = stringify(r); return;
+    }
+    if (!connectedAddress) throw new Error("connect a wallet first");
+    btn.disabled = true; out.textContent = "awaiting signature…";
+    const signer = await browserProvider.getSigner();
+    const tx = await F.writeContract({ signer, address, abi, fn: p.fn, args, value: p.payable ? 0n : undefined, ethers });
+    out.textContent = "sent: " + tx.hash + "\nwaiting for confirmation…";
+    const rcpt = await tx.wait();
+    out.className = "result ok"; out.textContent = `✅ confirmed in block ${rcpt.blockNumber}\ntx: ${tx.hash}`;
+    if (inputs.__agenticPlace?.checked) out.textContent += "\n\nℹ️ AgenticPlace listing is a separate BankonAgenticPlaceHook.list() call — use the Contract explorer to emit it.";
+  } catch (e) {
+    out.className = "result err"; out.textContent = "✗ " + (e?.shortMessage || e?.message || String(e));
+  } finally { btn.disabled = false; }
+}
+
+async function runResolve(p, values, out) {
+  const c = manifest.contracts.find((x) => x.deploymentKey === p.contract);
+  const address = requireAddress(c.deploymentKey, c.title);
+  const abi = await F.loadAbi(PUBLIC_BASE, c);
+  const node = F.namehash(ethers, values.name);
+  const addr = await F.readContract({ provider: browserProvider, address, abi, fn: "addr", args: [node], ethers });
+  let text = "";
+  if (values.key) text = await F.readContract({ provider: browserProvider, address, abi, fn: "text", args: [node, values.key], ethers });
+  out.className = "result ok";
+  out.textContent = `namehash: ${node}\naddr():   ${addr}` + (values.key ? `\ntext(${values.key}): ${text || "(empty)"}` : "");
+}
+
+function buildCommitReveal(p, inputs, out, submitBtn, root) {
+  submitBtn.style.display = "none";
+  let secret = null, quoteWei = null;
+  const c = manifest.contracts.find((x) => x.deploymentKey === p.contract);
+  const bar = el("div", { cls: "row" });
+  const quoteBtn = el("button", { text: "1 · Quote" });
+  const commitBtn = el("button", { text: "2 · Commit", attrs: { disabled: "true" } });
+  const revealBtn = el("button", { cls: "primary", text: "3 · Reveal + pay", attrs: { disabled: "true" } });
+  bar.append(quoteBtn, commitBtn, revealBtn);
+  root.appendChild(bar);
+
+  const getAddrAbi = async () => ({ address: requireAddress(c.deploymentKey, c.title), abi: await F.loadAbi(PUBLIC_BASE, c) });
+  const params = () => F.buildEthRegistrarParams(ethers, { ...valuesOf(inputs), owner: valuesOf(inputs).owner || connectedAddress, secret });
+
+  quoteBtn.onclick = async () => {
+    out.className = "result"; out.textContent = "quoting…";
+    try {
+      const { address, abi } = await getAddrAbi();
+      const v = valuesOf(inputs);
+      const q = await F.quoteEth({ provider: browserProvider, address, abi, label: v.label, durationYears: v.durationYears || 1, ethers });
+      quoteWei = q.wei; secret = ethers.hexlify(ethers.randomBytes(32));
+      out.className = "result ok";
+      out.textContent = `price: ${ethers.formatEther(q.wei)} ETH  ($${(Number(q.usd6) / 1e6).toFixed(2)})\nsecret (kept in-page): ${secret.slice(0, 18)}…`;
+      commitBtn.disabled = false;
+    } catch (e) { out.className = "result err"; out.textContent = "✗ " + (e?.shortMessage || e?.message); }
+  };
+  commitBtn.onclick = async () => {
+    try {
+      if (!connectedAddress) throw new Error("connect a wallet first");
+      const { address, abi } = await getAddrAbi();
+      const signer = await browserProvider.getSigner();
+      out.className = "result"; out.textContent = "committing…";
+      const tx = await F.writeContract({ signer, address, abi, fn: "commit", args: [params()], ethers });
+      out.textContent = "commit sent: " + tx.hash + "\nwaiting…"; await tx.wait();
+      out.className = "result ok"; out.textContent = "✅ committed. Wait the ENS min commit age (~60s), then Reveal.";
+      let left = 60; revealBtn.textContent = `3 · Reveal (${left}s)`;
+      const iv = setInterval(() => { left--; revealBtn.textContent = left > 0 ? `3 · Reveal (${left}s)` : "3 · Reveal + pay"; if (left <= 0) { clearInterval(iv); revealBtn.disabled = false; } }, 1000);
+    } catch (e) { out.className = "result err"; out.textContent = "✗ " + (e?.shortMessage || e?.message); }
+  };
+  revealBtn.onclick = async () => {
+    try {
+      const { address, abi } = await getAddrAbi();
+      const signer = await browserProvider.getSigner();
+      out.className = "result"; out.textContent = "revealing…";
+      const tx = await F.writeContract({ signer, address, abi, fn: "reveal", args: [params(), "0x"], value: quoteWei, ethers });
+      out.textContent = "reveal sent: " + tx.hash + "\nwaiting…"; const r = await tx.wait();
+      out.className = "result ok"; out.textContent = `✅ registered in block ${r.blockNumber}\ntx: ${tx.hash}`;
+    } catch (e) { out.className = "result err"; out.textContent = "✗ " + (e?.shortMessage || e?.message); }
+  };
+}
+
+// ── Contract explorer (generic ABI interaction) ──────────────────────────────
+function renderExplorer() {
+  const root = view(); root.innerHTML = "";
+  root.appendChild(el("div", { cls: "note", html: "Pick a deployed bankon contract, or choose <b>Custom</b> to paste any ABI + address. Read functions query instantly; write functions prompt your wallet." }));
+
+  const pickWrap = el("label", { cls: "field" }, [el("span", { cls: "lbl", text: "Contract" })]);
+  const sel = el("select");
+  sel.appendChild(el("option", { text: "— select —", attrs: { value: "" } }));
+  for (const c of (manifest?.contracts || [])) sel.appendChild(el("option", { text: `${c.title} · ${c.name}`, attrs: { value: c.deploymentKey } }));
+  sel.appendChild(el("option", { text: "Custom (paste ABI)", attrs: { value: "__custom" } }));
+  pickWrap.appendChild(sel); root.appendChild(pickWrap);
+
+  const addrWrap = el("label", { cls: "field", attrs: { hidden: "true" } }, [el("span", { cls: "lbl", html: "Address <code>address</code>" })]);
+  const addrInput = el("input", { attrs: { type: "text", placeholder: "0x…" } });
+  addrWrap.appendChild(addrInput);
+  const abiWrap = el("label", { cls: "field", attrs: { hidden: "true" } }, [el("span", { cls: "lbl", text: "ABI (JSON array)" })]);
+  const abiInput = el("textarea", { attrs: { placeholder: '[{"type":"function","name":"…"}]' } });
+  abiWrap.appendChild(abiInput);
+  root.append(addrWrap, abiWrap);
+
+  const panels = el("div");
+  root.appendChild(panels);
+
+  const load = async () => {
+    panels.innerHTML = "";
+    const key = sel.value;
+    if (!key) return;
+    let abi, address;
+    if (key === "__custom") {
+      addrWrap.hidden = false; abiWrap.hidden = false;
+      try { abi = JSON.parse(abiInput.value); } catch { panels.appendChild(el("div", { cls: "result err", text: "ABI is not valid JSON" })); return; }
+      address = addrInput.value.trim();
+      if (!ethers.isAddress(address)) { panels.appendChild(el("div", { cls: "result err", text: "enter a valid contract address" })); return; }
+    } else {
+      addrWrap.hidden = true; abiWrap.hidden = true;
+      const c = manifest.contracts.find((x) => x.deploymentKey === key);
+      abi = await F.loadAbi(PUBLIC_BASE, c);
+      try { address = requireAddress(c.deploymentKey, c.title); }
+      catch (e) { panels.appendChild(el("div", { cls: "result err", text: e.message })); return; }
+    }
+    renderAbiPanels(panels, abi, address);
+  };
+  sel.addEventListener("change", () => { addrWrap.hidden = sel.value !== "__custom"; abiWrap.hidden = sel.value !== "__custom"; load(); });
+  addrInput.addEventListener("change", load);
+  abiInput.addEventListener("change", load);
+  const loadBtn = el("button", { text: "Load (custom)", attrs: { } });
+  loadBtn.addEventListener("click", load);
+  root.appendChild(el("div", { cls: "row" }, [loadBtn]));
+}
+
+function renderAbiPanels(panels, abi, address) {
+  panels.innerHTML = "";
+  const { reads, writes } = F.categorizeAbi(abi);
+  panels.appendChild(el("div", { cls: "chip", text: address }));
+  panels.appendChild(el("h3", { text: `Read (${reads.length})` }));
+  for (const fn of reads) panels.appendChild(fnCard(fn, abi, address, false));
+  panels.appendChild(el("h3", { text: `Write (${writes.length})` }));
+  for (const fn of writes) panels.appendChild(fnCard(fn, abi, address, true));
+}
+
+function fnCard(fn, abi, address, isWrite) {
+  const payable = fn.stateMutability === "payable";
+  const card = el("div", { cls: "fn" });
+  card.appendChild(el("div", { cls: "sig", html: `${F.signatureOf(fn)} <span class="pill ${isWrite ? "write" : "read"}">${fn.stateMutability}</span>${payable ? '<span class="pill payable">payable</span>' : ""}` }));
+  const inputs = [];
+  for (const i of fn.inputs) {
+    const w = el("label", { cls: "field" }, [el("span", { cls: "lbl", html: `${i.name || "arg"} <code>${i.type}</code>` })]);
+    const inp = el("input", { attrs: { type: "text", placeholder: i.type } });
+    w.appendChild(inp); card.appendChild(w); inputs.push(inp);
+  }
+  let valueInput = null;
+  if (payable) {
+    const w = el("label", { cls: "field" }, [el("span", { cls: "lbl", html: "value <code>ETH</code>" })]);
+    valueInput = el("input", { attrs: { type: "text", placeholder: "0.0" } });
+    w.appendChild(valueInput); card.appendChild(w);
+  }
+  const out = el("div");
+  const btn = el("button", { cls: isWrite ? "primary" : "", text: isWrite ? "Write" : "Query" });
+  btn.addEventListener("click", async () => {
+    out.className = "result"; out.textContent = "…";
+    try {
+      const args = fn.inputs.map((i, idx) => F.coerceArg(i.type, inputs[idx].value));
+      if (!isWrite) {
+        const r = await F.readContract({ provider: browserProvider || ethers.getDefaultProvider(), address, abi, fn: fn.name, args, ethers });
+        out.className = "result ok"; out.textContent = stringify(r);
+      } else {
+        if (!connectedAddress) throw new Error("connect a wallet first");
+        const signer = await browserProvider.getSigner();
+        const value = valueInput && valueInput.value ? ethers.parseEther(valueInput.value) : undefined;
+        btn.disabled = true;
+        const tx = await F.writeContract({ signer, address, abi, fn: fn.name, args, value, ethers });
+        out.textContent = "sent: " + tx.hash + "\nwaiting…"; const r = await tx.wait();
+        out.className = "result ok"; out.textContent = `✅ block ${r.blockNumber}\n${tx.hash}`;
+      }
+    } catch (e) { out.className = "result err"; out.textContent = "✗ " + (e?.shortMessage || e?.message || String(e)); }
+    finally { btn.disabled = false; }
+  });
+  card.appendChild(el("div", { cls: "row" }, [btn]));
+  card.appendChild(out);
+  return card;
+}
+
+// ── utils ────────────────────────────────────────────────────────────────────
+function stringify(r) {
+  if (typeof r === "bigint") return r.toString();
+  if (Array.isArray(r)) return r.map(stringify).join("\n");
+  if (r && typeof r === "object") { try { return JSON.stringify(r, (_, v) => (typeof v === "bigint" ? v.toString() : v), 2); } catch { return String(r); } }
+  return String(r);
+}
+let toastTimer = null;
+function toast(msg, kind = "") {
+  clearTimeout(toastTimer);
+  let t = document.querySelector(".toast"); if (t) t.remove();
+  t = el("div", { cls: "toast " + kind, text: msg }); document.body.appendChild(t);
+  toastTimer = setTimeout(() => t.remove(), 5000);
+}
+
+// ── wire-up ───────────────────────────────────────────────────────────────────
+document.getElementById("walletBtn").addEventListener("click", connectWallet);
+document.getElementById("switchBtn").addEventListener("click", () => {
+  const order = [1, 11155111, 31337];
+  const next = order[(order.indexOf(connectedChainId) + 1) % order.length];
+  switchTo(next);
+});
+for (const b of document.querySelectorAll("nav.tabs button")) {
+  b.addEventListener("click", () => {
+    if (b.dataset.tab === "inft") { window.location.href = "./inft.html"; return; }
+    activeTab = b.dataset.tab;
+    for (const x of document.querySelectorAll("nav.tabs button")) x.classList.toggle("active", x === b);
+    render();
+  });
+}
+
+(async function boot() {
+  try { manifest = await F.loadManifest(PUBLIC_BASE); } catch (e) { toast("manifest load failed: " + e.message, "err"); }
+  setupEIP6963();
+  refreshConnUI();
+  render();
+})();
+</script>
+</body>
+</html>
