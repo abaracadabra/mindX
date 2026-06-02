@@ -128,6 +128,7 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 .section-hdr.open .arrow{transform:rotate(90deg)}
 .section-body{overflow:hidden;max-height:0;transition:max-height .4s ease-out;padding:0}
 .section-body.open{max-height:5000px;padding-bottom:12px}
+.sec-skel{padding:10px 4px;color:var(--text3);font-size:12px;font-family:var(--mono);opacity:.7}
 .deep-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:2px}
 @media(max-width:700px){.deep-grid{grid-template-columns:1fr}}
 .deep-grid.w1{grid-template-columns:1fr}
@@ -483,43 +484,43 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
 
     <!-- Agents & Reputation -->
     <div class="section-hdr" onclick="toggleSec(this)"><div class="circuit"></div><span>Agents & Reputation <span style="color:var(--text3);font-weight:400" id="agents-count"></span></span><span class="arrow">&#x25B8;</span></div>
-    <div class="section-body" id="sec-agents"></div>
+    <div class="section-body" id="sec-agents"><div class="sec-skel">loading mindX's sovereign agents&hellip;</div></div>
 
     <!-- Inference Sources -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>Inference Sources <span style="color:var(--text3);font-weight:400" id="inf-count"></span></span><span class="arrow">&#x25B8;</span></div>
-    <div class="section-body" id="sec-inference"></div>
+    <div class="section-body" id="sec-inference"><div class="sec-skel">loading inference providers&hellip;</div></div>
 
     <!-- Memory & Knowledge -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>Memory & Knowledge <span style="color:var(--text3);font-weight:400" id="mem-count"></span></span><span class="arrow">&#x25B8;</span></div>
-    <div class="section-body" id="sec-memory"></div>
+    <div class="section-body" id="sec-memory"><div class="sec-skel">loading memory &amp; knowledge stores&hellip;</div></div>
 
     <!-- Machine Dreaming — memories consolidated into long-term knowledge -->
-    <div class="section-hdr" onclick="toggleSec(this)" id="hdr-dreams" style="display:none"><span>Machine Dreaming <span class="insight-sub">lunar consolidation &middot; memories &rarr; long-term knowledge</span></span><span style="display:flex;align-items:center;gap:8px"><span class="fresh" id="fresh-dreams"></span><span class="arrow">&#x25B8;</span></span></div>
-    <div class="section-body" id="sec-dreams" style="display:none"></div>
+    <div class="section-hdr" onclick="toggleSec(this)" id="hdr-dreams"><span>Machine Dreaming <span class="insight-sub">lunar consolidation &middot; memories &rarr; long-term knowledge</span></span><span style="display:flex;align-items:center;gap:8px"><span class="fresh" id="fresh-dreams"></span><span class="arrow">&#x25B8;</span></span></div>
+    <div class="section-body" id="sec-dreams"><div class="sec-skel">loading dream cycles&hellip;</div></div>
 
     <!-- Godel Audit Trail -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>G&#246;del Audit Trail <span style="color:var(--text3);font-weight:400" id="godel-count"></span></span><span class="arrow">&#x25B8;</span></div>
-    <div class="section-body" id="sec-godel"></div>
+    <div class="section-body" id="sec-godel"><div class="sec-skel">loading G&#246;del decision trail&hellip;</div></div>
 
     <!-- Autonomous Systems -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>Autonomous Systems</span><span class="arrow">&#x25B8;</span></div>
-    <div class="section-body" id="sec-auto"></div>
+    <div class="section-body" id="sec-auto"><div class="sec-skel">loading autonomous loops &amp; governor&hellip;</div></div>
 
     <!-- Recent Actions -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>Recent Actions <span style="color:var(--text3);font-weight:400" id="actions-count"></span></span><span class="arrow">&#x25B8;</span></div>
-    <div class="section-body" id="sec-actions"></div>
+    <div class="section-body" id="sec-actions"><div class="sec-skel">loading recent actions&hellip;</div></div>
 
     <!-- Boardroom Sessions -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>Boardroom Sessions</span><span class="arrow">&#x25B8;</span></div>
-    <div class="section-body" id="sec-boardroom"></div>
+    <div class="section-body" id="sec-boardroom"><div class="sec-skel">loading boardroom sessions&hellip;</div></div>
 
     <!-- Endpoints & API -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>Endpoints & API</span><span class="arrow">&#x25B8;</span></div>
-    <div class="section-body" id="sec-endpoints"></div>
+    <div class="section-body" id="sec-endpoints"><div class="sec-skel">loading API surface&hellip;</div></div>
 
     <!-- Logs → Memories — every log mindX writes is also a memory -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>Logs &rarr; Memories <span class="insight-sub">every log is a memory</span></span><span class="arrow">&#x25B8;</span></div>
-    <div class="section-body" id="sec-logs"></div>
+    <div class="section-body" id="sec-logs"><div class="sec-skel">loading memory stream&hellip;</div></div>
 
   </div>
 
@@ -809,10 +810,22 @@ document.getElementById('content').addEventListener('scroll',function(){
 },{passive:true});
 
 // ── Section toggle ──
+// Loader-backed sections (filled by their own fetch, not render(d)).
+var _SEC_LOADERS={'sec-dreams':'loadDreams','sec-logs':'loadMemoryStream','sec-ledger':'loadLedger','sec-fitness':'loadFitness','sec-selection':'loadSelection'};
+// Populate a section the instant its heading is expanded, from the last good data —
+// so clicking a heading always reveals content instead of a blank box.
+function _refreshSec(bodyId){
+  try{
+    if(typeof LD!=='undefined' && LD) render(LD);  // fills every render(d) section
+    var fn=_SEC_LOADERS[bodyId];
+    if(fn && typeof window[fn]==='function') window[fn]();
+  }catch(e){}
+}
 function toggleSec(hdr){
   hdr.classList.toggle('open');
   const body=hdr.nextElementSibling;
   body.classList.toggle('open');
+  if(body.classList.contains('open')) _refreshSec(body.id);
 }
 
 // ── Helpers ──
@@ -2410,12 +2423,10 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
   var _dreamsLoaded=false;
   function loadDreams(){
     _fetchJSONt('/insight/dreams/recent?limit=8',10000).then(function(d){
-      if(d===null){ if(!_dreamsLoaded) Freshness.mark('dreams','empty'); return; } // keep last good; badge auto-stales by age
-      if(d.fallback){ if(!_dreamsLoaded) hideSec('sec-dreams','hdr-dreams'); Freshness.mark('dreams','empty'); return; }
-      var dreams=(d && d.dreams)||[];
-      if(!dreams.length){ if(!_dreamsLoaded) hideSec('sec-dreams','hdr-dreams'); Freshness.mark('dreams','empty'); return; }
+      if(d===null){ if(!_dreamsLoaded) Freshness.mark('dreams','empty'); return; } // keep last good (skeleton); badge auto-stales by age
+      if(d.fallback||!((d&&d.dreams)||[]).length){ if(!_dreamsLoaded){var be=document.getElementById('sec-dreams');if(be)be.innerHTML='<div class="insight-empty">no dream cycles yet &middot; mindX dreams on the lunar cycle</div>';} Freshness.mark('dreams','empty'); return; }
+      var dreams=d.dreams;
       _dreamsLoaded=true;
-      showSec('sec-dreams','hdr-dreams');
       Freshness.mark('dreams','ok');
       var last=dreams[0]||{};
       var lunar=last.lunar||{};
@@ -2478,6 +2489,11 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
   loadSelection();    setInterval(loadSelection,   60000);
   loadMemoryStream(); setInterval(loadMemoryStream,30000);
   loadDreams();       setInterval(loadDreams,      60000);
+  // Expose the insight loaders so toggleSec (outside this IIFE) can refresh a
+  // loader-backed section the moment its heading is expanded.
+  window.loadLedger=loadLedger; window.loadFitness=loadFitness;
+  window.loadSelection=loadSelection; window.loadMemoryStream=loadMemoryStream;
+  window.loadDreams=loadDreams;
 })();
 </script>
 
