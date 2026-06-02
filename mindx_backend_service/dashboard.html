@@ -170,6 +170,7 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 .tabs{display:flex;gap:1px;flex-shrink:0}
 .tab{flex:1;padding:6px;text-align:center;font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);background:rgba(10,14,20,.9);cursor:pointer;transition:color .15s;font-family:var(--mono)}
 .tab:hover{color:var(--text)}.tab.active{color:var(--blue);box-shadow:inset 0 -2px 0 var(--blue)}
+.tab{cursor:grab}.tab:active{cursor:grabbing}.tab.dragging{opacity:.4}.tab.drop-tgt{box-shadow:inset 2px 0 0 var(--violet)}
 .panel-tools{display:flex;gap:2px;padding:3px 6px;background:rgba(5,8,12,.6);border-bottom:1px solid rgba(26,31,46,.3)}
 .panel-tools button{flex:1;padding:3px;font-size:8px;border:1px solid rgba(48,54,61,.3);border-radius:2px;background:rgba(22,27,34,.5);color:var(--text3);cursor:pointer;font-family:var(--mono);transition:all .15s}
 .panel-tools button:hover{border-color:var(--blue);color:var(--blue)}
@@ -533,13 +534,7 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
 
 <!-- Sidebar: Activity Panel -->
 <div class="sidebar" id="sidebar">
-  <div class="tabs">
-    <div class="tab active" onclick="T(0)" id="t0">dialogue</div>
-    <div class="tab" onclick="T(1)" id="t1">actions</div>
-    <div class="tab" onclick="T(2)" id="t2">agents</div>
-    <div class="tab" onclick="T(3)" id="t3">dojo</div>
-    <div class="tab" onclick="T(4)" id="t4">feed</div>
-  </div>
+  <div class="tabs" id="tabstrip" title="drag tabs to reorder"></div>
   <div class="panel-tools">
     <button onclick="copyPanelContent()">COPY</button>
     <button onclick="exportPanelMd()">EXPORT</button>
@@ -822,7 +817,44 @@ function toggleSec(hdr){
 
 // ── Helpers ──
 let cpuH=[],curT=0,seenTs=new Set(),pendingNew=[];
-const _TABS=['dialogue','actions','agents','dojo','feed'];
+// Activity-feed tabs. Dojo removed — reputation/standings now live on the
+// mastermind.pythai.net war council, governed by the dojo there. Order is
+// user-draggable and persisted to localStorage.
+var _TAB_DEFAULT=['dialogue','actions','agents','feed'];
+var _TABS=_TAB_DEFAULT.slice();
+try{
+  var _saved=JSON.parse(localStorage.getItem('mindx_taborder')||'null');
+  if(Array.isArray(_saved)&&_saved.length===_TAB_DEFAULT.length&&_saved.every(function(t){return _TAB_DEFAULT.indexOf(t)>=0})){_TABS=_saved;}
+}catch(_e){}
+var _feedCount=0,_dragI=null;
+function _tabLabel(name){return name==='feed'&&_feedCount?'feed ('+_feedCount+')':name;}
+function _buildTabs(){
+  var c=document.getElementById('tabstrip');if(!c)return;
+  c.innerHTML='';
+  _TABS.forEach(function(name,i){
+    var t=document.createElement('div');
+    t.className='tab'+(i===curT?' active':'');
+    t.id='t'+i; t.setAttribute('data-name',name); t.textContent=_tabLabel(name); t.draggable=true;
+    t.onclick=function(){T(i)};
+    t.ondragstart=function(e){_dragI=i;t.classList.add('dragging');if(e.dataTransfer){e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',String(i))}catch(_){}}};
+    t.ondragend=function(){t.classList.remove('dragging');var a=document.querySelectorAll('.tab');for(var k=0;k<a.length;k++)a[k].classList.remove('drop-tgt');};
+    t.ondragover=function(e){e.preventDefault();if(e.dataTransfer)e.dataTransfer.dropEffect='move';t.classList.add('drop-tgt');};
+    t.ondragleave=function(){t.classList.remove('drop-tgt');};
+    t.ondrop=function(e){e.preventDefault();t.classList.remove('drop-tgt');_reorderTabs(_dragI,i);};
+    c.appendChild(t);
+  });
+}
+function _reorderTabs(from,to){
+  if(from==null||from===to||from<0||to<0)return;
+  var curName=_TABS[curT];
+  var moved=_TABS.splice(from,1)[0];
+  _TABS.splice(to,0,moved);
+  curT=Math.max(0,_TABS.indexOf(curName));
+  try{localStorage.setItem('mindx_taborder',JSON.stringify(_TABS));}catch(_e){}
+  _buildTabs();if(LD)rpnl(LD);
+}
+function _updateFeedTabLabel(){var t=document.querySelector('.tab[data-name="feed"]');if(t)t.textContent=_tabLabel('feed');}
+_buildTabs();
 
 // ── Fmt: shared, safe humanization (global; used by render() + insight IIFE) ──
 window.Fmt=(function(){
@@ -932,7 +964,7 @@ function bar(p,cls){return`<div class="gc-bar"><div class="gc-bar-fill ${cls||'g
 function sa(a){return a?a.slice(0,6)+'..'+a.slice(-4):'?'}
 function rk(t){const m={4:['SOV','rk-s'],3:['BF','rk-b'],2:['VER','rk-v'],1:['PRV','rk-p'],0:['UN','rk-u']};const[l,c]=m[t]||m[0];return`<span class="rk ${c}">${l}</span>`}
 
-function T(n){curT=n;document.querySelectorAll('.tab').forEach((t,i)=>{if(i<5)t.className='tab'+(i===n?' active':'')});if(LD)rpnl(LD);if(_popOpen){document.getElementById('popup-tab-name').textContent=_TABS[n]||'data';_renderPopupContent()}}
+function T(n){curT=n;_buildTabs();if(LD)rpnl(LD);if(_popOpen){document.getElementById('popup-tab-name').textContent=_TABS[n]||'data';_renderPopupContent()}}
 
 // ── Toast ──
 function showToast(m){
@@ -974,6 +1006,9 @@ cycleQuote();setInterval(cycleQuote,6000);
 
 // ── MAIN RENDER ──
 function render(d){
+  // Never render the cold-cache placeholder (no godel_choices/actions/agents) over
+  // good panels — that's what left Gödel + Recent Actions stuck at 0 under stalls.
+  if(!d || d.warming_up){ if(window.Freshness)Freshness.mark('diag','stale'); return; }
   const s=d.system||{},inf=d.inference||{},v=d.vault||{},th=d.thesis||{},db=d.database||{};
   cpuH.push(s.cpu_percent||0);if(cpuH.length>50)cpuH.shift();
 
@@ -1390,7 +1425,8 @@ function _renderStateCtx(ctx){
 }
 function rpnl(d){
   const p=document.getElementById('pnl');
-  if(curT===0){
+  const _tab=_TABS[curT]||'dialogue';
+  if(_tab==='dialogue'){
     const ms=d.interactions||[];
     if(!ms.length){p.innerHTML='<div class="msg msg-ai"><div class="msg-txt" style="color:var(--text3)">mindX is initializing. Dialogues will appear as agents communicate.</div></div>';return}
     const recentKeys=new Set(pendingNew.map(pn=>pn.m.timestamp+'_'+(pn.m.prompt||'').slice(0,20)));
@@ -1429,7 +1465,7 @@ function rpnl(d){
       }
       h+=`</div>`;
     });p.innerHTML=h;p.scrollTop=p.scrollHeight;
-  } else if(curT===1){
+  } else if(_tab==='actions'){
     const acts=d.actions||[];const thesis=d.thesis||{};const godels=d.godel_choices||[];
     if(!acts.length){p.innerHTML='<div style="padding:12px;color:var(--text3)">No actions yet.</div>';return}
     let h=`<div style="padding:4px 8px;font-size:10px;color:var(--text2);font-family:var(--mono);border-bottom:1px solid rgba(8,11,16,.3)">${acts.length} actions${thesis.improvement_rate!==undefined?' &#183; '+((thesis.improvement_rate*100).toFixed(1))+'% success':''}</div>`;
@@ -1496,31 +1532,15 @@ function rpnl(d){
       h+=`</div></details>`;
     });
     p.innerHTML=h;
-  } else if(curT===2){
-    const ai=d.agent_interactions||[];const st=d.dojo||[];
+  } else if(_tab==='agents'){
+    const ai=d.agent_interactions||[];
     let h='';
     if(ai.length){
       h+='<div style="font-size:9px;color:var(--text3);padding:6px 0;font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px">INTERACTIONS</div>';
       ai.slice(0,12).forEach(i=>{h+=`<div style="padding:4px 0;border-bottom:1px solid rgba(8,11,16,.3);font-size:11px"><span style="color:var(--blue);font-weight:600">${i.from}</span> &#8594; ${i.to} <span style="color:var(--violet)">${i.type}</span> <span style="color:var(--text3);font-size:9px">${i.ts}</span></div>`});
     }
-    if(st.length){
-      h+='<div style="font-size:9px;color:var(--text3);padding:6px 0;font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px">STANDINGS</div>';
-      st.forEach(s=>{h+=`<div style="padding:2px 0;border-bottom:1px solid rgba(8,11,16,.3);font-size:11px">${rk(s.tier)} ${s.agent_id} <span style="float:right;color:var(--text3)">${s.rank} ${s.score}</span></div>`});
-    }
     p.innerHTML=h||'<div style="padding:12px;color:var(--text3)">No interactions yet.</div>';
-  } else if(curT===3){
-    const st=d.dojo||[];
-    if(!st.length){p.innerHTML='<div style="padding:8px;color:var(--text3)">No standings</div>';return}
-    const grps={};st.forEach(s=>(grps[s.group]=grps[s.group]||[]).push(s));
-    let h='';
-    for(const[group,members]of Object.entries(grps)){
-      h+=`<div style="font-size:9px;color:var(--blue);padding:6px 0;font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px">${group} (${members.length})</div>`;
-      members.forEach(s=>{
-        h+=`<div style="padding:3px 0;border-bottom:1px solid rgba(8,11,16,.3)">${rk(s.tier)} <span style="color:#e6edf3;font-weight:600;font-size:11px">${s.agent_id}</span> <span style="float:right;color:var(--text3);font-size:10px">${s.rank} ${s.score} ${s.bona_fide?'<span style="color:var(--green);font-size:8px">BF</span>':''}</span>${bar(Math.min(100,s.score/100))}</div>`;
-      });
-    }
-    p.innerHTML=h;
-  } else if(curT===4){
+  } else if(_tab==='feed'){
     if(!window._afFeedEvents||!window._afFeedEvents.length){
       p.innerHTML='<div style="padding:12px;color:var(--text3)">Connecting to activity stream...</div>';
     } else {
@@ -1662,13 +1682,22 @@ setInterval(function(){
 // Layer 2: Full diagnostics (slower, loads everything)
 async function rf(){
   try{
-    if(!LD&&_preloadedData){LD=_preloadedData;_preloadedData=null;render(LD);_firstRender=false;Freshness.mark('diag','ok');return}
-    var r=await fetch('/diagnostics/live');
-    if(r.ok){LD=await r.json();render(LD);_firstRender=false;Freshness.mark('diag','ok');}
-    else{Freshness.mark('diag','error');}
+    if(!LD&&_preloadedData){var pd=_preloadedData;_preloadedData=null;if(pd&&!pd.warming_up){LD=pd;render(LD);_firstRender=false;Freshness.mark('diag','ok');return}}
+    // hard timeout so a CPU stall can't hang the poll; on failure/placeholder we
+    // KEEP the last good render and let the freshness badge age to STALE by cadence.
+    var ctl=('AbortController'in window)?new AbortController():null;
+    var to=ctl?setTimeout(function(){try{ctl.abort()}catch(e){}},8000):null;
+    var r=await fetch('/diagnostics/live',ctl?{signal:ctl.signal}:{});
+    if(to)clearTimeout(to);
+    if(r.ok){
+      var j=await r.json();
+      if(j&&!j.warming_up){LD=j;render(LD);_firstRender=false;Freshness.mark('diag','ok');}
+      // warming_up placeholder → keep last good (no re-mark; badge ages naturally)
+    }
+    // non-OK → keep last good; badge ages to STALE
   }catch(e){
-    Freshness.mark('diag','error');
-    if(Date.now()-_bootStart>5000){
+    // timeout/network → keep last good; only show CONNECTING if we never loaded
+    if(!LD && Date.now()-_bootStart>5000){
       document.getElementById('live-badge').textContent='CONNECTING';
       document.getElementById('live-badge').className='live-badge off';
     }
@@ -1758,8 +1787,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
     panel.innerHTML=feedEvents.slice(0,40).map(renderCard).join('');
   };
   function updateBadge(){
-    const tab=document.getElementById('t4');if(tab)tab.textContent='feed ('+feedEvents.length+')';
-    if(curT===4){const p=document.getElementById('pnl');if(p)window._afRenderToPanel(p)}
+    _feedCount=feedEvents.length;_updateFeedTabLabel();
+    if((_TABS[curT]||'')==='feed'){const p=document.getElementById('pnl');if(p)window._afRenderToPanel(p)}
   }
   function connectSSE(){
     const es=new EventSource('/activity/stream');

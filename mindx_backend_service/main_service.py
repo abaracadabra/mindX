@@ -2423,6 +2423,7 @@ _diag_heartbeat_count = 0
 _diag_last_probe = 0.0
 _diag_cache: dict = {}        # Cached /diagnostics/live response
 _diag_cache_ts: float = 0.0   # When the cache was last populated
+_diag_last_actions: list = []  # Last non-empty recent-actions (survives DB stalls)
 _DIAG_CACHE_TTL: float = 30.0  # Seconds to serve cached diagnostics (raised from 5s: the per-request gather is heavy on a 2-core box; 30s keeps /diagnostics/live responsive under load while staying fresh enough for a 6s-polling dashboard reading "updated Ns ago")
 _INTERACTIONS_LOG = PROJECT_ROOT / "data" / "logs" / "heartbeat_dialogues.jsonl"
 
@@ -6509,15 +6510,11 @@ async def thesis_summary():
     return {"summary": "\n".join(lines), "claims": {k: v["verdict"] for k, v in evidence.get("claims", {}).items()}}
 
 
-@app.get("/diagnostics/live", tags=["diagnostics"])
-async def diagnostics_live_endpoint():
+async def _diag_compute():
+    """Heavy diagnostics gather — run from the endpoint (cold cache only) or a
+    background refresher, so the endpoint never blocks on it under CPU load."""
     global _diag_last_probe, _diag_cache, _diag_cache_ts
     now = time.time()
-
-    # Serve cached response if fresh (prevents worker exhaustion from 6s polling)
-    if _diag_cache and (now - _diag_cache_ts) < _DIAG_CACHE_TTL:
-        return _diag_cache
-
     up_s = int(now - _diag_start)
     d, r = divmod(up_s, 86400); h, r = divmod(r, 3600); m, _ = divmod(r, 60)
     uptime = f"{d}d {h}h {m}m" if d else f"{h}h {m}m"
@@ -6680,6 +6677,14 @@ async def diagnostics_live_endpoint():
         actions_data = await _safe_await(_mpg2.get_recent_actions(limit=10), default=[])
     except Exception:
         pass
+    # Retain last-good: a transient pgvector stall under CPU load returns [] and
+    # would zero the "Recent Actions" panel. Keep the previous non-empty result
+    # until a fresh one lands, so the panel stays populated through serving stalls.
+    global _diag_last_actions
+    if actions_data:
+        _diag_last_actions = actions_data
+    elif _diag_last_actions:
+        actions_data = _diag_last_actions
 
     # RAGE embed stats
     rage_stats = {"docs": 0, "memories": 0}
@@ -6807,8 +6812,40 @@ async def diagnostics_live_endpoint():
     # Cache response for subsequent polls
     _diag_cache = response
     _diag_cache_ts = time.time()
-
     return response
+
+
+_diag_refreshing = False
+
+
+async def _diag_bg_refresh():
+    global _diag_refreshing
+    try:
+        await _diag_compute()
+    except Exception:
+        pass
+    finally:
+        _diag_refreshing = False
+
+
+@app.get("/diagnostics/live", tags=["diagnostics"])
+async def diagnostics_live_endpoint():
+    """Always serve the cached snapshot; refresh it in the BACKGROUND when stale,
+    so the page never blocks on the heavy gather under CPU saturation. The
+    dashboard's freshness badge shows how old the data is. Only the very first
+    (cold-cache) call computes inline."""
+    global _diag_refreshing
+    now = time.time()
+    # Kick a background recompute whenever the cache is cold OR stale — but never
+    # await it (the gather can take 90s on a CPU-saturated 2-core box). The
+    # endpoint returns instantly: the cache if we have one, else a tiny warming
+    # placeholder. The next poll (6s later) gets the freshly computed snapshot.
+    if (not _diag_cache or (now - _diag_cache_ts) >= _DIAG_CACHE_TTL) and not _diag_refreshing:
+        _diag_refreshing = True
+        asyncio.create_task(_diag_bg_refresh())
+    if _diag_cache:
+        return _diag_cache
+    return {"warming_up": True, "uptime_seconds": int(now - _diag_start)}
 
 # Include bankon ("I do not understand") router
 from mindx_backend_service.bankon import bankon_router
@@ -8468,7 +8505,7 @@ async def action_efficiency():
 @app.get("/diagnostics/export", tags=["diagnostics"], summary="Full diagnostics snapshot as JSON download")
 async def diagnostics_export():
     from starlette.responses import Response
-    data = await diagnostics_live_endpoint()
+    data = _diag_cache or await _diag_compute()
     return Response(json.dumps(data, indent=2, default=str), media_type="application/json", headers={"Content-Disposition": "attachment; filename=mindx_diagnostics.json"})
 
 # RAGE Embed — pgvector-backed semantic search (branded as RAGE)
