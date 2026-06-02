@@ -127,11 +127,34 @@ class MastermindAgent:
     async def _async_init_components(self):
         if self._initialized_async and not self.test_mode: return
 
-        try:
-            self.llm_handler = await create_llm_handler()
-            if self.llm_handler: logger.info(f"{self.log_prefix} Internal LLM set to: {self.llm_handler.provider_name}/{self.llm_handler.model_name_for_api or 'default'}")
-        except Exception as e:
-            logger.error(f"{self.log_prefix} Failed to create Mastermind LLM handler: {e}", exc_info=True)
+        # Prefer the best SERVABLE reasoning model (the proven blueprint/SEA
+        # path) so tool-strategy proposals run on a capable model instead of a
+        # weak bare default that returns empty responses. Bare default is the
+        # failsafe.
+        self.llm_handler = None
+        if self.model_registry is not None:
+            try:
+                from llm.model_selector import TaskType
+                ranked = self.model_registry.get_handler_and_model_for_purpose(TaskType.REASONING)
+                for cand_handler, model_name in ranked:
+                    if not cand_handler:
+                        continue
+                    if getattr(cand_handler, "model_name_for_api", None) == model_name:
+                        self.llm_handler = cand_handler
+                        break
+                    bound = await create_llm_handler(provider_name=cand_handler.provider_name, model_name=model_name)
+                    if bound:
+                        self.llm_handler = bound
+                        break
+            except Exception as e:
+                logger.debug(f"{self.log_prefix} capability routing failed: {e}")
+        if not self.llm_handler:
+            try:
+                self.llm_handler = await create_llm_handler()
+            except Exception as e:
+                logger.error(f"{self.log_prefix} Failed to create Mastermind LLM handler: {e}", exc_info=True)
+        if self.llm_handler:
+            logger.info(f"{self.log_prefix} Internal LLM set to: {self.llm_handler.provider_name}/{self.llm_handler.model_name_for_api or 'default'}")
 
         # Initialize AutoMINDX first
         self.automindx_agent = await AutoMINDXAgent.get_instance(memory_agent=self.memory_agent, config_override=self.config)
@@ -147,7 +170,8 @@ class MastermindAgent:
             coordinator_agent=self.coordinator_agent,
             automindx_agent=self.automindx_agent,
             persona_prompt=mastermind_persona,
-            mastermind_ref=self # Pass self-reference
+            mastermind_ref=self, # Pass self-reference
+            model_registry=self.model_registry # Self-aware handler resolution (no model pinning)
         )
         await self.bdi_agent.async_init_components()
         self._register_mastermind_bdi_actions() # Move registration to after BDI agent is created
@@ -240,7 +264,9 @@ class MastermindAgent:
                   f"Registered Tools:\n{json.dumps(tools_for_prompt, indent=2)}\n\n"
                   f"Provide your assessment in JSON format with keys 'overall_assessment' (string) and 'identified_gaps' (list of strings).")
         try:
-            response_str = await self.llm_handler.generate_text(prompt, json_mode=True)
+            response_str = await self.llm_handler.generate_text(
+                prompt, model=getattr(self.llm_handler, "model_name_for_api", None), json_mode=True
+            )
             if not response_str:
                 return False, "LLM returned empty response during tool assessment"
             assessment_result = json.loads(response_str)
@@ -293,7 +319,9 @@ class MastermindAgent:
                   f"Assessment: {assessment_text}\n\n"
                   f"Respond ONLY with a JSON object containing a 'recommendations' list.")
         try:
-            response_str = await self.llm_handler.generate_text(prompt, json_mode=True)
+            response_str = await self.llm_handler.generate_text(
+                prompt, model=getattr(self.llm_handler, "model_name_for_api", None), json_mode=True
+            )
             if not response_str:
                 return False, "LLM returned empty response during strategy proposal"
             strategy = json.loads(response_str)
@@ -365,7 +393,9 @@ class MastermindAgent:
                   f"'tool_id', 'display_name', 'description', 'module_path', 'class_name', 'capabilities' (list), "
                   f"'needs_identity' (bool), 'initial_version', 'initial_status', 'prompt_template_for_llm_interaction', and 'metadata'.")
         try:
-            response_str = await self.llm_handler.generate_text(prompt, json_mode=True)
+            response_str = await self.llm_handler.generate_text(
+                prompt, model=getattr(self.llm_handler, "model_name_for_api", None), json_mode=True
+            )
             tool_concept = json.loads(response_str)
 
             required_keys = ["tool_id", "display_name", "description", "module_path", "class_name", "capabilities"]
@@ -859,6 +889,10 @@ class MastermindAgent:
         Default: 30 minutes. Reviews system state, triggers SEA campaigns
         when improvement opportunities accumulate, logs strategic decisions.
         """
+        import os as _os
+        if _os.getenv("MINDX_DISABLE_AUTONOMOUS") == "1":
+            logger.info(f"{self.log_prefix} Autonomous strategic loop disabled via MINDX_DISABLE_AUTONOMOUS")
+            return
         if self.autonomous_loop_task and not self.autonomous_loop_task.done():
             logger.info(f"{self.log_prefix} Autonomous loop already running")
             return

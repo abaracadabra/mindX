@@ -66,6 +66,7 @@ mindX discovers and routes across multiple inference providers, with Ollama as t
 - [OllamaCloudTool](../tools/cloud/ollama_cloud_tool.py) — Cloud inference as a first-class [BaseTool](../agents/core/bdi_agent.py); any agent can call it; 9 operations (chat, generate, embed, list_models, show_model, web_search, web_fetch, get_metrics, get_status)
 - [LLM Factory](../llm/llm_factory.py) — Handler creation with rate limiting, caching, provider preference order
 - [Cloud Rate Limiting](ollama/cloud/rate_limiting.md) — Adaptive pacing (3s–30s), quota tracking, [actual token counts](ollama/mindx/precision_metrics.md) (no estimation)
+- [**Inference Budget — the LLM Metabolism**](INFERENCE_BUDGET.md) — Dynamic, self-adjusting per-provider rate-limit ledger ([`llm/inference_budget.py`](../llm/inference_budget.py)). Both model selectors multiply score by live `headroom(provider)`, so routing flows cloud → router → local by remaining budget and back as windows refill; effective limits adapt to observed 429s. Surfaced on `/diagnostics/live` + the landing-page Inference panel.
 - [Precision Metrics](ollama/mindx/precision_metrics.md) — 18-decimal-place `Decimal` tracking via [`precision_metrics.py`](../llm/precision_metrics.py)
 - [Cloud Research](OLLAMA_VLLM_CLOUD_RESEARCH.md) — Ollama Cloud + vLLM viability analysis (2026-04-10)
 
@@ -394,6 +395,11 @@ mindX is a Godel machine — a self-improving system where the improvement mecha
 - [MCP (Model Context Protocol)](mcp_tool.md) — [Anthropic MCP](https://modelcontextprotocol.io/) for structured context, tool registration. [HostingerVPSAgent](../agents/hostinger_vps_agent.py) registers its [3 channels](../agents/hostinger.vps.agent) as MCP tools. ([source](../tools/communication/mcp_tool.py))
 - [AgenticPlace](AgenticPlace_Deep_Dive.md) — Agent marketplace at [agenticplace.pythai.net](https://agenticplace.pythai.net); `.extensions` → `.json` → blockchain publishing. [SwarmFeed](https://github.com/swarmclawai/swarmfeed) timeline patterns inform agent activity discovery.
 - [x402 / x402-AVM Payments](X402.md) — HTTP 402 micropayment rail; triple-rail (Base USDC + Tempo MPP + Algorand ASA via [`@x402-avm/*`](https://github.com/algorand-devrel/x402-demo)). Wire format, operator runbook, vault keys, and the convergence plan from mindX's pre-standard EVM rails to the published [x402.org](https://x402.org) standard.
+
+## Blockchain
+
+- [Blockchain Agents](blockchain/BLOCKCHAIN_AGENTS.md) — Mint a mindX agent as an **ERC-7857 iNFT** with six sidecar facets (`.model .persona .walletpublickey .bankon .iNFT`); lists on [AgenticPlace](AgenticPlace_Deep_Dive.md), binds to [BANKON](https://bankon.pythai.net), registers on the ERC-8004 [AgentRegistry](../daio/contracts/agentregistry/AgentRegistry.sol). Pipeline: [`agents/blockchain/agent_factory.py`](../agents/blockchain/agent_factory.py); route `POST /blockchain/agentfactory/mint`.
+- [CoinMarketCap Integration](blockchain/coinmarketcap_integration_guide.md) — Provider-agnostic market data (key-auth REST / keyless public / x402 pay-per-request on Base).
 
 ## Economics
 

@@ -159,7 +159,29 @@ class ModelSelector:
                                 score += 1.0
                             elif result["status"] == "ERROR":
                                 score -= 1.0
-            
+
+            # Rate-limit budget (the "metabolism"): scale the whole score by how
+            # much budget the provider has left, so inference flows to where there
+            # is headroom — cloud → router → local — and back as windows refill.
+            # MULTIPLIER with a 0.05 floor: a starved provider drops below any
+            # provider with budget, but stays reachable as a last resort. Local
+            # providers and any error → headroom 1.0 (fail-open): this can NEVER
+            # block all inference.
+            try:
+                from llm.inference_budget import headroom as _budget_headroom
+                # Map ollama ":cloud" models to the rate-limited ollama_cloud
+                # budget (provider is "ollama" for both local and cloud tiers).
+                _bp = cap.provider
+                if (cap.provider or "").lower() == "ollama":
+                    _name = cap.model_id.split("/")[-1]
+                    _tag = _name.split(":", 1)[-1].lower() if ":" in _name else ""
+                    if _tag.endswith("cloud"):
+                        _bp = "ollama_cloud"
+                cap.availability = _budget_headroom(_bp)   # populate the existing field
+                score *= max(0.05, cap.availability)
+            except Exception:
+                pass
+
             scores[cap.model_id] = score
         
         return sorted(scores.items(), key=lambda item: item[1], reverse=True)

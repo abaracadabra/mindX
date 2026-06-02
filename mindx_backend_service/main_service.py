@@ -2423,7 +2423,7 @@ _diag_heartbeat_count = 0
 _diag_last_probe = 0.0
 _diag_cache: dict = {}        # Cached /diagnostics/live response
 _diag_cache_ts: float = 0.0   # When the cache was last populated
-_DIAG_CACHE_TTL: float = 5.0  # Seconds to serve cached diagnostics
+_DIAG_CACHE_TTL: float = 30.0  # Seconds to serve cached diagnostics (raised from 5s: the per-request gather is heavy on a 2-core box; 30s keeps /diagnostics/live responsive under load while staying fresh enough for a 6s-polling dashboard reading "updated Ns ago")
 _INTERACTIONS_LOG = PROJECT_ROOT / "data" / "logs" / "heartbeat_dialogues.jsonl"
 
 # Load existing dialogues from disk (all logs are memories in data)
@@ -6350,6 +6350,125 @@ async def storage_offload(req: OffloadRequest, request: Request):
     return serialize_run(run)
 
 
+# ── blockchain.agents: mint a mindX agent as an ERC-7857 iNFT ──
+# Spec: docs/blockchain/BLOCKCHAIN_AGENTS.md
+# dry_run=True (default) does wallet + persona + IPFS bundling but never
+# broadcasts. dry_run=False broadcasts the live mint and is admin-gated,
+# mirroring /storage/offload.
+
+class MintAgentRequest(BaseModel):
+    name: str
+    dry_run: bool = True
+    chain_id: int = 1337
+    list_price_wei: int = 0
+    avatar: bool = False
+    description: Optional[str] = None
+    rpc_url: Optional[str] = None
+
+
+@app.post("/blockchain/agentfactory/mint", tags=["blockchain"],
+          summary="Mint a mindX agent as an ERC-7857 iNFT (dry_run by default)")
+async def blockchain_agentfactory_mint(req: MintAgentRequest, request: Request):
+    if not req.dry_run:
+        # Live broadcast — require admin (shadow-overlord JWT)
+        await require_admin_access(request)
+    try:
+        from agents.blockchain import BlockchainAgentFactory
+    except Exception as imp_e:
+        raise HTTPException(status_code=503, detail=f"blockchain module unavailable: {imp_e}")
+    factory = await BlockchainAgentFactory.get_instance()
+    result = await factory.mint_agent(
+        req.name,
+        dry_run=req.dry_run,
+        chain_id=req.chain_id,
+        list_price_wei=req.list_price_wei,
+        avatar=req.avatar,
+        description=req.description,
+        rpc_url=req.rpc_url,
+    )
+    if result.get("status") == "error":
+        raise HTTPException(status_code=400, detail=result.get("error", "mint failed"))
+    return result
+
+
+# ── Multi-chain DEPLOYER (agents/deployer) ──
+# Wallet-authorized, per-chain-isolated, two-step deploy of .sol (Foundry) and
+# Algorand (ARC56) contracts. Spec: docs/services/contract_deployment_as_a_service.md
+# The UI wallet signs a challenge to AUTHORIZE (not to sign the deploy tx); the
+# backend verifies + checks dojo tier, then deploys with a vault-scoped per-chain
+# key. Mainnet/two-step confirm is admin-gated (mirrors /storage/offload).
+
+class DeployIntentPayload(BaseModel):
+    wallet_address: str
+    signature: str
+    message: str
+    manifest_path: str
+    chain: Optional[str] = None  # None = all stages in the manifest
+
+
+class DeployConfirmPayload(BaseModel):
+    wallet_address: str
+    signature: str
+    message: str
+
+
+@app.post("/deployer/intent", tags=["deployer"],
+          summary="Wallet-authorized deploy intent (preflight + estimate, 5-min expiry, no broadcast)")
+async def deployer_intent(payload: DeployIntentPayload):
+    try:
+        from agents.deployer import DeployerError, DeployerService
+    except Exception as imp_e:
+        raise HTTPException(status_code=503, detail=f"deployer module unavailable: {imp_e}")
+    svc = await DeployerService.get_instance()
+    try:
+        return await svc.create_intent(
+            wallet_address=payload.wallet_address, signature=payload.signature,
+            message=payload.message, manifest_path=payload.manifest_path, chain=payload.chain)
+    except DeployerError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/deployer/confirm/{intent_id}", tags=["deployer"],
+          summary="Execute a deploy intent (operator-gated when mainnet / two-step)")
+async def deployer_confirm(intent_id: str, payload: DeployConfirmPayload, request: Request):
+    try:
+        from agents.deployer import DeployerError, DeployerService
+    except Exception as imp_e:
+        raise HTTPException(status_code=503, detail=f"deployer module unavailable: {imp_e}")
+    svc = await DeployerService.get_instance()
+    intent = svc.load_intent(intent_id)
+    if intent is None:
+        raise HTTPException(status_code=404, detail="intent not found")
+    # Re-verify the signer matches the intent's deployer-of-record
+    ver = svc._verify_signature(payload.wallet_address, payload.message, payload.signature)
+    if not getattr(ver, "is_valid", False) or ver.recovered_address.lower() != str(intent["deployer_of_record"]).lower():
+        raise HTTPException(status_code=403, detail="signature does not match intent deployer-of-record")
+    if intent.get("requires_operator_confirm"):
+        await require_admin_access(request)
+    try:
+        return await svc.execute_intent(intent_id)
+    except DeployerError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+
+@app.get("/deployer/intents/{intent_id}", tags=["deployer"], summary="Get a deploy intent's status")
+async def deployer_get_intent(intent_id: str):
+    from agents.deployer import DeployerService
+    svc = await DeployerService.get_instance()
+    intent = svc.load_intent(intent_id)
+    if intent is None:
+        raise HTTPException(status_code=404, detail="intent not found")
+    return intent
+
+
+@app.get("/deployer/deployments/{chain_id}", tags=["deployer"], summary="Read deployment records for a chain id")
+async def deployer_records(chain_id: int):
+    from agents.deployer.records import read_chain_records
+    return {"chain_id": chain_id, "records": read_chain_records(chain_id)}
+
+
 # ── Thesis Evidence: scientific proof endpoints ──
 
 @app.get("/thesis", response_class=_DashResponse, tags=["thesis"], include_in_schema=False)
@@ -6673,6 +6792,15 @@ async def diagnostics_live_endpoint():
             "evidence_span_hours": round(m.evidence_span_hours, 1),
             "verdicts": m.thesis_verdicts,
         }
+    except Exception:
+        pass
+
+    # Inference budget metabolism — per-provider live rate-limit headroom so the
+    # dashboard can show the organism breathing (cloud/router deplete, local
+    # rises, windows refill).
+    try:
+        from llm.inference_budget import snapshot as _budget_snapshot
+        response["inference_budget"] = _budget_snapshot()
     except Exception:
         pass
 
