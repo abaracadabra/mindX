@@ -58,6 +58,27 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 @keyframes pulse-dot{0%,100%{opacity:.4;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
 .live-badge{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:4px;background:rgba(86,211,100,.12);color:var(--green);border:1px solid rgba(86,211,100,.25);letter-spacing:.5px;font-weight:600}
 .live-badge.off{background:rgba(227,179,65,.1);color:var(--amber);border-color:rgba(227,179,65,.2)}
+/* draggable / dockable top navbar */
+.hdr-grip{cursor:grab;color:var(--text3);font-size:15px;line-height:1;margin-right:10px;user-select:none;flex-shrink:0;letter-spacing:-1px}
+.hdr-grip:active{cursor:grabbing}
+.hdr-caret{cursor:pointer;color:var(--text3);font-size:12px;margin-left:8px;flex-shrink:0;transition:transform .2s;display:inline-block;user-select:none}
+.hdr-caret:hover{color:var(--blue)}
+.hdr.nav-collapsed .hdr-caret{transform:rotate(-90deg)}
+.hdr.dragging{position:fixed!important;z-index:120;width:auto;box-shadow:0 10px 48px rgba(0,0,0,.6);opacity:.96;border-radius:8px}
+.hdr.docked{position:fixed;z-index:60}
+.hdr.dock-bottom{bottom:0;left:0;right:0;top:auto;border-bottom:none;border-top:1px solid rgba(121,192,255,.1);box-shadow:0 -2px 12px rgba(0,0,0,.4)}
+.hdr.dock-left,.hdr.dock-right{top:0;bottom:0;width:150px;min-height:100vh;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:10px;padding:14px 12px;overflow-y:auto;border-bottom:none}
+.hdr.dock-left{left:0;right:auto;border-right:1px solid rgba(121,192,255,.1)}
+.hdr.dock-right{right:0;left:auto;border-left:1px solid rgba(121,192,255,.1)}
+.hdr.dock-left .hdr-mid,.hdr.dock-right .hdr-mid{flex-direction:column;align-items:flex-start;gap:6px;flex:none;width:100%}
+.hdr.dock-left .hdr-right,.hdr.dock-right .hdr-right{flex-direction:column;align-items:flex-start;gap:6px;margin-left:0;margin-top:10px}
+.hdr.dock-left .sep,.hdr.dock-right .sep{display:none}
+.hdr.nav-collapsed .hdr-mid,.hdr.nav-collapsed .hdr-right{display:none}
+.hdr.nav-collapsed.dock-left,.hdr.nav-collapsed.dock-right{width:auto;min-height:0;bottom:auto}
+body.navdock-bottom .wrap{padding-bottom:52px}
+body.navdock-left .wrap{padding-left:150px}
+body.navdock-right .wrap{padding-right:150px}
+body.navdock-collapsed .wrap{padding:0!important}
 
 /* ── Main layout ── */
 .wrap{position:relative;z-index:1;display:flex;min-height:100vh}
@@ -71,7 +92,10 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 .sb-title{flex:1;text-transform:uppercase}
 .sb-btn{cursor:pointer;color:var(--text3);padding:0 5px;font-size:12px}.sb-btn:hover{color:var(--blue)}
 .sidebar.floating{position:fixed;z-index:300;width:340px;height:72vh;top:auto;border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 48px rgba(0,0,0,.55);overflow:hidden}
-.sidebar.collapsed{height:auto!important;max-height:none}
+.sidebar.collapsed{height:auto!important;max-height:none;align-self:flex-start}
+/* collapsed & docked: leave the flex flow so the content reflows full-width and only
+   the bar remains, pinned top-right as a small tab (no empty panel frame left behind) */
+.sidebar.collapsed:not(.floating){position:fixed;top:48px;right:0;left:auto;width:auto;min-width:190px;z-index:300;border:1px solid var(--border);border-right:none;border-top-left-radius:8px;border-bottom-left-radius:8px;overflow:hidden}
 .sidebar.collapsed .tabs,.sidebar.collapsed .panel-tools,.sidebar.collapsed .conv,.sidebar.collapsed .sidebar-ft{display:none}
 .sidebar.collapsed .sidebar-bar{border-bottom:none}
 .sidebar.collapsed .sb-caret{transform:rotate(-90deg)}
@@ -388,6 +412,7 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
 
 <!-- Header -->
 <div class="hdr">
+  <span class="hdr-grip" id="hdr-grip" title="drag to dock to any edge &#183; double-click to collapse">&#x283F;</span>
   <span class="hdr-brand">mind<b>X</b></span>
   <div class="hdr-mid">
     <a href="/feedback.html" class="hl" style="color:var(--green);font-weight:700" title="Live operator console — agent dialogue, BDI activity, dream cycles, cognitive ascent, system pulse">feedback ▸</a>
@@ -412,6 +437,7 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
     <span class="live-dot" id="live-dot"></span>
     <span class="fresh" id="fresh-diag" style="margin-left:6px"></span>
   </div>
+  <span class="hdr-caret" id="hdr-caret" title="collapse / expand navbar">&#x25BE;</span>
 </div>
 
 <div class="wrap">
@@ -559,7 +585,7 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
     <button onclick="popoutPanel()" class="primary">EXPAND</button>
   </div>
   <div class="conv" id="pnl"><div style="padding:8px;color:var(--text3);font-size:11px">Loading agent activity...</div></div>
-  <div class="sidebar-ft">mindx.pythai.net <span id="ts"></span> &#183; <a href="/docs.html">docs</a> &#183; <a href="/book">book</a></div>
+  <div class="sidebar-ft"><a href="https://agenticplace.pythai.net" target="_blank" rel="noopener">AgenticPlace</a> &#183; <a href="https://mastermind.pythai.net" target="_blank" rel="noopener">mastermind</a> &#183; <a href="https://bankon.pythai.net" target="_blank" rel="noopener">BANKON</a> &#183; <a href="https://github.com/agenticplace" target="_blank" rel="noopener" title="GitHub &#183; agenticplace" aria-label="GitHub" style="display:inline-flex;align-items:center"><svg height="11" width="11" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 012-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a><br><span style="color:var(--text3)">BANKON all rights preserved &copy; <span id="ts"></span></span></div>
 </div>
 
 </div><!-- /wrap -->
@@ -896,6 +922,62 @@ function toggleSec(hdr){
     var pos=JSON.parse(localStorage.getItem('mindx_sidebar_pos')||'null');
     if(pos&&pos.l){ sb.classList.add('floating'); sb.style.left=pos.l; sb.style.top=pos.t; updDock(); }
     if(localStorage.getItem('mindx_sidebar_collapsed')==='1') sb.classList.add('collapsed');
+  }catch(e){}
+})();
+
+// ── Dockable / collapsible top navbar ──
+// Drag the grip to float the navbar; release near an edge to snap-dock it (top,
+// bottom, left, right). Double-click the grip (or click the caret) to collapse.
+// Dock side + collapsed state persist; content reflows so the bar never covers it.
+(function(){
+  var hdr=document.querySelector('.hdr'); if(!hdr) return;
+  var grip=document.getElementById('hdr-grip'), caret=document.getElementById('hdr-caret');
+  function save(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+  function clearPos(){hdr.style.left=hdr.style.top=hdr.style.right=hdr.style.bottom=hdr.style.width='';}
+  function applyDock(side){
+    hdr.classList.remove('docked','dock-bottom','dock-left','dock-right','dragging');
+    document.body.classList.remove('navdock-bottom','navdock-left','navdock-right');
+    clearPos();
+    if(side && side!=='top'){ hdr.classList.add('docked','dock-'+side); document.body.classList.add('navdock-'+side); }
+    save('mindx_nav_side', side||'top');
+  }
+  var _d=false,_m=false,_sx,_sy,_ox,_oy;
+  function down(cx,cy){ _d=true;_m=false; var r=hdr.getBoundingClientRect(); _sx=cx;_sy=cy;_ox=r.left;_oy=r.top; }
+  function move(cx,cy){
+    if(!_d) return;
+    var dx=cx-_sx, dy=cy-_sy;
+    if(!_m && (Math.abs(dx)+Math.abs(dy))>5){ _m=true;
+      document.body.classList.remove('navdock-bottom','navdock-left','navdock-right');
+      hdr.classList.remove('dock-bottom','dock-left','dock-right');
+      hdr.classList.add('docked','dragging');
+      hdr.style.width=Math.min(hdr.offsetWidth, Math.round(window.innerWidth*0.6))+'px';
+    }
+    if(_m){
+      hdr.style.left=Math.max(0,Math.min(window.innerWidth-60,_ox+dx))+'px';
+      hdr.style.top=Math.max(0,Math.min(window.innerHeight-30,_oy+dy))+'px';
+      hdr.style.right='auto'; hdr.style.bottom='auto';
+    }
+  }
+  function up(cx,cy){
+    if(!_d) return; _d=false;
+    if(_m){
+      var dd={top:cy, bottom:window.innerHeight-cy, left:cx, right:window.innerWidth-cx};
+      var best='top', bv=dd.top; for(var k in dd){ if(dd[k]<bv){bv=dd[k];best=k;} }
+      applyDock(best);
+    }
+  }
+  grip.addEventListener('mousedown',function(e){ down(e.clientX,e.clientY); e.preventDefault(); });
+  document.addEventListener('mousemove',function(e){ move(e.clientX,e.clientY); });
+  document.addEventListener('mouseup',function(e){ up(e.clientX,e.clientY); });
+  grip.addEventListener('touchstart',function(e){ var t=e.touches[0]; down(t.clientX,t.clientY); },{passive:true});
+  document.addEventListener('touchmove',function(e){ if(_d){ var t=e.touches[0]; move(t.clientX,t.clientY); } },{passive:true});
+  document.addEventListener('touchend',function(e){ var t=(e.changedTouches&&e.changedTouches[0])||{clientX:_ox,clientY:_oy}; up(t.clientX,t.clientY); });
+  function toggleNav(){ var c=hdr.classList.toggle('nav-collapsed'); document.body.classList.toggle('navdock-collapsed',c); save('mindx_nav_collapsed', c?'1':'0'); }
+  grip.addEventListener('dblclick',function(){ toggleNav(); });
+  if(caret) caret.addEventListener('click',function(e){ e.stopPropagation(); toggleNav(); });
+  try{
+    var side=localStorage.getItem('mindx_nav_side'); if(side && side!=='top') applyDock(side);
+    if(localStorage.getItem('mindx_nav_collapsed')==='1'){ hdr.classList.add('nav-collapsed'); document.body.classList.add('navdock-collapsed'); }
   }catch(e){}
 })();
 
