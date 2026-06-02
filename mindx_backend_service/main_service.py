@@ -2424,6 +2424,7 @@ _diag_last_probe = 0.0
 _diag_cache: dict = {}        # Cached /diagnostics/live response
 _diag_cache_ts: float = 0.0   # When the cache was last populated
 _diag_last_actions: list = []  # Last non-empty recent-actions (survives DB stalls)
+_diag_last_godel: list = []    # Last non-empty Gödel choices (survives read stalls)
 _DIAG_CACHE_TTL: float = 30.0  # Seconds to serve cached diagnostics (raised from 5s: the per-request gather is heavy on a 2-core box; 30s keeps /diagnostics/live responsive under load while staying fresh enough for a 6s-polling dashboard reading "updated Ns ago")
 _INTERACTIONS_LOG = PROJECT_ROOT / "data" / "logs" / "heartbeat_dialogues.jsonl"
 
@@ -6510,10 +6511,98 @@ async def thesis_summary():
     return {"summary": "\n".join(lines), "claims": {k: v["verdict"] for k, v in evidence.get("claims", {}).items()}}
 
 
+def _diag_read_sync():
+    """All synchronous diagnostics file I/O (beliefs, Gödel JSONL, agent registry,
+    vault, runtime log, workspace count) gathered in ONE function so the caller can
+    run it in a worker thread via asyncio.to_thread — keeping the FastAPI event loop
+    free to serve while disk reads + JSON parsing happen off-loop. This is what stops
+    the diagnostics refresh from blocking serving under CPU load (the 'flapping')."""
+    out = {"beliefs_count": 0, "beliefs_sample": [], "godel": [], "agents": [],
+           "vault": {}, "logs": [], "workspaces": 0}
+    # beliefs
+    try:
+        bp = PROJECT_ROOT / "data" / "memory" / "beliefs.json"
+        if bp.exists():
+            bd = json.loads(bp.read_text())
+            out["beliefs_count"] = len(bd)
+            for k, v in list(bd.items())[:8]:
+                val = v.get("value", "")
+                if isinstance(val, str) and len(val) > 50: val = val[:50] + "..."
+                out["beliefs_sample"].append({"key": k, "value": val})
+    except Exception as e: logger.debug(f"Diagnostics: beliefs read failed: {e}")
+    # workspaces
+    try:
+        wd = PROJECT_ROOT / "data" / "memory" / "agent_workspaces"
+        out["workspaces"] = sum(1 for d_ in wd.iterdir() if d_.is_dir()) if wd.exists() else 0
+    except Exception: pass
+    # godel
+    try:
+        gp = PROJECT_ROOT / "data" / "logs" / "godel_choices.jsonl"
+        if gp.exists():
+            lines = [l for l in gp.read_text().strip().split("\n") if l.strip()]
+            for l in lines[-10:]:
+                try:
+                    g = json.loads(l)
+                    out["godel"].append({"timestamp": g.get("timestamp_utc", g.get("timestamp","")), "agent": g.get("source_agent","?"), "type": g.get("choice_type",""), "chosen": str(g.get("chosen_option", g.get("chosen","")))[:100], "rationale": str(g.get("rationale",""))[:80], "outcome": str(g.get("outcome",""))[:40]})
+                except Exception: pass
+            out["godel"].reverse()
+    except Exception as e: logger.debug(f"Diagnostics: godel choices read failed: {e}")
+    # agent registry + tiers
+    try:
+        rp = PROJECT_ROOT / "data" / "identity" / "production_registry.json"
+        amp = PROJECT_ROOT / "daio" / "agents" / "agent_map.json"
+        agent_tiers = {}
+        if amp.exists():
+            for aid, ad in json.loads(amp.read_text()).get("agents", {}).items():
+                agent_tiers[aid] = ad.get("verification_tier", 0)
+        if rp.exists():
+            for a in json.loads(rp.read_text()).get("agents", []):
+                eid = a["entity_id"]
+                out["agents"].append({"entity_id": eid, "address": a["address"], "role": a.get("role",""), "verification_tier": agent_tiers.get(eid, 1)})
+    except Exception as e: logger.debug(f"Diagnostics: agent registry read failed: {e}")
+    # vault
+    try:
+        from mindx_backend_service.bankon_vault.vault import BankonVault
+        vi = BankonVault().info(); vi.pop("vault_dir", None); out["vault"] = vi
+    except Exception as e: logger.debug(f"Diagnostics: vault info failed: {e}")
+    # logs (tail of runtime log, redacted)
+    try:
+        lp = PROJECT_ROOT / "data" / "logs" / "mindx_runtime.log"
+        if lp.exists():
+            for l in lp.read_text().strip().split("\n")[-20:]:
+                if "API_KEY" in l or "private_key" in l.lower() or "WALLET_PK" in l: continue
+                out["logs"].append(l[:250])
+            out["logs"].reverse()
+    except Exception as e: logger.debug(f"Diagnostics: log read failed: {e}")
+    return out
+
+
+def _diag_stm_fallback_sync():
+    """Filesystem STM count — only used when pgvector is down. rglob over the STM
+    tree (tens of GB) MUST run in a worker thread, never on the event loop."""
+    stm = 0; stm_by_agent = {}
+    try:
+        stm_path = PROJECT_ROOT / "data" / "memory" / "stm"
+        if stm_path.exists():
+            from collections import defaultdict as _ddict
+            _counts = _ddict(int)
+            for f in stm_path.rglob("*.memory.json"):
+                parts = f.relative_to(stm_path).parts
+                if parts:
+                    _counts[parts[0]] += 1
+                    stm += 1
+            stm_by_agent = dict(sorted(_counts.items(), key=lambda x: -x[1]))
+    except Exception:
+        pass
+    return stm, stm_by_agent
+
+
 async def _diag_compute():
     """Heavy diagnostics gather — run from the endpoint (cold cache only) or a
-    background refresher, so the endpoint never blocks on it under CPU load."""
-    global _diag_last_probe, _diag_cache, _diag_cache_ts
+    background refresher, so the endpoint never blocks on it under CPU load.
+    All synchronous file I/O is offloaded to a worker thread (_diag_read_sync) so the
+    event loop stays free to serve cached responses even mid-refresh."""
+    global _diag_last_probe, _diag_cache, _diag_cache_ts, _diag_last_godel
     now = time.time()
     up_s = int(now - _diag_start)
     d, r = divmod(up_s, 86400); h, r = divmod(r, 3600); m, _ = divmod(r, 60)
@@ -6554,18 +6643,21 @@ async def _diag_compute():
         asyncio.create_task(_bg_probe())
         asyncio.create_task(_heartbeat_query_local_model())
 
-    # beliefs
-    bp = PROJECT_ROOT / "data" / "memory" / "beliefs.json"
-    bc, bs = 0, []
-    try:
-        if bp.exists():
-            bd = json.loads(bp.read_text())
-            bc = len(bd)
-            for k, v in list(bd.items())[:8]:
-                val = v.get("value", "")
-                if isinstance(val, str) and len(val) > 50: val = val[:50] + "..."
-                bs.append({"key": k, "value": val})
-    except Exception as e: logger.debug(f"Diagnostics: beliefs read failed: {e}")
+    # ── All synchronous file I/O offloaded to a worker thread (never blocks the
+    #    event loop, which is what kept serving responsive mid-refresh) ──
+    _sync = await asyncio.to_thread(_diag_read_sync)
+    bc, bs = _sync["beliefs_count"], _sync["beliefs_sample"]
+    wsp = _sync["workspaces"]
+    godel = _sync["godel"]
+    agents = _sync["agents"]
+    vault = _sync["vault"]
+    logs = _sync["logs"]
+    # Gödel last-good: a degraded read (e.g. right after restart) must not zero the
+    # audit-trail panel; keep the previous non-empty list until a fresh one lands.
+    if godel:
+        _diag_last_godel = godel
+    elif _diag_last_godel:
+        godel = _diag_last_godel
     # stm count — try pgvector first, fall back to filesystem
     stm = 0
     stm_by_agent = {}
@@ -6577,52 +6669,10 @@ async def _diag_compute():
         db_health = await _safe_await(_mpg.health_check(), default={})
     except Exception:
         pass
-    # Filesystem fallback if DB returned nothing
+    # Filesystem fallback if DB returned nothing — rglob over the (huge) STM tree
+    # runs in a worker thread so it can never block the event loop.
     if stm == 0:
-        try:
-            stm_path = PROJECT_ROOT / "data" / "memory" / "stm"
-            if stm_path.exists():
-                from collections import defaultdict as _ddict
-                _counts = _ddict(int)
-                for f in stm_path.rglob("*.memory.json"):
-                    parts = f.relative_to(stm_path).parts
-                    if parts:
-                        _counts[parts[0]] += 1
-                        stm += 1
-                stm_by_agent = dict(sorted(_counts.items(), key=lambda x: -x[1]))
-        except Exception:
-            pass
-    wsp = sum(1 for d_ in (PROJECT_ROOT / "data" / "memory" / "agent_workspaces").iterdir() if d_.is_dir()) if (PROJECT_ROOT / "data" / "memory" / "agent_workspaces").exists() else 0
-    # godel
-    gp = PROJECT_ROOT / "data" / "logs" / "godel_choices.jsonl"
-    godel = []
-    try:
-        if gp.exists():
-            lines = [l for l in gp.read_text().strip().split("\n") if l.strip()]
-            for l in lines[-10:]:
-                try:
-                    g = json.loads(l)
-                    godel.append({"timestamp": g.get("timestamp_utc", g.get("timestamp","")), "agent": g.get("source_agent","?"), "type": g.get("choice_type",""), "chosen": str(g.get("chosen_option", g.get("chosen","")))[:100], "rationale": str(g.get("rationale",""))[:80], "outcome": str(g.get("outcome",""))[:40]})
-                except Exception: pass
-            godel.reverse()
-    except Exception as e: logger.debug(f"Diagnostics: godel choices read failed: {e}")
-    # registry
-    rp = PROJECT_ROOT / "data" / "identity" / "production_registry.json"
-    amp = PROJECT_ROOT / "daio" / "agents" / "agent_map.json"
-    agents = []
-    agent_tiers = {}
-    try:
-        if amp.exists():
-            am = json.loads(amp.read_text())
-            for aid, ad in am.get("agents", {}).items():
-                agent_tiers[aid] = ad.get("verification_tier", 0)
-    except Exception as e: logger.debug(f"Diagnostics: agent map read failed: {e}")
-    try:
-        if rp.exists():
-            for a in json.loads(rp.read_text()).get("agents", []):
-                eid = a["entity_id"]
-                agents.append({"entity_id": eid, "address": a["address"], "role": a.get("role",""), "verification_tier": agent_tiers.get(eid, 1)})
-    except Exception as e: logger.debug(f"Diagnostics: agent registry read failed: {e}")
+        stm, stm_by_agent = await asyncio.to_thread(_diag_stm_fallback_sync)
     # inference (use cached summary — probe runs async above)
     inf = {"total": 0, "available": 0, "sources": {}}
     try:
@@ -6631,23 +6681,7 @@ async def _diag_compute():
         s = disc.status_summary()
         inf = {"total": s.get("total_sources",0), "available": s.get("available",0), "local_inference": s.get("local_inference",False), "cloud_inference": s.get("cloud_inference",False), "sources": s.get("sources",{})}
     except Exception as e: logger.debug(f"Diagnostics: inference status failed: {e}")
-    # vault
-    vault = {}
-    try:
-        from mindx_backend_service.bankon_vault.vault import BankonVault
-        v = BankonVault(); vault = v.info(); vault.pop("vault_dir", None)
-    except Exception as e: logger.debug(f"Diagnostics: vault info failed: {e}")
-    # logs
-    lp = PROJECT_ROOT / "data" / "logs" / "mindx_runtime.log"
-    logs = []
-    try:
-        if lp.exists():
-            all_lines = lp.read_text().strip().split("\n")
-            for l in all_lines[-20:]:
-                if "API_KEY" in l or "private_key" in l.lower() or "WALLET_PK" in l: continue
-                logs.append(l[:250])
-            logs.reverse()
-    except Exception as e: logger.debug(f"Diagnostics: log read failed: {e}")
+    # (vault + recent logs now come from _diag_read_sync, off the event loop)
     # Load dojo and boardroom data
     dojo_data = []
     try:
