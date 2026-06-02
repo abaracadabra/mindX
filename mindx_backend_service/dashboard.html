@@ -1213,8 +1213,8 @@ function render(d){
       const bo=(b.backoff_s>0)?` <span style="color:var(--red)">&middot; backoff ${Fmt.dur(b.backoff_s)}</span>`:'';
       const t429=(b.total_429>0)?` <span style="color:var(--amber)">&middot; ${b.total_429} throttled</span>`:'';
       const wins=(b.windows||[]).map(w=>w.used+'/'+w.limit+'@'+_win(w.span_s)).join(', ');
-      infH+=`<div class="dr" style="align-items:center" title="${esc(k)} &middot; ${b.total_req||0} reqs total &middot; ${b.tokens_min||0} tok/min &middot; safety ${Math.round((b.safety||0.9)*100)}% &middot; windows: ${wins}">`
-        +`<span style="font-family:var(--mono);font-size:10px;min-width:96px">${esc(k)}</span>`
+      infH+=`<div class="dr" style="align-items:center" title="${Fmt.esc(k)} &middot; ${b.total_req||0} reqs total &middot; ${b.tokens_min||0} tok/min &middot; safety ${Math.round((b.safety||0.9)*100)}% &middot; windows: ${wins}">`
+        +`<span style="font-family:var(--mono);font-size:10px;min-width:96px">${Fmt.esc(k)}</span>`
         +`<span style="flex:1">${bar(hrPct,col)}</span>`
         +`<span style="font-family:var(--mono);font-size:10px;color:var(--text2);min-width:120px;text-align:right">${hrPct}% &middot; ${Fmt.safe(b.binding_used)}/${Fmt.safe(b.binding_limit)}${bw}${t429}${bo}</span>`
         +`</div>`;
