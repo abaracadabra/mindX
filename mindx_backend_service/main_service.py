@@ -2425,6 +2425,7 @@ _diag_cache: dict = {}        # Cached /diagnostics/live response
 _diag_cache_ts: float = 0.0   # When the cache was last populated
 _diag_last_actions: list = []  # Last non-empty recent-actions (survives DB stalls)
 _diag_last_godel: list = []    # Last non-empty Gödel choices (survives read stalls)
+_diag_last_database: dict = {}  # Last connected pgvector health (survives query stalls)
 _DIAG_CACHE_TTL: float = 30.0  # Seconds to serve cached diagnostics (raised from 5s: the per-request gather is heavy on a 2-core box; 30s keeps /diagnostics/live responsive under load while staying fresh enough for a 6s-polling dashboard reading "updated Ns ago")
 _INTERACTIONS_LOG = PROJECT_ROOT / "data" / "logs" / "heartbeat_dialogues.jsonl"
 
@@ -6602,7 +6603,7 @@ async def _diag_compute():
     background refresher, so the endpoint never blocks on it under CPU load.
     All synchronous file I/O is offloaded to a worker thread (_diag_read_sync) so the
     event loop stays free to serve cached responses even mid-refresh."""
-    global _diag_last_probe, _diag_cache, _diag_cache_ts, _diag_last_godel
+    global _diag_last_probe, _diag_cache, _diag_cache_ts, _diag_last_godel, _diag_last_database
     now = time.time()
     up_s = int(now - _diag_start)
     d, r = divmod(up_s, 86400); h, r = divmod(r, 3600); m, _ = divmod(r, 60)
@@ -6669,6 +6670,13 @@ async def _diag_compute():
         db_health = await _safe_await(_mpg.health_check(), default={})
     except Exception:
         pass
+    # Retain last-good: a slow health query returns {} and would blank the Memory &
+    # Knowledge + Storage panels. Keep the previous connected health until a fresh
+    # connected one lands (only overwrite when we actually got a connected reading).
+    if db_health.get("status") == "connected":
+        _diag_last_database = db_health
+    elif _diag_last_database:
+        db_health = _diag_last_database
     # Filesystem fallback if DB returned nothing — rglob over the (huge) STM tree
     # runs in a worker thread so it can never block the event loop.
     if stm == 0:

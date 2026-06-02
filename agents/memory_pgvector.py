@@ -1011,32 +1011,49 @@ async def count_embeddings() -> Dict[str, int]:
 
 
 async def health_check() -> Dict[str, Any]:
-    """Check database health."""
+    """Check database health.
+
+    The old version ran eight exact COUNT(*)s (incl. two filtered scans over 100k+
+    rows) in ONE query, which exceeded the 3s diagnostics timeout under load and left
+    the dashboard `database` panel blank. This version stays well under a second:
+      - secondary counts (beliefs/agents/godel/actions) use pg_class.reltuples
+        planner estimates (no scan);
+      - the headline `memories` count and the embedding counts reuse the
+        proven-fast single-purpose queries (count_memories_total / count_embeddings);
+      - db_size uses current_database() so it is portable.
+    """
     pool = await get_pool()
     if not pool:
         return {"status": "disconnected"}
+
+    def _i(v) -> int:
+        try:
+            n = int(v)
+            return n if n > 0 else 0
+        except (TypeError, ValueError):
+            return 0
+
     try:
-        row = await pool.fetchrow(
+        est = await pool.fetchrow(
             """SELECT
-                (SELECT COUNT(*) FROM memories) as memories,
-                (SELECT COUNT(*) FROM beliefs) as beliefs,
-                (SELECT COUNT(*) FROM agents) as agents,
-                (SELECT COUNT(*) FROM godel_choices) as godel_choices,
-                (SELECT COUNT(*) FROM actions) as actions,
-                (SELECT COUNT(*) FROM doc_embeddings WHERE embedding IS NOT NULL) as doc_embeddings,
-                (SELECT COUNT(*) FROM memories WHERE embedding IS NOT NULL) as mem_embeddings,
-                (SELECT pg_size_pretty(pg_database_size('mindx'))) as db_size"""
+                (SELECT reltuples::bigint FROM pg_class WHERE relname='beliefs') as beliefs,
+                (SELECT reltuples::bigint FROM pg_class WHERE relname='agents') as agents,
+                (SELECT reltuples::bigint FROM pg_class WHERE relname='godel_choices') as godel_choices,
+                (SELECT reltuples::bigint FROM pg_class WHERE relname='actions') as actions,
+                (SELECT pg_size_pretty(pg_database_size(current_database()))) as db_size"""
         )
+        memories = await count_memories_total()  # exact, single fast count
+        emb = await count_embeddings()           # exact embedding counts, proven fast
         return {
             "status": "connected",
-            "memories": row["memories"],
-            "beliefs": row["beliefs"],
-            "agents": row["agents"],
-            "godel_choices": row["godel_choices"],
-            "actions": row["actions"],
-            "doc_embeddings": row["doc_embeddings"],
-            "mem_embeddings": row["mem_embeddings"],
-            "db_size": row["db_size"],
+            "memories": _i(memories),
+            "beliefs": _i(est["beliefs"]),
+            "agents": _i(est["agents"]),
+            "godel_choices": _i(est["godel_choices"]),
+            "actions": _i(est["actions"]),
+            "doc_embeddings": _i(emb.get("docs")),
+            "mem_embeddings": _i(emb.get("memories")),
+            "db_size": est["db_size"],
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}

@@ -1107,7 +1107,7 @@ function render(d){
   gH+=`<div class="gc" onclick="this.classList.toggle('open')" data-tip="CPU utilization with 50-sample history &middot; <a href='/doc/enhanced_monitoring_system'>docs</a>"><div class="gc-lbl">CPU ${spk(cpuH)}</div><div class="gc-val">${s.cpu_percent||0}%</div>${bar(Math.max(s.cpu_percent||0,s.cpu_avg||0),s.cpu_percent>85?'r':s.cpu_percent>65?'y':'g')}<div class="gc-detail">avg: ${s.cpu_avg||0}% | load: ${ld[0]} ${ld[1]} ${ld[2]} | samples: ${cpuH.length}/50<br><a href="/doc/enhanced_monitoring_system" class="link" style="font-size:9px">monitoring docs</a></div></div>`;
   gH+=`<div class="gc" onclick="this.classList.toggle('open')" data-tip="RAM: ${s.memory_used_gb}GB / ${s.memory_total_gb}GB &middot; <a href='/doc/pgvectorscale_memory_integration'>docs</a>"><div class="gc-lbl">Memory</div><div class="gc-val">${s.memory_used_gb||0}<span class="gc-sub">/${s.memory_total_gb||0}G</span></div>${bar(s.memory_percent||0,s.memory_percent>85?'r':s.memory_percent>65?'y':'g')}<div class="gc-detail">process: ${d.process_memory_mb||'?'}MB | free: ${((s.memory_total_gb||0)-(s.memory_used_gb||0)).toFixed(2)}GB<br><a href="/doc/pgvectorscale_memory_integration" class="link" style="font-size:9px">pgvector docs</a></div></div>`;
   gH+=`<div class="gc" onclick="this.classList.toggle('open')" data-tip="${inf.available} of ${inf.total} providers available &middot; <a href='/inference/status'>full status</a>"><div class="gc-lbl">Inference</div><div class="gc-val">${inf.available||0}<span class="gc-sub">/${inf.total||0}</span></div>${bar(inf.total?(inf.available/inf.total)*100:0)}<div class="gc-detail">${Object.entries(inf.sources||{}).map(([n,src])=>`<span class="dot ${src.status==='available'?'dot-g':'dot-r'}"></span>${n}: ${src.status}`).join('<br>')}<br><a href="/inference/status" class="link" style="font-size:9px">full inference status</a></div></div>`;
-  gH+=`<div class="gc" onclick="this.classList.toggle('open')" data-tip="Disk: ${s.disk_used_gb}GB / ${s.disk_total_gb}GB"><div class="gc-lbl">Storage</div><div class="gc-val">${s.disk_used_gb||0}<span class="gc-sub">/${s.disk_total_gb||0}G</span></div>${bar(s.disk_percent||0,s.disk_percent>85?'r':s.disk_percent>65?'y':'g')}<div class="gc-detail">${db.status==='connected'?'pgvector: '+db.db_size+' ('+db.memories+' mem, '+db.beliefs+' bel)':'pgvector: '+(db.status||'unknown')}<br><a href="/doc/pgvectorscale_memory_integration" class="link" style="font-size:9px">pgvector docs</a></div></div>`;
+  gH+=`<div class="gc" onclick="this.classList.toggle('open')" data-tip="Disk: ${s.disk_used_gb}GB / ${s.disk_total_gb}GB"><div class="gc-lbl">Storage</div><div class="gc-val">${s.disk_used_gb||0}<span class="gc-sub">/${s.disk_total_gb||0}G</span></div>${bar(s.disk_percent||0,s.disk_percent>85?'r':s.disk_percent>65?'y':'g')}<div class="gc-detail">${db.status==='connected'?'pgvector: '+db.db_size+' ('+(db.memories||0).toLocaleString()+' mem, '+(db.beliefs||0).toLocaleString()+' bel)':'pgvector: '+((d.memory?.stm_records||0).toLocaleString())+' memories'}<br><a href="/doc/pgvectorscale_memory_integration" class="link" style="font-size:9px">pgvector docs</a></div></div>`;
   // Second row
   gH+=`<div class="gc" data-tip="BDI belief system &middot; <a href='/doc/belief_system'>docs</a>"><div class="gc-lbl"><a href="/doc/belief_system" class="link" style="color:var(--blue)">Beliefs</a></div><div class="gc-val">${d.beliefs?.count||0}</div><div class="gc-sub">BDI identity map</div></div>`;
   gH+=`<div class="gc" data-tip="BANKON vault &middot; ${v.cipher||'AES-256-GCM'} &middot; <a href='/doc/DAIO'>DAIO docs</a>"><div class="gc-lbl"><a href="/doc/DAIO" class="link" style="color:var(--blue)">Vault</a></div><div class="gc-val">${v.entries||0}</div><div class="gc-sub">${v.cipher||'AES-256-GCM'}</div></div>`;
@@ -1237,25 +1237,32 @@ function render(d){
     }
     infH+=`</div>`;
   });
+  if(!allSources.length && !_bk.length) infH+='<div class="insight-empty">no inference sources discovered yet — probing providers</div>';
   document.getElementById('sec-inference').innerHTML=infH;
 
   // Memory & Knowledge
   const re=d.rage_embed||{};
   const stmAgents=Object.entries(d.memory?.stm_by_agent||{}).sort((a,b)=>b[1]-a[1]);
-  document.getElementById('mem-count').textContent=db.status==='connected'?`(${(db.memories||0).toLocaleString()} memories)`:'';
+  const _conn=db.status==='connected';
+  // Headline counts always come from the best available source so the panel is never
+  // blank: live pgvector health when connected, else the memory + rage_embed counts.
+  const memTotal=(_conn?db.memories:0)||d.memory?.stm_records||0;
+  const memEmb=(_conn?db.mem_embeddings:0)||re.memories||0;
+  const docChunks=(_conn?db.doc_embeddings:0)||re.docs||0;
+  document.getElementById('mem-count').textContent=memTotal?`(${memTotal.toLocaleString()} memories)`:'';
   let memH='<div style="font-size:11px;color:var(--text2);padding:4px 0;margin-bottom:8px"><a href="/doc/pgvectorscale_memory_integration" class="link">pgvector docs</a> &#183; <a href="/doc/mindx_memory_architecture_scalable" class="link">memory architecture</a> &#183; <a href="/api/rage/embed" class="link">RAGE search</a> &#183; <a href="/doc/EMBEDDING_SYSTEM" class="link">embedding system</a></div>';
   memH+='<div class="deep-grid">';
-  if(db.status==='connected'){
-    memH+=`<div style="background:var(--surface);padding:12px 14px">`;
-    memH+=`<div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">pgvector database</div>`;
-    memH+=`<div class="dr"><span class="dr-key">memories</span><span class="dr-val" style="font-size:18px;color:var(--green)">${(db.memories||0).toLocaleString()}</span></div>`;
-    memH+=`<div class="dr"><span class="dr-key">embeddings</span><span class="dr-val" style="color:var(--violet)">${(db.mem_embeddings||0).toLocaleString()}</span></div>`;
-    memH+=`<div class="dr"><span class="dr-key">doc chunks</span><span class="dr-val">${db.doc_embeddings||0}</span></div>`;
+  memH+=`<div style="background:var(--surface);padding:12px 14px">`;
+  memH+=`<div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">pgvector database${_conn?'':' <span style="color:var(--text3);font-size:9px">(cached — live stats warming)</span>'}</div>`;
+  memH+=`<div class="dr"><span class="dr-key">memories</span><span class="dr-val" style="font-size:18px;color:var(--green)">${memTotal.toLocaleString()}</span></div>`;
+  memH+=`<div class="dr"><span class="dr-key">embeddings</span><span class="dr-val" style="color:var(--violet)">${memEmb.toLocaleString()}</span></div>`;
+  memH+=`<div class="dr"><span class="dr-key">doc chunks</span><span class="dr-val">${docChunks.toLocaleString()}</span></div>`;
+  if(_conn){
     memH+=`<div class="dr"><span class="dr-key">actions tracked</span><span class="dr-val">${db.actions||0}</span></div>`;
     memH+=`<div class="dr"><span class="dr-key"><a href="/godel/choices" class="dlink">G&#246;del choices</a></span><span class="dr-val" style="color:var(--amber)">${db.godel_choices||0}</span></div>`;
-    memH+=`<div class="dr"><span class="dr-key">database size</span><span class="dr-val">${db.db_size||'?'}</span></div>`;
-    memH+=`</div>`;
   }
+  memH+=`<div class="dr"><span class="dr-key">database size</span><span class="dr-val">${db.db_size||'—'}</span></div>`;
+  memH+=`</div>`;
   // RAGE + STM breakdown
   memH+=`<div style="background:var(--surface);padding:12px 14px">`;
   memH+=`<div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">semantic retrieval</div>`;
