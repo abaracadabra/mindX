@@ -657,6 +657,14 @@ VLLM_EMBED_URL = os.getenv("VLLM_EMBED_URL", "http://localhost:8001")  # vLLM se
 OLLAMA_EMBED_URL = "http://localhost:11434"  # Ollama fallback
 
 
+# mxbai-embed-large has a 512-token (~1500-char) context window. Truncate ALL
+# embedding inputs here — the single choke point — so memory/doc embeds never
+# overflow it. Overflow returned None ("input exceeds context length") and left
+# the input perpetually "unembedded", so it was retried every cycle = sustained
+# ollama CPU churn. 1400 chars ≈ 350 tokens, safely under 512 with headroom.
+_EMBED_MAX_CHARS = 1400
+
+
 async def generate_embedding(text: str, model: str = EMBED_MODEL) -> Optional[List[float]]:
     """
     Generate embedding. Tries vLLM first (OpenAI-compatible /v1/embeddings),
@@ -665,6 +673,7 @@ async def generate_embedding(text: str, model: str = EMBED_MODEL) -> Optional[Li
     than the previous DEBUG silence which hid 0/105 backfill failures).
     """
     import aiohttp
+    text = text[:_EMBED_MAX_CHARS]
 
     vllm_status = ollama_status = None
 
@@ -910,7 +919,7 @@ async def get_action_efficiency() -> Dict[str, Any]:
                 COUNT(*) FILTER (WHERE status='failed') as failed,
                 COUNT(*) FILTER (WHERE status='pending') as pending,
                 COUNT(DISTINCT LEFT(description,100)) as unique_descriptions,
-                EXTRACT(EPOCH FROM AVG(completed_at - created_at)) FILTER (WHERE completed_at IS NOT NULL) as avg_completion_secs
+                EXTRACT(EPOCH FROM AVG(completed_at - created_at) FILTER (WHERE completed_at IS NOT NULL)) as avg_completion_secs
             FROM actions
         """)
         total = row["total"] or 0

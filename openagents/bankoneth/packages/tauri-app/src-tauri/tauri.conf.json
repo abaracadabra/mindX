@@ -1,0 +1,31 @@
+{
+  "$schema": "https://schema.tauri.app/config/2.0",
+  "productName": "bankoneth",
+  "version": "0.1.0",
+  "identifier": "net.pythai.bankoneth",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build",
+    "devUrl": "http://127.0.0.1:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "bankoneth",
+        "width": 900,
+        "height": 720,
+        "minWidth": 600,
+        "minHeight": 480
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/icon.png"]
+  }
+}

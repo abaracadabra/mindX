@@ -127,11 +127,34 @@ class MastermindAgent:
     async def _async_init_components(self):
         if self._initialized_async and not self.test_mode: return
 
-        try:
-            self.llm_handler = await create_llm_handler()
-            if self.llm_handler: logger.info(f"{self.log_prefix} Internal LLM set to: {self.llm_handler.provider_name}/{self.llm_handler.model_name_for_api or 'default'}")
-        except Exception as e:
-            logger.error(f"{self.log_prefix} Failed to create Mastermind LLM handler: {e}", exc_info=True)
+        # Prefer the best SERVABLE reasoning model (the proven blueprint/SEA
+        # path) so tool-strategy proposals run on a capable model instead of a
+        # weak bare default that returns empty responses. Bare default is the
+        # failsafe.
+        self.llm_handler = None
+        if self.model_registry is not None:
+            try:
+                from llm.model_selector import TaskType
+                ranked = self.model_registry.get_handler_and_model_for_purpose(TaskType.REASONING)
+                for cand_handler, model_name in ranked:
+                    if not cand_handler:
+                        continue
+                    if getattr(cand_handler, "model_name_for_api", None) == model_name:
+                        self.llm_handler = cand_handler
+                        break
+                    bound = await create_llm_handler(provider_name=cand_handler.provider_name, model_name=model_name)
+                    if bound:
+                        self.llm_handler = bound
+                        break
+            except Exception as e:
+                logger.debug(f"{self.log_prefix} capability routing failed: {e}")
+        if not self.llm_handler:
+            try:
+                self.llm_handler = await create_llm_handler()
+            except Exception as e:
+                logger.error(f"{self.log_prefix} Failed to create Mastermind LLM handler: {e}", exc_info=True)
+        if self.llm_handler:
+            logger.info(f"{self.log_prefix} Internal LLM set to: {self.llm_handler.provider_name}/{self.llm_handler.model_name_for_api or 'default'}")
 
         # Initialize AutoMINDX first
         self.automindx_agent = await AutoMINDXAgent.get_instance(memory_agent=self.memory_agent, config_override=self.config)
@@ -147,7 +170,8 @@ class MastermindAgent:
             coordinator_agent=self.coordinator_agent,
             automindx_agent=self.automindx_agent,
             persona_prompt=mastermind_persona,
-            mastermind_ref=self # Pass self-reference
+            mastermind_ref=self, # Pass self-reference
+            model_registry=self.model_registry # Self-aware handler resolution (no model pinning)
         )
         await self.bdi_agent.async_init_components()
         self._register_mastermind_bdi_actions() # Move registration to after BDI agent is created
@@ -240,7 +264,9 @@ class MastermindAgent:
                   f"Registered Tools:\n{json.dumps(tools_for_prompt, indent=2)}\n\n"
                   f"Provide your assessment in JSON format with keys 'overall_assessment' (string) and 'identified_gaps' (list of strings).")
         try:
-            response_str = await self.llm_handler.generate_text(prompt, json_mode=True)
+            response_str = await self.llm_handler.generate_text(
+                prompt, model=getattr(self.llm_handler, "model_name_for_api", None), json_mode=True
+            )
             if not response_str:
                 return False, "LLM returned empty response during tool assessment"
             assessment_result = json.loads(response_str)
@@ -293,7 +319,9 @@ class MastermindAgent:
                   f"Assessment: {assessment_text}\n\n"
                   f"Respond ONLY with a JSON object containing a 'recommendations' list.")
         try:
-            response_str = await self.llm_handler.generate_text(prompt, json_mode=True)
+            response_str = await self.llm_handler.generate_text(
+                prompt, model=getattr(self.llm_handler, "model_name_for_api", None), json_mode=True
+            )
             if not response_str:
                 return False, "LLM returned empty response during strategy proposal"
             strategy = json.loads(response_str)
@@ -365,7 +393,9 @@ class MastermindAgent:
                   f"'tool_id', 'display_name', 'description', 'module_path', 'class_name', 'capabilities' (list), "
                   f"'needs_identity' (bool), 'initial_version', 'initial_status', 'prompt_template_for_llm_interaction', and 'metadata'.")
         try:
-            response_str = await self.llm_handler.generate_text(prompt, json_mode=True)
+            response_str = await self.llm_handler.generate_text(
+                prompt, model=getattr(self.llm_handler, "model_name_for_api", None), json_mode=True
+            )
             tool_concept = json.loads(response_str)
 
             required_keys = ["tool_id", "display_name", "description", "module_path", "class_name", "capabilities"]
@@ -859,6 +889,10 @@ class MastermindAgent:
         Default: 30 minutes. Reviews system state, triggers SEA campaigns
         when improvement opportunities accumulate, logs strategic decisions.
         """
+        import os as _os
+        if _os.getenv("MINDX_DISABLE_AUTONOMOUS") == "1":
+            logger.info(f"{self.log_prefix} Autonomous strategic loop disabled via MINDX_DISABLE_AUTONOMOUS")
+            return
         if self.autonomous_loop_task and not self.autonomous_loop_task.done():
             logger.info(f"{self.log_prefix} Autonomous loop already running")
             return
@@ -868,66 +902,174 @@ class MastermindAgent:
         logger.info(f"{self.log_prefix} Autonomous strategic loop started ({interval_seconds}s interval)")
 
     async def _run_autonomous_loop(self, interval_seconds: int = 1800):
-        """Periodic strategic review — orchestration-level autonomous capability.
+        """Periodic strategic review — the Darwinian variation engine.
 
-        Each cycle:
-        1. Evaluate coordinator improvement backlog size
-        2. If backlog has accumulated, trigger a strategic evolution campaign
-        3. Log the strategic decision to Godel audit trail
+        Per docs/THESIS.md §2.4.2: Mastermind = variation. Each cycle it
+        picks ONE concrete backlog item, synthesizes a real directive that
+        binds to that item's target_component_path + suggestion, logs the
+        choice as a Gödel decision so the audit trail is provable, then
+        runs manage_mindx_evolution against the concrete directive. This
+        replaces the literal-stub directive ("Implement the top improvement
+        suggestion.") that produced 0/100 successful campaigns for the
+        seven days preceding 2026-05-24 (see emergent.md).
+
+        Eligibility rules:
+          - status is None, "PENDING", or "pending" (the 81K-item backlog
+            has no status field on 99.99% of entries, so default-pending is
+            the only sane semantic)
+          - suggestion text not already covered by a campaign in the last 24h
+            (prevents the loop from looping on the same item every 30 min)
         """
         if not self._initialized_async:
             await self._async_init_components()
 
+        # Warm-up delay — let the rest of the system finish startup.
+        # First cycle: 60s after start; subsequent cycles: full interval.
+        await asyncio.sleep(60)
+
         while True:
             try:
-                # Assess improvement backlog
                 backlog = getattr(self.coordinator_agent, 'improvement_backlog', []) if self.coordinator_agent else []
-                pending = [item for item in backlog if item.get("status") == "PENDING"]
+                # Default-pending semantics — most items have no status field.
+                eligible = [
+                    (idx, item) for idx, item in enumerate(backlog)
+                    if item.get("status") in (None, "PENDING", "pending")
+                    and (item.get("suggestion") or item.get("description"))
+                ]
+                # Dedup against last-24h campaign history.
+                now_ts = time.time()
+                recent_directives: set[str] = set()
+                for c in self.strategic_campaigns_history[-200:]:
+                    if (now_ts - float(c.get("ts", now_ts))) < 86400:
+                        d = (c.get("directive") or "")[:120].lower()
+                        if d:
+                            recent_directives.add(d)
 
-                if len(pending) >= 3 and self.strategic_evolution_agent:
-                    # Enough backlog — trigger strategic campaign
-                    top_items = pending[:3]
-                    directive = "; ".join(
-                        item.get("description", item.get("suggestion", "improve"))[:80]
-                        for item in top_items
+                def _key(item_tuple):
+                    _, item = item_tuple
+                    return (-int(item.get("priority", 5)), int(item_tuple[0]))
+
+                eligible.sort(key=_key)
+
+                chosen = None
+                for idx, item in eligible:
+                    suggestion = (item.get("suggestion") or item.get("description") or "").strip()
+                    if not suggestion:
+                        continue
+                    fingerprint = suggestion[:120].lower()
+                    if fingerprint in recent_directives:
+                        continue
+                    chosen = (idx, item)
+                    break
+
+                if not chosen:
+                    logger.debug(
+                        f"{self.log_prefix} Strategic review: {len(eligible)} eligible items, "
+                        f"all attempted within 24h — no new campaign this cycle"
                     )
+                else:
+                    idx, item = chosen
+                    suggestion = (item.get("suggestion") or item.get("description") or "improve").strip()
+                    target = (item.get("target_component_path") or "system").strip()
+                    priority = int(item.get("priority", 5))
+                    justification = (item.get("justification") or "from improvement backlog").strip()
+                    # Concrete directive — always binds to a real backlog item.
+                    directive = (
+                        f"{suggestion} "
+                        f"[target: {target}, priority: {priority}, backlog_idx: {idx}]"
+                    )[:500]
                     logger.info(
-                        f"{self.log_prefix} Strategic review: {len(pending)} pending items, "
-                        f"triggering campaign: {directive[:120]}"
+                        f"{self.log_prefix} Strategic variation: picked backlog #{idx} "
+                        f"(prio={priority}, target={target}). Directive: {directive[:160]}"
                     )
+
+                    # Log the selection as a Gödel choice so /insight/improvement/summary
+                    # coverage_ratio becomes provable (was 0.0 before this loop ran).
+                    try:
+                        if self.memory_agent:
+                            await self.memory_agent.log_godel_choice({
+                                "source_agent": self.agent_id,
+                                "choice_type": "backlog_directive_selection",
+                                "task_class": "improvement",
+                                "importance": "standard",
+                                "perception": {
+                                    "backlog_size": len(backlog),
+                                    "eligible_count": len(eligible),
+                                    "recent_directive_count": len(recent_directives),
+                                },
+                                "options_considered": [
+                                    {
+                                        "slug": f"backlog_{i}",
+                                        "priority": int(it.get("priority", 5)),
+                                        "target": it.get("target_component_path", "system"),
+                                    }
+                                    for i, it in eligible[:5]
+                                ],
+                                "chosen_option": f"backlog_{idx}",
+                                "rationale": (
+                                    f"backlog_idx={idx} priority={priority} target={target} "
+                                    f"reason: {justification[:120]}"
+                                ),
+                                "confidence": "standard",
+                                "outcome": "pending",
+                            })
+                    except Exception as gerr:
+                        logger.debug(f"{self.log_prefix} godel log failed (non-fatal): {gerr}")
+
+                    # Stamp the item as attempted (in-memory; coordinator persists on its cadence).
+                    item["status"] = "attempted"
+                    item["attempted_at"] = now_ts
+
                     try:
                         result = await asyncio.wait_for(
-                            self.strategic_evolution_agent.run_evolution_campaign(directive),
-                            timeout=300  # 5 min max per campaign
+                            self.manage_mindx_evolution(directive, max_mastermind_bdi_cycles=15),
+                            timeout=600,
                         )
-                        status = result.get("status", "UNKNOWN")
-                        logger.info(f"{self.log_prefix} Strategic campaign result: {status}")
+                        status = result.get("overall_campaign_status", "UNKNOWN")
+                        # Record campaign timestamp for dedup window.
+                        if self.strategic_campaigns_history:
+                            self.strategic_campaigns_history[-1]["ts"] = now_ts
+                            self.strategic_campaigns_history[-1]["backlog_idx"] = idx
+                            self._save_json_file("mastermind_campaigns_history.json", self.strategic_campaigns_history)
+                        logger.info(
+                            f"{self.log_prefix} Strategic campaign for backlog #{idx} → {status}"
+                        )
                     except asyncio.TimeoutError:
-                        logger.warning(f"{self.log_prefix} Strategic campaign timed out")
+                        # Persist a TIMED_OUT entry so /insight/improvement/summary
+                        # coverage_ratio reflects the real attempt and so the loop's
+                        # 24h dedup window catches this item next cycle. Without
+                        # this persist, manage_mindx_evolution's append never runs
+                        # (we cancelled it mid-flight), so the loop would loop on
+                        # the same backlog item forever waiting for LLM bandwidth.
+                        logger.warning(f"{self.log_prefix} Strategic campaign for backlog #{idx} timed out (>600s)")
+                        self.strategic_campaigns_history.append({
+                            "overall_campaign_status": "TIMED_OUT",
+                            "final_bdi_message": "Mastermind loop timeout (600s) — LLM bandwidth starved",
+                            "run_id": f"mastermind_timeout_{int(now_ts)}",
+                            "directive": directive,
+                            "ts": now_ts,
+                            "backlog_idx": idx,
+                        })
+                        self._save_json_file("mastermind_campaigns_history.json", self.strategic_campaigns_history)
                     except Exception as e:
-                        logger.warning(f"{self.log_prefix} Strategic campaign failed: {e}")
-
-                    # Log strategic decision to Godel audit trail
-                    try:
-                        from agents.memory_pgvector import store_action
-                        await store_action(
-                            self.agent_id, "strategic_review",
-                            f"Triggered campaign from {len(pending)} backlog items",
-                            "autonomous_loop", "completed",
-                        )
-                    except Exception:
-                        pass
-                else:
-                    logger.debug(
-                        f"{self.log_prefix} Strategic review: {len(pending)} pending items, "
-                        f"below threshold — no campaign triggered"
-                    )
+                        logger.warning(f"{self.log_prefix} Strategic campaign for backlog #{idx} failed: {e}")
+                        # Same persistence logic for unexpected errors — keeps the
+                        # coverage_ratio honest about what was tried.
+                        self.strategic_campaigns_history.append({
+                            "overall_campaign_status": "ERROR",
+                            "final_bdi_message": f"Mastermind loop exception: {type(e).__name__}: {str(e)[:200]}",
+                            "run_id": f"mastermind_error_{int(now_ts)}",
+                            "directive": directive,
+                            "ts": now_ts,
+                            "backlog_idx": idx,
+                        })
+                        self._save_json_file("mastermind_campaigns_history.json", self.strategic_campaigns_history)
 
             except asyncio.CancelledError:
                 logger.info(f"{self.log_prefix} Autonomous strategic loop cancelled")
                 return
             except Exception as e:
-                logger.warning(f"{self.log_prefix} Autonomous loop error: {e}")
+                logger.warning(f"{self.log_prefix} Autonomous loop error: {e}", exc_info=True)
 
             await asyncio.sleep(interval_seconds)
 

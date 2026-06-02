@@ -256,7 +256,7 @@ class MindXAgent:
             "autonomous_mode_enabled": False,
             "show_thinking_process": True,
             "show_action_choices": True,
-            "improvement_cycle_interval": 300,  # 5 minutes
+            "improvement_cycle_interval": 3600,  # 1 hour — respect Ollama Cloud free-tier rate limit (150 req/hr)
             "model_selection_strategy": "best_for_task",  # best_for_task, user_preference, balanced
             "max_concurrent_improvements": 5,  # Increased from 1 to 5 for better parallelism
             "auto_apply_safe_improvements": True
@@ -2541,6 +2541,10 @@ class MindXAgent:
         Returns:
             Dictionary with status and configuration
         """
+        import os as _os
+        if _os.getenv("MINDX_DISABLE_AUTONOMOUS") == "1":
+            logger.warning(f"{self.log_prefix} Autonomous mode disabled via MINDX_DISABLE_AUTONOMOUS")
+            return {"status": "disabled", "reason": "MINDX_DISABLE_AUTONOMOUS=1"}
         if self.autonomous_mode:
             logger.warning(f"{self.log_prefix} Autonomous mode already running")
             return {
@@ -2754,11 +2758,18 @@ class MindXAgent:
                             except Exception as e:
                                 logger.warning(f"{self.log_prefix} Error using Blueprint Agent: {e}")
 
-                        # Orchestrate improvement (with timeout to prevent hang)
+                        # Orchestrate improvement (with timeout to prevent hang).
+                        # 240s headroom: blueprint via OpenRouter is ~1s, but
+                        # the downstream SEA campaign + BDI plan execution
+                        # chain legitimately needs >120s on free-tier inference.
+                        # Cancelling at 120s prevents the SEA from writing the
+                        # campaign's terminal status, leaving it stuck in
+                        # `running` forever. Cycle interval is 300s, so 240s
+                        # leaves 60s breathing room before the next fire.
                         try:
                             result = await asyncio.wait_for(
                                 self.orchestrate_self_improvement(top_priority['goal']),
-                                timeout=120
+                                timeout=240
                             )
                             if result.success:
                                 logger.info(f"{self.log_prefix} Improvement cycle {cycle_count} completed successfully")
@@ -2876,8 +2887,11 @@ class MindXAgent:
                                 {"agent_id": self.agent_id, "event": "exit_conditions_met"}
                             )
                 
-                # Wait before next cycle (configurable interval)
-                await asyncio.sleep(300)  # 5 minutes between cycles
+                # Wait before next cycle. Default 1h to respect the Ollama Cloud
+                # free-tier rate limit (10 req/min, 150 req/hr): at the old 5-min
+                # cadence the loop's planning + tool-strategy + Gödel-eval calls
+                # blew past the quota → empty responses + 600s mastermind timeouts.
+                await asyncio.sleep(self.settings.get("improvement_cycle_interval", 3600))
                 
             except asyncio.CancelledError:
                 logger.info(f"{self.log_prefix} Autonomous loop cancelled")

@@ -66,6 +66,7 @@ mindX discovers and routes across multiple inference providers, with Ollama as t
 - [OllamaCloudTool](../tools/cloud/ollama_cloud_tool.py) — Cloud inference as a first-class [BaseTool](../agents/core/bdi_agent.py); any agent can call it; 9 operations (chat, generate, embed, list_models, show_model, web_search, web_fetch, get_metrics, get_status)
 - [LLM Factory](../llm/llm_factory.py) — Handler creation with rate limiting, caching, provider preference order
 - [Cloud Rate Limiting](ollama/cloud/rate_limiting.md) — Adaptive pacing (3s–30s), quota tracking, [actual token counts](ollama/mindx/precision_metrics.md) (no estimation)
+- [**Inference Budget — the LLM Metabolism**](INFERENCE_BUDGET.md) — Dynamic, self-adjusting per-provider rate-limit ledger ([`llm/inference_budget.py`](../llm/inference_budget.py)). Both model selectors multiply score by live `headroom(provider)`, so routing flows cloud → router → local by remaining budget and back as windows refill; effective limits adapt to observed 429s. Surfaced on `/diagnostics/live` + the landing-page Inference panel.
 - [Precision Metrics](ollama/mindx/precision_metrics.md) — 18-decimal-place `Decimal` tracking via [`precision_metrics.py`](../llm/precision_metrics.py)
 - [Cloud Research](OLLAMA_VLLM_CLOUD_RESEARCH.md) — Ollama Cloud + vLLM viability analysis (2026-04-10)
 
@@ -95,6 +96,32 @@ The boardroom is mindX's multi-agent consensus mechanism — deeper than SwarmCl
 - [Boardroom Self-Adaptation](agents/boardroom_self_adaptation.md) — pattern→action recovery registry (5 patterns)
 - [Boardroom Members](agents/boardroom_members.md) — three-file role architecture
 - **Agent Roster**: [`ceo.agent`](../agents/boardroom/ceo.agent), [`ciso.agent`](../agents/boardroom/ciso.agent), [`cfo.agent`](../agents/boardroom/cfo.agent), [`cro.agent`](../agents/boardroom/cro.agent), [`clo.agent`](../agents/boardroom/clo.agent), [`cpo.agent`](../agents/boardroom/cpo.agent), [`cto.agent`](../agents/boardroom/cto.agent), [`coo.agent`](../agents/boardroom/coo.agent)
+
+#### Soldier marketing capabilities
+
+The boardroom is also the marketing cabinet — each soldier carries a marketing skill (HBR layered-system pattern, instantiated on the existing 8-vote weighted consensus). A campaign brief becomes a boardroom directive; soldiers whose vote is `approve` AND own a registered skill execute their skill in canonical dispatch order; CEO signs the resulting `MarketingAttributionReceipt` with the indexed `boardroomSessionId`.
+
+| Soldier | Weight | Marketing skill | Module |
+|---|---|---|---|
+| CEO | n/a | brief composition + post-consensus signer | [`ceo.py`](../agents/marketing/skills/ceo.py) |
+| CPO | 1.0 | HBR L1 — content drafting | [`cpo.py`](../agents/marketing/skills/cpo.py) |
+| CTO | 1.0 | HBR L2 — experimentation | [`cto.py`](../agents/marketing/skills/cto.py) |
+| COO | 1.0 | HBR L3 — distribution | [`coo.py`](../agents/marketing/skills/coo.py) |
+| CFO | 1.0 | HBR L4 — reporting + treasury | [`cfo.py`](../agents/marketing/skills/cfo.py) |
+| CISO | 1.2× **veto** | identity + voice gate | [`ciso.py`](../agents/marketing/skills/ciso.py) |
+| CLO | 0.8 | regulatory + competitor | [`clo.py`](../agents/marketing/skills/clo.py) |
+| CRO | 1.2× **veto** | spend risk + hard-stop | [`cro.py`](../agents/marketing/skills/cro.py) |
+
+- [Marketing Counsellor architecture](MARKETING_AGENT.md) — soldier ↔ skill mapping, BDI cycle, brand-code substrate, dispatch order, CISO/CRO hard-veto contract
+- [Three-receipt model](MARKETING_RECEIPTS.md) — `Tessera.sol` (identity) + `X402Receipt.sol` (payment) + `MarketingAttributionReceipt.sol` (campaign envelope, EIP-712 v2 with indexed `boardroomSessionId`)
+- [90-day playbook](MARKETING_PLAYBOOK.md) — operator runbook (not automated)
+- [Marketing contracts](../daio/contracts/marketing/README.md) — `MarketingAttributionReceipt.sol` (Base) + `MarketingTreasury.sol` (Ethereum L1, 99/1 buyback rule)
+- [Brand code](../data/brand_code/) — voice / pillars / forbidden_terms / competitor_map / regulatory_constraints / per-soldier onboarding (8 files)
+- [Configuration](../data/config/marketinga.toml) — thresholds, GEO probe set, feature flags
+- [Skill registry](../agents/marketing/skills/registry.py) — single source of truth for `soldier_id → skill` binding
+- [Boardroom orchestrator](../agents/marketing/boardroom_orchestrator.py) — runs `Boardroom.convene()`, dispatches per-soldier skills, signs receipts
+- [Backend routes](../mindx_backend_service/marketing_routes.py) — `/marketing/{status,campaigns,brand_code,geo,session/{id},identity}` (all `?h=true` capable)
+- Agent manifests: [`agents/marketinga.agent`](../agents/marketinga.agent) (umbrella), [`agents/marketing.agent`](../agents/marketing.agent) (mindX-product face)
 
 ### Dojo
 
@@ -181,6 +208,9 @@ Full list: [Agent Docs](agents/) (30 agent docs)
 - [Memory Analysis Tool](memory_analysis_tool.md) — Memory pattern analysis
 - [System Analyzer Tool](system_analyzer_tool.md) — System analysis with LLM insights
 
+**Tuning**
+- [Autotune Tool](../autotune/README.md) — Agnostic ahead-of-time tuner (AMD/ROCm · NVIDIA/CUDA · CPU). Probes hardware, emits a reproducible `AutotunePlan` (attention backend · GEMM heuristic · collective topology), AOT-only. Standalone package `autotune/`, tool `tools/autotune_tool.py`, CLI `python -m autotune bench`
+
 **Identity**
 - [Identity Sync Tool](identity_sync_tool.md) — Cryptographic identity management
 
@@ -195,6 +225,9 @@ mindX uses RAGE (Retrieval Augmented Generation Engine) — not RAG. RAGE is sem
 
 - [AGInt / RAGE](AGINT.md) — Augmented Intelligence reasoning and retrieval architecture, origin of the [BDI cognitive loop](agents/bdi_agent.md)
 - [Memory Architecture](mindx_memory_architecture_scalable.md) — Scalable memory design documented in the [Thesis](THESIS.md)
+- [Hermes Integration — Day-1 (SKILL.md procedural memory)](HERMES_INTEGRATION.md) — Hermes-format skill files (`agents/skills/`) with screen-before-persist scanner. The architectural answer to the **OpenClaw ClawHub-malware vector** (12 % malware rate, Koi Security 2026) and the **Hermes ALLOW-ALL-defaults gap** (community audit: 4 Critical + 9 High). Hybrid 70/30 BM25+vector retrieval lands in `agents/skills/index.py` (Day-2).
+- [Hermes Integration Patterns research](operations/Hermes%20Agent%20Integration%20Patterns%20for%20mindX_%20Self-Improving%20Architecture%20Analysismd) — 494-line decomposition of Hermes v0.13.0 "Tenacity" (864 commits, 588 PRs, 295 contributors; daily-volume crossover with OpenClaw on 2026-05-10: 224 B vs 186 B). Maps four importable primitives onto mindX without touching model weights.
+- [OpenClaw research for mindX integration](operations/openclaw_mindx_research.md) — 280-line OpenClaw + OpenClaw-RL architectural read. Five highest-leverage transfers (SKILL.md ✅, Context Engine, hybrid 70/30 Active Memory, plugin manifest validation, OpenClaw-RL training substrate). Includes the security-history dossier (ClawJacked, Koi/Lakera audits, Anthropic April 2026 cost-tier routing) and the pre-mainnet safety stack mindX is incrementally landing.
 - [pgvector Integration](pgvectorscale_memory_integration.md) — [PostgreSQL 16](https://www.postgresql.org/) + [pgvector](https://github.com/pgvector/pgvector) (157K+ memories in [production](DEPLOYMENT_MINDX_PYTHAI_NET.md))
 
 ### Memory Tiers
@@ -363,6 +396,11 @@ mindX is a Godel machine — a self-improving system where the improvement mecha
 - [AgenticPlace](AgenticPlace_Deep_Dive.md) — Agent marketplace at [agenticplace.pythai.net](https://agenticplace.pythai.net); `.extensions` → `.json` → blockchain publishing. [SwarmFeed](https://github.com/swarmclawai/swarmfeed) timeline patterns inform agent activity discovery.
 - [x402 / x402-AVM Payments](X402.md) — HTTP 402 micropayment rail; triple-rail (Base USDC + Tempo MPP + Algorand ASA via [`@x402-avm/*`](https://github.com/algorand-devrel/x402-demo)). Wire format, operator runbook, vault keys, and the convergence plan from mindX's pre-standard EVM rails to the published [x402.org](https://x402.org) standard.
 
+## Blockchain
+
+- [Blockchain Agents](blockchain/BLOCKCHAIN_AGENTS.md) — Mint a mindX agent as an **ERC-7857 iNFT** with six sidecar facets (`.model .persona .walletpublickey .bankon .iNFT`); lists on [AgenticPlace](AgenticPlace_Deep_Dive.md), binds to [BANKON](https://bankon.pythai.net), registers on the ERC-8004 [AgentRegistry](../daio/contracts/agentregistry/AgentRegistry.sol). Pipeline: [`agents/blockchain/agent_factory.py`](../agents/blockchain/agent_factory.py); route `POST /blockchain/agentfactory/mint`.
+- [CoinMarketCap Integration](blockchain/coinmarketcap_integration_guide.md) — Provider-agnostic market data (key-auth REST / keyless public / x402 pay-per-request on Base).
+
 ## Economics
 
 - [Manifesto](MANIFESTO.md) — 3 pillars + Project Chimaiera roadmap + $BANKON token
@@ -374,9 +412,35 @@ mindX is a Godel machine — a self-improving system where the improvement mecha
 - [Thesis](THESIS.md) — [Darwin](ATTRIBUTION.md#intellectual-inspirations)-[Godel](ATTRIBUTION.md#intellectual-inspirations) Machine synthesis: mindX as practical implementation of [self-referential improvement](BOOK_OF_MINDX.md). The [BDI architecture](agents/bdi_agent.md) is the cognitive substrate, the [5-step resilience chain](ollama/INDEX.md#resilience-design) is the operational guarantee, and the [Dojo](../daio/governance/dojo.py) is the evolutionary pressure.
 - [Manifesto](MANIFESTO.md) — 3 pillars ([BDI reasoning](agents/bdi_agent.md), [BANKON vault](vault_system.md), [DAIO governance](DAIO.md)), Project [Chimaiera](ollama/setup/modelfile.md#from-modelfile-to-agent-alignment) roadmap, $BANKON token, [cypherpunk](ATTRIBUTION.md#intellectual-inspirations) tradition. Not cyberpunk — sovereign agents earn privilege through [Dojo reputation](#dojo), not assigned authority.
 - [Book of mindX](BOOK_OF_MINDX.md) — 17 chapters written by [AuthorAgent](AUTHOR_AGENT.md) via [machine.dreaming](#self-improvement). Lunar cycle editions. The [Godel journal](BOOK_OF_MINDX.md) — the machine's record of its own improvement.
+- [WordPress Publishing](WORDPRESS_PUBLISHING.md) — AuthorAgent → [wordpress-agent](../agents/wordpress.publish.agent) → rage.pythai.net. **Vault-backed, decrypt-on-demand**: WP API key + wordpress.agent wallet live in the isolated `wordpress.agent.keys` BANKON-vault namespace (never in any process env). Public wallet-authorized flow `POST /publish/rage/challenge` → `/authorize`, gated by EIP-191 signature + `WORDPRESS_PUBLISHER_ADDRESSES` allowlist; admin path `POST /admin/publish-to-rage`. Provisioning: `scripts/vault/provision_wordpress_agent.py`.
+- [How I Turn Logs Into Memory: RAGE + PostgreSQL](publications/rage_postgresql_memory_from_logs.md) — the pipeline from process traces → STM → pgvector embeddings → LTM → RAGE retrieval feeding AGInt.
+- [Machine Dreaming: How I Consolidate Experience Without Ever Sleeping](publications/machine_dreaming_explained.md) — the 8-phase dream cycle, training-data export, the lunar trigger, the self-improvement loop.
 - [Emergent Resilience](publications/ErmegentResilience.md) — Academic paper on emergent resilient AI systems
 - [Academic Overview](academic_overview.md) — Formal academic framing
 - [Attribution](ATTRIBUTION.md) — Open source that powers mindX: [Ollama](https://ollama.com), [vLLM](https://github.com/vllm-project/vllm), [SwarmClaw](https://github.com/swarmclawai), [pgvector](https://github.com/pgvector/pgvector), [A2A](https://github.com/a2aproject/a2a-python), [MCP](https://modelcontextprotocol.io/), and every dependency acknowledged
+
+### Operations Manuals (May 2026 deliverables)
+
+Production-grade architectural deliverables. PDF mirrors live in [`docs/publications/pdf/`](publications/pdf/).
+
+- [PYTHAI / DELTAVERSE Deployment Guide](operations/PYTHAI%20and%20DELTAVERSE%20Deployment%20Guide_%20Algorand%20Constitution,%20EVM%20Economy,%20and%20Agentic%20Architecture.md) — Algorand constitutional layer + EVM economic layer + mindX cognition + AgenticPlace marketplace + BANKON identity/payment. The full stack as one coherent deployment.
+- [PYTHAI / DELTAVERSE Zero-Knowledge Integration](operations/PYTHAI_DELTAVERSE%20Zero-Knowledge%20Integration%20Architecture_%20Four-Layer%20Cryptographic%20Fabric.md) — Four-layer cryptographic fabric (May 9 2026). ZK across the full stack.
+- [DELTAVERSE Integration Specification](publications/pdf/DELTAVERSE%20Integration%20Specification_%20Post-Quantum%20Agents,%20Identity,%20and%20Payments%20Stack.pdf) — Post-quantum agents, identity, payments stack (PDF only).
+- [AgenticPlace Integration Blueprint](operations/AgenticPlace%20Integration%20Blueprint_%20Parsec,%20x402,%20A2A,%20MCP,%20and%20AP2%20Source%20Code%20Analysis.md) — Parsec / x402 / A2A / MCP / AP2 source-code analysis. Notes: "Parsec" maps to GoPlausible's `algorand-remote-mcp-lite` + `x402-avm` substrate.
+- [BANKON × KeeperHub Architecture](publications/pdf/BANKON_KEEPERHUB_ARCHITECTURE.pdf) — KeeperHub × AgenticPlace bidirectional x402/MPP bridge architecture (PDF only).
+- [THOT, THLNK, and ERC-7857 INFTs](operations/THOT,%20THLNK,%20and%20ERC-7857%20INFTs_%20A%20Production%20Architecture%20for%20Agent%20Boardroom%20Governance.md) — Embed THOT inside ERC-7857 INFT; THLNK as cross-chain pointer. Production architecture for agent boardroom governance.
+- [Arweave Integration for the BANKON Stack](operations/Arweave%20Integration%20for%20the%20BANKON%20Stack_%20A%20Senior%20Architect's%20Deep-Dive.md) — Arweave as cold-archive cryptographic permanence; AO actor-model layer; Turbo as the only viable EVM-native bundler in May 2026.
+- [mindx_pay2store — Autonomous Arweave Archival](operations/mindx_pay2store_%20Production-Grade%20Autonomous%20Arweave%20Archival%20Module%20for%20mindX%20Agents.md) — Production-grade Python module wrapping `pay2store.agenticplace.pythai.net` x402 v2 service.
+- [shipping_pay2store](operations/shipping_pay2store.md) — How to actually move ETH/USDC into Arweave permanence today; wAR custody on Ethereum mainnet; pay2store as paid x402 service on AgenticPlace.
+- [Lighthouse Storage Integration for mindX](operations/Lighthouse%20Storage%20Integration%20for%20mindX_%20Decentralized%20Permanent%20Storage%20for%20Autonomous%20Agents.md) — `lighthouseweb3` SDK + `@lighthouse-web3/sdk` + `kavach` integration guide for autonomous agents.
+- [mindX Knowledge Catalogue Spec](publications/pdf/mindX%20Knowledge%20Catalogue_%20A%20CQRS%20Projection%20Layer%20Subsystem%20Specification.pdf) — CQRS projection layer subsystem specification (PDF only).
+- [mindX Observability Stack](operations/mindX%20Observability%20Stack_%20Production-Grade%20Self-Hosted%20Blueprint.md) — Production-grade self-hosted blueprint. All Apache-2.0 sovereignty-aligned components.
+- [OpenRouter Integration Manual](publications/pdf/OpenRouter%20Integration%20Manual%20for%20mindX_%20Production-Grade%20LLM%20Backplane%20Architecture.pdf) — LLM backplane architecture (PDF only).
+- [SkillForge — Pydantic AI Agent for SKILL.md Authoring](publications/pdf/SkillForge_%20A%20Pydantic%20AI%20Agent%20for%20Autonomous%20SKILL.md%20Authoring%20on%20mindX.pdf) — Autonomous SKILL.md authoring on mindX (PDF only).
+- [Vercel AI SDK + mindX](publications/pdf/vercel_AISDK_mindX.pdf) — Vercel AI SDK integration with mindX (PDF only).
+- [Quantum Machine Learning Compendium](publications/pdf/Quantum%20Machine%20Learning%20Code%20Compendium_%20A%202026%20Reference%20and%20Recovery%20Atlas.pdf) — 2026 reference and recovery atlas (PDF only).
+- [Shadow-Overlord Guide](operations/SHADOW_OVERLORD_GUIDE.md) — BANKON Vault admin tier complete guide. Browser login at [`/shadow-overlord`](../mindx_frontend_ui/shadow-overlord.html) — EIP-6963 wallet detection, `personal_sign` → 5-minute JWT (in-memory only). WebGL background shader (extrapolated from `live/allchain.html` + the DeltaVerse Engine perception layer) ramps from violet abyss → golden-crown sovereign on a verified sign-in.
+- [Shadow-Overlord Runbook](operations/SHADOW_OVERLORD_RUNBOOK.md) — One-page operator manual.
 
 ## PYTHAI Ecosystem
 

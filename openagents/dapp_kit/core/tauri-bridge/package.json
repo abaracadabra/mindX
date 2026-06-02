@@ -1,0 +1,32 @@
+{
+  "name": "@openagents/tauri-bridge",
+  "version": "0.1.0",
+  "description": "Webview ↔ Tauri Rust IPC for openagents/ dApps. Secure storage routes to OS keychain.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@tauri-apps/api": ">=2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@tauri-apps/api": { "optional": true }
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}

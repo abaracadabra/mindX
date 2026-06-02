@@ -90,7 +90,7 @@ class VLLMHandler(LLMHandlerInterface):
     async def generate_text(
         self,
         prompt: str,
-        model: str,
+        model: Optional[str] = None,  # handler defaults to self.model_name_for_api when omitted
         max_tokens: Optional[int] = 2048,
         temperature: Optional[float] = 0.7,
         json_mode: Optional[bool] = False,

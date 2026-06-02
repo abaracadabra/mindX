@@ -3,6 +3,7 @@
 from __future__ import annotations
 import asyncio
 import json
+import os
 import re
 import importlib
 import inspect
@@ -169,6 +170,7 @@ class BDIAgent:
                  automindx_agent: Optional[Any] = None, # Accept AutoMINDX
                  persona_prompt: Optional[str] = None, # New parameter for persona
                  mastermind_ref: Optional['MastermindAgent'] = None, # Add reference to mastermind
+                 model_registry: Optional[Any] = None, # ModelRegistry for self-aware handler resolution
                  test_mode: bool = False):
 
         if hasattr(self, '_initialized_sync_part') and self._initialized_sync_part and not test_mode:
@@ -189,6 +191,7 @@ class BDIAgent:
         self.strategic_evolution_agent = strategic_evolution_agent
         self.coordinator_agent = coordinator_agent
         self.mastermind_ref = mastermind_ref
+        self.model_registry = model_registry
         self._internal_state: Dict[str, Any] = {
             "status": "INITIALIZED", "last_action_details": None,
             "current_failure_reason": None, "cycle_count": 0, "current_run_id": None
@@ -246,15 +249,44 @@ class BDIAgent:
         if hasattr(self, '_initialized') and self._initialized:
             return
         
-        try:
-            self.llm_handler = await create_llm_handler(
-                provider_name=self._bdi_llm_provider_cfg,
-                model_name=self._bdi_llm_model_cfg
-            )
-            if self.llm_handler:
-                self.logger.info(f"Internal LLM initialized: {self.llm_handler.provider_name}/{self.llm_handler.model_name_for_api or 'default'}")
-        except Exception as e:
-            self.logger.error(f"Failed to initialize LLM handler: {e}", exc_info=True)
+        # Capability-first when a registry is available (e.g. the mastermind
+        # strategic planner): route to the best SERVABLE reasoning model rather
+        # than a weak config-pinned default that returns empty plans. Domains
+        # without a registry (coordinator, simple_coder, …) keep config-first
+        # behaviour unchanged.
+        if self.model_registry is not None:
+            try:
+                self.llm_handler = await self._resolve_active_handler()
+            except Exception as e:
+                self.logger.debug(f"capability-first resolution failed at init: {e}")
+
+        if not self.llm_handler:
+            try:
+                self.llm_handler = await create_llm_handler(
+                    provider_name=self._bdi_llm_provider_cfg,
+                    model_name=self._bdi_llm_model_cfg
+                )
+                if self.llm_handler:
+                    self.logger.info(f"Internal LLM initialized: {self.llm_handler.provider_name}/{self.llm_handler.model_name_for_api or 'default'}")
+            except Exception as e:
+                self.logger.error(f"Failed to initialize LLM handler: {e}", exc_info=True)
+
+        # No model pinning: if nothing resolved yet, cascade through the
+        # self-aware selector and then a bare default handler — the same path
+        # blueprint_agent + SEA + the mastermind use. Providers being "available"
+        # must translate into a live handler here, not a skeleton fallback.
+        if not self.llm_handler:
+            try:
+                self.llm_handler = await self._resolve_active_handler()
+            except Exception as e:
+                self.logger.debug(f"self-aware handler resolution failed at init: {e}")
+        if not self.llm_handler:
+            try:
+                self.llm_handler = await create_llm_handler()  # bare default, as mastermind does
+            except Exception as e:
+                self.logger.debug(f"bare-default handler resolution failed at init: {e}")
+        if self.llm_handler:
+            self.logger.info(f"LLM handler ready (post-cascade): {self.llm_handler.provider_name}/{self.llm_handler.model_name_for_api or 'default'}")
 
         # Initialize TokenCalculatorTool for cost tracking
         try:
@@ -616,9 +648,95 @@ class BDIAgent:
                 return f"Action '{action_type}' in step {i} is not a valid action. Valid actions are internal handlers or registered tools."
         return None
 
+    async def _resolve_active_handler(self) -> Optional[LLMHandlerInterface]:
+        """Consult the self-aware selector and return a handler matching the pick.
+
+        Mirrors blueprint_agent._resolve_active_handler / SEA._self_aware_handler
+        so the strategic BDI planner obeys the user-locked "no model pinning" rule:
+        always consult the self.aware selector + cascade to local Ollama on failure.
+        Returns None on any failure so callers cascade to their next option.
+        """
+        try:
+            from mindx.self.improve import choose_model
+            from mindx.self.improve.model_selector import TaskProfile
+            from mindx.self.improve.handler_resolver import (
+                classify_slug,
+                slug_is_openrouter_resolvable,
+            )
+
+            # 1. Registry capability routing FIRST — it is the authority on what
+            # is actually SERVABLE on this box and ranks the best reasoning model
+            # (gpt-oss:120b-cloud, the Ollama Cloud pillar) top. Bind to its model
+            # tag so the planner runs on a model that returns real plans, instead
+            # of a fictional local 70B or a free-tier openrouter slug that emits
+            # empty responses. Ollama small locals are the failsafe tail.
+            if self.model_registry is not None:
+                try:
+                    from llm.model_selector import TaskType
+                    ranked = self.model_registry.get_handler_and_model_for_purpose(TaskType.REASONING)
+                    for cand_handler, model_name in ranked:
+                        if not cand_handler:
+                            continue
+                        if getattr(cand_handler, "model_name_for_api", None) == model_name:
+                            return cand_handler
+                        bound = await create_llm_handler(
+                            provider_name=cand_handler.provider_name, model_name=model_name
+                        )
+                        if bound:
+                            self.logger.info(
+                                f"{self.agent_id}: capability-routed planner to "
+                                f"{bound.provider_name}/{bound.model_name_for_api}"
+                            )
+                            return bound
+                except Exception as e:
+                    self.logger.debug(f"{self.agent_id}: capability routing failed: {e}")
+            # 2. Fallback: self-aware selector (no-pinning) → openrouter if keyed.
+            choice = await choose_model(TaskProfile(
+                task_class="planning",
+                importance="standard",
+                source_agent=self.agent_id,
+                requires_tools=False,
+                min_context=4096,
+            ))
+            cls = classify_slug(choice.chosen)
+            self.logger.debug(
+                f"{self.agent_id}: self-aware handler resolution: "
+                f"slug={choice.chosen} class={cls} confidence={choice.confidence}"
+            )
+            if cls == "openrouter" and slug_is_openrouter_resolvable(choice.chosen):
+                handler = await create_llm_handler(
+                    provider_name="openrouter",
+                    model_name=choice.chosen,
+                )
+                if handler and handler.provider_name == "openrouter":
+                    return handler
+            if cls in ("ollama_local", "ollama_cloud"):
+                if self.model_registry is not None:
+                    try:
+                        return self.model_registry.get_handler("ollama")
+                    except Exception:
+                        pass
+                handler = await create_llm_handler(provider_name="ollama")
+                if handler:
+                    return handler
+            return None
+        except Exception as e:
+            self.logger.debug(f"{self.agent_id}: self-aware handler unavailable: {e}")
+            return None
+
     async def plan(self, goal_entry: Dict[str, Any]) -> bool:
         if not self.llm_handler:
-            self.logger.error("LLM handler not initialized. Cannot generate plan.")
+            # No model pinning: re-resolve via the self-aware selector, then a bare
+            # default, before giving up. Guards against init racing ahead of
+            # inference discovery, and against a config-pinned model going dark.
+            self.llm_handler = await self._resolve_active_handler()
+        if not self.llm_handler:
+            try:
+                self.llm_handler = await create_llm_handler()
+            except Exception:
+                pass
+        if not self.llm_handler:
+            self.logger.error("LLM handler not initialized after self-aware + default cascade. Cannot generate plan.")
             return False
 
         goal_description, goal_id = goal_entry["goal"], goal_entry["id"]
@@ -832,7 +950,12 @@ class BDIAgent:
             except (json.JSONDecodeError, ValueError) as e:
                 self.logger.warning(f"Planning attempt {attempt} failed: {e}")
                 last_error = str(e)
-                if "RateLimit" in current_plan_str:
+                # current_plan_str can be None when the LLM returned an empty response
+                # (the path that raised the ValueError at line 777). Guard the membership
+                # test — without this every BDI cycle crashes with "argument of type
+                # 'NoneType' is not iterable", which is the load-bearing break that
+                # zero'd campaign success for 100 consecutive runs (see emergent.md).
+                if current_plan_str and "RateLimit" in current_plan_str:
                     self.logger.error("Rate limit hit during planning. Pausing for 5 seconds before retry...")
                     await asyncio.sleep(5.0)
                     continue
@@ -993,11 +1116,20 @@ class BDIAgent:
         desc_lower = goal_description.lower()
         candidates_by_kind: list[tuple[list[str], list[tuple[str, dict]]]] = [
             (
+                # Improvement-class verbs — covers the synthesized directives
+                # Mastermind emits from improvement_backlog.json (which lead with
+                # "Implement…", "Add…", "Validate…", "Ensure…" — the omission of
+                # these previously dropped every mastermind campaign to NO_OP,
+                # masking that the cycle was alive (emergent.md break #2).
                 ["audit", "review", "analyze", "check", "inspect", "improve",
-                 "optimize", "enhance", "fix", "refactor"],
+                 "optimize", "enhance", "fix", "refactor", "implement", "add",
+                 "build", "create", "validate", "ensure", "secure", "harden",
+                 "integrate", "wire", "connect", "expose", "support"],
                 [
                     ("audit_and_improve",   {"target_path": ".", "scope": "quick"}),
                     ("system_analyzer",     {}),
+                    ("PROPOSE_TOOL_STRATEGY", {}),
+                    ("CONCEPTUALIZE_NEW_TOOL", {}),
                     ("base_gen_agent",      {"root_path_str": "."}),
                 ],
             ),
@@ -1005,6 +1137,7 @@ class BDIAgent:
                 ["deploy", "start", "launch", "run", "execute"],
                 [
                     ("system_analyzer",     {}),
+                    ("PROPOSE_TOOL_STRATEGY", {}),
                     ("shell_command",       {"command": "echo skeleton-plan-noop"}),
                 ],
             ),
@@ -1061,13 +1194,17 @@ class BDIAgent:
             godel_path = Path("data/logs/godel_choices.jsonl")
             godel_path.parent.mkdir(parents=True, exist_ok=True)
             import json as _json
+            _handler_desc = (
+                f"{self.llm_handler.provider_name}/{self.llm_handler.model_name_for_api or 'default'}"
+                if self.llm_handler else "no_handler_resolved"
+            )
             with open(godel_path, "a") as f:
                 f.write(_json.dumps({
                     "timestamp": time.time(),
                     "source_agent": self.agent_id,
                     "choice_type": "degraded_planning",
                     "chosen": "skeleton_plan",
-                    "rationale": "All LLM providers unavailable — generated structural skeleton",
+                    "rationale": f"LLM planning failed (handler={_handler_desc}) — generated structural skeleton",
                     "outcome": f"{len(skeleton_actions)} skeleton actions",
                 }) + "\n")
         except Exception:
@@ -1080,6 +1217,11 @@ class BDIAgent:
         run_id = str(uuid.uuid4())[:8]
         self.logger.info(f"Starting run ID '{run_id}'. Max cycles: {max_cycles}.")
         self._internal_state.update({"current_run_id": run_id, "cycle_count": 0, "status": "RUNNING", "current_failure_reason": None})
+        # Track step history for the Hermes/OpenClaw distill hook (§8.1 of the
+        # research doc). Cleared per-run; never raises if the import isn't
+        # available. Opt-in via MINDX_BDI_DISTILL_ENABLED.
+        self._internal_state["actions_this_run"] = []
+        self._internal_state["beliefs_before_run"] = await self._snapshot_belief_keys()
         if external_input: await self.perceive(external_input)
 
         while self._internal_state["cycle_count"] < max_cycles:
@@ -1139,6 +1281,13 @@ class BDIAgent:
                     if goal_entry: goal_entry["status"] = "completed_success"
                     if goal_id == self.desires.get("primary_goal_id"):
                         self._internal_state["status"] = "COMPLETED_GOAL_ACHIEVED"
+                        # Skill distillation hook (Hermes/OpenClaw §8.1, item 3).
+                        # Opt-in via MINDX_BDI_DISTILL_ENABLED. Best-effort —
+                        # never raises into the BDI loop.
+                        try:
+                            await self._maybe_distill_skill(goal_entry, run_id)
+                        except Exception as _e:  # pragma: no cover - defensive
+                            self.logger.warning(f"distill hook failed (non-fatal): {_e}")
                         break
 
                 await asyncio.sleep(self.config.get("bdi.agent_cycle_delay_seconds", 0.1))
@@ -1164,6 +1313,87 @@ class BDIAgent:
                 {'key': namespaced_key, 'value': value, 'confidence': confidence, 'source': source.name},
                 {'agent_id': self.agent_id}
             )
+
+    # ── Hermes/OpenClaw skill_distill hook (research doc §8.1) ──────────
+    # Best-effort capture of the agent's belief surface so distill can derive
+    # postconditions from belief diffs. Never raises into the run loop.
+    async def _snapshot_belief_keys(self) -> dict:
+        """Return a shallow dict {key: truthy?} of the agent's beliefs.
+        Defensive: returns {} on any failure."""
+        try:
+            if hasattr(self.belief_system, "get_all_beliefs"):
+                beliefs = await self.belief_system.get_all_beliefs()
+            elif hasattr(self.belief_system, "list_beliefs"):
+                beliefs = await self.belief_system.list_beliefs()
+            else:
+                return {}
+            out: dict = {}
+            prefix = f"bdi.{self.domain}.beliefs."
+            for b in beliefs or []:
+                k = b.get("key") if isinstance(b, dict) else None
+                v = b.get("value") if isinstance(b, dict) else None
+                if not k:
+                    continue
+                short = k[len(prefix):] if k.startswith(prefix) else k
+                out[short] = bool(v) if not isinstance(v, (int, float)) else bool(v)
+            return out
+        except Exception:
+            return {}
+
+    async def _maybe_distill_skill(self, goal_entry: Optional[Dict[str, Any]], run_id: str) -> None:
+        """Opt-in: when a primary goal completes successfully, hand the action
+        history + belief diff to ``agents.skills.distill_from_intention``. The
+        helper enforces step thresholds (default min_steps=5, min_unique_tools=2)
+        and writes a draft under ``$MINDX_SKILLS_DIR/.drafts/`` for operator
+        review. The Day-1 scanner is the final gate on any future promotion."""
+        if os.environ.get("MINDX_BDI_DISTILL_ENABLED", "").lower() not in ("1", "true", "yes"):
+            return
+        try:
+            from agents.skills.distill import distill_from_intention
+        except Exception as e:
+            self.logger.debug(f"distill helper unavailable: {e}")
+            return
+
+        steps = list(self._internal_state.get("actions_this_run", []) or [])
+        beliefs_before = dict(self._internal_state.get("beliefs_before_run", {}) or {})
+        beliefs_after = await self._snapshot_belief_keys()
+
+        title = (goal_entry or {}).get("goal") if goal_entry else None
+        result = distill_from_intention(
+            intention_id=run_id,
+            intention_template=(goal_entry or {}).get("intention_template") if goal_entry else None,
+            title=(title[:120] if isinstance(title, str) else None),
+            success_signal=True,
+            beliefs_before=beliefs_before,
+            beliefs_after=beliefs_after,
+            steps=steps,
+            agent_id=self.agent_id,
+            category=f"bdi-{self.domain}",
+            draft_only=True,   # always draft from BDI; promotion is an operator decision
+        )
+        if result.skill is not None:
+            self.logger.info(
+                f"distill: drafted skill '{result.skill.slug}' under {result.draft_path} "
+                f"({len(steps)} steps · {len(result.skill.frontmatter.postconditions)} postconditions)"
+            )
+            if self.memory_agent:
+                try:
+                    await self.memory_agent.log_process(
+                        "bdi_skill_distilled",
+                        {
+                            "slug": result.skill.slug,
+                            "category": result.skill.frontmatter.category,
+                            "intention_template": result.skill.frontmatter.intention_template,
+                            "postconditions": list(result.skill.frontmatter.postconditions),
+                            "steps": len(steps),
+                            "draft_path": str(result.draft_path) if result.draft_path else None,
+                        },
+                        {"agent_id": self.agent_id, "run_id": run_id},
+                    )
+                except Exception:
+                    pass
+        else:
+            self.logger.debug(f"distill skipped: {result.reason}")
 
     def set_goal(self, goal_description: str, priority: int = 1, **kwargs):
         goal_id = kwargs.get("goal_id", str(uuid.uuid4())[:8])
@@ -1227,6 +1457,17 @@ class BDIAgent:
         
         if success:
             self.logger.info(f"Action '{completed_action.get('type')}' success. Result: {str(result)[:100]}...")
+            # Distill hook: record the action so we can compose a SKILL.md
+            # draft on COMPLETED_GOAL_ACHIEVED. Best-effort, never raises.
+            try:
+                if "actions_this_run" in self._internal_state:
+                    self._internal_state["actions_this_run"].append({
+                        "tool": completed_action.get("type") or completed_action.get("tool"),
+                        "args": completed_action.get("params") or completed_action.get("args") or {},
+                        "result": str(result)[:200] if result is not None else None,
+                    })
+            except Exception:
+                pass
             if not self.intentions["current_plan_actions"]:
                 self.intentions["plan_status"] = "COMPLETED"
         else:

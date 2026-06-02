@@ -1,0 +1,38 @@
+{
+  "name": "@bankoneth/workspace",
+  "private": true,
+  "version": "0.1.0",
+  "description": "bankoneth — ENS subname issuance under bankon.eth, .eth 2LD purchase, and subdomain-minting-as-a-service. Standalone, agnostic; mindX and PARSEC are consumers.",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=20.10.0",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter './packages/core' --filter './packages/ui' --filter './packages/cli' --filter './packages/parsec-adapter' build",
+    "typecheck": "pnpm -r --filter './packages/*' typecheck",
+    "test": "pnpm -r --filter './packages/*' test",
+    "lint": "pnpm -r --filter './packages/*' lint",
+    "clean": "pnpm -r exec rm -rf dist node_modules/.vite",
+    "dev:tauri": "pnpm --filter @bankoneth/tauri-app dev"
+  },
+  "packageManager": "pnpm@9.12.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bankon-eth/bankoneth"
+  },
+  "keywords": [
+    "ens",
+    "bankon.eth",
+    "subname-registrar",
+    "erc-7857",
+    "erc-6551",
+    "x402",
+    "0g",
+    "algorand",
+    "agentic-identity",
+    "parsec",
+    "mindx",
+    "pythai"
+  ]
+}

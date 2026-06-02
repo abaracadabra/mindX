@@ -1,0 +1,80 @@
+# bankoneth — Foundry config
+#
+# Solc 0.8.24, EVM Cancun, via_ir, OZ v5 — same toolchain as the [profile.bankon]
+# block in daio/contracts/foundry.toml, lifted to root and isolated. bankoneth is
+# the canonical source; DAIO consumes from it.
+
+[profile.default]
+src              = "contracts"
+test             = "test"
+script           = "script"
+out              = "out"
+libs             = ["lib"]
+auto_detect_remappings = false
+solc             = "0.8.24"
+evm_version      = "cancun"
+optimizer        = true
+optimizer_runs   = 200
+via_ir           = true
+fuzz             = { runs = 256 }
+gas_reports      = ["*"]
+
+# Skip the 0G iNFT during the default Ethereum compile — that file deploys to
+# 0G via script/DeployZeroG.s.sol and uses an isolated profile below.
+skip = ["contracts/inft/iNFT_7857.sol", "contracts/inft/interfaces/**"]
+
+# 0G profile — compiles the iNFT_7857 contract (and only that) for the 0G
+# Galileo / 0G mainnet deploy. Avoid pulling in the rest of the tree.
+#   FOUNDRY_PROFILE=zerog forge build
+#   FOUNDRY_PROFILE=zerog forge script script/DeployZeroG.s.sol
+# Fork profile — runs the test/fork/* mainnet-fork integration tests
+# (Phase 0.3). Default profile skips them so CI stays fast. Use:
+#   MAINNET_RPC=https://… FOUNDRY_PROFILE=fork forge test -vv
+# Individual tests skip cleanly with vm.skip(true) if MAINNET_RPC is unset.
+[profile.fork]
+src              = "contracts"
+test             = "test/fork"
+script           = "script"
+out              = "out-fork"
+libs             = ["lib"]
+auto_detect_remappings = false
+solc             = "0.8.24"
+evm_version      = "cancun"
+optimizer        = true
+optimizer_runs   = 200
+via_ir           = true
+fuzz             = { runs = 32 }     # fewer fuzz runs — fork RPC latency
+skip             = ["contracts/inft/iNFT_7857.sol", "contracts/inft/interfaces/**"]
+gas_limit        = 30_000_000        # ENS controller register() touches many slots
+
+[profile.zerog]
+src              = "contracts/inft"
+test             = "test"
+script           = "script"
+out              = "out-zerog"
+libs             = ["lib"]
+auto_detect_remappings = false
+solc             = "0.8.24"
+evm_version      = "cancun"
+optimizer        = true
+optimizer_runs   = 200
+via_ir           = true
+
+[fmt]
+line_length = 120
+tab_width   = 4
+bracket_spacing = true
+int_types = "long"
+multiline_func_header = "params_first"
+quote_style = "double"
+number_underscore = "thousands"
+
+[rpc_endpoints]
+mainnet  = "${MAINNET_RPC}"
+sepolia  = "${SEPOLIA_RPC}"
+zerog    = "${ZEROG_RPC}"             # 0G Galileo testnet (16601) or 0G mainnet
+base     = "${BASE_RPC}"
+
+[etherscan]
+mainnet = { key = "${ETHERSCAN_API_KEY}" }
+sepolia = { key = "${ETHERSCAN_API_KEY}" }

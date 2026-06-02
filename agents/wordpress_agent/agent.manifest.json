@@ -1,0 +1,72 @@
+{
+  "$schema": "https://agenticplace.pythai.net/schemas/agent.v1.json",
+  "name": "wordpress.publish",
+  "version": "0.1.0",
+  "description": "Publish finished articles to a WordPress site via REST API. Single responsibility tool: takes finished content from AuthorAgent and posts it.",
+  "license": "Apache-2.0",
+  "author": "BANKON",
+  "homepage": "https://github.com/codephreak/wordpress-agent",
+  "transport": {
+    "type": "http",
+    "endpoint": "http://127.0.0.1:8765",
+    "scope": "loopback"
+  },
+  "capabilities": [
+    {
+      "name": "publish",
+      "method": "POST",
+      "path": "/publish",
+      "description": "Publish a finished article to WordPress. Use status='future' with a future date for scheduled publishing; WordPress's own cron handles the timer.",
+      "inputs": {
+        "title": { "type": "string", "required": true },
+        "content": { "type": "string", "required": true, "description": "HTML or WordPress block markup." },
+        "status": { "type": "enum", "values": ["publish", "future", "draft", "pending", "private"], "default": "publish" },
+        "date": { "type": "string", "format": "date-time", "required": false, "description": "Required when status=future." },
+        "categories": { "type": "array", "items": "integer", "required": false },
+        "tags": { "type": "array", "items": "integer", "required": false },
+        "featured_media": { "type": "integer", "required": false },
+        "excerpt": { "type": "string", "required": false },
+        "slug": { "type": "string", "required": false },
+        "author": { "type": "integer", "required": false },
+        "meta": { "type": "object", "required": false }
+      },
+      "outputs": {
+        "post_id": "integer",
+        "url": "string",
+        "status": "string",
+        "slug": "string",
+        "date_gmt": "string"
+      }
+    },
+    {
+      "name": "media.upload",
+      "method": "POST",
+      "path": "/media",
+      "description": "Upload a media file (typically a featured image). Multipart form-data.",
+      "inputs": {
+        "file": { "type": "file", "required": true },
+        "alt_text": { "type": "string", "required": false },
+        "caption": { "type": "string", "required": false },
+        "title": { "type": "string", "required": false }
+      },
+      "outputs": {
+        "media_id": "integer",
+        "url": "string",
+        "mime_type": "string"
+      }
+    },
+    {
+      "name": "health",
+      "method": "GET",
+      "path": "/healthz",
+      "description": "Verify connectivity and authentication against the configured WordPress site."
+    }
+  ],
+  "deployment": {
+    "platform": "vps",
+    "co_located_with": ["mindx", "authoragent"],
+    "target_site": "rage.pythai.net",
+    "host_environment": "hostinger-shared-php-apache"
+  },
+  "tags": ["publishing", "wordpress", "rest-api", "rage", "pythai", "deltaverse"]
+}

@@ -97,7 +97,7 @@ The two-stage HKDF (per-overseer `_INFO_PREFIX` for IKM, then unified `b"bankon-
 2. `cred_provider = CredentialProvider()` → `BankonVault()` constructor reads `.salt`, loads encrypted `entries.json` into RAM, stays locked.
 3. `cred_provider.load_from_vault()` → `unlock_with_key_file(None)`.
 4. `unlock_with_key_file` (`vault.py:182-211`): checks for sentinel; if absent, reads `.master.key`, HKDF→32B vault key, sets `_locked=False`.
-5. CredentialProvider iterates `PROVIDER_ENV_MAP` (21 entries, `credential_provider.py:13-55`), retrieves each, injects into `os.environ`.
+5. CredentialProvider iterates `PROVIDER_ENV_MAP` (currently 27 entries, including `shadow_overlord_address`/`shadow_jwt_secret`/`mindx_admin_addresses`/`wordpress_publisher_addresses` — see `credential_provider.py`), retrieves each, injects into `os.environ`.
 6. `vault.lock()` zeroizes `_vault_key`. Vault back to locked. Total ~50 ms.
 
 ### Startup — sentinel present (after Human handoff)
@@ -133,6 +133,30 @@ Mounted via `app.include_router(bankon_vault_router)` at `main_service.py:4607`.
 
 The two `/admin/vault/{keys,migrate}` endpoints are admin-gated since `be45f113` (the global auth middleware was already enforcing 401 for anonymous callers; the per-route gate adds `wallet ∈ admin_addresses`).
 
+### `context` as a namespace
+
+`store(entry_id, value, context=…)` derives the per-entry key from
+`HKDF(vault_key, info="bankon-entry:<entry_id>:<context>")` — so `context` is a
+real cryptographic namespace, not a label. Compromising one entry's key does
+not disclose another's, and entries sharing a context are HKDF-isolated as a
+group from entries in any other context.
+
+Known contexts (informational):
+
+| Context | Used by | Examples |
+|---|---|---|
+| `provider` | `PROVIDER_ENV_MAP` startup loader → `os.environ` | `gemini_api_key`, `openrouter_api_key`, `shadow_overlord_address`, `shadow_jwt_secret`, `mindx_admin_addresses`, … |
+| `cabinet_provision` / `cabinet_public` | `bankon_vault/cabinet.py` (executive cabinet wallets) | `company:…:cabinet:…:pk`, `…:address` |
+| `wordpress.agent.keys` | wordpress-agent service, decrypt-on-demand per `/publish` (see [WORDPRESS_PUBLISHING.md](WORDPRESS_PUBLISHING.md)) | `wordpress.agent:pk`, `wordpress.agent:address`, `wordpress.agent:wp_app_password`, `wordpress.agent:wp_base_url`, `wordpress.agent:wp_user` — none in `PROVIDER_ENV_MAP`, never decrypted into `os.environ` at startup |
+| `default` | fallback when no context is passed | — |
+
+### Public wallet-authorized publish (related route family)
+
+| Path | Method | Auth | Returns |
+|------|--------|------|---------|
+| `/publish/rage/challenge` | POST | public | `{nonce, message, expires_at}` for `scope=wordpress.publish`, bound to `{wallet, title, content_sha256}` |
+| `/publish/rage/authorize` | POST | EIP-191 sig (recovers to caller's `wallet_address`) + `WORDPRESS_PUBLISHER_ADDRESSES` allowlist | publishes via AuthorAgent → wordpress-agent (which decrypts the `wordpress.agent.keys` namespace on demand) |
+
 Rate limit: 30 req/min/client, all `/vault/*` share one bucket (`security_middleware.py:49`). No HTTP path can call `unlock_with_key_file` or return plaintext entry values.
 
 ## Tests
@@ -160,6 +184,8 @@ The defense-in-depth checks for stale `.rotation.ok` (>300 s) and candidate SHA 
 | You want to … | Path |
 |---------------|------|
 | Store a new API key | `python manage_credentials.py store <provider_id> <value>` |
+| Store a credential in an isolated namespace | `python manage_credentials.py store <id> <value> --context <namespace>` |
+| Provision wordpress.agent (wallet + WP API key, isolated `wordpress.agent.keys` namespace, decrypt-on-demand — see [WORDPRESS_PUBLISHING.md](WORDPRESS_PUBLISHING.md)) | `python scripts/vault/provision_wordpress_agent.py --wp-base-url … --wp-user …` |
 | List stored entries (no plaintexts) | `python manage_credentials.py list` |
 | Provision the deployer key for the iNFT campaign | `python manage_credentials.py store zerog_deployer_pk 0x...` |
 | Provision the x402-AVM (Algorand) buyer wallet — see [X402.md](X402.md) | `python manage_credentials.py store algorand_mnemonic "<25-word>"` ; also `algorand_recipient_address`, `algorand_usdc_asa_id`, `x402_avm_facilitator_url` |

@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bankoneth"
+version = "0.1.0"
+description = "Python integrations + CLI helpers for the bankoneth ENS subname module."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Professor Codephreak", email = "codephreak@pythai.net"},
+]
+keywords = ["ens", "bankon.eth", "subname-registrar", "erc-7857", "erc-6551", "x402", "0g", "algorand", "mindx", "parsec"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security :: Cryptography",
+    "Topic :: System :: Networking",
+]
+dependencies = [
+    "httpx>=0.27",
+    "pydantic>=2.5",
+]
+
+[project.optional-dependencies]
+mindx = []   # mindX-side wrapper — pure Python, no extra deps; mindX itself supplies the agent runtime.
+
+[project.urls]
+Homepage = "https://github.com/bankon-eth/bankoneth"
+Documentation = "https://github.com/bankon-eth/bankoneth/tree/main/docs"
+
+[tool.hatch.build]
+include = [
+    "integrations/**/*.py",
+    "README.md",
+    "LICENSE",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["integrations"]

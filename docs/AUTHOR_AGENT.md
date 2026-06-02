@@ -282,11 +282,87 @@ class AuthorAgent:
         # Daily loop with CancelledError handling
 ```
 
+## External publishing — rage.pythai.net (WordPress)
+
+AuthorAgent is the canonical caller of the **wordpress-agent** loopback service
+(`agents/wordpress_agent/`, descriptor `agents/wordpress.publish.agent`). It
+renders an article's markdown to HTML, attaches a `_mindx_content_hash`
+(sha256[:16]) for provenance, and POSTs it:
+
+```python
+await author.publish_to_rage(
+    title="How I Turn Logs Into Memory",
+    content_html=html,            # already rendered
+    status="draft",               # draft|publish|future|pending|private
+    excerpt=None, slug=None, tags=None, categories=None, featured_media=None,
+)  # → {"post_id", "url", "status", "slug", "date_gmt"}  or  None if the service is unreachable
+```
+
+It never raises into the author loop — an unreachable service is logged and
+returns `None`. The wordpress-agent itself retries 5xx with backoff.
+
+- Endpoint: `POST /admin/publish-to-rage` (admin-gated) — body takes one of
+  `doc_path` (a markdown file under `docs/`, rendered to HTML), `markdown`, or
+  `html`; `status` defaults to `draft`.
+- Diagnostics: `GET /diagnostics/live` → `author.rage_publishes`,
+  `author.last_rage_url`. `GET /insight/publications/health` → orchestrator
+  liveness + per-source status defaults + ledger state.
+- Full guide: [`docs/WORDPRESS_PUBLISHING.md`](WORDPRESS_PUBLISHING.md).
+
+### Autonomous publishing — AuthorAgent is the canonical writer
+
+`publish_to_rage()` is the low-level transport. The autonomous publishing
+pipeline (see [`docs/publications/README.md`](publications/README.md) and
+[`docs/SEA_MILESTONES.md`](SEA_MILESTONES.md)) calls it via
+PublicationOrchestrator, which owns ledger / debounce / rate-limit /
+status policy and **delegates article composition to AuthorAgent** for the
+rich surfaces. Established pattern: `agents/learning/improvement_journal.py:76-87`
+already delegates journal entry authorship to AuthorAgent.
+
+Rich composers live alongside `publish_to_rage`:
+
+| Method | Triggered by | Default rage status |
+|---|---|---|
+| `compose_milestone_article(payload, category=…)` | Dispatcher — routes to a per-category composer below | per category |
+| └ `_compose_sea_milestone_article(campaign_summary)` | SEA campaign with `is_milestone=true` (event `sea.campaign.concluded`) | `publish` |
+| └ `_compose_bug_crushed_article(payload)` | Operator-triggered (`POST /admin/recognize/bug-crushed`) when an alert batch closes | `publish` (major) |
+| └ `_compose_dreaming_milestone_article(payload)` | `machine_dreaming` code change OR insight outlier (event `dreaming.improved`) | `draft` |
+| `compose_book_edition_article(book_event)` | AuthorAgent's own `_full_moon_publish` (event `book.edition.published`) | `draft` |
+| `compose_journal_digest_article(journal_text, lunar_phase)` | Full-moon co-fire from AuthorAgent (event `journal.lunar.digest.ready`) | `publish` |
+
+Each returns the `(title, content_html, excerpt, topic)` tuple shape the
+orchestrator passes to `publish_to_rage`. All env-overridable. The
+milestone composers ride on the `MilestoneRecognizer` chain
+(see [`docs/MILESTONE_RECOGNITION.md`](MILESTONE_RECOGNITION.md));
+status defaults come from `MINDX_MILESTONE_<CATEGORY>_STATUS`.
+
+### Lunar events emitted by `_full_moon_publish()`
+
+When the full-moon compilation writes the new Book of mindX edition,
+AuthorAgent emits two coordinator events (`self.coordinator.publish_event`)
+back-to-back:
+
+1. `book.edition.published` → PublicationOrchestrator composes a rage post
+   linking to the published edition with a curated TOC + colophon
+2. `journal.lunar.digest.ready` → PublicationOrchestrator reads
+   `docs/IMPROVEMENT_JOURNAL.md` and asks AuthorAgent's journal-digest
+   composer to summarise the lunar cycle
+
+`self.coordinator` is set by `mindx_backend_service/main_service.py` right
+after `AuthorAgent.get_instance()` in the orchestrator spawn block. If
+the coordinator is missing (e.g., dev harness with no event bus),
+AuthorAgent's lunar disk writes still happen — the events are simply not
+emitted, and the file-polling watcher will pick up the dream-cycle book
+edition trigger as a fallback.
+
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `agents/author_agent.py` | Book compilation, lunar cycle, publishing |
+| `agents/author_agent.py` | Book compilation, lunar cycle, publishing (incl. `publish_to_rage`) |
+| `agents/wordpress_agent/` | Loopback WordPress REST service AuthorAgent calls (ported from mindXtrain) |
+| `agents/wordpress.publish.agent` | Agent extension descriptor for the wordpress-agent |
+| `docs/WORDPRESS_PUBLISHING.md` | AuthorAgent → wordpress-agent → rage.pythai.net guide |
 | `agents/learning/improvement_journal.py` | Journal entries (feeds Chapter VI) |
 | `docs/BOOK_OF_MINDX.md` | Current book edition (auto-generated) |
 | `docs/publications/` | Timestamped archived on-demand editions |

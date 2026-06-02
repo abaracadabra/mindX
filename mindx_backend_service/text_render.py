@@ -216,6 +216,24 @@ def render_storage_recent(d: dict) -> str:
     )
 
 
+def render_memory_recent(d: dict) -> str:
+    """Logs → Memories — recent memory.write events from the catalogue."""
+    rows = d.get("events") or []
+    if not rows:
+        return "(no memory writes in the catalogue yet)\n"
+    IMP = {1: "CRIT", 2: "HIGH", 3: "MED ", 4: "LOW "}
+    out = [f"logs → memories  ·  {len(rows)} most recent  ·  source: {d.get('source','catalogue')}"]
+    out.append("─" * 80)
+    for e in rows:
+        ts = human_rel_ts(e.get("ts"))
+        actor = (e.get("actor") or "?")[:32]
+        mtype = (e.get("memory_type") or "memory")[:18]
+        imp = IMP.get(e.get("importance"), str(e.get("importance") or "?"))
+        src = (e.get("source_log") or "").split("/")[-1][:36]
+        out.append(f"  {ts:>8}  {imp}  {actor:<32}  {mtype:<18}  {src}")
+    return "\n".join(out) + "\n"
+
+
 def render_dreams_recent(d: dict) -> str:
     rows = d.get("dreams") or []
     return render_table(
@@ -1038,12 +1056,169 @@ def render_cost_recent(d: dict) -> str:
     )
 
 
+# ------------------------------------------------------------------------
+# Phase 1.2 — /insight/host/* renderers (netdata-primary, psutil fallback).
+# ------------------------------------------------------------------------
+
+def render_host_cpu(d: dict) -> str:
+    if d.get("source") == "psutil_fallback":
+        return render_kv({
+            "source":              d["source"],
+            "netdata":             d.get("netdata_error", "?"),
+            "cpu_percent":         f"{d.get('cpu_percent', 0):.1f}%",
+            "per_core":            ", ".join(f"{x:.0f}%" for x in (d.get("cpu_percent_per_core") or [])),
+            "load_1m_5m_15m":      ", ".join(f"{x:.2f}" for x in (d.get("load_avg") or [])),
+        })
+    labels = d.get("labels") or []
+    data = d.get("data") or []
+    n = len(data)
+    if not data:
+        return f"source: netdata\nchart : system.cpu\nno data\n"
+    latest = data[-1] if data else []
+    return render_kv({
+        "source":         d.get("source", "netdata"),
+        "chart":          d.get("chart", "system.cpu"),
+        "samples":        n,
+        "labels":         ", ".join(labels[1:]) if len(labels) > 1 else "?",
+        "latest_at_t":    latest[0] if latest else "?",
+        "latest_values":  ", ".join(f"{v:.1f}" for v in latest[1:]) if len(latest) > 1 else "?",
+        "interval_s":     d.get("view_update_every", "?"),
+    })
+
+
+def render_host_memory(d: dict) -> str:
+    if d.get("source") == "psutil_fallback":
+        return render_kv({
+            "source":          d["source"],
+            "netdata":         d.get("netdata_error", "?"),
+            "ram_total":       f"{d.get('ram_total_mb', 0):.0f} MB",
+            "ram_used":        f"{d.get('ram_used_mb', 0):.0f} MB  ({d.get('ram_percent', 0):.0f}%)",
+            "ram_available":   f"{d.get('ram_available_mb', 0):.0f} MB",
+            "swap_total":      f"{d.get('swap_total_mb', 0):.0f} MB",
+            "swap_used":       f"{d.get('swap_used_mb', 0):.0f} MB  ({d.get('swap_percent', 0):.0f}%)",
+        })
+    ram = d.get("ram", {})
+    swap = d.get("swap", {})
+    ram_data = ram.get("data") or []
+    swap_data = swap.get("data") or []
+    out = ["source: netdata", ""]
+    if ram_data:
+        latest = ram_data[-1]
+        out.append("RAM (latest):")
+        for i, lbl in enumerate(ram.get("labels", [])[1:], start=1):
+            if i < len(latest):
+                out.append(f"  {lbl:15s}  {latest[i]:.0f}")
+    out.append("")
+    if swap_data:
+        latest = swap_data[-1]
+        out.append("SWAP (latest):")
+        for i, lbl in enumerate(swap.get("labels", [])[1:], start=1):
+            if i < len(latest):
+                out.append(f"  {lbl:15s}  {latest[i]:.0f}")
+    return "\n".join(out) + "\n"
+
+
+def render_host_disk(d: dict) -> str:
+    r = d.get("root", {})
+    return render_kv({
+        "root_total":         f"{r.get('total_gb', 0):.1f} GB",
+        "root_used":          f"{r.get('used_gb', 0):.1f} GB  ({r.get('percent', 0):.0f}%)",
+        "root_free":          f"{r.get('free_gb', 0):.1f} GB",
+        "prom_tsdb_size":     f"{d.get('prometheus_data_mb', 0):.1f} MB",
+        "prom_tsdb_cap":      f"{d.get('prometheus_data_cap_gb', 4):.1f} GB  (Phase 1.1 retention)",
+    })
+
+
+def render_narrative_recent(d: dict) -> str:
+    """※-prefixed plaintext recap stream (top 10) for ?h=true clients."""
+    import time as _t
+    items = d.get("recaps") or []
+    if not items:
+        return "  no narrative recaps yet\n"
+    now = _t.time()
+    lines: list[str] = []
+    for r in items[:10]:
+        ts = float(r.get("ts") or 0)
+        delta = max(0.0, now - ts)
+        if delta < 60:
+            ago = f"{int(delta)}s ago"
+        elif delta < 3600:
+            ago = f"{int(delta/60)}m ago"
+        elif delta < 86400:
+            ago = f"{int(delta/3600)}h ago"
+        else:
+            ago = f"{int(delta/86400)}d ago"
+        src = (r.get("source") or "?")[:9].ljust(9)
+        author = (r.get("author") or "?")[:24]
+        body = (r.get("body") or "").strip().split("\n")[0][:200]
+        lines.append(f"  ※ {ago:>10}  [{src}] {author}")
+        lines.append(f"      {body}")
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def render_host_htop(d: dict) -> str:
+    """htop-header-style plaintext for ?h=true clients."""
+    cores = d.get("cpu_percent_per_core") or []
+    ram = d.get("ram", {})
+    sw = d.get("swap", {})
+    stat = d.get("task_statuses", {})
+    width = 30
+
+    def bar(pct: float) -> str:
+        pct = max(0.0, min(100.0, float(pct or 0)))
+        n = int((pct / 100) * width)
+        return "[" + "|" * n + " " * (width - n) + "]"
+
+    lines: list[str] = []
+    for i, c in enumerate(cores, start=1):
+        lines.append(f"  {i:>2}  {bar(c)}  {c:5.1f}%")
+    used = ram.get("used_mb", 0) or 0
+    total = ram.get("total_mb", 0) or 1
+    lines.append(f"  Mem  {bar((used/total)*100)}  {used/1024:.1f}G / {total/1024:.1f}G")
+    su = sw.get("used_mb", 0) or 0
+    st = sw.get("total_mb", 0) or 1
+    lines.append(f"  Swp  {bar((su/st)*100)}  {su/1024:.2f}G / {st/1024:.1f}G")
+    lines.append("")
+    lines.append(f"  Tasks      {d.get('task_count', 0)}, {d.get('threads_total', 0)} thr ({d.get('kthreads', 0)} kthr); {stat.get('running', 0)} running")
+    la = d.get("load_avg") or [0, 0, 0]
+    lines.append(f"  Load avg   {la[0]:.2f}  {la[1]:.2f}  {la[2]:.2f}")
+    up_s = int(d.get("uptime_seconds") or 0)
+    days, rem = divmod(up_s, 86400)
+    hrs, rem = divmod(rem, 3600)
+    mins, secs = divmod(rem, 60)
+    up_str = f"{days}d {hrs:02d}:{mins:02d}:{secs:02d}" if days else f"{hrs:02d}:{mins:02d}:{secs:02d}"
+    lines.append(f"  Uptime     {up_str}")
+    return "\n".join(lines) + "\n"
+
+
+def render_host_probes(d: dict) -> str:
+    if d.get("prom") == "off":
+        return render_kv({
+            "prom":   "off (Phase 1.2 default)",
+            "hint":   d.get("hint", "bash scripts/prom_on.sh"),
+            "error":  d.get("error", "?"),
+        })
+    targets = d.get("targets") or []
+    lines = [
+        f"prom        : on",
+        f"target_count: {d.get('target_count', 0)}",
+        f"up_count    : {d.get('up_count', 0)}",
+        "",
+    ]
+    for t in targets:
+        state = "UP  " if t.get("up") else "DOWN"
+        lines.append(f"  {state}  {t.get('instance', '?')}")
+    return "\n".join(lines) + "\n"
+
+
 RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/storage/status":      render_storage_status,
     "/insight/storage/recent":      render_storage_recent,
     "/insight/cost/summary":        render_cost_summary,
     "/insight/cost/recent":         render_cost_recent,
     "/insight/dreams/recent":       render_dreams_recent,
+    "/insight/memory/recent":       render_memory_recent,
     "/insight/bdi/recent":          render_bdi_recent,
     "/insight/cognition":           render_cognition,
     "/insight/system":              render_system,
@@ -1064,6 +1239,12 @@ RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/stuck_loops":         render_stuck_loops,
     "/storage/eligible":            render_eligible,
     "/storage/anchor/health":       render_anchor_health,
+    "/insight/host/cpu":            render_host_cpu,
+    "/insight/host/memory":         render_host_memory,
+    "/insight/host/disk":           render_host_disk,
+    "/insight/host/probes":         render_host_probes,
+    "/insight/host/htop":           render_host_htop,
+    "/insight/narrative/recent":    render_narrative_recent,
 }
 
 

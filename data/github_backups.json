@@ -485,16 +485,2473 @@
       "source_commit": "fc22fce65bb4817ad137e76c13fc0f8fd79051e5",
       "created_at": "2026-05-02T02:38:51.291641",
       "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_004931",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "c33623b594fafdff89dc336d82619181379921fd",
+      "created_at": "2026-05-13T00:49:49.519585",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_010106",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "371c861c899e0efe22224e79fc0725481f925961",
+      "created_at": "2026-05-13T01:01:32.194876",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_011254",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "62023fd20e85d6d4cc243bc6177cc8f3d37fa19c",
+      "created_at": "2026-05-13T01:13:06.429112",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_014546",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "70aabeccfede9b95eca67d6eed8fe5d2192db272",
+      "created_at": "2026-05-13T01:45:50.843641",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_014844",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "297b195f0d9f9e6ac8f628e5ee0580288e360ed3",
+      "created_at": "2026-05-13T01:48:49.232137",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_015655",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "0148f1c8341a269a225c6e315e9c74bb75b078c9",
+      "created_at": "2026-05-13T01:56:59.223048",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_015907",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "37e6d29115855b8b5b0828202a6452abe9b6dffd",
+      "created_at": "2026-05-13T01:59:11.030474",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_020720",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "b84289387f5cc4c624a05fe707b2fc2c2475bf6d",
+      "created_at": "2026-05-13T02:07:24.846472",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_020920",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "93b69f49fc8433f4de05678a461d124c897a8f5f",
+      "created_at": "2026-05-13T02:09:24.336544",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_021742",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "1852fbd9797b94f99ec5f37f96dfdca21aa70733",
+      "created_at": "2026-05-13T02:17:48.213447",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_022323",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "02c6a607b22db6a18e1bfc9db59f26de329cf357",
+      "created_at": "2026-05-13T02:23:29.281031",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_023227",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "6bfbfea41e517aec4258673e3e5507335411fb00",
+      "created_at": "2026-05-13T02:32:55.978750",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_023421",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "82e276e61aab761c62676ec2a33bafff134ae8fa",
+      "created_at": "2026-05-13T02:34:25.818777",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_024143",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "e8dbec73d3fc1b296e62301b2f43a2651af356ac",
+      "created_at": "2026-05-13T02:41:48.292262",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_024317",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "e2950fd78bd654a165094549e99cd07863cb3210",
+      "created_at": "2026-05-13T02:43:21.735045",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_025055",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "df1b9eef5dd88eb8043bc1c5c983ae88deda78ab",
+      "created_at": "2026-05-13T02:51:00.963558",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_025246",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "4dfe347b581499ac07bf5f9d64ff0a4612d60093",
+      "created_at": "2026-05-13T02:52:51.091438",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/daily-backup-20260513_030023",
+      "backup_type": "daily_backup",
+      "reason": "Scheduled daily backup",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "d98d3f938ceb531e8c660aa5b81a7a2ce12a85f4",
+      "created_at": "2026-05-13T03:00:26.304756",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_030052",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "568b801d09e0013f4878c328a3c3b96604fc1358",
+      "created_at": "2026-05-13T03:00:55.260159",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_030218",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "d0c2c49504886a3de9e9030ceaa3957036d29265",
+      "created_at": "2026-05-13T03:02:23.078147",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_030942",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "b3a1e132f7d562d633ca27bce47eb43f6973cff5",
+      "created_at": "2026-05-13T03:09:57.340982",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_031112",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "2ec47728b94425ddf2aae9f8efb479a1fa3cff17",
+      "created_at": "2026-05-13T03:11:16.922729",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_031826",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "2588e09335e63bd8a834818909fea5db4188e6af",
+      "created_at": "2026-05-13T03:18:30.542107",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_031946",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "6d1ceafd745a380033fd6aebb299e6cbc37b2648",
+      "created_at": "2026-05-13T03:19:51.738276",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_032701",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "840540e577724feadb3feb5395163d9d313b8c6e",
+      "created_at": "2026-05-13T03:27:05.860445",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_032819",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "8532ad88a68916fe4b46afd88f29e8ba615b1bd5",
+      "created_at": "2026-05-13T03:28:24.336337",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_033536",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "3e2ebad9c4d09e34e3fbd1d9a02cd031100308c5",
+      "created_at": "2026-05-13T03:35:40.948330",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_033656",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "97c97abb877543cd08ab5bb4af995c66e5bde345",
+      "created_at": "2026-05-13T03:37:01.168567",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_034411",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "eb9e97df91461f68fde6357ebc0e74565348fb8f",
+      "created_at": "2026-05-13T03:44:16.025051",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_034530",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "ae2f596c19108f4266f7dea9320fd66976156ffe",
+      "created_at": "2026-05-13T03:45:35.223295",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_035245",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "81355d72c3eb6ec19eafbce816a5bad4072218a4",
+      "created_at": "2026-05-13T03:52:49.716513",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_035403",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "d61f5ca5d5fcc5788381428c27c49f2c2059cafe",
+      "created_at": "2026-05-13T03:54:08.368969",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_040121",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "072438c45da5a92cd808172caff023af3d9acd7d",
+      "created_at": "2026-05-13T04:01:25.662927",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_040240",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "8005c280df13cdb228225d12bd10e0685aa05985",
+      "created_at": "2026-05-13T04:02:44.642938",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_040951",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "2ac1256119783a2dddd2d3a44a603d58130a724f",
+      "created_at": "2026-05-13T04:09:55.810885",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_041110",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "4bd667d2e1a5ae58085e91cbefb4bb70008d04b6",
+      "created_at": "2026-05-13T04:11:14.459626",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_041824",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "c302cc01c83f80caefb92e86a24c5b234098be3e",
+      "created_at": "2026-05-13T04:18:29.287544",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_041946",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "58df81e98531f4a8e7648f33e8992fed5d328e89",
+      "created_at": "2026-05-13T04:19:51.235286",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_042701",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "8d59b7d6464c16a2eaf42711b00a7af65bc5779b",
+      "created_at": "2026-05-13T04:27:06.210152",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_042820",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "7f5e8bb56348601e04856763e890f2aa3d8fdf3a",
+      "created_at": "2026-05-13T04:28:24.987276",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_043537",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "6c6f721432363854a00e27a0001bd6449c01fd4e",
+      "created_at": "2026-05-13T04:35:42.184777",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_043657",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "47a95f56b3022211692848a65165d5c671342d07",
+      "created_at": "2026-05-13T04:37:01.767376",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_044412",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "e13932294f41f079b93a77faeb2ac2a5f8868f37",
+      "created_at": "2026-05-13T04:44:16.726587",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_044534",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "79aa898b04d3ddcf0ecea69463dfea08cfcd7030",
+      "created_at": "2026-05-13T04:45:38.539491",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_045249",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "0a1850787ffb3030d20aab466b9dfce08dee8ecb",
+      "created_at": "2026-05-13T04:52:54.482592",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_045409",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "c46c4d09c9b4a77de0ea9be6cacb18cfd02b77f6",
+      "created_at": "2026-05-13T04:54:14.136292",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_050125",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "ca0cb5e1dde640aa04c7176fe1206767972c4b65",
+      "created_at": "2026-05-13T05:01:30.179094",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_050245",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "ebce1598d3117436c8f212133fad2f853d75ee89",
+      "created_at": "2026-05-13T05:02:50.152730",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_050958",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "1bd8e85f85a1832da136d7f1d8cc9006d65fa20e",
+      "created_at": "2026-05-13T05:10:02.643929",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_051118",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "daa4a68a14aefbd5ed68471363ba50858c7fcb36",
+      "created_at": "2026-05-13T05:11:23.101441",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_051837",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "efb7cae248f5526e5e67cb7bd3fa4f4b71662764",
+      "created_at": "2026-05-13T05:18:42.348601",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_052000",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "79af1ed73073454b109e5da4ba1d4c6af97c5cc8",
+      "created_at": "2026-05-13T05:20:06.386728",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_052718",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "03f12206cfb62a2e5f3d396a409f86461c4782e5",
+      "created_at": "2026-05-13T05:27:24.111492",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_052839",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "bc9d25981d788f821d345bac33467aa76bbe7187",
+      "created_at": "2026-05-13T05:28:44.438283",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_053558",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "fcfaa6ee3c2fd431af4507d0ffa4852f5b9e41e5",
+      "created_at": "2026-05-13T05:36:04.439172",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_053721",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "465469bf510c716370c6f6fdac548e51ea5d534b",
+      "created_at": "2026-05-13T05:37:26.396259",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_054440",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "1e4fc2eafea546822759ab735ff979394f9901a3",
+      "created_at": "2026-05-13T05:44:45.646662",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_054603",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "d2e0b8df28431265cd9d6b8276df1545978005e8",
+      "created_at": "2026-05-13T05:46:09.729869",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_055325",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "9b3d384889b19270fc4e0d8083b7649210daa6f5",
+      "created_at": "2026-05-13T05:53:30.183362",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_055447",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "f14e885f88a2fc424f8199ef8135539c8af5bbb8",
+      "created_at": "2026-05-13T05:54:54.324055",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_060209",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "a3e6b5c808ca5c5382a6caebb767042aa0984176",
+      "created_at": "2026-05-13T06:02:14.259340",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_060335",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "f7f6eb344c3bb751793c88a409b83a544520f4e3",
+      "created_at": "2026-05-13T06:03:39.700050",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_061053",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "3b32ba3979b8275a51c14517322a61ed19ccf689",
+      "created_at": "2026-05-13T06:10:58.646659",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_061216",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "5574beab5d94def1c8f962e745ff0771712706cb",
+      "created_at": "2026-05-13T06:12:22.757352",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_061935",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "1a56f4a67facf44724ab987c02357d624f9a1159",
+      "created_at": "2026-05-13T06:19:39.815097",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_062057",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "0f814c699621a373fa3bc2673cc1cc6556dd7b06",
+      "created_at": "2026-05-13T06:21:02.022316",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_062815",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "cad290dc9234d7d513bb51568df79e5023db7c9f",
+      "created_at": "2026-05-13T06:28:20.042095",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_062937",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "518f4d2d3b67e1e39acc105925bc2d4e86d4f5f9",
+      "created_at": "2026-05-13T06:29:41.821541",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_063701",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "6cc31431b924dd3e57d79326610c757633c4e982",
+      "created_at": "2026-05-13T06:37:06.508788",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_063827",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "fdebe0b103d1b389fde446a75fbdc3cdbff99ee6",
+      "created_at": "2026-05-13T06:38:32.559691",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_064547",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "ec7fbba764ebe5c3c22ab2646bd06ca7f5368331",
+      "created_at": "2026-05-13T06:45:53.015593",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_064711",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "c7200f68dba3ae3fdac62388b231872fe2d8b632",
+      "created_at": "2026-05-13T06:47:19.147165",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_065336",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "d64b3f61e4340c0fdf02b06bc0c033897521cf66",
+      "created_at": "2026-05-13T06:53:40.931502",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_065457",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "9cd28debfa52e9ac2a1988816e8c25dad92eda86",
+      "created_at": "2026-05-13T06:55:02.057230",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_070216",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "6d12affb2afb0083652907ac06eaa9ab785f7d86",
+      "created_at": "2026-05-13T07:02:21.057377",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_070343",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "fc07b47ab091629449a428158d4e8eb500afb7bc",
+      "created_at": "2026-05-13T07:03:50.847916",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_071102",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "2cb2bda5519b1ced75782180c9279b42612e21e0",
+      "created_at": "2026-05-13T07:11:07.291574",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_071224",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "cc425042791f7d48e70ae2fef60d781eadc3f96c",
+      "created_at": "2026-05-13T07:12:32.060274",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_071947",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "b5be6801a33edd60edbc49deb2e6cf56321eb16f",
+      "created_at": "2026-05-13T07:19:52.186627",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_072114",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "b7a1859c7fdf14fb18bd105cae8aac87b577f836",
+      "created_at": "2026-05-13T07:21:20.975100",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_072841",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "4133ec7893837d939db0b6386c0418b180cbe580",
+      "created_at": "2026-05-13T07:28:46.244413",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_073011",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "ce348a70d30229785941c8531739872aff063e42",
+      "created_at": "2026-05-13T07:30:17.887375",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_073730",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "743e0e80ad7630651031888d0524f13a51abad0a",
+      "created_at": "2026-05-13T07:37:35.423966",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_073857",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "1ee5bd895908b0b48f44785a5df3b64a78da6f73",
+      "created_at": "2026-05-13T07:39:03.261882",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_074616",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "3069f539ec546e7d703fcd5d63e4138159a97df1",
+      "created_at": "2026-05-13T07:46:21.794960",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_074740",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "8cc3f86afa7cb4b0bc37689da713035a1f315773",
+      "created_at": "2026-05-13T07:47:47.323296",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_075504",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "c25ab38e8648bd0eac36eadd88f77093d6a2542f",
+      "created_at": "2026-05-13T07:55:08.839352",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_075646",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "839c2d0bb353c1654c7b2f2069d652ecc2edb6be",
+      "created_at": "2026-05-13T07:56:54.946618",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_080433",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "7b21204c063b0dddb71232b78d99c3d97850f212",
+      "created_at": "2026-05-13T08:04:57.855942",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_080733",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "93c7847611f96e508d74b81aa02d1cf27efb6b6f",
+      "created_at": "2026-05-13T08:07:39.167593",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_081458",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "021186a8bc8eaa3b16f634389cbe15ac601316ae",
+      "created_at": "2026-05-13T08:15:04.036454",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_081631",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "7b21204c063b0dddb71232b78d99c3d97850f212",
+      "created_at": "2026-05-13T08:17:00.310311",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_082420",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "8c3126dfcf4fa6648c50d980a21b07cbd1ce84f7",
+      "created_at": "2026-05-13T08:24:26.745482",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_082558",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "1fe4ebadd95671b8f81b813299edb0fe8349b4ed",
+      "created_at": "2026-05-13T08:26:05.183723",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_083322",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "40090b725135e78a18a47edc1dcdedc9be2c56eb",
+      "created_at": "2026-05-13T08:33:28.066495",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_083456",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "691ab6e38ab22d2263265adf4610748864865778",
+      "created_at": "2026-05-13T08:35:03.679991",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_084228",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "08f040b6b564ebced219e778304016cb61f67228",
+      "created_at": "2026-05-13T08:42:33.487242",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_084406",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "6a956b6b1bfdc31a6fc837613731dbe1cdfef611",
+      "created_at": "2026-05-13T08:44:15.801437",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_085147",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "11b2f1a82c9f61ba991a97f8f4aa989d6c8d94a2",
+      "created_at": "2026-05-13T08:51:54.869749",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_085314",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "890bb3ad06e48850f965b29a2cb1be86e1b4bc97",
+      "created_at": "2026-05-13T08:53:19.521052",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_090038",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "e7db2017372e36e603ef12d8128bebe3c1bf896b",
+      "created_at": "2026-05-13T09:00:44.633524",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_090206",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "c2c75b65a33496558bc6c89bcef72d1528c20964",
+      "created_at": "2026-05-13T09:02:19.915097",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_090937",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "7fa1251301d4dc70e49218909b7db76ec11a2010",
+      "created_at": "2026-05-13T09:09:42.722131",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_091112",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "ce5dabe2c4e3840085aa5a45e2e6e0d08cb69e6a",
+      "created_at": "2026-05-13T09:11:18.726994",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_091842",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "f815f23a8a876dbd6cea424628a596eb7306d32c",
+      "created_at": "2026-05-13T09:18:47.442611",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_092021",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "91d4368c21214dedcb5d8c7ca606da18dd9e0a77",
+      "created_at": "2026-05-13T09:20:33.097440",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_092758",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "e3c2bd4501756b3116ef7077d7968999b758c25b",
+      "created_at": "2026-05-13T09:28:04.844169",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_092924",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "e085131255033c02a91025a43ecfde2cbdfae1e0",
+      "created_at": "2026-05-13T09:29:30.957998",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_093647",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "0e68aedda79acd3b4c03720d40f22dfbd8e2d05c",
+      "created_at": "2026-05-13T09:36:53.124971",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_093825",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "shadow-overlord-handoff-2026-05-13",
+      "source_commit": "4587c26ad844c3ad28810233babe660100716c90",
+      "created_at": "2026-05-13T09:38:29.673725",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_094553",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_093825",
+      "source_commit": "4587c26ad844c3ad28810233babe660100716c90",
+      "created_at": "2026-05-13T09:45:55.466531",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_094728",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_093825",
+      "source_commit": "4587c26ad844c3ad28810233babe660100716c90",
+      "created_at": "2026-05-13T09:47:30.955900",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_095456",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_093825",
+      "source_commit": "4587c26ad844c3ad28810233babe660100716c90",
+      "created_at": "2026-05-13T09:54:59.483573",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_095635",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_093825",
+      "source_commit": "4587c26ad844c3ad28810233babe660100716c90",
+      "created_at": "2026-05-13T09:56:38.924002",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_100419",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "4587c26ad844c3ad28810233babe660100716c90",
+      "created_at": "2026-05-13T10:04:21.274530",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_100609",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "4587c26ad844c3ad28810233babe660100716c90",
+      "created_at": "2026-05-13T10:06:20.113859",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_101343",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "8d9e70050570a73e4740572ffabfbbea990027e9",
+      "created_at": "2026-05-13T10:13:50.913346",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_101527",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "336822c6f28fcbdeb572d0a1b79a33eb2db5918d",
+      "created_at": "2026-05-13T10:15:35.231652",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_102029",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "d948033dc5dfaf95718260467fec025255f265fe",
+      "created_at": "2026-05-13T10:20:34.816318",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_102215",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "1465a5e6a24f0077f66aa4420cb83ec494d30ec9",
+      "created_at": "2026-05-13T10:22:25.475366",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_103005",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "336822c6f28fcbdeb572d0a1b79a33eb2db5918d",
+      "created_at": "2026-05-13T10:30:11.577079",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_103200",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "cb4d93d61ddc0adc5c97b3226f122d639a5dc34d",
+      "created_at": "2026-05-13T10:32:08.796030",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_103957",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "7fafddb580912d1034b22f7fc155693e33ac0d08",
+      "created_at": "2026-05-13T10:40:02.386858",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_104130",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "84f93200a7a9b066cb910264e332c22abbc2e427",
+      "created_at": "2026-05-13T10:41:38.118121",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_104911",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "4d5913de968839aebadbe7a3903cc36e37c8e378",
+      "created_at": "2026-05-13T10:49:15.294233",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_105100",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "2f600e9221ad1e3bb8622d057b6d50de6cf0ae68",
+      "created_at": "2026-05-13T10:51:06.171847",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_105834",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "7dc36b623d40cafdf17888fe957bd55a675aa186",
+      "created_at": "2026-05-13T10:58:39.680042",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_110044",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "9fce4626a87e625ef34130a01a5edcc96d442202",
+      "created_at": "2026-05-13T11:00:50.441268",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_110811",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "0aa38149413b0e0cbc035b2cc96817d5d2835d9a",
+      "created_at": "2026-05-13T11:08:16.126547",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_111001",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "c8aa43a8e30b9ebdc227a7e1de6728c4e77f5061",
+      "created_at": "2026-05-13T11:10:07.125457",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_111749",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "80eedc6e068b0b9dbf44e88db165745a0dc1d505",
+      "created_at": "2026-05-13T11:17:54.761357",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_111937",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "743b4f038f5797d33c4b725929bda6bbe8c0a09b",
+      "created_at": "2026-05-13T11:19:45.374078",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_112716",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "e80eb7b10d79d871fd843d6927062c47b12808ae",
+      "created_at": "2026-05-13T11:27:21.582398",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_114048",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "7dc3ba6c24dfc31e06a4ea02c1178243f7122a2f",
+      "created_at": "2026-05-13T11:40:53.554594",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_115151",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "062e118c08b01fabbb2fff77aed52caaff6db36a",
+      "created_at": "2026-05-13T11:51:56.483977",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_120310",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "22acf4bc607eb8f20a06849e4374c770775e38da",
+      "created_at": "2026-05-13T12:03:17.481692",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_121421",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "80eedc6e068b0b9dbf44e88db165745a0dc1d505",
+      "created_at": "2026-05-13T12:14:26.131589",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_122536",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "56fa394cf0af216ebb40f2da494b2aa1c479c084",
+      "created_at": "2026-05-13T12:25:40.546799",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_123638",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "a3e9bf0d115fe8edfcbcf28c39843c8ae14fd7a7",
+      "created_at": "2026-05-13T12:36:42.713660",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_124740",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "41205f3f82c285742686e63c5d4315c8f4603845",
+      "created_at": "2026-05-13T12:47:46.695611",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_125844",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "33d21d852493003d18ff259d95e461bf62b95ec9",
+      "created_at": "2026-05-13T12:58:49.877744",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_130955",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "00a7b8a345f5bb7e70524a6c10ad19ef98f5ab3a",
+      "created_at": "2026-05-13T13:10:00.549936",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_132053",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "a290deb14e5a3fc6884e69b930c90331b870f7cd",
+      "created_at": "2026-05-13T13:20:58.489358",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_133206",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "3c353d330403035090baaa4ab02231ef6f4d0f64",
+      "created_at": "2026-05-13T13:32:12.447134",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_134308",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "1a1dd78ead7e38ad7c6bd2155f24a2a826dcac08",
+      "created_at": "2026-05-13T13:43:13.103315",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_135429",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "ba0c07c8ad636484b6299a622b3557e8675ca2ea",
+      "created_at": "2026-05-13T13:54:34.613679",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_140533",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "61ef1d6f8028704bf51bc97d45c971451301ae67",
+      "created_at": "2026-05-13T14:05:38.520657",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_141635",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "17a2bad1b8e33be4e8f8b6ccabfc40747ad188d0",
+      "created_at": "2026-05-13T14:16:40.123657",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_142737",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "31bd7b69ddd50793b48ac22731cbc3c58779a555",
+      "created_at": "2026-05-13T14:27:42.262139",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_143839",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "e37ccb3c78f2b705272d2094cd52ed6fc1b288d7",
+      "created_at": "2026-05-13T14:38:44.088366",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_144941",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "83850d8999c6589c284d9ebb47e6e4e99f2df3fb",
+      "created_at": "2026-05-13T14:49:45.961153",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_150043",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "0d977b1e795e34bd5f57f54e96f5b262ca5b27ff",
+      "created_at": "2026-05-13T15:00:48.780805",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_151145",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "30d04d23520b423e6e6964bb792a2afbf8fbdee7",
+      "created_at": "2026-05-13T15:11:54.001063",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_152247",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "cf6ec527d4bb0f02be01d4a8f663b5e63463e895",
+      "created_at": "2026-05-13T15:22:52.408662",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_153349",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "5a02224210df0c5df2338045ee8eb5fcbd262803",
+      "created_at": "2026-05-13T15:33:57.572878",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_154451",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "78bd54e05fd607b58a1a6cacaa86fb4fda65148a",
+      "created_at": "2026-05-13T15:44:56.649866",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_155553",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "9cbd1b602e4e5dd89ce131e505aef3ab2ec28646",
+      "created_at": "2026-05-13T15:55:58.056150",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_160627",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "d62eb78547b712d729321f380efafa9943276aca",
+      "created_at": "2026-05-13T16:06:32.948946",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_161757",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "c9fd10bc31c390b1c7c6c57418862e09a8ece8a5",
+      "created_at": "2026-05-13T16:18:02.274559",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_162905",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "0ed3ac6461f48b045331c5b0b45a89a400c7098b",
+      "created_at": "2026-05-13T16:29:10.938011",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_164019",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "3007196f9ec42483d9d450894d517b0bf34df985",
+      "created_at": "2026-05-13T16:40:28.067007",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_165127",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "8cacc85b558567e1a6aee8ec43f3adccb199780c",
+      "created_at": "2026-05-13T16:51:32.245051",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_171434",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "a74894161007396d814fe881df79c1ec296f65f6",
+      "created_at": "2026-05-13T17:14:39.426094",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_172459",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "e0fa30d18fe45f2a7e34af3be570689a1cc0e31d",
+      "created_at": "2026-05-13T17:25:01.636754",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_173609",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "74543ab79c48a58388fef096c37977178306c1a2",
+      "created_at": "2026-05-13T17:36:13.152702",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_174602",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "9887f3df44ac13da7b4725ee000d551e70027135",
+      "created_at": "2026-05-13T17:46:04.386943",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_175635",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "c3c68138de28c70d8994da8467e01efb91c7db2b",
+      "created_at": "2026-05-13T17:56:41.090581",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_180728",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "787184ceb1cd01eeb25ae210ab614a680cbdd76f",
+      "created_at": "2026-05-13T18:07:30.621597",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_181932",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "001f4cf147c0a2f822a1ce308f1263e082bafec4",
+      "created_at": "2026-05-13T18:19:35.406725",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_182915",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "ac9b00cd54cd4142e08af308d5a99c8cb96f4583",
+      "created_at": "2026-05-13T18:29:24.707442",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_183944",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "05fa9129bdfd99ea8e628ce3dcc61e75dad02c61",
+      "created_at": "2026-05-13T18:39:47.556801",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_184200",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "c33e37303995b5015e62e50b722adad243d453a2",
+      "created_at": "2026-05-13T18:42:03.508355",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_185114",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "96348914ca40e8702b4c7a13d3e7e3880e6d5a7c",
+      "created_at": "2026-05-13T18:51:16.569808",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_185331",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "ef88c4d71e916c1c1143e85c708d1ba5df3f3170",
+      "created_at": "2026-05-13T18:53:58.183648",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_190411",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "3a17c46a7bc70f003a084681db84f2fbb15928a2",
+      "created_at": "2026-05-13T19:04:13.743450",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_191411",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "f9cb9d1a5f4f07a515f98bdd43509e8112bc9188",
+      "created_at": "2026-05-13T19:14:14.321664",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_192519",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "5eda0de89c5e18525311b3c2f352ece25b69322f",
+      "created_at": "2026-05-13T19:25:22.043902",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_193416",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "b8a72e03c514f0f212a339f24ba336a06bc1874c",
+      "created_at": "2026-05-13T19:34:23.001733",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_193722",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "48905317977b1faa528a75e72709c22573769705",
+      "created_at": "2026-05-13T19:37:32.277554",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_194857",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "a3212dac480267a049262551720284e82aa3aa03",
+      "created_at": "2026-05-13T19:49:01.566700",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_202041",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "250dd04b7a40b260b840eefa4fd192549e7fcdd3",
+      "created_at": "2026-05-13T20:20:57.801925",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_203243",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "64ab4e9c832c6f6ba9a4df7fd7d95319b7ebca5d",
+      "created_at": "2026-05-13T20:32:50.588651",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_203532",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "8ef3532d090f979d4166c9e7d5ec3df17bc00128",
+      "created_at": "2026-05-13T20:35:37.612573",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_204237",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "bb531e22f9d660befb53ba790e53cc3ecd826dd3",
+      "created_at": "2026-05-13T20:42:38.846949",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_204553",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "b7be26bee856fab6f5d51c98b87b2bcebd0acac3",
+      "created_at": "2026-05-13T20:46:03.743989",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_205629",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "48a0b0f3857d41bd6ca85f4a89870f673261b5f2",
+      "created_at": "2026-05-13T20:56:35.645120",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_210841",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "feeedf548b88c1be51a4852209330d443cb394ac",
+      "created_at": "2026-05-13T21:08:46.052330",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_212104",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "93821034ed99943ea1f96da58ee8ac49d85a7e29",
+      "created_at": "2026-05-13T21:21:09.632932",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_213317",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "c8859b4cc17798d92163cf1d0abf18c5d6b4d136",
+      "created_at": "2026-05-13T21:33:22.412030",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_214448",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "555b34e5b0e8df8f588662f4026772e0807cdacd",
+      "created_at": "2026-05-13T21:44:53.398898",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_215629",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "7771039fb1045898ac4a1cff452ecfd62fdad6c3",
+      "created_at": "2026-05-13T21:56:34.856176",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_220819",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "4f46bfa78b984516763e0d087acd25e72be929f6",
+      "created_at": "2026-05-13T22:08:24.966162",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_222007",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "e08903fa48e4f9efbad0b5f13f4fbf26a835864a",
+      "created_at": "2026-05-13T22:20:12.847514",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_223125",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "23d9ed068df19a95587c05c6650e79d0b5438305",
+      "created_at": "2026-05-13T22:31:30.617866",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_224247",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "3e94cecd74d9b7042cbcded679473f31976d0c94",
+      "created_at": "2026-05-13T22:42:52.791875",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_225410",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "85d03f9e959165d857d2e708c9d4cb7e15806f90",
+      "created_at": "2026-05-13T22:54:15.371288",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_230520",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "9923dff15077c8c8d15dedbb309536bd07d1eeae",
+      "created_at": "2026-05-13T23:05:26.946950",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_231643",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "c2889f121b8920bb5f1126d7734e3e0148a91c47",
+      "created_at": "2026-05-13T23:16:48.834004",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_232813",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "5b9184208ddd485c894a56b7e245c6e24666e449",
+      "created_at": "2026-05-13T23:28:19.702714",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_233926",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "04e5f7fcee8bc6b5799e9e352bf4b7ea90cfa794",
+      "created_at": "2026-05-13T23:39:31.002035",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260513_235117",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "9742d078c964fbcb857508dd7abf1a1d8b2461c1",
+      "created_at": "2026-05-13T23:51:22.080552",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_000233",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "3f6b93c572ed7500c3465c0c2f0d31954858e23b",
+      "created_at": "2026-05-14T00:02:38.486420",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_001353",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "a435e4f8931675802d2ca1978d5a7121598b68e2",
+      "created_at": "2026-05-14T00:13:58.478441",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_002507",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "e371efb77c22bebfe7775005f6ea7b908c5c80eb",
+      "created_at": "2026-05-14T00:25:12.999144",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_003630",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "de9e2b0b7039c595003fd556db326e37361d3bb2",
+      "created_at": "2026-05-14T00:36:36.065157",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_004745",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "6c39c79ee35fd1f095456136646a5cdc1637096e",
+      "created_at": "2026-05-14T00:47:50.115052",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_005858",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "a6edfa665b2239f668ce2d5dccd60885d0c65a2b",
+      "created_at": "2026-05-14T00:59:03.666210",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_011018",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "9f0cbecb9653bb043d428a2ffe8cfdc9697af2b4",
+      "created_at": "2026-05-14T01:10:23.394954",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_012145",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "ccf829261aa85c2bc34d620d8b49c2263ef50cd3",
+      "created_at": "2026-05-14T01:21:50.016878",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_013315",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "eb7a28f892ddd8afa68ca6d1fb3134a94433a736",
+      "created_at": "2026-05-14T01:33:23.078345",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_014446",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "db109b04c41104a3a9391b30b18bbdd574b3e3d5",
+      "created_at": "2026-05-14T01:44:51.858795",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_015616",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "040b664b03ee40cb870c6156be869ad652d9cdc5",
+      "created_at": "2026-05-14T01:56:22.046440",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_020736",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "243e69e7233765e6a1dda86b1aa42456cb89f833",
+      "created_at": "2026-05-14T02:07:41.377977",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_021842",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "b740a052c259eae5d592e14e6086a053c4f37f42",
+      "created_at": "2026-05-14T02:18:47.977490",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_022955",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "acbec7d0c8760e199fb0e73b90b656ec4b7fcb91",
+      "created_at": "2026-05-14T02:30:00.902150",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_024119",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "5ef613cf0410c07abf14c5381778f143e32b1a1c",
+      "created_at": "2026-05-14T02:41:25.337459",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_025234",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "7e68a5bcbb4b746798340a56153bb322fc45cbd0",
+      "created_at": "2026-05-14T02:52:39.782672",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/daily-backup-20260514_030000",
+      "backup_type": "daily_backup",
+      "reason": "Scheduled daily backup",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "66c874136cb1fec191f3bd2715cf18aff8190b3e",
+      "created_at": "2026-05-14T03:00:07.151451",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_030401",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "42b5d1e90507a953d761262293a63afbe1692237",
+      "created_at": "2026-05-14T03:04:05.641384",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_031516",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "5181d8650f573f52c3719b2d01f50e8f14771a75",
+      "created_at": "2026-05-14T03:15:21.686183",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_032628",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "0645d2f98c5324284b515b196184ddadd2078ca1",
+      "created_at": "2026-05-14T03:26:34.971837",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_033732",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "c20c22070b7e5516816034d7671c03455584d4fc",
+      "created_at": "2026-05-14T03:37:37.747090",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_034828",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "1c9e0a803a5be5e8c67b6b7807a61c29b6b59c2c",
+      "created_at": "2026-05-14T03:48:34.043551",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_035934",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "50cba10dbcbdfa72d967037697809234fa10d771",
+      "created_at": "2026-05-14T03:59:40.825591",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_041044",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "72bd07cec7903c78194bf134b098b64a915a459a",
+      "created_at": "2026-05-14T04:10:49.732319",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_042156",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "31594590d17c6bd2edb8bc4f21653d4f4843d333",
+      "created_at": "2026-05-14T04:22:01.830278",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_043306",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "2353cd7a5a717f474c1a9be7d79c8f3ad404c6b1",
+      "created_at": "2026-05-14T04:33:11.501369",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_044424",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "e2d9b6ca3663a14797f037a3820f2b79b4f92a91",
+      "created_at": "2026-05-14T04:44:31.206243",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_045438",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "92c32aaccb2d6b5af42913f4ec3d221f68f29688",
+      "created_at": "2026-05-14T04:54:44.221527",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_050550",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "732bc6eacc66cfacdf045a9df02c77f9c59d09dc",
+      "created_at": "2026-05-14T05:05:53.006605",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_051450",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "3f1fd0e4b253b31a60762bb5cc78b595eaf98766",
+      "created_at": "2026-05-14T05:14:53.578423",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_051755",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "f2c077e50934ffd4bfd70592fdec6cefca016203",
+      "created_at": "2026-05-14T05:18:03.499887",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_052950",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "73449f17d8026ccc47f1cd369d1be91a6529a752",
+      "created_at": "2026-05-14T05:29:56.213940",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_053718",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "d42cfbeaddad0fad3cc2148c8165cb0589684444",
+      "created_at": "2026-05-14T05:37:21.691556",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_054042",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "607ab4a88f901dd21ffbfb5ecb35cda9fd663cc0",
+      "created_at": "2026-05-14T05:40:48.142071",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_054943",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "7e0408aca23b7109eefdf2042beee76613143dd5",
+      "created_at": "2026-05-14T05:49:48.919546",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_055234",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "d871e74967b568fdcdccad355e753a016b86d1d8",
+      "created_at": "2026-05-14T05:52:44.824225",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_060202",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "fa7a3605fec56dc16d2b28993fb118618c13851a",
+      "created_at": "2026-05-14T06:02:08.253749",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_061237",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "926b482c2d89425b80f18cad6ef55f0b5cf3b416",
+      "created_at": "2026-05-14T06:12:49.158198",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_061527",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "1f4b3f53294e45f27ca7f187009a42bc3c861680",
+      "created_at": "2026-05-14T06:15:33.175555",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_062448",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "0381cde01a94d7676809773aa4c4131c506f23cf",
+      "created_at": "2026-05-14T06:24:54.323079",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_062705",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "1fc712cf07770dba609af969adc5ae674957fe36",
+      "created_at": "2026-05-14T06:27:07.747915",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_063644",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "a35cd48cc65506a6d6df1cdabdba2bb01a5f146a",
+      "created_at": "2026-05-14T06:36:50.918550",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_063914",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "b880425063e5b45751ee8b7e3d70f49c75888b0f",
+      "created_at": "2026-05-14T06:39:20.131828",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_064756",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "0b39acf2e274d71aedb1ae6cea31c8ece296de23",
+      "created_at": "2026-05-14T06:48:01.281918",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_065736",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "5819d3642cb9b3eefc31e60896395c97519a05c8",
+      "created_at": "2026-05-14T06:57:38.791134",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_065958",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "6f4fb7748772e1fadc7214c256cbf28654e4d449",
+      "created_at": "2026-05-14T07:00:01.277010",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_071000",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "5c8d449beb79dbf2db61a090ea4cbbb405c9e064",
+      "created_at": "2026-05-14T07:10:11.987999",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_071957",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "047391b61965793152af32124d8a581df965661e",
+      "created_at": "2026-05-14T07:20:00.120426",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_073037",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "41fbaada77618b7dfb0e13878f0e68c9029c7115",
+      "created_at": "2026-05-14T07:30:39.873639",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_073249",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "e33526ecba5f991d57d3335c2abac4c413a2d16a",
+      "created_at": "2026-05-14T07:32:52.306735",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_074147",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "b5717ea557f6701b0ca07973319ecbe31842ed01",
+      "created_at": "2026-05-14T07:41:50.406038",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_074413",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Enhanced Campaign: Audit-driven improvements: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "dc3021083296673e5dde75ae72201370a3dafac0",
+      "created_at": "2026-05-14T07:44:19.033739",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_075419",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "44579a31a18da5c473a08c79d561d833eb4abeab",
+      "created_at": "2026-05-14T07:54:21.748532",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_080403",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "e4e8c8b3374fb15d3673db46af84f265c1cc5bad",
+      "created_at": "2026-05-14T08:04:09.008685",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_081654",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "17345d9697f9d2eddc8f28892c5f2bb8aea9dd41",
+      "created_at": "2026-05-14T08:16:56.821068",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260514_082632",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "backup/pre-architectural-up-20260513_095635",
+      "source_commit": "2d41191fe64e40757328e002315f3fd40aef01ad",
+      "created_at": "2026-05-14T08:26:38.940417",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260515_100531",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "feat/obs-phase1",
+      "source_commit": "bb530f64a58bb3d02b50fb3af82afa365e98bec0",
+      "created_at": "2026-05-15T10:05:36.989588",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260515_101712",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "feat/obs-phase1",
+      "source_commit": "f32a7447f72d821a81c11d195af0fd406368959d",
+      "created_at": "2026-05-15T10:17:19.934657",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260515_102900",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "feat/obs-phase1",
+      "source_commit": "b17423d032fe6e7619784d4dec7ee487bcbcf6fc",
+      "created_at": "2026-05-15T10:29:06.046589",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260515_104054",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "feat/obs-phase1",
+      "source_commit": "bcfadf1643e580aee4945898ce76b92379a91bdb",
+      "created_at": "2026-05-15T10:40:59.069271",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260515_105214",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "feat/obs-phase1",
+      "source_commit": "018636e15fa637312069aecbcf8f560d52419e59",
+      "created_at": "2026-05-15T10:52:18.512335",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260515_110348",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "feat/obs-phase1",
+      "source_commit": "a6da19a93dfdbff3c1c616a67fc078dd22c60e4d",
+      "created_at": "2026-05-15T11:03:52.077322",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260515_112906",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "feat/obs-phase1",
+      "source_commit": "b8167ab0bb51677194372e2a61667f6f3efb36f7",
+      "created_at": "2026-05-15T11:29:19.736229",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260515_114530",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "feat/obs-phase1",
+      "source_commit": "d9eacc3ad42b35b7a3f94b48fd0ea6d3f92872b2",
+      "created_at": "2026-05-15T11:45:35.925460",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260515_120007",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "feat/obs-phase1",
+      "source_commit": "9b206e8f6e85d675f24f6d8d63bc518bfd041cc8",
+      "created_at": "2026-05-15T12:00:13.033990",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260515_121248",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "feat/obs-phase1",
+      "source_commit": "04517d0b9586346c27c2ee13a71dd41338bfbdb7",
+      "created_at": "2026-05-15T12:12:53.878991",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260515_122525",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "feat/obs-phase1",
+      "source_commit": "fa4e90ff5f9987171257be841ac15e2227cc9a6a",
+      "created_at": "2026-05-15T12:25:31.030820",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260515_214245",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "feat/obs-phase1",
+      "source_commit": "f377b7ed17b85bb08bb7e354deb028256e4e5344",
+      "created_at": "2026-05-15T21:42:59.431743",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260515_215800",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "feat/obs-phase1",
+      "source_commit": "92d3df311219bc6199e2c545c7289c8d10530967",
+      "created_at": "2026-05-15T21:58:06.702025",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260515_221054",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "feat/obs-phase1",
+      "source_commit": "90d7f1ac8f9a86370bb09f91ad40d5a1bb5a3ab3",
+      "created_at": "2026-05-15T22:11:00.871269",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260515_222354",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "feat/obs-phase1",
+      "source_commit": "96cf4b9075bd82b12eb29d762186d87460307283",
+      "created_at": "2026-05-15T22:23:59.953701",
+      "status": "created"
+    },
+    {
+      "branch_name": "backup/pre-architectural-up-20260516_114346",
+      "backup_type": "pre_architectural_upgrade",
+      "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+      "source_branch": "feat/obs-phase1",
+      "source_commit": "f377b7ed17b85bb08bb7e354deb028256e4e5344",
+      "created_at": "2026-05-16T11:44:04.336140",
+      "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/shutdown-backup-20260502_023849",
-    "backup_type": "shutdown_backup",
-    "reason": "System shutdown - automatic backup",
-    "source_branch": "main",
-    "source_commit": "fc22fce65bb4817ad137e76c13fc0f8fd79051e5",
-    "created_at": "2026-05-02T02:38:51.291641",
+    "branch_name": "backup/pre-architectural-up-20260516_114346",
+    "backup_type": "pre_architectural_upgrade",
+    "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+    "source_branch": "feat/obs-phase1",
+    "source_commit": "f377b7ed17b85bb08bb7e354deb028256e4e5344",
+    "created_at": "2026-05-16T11:44:04.336140",
     "status": "created"
   },
-  "last_backup_at": "2026-05-02T02:38:51.291671"
+  "last_backup_at": "2026-05-16T11:44:04.336174"
 }

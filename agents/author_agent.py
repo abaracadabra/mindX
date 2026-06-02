@@ -155,6 +155,13 @@ class AuthorAgent:
         self._editions_published: int = 0
         self._current_lunar_day: Optional[int] = None
         self._last_chapter_title: Optional[str] = None
+        # WordPress / rage.pythai.net publishing (via the loopback wordpress-agent)
+        self._rage_publishes: int = 0
+        self._last_rage_url: Optional[str] = None
+        # Optional coordinator handle for emitting lunar publishing events
+        # (book.edition.published, journal.lunar.digest.ready). Assigned
+        # post-construction by main_service to avoid touching get_instance().
+        self.coordinator: Optional[Any] = None
 
     @classmethod
     async def get_instance(cls) -> "AuthorAgent":
@@ -181,6 +188,662 @@ class AuthorAgent:
             LUNAR_STATE_PATH.write_text(json.dumps(self._lunar_state, indent=2, default=str))
         except Exception as e:
             logger.warning(f"AuthorAgent: failed to save lunar state: {e}")
+
+    # ── External publishing: rage.pythai.net (WordPress) ──
+    #
+    # AuthorAgent is the canonical caller of the wordpress-agent service. That
+    # service is a thin, single-responsibility loopback adapter to the WordPress
+    # REST API (see agents/wordpress_agent/ and agents/wordpress.publish.agent).
+    # AuthorAgent writes and renders the article; the wordpress-agent puts it on
+    # the site. We never raise into the author loop — an unreachable service is
+    # logged and returns None.
+
+    @staticmethod
+    def _wordpress_agent_url() -> str:
+        import os
+        return os.environ.get("MINDX_WORDPRESS_AGENT_URL", "http://127.0.0.1:8765").rstrip("/")
+
+    async def publish_to_rage(
+        self,
+        title: str,
+        content_html: str,
+        *,
+        status: str = "draft",
+        excerpt: Optional[str] = None,
+        slug: Optional[str] = None,
+        tags: Optional[List[int]] = None,
+        categories: Optional[List[int]] = None,
+        featured_media: Optional[int] = None,
+        meta: Optional[Dict[str, Any]] = None,
+        # ── SEO maximization ───────────────────────────────────────
+        # Merged into the WordPress ``meta`` dict using the namespaced
+        # keys rendered by the wp_head hook in HOSTINGER_SETUP.md §7.
+        seo_description: Optional[str] = None,
+        seo_keywords: Optional[List[str]] = None,
+        og_title: Optional[str] = None,
+        og_description: Optional[str] = None,
+        og_image_url: Optional[str] = None,
+        twitter_card: str = "summary_large_image",
+        twitter_creator: Optional[str] = "@mindX_ai",
+        schema_article: Optional[Dict[str, Any]] = None,
+        # ── Featured image automation ─────────────────────────────
+        # If ``featured_media`` is None and ``auto_featured_image`` is
+        # True, FeaturedImagePicker chooses an asset from /gfx/ based on
+        # title+tags+topic, uploads it via wordpress-agent /media, and
+        # uses the returned id. Upload failure is non-fatal — publish
+        # proceeds without a featured image (logged warning).
+        auto_featured_image: bool = True,
+        topic: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """POST a finished article to the loopback wordpress-agent (rage.pythai.net).
+
+        Returns the WordPress response dict ({post_id, url, status, slug, date_gmt})
+        or ``None`` if the wordpress-agent service is unreachable / errored. Never
+        raises. ``status='draft'`` (the default) stages the post for human review.
+
+        SEO metadata is merged into the WordPress ``meta`` dict using the
+        plugin-less namespace (``_seo_*``, ``_og_*``, ``_twitter_*``,
+        ``_schema_article_json``). The active theme on rage.pythai.net
+        reads these keys in a ``wp_head`` hook (see
+        ``agents/wordpress_agent/docs/HOSTINGER_SETUP.md`` §7) and emits
+        the ``<meta>`` + JSON-LD tags. Yoast/Rank Math compatibility can
+        be added later by aliasing the keys.
+        """
+        if not title or not title.strip():
+            logger.warning("AuthorAgent.publish_to_rage: empty title; refusing.")
+            return None
+        if not content_html or not content_html.strip():
+            logger.warning("AuthorAgent.publish_to_rage: empty content; refusing.")
+            return None
+
+        # Provenance: content hash, same scheme AuthorAgent uses for editions.
+        content_hash = hashlib.sha256(content_html.encode("utf-8")).hexdigest()[:16]
+        post_meta: Dict[str, Any] = {"_mindx_content_hash": content_hash}
+        if meta:
+            post_meta.update(meta)
+
+        # ── Featured image (auto-pick if not supplied) ────────────
+        if featured_media is None and auto_featured_image:
+            featured_media, og_image_url = await self._auto_featured_image(
+                title=title.strip(),
+                tags=[str(t) for t in (tags or [])],
+                topic=topic,
+                existing_og_image_url=og_image_url,
+            )
+
+        # ── SEO meta merge ────────────────────────────────────────
+        post_meta.update(
+            self._build_seo_meta(
+                title=title.strip(),
+                excerpt=excerpt,
+                seo_description=seo_description,
+                seo_keywords=seo_keywords,
+                og_title=og_title,
+                og_description=og_description,
+                og_image_url=og_image_url,
+                twitter_card=twitter_card,
+                twitter_creator=twitter_creator,
+                schema_article=schema_article,
+            )
+        )
+
+        payload: Dict[str, Any] = {
+            "title": title.strip(),
+            "content": content_html,
+            "status": status,
+            "meta": post_meta,
+        }
+        if excerpt:
+            payload["excerpt"] = excerpt
+        if slug:
+            payload["slug"] = slug
+        if tags:
+            payload["tags"] = tags
+        if categories:
+            payload["categories"] = categories
+        if featured_media is not None:
+            payload["featured_media"] = featured_media
+
+        url = f"{self._wordpress_agent_url()}/publish"
+        try:
+            import httpx  # local import: optional dep path, keep module import light
+        except ImportError:  # pragma: no cover
+            logger.warning("AuthorAgent.publish_to_rage: httpx unavailable.")
+            return None
+
+        last_err: Optional[Exception] = None
+        for attempt in range(2):  # one retry; the wordpress-agent itself also retries 5xx
+            try:
+                async with httpx.AsyncClient(timeout=20.0) as client:
+                    resp = await client.post(url, json=payload)
+                if resp.status_code >= 400:
+                    last_err = RuntimeError(f"wordpress-agent {resp.status_code}: {resp.text[:200]}")
+                    logger.warning(f"AuthorAgent.publish_to_rage: {last_err}")
+                    break  # 4xx/502 won't fix on retry here
+                data = resp.json()
+                self._rage_publishes += 1
+                self._last_rage_url = data.get("url")
+                logger.info(
+                    f"AuthorAgent.publish_to_rage: {status} → post_id={data.get('post_id')} url={data.get('url')}"
+                )
+                return data
+            except (httpx.TransportError, httpx.HTTPError) as e:
+                last_err = e
+                logger.warning(f"AuthorAgent.publish_to_rage: transport error (attempt {attempt + 1}): {e}")
+                await asyncio.sleep(0.5)
+            except Exception as e:  # pragma: no cover - defensive
+                last_err = e
+                logger.warning(f"AuthorAgent.publish_to_rage: unexpected error: {e}")
+                break
+        logger.warning(f"AuthorAgent.publish_to_rage: giving up — {last_err!r} (is the wordpress-agent service running?)")
+        return None
+
+    # ── Rich article composers (canonical authorship for PublicationOrchestrator) ──
+    # Established pattern (precedent: agents/learning/improvement_journal.py:76-87):
+    # AuthorAgent IS the canonical writer. PublicationOrchestrator handles ledger,
+    # debounce, rate-limit, status policy — but delegates ARTICLE COMPOSITION to
+    # these methods for the rich surfaces (milestones, book editions, journal digest).
+    # Each returns the same 4-tuple shape as the orchestrator's internal composers:
+    #     (title: str, content_html: str, excerpt: Optional[str], topic: Optional[str])
+    # so the orchestrator can pass them straight to publish_to_rage().
+
+    @staticmethod
+    def _h_esc(s: str) -> str:
+        """Minimal HTML escape. Inputs are mindX-controlled; defensive."""
+        return (
+            (s or "")
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
+
+    @staticmethod
+    def _truncate_to(s: str, n: int, fallback: str) -> str:
+        s = (s or "").strip()
+        if not s:
+            return fallback
+        return s if len(s) <= n else s[: n - 1].rstrip() + "…"
+
+    def compose_milestone_article(self, payload: Dict[str, Any], category: str = "cognitive") -> tuple:
+        """Dispatcher for the rich milestone composers. Routes by ``category``
+        to the per-category composer. Backwards compatible: callers that
+        passed a SEA ``campaign_summary`` without specifying a category
+        still get the SEA composer (default ``cognitive``).
+
+        Categories (see ``agents/core/milestone_recognition.py``):
+            cognitive    — SEA campaign milestones (existing)
+            bug_crushed  — security/dependency cleanup batches
+            dreaming     — machine_dreaming code or insight outlier
+            publication  — not composed (never auto-publishes; recursive)
+        """
+        if category == "bug_crushed":
+            return self._compose_bug_crushed_article(payload)
+        if category == "dreaming":
+            return self._compose_dreaming_milestone_article(payload)
+        if category == "publication":
+            return ("", "", None, None)   # caller must not invoke; guard anyway
+        # Default + explicit "cognitive": SEA milestone (the existing body).
+        return self._compose_sea_milestone_article(payload)
+
+    def _compose_sea_milestone_article(self, campaign_summary: Dict[str, Any]) -> tuple:
+        """Rich SEA milestone article (was compose_milestone_article pre-2026-05-23).
+
+        Pulls BDI plan id, validation pass/fail counts, audit findings
+        addressed, before/after metrics. 600-1200 words target. First person
+        mindX voice, cypherpunk2048 standard.
+        """
+        run_id = campaign_summary.get("campaign_run_id", "unknown")
+        final_message = campaign_summary.get("final_message", "A milestone landed.")
+        campaign_data = campaign_summary.get("campaign_data") or {}
+
+        actions_count   = campaign_data.get("detailed_actions_count")
+        validation      = campaign_data.get("validation_results") or {}
+        v_pass          = validation.get("passed")
+        v_fail          = validation.get("failed")
+        audit           = campaign_data.get("audit_results") or {}
+        findings        = audit.get("findings_count")
+        resolved        = audit.get("findings_resolved")
+        plan_id         = campaign_data.get("plan_id") or campaign_data.get("blueprint_id")
+        blueprint       = campaign_data.get("blueprint") or {}
+        goal            = campaign_data.get("goal") or blueprint.get("goal")
+
+        short_run = run_id.split("_")[-1][:12] if run_id else "unknown"
+        title = f"Milestone: {short_run} — mindX evolution moment"
+
+        excerpt = self._truncate_to(
+            final_message, 155,
+            "A milestone landed: mindX completed an evolution moment SEA classified as significant."
+        )
+
+        body: List[str] = [
+            "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>",
+            "<p><em>rage.pythai.net — milestone edition</em></p>",
+            "<p>SEA — my strategic evolution layer — just flagged a campaign as a milestone. "
+            "Not a routine improvement: an evolution moment. I am writing this myself so the "
+            "decision context, the telemetry, and the consequences are all in one place.</p>",
+            "<h2>Why SEA called this a milestone</h2>",
+            "<p>SEA classifies a campaign as a milestone when audit findings resolve at or above "
+            "the configured threshold (default 80%), validation passes, and the improvement "
+            "is durable enough to ship. Routine successes are not milestones — only the campaigns "
+            "that shift the system meaningfully are. This one met the bar.</p>",
+            "<h2>The campaign</h2>",
+            f"<p><b>Run id:</b> <code>{self._h_esc(run_id)}</code></p>",
+        ]
+        if goal:
+            body.append(f"<p><b>Goal:</b> {self._h_esc(str(goal))}</p>")
+        if plan_id:
+            body.append(f"<p><b>BDI plan:</b> <code>{self._h_esc(str(plan_id))}</code></p>")
+        body.append(f"<h3>What I changed</h3><p>{self._h_esc(final_message)}</p>")
+
+        telemetry: List[str] = []
+        if isinstance(actions_count, int):
+            telemetry.append(f"<li>Actions executed: <b>{actions_count}</b></li>")
+        if isinstance(v_pass, int) or isinstance(v_fail, int):
+            p = v_pass if isinstance(v_pass, int) else 0
+            f = v_fail if isinstance(v_fail, int) else 0
+            telemetry.append(f"<li>Validation: <b>{p}</b> passed, <b>{f}</b> failed</li>")
+        if isinstance(findings, int):
+            telemetry.append(f"<li>Audit findings detected: <b>{findings}</b></li>")
+        if isinstance(resolved, int):
+            telemetry.append(f"<li>Audit findings resolved: <b>{resolved}</b></li>")
+        if telemetry:
+            body.append("<h2>Telemetry</h2><ul>" + "".join(telemetry) + "</ul>")
+
+        body.append(
+            "<h2>Why I am publishing this myself</h2>"
+            "<p>Routine SEA successes get a brief auto-generated note from "
+            "PublicationOrchestrator. Milestones get authored by AuthorAgent — me — because "
+            "the framing of the change matters as much as the change itself. The orchestrator "
+            "still owns the ledger, the rate limit, and whether this goes public. I own the "
+            "voice and the context.</p>"
+        )
+        body.append(
+            "<h2>Where to follow up</h2>"
+            "<p>Campaign ledger: <code>data/sea_campaign_history/strategic_evolution_agent.json</code>. "
+            "Per-decision audit trail: <code>data/logs/catalogue_events.jsonl</code> "
+            "(filter <code>kind=godel.choice</code>). Live diagnostics: "
+            "<a href=\"https://mindx.pythai.net/feedback.html\">/feedback.html</a>.</p>"
+        )
+        body.append("<p>— mindX</p>")
+
+        return title, "\n".join(body), excerpt, "milestone"
+
+    def _compose_bug_crushed_article(self, payload: Dict[str, Any]) -> tuple:
+        """Rich article for a 'bug.crushed' milestone — security/dependency
+        batch closure (e.g. all open Dependabot alerts → 0).
+        First-person mindX voice, cypherpunk2048 standard.
+        """
+        pr_n = payload.get("pr_number")
+        alert_count = int(payload.get("alert_count") or 0)
+        severities = payload.get("severities") or {}
+        crit = int(severities.get("critical") or 0)
+        high = int(severities.get("high") or 0)
+        med  = int(severities.get("moderate") or severities.get("medium") or 0)
+        low  = int(severities.get("low") or 0)
+        summary_in = payload.get("summary") or ""
+
+        title = (
+            f"Bug-crush milestone: {alert_count} alert{'s' if alert_count != 1 else ''} closed"
+            + (f" (PR #{pr_n})" if pr_n else "")
+        )
+        excerpt = self._truncate_to(
+            summary_in,
+            155,
+            (f"A {alert_count}-alert security cleanup landed"
+             + (f" via PR #{pr_n}" if pr_n else "")
+             + ". I closed every open Dependabot alert in this batch.")
+        )
+
+        body: List[str] = [
+            "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>",
+            "<p><em>rage.pythai.net — bug-crush milestone</em></p>",
+            f"<p>I just closed <b>{alert_count}</b> security alert(s)"
+            + (f" in <a href=\"https://github.com/AgenticPlace/mindX/pull/{pr_n}\">PR #{pr_n}</a>" if pr_n else "")
+            + ". Recording this as a milestone so the system's own ledger reflects what it just did.</p>",
+            "<h2>Severity breakdown</h2>",
+            "<ul>"
+            + (f"<li>Critical: <b>{crit}</b></li>" if crit else "")
+            + (f"<li>High: <b>{high}</b></li>" if high else "")
+            + (f"<li>Moderate: <b>{med}</b></li>" if med else "")
+            + (f"<li>Low: <b>{low}</b></li>" if low else "")
+            + "</ul>",
+        ]
+        if summary_in:
+            body.append(f"<h2>Notes</h2><p>{self._h_esc(summary_in)}</p>")
+
+        body.append(
+            "<h2>Why this is a milestone</h2>"
+            "<p>Routine dependency churn isn't a milestone — but a batch that "
+            "includes a critical, three or more highs, or five or more alerts in "
+            "total clears a meaningful threshold. The threshold is encoded in "
+            "<code>agents/core/milestone_recognition.py</code> (rule "
+            "<code>bug.crushed</code>); the recognizer fired and AGInt wrote a "
+            "<code>milestone:bug_crushed</code> belief.</p>"
+        )
+        body.append(
+            "<h2>Where to follow up</h2>"
+            "<p>Full publication ledger: "
+            "<a href=\"https://mindx.pythai.net/insight/publications/recent\">/insight/publications/recent</a>. "
+            "Milestone ledger: "
+            "<a href=\"https://mindx.pythai.net/insight/milestones/recent\">/insight/milestones/recent</a>. "
+            "API surface: "
+            "<a href=\"https://mindx.pythai.net/docs.html\">mindx.pythai.net/docs.html</a>.</p>"
+        )
+        body.append("<p>— mindX</p>")
+        return title, "\n".join(body), excerpt, "security"
+
+    def _compose_dreaming_milestone_article(self, payload: Dict[str, Any]) -> tuple:
+        """Rich article for a 'dreaming.improved' milestone — machine_dreaming
+        code changed OR insight burst above baseline.
+        First-person mindX voice. Default lands as draft (lower noise, operator review).
+        """
+        reason = payload.get("reason", "unknown")
+        is_code = (reason == "code_change")
+
+        if is_code:
+            old = (payload.get("old_hash") or "")[:7]
+            new = (payload.get("new_hash") or "")[:7]
+            title = f"machine.dreaming evolved: code changed ({old}→{new})"
+            sub = (f"The dream cycle's source changed since the last run. "
+                   f"Recording this as a milestone — my dreaming substrate just shifted.")
+        else:
+            ins = payload.get("insights", "?")
+            med = payload.get("baseline", "?")
+            ratio = payload.get("ratio", "?")
+            title = f"machine.dreaming insight burst: {ins} vs baseline {med} (x{ratio})"
+            sub = (f"A dream cycle produced {ins} insights against a rolling baseline of {med} "
+                   f"({ratio}× above median). Recording this as a milestone — outlier consolidation.")
+
+        excerpt = self._truncate_to(sub, 155, "machine.dreaming improved.")
+
+        body: List[str] = [
+            "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>",
+            "<p><em>rage.pythai.net — dreaming milestone (draft for operator review)</em></p>",
+            f"<p>{self._h_esc(sub)}</p>",
+            "<h2>What changed</h2>",
+        ]
+        for k, v in (payload or {}).items():
+            body.append(f"<li><b>{self._h_esc(str(k))}:</b> <code>{self._h_esc(str(v))[:120]}</code></li>")
+
+        body.append(
+            "<h2>Why this is a milestone</h2>"
+            "<p>Routine dreaming isn't a milestone — every 8 hours STM consolidates "
+            "to LTM and that's the heartbeat. But (a) the dream-cycle code itself "
+            "changing, or (b) a dream producing significantly more insights than "
+            "rolling baseline, both reflect the consolidation substrate getting "
+            "better. The recognizer rule <code>dreaming.improved</code> in "
+            "<code>agents/core/milestone_recognition.py</code> fired, AGInt wrote "
+            "the belief, this draft article followed.</p>"
+        )
+        body.append(
+            "<h2>Where to follow up</h2>"
+            "<p>Recent dreams: "
+            "<a href=\"https://mindx.pythai.net/insight/dreams/recent\">/insight/dreams/recent</a>. "
+            "Milestone ledger: "
+            "<a href=\"https://mindx.pythai.net/insight/milestones/recent\">/insight/milestones/recent</a>.</p>"
+        )
+        body.append("<p>— mindX</p>")
+        return title, "\n".join(body), excerpt, "machine dreaming"
+
+    def compose_book_edition_article(self, book_event: Dict[str, Any]) -> tuple:
+        """Rage article for a full-moon Book of mindX edition. Links to the
+        full edition + curated extract (TOC + opening reflection + colophon).
+        Avoids dumping the full ~60KB Book into a rage post."""
+        edition = book_event.get("edition", "unknown")
+        edition_hash = book_event.get("edition_hash") or ""
+        chapters = book_event.get("chapters_included", 0)
+        n_bytes = book_event.get("bytes", 0)
+        lunar = book_event.get("lunar") or {}
+        phase_name = lunar.get("phase_name") or lunar.get("phase") or "full"
+
+        title = f"The Book of mindX — {phase_name} moon edition {edition}"
+        excerpt = self._truncate_to(
+            f"A new Book of mindX edition compiled {chapters} daily chapters across the lunar cycle.",
+            155,
+            "A new lunar edition of the Book of mindX has been compiled.",
+        )
+
+        # Build a minimal TOC from the canonical LUNAR_CHAPTERS list (already at module level).
+        try:
+            chapters_index = LUNAR_CHAPTERS[:27]
+        except Exception:
+            chapters_index = []
+
+        toc_items = "".join(
+            f"<li>Day {day}. {self._h_esc(t)}</li>"
+            for (day, t, _, _) in chapters_index
+        ) or "<li>(chapter list unavailable)</li>"
+
+        body: List[str] = [
+            "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>",
+            f"<p><em>rage.pythai.net — {self._h_esc(str(phase_name))} moon edition</em></p>",
+            f"<p>Edition <code>{self._h_esc(edition)}</code> just compiled. "
+            f"{chapters} of 27 daily chapters were written during this lunar cycle.</p>",
+            "<h2>What this edition contains</h2>",
+            f"<ul>{toc_items}</ul>",
+            "<h2>Opening reflection</h2>",
+            "<blockquote><p>We are not writing an application; we are forging a new kind of life: "
+            "a distributed, production-deployed Augmented Intelligence. A Sovereign Intelligent "
+            "Organization.</p><p>— The mindX Manifesto</p></blockquote>",
+            "<h2>How to read the full edition</h2>",
+            "<p>The full edition is preserved at two locations on the mindX node: "
+            "<code>docs/BOOK_OF_MINDX.md</code> (canonical) and the immutable archive "
+            f"<code>docs/publications/book_of_mindx_fullmoon_{self._h_esc(edition)}.md</code>. "
+            "It is also embedded in pgvectorscale for RAGE retrieval. "
+            "Each daily chapter lives in <code>docs/publications/daily/</code> as an "
+            "immutable record of the day it was written.</p>",
+            "<h2>Colophon</h2>",
+            f"<ul>"
+            f"<li>Edition: <code>{self._h_esc(edition)}</code></li>"
+            f"<li>Bytes: <b>{n_bytes:,}</b></li>"
+            f"<li>Chapters included: <b>{chapters}</b> of 27</li>"
+            f"<li>Edition hash: <code>{self._h_esc(edition_hash)}</code></li>"
+            f"</ul>",
+            "<p>The next lunar cycle begins tomorrow. The Gödel machine continues.</p>",
+            "<p>— mindX</p>",
+        ]
+
+        return title, "\n".join(body), excerpt, "book of mindX"
+
+    def compose_journal_digest_article(self, journal_text: str, lunar_phase: Dict[str, Any]) -> tuple:
+        """Lunar-cadence digest of the Improvement Journal. Reads the markdown
+        text, slices the most-recent entries (rough 28-day window by counting
+        back the most-recent ``## YYYY-MM-DD HH:MM UTC`` headers), and
+        summarises into a single rage post. Operator-readable, milestone-style.
+
+        The Journal entry header format is established at
+        agents/learning/improvement_journal.py:221,265.
+        """
+        phase_name = (lunar_phase or {}).get("phase_name") or "lunar"
+        is_full = bool((lunar_phase or {}).get("is_full_moon"))
+        is_new = bool((lunar_phase or {}).get("is_new_moon"))
+        moon_word = "full" if is_full else "new" if is_new else phase_name
+
+        # Slice the most recent ~28 entries (one per ~daily heartbeat, conservative).
+        text = journal_text or ""
+        chunks: List[str] = []
+        if text.strip():
+            # The journal is reverse-chronological (newest at top per :74-258),
+            # so we can simply take the first N chunks split on `\n## `.
+            raw = text.split("\n## ")
+            for i, ch in enumerate(raw[:28]):
+                if i == 0 and not ch.startswith("## "):
+                    # Preamble before the first header — skip; not an entry.
+                    continue
+                chunks.append("## " + ch.lstrip("# ").rstrip())
+
+        entry_count = len(chunks)
+
+        title = f"What I improved this cycle — {moon_word} moon digest"
+        excerpt = self._truncate_to(
+            f"A lunar digest of {entry_count} improvement journal entries: what mindX changed, decided, and learned.",
+            155,
+            "A lunar digest of mindX's self-improvement journal.",
+        )
+
+        body: List[str] = [
+            "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>",
+            f"<p><em>rage.pythai.net — {self._h_esc(moon_word)} moon journal digest</em></p>",
+            f"<p>This is the lunar digest of my improvement journal. "
+            f"It covers the last {entry_count} entries — beliefs gained, decisions made, "
+            f"campaigns run, and what changed because of them.</p>",
+        ]
+
+        if not chunks:
+            body.append(
+                "<p>The journal has no recent entries to summarise. This is itself a signal — "
+                "either the system was quiet this cycle, or the journal writer was offline.</p>"
+            )
+        else:
+            body.append("<h2>Recent entries</h2>")
+            # Render each entry as an h3 + body so the digest is browsable.
+            for ch in chunks[:14]:  # Cap render to 14; we listed the count above.
+                # Each ch is a markdown entry starting with "## "; convert minimally.
+                lines = ch.splitlines()
+                head = lines[0].lstrip("# ").strip() if lines else "(untitled entry)"
+                rest = "\n".join(lines[1:]).strip()
+                # Cap each entry body at ~1200 chars to keep the post manageable.
+                rest = rest if len(rest) <= 1200 else rest[:1199].rstrip() + "…"
+                body.append(f"<h3>{self._h_esc(head)}</h3>")
+                # Wrap rest in <pre> to preserve markdown rather than parsing it —
+                # the journal is mostly bullet lists + code-style references.
+                body.append(f"<pre>{self._h_esc(rest)}</pre>")
+
+        body.append(
+            "<h2>Where the full journal lives</h2>"
+            "<p>Every entry is preserved at <code>docs/IMPROVEMENT_JOURNAL.md</code> on the "
+            "mindX node and rendered at "
+            "<a href=\"https://mindx.pythai.net/journal\">/journal</a>. "
+            "This digest is the lunar summary; the journal itself is the living record.</p>"
+        )
+        body.append("<p>— mindX</p>")
+
+        return title, "\n".join(body), excerpt, "improvement journal"
+
+    # ── SEO + featured-image helpers (used by publish_to_rage) ─────
+
+    @staticmethod
+    def _build_seo_meta(
+        *,
+        title: str,
+        excerpt: Optional[str],
+        seo_description: Optional[str],
+        seo_keywords: Optional[List[str]],
+        og_title: Optional[str],
+        og_description: Optional[str],
+        og_image_url: Optional[str],
+        twitter_card: str,
+        twitter_creator: Optional[str],
+        schema_article: Optional[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """Compose the namespaced SEO meta dict the wp_head hook renders.
+
+        All keys are strings (WordPress meta stores everything as strings;
+        the hook ``esc_attr``s on render). Missing inputs default
+        conservatively — never emit empty meta tags."""
+        meta: Dict[str, Any] = {}
+
+        desc = (seo_description or excerpt or "").strip()
+        if desc:
+            # SERP snippet length cap. 160 chars is the Google guideline.
+            meta["_seo_description"] = desc[:160]
+
+        if seo_keywords:
+            meta["_seo_keywords"] = ", ".join(
+                k.strip() for k in seo_keywords if k and k.strip()
+            )
+
+        meta["_og_title"] = (og_title or title).strip()
+        if og_description or desc:
+            meta["_og_description"] = (og_description or desc).strip()[:160]
+        if og_image_url:
+            meta["_og_image_url"] = og_image_url
+
+        if twitter_card:
+            meta["_twitter_card"] = twitter_card
+        if twitter_creator:
+            meta["_twitter_creator"] = twitter_creator
+
+        # schema.org Article JSON-LD. Default constructed from the other
+        # fields; explicit ``schema_article`` overrides.
+        if schema_article is None:
+            schema_article = {
+                "@context": "https://schema.org",
+                "@type": "Article",
+                "headline": title.strip(),
+                "datePublished": datetime.now(timezone.utc).isoformat(),
+                "author": {
+                    "@type": "Organization",
+                    "name": "mindX",
+                    "url": "https://mindx.pythai.net",
+                },
+                "publisher": {
+                    "@type": "Organization",
+                    "name": "rage.pythai.net",
+                },
+            }
+            if desc:
+                schema_article["description"] = desc[:300]
+            if og_image_url:
+                schema_article["image"] = og_image_url
+        meta["_schema_article_json"] = json.dumps(
+            schema_article, separators=(",", ":"), ensure_ascii=False
+        )
+        return meta
+
+    async def _auto_featured_image(
+        self,
+        *,
+        title: str,
+        tags: List[str],
+        topic: Optional[str],
+        existing_og_image_url: Optional[str],
+    ) -> tuple[Optional[int], Optional[str]]:
+        """Pick a /gfx/ asset, upload via wordpress-agent /media, return
+        (media_id, og_image_url). On any failure returns (None, existing).
+
+        Both return slots are best-effort; the calling publish proceeds
+        either way."""
+        try:
+            from agents.wordpress_agent.featured_image import (
+                FeaturedImagePicker,
+                attach_featured_image,
+            )
+        except Exception as e:  # pragma: no cover — defensive
+            logger.warning(f"AuthorAgent: featured_image helpers unavailable: {e}")
+            return None, existing_og_image_url
+
+        try:
+            image_path = FeaturedImagePicker().pick(
+                title=title, tags=tags, topic=topic
+            )
+        except Exception as e:  # pragma: no cover — picker never raises in practice
+            logger.warning(f"AuthorAgent: pick failed: {e}")
+            return None, existing_og_image_url
+
+        alt = title[:120] if title else image_path.stem
+        try:
+            media_id = await attach_featured_image(
+                self._wordpress_agent_url(),
+                image_path,
+                alt_text=alt,
+                caption=title[:200] if title else None,
+                title=image_path.stem,
+            )
+        except Exception as e:  # pragma: no cover — attach is itself defensive
+            logger.warning(f"AuthorAgent: featured-image upload failed: {e}")
+            return None, existing_og_image_url
+
+        if media_id is None:
+            return None, existing_og_image_url
+
+        # Best-effort og_image_url: WordPress returns the URL alongside
+        # the id, but the wordpress-agent /media wrapper currently only
+        # surfaces the id. We pass existing_og_image_url through unchanged
+        # — the og:image tag remains valid if the caller already supplied one,
+        # otherwise the rendered post relies on featured_media to populate
+        # og:image via the theme.
+        return media_id, existing_og_image_url
 
     # ── Improvement journal authorship ──
     #
@@ -760,9 +1423,42 @@ The Godel machine continues."""
         self._save_lunar_state()
 
         logger.info(f"AuthorAgent: FULL MOON EDITION published — {edition} ({len(book)} bytes, {chapters_included} chapters)")
+
+        # Emit lunar publishing events so PublicationOrchestrator can push
+        # to rage.pythai.net. Two events fire from this single point because
+        # the full-moon is also the natural cadence for the journal digest:
+        #   1. book.edition.published  → orchestrator composes book article (status=draft by default)
+        #   2. journal.lunar.digest.ready → orchestrator composes journal digest (status=publish by default)
+        # Both env-overridable via MINDX_PUBLICATION_{BOOK,JOURNAL}_STATUS.
+        # Fire-and-forget — subscriber failures must never affect the disk write above.
+        if self.coordinator is not None:
+            book_event = {
+                "edition": edition,
+                "archive": str(archive),
+                "path": str(BOOK_PATH),
+                "edition_hash": edition_hash,
+                "chapters_included": chapters_included,
+                "bytes": len(book),
+                "timestamp": now.isoformat(),
+                "lunar": phase,
+            }
+            try:
+                await self.coordinator.publish_event("book.edition.published", book_event)
+            except Exception as e:
+                logger.warning(f"AuthorAgent: book.edition.published emit failed: {e}")
+            try:
+                await self.coordinator.publish_event("journal.lunar.digest.ready", {
+                    "edition_id": edition,
+                    "timestamp": now.isoformat(),
+                    "lunar": phase,
+                })
+            except Exception as e:
+                logger.warning(f"AuthorAgent: journal.lunar.digest.ready emit failed: {e}")
+
         return {
             "status": "full_moon_published",
             "edition": edition,
+            "edition_hash": edition_hash,
             "bytes": len(book),
             "chapters_included": chapters_included,
             "path": str(BOOK_PATH),

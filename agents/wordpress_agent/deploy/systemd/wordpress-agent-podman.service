@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: Apache-2.0
+# (c) 2026 BANKON — all rights reserved.
+#
+# Systemd unit that wraps the Podman container.
+# Use this when running under the container layer.
+#
+# Install:
+#   sudo cp deploy/systemd/wordpress-agent-podman.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now wordpress-agent-podman.service
+
+[Unit]
+Description=WordPress.agent (Podman container)
+Documentation=https://github.com/codephreak/wordpress-agent
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=%t/containers
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=70
+ExecStartPre=-/usr/bin/podman rm -f wordpress-agent
+ExecStart=/usr/bin/podman run \
+    --name wordpress-agent \
+    --rm \
+    --read-only \
+    --tmpfs /tmp:size=64m \
+    --security-opt no-new-privileges \
+    --cap-drop ALL \
+    --env-file /etc/wordpress-agent/wordpress-agent.env \
+    --env WP_SERVER_HOST=0.0.0.0 \
+    --env WP_SERVER_PORT=8765 \
+    --publish 127.0.0.1:8765:8765 \
+    localhost/wordpress-agent:0.1.0
+ExecStop=/usr/bin/podman stop -t 10 wordpress-agent
+KillMode=mixed
+Type=simple
+
+[Install]
+WantedBy=multi-user.target

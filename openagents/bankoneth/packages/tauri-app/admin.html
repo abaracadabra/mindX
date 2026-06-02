@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>bankoneth — Admin: contract naming audit</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { font-family: system-ui, -apple-system, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+      h1   { font-size: 1.25rem; margin: 0 0 1rem 0; }
+      section + section { margin-top: 1.5rem; }
+      .hint {
+        font-size: 0.875rem; color: #6b7280; line-height: 1.5;
+        background: #f9fafb; border-left: 3px solid #d1d5db;
+        padding: 0.75rem 1rem; margin: 1rem 0;
+      }
+      .hint code { background: #ffffff; padding: 0 0.25rem; border-radius: 3px; }
+    </style>
+  </head>
+  <body>
+    <h1>bankoneth — Admin: contract naming audit</h1>
+    <div class="hint">
+      Read-only inspector. Audits each registrar's reverse + forward records via
+      <code>verifyContractName()</code> from <code>@bankoneth/core</code>. No
+      wallet required. Each row expands to show actual values + gap list.
+    </div>
+    <div id="admin"></div>
+    <script type="module" src="./src/admin-page.ts"></script>
+  </body>
+</html>

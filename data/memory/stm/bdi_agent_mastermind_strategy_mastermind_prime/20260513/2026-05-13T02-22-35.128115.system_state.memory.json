@@ -1,0 +1,47 @@
+{
+  "timestamp": "2026-05-13T02:22:35.128115",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "content": {
+    "process_name": "bdi_deliberation",
+    "data": {
+      "selected_goal": {
+        "id": "e59e29ec",
+        "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+        "priority": 1,
+        "status": "pending",
+        "added_at": 1778664151.9320421,
+        "is_primary": true
+      },
+      "full_desire_queue": [
+        {
+          "id": "e59e29ec",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664151.9320421,
+          "is_primary": true
+        },
+        {
+          "id": "01021d59",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778664155.127676,
+          "is_primary": true
+        }
+      ]
+    }
+  },
+  "context": {
+    "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+    "run_id": "6359903f"
+  },
+  "tags": [
+    "bdi_deliberation",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "4e181f43c4110b15"
+}

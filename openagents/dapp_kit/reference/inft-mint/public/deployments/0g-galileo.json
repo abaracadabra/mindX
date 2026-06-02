@@ -1,0 +1,20 @@
+{
+  "network": "0g-galileo",
+  "chain_id": 16601,
+  "rpc_url": "https://evmrpc-testnet.0g.ai",
+  "explorer": "https://chainscan-galileo.0g.ai",
+  "native_currency": { "name": "0G", "symbol": "0G", "decimals": 18 },
+  "deployed_at": "2026-05-02T19:06:00Z",
+  "_note": "Placeholder deployment record. Real addresses fill in at deploy time per openagents/HANDOFF.md.",
+  "contracts": {
+    "iNFT_7857": {
+      "address": "0x0000000000000000000000000000000000000000",
+      "deployer": "0x0000000000000000000000000000000000000000",
+      "tx_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "block_number": 0,
+      "deployed_at": "2026-05-02T19:06:00Z",
+      "verified": false,
+      "_note": "Operator fills this in after running openagents/deploy/deploy_galileo.sh."
+    }
+  }
+}

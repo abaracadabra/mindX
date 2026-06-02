@@ -1,0 +1,43 @@
+{
+  "timestamp": "2026-05-13T02:17:29.870078",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_heartbeat",
+  "content": {
+    "process_name": "heartbeat_dialogue",
+    "data": {
+      "timestamp": "2026-05-13T09:17:29Z",
+      "agent": "mindx_heartbeat",
+      "model": "openrouter/nvidia/nemotron-3-super-120b-a12b:free",
+      "prompt": "You are mindX. Your top-fitness agent is coordinator_agent_main (score=55.0); your bottom is mastermind_prime (score=26.1). What evolutionary pressure is currently active?",
+      "response": "We need to answer: \"What evolutionary pressure is currently active?\" Given context: mindX, top-fitness agent coordinator_agent_main (score=55.0), bottom mastermind_prime (score=26.1). Evolutionary pressure likely refers to selection pressure favoring higher fitness, i.e., pressure to improve lower-scoring agents, or pressure to maintain high fitness of top agent. Could be \"selection pressure towards higher coordination/fitness\" or \"pressure to eliminate low-performing agents\". The question: \"Wha",
+      "latency_ms": 15784,
+      "state_context": {
+        "recent_godel": "self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free; self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free; self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free",
+        "ok": 0,
+        "total": 25,
+        "top_agent": "coordinator_agent_main",
+        "top_score": "55.0",
+        "bot_agent": "mastermind_prime",
+        "bot_score": "26.1",
+        "blueprint_title": "(none)",
+        "backlog_total": 939,
+        "running": 0,
+        "promoted": 150,
+        "dream_ts": "2026-05-13T07:41:57",
+        "stm_count": 10671
+      }
+    }
+  },
+  "context": {
+    "agent_id": "mindx_heartbeat",
+    "model": "nvidia/nemotron-3-super-120b-a12b:free",
+    "type": "self_reflection_grounded"
+  },
+  "tags": [
+    "heartbeat_dialogue",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "934ec8d6a5acc7db"
+}

@@ -180,6 +180,14 @@ SOLDIER_PERSONAS = {
 
 OLLAMA_URL = "http://localhost:11434"
 OLLAMA_CLOUD_URL = "https://ollama.com"
+OPENROUTER_URL = "https://openrouter.ai/api/v1"
+
+# Per-seat OpenRouter free-tier model map. Loaded from
+# data/config/board_openrouter_map.json once at first need; falls back to a
+# single workhorse free slug for any unmapped seat. The map is regenerated
+# empirically by scripts/test_openrouter_boardroom.py --write.
+OPENROUTER_MAP_PATH = PROJECT_ROOT / "data" / "config" / "board_openrouter_map.json"
+OPENROUTER_DEFAULT_FREE_MODEL = "openai/gpt-oss-120b:free"
 
 # Agent file path for loading extended personas
 BOARDROOM_AGENTS_DIR = PROJECT_ROOT / "agents" / "boardroom"
@@ -290,6 +298,13 @@ class Boardroom:
         """
         Convene a boardroom session. CEO presents directive, Soldiers evaluate.
 
+        When ``MINDX_BOARDROOM_SERVICE_ENABLED=1`` (Phase E cutover flag), this
+        delegates to the standalone Node.js ``boardroom-service`` via
+        ``agents/boardroom_client.py`` rather than running the in-process
+        consensus engine below. The flag is OPT-IN — default behaviour is the
+        original local path. Operators flip after confirming parity on the
+        live JSONL substrate (both old and new write to the same path).
+
         model_mode: "local" (SOLDIER_MODELS only), "cloud" (single CLOUD_MODEL for all members),
                     "auto" (try CLOUD_MODEL, fall back to local — default)
         priority: "executive" (preempt autonomous), "elevated", "standard" (default), "deferred"
@@ -298,6 +313,14 @@ class Boardroom:
                  Shorthand: "ciso,cro,cto" etc (prefix match).
         consensus: weighted score threshold for approval (default 0.666 supermajority).
         """
+        # ── Phase E delegation gate ───────────────────────────────────────
+        # Cheap env check on every call so the operator can flip at runtime.
+        if os.environ.get("MINDX_BOARDROOM_SERVICE_ENABLED") == "1":
+            return await self._convene_via_service(
+                directive=directive, importance=importance, context=context,
+                model_mode=model_mode, priority=priority, members=members,
+                consensus=consensus,
+            )
         priority_cfg = self.PRIORITY_LEVELS.get(priority, self.PRIORITY_LEVELS["standard"])
         preempted = False
 
@@ -370,6 +393,90 @@ class Boardroom:
             # Resume autonomous loop after executive session
             if preempted:
                 await self._resume_autonomous()
+
+    # ── Phase E: service delegation ──────────────────────────────────────
+    async def _convene_via_service(
+        self,
+        *,
+        directive: str,
+        importance: str,
+        context: Optional[Dict[str, Any]],
+        model_mode: str,
+        priority: str,
+        members: Optional[str],
+        consensus: float,
+    ) -> BoardroomSession:
+        """Delegate to the standalone boardroom-service and coerce the response
+        into the BoardroomSession dataclass shape the callers expect."""
+        from agents.boardroom_client import BoardroomClient
+        client = await BoardroomClient.get_instance()
+        ctx_str = None
+        if context:
+            try:
+                ctx_str = json.dumps(context, default=str)
+            except Exception:
+                ctx_str = str(context)
+        result = await client.convene_in_default_room(
+            directive=directive, importance=importance, context=ctx_str,
+        )
+        # Coerce. The Node service returns:
+        #   { session_id, room_id, directive, importance, started_at, finished_at,
+        #     votes: [{seat, value, weight, veto, reasoning, provider, model, latency_ms}],
+        #     verdict: { value, accept_weight, reject_weight, ... } }
+        session = BoardroomSession(
+            session_id=result.get("session_id") or f"br_{int(time.time())}",
+            directive=directive,
+            importance=importance,
+            timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        )
+        verdict = result.get("verdict") or {}
+        verdict_value = verdict.get("value", "")
+        # Map Node verdict → Python outcome vocabulary.
+        outcome_map = {
+            "PASSED": "approved",
+            "REJECTED": "rejected",
+            "VETOED": "rejected",
+            "TIED": "approved",         # tied carries — same as Python tie rule
+            "NO_QUORUM": "exploration",
+        }
+        session.outcome = outcome_map.get(verdict_value, "pending")
+        total_w = (verdict.get("accept_weight", 0) +
+                   verdict.get("reject_weight", 0) +
+                   verdict.get("abstain_weight", 0)) or 1.0
+        session.weighted_score = (verdict.get("accept_weight", 0) / total_w) if total_w else 0.0
+        for raw in (result.get("votes") or []):
+            try:
+                session.votes.append(SoldierVote(
+                    soldier_id=raw.get("seat", "?"),
+                    role=raw.get("seat", "?"),
+                    provider=raw.get("provider", "?"),
+                    model=raw.get("model", "?"),
+                    decision=("approve" if raw.get("value") == "accept" else
+                              "reject" if raw.get("value") == "reject" else "abstain"),
+                    reasoning=raw.get("reasoning", "")[:2000],
+                    confidence=0.8,
+                    latency_ms=int(raw.get("latency_ms", 0)),
+                    weight=float(raw.get("weight", 1.0)),
+                ))
+            except Exception as e:
+                logger.warning(f"Boardroom: failed to coerce service vote: {e}")
+        session.model_report = {
+            "transport": "boardroom-service (Node.js)",
+            "consensus_threshold": consensus,
+            "priority": priority,
+            "model_mode": model_mode,
+            "members": members,
+            "verdict": verdict,
+        }
+        # Persist to local in-memory cache so /insight/boardroom/sessions reads it.
+        self.sessions.append(session)
+        if len(self.sessions) > 100:
+            self.sessions = self.sessions[-100:]
+        logger.info(
+            f"Boardroom (via service) session {session.session_id}: {session.outcome} "
+            f"(score={session.weighted_score:.3f}, votes={len(session.votes)})"
+        )
+        return session
 
     async def convene_stream(
         self,
@@ -659,6 +766,25 @@ class Boardroom:
         "constitutional": "tier3",
     }
 
+    def _resolve_openrouter_model(self, soldier_id: str) -> Optional[str]:
+        """Pick the OpenRouter free-tier slug for this seat.
+
+        Reads data/config/board_openrouter_map.json once, caches on instance.
+        Returns None when no key is in env (caller skips the OpenRouter step).
+        For an unmapped seat we fall back to OPENROUTER_DEFAULT_FREE_MODEL so
+        every CEO + 7 soldiers always has a route to vote.
+        """
+        if not os.environ.get("OPENROUTER_API_KEY"):
+            return None
+        if not hasattr(self, "_openrouter_map_cache"):
+            self._openrouter_map_cache: Dict[str, str] = {}
+            try:
+                if OPENROUTER_MAP_PATH.exists():
+                    self._openrouter_map_cache = json.loads(OPENROUTER_MAP_PATH.read_text()) or {}
+            except Exception as e:
+                logger.debug(f"Boardroom: load board_openrouter_map.json failed: {e}")
+        return self._openrouter_map_cache.get(soldier_id) or OPENROUTER_DEFAULT_FREE_MODEL
+
     def _resolve_member_model(self, soldier_id: str, importance: str, model_mode: str) -> Optional[str]:
         """Pick the best model for this member at this importance.
 
@@ -806,6 +932,7 @@ class Boardroom:
         t0 = time.time()
         used_model = model
         is_cloud = False
+        provider_override: Optional[str] = None
         try:
             import aiohttp
             payload = {
@@ -848,8 +975,53 @@ class Boardroom:
                 except Exception as e:
                     logger.debug(f"Boardroom: vLLM path failed for {soldier_id}: {e}")
 
+            # Step 0.5: OpenRouter — per-seat free-tier diversity. When
+            # OPENROUTER_API_KEY is in env (loaded from BANKON Vault at
+            # service startup) and model_mode is "openrouter", "auto", or
+            # "cloud", we route the seat to its slug from the per-seat map.
+            # This is the only path today that gives genuine per-soldier
+            # model diversity at zero cost.
+            if not response and model_mode in ("openrouter", "auto", "cloud"):
+                or_model = self._resolve_openrouter_model(soldier_id)
+                if or_model:
+                    try:
+                        api_key = os.environ.get("OPENROUTER_API_KEY", "")
+                        headers = {
+                            "Authorization": f"Bearer {api_key}",
+                            "Content-Type": "application/json",
+                            "HTTP-Referer": "https://mindx.pythai.net",
+                            "X-Title": "mindX",
+                        }
+                        or_payload = {
+                            "model": or_model,
+                            "messages": [{"role": "user", "content": prompt}],
+                            "temperature": BOARDROOM_TEMPERATURE,
+                            "max_completion_tokens": BOARDROOM_NUM_PREDICT,
+                        }
+                        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=120)) as sess:
+                            async with sess.post(f"{OPENROUTER_URL}/chat/completions", json=or_payload, headers=headers) as resp:
+                                if resp.status == 200:
+                                    data = await resp.json()
+                                    choices = data.get("choices") or []
+                                    if choices:
+                                        msg = (choices[0] or {}).get("message") or {}
+                                        c = msg.get("content")
+                                        if isinstance(c, list):
+                                            c = "".join(p.get("text", "") for p in c if isinstance(p, dict) and p.get("type") == "text")
+                                        if c:
+                                            response = c.strip()
+                                            used_model = or_model
+                                            is_cloud = True
+                                            provider_override = f"openrouter/{data.get('provider', 'unknown')}"
+                                            logger.info(f"Boardroom: {soldier_id} responded via OpenRouter ({or_model})")
+                                else:
+                                    err_text = await resp.text()
+                                    logger.warning(f"Boardroom: OpenRouter error ({resp.status}) for {or_model}: {err_text[:200]}")
+                    except Exception as e:
+                        logger.warning(f"Boardroom: OpenRouter dispatch failed for {soldier_id}: {e}")
+
             # Step 1: Try local Ollama daemon (handles both local + cloud-proxied models)
-            # Skipped when vLLM already returned content above; also skipped
+            # Skipped when vLLM/OpenRouter already returned content above; also skipped
             # entirely when the operator forced backend=vllm (no Ollama fallback).
             ollama_skip = bool(response) or BOARDROOM_INFERENCE_BACKEND == "vllm"
             try:
@@ -958,9 +1130,13 @@ class Boardroom:
                     else:
                         vote_data = {"vote": "abstain", "reasoning": clean[:2000], "confidence": 0.3}
 
-            # Label: ollama/model for local, ollama-cloud/model for cloud
-            is_cloud = used_model != local_model and model_mode in ("auto", "cloud")
-            provider_label = f"ollama-cloud/{used_model}" if is_cloud else f"ollama/{used_model}"
+            # Label: respect provider_override when set by vLLM or OpenRouter
+            # paths above; otherwise infer ollama vs ollama-cloud from model.
+            if provider_override:
+                provider_label = provider_override
+            else:
+                is_cloud = used_model != local_model and model_mode in ("auto", "cloud")
+                provider_label = f"ollama-cloud/{used_model}" if is_cloud else f"ollama/{used_model}"
 
             vote_obj = SoldierVote(
                 soldier_id=soldier_id,

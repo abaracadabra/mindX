@@ -1,0 +1,44 @@
+groups:
+  - name: phase1_infra
+    interval: 30s
+    rules:
+      - alert: ProbeDown
+        expr: probe_success == 0
+        for: 2m
+        labels:
+          severity: page
+          project: mindx
+        annotations:
+          summary: "Blackbox probe failing: {{ $labels.instance }}"
+          description: "{{ $labels.instance }} has been unreachable for 2m (module={{ $labels.module }})."
+
+      - alert: HighDiskUsage
+        expr: (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}) > 0.90
+        for: 10m
+        labels:
+          severity: page
+          project: mindx
+        annotations:
+          summary: "Disk >90% on {{ $labels.mountpoint }}"
+          description: "Filesystem {{ $labels.mountpoint }} is at {{ $value | humanizePercentage }}. Check /home/mindx/obs/prometheus_data — TSDB capped at 8 GB."
+
+      - alert: HighMemoryUsage
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.95
+        for: 5m
+        labels:
+          severity: page
+          project: mindx
+        annotations:
+          summary: "Memory >95% on mindx-vps"
+          description: "Available memory exhausted. OOM imminent. Fast relief: `systemctl --user stop prometheus.service` as mindx user."
+
+      - alert: PrometheusSelfDown
+        expr: absent(up{job="prometheus"}) or up{job="prometheus"} == 0
+        for: 1m
+        labels:
+          severity: page
+          project: mindx
+          kind: heartbeat
+        annotations:
+          summary: "Prometheus is not scraping itself (container down)"
+          description: "The prometheus container has stopped scraping localhost:9090. Phase 1.5 will add a true dead-man's-switch via external pinger."

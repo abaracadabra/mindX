@@ -52,6 +52,7 @@ If your framework wants any subset of the eight, lift them — they don't depend
 | 6 | **Uniswap V4 Trader** — BDI-reasoning swap agent | Uniswap · Best API Integration ($5k) | — | shipped + persona | `tools/uniswap_v4_tool.py` + `openagents/uniswap/` |
 | 7 | **THOT.commit()** — pillar-gated memory-anchor primitive | composable; boosts M1 + M2 | **14** ✓ | shipped | `daio/contracts/THOT/v1/THOT.sol` |
 | 8 | **ERC-8004 AgentRegistry** — identity + capability layer | composable; boosts M1 + M4 | **20** ✓ | shipped | `daio/contracts/agentregistry/AgentRegistry.sol` |
+| 9 | **dApp Kit** — Tauri 2 + Lit + Vite framework. Wallet-connection, contract-interaction, contract-deployment as composable libraries. Same `src/` ships as web SPA + Tauri native + embeddable Web Component. | dApp infrastructure | scaffold | shipped (local; pending CI) | `openagents/dapp_kit/` — see [`README`](dapp_kit/README.md), [`QUICKSTART`](dapp_kit/QUICKSTART.md) |
 
 **Aggregate test totals: 193 tests, all green · 87% Python (Cabinet) line coverage · 89-100% Solidity coverage (all 4 daio contracts + both Conclave contracts at 100% line) · Slither audited (2 bugs fixed + permanent CI guard).**
 

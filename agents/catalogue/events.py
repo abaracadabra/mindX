@@ -46,6 +46,19 @@ EventKind = Literal[
     "admin.shadow_overlord_action",  # bankon_vault.shadow_overlord — privileged op (auth/provision/clear/sign/release)
     "admin.cabinet.provisioned",     # 8-wallet cabinet minted under company namespace
     "admin.cabinet.cleared",         # cabinet wiped under shadow-overlord authority
+    "marketing.campaign_proposed",   # marketinga.agent — campaign envelope drafted, awaiting governance routing
+    "marketing.campaign_executed",   # marketinga.agent — campaign envelope executed, MarketingAttributionReceipt emitted
+    "marketing.geo_probe",           # cfo_finance — share-of-voice probe rollup across LLM engines
+    "marketing.tessera_attested",    # any soldier — per-action Tessera credential issuance
+    "marketing.boardroom_routed",    # marketinga.agent — campaign routed through Boardroom; outcome + per-soldier votes
+    "marketing.soldier_skill_executed",  # any soldier — per-soldier marketing skill ran post-vote
+    "narrative.recap",               # NarratorAgent autonomous summary OR operator-pinned recap (DeltaVerse narrative channel)
+    "publication.attempted",         # PublicationOrchestrator — publish_to_rage invoked
+    "publication.published",         # PublicationOrchestrator — publish_to_rage returned a post_id
+    "publication.coalesced",         # PublicationOrchestrator — trigger fell within MIN_GAP_S, recorded as coalesced
+    "bug.crushed",                   # operator/SEA/CI — security alert batch closed (severities + count in payload)
+    "dreaming.improved",             # machine_dreaming — code change OR statistical-outlier insight burst
+    "milestone.recognized",          # AGInt.milestone_recognition — system-state milestone recognized
 ]
 
 EVENT_KINDS: tuple[str, ...] = tuple(EventKind.__args__)  # type: ignore[attr-defined]

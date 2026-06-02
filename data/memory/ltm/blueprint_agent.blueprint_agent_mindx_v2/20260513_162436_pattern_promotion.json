@@ -1,0 +1,31 @@
+{
+  "agent_id": "blueprint_agent.blueprint_agent_mindx_v2",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 339,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Active: 339 memories",
+      "Top processes: godel_core_choice(339)",
+      "Peak activity hour: 7:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 339
+        },
+        "process_distribution": {
+          "godel_core_choice": 339
+        },
+        "total_memories": 339,
+        "timestamp": "2026-05-13T16:24:36.418251"
+      }
+    ]
+  },
+  "promoted_at": "2026-05-13T16:24:36.418272",
+  "promotion_criteria": {
+    "pattern_threshold": 3,
+    "days_analyzed": 7
+  }
+}

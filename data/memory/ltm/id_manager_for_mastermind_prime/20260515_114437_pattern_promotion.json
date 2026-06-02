@@ -1,0 +1,31 @@
+{
+  "agent_id": "id_manager_for_mastermind_prime",
+  "analysis_period": "7_days",
+  "stm_memories_analyzed": 28,
+  "patterns": {
+    "success_patterns": [],
+    "failure_patterns": [],
+    "behavioral_insights": [
+      "Top processes: id_manager_wallet_exists(14), id_manager_address_lookup(14)",
+      "Peak activity hour: 19:00"
+    ],
+    "performance_trends": [
+      {
+        "memory_distribution": {
+          "system_state": 28
+        },
+        "process_distribution": {
+          "id_manager_wallet_exists": 14,
+          "id_manager_address_lookup": 14
+        },
+        "total_memories": 28,
+        "timestamp": "2026-05-15T11:44:37.894059"
+      }
+    ]
+  },
+  "promoted_at": "2026-05-15T11:44:37.894070",
+  "promotion_criteria": {
+    "pattern_threshold": 3,
+    "days_analyzed": 7
+  }
+}

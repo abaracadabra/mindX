@@ -1,0 +1,32 @@
+{
+  "name": "@openagents/deploy",
+  "version": "0.1.0",
+  "description": "Foundry + AlgoKit deployment drivers for openagents/ dApp kit. Pre-flight checks, deterministic deployment records, two-step mainnet confirmation.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./foundry": "./dist/foundry-driver.js",
+    "./algokit": "./dist/algokit-driver.js"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "viem": "^2.21.0",
+    "@openagents/wallet": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}

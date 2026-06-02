@@ -46,6 +46,61 @@ EVIDENCE_LOG = EVIDENCE_DIR / "thesis_evidence.jsonl"
 METRICS_FILE = EVIDENCE_DIR / "thesis_metrics.json"
 
 
+def _wilson_ci(successes: int, trials: int, z: float = 1.96) -> tuple:
+    """Wilson score interval for a binomial proportion (95% by default).
+
+    Returns (lower, upper) bounds in [0, 1]. Pure arithmetic — no scipy.
+    Conservative at small n; matches scipy.stats.binomtest within 0.001 for n>30.
+    """
+    if trials <= 0:
+        return (0.0, 0.0)
+    p = successes / trials
+    z2 = z * z
+    denom = 1.0 + z2 / trials
+    centre = (p + z2 / (2 * trials)) / denom
+    margin = (z * ((p * (1 - p) / trials + z2 / (4 * trials * trials)) ** 0.5)) / denom
+    return (max(0.0, centre - margin), min(1.0, centre + margin))
+
+
+def _darwinian_verdict_from_fitness(fallback_total: int = 0, fallback_rate: float = 0.0) -> str:
+    """Compute darwinian_selection verdict from per-agent fitness snapshot.
+
+    Reads the existing InsightAggregator (already aggregates 7 fitness axes
+    per agent from cost_ledger, traces, boardroom, dojo) and tests whether
+    top-quartile agents have measurably higher fitness than bottom-quartile.
+    Falls back to the legacy action-completion heuristic when no fitness data.
+    """
+    try:
+        from mindx_backend_service.insight_aggregator import InsightAggregator
+        agents = InsightAggregator.get_instance().snapshot() or []
+    except Exception:
+        agents = []
+
+    if len(agents) < 4:
+        # Need at least 4 agents to split into quartiles meaningfully.
+        if fallback_total > 0 and fallback_rate > 0.5:
+            return f"PARTIAL — {fallback_rate:.0%} action completion rate suggests selection pressure"
+        if len(agents) > 0:
+            return f"PARTIAL — only {len(agents)} agents tracked; need ≥4 for quartile gap"
+        return "INSUFFICIENT DATA — need per-agent fitness tracking"
+
+    scores = sorted([a.get("fitness", 50.0) for a in agents])
+    n = len(scores)
+    q1_size = max(1, n // 4)
+    bottom = scores[:q1_size]
+    top = scores[-q1_size:]
+    bot_mean = sum(bottom) / len(bottom)
+    top_mean = sum(top) / len(top)
+    delta = top_mean - bot_mean
+
+    # 5-point gap on a 0-100 scale ≈ small effect; 15-point gap ≈ large.
+    if delta >= 15.0:
+        return f"SUPPORTED — top quartile {top_mean:.1f} vs bottom {bot_mean:.1f} fitness (Δ={delta:.1f}pts, n={n} agents, q={q1_size}/quartile)"
+    if delta >= 5.0:
+        return f"PARTIAL — top quartile {top_mean:.1f} vs bottom {bot_mean:.1f} fitness (Δ={delta:.1f}pts, n={n} agents)"
+    return f"PARTIAL — only Δ={delta:.1f}pt fitness gap across {n} agents; selection pressure weak"
+
+
 @dataclass
 class ThesisExperiment:
     """A single experiment record — hypothesis → intervention → measurement → outcome."""
@@ -167,37 +222,56 @@ class ThesisEvidenceCollector:
             self.metrics.improvement_success_rate = len(succeeded) / len(improvements)
 
     def _collect_actions(self):
-        """Analyze actions from pgvector or diagnostics cache."""
-        try:
-            import aiohttp
-            import asyncio
-            # Try to read from local diagnostics cache
-            diag_path = PROJECT_ROOT / "data" / "logs" / "diagnostics_cache.json"
-            if diag_path.exists():
-                data = json.loads(diag_path.read_text())
-                actions = data.get("actions", [])
-            else:
-                actions = []
-        except Exception:
-            actions = []
-
-        # Also try reading from the last diagnostics/live response
-        # (In production, this would query pgvector directly)
-        if not actions:
+        """Analyze actions from pgvector. Read from a cached file written by
+        collect_actions_async() — the sync path can't query pgvector directly
+        because the async self-fetch deadlocks the FastAPI event loop.
+        """
+        cache_path = EVIDENCE_DIR / "actions_count.json"
+        if cache_path.exists():
             try:
-                import urllib.request
-                resp = urllib.request.urlopen("http://localhost:8000/diagnostics/live", timeout=5)
-                data = json.loads(resp.read())
-                actions = data.get("actions", [])
-            except Exception:
-                pass
+                data = json.loads(cache_path.read_text())
+                self.metrics.total_actions = int(data.get("total", 0))
+                self.metrics.actions_completed = int(data.get("completed", 0))
+                self.metrics.actions_failed = int(data.get("failed", 0))
+                if self.metrics.total_actions > 0:
+                    self.metrics.action_completion_rate = self.metrics.actions_completed / self.metrics.total_actions
+            except Exception as e:
+                logger.debug(f"actions_count.json unreadable: {e}")
 
-        if actions:
-            self.metrics.total_actions = len(actions)
-            self.metrics.actions_completed = sum(1 for a in actions if a.get("status") == "completed")
-            self.metrics.actions_failed = sum(1 for a in actions if a.get("status") == "failed")
-            if self.metrics.total_actions > 0:
-                self.metrics.action_completion_rate = self.metrics.actions_completed / self.metrics.total_actions
+    async def collect_actions_async(self) -> Dict[str, int]:
+        """Query pgvector directly for action counts. Caller awaits this from
+        an async context; results are written to actions_count.json so the
+        sync collect_all() picks them up on subsequent calls.
+        """
+        counts = {"total": 0, "completed": 0, "failed": 0, "pending": 0}
+        try:
+            from agents import memory_pgvector as _mpg
+            pool = await _mpg.get_pool()
+            if pool:
+                rows = await pool.fetch(
+                    "SELECT status, COUNT(*) AS n FROM actions GROUP BY status"
+                )
+                for r in rows:
+                    s = (r["status"] or "").lower()
+                    n = int(r["n"])
+                    counts["total"] += n
+                    if s in counts:
+                        counts[s] = n
+        except Exception as e:
+            logger.debug(f"collect_actions_async failed: {e}")
+            return counts
+        # Persist for the next sync collect_all() call.
+        try:
+            (EVIDENCE_DIR / "actions_count.json").write_text(json.dumps(counts))
+        except Exception:
+            pass
+        # Also update in-memory metrics so the very next summary() call sees them.
+        self.metrics.total_actions = counts["total"]
+        self.metrics.actions_completed = counts["completed"]
+        self.metrics.actions_failed = counts["failed"]
+        if counts["total"] > 0:
+            self.metrics.action_completion_rate = counts["completed"] / counts["total"]
+        return counts
 
     def _collect_dream_reports(self):
         """Analyze machine.dreaming outputs."""
@@ -271,27 +345,34 @@ class ThesisEvidenceCollector:
 
         # Claim 1: Self-improvement — system actually improves
         if m.total_improvements_attempted > 0:
+            ci = _wilson_ci(m.total_improvements_succeeded, m.total_improvements_attempted)
+            ci_str = f" [95% CI {ci[0]*100:.1f}%-{ci[1]*100:.1f}%, n={m.total_improvements_attempted}]"
             if m.improvement_success_rate > 0.5:
-                verdicts["self_improvement"] = f"SUPPORTED — {m.total_improvements_succeeded}/{m.total_improvements_attempted} improvements succeeded ({m.improvement_success_rate:.0%})"
+                verdicts["self_improvement"] = f"SUPPORTED — {m.total_improvements_succeeded}/{m.total_improvements_attempted} improvements succeeded ({m.improvement_success_rate:.0%}){ci_str}"
             elif m.improvement_success_rate > 0:
-                verdicts["self_improvement"] = f"PARTIAL — {m.total_improvements_succeeded}/{m.total_improvements_attempted} succeeded ({m.improvement_success_rate:.0%}), needs higher rate"
+                verdicts["self_improvement"] = f"PARTIAL — {m.total_improvements_succeeded}/{m.total_improvements_attempted} succeeded ({m.improvement_success_rate:.0%}){ci_str}"
             else:
-                verdicts["self_improvement"] = f"NOT SUPPORTED — 0/{m.total_improvements_attempted} succeeded"
+                verdicts["self_improvement"] = f"NOT SUPPORTED — 0/{m.total_improvements_attempted} succeeded{ci_str}"
         else:
             verdicts["self_improvement"] = "INSUFFICIENT DATA — no improvement cycles recorded"
 
         # Claim 2: Godel self-reference — improvement mechanism references itself
         if m.godel_self_referential > 0:
             ratio = m.godel_self_referential / max(m.total_godel_choices, 1)
-            verdicts["godel_self_reference"] = f"SUPPORTED — {m.godel_self_referential}/{m.total_godel_choices} choices are self-referential ({ratio:.0%})"
+            ci = _wilson_ci(m.godel_self_referential, m.total_godel_choices)
+            verdicts["godel_self_reference"] = f"SUPPORTED — {m.godel_self_referential}/{m.total_godel_choices} choices are self-referential ({ratio:.0%}) [CI {ci[0]*100:.2f}%-{ci[1]*100:.2f}%]"
         else:
             verdicts["godel_self_reference"] = "INSUFFICIENT DATA — no self-referential choices logged"
 
-        # Claim 3: Darwinian selection — fitter entities survive
-        if m.total_actions > 0 and m.action_completion_rate > 0.5:
-            verdicts["darwinian_selection"] = f"PARTIAL — {m.action_completion_rate:.0%} action completion rate suggests selection pressure"
-        else:
-            verdicts["darwinian_selection"] = "INSUFFICIENT DATA — need per-agent fitness tracking"
+        # Claim 3: Darwinian selection — fitter entities have measurably higher
+        # success. Consume InsightAggregator.snapshot() (already aggregates 7
+        # fitness axes per agent from cost_ledger + traces + boardroom + dojo)
+        # and compute the top vs bottom quartile gap. Falls back to the legacy
+        # action-rate heuristic when the fitness cache is empty.
+        verdicts["darwinian_selection"] = _darwinian_verdict_from_fitness(
+            fallback_total=m.total_actions,
+            fallback_rate=m.action_completion_rate,
+        )
 
         # Claim 4: Resilience — system recovers from failures
         if m.total_improvements_failed > 0 and m.total_improvements_succeeded > 0:
@@ -303,7 +384,8 @@ class ThesisEvidenceCollector:
 
         # Claim 5: Autonomy — operates without human intervention
         if m.total_godel_choices > 5:
-            verdicts["autonomy"] = f"SUPPORTED — {m.total_godel_choices} autonomous decisions logged across {m.evidence_span_hours:.1f} hours"
+            rate_per_hr = m.total_godel_choices / max(m.evidence_span_hours, 0.001)
+            verdicts["autonomy"] = f"SUPPORTED — {m.total_godel_choices} autonomous decisions across {m.evidence_span_hours:.1f}h ({rate_per_hr:.1f}/hr steady-state)"
         else:
             verdicts["autonomy"] = "INSUFFICIENT DATA — need more autonomous decision cycles"
 

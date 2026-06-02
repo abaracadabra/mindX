@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-05-13T03:12:32.157916",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "content": {
+    "process_name": "bdi_goal_set",
+    "data": {
+      "goal": {
+        "id": "ab3aabbc",
+        "goal": "Improve improvement success rate",
+        "priority": 1,
+        "status": "pending",
+        "added_at": 1778667151.9133916
+      }
+    }
+  },
+  "context": {
+    "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime"
+  },
+  "tags": [
+    "bdi_goal_set",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "9a210034c53b4688"
+}

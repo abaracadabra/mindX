@@ -204,6 +204,18 @@ class ModelSelector:
         for slug in candidates:
             summary = await self.aware.model_summary(slug, task_profile.task_class)
             score, breakdown = self._weighted_score(summary, task_profile, weights)
+            # Inference-budget metabolism: scale by remaining rate-limit budget so
+            # the self-aware selector routes toward tiers with headroom
+            # (cloud -> router -> local, and back as the 60s/3600s windows refill).
+            # Floor 0.05 (deprioritise, don't hard-exclude); fail-open: local /
+            # unknown -> 1.0, so this can never block all inference.
+            try:
+                from mindx.self.improve.handler_resolver import slug_budget_headroom
+                bud = slug_budget_headroom(slug)
+                breakdown["rate_limit_budget"] = bud
+                score *= max(0.05, bud)
+            except Exception:
+                pass
             scored.append(ScoredCandidate(slug, score, breakdown, summary))
 
         # Free-first floor: drop paid candidates unless value_proven.

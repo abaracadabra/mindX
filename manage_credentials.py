@@ -3,9 +3,9 @@
 BANKON Vault — CLI credential manager for mindX
 
 Usage:
-  python manage_credentials.py store <provider_id> <value>
+  python manage_credentials.py store <id> <value> [--context CTX]
   python manage_credentials.py list
-  python manage_credentials.py delete <provider_id>
+  python manage_credentials.py delete <id>
   python manage_credentials.py providers
   python manage_credentials.py load         # Load vault → environment (for testing)
 
@@ -13,8 +13,10 @@ Examples:
   python manage_credentials.py store gemini_api_key AIzaSy...
   python manage_credentials.py store groq_api_key gsk_...
   python manage_credentials.py store mindx_api_keys "key1,key2,key3"
-  python manage_credentials.py list
-  python manage_credentials.py providers
+
+  # Isolated namespace (wordpress.agent.keys) — entries NOT in PROVIDER_ENV_MAP,
+  # never loaded into os.environ at startup; reachable only on-demand:
+  python manage_credentials.py store wordpress.agent:wp_app_password 'xxxx' --context wordpress.agent.keys
 """
 
 import sys
@@ -41,14 +43,28 @@ def main():
 
     if command == "store":
         if len(sys.argv) < 4:
-            print("Usage: manage_credentials.py store <provider_id> <value>")
+            print("Usage: manage_credentials.py store <id> <value> [--context CTX]")
             sys.exit(1)
         provider_id = sys.argv[2]
         value = sys.argv[3]
+        # Optional --context CTX
+        context = None
+        rest = sys.argv[4:]
+        i = 0
+        while i < len(rest):
+            if rest[i] == "--context" and i + 1 < len(rest):
+                context = rest[i + 1]
+                i += 2
+            else:
+                print(f"Unknown argument: {rest[i]}")
+                sys.exit(1)
         try:
-            provider.store_credential(provider_id, value)
-            env_var = PROVIDER_ENV_MAP.get(provider_id, "?")
-            print(f"Stored: {provider_id} → {env_var} (AES-256-GCM encrypted)")
+            provider.store_credential(provider_id, value, context=context)
+            env_var = PROVIDER_ENV_MAP.get(provider_id)
+            if env_var:
+                print(f"Stored: {provider_id} → {env_var} [context={context or 'provider'}] (AES-256-GCM encrypted)")
+            else:
+                print(f"Stored: {provider_id} [context={context or 'provider'}] (AES-256-GCM encrypted, NOT env-mapped)")
         except ValueError as e:
             print(f"Error: {e}")
             sys.exit(1)

@@ -1,0 +1,78 @@
+{
+  "_comment": "x402 paywall pricing per endpoint. Values are in microUSDC (1e6 == $1). Hot-reloadable: changes take effect on next request. Contract documented in docs/services/x402_as_a_service.md §6.",
+  "_version": "1.0.0",
+  "_updated": "2026-05-13",
+
+  "free_quota": {
+    "_comment": "Per-wallet free-call allowance on cost-center endpoints. Resets every 24h rolling window. Anonymous callers get 0 free calls (must pay every time).",
+    "calls_per_24h": 10,
+    "anonymous_calls_per_24h": 0
+  },
+
+  "endpoints": {
+    "/coordinator/query":          { "max_amount_microusd": 2000, "description": "Single LLM call, single provider" },
+    "/coordinator/analyze":        { "max_amount_microusd": 2000, "description": "Multi-step but bounded" },
+    "/coordinator/improve":        { "max_amount_microusd": 2000, "description": "BDI deliberation, bounded" },
+    "/coordinator/backlog/process":{ "max_amount_microusd": 3000, "description": "Pops + processes one item, may chain calls" },
+    "/agents/{agent_id}/evolve":   { "max_amount_microusd": 5000, "description": "Full directive loop, up to N LLM calls" },
+    "/boardroom/convene":          { "max_amount_microusd": 5000, "description": "7-agent deliberation, 7 LLM calls" },
+    "/llm/chat":                   { "max_amount_microusd": 2000, "description": "Direct provider proxy, base price" },
+    "/llm/completion":             { "max_amount_microusd": 2000, "description": "Direct provider proxy, base price" },
+    "/bankon/identity/provision":  { "max_amount_microusd": 20000, "description": "One-time vault provisioning + optional on-chain mint" }
+  },
+
+  "rails": {
+    "base": {
+      "_comment": "USDC on Base. EIP-3009 transferWithAuthorization. Default fastest-cheapest EVM rail.",
+      "scheme": "exact",
+      "network": "base",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "payTo": "0x0000000000000000000000000000000000000000",
+      "extra": {
+        "chainId": 8453,
+        "decimals": 6,
+        "facilitator": "https://mindx.pythai.net:4022"
+      },
+      "_payTo_note": "Replace 0x000…000 with the BankonPaymentRouter address on Base after deploy. Until then the facilitator rejects settlement attempts on this rail and clients should pick Tempo or Algorand."
+    },
+    "tempo": {
+      "_comment": "USDC.e on Tempo. Multi-Party Payment chain. Used when settlement requires more than one signer (e.g. DAO-controlled treasury).",
+      "scheme": "exact",
+      "network": "tempo",
+      "asset": "0x0000000000000000000000000000000000000000",
+      "payTo": "0x0000000000000000000000000000000000000000",
+      "extra": {
+        "chainId": 4217,
+        "decimals": 6,
+        "facilitator": "https://mindx.pythai.net:4022"
+      },
+      "_payTo_note": "Tempo USDC.e contract + payee address pending Tempo mainnet deploy."
+    },
+    "algorand-mainnet": {
+      "_comment": "USDC ASA on Algorand Mainnet. Sub-second finality, $0.001 per transaction. Non-EVM rail.",
+      "scheme": "exact",
+      "network": "algorand-mainnet",
+      "asset": "31566704",
+      "payTo": "",
+      "extra": {
+        "assetId": 31566704,
+        "decimals": 6,
+        "facilitator": "https://mindx.pythai.net:4022",
+        "multisigThreshold": null
+      },
+      "_payTo_note": "Empty payTo means this rail is currently advertised but not yet settling. Fill in the Algorand payee address (58-char base32) after the aORC minter is deployed."
+    }
+  },
+
+  "facilitator": {
+    "url": "https://mindx.pythai.net:4022",
+    "verify_endpoint": "/verify",
+    "supported_endpoint": "/supported",
+    "_comment": "mindX-hosted facilitator. Callers may verify with any compatible facilitator and present the proof; mindX re-verifies on-chain before honoring it."
+  },
+
+  "idempotency": {
+    "settlement_cache_ttl_seconds": 60,
+    "_comment": "Verified settlements are cached for 60s so a network retry (same X-PAYMENT) within the window does not double-charge."
+  }
+}

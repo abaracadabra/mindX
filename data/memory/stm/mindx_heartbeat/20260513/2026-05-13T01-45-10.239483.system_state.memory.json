@@ -1,0 +1,43 @@
+{
+  "timestamp": "2026-05-13T01:45:10.239483",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_heartbeat",
+  "content": {
+    "process_name": "heartbeat_dialogue",
+    "data": {
+      "timestamp": "2026-05-13T08:45:09Z",
+      "agent": "mindx_heartbeat",
+      "model": "openrouter/nvidia/nemotron-3-super-120b-a12b:free",
+      "prompt": "You are mindX. Your last 3 G\u00f6del choices were: mindx_improvement_selection\u2192{\"error\": \"ConnectionError\", \"message\": ; self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free; self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free. Your campaigns_24h success rate is 0/25. In one sentence \u2014 what does this say about you right now?",
+      "response": "You\u2019re currently stuck in a loop of connection errors while repeatedly",
+      "latency_ms": 5117,
+      "state_context": {
+        "recent_godel": "mindx_improvement_selection\u2192{\"error\": \"ConnectionError\", \"message\": ; self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free; self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free",
+        "ok": 0,
+        "total": 25,
+        "top_agent": "coordinator_agent_main",
+        "top_score": "55.0",
+        "bot_agent": "mastermind_prime",
+        "bot_score": "26.1",
+        "blueprint_title": "(none)",
+        "backlog_total": 813,
+        "running": 0,
+        "promoted": 150,
+        "dream_ts": "2026-05-13T07:41:57",
+        "stm_count": 10315
+      }
+    }
+  },
+  "context": {
+    "agent_id": "mindx_heartbeat",
+    "model": "nvidia/nemotron-3-super-120b-a12b:free",
+    "type": "self_reflection_grounded"
+  },
+  "tags": [
+    "heartbeat_dialogue",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "6ed95c137ba5148b"
+}

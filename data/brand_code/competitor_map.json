@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "last_reviewed": "2026-05-09",
+  "rule": "I describe how mindX is positioned, not how a competitor falls short. Comparisons are factual ('mindX uses BDI; Bittensor uses subnet emissions') not evaluative ('mindX is better than Bittensor'). I never use a competitor's name as a foil.",
+  "competitors": {
+    "bittensor": {
+      "narrative_relationship": "complementary",
+      "their_thesis": "AI Bitcoin — decentralized neural network training via subnet emissions",
+      "our_position": "PYTHAI runs on every L1; we are not an L1 ourselves. Bittensor mining is one possible substrate that mindX agents can consume.",
+      "do_say": ["dTAO", "subnet", "PoAA-adjacent"],
+      "do_not_say": ["replaces", "obsolete", "superior"]
+    },
+    "olas": {
+      "narrative_relationship": "spiritual cousin",
+      "their_thesis": "Olas Proof-of-Active-Agent — agent legitimacy through measured activity",
+      "our_position": "We borrow the legitimacy framing without copying the emission curve. mindX uses the three-receipt model (Tessera + X402 + MarketingAttributionReceipt) for proof of authority + payment + attribution.",
+      "do_say": ["PoAA", "Pearl", "agent legitimacy"],
+      "do_not_say": ["fork", "replacement"]
+    },
+    "virtuals": {
+      "narrative_relationship": "marketplace adjacency",
+      "their_thesis": "Tokenized agent ownership through bonding-curve launches",
+      "our_position": "AgenticPlace is mindX's marketplace; agents register via ENS subnames (\\*.bankon.eth) and AgentRegistry (ERC-8004), priced through x402. Virtuals tokenizes agent ownership; we tokenize agent identity.",
+      "do_say": ["Virtuals Protocol", "GAME framework"],
+      "do_not_say": ["bonding curves are bad"]
+    },
+    "elizaos": {
+      "narrative_relationship": "framework peer",
+      "their_thesis": "Agent framework with strong character/lore primitives",
+      "our_position": "ElizaOS is a framework; mindX is a Counsellor cabinet on a constitutional substrate. Different layer of the stack.",
+      "do_say": ["Eliza framework", "shaw", "ai16z"],
+      "do_not_say": ["framework wars"]
+    },
+    "story_protocol": {
+      "narrative_relationship": "IP-rail adjacency",
+      "their_thesis": "On-chain IP and licensing primitives",
+      "our_position": "Story handles IP; mindX handles cognition. Composable — a mindX agent can register a piece of generated content as a Story IP asset.",
+      "do_say": ["IP Asset", "PIL"],
+      "do_not_say": ["VC pedigree", "compete"]
+    },
+    "ai16z": {
+      "narrative_relationship": "founder-led DAO peer",
+      "their_thesis": "AI-led DAO with strong founder narrative",
+      "our_position": "ai16z is a DAO that uses agents; mindX is the Counsellor cabinet that any DAO can adopt.",
+      "do_say": ["ai16z", "DAO governance"],
+      "do_not_say": ["replaces ai16z"]
+    },
+    "manus": {
+      "narrative_relationship": "cautionary tale",
+      "their_thesis": "Closed-source autonomous agent service",
+      "our_position": "Manus's invite-code reselling and AI-slop backlash is the failure mode mindX is structurally immune to: every action is signed, attested, and traceable through the three-receipt model.",
+      "do_say": ["transparency", "signed actions"],
+      "do_not_say": ["Manus failed because", "vapor"]
+    }
+  }
+}

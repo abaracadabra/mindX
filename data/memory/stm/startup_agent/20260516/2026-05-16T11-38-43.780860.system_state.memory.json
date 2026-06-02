@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-05-16T11:38:43.780860",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "startup_agent",
+  "content": {
+    "process_name": "godel_core_choice",
+    "data": {
+      "source_agent": "startup_agent",
+      "choice_type": "startup_ollama_bootstrap",
+      "perception_summary": "no inference connection",
+      "options_considered": [
+        "ollama_bootstrap_linux",
+        "skip"
+      ],
+      "chosen_option": "ollama_bootstrap_linux",
+      "rationale": "Ollama reachable at http://localhost:11434",
+      "outcome": "retry_failed",
+      "timestamp_utc": "2026-05-16T18:38:43.779303Z"
+    }
+  },
+  "context": {
+    "agent_id": "startup_agent"
+  },
+  "tags": [
+    "godel_core_choice",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "c5573b271be37964"
+}

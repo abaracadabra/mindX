@@ -1,0 +1,30 @@
+[Unit]
+Description=Alertmanager 0.32.0 — mindX paging
+After=network-online.target obs-network.service
+Wants=network-online.target obs-network.service
+
+[Container]
+Image=quay.io/prometheus/alertmanager:v0.32.0
+ContainerName=alertmanager
+AutoUpdate=registry
+Network=obs.network
+Volume=%h/obs/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:Z,ro
+Volume=%h/obs/alertmanager/smtp_app_password:/etc/alertmanager/smtp_app_password:Z,ro
+Volume=%h/obs/alertmanager_data:/alertmanager:Z
+PublishPort=127.0.0.1:9093:9093
+Exec=--config.file=/etc/alertmanager/alertmanager.yml \
+     --storage.path=/alertmanager \
+     --web.external-url=https://alerts.pythai.net/
+LogDriver=journald
+NoNewPrivileges=true
+
+[Service]
+Restart=no
+RestartSec=5
+TimeoutStartSec=300
+MemoryMax=48M
+CPUQuota=5%
+OOMScoreAdjust=300
+
+# Phase 1.2: Alertmanager is OFF BY DEFAULT (only useful with Prometheus running).
+# Auto-armed when `scripts/prom_on.sh` brings the Prom stack up.

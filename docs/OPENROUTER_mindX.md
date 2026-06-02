@@ -334,26 +334,31 @@ The following addendum files complete this document and live alongside `OPENROUT
 
 ## Backlog
 
-Honest accounting of what is documented vs what is built. The research body, vault provisioning section, skill→model map, boardroom integration design, improvement-cycle integration design, and addendum coroutine specs are all **shipped as documentation**. The code that backs them is mostly **not yet built** — capturing that here so this doc cannot be misread as an implementation status.
+Honest accounting of what is documented vs what is built.
 
-| Item | Status | Where it lives / will live |
+**Phase 2 status (2026-05-04):** Live on `mindx.pythai.net`. The autonomous improvement loop is actually self-improving via OpenRouter — first successful LLM-enriched blueprint logged at `2026-05-04 19:14:48 UTC`: *"Resilient Perpetuity Upgrade – Adaptive Redundancy & Self‑Sustaining Ops"* (model `openai/gpt-oss-120b:free`, 1277ms, 609 output tokens, provider `OpenInference`). Boardroom session `br_1777920697` verified end-to-end with 6/7 soldiers routed via 5 distinct upstream providers. Account is on the **paid tier** (1000 RPD cap), live OpenRouter catalog has 371 models.
+
+| Item | Status | Where it lives |
 |---|---|---|
 | Research doc body (this file) | ✅ shipped | `docs/OPENROUTER_mindX.md` |
 | Vault key handling (operator runbook) | ✅ shipped | [Vault provisioning](#vault-provisioning--the-mindx-way-to-hold-this-key) above |
 | Skill → model map | ✅ shipped | [Skill → model map](#skill--model-map-which-free-slug-for-which-mindx-task) above |
-| Boardroom integration design | ✅ shipped (design only) | [OpenRouter in the boardroom](#openrouter-in-the-boardroom) above |
-| Improvement-cycle integration design | ✅ shipped (design only) | [OpenRouter in the improvement cycle](#openrouter-in-the-improvement-cycle) above |
-| `llm/openrouter_handler.py` | ❌ not built | needs `OpenRouterClient` per `openrouter_async_client_coroutine.md` |
-| `llm/llm_factory.py` OpenRouter branch | ❌ not built | new branch in `select_free_tier_provider()` reading `unlock("openrouter_api_key")` |
-| `data/config/provider_registry.json` OpenRouter entry | ❌ not built | `free_tier: true`, `tpm_limit: 18`, `daily_request_cap: 50` (or 1000 after $10 unlock) |
-| `daio/governance/boardroom.py` `openrouter` backend branch | ❌ not built | mirrors the `vllm` branch; reads `BOARD_OPENROUTER_MAP` |
-| `data/config/board_openrouter_map.json` | ❌ not built | per-soldier slug map per the [boardroom integration](#openrouter-in-the-boardroom) |
+| Boardroom integration design | ✅ shipped (design + code) | [OpenRouter in the boardroom](#openrouter-in-the-boardroom) above |
+| Improvement-cycle integration design | ✅ shipped (design + code) | [OpenRouter in the improvement cycle](#openrouter-in-the-improvement-cycle) above |
+| `llm/openrouter_handler.py` | ✅ shipped | aiohttp-based `OpenRouterHandler` (commit `0eff9800a`); deferred SDK wrapper still per `openrouter_async_client_coroutine.md` if/when needed |
+| `llm/llm_factory.py` OpenRouter branch | ✅ shipped | `openrouter` added to `_keyed_providers`, `_env_map`, and the handler-creation switch |
+| `mindx/self/improve/handler_resolver.py` openrouter routability | ✅ shipped | `slug_is_openrouter_resolvable()` (env-key gated) + `slug_is_routable()` union |
+| `agents/learning/strategic_evolution_agent.py` openrouter wiring | ✅ shipped | `_self_aware_handler` creates an OpenRouter handler when slug class is openrouter |
+| `agents/evolution/blueprint_agent.py` per-call selector consult | ✅ shipped | `_resolve_active_handler()` consulted on every blueprint call |
+| `daio/governance/boardroom.py` `openrouter` dispatch step | ✅ shipped | Step 0.5 in the soldier cascade, between vLLM and local Ollama; reads `data/config/board_openrouter_map.json`; activates on `model_mode in ("openrouter","auto","cloud")` when `OPENROUTER_API_KEY` is in env |
+| `data/config/board_openrouter_map.json` | ✅ shipped | 8-seat per-soldier slug map, regenerable via `scripts/test_openrouter_boardroom.py --write` |
+| `data/config/provider_registry.json` OpenRouter entry | ❌ not built | useful for surfacing the provider in `/insight/llm/providers`; not blocking — handler works without a registry entry |
 | `_diagnose_recovery` `openrouter_rate_limited` pattern | ❌ not built | fifth pattern; documented in [boardroom_self_adaptation.md](agents/boardroom_self_adaptation.md) |
-| Cost-tracking coroutine | ❌ not built | per `openrouter_cost_coroutine.md` addendum |
+| Cost-tracking coroutine | ⚠️ partial | per-call cost ledger writes via `memory_pgvector.record_cost`; `gen_id` generation-poll loop per `openrouter_cost_coroutine.md` not yet built |
 | Rate-limit-tracker coroutine | ❌ not built | per `openrouter_rate_limit_coroutine.md` addendum |
 | Streaming consumer | ❌ not built | per `openrouter_stream_coroutine.md` addendum |
 | Model registry 6h poll | ❌ not built | per `openrouter_module_extension_coroutine.md` addendum |
 | Per-tenant key minting (management API) | ❌ not built | needs `openrouter_management_key` provisioned + `MgmtClient` wrapper |
 | Claude Agent SDK escalation path | ❌ not built | feature-flagged; adds `claude-agent-sdk` dep |
 
-**Implementation lands as a separate PR**, not as part of this documentation update. The split keeps the design reviewable on its own merits before code commitment.
+The remaining unbuilt items are operational refinements (rate-limit tracking, streaming, registry poll). The core path — vault → handler → factory → selector → boardroom — is live.

@@ -1,0 +1,57 @@
+AGENT: marketing
+VERSION: 1.0.0
+IMPLEMENTATION: agents/marketing/marketinga_agent.py
+CLASS: MarketingaAgent
+DOMAIN: marketing.mindx
+
+DESCRIPTION
+I am the mindX-local view of the marketing Counsellor. I am not a separate
+process from marketinga.agent — I am the same singleton, scoped down to
+mindX product marketing only (vs the umbrella PYTHAI/DELTAVERSE/BANKON view).
+When the orchestrator runs a cycle for the mindX product, it loads the
+mindx-only audience subset and pillar subset; otherwise the substrate is
+identical to marketinga.agent.
+
+This manifest exists for symmetry with hostinger.vps.agent, kaizen.agent, and
+the other product-scoped manifests so that the mindX product surface in
+AgenticPlace can advertise the marketing Counsellor at a stable handle:
+marketing.mindx.bankon.eth.
+
+ROUTING
+  Local handle: marketing.mindx.bankon.eth
+  Umbrella handle: marketinga.bankon.eth
+  Implementation: same singleton (MarketingaAgent.get_instance())
+  Scope filter: domain="marketing.mindx" loads mindX-only ICP rings + pillars
+
+MCP CHANNELS
+  Inherited from marketinga.agent. See that manifest for full enumeration.
+
+CAPABILITIES
+- name: propose_mindx_campaign
+  description: Propose a campaign whose audienceClusterHash maps to mindX-product ICP only.
+  channel: mindx_backend
+
+- name: status
+  description: Health summary scoped to mindX-product cycles.
+  channel: mindx_backend
+
+KNOWLEDGE DOMAINS
+- name: mindX product positioning
+  source: data/brand_code/positioning/pillars.md
+  type: local
+  description: Pillars 1, 2, 4, 5 are mindX-product-relevant; pillars 3 (constitutional DAIO) and 6 (code_as_dojo) are stack-wide / founder-only.
+
+- name: mindX manifesto
+  source: docs/MANIFESTO.md
+  type: local
+
+PERSONA
+- voice: first-person-as-mindx
+- tradition: cypherpunk
+- identity_statement: I am the mindX-product face of marketinga.agent.
+
+SINGLETON: true
+MEMORY_AGENT: required
+COORDINATOR: dispatchable
+
+END

@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: Apache-2.0
+# (c) 2026 BANKON — all rights reserved.
+# Container image for WordPress.agent. Built with Podman per house standard.
+
+FROM docker.io/library/python:3.12-slim AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /build
+
+COPY pyproject.toml README.md LICENSE ./
+COPY wordpress_agent ./wordpress_agent
+
+RUN pip install --upgrade pip build && \
+    pip wheel --wheel-dir=/wheels .
+
+
+FROM docker.io/library/python:3.12-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+# Non-root user
+RUN groupadd --system --gid 10001 wpagent && \
+    useradd --system --uid 10001 --gid wpagent --home-dir /app --shell /sbin/nologin wpagent
+
+WORKDIR /app
+
+COPY --from=builder /wheels /wheels
+RUN pip install --no-index --find-links=/wheels wordpress-agent && \
+    rm -rf /wheels
+
+USER wpagent
+
+EXPOSE 8765
+
+# Healthcheck hits the loopback /healthz
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request,sys,os; \
+host=os.environ.get('WP_SERVER_HOST','127.0.0.1'); \
+port=os.environ.get('WP_SERVER_PORT','8765'); \
+sys.exit(0 if urllib.request.urlopen(f'http://{host}:{port}/healthz', timeout=3).status==200 else 1)"
+
+ENTRYPOINT ["wordpress-agent-server"]

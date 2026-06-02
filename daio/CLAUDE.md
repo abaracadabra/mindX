@@ -122,6 +122,15 @@ THOT (Transferable Hyper-Optimized Tensor) Layer
 │   └── NFPrompT.sol        # Agent Prompt NFT
 ├── agents/
 │   └── TransmuteAgent.sol  # Automated THOT creation from raw data
+├── libraries/
+│   └── THOTLib.sol         # Merkle commitment + Matryoshka prefix binding (RFC-6962)
+├── commitment/
+│   └── THOTCommitmentRegistry.sol  # Canonical roots + censura revocation
+├── python/                 # Off-chain reference codec (byte-parity with THOTLib)
+│   └── thot/{merkle,matryoshka,thot8_cpu,builder}.py
+├── interfaces/
+│   ├── ITHOTRegistry.sol            # Discovery (ratings, model name, params)
+│   └── ITHOTCommitmentRegistry.sol  # Cryptographic (registered / revoked / prefix)
 └── marketplace/
     └── AgenticPlace.sol    # Decentralized skill marketplace
 

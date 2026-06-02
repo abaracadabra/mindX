@@ -1,0 +1,26 @@
+[Unit]
+Description=blackbox_exporter 0.27.0 — HTTP probes
+After=network-online.target obs-network.service
+Wants=network-online.target obs-network.service
+
+[Container]
+Image=quay.io/prometheus/blackbox-exporter:v0.27.0
+ContainerName=blackbox-exporter
+AutoUpdate=registry
+Network=obs.network
+Volume=%h/obs/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:Z,ro
+PublishPort=127.0.0.1:9115:9115
+Exec=--config.file=/etc/blackbox_exporter/config.yml
+LogDriver=journald
+NoNewPrivileges=true
+
+[Service]
+Restart=no
+RestartSec=5
+TimeoutStartSec=120
+MemoryMax=48M
+CPUQuota=5%
+OOMScoreAdjust=200
+
+# Phase 1.2: blackbox_exporter is OFF BY DEFAULT (probes only useful with Prom).
+# Started by `scripts/prom_on.sh` when needed.

@@ -1,0 +1,23 @@
+# PYTHAI / DELTAVERSE / BANKON — llms.txt
+
+> Voice register: cypherpunk. First-person-as-mindx.
+> Cypherpunk tradition (not cyberpunk).
+
+## Sites
+- [mindX](https://mindx.pythai.net/) — mindX surface
+- [AgenticPlace](https://agenticplace.pythai.net/) — AgenticPlace surface
+- [BANKON](https://bankon.pythai.net/) — BANKON surface
+
+## Pillars
+- cognition_you_own
+- agents_that_pay_each_other
+- constitution_before_code
+- aGLM_as_sovereign_model_family
+- ethglobal_openagents_lineage
+- code_as_dojo (founder voice only)
+
+## Optional
+- [Manifesto](docs/MANIFESTO.md)
+- [Thesis](docs/THESIS.md)
+- [Marketing Receipts](docs/MARKETING_RECEIPTS.md)
+

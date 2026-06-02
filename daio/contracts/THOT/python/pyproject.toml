@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thot"
+version = "0.1.0"
+description = "Canonical THOT family reference implementation (8 / 768 / 1024 / 2048 / 4096)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "codephreak (Gregory)", email = "ops@bankon.pythai.net" },
+]
+keywords = ["thot", "merkle", "matryoshka", "mindx", "bankon", "agenticplace"]
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "numpy>=1.26",
+    "pycryptodome>=3.20",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-cov>=4"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# (c) 2026 BANKON — all rights reserved

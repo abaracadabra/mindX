@@ -1,0 +1,71 @@
+{
+  "timestamp": "2026-05-13T19:47:40.244393",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "content": {
+    "process_name": "bdi_deliberation",
+    "data": {
+      "selected_goal": {
+        "id": "113c87a2",
+        "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+        "priority": 1,
+        "status": "pending",
+        "added_at": 1778726710.257741,
+        "is_primary": true
+      },
+      "full_desire_queue": [
+        {
+          "id": "113c87a2",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726710.257741,
+          "is_primary": true
+        },
+        {
+          "id": "cd3e53e5",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726767.3753684,
+          "is_primary": true
+        },
+        {
+          "id": "602f2435",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726798.2557418,
+          "is_primary": true
+        },
+        {
+          "id": "8535a7f9",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726829.266864,
+          "is_primary": true
+        },
+        {
+          "id": "03c9e8d6",
+          "goal": "Implement the following evolution: Implement the top improvement suggestion.",
+          "priority": 1,
+          "status": "pending",
+          "added_at": 1778726860.2438035,
+          "is_primary": true
+        }
+      ]
+    }
+  },
+  "context": {
+    "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+    "run_id": "d4cdab1a"
+  },
+  "tags": [
+    "bdi_deliberation",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "6708e60ae3c4e499"
+}

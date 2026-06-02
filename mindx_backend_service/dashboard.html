@@ -101,7 +101,8 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 .claim-verdict{font-size:15px;font-weight:700;font-family:var(--mono)}
 .claim-verdict.sup{color:var(--green)}.claim-verdict.par{color:var(--amber)}.claim-verdict.nos{color:var(--red)}.claim-verdict.ins{color:var(--text3)}
 .claim-detail{font-size:12px;color:var(--text);margin-top:6px;line-height:1.5}
-.thesis-nums{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}
+.thesis-nums{display:grid;grid-template-columns:repeat(6,1fr);gap:2px}
+@media(max-width:900px){.thesis-nums{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:600px){.thesis-nums{grid-template-columns:repeat(2,1fr)}}
 .tn{background:var(--surface);padding:12px;text-align:center}
 .tn-val{font-family:var(--mono);font-size:20px;font-weight:700;color:#e6edf3}
@@ -395,6 +396,7 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
     <span class="hdr-sub" id="hdr-sub">connecting...</span>
     <span class="live-badge" id="live-badge">...</span>
     <span class="live-dot" id="live-dot"></span>
+    <span class="fresh" id="fresh-diag" style="margin-left:6px"></span>
   </div>
 </div>
 
@@ -435,6 +437,8 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
       <div class="tn"><div class="tn-val" style="color:var(--text3)">--</div><div class="tn-lbl">self-referential</div></div>
       <div class="tn"><div class="tn-val" style="color:var(--text3)">--</div><div class="tn-lbl">memories</div></div>
       <div class="tn"><div class="tn-val" style="color:var(--text3)">--</div><div class="tn-lbl">actions</div></div>
+      <div class="tn" id="tn-coverage" title="Fraction of attempted directives matching real backlog items. 0.0 = stub directives only; >0 = Mastermind variation loop is binding to real backlog. Thesis proof surface (emergent.md)."><div class="tn-val" style="color:var(--text3)">--</div><div class="tn-lbl">backlog coverage</div></div>
+      <div class="tn" id="tn-succ-rate" title="Campaign success rate (7-day window). Manifesto Pillar II claim: 'the learning rate is non-zero'. This tile is the empirical witness."><div class="tn-val" style="color:var(--text3)">--</div><div class="tn-lbl">7d success rate</div></div>
     </div>
   </div>
 
@@ -461,19 +465,19 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
   <div class="layer" id="L3">
 
     <!-- Now Thinking — live SSE -->
-    <div class="section-hdr open" onclick="toggleSec(this)" id="hdr-think" style="display:none"><span>Now Thinking <span class="insight-sub" id="think-stream-state">connecting...</span></span><span class="arrow">&#x25B8;</span></div>
+    <div class="section-hdr open" onclick="toggleSec(this)" id="hdr-think" style="display:none"><span>Now Thinking <span class="insight-sub" id="think-stream-state">connecting...</span></span><span style="display:flex;align-items:center;gap:8px"><span class="fresh" id="fresh-think"></span><span class="arrow">&#x25B8;</span></span></div>
     <div class="section-body open" id="sec-think"><div class="think-list" id="think-list"></div></div>
 
     <!-- Self-Improvement Ledger -->
-    <div class="section-hdr open" onclick="toggleSec(this)" id="hdr-ledger" style="display:none"><span>Self-Improvement Ledger <span class="insight-sub">mastermind campaigns &middot; hover pill for directive</span></span><span class="arrow">&#x25B8;</span></div>
+    <div class="section-hdr open" onclick="toggleSec(this)" id="hdr-ledger" style="display:none"><span>Self-Improvement Ledger <span class="insight-sub">mastermind campaigns &middot; hover pill for directive</span></span><span style="display:flex;align-items:center;gap:8px"><span class="fresh" id="fresh-ledger"></span><span class="arrow">&#x25B8;</span></span></div>
     <div class="section-body open" id="sec-ledger"><div class="ledger-row" id="ledger-row"></div></div>
 
     <!-- Per-Agent Fitness Leaderboard -->
-    <div class="section-hdr open" onclick="toggleSec(this)" id="hdr-fitness" style="display:none"><span>Per-Agent Fitness &middot; Darwinian Leaderboard <span class="insight-sub">weighted rollup of 7 axes &middot; /insight/fitness</span></span><span class="arrow">&#x25B8;</span></div>
+    <div class="section-hdr open" onclick="toggleSec(this)" id="hdr-fitness" style="display:none"><span>Per-Agent Fitness &middot; Darwinian Leaderboard <span class="insight-sub">weighted rollup of 7 axes &middot; 0&ndash;100 scale &middot; /insight/fitness</span></span><span style="display:flex;align-items:center;gap:8px"><span class="fresh" id="fresh-fitness"></span><span class="arrow">&#x25B8;</span></span></div>
     <div class="section-body open" id="sec-fitness"></div>
 
     <!-- Selection Events -->
-    <div class="section-hdr open" onclick="toggleSec(this)" id="hdr-selection" style="display:none"><span>Selection Events <span class="insight-sub" id="sel-mode">mode: shadow</span></span><span class="arrow">&#x25B8;</span></div>
+    <div class="section-hdr open" onclick="toggleSec(this)" id="hdr-selection" style="display:none"><span>Selection Events <span class="insight-sub" id="sel-mode">mode: shadow</span></span><span style="display:flex;align-items:center;gap:8px"><span class="fresh" id="fresh-selection"></span><span class="arrow">&#x25B8;</span></span></div>
     <div class="section-body open" id="sec-selection"></div>
 
     <!-- Agents & Reputation -->
@@ -487,6 +491,10 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
     <!-- Memory & Knowledge -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>Memory & Knowledge <span style="color:var(--text3);font-weight:400" id="mem-count"></span></span><span class="arrow">&#x25B8;</span></div>
     <div class="section-body" id="sec-memory"></div>
+
+    <!-- Machine Dreaming — memories consolidated into long-term knowledge -->
+    <div class="section-hdr" onclick="toggleSec(this)" id="hdr-dreams" style="display:none"><span>Machine Dreaming <span class="insight-sub">lunar consolidation &middot; memories &rarr; long-term knowledge</span></span><span style="display:flex;align-items:center;gap:8px"><span class="fresh" id="fresh-dreams"></span><span class="arrow">&#x25B8;</span></span></div>
+    <div class="section-body" id="sec-dreams" style="display:none"></div>
 
     <!-- Godel Audit Trail -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>G&#246;del Audit Trail <span style="color:var(--text3);font-weight:400" id="godel-count"></span></span><span class="arrow">&#x25B8;</span></div>
@@ -508,8 +516,8 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
     <div class="section-hdr" onclick="toggleSec(this)"><span>Endpoints & API</span><span class="arrow">&#x25B8;</span></div>
     <div class="section-body" id="sec-endpoints"></div>
 
-    <!-- System Logs -->
-    <div class="section-hdr" onclick="toggleSec(this)"><span>System Logs</span><span class="arrow">&#x25B8;</span></div>
+    <!-- Logs → Memories — every log mindX writes is also a memory -->
+    <div class="section-hdr" onclick="toggleSec(this)"><span>Logs &rarr; Memories <span class="insight-sub">every log is a memory</span></span><span class="arrow">&#x25B8;</span></div>
     <div class="section-body" id="sec-logs"></div>
 
   </div>
@@ -816,6 +824,109 @@ function toggleSec(hdr){
 let cpuH=[],curT=0,seenTs=new Set(),pendingNew=[];
 const _TABS=['dialogue','actions','agents','dojo','feed'];
 
+// ── Fmt: shared, safe humanization (global; used by render() + insight IIFE) ──
+window.Fmt=(function(){
+  function _n(v){return (typeof v==='number'&&isFinite(v))?v:((v!=null&&v!==''&&isFinite(+v))?+v:null)}
+  return {
+    n:_n,
+    // The single choke point: never let undefined/null/NaN/objects leak to the DOM.
+    safe:function(v){
+      if(v==null)return'—';
+      if(typeof v==='number')return isFinite(v)?v.toLocaleString():'—';
+      if(typeof v==='string')return v;
+      if(typeof v==='boolean')return v?'yes':'no';
+      try{var j=JSON.stringify(v);return (j&&j.length<=80)?j:(Array.isArray(v)?('['+v.length+' items]'):'{…}')}catch(e){return'—'}
+    },
+    num:function(v){var n=_n(v);return n==null?'—':n.toLocaleString()},
+    count:function(v){var n=_n(v);if(n==null)return'—';var a=Math.abs(n);
+      if(a>=1e9)return(n/1e9).toFixed(1).replace(/\.0$/,'')+'B';
+      if(a>=1e6)return(n/1e6).toFixed(1).replace(/\.0$/,'')+'M';
+      if(a>=1e3)return(n/1e3).toFixed(1).replace(/\.0$/,'')+'K';
+      return String(n)},
+    pct:function(v,dp){var n=_n(v);return n==null?'—':(n*100).toFixed(dp==null?1:dp)+'%'},
+    dur:function(s){var n=_n(s);if(n==null)return'—';n=Math.max(0,Math.floor(n));
+      if(n<60)return n+'s';
+      var d=Math.floor(n/86400),h=Math.floor(n%86400/3600),m=Math.floor(n%3600/60),sec=n%60;
+      if(d>0)return d+'d '+h+'h';
+      if(h>0)return h+'h '+m+'m';
+      return m+'m '+sec+'s'},
+    _epoch:function(ts){ // → seconds-epoch or null; tolerant of int/float/ISO/ms
+      if(ts==null)return null;
+      if(typeof ts==='number')return ts>1e12?ts/1000:ts;
+      var s=String(ts).trim(); if(!s)return null;
+      if(/^\d+(\.\d+)?$/.test(s)){var f=+s;return f>1e12?f/1000:f}
+      var iso=(s.indexOf('T')>0&&s.indexOf('Z')<0&&s.indexOf('+')<0)?s+'Z':s;
+      var d=Date.parse(iso);return isNaN(d)?null:d/1000},
+    timeAgo:function(ts){var e=this._epoch(ts);if(e==null)return'—';
+      var s=Math.floor(Date.now()/1000-e);if(s<0)s=0;
+      if(s<60)return s+'s ago';if(s<3600)return Math.floor(s/60)+'m ago';
+      if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago'},
+    tsRel:function(ts){var e=this._epoch(ts);if(e==null)return'—';
+      var d=new Date(e*1000),hh=String(d.getUTCHours()).padStart(2,'0'),mm=String(d.getUTCMinutes()).padStart(2,'0');
+      return hh+':'+mm+' ('+this.timeAgo(ts)+')'},
+    score:function(v,opt){var n=_n(v);if(n==null)return'—';opt=opt||{};
+      return n.toFixed(opt.dp==null?2:opt.dp)+(opt.max!=null?(' / '+opt.max):'')},
+    ellipsis:function(s,n){s=(s==null?'':String(s));n=n||80;return s.length>n?s.slice(0,n-1)+'…':s},
+    esc:function(s){return (s==null?'':String(s)).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  };
+})();
+
+// ── Freshness: per-source live/stale/error tracking → standard header chip ──
+window.Freshness=(function(){
+  var S={},CAD={};
+  function st(key){
+    var r=S[key]; if(!r)return{state:'none',age:null};
+    if(r.status==='error')return{state:'error',age:r.t?Math.floor((Date.now()-r.t)/1000):null};
+    var age=Math.floor((Date.now()-r.t)/1000),cad=(CAD[key]||6000)/1000;
+    return{state:(r.status==='empty'?'empty':(age>cad*3?'stale':'live')),age:age}
+  }
+  return {
+    cadence:function(key,ms){CAD[key]=ms;return this},
+    mark:function(key,status){
+      if(status==='error'){S[key]=S[key]||{};S[key].status='error';S[key].t=S[key].t||Date.now();}
+      else{S[key]={status:status||'ok',t:Date.now()};}
+      this.paint(key);return this;
+    },
+    age:function(key){return st(key).age},
+    state:function(key){return st(key).state},
+    badge:function(key){
+      var x=st(key),a=x.age,dot,cls,txt;
+      if(x.state==='live'){dot='●';cls='live';txt='live · '+(a<=2?'now':a+'s ago')}
+      else if(x.state==='stale'){dot='⚠';cls='stale';txt='STALE · '+Fmt.dur(a)}
+      else if(x.state==='error'){dot='✕';cls='err';txt='error'+(a!=null?' · '+Fmt.dur(a):'')}
+      else if(x.state==='empty'){dot='○';cls='empty';txt='no data'}
+      else{dot='○';cls='none';txt='…'}
+      return '<span class="fresh '+cls+'">'+dot+' '+txt+'</span>';
+    },
+    paint:function(key){var el=document.getElementById('fresh-'+key);if(el)el.innerHTML=this.badge(key)},
+    paintAll:function(){for(var k in S)this.paint(k)}
+  };
+})();
+// Repaint every second so "Xs ago" ticks up and live→STALE flips without a fetch.
+setInterval(function(){
+  if(!window.Freshness)return;
+  Freshness.paintAll();
+  // The global header badge honestly tracks the primary /diagnostics/live feed:
+  // no more falsely-LIVE while the feed has actually stalled.
+  var st=Freshness.state('diag');
+  var lb=document.getElementById('live-badge'),ld=document.getElementById('live-dot');
+  if(lb){
+    if(st==='live'){lb.textContent='LIVE';lb.className='live-badge';}
+    else if(st==='stale'){lb.textContent='STALE';lb.className='live-badge off';}
+    else if(st==='error'){lb.textContent='OFFLINE';lb.className='live-badge off';}
+  }
+  if(ld)ld.className='live-dot'+(st==='live'?'':' off');
+},1000);
+// Self-contained styles for freshness chips / banners / skeletons.
+(function(){var st=document.createElement('style');st.textContent=
+'.fresh{font-family:var(--mono,monospace);font-size:9px;letter-spacing:.3px;padding:0 4px;white-space:nowrap;opacity:.9}'+
+'.fresh.live{color:var(--green,#56d364)}.fresh.stale{color:var(--amber,#e3b341)}'+
+'.fresh.err{color:var(--red,#f85149)}.fresh.empty,.fresh.none{color:var(--text3,#7d8590)}'+
+'.panel-banner{font-family:var(--mono,monospace);font-size:10px;color:var(--amber,#e3b341);background:rgba(227,179,65,.08);border:1px solid rgba(227,179,65,.25);border-radius:4px;padding:4px 8px;margin:4px 0}'+
+'.skel{background:linear-gradient(90deg,rgba(255,255,255,.03),rgba(255,255,255,.09),rgba(255,255,255,.03));background-size:200% 100%;animation:skelsh 1.2s infinite;border-radius:4px;height:13px;margin:6px 0}'+
+'@keyframes skelsh{0%{background-position:200% 0}100%{background-position:-200% 0}}';
+document.head.appendChild(st)})();
+
 function spk(a){if(!a.length)return'';const mx=Math.max(...a,1);let r='';a.forEach((v,i)=>{const h=Math.max(1,Math.round(v/mx*8));r+=`<rect x="${i*2}" y="${8-h}" width="1" height="${h}"/>`});return`<svg class="sparkline" width="${a.length*2}" height="8">${r}</svg>`}
 function bar(p,cls){return`<div class="gc-bar"><div class="gc-bar-fill ${cls||'g'}" style="width:${Math.min(100,p)}%"></div></div>`}
 function sa(a){return a?a.slice(0,6)+'..'+a.slice(-4):'?'}
@@ -992,7 +1103,7 @@ function render(d){
       const agActs=(d.actions||[]).filter(ac=>ac.agent_id===a.entity_id).slice(0,5);
       const agGodel=(d.godel_choices||[]).filter(g=>g.agent===a.entity_id).slice(0,5);
       agH+=`<div class="agent-card" onclick="this.classList.toggle('open')" data-tip="${a.entity_id}: ${role.slice(0,80)}">`;
-      agH+=`<div>${rk(tier)} <a href="/dojo" class="alink name">${a.entity_id}</a> ${dj?`<span style="color:var(--text3);font-size:11px">${dj.rank} ${dj.score}</span>`:''}</div>`;
+      agH+=`<div>${rk(tier)} <a href="/dojo" class="alink name">${a.entity_id}</a> ${dj?`<span style="color:var(--text3);font-size:11px" title="dojo rank · reputation score">${Fmt.safe(dj.rank)} &middot; ${Fmt.safe(dj.score)}</span>`:''}</div>`;
       agH+=`<div class="meta">${role.slice(0,80)}</div>`;
       agH+=`<div class="detail">`;
       // Level 2: Identity + reputation
@@ -1000,9 +1111,9 @@ function render(d){
       agH+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">wallet</span> <a href="/identities" class="link" style="font-size:10px">${sa(a.address)}</a></div>`;
       agH+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">tier</span> <span style="color:var(--text)">${tier}</span> ${dj?.bona_fide?'<span style="color:var(--green)">BONA FIDE</span>':''}</div>`;
       if(dj){agH+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">rank</span> <span style="color:var(--violet)">${dj.rank}</span></div>`;
-      agH+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">score</span> <span style="color:var(--green)">${dj.score}</span></div>`}
+      agH+=`<div style="padding:3px 6px;background:rgba(5,8,16,.3);border-radius:2px"><span style="color:var(--text3)">score</span> <span style="color:var(--green)">${Fmt.safe(dj.score)}</span></div>`}
       agH+=`</div>`;
-      if(dj)agH+=bar(Math.min(100,dj.score/100));
+      if(dj&&Fmt.n(dj.score)!=null)agH+=bar(Math.min(100,Fmt.n(dj.score)/100));
       if(a.stm>0)agH+=`<div style="margin:4px 0;font-size:11px">STM: <span style="color:var(--violet)">${a.stm.toLocaleString()}</span> records</div>`;
       // Level 2: Full role description
       if(role.length>80)agH+=`<details style="margin:4px 0"><summary style="cursor:pointer;color:var(--blue);font-size:10px;font-family:var(--mono)">full role</summary><div style="color:var(--text);padding:4px 0;font-size:12px;line-height:1.5">${role}</div></details>`;
@@ -1012,7 +1123,7 @@ function render(d){
         agActs.forEach(ac=>{
           const sc=ac.status==='completed'?'var(--green)':ac.status==='failed'?'var(--red)':'var(--amber)';
           const desc=(ac.description||'').replace(/</g,'&lt;');
-          agH+=`<details style="margin:2px 0;border-left:2px solid ${sc}"><summary style="cursor:pointer;padding:3px 6px;font-size:11px"><span style="color:${sc};font-weight:600;font-size:10px">${ac.status}</span> ${ac.action_type||''}</summary><div style="padding:4px 8px;font-size:11px;color:var(--text);white-space:pre-wrap;word-break:break-word">${desc}${ac.result?'<div style="color:var(--green);margin-top:4px">'+ac.result+'</div>':''}</div></details>`;
+          agH+=`<details style="margin:2px 0;border-left:2px solid ${sc}"><summary style="cursor:pointer;padding:3px 6px;font-size:11px"><span style="color:${sc};font-weight:600;font-size:10px">${ac.status}</span> ${ac.action_type||''}</summary><div style="padding:4px 8px;font-size:11px;color:var(--text);white-space:pre-wrap;word-break:break-word">${desc}${(ac.result!=null&&ac.result!=='')?'<div style="color:var(--green);margin-top:4px">'+Fmt.esc(Fmt.safe(ac.result))+'</div>':''}</div></details>`;
         });
         agH+=`</div></details>`;
       }
@@ -1039,13 +1150,37 @@ function render(d){
   document.getElementById('inf-count').textContent=`(${inf.available||0}/${inf.total||0})`;
   let infH='';
   infH+=`<div style="font-size:11px;color:var(--text2);padding:4px 0;margin-bottom:8px"><a href="/inference/status" class="link">full status</a> &#183; <a href="/doc/inference_optimization" class="link">inference docs</a> &#183; <a href="/inference/preference" class="link">model preference</a></div>`;
+  // Inference budget metabolism — per-provider rate-limit headroom (the organism
+  // breathing: cloud/router deplete & back off on 429, local is unlimited, all
+  // refill each window). Selection routes toward whoever has headroom.
+  const _bud=d.inference_budget||{}; const _bk=Object.keys(_bud);
+  if(_bk.length){
+    infH+=`<div style="margin-bottom:10px;padding:8px 10px;background:rgba(121,192,255,.04);border-radius:4px">`;
+    infH+=`<div style="font-size:10px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">inference budget &middot; rate-limit metabolism</div>`;
+    const _win=(s)=> !s?'' : (s<3600?Math.round(s/60)+'m' : s<86400?Math.round(s/3600)+'h' : Math.round(s/86400)+'d');
+    _bk.sort().forEach(k=>{
+      const b=_bud[k]||{}; const hr=(typeof b.headroom==='number')?b.headroom:1; const hrPct=Math.round(hr*100);
+      const col=hr>0.5?'g':hr>0.2?'y':'r';
+      const bw=b.binding_window_s?('/'+_win(b.binding_window_s)):'';
+      const bo=(b.backoff_s>0)?` <span style="color:var(--red)">&middot; backoff ${Fmt.dur(b.backoff_s)}</span>`:'';
+      const t429=(b.total_429>0)?` <span style="color:var(--amber)">&middot; ${b.total_429} throttled</span>`:'';
+      const wins=(b.windows||[]).map(w=>w.used+'/'+w.limit+'@'+_win(w.span_s)).join(', ');
+      infH+=`<div class="dr" style="align-items:center" title="${esc(k)} &middot; ${b.total_req||0} reqs total &middot; ${b.tokens_min||0} tok/min &middot; safety ${Math.round((b.safety||0.9)*100)}% &middot; windows: ${wins}">`
+        +`<span style="font-family:var(--mono);font-size:10px;min-width:96px">${esc(k)}</span>`
+        +`<span style="flex:1">${bar(hrPct,col)}</span>`
+        +`<span style="font-family:var(--mono);font-size:10px;color:var(--text2);min-width:120px;text-align:right">${hrPct}% &middot; ${Fmt.safe(b.binding_used)}/${Fmt.safe(b.binding_limit)}${bw}${t429}${bo}</span>`
+        +`</div>`;
+    });
+    infH+=`<div style="font-size:9px;color:var(--text3);padding-top:4px">local = unlimited &middot; consumes free tiers to ~90% (safety margin) then routes to local &middot; never trips a 429 &middot; adapts to observed limits</div>`;
+    infH+=`</div>`;
+  }
   allSources.forEach(([name,src])=>{
     const models=src.models||[];
     const isCloud=name.startsWith('cloud_')||name==='ollama_cloud';
     const label=isCloud?name.replace('cloud_','').replace('ollama_cloud','ollama cloud'):name;
     const st=src.status==='available'?'dot-g':src.status==='degraded'?'dot-y':'dot-r';
     infH+=`<div class="inf-src" onclick="this.classList.toggle('open')">`;
-    infH+=`<div style="display:flex;justify-content:space-between;align-items:center"><span><span class="dot ${st}"></span><span style="color:#f0f6fc;font-weight:600;font-size:13px">${label}</span>${isCloud?' <span style="color:var(--blue);font-size:10px;font-family:var(--mono)">CLOUD</span>':''}</span><span style="color:var(--text2);font-size:11px;font-family:var(--mono)">${src.status} &#183; score ${(src.score||0).toFixed(2)}</span></div>`;
+    infH+=`<div style="display:flex;justify-content:space-between;align-items:center"><span><span class="dot ${st}"></span><span style="color:#f0f6fc;font-weight:600;font-size:13px">${label}</span>${isCloud?' <span style="color:var(--blue);font-size:10px;font-family:var(--mono)">CLOUD</span>':''}</span><span style="color:var(--text2);font-size:11px;font-family:var(--mono)" title="health score 0&ndash;1, higher is better">${src.status} &#183; score ${(src.score||0).toFixed(2)}/1.0</span></div>`;
     if(models.length){
       infH+=`<div class="models">`;
       infH+=`<div style="font-size:10px;color:var(--text3);margin-bottom:4px">${models.length} model${models.length>1?'s':''} available</div>`;
@@ -1120,7 +1255,7 @@ function render(d){
     const chosen=(g.chosen||'').replace(/</g,'&lt;');
     const chosenShort=chosen.length>80?chosen.slice(0,80)+'...':chosen;
     glH+=`<div class="godel-entry ${cls}" onclick="this.classList.toggle('open')">`;
-    glH+=`<div style="display:flex;justify-content:space-between;font-size:12px"><span><span style="color:${oc};font-family:var(--mono);font-size:10px">[${(g.outcome||'?').slice(0,3)}]</span> <a href="/godel/choices?source_agent=${encodeURIComponent(g.agent)}" class="link">${g.agent}</a> <span style="color:var(--text2)">${g.type}</span></span><span style="color:var(--text3);font-family:var(--mono);font-size:10px">${ts}</span></div>`;
+    glH+=`<div style="display:flex;justify-content:space-between;font-size:12px"><span><span style="color:${oc};font-family:var(--mono);font-size:10px">[${(g.outcome||'?').slice(0,3)}]</span> <a href="/godel/choices?source_agent=${encodeURIComponent(g.agent)}" class="link">${g.agent}</a> <span style="color:var(--text2)">${g.type}</span></span><span style="color:var(--text3);font-family:var(--mono);font-size:10px" title="${Fmt.esc(tsFull)} UTC">${g.timestamp?Fmt.timeAgo(g.timestamp):ts}</span></div>`;
     glH+=`<div class="godel-detail">`;
     glH+=`<div style="color:var(--green);font-size:12px">\u2192 ${chosenShort}</div>`;
     if(g.rationale)glH+=`<div style="color:var(--text2);margin-top:4px;font-size:12px;line-height:1.5">${g.rationale}</div>`;
@@ -1137,13 +1272,13 @@ function render(d){
   const au=d.autonomous||{},auth=d.author||{},gv=d.governor||{};
   let auH='<div style="font-size:11px;color:var(--text2);padding:4px 0;margin-bottom:8px"><a href="/doc/AUTONOMOUS" class="link">autonomous docs</a> &#183; <a href="/doc/THESIS" class="link">thesis</a> &#183; <a href="/doc/AUTHOR_AGENT" class="link">author agent</a> &#183; <a href="/doc/BOOK_OF_MINDX" class="link">book</a> &#183; <a href="/doc/enhanced_monitoring_system" class="link">monitoring</a></div>';
   auH+='<div style="background:var(--surface);padding:12px 14px">';
-  auH+=`<div class="dr"><span class="dr-key"><span class="dot ${au.loop_running?'dot-g':'dot-r'}"></span><a href="/doc/THESIS" class="dlink">improvement loop</a></span><span class="dr-val">${au.loop_running?'active':'stopped'}${au.last_cycle?' &#183; '+au.last_cycle:''}</span></div>`;
+  auH+=`<div class="dr"><span class="dr-key"><span class="dot ${au.loop_running?'dot-g':'dot-r'}"></span><a href="/doc/THESIS" class="dlink">improvement loop</a></span><span class="dr-val">${au.loop_running?'active':'stopped'}${au.last_cycle?' &#183; '+Fmt.timeAgo(au.last_cycle):''}</span></div>`;
   auH+=`<div class="dr"><span class="dr-key"><span class="dot ${auth.periodic_active?'dot-g':'dot-x'}"></span><a href="/doc/AUTHOR_AGENT" class="dlink">author agent</a></span><span class="dr-val">${auth.last_chapter||'no chapters yet'}${auth.lunar_day?' &#183; day '+auth.lunar_day:''}</span></div>`;
   auH+=`<div class="dr"><span class="dr-key"><span class="dot ${au.restart_pending?'dot-y':'dot-x'}"></span>restart signal</span><span class="dr-val">${au.restart_pending?'PENDING':'none'}</span></div>`;
   const dreamActions=(d.actions||[]).filter(a=>a.agent_id==='machine_dreaming');
-  if(dreamActions.length)auH+=`<div class="dr"><span class="dr-key"><span class="dot dot-g"></span><a href="/doc/BOOK_OF_MINDX" class="dlink">machine.dreaming</a></span><span class="dr-val">${dreamActions.length} cycles</span></div>`;
-  if(au.stuck_cycles>0)auH+=`<div class="dr"><span class="dr-key">stuck cycles</span><span class="dr-val" style="color:var(--amber)">${au.stuck_cycles}</span></div>`;
-  if(au.circuit_breaker_open)auH+=`<div class="dr"><span class="dr-key">circuit breaker</span><span class="dr-val" style="color:var(--red)">OPEN</span></div>`;
+  if(dreamActions.length)auH+=`<div class="dr"><span class="dr-key"><span class="dot dot-g"></span><a href="#hdr-dreams" class="dlink">machine.dreaming</a></span><span class="dr-val">${dreamActions.length} cycles &#183; see Machine Dreaming &#8595;</span></div>`;
+  auH+=`<div class="dr"><span class="dr-key">stuck cycles</span><span class="dr-val" style="color:${au.stuck_cycles>0?'var(--amber)':'var(--text3)'}">${au.stuck_cycles||0}</span></div>`;
+  auH+=`<div class="dr"><span class="dr-key">circuit breaker</span><span class="dr-val" style="color:${au.circuit_breaker_open?'var(--red)':'var(--green)'}">${au.circuit_breaker_open?'OPEN':'CLOSED'}</span></div>`;
   if(gv.mode){
     const gc=gv.mode==='greedy'?'var(--red)':gv.mode==='generous'?'var(--green)':'var(--blue)';
     auH+=`<div class="dr"><span class="dr-key">governor</span><span class="dr-val" style="color:${gc}">${gv.mode} ${gv.auto_adjust?'(auto)':''}</span></div>`;
@@ -1169,11 +1304,11 @@ function render(d){
     const ts=(a.created_at||'').slice(5,19).replace('T',' ');
     const desc=(a.description||'').replace(/</g,'&lt;');
     const descShort=desc.length>100?desc.slice(0,100)+'...':desc;
-    acH+=`<details style="margin:2px 0;border-left:2px solid ${scC}"><summary style="cursor:pointer;padding:6px 10px;font-size:12px"><span class="dot ${sc}"></span><span style="font-weight:600">${a.agent_id||'?'}</span> <span style="color:var(--text2)">${a.action_type||''}</span> <span style="float:right;color:var(--text3);font-family:var(--mono);font-size:10px">${ts}</span></summary>`;
+    acH+=`<details style="margin:2px 0;border-left:2px solid ${scC}"><summary style="cursor:pointer;padding:6px 10px;font-size:12px"><span class="dot ${sc}"></span><span style="font-weight:600">${a.agent_id||'?'}</span> <span style="color:var(--text2)">${a.action_type||''}</span> <span style="float:right;color:var(--text3);font-family:var(--mono);font-size:10px" title="${Fmt.esc(ts)} UTC">${a.created_at?Fmt.timeAgo(a.created_at):ts}</span></summary>`;
     acH+=`<div style="padding:6px 12px;font-size:12px;color:var(--text)">`;
     acH+=`<div style="margin-bottom:6px">${descShort}</div>`;
     if(desc.length>100)acH+=`<details style="margin:4px 0"><summary style="cursor:pointer;color:var(--blue);font-size:10px;font-family:var(--mono)">full description</summary><div style="padding:6px 8px;white-space:pre-wrap;word-break:break-word;background:rgba(5,8,16,.3);border-radius:2px;margin-top:4px">${desc}</div></details>`;
-    if(a.result)acH+=`<div style="color:var(--green);margin-top:4px;padding:4px 8px;background:rgba(10,32,18,.2);border-radius:2px"><span style="font-size:10px;font-family:var(--mono);color:var(--text3)">RESULT</span><br>${(a.result+'').replace(/</g,'&lt;')}</div>`;
+    if(a.result!=null&&a.result!=='')acH+=`<div style="color:var(--green);margin-top:4px;padding:4px 8px;background:rgba(10,32,18,.2);border-radius:2px"><span style="font-size:10px;font-family:var(--mono);color:var(--text3)">RESULT</span><br>${Fmt.esc(Fmt.safe(a.result))}</div>`;
     acH+=`<div style="margin-top:4px;font-size:10px"><span style="color:var(--text3)">source: ${a.source||'?'} &#183; id: ${a.id||'?'}</span></div>`;
     acH+=`</div></details>`;
   });
@@ -1185,8 +1320,8 @@ function render(d){
   bs.slice(0,5).forEach(ses=>{
     const oc=ses.outcome==='approved'?'var(--green)':ses.outcome==='rejected'?'var(--red)':'var(--amber)';
     bsH+=`<div style="padding:6px 10px;margin:1px 0;background:rgba(8,12,18,.5)">`;
-    bsH+=`<div class="dr"><span style="color:${oc};font-weight:700;font-size:10px;text-transform:uppercase">${ses.outcome||'?'}</span><span class="dr-val">${(ses.directive||'').slice(0,60)}</span></div>`;
-    bsH+=`<div style="font-size:10px;color:var(--text3)">${ses.votes||0} votes &#183; score ${ses.score||0} &#183; ${ses.dissent||0} dissent</div>`;
+    bsH+=`<div class="dr"><span style="color:${oc};font-weight:700;font-size:10px;text-transform:uppercase">${ses.outcome||'?'}</span><span class="dr-val">${Fmt.esc(Fmt.ellipsis(ses.directive,60))}</span></div>`;
+    bsH+=`<div style="font-size:10px;color:var(--text3)" title="weighted consensus score, 0&ndash;1">${ses.votes||0} votes &#183; score ${Fmt.score(ses.score!=null?ses.score:ses.weighted_score,{max:1})} &#183; ${ses.dissent||0} dissent${ses.timestamp?' &#183; '+Fmt.timeAgo(ses.timestamp):''}</div>`;
     bsH+=`</div>`;
   });
   if(!bsH)bsH='<div style="padding:8px;color:var(--text2)">No sessions yet.</div>';
@@ -1212,17 +1347,43 @@ function render(d){
   });
   document.getElementById('sec-endpoints').innerHTML=epH;
 
-  // Logs
-  const logs=d.recent_logs||[];
-  let llH='';
-  logs.slice(0,12).forEach(l=>{llH+=`<div style="font-size:10px;color:var(--text3);padding:2px 0;border-bottom:1px solid rgba(5,8,16,.2);font-family:var(--mono);word-break:break-all;line-height:1.4">${l.replace(/</g,'&lt;')}</div>`});
-  document.getElementById('sec-logs').innerHTML=llH||'<div style="padding:8px;color:var(--text3)">No logs</div>';
+  // Logs → Memories is populated by loadMemoryStream() (own sub-fetch from
+  // /insight/memory/recent — the catalogue memory.write stream). Machine
+  // Dreaming by loadDreams(). Neither reads from /diagnostics/live.
 
   // Render sidebar panel
   rpnl(d);
 }
 
 // ── Sidebar panel rendering ──
+// Helper: render the heartbeat state_context dict as a compact "INJECTED STATE"
+// chip-row above the response. This is the scientific evidence — it shows
+// exactly which live mindX facts grounded the prompt. Empty / missing keys
+// are hidden so the chip-row stays tight.
+function _renderStateCtx(ctx){
+  if(!ctx||typeof ctx!=='object')return '';
+  const pretty={
+    recent_godel:'recent gödel',top_agent:'top fitness',bot_agent:'bottom fitness',
+    blueprint_title:'last blueprint',backlog_total:'backlog',promoted:'dream promoted',
+    dream_ts:'last dream',stm_count:'stm',ok:'ok',total:'total',running:'running',
+    top_score:'',bot_score:'',  // already paired with top_agent/bot_agent
+  };
+  const skip=new Set(['top_score','bot_score']);
+  const chips=[];
+  for(const k in ctx){
+    if(skip.has(k))continue;
+    const v=ctx[k];
+    if(v===null||v===undefined||v===''||v==='?'||v==='(none)'||v==='(unknown)'||v===0)continue;
+    const label=pretty[k]||k;
+    let display=String(v);
+    if(k==='top_agent'&&ctx.top_score)display=`${v} (${ctx.top_score})`;
+    if(k==='bot_agent'&&ctx.bot_score)display=`${v} (${ctx.bot_score})`;
+    if(display.length>56)display=display.slice(0,56)+'…';
+    chips.push(`<span style="display:inline-block;background:rgba(121,192,255,.08);border:1px solid rgba(121,192,255,.25);border-radius:3px;padding:2px 6px;margin:1px 2px 1px 0;font-family:var(--mono);font-size:10px;color:var(--blue)"><span style="color:var(--text3)">${label}:</span> ${display.replace(/</g,'&lt;')}</span>`);
+  }
+  if(!chips.length)return '';
+  return `<div style="margin:4px 0 6px 0;font-size:10px"><span style="color:var(--text3);font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;margin-right:4px">injected state</span>${chips.join('')}</div>`;
+}
 function rpnl(d){
   const p=document.getElementById('pnl');
   if(curT===0){
@@ -1238,10 +1399,29 @@ function rpnl(d){
       const promptShort=prompt.length>120?prompt.slice(0,120)+'...':prompt;
       const responseShort=response.length>200?response.slice(0,200)+'...':response;
       const hasMore=prompt.length>120||response.length>200;
+      // Scientific depth: when the entry has state_context (new heartbeat
+      // format), surface the injected facts as a chip-row above the response.
+      // Old entries (qwen3:0.6b platitudes) don't have state_context → no chips.
+      const stateChips=_renderStateCtx(m.state_context);
+      // Model badge: distinguish openrouter vs ollama vs fallback at a glance.
+      const modelLabel=m.model||'?';
+      const isOR=modelLabel.indexOf('openrouter')===0;
+      const isFallback=modelLabel.indexOf('fallback')!==-1;
+      const modelColor=isFallback?'var(--amber)':(isOR?'var(--violet)':'var(--green)');
       h+=`<div class="msg msg-usr${cls}"><div class="msg-hdr"><span style="color:var(--violet);font-weight:600">${m.agent||'mindX'}</span><span>${td}</span></div><div class="msg-txt">${promptShort}</div></div>`;
-      h+=`<div class="msg msg-ai${cls}"><div class="msg-hdr"><span style="color:var(--green);font-weight:600">${m.model||'?'}</span><span>${m.latency_ms?m.latency_ms+'ms':''} ${m.tokens_est?'&#183; '+m.tokens_est+' tok':''}</span></div><div class="msg-txt">${responseShort}</div>`;
-      if(hasMore){
-        h+=`<details style="margin-top:4px"><summary style="cursor:pointer;color:var(--blue);font-size:10px;font-family:var(--mono)">full dialogue</summary><div style="padding:6px 0;font-size:12px;line-height:1.6"><div style="color:var(--violet);font-weight:600;font-size:10px;margin-bottom:4px;font-family:var(--mono)">${m.agent||'mindX'} PROMPT</div><div style="color:var(--text);white-space:pre-wrap;word-break:break-word;padding:6px 8px;background:rgba(22,16,32,.3);border-left:2px solid var(--violet);border-radius:2px;margin-bottom:8px">${prompt}</div><div style="color:var(--green);font-weight:600;font-size:10px;margin-bottom:4px;font-family:var(--mono)">${m.model||'?'} RESPONSE</div><div style="color:var(--text);white-space:pre-wrap;word-break:break-word;padding:6px 8px;background:rgba(10,32,18,.3);border-left:2px solid var(--green);border-radius:2px">${response}</div></div></details>`;
+      h+=`<div class="msg msg-ai${cls}"><div class="msg-hdr"><span style="color:${modelColor};font-weight:600;font-family:var(--mono);font-size:10px">${modelLabel}</span><span>${m.latency_ms?m.latency_ms+'ms':''} ${m.tokens_est?'&#183; '+m.tokens_est+' tok':''}</span></div>${stateChips}<div class="msg-txt">${responseShort}</div>`;
+      if(hasMore||m.state_context){
+        let detailsBody=`<div style="padding:6px 0;font-size:12px;line-height:1.6">`;
+        detailsBody+=`<div style="color:var(--violet);font-weight:600;font-size:10px;margin-bottom:4px;font-family:var(--mono)">${m.agent||'mindX'} PROMPT (rendered with injected state)</div>`;
+        detailsBody+=`<div style="color:var(--text);white-space:pre-wrap;word-break:break-word;padding:6px 8px;background:rgba(22,16,32,.3);border-left:2px solid var(--violet);border-radius:2px;margin-bottom:8px">${prompt}</div>`;
+        if(m.state_context&&typeof m.state_context==='object'){
+          detailsBody+=`<div style="color:var(--blue);font-weight:600;font-size:10px;margin-bottom:4px;font-family:var(--mono)">STATE CONTEXT (mindX facts injected at heartbeat time)</div>`;
+          detailsBody+=`<pre style="font-size:10px;line-height:1.5;background:rgba(10,18,32,.3);border-left:2px solid var(--blue);border-radius:2px;padding:6px 8px;margin-bottom:8px;white-space:pre-wrap;word-break:break-word">${(JSON.stringify(m.state_context,null,1)||'').replace(/</g,'&lt;')}</pre>`;
+        }
+        detailsBody+=`<div style="color:${modelColor};font-weight:600;font-size:10px;margin-bottom:4px;font-family:var(--mono)">${modelLabel} RESPONSE</div>`;
+        detailsBody+=`<div style="color:var(--text);white-space:pre-wrap;word-break:break-word;padding:6px 8px;background:rgba(10,32,18,.3);border-left:2px solid ${modelColor};border-radius:2px">${response}</div>`;
+        detailsBody+=`</div>`;
+        h+=`<details style="margin-top:4px"><summary style="cursor:pointer;color:var(--blue);font-size:10px;font-family:var(--mono)">full dialogue${m.state_context?' + injected state':''}</summary>${detailsBody}</details>`;
       }
       h+=`</div>`;
     });p.innerHTML=h;p.scrollTop=p.scrollHeight;
@@ -1384,13 +1564,87 @@ fetch('/thesis/evidence').then(function(r){return r.json()}).then(function(ev){
     }
     clEl.innerHTML=clH;
   }
-  // Populate thesis numbers
+  // Populate thesis numbers \u2014 tiles are clickable; click toggles drill-in panel
   var tnEl=document.getElementById('thesis-nums');
   if(tnEl&&th.aggregate){
     var a=th.aggregate;
-    tnEl.innerHTML='<div class="tn"><div class="tn-val" style="color:var(--violet)">'+(a.total_godel_choices||0).toLocaleString()+'</div><div class="tn-lbl">G\u00F6del choices</div></div><div class="tn"><div class="tn-val" style="color:var(--green)">'+(th.claims?.godel_self_reference?.evidence?.self_referential_choices||0)+'</div><div class="tn-lbl">self-referential</div></div><div class="tn"><div class="tn-val" style="color:var(--blue)">'+(a.total_memories||0).toLocaleString()+'</div><div class="tn-lbl">memories</div></div><div class="tn"><div class="tn-val" style="color:var(--amber)">'+(a.total_actions||0)+'</div><div class="tn-lbl">actions</div></div>';
+    var sr=th.claims?.godel_self_reference?.evidence?.self_referential_choices||0;
+    tnEl.innerHTML=
+      '<div class="tn" onclick="tnExpand(\'godel\')" style="cursor:pointer" title="Click for breakdown"><div class="tn-val" style="color:var(--violet)">'+(a.total_godel_choices||0).toLocaleString()+'</div><div class="tn-lbl">G\u00F6del choices</div></div>'+
+      '<div class="tn" onclick="tnExpand(\'self_ref\')" style="cursor:pointer" title="Click for breakdown"><div class="tn-val" style="color:var(--green)">'+sr.toLocaleString()+'</div><div class="tn-lbl">self-referential</div></div>'+
+      '<div class="tn" onclick="tnExpand(\'memory\')" style="cursor:pointer" title="Click for breakdown"><div class="tn-val" style="color:var(--blue)">'+(a.total_memories||0).toLocaleString()+'</div><div class="tn-lbl">memories</div></div>'+
+      '<div class="tn" onclick="tnExpand(\'actions\')" style="cursor:pointer" title="Click for breakdown"><div class="tn-val" style="color:var(--amber)">'+(a.total_actions||0).toLocaleString()+'</div><div class="tn-lbl">actions</div></div>';
   }
 }).catch(function(){});
+
+// Click-expand for the 4 thesis tiles. Toggles a panel below the grid; renders
+// the JSON breakdown from /insight/{topic}/breakdown with a Source line.
+var _tnPanel=null;
+function tnEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function tnRender(title, sourceLine, data){
+  function kv(obj, max){
+    if(!obj||typeof obj!=='object')return '<i style="color:var(--text3)">none</i>';
+    var keys=Object.keys(obj);
+    if(max&&keys.length>max)keys=keys.slice(0,max);
+    return '<table style="width:100%;font-family:var(--mono);font-size:11px"><tbody>'+
+      keys.map(function(k){return '<tr><td style="padding:2px 8px;color:var(--text2)">'+tnEsc(k)+'</td><td style="text-align:right;color:var(--green)">'+tnEsc(obj[k]).toLocaleString?obj[k].toLocaleString():tnEsc(obj[k])+'</td></tr>'}).join('')+
+      '</tbody></table>';
+  }
+  var html='<div style="border-top:1px solid rgba(255,255,255,.08);padding:14px 0;margin-top:10px">'+
+    '<div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:8px">SOURCE: '+tnEsc(sourceLine)+'</div>'+
+    '<h3 style="margin:0 0 10px 0;font-size:14px;color:var(--blue)">'+tnEsc(title)+'</h3>';
+  if(data.error){html+='<div style="color:var(--amber)">error: '+tnEsc(data.error)+'</div>';}
+  // Total
+  if(data.total!=null){html+='<div style="font-family:var(--mono);font-size:13px;margin-bottom:10px">total: <b style="color:var(--green)">'+(data.total||0).toLocaleString()+'</b>'+(data.completion_rate!=null?' &middot; completion: <b>'+(data.completion_rate*100).toFixed(1)+'%</b>':'')+'</div>';}
+  // Discrepancy explanation (memory)
+  if(data.discrepancy_explanation){html+='<div style="background:rgba(227,179,65,.1);border:1px solid rgba(227,179,65,.3);padding:8px;margin-bottom:10px;font-size:11px;color:var(--amber)">'+tnEsc(data.discrepancy_explanation)+'</div>';}
+  // Counts (memory has multiple sources)
+  if(data.counts){html+='<div style="margin-bottom:10px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">COUNTS BY SOURCE</div>'+kv(data.counts)+'</div>';}
+  // by_status
+  if(data.by_status){html+='<div style="margin-bottom:10px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">BY STATUS</div>'+kv(data.by_status)+'</div>';}
+  // by_agent
+  if(data.by_agent){html+='<div style="margin-bottom:10px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">BY AGENT (top 15)</div>'+kv(data.by_agent,15)+'</div>';}
+  // by_choice_type
+  if(data.by_choice_type){html+='<div style="margin-bottom:10px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">BY CHOICE TYPE</div>'+kv(data.by_choice_type)+'</div>';}
+  // by_memory_type
+  if(data.by_memory_type){html+='<div style="margin-bottom:10px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">BY MEMORY TYPE</div>'+kv(data.by_memory_type)+'</div>';}
+  // Self-ref rule + counts + examples
+  if(data.rule){html+='<div style="font-size:11px;color:var(--text3);margin-bottom:6px">RULE</div><div style="font-family:var(--mono);font-size:11px;background:rgba(255,255,255,.04);padding:8px;margin-bottom:10px">'+tnEsc(data.rule)+'</div>';}
+  if(data.self_referential!=null){html+='<div style="font-family:var(--mono);font-size:12px;margin-bottom:10px">self-ref: <b style="color:var(--green)">'+data.self_referential.toLocaleString()+'</b> &middot; non-self-ref: <b style="color:var(--text2)">'+data.non_self_referential.toLocaleString()+'</b> &middot; ratio: <b>'+(data.ratio?(data.ratio*100).toFixed(2):'0')+'%</b></div>';}
+  if(data.examples_self_ref&&data.examples_self_ref.length){html+='<div style="font-size:11px;color:var(--text3);margin-bottom:4px">EXAMPLES: SELF-REFERENTIAL</div><pre style="font-size:10px;background:rgba(86,211,100,.06);padding:8px;border-left:2px solid var(--green);white-space:pre-wrap;word-break:break-word;max-height:140px;overflow:auto;margin-bottom:10px">'+tnEsc(JSON.stringify(data.examples_self_ref,null,1))+'</pre>';}
+  if(data.examples_non_self_ref&&data.examples_non_self_ref.length){html+='<div style="font-size:11px;color:var(--text3);margin-bottom:4px">EXAMPLES: NON-SELF-REFERENTIAL</div><pre style="font-size:10px;background:rgba(255,255,255,.04);padding:8px;border-left:2px solid var(--text3);white-space:pre-wrap;word-break:break-word;max-height:140px;overflow:auto;margin-bottom:10px">'+tnEsc(JSON.stringify(data.examples_non_self_ref,null,1))+'</pre>';}
+  // Recent
+  if(data.recent&&data.recent.length){html+='<div style="font-size:11px;color:var(--text3);margin-bottom:4px">RECENT '+data.recent.length+'</div><pre style="font-size:10px;background:rgba(255,255,255,.04);padding:8px;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow:auto">'+tnEsc(JSON.stringify(data.recent,null,1))+'</pre>';}
+  html+='</div>';
+  return html;
+}
+function tnExpand(topic){
+  var tnEl=document.getElementById('thesis-nums');
+  if(!tnEl)return;
+  // Toggle: re-clicking the same topic closes
+  if(_tnPanel&&_tnPanel.topic===topic){
+    _tnPanel.div.remove();_tnPanel=null;return;
+  }
+  if(_tnPanel){_tnPanel.div.remove();_tnPanel=null;}
+  var div=document.createElement('div');
+  div.style.gridColumn='1/-1';
+  div.innerHTML='<div style="padding:10px;color:var(--text3);font-family:var(--mono);font-size:11px">loading '+topic+' breakdown...</div>';
+  tnEl.parentNode.insertBefore(div, tnEl.nextSibling);
+  _tnPanel={topic:topic, div:div};
+  var URLS={
+    godel:    {url:'/insight/godel/breakdown',     title:'G\u00F6del Choices Breakdown',         src:'data/logs/godel_choices.jsonl'},
+    self_ref: {url:'/insight/godel/self_reference',title:'Self-Referential Choice Audit',        src:'data/logs/godel_choices.jsonl + rule'},
+    memory:   {url:'/insight/memory/breakdown',    title:'Memory Breakdown (all sources)',       src:'pgvector + STM/LTM/dreams disk'},
+    actions:  {url:'/insight/actions/breakdown',   title:'Actions Ledger Breakdown',             src:'pgvector actions table'},
+  };
+  var u=URLS[topic];
+  if(!u){div.innerHTML='<div style="color:var(--amber)">unknown topic '+topic+'</div>';return;}
+  fetch(u.url).then(function(r){return r.json()}).then(function(d){
+    div.innerHTML=tnRender(u.title, u.src, d);
+  }).catch(function(e){
+    div.innerHTML='<div style="color:var(--amber);padding:10px">error loading '+topic+': '+tnEsc(String(e))+'</div>';
+  });
+}
 
 // Session timer — updates every second, no API needed
 var _sessionStart=Date.now();
@@ -1404,16 +1658,19 @@ setInterval(function(){
 // Layer 2: Full diagnostics (slower, loads everything)
 async function rf(){
   try{
-    if(!LD&&_preloadedData){LD=_preloadedData;_preloadedData=null;render(LD);_firstRender=false;return}
+    if(!LD&&_preloadedData){LD=_preloadedData;_preloadedData=null;render(LD);_firstRender=false;Freshness.mark('diag','ok');return}
     var r=await fetch('/diagnostics/live');
-    if(r.ok){LD=await r.json();render(LD);_firstRender=false}
+    if(r.ok){LD=await r.json();render(LD);_firstRender=false;Freshness.mark('diag','ok');}
+    else{Freshness.mark('diag','error');}
   }catch(e){
+    Freshness.mark('diag','error');
     if(Date.now()-_bootStart>5000){
       document.getElementById('live-badge').textContent='CONNECTING';
       document.getElementById('live-badge').className='live-badge off';
     }
   }
 }
+Freshness.cadence('diag',6000);
 rf();setInterval(rf,6000);
 
 // ── Popup system ──
@@ -1823,14 +2080,17 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
           if(thinkBuf.length>30)thinkBuf=thinkBuf.slice(-30);
           showSec('sec-think','hdr-think');
           if(state){state.textContent='live';state.className='insight-sub sse-state live';}
+          Freshness.mark('think','ok');
           renderThink();
         }catch(_){}
       });
       src.addEventListener('heartbeat',function(){
         if(state){state.textContent='live';state.className='insight-sub sse-state live';}
+        Freshness.mark('think','ok');
       });
       src.onerror=function(){
         if(state){state.textContent='reconnecting...';state.className='insight-sub sse-state';}
+        Freshness.mark('think','error');
         // Soft fallback: one-shot poll of the recent endpoint.
         fetch('/insight/dialogue/recent?room=thinking&limit=6').then(function(r){return r.ok?r.json():null;}).then(function(d){
           if(d && Array.isArray(d.events) && d.events.length){
@@ -1852,12 +2112,31 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
       fetch('/insight/improvement/timeline?limit=50').then(function(r){return r.ok?r.json():null;})
     ]).then(function(parts){
       var d=parts[0], tl=parts[1];
-      if(!d || d.fallback || d.status==='warming_up'){ hideSec('sec-ledger','hdr-ledger'); return; }
+      if(!d || d.fallback || d.status==='warming_up'){ hideSec('sec-ledger','hdr-ledger'); Freshness.mark('ledger','empty'); return; }
+      // Populate thesis-proof tiles — the empirical witnesses from emergent.md.
+      // backlog coverage: fraction of attempted directives matching real backlog items
+      // 7d success rate: Manifesto Pillar II "learning rate is non-zero" — provable here
+      try {
+        var c7 = d.campaigns_7d || {total:0,succeeded:0};
+        var cov2 = d.directive_coverage || {};
+        var cvRatio = (typeof cov2.coverage_ratio === 'number') ? cov2.coverage_ratio : 0;
+        var cvPct = (cvRatio * 100).toFixed(cvRatio < 0.1 ? 2 : 1);
+        var cvColor = cvRatio > 0.01 ? 'var(--green)' : (cvRatio > 0 ? 'var(--amber)' : 'var(--red)');
+        var sr = (c7.total > 0) ? (c7.succeeded / c7.total) : 0;
+        var srPct = (sr * 100).toFixed(sr < 0.1 ? 2 : 1);
+        var srColor = sr > 0.01 ? 'var(--green)' : (c7.succeeded > 0 ? 'var(--amber)' : 'var(--red)');
+        var cvEl = document.querySelector('#tn-coverage .tn-val');
+        var srEl = document.querySelector('#tn-succ-rate .tn-val');
+        if (cvEl) { cvEl.textContent = cvPct + '%'; cvEl.style.color = cvColor; }
+        if (srEl) { srEl.textContent = srPct + '%'; srEl.style.color = srColor;
+                    srEl.title = c7.succeeded + ' / ' + c7.total + ' campaigns (7d)'; }
+      } catch (e) { /* non-fatal */ }
       var c24=d.campaigns_24h||{total:0,succeeded:0,failed:0,running:0};
       var campaigns=(tl && tl.campaigns)?tl.campaigns.slice(0,50):[];
       _ledgerCampaigns = campaigns;
-      if(!campaigns.length && !c24.total){ hideSec('sec-ledger','hdr-ledger'); return; }
+      if(!campaigns.length && !c24.total){ hideSec('sec-ledger','hdr-ledger'); Freshness.mark('ledger','empty'); return; }
       showSec('sec-ledger','hdr-ledger');
+      Freshness.mark('ledger','ok');
       var pills=campaigns.map(function(c, idx){
         var status=(c.overall_campaign_status||'').toUpperCase();
         var cls= status==='SUCCESS'?'ok' : (status==='IN_PROGRESS'||status==='RUNNING')?'running' : 'failed';
@@ -1901,7 +2180,11 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
           injected.innerHTML=html;
         }
       } catch (e) { /* non-fatal */ }
-    }).catch(function(){ hideSec('sec-ledger','hdr-ledger'); });
+    }).catch(function(){
+      Freshness.mark('ledger','error'); showSec('sec-ledger','hdr-ledger');
+      var row=document.getElementById('ledger-row');
+      if(row && !row.querySelector('.ledger-pill')) row.innerHTML='<div class="panel-banner">ledger feed error &mdash; showing nothing yet, retrying every 60s</div>';
+    });
   }
 
   function onLedgerPillClick(ev, idx){
@@ -1954,10 +2237,11 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
 
   function loadFitness(){
     fetch('/insight/fitness').then(function(r){return r.ok?r.json():null;}).then(function(d){
-      if(!d || d.fallback){ hideSec('sec-fitness','hdr-fitness'); return; }
+      if(!d || d.fallback){ hideSec('sec-fitness','hdr-fitness'); Freshness.mark('fitness','empty'); return; }
       var agents=(d.agents||[]).slice(0,8);
-      if(!agents.length){ hideSec('sec-fitness','hdr-fitness'); return; }
+      if(!agents.length){ hideSec('sec-fitness','hdr-fitness'); Freshness.mark('fitness','empty'); return; }
       showSec('sec-fitness','hdr-fitness');
+      Freshness.mark('fitness','ok');
       var axes=['campaign_success','trace_reliability','latency_score','consensus_alignment','reputation_momentum','learning_velocity','godel_selection_rate'];
       var rows=agents.map(function(a,i){
         var bar='<div class="fit-bar-wrap"><div class="fit-bar" style="width:'+a.fitness+'%;background:'+barColor(a.fitness)+'"></div></div>';
@@ -1980,15 +2264,20 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
       document.getElementById('sec-fitness').innerHTML='<table class="fit-table">'
         +'<thead><tr><th></th><th>agent</th><th style="text-align:right">fit</th><th></th><th>axes</th><th>&Delta;7d</th></tr></thead>'
         +'<tbody>'+rows+'</tbody></table>';
-    }).catch(function(){ hideSec('sec-fitness','hdr-fitness'); });
+    }).catch(function(){
+      Freshness.mark('fitness','error'); showSec('sec-fitness','hdr-fitness');
+      var b=document.getElementById('sec-fitness');
+      if(b && !b.querySelector('.fit-table')) b.innerHTML='<div class="panel-banner">fitness feed error &mdash; retrying every 30s</div>';
+    });
   }
 
   function loadSelection(){
     fetch('/insight/selection/events?limit=5').then(function(r){return r.ok?r.json():null;}).then(function(d){
-      if(!d || d.fallback){ hideSec('sec-selection','hdr-selection'); return; }
+      if(!d || d.fallback){ hideSec('sec-selection','hdr-selection'); Freshness.mark('selection','empty'); return; }
       var selModeEl=document.getElementById('sel-mode'); if(selModeEl) selModeEl.textContent='mode: '+(d.mode||'shadow');
       var evs=d.events||[];
       showSec('sec-selection','hdr-selection');
+      Freshness.mark('selection', evs.length?'ok':'empty');
       if(!evs.length){
         document.getElementById('sec-selection').innerHTML='<div class="insight-empty">no selection proposals yet — no agents above/below thresholds (mode='+esc(d.mode||'shadow')+')</div>';
         return;
@@ -2007,7 +2296,108 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
           +'</div>';
       }).join('');
       document.getElementById('sec-selection').innerHTML=rows;
-    }).catch(function(){ hideSec('sec-selection','hdr-selection'); });
+    }).catch(function(){
+      Freshness.mark('selection','error'); showSec('sec-selection','hdr-selection');
+      var b=document.getElementById('sec-selection');
+      if(b && !b.querySelector('.sel-row')) b.innerHTML='<div class="panel-banner">selection feed error &mdash; retrying every 60s</div>';
+    });
+  }
+
+  // Logs → Memories — the catalogue memory.write stream. mindX writes no log
+  // that is not also a memory; this shows each log becoming one.
+  function loadMemoryStream(){
+    fetch('/insight/memory/recent?limit=24').then(function(r){return r.ok?r.json():null;}).then(function(d){
+      var box=document.getElementById('sec-logs');
+      if(!box) return;
+      var evs=(d && d.events)||[];
+      if(!evs.length){
+        box.innerHTML='<div class="insight-empty">no memory writes in the catalogue yet</div>';
+        Freshness.mark('logs','empty');
+        return;
+      }
+      Freshness.mark('logs','ok');
+      var IMP={1:'CRIT',2:'HIGH',3:'MED',4:'LOW'};
+      var IMPC={1:'var(--red)',2:'var(--amber)',3:'var(--blue)',4:'var(--text3)'};
+      var rows=evs.map(function(e){
+        var src=String(e.source_log||'');
+        src=(src.split('/').pop()||src);
+        var imp=IMP[e.importance]||String(e.importance||'?');
+        var impc=IMPC[e.importance]||'var(--text3)';
+        var t=e.ts?Fmt.timeAgo(e.ts):'';
+        return '<div class="dr" style="align-items:baseline">'
+          +'<span style="font-family:var(--mono);font-size:10px">'
+          +'<span style="color:var(--text3)">'+esc(src)+'</span>'
+          +' <span style="color:var(--text3)">&rarr;</span> '
+          +'<span style="color:var(--blue)">'+esc(e.memory_type||'memory')+'</span>'
+          +' <span style="color:var(--text3)">&middot; '+esc(e.actor||'?')+'</span>'
+          +'</span>'
+          +'<span style="color:'+impc+';font-size:9px;font-family:var(--mono)">'+imp+' &middot; '+esc(t)+'</span>'
+          +'</div>';
+      }).join('');
+      box.innerHTML='<div style="font-size:10px;color:var(--text2);padding:4px 0 6px;display:flex;justify-content:space-between;align-items:center">'
+        +'<span>Every log mindX writes is also stored as a memory. '+evs.length+' most recent &mdash; '
+        +'<a href="/insight/memory/recent?h=true" class="link">plain text</a></span>'
+        +'<span class="fresh" id="fresh-logs"></span></div>'+rows;
+      Freshness.paint('logs');
+    }).catch(function(){
+      Freshness.mark('logs','error');
+      var box=document.getElementById('sec-logs');
+      if(box) box.innerHTML='<div class="panel-banner">memory stream error &mdash; retrying every 30s</div>';
+    });
+  }
+
+  // Machine Dreaming — lunar consolidation of memories into long-term knowledge.
+  function loadDreams(){
+    fetch('/insight/dreams/recent?limit=8').then(function(r){return r.ok?r.json():null;}).then(function(d){
+      if(!d || d.fallback){ hideSec('sec-dreams','hdr-dreams'); Freshness.mark('dreams','empty'); return; }
+      var dreams=(d && d.dreams)||[];
+      if(!dreams.length){ hideSec('sec-dreams','hdr-dreams'); Freshness.mark('dreams','empty'); return; }
+      showSec('sec-dreams','hdr-dreams');
+      Freshness.mark('dreams','ok');
+      var last=dreams[0]||{};
+      var lunar=last.lunar||{};
+      var head='<div style="font-family:var(--mono);font-size:11px;padding:6px 8px;background:rgba(121,192,255,.05);border-radius:4px;margin-bottom:8px;line-height:1.6">'
+        +'<b style="color:var(--violet)">last cycle</b> &middot; '
+        +esc(lunar.phase_name||'lunar')+' &middot; '
+        +'<span style="color:var(--green)">'+(last.agents_dreamed||0)+'</span> agents dreamed &middot; '
+        +'<span style="color:var(--blue)">'+(last.insights_generated||0)+'</span> insights &middot; '
+        +'<span style="color:var(--amber)">'+(last.memories_promoted_to_ltm||0)+'</span> &rarr; long-term memory';
+      if(last.last_dream_age_seconds!=null || d.last_dream_age_seconds!=null){
+        var age=d.last_dream_age_seconds!=null?d.last_dream_age_seconds:last.last_dream_age_seconds;
+        head+=' &middot; '+ago(Math.floor(Date.now()/1000-age));
+      }
+      head+='</div>';
+      var rows=dreams.map(function(dr){
+        var lp=(dr.lunar||{}).phase_name||'';
+        var ts=dr.timestamp?String(dr.timestamp).slice(0,16).replace('T',' '):'';
+        return '<div class="dr">'
+          +'<span style="font-family:var(--mono);font-size:10px">'
+          +'<span style="color:var(--text3)">'+esc(ts)+'</span> '
+          +'<span style="color:var(--violet)">'+esc(lp)+'</span></span>'
+          +'<span style="color:var(--text3);font-size:10px;font-family:var(--mono)">'
+          +(dr.agents_dreamed||0)+' agents &middot; '
+          +(dr.insights_generated||0)+' insights &middot; '
+          +(dr.memories_promoted_to_ltm||0)+' &rarr;ltm</span>'
+          +'</div>';
+      }).join('');
+      var recs=(last.tuning_recommendations||[]).slice(0,4);
+      var recH='';
+      if(recs.length){
+        recH='<div style="font-size:10px;color:var(--text2);padding:8px 0 2px"><b>tuning recommendations</b></div>';
+        recH+=recs.map(function(r){
+          var param=(r&&(r.parameter||r.name))||'(param)';
+          var dir=(r&&(r.recommendation||r.direction||r.change))||'adjust';
+          return '<div style="font-family:var(--mono);font-size:10px;color:var(--text3);padding:1px 0">'
+            +'<span style="color:var(--blue)">'+esc(param)+'</span> &middot; '+esc(String(dir).slice(0,60))+'</div>';
+        }).join('');
+      }
+      document.getElementById('sec-dreams').innerHTML=head+rows+recH
+        +'<div style="font-size:10px;padding:6px 0 0"><a href="/insight/dreams/recent?h=true" class="link">plain text</a> &middot; <a href="/feedback.html#sec-dreams" class="link">feedback console</a></div>';
+    }).catch(function(){
+      Freshness.mark('dreams','error'); showSec('sec-dreams','hdr-dreams');
+      var b=document.getElementById('sec-dreams');
+      if(b && !b.querySelector('.dr')) b.innerHTML='<div class="panel-banner">dream feed error &mdash; retrying every 60s</div>';
+    });
   }
 
   // Expose ledger handlers to global scope so inline onclick="..." works.
@@ -2016,10 +2406,14 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
   window.scrollToSelfImprovementCard = scrollToSelfImprovementCard;
 
   // Kick off — SSE reconnects itself; polled sections refresh on cadence.
+  Freshness.cadence('ledger',60000).cadence('fitness',30000).cadence('selection',60000)
+           .cadence('logs',30000).cadence('dreams',60000).cadence('think',15000);
   connectThinkStream();
-  loadLedger();    setInterval(loadLedger,   60000);
-  loadFitness();   setInterval(loadFitness,  30000);
-  loadSelection(); setInterval(loadSelection,60000);
+  loadLedger();       setInterval(loadLedger,      60000);
+  loadFitness();      setInterval(loadFitness,     30000);
+  loadSelection();    setInterval(loadSelection,   60000);
+  loadMemoryStream(); setInterval(loadMemoryStream,30000);
+  loadDreams();       setInterval(loadDreams,      60000);
 })();
 </script>
 

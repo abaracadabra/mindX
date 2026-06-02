@@ -127,6 +127,15 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
                 if response.status != 200: # pragma: no cover
                     error_text = await response.text()
                     logger.warning(f"Ollama API error ({response.status}) for model '{model}': {error_text[:500]}")
+                    # Inference budget: a 429 / quota error backs off this provider.
+                    try:
+                        from llm.inference_budget import record as _budget_record
+                        _ra = response.headers.get("Retry-After")
+                        _is_rl = response.status == 429 or "rate" in error_text.lower() or "quota" in error_text.lower()
+                        _budget_record(_ledger_provider, ok=not _is_rl,
+                                       retry_after=float(_ra) if (_ra and _ra.isdigit()) else None)
+                    except Exception:
+                        pass
                     # Graceful failure - return None instead of error string to indicate fallback needed
                     if response.status == 404 and "not found" in error_text.lower():
                         logger.info(f"Ollama model '{model}' not found. This is expected if Ollama is not installed or model not pulled.")
@@ -190,6 +199,19 @@ class OllamaHandler(LLMHandlerInterface): # pragma: no cover
                not (response_content_full.startswith('{') and response_content_full.endswith('}')) and \
                not (response_content_full.startswith('[') and response_content_full.endswith(']')): # pragma: no cover
                 logger.warning(f"OllamaHandler: Model '{model}' requested JSON but output seems non-JSON. Snippet: {response_content_full[:100]}")
+
+            # Inference budget metabolism: a non-empty response = healthy use of
+            # this provider's budget; an EMPTY cloud response is the throttle
+            # symptom (the free tier returns 200 + "" when starved) → record it as
+            # a soft failure so the metabolism backs off and reroutes to local.
+            try:
+                from llm.inference_budget import record as _budget_record
+                if _ledger_provider == "ollama_cloud" and not response_content_full:
+                    _budget_record(_ledger_provider, ok=False)
+                else:
+                    _budget_record(_ledger_provider, ok=True, tokens=_tokens_in + _tokens_out)
+            except Exception:
+                pass
 
             logger.debug(f"OllamaHandler response for '{model}' (first 100 chars): {response_content_full[:100]}")
             return response_content_full

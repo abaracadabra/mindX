@@ -1,0 +1,137 @@
+# marketinga.toml — runtime configuration for marketinga.agent + 5 sub-agents.
+#
+# Watched by inotify; changes apply on the next BDI cycle (no restart).
+# Defaults are conservative — Convener tightens or loosens per campaign.
+#
+# Phase 1 invariants:
+#   - All `*_LIVE` flags default off; outbox-only.
+#   - All on-chain bindings default to dry-run; operator runs bind_identity --execute.
+#   - Above-threshold spends route to Boardroom regardless of Convener override.
+#
+# See data/brand_code/onboarding/marketinga_job_description.md for the role.
+# See docs/MARKETING_AGENT.md for the architectural overview.
+
+schema_version = 1
+
+[agent]
+domain = "marketing.umbrella"
+parent_did = "did:pythai:marketinga"
+ens_root = "marketinga.bankon.eth"
+bdi_cycle_interval_seconds_active = 3600       # 1h during active campaigns
+bdi_cycle_interval_seconds_idle = 86400        # 1d when idle
+shutdown_grace_seconds = 30
+
+[brand_code]
+root = "data/brand_code"
+watch = true                                    # inotify reload on change
+deny_pattern_file = "forbidden_terms.json"
+competitor_map_file = "competitor_map.json"
+voice_file = "voice.md"
+icp_file = "positioning/icp_segments.md"
+pillars_file = "positioning/pillars.md"
+regulatory_file = "regulatory_constraints.md"
+onboarding_dir = "onboarding"
+
+[governance]
+spend_threshold_usd = 500.0                     # > → Boardroom routing
+convener_required_pillars = ["code_as_dojo"]    # always route to human, never auto
+convener_required_audiences = ["E"]             # founder-only audience
+boardroom_module = "daio.governance.boardroom"
+boardroom_class = "Boardroom"
+attestation_required = true                     # every executed envelope → Tessera
+hard_refuse_on_pending_identity = false         # Phase 1 emits PENDING events
+
+[experimentation]
+max_variants_per_campaign = 4                   # one per audience ring (A,B,C,D — never E)
+holdout_rate = 0.10                             # 10% per ring held out
+deterministic_variant_id = true                 # variantId = keccak256(campaignId | ring)
+variants_dir = "data/marketing/experiments"
+
+[distribution]
+outbox_dir = "data/marketing/outbox"
+channel_set_default_mask = 0b00000111           # farcaster | x | llms_txt
+require_governance_signoff = true               # no UNSIGNED_ENVELOPE publishes
+
+[distribution.farcaster]
+live = false                                    # MINDX_MARKETING_FARCASTER_LIVE override
+neynar_signer_id_vault_key = "marketinga_neynar_signer"
+
+[distribution.x]
+live = false                                    # MINDX_MARKETING_X_LIVE override
+api_credentials_vault_key = "marketinga_x_api"
+
+[distribution.linkedin]
+live = false                                    # out of scope Phase 1
+
+[distribution.wikidata]
+live = false                                    # drafting only Phase 1
+draft_dir = "data/marketing/wikidata_drafts"
+
+[distribution.llms_txt]
+sites = [
+  { domain = "mindx.pythai.net",        product = "mindX" },
+  { domain = "agenticplace.pythai.net", product = "AgenticPlace" },
+  { domain = "bankon.pythai.net",       product = "BANKON" },
+]
+write_target_dir = "data/marketing/llms_txt"
+indexnow_ping = true
+
+[reporting]
+geo_engines = ["chatgpt", "claude", "perplexity", "gemini", "grok"]
+geo_brand_terms = [
+  "PYTHAI", "DELTAVERSE", "BANKON", "mindX",
+  "AgenticPlace", "BONAFIDE", "marketinga.agent",
+]
+geo_prompts_file = "data/marketing/geo_prompts.json"
+geo_cadence_seconds = 604800                    # weekly
+geo_cache_seconds = 86400                       # 24h per (engine, prompt) pair
+geo_weekly_budget_usd = 20.0                    # hard cap
+kpi_snapshot_dir = "data/marketing/kpi_snapshots"
+
+[onchain]
+# All addresses default to zero — operator fills .env.deploy then runs
+# bind_identity --execute. Phase 1 emits REGISTRATION_PENDING events.
+tessera_address_envvar = "MARKETING_TESSERA_ADDR"
+censura_address_envvar = "MARKETING_CENSURA_ADDR"
+agent_registry_address_envvar = "MARKETING_AGENT_REGISTRY_ADDR"
+inft_7857_address_envvar = "MARKETING_INFT_7857_ADDR"
+bankon_subname_registrar_envvar = "MARKETING_BANKON_REGISTRAR_ADDR"
+attribution_receipt_address_envvar = "MARKETING_ATTRIBUTION_RECEIPT_ADDR"
+marketing_treasury_address_envvar = "MARKETING_TREASURY_ADDR"
+
+attribution_receipt_chain_id = 8453             # Base mainnet for sub-cent receipts
+marketing_treasury_chain_id = 1                 # Ethereum L1 for finality
+
+# Tessera write batching — every action is one credential, but for cost we
+# can batch into a per-campaign rollup attestation. Default: per-campaign.
+tessera_batch_window = "per_campaign"           # "per_action" | "per_campaign" | "daily"
+
+[onchain.bind_identity]
+default_dry_run = true                          # CLI requires --execute to broadcast
+require_convener_confirmation = true            # interactive prompt before send
+sub_agent_subnames = [
+  "content.marketinga",
+  "experimentation.marketinga",
+  "distribution.marketinga",
+  "reporting.marketinga",
+  "governance.marketinga",
+]
+
+[features]
+# Hard kill switch. If true, marketinga.agent runs reflective-only (no
+# external side-effects, no on-chain writes, no LLM calls). Useful for
+# debugging the cycle without burning budget.
+dry_run = false
+
+# When true, every BDI cycle additionally emits a marketing.geo_probe even
+# if the campaign doesn't request one. Useful for the freeze-baseline week.
+always_probe_geo = false
+
+[risks]
+# If a single campaign's spend is forecast above this floor, hard-stop and
+# require Convener intervention regardless of the Boardroom outcome.
+hard_stop_spend_usd = 5000.0
+
+# Maximum drafts per campaign before forced finalization. Defends against
+# pathological loops in the BDI cycle.
+max_drafts_per_campaign = 8

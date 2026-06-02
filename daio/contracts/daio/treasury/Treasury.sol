@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../constitution/DAIO_Constitution.sol";
+import "../Errors.sol";
 
 /**
  * @title Treasury
@@ -231,7 +232,8 @@ contract Treasury is Ownable, ReentrancyGuard {
         
         if (allocation.token == address(0)) {
             treasury.nativeBalance -= allocation.amount;
-            payable(allocation.recipient).transfer(allocation.amount);
+            (bool ok, ) = payable(allocation.recipient).call{value: allocation.amount}("");
+            if (!ok) revert NativeTransferFailed(allocation.recipient, allocation.amount);
         } else {
             treasury.tokenBalances[allocation.token] -= allocation.amount;
             IERC20(allocation.token).safeTransfer(allocation.recipient, allocation.amount);
@@ -258,7 +260,8 @@ contract Treasury is Ownable, ReentrancyGuard {
         if (token == address(0)) {
             require(treasury.nativeBalance >= amount, "Insufficient native balance");
             treasury.nativeBalance -= amount;
-            payable(recipient).transfer(amount);
+            (bool ok, ) = payable(recipient).call{value: amount}("");
+            if (!ok) revert NativeTransferFailed(recipient, amount);
         } else {
             require(treasury.tokenBalances[token] >= amount, "Insufficient token balance");
             treasury.tokenBalances[token] -= amount;

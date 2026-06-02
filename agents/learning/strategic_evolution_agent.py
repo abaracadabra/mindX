@@ -9,6 +9,7 @@ and uses a ModelSelector to choose the optimal LLM for its cognitive tasks.
 
 import asyncio
 import json
+import os
 import re
 import uuid
 import time
@@ -123,14 +124,21 @@ class StrategicEvolutionAgent:
 
     async def _self_aware_handler(self, task_class: str = "planning"):
         """Consult mindx.self.improve.model_selector and resolve the pick to a
-        concrete LLMHandler via the model_registry. Always logs godel.choice
-        for audit; returns None when the pick is not routable in the current
-        build, so the caller can fall through to the existing chain.
+        concrete LLMHandler. Always logs godel.choice for audit; returns None
+        only when the pick is not routable today (no provider key, unknown
+        class), letting the caller fall through to the deterministic chain.
+
+        OpenRouter slugs route to llm.openrouter_handler.OpenRouterHandler,
+        which itself returns None when OPENROUTER_API_KEY is absent — that
+        cascades the fall-through, so the caller still gets a working handler.
         """
         try:
             from mindx.self.improve import choose_model
             from mindx.self.improve.model_selector import TaskProfile
-            from mindx.self.improve.handler_resolver import classify_slug
+            from mindx.self.improve.handler_resolver import (
+                classify_slug,
+                slug_is_openrouter_resolvable,
+            )
 
             choice = await choose_model(TaskProfile(
                 task_class=task_class,
@@ -147,7 +155,16 @@ class StrategicEvolutionAgent:
                     return self.model_registry.get_handler("ollama")
                 except Exception:
                     return None
-            # Other classes (openrouter) — handler not yet routable; caller falls through.
+            if cls == "openrouter" and slug_is_openrouter_resolvable(choice.chosen):
+                try:
+                    from llm.llm_factory import create_llm_handler
+                    return await create_llm_handler(
+                        provider_name="openrouter",
+                        model_name=choice.chosen,
+                    )
+                except Exception as e:
+                    logger.warning(f"{self.log_prefix} openrouter handler creation failed: {e}")
+                    return None
             return None
         except Exception as e:
             logger.debug(f"{self.log_prefix} self-aware selector unavailable: {e}")
@@ -377,19 +394,79 @@ class StrategicEvolutionAgent:
             logger.error(f"{self.log_prefix} Failed to generate strategic plan: {e}", exc_info=True)
             return None
 
+    def _is_milestone(self, status: str, data: Dict[str, Any]) -> bool:
+        """Decide whether this campaign is a true evolution moment vs. a
+        routine successful audit. Used to upgrade the autopublish path so
+        AuthorAgent composes a richer article instead of the orchestrator's
+        terse generic template.
+
+        Heuristic (deliberately conservative — false negatives are fine,
+        false positives create noisy rage posts):
+          * status must be SUCCESS;
+          * validation results must record at least one passing check;
+          * audit findings must have been ADDRESSED (not just detected);
+          * resolution rate must meet the operator-tunable threshold
+            (env ``MINDX_SEA_MILESTONE_RESOLUTION_THRESHOLD``, default 0.8 —
+            matches the EXCELLENT grade band at :1112).
+        """
+        if status != "SUCCESS":
+            return False
+        try:
+            threshold = float(os.environ.get(
+                "MINDX_SEA_MILESTONE_RESOLUTION_THRESHOLD", "0.8"
+            ))
+        except (TypeError, ValueError):
+            threshold = 0.8
+        validation = (data or {}).get("validation_results") or {}
+        audit = (data or {}).get("audit_results") or {}
+        v_pass = validation.get("passed") or 0
+        resolution_rate = validation.get("resolution_rate") or 0.0
+        findings_resolved = audit.get("findings_resolved") or 0
+        try:
+            resolution_rate = float(resolution_rate)
+        except (TypeError, ValueError):
+            resolution_rate = 0.0
+        if not isinstance(v_pass, int) or v_pass <= 0:
+            return False
+        if not isinstance(findings_resolved, int) or findings_resolved <= 0:
+            return False
+        return resolution_rate >= threshold
+
     def _conclude_campaign(self, status: str, message: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Helper to format and log the final campaign summary."""
+        is_milestone = self._is_milestone(status, data)
         campaign_summary = {
             "campaign_run_id": self._current_campaign_run_id,
             "agent_id": self.agent_id,
             "overall_campaign_status": status,
             "final_message": message,
             "campaign_data": data,
+            "is_milestone": is_milestone,
             "timestamp": time.time()
         }
         self.campaign_history.append(campaign_summary)
         self._save_campaign_history()
-        logger.info(f"{self.log_prefix} Campaign '{self._current_campaign_run_id}' finished. Status: {status}. Message: {message}")
+        logger.info(
+            f"{self.log_prefix} Campaign '{self._current_campaign_run_id}' finished. "
+            f"Status: {status}. Milestone: {is_milestone}. Message: {message}"
+        )
+
+        # Notify subscribers (e.g. PublicationOrchestrator) on SUCCESS so the
+        # autopublish pipeline fires within the same async tick rather than
+        # waiting for the 60s file-polling fallback. Fire-and-forget — failures
+        # in subscribers must never affect the campaign result. The orchestrator
+        # routes is_milestone=True payloads through AuthorAgent's richer
+        # compose_milestone_article instead of its generic template.
+        if status == "SUCCESS" and getattr(self, "coordinator_agent", None) is not None:
+            try:
+                asyncio.create_task(
+                    self.coordinator_agent.publish_event("sea.campaign.concluded", campaign_summary)
+                )
+            except RuntimeError:
+                # No running loop (e.g. sync test harness) — silently skip; the
+                # file-polling watcher will pick it up on next scan.
+                pass
+
         return campaign_summary
 
     def _get_history_file_path(self) -> Path:

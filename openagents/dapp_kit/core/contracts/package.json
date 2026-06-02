@@ -1,0 +1,33 @@
+{
+  "name": "@openagents/contracts",
+  "version": "0.1.0",
+  "description": "Registry-driven ABI loading + read/write helpers for openagents/ dApps. TS port of openagents/contracts/registry.py.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./registry": "./dist/registry.js",
+    "./deployments": "./dist/deployments.js"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "viem": "^2.21.0",
+    "@openagents/wallet": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "happy-dom": "^15.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}

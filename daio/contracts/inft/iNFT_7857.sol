@@ -11,6 +11,8 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 
+import {ITHOTCommitmentRegistry} from "../THOT/interfaces/ITHOTCommitmentRegistry.sol";
+
 /// @title  iNFT_7857
 /// @notice ERC-7857 Intelligent NFT for the mindX ecosystem.
 ///         Encrypted intelligence + persistent memory live in 0G Storage
@@ -99,6 +101,11 @@ contract iNFT_7857 is
     error TreasuryUnset();
     error EthTransferFailed();
     error WrongOracleSigner(address recovered, address expected);
+    // THOT commitment-registry binding
+    error ThotRootNotRegistered(bytes32 root);
+    error ThotRootRevoked(bytes32 root);
+    error ThotRootAlreadyAttached(uint256 tokenId);
+    error CommitmentRegistryUnset();
 
     /* ───── Storage ───────────────────────────────────────────────── */
     struct IntelligencePayload {
@@ -154,8 +161,20 @@ contract iNFT_7857 is
     mapping(uint256 => uint256) public cloneCount;
     mapping(uint256 => uint256) public clonedFrom;           // 0 if root, else parent tokenId
 
+    // THOT commitment-registry binding. The registry is the cryptographic
+    // substrate that asserts a THOT4096 Merkle root has been canonically
+    // issued (and not censura-revoked). A token may opt in to a registered
+    // root via attachThotRoot; once attached, the root is consulted on
+    // every transferWithSealedKey to enforce revocation.
+    ITHOTCommitmentRegistry public commitmentRegistry;
+    mapping(uint256 => bytes32) public thotRootOf;          // tokenId => attached THOT4096 root
+
     // Transfer gate — set true while we're inside transferWithSealedKey or cloneAgent
     bool private _gateOpen;
+
+    /* ───── THOT-binding events (contract-local) ──────────────────── */
+    event CommitmentRegistryUpdated(address indexed oldRegistry, address indexed newRegistry);
+    event ThotRootAttached(uint256 indexed tokenId, bytes32 indexed root);
 
     /* ───── Constructor ───────────────────────────────────────────── */
     constructor(
@@ -221,6 +240,47 @@ contract iNFT_7857 is
         address old = treasury;
         treasury = newTreasury;
         emit TreasuryUpdated(old, newTreasury);
+    }
+
+    /// @notice Point this iNFT at a THOTCommitmentRegistry instance. Once
+    ///         set, attachThotRoot becomes callable by MINTER_ROLE and
+    ///         transferWithSealedKey will refuse to move an attached
+    ///         token whose root has been revoked.
+    /// @dev    Setting to address(0) detaches the registry (and disables
+    ///         attachThotRoot + the revoke gate). Existing thotRootOf
+    ///         entries are preserved for off-chain audit.
+    function setCommitmentRegistry(ITHOTCommitmentRegistry r)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        address old = address(commitmentRegistry);
+        commitmentRegistry = r;
+        emit CommitmentRegistryUpdated(old, address(r));
+    }
+
+    /// @notice Bind a registered THOT4096 root to an existing iNFT token.
+    ///         The root must already live in the commitment registry and
+    ///         must not be revoked. Once attached, the binding is
+    ///         immutable (can never be re-attached to a different root
+    ///         on the same token).
+    /// @dev    Optional. Tokens minted without attachThotRoot behave
+    ///         exactly as before. MINTER_ROLE-gated because attaching is
+    ///         a privileged assertion that the root corresponds to the
+    ///         sealed payload — the registry only proves the root
+    ///         exists, not that THIS payload matches THAT root.
+    function attachThotRoot(uint256 tokenId, bytes32 thotRoot)
+        external
+        onlyRole(MINTER_ROLE)
+        whenNotPaused
+    {
+        if (address(commitmentRegistry) == address(0)) revert CommitmentRegistryUnset();
+        if (_ownerOf(tokenId) == address(0)) revert TokenDoesNotExist(tokenId);
+        if (thotRootOf[tokenId] != bytes32(0)) revert ThotRootAlreadyAttached(tokenId);
+        if (thotRoot == bytes32(0)) revert ZeroBytes32();
+        if (!commitmentRegistry.isRegistered(thotRoot)) revert ThotRootNotRegistered(thotRoot);
+        if (commitmentRegistry.isRevoked(thotRoot))    revert ThotRootRevoked(thotRoot);
+        thotRootOf[tokenId] = thotRoot;
+        emit ThotRootAttached(tokenId, thotRoot);
     }
 
     function setCloneFee(uint256 newFeeWei) external onlyRole(TREASURER_ROLE) {
@@ -329,6 +389,15 @@ contract iNFT_7857 is
         if (tokenOwner == address(0)) revert TokenDoesNotExist(tokenId);
         if (tokenOwner != from)       revert NotAuthorized(from);
         if (!_isAuthorized(tokenOwner, msg.sender, tokenId)) revert NotAuthorized(msg.sender);
+
+        // THOT commitment-registry revoke gate. If a root was attached to
+        // this token and has since been censura-revoked, refuse to move
+        // the sealed key. See THOT/commitment/THOTCommitmentRegistry.sol
+        // revoke() and the MD doc §C (post-mint revocation flow).
+        bytes32 attachedRoot = thotRootOf[tokenId];
+        if (attachedRoot != bytes32(0) && address(commitmentRegistry) != address(0)) {
+            if (commitmentRegistry.isRevoked(attachedRoot)) revert ThotRootRevoked(attachedRoot);
+        }
 
         bytes32 newSealedKeyHash = keccak256(sealedKey);
         uint256 nonce = _oracleNonce[tokenId]++;

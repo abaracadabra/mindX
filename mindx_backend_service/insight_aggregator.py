@@ -555,7 +555,11 @@ class InsightAggregator:
                 "matched_in_backlog": matched_in_backlog,
                 # Back-compat field — older clients (dashboard.html) read this name.
                 "attempted": distinct,
-                "coverage_ratio": round(distinct / backlog_count, 4) if backlog_count else 0.0,
+                # 6-decimal precision so movement is visible at the early stage
+                # when distinct_directives is small relative to the 81K backlog.
+                # 2/81971 = 0.0000244 — at 4 decimals this read as 0.0; at 6 it
+                # reads as 0.000024 → 0.0024% on the tile, which IS movement.
+                "coverage_ratio": round(distinct / backlog_count, 6) if backlog_count else 0.0,
             }
 
         return summary

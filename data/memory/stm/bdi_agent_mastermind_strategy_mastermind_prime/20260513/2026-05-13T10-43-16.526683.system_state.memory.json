@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-05-13T10:43:16.526683",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime",
+  "content": {
+    "process_name": "bdi_goal_set",
+    "data": {
+      "goal": {
+        "id": "df419fb0",
+        "goal": "{\"error\": \"ConnectionError\", \"message\": \"Cannot connect to Ollama at http://10.0.0.155:18080\"}",
+        "priority": 1,
+        "status": "pending",
+        "added_at": 1778694196.3128307
+      }
+    }
+  },
+  "context": {
+    "agent_id": "bdi_agent_mastermind_strategy_mastermind_prime"
+  },
+  "tags": [
+    "bdi_goal_set",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "78e29a3401bc4038"
+}

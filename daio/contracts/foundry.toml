@@ -53,6 +53,34 @@ optimizer = true
 optimizer_runs = 200
 via_ir = true
 
+# THOT commitment substrate — THOTLib + THOTCommitmentRegistry + iNFT_7857
+# extension. Pulls in iNFT_7857 (canonical ERC-7857 wrapper) and skips the
+# legacy prior-art and unrelated trees. Run:
+#   FOUNDRY_PROFILE=thot_commitment forge build
+#   FOUNDRY_PROFILE=thot_commitment forge test -vv
+[profile.thot_commitment]
+src = "inft"
+test = "test/thot"
+script = "script"
+libs = ["lib"]
+auto_detect_remappings = false
+solc = "0.8.24"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+# Skip the OZ-v4-era prior-art iNFT.sol / IntelligentNFT.sol files +
+# the unrelated tests under test/inft/. Tests under test/thot/ reach
+# into ../../THOT/{libraries,commitment,interfaces} via relative paths —
+# the resolver follows those without needing a src include.
+skip = [
+    "inft/iNFT.sol",
+    "inft/IntelligentNFT.sol",
+    "inft/IntelligentNFTFactory.sol",
+    "inft/interfaces/**",
+    "test/inft/**",
+]
+
 # AgentRegistry (ERC-8004-aligned) — agnostic identity + capability registry.
 [profile.agentregistry]
 src = "agentregistry"
@@ -77,5 +105,49 @@ evm_version = "cancun"
 optimizer = true
 optimizer_runs = 200
 via_ir = true
+
+# Marketing — MarketingAttributionReceipt (Base) + MarketingTreasury (L1).
+# Imports Conclave Tessera/Censura interfaces from openagents/conclave/
+# at relative path; the profile-local src + test scope keeps the rest of
+# the legacy tree out of the build.
+#
+# Run: FOUNDRY_PROFILE=marketing forge test --fuzz-runs 50000 -vvv
+[profile.marketing]
+src = "marketing"
+test = "marketing/test"
+libs = ["lib"]
+auto_detect_remappings = false
+solc = "0.8.24"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+
+# ──────────────────────────────────────────────────────────────────────
+# RPC endpoints used by `script/DeployTier1.s.sol` and `verify_tier1.sh`.
+# Values resolve from environment via `.env.deploy`.
+# ──────────────────────────────────────────────────────────────────────
+[rpc_endpoints]
+base_sepolia = "${BASE_SEPOLIA_RPC_URL}"
+sepolia      = "${SEPOLIA_RPC_URL}"
+base         = "${BASE_RPC_URL}"
+mainnet      = "${MAINNET_RPC_URL}"
+arbitrum     = "${ARBITRUM_RPC_URL}"
+optimism     = "${OPTIMISM_RPC_URL}"
+bnb          = "${BNB_RPC_URL}"
+
+[etherscan]
+base_sepolia = { key = "${BASESCAN_API_KEY}", chain = 84532 }
+sepolia      = { key = "${ETHERSCAN_API_KEY}", chain = 11155111 }
+base         = { key = "${BASESCAN_API_KEY}", chain = 8453 }
+mainnet      = { key = "${ETHERSCAN_API_KEY}", chain = 1 }
+arbitrum     = { key = "${ARBISCAN_API_KEY}", chain = 42161 }
+optimism     = { key = "${OPTIMISTIC_ETHERSCAN_API_KEY}", chain = 10 }
+bnb          = { key = "${BSCSCAN_API_KEY}", chain = 56 }
+
+[fmt]
+line_length = 120
+tab_width = 4
+bracket_spacing = false
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

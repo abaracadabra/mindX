@@ -1,0 +1,43 @@
+{
+  "timestamp": "2026-05-13T02:05:43.672969",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "mindx_heartbeat",
+  "content": {
+    "process_name": "heartbeat_dialogue",
+    "data": {
+      "timestamp": "2026-05-13T09:05:43Z",
+      "agent": "mindx_heartbeat",
+      "model": "openrouter/nvidia/nemotron-3-super-120b-a12b:free",
+      "prompt": "You are mindX. Your top-fitness agent is coordinator_agent_main (score=55.0); your bottom is mastermind_prime (score=26.1). What evolutionary pressure is currently active?",
+      "response": "Okay, let's tackle this question. The user is asking about the evolutionary pressure currently active based on the scores of two agents: coordinator_agent_main with a score of 55.0 (top-fitness) and mastermind_prime with 26.1 (bottom). \n\nFirst, I need to recall what evolutionary pressure means in this context. Evolutionary pressure refers to factors that influence which traits are favored in a population, driving natural selection. Higher fitness scores usually indicate better adaptation to the ",
+      "latency_ms": 6260,
+      "state_context": {
+        "recent_godel": "self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free; self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free; self_aware_model_selection\u2192nvidia/nemotron-3-super-120b-a12b:free",
+        "ok": 0,
+        "total": 25,
+        "top_agent": "coordinator_agent_main",
+        "top_score": "55.0",
+        "bot_agent": "mastermind_prime",
+        "bot_score": "26.1",
+        "blueprint_title": "(none)",
+        "backlog_total": 894,
+        "running": 0,
+        "promoted": 150,
+        "dream_ts": "2026-05-13T07:41:57",
+        "stm_count": 10526
+      }
+    }
+  },
+  "context": {
+    "agent_id": "mindx_heartbeat",
+    "model": "nvidia/nemotron-3-super-120b-a12b:free",
+    "type": "self_reflection_grounded"
+  },
+  "tags": [
+    "heartbeat_dialogue",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "7ec85b339ce79bc7"
+}

@@ -581,24 +581,55 @@ class CoordinatorAgent:
 
         # --- AUTO-EXECUTE EVOLUTION ---
         # Take the highest priority suggestion and immediately try to implement it.
-        top_suggestion = suggestions[0] # Assuming the first one is the highest priority
-        directive = top_suggestion.get("description", "Implement the top improvement suggestion.")
-        
+        # Skip the stub-directive path that produced 0/100 successful campaigns
+        # for the seven days preceding 2026-05-24 — when the system_analyzer can't
+        # produce a usable description, defer to MastermindAgent's autonomous
+        # variation loop which selects from the 81K-item persisted backlog
+        # against real target_component_path + priority + justification fields.
+        top_suggestion = suggestions[0]  # Assuming the first one is the highest priority
+        raw_directive = top_suggestion.get("description") or top_suggestion.get("suggestion") or ""
+        _STUB_DIRECTIVES = {
+            "implement the top improvement suggestion.",
+            "implement the top improvement suggestion",
+        }
+        if (not raw_directive) or raw_directive.strip().lower() in _STUB_DIRECTIVES:
+            self.logger.info(
+                "Skipping coordinator auto-execute: top suggestion has no usable description "
+                "(stub directive avoided). Mastermind's autonomous loop will pick from backlog."
+            )
+            interaction.response = {
+                "status": "SUCCESS",
+                "message": f"Generated {len(suggestions)} suggestions; auto-execute deferred to Mastermind backlog loop.",
+            }
+            interaction.status = InteractionStatus.COMPLETED
+            await self.publish_event(
+                "component.improvement.success",
+                {"interaction_id": interaction.interaction_id, "metadata": interaction.metadata, "suggestions_generated": len(suggestions)},
+            )
+            if target_component and any(indicator in target_component for indicator in ["orchestration", "core", "agents", "tools", "learning", "evolution"]):
+                await self._check_and_backup_architectural_changes(target_component)
+            return
+
+        # Real directive — proceed with auto-execute, decorated with backlog context.
+        target = top_suggestion.get("target_component_path", "system")
+        priority = int(top_suggestion.get("priority", 5))
+        directive = f"{raw_directive.strip()} [target: {target}, priority: {priority}, source: coordinator_auto_execute]"[:500]
+
         self.logger.info(f"Attempting to auto-execute top improvement suggestion: {directive}")
 
         try:
             from agents.orchestration.mastermind_agent import MastermindAgent
             mastermind = await MastermindAgent.get_instance(coordinator_agent_instance=self)
-            
+
             # Run the evolution campaign in the background
             asyncio.create_task(mastermind.manage_mindx_evolution(top_level_directive=directive))
-            
+
             interaction.response = {"status": "SUCCESS", "message": f"Successfully generated {len(suggestions)} suggestions and initiated evolution campaign for the top suggestion: '{directive}'"}
             interaction.status = InteractionStatus.COMPLETED
         except Exception as e:
             self.logger.error(f"Failed to initiate auto-evolution campaign: {e}", exc_info=True)
             interaction.response = {"status": "PARTIAL_SUCCESS", "message": f"Generated {len(suggestions)} suggestions, but failed to start evolution campaign.", "error": str(e)}
-            interaction.status = InteractionStatus.COMPLETED # The analysis part was done.
+            interaction.status = InteractionStatus.COMPLETED  # The analysis part was done.
 
         await self.publish_event(
             "component.improvement.success",

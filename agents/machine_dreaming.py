@@ -286,6 +286,8 @@ class DreamResult:
     archive_bytes_after: int = 0
     training_examples_written: int = 0
     training_file: str = ""
+    evolution_proposals_written: int = 0
+    evolution_file: str = ""
 
     @property
     def stm_bytes_freed(self) -> int:
@@ -305,13 +307,16 @@ class MachineDreamCycle:
     I distill experience into knowledge. I distribute, I do not delete.
     """
 
-    def __init__(self, memory_agent=None, config=None, days_back: int = 90):
+    def __init__(self, memory_agent=None, config=None, days_back: int = 90, coordinator=None):
         self.memory_agent = memory_agent
         self.config = config or Config()
         self.log_prefix = "[MachineDream]"
         self.days_back = days_back  # Look back window for STM analysis
         self._existing_ltm_keys: set = set()
         self.clock = DreamClock()
+        # Optional CoordinatorAgent for pub/sub notifications when a book-edition
+        # dream report is written (PublicationOrchestrator listens for these).
+        self.coordinator = coordinator
 
     # === PHASE 1: STATE ASSESSMENT ===
 
@@ -690,6 +695,21 @@ class MachineDreamCycle:
             except Exception as _te:
                 logger.debug(f"{self.log_prefix} training-data write failed for {agent_id}: {_te}")
 
+            # Phase 5c: evolution proposals. Distinct file alongside the
+            # consolidation JSONL — mindXtrain's `mindx_dreams` source
+            # picks both up when `data.include_evolutions: true`.
+            try:
+                evo_count, evo_file = await self._write_evolution_proposals(
+                    agent_id, scored_insights,
+                )
+                result.evolution_proposals_written = evo_count
+                result.evolution_file = evo_file
+            except Exception as _ee:
+                logger.debug(
+                    f"{self.log_prefix} evolution-proposals write failed "
+                    f"for {agent_id}: {_ee}"
+                )
+
             # Phase 6: Parameter Tuning
             tuning = self._generate_tuning(agent_id, scored_insights, state)
             result.tuning_recommendations = tuning
@@ -779,6 +799,119 @@ class MachineDreamCycle:
                 examples += 1
 
         return examples, str(training_file.relative_to(PROJECT_ROOT))
+
+    async def _write_evolution_proposals(
+        self,
+        agent_id: str,
+        insights: List[DreamInsight],
+    ) -> tuple:
+        """Write a `*_evolutions.jsonl` file with synthesized evolution proposals.
+
+        Phase 5c. For each high-scoring failure/behavioral/performance insight,
+        synthesize one evolution proposal in the same OpenAI-chat shape as
+        phase 5b's consolidation rows. mindXtrain's `mindx_dreams` data
+        adapter consumes both files when a recipe sets
+        `data.include_evolutions: true`, so the trained fallback model
+        learns the *insight → evolution* mapping alongside *STM → insight*.
+
+        Synthesis is deterministic — no LLM call. We treat each insight as
+        a structured signal and project it into the evolution-proposal
+        schema. This keeps the cycle cheap (no extra LLM cost), avoids
+        nondeterminism in the training corpus, and is enough to teach the
+        fine-tuned model the shape. A future iteration can swap in an LLM
+        synthesizer for richer proposals.
+
+        Schema of the assistant turn:
+            {"type": "strategy|configuration|prompt_change|tool_change|rollback",
+             "target_agent": "<agent_id>",
+             "proposal": "<short directive>",
+             "rationale": "refs:[<insight types and scores>]",
+             "expected_outcome": "<short text>",
+             "confidence": 0.NN}
+        """
+        if len(insights) < 3:
+            return 0, ""
+
+        # Pick the top-N actionable insights. Success patterns yield
+        # low-signal proposals ("keep doing X"), and cross_agent needs
+        # multi-agent context we don't have here.
+        actionable = [
+            ins for ins in insights
+            if ins.pattern_type in {"failure", "behavioral", "performance"}
+        ]
+        if not actionable:
+            return 0, ""
+        actionable.sort(key=lambda ins: ins.score, reverse=True)
+        top_n = actionable[:3]
+
+        # Project each insight into the proposal schema. Type mapping
+        # encodes our hypothesis about what KIND of evolution the pattern
+        # most naturally implies.
+        type_map = {
+            "failure":     "rollback",      # something went wrong; consider reverting
+            "performance": "configuration",  # tune knobs (timeouts, batch sizes, etc.)
+            "behavioral":  "strategy",       # change which action to prefer
+        }
+
+        ltm_path = PROJECT_ROOT / "data" / "memory" / "ltm" / agent_id
+        ltm_path.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        evo_file = ltm_path / f"{ts}_evolutions.jsonl"
+
+        system_prompt = (
+            f"You are the evolution-proposal engine for mindX agent {agent_id}. "
+            f"Given the agent's most durable insights, propose a single concrete "
+            f"self-improvement. Output JSON only."
+        )
+
+        proposals = 0
+        with evo_file.open("w", encoding="utf-8") as fh:
+            for ins in top_n:
+                # Compact the supporting insights for the user turn — the
+                # model needs to see the pattern that justifies the proposal.
+                ctx = [
+                    {
+                        "type": i.pattern_type,
+                        "description": i.description[:160],
+                        "score": round(i.score, 4),
+                        "frequency": i.frequency,
+                    }
+                    for i in top_n
+                ]
+                user_msg = (
+                    f"Top insights for {agent_id}:\n"
+                    f"{json.dumps(ctx, ensure_ascii=False)}\n\n"
+                    f"Propose one evolution this agent should consider applying to itself."
+                )
+                proposal_type = type_map.get(ins.pattern_type, "strategy")
+                # Confidence is a function of the insight's own confidence
+                # tempered by how much of the top-N supports the same pattern.
+                pattern_support = sum(
+                    1 for i in top_n if i.pattern_type == ins.pattern_type
+                ) / max(1, len(top_n))
+                proposal_confidence = round(ins.confidence * pattern_support, 2)
+                assistant_msg = json.dumps({
+                    "type": proposal_type,
+                    "target_agent": agent_id,
+                    "proposal": f"address {ins.pattern_type} pattern: {ins.description[:120]}",
+                    "rationale": (
+                        f"refs:[{','.join(f'{i.pattern_type}@{round(i.score,3)}' for i in top_n)}]"
+                    ),
+                    "expected_outcome": (
+                        f"reduce {ins.pattern_type} frequency below current "
+                        f"{ins.frequency}"
+                    ),
+                    "confidence": proposal_confidence,
+                }, ensure_ascii=False)
+                row = {"messages": [
+                    {"role": "system",    "content": system_prompt},
+                    {"role": "user",      "content": user_msg},
+                    {"role": "assistant", "content": assistant_msg},
+                ]}
+                fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+                proposals += 1
+
+        return proposals, str(evo_file.relative_to(PROJECT_ROOT))
 
     # === FULL DREAM FOR ALL AGENTS ===
 
@@ -956,6 +1089,88 @@ class MachineDreamCycle:
             logger.warning(f"{self.log_prefix} model_selector_retrain failed: {e}")
             return out
 
+    async def _maybe_emit_dreaming_improved(self, report: Dict[str, Any], total_insights: int) -> None:
+        """Fire 'dreaming.improved' coordinator event under either of two
+        conditions (consumed by AGInt's milestone recognizer):
+
+          1. **code_change**: the file hash of agents/machine_dreaming.py
+             differs from the last-recorded baseline. The dreaming substrate
+             itself was upgraded since the previous dream cycle.
+
+          2. **insight_outlier**: insights_generated for THIS dream is
+             ≥1.5× the rolling-baseline median (computed from the last 30
+             dream reports). The cycle produced significantly more than usual.
+
+        Baseline persisted at data/governance/dreaming_baseline.json.
+        Cheap; runs once per dream cycle (every ~8h).
+        """
+        import hashlib as _h
+        import statistics as _st
+        from datetime import date as _date
+
+        baseline_path = PROJECT_ROOT / "data" / "governance" / "dreaming_baseline.json"
+        baseline_path.parent.mkdir(parents=True, exist_ok=True)
+        baseline: Dict[str, Any] = {}
+        if baseline_path.exists():
+            try:
+                baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+            except Exception:
+                baseline = {}
+
+        # 1. Code-change detector
+        try:
+            src = Path(__file__).read_bytes()
+            new_hash = _h.sha256(src).hexdigest()
+        except Exception:
+            new_hash = None
+        old_hash = baseline.get("code_hash")
+        if new_hash and old_hash and new_hash != old_hash:
+            try:
+                await self.coordinator.publish_event("dreaming.improved", {
+                    "reason": "code_change",
+                    "old_hash": old_hash,
+                    "new_hash": new_hash,
+                    "date": _date.today().isoformat(),
+                    "timestamp": report.get("timestamp"),
+                })
+                logger.info(f"{self.log_prefix} dreaming.improved (code_change) {old_hash[:7]}→{new_hash[:7]}")
+            except Exception as e:
+                logger.warning(f"{self.log_prefix} dreaming.improved emit failed: {e}")
+
+        # 2. Insight-outlier detector — needs a rolling history
+        history = list(baseline.get("insights_history") or [])
+        median = None
+        if len(history) >= 5:
+            try:
+                median = _st.median(history)
+                if median > 0 and total_insights >= 1.5 * median:
+                    ratio = round(total_insights / median, 2)
+                    await self.coordinator.publish_event("dreaming.improved", {
+                        "reason": "insight_outlier",
+                        "insights": total_insights,
+                        "baseline": median,
+                        "ratio": ratio,
+                        "date": _date.today().isoformat(),
+                        "timestamp": report.get("timestamp"),
+                    })
+                    logger.info(
+                        f"{self.log_prefix} dreaming.improved (insight_outlier) "
+                        f"{total_insights} vs baseline {median} (x{ratio})"
+                    )
+            except Exception as e:
+                logger.debug(f"{self.log_prefix} outlier detect skipped: {e}")
+
+        # Update baseline (idempotent; bounded rolling window of 30 entries).
+        history.append(int(total_insights))
+        history = history[-30:]
+        baseline_out = {"code_hash": new_hash, "insights_history": history}
+        try:
+            tmp = baseline_path.with_suffix(baseline_path.suffix + ".tmp")
+            tmp.write_text(json.dumps(baseline_out, indent=2), encoding="utf-8")
+            os.replace(tmp, baseline_path)
+        except Exception as e:
+            logger.warning(f"{self.log_prefix} baseline save failed: {e}")
+
     async def run_full_dream(self) -> Dict[str, Any]:
         """Run dream cycle for all agents with STM data. The system dreams."""
         start = time.time()
@@ -1037,6 +1252,9 @@ class MachineDreamCycle:
         total_stm_freed = max(0, total_stm_before - total_stm_after)
         total_ltm_growth = max(0, total_ltm_after - total_ltm_before)
         total_training = sum(r.training_examples_written for r in all_results)
+        total_evolution_proposals = sum(
+            r.evolution_proposals_written for r in all_results
+        )
         compression_ratio = round(total_stm_freed / max(1, total_ltm_growth), 2)
 
         # Store dream report — cypherpunk2048 precision
@@ -1065,6 +1283,7 @@ class MachineDreamCycle:
                 "archive_bytes_after": total_archive_after,
                 "compression_ratio": compression_ratio,
                 "training_examples_written": total_training,
+                "evolution_proposals_written": total_evolution_proposals,
             },
             "per_agent": [
                 {
@@ -1101,6 +1320,24 @@ class MachineDreamCycle:
             )
         except Exception as e:
             logger.warning(f"{self.log_prefix} Failed to save dream report: {e}")
+
+        # Notify subscribers (e.g. PublicationOrchestrator) when a book edition
+        # was triggered, so autopublish fires within the same tick rather than
+        # waiting for the 60s file-polling fallback. Fire-and-forget — failures
+        # in subscribers must never affect the dream cycle.
+        if book_edition_due and self.coordinator is not None:
+            try:
+                await self.coordinator.publish_event("dream.report.written", report)
+            except Exception as ev_e:
+                logger.warning(f"{self.log_prefix} publish_event failed: {ev_e}")
+
+        # ─── dreaming.improved detectors (milestone candidates) ───
+        # Fire-and-forget; consumed by AGInt's milestone recognizer.
+        if self.coordinator is not None:
+            try:
+                await self._maybe_emit_dreaming_improved(report, total_insights)
+            except Exception as e:
+                logger.warning(f"{self.log_prefix} dreaming.improved emit failed: {e}")
 
         # Log as memory
         if self.memory_agent:

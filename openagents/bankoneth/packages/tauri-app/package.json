@@ -1,0 +1,27 @@
+{
+  "name": "@bankoneth/tauri-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "bankoneth reference desktop dApp — Tauri 2 + Vite + Lit. Standalone app and embeddable demo.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev":     "vite",
+    "build":   "vite build",
+    "preview": "vite preview",
+    "tauri":   "tauri",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@bankoneth/core": "workspace:*",
+    "@bankoneth/ui":   "workspace:*",
+    "lit":             "^3.2.0",
+    "viem":            "^2.21.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/api":   "^2.1.0",
+    "@tauri-apps/cli":   "^2.1.0",
+    "typescript":        "^5.4.0",
+    "vite":              "^5.4.0"
+  }
+}
