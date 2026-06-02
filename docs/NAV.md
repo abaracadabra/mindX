@@ -289,7 +289,8 @@ Phase A–E shipped 2026-04-26. Pushes old/low-importance STM to IPFS (Lighthous
 
 ### Autonomous Operation
 
-- [Autonomous Mode](AUTONOMOUS.md) — 5-minute improvement cycles, inference pre-check, 120s backoff on gap
+- [Autonomous Mode](AUTONOMOUS.md) — improvement cycles, inference pre-check, 120s backoff on gap, dynamic CPU gate
+- [Resource Governance](RESOURCE_GOVERNANCE.md) — how mindX shares the 2-core VPS: ResourceGovernor modes + dynamic ~92% CPU ceiling (loops + background inference defer under load) + cap-free CPUWeight/Nice scheduling priority. "I coexist."
 - [mindXagent](../agents/core/mindXagent.py) — `POST /mindxagent/autonomous/start`, `POST /mindxagent/autonomous/stop`, `GET /mindxagent/status`
 - [Self-Improvement](agents/self_improve_agent.md) — Strategic evolution through code analysis and targeted improvement
 - [Godel Journal](BOOK_OF_MINDX.md) — Autonomous audit trail (the machine's record of its own improvement)
@@ -365,6 +366,7 @@ Priority: Environment variables (`MINDX_` prefix) > [BANKON Vault](vault_system.
 
 - [Production Deployment](DEPLOYMENT_MINDX_PYTHAI_NET.md) — mindx.pythai.net on Hostinger VPS (168.231.126.58), Apache2 + Let's Encrypt, systemd service
 - [HostingerVPSAgent](../agents/hostinger_vps_agent.py) — Three MCP channels for VPS management: SSH (shell), [Hostinger API](https://developers.hostinger.com) (restart/metrics/backups), [mindX Backend](https://mindx.pythai.net) (diagnostics/activity). Persistent state, MCP tool registration. See [.agent definition](../agents/hostinger.vps.agent)
+- [Resource Governance](RESOURCE_GOVERNANCE.md) — coexisting on a 2-core VPS: dynamic ~92% CPU ceiling + cap-free ollama/mindx CPUWeight & Nice systemd drop-ins (web-serving favored under contention, ollama still uncapped when idle)
 - [Vault System](vault_system.md) — BANKON Vault: AES-256-GCM + HKDF-SHA512 encrypted credentials
 - **[BANKON Vault — canonical reference](BANKON_VAULT.md)** — full innerstanding: crypto stack, on-disk layout, three custody modes (Machine/Human/DAIO), lifecycle, HTTP surface, tests
   - [BANKON Vault Handoff](BANKON_VAULT_HANDOFF.md) — operator runbook for the airgapped Machine→Human ceremony (threat model, recovery, DAIO migration path)
