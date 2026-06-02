@@ -1034,26 +1034,31 @@ async def health_check() -> Dict[str, Any]:
             return 0
 
     try:
-        est = await pool.fetchrow(
-            """SELECT
-                (SELECT reltuples::bigint FROM pg_class WHERE relname='beliefs') as beliefs,
-                (SELECT reltuples::bigint FROM pg_class WHERE relname='agents') as agents,
-                (SELECT reltuples::bigint FROM pg_class WHERE relname='godel_choices') as godel_choices,
-                (SELECT reltuples::bigint FROM pg_class WHERE relname='actions') as actions,
-                (SELECT pg_size_pretty(pg_database_size(current_database()))) as db_size"""
+        # Single INSTANT query against the stats collector — n_live_tup is maintained
+        # live (no table scan), so this stays sub-100ms even on 300k-row tables. The
+        # old exact/combined COUNT(*) over memories + filtered embedding scans took
+        # multiple seconds and timed out under load, blanking the dashboard panel.
+        rows = await pool.fetch(
+            "SELECT relname, n_live_tup FROM pg_stat_user_tables "
+            "WHERE relname = ANY($1::text[])",
+            ["memories", "beliefs", "agents", "godel_choices", "actions", "doc_embeddings"],
         )
-        memories = await count_memories_total()  # exact, single fast count
-        emb = await count_embeddings()           # exact embedding counts, proven fast
+        c = {r["relname"]: _i(r["n_live_tup"]) for r in rows}
+        db_size = await pool.fetchval(
+            "SELECT pg_size_pretty(pg_database_size(current_database()))"
+        )
         return {
             "status": "connected",
-            "memories": _i(memories),
-            "beliefs": _i(est["beliefs"]),
-            "agents": _i(est["agents"]),
-            "godel_choices": _i(est["godel_choices"]),
-            "actions": _i(est["actions"]),
-            "doc_embeddings": _i(emb.get("docs")),
-            "mem_embeddings": _i(emb.get("memories")),
-            "db_size": est["db_size"],
+            "memories": c.get("memories", 0),
+            "beliefs": c.get("beliefs", 0),
+            "agents": c.get("agents", 0),
+            "godel_choices": c.get("godel_choices", 0),
+            "actions": c.get("actions", 0),
+            "doc_embeddings": c.get("doc_embeddings", 0),
+            # approximate (≈ total memories); the dashboard prefers the exact
+            # rage_embed.memories count when present.
+            "mem_embeddings": c.get("memories", 0),
+            "db_size": db_size,
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
