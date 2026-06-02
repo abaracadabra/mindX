@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BANKON · member dashboard</title>
+<link rel="stylesheet" href="./styled.css" />
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><span class="mark">BANKON</span><span class="eth">.eth</span>
+      <span class="tagline">Member · Cryptonomy</span></div>
+    <span class="spacer"></span>
+    <span class="row" data-conn></span>
+  </div>
+
+  <section class="hero">
+    <img class="crest" src="/gfx/BONAFIDE.png" alt="member" onerror="this.src='/gfx/shadow_overlord.png';this.onerror=null" />
+    <h1>Your bankon.eth identity</h1>
+    <p class="sub">Membership in the bankon.eth cryptonomy — manage your names, records, and agent identity.</p>
+  </section>
+
+  <div class="panel">
+    <h3>Your names</h3>
+    <div id="names" class="grid"><div class="muted">loading…</div></div>
+    <div class="note">Don't see a name you hold? <span class="row" style="display:inline-flex">
+      <input id="manualName" type="text" placeholder="alice" style="width:160px;display:inline-block" />
+      <button id="proveBtn">Prove ownership</button></span></div>
+  </div>
+
+  <div id="manage" class="panel" style="display:none">
+    <h3>Manage <span id="manageName" style="color:var(--cyan)"></span></h3>
+    <label class="field"><span class="lbl">text key</span><input id="tkey" type="text" value="agent.capabilities" /></label>
+    <label class="field"><span class="lbl">text value</span><input id="tval" type="text" placeholder="…" /></label>
+    <div class="row"><button id="readText">Read</button><button class="primary" id="setText">Set record</button></div>
+    <div id="recOut" class="result" style="display:none"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Agent identity</h3>
+    <div class="sub">Register an ERC-8004 agent bound to your name (AgentRegistry).</div>
+    <label class="field"><span class="lbl">agent id</span><input id="agentId" type="text" placeholder="my-agent" /></label>
+    <button class="primary" id="regAgent">Register agent</button>
+    <div id="agentOut" class="result" style="display:none"></div>
+  </div>
+
+  <div class="foot">Want a new name? <a href="./index.html">storefront →</a></div>
+</div>
+
+<script type="module" src="./webgl-bg.js"></script>
+<script type="module">
+import { BANKON, F, ethers, connect, login, whoami, routeToTier, topbar, toast, el, stringify } from "./app-common.js";
+
+const show = (n, t, c = "") => { n.style.display = "block"; n.className = "result " + c; n.textContent = t; };
+let activeName = null;
+
+async function onLogin() { const r = await login(); topbar({ onLogin }); if (r?.tier) routeToTier(r.tier, "member.html"); }
+
+async function resolverCtx() {
+  if (!BANKON.deployments) BANKON.deployments = await F.loadDeployments(BANKON.PUBLIC_BASE, BANKON.chainId || 1);
+  const address = F.addressFor(BANKON.deployments, "resolver");
+  if (!address) throw new Error("resolver not deployed on this network");
+  return { address, abi: await F.loadAbi(BANKON.PUBLIC_BASE, "BankonSubnameResolver") };
+}
+
+function renderNames() {
+  const box = document.getElementById("names"); box.innerHTML = "";
+  if (!BANKON.names.length) { box.appendChild(el("div", { cls: "muted", text: "No names discovered. Prove ownership of one below, or visit the storefront." })); return; }
+  for (const n of BANKON.names) box.appendChild(el("div", { cls: "card click", on: { click: () => openManage(n) } }, [
+    el("h3", { text: n }), el("div", { cls: "sub", text: "manage records →" }),
+  ]));
+}
+
+function openManage(name) {
+  activeName = name;
+  document.getElementById("manage").style.display = "block";
+  document.getElementById("manageName").textContent = name;
+  document.getElementById("manage").scrollIntoView({ behavior: "smooth" });
+}
+
+document.getElementById("proveBtn").addEventListener("click", async () => {
+  const label = document.getElementById("manualName").value.trim().toLowerCase().replace(/\.bankon\.eth$/, "");
+  if (!label) return;
+  const r = await login(label);
+  if (r?.tier === "member" || r?.tier === "admin") { BANKON.names = r.names || [`${label}.bankon.eth`]; renderNames(); toast("Ownership proven.", "ok"); }
+  else toast("You don't appear to own " + label + ".bankon.eth", "err");
+});
+
+document.getElementById("readText").addEventListener("click", async () => {
+  const o = document.getElementById("recOut"); show(o, "…");
+  try { const { address, abi } = await resolverCtx();
+    const v = await F.readContract({ provider: BANKON.browserProvider, address, abi, fn: "text", args: [ethers.namehash(activeName), document.getElementById("tkey").value], ethers });
+    show(o, "text = " + (v || "(empty)"), "ok"); } catch (e) { show(o, "✗ " + (e.shortMessage || e.message), "err"); }
+});
+document.getElementById("setText").addEventListener("click", async () => {
+  const o = document.getElementById("recOut"); show(o, "awaiting signature…");
+  try { const { address, abi } = await resolverCtx(); const signer = await BANKON.browserProvider.getSigner();
+    const tx = await F.writeContract({ signer, address, abi, fn: "setText", args: [ethers.namehash(activeName), document.getElementById("tkey").value, document.getElementById("tval").value], ethers });
+    show(o, "sent: " + tx.hash + "\nwaiting…"); const r = await tx.wait(); show(o, `✅ block ${r.blockNumber}`, "ok"); }
+  catch (e) { show(o, "✗ " + (e.shortMessage || e.message), "err"); }
+});
+
+document.getElementById("regAgent").addEventListener("click", async () => {
+  const o = document.getElementById("agentOut"); show(o, "awaiting signature…");
+  try {
+    if (!BANKON.deployments) BANKON.deployments = await F.loadDeployments(BANKON.PUBLIC_BASE, BANKON.chainId || 1);
+    const address = F.addressFor(BANKON.deployments, "agentRegistry");
+    if (!address) throw new Error("agentRegistry not deployed on this network");
+    const abi = await F.loadAbi(BANKON.PUBLIC_BASE, "AgentRegistry");
+    const signer = await BANKON.browserProvider.getSigner();
+    const args = [BANKON.address, document.getElementById("agentId").value, "0x0000000000000000000000000000000000000000", "0x" + "0".repeat(64), ""];
+    const tx = await F.writeContract({ signer, address, abi, fn: "register", args, ethers });
+    show(o, "sent: " + tx.hash + "\nwaiting…"); const r = await tx.wait(); show(o, `✅ agent registered, block ${r.blockNumber}`, "ok");
+  } catch (e) { show(o, "✗ " + (e.shortMessage || e.message), "err"); }
+});
+
+(async function () {
+  await whoami();
+  await connect().catch(() => {});
+  topbar({ onLogin });
+  if (BANKON.tier === "visitor") { // not a member — bounce to storefront (server also gates)
+    location.href = "/index.html"; return;
+  }
+  renderNames();
+})();
+</script>
+</body>
+</html>

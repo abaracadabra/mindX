@@ -1,5 +1,9 @@
 # bankoneth dApp — run, use, deploy
 
+> **Product UI = the tiered login** (`docs/TIERED_LOGIN.md`): a server-gated
+> admin/member/visitor experience served by `backend/` (`uvicorn backend.app:app`).
+> The pages below are the **developer explorer** + iNFT, reachable from the tiered UI.
+
 Two framework-free, no-build prototype pages plus a production parsec view.
 
 | File | What |

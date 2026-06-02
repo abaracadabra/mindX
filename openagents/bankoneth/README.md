@@ -38,9 +38,31 @@ node script/export-abis.mjs                      # regenerate ABIs + manifest fo
 cd packages/web && python3 -m http.server 8788   # open http://localhost:8788/bankoneth.html
 ```
 
-## Interactive dApp
+## Hierarchical login (admin / member / visitor)
 
-The fastest way in is the **self-contained, framework-free** dApp at
+The product UI is a **server-gated, three-tier** dApp — the single front-end for both
+bankon.eth and the **BANKON Vault**:
+
+- **admin** (owns `bankon.eth`) → console: pricing/fees/hosting/registry setters + vault
+  (credentials, cabinet, signing). Non-owners **never receive** these pages.
+- **member** (holds `*.bankon.eth`) → dashboard: names, records, agent identity.
+- **visitor** → storefront: buy a subname, paying **any denomination** (ETH / USDC / x402 /
+  bridge from ARC), converted to settle on-chain.
+
+Tiers are resolved **on-chain** (live `NameWrapper.ownerOf`) and enforced by the gate in
+[`backend/`](backend/); the BANKON Vault + shadow-overlord auth is fully imported into
+[`vault_module/`](vault_module/). See [`docs/TIERED_LOGIN.md`](docs/TIERED_LOGIN.md),
+[`docs/BANKON_VAULT.md`](docs/BANKON_VAULT.md), [`docs/PAYMENTS.md`](docs/PAYMENTS.md),
+[`docs/ADMIN_ROLES.md`](docs/ADMIN_ROLES.md), [`docs/ETHERSCAN.md`](docs/ETHERSCAN.md).
+
+```bash
+export BANKON_GATE_SECRET=$(openssl rand -hex 24)
+uvicorn backend.app:app --port 8800        # open http://localhost:8800/
+```
+
+## Interactive dApp (developer explorer)
+
+A **self-contained, framework-free** explorer is at
 [`packages/web/bankoneth.html`](packages/web/bankoneth.html) — MetaMask login
 (EIP-6963, allchain.html-style), guided mint/buy/host/register-agent/resolve
 flows, **and** a generic ABI explorer (load any contract → read/write forms).

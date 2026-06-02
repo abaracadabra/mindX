@@ -239,3 +239,26 @@ export function buildEthRegistrarParams(
 }
 
 export const constants = { ZERO_ADDR, ZERO_BYTES32, deploymentFileFor };
+// ── Client-side tier resolution (parsec/react have no server gate) ───────────
+const BANKON_ETH_NODE = "0x79c178642317fc2d61d186f3b412440f06590d8314f126362d6a88929a6cbe1a";
+const NAME_WRAPPER = "0xD4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401";
+const NW_ABI = [{ type: "function", name: "ownerOf", stateMutability: "view", inputs: [{ name: "id", type: "uint256" }], outputs: [{ name: "", type: "address" }] }] as const;
+
+export type Tier = "admin" | "member" | "visitor";
+
+/** Resolve admin|member|visitor from ENS reads. Cosmetic routing only —
+ *  on-chain AccessControl still enforces every write. */
+export async function resolveTier(o: { provider: unknown; address: string; label?: string; ethers: EthersNS }): Promise<{ tier: Tier; address: string; names?: string[] }> {
+  const nw = new o.ethers.Contract(NAME_WRAPPER, NW_ABI as never, o.provider as never);
+  const ownerOf = async (node: string): Promise<string | null> => {
+    try { const r = await (nw as never as { ownerOf: (id: bigint) => Promise<string> }).ownerOf(BigInt(node)); return r === ZERO_ADDR ? null : r; } catch { return null; }
+  };
+  const root = await ownerOf(BANKON_ETH_NODE);
+  if (root && root.toLowerCase() === o.address.toLowerCase()) return { tier: "admin", address: o.address };
+  if (o.label) {
+    const sub = o.ethers.namehash(`${o.label}.bankon.eth`);
+    const own = await ownerOf(sub);
+    if (own && own.toLowerCase() === o.address.toLowerCase()) return { tier: "member", address: o.address, names: [`${o.label}.bankon.eth`] };
+  }
+  return { tier: "visitor", address: o.address };
+}

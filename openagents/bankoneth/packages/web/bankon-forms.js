@@ -185,3 +185,28 @@ export function buildEthRegistrarParams(ethers, { label, owner, durationYears, s
 }
 
 export const constants = { ZERO_ADDR, ZERO_BYTES32, deploymentFileFor };
+
+// ── Client-side tier resolution (for backend-less consumers: parsec, react) ──
+// The web dApp uses the server gate (backend/) for true hiding; parsec/react have
+// no server, so they resolve the tier client-side from the same ENS reads. This
+// is cosmetic routing only — on-chain AccessControl still enforces every write.
+const BANKON_ETH_NODE = "0x79c178642317fc2d61d186f3b412440f06590d8314f126362d6a88929a6cbe1a";
+const NAME_WRAPPER = "0xD4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401";
+const NW_ABI = [{ type: "function", name: "ownerOf", stateMutability: "view", inputs: [{ name: "id", type: "uint256" }], outputs: [{ name: "", type: "address" }] }];
+
+/** Resolve admin|member|visitor for `address`. `label` (optional) checks a
+ *  specific *.bankon.eth the wallet may hold (no on-chain enumeration exists). */
+export async function resolveTier({ provider, address, label, ethers }) {
+  const nw = new ethers.Contract(NAME_WRAPPER, NW_ABI, provider);
+  const ownerOf = async (node) => {
+    try { const o = await nw.ownerOf(BigInt(node)); return o === ZERO_ADDR ? null : o; } catch { return null; }
+  };
+  const root = await ownerOf(BANKON_ETH_NODE);
+  if (root && root.toLowerCase() === address.toLowerCase()) return { tier: "admin", address };
+  if (label) {
+    const sub = ethers.namehash(`${label}.bankon.eth`);
+    const o = await ownerOf(sub);
+    if (o && o.toLowerCase() === address.toLowerCase()) return { tier: "member", address, names: [`${label}.bankon.eth`] };
+  }
+  return { tier: "visitor", address };
+}

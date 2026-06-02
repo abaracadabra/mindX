@@ -2,6 +2,15 @@
   "chainId": 1,
   "network": "mainnet",
   "note": "Bankon contracts NOT yet deployed — slots are zero until DeployEthereum.s.sol runs. ENS canonical addresses are pinned from packages/core/src/addresses.ts.",
+  "rootName": {
+    "name": "bankon.eth",
+    "node": "0x79c178642317fc2d61d186f3b412440f06590d8314f126362d6a88929a6cbe1a",
+    "wrapped": true,
+    "owner": "0x54165AdA93FA752cfec95F3f3bAE2676D3752A99",
+    "ownerNote": "Observed via NameWrapper.ownerOf(node) on mainnet 2026-06-02. The gate resolves the admin tier LIVE from NameWrapper.ownerOf — this value is informational + the GrantOwnerRoles target.",
+    "registryOwner": "0xD4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401",
+    "resolver": "0x231b0Ee14048e9dCcD1d247744d114a4EB5E8E63"
+  },
   "bankon": {
     "subnameRegistrar": "0x0000000000000000000000000000000000000000",
     "ethRegistrar": "0x0000000000000000000000000000000000000000",

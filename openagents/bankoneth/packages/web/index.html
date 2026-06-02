@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BANKON · claim your .bankon.eth</title>
+<meta name="description" content="Sovereign Identity Infrastructure — claim a subdomain.bankon.eth" />
+<link rel="stylesheet" href="./styled.css" />
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <span class="mark">BANKON</span><span class="eth">.eth</span>
+      <span class="tagline">Sovereign Identity Infrastructure</span>
+    </div>
+    <span class="spacer"></span>
+    <span class="row" data-conn></span>
+  </div>
+
+  <section class="hero">
+    <img class="crest" src="/gfx/bankonvault.png" alt="BANKON" onerror="this.style.display='none'" />
+    <h1>Claim your <span style="color:var(--cyan)">name</span>.bankon.eth</h1>
+    <p class="sub">A soulbound ENS identity in the bankon.eth cryptonomy — yours, on-chain, forever.</p>
+  </section>
+
+  <div class="panel">
+    <div class="bigsearch">
+      <input id="name" type="text" placeholder="yourname" autocomplete="off" spellcheck="false" />
+      <button class="primary" id="checkBtn">Check</button>
+    </div>
+    <div id="out" class="result" style="display:none"></div>
+  </div>
+
+  <div class="grid">
+    <div class="card"><h3>① Sign in</h3><div class="sub">Connect a wallet and sign (gas-free). Holders of bankon.eth or a subname get a richer experience automatically.</div></div>
+    <div class="card"><h3>② Pick a name</h3><div class="sub">Search availability above. Pricing is set on-chain by the bankon.eth owner.</div></div>
+    <div class="card"><h3>③ Pay any token</h3><div class="sub">ETH, USDC, x402, or bridge from ARC — we convert to settle. <a href="../docs/PAYMENTS.md">how it works</a></div></div>
+  </div>
+
+  <div class="panel">
+    <h3>Resolve a name</h3>
+    <label class="field"><span class="lbl">name <code>*.bankon.eth</code></span>
+      <input id="resolveName" type="text" placeholder="alice.bankon.eth" /></label>
+    <button id="resolveBtn">Resolve</button>
+    <div id="resolveOut" class="result" style="display:none"></div>
+  </div>
+
+  <div class="foot">
+    BANKON · the explorer for developers is at <a href="./bankoneth.html">/bankoneth.html</a> · iNFT at <a href="./inft.html">/inft.html</a>
+  </div>
+</div>
+
+<script type="module" src="./webgl-bg.js"></script>
+<script type="module">
+import { BANKON, F, ethers, connect, login, routeToTier, topbar, whoami, toast, el } from "./app-common.js";
+import { RAILS, quoteFor, preparePayment } from "./payments.js";
+
+const BANKON_NODE = "0x79c178642317fc2d61d186f3b412440f06590d8314f126362d6a88929a6cbe1a";
+const out = document.getElementById("out");
+const show = (node, txt, cls = "") => { node.style.display = "block"; node.className = "result " + cls; node.textContent = txt; };
+
+async function onLogin() {
+  const r = await login();
+  topbar({ onLogin });
+  if (r && r.tier && r.tier !== "visitor") routeToTier(r.tier, "index.html");
+  else toast("Signed in as visitor — buy a subname to join.", "ok");
+}
+
+function subnode(label) { return ethers.namehash(`${label}.bankon.eth`); }
+
+async function hostingCtx() {
+  if (!BANKON.deployments) BANKON.deployments = await F.loadDeployments(BANKON.PUBLIC_BASE, BANKON.chainId || 1);
+  const addr = F.addressFor(BANKON.deployments, "domainHosting");
+  if (!addr) throw new Error("bankon.eth storefront not live yet on this network (DomainHosting not deployed/enrolled).");
+  const abi = await F.loadAbi(BANKON.PUBLIC_BASE, "BankonDomainHosting");
+  return { addr, abi };
+}
+
+document.getElementById("checkBtn").addEventListener("click", async () => {
+  const label = document.getElementById("name").value.trim().toLowerCase().replace(/\.bankon\.eth$/, "");
+  if (!label) return;
+  show(out, "checking " + label + ".bankon.eth …");
+  try {
+    if (!BANKON.browserProvider) await connect();
+    const prov = BANKON.browserProvider || ethers.getDefaultProvider();
+    // availability via NameWrapper.ownerOf(subnode)==0
+    const nw = new ethers.Contract("0xD4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401",
+      ["function ownerOf(uint256) view returns (address)"], prov);
+    let taken = false;
+    try { const o = await nw.ownerOf(BigInt(subnode(label))); taken = o !== "0x0000000000000000000000000000000000000000"; } catch {}
+    if (taken) { show(out, `✗ ${label}.bankon.eth is taken.`, "err"); return; }
+    // price via DomainHosting.parentOf(bankonNode).priceEthWei
+    let priceLine = "";
+    try {
+      const { addr, abi } = await hostingCtx();
+      const parent = await F.readContract({ provider: prov, address: addr, abi, fn: "parentOf", args: [BANKON_NODE], ethers });
+      const wei = parent.priceEthWei ?? parent[2];
+      priceLine = parent.active ?? parent[6] ? `\nprice: ${ethers.formatEther(wei)} ETH` : "\n(not yet enrolled by the owner)";
+    } catch (e) { priceLine = "\n" + (e.shortMessage || e.message); }
+    show(out, `✓ ${label}.bankon.eth is available.${priceLine}`, "ok");
+    // rail selector + buy
+    const sel = el("select", { attrs: { style: "max-width:240px" } });
+    for (const r of RAILS) sel.appendChild(el("option", { text: r.label, attrs: { value: r.id } }));
+    out.appendChild(el("div", { cls: "row", attrs: { style: "margin-top:12px" } }, [
+      el("span", { cls: "lbl muted", text: "pay with" }), sel,
+      el("button", { cls: "gold", text: `Buy ${label}.bankon.eth`, on: { click: () => buy(label, sel.value) } }),
+    ]));
+  } catch (e) { show(out, "✗ " + (e.shortMessage || e.message), "err"); }
+});
+
+async function buy(label, rail = "eth") {
+  try {
+    if (!BANKON.address) { await connect(); }
+    const { addr, abi } = await hostingCtx();
+    const prov = BANKON.browserProvider;
+    const quote = await quoteFor({ provider: prov, address: addr, abi, ethers });
+    if (!quote.active) throw new Error("bankon.eth is not enrolled for sale yet (owner must enroll in the admin console).");
+    show(out, `preparing ${rail} payment…`);
+    const { value, paymentBytes } = await preparePayment({ rail, label, payer: BANKON.address, quote, ethers });
+    const signer = await prov.getSigner();
+    show(out, "awaiting signature…" + (rail === "eth" ? " paying " + ethers.formatEther(value) + " ETH" : ""));
+    const tx = await F.writeContract({ signer, address: addr, abi, fn: "issue", args: [BANKON_NODE, label, BANKON.address, paymentBytes], value, ethers });
+    show(out, "sent: " + tx.hash + "\nwaiting…");
+    const r = await tx.wait();
+    show(out, `✅ ${label}.bankon.eth minted in block ${r.blockNumber}\nYou are now a member — reload to enter your dashboard.`, "ok");
+    setTimeout(() => location.reload(), 2500);
+  } catch (e) { show(out, "✗ " + (e.shortMessage || e.message), "err"); }
+}
+
+document.getElementById("resolveBtn").addEventListener("click", async () => {
+  const ro = document.getElementById("resolveOut");
+  const name = document.getElementById("resolveName").value.trim();
+  if (!name) return;
+  show(ro, "resolving…");
+  try {
+    const prov = BANKON.browserProvider || ethers.getDefaultProvider();
+    if (!BANKON.deployments) BANKON.deployments = await F.loadDeployments(BANKON.PUBLIC_BASE, BANKON.chainId || 1);
+    const resolver = F.addressFor(BANKON.deployments, "resolver");
+    if (!resolver) throw new Error("resolver not deployed on this network");
+    const abi = await F.loadAbi(BANKON.PUBLIC_BASE, "BankonSubnameResolver");
+    const node = ethers.namehash(name);
+    const addr = await F.readContract({ provider: prov, address: resolver, abi, fn: "addr", args: [node], ethers });
+    show(ro, `${name}\naddr(): ${addr}`, "ok");
+  } catch (e) { show(ro, "✗ " + (e.shortMessage || e.message), "err"); }
+});
+
+(async function () {
+  await whoami();
+  await connect().catch(() => {});
+  topbar({ onLogin });
+  // If already a higher tier (cookie session), offer to enter the dashboard.
+  if (BANKON.tier && BANKON.tier !== "visitor") routeToTier(BANKON.tier, "index.html");
+})();
+</script>
+</body>
+</html>
