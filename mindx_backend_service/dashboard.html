@@ -2307,21 +2307,43 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
     });
   }
 
+  // fetch JSON with a hard timeout; resolves null on any non-OK / abort / network
+  // error so callers can keep their last-good render through the box's CPU stalls.
+  function _fetchJSONt(url,ms){
+    var ctl=('AbortController' in window)?new AbortController():null;
+    var to=ctl?setTimeout(function(){try{ctl.abort();}catch(e){}},ms||10000):null;
+    return fetch(url,ctl?{signal:ctl.signal}:{}).then(function(r){
+      if(to)clearTimeout(to); return r.ok?r.json():null;
+    }).catch(function(){ if(to)clearTimeout(to); return null; });
+  }
+
   // Logs → Memories — the catalogue memory.write stream. mindX writes no log
-  // that is not also a memory; this shows each log becoming one.
+  // that is not also a memory; this shows each log becoming one. Resilient: a
+  // transient endpoint stall keeps the last-good list (marked stale) instead of
+  // wiping it to an error — so the public can watch memories form uninterrupted.
+  var _memLoaded=false;
   function loadMemoryStream(){
-    fetch('/insight/memory/recent?limit=24').then(function(r){return r.ok?r.json():null;}).then(function(d){
+    _fetchJSONt('/insight/memory/recent?limit=24',10000).then(function(d){
       var box=document.getElementById('sec-logs');
       if(!box) return;
-      var evs=(d && d.events)||[];
-      if(!evs.length){
-        box.innerHTML='<div class="insight-empty">no memory writes in the catalogue yet</div>';
-        Freshness.mark('logs','empty');
+      if(d===null){ // transient failure (timeout / 504) — keep last good; leave the
+        // prior 'ok' mark untouched so the badge ages to STALE naturally by cadence.
+        if(!_memLoaded){ box.innerHTML='<div class="panel-banner">memory stream warming up &mdash; retrying every 30s</div>'; Freshness.mark('logs','error'); }
         return;
       }
+      var evs=d.events||[];
+      if(!evs.length){
+        if(!_memLoaded) box.innerHTML='<div class="insight-empty">no memory writes in the catalogue yet</div>';
+        Freshness.mark('logs', _memLoaded?'ok':'empty'); if(_memLoaded) Freshness.paint('logs');
+        return;
+      }
+      _memLoaded=true;
       Freshness.mark('logs','ok');
       var IMP={1:'CRIT',2:'HIGH',3:'MED',4:'LOW'};
       var IMPC={1:'var(--red)',2:'var(--amber)',3:'var(--blue)',4:'var(--text3)'};
+      var actors={}; evs.forEach(function(e){ if(e.actor) actors[e.actor]=1; });
+      var nActors=Object.keys(actors).length;
+      var newest=evs[0]&&evs[0].ts?Fmt.timeAgo(evs[0].ts):'';
       var rows=evs.map(function(e){
         var src=String(e.source_log||'');
         src=(src.split('/').pop()||src);
@@ -2339,23 +2361,24 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
           +'</div>';
       }).join('');
       box.innerHTML='<div style="font-size:10px;color:var(--text2);padding:4px 0 6px;display:flex;justify-content:space-between;align-items:center">'
-        +'<span>Every log mindX writes is also stored as a memory. '+evs.length+' most recent &mdash; '
+        +'<span><span style="color:var(--green)">'+evs.length+'</span> memories formed across <span style="color:var(--blue)">'+nActors+'</span> agents &middot; newest '+esc(newest)+' &mdash; '
         +'<a href="/insight/memory/recent?h=true" class="link">plain text</a></span>'
         +'<span class="fresh" id="fresh-logs"></span></div>'+rows;
       Freshness.paint('logs');
-    }).catch(function(){
-      Freshness.mark('logs','error');
-      var box=document.getElementById('sec-logs');
-      if(box) box.innerHTML='<div class="panel-banner">memory stream error &mdash; retrying every 30s</div>';
     });
   }
 
   // Machine Dreaming — lunar consolidation of memories into long-term knowledge.
+  // Resilient like the memory stream: a transient stall keeps the last dream cycle
+  // visible (marked stale) rather than hiding the section.
+  var _dreamsLoaded=false;
   function loadDreams(){
-    fetch('/insight/dreams/recent?limit=8').then(function(r){return r.ok?r.json():null;}).then(function(d){
-      if(!d || d.fallback){ hideSec('sec-dreams','hdr-dreams'); Freshness.mark('dreams','empty'); return; }
+    _fetchJSONt('/insight/dreams/recent?limit=8',10000).then(function(d){
+      if(d===null){ if(!_dreamsLoaded) Freshness.mark('dreams','empty'); return; } // keep last good; badge auto-stales by age
+      if(d.fallback){ if(!_dreamsLoaded) hideSec('sec-dreams','hdr-dreams'); Freshness.mark('dreams','empty'); return; }
       var dreams=(d && d.dreams)||[];
-      if(!dreams.length){ hideSec('sec-dreams','hdr-dreams'); Freshness.mark('dreams','empty'); return; }
+      if(!dreams.length){ if(!_dreamsLoaded) hideSec('sec-dreams','hdr-dreams'); Freshness.mark('dreams','empty'); return; }
+      _dreamsLoaded=true;
       showSec('sec-dreams','hdr-dreams');
       Freshness.mark('dreams','ok');
       var last=dreams[0]||{};
@@ -2398,9 +2421,10 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
       document.getElementById('sec-dreams').innerHTML=head+rows+recH
         +'<div style="font-size:10px;padding:6px 0 0"><a href="/insight/dreams/recent?h=true" class="link">plain text</a> &middot; <a href="/feedback.html#sec-dreams" class="link">feedback console</a></div>';
     }).catch(function(){
-      Freshness.mark('dreams','error'); showSec('sec-dreams','hdr-dreams');
+      Freshness.mark('dreams','stale');
       var b=document.getElementById('sec-dreams');
-      if(b && !b.querySelector('.dr')) b.innerHTML='<div class="panel-banner">dream feed error &mdash; retrying every 60s</div>';
+      if(b && !b.querySelector('.dr') && !_dreamsLoaded){ showSec('sec-dreams','hdr-dreams'); b.innerHTML='<div class="panel-banner">dream feed warming up &mdash; retrying every 60s</div>'; }
+      else { Freshness.paint('dreams'); }
     });
   }
 
