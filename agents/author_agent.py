@@ -873,11 +873,18 @@ class AuthorAgent:
             try:
                 stm_root = PROJECT_ROOT / "data" / "memory" / "stm"
                 ltm_root = PROJECT_ROOT / "data" / "memory" / "ltm"
-                fs_count = 0
-                for root in (stm_root, ltm_root):
-                    if root.exists():
-                        fs_count += sum(1 for _ in root.rglob("*.json"))
-                memory_count = fs_count
+
+                def _count_json(*roots) -> int:
+                    n = 0
+                    for root in roots:
+                        if root.exists():
+                            n += sum(1 for _ in root.rglob("*.json"))
+                    return n
+
+                # Sync rglob walk — offload so it never stalls the event loop.
+                memory_count = await asyncio.get_running_loop().run_in_executor(
+                    None, _count_json, stm_root, ltm_root
+                )
             except Exception:
                 memory_count = 0
         stats["stm_records"] = memory_count

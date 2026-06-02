@@ -646,8 +646,11 @@ class MachineDreamCycle:
         stm_dir = PROJECT_ROOT / "data" / "memory" / "stm" / agent_id
         ltm_dir = PROJECT_ROOT / "data" / "memory" / "ltm" / agent_id
         archive_dir = PROJECT_ROOT / "data" / "memory" / "archive" / agent_id
-        result.stm_bytes_before = self._dir_size(stm_dir)
-        result.ltm_bytes_before = self._dir_size(ltm_dir)
+        # Recursive byte sums are sync rglob walks — run them off the event loop so
+        # they never stall FastAPI serving on a busy box.
+        _loop = asyncio.get_running_loop()
+        result.stm_bytes_before = await _loop.run_in_executor(None, self._dir_size, stm_dir)
+        result.ltm_bytes_before = await _loop.run_in_executor(None, self._dir_size, ltm_dir)
 
         try:
             # Phase 1: State Assessment
@@ -721,10 +724,10 @@ class MachineDreamCycle:
         except Exception as e:
             logger.warning(f"{self.log_prefix} Dream cycle error for {agent_id}: {e}")
 
-        # Diagnostic capture: byte sizes after
-        result.stm_bytes_after = self._dir_size(stm_dir)
-        result.ltm_bytes_after = self._dir_size(ltm_dir)
-        result.archive_bytes_after = self._dir_size(archive_dir)
+        # Diagnostic capture: byte sizes after (off the event loop)
+        result.stm_bytes_after = await _loop.run_in_executor(None, self._dir_size, stm_dir)
+        result.ltm_bytes_after = await _loop.run_in_executor(None, self._dir_size, ltm_dir)
+        result.archive_bytes_after = await _loop.run_in_executor(None, self._dir_size, archive_dir)
         result.duration_seconds = time.time() - start
         return result
 

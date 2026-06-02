@@ -665,12 +665,31 @@ OLLAMA_EMBED_URL = "http://localhost:11434"  # Ollama fallback
 _EMBED_MAX_CHARS = 1400
 
 
-async def generate_embedding(text: str, model: str = EMBED_MODEL) -> Optional[List[float]]:
+async def _bg_governor(interactive: bool):
+    """Return the ResourceGovernor for background dispatch, or None for interactive
+    calls / when it's unavailable (fail-open — never block embedding outright)."""
+    if interactive:
+        return None
+    try:
+        from agents.resource_governor import ResourceGovernor
+        return await ResourceGovernor.get_instance()
+    except Exception:
+        return None
+
+
+async def generate_embedding(
+    text: str, model: str = EMBED_MODEL, *, interactive: bool = False
+) -> Optional[List[float]]:
     """
     Generate embedding. Tries vLLM first (OpenAI-compatible /v1/embeddings),
     falls back to Ollama /api/embeddings. Returns None on failure with a
     WARNING-level log so the operator can see the failure mode (rather
     than the previous DEBUG silence which hid 0/105 backfill failures).
+
+    The Ollama (CPU) fallback is serialized through the ResourceGovernor's
+    background-only inference semaphore so concurrent background embeds can't
+    peg both cores and starve the web service. Pass interactive=True for
+    web-triggered embeds (e.g. a live RAGE query) to bypass the gate.
     """
     import aiohttp
     text = text[:_EMBED_MAX_CHARS]
@@ -691,22 +710,33 @@ async def generate_embedding(text: str, model: str = EMBED_MODEL) -> Optional[Li
     except Exception as e:
         vllm_status = f"err:{type(e).__name__}"
 
-    # 2. Fallback to Ollama (reliable, CPU)
+    # 2. Fallback to Ollama (reliable, CPU). This shares the processor with
+    #    web-serving: when the box is over the CPU ceiling, DEFER the embed (return
+    #    None → retried at a lower-load moment) rather than pile onto a saturated
+    #    ollama and thrash. Otherwise serialize through the background-only
+    #    semaphore. Interactive (web-triggered) embeds bypass both.
+    import contextlib
     try:
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as sess:
-            async with sess.post(f"{OLLAMA_EMBED_URL}/api/embeddings", json={"model": model, "prompt": text[:8000]}) as resp:
-                ollama_status = resp.status
-                if resp.status == 200:
-                    data = await resp.json()
-                    emb = data.get("embedding")
-                    if emb:
-                        return emb
-                    ollama_status = "200_empty"
-                else:
-                    # Read body once for diagnostics (Ollama returns 500 with a JSON body
-                    # for context-overflow — surface it so the operator can act).
-                    body = (await resp.text())[:200] if resp.status >= 400 else ""
-                    ollama_status = f"{resp.status}:{body}"
+        gov = await _bg_governor(interactive)
+        if gov is not None and gov.should_throttle():
+            ollama_status = "cpu_throttled_deferred"
+        else:
+            slot = gov.inference_slot() if gov is not None else contextlib.nullcontext()
+            async with slot:
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as sess:
+                    async with sess.post(f"{OLLAMA_EMBED_URL}/api/embeddings", json={"model": model, "prompt": text[:8000]}) as resp:
+                        ollama_status = resp.status
+                        if resp.status == 200:
+                            data = await resp.json()
+                            emb = data.get("embedding")
+                            if emb:
+                                return emb
+                            ollama_status = "200_empty"
+                        else:
+                            # Read body once for diagnostics (Ollama returns 500 with a JSON body
+                            # for context-overflow — surface it so the operator can act).
+                            body = (await resp.text())[:200] if resp.status >= 400 else ""
+                            ollama_status = f"{resp.status}:{body}"
     except Exception as e:
         ollama_status = f"err:{type(e).__name__}"
 

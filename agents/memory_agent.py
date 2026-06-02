@@ -792,6 +792,19 @@ class MemoryAgent:
             logger.warning("eval module import failed: %s", exc)
             return None
 
+        # Share the processor: the GEval judge falls back to local CPU inference
+        # under cloud exhaustion, which thrashes a busy box (40s+ model loads). Skip
+        # this best-effort eval when CPU is over the autonomous ceiling — the choice
+        # is still logged without a score, and the eval runs at a lower-load moment.
+        try:
+            from agents.resource_governor import ResourceGovernor
+            _gov = await ResourceGovernor.get_instance()
+            if _gov.should_throttle():
+                logger.debug("Gödel choice eval deferred — CPU over ceiling")
+                return None
+        except Exception:
+            pass  # fail-open: governor unavailable → run the eval
+
         try:
             problem = (
                 record.get("perception")

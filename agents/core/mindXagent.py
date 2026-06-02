@@ -2694,6 +2694,24 @@ class MindXAgent:
                 except Exception:
                     pass
 
+                # Dynamic CPU gate — yield the processor before the heavy,
+                # inference-driven part of the cycle. If the box is over the
+                # autonomous ceiling (~92%), back off in a bounded loop; if still
+                # saturated, skip this cycle so the web service keeps the CPU.
+                # Fail-open: governor unavailable → proceed.
+                try:
+                    from agents.resource_governor import ResourceGovernor
+                    _gov = await ResourceGovernor.get_instance()
+                    if not await _gov.throttle_for_cpu(label="mindx_loop", max_wait=180):
+                        logger.info(
+                            f"{self.log_prefix} Cycle {cycle_count}: CPU over ceiling "
+                            f"after backoff — skipping cycle (shares processor)"
+                        )
+                        await asyncio.sleep(120)
+                        continue
+                except Exception:
+                    pass
+
                 # Log thinking step
                 self._log_thinking("analyzing_system_state", "Analyzing current system state for improvement opportunities")
 

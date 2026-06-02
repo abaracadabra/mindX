@@ -1283,6 +1283,10 @@ function render(d){
     const gc=gv.mode==='greedy'?'var(--red)':gv.mode==='generous'?'var(--green)':'var(--blue)';
     auH+=`<div class="dr"><span class="dr-key">governor</span><span class="dr-val" style="color:${gc}">${gv.mode} ${gv.auto_adjust?'(auto)':''}</span></div>`;
   }
+  if(gv.cpu){
+    const cpu=gv.cpu, over=cpu.current>cpu.ceiling, cc=over?'var(--red)':cpu.current>cpu.ceiling*0.8?'var(--amber)':'var(--green)';
+    auH+=`<div class="dr"><span class="dr-key">CPU (live)</span><span class="dr-val" style="color:${cc}">${cpu.current}% / ${cpu.ceiling}% ceiling${cpu.throttling?' &#183; <span style="color:var(--amber)">THROTTLING'+(cpu.throttle_label?' ('+cpu.throttle_label+')':'')+'</span>':''}</span></div>`;
+  }
   if(gv.profile){
     auH+=`<div class="dr"><span class="dr-key">RAM budget</span><span class="dr-val">${gv.profile.max_ram_pct}%</span></div>`;
     auH+=`<div class="dr"><span class="dr-key">CPU budget</span><span class="dr-val">${gv.profile.max_cpu_pct}%</span></div>`;

@@ -962,6 +962,24 @@ class MastermindAgent:
                     chosen = (idx, item)
                     break
 
+                # Dynamic CPU gate — the loop "shares the processor". If the box is
+                # over the autonomous ceiling (~92%), back off in a bounded loop; if
+                # still saturated, defer this campaign rather than pile heavy
+                # inference onto a busy CPU and starve web-serving. Treating it as
+                # "no campaign this cycle" avoids burning the item's 24h dedup slot.
+                if chosen:
+                    try:
+                        from agents.resource_governor import ResourceGovernor
+                        _gov = await ResourceGovernor.get_instance()
+                        if not await _gov.throttle_for_cpu(label="mastermind", max_wait=180):
+                            logger.info(
+                                f"{self.log_prefix} CPU over ceiling after backoff — "
+                                f"deferring strategic campaign this cycle (shares processor)"
+                            )
+                            chosen = None
+                    except Exception:
+                        pass  # fail-open: governor unavailable → proceed
+
                 if not chosen:
                     logger.debug(
                         f"{self.log_prefix} Strategic review: {len(eligible)} eligible items, "
