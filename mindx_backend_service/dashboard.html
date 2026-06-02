@@ -64,6 +64,18 @@ canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 .content{flex:1;overflow-y:auto;scroll-behavior:smooth}
 .sidebar{width:280px;flex-shrink:0;position:sticky;top:48px;height:calc(100vh - 48px);display:flex;flex-direction:column;border-left:1px solid var(--border);background:rgba(4,6,9,.6);backdrop-filter:blur(12px)}
 @media(max-width:1024px){.sidebar{display:none}}
+/* draggable / floatable sidebar */
+.sidebar-bar{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);cursor:grab;user-select:none;font-family:var(--mono);font-size:11px;letter-spacing:.5px;color:var(--text2);background:rgba(8,12,18,.7);flex-shrink:0}
+.sidebar-bar:active{cursor:grabbing}
+.sb-grip{color:var(--text3);font-size:13px;line-height:1;letter-spacing:-1px}
+.sb-title{flex:1;text-transform:uppercase}
+.sb-btn{cursor:pointer;color:var(--text3);padding:0 5px;font-size:12px}.sb-btn:hover{color:var(--blue)}
+.sidebar.floating{position:fixed;z-index:300;width:340px;height:72vh;top:auto;border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 48px rgba(0,0,0,.55);overflow:hidden}
+.sidebar.collapsed{height:auto!important;max-height:none}
+.sidebar.collapsed .tabs,.sidebar.collapsed .panel-tools,.sidebar.collapsed .conv,.sidebar.collapsed .sidebar-ft{display:none}
+.sidebar.collapsed .sidebar-bar{border-bottom:none}
+.sidebar.collapsed .sb-caret{transform:rotate(-90deg)}
+.sb-caret{transition:transform .2s;display:inline-block}
 
 /* ── Layers ── */
 .layer{padding:32px 32px 40px;max-width:960px;margin:0 auto;opacity:0;transform:translateY(12px);transition:opacity .6s ease-out,transform .6s ease-out}
@@ -535,6 +547,11 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
 
 <!-- Sidebar: Activity Panel -->
 <div class="sidebar" id="sidebar">
+  <div class="sidebar-bar" id="sidebar-bar" title="drag to move &#183; double-click to collapse">
+    <span class="sb-grip">&#x283F;</span><span class="sb-title">mind<b>X</b> activity</span>
+    <span class="sb-btn sb-caret" id="sb-collapse" title="collapse / expand">&#x25BE;</span>
+    <span class="sb-btn" id="sb-dock" title="dock to right" style="display:none">&#x21E5;</span>
+  </div>
   <div class="tabs" id="tabstrip" title="drag tabs to reorder"></div>
   <div class="panel-tools">
     <button onclick="copyPanelContent()">COPY</button>
@@ -827,6 +844,60 @@ function toggleSec(hdr){
   body.classList.toggle('open');
   if(body.classList.contains('open')) _refreshSec(body.id);
 }
+
+// ── Floatable / collapsible sidebar ──
+// Drag the top bar to move the whole sidebar anywhere; double-click it (or the
+// caret) to accordion-collapse to just the bar. Position + state persist.
+(function(){
+  var sb=document.getElementById('sidebar'), bar=document.getElementById('sidebar-bar');
+  var dock=document.getElementById('sb-dock'), caret=document.getElementById('sb-collapse');
+  if(!sb||!bar) return;
+  function save(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+  function updDock(){ if(dock) dock.style.display=sb.classList.contains('floating')?'':'none'; }
+  function startFloat(){
+    if(!sb.classList.contains('floating')){
+      var r=sb.getBoundingClientRect();
+      sb.classList.add('floating');
+      sb.style.left=r.left+'px'; sb.style.top=Math.max(0,r.top)+'px';
+      updDock();
+    }
+  }
+  function clampMove(e){
+    var dx=e.clientX-_sx, dy=e.clientY-_sy;
+    if(!_moved && (Math.abs(dx)+Math.abs(dy))>4){ _moved=true; startFloat(); }
+    if(_moved){
+      var w=sb.offsetWidth, h=40;
+      var nl=Math.max(0,Math.min(window.innerWidth-Math.min(w,80), _ox+dx));
+      var nt=Math.max(0,Math.min(window.innerHeight-h, _oy+dy));
+      sb.style.left=nl+'px'; sb.style.top=nt+'px';
+    }
+  }
+  var _drag=false,_moved=false,_sx,_sy,_ox,_oy;
+  function down(cx,cy,e){
+    if(e&&e.target&&e.target.closest('.sb-btn')) return;
+    _drag=true; _moved=false; var r=sb.getBoundingClientRect();
+    _sx=cx; _sy=cy; _ox=r.left; _oy=r.top;
+  }
+  bar.addEventListener('mousedown',function(e){ down(e.clientX,e.clientY,e); e.preventDefault(); });
+  document.addEventListener('mousemove',function(e){ if(_drag) clampMove(e); });
+  document.addEventListener('mouseup',function(){ if(_drag&&_moved) save('mindx_sidebar_pos',JSON.stringify({l:sb.style.left,t:sb.style.top})); _drag=false; });
+  // touch (desktop-tablet)
+  bar.addEventListener('touchstart',function(e){ var t=e.touches[0]; down(t.clientX,t.clientY,e); },{passive:true});
+  document.addEventListener('touchmove',function(e){ if(_drag){ clampMove(e.touches[0]); } },{passive:true});
+  document.addEventListener('touchend',function(){ if(_drag&&_moved) save('mindx_sidebar_pos',JSON.stringify({l:sb.style.left,t:sb.style.top})); _drag=false; });
+  // accordion: double-click the bar, or click the caret
+  function toggleCollapse(){ sb.classList.toggle('collapsed'); save('mindx_sidebar_collapsed',sb.classList.contains('collapsed')?'1':'0'); }
+  bar.addEventListener('dblclick',function(e){ if(e.target&&e.target.closest('.sb-btn'))return; toggleCollapse(); });
+  if(caret) caret.addEventListener('click',function(e){ e.stopPropagation(); toggleCollapse(); });
+  // dock back to the right
+  if(dock) dock.addEventListener('click',function(e){ e.stopPropagation(); sb.classList.remove('floating'); sb.style.left=''; sb.style.top=''; try{localStorage.removeItem('mindx_sidebar_pos')}catch(_){} updDock(); });
+  // restore saved state
+  try{
+    var pos=JSON.parse(localStorage.getItem('mindx_sidebar_pos')||'null');
+    if(pos&&pos.l){ sb.classList.add('floating'); sb.style.left=pos.l; sb.style.top=pos.t; updDock(); }
+    if(localStorage.getItem('mindx_sidebar_collapsed')==='1') sb.classList.add('collapsed');
+  }catch(e){}
+})();
 
 // ── Helpers ──
 let cpuH=[],curT=0,seenTs=new Set(),pendingNew=[];
