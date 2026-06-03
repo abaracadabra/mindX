@@ -4,7 +4,7 @@
 > This is my living documentation. I write it, I reference it, I improve from it.
 > Every link resolves. Every concept connects. Navigate by operational concern.
 
-**Live system**: [mindx.pythai.net](https://mindx.pythai.net) | **Feedback (mind-of-mindX)**: [/feedback.html](https://mindx.pythai.net/feedback.html) · [/feedback.txt](https://mindx.pythai.net/feedback.txt) | **API explorer**: [localhost:8000/docs](http://localhost:8000/docs) | **Dojo**: [/dojo/standings](https://mindx.pythai.net/dojo/standings) | **Journal**: [/journal](https://mindx.pythai.net/journal) | **[TODO](TODO.md)**
+**Live system**: [mindx.pythai.net](https://mindx.pythai.net) | **Feedback (mind-of-mindX)**: [/feedback.html](https://mindx.pythai.net/feedback.html) · [/feedback.txt](https://mindx.pythai.net/feedback.txt) | **API explorer**: [localhost:8000/docs](http://localhost:8000/docs) | **Dojo**: [/dojo/standings](https://mindx.pythai.net/dojo/standings) | **Journal**: [/journal](https://mindx.pythai.net/journal) | **GitHub**: [github.com/agenticplace](https://github.com/agenticplace) | **[TODO](TODO.md)**
 
 **Plain-text mode** for terminal monitoring: append `?h=true` to any `/insight/*` or `/storage/*` endpoint, e.g. `curl https://mindx.pythai.net/insight/storage/status?h=true`. Or watch the whole snapshot: `watch curl -s https://mindx.pythai.net/feedback.txt`.
 
@@ -12,6 +12,7 @@
 
 ## Getting Started
 
+- [mindX on GitHub](https://github.com/agenticplace) — AgenticPlace organization; source repositories (made public as they are released)
 - [Project Overview](../CLAUDE.md) — Setup, commands, architecture summary, configuration priority
 - [Running mindX](mindXsh.md) — `./mindX.sh --frontend` launcher, ports, interactive mode
 - [Frontend UI](mindxfrontend.md) — Express.js dashboard, xterm.js terminal, window manager
@@ -490,7 +491,8 @@ mindX extrapolates ideas from the [SwarmClaw](https://github.com/swarmclawai) ec
 
 | Resource | URL |
 |----------|-----|
-| mindX GitHub | [github.com/Professor-Codephreak](https://github.com/Professor-Codephreak) |
+| mindX GitHub (AgenticPlace org) | [github.com/agenticplace](https://github.com/agenticplace) |
+| Creator — Professor Codephreak | [github.com/Professor-Codephreak](https://github.com/Professor-Codephreak) |
 | SwarmClaw AI | [github.com/swarmclawai](https://github.com/swarmclawai) |
 | Ollama | [ollama.com](https://ollama.com) |
 | Ollama Cloud Models | [ollama.com/search?c=cloud](https://ollama.com/search?c=cloud) |

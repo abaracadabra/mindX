@@ -42,9 +42,24 @@
             background:
                 radial-gradient(circle at 30% 20%, rgba(139,92,246,.18) 0%, transparent 45%),
                 radial-gradient(circle at 70% 80%, rgba(86,204,242,.10) 0%, transparent 50%),
+                linear-gradient(rgba(6,3,14,.86), rgba(0,0,0,.93)),
+                url('/gfx/supremedirective.jpeg') center top / cover fixed no-repeat,
                 radial-gradient(circle at center, #1a1030 0%, #000 70%);
             min-height: 100vh;
         }
+        /* ── Access-denied treatment ─────────────────────────────── */
+        .denied { margin: 0 auto 18px; max-width: 660px; text-align: center; }
+        .denied-gfx {
+            width: 104px; height: 104px; object-fit: cover; border-radius: 14px;
+            border: 1px solid rgba(255,80,80,.45); box-shadow: 0 0 30px rgba(255,40,40,.35);
+            margin-bottom: 12px;
+        }
+        .denied-title {
+            font-family: ui-monospace, 'SFMono-Regular', monospace;
+            font-size: 1.9rem; font-weight: 800; letter-spacing: 7px;
+            color: #ff5b5b; text-shadow: 0 0 24px rgba(255,40,40,.55); margin-bottom: 8px;
+        }
+        .denied-sub { color: var(--text); opacity: .88; font-size: .98rem; }
 
         .page { max-width: 1180px; margin: 0 auto; padding: 28px 20px 60px; }
 
@@ -326,6 +341,13 @@
         <section class="hero">
             <img src="/gfx/mindX.png" class="brand-mark" alt="mindX" width="124" height="124">
             <div class="wordmark">mindX</div>
+
+            <div class="denied" id="deniedBox" hidden>
+                <img src="/gfx/shadow_overlord2.png" alt="" class="denied-gfx">
+                <div class="denied-title">ACCESS DENIED</div>
+                <div class="denied-sub" id="deniedSub">Connect your wallet and sign in to continue.</div>
+            </div>
+
             <p class="tagline" id="tagline">
                 <em>pioneering</em> self-building cognitive architecture
             </p>
@@ -338,7 +360,6 @@
                     </svg>
                     Connect Wallet & Sign-In
                 </button>
-                <a href="/shadow-overlord" class="btn-ghost">Shadow-Overlord →</a>
             </div>
 
             <div class="status-bar" id="statusBar">
@@ -368,7 +389,7 @@
             ·
             <a id="apiLink"  href="#" rel="noopener">api</a>
             ·
-            <a href="https://github.com/AgenticPlace/mindX" target="_blank" rel="noopener">github</a>
+            <a href="https://github.com/agenticplace" target="_blank" rel="noopener">github</a>
         </div>
     </div>
 
@@ -383,6 +404,23 @@
     })();
     document.getElementById('docsLink').href = apiBase + '/docs.html';
     document.getElementById('apiLink').href  = apiBase + '/redoc';
+
+    // ─── Access-denied state ────────────────────────────────────────────
+    // Arrived via a gated redirect (/login?from=<path>): show ACCESS DENIED.
+    // Connecting the wallet + signing in is the single path forward — sovereign
+    // (shadow-overlord) sign-in lives only on the /shadow-overlord page.
+    (function(){
+        var from = new URLSearchParams(location.search).get('from');
+        if (!from) return;
+        var box = document.getElementById('deniedBox');
+        var sub = document.getElementById('deniedSub');
+        var tag = document.getElementById('tagline');
+        var clean = from.split('?')[0];
+        if (box) box.hidden = false;
+        if (sub) sub.textContent = 'Connect your wallet and sign in to reach ' + clean + '.';
+        if (tag) tag.style.display = 'none';
+        document.title = 'ACCESS DENIED — mindX';
+    })();
 
     // ─── Cards inventory ────────────────────────────────────────────────
     // Two-tier model (locked 2026-05-13). Shadow-overlord operations are
