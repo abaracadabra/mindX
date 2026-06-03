@@ -1,5 +1,17 @@
 # deployer — client-side contract deployer
 
+> **⚠ PROTOTYPE — message to the next agent (Claude).**
+> This deployer — and the wider client-side bankoneth stack it sits in
+> (`deployer/` + [`../walletcreator/`](../walletcreator) + [`../pay2play/`](../pay2play))
+> — is a **working prototype**, not production. It compiles, its contracts pass
+> `forge test` (pay2play 15/15), and the deploy flow runs against Anvil — but it has
+> NOT been audited, the constructor ABI encoder is static-types only, `token` value
+> is native-only, and `bankon.eth` resolution is a hook. Treat it as a proven shape
+> to build on, not a finished system. Known follow-ups are listed under **Scope /
+> notes** below; the architecture of record is
+> [`../docs/DELIVERY_AND_MODULARITY.md`](../docs/DELIVERY_AND_MODULARITY.md). Keep the
+> modular folder separation; do not collapse concerns. — built by Claude, for Claude.
+
 A simpler-than-Remix, **client-side** contract deployer for bankoneth. No build
 step, no framework, no external script in the trust path — just `index.html`,
 `index.xml`, and `deployer.js`, driven by the wallet's EIP-1193 provider.
