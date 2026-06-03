@@ -74,6 +74,23 @@ contract DeployPay2Play is Script {
                 name:        "allchain.access"
             })
         );
+        // Wallet & vault creation are pay-to-play fee services. The client mints +
+        // vaults client-side (keys never reach BANKON); the entitlement is the
+        // receipt that the fee was paid. See walletcreator/.
+        registry.setService(
+            keccak256("wallet.create"),
+            IBankonServiceRegistry.Service({
+                beneficiary: beneficiary, asset: address(0), price: 0.002 ether,
+                period: 0, tier: 1, active: true, name: "wallet.create"
+            })
+        );
+        registry.setService(
+            keccak256("vault.create"),
+            IBankonServiceRegistry.Service({
+                beneficiary: beneficiary, asset: address(0), price: 0.001 ether,
+                period: 0, tier: 1, active: true, name: "vault.create"
+            })
+        );
 
         vm.stopBroadcast();
 
