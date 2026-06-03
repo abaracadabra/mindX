@@ -9,7 +9,8 @@ expects:
 - **rail `0x00`** — ETH via `msg.value` (direct).
 - **rail `0x02`** — an EIP-712 **X402Receipt** signed by a registered facilitator
   (`BankonX402Attestor.verify`), so USDC/any-token/cross-chain settlements mint without
-  an inline ERC-20 transfer.
+  an inline ERC-20 transfer. *(This is the Algorand-origin attestor; for native EVM
+  settlement on Base / Arc / Optimism / … see [**x402evm**](#x402-on-every-evm-rail--x402evm) below.)*
 
 ## Layer (packages/web/)
 
@@ -40,6 +41,24 @@ env: BANKON_X402_FACILITATOR_PK   facilitator EOA (vault/env); register via
 > transfer to treasury, a Circle CCTP/Gateway mint receipt, or an Algorand x402 proof)
 > BEFORE signing. Without `BANKON_X402_TRUST_REQUEST=1` the endpoint 501s until a verifier
 > is wired. GoPlausible or a self-hosted facilitator both fit.
+
+## x402 on every EVM rail — `x402evm/`
+
+The `0x02` rail above is the **Algorand-origin** attestor. The [`x402evm/`](../x402evm/) module
+generalizes x402 settlement to **every EVM chain** (Base, Arc, Optimism, Polygon, Arbitrum, …) with one
+`X402EVMFacilitator` + an `X402ChainRegistry` (canonical USDC per chain). A facilitator signs an EIP-712
+`X402EVMReceipt(resourceHash,payer,asset,amount,srcChainId,nonce,expiresAt)`; `srcChainId` + `asset` say
+where a payment settled, so **Arc (5042002, USDC-as-gas)** and **Base (8453)** are the same code path. Two
+replay guards (monotonic per-facilitator nonce + spent-digest) + ERC-1271. **6/6 tests.**
+
+This is the receive side for **BANKON / mindX / AgenticPlace** service delivery; the [`bankonMCP/`](../bankonMCP/)
+proxy auto-pays it for agent tool calls (φ/10 fee → RAKE home to `bankon.eth`), and
+[`x402evm/clients/cmc_x402_ingest.mjs`](../x402evm/clients/cmc_x402_ingest.mjs) is the EIP-3009 USDC payer
+for CoinMarketCap ingestion.
+
+See **[`docs/blockchain/X402_EVM.md`](blockchain/X402_EVM.md)** (the full x402 rail family + receipt shapes)
+and **[`docs/operations/COINMARKETCAP_X402.md`](operations/COINMARKETCAP_X402.md)** (CMC ingestion + key
+handling + MCP delivery).
 
 ## Conversion flow (any token, any chain → mint)
 
