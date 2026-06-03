@@ -44,10 +44,15 @@ Pure client-side: no backend, **no API key required** (public RPC + the wallet).
 - **bankon_autoconvert / bridge_collect** — any token → settlement (Uniswap V3) / LI.FI-GLMR cross-chain,
   golden fee → RAKE.
 - **Gas-as-a-service** (`bankon_gas_service`, Base) — drops **one transaction** of gas (live `basefee × units`)
-  to an address arriving with a bridged asset; plus custom client-paid buy. **9+ / golden-fee verified.**
+  to an address arriving with a bridged asset; plus custom client-paid buy.
+- **Treasury + remittance** (`bankon_custody` → `treasury` / `remittance`) — safe multi-asset vaults that hold
+  native / ERC-20 / ERC-721 / ERC-1155 on any chain; value redeems **only to the immutable founder
+  (bankon.eth)**, permissionlessly. Governance is a reconfigurable renounce state machine: 1:1 dictator →
+  2:2 / 2:3 / 3:3 multisig (and a 3:3 can vote to instate a 1:1), with an optional **permanent** never-return
+  lock-out.
 
 **Treasury / owner / RAKE home = `bankon.eth` = `0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169`** (verified via
-Blockscout + Etherscan ENS), immutable across every contract and chain.
+Blockscout + Etherscan ENS), immutable across every contract and chain. **Full suite: `forge test` 235/235.**
 
 ## Architecture
 
@@ -73,7 +78,7 @@ gas** → fee rakes home to `bankon.eth` → list on the ARC marketspace.
 ## Run it
 
 ```bash
-forge build && forge test                      # contracts (cp2048 21/21 + iNFT + ARC)
+forge build && forge test                      # contracts (cp2048 31/31 + iNFT + ARC)
 node script/export-abis.mjs                     # emit ABIs + bankon.bytecodes.json + deploy sequences
 python3 -m http.server -d packages/web 6680     # serve the dApp; open /deploy.html
 ```

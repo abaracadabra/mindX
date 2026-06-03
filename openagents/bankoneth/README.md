@@ -55,10 +55,10 @@ the pluggable `IERC7857DataVerifier` (`OracleType{TEE,ZKP}`) as the documented F
 **never claimed PQ-today**. Genuine quantum-native (Tier-Q) is the Algorand/PARSEC track, not this
 submission. See [`QUANTUM_READINESS.md`](docs/QUANTUM_READINESS.md). Docs: [`INFT7857_MODULE`](docs/INFT7857_MODULE.md),
 [`ARC_AGENT_ECONOMY`](docs/ARC_AGENT_ECONOMY.md), [`INFT_CANONICAL_VS_LEGACY`](docs/INFT_CANONICAL_VS_LEGACY.md),
-[`NAME_SERVICE_UI`](docs/NAME_SERVICE_UI.md). `forge test` **225/225**.
+[`NAME_SERVICE_UI`](docs/NAME_SERVICE_UI.md). `forge test` **235/235**.
 
 ```bash
-forge test                                   # 225 green (45 suites)
+forge test                                   # 235 green (46 suites)
 forge script script/deploy_bankon_inft.s.sol --rpc-url <fork> --broadcast   # deploy the canonical stack
 ```
 
@@ -79,9 +79,12 @@ immutable beneficiary, `self_purge`→owner); **RAKE** (collects home to `bankon
 chain cost); **bankon_oracle** (price straight from the Uniswap pair); **bankon_autoconvert** (any token →
 settlement via Uniswap V3) + **bridge_collect** (LI.FI/GLMR); and **gas-as-a-service**
 ([`bankon_gas_service`](contracts/cp2048/bankon_gas_service.sol)) — drops **one transaction** of Base gas to
-an address arriving with a bridged asset, φ-fee funded. Treasury / owner / RAKE home = **bankon.eth**
+an address arriving with a bridged asset, φ-fee funded. **treasury + remittance**
+([`bankon_custody`](contracts/cp2048/bankon_custody.sol)) — safe multi-asset vaults (native/ERC-20/721/1155,
+any chain) that redeem **only to the immutable bankon.eth**, with a reconfigurable renounce state machine
+(1:1 → 2:2/2:3/3:3 multisig, 3:3-can-instate-1:1, optional permanent lock-out). Treasury / owner / RAKE home = **bankon.eth**
 `0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169` (immutable, every chain). Docs:
-[`ETHGLOBAL_NY`](docs/ETHGLOBAL_NY.md), [`SCIENTIFIC_AND_RAKE`](docs/SCIENTIFIC_AND_RAKE.md). cp2048 **21/21**.
+[`ETHGLOBAL_NY`](docs/ETHGLOBAL_NY.md), [`SCIENTIFIC_AND_RAKE`](docs/SCIENTIFIC_AND_RAKE.md). cp2048 + custody **31/31**.
 
 ```bash
 node script/export-abis.mjs                  # emit ABIs + bankon.bytecodes.json + deploy sequences
@@ -135,7 +138,7 @@ contracts/         Solidity (Foundry) — canonical source
   cp2048/            golden-ratio treasury: φ fee, SCIENTIFIC, RAKE, oracle, autoconvert, bridge_collect, gas_service
   inft7857/  arc/    canonical EIP-7857 iNFT + ERC-6551 stack · ARC agent economy
 script/            DeployEthereum + DeployZeroG + WireCrossChain + export-abis.mjs (ABIs + bytecodes + deploy sequences)
-test/              Foundry test suite (Flow A × B × C × payment rails × cp2048) — 225 green
+test/              Foundry test suite (Flow A × B × C × payment rails × cp2048 × custody) — 235 green
 deployments/       per-chain address records ({1,11155111,local}.json) loaded by the dApp
 clients/python/    async Python client (subdomain_issuer.py, agent_mint_service.py) — moved from openagents/ens/
 packages/          pnpm workspace
