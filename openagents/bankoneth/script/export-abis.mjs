@@ -61,6 +61,8 @@ const CONTRACTS = [
   { name: "bankon_autoconvert",       deploymentKey: "autoconvert",     category: "cp2048",    title: "Auto-convert router",     blurb: "Any token → settlement via Uniswap V3; golden-ratio fee → RAKE." },
   { name: "bridge_collect",           deploymentKey: "bridgeCollect",   category: "cp2048",    title: "Bridge-collect (GLMR)",   blurb: "LI.FI cross-chain pay-any-currency; golden fee → RAKE." },
   { name: "bankon_gas_service",       deploymentKey: "gasService",      category: "cp2048",    title: "Gas-as-a-service",        blurb: "Base gas reservoir: sponsored one-tx drop + custom buy; φ/10 golden fee home to bankon.eth." },
+  { name: "treasury",                 deploymentKey: "treasury",        category: "cp2048",    title: "Treasury vault",          blurb: "Holds native/ERC20/721/1155 on any chain; redeems only to immutable bankon.eth; dictator→2:2/2:3/3:3 multisig." },
+  { name: "remittance",               deploymentKey: "remittance",      category: "cp2048",    title: "Remittance",              blurb: "Collection/forwarding vault; batch remit home to bankon.eth; same custody + consensus migration as treasury." },
 ];
 
 // ── Browser-deploy sequences. Each set lists contracts in dependency order; the
@@ -80,6 +82,14 @@ const DEPLOY_SEQUENCES = [
       { contract: "bankon_autoconvert", args: [{ owner: true }, { chain: "univ3Router" }, { ref: "rake" }, { literal: "10000" }] },
       { contract: "bridge_collect",     args: [{ owner: true }, { ref: "rake" }, { literal: "10000" }] },
       { contract: "bankon_gas_service", args: [{ owner: true }, { owner: true }, { literal: "150000" }, { literal: "100000000000000000" }], chains: [8453, 84532], note: "Base only — the gas-as-a-service reservoir." },
+    ],
+  },
+  {
+    id: "custody", title: "Treasury + remittance", category: "cp2048",
+    blurb: "Safe multi-asset vaults (native/ERC20/721/1155, any chain): treasury (long-term hold) + remittance (collect/forward). Founder = bankon.eth immutable; redeem home only; dictator → 2:2/2:3/3:3 multisig → renounce.",
+    steps: [
+      { contract: "treasury",   args: [{ owner: true }] },
+      { contract: "remittance", args: [{ owner: true }] },
     ],
   },
   {

@@ -74,6 +74,34 @@ golden steps** (`φⁿ` via the Fibonacci identity `φⁿ = Fₙφ + Fₙ₋₁`
 3× the original contract cost** (`MAX_FEE_NUM = 3`). `tier_mult(tier)` gives the ladder; `quote_fee_priority`
 applies it. Normalized → Fast → Express → Instant in the UI.
 
+## Treasury + remittance — safe multi-asset custody, home to bankon.eth (`bankon_custody.sol`)
+
+Where the value lands. `treasury.sol` (long-term hold) and `remittance.sol` (collection/forwarding) share
+`bankon_custody` — a vault that **holds and receives ANY asset on ANY EVM chain** (native, ERC-20, ERC-721,
+ERC-1155, via `ERC721Holder`/`ERC1155Holder`).
+
+- **Immutable founding owner** — `address public immutable FOUNDER` = **bankon.eth**. The **only** destination
+  value can ever be redeemed to; it cannot be changed by anyone, ever — not even by a migrated multisig.
+- **Redeem → home only (permissionless)** — `redeem_native / redeem_erc20 / redeem_erc721 / redeem_erc1155`
+  send the held asset **only to FOUNDER**. Anyone may call them (the destination is hard-wired, so pushing
+  assets home is always safe). `remittance.remit([erc20s])` batch-sweeps native + listed tokens home in one call.
+- **Governed allocation (operations)** — `allocate_* / execute` disburse to any address for operations, gated
+  by governance (dictator owner, or the multisig).
+- **Governance: a reconfigurable renounce state machine** — born as a single-owner **1:1 dictator**
+  (owner = bankon.eth). `renounce_to(signers, threshold, lock_out_dictator)` re-keys the governance shape;
+  valid shapes are **1:1, 2:2, 2:3, 3:3** (`_valid_consensus`). Transitions are authorized by the *current*
+  mode: a 1:1 dictator may go directly to 2:2 / 2:3 / 3:3 (owner forwarded as the default address — not
+  necessarily one of the new pair); a multisig may re-key to any shape **only via `execute_signed`** (≥
+  threshold EIP-712 sigs, ascending-signer ordered, replay-nonced) — **including a 3:3 voting to instate a
+  1:1**. The optional `lock_out_dictator` flag makes a renounce **complete and permanent**: once set,
+  instating a 1:1 is forbidden **forever** (`dictator_locked`, one-way). The treasury **and** remittance share
+  this. Note: the **permissionless redeem-home paths are always live** regardless of governance — value can
+  never be trapped away from bankon.eth.
+
+Both deploy with `founder = owner = bankon.eth` (the `custody` deploy set). **10/10 custody tests** (all asset
+types held; redeem→FOUNDER only & permissionless; dictator-only allocate; consensus-shape validation; 2-of-3
+EIP-712 execute; 3:3-instates-1:1; multisig-only-via-self-call; optional permanent dictator lock-out).
+
 ## How it plugs into the payment layer
 `packages/web/payments.js` `swap`/`bridge` rails call `bankon_autoconvert` / `bridge_collect`; the φ fee
 + SCIENTIFIC precision toggle surface in the UI. Settlement feeds the iNFT/subname registrar or the ARC

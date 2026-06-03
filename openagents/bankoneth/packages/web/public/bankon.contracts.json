@@ -340,6 +340,26 @@
       "abi": "abis/bankon_gas_service.json",
       "fnCount": 22,
       "deployable": true
+    },
+    {
+      "name": "treasury",
+      "deploymentKey": "treasury",
+      "category": "cp2048",
+      "title": "Treasury vault",
+      "blurb": "Holds native/ERC20/721/1155 on any chain; redeems only to immutable bankon.eth; dictator→2:2/2:3/3:3 multisig.",
+      "abi": "abis/treasury.json",
+      "fnCount": 24,
+      "deployable": true
+    },
+    {
+      "name": "remittance",
+      "deploymentKey": "remittance",
+      "category": "cp2048",
+      "title": "Remittance",
+      "blurb": "Collection/forwarding vault; batch remit home to bankon.eth; same custody + consensus migration as treasury.",
+      "abi": "abis/remittance.json",
+      "fnCount": 25,
+      "deployable": true
     }
   ],
   "presets": [
@@ -669,6 +689,30 @@
               84532
             ],
             "note": "Base only — the gas-as-a-service reservoir."
+          }
+        ]
+      },
+      {
+        "id": "custody",
+        "title": "Treasury + remittance",
+        "category": "cp2048",
+        "blurb": "Safe multi-asset vaults (native/ERC20/721/1155, any chain): treasury (long-term hold) + remittance (collect/forward). Founder = bankon.eth immutable; redeem home only; dictator → 2:2/2:3/3:3 multisig → renounce.",
+        "steps": [
+          {
+            "contract": "treasury",
+            "args": [
+              {
+                "owner": true
+              }
+            ]
+          },
+          {
+            "contract": "remittance",
+            "args": [
+              {
+                "owner": true
+              }
+            ]
           }
         ]
       },
