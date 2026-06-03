@@ -30,6 +30,16 @@ export const CHAINS = {
     rpc: "https://rpc.testnet.arc.network", explorer: "https://testnet.arcscan.app",
     faucet: "https://faucet.circle.com", testnet: true,
   },
+  16661: {
+    key: "0g-aristotle", name: "0G Aristotle Mainnet", nativeSymbol: "0G",
+    usdc: null, cctpDomain: null,
+    rpc: "https://evmrpc.0g.ai", explorer: "https://chainscan.0g.ai",
+  },
+  16601: {
+    key: "0g-galileo", name: "0G Galileo Testnet", nativeSymbol: "0G",
+    usdc: null, cctpDomain: null,
+    rpc: "https://evmrpc-testnet.0g.ai", explorer: "https://chainscan-galileo.0g.ai", testnet: true,
+  },
 };
 
 export const SETTLEMENT_CHAIN_ID = 1; // where the bankon registrar/router settle

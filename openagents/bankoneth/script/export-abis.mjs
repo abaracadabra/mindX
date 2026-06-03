@@ -42,6 +42,18 @@ const CONTRACTS = [
   { name: "SoulBadger",             deploymentKey: "soulBadger",       category: "identity",  title: "SoulBadger",         blurb: "Soulbound badge wrapper." },
   { name: "BankonOffchainRegistrar",deploymentKey: "offchainRegistrar",category: "offchain",  title: "Offchain Registrar", blurb: "Gas-light CCIP-Read subname issuance (Phase 2.2)." },
   { name: "BankonOffchainResolver", deploymentKey: "offchainResolver", category: "offchain",  title: "Offchain Resolver",  blurb: "EIP-3668 CCIP-Read resolver." },
+  // ── Canonical EIP-7857 + ERC-6551 modular stack (contracts/inft7857/) ──
+  { name: "bankon_inft_subname",      deploymentKey: "inftUnified",     category: "inft7857",  title: "iNFT (Mode A unified)",   blurb: "Canonical ERC-7857 + ERC-721 + 5192 + 2981, NameWrapper-backed." },
+  { name: "bankon_inft_extension",    deploymentKey: "inftParallel",    category: "inft7857",  title: "iNFT (Mode B parallel)",  blurb: "Canonical ERC-7857 bolted onto an existing wrapped subname." },
+  { name: "bankon_inft_registrar",    deploymentKey: "inftRegistrar",   category: "inft7857",  title: "iNFT Registrar",          blurb: "Mint router (WRAPPED/UNIFIED/PARALLEL ± soulbound) + x402." },
+  { name: "bankon_inft_oracle",       deploymentKey: "inftOracle",      category: "inft7857",  title: "iNFT Verifier (oracle)",  blurb: "Pluggable IERC7857DataVerifier (multisig EIP-712 TEE)." },
+  { name: "bankon_tba_account",       deploymentKey: "tbaImpl",         category: "inft7857",  title: "ERC-6551 TBA account",    blurb: "Agent wallet; owner = live ownerOf(tokenId)." },
+  { name: "bankon_tba_registry_proxy",deploymentKey: "tbaRegistryProxy",category: "inft7857",  title: "TBA registry proxy",      blurb: "Event-emitting wrapper over the canonical 6551 registry." },
+  // ── ARC agent economy (contracts/arc/, copied from daio + expanded) ──
+  { name: "bankon_agent_market",      deploymentKey: "agentMarket",     category: "arc",       title: "Agent Marketspace",       blurb: "List iNFT agents for sale; AgenticPlace indexer source." },
+  { name: "AgentReputationRegistry",  deploymentKey: "agentReputation", category: "arc",       title: "Agent Reputation",        blurb: "Agent profiles, metrics, reviews (USDC economy)." },
+  { name: "AgenticMarketplaceEscrow", deploymentKey: "agentEscrow",     category: "arc",       title: "Marketplace Escrow",      blurb: "Milestone-based agent service agreements + disputes." },
+  { name: "SubscriptionManager",      deploymentKey: "subscriptions",   category: "arc",       title: "Subscriptions",           blurb: "Recurring USDC billing for agent services." },
 ];
 
 // ── Guided-form preset descriptors. The DOM is rendered per-UI; the call
@@ -186,10 +198,12 @@ const INFT_HEADER = `// SPDX-License-Identifier: Apache-2.0
 // the ABI by hand — edit the curated descriptors in export-abis.mjs and re-run.
 
 export const ZEROG_CHAINS = {
+  16661: { hex: "0x4115", name: "0G Aristotle Mainnet", rpc: "https://evmrpc.0g.ai", explorer: "https://chainscan.0g.ai", symbol: "0G" },
   16601: { hex: "0x40d9", name: "0G Galileo Testnet", rpc: "https://evmrpc-testnet.0g.ai", explorer: "https://chainscan-galileo.0g.ai", symbol: "0G" },
 };
 
 export const INFT_ADDRESS = {
+  16661: "0x0000000000000000000000000000000000000000",
   16601: "0x0000000000000000000000000000000000000000",
 };
 

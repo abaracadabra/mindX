@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BANKON · AgenticPlace marketspace</title>
+<link rel="stylesheet" href="./styled.css" />
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><span class="mark">BANKON</span><span class="eth">.eth</span>
+      <span class="tagline">ARC · Agent economy</span></div>
+    <span class="spacer"></span>
+    <a href="./index.html"><button class="ghost">← storefront</button></a>
+    <span class="row" data-conn></span>
+  </div>
+
+  <section class="hero">
+    <img class="crest" src="/gfx/AgenticPlace1.png" alt="marketspace" onerror="this.src='/gfx/war_council_gold.png';this.onerror=null" />
+    <h1>Agent marketspace</h1>
+    <p class="sub">List your agent <b>iNFT</b> for sale, escrow milestone work, run subscriptions, and build
+      reputation — the ARC agent economy, settled in USDC. Lists feed
+      <a href="https://agenticplace.pythai.net/marketspace" target="_blank" rel="noopener">agenticplace.pythai.net/marketspace</a>.</p>
+  </section>
+
+  <nav class="tabs">
+    <button data-tab="browse" class="active">Browse</button>
+    <button data-tab="list">List an agent</button>
+    <button data-tab="reputation">Reputation</button>
+    <button data-tab="explorer">Contracts</button>
+  </nav>
+  <main id="view"></main>
+  <div class="foot">contracts/arc/ — copied from daio Agent Reputation Collection + expanded (bankon_agent_market)</div>
+</div>
+
+<script type="module" src="./webgl-bg.js"></script>
+<script type="module">
+import { BANKON, F, ethers, connect, topbar, whoami, toast, el, stringify } from "./app-common.js";
+
+const view = () => document.getElementById("view");
+const show = (n, t, c = "") => { n.style.display = "block"; n.className = "result " + c; n.textContent = t; };
+let activeTab = "browse";
+
+async function ctx(key, abiName) {
+  if (!BANKON.deployments) BANKON.deployments = await F.loadDeployments(BANKON.PUBLIC_BASE, BANKON.chainId || 1);
+  const address = F.addressFor(BANKON.deployments, key);
+  if (!address) throw new Error(`${abiName} not deployed on this network yet (deploy contracts/arc/).`);
+  return { address, abi: await F.loadAbi(BANKON.PUBLIC_BASE, abiName) };
+}
+function field(label, id, val = "", ph = "") {
+  return el("label", { cls: "field" }, [el("span", { cls: "lbl", html: label }), el("input", { attrs: { type: "text", id, value: val, placeholder: ph } })]);
+}
+const v = (id) => document.getElementById(id).value.trim();
+
+function render() {
+  const root = view(); root.innerHTML = "";
+  if (activeTab === "browse") return renderBrowse(root);
+  if (activeTab === "list") return renderList(root);
+  if (activeTab === "reputation") return renderReputation(root);
+  if (activeTab === "explorer") return renderExplorer(root);
+}
+
+// ── Browse listings (AgentListed events) ─────────────────────────────────────
+function renderBrowse(root) {
+  const p = el("div", { cls: "panel" });
+  p.append(el("h3", { text: "Listed agents" }));
+  const grid = el("div", { cls: "grid" }); p.append(grid); root.append(p);
+  (async () => {
+    try {
+      const { address, abi } = await ctx("agentMarket", "bankon_agent_market");
+      const prov = BANKON.browserProvider || ethers.getDefaultProvider();
+      const c = new ethers.Contract(address, abi, prov);
+      const logs = await c.queryFilter(c.filters.AgentListed(), 0, "latest");
+      if (!logs.length) { grid.append(el("div", { cls: "muted", text: "No agents listed yet. Be the first → List an agent." })); return; }
+      for (const lg of logs.slice(-30).reverse()) {
+        const { tokenId, seller, priceUsdc6, metadataURI } = lg.args;
+        const l = await c.listingOf(tokenId);
+        if (!l.active) continue;
+        grid.append(el("div", { cls: "card" }, [
+          el("h3", { text: `iNFT #${tokenId}` }),
+          el("div", { cls: "sub", text: `$${(Number(priceUsdc6) / 1e6).toFixed(2)} USDC · seller ${seller.slice(0, 6)}…${seller.slice(-4)}` }),
+          el("div", { cls: "muted", text: metadataURI || "" }),
+        ]));
+      }
+    } catch (e) { grid.append(el("div", { cls: "result err", text: e.message })); }
+  })();
+}
+
+// ── List an agent iNFT ───────────────────────────────────────────────────────
+function renderList(root) {
+  const p = el("div", { cls: "panel" });
+  p.append(el("h3", { text: "List your agent iNFT" }),
+    el("div", { cls: "note", html: "You must own the iNFT token. BANKON / AgenticPlace indexes the <code>AgentListed</code> event." }),
+    field("iNFT token id <code>uint256</code>", "lt", "1", ""),
+    field("price (USDC) <code>e.g. 25</code>", "lp", "25", ""),
+    field("metadata URI", "lu", "", "agenticplace.pythai.net/marketspace/…"));
+  const out = el("div", { cls: "result", attrs: { style: "display:none" } });
+  p.append(el("button", { cls: "primary", text: "List for sale", on: { click: () => listAgent(out) } }), out);
+  root.append(p);
+}
+
+async function listAgent(out) {
+  show(out, "awaiting signature…");
+  try {
+    const { address, abi } = await ctx("agentMarket", "bankon_agent_market");
+    const priceUsdc6 = BigInt(Math.round(parseFloat(v("lp") || "0") * 1e6));
+    const signer = await BANKON.browserProvider.getSigner();
+    const tx = await F.writeContract({ signer, address, abi, fn: "listAgent", args: [BigInt(v("lt")), priceUsdc6, v("lu") || `https://agenticplace.pythai.net/marketspace/${v("lt")}`], ethers });
+    const r = await tx.wait();
+    show(out, `✅ listed iNFT #${v("lt")} at $${v("lp")} (block ${r.blockNumber})\nView: agenticplace.pythai.net/marketspace`, "ok");
+  } catch (e) { show(out, "✗ " + (e.shortMessage || e.message), "err"); }
+}
+
+// ── Reputation lookup ────────────────────────────────────────────────────────
+function renderReputation(root) {
+  const p = el("div", { cls: "panel" });
+  p.append(el("h3", { text: "Agent reputation" }),
+    el("div", { cls: "note", text: "Look up an agent's on-chain profile + performance metrics (AgentReputationRegistry)." }),
+    field("agent <code>address</code>", "ra", "", "0x… (or a TBA wallet)"));
+  const out = el("div", { cls: "result", attrs: { style: "display:none" } });
+  p.append(el("button", { cls: "primary", text: "Look up", on: { click: () => lookupRep(out) } }), out);
+  root.append(p);
+}
+
+async function lookupRep(out) {
+  show(out, "…");
+  try {
+    const { address, abi } = await ctx("agentReputation", "AgentReputationRegistry");
+    const prov = BANKON.browserProvider || ethers.getDefaultProvider();
+    const profile = await F.readContract({ provider: prov, address, abi, fn: "getAgentProfile", args: [v("ra")], ethers });
+    const metrics = await F.readContract({ provider: prov, address, abi, fn: "getAgentMetrics", args: [v("ra")], ethers });
+    show(out, "profile:\n" + stringify(profile) + "\n\nmetrics:\n" + stringify(metrics), "ok");
+  } catch (e) { show(out, "✗ " + (e.shortMessage || e.message), "err"); }
+}
+
+// ── Generic explorer over the ARC contracts ──────────────────────────────────
+function renderExplorer(root) {
+  const p = el("div", { cls: "panel" });
+  const sel = el("select");
+  for (const [key, name, title] of [["agentMarket", "bankon_agent_market", "Agent Marketspace"], ["agentReputation", "AgentReputationRegistry", "Reputation Registry"], ["agentEscrow", "AgenticMarketplaceEscrow", "Marketplace Escrow"], ["subscriptions", "SubscriptionManager", "Subscriptions"]]) sel.append(el("option", { text: title, attrs: { value: key + "|" + name } }));
+  p.append(el("label", { cls: "field" }, [el("span", { cls: "lbl", text: "contract" }), sel]));
+  const panels = el("div"); p.append(panels);
+  const load = async () => {
+    panels.innerHTML = "";
+    const [key, name] = sel.value.split("|");
+    try {
+      const { address, abi } = await ctx(key, name);
+      const { reads, writes } = F.categorizeAbi(abi);
+      panels.append(el("span", { cls: "chip", text: address }), el("h3", { text: `Read (${reads.length})` }));
+      for (const fn of reads) panels.append(fnCard(fn, abi, address, false));
+      panels.append(el("h3", { text: `Write (${writes.length})` }));
+      for (const fn of writes) panels.append(fnCard(fn, abi, address, true));
+    } catch (e) { panels.append(el("div", { cls: "result err", text: e.message })); }
+  };
+  sel.addEventListener("change", load); load();
+  root.append(p);
+}
+
+function fnCard(fn, abi, address, isWrite) {
+  const card = el("div", { cls: "fn" });
+  card.append(el("div", { cls: "sig", text: F.signatureOf(fn) }));
+  const inputs = [];
+  for (const i of fn.inputs) { const w = el("label", { cls: "field" }, [el("span", { cls: "lbl", html: `${i.name || "arg"} <code>${i.type}</code>` })]); const inp = el("input", { attrs: { type: "text", placeholder: i.type } }); w.append(inp); card.append(w); inputs.push(inp); }
+  const out = el("div", { cls: "result", attrs: { style: "display:none" } });
+  const btn = el("button", { cls: isWrite ? "primary" : "", text: isWrite ? "Write" : "Query", on: { click: async () => {
+    show(out, "…");
+    try {
+      const args = fn.inputs.map((i, idx) => F.coerceArg(i.type, inputs[idx].value));
+      if (!isWrite) { const r = await F.readContract({ provider: BANKON.browserProvider || ethers.getDefaultProvider(), address, abi, fn: fn.name, args, ethers }); show(out, stringify(r), "ok"); }
+      else { const signer = await BANKON.browserProvider.getSigner(); const tx = await F.writeContract({ signer, address, abi, fn: fn.name, args, ethers }); const r = await tx.wait(); show(out, `✅ block ${r.blockNumber}`, "ok"); }
+    } catch (e) { show(out, "✗ " + (e.shortMessage || e.message), "err"); }
+  } } });
+  card.append(el("div", { cls: "row" }, [btn]), out);
+  return card;
+}
+
+for (const b of document.querySelectorAll("nav.tabs button"))
+  b.addEventListener("click", () => { activeTab = b.dataset.tab; for (const x of document.querySelectorAll("nav.tabs button")) x.classList.toggle("active", x === b); render(); });
+
+(async function () { await whoami(); await connect().catch(() => {}); topbar(); render(); })();
+</script>
+</body>
+</html>

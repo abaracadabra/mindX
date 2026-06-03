@@ -8,10 +8,12 @@
 // the ABI by hand — edit the curated descriptors in export-abis.mjs and re-run.
 
 export const ZEROG_CHAINS = {
+  16661: { hex: "0x4115", name: "0G Aristotle Mainnet", rpc: "https://evmrpc.0g.ai", explorer: "https://chainscan.0g.ai", symbol: "0G" },
   16601: { hex: "0x40d9", name: "0G Galileo Testnet", rpc: "https://evmrpc-testnet.0g.ai", explorer: "https://chainscan-galileo.0g.ai", symbol: "0G" },
 };
 
 export const INFT_ADDRESS = {
+  16661: "0x0000000000000000000000000000000000000000",
   16601: "0x0000000000000000000000000000000000000000",
 };
 

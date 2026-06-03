@@ -38,6 +38,26 @@ node script/export-abis.mjs                      # regenerate ABIs + manifest fo
 cd packages/web && python3 -m http.server 8788   # open http://localhost:8788/bankoneth.html
 ```
 
+## Canonical iNFT + ARC agent economy (ETHGlobal NYC)
+
+A **modular, extensible** canonical **EIP-7857 + ERC-6551** iNFT stack lives in
+[`contracts/inft7857/`](contracts/inft7857/) (interfaces, pluggable verifier, Mode A unified +
+Mode B parallel iNFT, mint registrar, lean TBA account + registry proxy, metadata resolver,
+CREATE2 deployer). The **ARC agent economy** ([`contracts/arc/`](contracts/arc/) — "Agent
+Reputation Collection", copied from `daio/contracts/arc/` and expanded) turns an iNFT into a
+tradable, reputation-bearing, escrow-able agent: `bankon_agent_market` + `AgentReputationRegistry`
++ `AgenticMarketplaceEscrow` + `SubscriptionManager` + `BonaFide`. Two new modular UIs ship beside
+the simple MVP storefront: [`name-service.html`](packages/web/name-service.html) (ENS naming as a
+service + iNFT/TBA) and [`marketspace.html`](packages/web/marketspace.html) (the ARC marketspace).
+0G **Aristotle mainnet 16661** is wired. Docs: [`INFT7857_MODULE`](docs/INFT7857_MODULE.md),
+[`ARC_AGENT_ECONOMY`](docs/ARC_AGENT_ECONOMY.md), [`INFT_CANONICAL_VS_LEGACY`](docs/INFT_CANONICAL_VS_LEGACY.md),
+[`NAME_SERVICE_UI`](docs/NAME_SERVICE_UI.md). `forge test` **195/195**.
+
+```bash
+forge test                                   # 195 green (38 suites)
+forge script script/deploy_bankon_inft.s.sol --rpc-url <fork> --broadcast   # deploy the canonical stack
+```
+
 ## Hierarchical login (admin / member / visitor)
 
 The product UI is a **server-gated, three-tier** dApp — the single front-end for both

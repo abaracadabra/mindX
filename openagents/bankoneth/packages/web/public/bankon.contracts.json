@@ -164,6 +164,96 @@
       "blurb": "EIP-3668 CCIP-Read resolver.",
       "abi": "abis/BankonOffchainResolver.json",
       "fnCount": 15
+    },
+    {
+      "name": "bankon_inft_subname",
+      "deploymentKey": "inftUnified",
+      "category": "inft7857",
+      "title": "iNFT (Mode A unified)",
+      "blurb": "Canonical ERC-7857 + ERC-721 + 5192 + 2981, NameWrapper-backed.",
+      "abi": "abis/bankon_inft_subname.json",
+      "fnCount": 45
+    },
+    {
+      "name": "bankon_inft_extension",
+      "deploymentKey": "inftParallel",
+      "category": "inft7857",
+      "title": "iNFT (Mode B parallel)",
+      "blurb": "Canonical ERC-7857 bolted onto an existing wrapped subname.",
+      "abi": "abis/bankon_inft_extension.json",
+      "fnCount": 34
+    },
+    {
+      "name": "bankon_inft_registrar",
+      "deploymentKey": "inftRegistrar",
+      "category": "inft7857",
+      "title": "iNFT Registrar",
+      "blurb": "Mint router (WRAPPED/UNIFIED/PARALLEL ± soulbound) + x402.",
+      "abi": "abis/bankon_inft_registrar.json",
+      "fnCount": 14
+    },
+    {
+      "name": "bankon_inft_oracle",
+      "deploymentKey": "inftOracle",
+      "category": "inft7857",
+      "title": "iNFT Verifier (oracle)",
+      "blurb": "Pluggable IERC7857DataVerifier (multisig EIP-712 TEE).",
+      "abi": "abis/bankon_inft_oracle.json",
+      "fnCount": 16
+    },
+    {
+      "name": "bankon_tba_account",
+      "deploymentKey": "tbaImpl",
+      "category": "inft7857",
+      "title": "ERC-6551 TBA account",
+      "blurb": "Agent wallet; owner = live ownerOf(tokenId).",
+      "abi": "abis/bankon_tba_account.json",
+      "fnCount": 11
+    },
+    {
+      "name": "bankon_tba_registry_proxy",
+      "deploymentKey": "tbaRegistryProxy",
+      "category": "inft7857",
+      "title": "TBA registry proxy",
+      "blurb": "Event-emitting wrapper over the canonical 6551 registry.",
+      "abi": "abis/bankon_tba_registry_proxy.json",
+      "fnCount": 3
+    },
+    {
+      "name": "bankon_agent_market",
+      "deploymentKey": "agentMarket",
+      "category": "arc",
+      "title": "Agent Marketspace",
+      "blurb": "List iNFT agents for sale; AgenticPlace indexer source.",
+      "abi": "abis/bankon_agent_market.json",
+      "fnCount": 9
+    },
+    {
+      "name": "AgentReputationRegistry",
+      "deploymentKey": "agentReputation",
+      "category": "arc",
+      "title": "Agent Reputation",
+      "blurb": "Agent profiles, metrics, reviews (USDC economy).",
+      "abi": "abis/AgentReputationRegistry.json",
+      "fnCount": 21
+    },
+    {
+      "name": "AgenticMarketplaceEscrow",
+      "deploymentKey": "agentEscrow",
+      "category": "arc",
+      "title": "Marketplace Escrow",
+      "blurb": "Milestone-based agent service agreements + disputes.",
+      "abi": "abis/AgenticMarketplaceEscrow.json",
+      "fnCount": 33
+    },
+    {
+      "name": "SubscriptionManager",
+      "deploymentKey": "subscriptions",
+      "category": "arc",
+      "title": "Subscriptions",
+      "blurb": "Recurring USDC billing for agent services.",
+      "abi": "abis/SubscriptionManager.json",
+      "fnCount": 21
     }
   ],
   "presets": [
