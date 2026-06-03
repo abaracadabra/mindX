@@ -8,6 +8,7 @@
 // addresses/gas (no broadcast); launch() confirms the sequence on livenet.
 import { ethers } from "./vendor/ethers.min.js";
 import { CHAINS } from "./chains.js";
+import { cfg, addChainById as _addChainById } from "./bankonchains/extend.js";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
 
@@ -48,16 +49,21 @@ export const Deployer = {
     this.injected.on?.("accountsChanged", () => location.reload());
     return this.address;
   },
+  // extensible: resolve curated chains, or any EVM chain via chainid.network (allchain.html).
+  async addChainById(id) { return _addChainById(id); },
+  cfg(id) { return cfg(id); },
+
   async switchChain(id) {
     const hex = "0x" + Number(id).toString(16);
     try {
       await this.injected.request({ method: "wallet_switchEthereumChain", params: [{ chainId: hex }] });
     } catch (e) {
       if (e.code === 4902) {
-        const c = CHAINS[id];
+        const c = cfg(id) || await _addChainById(id);
+        if (!c) throw new Error(`chain ${id} not found (curated or chainid.network)`);
         await this.injected.request({ method: "wallet_addEthereumChain", params: [{
           chainId: hex, chainName: c.name, nativeCurrency: { name: c.nativeSymbol, symbol: c.nativeSymbol, decimals: 18 },
-          rpcUrls: [c.rpc], blockExplorerUrls: [c.explorer],
+          rpcUrls: [c.rpc], blockExplorerUrls: c.explorer ? [c.explorer] : [],
         }] });
       } else if (e.code !== 4001) throw e;
     }

@@ -40,3 +40,6 @@ vault_module/data/
 
 # local static-serve convenience
 packages/web/gfx
+
+# bankonchains CMC key — secret, never commit (outside web root)
+.bankonchains.env

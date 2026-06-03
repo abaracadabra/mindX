@@ -17,6 +17,7 @@
     <div class="brand">BANKON <span class="g">dApp</span></div>
     <div class="row">
       <span class="pill" id="who"></span>
+      <span class="tag" id="tier"></span>
       <a href="./admin.html"><button>admin</button></a>
     </div>
   </header>
@@ -73,6 +74,16 @@ async function init(){
   await Dapp.connect().catch(()=>{});           // re-attach signer this session
   await Dapp.loadData();
   $("who").innerHTML = `<span class="dot"></span> ${short(Dapp.address)} · ${CHAINS[Dapp.chainId]?.name||("chain "+Dapp.chainId)}`;
+  // privilege tier + native price: holders (*.bankon.eth) get CoinMarketCap, public gets keyless spot
+  try {
+    await Dapp.refreshHolder();
+    const sym = CHAINS[Dapp.chainId]?.nativeSymbol || "ETH";
+    const pr = await Dapp.priceUsd(sym);
+    const px = pr.usd != null ? `${sym} $${Number(pr.usd).toFixed(2)}` : `${sym} —`;
+    $("tier").innerHTML = Dapp.holderStatus?.holder
+      ? `★ holder${Dapp.holderStatus.name?` ${Dapp.holderStatus.name}`:""} · ${px} <span class="muted">(${pr.source||"n/a"})</span>`
+      : `public · ${px} <span class="muted">(${pr.source||"keyless"})</span>`;
+  } catch {}
   $("nameSel").innerHTML = `<option value="">— contract name —</option>` + CONTRACTS.map(c=>`<option value="${c.name}">${c.title} (${c.name})</option>`).join("");
   if (Dapp.localCount) $("loadInfo").innerHTML = `<span class="ok">🔌 ${Dapp.localCount} address(es) wired from your live deploy on ${CHAINS[Dapp.chainId]?.name}</span> — load any by name.`;
   if (localStorage.getItem("etherscan_key")) $("esKey").value = "••• saved";

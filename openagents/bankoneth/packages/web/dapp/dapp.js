@@ -12,6 +12,8 @@
 import { ethers } from "../vendor/ethers.min.js";
 import { CHAINS } from "../chains.js";
 import { CONTRACTS, byKey, loadAbi } from "./abis/index.js";
+import { Bankon } from "../bankon.js";
+import { nativeUsd } from "../bankonchains/price.js";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
 const isAddr = (s) => typeof s === "string" && /^0x[0-9a-fA-F]{40}$/.test(s.trim());
@@ -104,6 +106,18 @@ export const Dapp = {
     const readonly = fragment && (fragment.stateMutability === "view" || fragment.stateMutability === "pure");
     const c = this.contract(address, abi, !readonly);
     return readonly ? c[fn](...args) : c[fn](...args, value ? { value } : {});
+  },
+
+  // ── holder privilege + price tier (public keyless vs holder CMC) ────────────
+  async refreshHolder() { this.holderStatus = await Bankon.checkHolder(this.address); return this.holderStatus; },
+  // Holders (*.bankon.eth / bankon.eth) get CoinMarketCap prices (proves once, lazily);
+  // the public gets keyless spot. Returns { usd, source }.
+  async priceUsd(symbol) {
+    if (this.holderStatus?.holder) {
+      if (!this._proof) { try { this._proof = await Bankon.proveHolder(this.signer, this.address); } catch { this._proof = null; } }
+      return nativeUsd(symbol, { proof: this._proof });
+    }
+    return nativeUsd(symbol);
   },
 
   // ── ENS search + Etherscan injection ────────────────────────────────────────

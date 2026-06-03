@@ -69,6 +69,8 @@
     </div>
     <div class="row">
       <select id="chainSel" title="LIVE target chain"></select>
+      <input id="addChainId" placeholder="+ chain id" style="width:96px" title="add any EVM chain by id (chainid.network)" />
+      <button id="addChainBtn" title="resolve from chainid.network (allchain.html)">＋</button>
       <button id="connectBtn" class="primary">Connect wallet</button>
     </div>
   </header>
@@ -125,10 +127,11 @@ let selectedSet = "treasury", usd = null;
 function toast(m, k=""){ const t=document.createElement("div"); t.className="toast "+k; t.textContent=m; document.body.appendChild(t); setTimeout(()=>t.remove(),5200); }
 const short = (a)=> a ? a.slice(0,7)+"…"+a.slice(-5) : "";
 
-// LIVE target chains — Base first (parity with Ethereum), then the rest.
-const TARGETS = [8453, 1, 84532, 11155111, 42161, 137, 5042002];
+// LIVE target chains — Base first (parity with Ethereum), then the multichain set, then
+// testnets. Extensible to ANY EVM chain via the ＋ control (chainid.network / allchain.html).
+let TARGETS = [8453, 1, 1284, 137, 42161, 10, 81457, 1776, 43114, 56, 5042002, 16661, 84532, 11155111, 16601];
 function fillChains(){
-  $("chainSel").innerHTML = TARGETS.map((id)=>`<option value="${id}">${CHAINS[id].name}${CHAINS[id].testnet?" · testnet":""}</option>`).join("");
+  $("chainSel").innerHTML = TARGETS.map((id)=>{ const c=Deployer.cfg(id)||CHAINS[id]; return c?`<option value="${id}">${c.name}${c.testnet?" · testnet":""}</option>`:""; }).join("");
 }
 function fillTiers(){
   $("gsTier").innerHTML = GasService.TIERS.map((t)=>`<option value="${t.tier}">${t.label} — ${t.note}</option>`).join("");
@@ -157,7 +160,18 @@ $("connectBtn").onclick = async ()=>{
     toast("Connected on "+CHAINS[Deployer.chainId].name,"ok");
   }catch(e){ toast(e.message||String(e),"err"); }
 };
-$("chainSel").onchange = async ()=>{ if(Deployer.signer){ try{ await Deployer.switchChain(Number($("chainSel").value)); usd=await Feedback.nativeUsd(Deployer.chainId); resetPlan(); toast("Switched to "+CHAINS[Deployer.chainId].name);}catch(e){toast(e.message,"err");} } };
+$("chainSel").onchange = async ()=>{ if(Deployer.signer){ try{ await Deployer.switchChain(Number($("chainSel").value)); usd=await Feedback.nativeUsd(Deployer.chainId); resetPlan(); toast("Switched to "+(Deployer.cfg(Deployer.chainId)?.name||("chain "+Deployer.chainId)));}catch(e){toast(e.message,"err");} } };
+$("addChainBtn").onclick = async ()=>{
+  const id = Number($("addChainId").value.trim()); if(!id){ toast("enter a chain id","err"); return; }
+  try{
+    $("addChainBtn").disabled=true;
+    const c = await Deployer.addChainById(id);
+    if(!c){ toast(`chain ${id} not found on chainid.network`,"err"); return; }
+    if(!TARGETS.includes(id)) TARGETS.unshift(id);
+    fillChains(); $("chainSel").value=String(id);
+    toast(`added ${c.name} (${id}) — extensible from allchain.html`,"ok");
+  }catch(e){ toast(e.message||String(e),"err"); } finally{ $("addChainBtn").disabled=false; }
+};
 
 $("deployBtn").onclick = async ()=>{
   try{
