@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- admin.html — owner console (bankon.eth). Client-side gating is advisory UX; real
+     authority is enforced ON-CHAIN by the contracts (onlyDictator / multisig). -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BANKON · admin</title>
+<link rel="stylesheet" href="./styled.css" />
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div class="wrap">
+  <header>
+    <div class="brand">BANKON <span class="g">admin</span></div>
+    <div class="row"><span class="pill" id="who"></span><a href="./dapp.html"><button>← dApp</button></a></div>
+  </header>
+
+  <div id="gate" class="card center" style="display:none">
+    <div class="hero">
+      <h3 class="err">Access restricted</h3>
+      <p class="sub">This console is for the <span class="gold-t">bankon.eth</span> owner. Connect as the
+        owner address to continue. (On-chain authority is enforced by the contracts regardless of this page.)</p>
+      <p class="mono" id="gateInfo"></p>
+    </div>
+  </div>
+
+  <div id="panel" style="display:none">
+    <div class="card">
+      <h3>Owner console</h3>
+      <p class="sub">Connected as the resolved <span class="gold-t">bankon.eth</span> owner. Privileged actions
+        run against the deployed contracts; the deployer ships new ones.</p>
+      <div class="row">
+        <a href="../deploy.html"><button class="primary">go-LIVE deployer →</button></a>
+        <a href="./dapp.html"><button>contract explorer →</button></a>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Governance (treasury / remittance)</h3>
+      <p class="sub">Re-key the custody governance: 1:1 → 2:2 / 2:3 / 3:3 (or a multisig vote to instate a 1:1).
+        Load the contract in the dApp and call <span class="mono">renounce_to(signers, threshold, lock_out)</span>;
+        a multisig routes it through <span class="mono">execute_signed</span>. <span class="muted">Migrate to 2:3+
+        early to close the single-key window.</span></p>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="../webgl-bg.js"></script>
+<script type="module">
+import { Dapp, short } from "./dapp.js";
+import { ethers } from "../vendor/ethers.min.js";
+import { CHAINS } from "../chains.js";
+const $ = (id)=>document.getElementById(id);
+
+async function init(){
+  if (!Dapp.guardOrRedirect()) return;
+  await Dapp.connect().catch(()=>{});
+  await Dapp.loadData();
+  $("who").innerHTML = `<span class="dot"></span> ${short(Dapp.address)}`;
+  // resolve the owner (bankon.eth) — live ENS, fallback to manifest treasuryOwner
+  let owner = Dapp.manifest?.deploy?.treasuryOwner || null;
+  try { const a = await new ethers.JsonRpcProvider(CHAINS[1].rpc).resolveName("bankon.eth"); if (a) owner = a; } catch {}
+  const isOwner = owner && Dapp.address && owner.toLowerCase() === Dapp.address.toLowerCase();
+  $("gate").style.display = isOwner ? "none" : "block";
+  $("panel").style.display = isOwner ? "block" : "none";
+  if (!isOwner) $("gateInfo").textContent = `owner = ${short(owner)} · you = ${short(Dapp.address)}`;
+}
+init();
+</script>
+</body>
+</html>

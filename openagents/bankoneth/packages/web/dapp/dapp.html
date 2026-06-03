@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- dapp.html — the BANKON dApp. Load any contract BY NAME or BY ADDRESS (each contract's
+     ABI is its own module), interact (read/write), RAKE quick-actions, and an ENS search
+     that injects the Etherscan view for any *.eth name or address. -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BANKON · dApp</title>
+<link rel="stylesheet" href="./styled.css" />
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div class="wrap">
+  <header>
+    <div class="brand">BANKON <span class="g">dApp</span></div>
+    <div class="row">
+      <span class="pill" id="who"></span>
+      <a href="./admin.html"><button>admin</button></a>
+    </div>
+  </header>
+
+  <!-- ENS search → inject Etherscan -->
+  <div class="card">
+    <h3>🔎 ENS / address lookup <span class="tag">keyless</span></h3>
+    <div class="row">
+      <input id="lookupQ" placeholder="bankon.eth  or  0x…" style="flex:1" value="bankon.eth" />
+      <button id="lookupBtn" class="primary">Look up</button>
+    </div>
+    <div class="out" id="lookupOut"></div>
+    <div class="sub" style="margin-top:8px">Public by default (RPC only). Add an Etherscan key for richer data:
+      <input id="esKey" placeholder="Etherscan API key (optional)" style="padding:6px 10px" />
+      <button id="esSave">save</button></div>
+  </div>
+
+  <!-- contract by name or address -->
+  <div class="card">
+    <h3>📜 Contract — by name or address</h3>
+    <div class="row">
+      <select id="nameSel"></select>
+      <span class="muted">or</span>
+      <input id="addrIn" placeholder="0x… contract address" style="flex:1" />
+      <button id="loadBtn" class="primary">Load</button>
+    </div>
+    <div class="sub" id="loadInfo" style="margin-top:8px"></div>
+  </div>
+
+  <!-- RAKE quick actions -->
+  <div class="card" id="rakeCard" style="display:none">
+    <h3>💰 RAKE — collect home to bankon.eth</h3>
+    <div class="row">
+      <input id="rakeAsset" placeholder="asset token address (0x… or empty=skip)" style="flex:1" />
+      <button id="rakeQuote">pending USD</button>
+      <button id="rakeCollect" class="gold">collect →</button>
+    </div>
+    <div class="out" id="rakeOut"></div>
+  </div>
+
+  <div id="fns"></div>
+</div>
+
+<script type="module" src="../webgl-bg.js"></script>
+<script type="module">
+import { Dapp, CONTRACTS, CHAINS, short } from "./dapp.js";
+import { ethers } from "../vendor/ethers.min.js";
+const $ = (id) => document.getElementById(id);
+function toast(m,k=""){const t=document.createElement("div");t.className="toast "+k;t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),5200);}
+let loaded = null; // {name,address,abi}
+
+async function init(){
+  if (!Dapp.guardOrRedirect()) return;          // security default: bounce if not logged in
+  await Dapp.connect().catch(()=>{});           // re-attach signer this session
+  await Dapp.loadData();
+  $("who").innerHTML = `<span class="dot"></span> ${short(Dapp.address)} · ${CHAINS[Dapp.chainId]?.name||("chain "+Dapp.chainId)}`;
+  $("nameSel").innerHTML = `<option value="">— contract name —</option>` + CONTRACTS.map(c=>`<option value="${c.name}">${c.title} (${c.name})</option>`).join("");
+  if (localStorage.getItem("etherscan_key")) $("esKey").value = "••• saved";
+}
+
+$("esSave").onclick = ()=>{ const v=$("esKey").value.trim(); if(v && !v.startsWith("•")){ localStorage.setItem("etherscan_key",v); $("esKey").value="••• saved"; toast("Etherscan key saved (local only)","ok"); } };
+
+$("lookupBtn").onclick = async ()=>{
+  try{
+    $("lookupOut").textContent = "resolving…";
+    const p = await Dapp.lookup($("lookupQ").value, Dapp.chainId);
+    $("lookupOut").innerHTML =
+      `${p.ensName?`<b>${p.ensName}</b> → `:""}<span class="mono">${p.address}</span>\n`+
+      `${p.isContract?"contract":"EOA"}${p.contractName?` · <span class="gold-t">${p.contractName}</span>`:""} · balance ${Number(p.balance).toFixed(5)} ${p.symbol}\n`+
+      (p.etherscan?`last tx: ${p.etherscan.lastTx?short(p.etherscan.lastTx):"—"}\n`:"")+
+      `<a href="${p.explorer}" target="_blank">↗ view on explorer</a>`;
+  }catch(e){ $("lookupOut").innerHTML = `<span class="err">${e.message||e}</span>`; }
+};
+
+$("loadBtn").onclick = async ()=>{
+  try{
+    const q = $("addrIn").value.trim() || $("nameSel").value;
+    if(!q){ toast("pick a name or paste an address","err"); return; }
+    loaded = await Dapp.resolveContract(q);
+    if(!loaded.address || loaded.address==="0x0000000000000000000000000000000000000000")
+      $("loadInfo").innerHTML = `<span class="err">no deployed address for ${loaded.name||q} on ${CHAINS[Dapp.chainId]?.name}</span> — deploy it first (deploy.html), then reload.`;
+    else $("loadInfo").innerHTML = `loaded <b>${loaded.name||"(unknown)"}</b> at <a href="${Dapp.explorerUrl(Dapp.chainId,loaded.address)}" target="_blank" class="mono">${short(loaded.address)}</a>`;
+    $("rakeCard").style.display = loaded.name==="rake" ? "block" : "none";
+    renderFns();
+  }catch(e){ toast(e.message||String(e),"err"); }
+};
+
+function renderFns(){
+  const host = $("fns"); host.innerHTML="";
+  if(!loaded?.abi){ host.innerHTML = `<div class="card muted">Unknown address — no ABI on file. (A future build will let you paste an ABI.)</div>`; return; }
+  const fns = loaded.abi.filter(x=>x.type==="function");
+  const card = document.createElement("div"); card.className="card";
+  card.innerHTML = `<h3>functions <span class="tag">${loaded.name||""}</span></h3>`;
+  for(const f of fns){
+    const ro = f.stateMutability==="view"||f.stateMutability==="pure";
+    const row = document.createElement("div"); row.className="fn";
+    const ins = (f.inputs||[]).map((inp,i)=>`<input data-arg="${i}" placeholder="${inp.name||('arg'+i)}: ${inp.type}" style="width:100%;margin-top:4px"/>`).join("");
+    row.innerHTML = `<div class="name"><span class="${ro?'ro':'wr'}">${ro?'read':'write'}</span> ${f.name}</div>${ins}`;
+    const btn = document.createElement("button"); btn.textContent = ro?"call":"send"; btn.className = ro?"":"gold"; btn.style.marginTop="8px";
+    const out = document.createElement("div"); out.className="out";
+    btn.onclick = async ()=>{
+      try{
+        const args = (f.inputs||[]).map((inp,i)=>coerce(inp.type, row.querySelector(`[data-arg="${i}"]`).value));
+        out.textContent = ro?"calling…":"sending…";
+        const res = await Dapp.call(loaded.address, loaded.abi, f.name, args);
+        if(ro){ out.textContent = fmt(res); }
+        else { out.innerHTML = `tx <span class="mono">${short(res.hash)}</span> — mining…`; await res.wait(); out.innerHTML = `✓ confirmed <a href="${CHAINS[Dapp.chainId].explorer}/tx/${res.hash}" target="_blank" class="mono">${short(res.hash)}</a>`; }
+      }catch(e){ out.innerHTML = `<span class="err">${(e.shortMessage||e.message||e).slice(0,180)}</span>`; }
+    };
+    row.appendChild(btn); row.appendChild(out); card.appendChild(row);
+  }
+  host.appendChild(card);
+}
+function coerce(type,v){ v=(v||"").trim(); if(type.endsWith("[]")) return v?JSON.parse(v):[]; if(type.startsWith("uint")||type.startsWith("int")) return BigInt(v||"0"); if(type==="bool") return v==="true"; return v; }
+function fmt(r){ if(typeof r==="bigint") return r.toString(); if(Array.isArray(r)) return r.map(fmt).join(", "); return String(r); }
+
+$("rakeQuote").onclick = async ()=>{ try{ const v=await Dapp.rakePending(loaded.address,$("rakeAsset").value.trim()); $("rakeOut").textContent = `pending value: ${v.toString()} (USD-6)`; }catch(e){ $("rakeOut").innerHTML=`<span class="err">${e.shortMessage||e.message}</span>`; } };
+$("rakeCollect").onclick = async ()=>{ try{ const tx=await Dapp.rakeCollect(loaded.address,$("rakeAsset").value.trim()); $("rakeOut").innerHTML=`collect tx <span class="mono">${short(tx.hash)}</span>…`; await tx.wait(); $("rakeOut").innerHTML=`✓ raked home to bankon.eth`; toast("RAKE collected → bankon.eth","ok"); }catch(e){ $("rakeOut").innerHTML=`<span class="err">${e.shortMessage||e.message}</span>`; } };
+
+init().catch(e=>toast(e.message||String(e),"err"));
+</script>
+</body>
+</html>

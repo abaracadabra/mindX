@@ -1,0 +1,31 @@
+# admin.ipfs — IPFS-hosted variant of the BANKON admin console
+
+The dApp is **fully static and uses only relative paths**, so the whole `dapp/` directory is
+content-addressable as-is — no server, no build. This file is the IPFS deployment descriptor.
+
+## Pin the dApp
+
+    ipfs add -r packages/web/dapp        # → CID for the whole dApp
+    # admin console is then at:  https://<gateway>/ipfs/<CID>/admin.html
+    #                       or:  ipfs://<CID>/admin.html
+
+For a stable name, publish under IPNS or an ENS contenthash on `bankon.eth`:
+
+    ipfs name publish /ipfs/<CID>                 # IPNS
+    # or set bankon.eth contenthash → ipfs://<CID>   (resolves at bankon.eth.link / EVM ENS)
+
+## Why it just works on IPFS
+
+- All asset references are relative (`./styled.css`, `./dapp.js`, `../vendor/ethers.min.js`,
+  `./abis/<name>.abi.js`) — no absolute origins, so they resolve under any gateway path.
+- No backend / API key is required (public RPC + the wallet). The optional Etherscan key lives
+  only in the visitor's `localStorage`.
+- Authority is **on-chain** (the custody contracts' `onlyDictator` / multisig). The admin page's
+  owner check is advisory UX — serving it from IPFS removes the host as a trust dependency, which
+  is the point: a censorship-resistant, sovereign admin surface for bankon.eth.
+
+## Note
+
+The `../vendor`, `../chains.js`, `../webgl-bg.js`, and `../public/*` references live one level above
+`dapp/`. To pin a self-contained bundle, pin `packages/web/` (so the `../` paths resolve) or vendor
+those few files into `dapp/` before `ipfs add`.
