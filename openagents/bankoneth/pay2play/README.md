@@ -57,6 +57,28 @@ Trust is bounded by the facilitator's signing key, so the layer enforces:
 `ArcReceipt = { serviceId, payer, asset, amount, srcChainId, nonce, deadline }`; the
 payer (who signed the EIP-3009 USDC authorization on ARC) receives the entitlement.
 
+## The gate to a service
+
+[`Pay2PlayGate`](src/Pay2PlayGate.sol) turns an entitlement into **admission**. A
+"service" can be an **API call** or entry to a **privileged room** (DeltaVerse-style).
+Admission is granted by **signature**: the wallet signs `Connect(roomId,user,nonce)`,
+the gate verifies the signature (identity), checks the on-chain entitlement
+(**persistence.state** in `BankonEntitlement`), and — per room — optionally a
+[**proof.oracle**](src/interfaces/IProofOracle.sol) for "world" connection and a
+**modular-NFT** gate (DeltaVerse expansion — github.com/deltav-deltaverse). On success
+it emits `Admitted` — the signal an off-chain **signature event-listener layer**
+watches to open the API/room session seamlessly. No tokens move in the gate.
+
+```
+  pay2play (pay → entitlement)
+        → Pay2PlayGate (signature → admission, + proof.oracle + modular-NFT)
+        → off-chain listener (Admitted event → opens the session)
+```
+
+A room is `{ service, proofOracle?, nft? (ERC-721/1155 + minBalance), active, name }`.
+`eligible(user, roomId)` is the read-only pre-check a UI uses before asking the wallet
+to sign.
+
 ## Wire-up
 
 The router and the ARC settlement layer each need `GRANTER_ROLE` on the entitlement
