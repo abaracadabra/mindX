@@ -1,0 +1,22 @@
+{
+  "name": "@bankoneth/bankon-mcp",
+  "version": "0.1.0",
+  "description": "MCP × x402 adaptive-rails proxy — auto-pays x402 for agent tool calls and serves as the AgenticPlace payment processor for BANKON / mindX service delivery.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "bin": { "bankon-mcp": "./dist/index.js" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "ethers": "^6.13.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0"
+  }
+}

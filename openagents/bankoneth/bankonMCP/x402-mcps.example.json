@@ -1,0 +1,7 @@
+{
+  "remotes": [
+    { "name": "cmc",   "url": "https://pro-api.coinmarketcap.com/mcp" },
+    { "name": "bankon", "url": "https://bankon.pythai.net/mcp" },
+    { "name": "mindx",  "url": "https://mindx.pythai.net/mcp" }
+  ]
+}
