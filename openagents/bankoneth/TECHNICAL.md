@@ -211,3 +211,36 @@ Framework-free; only the wallet's EIP-1193 provider in the trust path.
   on-device key binding.
 - ERC-20 / x402 payment wired through the deployer's LAUNCH.
 - A unified cross-chain receipt indexer joining EVM + ARC + Algorand by receipt hash.
+
+---
+
+## 9. Related mindX runtime agents (server-side companions)
+
+Built alongside this prototype in the mindX tree — the running-system counterparts to
+the contracts/dApp here. Each is project-agnostic (mindX is one consumer) and
+**fails closed**.
+
+- **`agents/deltaverse/` — `DeltaVerseGate`** — the runtime companion to the Solidity
+  `Pay2PlayGate` (§2.5). Turns a `DeltaVerse.gate.event` into an on-chain **room**
+  (`BubbleRoomV4.mintRoom`) + **bubbleroom** (`BubbleRoomSpawn.spawnFromRoom`) on
+  Polygon (the [NeuralNode suite](https://github.com/deltav-deltaverse/neuralnode)),
+  built on the minimal `agents.blockchain.abi_codec` + `agents.storage.raw_tx` (no
+  web3.py). Emits catalogue kinds `deltaverse.gate.event`, `deltaverse.room.created`,
+  `deltaverse.bubbleroom.spawned`. Fails closed unless deployed addresses
+  (`data/config/blockchain_addresses.json`), an RPC, and a spawner key all resolve —
+  Polygon contracts are zero placeholders pending deployment.
+- **`agents/deployer/` — `DeployerService`** — the server-side companion to the client
+  deployer dApp (§4): a governed, multi-chain (EVM via Foundry + Algorand ARC56),
+  `.deploy`-manifest-driven deployer with per-chain isolated stages, a two-step
+  **intent → confirm** gate, and participant-tier authorization. Intents/receipts live
+  under `data/governance/`. Spec: `docs/services/contract_deployment_as_a_service.md`.
+  This is the path that deploys the NeuralNode suite so `DeltaVerseGate` goes live.
+- **`agents/blockchain/` — `BlockchainAgentFactory`** — mints a mindX agent as an
+  ERC-7857 iNFT (sidecar facets), lists on AgenticPlace, binds BANKON. Provides the
+  `abi_codec` reused by `DeltaVerseGate`. Spec: `docs/blockchain/BLOCKCHAIN_AGENTS.md`.
+
+So the on-chain gate exists in two forms — the **Solidity `Pay2PlayGate`** (entitlement +
+proof-oracle + modular-NFT admission) and the **Python `DeltaVerseGate`** (mints the
+room/bubbleroom). The "DeltaVerse room gate" listed as a prototype edge in §8 is, at the
+runtime layer, now real and fail-closed; what remains is deploying the NeuralNode
+contracts (via `agents/deployer`) and binding the two gates.
