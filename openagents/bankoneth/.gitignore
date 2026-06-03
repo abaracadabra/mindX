@@ -37,3 +37,6 @@ vault_module/data/
 **/entries.json
 **/.overseer_proof.json
 **/shadow_nonces.json
+
+# local static-serve convenience
+packages/web/gfx

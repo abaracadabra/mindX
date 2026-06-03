@@ -129,7 +129,15 @@ async def verify(req: VerifyReq, response: Response):
     response.set_cookie(
         COOKIE, token, max_age=TTL_S, httponly=True, samesite="lax", secure=False
     )
-    return {"tier": info["tier"], "token": token, "address": info["address"], "names": info.get("names", [])}
+    # Holding a *.bankon.eth (member) or owning bankon.eth (admin) is a signed,
+    # on-chain proof agenticplace.pythai.net trusts to grant verified privilege.
+    verified = info["tier"] in ("member", "admin")
+    return {
+        "tier": info["tier"], "token": token, "address": info["address"],
+        "names": info.get("names", []),
+        "agenticplace_verified": verified,
+        "agenticplace": "https://agenticplace.pythai.net/marketspace" if verified else None,
+    }
 
 
 @router.post("/logout")
@@ -142,8 +150,12 @@ async def logout(response: Response):
 async def me(request: Request):
     claims = session_from_request(request)
     if not claims:
-        return {"tier": "visitor"}
-    return {"tier": claims.get("tier"), "address": claims.get("sub"), "names": claims.get("names", [])}
+        return {"tier": "visitor", "agenticplace_verified": False}
+    tier = claims.get("tier")
+    return {
+        "tier": tier, "address": claims.get("sub"), "names": claims.get("names", []),
+        "agenticplace_verified": tier in ("member", "admin"),
+    }
 
 
 async def require_admin_tier(request: Request) -> dict:
