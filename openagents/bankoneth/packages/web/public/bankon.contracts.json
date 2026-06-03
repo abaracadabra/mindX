@@ -338,7 +338,7 @@
       "title": "Gas-as-a-service",
       "blurb": "Base gas reservoir: sponsored one-tx drop + custom buy; φ/10 golden fee home to bankon.eth.",
       "abi": "abis/bankon_gas_service.json",
-      "fnCount": 19,
+      "fnCount": 22,
       "deployable": true
     }
   ],

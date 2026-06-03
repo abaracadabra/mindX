@@ -111,6 +111,40 @@
   },
   {
     "type": "function",
+    "name": "buy_gas_priority",
+    "inputs": [
+      {
+        "name": "to",
+        "type": "address",
+        "internalType": "address payable"
+      },
+      {
+        "name": "gas_wei",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "sides",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "mult_wad",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "fee",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
     "name": "default_gas_units",
     "inputs": [],
     "outputs": [
@@ -253,6 +287,35 @@
   },
   {
     "type": "function",
+    "name": "quote_fee_priority",
+    "inputs": [
+      {
+        "name": "cost_wei",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "sides",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "mult_wad",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
     "name": "renounceOwnership",
     "inputs": [],
     "outputs": [],
@@ -321,6 +384,25 @@
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "tier_mult",
+    "inputs": [
+      {
+        "name": "tier",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "pure"
   },
   {
     "type": "function",

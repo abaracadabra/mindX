@@ -21,8 +21,14 @@ library cp2048_constants {
     /// @notice φ-1 = 1/φ to 18 dp = 0.618033988749894848 — the canonical golden fraction.
     uint256 internal constant PHI_MINUS_ONE_WAD = 618033988749894848;
 
-    /// @notice φ/10 to 18 dp = 0.161803398874989484(8) — the BANKON gas-service fee rate
-    ///         (16.18%): the golden-ratio markup charged on the gas cost of one contract
-    ///         call. e.g. a 0.001 ETH call → 0.000161803… ETH fee. See scientific_math.goldenGasFeeWad.
+    /// @notice φ/10 to 18 dp = 0.161803398874989484(8) — the NORMALIZED BANKON fee rate
+    ///         (16.18%): the golden-ratio markup in the digits following the cost of one
+    ///         contract call. e.g. a 0.001 ETH call → 0.000161803… ETH fee. The base tier;
+    ///         expedited priority scales it up by golden steps. See scientific_math.
     uint256 internal constant PHI_OVER_TEN_WAD = 161803398874989484;
+
+    /// @notice Expedited ceiling: the BANKON fee never exceeds 3× the original contract
+    ///         call cost, however high the requested priority. (Fee is bounded in
+    ///         [normalized φ/10 , 3× cost].)
+    uint256 internal constant MAX_FEE_NUM = 3;
 }

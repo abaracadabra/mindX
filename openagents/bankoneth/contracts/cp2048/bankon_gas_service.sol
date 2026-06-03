@@ -13,6 +13,7 @@ pragma solidity ^0.8.24;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {scientific_math} from "./scientific_math.sol";
+import {cp2048_constants as C} from "./cp2048_constants.sol";
 
 contract bankon_gas_service is Ownable {
     /// @notice immutable home for any swept reservoir funds (bankon.eth).
@@ -92,6 +93,18 @@ contract bankon_gas_service is Ownable {
         total = issue + fee;
     }
 
+    /// @notice The golden multiplier (WAD) for an expedited priority `tier`: tier 0 = normalized
+    ///         (φ/10), each step ×φ; the resulting fee is still capped at 3× cost. UI convenience.
+    function tier_mult(uint256 tier) public pure returns (uint256) {
+        return scientific_math.goldenTierMult(tier);
+    }
+
+    /// @notice The BANKON fee at a custom priority `mult_wad` (1e18 = normalized). Increases
+    ///         proportionally with priority, hard-capped at 3× the contract cost.
+    function quote_fee_priority(uint256 cost_wei, uint256 sides, uint256 mult_wad) public pure returns (uint256) {
+        return scientific_math.goldenFeePriority(cost_wei, sides, mult_wad);
+    }
+
     /// @notice Custom gas issuance where the CLIENT pays. Send `gas_wei + quote_fee(gas_wei,
     ///         sides)` (or more) as msg.value; `gas_wei` is delivered to `to` on this chain and
     ///         the golden fee (plus any excess) stays in the reservoir, swept home to bankon.eth.
@@ -99,7 +112,22 @@ contract bankon_gas_service is Ownable {
     function buy_gas(address payable to, uint256 gas_wei, uint256 sides)
         external payable returns (uint256 fee)
     {
-        fee = scientific_math.goldenGasFeeWad(gas_wei, sides);
+        return _buy_gas(to, gas_wei, sides, C.WAD);
+    }
+
+    /// @notice As buy_gas, but at an expedited priority `mult_wad` (1e18 = normalized; higher =
+    ///         faster, fee climbs by golden steps, capped at 3× cost). Use tier_mult(tier) for
+    ///         the golden tier ladder.
+    function buy_gas_priority(address payable to, uint256 gas_wei, uint256 sides, uint256 mult_wad)
+        external payable returns (uint256 fee)
+    {
+        return _buy_gas(to, gas_wei, sides, mult_wad);
+    }
+
+    function _buy_gas(address payable to, uint256 gas_wei, uint256 sides, uint256 mult_wad)
+        internal returns (uint256 fee)
+    {
+        fee = scientific_math.goldenFeePriority(gas_wei, sides, mult_wad);
         if (msg.value < gas_wei + fee) revert underpaid();
         (bool ok, ) = to.call{value: gas_wei}("");
         require(ok, "issue failed");

@@ -101,6 +101,39 @@ contract gas_service_test is Test {
         assertEq(address(gs).balance, reservoirBefore + fee, "fee retained in reservoir for bankon.eth");
     }
 
+    function test_priority_tier_ladder_and_cap() public view {
+        uint256 cost = 0.001 ether;
+        // tier 0 = normalized golden rate φ/10
+        assertEq(gs.quote_fee_priority(cost, 1, gs.tier_mult(0)), gs.quote_fee(cost, 1), "tier 0 == normalized");
+        // each golden step raises the fee proportionally (×φ) until the cap
+        uint256 prev = gs.quote_fee_priority(cost, 1, gs.tier_mult(0));
+        for (uint256 t = 1; t <= 6; t++) {
+            uint256 f = gs.quote_fee_priority(cost, 1, gs.tier_mult(t));
+            assertGe(f, prev, "fee rises with priority");
+            prev = f;
+        }
+        // hard ceiling: never more than 3x the contract cost, however high the priority
+        uint256 cap = 3 * cost;
+        assertLe(gs.quote_fee_priority(cost, 1, gs.tier_mult(8)), cap, "capped at 3x cost");
+        assertEq(gs.quote_fee_priority(cost, 1, 100 * 1e18), cap, "extreme priority clamps to 3x");
+    }
+
+    function test_buy_gas_priority_charges_more() public {
+        uint256 gasWei = 0.001 ether;
+        uint256 normalFee = gs.quote_fee_priority(gasWei, 1, gs.tier_mult(0));
+        uint256 fastFee = gs.quote_fee_priority(gasWei, 1, gs.tier_mult(3));
+        assertGt(fastFee, normalFee, "expedited costs more");
+
+        address client = address(0xC11E47);
+        vm.deal(client, 1 ether);
+        uint256 reservoirBefore = address(gs).balance;
+        vm.prank(client);
+        uint256 paid = gs.buy_gas_priority{value: gasWei + fastFee}(arriving, gasWei, 1, gs.tier_mult(3));
+        assertEq(paid, fastFee);
+        assertEq(arriving.balance, gasWei, "gas delivered");
+        assertEq(address(gs).balance, reservoirBefore + fastFee, "expedited fee retained for bankon.eth");
+    }
+
     function test_buy_gas_underpaid_reverts() public {
         uint256 gasWei = 0.001 ether;
         address client = address(0xC11E47);
