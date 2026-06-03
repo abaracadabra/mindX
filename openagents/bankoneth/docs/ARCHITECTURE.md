@@ -21,6 +21,17 @@ there alongside their PDFs.
 - **Algorand mainnet** — the GoPlausible x402-avm facilitator that
   attests USDC payments (ASA 31566704); the Ethereum-side
   `BankonX402Attestor` verifies the EIP-712 receipts the facilitator signs.
+- **Every EVM chain (Base, Arc, Optimism, …)** — the [`x402evm/`](../x402evm/) module
+  (`X402EVMFacilitator` + `X402ChainRegistry`) generalizes x402 settlement to all EVM
+  rails: one EIP-712 `X402EVMReceipt`, `srcChainId` + `asset` discriminate where USDC
+  settled. It's the receive side for BANKON / mindX / AgenticPlace service delivery
+  ([`bankonMCP/`](../bankonMCP/) auto-pays it; φ/10 fee → RAKE home to `bankon.eth`).
+  See [`PAYMENTS.md`](PAYMENTS.md), [`blockchain/X402_EVM.md`](blockchain/X402_EVM.md).
+
+The golden-ratio economics (φ fee, SCIENTIFIC precision rail, RAKE) follow the
+**cypherpunk2048 standard** — <https://rage.pythai.net/cypherpunk2048-standard/> — see
+[`SCIENTIFIC_AND_RAKE.md`](SCIENTIFIC_AND_RAKE.md). This EVM stack is CP2048-QR **Tier-A**
+(crypto-agile / PQ-ready, never PQ-today); see [`QUANTUM_READINESS.md`](QUANTUM_READINESS.md).
 
 ## Cross-chain flow (iNFT Mode A)
 
@@ -84,6 +95,10 @@ contracts/
 ├── inft/                        iNFT_7857 + ITHOTCommitmentRegistry
 ├── x402/                        X402Receipt
 └── interfaces/                  IBankon.sol + IBankonExtensions.sol
+# sibling modules (self-contained Foundry):
+#   ../x402evm/   X402EVMFacilitator + X402ChainRegistry (multichain EVM x402, 6/6)
+#   ../pay2play/  Pay2PlayArcSettlement (Arc x402 → entitlement)
+#   ../contracts/cp2048/  golden-ratio treasury (φ fee, SCIENTIFIC, RAKE, custody) — cypherpunk2048
 ```
 
 ## Constructor wiring
