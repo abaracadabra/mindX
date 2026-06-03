@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  index.xml — the deployer "solution".
+
+  A solution is a manifest of deployable contracts. index.html (the protective
+  layer) reads this file and offers each <contract> for a two-event deploy:
+    DEPLOY  arms the deployment (resolves constructor args, encodes the tx — no cost)
+    LAUNCH  fires it FROM VALUE — pays with a token or proves identity by signature,
+            then broadcasts; the participant's public key (wallet / bankon.eth) is the
+            identity that receives the privilege.
+
+  `bytecode`/`abi` point at standard Foundry artifacts so the deployer reads the
+  exact compiled output (auditable). `value/@kind` is `signature` (sign to deploy)
+  or `token` (pay `amount` of `asset`, address(0)=native). `privilege/@service` is
+  the pay2play service the deployment confers.
+
+  Always open source. (c) BANKON all rights preserved.
+-->
+<solution name="bankon-deployer" version="1" chainHint="31337">
+
+  <contract id="service-registry"
+            name="BankonServiceRegistry"
+            summary="The BANKON-as-a-Service catalogue (one row per service).">
+    <abi src="../pay2play/out/BankonServiceRegistry.sol/BankonServiceRegistry.json"/>
+    <bytecode src="../pay2play/out/BankonServiceRegistry.sol/BankonServiceRegistry.json"/>
+    <constructor>
+      <arg name="admin" type="address" from="wallet"/>
+    </constructor>
+    <value kind="signature"/>
+    <privilege service="vault.create" tier="1"/>
+  </contract>
+
+  <contract id="entitlement"
+            name="BankonEntitlement"
+            summary="Identity ledger: who holds which entitlement (persistence.state).">
+    <abi src="../pay2play/out/BankonEntitlement.sol/BankonEntitlement.json"/>
+    <bytecode src="../pay2play/out/BankonEntitlement.sol/BankonEntitlement.json"/>
+    <constructor>
+      <arg name="admin" type="address" from="wallet"/>
+    </constructor>
+    <value kind="signature"/>
+    <privilege service="identity.register" tier="1"/>
+  </contract>
+
+  <contract id="arc-settlement"
+            name="Pay2PlayArcSettlement"
+            summary="ARC-chain USDC x402 settlement layer (requires registry + entitlement first).">
+    <abi src="../pay2play/out/Pay2PlayArcSettlement.sol/Pay2PlayArcSettlement.json"/>
+    <bytecode src="../pay2play/out/Pay2PlayArcSettlement.sol/Pay2PlayArcSettlement.json"/>
+    <constructor>
+      <arg name="admin"       type="address" from="wallet"/>
+      <arg name="registry"    type="address" from="deployed:service-registry"/>
+      <arg name="entitlement" type="address" from="deployed:entitlement"/>
+      <arg name="arcChainId"  type="uint64"  value="0"/>
+      <arg name="arcUsdc"     type="address" from="wallet"/>
+    </constructor>
+    <value kind="token" asset="0x0000000000000000000000000000000000000000" amount="0"/>
+    <privilege service="allchain.access" tier="3"/>
+  </contract>
+
+</solution>
