@@ -206,6 +206,13 @@ $("launchBtn").onclick = async ()=>{
     $("resultFoot").innerHTML = `✅ Live on <b>${CHAINS[Deployer.chainId].name}</b>. Treasury / RAKE home = <span class="gold-t">bankon.eth</span> <code>${short(home)}</code>. ${results.length} contracts deployed.`;
     if (Deployer.lastDeployed?.bankon_gas_service) initGas(Deployer.lastDeployed.bankon_gas_service);
     toast("Deployed live 🚀","ok");
+    // wire the live addresses into the dApp + emit the committable deployments artifact
+    const exp = await Deployer.exportDeployments();
+    $("resultFoot").innerHTML += `<br><br>🔌 <b>Wired into the dApp</b> (this browser): open the <a href="./dapp/dapp.html">dApp</a> → load any contract by name.
+      To persist for <i>everyone</i>, commit <code>${exp.path}</code>:
+      <button id="dlDep">download JSON</button> <button id="cpDep">copy</button>`;
+    $("dlDep").onclick = ()=>{ const b=new Blob([exp.json],{type:"application/json"}); const u=URL.createObjectURL(b); const a=document.createElement("a"); a.href=u; a.download=exp.path.split("/").pop(); a.click(); URL.revokeObjectURL(u); };
+    $("cpDep").onclick = ()=>{ navigator.clipboard.writeText(exp.json); toast("deployments JSON copied — commit it to "+exp.path); };
   }catch(e){ toast(e.message||String(e),"err"); $("deployBtn").disabled=false; $("launchBtn").disabled=false; }
 };
 

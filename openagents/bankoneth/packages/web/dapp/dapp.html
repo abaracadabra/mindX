@@ -74,6 +74,7 @@ async function init(){
   await Dapp.loadData();
   $("who").innerHTML = `<span class="dot"></span> ${short(Dapp.address)} · ${CHAINS[Dapp.chainId]?.name||("chain "+Dapp.chainId)}`;
   $("nameSel").innerHTML = `<option value="">— contract name —</option>` + CONTRACTS.map(c=>`<option value="${c.name}">${c.title} (${c.name})</option>`).join("");
+  if (Dapp.localCount) $("loadInfo").innerHTML = `<span class="ok">🔌 ${Dapp.localCount} address(es) wired from your live deploy on ${CHAINS[Dapp.chainId]?.name}</span> — load any by name.`;
   if (localStorage.getItem("etherscan_key")) $("esKey").value = "••• saved";
 }
 

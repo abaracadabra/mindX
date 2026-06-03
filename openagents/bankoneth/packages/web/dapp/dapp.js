@@ -53,10 +53,19 @@ export const Dapp = {
   // ── shared data (public mirror) ─────────────────────────────────────────────
   async loadData() {
     this.manifest = await fetch("../public/bankon.contracts.json").then((r) => r.json()).catch(() => null);
+    this.localCount = 0;
     if (this.chainId) {
       const m = (this.manifest?.chains || []).find((c) => c.id === this.chainId);
       const file = m ? m.deployments : `deployments/${this.chainId}.json`;
       this.deployments = await fetch(`../public/${file}`).then((r) => r.json()).catch(() => null);
+      this.deployments = this.deployments || { bankon: {} };
+      this.deployments.bankon = this.deployments.bankon || {};
+      // Merge addresses wired by the deployer this session (deploy.js persistDeployments) —
+      // shared localStorage key `bankon.deploy.<chainId>` — so freshly-launched contracts
+      // resolve by name without waiting for a committed deployments file.
+      const local = JSON.parse(localStorage.getItem(`bankon.deploy.${this.chainId}`) || "{}");
+      this.deployments.bankon = Object.assign({}, this.deployments.bankon, local);
+      this.localCount = Object.keys(local).length;
     }
     return this.manifest;
   },

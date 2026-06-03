@@ -189,7 +189,38 @@ export const Deployer = {
     }
 
     this.lastDeployed = deployed;
+    this.persistDeployments();   // wire live addresses into the dApp (this browser) immediately
     return results;
+  },
+
+  // ── wire deployed addresses into the dApp ───────────────────────────────────
+  _deploymentKeyFor(name) {
+    return (this.manifest?.contracts?.find((c) => c.name === name) || {}).deploymentKey;
+  },
+  // localStorage key shared with dapp.js — merged over the static deployments file at runtime.
+  _depKey() { return `bankon.deploy.${this.chainId}`; },
+
+  // Persist this run's {deploymentKey: address} to localStorage so the dApp (and a re-opened
+  // deployer) resolves contracts by name on this chain right away — no commit, no backend.
+  persistDeployments() {
+    if (!this.lastDeployed) return null;
+    const store = JSON.parse(localStorage.getItem(this._depKey()) || "{}");
+    for (const [name, addr] of Object.entries(this.lastDeployed)) {
+      const dk = this._deploymentKeyFor(name);
+      if (dk && addr) store[dk] = addr;
+    }
+    localStorage.setItem(this._depKey(), JSON.stringify(store));
+    return store;
+  },
+
+  // Build the canonical deployments/<chainId>.json for the operator to COMMIT (persistent for
+  // everyone): the static file merged with every address deployed this session.
+  async exportDeployments() {
+    const m = (this.manifest?.chains || []).find((c) => c.id === this.chainId);
+    const file = m ? m.deployments : `deployments/${this.chainId}.json`;
+    const base = await fetch(`./public/${file}`).then((r) => r.json()).catch(() => ({ bankon: {} }));
+    base.bankon = Object.assign({}, base.bankon || {}, JSON.parse(localStorage.getItem(this._depKey()) || "{}"));
+    return { path: `packages/web/public/${file}`, json: JSON.stringify(base, null, 2) };
   },
 };
 
