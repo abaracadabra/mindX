@@ -20,4 +20,9 @@ library cp2048_constants {
 
     /// @notice φ-1 = 1/φ to 18 dp = 0.618033988749894848 — the canonical golden fraction.
     uint256 internal constant PHI_MINUS_ONE_WAD = 618033988749894848;
+
+    /// @notice φ/10 to 18 dp = 0.161803398874989484(8) — the BANKON gas-service fee rate
+    ///         (16.18%): the golden-ratio markup charged on the gas cost of one contract
+    ///         call. e.g. a 0.001 ETH call → 0.000161803… ETH fee. See scientific_math.goldenGasFeeWad.
+    uint256 internal constant PHI_OVER_TEN_WAD = 161803398874989484;
 }

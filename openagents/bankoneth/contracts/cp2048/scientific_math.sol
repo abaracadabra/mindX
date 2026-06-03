@@ -42,4 +42,15 @@ library scientific_math {
         uint256 feeE36 = mul36(amtE36, phiFracE36) / feeDiv;
         return toWad(feeE36);
     }
+
+    /// @notice the BANKON gas-service fee: the golden-ratio markup φ/10 = 0.1618033988749894848
+    ///         (16.18%, to 18 dp via the 36-dp rail) on the gas `cost` of one contract call,
+    ///         times the number of `sides` that need gas (1 same-chain, 2 cross-chain).
+    ///         Scale-free — pass wei (or any 1e18-relative unit) in, same unit out.
+    ///         e.g. cost 0.001 ETH, sides 1 → 0.000161803988749894848 ETH.
+    function goldenGasFeeWad(uint256 cost, uint256 sides) internal pure returns (uint256) {
+        // fee = cost * sides * φ/10. Multiply by PHI_WAD first, divide by 10*WAD last, so
+        // the 18 dp survive even for small wei amounts (e.g. 1e15 wei → 161803398874989484).
+        return cost * sides * C.PHI_WAD / (10 * C.WAD);
+    }
 }
