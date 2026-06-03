@@ -130,7 +130,7 @@ bankon.eth and the **BANKON Vault**:
 
 Tiers are resolved **on-chain** (live `NameWrapper.ownerOf`) and enforced by the gate in
 [`backend/`](backend/); the BANKON Vault + shadow-overlord auth is fully imported into
-[`vault_module/`](vault_module/). See [`docs/TIERED_LOGIN.md`](docs/TIERED_LOGIN.md),
+[`bankon-vault/bankon_vault/`](bankon-vault/bankon_vault/). See [`docs/TIERED_LOGIN.md`](docs/TIERED_LOGIN.md),
 [`docs/BANKON_VAULT.md`](docs/BANKON_VAULT.md), [`docs/PAYMENTS.md`](docs/PAYMENTS.md),
 [`docs/ADMIN_ROLES.md`](docs/ADMIN_ROLES.md), [`docs/ETHERSCAN.md`](docs/ETHERSCAN.md).
 

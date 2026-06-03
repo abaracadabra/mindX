@@ -12,11 +12,11 @@ import os
 
 import pytest
 
-from vault_module.credential_provider import (
+from bankon_vault.credential_provider import (
     PROVIDER_ENV_MAP,
     CredentialProvider,
 )
-from vault_module.vault import BankonVault
+from bankon_vault.vault import BankonVault
 
 
 _ADDR = "0x" + "a" * 40   # any valid-looking 0x address
@@ -69,7 +69,7 @@ def test_shadow_overlord_helpers_pick_up_loaded_env(vault_with_shadow_creds, mon
     fresh = BankonVault(vault_dir=vault_with_shadow_creds.vault_dir)
     CredentialProvider(fresh).load_from_vault()
 
-    from vault_module import shadow_overlord as so
+    from bankon_vault import shadow_overlord as so
 
     # _jwt_secret() must not raise (would 503 if missing / too short)
     assert so._jwt_secret() == _SECRET

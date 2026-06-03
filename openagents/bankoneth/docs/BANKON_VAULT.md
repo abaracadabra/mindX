@@ -2,7 +2,7 @@
 
 ## Summary
 
-`vault_module/` is a **full, self-contained import** of mindX's BANKON Vault and
+`bankon-vault/bankon_vault/` is a **full, self-contained import** of mindX's BANKON Vault and
 shadow-overlord signature-auth system, so the bankon.eth dApp is also the UI to
 bankon-vault without depending on the mindX backend. It gives the **admin tier**
 (the bankon.eth owner) an encrypted credential store (AES-256-GCM + HKDF-SHA512),
@@ -11,7 +11,7 @@ an offline-key challenge→sign→JWT authorization model (shadow-overlord), an
 the gate (`backend/`) and reachable only behind the admin tier. Imported from
 `mindx_backend_service/bankon_vault/` with **only** relative-import rewrites, a
 per-request admin hook, and two already-guarded coupling points (below). **3/3
-ported tests pass standalone** (`pytest vault_module/tests`); `/vault/credentials/*`
+ported tests pass standalone** (`pytest bankon-vault/bankon_vault/tests`); `/vault/credentials/*`
 verified live through the gate (status/list 200 for admin, 401 for others).
 
 ## What it is
@@ -71,9 +71,9 @@ performs the op, and re-locks — the key never leaves.
 ## Use
 
 ```bash
-pip install -r vault_module/requirements-vault.txt
+pip install -r bankon-vault/bankon_vault/requirements-vault.txt
 # mounted by the gate backend (Phase 2); or directly:
-python -c "from vault_module import BankonVault, bankon_vault_router"
+python -c "from bankon-vault/bankon_vault import BankonVault, bankon_vault_router"
 ```
 
 The tiered-login gate (`backend/`, see `docs/TIERED_LOGIN.md`) mounts these routers
@@ -105,7 +105,7 @@ and exposes the credential/cabinet/sign surface to the **admin** tier only.
   it **503s** every gated route (safe — never silently open). The gate's `TierGate`
   also fronts `/vault/*` (defense in depth).
 - **Default storage paths resolve relative to cwd/module** (`vault_bankon/`,
-  `vault_module/data/shadow_nonces.json`); the gate sets `BANKON_VAULT_DIR` /
+  `bankon-vault/bankon_vault/data/shadow_nonces.json`); the gate sets `BANKON_VAULT_DIR` /
   `SHADOW_NONCES_PATH`. Standalone callers must configure them.
 - **Cabinet registries still default to mindX-style paths** (`data/identity/…`,
   `daio/…`) — override `MINDX_PRODUCTION_REGISTRY` / `MINDX_AGENT_MAP` for a clean

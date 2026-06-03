@@ -4,9 +4,9 @@
 Mounts:
   /auth/*                       SIWE login → tier-scoped session JWT (auth.py)
   TierGate middleware           true-hide admin/member pages (gate.py)
-  /vault/credentials/*          bankon-vault credential mgmt   (vault_module)
-  /admin/shadow/*, /cabinet/*   shadow-overlord + cabinet      (vault_module)
-  /vault/sign/*                 vault signing oracle           (vault_module)
+  /vault/credentials/*          bankon-vault credential mgmt   (bankon_vault)
+  /admin/shadow/*, /cabinet/*   shadow-overlord + cabinet      (bankon_vault)
+  /vault/sign/*                 vault signing oracle           (bankon_vault)
   /gfx/*                        branding assets (StaticFiles)
   /public/*                     manifest + abis + deployments  (StaticFiles)
   /                             tier-served HTML from packages/web
@@ -16,6 +16,7 @@ Run:  uvicorn backend.app:app --port 8800   (from openagents/bankoneth/)
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -32,9 +33,15 @@ WEB = ROOT / "packages" / "web"
 GFX = ROOT / "gfx"
 GFX_FALLBACK = ROOT.parent.parent / "gfx"  # mindX/gfx master library
 
-# Default the vault/nonce storage under the module so it's self-contained.
-os.environ.setdefault("BANKON_VAULT_DIR", str(ROOT / "vault_bankon"))
-os.environ.setdefault("SHADOW_NONCES_PATH", str(ROOT / "vault_module" / "data" / "shadow_nonces.json"))
+# bankon-vault is isolated under bankoneth/bankon-vault/ and used by bankoneth ONLY. Its importable
+# package is bankon_vault (hyphens aren't valid Python identifiers); add the folder to the path.
+VAULT_HOME = ROOT / "bankon-vault"
+if str(VAULT_HOME) not in sys.path:
+    sys.path.insert(0, str(VAULT_HOME))
+
+# Default the vault/nonce storage under bankon-vault/ so it's self-contained + isolated.
+os.environ.setdefault("BANKON_VAULT_DIR", str(VAULT_HOME / "vault_bankon"))
+os.environ.setdefault("SHADOW_NONCES_PATH", str(VAULT_HOME / "bankon_vault" / "data" / "shadow_nonces.json"))
 (Path(os.environ["SHADOW_NONCES_PATH"]).parent).mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="bankon.eth gate", version="0.1.0")
@@ -44,9 +51,9 @@ app.include_router(x402_router)
 
 # bankon-vault routers (admin-tier gated by TierGate on /vault, /admin, /cabinet)
 try:
-    from vault_module import bankon_vault_router, vault_sign_router
-    from vault_module import routes as _vault_routes
-    from vault_module.admin_routes import admin_router as shadow_admin_router, public_cabinet_router
+    from bankon_vault import bankon_vault_router, vault_sign_router
+    from bankon_vault import routes as _vault_routes
+    from bankon_vault.admin_routes import admin_router as shadow_admin_router, public_cabinet_router
     from .auth import require_admin_tier
 
     # Wire the vault credential routes' admin dependency to our admin-tier session

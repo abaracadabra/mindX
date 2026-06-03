@@ -30,8 +30,8 @@ __pycache__/
 .env.*.local
 
 # bankon-vault runtime — NEVER commit keys/secrets/ciphertext
-vault_bankon/
-vault_module/data/
+bankon-vault/vault_bankon/
+bankon-vault/bankon_vault/data/
 **/.master.key
 **/.salt
 **/entries.json

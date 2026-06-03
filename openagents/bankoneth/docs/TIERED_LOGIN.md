@@ -60,7 +60,7 @@ client-side routing (cosmetic; writes still gated on-chain).
 ## Run
 
 ```bash
-pip install -r vault_module/requirements-vault.txt fastapi uvicorn web3 eth-account pyjwt
+pip install -r bankon-vault/bankon_vault/requirements-vault.txt fastapi uvicorn web3 eth-account pyjwt
 export BANKON_GATE_SECRET=$(openssl rand -hex 24)
 export BANKON_GATE_RPC=$MAINNET_RPC          # tier reads hit ENS NameWrapper
 uvicorn backend.app:app --port 8800          # from openagents/bankoneth/
