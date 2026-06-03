@@ -28,7 +28,8 @@
       "title": "Subname Registrar",
       "blurb": "Issues *.bankon.eth subnames (Flow A).",
       "abi": "abis/BankonSubnameRegistrar.json",
-      "fnCount": 43
+      "fnCount": 43,
+      "deployable": true
     },
     {
       "name": "BankonEthRegistrar",
@@ -37,7 +38,8 @@
       "title": ".eth Registrar",
       "blurb": "Buys new .eth 2LDs via ENS commit-reveal (Flow B).",
       "abi": "abis/BankonEthRegistrar.json",
-      "fnCount": 23
+      "fnCount": 23,
+      "deployable": true
     },
     {
       "name": "BankonDomainHosting",
@@ -46,7 +48,8 @@
       "title": "Domain Hosting",
       "blurb": "Subdomain-minting-as-a-service for any .eth (Flow C).",
       "abi": "abis/BankonDomainHosting.json",
-      "fnCount": 27
+      "fnCount": 27,
+      "deployable": true
     },
     {
       "name": "BankonSubnameResolver",
@@ -55,7 +58,8 @@
       "title": "Resolver",
       "blurb": "addr / text records; iNFT TBA binding.",
       "abi": "abis/BankonSubnameResolver.json",
-      "fnCount": 22
+      "fnCount": 22,
+      "deployable": true
     },
     {
       "name": "BankonSubnameResolverV2",
@@ -64,7 +68,8 @@
       "title": "Resolver V2",
       "blurb": "ENSv2 / Namechain forward-compatible resolver.",
       "abi": "abis/BankonSubnameResolverV2.json",
-      "fnCount": 26
+      "fnCount": 26,
+      "deployable": true
     },
     {
       "name": "BankonPriceOracle",
@@ -73,7 +78,8 @@
       "title": "Price Oracle",
       "blurb": "Length-tiered USD pricing + PYTHAI discount.",
       "abi": "abis/BankonPriceOracle.json",
-      "fnCount": 28
+      "fnCount": 28,
+      "deployable": true
     },
     {
       "name": "BankonReputationGate",
@@ -82,7 +88,8 @@
       "title": "Reputation Gate",
       "blurb": "Free-tier eligibility (BONAFIDE / stake / attestation).",
       "abi": "abis/BankonReputationGate.json",
-      "fnCount": 21
+      "fnCount": 21,
+      "deployable": true
     },
     {
       "name": "BankonPaymentRouter",
@@ -91,7 +98,8 @@
       "title": "Payment Router",
       "blurb": "x402 settlement + 5-bucket revenue split.",
       "abi": "abis/BankonPaymentRouter.json",
-      "fnCount": 28
+      "fnCount": 28,
+      "deployable": true
     },
     {
       "name": "BankonInftAdapter",
@@ -100,7 +108,8 @@
       "title": "iNFT Adapter",
       "blurb": "ERC-7857 Mode A glue; ENS labelhash → 0G tokenId / TBA.",
       "abi": "abis/BankonInftAdapter.json",
-      "fnCount": 27
+      "fnCount": 27,
+      "deployable": true
     },
     {
       "name": "BankonX402Attestor",
@@ -109,7 +118,8 @@
       "title": "x402 Attestor",
       "blurb": "EIP-712 x402 receipt verification + replay guard.",
       "abi": "abis/BankonX402Attestor.json",
-      "fnCount": 15
+      "fnCount": 15,
+      "deployable": true
     },
     {
       "name": "BankonAgenticPlaceHook",
@@ -118,7 +128,8 @@
       "title": "AgenticPlace Hook",
       "blurb": "Emits marketplace listing events for agenticplace.pythai.net.",
       "abi": "abis/BankonAgenticPlaceHook.json",
-      "fnCount": 12
+      "fnCount": 12,
+      "deployable": true
     },
     {
       "name": "AgentRegistry",
@@ -127,7 +138,8 @@
       "title": "Agent Registry",
       "blurb": "ERC-8004-aligned agent identity + capability bitmap.",
       "abi": "abis/AgentRegistry.json",
-      "fnCount": 35
+      "fnCount": 35,
+      "deployable": true
     },
     {
       "name": "BankonAuthGate",
@@ -136,7 +148,8 @@
       "title": "Auth Gate",
       "blurb": "On-chain SIWE / ENS-gated auth for downstream services.",
       "abi": "abis/BankonAuthGate.json",
-      "fnCount": 6
+      "fnCount": 6,
+      "deployable": true
     },
     {
       "name": "SoulBadger",
@@ -145,7 +158,8 @@
       "title": "SoulBadger",
       "blurb": "Soulbound badge wrapper.",
       "abi": "abis/SoulBadger.json",
-      "fnCount": 26
+      "fnCount": 26,
+      "deployable": true
     },
     {
       "name": "BankonOffchainRegistrar",
@@ -154,7 +168,8 @@
       "title": "Offchain Registrar",
       "blurb": "Gas-light CCIP-Read subname issuance (Phase 2.2).",
       "abi": "abis/BankonOffchainRegistrar.json",
-      "fnCount": 22
+      "fnCount": 22,
+      "deployable": true
     },
     {
       "name": "BankonOffchainResolver",
@@ -163,7 +178,8 @@
       "title": "Offchain Resolver",
       "blurb": "EIP-3668 CCIP-Read resolver.",
       "abi": "abis/BankonOffchainResolver.json",
-      "fnCount": 15
+      "fnCount": 15,
+      "deployable": true
     },
     {
       "name": "bankon_inft_subname",
@@ -172,7 +188,8 @@
       "title": "iNFT (Mode A unified)",
       "blurb": "Canonical ERC-7857 + ERC-721 + 5192 + 2981, NameWrapper-backed.",
       "abi": "abis/bankon_inft_subname.json",
-      "fnCount": 45
+      "fnCount": 45,
+      "deployable": true
     },
     {
       "name": "bankon_inft_extension",
@@ -181,7 +198,8 @@
       "title": "iNFT (Mode B parallel)",
       "blurb": "Canonical ERC-7857 bolted onto an existing wrapped subname.",
       "abi": "abis/bankon_inft_extension.json",
-      "fnCount": 34
+      "fnCount": 34,
+      "deployable": true
     },
     {
       "name": "bankon_inft_registrar",
@@ -190,7 +208,8 @@
       "title": "iNFT Registrar",
       "blurb": "Mint router (WRAPPED/UNIFIED/PARALLEL ± soulbound) + x402.",
       "abi": "abis/bankon_inft_registrar.json",
-      "fnCount": 14
+      "fnCount": 14,
+      "deployable": true
     },
     {
       "name": "bankon_inft_oracle",
@@ -199,7 +218,8 @@
       "title": "iNFT Verifier (oracle)",
       "blurb": "Pluggable IERC7857DataVerifier (multisig EIP-712 TEE).",
       "abi": "abis/bankon_inft_oracle.json",
-      "fnCount": 16
+      "fnCount": 16,
+      "deployable": true
     },
     {
       "name": "bankon_tba_account",
@@ -208,7 +228,8 @@
       "title": "ERC-6551 TBA account",
       "blurb": "Agent wallet; owner = live ownerOf(tokenId).",
       "abi": "abis/bankon_tba_account.json",
-      "fnCount": 11
+      "fnCount": 11,
+      "deployable": true
     },
     {
       "name": "bankon_tba_registry_proxy",
@@ -217,7 +238,8 @@
       "title": "TBA registry proxy",
       "blurb": "Event-emitting wrapper over the canonical 6551 registry.",
       "abi": "abis/bankon_tba_registry_proxy.json",
-      "fnCount": 3
+      "fnCount": 3,
+      "deployable": true
     },
     {
       "name": "bankon_agent_market",
@@ -226,7 +248,8 @@
       "title": "Agent Marketspace",
       "blurb": "List iNFT agents for sale; AgenticPlace indexer source.",
       "abi": "abis/bankon_agent_market.json",
-      "fnCount": 9
+      "fnCount": 9,
+      "deployable": true
     },
     {
       "name": "AgentReputationRegistry",
@@ -235,7 +258,8 @@
       "title": "Agent Reputation",
       "blurb": "Agent profiles, metrics, reviews (USDC economy).",
       "abi": "abis/AgentReputationRegistry.json",
-      "fnCount": 21
+      "fnCount": 21,
+      "deployable": true
     },
     {
       "name": "AgenticMarketplaceEscrow",
@@ -244,7 +268,8 @@
       "title": "Marketplace Escrow",
       "blurb": "Milestone-based agent service agreements + disputes.",
       "abi": "abis/AgenticMarketplaceEscrow.json",
-      "fnCount": 33
+      "fnCount": 33,
+      "deployable": true
     },
     {
       "name": "SubscriptionManager",
@@ -253,7 +278,8 @@
       "title": "Subscriptions",
       "blurb": "Recurring USDC billing for agent services.",
       "abi": "abis/SubscriptionManager.json",
-      "fnCount": 21
+      "fnCount": 21,
+      "deployable": true
     },
     {
       "name": "scientific_token",
@@ -262,7 +288,8 @@
       "title": "SCIENTIFIC token",
       "blurb": "Precision rail ERC-20: single-issuance, owner-renounce, self-purge to immutable owner.",
       "abi": "abis/scientific_token.json",
-      "fnCount": 14
+      "fnCount": 14,
+      "deployable": true
     },
     {
       "name": "rake",
@@ -271,7 +298,8 @@
       "title": "RAKE collector",
       "blurb": "Per-chain fee sweep to bankon.eth only when value beats chain cost.",
       "abi": "abis/rake.json",
-      "fnCount": 11
+      "fnCount": 11,
+      "deployable": true
     },
     {
       "name": "bankon_oracle",
@@ -280,7 +308,8 @@
       "title": "Pair-price oracle",
       "blurb": "USD value straight from the Uniswap liquidity pair.",
       "abi": "abis/bankon_oracle.json",
-      "fnCount": 8
+      "fnCount": 8,
+      "deployable": true
     },
     {
       "name": "bankon_autoconvert",
@@ -289,7 +318,8 @@
       "title": "Auto-convert router",
       "blurb": "Any token → settlement via Uniswap V3; golden-ratio fee → RAKE.",
       "abi": "abis/bankon_autoconvert.json",
-      "fnCount": 8
+      "fnCount": 8,
+      "deployable": true
     },
     {
       "name": "bridge_collect",
@@ -298,7 +328,18 @@
       "title": "Bridge-collect (GLMR)",
       "blurb": "LI.FI cross-chain pay-any-currency; golden fee → RAKE.",
       "abi": "abis/bridge_collect.json",
-      "fnCount": 8
+      "fnCount": 8,
+      "deployable": true
+    },
+    {
+      "name": "bankon_gas_service",
+      "deploymentKey": "gasService",
+      "category": "cp2048",
+      "title": "Gas-as-a-service",
+      "blurb": "Base gas reservoir: sponsored one-tx drop + custom buy; φ/10 golden fee home to bankon.eth.",
+      "abi": "abis/bankon_gas_service.json",
+      "fnCount": 19,
+      "deployable": true
     }
   ],
   "presets": [
@@ -524,5 +565,310 @@
         }
       ]
     }
-  ]
+  ],
+  "deploy": {
+    "treasuryOwner": "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169",
+    "sequences": [
+      {
+        "id": "treasury",
+        "title": "Treasury (cp2048)",
+        "category": "cp2048",
+        "blurb": "The golden-ratio economy: pair oracle → SCIENTIFIC token → RAKE → auto-convert + bridge-collect → gas-as-a-service. Rakes home to bankon.eth.",
+        "steps": [
+          {
+            "contract": "bankon_oracle",
+            "args": [
+              {
+                "owner": true
+              },
+              {
+                "chain": "usdc"
+              }
+            ]
+          },
+          {
+            "contract": "scientific_token",
+            "args": [
+              {
+                "owner": true
+              },
+              {
+                "literal": "1000000000000000000000000"
+              },
+              {
+                "owner": true
+              }
+            ]
+          },
+          {
+            "contract": "rake",
+            "args": [
+              {
+                "owner": true
+              },
+              {
+                "owner": true
+              },
+              {
+                "ref": "bankon_oracle"
+              },
+              {
+                "literal": "5000000"
+              }
+            ]
+          },
+          {
+            "contract": "bankon_autoconvert",
+            "args": [
+              {
+                "owner": true
+              },
+              {
+                "chain": "univ3Router"
+              },
+              {
+                "ref": "rake"
+              },
+              {
+                "literal": "10000"
+              }
+            ]
+          },
+          {
+            "contract": "bridge_collect",
+            "args": [
+              {
+                "owner": true
+              },
+              {
+                "ref": "rake"
+              },
+              {
+                "literal": "10000"
+              }
+            ]
+          },
+          {
+            "contract": "bankon_gas_service",
+            "args": [
+              {
+                "owner": true
+              },
+              {
+                "owner": true
+              },
+              {
+                "literal": "150000"
+              },
+              {
+                "literal": "100000000000000000"
+              }
+            ],
+            "chains": [
+              8453,
+              84532
+            ],
+            "note": "Base only — the gas-as-a-service reservoir."
+          }
+        ]
+      },
+      {
+        "id": "inft",
+        "title": "iNFT identity",
+        "category": "inft7857",
+        "blurb": "ENS-named, ERC-7857 agent intelligence with an ERC-6551 wallet: oracle → TBA impl + proxy → unified + parallel iNFT → registrar (then setMinter).",
+        "steps": [
+          {
+            "contract": "bankon_inft_oracle",
+            "args": [
+              {
+                "owner": true
+              },
+              {
+                "literal": "[]"
+              },
+              {
+                "literal": "1"
+              }
+            ],
+            "note": "signers[], quorum — set real signers post-deploy."
+          },
+          {
+            "contract": "bankon_tba_account",
+            "args": []
+          },
+          {
+            "contract": "bankon_tba_registry_proxy",
+            "args": []
+          },
+          {
+            "contract": "bankon_inft_subname",
+            "args": [
+              {
+                "literal": "BANKON Agent"
+              },
+              {
+                "literal": "BANK"
+              },
+              {
+                "literal": "ipfs://bankon-storage"
+              },
+              {
+                "literal": "https://bankon.eth/contract-metadata.json"
+              },
+              {
+                "owner": true
+              },
+              {
+                "literal": "0x0000000000000000000000000000000000000000"
+              },
+              {
+                "chain": "nameWrapper"
+              },
+              {
+                "ref": "bankon_inft_oracle"
+              },
+              {
+                "owner": true
+              },
+              {
+                "literal": "250"
+              }
+            ]
+          },
+          {
+            "contract": "bankon_inft_extension",
+            "args": [
+              {
+                "literal": "BANKON Agent Extension"
+              },
+              {
+                "literal": "BANKX"
+              },
+              {
+                "literal": "ipfs://bankon-ext"
+              },
+              {
+                "owner": true
+              },
+              {
+                "chain": "nameWrapper"
+              },
+              {
+                "ref": "bankon_inft_oracle"
+              },
+              {
+                "owner": true
+              },
+              {
+                "literal": "250"
+              }
+            ]
+          },
+          {
+            "contract": "bankon_inft_registrar",
+            "args": [
+              {
+                "owner": true
+              },
+              {
+                "chain": "nameWrapper"
+              },
+              {
+                "ref": "bankon_inft_subname"
+              },
+              {
+                "ref": "bankon_inft_extension"
+              },
+              {
+                "chain": "erc6551Registry"
+              },
+              {
+                "ref": "bankon_tba_account"
+              },
+              {
+                "owner": true
+              }
+            ]
+          }
+        ],
+        "wire": [
+          {
+            "contract": "bankon_inft_subname",
+            "fn": "setMinter",
+            "args": [
+              {
+                "ref": "bankon_inft_registrar"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "arc",
+        "title": "ARC economy",
+        "category": "arc",
+        "blurb": "Agent reputation + marketspace (USDC economy): reputation registry → agent market.",
+        "steps": [
+          {
+            "contract": "AgentReputationRegistry",
+            "args": [
+              {
+                "owner": true
+              },
+              {
+                "chain": "usdc"
+              }
+            ]
+          },
+          {
+            "contract": "bankon_agent_market",
+            "args": [
+              {
+                "owner": true
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "chainParams": {
+      "1": {
+        "label": "Ethereum",
+        "usdc": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "univ3Router": "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+        "nameWrapper": "0xD4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401",
+        "erc6551Registry": "0x000000006551c19487814612e58FE06813775758"
+      },
+      "137": {
+        "label": "Polygon",
+        "usdc": "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+        "univ3Router": "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+        "nameWrapper": "0x0000000000000000000000000000000000000000",
+        "erc6551Registry": "0x000000006551c19487814612e58FE06813775758"
+      },
+      "8453": {
+        "label": "Base",
+        "usdc": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "univ3Router": "0x2626664c2603336E57B271c5C0b26F421741e481",
+        "nameWrapper": "0x0000000000000000000000000000000000000000",
+        "erc6551Registry": "0x000000006551c19487814612e58FE06813775758"
+      },
+      "42161": {
+        "label": "Arbitrum",
+        "usdc": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+        "univ3Router": "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+        "nameWrapper": "0x0000000000000000000000000000000000000000",
+        "erc6551Registry": "0x000000006551c19487814612e58FE06813775758"
+      },
+      "5042002": {
+        "label": "Arc testnet",
+        "usdc": "0x3600000000000000000000000000000000000000",
+        "univ3Router": "0x0000000000000000000000000000000000000000",
+        "nameWrapper": "0x0000000000000000000000000000000000000000",
+        "erc6551Registry": "0x000000006551c19487814612e58FE06813775758"
+      }
+    },
+    "bytecodes": "bankon.bytecodes.json"
+  }
 }

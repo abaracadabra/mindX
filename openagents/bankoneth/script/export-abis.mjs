@@ -60,7 +60,60 @@ const CONTRACTS = [
   { name: "bankon_oracle",            deploymentKey: "bankonOracle",    category: "cp2048",    title: "Pair-price oracle",       blurb: "USD value straight from the Uniswap liquidity pair." },
   { name: "bankon_autoconvert",       deploymentKey: "autoconvert",     category: "cp2048",    title: "Auto-convert router",     blurb: "Any token → settlement via Uniswap V3; golden-ratio fee → RAKE." },
   { name: "bridge_collect",           deploymentKey: "bridgeCollect",   category: "cp2048",    title: "Bridge-collect (GLMR)",   blurb: "LI.FI cross-chain pay-any-currency; golden fee → RAKE." },
+  { name: "bankon_gas_service",       deploymentKey: "gasService",      category: "cp2048",    title: "Gas-as-a-service",        blurb: "Base gas reservoir: sponsored one-tx drop + custom buy; φ/10 golden fee home to bankon.eth." },
 ];
+
+// ── Browser-deploy sequences. Each set lists contracts in dependency order; the
+//    deployer reads creation bytecode from bankon.bytecodes.json + the ctor ABI,
+//    and threads each arg from one of: {owner} (resolved bankon.eth / connected),
+//    {ref:<contract>} (a prior step's deployed address), {chain:<key>} (per-chain
+//    param below), or {literal:<value>}. Post-deploy `wire` calls run after.    ──
+const TREASURY_OWNER = "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169"; // bankon.eth (verified ENS)
+const DEPLOY_SEQUENCES = [
+  {
+    id: "treasury", title: "Treasury (cp2048)", category: "cp2048",
+    blurb: "The golden-ratio economy: pair oracle → SCIENTIFIC token → RAKE → auto-convert + bridge-collect → gas-as-a-service. Rakes home to bankon.eth.",
+    steps: [
+      { contract: "bankon_oracle",      args: [{ owner: true }, { chain: "usdc" }] },
+      { contract: "scientific_token",   args: [{ owner: true }, { literal: "1000000000000000000000000" }, { owner: true }] },
+      { contract: "rake",               args: [{ owner: true }, { owner: true }, { ref: "bankon_oracle" }, { literal: "5000000" }] },
+      { contract: "bankon_autoconvert", args: [{ owner: true }, { chain: "univ3Router" }, { ref: "rake" }, { literal: "10000" }] },
+      { contract: "bridge_collect",     args: [{ owner: true }, { ref: "rake" }, { literal: "10000" }] },
+      { contract: "bankon_gas_service", args: [{ owner: true }, { owner: true }, { literal: "150000" }, { literal: "100000000000000000" }], chains: [8453, 84532], note: "Base only — the gas-as-a-service reservoir." },
+    ],
+  },
+  {
+    id: "inft", title: "iNFT identity", category: "inft7857",
+    blurb: "ENS-named, ERC-7857 agent intelligence with an ERC-6551 wallet: oracle → TBA impl + proxy → unified + parallel iNFT → registrar (then setMinter).",
+    steps: [
+      { contract: "bankon_inft_oracle",        args: [{ owner: true }, { literal: "[]" }, { literal: "1" }], note: "signers[], quorum — set real signers post-deploy." },
+      { contract: "bankon_tba_account",        args: [] },
+      { contract: "bankon_tba_registry_proxy", args: [] },
+      { contract: "bankon_inft_subname",       args: [{ literal: "BANKON Agent" }, { literal: "BANK" }, { literal: "ipfs://bankon-storage" }, { literal: "https://bankon.eth/contract-metadata.json" }, { owner: true }, { literal: "0x0000000000000000000000000000000000000000" }, { chain: "nameWrapper" }, { ref: "bankon_inft_oracle" }, { owner: true }, { literal: "250" }] },
+      { contract: "bankon_inft_extension",     args: [{ literal: "BANKON Agent Extension" }, { literal: "BANKX" }, { literal: "ipfs://bankon-ext" }, { owner: true }, { chain: "nameWrapper" }, { ref: "bankon_inft_oracle" }, { owner: true }, { literal: "250" }] },
+      { contract: "bankon_inft_registrar",     args: [{ owner: true }, { chain: "nameWrapper" }, { ref: "bankon_inft_subname" }, { ref: "bankon_inft_extension" }, { chain: "erc6551Registry" }, { ref: "bankon_tba_account" }, { owner: true }] },
+    ],
+    wire: [{ contract: "bankon_inft_subname", fn: "setMinter", args: [{ ref: "bankon_inft_registrar" }] }],
+  },
+  {
+    id: "arc", title: "ARC economy", category: "arc",
+    blurb: "Agent reputation + marketspace (USDC economy): reputation registry → agent market.",
+    steps: [
+      { contract: "AgentReputationRegistry", args: [{ owner: true }, { chain: "usdc" }] },
+      { contract: "bankon_agent_market",     args: [{ owner: true }] },
+    ],
+  },
+];
+
+// Per-chain deploy parameters. Browser deployer falls back to address(0) when a
+// key is missing on the active chain (and surfaces it for manual entry).
+const CHAIN_PARAMS = {
+  1:        { label: "Ethereum", usdc: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", univ3Router: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", nameWrapper: "0xD4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401", erc6551Registry: "0x000000006551c19487814612e58FE06813775758" },
+  8453:     { label: "Base",     usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", univ3Router: "0x2626664c2603336E57B271c5C0b26F421741e481", nameWrapper: "0x0000000000000000000000000000000000000000", erc6551Registry: "0x000000006551c19487814612e58FE06813775758" },
+  42161:    { label: "Arbitrum", usdc: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", univ3Router: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", nameWrapper: "0x0000000000000000000000000000000000000000", erc6551Registry: "0x000000006551c19487814612e58FE06813775758" },
+  137:      { label: "Polygon",  usdc: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", univ3Router: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", nameWrapper: "0x0000000000000000000000000000000000000000", erc6551Registry: "0x000000006551c19487814612e58FE06813775758" },
+  5042002:  { label: "Arc testnet", usdc: "0x3600000000000000000000000000000000000000", univ3Router: "0x0000000000000000000000000000000000000000", nameWrapper: "0x0000000000000000000000000000000000000000", erc6551Registry: "0x000000006551c19487814612e58FE06813775758" },
+};
 
 // ── Guided-form preset descriptors. The DOM is rendered per-UI; the call
 //    construction lives in packages/web/bankon-forms.js, keyed by `id`/`flow`.
@@ -137,20 +190,25 @@ const PRESETS = [
   },
 ];
 
-function readAbi(name) {
+function readArtifact(name) {
   const p = join(OUT, `${name}.sol`, `${name}.json`);
   if (!existsSync(p)) {
     throw new Error(`Missing artifact: ${p}\n  → run \`forge build\` in ${ROOT} first.`);
   }
-  return JSON.parse(readFileSync(p, "utf8")).abi;
+  const j = JSON.parse(readFileSync(p, "utf8"));
+  // creation bytecode (Foundry: .bytecode.object) — what a browser deployer sends.
+  const bytecode = (j.bytecode && (j.bytecode.object || j.bytecode)) || "0x";
+  return { abi: j.abi, bytecode };
 }
 
 function main() {
   mkdirSync(ABI_DIR, { recursive: true });
   const contracts = [];
+  const bytecodes = {};
   for (const c of CONTRACTS) {
-    const abi = readAbi(c.name);
+    const { abi, bytecode } = readArtifact(c.name);
     writeFileSync(join(ABI_DIR, `${c.name}.json`), JSON.stringify(abi, null, 2) + "\n");
+    bytecodes[c.name] = bytecode;
     contracts.push({
       name: c.name,
       deploymentKey: c.deploymentKey,
@@ -159,9 +217,14 @@ function main() {
       blurb: c.blurb,
       abi: `abis/${c.name}.json`,
       fnCount: abi.filter((x) => x.type === "function").length,
+      deployable: typeof bytecode === "string" && bytecode.length > 2,
     });
-    console.log(`  abis/${c.name}.json  (${abi.length} entries)`);
+    console.log(`  abis/${c.name}.json  (${abi.length} entries, bytecode ${bytecode.length > 2 ? (bytecode.length - 2) / 2 + "B" : "—"})`);
   }
+
+  // Creation-bytecode manifest for the browser deployer (deploy.html).
+  writeFileSync(join(PUB, "bankon.bytecodes.json"), JSON.stringify(bytecodes, null, 2) + "\n");
+  console.log(`  bankon.bytecodes.json  (${Object.keys(bytecodes).length} contracts)`);
 
   const manifest = {
     generatedFrom: "forge build artifacts in out/ — regenerate with `node script/export-abis.mjs`",
@@ -172,9 +235,10 @@ function main() {
     ],
     contracts,
     presets: PRESETS,
+    deploy: { treasuryOwner: TREASURY_OWNER, sequences: DEPLOY_SEQUENCES, chainParams: CHAIN_PARAMS, bytecodes: "bankon.bytecodes.json" },
   };
   writeFileSync(join(PUB, "bankon.contracts.json"), JSON.stringify(manifest, null, 2) + "\n");
-  console.log(`  bankon.contracts.json  (${contracts.length} contracts, ${PRESETS.length} presets)`);
+  console.log(`  bankon.contracts.json  (${contracts.length} contracts, ${PRESETS.length} presets, ${DEPLOY_SEQUENCES.length} deploy sequences)`);
 
   // Mirror the canonical per-chain address records into public/ so the static
   // dApp can fetch them. deployments/ at the module root stays the source of
