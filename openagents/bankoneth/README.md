@@ -49,7 +49,11 @@ tradable, reputation-bearing, escrow-able agent: `bankon_agent_market` + `AgentR
 + `AgenticMarketplaceEscrow` + `SubscriptionManager` + `BonaFide`. Two new modular UIs ship beside
 the simple MVP storefront: [`name-service.html`](packages/web/name-service.html) (ENS naming as a
 service + iNFT/TBA) and [`marketspace.html`](packages/web/marketspace.html) (the ARC marketspace).
-0G **Aristotle mainnet 16661** is wired. Docs: [`INFT7857_MODULE`](docs/INFT7857_MODULE.md),
+0G **Aristotle mainnet 16661** is wired. **Quantum posture:** this EVM module is **Tier-A
+(crypto-agile / PQ-ready)** per [CP2048-QR](https://github.com/cypherpunk2048) — secp256k1 today, with
+the pluggable `IERC7857DataVerifier` (`OracleType{TEE,ZKP}`) as the documented Falcon/ML-DSA swap point;
+**never claimed PQ-today**. Genuine quantum-native (Tier-Q) is the Algorand/PARSEC track, not this
+submission. See [`QUANTUM_READINESS.md`](docs/QUANTUM_READINESS.md). Docs: [`INFT7857_MODULE`](docs/INFT7857_MODULE.md),
 [`ARC_AGENT_ECONOMY`](docs/ARC_AGENT_ECONOMY.md), [`INFT_CANONICAL_VS_LEGACY`](docs/INFT_CANONICAL_VS_LEGACY.md),
 [`NAME_SERVICE_UI`](docs/NAME_SERVICE_UI.md). `forge test` **195/195**.
 
