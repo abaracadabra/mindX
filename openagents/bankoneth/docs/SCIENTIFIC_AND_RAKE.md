@@ -85,8 +85,12 @@ ERC-1155, via `ERC721Holder`/`ERC1155Holder`).
 - **Redeem → home only (permissionless)** — `redeem_native / redeem_erc20 / redeem_erc721 / redeem_erc1155`
   send the held asset **only to FOUNDER**. Anyone may call them (the destination is hard-wired, so pushing
   assets home is always safe). `remittance.remit([erc20s])` batch-sweeps native + listed tokens home in one call.
-- **Governed allocation (operations)** — `allocate_* / execute` disburse to any address for operations, gated
-  by governance (dictator owner, or the multisig).
+- **Governed allocation (operations)** — `allocate_* / execute` disburse to **any** address for operations,
+  gated by governance (dictator owner, or the multisig via `execute_signed`). **Precise invariant:** the
+  *permissionless* `redeem_*` path is FOUNDER-locked (value can only be pushed home to bankon.eth); *governance*
+  disbursement is unrestricted (the dictator/multisig is trusted and can send anywhere). "Only redeemed to
+  bankon.eth" describes the permissionless path, not all outflow. (Typed `allocate_*` are dictator-only
+  conveniences; a multisig disburses via `execute_signed(token/recipient, …)`.)
 - **Governance: a reconfigurable renounce state machine** — born as a single-owner **1:1 dictator**
   (owner = bankon.eth). `renounce_to(signers, threshold, lock_out_dictator)` re-keys the governance shape;
   valid shapes are **1:1, 2:2, 2:3, 3:3** (`_valid_consensus`). Transitions are authorized by the *current*
@@ -98,9 +102,15 @@ ERC-1155, via `ERC721Holder`/`ERC1155Holder`).
   this. Note: the **permissionless redeem-home paths are always live** regardless of governance — value can
   never be trapped away from bankon.eth.
 
-Both deploy with `founder = owner = bankon.eth` (the `custody` deploy set). **10/10 custody tests** (all asset
-types held; redeem→FOUNDER only & permissionless; dictator-only allocate; consensus-shape validation; 2-of-3
-EIP-712 execute; 3:3-instates-1:1; multisig-only-via-self-call; optional permanent dictator lock-out).
+Both deploy with `founder = owner = bankon.eth` (the `custody` deploy set). **10/10 custody tests** + 3
+adversarial PoCs (no signature replay, reentrancy blocked, no stranger exfiltration path).
+
+**Operational guidance (from the security review):** while in the 1:1 phase a single key (bankon.eth) has full
+allocation power with no timelock, so **migrate to a 2:3+ multisig early** (and/or use `lock_out_dictator`) to
+close the single-key window. Funds can never be *bricked* by governance loss — `redeem_*`/`remit` stay
+permissionless, so anyone can always sweep assets home to bankon.eth even if all signer keys are lost. Note
+`redeem_native` requires the immutable FOUNDER to accept ETH — safe because bankon.eth is an EOA. Full audit
+write-up + findings: a Low/Informational set only, no Critical/High/Medium.
 
 ## How it plugs into the payment layer
 `packages/web/payments.js` `swap`/`bridge` rails call `bankon_autoconvert` / `bridge_collect`; the φ fee

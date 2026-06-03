@@ -48,6 +48,9 @@ abstract contract bankon_custody is ERC721Holder, ERC1155Holder, ReentrancyGuard
         keccak256("Execute(address target,uint256 value,bytes32 dataHash,uint256 nonce)");
     bytes32 private constant DOMAIN_TYPEHASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    // Cached EIP-712 domain separator (rebuilt only on a chain-id fork). [audit: gas]
+    uint256 private immutable _CACHED_CHAIN_ID;
+    bytes32 private immutable _CACHED_DOMAIN_SEPARATOR;
 
     event Redeemed(string kind, address indexed asset, uint256 idOrAmount);
     event Allocated(string kind, address indexed asset, address indexed to, uint256 idOrAmount);
@@ -68,6 +71,8 @@ abstract contract bankon_custody is ERC721Holder, ERC1155Holder, ReentrancyGuard
         FOUNDER = founder_;
         owner = founder_;     // begins life as dictator/admin of the one founding address
         mode = Mode.DICTATOR;
+        _CACHED_CHAIN_ID = block.chainid;
+        _CACHED_DOMAIN_SEPARATOR = _buildDomainSeparator();
     }
 
     receive() external payable {}
@@ -195,24 +200,28 @@ abstract contract bankon_custody is ERC721Holder, ERC1155Holder, ReentrancyGuard
 
     // ─────────────────────────────── EIP-712 multisig verification ───────────────────────────────
 
-    function _domainSeparator() internal view returns (bytes32) {
+    function _buildDomainSeparator() private view returns (bytes32) {
         return keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256("bankon_custody"), keccak256("1"), block.chainid, address(this)));
+    }
+    function _domainSeparator() internal view returns (bytes32) {
+        // Cached unless the chain forked to a new chain-id (then recompute, fork-safe).
+        return block.chainid == _CACHED_CHAIN_ID ? _CACHED_DOMAIN_SEPARATOR : _buildDomainSeparator();
     }
     function _digest(address target, uint256 value, bytes calldata data) internal view returns (bytes32) {
         bytes32 structHash = keccak256(abi.encode(EXECUTE_TYPEHASH, target, value, keccak256(data), nonce));
         return keccak256(abi.encodePacked("\x19\x01", _domainSeparator(), structHash));
     }
     function _verify(bytes32 digest, bytes[] calldata sigs) internal view {
+        // sigs.length ≥ threshold AND every sig is a distinct, valid signer (strictly ascending
+        // recovered address ⇒ no duplicates) ⇒ ≥ threshold distinct approvals. [audit: dropped
+        // the redundant post-loop count check].
         if (sigs.length < threshold) revert insufficient_approvals();
         address last = address(0);
-        uint256 valid;
         for (uint256 i = 0; i < sigs.length; i++) {
             address rec = ECDSA.recover(digest, sigs[i]);
             if (rec <= last || !isSigner[rec]) revert unsorted_or_unknown_signer();
             last = rec;
-            valid++;
         }
-        if (valid < threshold) revert insufficient_approvals();
     }
 
     modifier onlyDictator() {
