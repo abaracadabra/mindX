@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  bundle: deltaverse — the NeuralNode room suite for cross-chain games.
+
+  Targets GLMR (Moonbeam — almost free) and Polygon. A gate event mints a room
+  (BubbleRoomV4) then spawns a bubbleroom (BubbleRoomSpawn) — the on-chain lineage
+  the Python agents/deltaverse/DeltaVerseGate broadcasts at runtime.
+
+  EXTERNAL SUITE: these contracts live in github.com/deltav-deltaverse/neuralnode —
+  vendor + `forge build` that repo (or deploy via agents/deployer + openBDK), then
+  point the artifact paths below at its out/. Until then DEPLOY will report "no
+  bytecode" and DeltaVerseGate stays fail-closed. Set the resulting addresses in
+  data/config/blockchain_addresses.json ("1284"/"137").
+-->
+<bundle name="deltaverse" chains="moonbeam,polygon">
+
+  <contract id="bubbleroom-v4" name="BubbleRoomV4" stage="1"
+            summary="Origin room — mintRoom(...) → roomId. The first node of the gate lineage.">
+    <abi src="../neuralnode/out/BubbleRoomV4.sol/BubbleRoomV4.json"/>
+    <bytecode src="../neuralnode/out/BubbleRoomV4.sol/BubbleRoomV4.json"/>
+    <constructor><arg name="admin" type="address" from="wallet"/></constructor>
+    <value kind="signature"/>
+    <privilege service="deltaverse.room" tier="3"/>
+  </contract>
+
+  <contract id="bubbleroom-spawn" name="BubbleRoomSpawn" stage="2"
+            summary="Emergence spawner — spawnFromRoom(originRoomId,...) → emergenceId.">
+    <abi src="../neuralnode/out/BubbleRoomSpawn.sol/BubbleRoomSpawn.json"/>
+    <bytecode src="../neuralnode/out/BubbleRoomSpawn.sol/BubbleRoomSpawn.json"/>
+    <constructor>
+      <arg name="admin" type="address" from="wallet"/>
+      <arg name="room"  type="address" from="deployed:bubbleroom-v4"/>
+    </constructor>
+    <value kind="signature"/>
+    <privilege service="deltaverse.spawn" tier="3"/>
+  </contract>
+
+</bundle>

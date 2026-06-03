@@ -63,6 +63,24 @@
   .gate{text-align:center;padding:30px;color:var(--dim);font-family:var(--mono);font-size:13px}
   footer{margin-top:30px;font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center}
   footer a{color:#79c0ff;text-decoration:none}
+  /* chain isolation bar */
+  .chainbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .chain{padding:6px 12px;background:rgba(12,16,24,.7);border:1px solid var(--line);color:var(--dim);font-family:var(--mono);font-size:11px;border-radius:999px}
+  .chain:hover{color:var(--text)}
+  .chain.sel{border-color:var(--accent);color:#c9a0ff;box-shadow:0 0 14px rgba(139,92,246,.2)}
+  .chain .csym{color:var(--dim);font-size:9px}
+  .chain .onchain{color:var(--green)}
+  .feebar{font-family:var(--mono);font-size:10px;color:var(--dim);margin-bottom:18px}
+  .feebar b{color:var(--gold)}
+  /* bundles + stages */
+  .bundle{margin:0 0 22px}
+  .bhdr{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px;font-family:var(--mono)}
+  .bname{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#79c0ff}
+  .bmeta{font-size:10px;color:var(--dim)}
+  .btn-bundle{padding:6px 14px;background:rgba(139,92,246,.16);color:#c9a0ff;border:1px solid rgba(139,92,246,.3);font-size:.74rem;margin-left:auto}
+  .btn-bundle:hover:not(:disabled){background:rgba(139,92,246,.26)}
+  .bhdr .btn-launch{padding:6px 14px;font-size:.74rem;flex:none}
+  .stage{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:rgba(86,204,242,.15);color:#79c0ff;font-size:10px;font-family:var(--mono)}
 </style>
 </head>
 <body>
@@ -85,8 +103,12 @@
     <span class="step"><b>RETURN</b> blockchain tx</span>
   </div>
 
-  <h2>Solution — deployable contracts</h2>
-  <div class="grid" id="contracts"><div class="empty">connect a wallet to load the solution</div></div>
+  <h2>Chain — isolation target (toggle · ALL cycles every chain)</h2>
+  <div class="chainbar" id="chains"></div>
+  <div class="feebar" id="feebar"></div>
+
+  <h2>Solution — topic bundles · stages</h2>
+  <div id="contracts"><div class="empty">connect a wallet to load the solution</div></div>
 
   <h2>Return — blockchain transactions</h2>
   <div id="return"><div class="rline dim">deploy output appears here</div></div>
@@ -95,7 +117,22 @@
     always open source · client-side · keys never leave your device ·
     <a href="https://github.com/agenticplace" target="_blank" rel="noopener">github.com/agenticplace</a> ·
     &copy; BANKON all rights preserved
+    <br/>
+    <a class="puffy" href="https://www.openbsd.org/" target="_blank" rel="noopener"
+       title="Download OpenBSD from headquarters — secure by default, made in Canada">
+      <span class="puffy-fish" aria-hidden="true">🐡</span>
+      Secured by <b>OpenBSD</b> — proper security posture, made in Canada 🇨🇦
+    </a>
+    <span class="overlord-note">OWNER holds the key; the software does not — OVERLORD signature handoff</span>
   </footer>
+  <style>
+    footer .puffy { display:inline-flex; align-items:center; gap:.4em; margin-top:.6em;
+      padding:.35em .7em; border:1px solid #2a3; border-radius:999px; color:#9fe6a0;
+      text-decoration:none; font-size:.85em; background:rgba(40,90,40,.15); }
+    footer .puffy:hover { background:rgba(40,120,40,.28); }
+    footer .puffy-fish { font-size:1.25em; }
+    footer .overlord-note { display:block; margin-top:.5em; opacity:.7; font-size:.8em; }
+  </style>
 </div>
 <script src="deployer.js"></script>
 </body>

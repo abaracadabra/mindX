@@ -117,12 +117,24 @@ Framework-free; only the wallet's EIP-1193 provider in the trust path.
   (exact compiled bytecode/ABI), declare constructor arg sources (`from="wallet"`, a
   literal, `from="deployed:<id>"` for dependent deploys), a `value` kind, and the pay2play
   `privilege` conferred.
-- **deployer.js** — **DEPLOY** arms (resolve args, fetch bytecode, ABI-encode static
-  types, build tx — no cost); **LAUNCH** fires from value (`signature` to prove identity,
-  or `token` native value) then `eth_sendTransaction`; **RETURN** polls
-  `eth_getTransactionReceipt` and shows hash/status/deployed address. Deployed addresses
-  feed `from="deployed:<id>"` so a session can deploy registry → entitlement → ARC
-  settlement in order.
+- **deployer.js** — **DEPLOY** arms a contract or a whole bundle (records the selection);
+  **LAUNCH** fires from value (`signature` / `token`), building each tx at fire time then
+  `eth_sendTransaction`; **RETURN** polls `eth_getTransactionReceipt` and shows
+  hash/status/deployed address. Deployed addresses feed `from="deployed:<id>"` so a
+  session deploys registry → entitlement → ARC settlement in stage order.
+- **chains.xml** — chain registry + **isolation**: select a target (0G/ETH/Base/ARC/
+  Moonbeam-GLMR/Polygon-POL/Anvil); the deployer requires the wallet on that chain
+  (`wallet_switchEthereumChain`) and namespaces addresses per chain. **ALL** runs the
+  **launch cycle** — deploy the armed selection to every chain (POL included; ARC skipped
+  until its chainId finalises). `marketRef` = chainmarketcap "innerstanding" hook.
+- **bundles/*.xml** — **topic bundles** merged via `<include>` (`daio-inft`, `deltaverse`).
+  Bundle = artifact path or explicit `bundle=`; **stage** orders the launch. DEPLOY/LAUNCH
+  BUNDLE fires a topic sequentially — the cohesive launch pattern for hundreds of contracts.
+- **`<fee>`** — deploying is itself a pay-to-play service: native/`x402` fee → mindX/
+  AgenticPlace on LAUNCH (`amount="0"` = free, the prototype default).
+- **algorand/** — a **separate modular tool** (AVM ≠ EVM): ARC-56 appspecs + `algosdk`,
+  same DEPLOY→LAUNCH→RETURN, returns app id + app address; deploy fee is a grouped
+  `PaymentTxn`. Seeded with dojo BONA FIDE + DAIO governance.
 
 ---
 
@@ -160,8 +172,9 @@ Framework-free; only the wallet's EIP-1193 provider in the trust path.
 - `walletcreator`: Python smoke — vault round-trip, wrong-key rejection, participant-key
   binding (only same wallet reopens), folder encrypt/decrypt, allchain mint, signature
   recovery.
-- `deployer`: JS parses; `index.xml` well-formed; referenced artifacts carry real
-  bytecode (deployable against Anvil).
+- `deployer`: JS parses (`node --check`); `index.xml` / `chains.xml` / `bundles/*.xml` /
+  `algorand/algorand.xml` well-formed; bundle-grouping + static ABI-encode + ALL-cycle
+  target filter pass a Node logic harness; `algorand_deploy.py` compiles + `list` runs.
 
 ---
 

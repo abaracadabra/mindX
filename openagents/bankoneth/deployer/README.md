@@ -41,6 +41,43 @@ a literal `value=`, or `from="deployed:<id>"` to chain on an address deployed ea
 in the session), the `value` kind (`signature` or `token`), and the pay2play
 `privilege` it confers.
 
+## Chains — isolation + the ALL cycle (`chains.xml`)
+
+The chain bar is the **isolation** control. Each `<chain>` in `chains.xml` is a
+separate target (0G, Ethereum, Base, ARC, Moonbeam/GLMR, Polygon/POL, Anvil); before
+LAUNCH the deployer requires the wallet to be **on** the selected chain and offers
+`wallet_switchEthereumChain`, and it records addresses **per chain** so deployments
+never cross chains. `marketRef` is the chainmarketcap key — the "innerstanding" hook
+for live fee/market context.
+
+Pick **ALL** to run the **launch cycle**: the armed contract/bundle is deployed to
+*every* chain in turn (POL included; ARC is skipped until its chainId finalises), each
+with a fresh per-chain address namespace so stage chaining stays correct on each chain.
+
+## Bundles + stages (topic launch pattern)
+
+Contracts group into **topic bundles** — derived from the artifact path (`../pay2play/`
+→ `pay2play`, `../openbdk/` → `openbdk`) or set explicitly. `bundles/*.xml` are
+self-contained manifests merged via `<include>` (seeded: `daio-inft`, `deltaverse`).
+**DEPLOY BUNDLE** arms a whole topic in **stage** order (`stage="N"`, else document
+order); **LAUNCH BUNDLE** fires it sequentially, so `from="deployed:<id>"` resolves to
+the address the prior stage just produced. Build happens at fire time, so dependents
+always see their dependencies. This is how hundreds of contracts launch as one
+cohesive pattern — add `<contract>` rows to a bundle to grow a topic.
+
+## Deployment fee (pay-to-play → mindX / AgenticPlace)
+
+Deploying is itself a service. `<fee>` in `index.xml` settles to mindX/AgenticPlace
+on LAUNCH — native value to `recipient`, or via the `x402` endpoint for USDC. Set the
+recipient/amount before mainnet; `amount="0"` means free (the prototype default).
+
+## Algorand — a separate modular tool (`algorand/`)
+
+Algorand is **not** in `chains.xml` and **not** in the EVM launch cycle: the AVM is
+not the EVM. It lives in [`algorand/`](algorand/) as its own tool — same
+DEPLOY→LAUNCH→RETURN shape, ARC-56 appspecs + `algosdk` instead of Foundry artifacts +
+`window.ethereum`. See [`algorand/README.md`](algorand/README.md).
+
 ## Run it
 
 ```bash

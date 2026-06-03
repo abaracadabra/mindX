@@ -18,6 +18,18 @@
 -->
 <solution name="bankon-deployer" version="1" chainHint="31337">
 
+  <!-- Blockchain isolation targets (0G, ETH, Base, ARC, GLMR…). -->
+  <chains src="chains.xml"/>
+
+  <!-- Deploying a bundle is a pay-to-play service: the fee goes to mindX /
+       AgenticPlace (the OpenBSD-secured rail), settled native or via x402.
+       Set `recipient` to the AgenticPlace treasury before mainnet use. -->
+  <fee recipient="0x0000000000000000000000000000000000000000"
+       asset="0x0000000000000000000000000000000000000000"
+       amount="0"
+       service="deploy.bundle"
+       x402="https://agenticplace.pythai.net/x402/deploy"/>
+
   <contract id="service-registry"
             name="BankonServiceRegistry"
             summary="The BANKON-as-a-Service catalogue (one row per service).">
@@ -57,5 +69,51 @@
     <value kind="token" asset="0x0000000000000000000000000000000000000000" amount="0"/>
     <privilege service="allchain.access" tier="3"/>
   </contract>
+
+  <!-- ── openBDK: governance control plane, OWNER-custodial ──────────────────
+       One LAUNCH stands up the OWNER-custodial openBDK stack: an OVERLORD timelock
+       (proposer/executor = the connected wallet), a ValidatorRegistry proxy whose
+       admin IS that timelock, and an allocations vault owned by the timelock.
+       The constructor takes STATIC args only (the proxy `bytes` init lives inside
+       OpenBDKDeployer, not the browser encoder). OWNER holds the key; software
+       holds nothing once the tx confirms. -->
+  <contract id="openbdk-deployer"
+            name="OpenBDKDeployer"
+            summary="OWNER-custodial openBDK control plane: OVERLORD timelock + ValidatorRegistry + allocations, all admin'd by the OWNER's timelock.">
+    <abi src="../openbdk/out/OpenBDKDeployer.sol/OpenBDKDeployer.json"/>
+    <bytecode src="../openbdk/out/OpenBDKDeployer.sol/OpenBDKDeployer.json"/>
+    <constructor>
+      <arg name="owner"            type="address" from="wallet"/>
+      <arg name="timelockMinDelay" type="uint256" value="172800"/>           <!-- 2 days -->
+      <arg name="stakingToken"     type="address" from="wallet"/>            <!-- replace with THRUST/gov token -->
+      <arg name="minimumStake"     type="uint256" value="1000000000000000000000"/> <!-- 1000e18 -->
+      <arg name="unbondingPeriod"  type="uint256" value="100"/>
+      <arg name="allocationToken"  type="address" value="0x0000000000000000000000000000000000000000"/>
+    </constructor>
+    <value kind="signature"/>
+    <privilege service="overlord.handoff" tier="3"/>
+  </contract>
+
+  <!-- ── openBDK: whitelist-as-a-service (rooms + databanks) ─────────────────
+       Multi-room public-key whitelist; capacity expands via databanks added only
+       by an authorized gate/registry/holding. admin = the connected wallet. -->
+  <contract id="openbdk-whitelist"
+            name="Whitelist"
+            summary="Whitelist-as-a-service: rooms of public keys, capacity-expandable via gated databanks.">
+    <abi src="../openbdk/out/whitelist.sol/Whitelist.json"/>
+    <bytecode src="../openbdk/out/whitelist.sol/Whitelist.json"/>
+    <constructor>
+      <arg name="admin" type="address" from="wallet"/>
+    </constructor>
+    <value kind="signature"/>
+    <privilege service="whitelist.create" tier="2"/>
+  </contract>
+
+  <!-- ── Topic bundles (hundreds of contracts, by topic) ────────────────────
+       Each include is a self-contained bundle manifest. The deployer merges them
+       and groups by topic; DEPLOY BUNDLE arms a whole topic in stage order, LAUNCH
+       fires it. Build the referenced artifacts (forge build) before launching. -->
+  <include src="bundles/daio-inft.xml"/>
+  <include src="bundles/deltaverse.xml"/>
 
 </solution>
