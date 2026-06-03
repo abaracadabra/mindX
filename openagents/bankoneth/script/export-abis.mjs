@@ -97,10 +97,11 @@ const DEPLOY_SEQUENCES = [
   },
   {
     id: "arc", title: "ARC economy", category: "arc",
-    blurb: "Agent reputation + marketspace (USDC economy): reputation registry → agent market.",
+    blurb: "Agent reputation + escrow + marketspace (USDC economy): reputation registry → escrow → agent market.",
     steps: [
-      { contract: "AgentReputationRegistry", args: [{ owner: true }, { chain: "usdc" }] },
-      { contract: "bankon_agent_market",     args: [{ owner: true }] },
+      { contract: "AgentReputationRegistry",  args: [] },
+      { contract: "AgenticMarketplaceEscrow", args: [{ owner: true }, { literal: "250" }] },
+      { contract: "bankon_agent_market",      args: [{ literal: "0x0000000000000000000000000000000000000000" }, { ref: "AgentReputationRegistry" }, { ref: "AgenticMarketplaceEscrow" }, { literal: "0x0000000000000000000000000000000000000000" }], note: "inft_ / x402Attestor_ = 0x0; wire to the iNFT set + attestor after." },
     ],
   },
 ];

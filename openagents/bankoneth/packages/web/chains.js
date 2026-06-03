@@ -40,6 +40,18 @@ export const CHAINS = {
     usdc: null, cctpDomain: null,
     rpc: "https://evmrpc-testnet.0g.ai", explorer: "https://chainscan-galileo.0g.ai", testnet: true,
   },
+  11155111: {
+    key: "sepolia", name: "Sepolia", nativeSymbol: "ETH",
+    usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", cctpDomain: 0,
+    rpc: "https://ethereum-sepolia-rpc.publicnode.com", explorer: "https://sepolia.etherscan.io",
+    faucet: "https://sepoliafaucet.com", testnet: true,
+  },
+  84532: {
+    key: "base-sepolia", name: "Base Sepolia", nativeSymbol: "ETH",
+    usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", cctpDomain: 6,
+    rpc: "https://base-sepolia-rpc.publicnode.com", explorer: "https://sepolia.basescan.org",
+    faucet: "https://www.alchemy.com/faucets/base-sepolia", testnet: true,
+  },
 };
 
 export const SETTLEMENT_CHAIN_ID = 1; // where the bankon registrar/router settle
