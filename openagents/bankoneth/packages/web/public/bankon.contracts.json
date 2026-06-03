@@ -254,6 +254,51 @@
       "blurb": "Recurring USDC billing for agent services.",
       "abi": "abis/SubscriptionManager.json",
       "fnCount": 21
+    },
+    {
+      "name": "scientific_token",
+      "deploymentKey": "scientific",
+      "category": "cp2048",
+      "title": "SCIENTIFIC token",
+      "blurb": "Precision rail ERC-20: single-issuance, owner-renounce, self-purge to immutable owner.",
+      "abi": "abis/scientific_token.json",
+      "fnCount": 14
+    },
+    {
+      "name": "rake",
+      "deploymentKey": "rakeCollector",
+      "category": "cp2048",
+      "title": "RAKE collector",
+      "blurb": "Per-chain fee sweep to bankon.eth only when value beats chain cost.",
+      "abi": "abis/rake.json",
+      "fnCount": 11
+    },
+    {
+      "name": "bankon_oracle",
+      "deploymentKey": "bankonOracle",
+      "category": "cp2048",
+      "title": "Pair-price oracle",
+      "blurb": "USD value straight from the Uniswap liquidity pair.",
+      "abi": "abis/bankon_oracle.json",
+      "fnCount": 8
+    },
+    {
+      "name": "bankon_autoconvert",
+      "deploymentKey": "autoconvert",
+      "category": "cp2048",
+      "title": "Auto-convert router",
+      "blurb": "Any token → settlement via Uniswap V3; golden-ratio fee → RAKE.",
+      "abi": "abis/bankon_autoconvert.json",
+      "fnCount": 8
+    },
+    {
+      "name": "bridge_collect",
+      "deploymentKey": "bridgeCollect",
+      "category": "cp2048",
+      "title": "Bridge-collect (GLMR)",
+      "blurb": "LI.FI cross-chain pay-any-currency; golden fee → RAKE.",
+      "abi": "abis/bridge_collect.json",
+      "fnCount": 8
     }
   ],
   "presets": [

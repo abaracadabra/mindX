@@ -54,6 +54,12 @@ const CONTRACTS = [
   { name: "AgentReputationRegistry",  deploymentKey: "agentReputation", category: "arc",       title: "Agent Reputation",        blurb: "Agent profiles, metrics, reviews (USDC economy)." },
   { name: "AgenticMarketplaceEscrow", deploymentKey: "agentEscrow",     category: "arc",       title: "Marketplace Escrow",      blurb: "Milestone-based agent service agreements + disputes." },
   { name: "SubscriptionManager",      deploymentKey: "subscriptions",   category: "arc",       title: "Subscriptions",           blurb: "Recurring USDC billing for agent services." },
+  // ── cypherpunk2048 financial primitives (contracts/cp2048/) ──
+  { name: "scientific_token",         deploymentKey: "scientific",      category: "cp2048",    title: "SCIENTIFIC token",        blurb: "Precision rail ERC-20: single-issuance, owner-renounce, self-purge to immutable owner." },
+  { name: "rake",                     deploymentKey: "rakeCollector",   category: "cp2048",    title: "RAKE collector",          blurb: "Per-chain fee sweep to bankon.eth only when value beats chain cost." },
+  { name: "bankon_oracle",            deploymentKey: "bankonOracle",    category: "cp2048",    title: "Pair-price oracle",       blurb: "USD value straight from the Uniswap liquidity pair." },
+  { name: "bankon_autoconvert",       deploymentKey: "autoconvert",     category: "cp2048",    title: "Auto-convert router",     blurb: "Any token → settlement via Uniswap V3; golden-ratio fee → RAKE." },
+  { name: "bridge_collect",           deploymentKey: "bridgeCollect",   category: "cp2048",    title: "Bridge-collect (GLMR)",   blurb: "LI.FI cross-chain pay-any-currency; golden fee → RAKE." },
 ];
 
 // ── Guided-form preset descriptors. The DOM is rendered per-UI; the call
