@@ -49,6 +49,31 @@ never costs more than it returns, and the threshold differs per chain (immutable
   pay any currency on any chain, take the golden fee → RAKE, emit a `BridgeCollected` intent the
   LI.FI/GLMR relayer fulfils to the settlement chain. Sovereign on-chain collection + open bridge infra.
 
+## Gas-as-a-service — land ready on Base (`bankon_gas_service.sol`)
+
+The settlement-chain (Base) gas reservoir. A sovereign agent that bridges an asset from the Ethereum
+onboard chain lands on Base with **no Base ETH** — so it can't act. The gas service fixes that:
+
+- **Sponsored drop** — `allocate_gas(to)` (allocator-gated, e.g. `bridge_collect` on arrival) drops
+  **precisely one transaction** of gas: `min(block.basefee × default_gas_units, max_drop_wei)`, sized live
+  from Base's own basefee (default ~150k units ≈ one swap/transfer), one drop per address by default.
+- **Custom client-paid** — `buy_gas(to, gas_wei, sides)` / `buy_gas_priority(..., mult)`: the client pays
+  `gas_wei + fee`; `gas_wei` is delivered, the fee retained for bankon.eth.
+- **`self_purge()`** sweeps the reservoir **only to the immutable beneficiary (bankon.eth)**.
+
+### The BANKON gas fee — golden ratio in the digits following the cost
+
+The fee is the **golden ratio placed in the digits immediately after the contract cost**. Normalized rate =
+**φ/10 = 0.1618033988749894848** (16.18%, to 18 dp). So a `0.001 ETH` contract call → fee `0.000161803…
+ETH`, total `0.001161803… ETH`. Charged on the cost of **one contract call × sides** (1 same-chain, 2 when
+the rail needs gas on each side of a bridge). The caller normalizes `cost` for chain + usage (e.g. an average
+basefee), so the rate **varies by chain and load within limits**.
+
+**Expedited priority tiers** — for setting execution priority, the fee ratio climbs **proportionally by
+golden steps** (`φⁿ` via the Fibonacci identity `φⁿ = Fₙφ + Fₙ₋₁`) from the 16.18% base, **hard-capped at
+3× the original contract cost** (`MAX_FEE_NUM = 3`). `tier_mult(tier)` gives the ladder; `quote_fee_priority`
+applies it. Normalized → Fast → Express → Instant in the UI.
+
 ## How it plugs into the payment layer
 `packages/web/payments.js` `swap`/`bridge` rails call `bankon_autoconvert` / `bridge_collect`; the φ fee
 + SCIENTIFIC precision toggle surface in the UI. Settlement feeds the iNFT/subname registrar or the ARC

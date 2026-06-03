@@ -55,11 +55,37 @@ the pluggable `IERC7857DataVerifier` (`OracleType{TEE,ZKP}`) as the documented F
 **never claimed PQ-today**. Genuine quantum-native (Tier-Q) is the Algorand/PARSEC track, not this
 submission. See [`QUANTUM_READINESS.md`](docs/QUANTUM_READINESS.md). Docs: [`INFT7857_MODULE`](docs/INFT7857_MODULE.md),
 [`ARC_AGENT_ECONOMY`](docs/ARC_AGENT_ECONOMY.md), [`INFT_CANONICAL_VS_LEGACY`](docs/INFT_CANONICAL_VS_LEGACY.md),
-[`NAME_SERVICE_UI`](docs/NAME_SERVICE_UI.md). `forge test` **195/195**.
+[`NAME_SERVICE_UI`](docs/NAME_SERVICE_UI.md). `forge test` **225/225**.
 
 ```bash
-forge test                                   # 195 green (38 suites)
+forge test                                   # 225 green (45 suites)
 forge script script/deploy_bankon_inft.s.sol --rpc-url <fork> --broadcast   # deploy the canonical stack
+```
+
+## go-LIVE deployer + golden-ratio treasury (ETHGlobal NY)
+
+A **single-page, client-side, WebGL-skinned deployer** — [`packages/web/deploy.html`](packages/web/deploy.html)
+— takes the whole stack LIVE with a **two-button DEPLOY → LAUNCH → RETURN** flow. **① DEPLOY** arms the
+ordered sequence (reads creation bytecode + ctor ABI from the generated manifest, predicts addresses + gas,
+no broadcast); **② LAUNCH** broadcasts each creation tx straight from the wallet, threading each deployed
+address into the next constructor + post-deploy wiring; **RETURN** is live explorer feedback (tx hashes,
+addresses, confirmations, explorer links, optional verify). **No backend, no API key** — public RPC + your
+wallet. LIVE target **Base at parity with Ethereum**; multi-chain picker.
+
+The **cypherpunk2048 financial primitives** ([`contracts/cp2048/`](contracts/cp2048/)) are the golden-ratio
+treasury: **golden-ratio BANKON fee** (φ in the digits following the cost — normalized **φ/10 = 16.18%**,
+expedited priority tiers up to **3× the cost**); **SCIENTIFIC** token (18+18 precision rail, single-issuance,
+immutable beneficiary, `self_purge`→owner); **RAKE** (collects home to `bankon.eth` only when value beats the
+chain cost); **bankon_oracle** (price straight from the Uniswap pair); **bankon_autoconvert** (any token →
+settlement via Uniswap V3) + **bridge_collect** (LI.FI/GLMR); and **gas-as-a-service**
+([`bankon_gas_service`](contracts/cp2048/bankon_gas_service.sol)) — drops **one transaction** of Base gas to
+an address arriving with a bridged asset, φ-fee funded. Treasury / owner / RAKE home = **bankon.eth**
+`0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169` (immutable, every chain). Docs:
+[`ETHGLOBAL_NY`](docs/ETHGLOBAL_NY.md), [`SCIENTIFIC_AND_RAKE`](docs/SCIENTIFIC_AND_RAKE.md). cp2048 **21/21**.
+
+```bash
+node script/export-abis.mjs                  # emit ABIs + bankon.bytecodes.json + deploy sequences
+python3 -m http.server -d packages/web 6680  # open /deploy.html → connect on Base → ① DEPLOY → ② LAUNCH
 ```
 
 ## Hierarchical login (admin / member / visitor)
@@ -106,12 +132,16 @@ For the architecture, see [`BANKONETH.md`](BANKONETH.md). For deployment, see
 
 ```
 contracts/         Solidity (Foundry) — canonical source
-script/            DeployEthereum + DeployZeroG + WireCrossChain + export-abis.mjs
-test/              Foundry test suite (Flow A × B × C × payment rails)
+  cp2048/            golden-ratio treasury: φ fee, SCIENTIFIC, RAKE, oracle, autoconvert, bridge_collect, gas_service
+  inft7857/  arc/    canonical EIP-7857 iNFT + ERC-6551 stack · ARC agent economy
+script/            DeployEthereum + DeployZeroG + WireCrossChain + export-abis.mjs (ABIs + bytecodes + deploy sequences)
+test/              Foundry test suite (Flow A × B × C × payment rails × cp2048) — 225 green
 deployments/       per-chain address records ({1,11155111,local}.json) loaded by the dApp
 clients/python/    async Python client (subdomain_issuer.py, agent_mint_service.py) — moved from openagents/ens/
 packages/          pnpm workspace
-  web/               self-contained dApp (bankoneth.html + inft.html + iNFTabi.js) — prototype, no build
+  web/               self-contained dApp — prototype, no build:
+                       deploy.html (go-LIVE two-button deployer) + deploy.js + deploy-feedback.js
+                       bankoneth.html + inft.html + iNFTabi.js + name-service/marketspace
   parsec-view/       @bankoneth/parsec-view — native parsec-wallet view (TS, production)
   react/             @bankoneth/react — <BankonDeploy/> React component (TSX, production)
   core/              @bankoneth/core — pure viem v2 client
