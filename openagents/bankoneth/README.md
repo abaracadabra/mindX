@@ -55,10 +55,10 @@ the pluggable `IERC7857DataVerifier` (`OracleType{TEE,ZKP}`) as the documented F
 **never claimed PQ-today**. Genuine quantum-native (Tier-Q) is the Algorand/PARSEC track, not this
 submission. See [`QUANTUM_READINESS.md`](docs/QUANTUM_READINESS.md). Docs: [`INFT7857_MODULE`](docs/INFT7857_MODULE.md),
 [`ARC_AGENT_ECONOMY`](docs/ARC_AGENT_ECONOMY.md), [`INFT_CANONICAL_VS_LEGACY`](docs/INFT_CANONICAL_VS_LEGACY.md),
-[`NAME_SERVICE_UI`](docs/NAME_SERVICE_UI.md). `forge test` **235/235**.
+[`NAME_SERVICE_UI`](docs/NAME_SERVICE_UI.md). `forge test` **238/238** (+ x402evm **6/6**).
 
 ```bash
-forge test                                   # 235 green (46 suites)
+forge test                                   # 238 green (47 suites); cd x402evm && forge test → 6/6
 forge script script/deploy_bankon_inft.s.sol --rpc-url <fork> --broadcast   # deploy the canonical stack
 ```
 
@@ -90,6 +90,32 @@ any chain) that redeem **only to the immutable bankon.eth**, with a reconfigurab
 node script/export-abis.mjs                  # emit ABIs + bankon.bytecodes.json + deploy sequences
 python3 -m http.server -d packages/web 6680  # open /deploy.html → connect on Base → ① DEPLOY → ② LAUNCH
 ```
+
+## Multichain registry, prices, x402 & MCP
+
+**[`packages/web/bankonchains/`](packages/web/bankonchains/)** — the canonical chain registry (ETH, Base,
+Moonbeam/GLMR, Polygon/POL, Arbitrum/ARB, Optimism/OP, Avalanche/AVAX, BNB, Blast, Injective-EVM/INJ, 0G,
+Arc/Circle + testnets). `extend.js addChainById(id)` resolves **any** EVM chain from `chainid.network` (the
+`allchain.html` source), so the deployer toggle is extensible. **Prices are two-tier:** public visitors get
+keyless spot (Coinbase); **holders of `bankon.eth` / `*.bankon.eth`** get **CoinMarketCap** prices via a
+server-side proxy (`cmc-proxy.{mjs,php}`). The **CMC API key is server-side only, OUTSIDE the web root**
+(gitignored bankoneth-root `.bankonchains.env`) — never shipped to the browser. Privilege via
+[`bankon.js`](packages/web/bankon.js).
+
+**[`packages/web/dapp/`](packages/web/dapp/)** — a framework-free web3 dApp prototype: secure-by-default
+`index.html` (wallet login → redirect), `dapp.html` (load any contract **by name or address**; RAKE actions;
+ENS search → Etherscan inject), per-contract `abis/<name>.abi.js` modules, `admin.html`/`.php`/`.ipfs`. After
+go-LIVE the deployer wires live addresses into the dApp (localStorage + a committable `deployments/<id>.json`).
+
+**[`x402evm/`](x402evm/)** — self-contained module (sibling of `pay2play/`, **6/6 tests**) that generalizes
+HTTP-402 settlement to **every EVM rail (Base ∥ Arc ∥ …)**: `X402EVMFacilitator` + `X402ChainRegistry`
+(EIP-712 receipt, monotonic-nonce + spent-digest guards). Plus `clients/` — the EIP-3009 USDC **x402 payer**
+for keyless CoinMarketCap ingestion + a wrapper over the `cmc` Go CLI. Docs:
+[`X402_EVM`](docs/blockchain/X402_EVM.md), [`COINMARKETCAP_X402`](docs/operations/COINMARKETCAP_X402.md).
+
+**[`bankonMCP/`](bankonMCP/)** — the AgenticPlace **payment processor** for MCP service delivery (TS, adapted
+from `openCMC/x402-mcp-proxy`): proxies MCP tool calls, **auto-pays x402** on the cheapest adaptive rail, and
+rakes the **golden φ/10 fee** home to `bankon.eth`. Serves bankon + mindX tools behind x402.
 
 ## Hierarchical login (admin / member / visitor)
 
@@ -138,12 +164,18 @@ contracts/         Solidity (Foundry) — canonical source
   cp2048/            golden-ratio treasury: φ fee, SCIENTIFIC, RAKE, oracle, autoconvert, bridge_collect, gas_service
   inft7857/  arc/    canonical EIP-7857 iNFT + ERC-6551 stack · ARC agent economy
 script/            DeployEthereum + DeployZeroG + WireCrossChain + export-abis.mjs (ABIs + bytecodes + deploy sequences)
-test/              Foundry test suite (Flow A × B × C × payment rails × cp2048 × custody) — 235 green
+test/              Foundry test suite (Flow A × B × C × payment rails × cp2048 × custody) — 238 green
 deployments/       per-chain address records ({1,11155111,local}.json) loaded by the dApp
 clients/python/    async Python client (subdomain_issuer.py, agent_mint_service.py) — moved from openagents/ens/
+pay2play/          self-contained x402 pay-to-play module (Arc settlement → entitlement)
+x402evm/           self-contained x402 EVM settlement module (Base/Arc/… facilitator) + CMC x402 ingestion
+bankonMCP/         MCP × x402 adaptive-rails proxy (AgenticPlace processor; TS, needs pnpm install)
+.bankonchains.env  CMC API key — GITIGNORED, outside the web root (loaded by the cmc proxies)
 packages/          pnpm workspace
   web/               self-contained dApp — prototype, no build:
                        deploy.html (go-LIVE two-button deployer) + deploy.js + deploy-feedback.js
+                       dapp/ (web3 prototype: index/dapp/admin + per-contract abis/<name>.abi.js)
+                       bankonchains/ (chain registry + chainid.network extend + CMC price proxy) + bankon.js
                        bankoneth.html + inft.html + iNFTabi.js + name-service/marketspace
   parsec-view/       @bankoneth/parsec-view — native parsec-wallet view (TS, production)
   react/             @bankoneth/react — <BankonDeploy/> React component (TSX, production)
