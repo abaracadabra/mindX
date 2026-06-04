@@ -105,6 +105,7 @@ async def main() -> int:
         title=TITLE,
         content_html=html,
         status="draft",  # DRAFT — prototype, staged for human review
+        post_id=759,      # UPDATE the existing post in place (preserve URL/slug)
         slug=SLUG,
         excerpt=EXCERPT,
         featured_media=featured_id,

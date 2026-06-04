@@ -193,8 +193,10 @@ class WordpressAgent:
         slug: str | None = None,
         author: int | None = None,
         meta: dict[str, Any] | None = None,
+        post_id: int | None = None,
     ) -> PublishResult:
-        """Publish a finished article.
+        """Publish a finished article, or update an existing one when ``post_id``
+        is given (WordPress REST treats POST /posts/{id} as an in-place update).
 
         Scheduling is handled by WordPress itself: pass ``status="future"`` with
         a future ``date`` and WordPress's cron will publish at that time. No
@@ -229,7 +231,8 @@ class WordpressAgent:
         if meta:
             payload["meta"] = meta
 
-        response = await self._request_with_retry("POST", "/posts", json=payload)
+        endpoint = f"/posts/{int(post_id)}" if post_id is not None else "/posts"
+        response = await self._request_with_retry("POST", endpoint, json=payload)
         if response.status_code >= 400:
             raise PublishError(
                 f"Publish failed with status {response.status_code}: {response.text}"

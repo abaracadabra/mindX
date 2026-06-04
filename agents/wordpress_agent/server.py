@@ -46,6 +46,7 @@ class PublishRequest(BaseModel):
     slug: str | None = None
     author: int | None = None
     meta: dict[str, Any] | None = None
+    post_id: int | None = None  # update an existing post in place (None = create)
 
 
 class PublishResponse(BaseModel):
@@ -68,6 +69,44 @@ class HealthResponse(BaseModel):
     base_url: str
     user: str
     wp_user_id: int | None = None
+
+
+class GateRequest(BaseModel):
+    """Schema for the /gate endpoint — a DeltaVerse.gate.event.
+
+    Crossing the DeltaVerse turnstile creates a NeuralNode *room*
+    (BubbleRoomV4.mintRoom) and a *bubbleroom* (BubbleRoomSpawn.spawnFromRoom)
+    on Polygon. Fails CLOSED: if the contracts aren't deployed / no RPC / no
+    spawner key, the gate is recorded as ``blocked`` and nothing is broadcast.
+    """
+
+    theme: str = Field(..., min_length=1, description="Room theme (e.g. article title).")
+    origin_event: str = Field(..., min_length=1, description="What opened the gate, e.g. 'publication:<slug>'.")
+    metadata_uri: str = Field(default="", description="Room metadata URI (post URL or IPFS CID).")
+    chain_id: int = Field(default=137, description="Target chain (137 = Polygon mainnet).")
+    participants: list[str] = Field(default_factory=list)
+    roles: list[int] = Field(default_factory=list)
+    is_private: bool = False
+    room_type: int = 0
+    storage_cid: str = ""
+    ai_seed: str = "mindX"
+    tone: str = "genesis"
+    seed_mutation: str = "emergence"
+    evolves: bool = True
+    actor_wallet: str | None = None
+
+
+class GateResponse(BaseModel):
+    ok: bool
+    blocked: bool = False
+    reason: str | None = None
+    chain_id: int
+    room_id: int | None = None
+    bubbleroom_id: int | None = None
+    room_tx: str | None = None
+    bubbleroom_tx: str | None = None
+    spawner: str | None = None
+    links: dict[str, str] = Field(default_factory=dict)
 
 
 def _resolve_settings() -> Settings:
@@ -148,6 +187,7 @@ async def publish(req: PublishRequest) -> PublishResponse:
                 slug=req.slug,
                 author=req.author,
                 meta=meta,
+                post_id=req.post_id,
             )
         except AuthenticationError as exc:
             raise HTTPException(status_code=401, detail=str(exc)) from exc
@@ -196,6 +236,39 @@ async def upload_media(
         url=result.url,
         mime_type=result.mime_type,
     )
+
+
+@app.post("/gate", response_model=GateResponse)
+async def gate(req: GateRequest) -> GateResponse:
+    """Open a DeltaVerse gate → mint a NeuralNode room + spawn a bubbleroom.
+
+    Wired to the catalogue (``deltaverse.gate.event`` + ``deltaverse.room.created``
+    + ``deltaverse.bubbleroom.spawned``). Never broadcasts a partial result; if
+    the on-chain prerequisites are absent the gate is recorded as blocked.
+    """
+    try:
+        from agents.deltaverse import DeltaVerseGate
+        from agents.deltaverse.neuralnode_gate import GateSpec
+    except Exception as exc:  # pragma: no cover - import guard
+        raise HTTPException(status_code=503, detail=f"deltaverse gate unavailable: {exc}") from exc
+
+    spec = GateSpec(
+        theme=req.theme,
+        origin_event=req.origin_event,
+        metadata_uri=req.metadata_uri,
+        participants=req.participants,
+        roles=req.roles,
+        is_private=req.is_private,
+        room_type=req.room_type,
+        storage_cid=req.storage_cid,
+        ai_seed=req.ai_seed,
+        tone=req.tone,
+        seed_mutation=req.seed_mutation,
+        evolves=req.evolves,
+    )
+    g = DeltaVerseGate(chain_id=req.chain_id)
+    result = await g.open_gate(spec, actor="wordpress_agent_gate", actor_wallet=req.actor_wallet)
+    return GateResponse(**result.to_dict())
 
 
 def run() -> None:

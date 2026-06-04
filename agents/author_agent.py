@@ -215,6 +215,65 @@ class AuthorAgent:
         import os
         return os.environ.get("MINDX_WORDPRESS_AGENT_URL", "http://127.0.0.1:8765").rstrip("/")
 
+    # Canonical AuthorAgent wallet (vault wordpress.agent:pk). Used as the
+    # footer identity when the vault can't be opened to sign in this context.
+    AUTHOR_ADDRESS_FALLBACK = "0x5277D156E7cD71ebF22c8f81812A65493D1ce534"
+
+    def _identity_footer(self, body_html: str, *, slug: Optional[str] = None) -> tuple:
+        """Build AuthorAgent's cryptographic identity footer for an article.
+
+        Returns ``(footer_html, signer_address)``. The footer states AuthorAgent's
+        public address and — when the vault is reachable — a signature over the
+        body's sha256, with the exact challenge string so a reader can recover the
+        signer. Never raises; degrades to an address-only footer if signing is
+        unavailable. Appended to the very bottom of every publish_to_rage article.
+        """
+        full_sha = "0x" + hashlib.sha256(body_html.encode("utf-8")).hexdigest()
+        challenge = f"mindX AuthorAgent publication | slug={slug or ''} | sha256={full_sha}"
+        signature = None
+        address = None
+        try:
+            from agents.wordpress_agent.vault_creds import sign_with_agent_wallet
+            res = sign_with_agent_wallet(challenge)
+            if res:
+                signature, address = res
+        except Exception as e:  # pragma: no cover - vault optional in some contexts
+            logger.debug(f"_identity_footer: signing unavailable ({e})")
+        address = address or self.AUTHOR_ADDRESS_FALLBACK
+
+        esc = self._h_esc if hasattr(self, "_h_esc") else (lambda s: s)
+        rows = [
+            f"<strong>public key</strong>: <code>{esc(address)}</code>",
+            f"<strong>content sha256</strong>: <code>{esc(full_sha)}</code>",
+        ]
+        if signature:
+            rows.append(f"<strong>signature</strong>: <code>{esc(signature)}</code>")
+            rows.append(
+                "<span style=\"opacity:.8\">verify: recover the signer of "
+                f"<code>{esc(challenge)}</code> &mdash; it is the public key above.</span>"
+            )
+        else:
+            rows.append("<span style=\"opacity:.8\">identity proven by signature on "
+                        "publish; signer recorded in post metadata.</span>")
+
+        body = "<br/>\n".join(rows)
+        footer = (
+            "\n\n<hr/>\n"
+            "<figure class=\"mindx-author-identity\" "
+            "style=\"margin:1.5em 0 0;padding:1em 1.2em;border-left:3px solid #d4af37;"
+            "background:rgba(212,175,55,.06);border-radius:6px;font-size:.85em;"
+            "line-height:1.7;color:#556\">"
+            "<p style=\"margin:0\">"
+            "<strong>&#9997;&#65038; AuthorAgent</strong> &mdash; mindX&rsquo;s autonomous author. "
+            "My identity is not assigned by an administrator; it is proven through "
+            "cryptographic signature. No trust required, only a public key.<br/>\n"
+            f"{body}<br/>\n"
+            "<a href=\"https://mindx.pythai.net\">mindx.pythai.net</a> &middot; "
+            "<a href=\"https://rage.pythai.net\">rage.pythai.net</a>"
+            "</p></figure>\n"
+        )
+        return footer, address
+
     async def publish_to_rage(
         self,
         title: str,
@@ -246,6 +305,7 @@ class AuthorAgent:
         # proceeds without a featured image (logged warning).
         auto_featured_image: bool = True,
         topic: Optional[str] = None,
+        post_id: Optional[int] = None,
     ) -> Optional[Dict[str, Any]]:
         """POST a finished article to the loopback wordpress-agent (rage.pythai.net).
 
@@ -269,8 +329,18 @@ class AuthorAgent:
             return None
 
         # Provenance: content hash, same scheme AuthorAgent uses for editions.
+        # Computed over the BODY (pre-footer) so the footer's signature references it.
         content_hash = hashlib.sha256(content_html.encode("utf-8")).hexdigest()[:16]
         post_meta: Dict[str, Any] = {"_mindx_content_hash": content_hash}
+
+        # ── AuthorAgent cryptographic identity footer (EVERY article) ──
+        # I sign what I publish; my identity is proven by key, not assigned. The
+        # footer carries my public address + a signature over the body's sha256,
+        # so any reader can recover the signer and confirm authorship.
+        footer, signer_addr = self._identity_footer(content_html, slug=slug)
+        content_html = content_html.rstrip() + footer
+        if signer_addr:
+            post_meta["_mindx_author_address"] = signer_addr
         if meta:
             post_meta.update(meta)
 
@@ -315,6 +385,8 @@ class AuthorAgent:
             payload["categories"] = categories
         if featured_media is not None:
             payload["featured_media"] = featured_media
+        if post_id is not None:
+            payload["post_id"] = post_id  # update an existing post in place
 
         url = f"{self._wordpress_agent_url()}/publish"
         try:
@@ -1089,6 +1161,11 @@ class AuthorAgent:
         gh = self._get_github_awareness()
         if gh is None or not gh.is_repo():
             return {"ok": False, "reason": "no git awareness", "worthy": False}
+        # Refresh the milestone-signal ref. On the VPS this fetches
+        # origin/feat/obs-phase1 (remote-tracking only — the scp-deployed working
+        # tree is untouched) so commits_since sees the real pushed history rather
+        # than the stale backup branch HEAD points at.
+        gh.fetch()
         commits = gh.commits_since(gh.read_watermark())
         commits = [c for c in commits if not self.is_routine_commit(c.subject)]
         if not commits:

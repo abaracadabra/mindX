@@ -77,13 +77,20 @@ class GitHubAwareness:
     """Reads mindX's own commit history; the milestone signal source."""
 
     def __init__(self, repo_root: Optional[Path] = None,
-                 public_repo_url: Optional[str] = None):
+                 public_repo_url: Optional[str] = None,
+                 ref: Optional[str] = None):
         self.repo_root = Path(repo_root or PROJECT_ROOT)
         self.public_repo_url = (
             public_repo_url
             or os.environ.get("MINDX_GITHUB_REPO_URL")
             or self._derive_public_url()
         )
+        # The git ref whose history is the milestone signal. Defaults to HEAD, but
+        # on the VPS the working tree is deployed by scp and HEAD sits on a stale
+        # backup branch with no commits — so prod sets
+        # MINDX_GITHUB_AWARENESS_REF=origin/feat/obs-phase1 and fetch() refreshes
+        # that remote-tracking ref (no working-tree change) before reading.
+        self.ref = (ref or os.environ.get("MINDX_GITHUB_AWARENESS_REF") or "HEAD").strip()
 
     # ── git plumbing ────────────────────────────────────────────────
 
@@ -102,8 +109,19 @@ class GitHubAwareness:
     def is_repo(self) -> bool:
         return self._git("rev-parse", "--is-inside-work-tree") is not None
 
+    def fetch(self) -> bool:
+        """Refresh remote-tracking refs when ``self.ref`` is a remote ref
+        (e.g. ``origin/feat/obs-phase1``). Updates only refs/remotes — never the
+        working tree — so it is safe on the scp-deployed VPS. No-op for local refs.
+        Best-effort; returns True on a successful fetch."""
+        ref = self.ref or "HEAD"
+        if "/" not in ref or ref == "HEAD":
+            return False
+        remote, branch = ref.split("/", 1)
+        return self._git("fetch", remote, branch, "--quiet", timeout=60) is not None
+
     def head_sha(self) -> Optional[str]:
-        out = self._git("rev-parse", "HEAD")
+        out = self._git("rev-parse", self.ref or "HEAD")
         return out.strip() if out else None
 
     def _derive_public_url(self) -> str:
@@ -138,14 +156,16 @@ class GitHubAwareness:
         """
         # Record sep PREFIXES each commit so the trailing --numstat lines stay
         # within the same record as their commit (not bleeding into the next).
+        target = self.ref or "HEAD"
         fmt = _R + _F.join(["%H", "%h", "%an", "%aI", "%s", "%b"])
         args = ["log", f"--pretty=format:{fmt}", "--numstat", f"--max-count={max_n}"]
         if not include_merges:
             args.append("--no-merges")
         if since_sha:
-            args.append(f"{since_sha}..HEAD")
+            args.append(f"{since_sha}..{target}")
         else:
             args.append(f"--since={fallback_days} days ago")
+            args.append(target)
         raw = self._git(*args)
         if not raw:
             return []
