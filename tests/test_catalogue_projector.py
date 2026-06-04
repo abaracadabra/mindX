@@ -136,6 +136,34 @@ pg_required = pytest.mark.skipif(not _pg_up(), reason="Postgres/pgvector not rea
 
 
 @pg_required
+def test_lineage_traversal_real_db(tmp_path):
+    from agents import memory_pgvector as pg
+
+    async def _run():
+        await pg.init_catalogue_schema()
+        # child --derivedFrom--> parent ; grandchild --derivedFrom--> child
+        base = "urn:mindx:test:lin"
+        async def _put(urn, links):
+            await pg.upsert_catalogue_entry(
+                urn=urn, kind="misc", actor="ci", actor_wallet=None, ts=1.0,
+                title=urn.split(":")[-1], text=None, payload={}, tags=[],
+                links=links, source_event_id=urn, embedding=None)
+        await _put(f"{base}:parent", [])
+        await _put(f"{base}:child", [{"type": "derivedFrom", "target_urn": f"{base}:parent"}])
+        await _put(f"{base}:grandchild", [{"type": "derivedFrom", "target_urn": f"{base}:child"}])
+        # ancestors of grandchild = child (d1), parent (d2)
+        lin = await pg.catalogue_lineage(f"{base}:grandchild", direction="ancestors", depth=6)
+        anc_dsts = {e["dst_urn"] for e in lin["ancestors"]}
+        assert f"{base}:child" in anc_dsts and f"{base}:parent" in anc_dsts
+        # descendants of parent = child (d1), grandchild (d2)
+        lin2 = await pg.catalogue_lineage(f"{base}:parent", direction="descendants", depth=6)
+        desc_srcs = {e["src_urn"] for e in lin2["descendants"]}
+        assert f"{base}:child" in desc_srcs and f"{base}:grandchild" in desc_srcs
+
+    asyncio.run(_run())
+
+
+@pg_required
 def test_upsert_idempotent_real_db(tmp_path):
     from agents import memory_pgvector as pg
 

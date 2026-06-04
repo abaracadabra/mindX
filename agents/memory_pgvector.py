@@ -1128,6 +1128,22 @@ async def init_catalogue_schema() -> bool:
                 );
                 ALTER TABLE catalogue_state
                     ADD COLUMN IF NOT EXISTS observed_kinds JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+                -- Lineage graph (Tier A #1): the inline EntryLinks materialized as
+                -- indexed edges for bidirectional traversal. src --type--> dst means
+                -- "src derivedFrom/producedBy/wasInformedBy/scored dst" — i.e. dst is
+                -- the ancestor/source. Additive (invalidate-never-delete): provenance
+                -- edges only accrue. Rebuildable from catalogue_entries.links.
+                CREATE TABLE IF NOT EXISTS catalogue_edges (
+                    src_urn   TEXT NOT NULL,
+                    edge_type TEXT NOT NULL,
+                    dst_urn   TEXT NOT NULL,
+                    ts        DOUBLE PRECISION NOT NULL DEFAULT 0,
+                    PRIMARY KEY (src_urn, edge_type, dst_urn)
+                );
+                CREATE INDEX IF NOT EXISTS idx_cat_edges_src  ON catalogue_edges (src_urn);
+                CREATE INDEX IF NOT EXISTS idx_cat_edges_dst  ON catalogue_edges (dst_urn);
+                CREATE INDEX IF NOT EXISTS idx_cat_edges_type ON catalogue_edges (edge_type);
                 """
             )
         logger.info("pgvector: catalogue schema ensured (catalogue_entries + catalogue_state)")
@@ -1223,7 +1239,7 @@ async def upsert_catalogue_entry(
     *, urn: str, kind: str, actor: Optional[str], actor_wallet: Optional[str],
     ts: float, title: Optional[str], text: Optional[str], payload: Dict[str, Any],
     tags: List[str], links: List[Dict[str, Any]], source_event_id: str,
-    embedding: Optional[List[float]] = None,
+    embedding: Optional[List[float]] = None, materialize_edges: bool = True,
 ) -> bool:
     """Idempotent upsert keyed by URN. Re-projecting the same source record is a
     no-op merge (source_event_ids deduped, newest ts kept). A NULL embedding on
@@ -1263,10 +1279,121 @@ async def upsert_catalogue_entry(
             json.dumps(payload, default=str), list(tags or []),
             json.dumps(links or [], default=str), source_event_id, emb_str, fts_text,
         )
+        # Materialize lineage edges inline (cheap for the live trickle of a few
+        # entries/tick). Bulk backfill sets materialize_edges=False and calls the
+        # set-based rebuild_catalogue_edges() once at the end instead — per-entry
+        # inserts over 77k rows are pathologically slow.
+        if materialize_edges and links:
+            rows = [(urn, str(l.get("type") or "related"), str(l.get("target_urn") or ""),
+                     float(ts or 0.0)) for l in links if l.get("target_urn")]
+            if rows:
+                await pool.executemany(
+                    "INSERT INTO catalogue_edges (src_urn, edge_type, dst_urn, ts) "
+                    "VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING", rows)
         return True
     except Exception as e:
         logger.warning(f"upsert_catalogue_entry({urn}) failed: {e}")
         return False
+
+
+async def rebuild_catalogue_edges() -> int:
+    """Backfill catalogue_edges from existing catalogue_entries.links in one pass.
+    Idempotent (ON CONFLICT DO NOTHING). Returns the edge count after the rebuild."""
+    pool = await get_pool()
+    if not pool:
+        return 0
+    try:
+        await pool.execute(
+            """INSERT INTO catalogue_edges (src_urn, edge_type, dst_urn, ts)
+               SELECT e.urn, l->>'type', l->>'target_urn', e.ts
+               FROM catalogue_entries e,
+                    LATERAL jsonb_array_elements(e.links) AS l
+               WHERE jsonb_typeof(e.links) = 'array'
+                 AND jsonb_array_length(e.links) > 0
+                 AND l->>'target_urn' IS NOT NULL
+               ON CONFLICT DO NOTHING""")
+        n = await pool.fetchval("SELECT COUNT(*) FROM catalogue_edges")
+        logger.info(f"pgvector: catalogue_edges rebuilt — {n} edges")
+        return int(n or 0)
+    except Exception as e:
+        logger.warning(f"rebuild_catalogue_edges failed: {e}")
+        return 0
+
+
+async def catalogue_lineage(urn: str, direction: str = "both",
+                            depth: int = 6) -> Dict[str, Any]:
+    """Traverse the lineage graph from ``urn``. Bounded BFS (depth cap 20).
+
+    direction:
+      - ancestors   — what this entry derives from / was produced by (out-edges)
+      - descendants — what derived from / was produced by this entry (in-edges)
+      - both        — both (default)
+
+    Returns {urn, root, ancestors:[edge], descendants:[edge], nodes:{urn:{kind,title}},
+    counts}. Each edge = {src_urn, edge_type, dst_urn, depth}. ``nodes`` resolves the
+    materialized entries; URNs absent from it are dangling provenance refs (expected —
+    a claimed source whose entry isn't projected/keyed identically)."""
+    pool = await get_pool()
+    if not pool:
+        return {"urn": urn, "ancestors": [], "descendants": [], "nodes": {}}
+    depth = max(1, min(int(depth or 6), 20))
+
+    async def _walk(anchor_col: str, follow_col: str) -> List[Dict[str, Any]]:
+        # anchor_col/follow_col ∈ {src_urn,dst_urn}: walk from the anchor side
+        # outward along the opposite side, depth-bounded, cycle-safe via path.
+        sql = f"""
+            WITH RECURSIVE walk(src_urn, edge_type, dst_urn, depth, path) AS (
+                SELECT src_urn, edge_type, dst_urn, 1, ARRAY[{anchor_col}]
+                FROM catalogue_edges WHERE {anchor_col} = $1
+                UNION ALL
+                SELECT e.src_urn, e.edge_type, e.dst_urn, w.depth + 1,
+                       w.path || e.{anchor_col}
+                FROM catalogue_edges e
+                JOIN walk w ON e.{anchor_col} = w.{follow_col}
+                WHERE w.depth < $2 AND NOT e.{anchor_col} = ANY(w.path)
+            )
+            SELECT DISTINCT src_urn, edge_type, dst_urn, depth
+            FROM walk ORDER BY depth, src_urn
+        """
+        rows = await pool.fetch(sql, urn, depth)
+        return [{"src_urn": r["src_urn"], "edge_type": r["edge_type"],
+                 "dst_urn": r["dst_urn"], "depth": r["depth"]} for r in rows]
+
+    ancestors = descendants = []
+    if direction in ("ancestors", "both"):
+        ancestors = await _walk("src_urn", "dst_urn")
+    if direction in ("descendants", "both"):
+        descendants = await _walk("dst_urn", "src_urn")
+
+    # Hydrate node metadata for every URN that appears.
+    urns = {urn}
+    for e in ancestors + descendants:
+        urns.add(e["src_urn"]); urns.add(e["dst_urn"])
+    nodes: Dict[str, Any] = {}
+    try:
+        meta = await pool.fetch(
+            "SELECT urn, kind, title, actor, ts FROM catalogue_entries WHERE urn = ANY($1)",
+            list(urns))
+        nodes = {r["urn"]: {"kind": r["kind"], "title": r["title"],
+                            "actor": r["actor"], "ts": r["ts"]} for r in meta}
+    except Exception as e:
+        logger.debug(f"catalogue_lineage hydrate failed: {e}")
+
+    return {"urn": urn, "direction": direction, "depth": depth,
+            "root": nodes.get(urn), "found": urn in nodes,
+            "ancestors": ancestors, "descendants": descendants, "nodes": nodes,
+            "counts": {"ancestors": len(ancestors), "descendants": len(descendants),
+                       "nodes": len(nodes), "dangling": len(urns) - len(nodes)}}
+
+
+async def catalogue_edges_count() -> int:
+    pool = await get_pool()
+    if not pool:
+        return 0
+    try:
+        return int(await pool.fetchval("SELECT COUNT(*) FROM catalogue_edges") or 0)
+    except Exception:
+        return 0
 
 
 async def embed_catalogue_entry(urn: str, embedding: List[float]) -> bool:
@@ -1356,7 +1483,9 @@ async def catalogue_stats() -> Dict[str, Any]:
         by_kind_rows = await pool.fetch(
             "SELECT kind, COUNT(*) AS n FROM catalogue_entries GROUP BY kind ORDER BY n DESC")
         wm = await get_catalogue_watermark("entries")
+        edges = await pool.fetchval("SELECT COUNT(*) FROM catalogue_edges")
         return {"total": int(total or 0), "embedded": int(embedded or 0),
+                "edges": int(edges or 0),
                 "by_kind": {r["kind"]: int(r["n"]) for r in by_kind_rows},
                 "watermark": {k: wm.get(k) for k in
                               ("version", "byte_offset", "events_seen", "entries_written")}}

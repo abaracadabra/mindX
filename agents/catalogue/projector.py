@@ -74,6 +74,10 @@ class CatalogueProjector:
     def __init__(self, name: str = "entries", version: str = "v1"):
         self.name = name
         self.version = version
+        # Inline per-entry edge materialization is cheap for the live trickle but
+        # pathologically slow for a 77k bulk backfill — the backfill flips this off
+        # and calls rebuild_catalogue_edges() once at the end instead.
+        self.materialize_edges = True
 
     # ── public entry points ─────────────────────────────────────────────
     async def run(self, max_events: Optional[int] = None, embed: bool = True) -> ProjectorRun:
@@ -203,7 +207,8 @@ class CatalogueProjector:
             urn=draft.urn, kind=draft.kind, actor=draft.actor, actor_wallet=draft.actor_wallet,
             ts=draft.ts, title=draft.title, text=draft.text, payload=draft.payload,
             tags=draft.tags, links=[l.model_dump() for l in draft.links],
-            source_event_id=draft.source_event_id, embedding=embedding)
+            source_event_id=draft.source_event_id, embedding=embedding,
+            materialize_edges=self.materialize_edges)
         if ok:
             run.entries_upserted += 1
 

@@ -5674,6 +5674,20 @@ async def insight_catalogue_stats(request: Request):
     return _maybe_h_text(request, stats, route_path="/insight/catalogue/stats")
 
 
+@app.get("/insight/catalogue/lineage", tags=["insight"],
+         summary="Provenance lineage for a catalogue entry (ancestors/descendants)")
+@_insight_safe
+async def insight_catalogue_lineage(request: Request, urn: str,
+                                    dir: str = "both", depth: int = 6):
+    """Traverse the catalogue lineage graph from a URN.
+    dir ∈ {ancestors, descendants, both}; depth capped at 20."""
+    from agents import memory_pgvector
+    if dir not in ("ancestors", "descendants", "both"):
+        dir = "both"
+    data = await memory_pgvector.catalogue_lineage(urn, direction=dir, depth=depth)
+    return _maybe_h_text(request, data, route_path="/insight/catalogue/lineage")
+
+
 @app.get("/insight/catalogue/kinds", tags=["insight"],
          summary="Catalogue entry/event kind registry + mapping")
 @_insight_safe

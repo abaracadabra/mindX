@@ -73,6 +73,9 @@ async def run(max_events: int, apply: bool, embed: bool, include_archives: bool,
 
     await pg.init_catalogue_schema()
     proj = CatalogueProjector(name="entries", version="v1")
+    # Bulk: skip per-entry edge inserts; materialize edges once via the set-based
+    # rebuild after projection (per-entry over 77k rows is pathologically slow).
+    proj.materialize_edges = False
 
     # ── observe-only: collect distinct EventKinds, merge into watermark ──
     # Cheap (no upserts, no embeds): folds the stream in dry-run to gather the
@@ -176,6 +179,11 @@ async def run(max_events: int, apply: bool, embed: bool, include_archives: bool,
     finally:
         if apply and got_lock:
             await pg.release_catalogue_lock()
+
+    # Materialize lineage edges from the (now-current) links in one set-based pass.
+    if apply:
+        edges = await pg.rebuild_catalogue_edges()
+        print(f"lineage edges rebuilt: {edges}")
 
     el = time.time() - started
     print()

@@ -1475,6 +1475,7 @@ def render_catalogue_stats(d: dict) -> str:
         "total entries": human_count(d.get("total", 0)),
         "embedded": f"{human_count(d.get('embedded',0))} "
                     f"({100*d.get('embedded',0)//max(d.get('total',1),1)}%)",
+        "lineage edges": human_count(d.get("edges", 0)),
         "wm offset": human_bytes(wm.get("byte_offset", 0)),
         "events seen": human_count(wm.get("events_seen", 0)),
         "version": wm.get("version"),
@@ -1500,12 +1501,48 @@ def render_catalogue_kinds(d: dict) -> str:
         [("event_kind", "event", None), ("→ entry", "entry", None), ("emitted", "emitted", None)])
 
 
+def _lineage_rows(edges: list, nodes: dict, arrow: str) -> str:
+    if not edges:
+        return "  (none)\n"
+    out = []
+    for e in edges:
+        dst = e.get("dst_urn", "")
+        nd = nodes.get(dst) or {}
+        label = (nd.get("title") or dst)[:48]
+        kind = nd.get("kind") or ("?" if dst not in nodes else "")
+        dangling = "" if dst in nodes else "  (dangling)"
+        out.append(f"  {'  ' * (e.get('depth',1)-1)}{arrow} [{e.get('edge_type','')}] "
+                   f"{kind}: {label}{dangling}")
+    return "\n".join(out) + "\n"
+
+
+def render_catalogue_lineage(d: dict) -> str:
+    urn = d.get("urn", "?")
+    root = d.get("root") or {}
+    c = d.get("counts") or {}
+    head = (f"lineage · {urn}\n"
+            f"root: {('%s — %s' % (root.get('kind'), (root.get('title') or '')[:50])) if root else '(not materialized)'}\n"
+            f"dir={d.get('direction')} depth={d.get('depth')} · "
+            f"{c.get('ancestors',0)} ancestors, {c.get('descendants',0)} descendants, "
+            f"{c.get('dangling',0)} dangling refs\n")
+    nodes = d.get("nodes") or {}
+    out = head
+    if d.get("direction") in ("ancestors", "both"):
+        out += "\nancestors (what this derives from / was produced by):\n"
+        out += _lineage_rows(d.get("ancestors") or [], nodes, "↑")
+    if d.get("direction") in ("descendants", "both"):
+        out += "\ndescendants (what derived from / was produced by this):\n"
+        out += _lineage_rows(d.get("descendants") or [], nodes, "↓")
+    return out
+
+
 RENDERERS: dict[str, Callable[[dict], str]] = {
     "/insight/catalogue/recent":    render_catalogue_recent,
     "/insight/catalogue/search":    render_catalogue_search,
     "/insight/catalogue/entry":     render_catalogue_entry,
     "/insight/catalogue/stats":     render_catalogue_stats,
     "/insight/catalogue/kinds":     render_catalogue_kinds,
+    "/insight/catalogue/lineage":   render_catalogue_lineage,
     "/insight/storage/status":      render_storage_status,
     "/insight/storage/recent":      render_storage_recent,
     "/insight/cost/summary":        render_cost_summary,
