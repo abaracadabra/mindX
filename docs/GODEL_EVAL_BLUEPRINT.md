@@ -1,7 +1,7 @@
 # GÖDEL EVAL BLUEPRINT
 ### The evaluation that proves or disproves mindX as a Gödel machine
 
-**Status:** design / Phase 0
+**Status:** Phase 1 live — G2 (source-manifest↔commit ledger), G6 (determinism), and surrogate coverage are actively checked (`mindx/godel/eval/{ledger,surrogate,gmi}.py`); G3/G4/G5/G7 await the proof kernel (Phase 2). Verdict honestly remains `NOT_YET_A_GODEL_MACHINE`.
 **Constraint:** must run on the live VPS — 2 vCPU, 7.8 GB RAM (`mindx.pythai.net`, Hostinger KVM 2, AMD EPYC 7543P). See [`DEPLOYMENT_MINDX_PYTHAI_NET.md`](DEPLOYMENT_MINDX_PYTHAI_NET.md).
 **Related:** [`Blueprint.md`](Blueprint.md) · [`SCHMIDHUBER_ENGINE.md`](SCHMIDHUBER_ENGINE.md) · [`ATARAXIA.md`](ATARAXIA.md) · [`agents/eval/README.md`](../agents/eval/README.md) · [`NAV.md`](NAV.md)
 
@@ -203,12 +203,15 @@ non-authoritative signal feeding G-coherence, never the Gödel-machine verdict.
 
 ## 7. Phased rollout (honest from day one)
 
-- **Phase 0 — Truth in advertising.** Ship G2, G6, G8 (cheapest, verification
-  only) + the GMI scorecard + dashboard panels. Result: the public page
-  correctly reads `NOT_YET_A_GODEL_MACHINE, coverage 0%`. Zero new model load.
-- **Phase 1 — Surrogate gating.** Add G1 + the metamorphic/differential/
-  property surrogates (§3.3). Changes can now be *disproven* cheaply on CPU;
-  G8 begins to register `coverage:surrogate`.
+- **Phase 0 — Truth in advertising. ✓ SHIPPED.** GMI scorecard + dashboard
+  panels (`mindx/godel/eval/gmi.py`, `/insight/godel/machine`). The public page
+  correctly reads `NOT_YET_A_GODEL_MACHINE`. Zero new model load.
+- **Phase 1 — Surrogate gating. ✓ SHIPPED.** G2 source-manifest↔commit ledger
+  (`ledger.py`: catches ungated self-mod surface changes), G6 determinism +
+  G1 monotonicity surrogates (`surrogate.py`: exact-rational, order-invariant),
+  and `coverage:surrogate` in G8. Changes can now be *disproven* cheaply on CPU;
+  G2/G6 read PROVEN-so-far when they hold, FALSIFIED with evidence when they
+  don't. Verdict still honestly `NOT_YET` (proof layer absent).
 - **Phase 2 — Real proofs.** Land the kernel checker (`mindx/godel/kernel/`,
   per the Gödel blueprint). G3/G7 become testable; G8 starts registering
   `coverage:proof`. Proof *search* offloads to Cloud / the disrupting head.

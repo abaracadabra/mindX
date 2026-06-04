@@ -1542,11 +1542,13 @@ function renderGodelMachine(d) {
   const isMachine = d.verdict === 'GODEL_MACHINE';
   const vColor = isMachine ? '#3fb950' : '#d29922';
   const cov = (typeof d.proof_coverage === 'number') ? (d.proof_coverage * 100).toFixed(0) + '%' : '—';
+  const scov = (typeof d.surrogate_coverage === 'number') ? (d.surrogate_coverage * 100).toFixed(0) + '%' : null;
   let html = '';
   html += '<div style="border-left:4px solid ' + vColor + ';padding:8px 12px;margin-bottom:12px">' +
           '<div style="font-size:1.05em;font-weight:600;color:' + vColor + '">' + escapeHtml(d.verdict) + '</div>' +
           '<div class="sub">' + escapeHtml(d.honest_summary || '') + '</div>' +
-          '<div class="sub">proof coverage: <b>' + cov + '</b>';
+          '<div class="sub">proof coverage: <b>' + cov + '</b>' +
+          (scov !== null ? ' · surrogate coverage: <b>' + scov + '</b>' : '');
   const t = d.telemetry || {};
   if (typeof t.godel_choices_sampled === 'number') {
     html += ' · ' + t.godel_choices_sampled + ' choices sampled';

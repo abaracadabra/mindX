@@ -99,19 +99,31 @@ def compute_gmi(*, sample: int = 5000) -> dict[str, Any]:
     )
     proof_coverage = round(n_proof / total, 4) if total else 0.0
 
+    # ── Phase 1: live G1/G2/G6 + surrogate coverage ────────────────────────
+    # Defensive: any failure in a live check degrades that predicate to UNTESTED
+    # rather than breaking the whole audit.
+    try:
+        from . import surrogate as _surr
+        g1 = _surr.check_monotonicity(rows)
+        g6 = _surr.check_determinism(rows)
+        surr = _surr.surrogate_coverage(rows)
+    except Exception as e:  # pragma: no cover - defensive
+        g1 = _predicate("G1", "utility_monotonicity", UNTESTED,
+                        f"surrogate unavailable: {e}", {})
+        g6 = _predicate("G6", "determinism", UNTESTED, f"surrogate unavailable: {e}", {})
+        surr = {"surrogate_coverage": 0.0, "scored": n_coherence, "total": total}
+    try:
+        from . import ledger as _ledger
+        g2 = _ledger.evaluate()
+    except Exception as e:  # pragma: no cover - defensive
+        g2 = _predicate("G2", "gate_soundness", UNTESTED,
+                        f"ledger unavailable: {e}", {})
+
+    surrogate_cov = surr.get("surrogate_coverage", 0.0)
+
     predicates = [
-        _predicate(
-            "G1", "utility_monotonicity", UNTESTED,
-            "No formal utility function U yet; cannot test that accepted "
-            "changes do not lower utility.",
-            {"formal_utility": False},
-        ),
-        _predicate(
-            "G2", "gate_soundness", UNMET,
-            "No source-hash↔certificate ledger yet; cannot verify that every "
-            "live change passed a gate.",
-            {"ledger": False},
-        ),
+        g1,
+        g2,
         _predicate(
             "G3", "proof_validity", UNMET,
             "No proof kernel. Self-modification is gated by a 0.6 LLM critique; "
@@ -130,22 +142,21 @@ def compute_gmi(*, sample: int = 5000) -> dict[str, Any]:
             "under a reflective-consistency proof.",
             {},
         ),
-        _predicate(
-            "G6", "determinism", UNTESTED,
-            "No pure utility function to recompute; determinism not yet "
-            "exercised.",
-            {},
-        ),
+        g6,
         _predicate(
             "G7", "checker_totality", UNMET,
             "No proof checker exists to fuzz for guaranteed termination.",
             {},
         ),
         _predicate(
-            "G8", "proof_coverage", FALSIFIED if total and proof_coverage == 0.0 else UNTESTED,
-            "Fraction of logged choices carrying a machine-checked proof. "
-            f"{n_proof} of {total} sampled — coherence-judged, not proof-gated.",
+            "G8", "proof_coverage",
+            FALSIFIED if total and proof_coverage == 0.0 else UNTESTED,
+            "Fraction of changes carrying a machine-checked PROOF (still 0 — no "
+            f"kernel). Surrogate-gated coverage (metamorphic/property checks): "
+            f"{surrogate_cov:.0%} of {surr.get('total', total)} decisions. "
+            "Surrogate gating is a Phase-1 stand-in, not proof.",
             {"proof_coverage": proof_coverage,
+             "surrogate_coverage": surrogate_cov,
              "choices_sampled": total,
              "choices_with_proof": n_proof,
              "choices_with_coherence_score": n_coherence,
@@ -154,30 +165,36 @@ def compute_gmi(*, sample: int = 5000) -> dict[str, Any]:
     ]
 
     # The verdict can be GODEL_MACHINE only when G2, G3, G5, G7 are PROVEN and
-    # G8 clears a published coverage threshold. None hold today.
+    # PROOF coverage (not surrogate) clears the threshold. G3/G5/G7 need the
+    # kernel, so this stays NOT_YET — but G2/G6 can now legitimately read PROVEN.
     gate = {p["id"]: p["verdict"] for p in predicates}
     is_machine = (
-        gate["G2"] == PROVEN and gate["G3"] == PROVEN
-        and gate["G5"] == PROVEN and gate["G7"] == PROVEN
+        gate.get("G2") == PROVEN and gate.get("G3") == PROVEN
+        and gate.get("G5") == PROVEN and gate.get("G7") == PROVEN
         and proof_coverage >= 0.5
     )
+    proven = sum(1 for v in gate.values() if v == PROVEN)
 
     return {
-        "phase": 0,
+        "phase": 1,
         "verdict": "GODEL_MACHINE" if is_machine else "NOT_YET_A_GODEL_MACHINE",
         "proof_coverage": proof_coverage,
+        "surrogate_coverage": surrogate_cov,
+        "predicates_proven": proven,
         "honest_summary": (
-            "Self-modifying and self-referential. Proof layer absent — "
-            "coherence-judged, not proof-gated. Climbing."
+            "Self-modifying and self-referential. Phase 1: gate-soundness and "
+            "determinism are now actively checked (surrogate gating live); proof "
+            "layer still absent — surrogate-gated, not proof-gated. Climbing."
         ),
-        "constraint": "CPU eval on 2-core/8GB VPS; heavy proofs would be "
-                      "sampled off-peak (see docs/GODEL_EVAL_BLUEPRINT.md §3).",
+        "constraint": "CPU eval on 2-core/8GB VPS; checking is on-box, proof "
+                      "search would be sampled off-peak (docs/GODEL_EVAL_BLUEPRINT.md §3).",
         "predicates": predicates,
         "telemetry": {
             "godel_choices_sampled": total,
             "with_coherence_score": n_coherence,
             "mean_coherence": mean_coherence,
             "with_proof": n_proof,
+            "surrogate_coverage": surrogate_cov,
         },
         "doc": "docs/GODEL_EVAL_BLUEPRINT.md",
     }
