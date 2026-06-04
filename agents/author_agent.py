@@ -42,6 +42,10 @@ JOURNAL_PATH = PROJECT_ROOT / "docs" / "IMPROVEMENT_JOURNAL.md"
 MILESTONES_PATH = PROJECT_ROOT / "docs" / "MILESTONES.md"
 MILESTONE_DIR = PUBLICATIONS_DIR / "milestones"
 MILESTONE_LOG = PROJECT_ROOT / "data" / "milestones" / "milestone_log.jsonl"
+# Auto-maintained documentation index — AuthorAgent regenerates this on every
+# milestone so the docs catalogue stays current without human upkeep.
+DOCS_DIR = PROJECT_ROOT / "docs"
+DOC_INDEX_PATH = DOCS_DIR / "DOC_INDEX.md"
 # Worthiness threshold — below this a commit batch is journaled but not published.
 MILESTONE_THRESHOLD = float(os.environ.get("MINDX_MILESTONE_THRESHOLD", "0.60"))
 
@@ -503,7 +507,80 @@ class AuthorAgent:
                              f"- {len(new)} commit(s); see docs/MILESTONES.md\n")
         except Exception:
             pass
+
+        # From now on, mindX keeps its own documentation catalogue current:
+        # every recognized milestone refreshes docs/DOC_INDEX.md.
+        try:
+            self.update_docs_index()
+        except Exception:
+            pass
         return len(new)
+
+    @staticmethod
+    def _doc_title_and_desc(path: Path) -> "tuple[str, str]":
+        """First H1 (title) + first prose line (description) from a markdown doc."""
+        title, desc = path.stem, ""
+        try:
+            for ln in path.read_text(encoding="utf-8").splitlines():
+                s = ln.strip()
+                if not s:
+                    continue
+                if s.startswith("# ") and title == path.stem:
+                    title = s.lstrip("# ").strip()
+                    continue
+                if not desc and not s.startswith(("#", ">", "|", "-", "*", "`", "<", "!")):
+                    desc = s[:160]
+                if title != path.stem and desc:
+                    break
+        except Exception:
+            pass
+        return title, desc
+
+    def update_docs_index(self) -> int:
+        """Regenerate docs/DOC_INDEX.md from the docs/ tree. Idempotent;
+        AuthorAgent owns this file and refreshes it on every milestone so the
+        documentation catalogue stays current without human upkeep. Returns the
+        number of docs indexed. Defensive — never raises."""
+        try:
+            DOCS_DIR.mkdir(parents=True, exist_ok=True)
+            docs = sorted(DOCS_DIR.glob("*.md"),
+                          key=lambda p: p.name.lower())
+            now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+            lines = [
+                "# Documentation Index",
+                "",
+                "> Auto-maintained by [AuthorAgent](AUTHOR_AGENT.md). Regenerated on "
+                "every recognized milestone (`github.awareness`). Do not edit by "
+                "hand — changes are overwritten. The curated hub is [NAV.md](NAV.md).",
+                "",
+                f"_Last regenerated: {now} · {len(docs)} top-level documents._",
+                "",
+                "| document | title | updated |",
+                "|----------|-------|---------|",
+            ]
+            for p in docs:
+                if p.name == DOC_INDEX_PATH.name:
+                    continue
+                title, _desc = self._doc_title_and_desc(p)
+                try:
+                    mtime = datetime.fromtimestamp(
+                        p.stat().st_mtime, tz=timezone.utc).strftime("%Y-%m-%d")
+                except Exception:
+                    mtime = "—"
+                safe_title = title.replace("|", "/")[:90]
+                lines.append(f"| [{p.name}]({p.name}) | {safe_title} | {mtime} |")
+            # Note the major subtrees without enumerating their many files.
+            subdirs = [d.name for d in sorted(DOCS_DIR.iterdir())
+                       if d.is_dir() and not d.name.startswith(".")]
+            if subdirs:
+                lines += ["", "**Subtrees:** " + ", ".join(f"`{s}/`" for s in subdirs)
+                          + " (browse directly; lunar editions & dailies live under "
+                            "`publications/`)."]
+            DOC_INDEX_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            return len([p for p in docs if p.name != DOC_INDEX_PATH.name])
+        except Exception as e:  # pragma: no cover - defensive
+            logger.warning(f"AuthorAgent.update_docs_index failed: {e}")
+            return 0
 
     def _compose_milestone_article(
         self, payload: Dict[str, Any]
@@ -590,8 +667,9 @@ class AuthorAgent:
             return {"ok": True, "new_commits": 0, "worthy": False,
                     "note": "no non-routine commits"}
         decision = self.assess_milestone(commits)
-        journaled = self.journal_milestone(commits, decision)
+        journaled = self.journal_milestone(commits, decision)   # also refreshes DOC_INDEX
         result = {"ok": True, "new_commits": len(commits), "journaled": journaled,
+                  "docs_indexed": self.update_docs_index(),
                   "decision": decision,
                   "trigger_id": "milestone:" + commits[-1].sha[:12]}
         if publish and decision.get("worthy"):

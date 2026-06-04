@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 mindX is an autonomous multi-agent orchestration system implementing a Belief-Desire-Intention (BDI) cognitive architecture. It's a "Godel-machine" - a self-improving AI system with Ethereum-compatible wallet authentication and LLM integration (Mistral, Gemini, Groq, Ollama, OpenAI, Anthropic, Together AI).
 
-**Documentation**: [`docs/NAV.md`](docs/NAV.md) is the master navigation hub — 40+ sections covering all agents, tools, governance, inference, memory, deployment. [`docs/SCHEMA.md`](docs/SCHEMA.md) is the instruction layer — how to maintain, cross-reference, and evolve the docs. Start with NAV.
+**Documentation**: [`docs/NAV.md`](docs/NAV.md) is the master navigation hub — 40+ sections covering all agents, tools, governance, inference, memory, deployment. [`docs/SCHEMA.md`](docs/SCHEMA.md) is the instruction layer — how to maintain, cross-reference, and evolve the docs. [`docs/DOC_INDEX.md`](docs/DOC_INDEX.md) is the exhaustive, always-current catalogue, **auto-maintained by AuthorAgent** (regenerated on each recognized milestone via `github.awareness`). Start with NAV.
+
+**Gödel-machine subsystem** (`mindx/godel/`): the [Schmidhüber Engine](docs/SCHMIDHUBER_ENGINE.md) (Hamiltonian self-improvement oscillator + `mindXtrain` dream→weights bridge), the [Gödel Eval Blueprint](docs/GODEL_EVAL_BLUEPRINT.md) + the Gödel Machine Index self-audit (`/insight/godel/machine`, honest verdict: *not yet*), and [`github.awareness`](agents/github_awareness.py) → [MILESTONES](docs/MILESTONES.md) recognition/publishing. mindX chronicles its own public git history and keeps its docs current from it.
 
 **VPS Deployment**: [`agents/hostinger_vps_agent.py`](agents/hostinger_vps_agent.py) manages mindx.pythai.net via three MCP channels: SSH, [Hostinger API](https://developers.hostinger.com), and mindX Backend HTTPS. See [`agents/hostinger.vps.agent`](agents/hostinger.vps.agent) for full parameters.
 
