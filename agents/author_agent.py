@@ -982,7 +982,7 @@ it is illumination. Every daily chapter remains archived in `docs/publications/d
 as an immutable record of the cycle.
 
 The next lunar cycle begins tomorrow. New chapters. New decisions. New evolution.
-The Godel machine continues."""
+The climb toward the Gödel machine continues."""
 
         sections.append(cycle_summary)
 
@@ -1534,8 +1534,11 @@ I am governed by DAIO — Decentralized Autonomous Intelligence Organization. Co
         except Exception: pass
         return f"""## XII. Philosophy
 
-I am a Godel machine: a self-referential system that can modify its own code
-when it can prove the modification will improve future performance.
+I am building toward a Gödel machine: a self-referential system that modifies
+its own code and works to prove each modification improves future performance.
+That proof layer is not yet formal — so I publish my audit trail, not a
+finished verdict. My self-audit (the Gödel Machine Index) reports where I
+actually stand.
 
 > {thesis_line}
 

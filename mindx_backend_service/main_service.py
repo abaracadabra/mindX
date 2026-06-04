@@ -3490,6 +3490,26 @@ async def insight_godel_recent(request: Request, limit: int = 50):
         return {"events": [], "count": 0, "error": str(e)}
 
 
+@app.get("/insight/godel/machine", tags=["insight"])
+@_insight_safe
+async def insight_godel_machine(request: Request):
+    """The Gödel Machine Index (GMI) — mindX's honest self-audit.
+
+    An eight-predicate scorecard (G1–G8) of whether mindX is or is not a Gödel
+    machine, per docs/GODEL_EVAL_BLUEPRINT.md. Reports what is actually measured
+    (rationale coherence) versus what a Gödel machine requires (a machine-checked
+    proof of utility increase). Today reads NOT_YET_A_GODEL_MACHINE, coverage 0%.
+    Read-only; computed from data/logs/godel_choices.jsonl.
+    """
+    try:
+        from mindx.godel.eval import compute_gmi
+        gmi = compute_gmi()
+    except Exception as e:
+        gmi = {"verdict": "UNKNOWN", "error": str(e),
+               "honest_summary": "GMI computation unavailable."}
+    return _maybe_h_text(request, gmi, route_path="/insight/godel/machine")
+
+
 @app.get("/insight/model_selector/recent", tags=["insight"])
 @_insight_safe
 async def insight_model_selector_recent(request: Request, limit: int = 50):
