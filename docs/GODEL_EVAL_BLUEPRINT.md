@@ -1,7 +1,7 @@
 # GÖDEL EVAL BLUEPRINT
 ### The evaluation that proves or disproves mindX as a Gödel machine
 
-**Status:** Phase 1 live — G2 (source-manifest↔commit ledger), G6 (determinism), and surrogate coverage are actively checked (`mindx/godel/eval/{ledger,surrogate,gmi}.py`); G3/G4/G5/G7 await the proof kernel (Phase 2). Verdict honestly remains `NOT_YET_A_GODEL_MACHINE`.
+**Status:** Phase 2 live — the trusted proof kernel exists (`mindx/godel/kernel/`): a total, deterministic checker over QF linear-rational conjunctions, **fuzz-verified (G7) and sound on its conformance suite (G3)**. `self_improve_agent` now emits a kernel-checked acceptance certificate at every accepted self-modification, so G8 registers `coverage:proof` (climbs from 0 as real changes are gated). Phase 1 (G2 ledger, G6 determinism, surrogates) remains live. G4/G5 await Phase 3. Verdict honestly remains `NOT_YET_A_GODEL_MACHINE` (G5 anti-wireheading unmet; proof coverage of real changes still climbing).
 **Constraint:** must run on the live VPS — 2 vCPU, 7.8 GB RAM (`mindx.pythai.net`, Hostinger KVM 2, AMD EPYC 7543P). See [`DEPLOYMENT_MINDX_PYTHAI_NET.md`](DEPLOYMENT_MINDX_PYTHAI_NET.md).
 **Related:** [`Blueprint.md`](Blueprint.md) · [`SCHMIDHUBER_ENGINE.md`](SCHMIDHUBER_ENGINE.md) · [`ATARAXIA.md`](ATARAXIA.md) · [`agents/eval/README.md`](../agents/eval/README.md) · [`NAV.md`](NAV.md)
 
@@ -212,9 +212,18 @@ non-authoritative signal feeding G-coherence, never the Gödel-machine verdict.
   and `coverage:surrogate` in G8. Changes can now be *disproven* cheaply on CPU;
   G2/G6 read PROVEN-so-far when they hold, FALSIFIED with evidence when they
   don't. Verdict still honestly `NOT_YET` (proof layer absent).
-- **Phase 2 — Real proofs.** Land the kernel checker (`mindx/godel/kernel/`,
-  per the Gödel blueprint). G3/G7 become testable; G8 starts registering
-  `coverage:proof`. Proof *search* offloads to Cloud / the disrupting head.
+- **Phase 2 — Real proofs. ✓ SHIPPED.** The trusted kernel (`mindx/godel/kernel/`):
+  `proof_ir.py` (serialized claims/obligations/certificates), `checker.py` (a
+  total, deterministic checker over QF linear-rational conjunctions — hard
+  budgets, no recursion, exact `Fraction` arithmetic, conformance suite + fuzz),
+  `prover.py` (builds checkable certificates; records only those the checker
+  accepts). G7 reads PROVEN (fuzz-clean, conformance-sound); G3 reads PROVEN
+  (checker sound + every recorded production cert re-verifies). `self_improve_agent`
+  emits an acceptance certificate at each accepted change → G8 registers
+  `coverage:proof`. The honesty boundary: a verified cert proves the claim
+  *follows from its premises* (measured rationals), not that the premises
+  reflect reality — that is Phase 3. Proof *search* offload to Cloud / the
+  disrupting head remains future.
 - **Phase 3 — Reflective reach.** Admit `prover/`/`utility.py`/eval into the
   mutable set under the `Checkable(K')` lock; G4/G5 become testable. Only here
   can the overall verdict legitimately flip toward `GODEL_MACHINE`.
