@@ -12,7 +12,7 @@ turns dreams into model weights.
 
 **Code:** [`mindx/godel/schmidhuber_engine.py`](../mindx/godel/schmidhuber_engine.py),
 [`mindx/godel/mindxtrain/`](../mindx/godel/mindxtrain/)
-**Related:** [`ATARAXIA.md`](ATARAXIA.md) · [`GODEL_MACHINE_BLUEPRINT.md`](GODEL_MACHINE_BLUEPRINT.md) · [`Blueprint.md`](Blueprint.md) · [`NAV.md`](NAV.md)
+**Related:** [`ATARAXIA.md`](ATARAXIA.md) · [`Blueprint.md`](Blueprint.md) · [`GODEL_EVAL_BLUEPRINT.md`](GODEL_EVAL_BLUEPRINT.md) · [`NAV.md`](NAV.md)
 
 ---
 
@@ -170,7 +170,7 @@ Gödel-machine rule that nothing reaches the live mind without a verdict.
 ## 6. How it fits the Gödel machine
 
 The engine is the **dynamics layer** that animates the four pillars of
-[`GODEL_MACHINE_BLUEPRINT.md`](GODEL_MACHINE_BLUEPRINT.md):
+[`Blueprint.md`](Blueprint.md):
 
 | Pillar | Role in the pendulum |
 |---|---|
