@@ -1,8 +1,23 @@
 # mindX Knowledge Catalogue — Subsystem Specification
 
-> **Status (2026-04-26):** Phase 0 instrumentation is implemented (`agents/catalogue/`, mirror calls in `memory_agent.py`, `machine_dreaming.py`, `daio/governance/boardroom.py`). Phases 1+ below are the **design contract** — not yet built.
+> **Status (2026-04-26):** Phase 0 instrumentation is implemented (`agents/catalogue/`, mirror calls in `memory_agent.py`, `machine_dreaming.py`, `daio/governance/boardroom.py`).
 >
-> See [`agents/catalogue/__init__.py`](../agents/catalogue/__init__.py) for the live Phase 0 implementation, and the implementation plan at `~/.claude/plans/purring-humming-stonebraker.md`.
+> **Status (2026-06-04): Phase 1 (read-model) implemented.** The catalogue event stream is now folded into a queryable, semantically-searchable Postgres read-model — built pragmatically on the **existing** pgvector + Ollama embedding pipeline, with **zero new container services** (the named graph/vector/search stores below are deferred — see *Phase-1 deferrals*). What shipped:
+>
+> - **Core model** — [`agents/catalogue/model.py`](../agents/catalogue/model.py): `Entry`/`EntryLink` Pydantic, `mint_urn()` (the idempotency key), `EVENTKIND_TO_ENTRYKIND` (all 38 EventKinds mapped), and per-kind extractors (bespoke for the 14 active kinds, `derive_generic` fallback for the dormant 24).
+> - **Projector** — [`agents/catalogue/projector.py`](../agents/catalogue/projector.py): `CatalogueProjector` folds events → `catalogue_entries`. Idempotent (URN upsert merges `source_event_ids`, keeps newest `ts`), watermark-resumable (byte-offset in `catalogue_state`), embedding-decoupled (rows written `embedding=NULL` first; embedded via `generate_embedding(interactive=False)` under the ResourceGovernor gate), advisory-locked against backfill/live-loop races.
+> - **Schema** — [`memory_pgvector.init_catalogue_schema()`](../agents/memory_pgvector.py): one flat `catalogue_entries` (URN PK + JSONB `payload` aspects + inline JSONB `links` + `VECTOR(1024)` + `TSVECTOR`) + `catalogue_state`. The six-resource model is honored *conceptually* — aspects-as-JSONB, EntryLinks inline — not as separate stores.
+> - **Hybrid search** — `catalogue_hybrid_search()`: pgvector cosine + tsvector `ts_rank_cd`, RRF-fused (k=60), graceful degradation (embeddings down → FTS-only). Cross-encoder rerank deferred (flagged `"rerank":"deferred"`).
+> - **Query API** (auto-public via the `/insight/` prefix, `?h=true` plain-text): `GET /insight/catalogue/{recent,search,entry,stats,kinds}`.
+> - **Backfill** — [`scripts/catalogue_backfill.py`](../scripts/catalogue_backfill.py): one-shot replay (`--include-archives`), structure-first (`--no-embed`) then incremental embed (live loop or `--embed-only`).
+> - **Live wiring** — `_periodic_catalogue_projector()` in `main_service.py` (5-min incremental + embed sweep; `MINDX_CATALOGUE_PROJECT_INTERVAL_S=0` disables) + boot `init_catalogue_schema()`.
+> - **Tests** — `tests/test_catalogue_projector.py` (URN stability, mapping totality, extractor coverage, dry-run idempotency; DB tests pg-gated).
+>
+> Phase 1 collapses the design's `proj_entries + proj_search + proj_vector` into one Postgres-backed projector. The non-violation contract holds: every entry carries `source_event_ids` back into the log; drop the read-model tables and replay to rebuild.
+>
+> **Phase-1 deferrals (Phase 2–3):** dedicated graph DB (Kuzu / Apache AGE), separate vector store (Qdrant) + search engine (Meilisearch), NATS JetStream substrate, OpenLineage/PROV-AGENT lineage projector, MCP skill-registry server (+ `skill.invoke/result` activation), cross-encoder rerank leg, federation (leaf-nodes / pycrdt / IPFS snapshots), `openbdk_bridge`, policy/TTL projector. These need infrastructure beyond a single 2-core/8GB VPS; they are intentionally not built here.
+>
+> See [`agents/catalogue/__init__.py`](../agents/catalogue/__init__.py) for the package, and the Phase-1 plan at `~/.claude/plans/cozy-wibbling-taco.md` (original Phase-0 plan: `~/.claude/plans/purring-humming-stonebraker.md`).
 
 ---
 

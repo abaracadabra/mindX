@@ -5622,6 +5622,70 @@ def _maybe_h_text(request: Request, data, *, route_path: str = ""):
     return PlainTextResponse(rendered, media_type="text/plain; charset=utf-8")
 
 
+# ── Knowledge Catalogue (Phase 1 read-model) endpoints ──
+# CQRS projection over data/logs/catalogue_events.jsonl; never the source of
+# truth. Public (read-only) via the /insight/ prefix. docs/KNOWLEDGE_CATALOGUE.md.
+
+@app.get("/insight/catalogue/recent", tags=["insight"],
+         summary="Recent catalogue entries (read-model tail)")
+@_insight_safe
+async def insight_catalogue_recent(request: Request, limit: int = 50,
+                                   kind: Optional[str] = None):
+    from agents import memory_pgvector
+    entries = await memory_pgvector.catalogue_recent(limit=limit, kind=kind)
+    return _maybe_h_text(request, {"entries": entries, "count": len(entries),
+                                   "kind_filter": kind or "all", "source": "catalogue_entries"},
+                         route_path="/insight/catalogue/recent")
+
+
+@app.get("/insight/catalogue/search", tags=["insight"],
+         summary="Hybrid search over the catalogue (dense + BM25, RRF-fused)")
+@_insight_safe
+async def insight_catalogue_search(request: Request, q: str, k: int = 10,
+                                   kind: Optional[str] = None):
+    from agents import memory_pgvector
+    kinds = [kind] if kind else None
+    res = await memory_pgvector.catalogue_hybrid_search(q, kinds=kinds, top_k=min(k, 50))
+    return _maybe_h_text(request, {"query": q, "results": res.get("results", []),
+                                   "count": len(res.get("results", [])),
+                                   "legs": res.get("legs"), "rerank": res.get("rerank", "deferred")},
+                         route_path="/insight/catalogue/search")
+
+
+@app.get("/insight/catalogue/entry", tags=["insight"],
+         summary="Full catalogue entry by URN (with links + source events)")
+@_insight_safe
+async def insight_catalogue_entry(request: Request, urn: str):
+    from agents import memory_pgvector
+    entry = await memory_pgvector.catalogue_entry_by_urn(urn)
+    if not entry:
+        return _maybe_h_text(request, {"found": False, "urn": urn},
+                             route_path="/insight/catalogue/entry")
+    entry["found"] = True
+    return _maybe_h_text(request, entry, route_path="/insight/catalogue/entry")
+
+
+@app.get("/insight/catalogue/stats", tags=["insight"],
+         summary="Catalogue read-model stats (counts by kind + projector watermark)")
+@_insight_safe
+async def insight_catalogue_stats(request: Request):
+    from agents import memory_pgvector
+    stats = await memory_pgvector.catalogue_stats()
+    return _maybe_h_text(request, stats, route_path="/insight/catalogue/stats")
+
+
+@app.get("/insight/catalogue/kinds", tags=["insight"],
+         summary="Catalogue entry/event kind registry + mapping")
+@_insight_safe
+async def insight_catalogue_kinds(request: Request):
+    from agents.catalogue.model import ENTRY_KINDS, EVENTKIND_TO_ENTRYKIND
+    from agents.catalogue.events import EVENT_KINDS
+    data = {"entry_kinds": list(ENTRY_KINDS), "event_kinds": list(EVENT_KINDS),
+            "mapping": dict(EVENTKIND_TO_ENTRYKIND),
+            "active_event_kinds": sorted(set(EVENTKIND_TO_ENTRYKIND) & set(EVENT_KINDS))}
+    return _maybe_h_text(request, data, route_path="/insight/catalogue/kinds")
+
+
 # ── Storage / IPFS offload endpoints ──
 # Plan: ~/.claude/plans/whispering-floating-merkle.md
 # All routes auth-gated by the access-gate middleware (not in _PUBLIC_EXACT).
@@ -7497,6 +7561,15 @@ async def startup_event():
         except Exception as schema_e:
             logger.warning(f"init_offload_schema failed: {schema_e}")
 
+        # Knowledge Catalogue Phase 1 read-model schema (idempotent).
+        # docs/KNOWLEDGE_CATALOGUE.md — catalogue_entries + catalogue_state.
+        try:
+            from agents import memory_pgvector
+            ok = await memory_pgvector.init_catalogue_schema()
+            logger.info(f"Catalogue schema init: {'ok' if ok else 'skipped (pg unavailable)'}")
+        except Exception as schema_e:
+            logger.warning(f"init_catalogue_schema failed: {schema_e}")
+
         # Run startup_agent.initialize_system() as a background task so it can
         # coordinate the full startup sequence and notify mindXagent (Ollama models, terminal log, etc.)
         try:
@@ -7755,6 +7828,35 @@ async def startup_event():
             except Exception as ml_err:
                 logger.warning(f"MastermindAgent autonomous loop failed to start: {ml_err}")
 
+        # Knowledge Catalogue projector — folds the catalogue event stream into
+        # the Postgres read-model incrementally (cheap: resumes from a byte-offset
+        # watermark each tick). Also fills embeddings deferred by --no-embed
+        # backfills, under the ResourceGovernor gate. Disable with
+        # MINDX_CATALOGUE_PROJECT_INTERVAL_S=0.
+        async def _periodic_catalogue_projector():
+            interval = int(os.getenv("MINDX_CATALOGUE_PROJECT_INTERVAL_S", "300"))
+            if interval <= 0:
+                logger.info("Catalogue projector loop disabled (interval<=0)")
+                return
+            from agents.catalogue.projector import CatalogueProjector
+            proj = CatalogueProjector()
+            await asyncio.sleep(45)  # let boot settle before first tick
+            while True:
+                try:
+                    run = await proj.run(max_events=2000, embed=True)
+                    if run.entries_upserted or run.embeds_done:
+                        logger.info(
+                            "catalogue projector: +%d entries, %d embedded, %d deferred (offset=%d)",
+                            run.entries_upserted, run.embeds_done, run.embeds_deferred,
+                            run.final_offset)
+                    # Top up embeddings for older rows left NULL by a --no-embed backfill.
+                    swept = await proj.embed_sweep(limit=120)
+                    if swept:
+                        logger.info("catalogue projector: embed sweep +%d", swept)
+                except Exception:
+                    logger.warning("catalogue projector loop error", exc_info=True)
+                await asyncio.sleep(interval)
+
         asyncio.create_task(_auto_start_autonomous())
         asyncio.create_task(_periodic_memory_promotion())
         asyncio.create_task(_periodic_dream_cycle())
@@ -7762,6 +7864,7 @@ async def startup_event():
         asyncio.create_task(_periodic_author())
         asyncio.create_task(_periodic_embedding())
         asyncio.create_task(_periodic_health_audit())
+        asyncio.create_task(_periodic_catalogue_projector())
         asyncio.create_task(_start_mastermind_loop())
 
         # Milestone recognizer — coordinator subscriber that classifies

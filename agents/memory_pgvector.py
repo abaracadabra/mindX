@@ -1062,3 +1062,355 @@ async def health_check() -> Dict[str, Any]:
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+# ═══════════════════════════════════════════════════════════════
+#  KNOWLEDGE CATALOGUE — Phase 1 read-model (CQRS projection)
+#  Projection over data/logs/catalogue_events.jsonl. NEVER the source of
+#  truth; rebuildable by replaying the log. See docs/KNOWLEDGE_CATALOGUE.md
+#  and agents/catalogue/{model,projector}.py.
+# ═══════════════════════════════════════════════════════════════
+
+# Stable 64-bit advisory-lock key so the live projector loop and a manually-run
+# backfill cannot interleave writes to catalogue_state.
+_CATALOGUE_LOCK_KEY = 0x6D696E6478636174  # "mindxcat"
+
+
+async def init_catalogue_schema() -> bool:
+    """Create the catalogue read-model tables. Idempotent — safe every boot.
+
+    One flat ``catalogue_entries`` table (DataHub entity-aspect collapse,
+    simplified): aspects live in JSONB ``payload``, EntryLinks inline in
+    ``links``, BM25 leg via ``fts`` tsvector, dense leg via ``embedding``
+    (VECTOR(1024), mxbai-embed-large), NULL until embedded. No ivfflat index
+    at Phase-1 scale (<100k rows) — cosine seq-scan is sub-100ms.
+    """
+    pool = await get_pool()
+    if not pool:
+        return False
+    try:
+        async with pool.acquire() as conn:
+            await conn.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+            await conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS catalogue_entries (
+                    urn              TEXT PRIMARY KEY,
+                    kind             TEXT NOT NULL,
+                    actor            TEXT,
+                    actor_wallet     TEXT,
+                    ts               DOUBLE PRECISION NOT NULL DEFAULT 0,
+                    title            TEXT,
+                    text             TEXT,
+                    payload          JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    tags             TEXT[] NOT NULL DEFAULT '{}',
+                    links            JSONB NOT NULL DEFAULT '[]'::jsonb,
+                    source_event_ids TEXT[] NOT NULL DEFAULT '{}',
+                    embedding        VECTOR(1024),
+                    fts              TSVECTOR,
+                    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                );
+                CREATE INDEX IF NOT EXISTS idx_cat_kind  ON catalogue_entries (kind, ts DESC);
+                CREATE INDEX IF NOT EXISTS idx_cat_ts    ON catalogue_entries (ts DESC);
+                CREATE INDEX IF NOT EXISTS idx_cat_actor ON catalogue_entries (actor, ts DESC);
+                CREATE INDEX IF NOT EXISTS idx_cat_tags  ON catalogue_entries USING GIN (tags);
+                CREATE INDEX IF NOT EXISTS idx_cat_fts   ON catalogue_entries USING GIN (fts);
+
+                CREATE TABLE IF NOT EXISTS catalogue_state (
+                    projector       TEXT PRIMARY KEY,
+                    version         TEXT NOT NULL DEFAULT 'v1',
+                    byte_offset     BIGINT NOT NULL DEFAULT 0,
+                    last_event_id   TEXT,
+                    events_seen     BIGINT NOT NULL DEFAULT 0,
+                    entries_written BIGINT NOT NULL DEFAULT 0,
+                    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                );
+                """
+            )
+        logger.info("pgvector: catalogue schema ensured (catalogue_entries + catalogue_state)")
+        return True
+    except Exception as e:
+        logger.warning(f"pgvector init_catalogue_schema failed: {e}")
+        return False
+
+
+async def try_catalogue_lock() -> bool:
+    """Take the catalogue projector advisory lock (non-blocking). Returns True
+    if acquired. Hold the SAME connection for the run; release with the pool."""
+    pool = await get_pool()
+    if not pool:
+        return False
+    try:
+        return bool(await pool.fetchval("SELECT pg_try_advisory_lock($1)", _CATALOGUE_LOCK_KEY))
+    except Exception as e:
+        logger.debug(f"try_catalogue_lock failed: {e}")
+        return False
+
+
+async def release_catalogue_lock() -> None:
+    pool = await get_pool()
+    if not pool:
+        return
+    try:
+        await pool.fetchval("SELECT pg_advisory_unlock($1)", _CATALOGUE_LOCK_KEY)
+    except Exception:
+        pass
+
+
+async def get_catalogue_watermark(projector: str = "entries") -> Dict[str, Any]:
+    """Return the projector's resume state, or defaults if unseen."""
+    pool = await get_pool()
+    if not pool:
+        return {}
+    try:
+        row = await pool.fetchrow(
+            "SELECT projector, version, byte_offset, last_event_id, events_seen, entries_written "
+            "FROM catalogue_state WHERE projector = $1", projector,
+        )
+        if not row:
+            return {"projector": projector, "version": None, "byte_offset": 0,
+                    "last_event_id": None, "events_seen": 0, "entries_written": 0}
+        return dict(row)
+    except Exception as e:
+        logger.debug(f"get_catalogue_watermark failed: {e}")
+        return {}
+
+
+async def set_catalogue_watermark(projector: str, version: str, byte_offset: int,
+                                  last_event_id: Optional[str], events_seen: int,
+                                  entries_written: int) -> bool:
+    pool = await get_pool()
+    if not pool:
+        return False
+    try:
+        await pool.execute(
+            """INSERT INTO catalogue_state
+                   (projector, version, byte_offset, last_event_id, events_seen, entries_written, updated_at)
+               VALUES ($1,$2,$3,$4,$5,$6, NOW())
+               ON CONFLICT (projector) DO UPDATE SET
+                   version=$2, byte_offset=$3, last_event_id=$4,
+                   events_seen=$5, entries_written=$6, updated_at=NOW()""",
+            projector, version, int(byte_offset), last_event_id,
+            int(events_seen), int(entries_written),
+        )
+        return True
+    except Exception as e:
+        logger.warning(f"set_catalogue_watermark failed: {e}")
+        return False
+
+
+async def upsert_catalogue_entry(
+    *, urn: str, kind: str, actor: Optional[str], actor_wallet: Optional[str],
+    ts: float, title: Optional[str], text: Optional[str], payload: Dict[str, Any],
+    tags: List[str], links: List[Dict[str, Any]], source_event_id: str,
+    embedding: Optional[List[float]] = None,
+) -> bool:
+    """Idempotent upsert keyed by URN. Re-projecting the same source record is a
+    no-op merge (source_event_ids deduped, newest ts kept). A NULL embedding on
+    re-projection does NOT wipe an existing one (COALESCE)."""
+    pool = await get_pool()
+    if not pool:
+        return False
+    fts_text = f"{title or ''} {text or ''}".strip()[:8000]
+    emb_str = str(embedding) if embedding else None
+    try:
+        await pool.execute(
+            """
+            INSERT INTO catalogue_entries
+                (urn, kind, actor, actor_wallet, ts, title, text, payload, tags, links,
+                 source_event_ids, embedding, fts, created_at, updated_at)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10::jsonb,
+                    ARRAY[$11]::text[], $12::vector, to_tsvector('english',$13), NOW(), NOW())
+            ON CONFLICT (urn) DO UPDATE SET
+                kind  = EXCLUDED.kind,
+                actor = COALESCE(EXCLUDED.actor, catalogue_entries.actor),
+                actor_wallet = COALESCE(EXCLUDED.actor_wallet, catalogue_entries.actor_wallet),
+                ts    = GREATEST(catalogue_entries.ts, EXCLUDED.ts),
+                title = COALESCE(EXCLUDED.title, catalogue_entries.title),
+                text  = COALESCE(EXCLUDED.text, catalogue_entries.text),
+                payload = EXCLUDED.payload,
+                tags  = EXCLUDED.tags,
+                links = EXCLUDED.links,
+                source_event_ids = (
+                    SELECT array_agg(DISTINCT e)
+                    FROM unnest(catalogue_entries.source_event_ids || EXCLUDED.source_event_ids) AS e
+                ),
+                embedding = COALESCE(EXCLUDED.embedding, catalogue_entries.embedding),
+                fts   = EXCLUDED.fts,
+                updated_at = NOW()
+            """,
+            urn, kind, actor, actor_wallet, float(ts or 0.0), title, text,
+            json.dumps(payload, default=str), list(tags or []),
+            json.dumps(links or [], default=str), source_event_id, emb_str, fts_text,
+        )
+        return True
+    except Exception as e:
+        logger.warning(f"upsert_catalogue_entry({urn}) failed: {e}")
+        return False
+
+
+async def embed_catalogue_entry(urn: str, embedding: List[float]) -> bool:
+    """Attach an embedding to an existing catalogue entry (deferred-embed path)."""
+    pool = await get_pool()
+    if not pool or not embedding:
+        return False
+    try:
+        await pool.execute(
+            "UPDATE catalogue_entries SET embedding=$1::vector, updated_at=NOW() WHERE urn=$2",
+            str(embedding), urn,
+        )
+        return True
+    except Exception as e:
+        logger.debug(f"embed_catalogue_entry failed: {e}")
+        return False
+
+
+async def catalogue_unembedded(limit: int = 200) -> List[Dict[str, Any]]:
+    """Text-bearing entries still missing an embedding (for the live embed sweep)."""
+    pool = await get_pool()
+    if not pool:
+        return []
+    try:
+        rows = await pool.fetch(
+            "SELECT urn, text FROM catalogue_entries "
+            "WHERE embedding IS NULL AND text IS NOT NULL AND length(text) > 0 "
+            "ORDER BY ts DESC LIMIT $1", limit,
+        )
+        return [{"urn": r["urn"], "text": r["text"]} for r in rows]
+    except Exception as e:
+        logger.debug(f"catalogue_unembedded failed: {e}")
+        return []
+
+
+async def catalogue_recent(limit: int = 50, kind: Optional[str] = None) -> List[Dict[str, Any]]:
+    pool = await get_pool()
+    if not pool:
+        return []
+    try:
+        if kind:
+            rows = await pool.fetch(
+                "SELECT urn, kind, actor, ts, title, tags FROM catalogue_entries "
+                "WHERE kind=$1 ORDER BY ts DESC LIMIT $2", kind, min(limit, 500))
+        else:
+            rows = await pool.fetch(
+                "SELECT urn, kind, actor, ts, title, tags FROM catalogue_entries "
+                "ORDER BY ts DESC LIMIT $1", min(limit, 500))
+        return [{"urn": r["urn"], "kind": r["kind"], "actor": r["actor"],
+                 "ts": r["ts"], "title": r["title"], "tags": list(r["tags"] or [])}
+                for r in rows]
+    except Exception as e:
+        logger.debug(f"catalogue_recent failed: {e}")
+        return []
+
+
+async def catalogue_entry_by_urn(urn: str) -> Optional[Dict[str, Any]]:
+    pool = await get_pool()
+    if not pool:
+        return None
+    try:
+        r = await pool.fetchrow(
+            "SELECT urn, kind, actor, actor_wallet, ts, title, text, payload, tags, links, "
+            "source_event_ids, (embedding IS NOT NULL) AS embedded "
+            "FROM catalogue_entries WHERE urn=$1", urn)
+        if not r:
+            return None
+        def _j(v):
+            return json.loads(v) if isinstance(v, str) else v
+        return {"urn": r["urn"], "kind": r["kind"], "actor": r["actor"],
+                "actor_wallet": r["actor_wallet"], "ts": r["ts"], "title": r["title"],
+                "text": r["text"], "payload": _j(r["payload"]), "tags": list(r["tags"] or []),
+                "links": _j(r["links"]), "source_event_ids": list(r["source_event_ids"] or []),
+                "embedded": r["embedded"]}
+    except Exception as e:
+        logger.debug(f"catalogue_entry_by_urn failed: {e}")
+        return None
+
+
+async def catalogue_stats() -> Dict[str, Any]:
+    pool = await get_pool()
+    if not pool:
+        return {"status": "no_pool"}
+    try:
+        total = await pool.fetchval("SELECT COUNT(*) FROM catalogue_entries")
+        embedded = await pool.fetchval("SELECT COUNT(*) FROM catalogue_entries WHERE embedding IS NOT NULL")
+        by_kind_rows = await pool.fetch(
+            "SELECT kind, COUNT(*) AS n FROM catalogue_entries GROUP BY kind ORDER BY n DESC")
+        wm = await get_catalogue_watermark("entries")
+        return {"total": int(total or 0), "embedded": int(embedded or 0),
+                "by_kind": {r["kind"]: int(r["n"]) for r in by_kind_rows},
+                "watermark": {k: wm.get(k) for k in
+                              ("version", "byte_offset", "events_seen", "entries_written")}}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+async def catalogue_hybrid_search(query: str, kinds: Optional[List[str]] = None,
+                                  top_k: int = 10, per_leg: int = 50,
+                                  interactive: bool = True) -> Dict[str, Any]:
+    """Two-leg hybrid (pgvector cosine + tsvector ts_rank), RRF-fused (k=60).
+    Degrades gracefully: embeddings down → FTS-only; FTS empty → dense-only.
+    Cross-encoder rerank deferred."""
+    pool = await get_pool()
+    if not pool:
+        return {"results": [], "legs": {"dense": 0, "bm25": 0}, "rerank": "deferred"}
+    kinds = kinds or None
+    RRF_K = 60
+
+    dense_rows = []
+    emb = await generate_embedding(query, interactive=interactive)
+    if emb:
+        try:
+            dense_rows = await pool.fetch(
+                """SELECT urn, 1 - (embedding <=> $1::vector) AS score
+                   FROM catalogue_entries
+                   WHERE embedding IS NOT NULL AND ($2::text[] IS NULL OR kind = ANY($2))
+                   ORDER BY embedding <=> $1::vector LIMIT $3""",
+                str(emb), kinds, per_leg)
+        except Exception as e:
+            logger.debug(f"catalogue dense leg failed: {e}")
+
+    bm25_rows = []
+    try:
+        bm25_rows = await pool.fetch(
+            """SELECT urn, ts_rank_cd(fts, plainto_tsquery('english',$1)) AS score
+               FROM catalogue_entries
+               WHERE fts @@ plainto_tsquery('english',$1)
+                 AND ($2::text[] IS NULL OR kind = ANY($2))
+               ORDER BY score DESC LIMIT $3""",
+            query, kinds, per_leg)
+    except Exception as e:
+        logger.debug(f"catalogue bm25 leg failed: {e}")
+
+    # Reciprocal Rank Fusion
+    fused: Dict[str, Dict[str, Any]] = {}
+    for rank, r in enumerate(dense_rows):
+        f = fused.setdefault(r["urn"], {"urn": r["urn"], "rrf": 0.0, "dense": None, "bm25": None})
+        f["rrf"] += 1.0 / (RRF_K + rank + 1)
+        f["dense"] = round(float(r["score"]), 4)
+    for rank, r in enumerate(bm25_rows):
+        f = fused.setdefault(r["urn"], {"urn": r["urn"], "rrf": 0.0, "dense": None, "bm25": None})
+        f["rrf"] += 1.0 / (RRF_K + rank + 1)
+        f["bm25"] = round(float(r["score"]), 4)
+
+    ranked = sorted(fused.values(), key=lambda x: x["rrf"], reverse=True)[:top_k]
+    if not ranked:
+        return {"results": [], "legs": {"dense": len(dense_rows), "bm25": len(bm25_rows)},
+                "rerank": "deferred"}
+
+    # Hydrate the winners
+    urns = [x["urn"] for x in ranked]
+    try:
+        meta = await pool.fetch(
+            "SELECT urn, kind, actor, ts, title FROM catalogue_entries WHERE urn = ANY($1)", urns)
+        m = {r["urn"]: r for r in meta}
+    except Exception:
+        m = {}
+    results = []
+    for x in ranked:
+        r = m.get(x["urn"])
+        results.append({"urn": x["urn"], "kind": r["kind"] if r else None,
+                        "actor": r["actor"] if r else None, "ts": r["ts"] if r else None,
+                        "title": r["title"] if r else None,
+                        "score": round(x["rrf"], 5), "dense": x["dense"], "bm25": x["bm25"]})
+    return {"results": results, "legs": {"dense": len(dense_rows), "bm25": len(bm25_rows)},
+            "rerank": "deferred"}

@@ -1402,7 +1402,109 @@ def render_agentic_activity(d: dict) -> str:
     )
 
 
+# ── Knowledge Catalogue (Phase 1 read-model) renderers ──
+
+def render_catalogue_recent(d: dict) -> str:
+    rows = d.get("entries") or []
+    if not rows:
+        return f"(no catalogue entries for kind={d.get('kind_filter','all')})\n"
+    head = f"catalogue · {d.get('count',0)} entries · kind={d.get('kind_filter','all')}\n\n"
+    return head + render_table(
+        rows,
+        [
+            ("when",  "ts",    human_rel_ts),
+            ("kind",  "kind",  None),
+            ("title", "title", lambda v: (v or "")[:54]),
+            ("actor", "actor", lambda v: human_hash(v, 18)),
+            ("tags",  "tags",  lambda v: ",".join(v[:3]) if isinstance(v, list) else ""),
+        ],
+        max_col=58,
+    )
+
+
+def render_catalogue_search(d: dict) -> str:
+    rows = d.get("results") or []
+    legs = d.get("legs") or {}
+    head = (f"query: {d.get('query','')}\n"
+            f"{d.get('count',0)} results · legs dense={legs.get('dense',0)} "
+            f"bm25={legs.get('bm25',0)} · rerank={d.get('rerank','deferred')}\n\n")
+    if not rows:
+        return head + "(no results)\n"
+    return head + render_table(
+        rows,
+        [
+            ("score", "score", lambda v: f"{float(v):.4f}" if v is not None else "—"),
+            ("d",     "dense", lambda v: f"{float(v):.2f}" if v is not None else "·"),
+            ("bm25",  "bm25",  lambda v: f"{float(v):.2f}" if v is not None else "·"),
+            ("kind",  "kind",  None),
+            ("title", "title", lambda v: (v or "")[:50]),
+        ],
+        max_col=54,
+    )
+
+
+def render_catalogue_entry(d: dict) -> str:
+    if not d.get("found", True) or d.get("urn") is None:
+        return f"entry not found: {d.get('urn','?')}\n"
+    out = render_kv(
+        {
+            "urn": d.get("urn"), "kind": d.get("kind"), "actor": d.get("actor"),
+            "when": human_ts_with_rel(d.get("ts")), "embedded": d.get("embedded"),
+            "title": d.get("title"),
+        },
+        {"actor": lambda v: human_hash(v, 30)},
+    )
+    text = (d.get("text") or "").strip()
+    if text:
+        out += "\n\ntext:\n  " + text[:600].replace("\n", "\n  ")
+    links = d.get("links") or []
+    if links:
+        out += "\n\nlinks:\n" + "\n".join(
+            f"  {l.get('type','?')} → {l.get('target_urn','?')}" for l in links[:12])
+    sids = d.get("source_event_ids") or []
+    if sids:
+        out += f"\n\nsource events: {len(sids)} ({', '.join(sids[:3])}…)"
+    return out + "\n"
+
+
+def render_catalogue_stats(d: dict) -> str:
+    if d.get("status") in ("no_pool", "error"):
+        return f"catalogue: {d.get('status')} {d.get('error','')}\n"
+    wm = d.get("watermark") or {}
+    out = render_kv({
+        "total entries": human_count(d.get("total", 0)),
+        "embedded": f"{human_count(d.get('embedded',0))} "
+                    f"({100*d.get('embedded',0)//max(d.get('total',1),1)}%)",
+        "wm offset": human_bytes(wm.get("byte_offset", 0)),
+        "events seen": human_count(wm.get("events_seen", 0)),
+        "version": wm.get("version"),
+    })
+    bk = d.get("by_kind") or {}
+    if bk:
+        out += "\n\nby kind:\n" + render_table(
+            [{"kind": k, "n": n} for k, n in bk.items()],
+            [("kind", "kind", None), ("count", "n", human_count)])
+    return out
+
+
+def render_catalogue_kinds(d: dict) -> str:
+    active = d.get("active_event_kinds") or []
+    mapping = d.get("mapping") or {}
+    out = (f"entry kinds ({len(d.get('entry_kinds',[]))}): "
+           f"{', '.join(d.get('entry_kinds', []))}\n\n"
+           f"event kinds ({len(d.get('event_kinds',[]))}, active {len(active)}):\n\n")
+    return out + render_table(
+        [{"event": k, "entry": mapping.get(k, "?"),
+          "active": "•" if k in active else ""} for k in d.get("event_kinds", [])],
+        [("event_kind", "event", None), ("→ entry", "entry", None), ("active", "active", None)])
+
+
 RENDERERS: dict[str, Callable[[dict], str]] = {
+    "/insight/catalogue/recent":    render_catalogue_recent,
+    "/insight/catalogue/search":    render_catalogue_search,
+    "/insight/catalogue/entry":     render_catalogue_entry,
+    "/insight/catalogue/stats":     render_catalogue_stats,
+    "/insight/catalogue/kinds":     render_catalogue_kinds,
     "/insight/storage/status":      render_storage_status,
     "/insight/storage/recent":      render_storage_recent,
     "/insight/cost/summary":        render_cost_summary,
