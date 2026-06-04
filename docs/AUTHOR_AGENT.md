@@ -359,3 +359,50 @@ activity feed + eval-gate health on one page; refreshes every 30 s.
 | `data/governance/doc_audit.json` | Chapter VIII doc audit output |
 | `tools/core/health_auditor_tool.py` | AuthorAgent staleness check |
 | `mindx_backend_service/main_service.py` | Scheduling, health restart, `/book` endpoint |
+| `agents/github_awareness.py` | Local-git reader; the milestone signal source |
+| `docs/MILESTONES.md` | Milestone chronicle (auto-maintained) |
+| `docs/DOC_INDEX.md` | Exhaustive doc catalogue (auto-maintained) |
+| `data/milestones/milestone_log.jsonl` | Per-commit milestone log |
+
+## Verification (2026-06-04)
+
+The book-writing path is confirmed operational on disk:
+
+- `docs/BOOK_OF_MINDX.md` — current edition present (2026-05-13, chapters I–… in
+  first person).
+- `data/governance/lunar_cycle.json` — records chapters written (Security d14,
+  Cognition d15, Predictions d24, The Network d25), matching `LUNAR_CHAPTERS`.
+- `docs/publications/daily/` — daily chapter snapshots present.
+- `docs/publications/book_of_mindx_*.md` — 7 archived editions.
+- `run_periodic()` is started at backend boot (on-demand publish on startup +
+  daily lunar chapter).
+
+**Expected cadence:** AuthorAgent writes the chapter for the *current lunar day*
+when the periodic task runs, and skips if today's chapter already exists. It is
+not a contiguous 1→28 march; coverage depends on uptime across the synodic
+cycle. The full-moon compilation gathers all available daily chapters into a
+Book edition regardless of gaps.
+
+## Expanded responsibilities (2026-06)
+
+Beyond the lunar book, AuthorAgent now keeps two artifacts current automatically
+(see [`MILESTONES.md`](MILESTONES.md), [`survive.md`](survive.md), and
+[`github_awareness`](../agents/github_awareness.py)):
+
+1. **Milestone recognition (`github.awareness`).** A push is already public, so
+   the local git log is the zero-overhead milestone signal. `assess_milestone()`
+   scores a commit batch; `journal_milestone()` chronicles it to
+   `docs/MILESTONES.md` + `data/milestones/milestone_log.jsonl` (idempotent
+   per-SHA). Routine commits (`Pre-shutdown backup:` from backup_agent, merges,
+   version bumps) are filtered via `is_routine_commit()`. Worthy batches publish
+   in mindX's own voice through the same `publish_to_rage()` → wordpress-agent
+   relationship, driven by the `PublicationOrchestrator.watch_github()` trigger
+   (third alongside SEA-success and full-moon dreams).
+2. **Documentation index.** `update_docs_index()` regenerates
+   `docs/DOC_INDEX.md` — the exhaustive, category-grouped catalogue (same
+   categories as `/docs.html`) — on **every recognized milestone**, so the docs
+   stay current with no human upkeep. NAV.md remains the curated hub.
+
+These make AuthorAgent the canonical maintainer of mindX's self-chronicle: the
+lunar Book (reflective), the milestone log (factual), and the doc index
+(structural).
