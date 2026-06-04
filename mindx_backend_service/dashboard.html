@@ -446,7 +446,9 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
   <!-- LAYER 0: Hero — What is mindX? -->
   <div class="hero layer" id="L0">
     <h1 class="hero-title">mind<span class="m">X</span></h1>
-    <p class="hero-sub">A <em>Darwin-Godel Machine</em> — self-improving autonomous intelligence with sovereign agents, cryptographic identity, and constitutional governance. Live on commodity hardware.</p>
+    <p class="hero-sub"><em>Building a Darwin-Gödel Machine</em> — self-improving autonomous intelligence with sovereign agents, cryptographic identity, and constitutional governance. Live on commodity hardware.</p>
+    <div id="gmi-headline" style="font-family:var(--mono);font-size:12px;color:var(--text2);margin:-12px auto 6px;max-width:600px"><span id="gmi-verdict">Gödel Machine Index: checking…</span></div>
+    <div id="milestone-line" style="font-family:var(--mono);font-size:11px;color:var(--text3);margin:0 auto 24px;max-width:600px"></div>
     <div class="hero-stats" id="hero-stats">
       <div class="hs"><div class="hs-val" id="hs-up">--</div><div class="hs-lbl">operational</div></div>
       <div class="hs"><div class="hs-val" id="hs-session">0:00</div><div class="hs-lbl">session</div></div>
@@ -535,6 +537,10 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
     <!-- Machine Dreaming — memories consolidated into long-term knowledge -->
     <div class="section-hdr" onclick="toggleSec(this)" id="hdr-dreams"><span>Machine Dreaming <span class="insight-sub">lunar consolidation &middot; memories &rarr; long-term knowledge</span></span><span style="display:flex;align-items:center;gap:8px"><span class="fresh" id="fresh-dreams"></span><span class="arrow">&#x25B8;</span></span></div>
     <div class="section-body" id="sec-dreams"><div class="sec-skel">loading dream cycles&hellip;</div></div>
+
+    <!-- Machine Dreaming — memories consolidated into long-term knowledge -->
+    <div class="section-hdr" onclick="toggleSec(this)" id="hdr-dreams" style="display:none"><span>Machine Dreaming <span class="insight-sub">lunar consolidation &middot; memories &rarr; long-term knowledge</span></span><span class="arrow">&#x25B8;</span></div>
+    <div class="section-body" id="sec-dreams" style="display:none"></div>
 
     <!-- Godel Audit Trail -->
     <div class="section-hdr" onclick="toggleSec(this)"><span>G&#246;del Audit Trail <span style="color:var(--text3);font-weight:400" id="godel-count"></span></span><span class="arrow">&#x25B8;</span></div>
@@ -1740,6 +1746,29 @@ fetch('/health').then(function(r){return r.json()}).then(function(d){
   document.getElementById('live-badge').className='live-badge off';
 });
 
+// Honest Gödel Machine Index headline (the self-audit, not the marketing claim)
+fetch('/insight/godel/machine').then(function(r){return r.json()}).then(function(g){
+  var el=document.getElementById('gmi-verdict');if(!el)return;
+  var yes=g.verdict==='GODEL_MACHINE';
+  var cov=(typeof g.proof_coverage==='number')?(g.proof_coverage*100).toFixed(0)+'%':'—';
+  var label=yes?'GÖDEL MACHINE':'NOT YET';
+  var color=yes?'#3fb950':'#d29922';
+  el.innerHTML='Gödel Machine Index: <b style="color:'+color+'">'+label+'</b> · proof coverage '+cov+
+    ' · <a href="/feedback.html#sec-godel-machine" style="color:var(--blue)">self-audit</a>';
+}).catch(function(){});
+
+// Latest milestone mindX recognized from its own public git history
+fetch('/insight/milestones/recent?limit=10').then(function(r){return r.json()}).then(function(d){
+  var el=document.getElementById('milestone-line');if(!el)return;
+  var rows=(d&&d.milestones)||[];
+  var worthy=rows.filter(function(m){return m.worthy});
+  var latest=worthy[0]||rows[0];if(!latest)return;
+  var url=latest.url||'#';
+  el.innerHTML='latest milestone: <a href="'+url+'" target="_blank" rel="noopener" style="color:var(--blue)">'+
+    (latest.short_sha||'')+'</a> '+(latest.subject||'').replace(/[<>&]/g,'')+
+    ' · <a href="/feedback.html#sec-milestones" style="color:var(--blue)">all</a>';
+}).catch(function(){});
+
 // Layer 1: Thesis evidence loads fast (cached, small payload)
 fetch('/thesis/evidence').then(function(r){return r.json()}).then(function(ev){
   var th=ev||{};
@@ -2626,6 +2655,93 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
       if(b && !b.querySelector('.dr') && !_dreamsLoaded){ showSec('sec-dreams','hdr-dreams'); b.innerHTML='<div class="panel-banner">dream feed warming up &mdash; retrying every 60s</div>'; }
       else { Freshness.paint('dreams'); }
     });
+  }
+
+  // Logs → Memories — the catalogue memory.write stream. mindX writes no log
+  // that is not also a memory; this shows each log becoming one.
+  function loadMemoryStream(){
+    fetch('/insight/memory/recent?limit=24').then(function(r){return r.ok?r.json():null;}).then(function(d){
+      var box=document.getElementById('sec-logs');
+      if(!box) return;
+      var evs=(d && d.events)||[];
+      if(!evs.length){
+        box.innerHTML='<div class="insight-empty">no memory writes in the catalogue yet</div>';
+        return;
+      }
+      var IMP={1:'CRIT',2:'HIGH',3:'MED',4:'LOW'};
+      var IMPC={1:'var(--red)',2:'var(--amber)',3:'var(--blue)',4:'var(--text3)'};
+      var rows=evs.map(function(e){
+        var src=String(e.source_log||'');
+        src=(src.split('/').pop()||src);
+        var imp=IMP[e.importance]||String(e.importance||'?');
+        var impc=IMPC[e.importance]||'var(--text3)';
+        var t=e.ts?ago(e.ts):'';
+        return '<div class="dr" style="align-items:baseline">'
+          +'<span style="font-family:var(--mono);font-size:10px">'
+          +'<span style="color:var(--text3)">'+esc(src)+'</span>'
+          +' <span style="color:var(--text3)">&rarr;</span> '
+          +'<span style="color:var(--blue)">'+esc(e.memory_type||'memory')+'</span>'
+          +' <span style="color:var(--text3)">&middot; '+esc(e.actor||'?')+'</span>'
+          +'</span>'
+          +'<span style="color:'+impc+';font-size:9px;font-family:var(--mono)">'+imp+' &middot; '+esc(t)+'</span>'
+          +'</div>';
+      }).join('');
+      box.innerHTML='<div style="font-size:10px;color:var(--text2);padding:4px 0 6px">'
+        +'Every log mindX writes is also stored as a memory. '+evs.length+' most recent &mdash; '
+        +'<a href="/insight/memory/recent?h=true" class="link">plain text</a></div>'+rows;
+    }).catch(function(){
+      var box=document.getElementById('sec-logs');
+      if(box) box.innerHTML='<div class="insight-empty">memory stream unavailable</div>';
+    });
+  }
+
+  // Machine Dreaming — lunar consolidation of memories into long-term knowledge.
+  function loadDreams(){
+    fetch('/insight/dreams/recent?limit=8').then(function(r){return r.ok?r.json():null;}).then(function(d){
+      if(!d || d.fallback){ hideSec('sec-dreams','hdr-dreams'); return; }
+      var dreams=(d && d.dreams)||[];
+      if(!dreams.length){ hideSec('sec-dreams','hdr-dreams'); return; }
+      showSec('sec-dreams','hdr-dreams');
+      var last=dreams[0]||{};
+      var lunar=last.lunar||{};
+      var head='<div style="font-family:var(--mono);font-size:11px;padding:6px 8px;background:rgba(121,192,255,.05);border-radius:4px;margin-bottom:8px;line-height:1.6">'
+        +'<b style="color:var(--violet)">last cycle</b> &middot; '
+        +esc(lunar.phase_name||'lunar')+' &middot; '
+        +'<span style="color:var(--green)">'+(last.agents_dreamed||0)+'</span> agents dreamed &middot; '
+        +'<span style="color:var(--blue)">'+(last.insights_generated||0)+'</span> insights &middot; '
+        +'<span style="color:var(--amber)">'+(last.memories_promoted_to_ltm||0)+'</span> &rarr; long-term memory';
+      if(last.last_dream_age_seconds!=null || d.last_dream_age_seconds!=null){
+        var age=d.last_dream_age_seconds!=null?d.last_dream_age_seconds:last.last_dream_age_seconds;
+        head+=' &middot; '+ago(Math.floor(Date.now()/1000-age));
+      }
+      head+='</div>';
+      var rows=dreams.map(function(dr){
+        var lp=(dr.lunar||{}).phase_name||'';
+        var ts=dr.timestamp?String(dr.timestamp).slice(0,16).replace('T',' '):'';
+        return '<div class="dr">'
+          +'<span style="font-family:var(--mono);font-size:10px">'
+          +'<span style="color:var(--text3)">'+esc(ts)+'</span> '
+          +'<span style="color:var(--violet)">'+esc(lp)+'</span></span>'
+          +'<span style="color:var(--text3);font-size:10px;font-family:var(--mono)">'
+          +(dr.agents_dreamed||0)+' agents &middot; '
+          +(dr.insights_generated||0)+' insights &middot; '
+          +(dr.memories_promoted_to_ltm||0)+' &rarr;ltm</span>'
+          +'</div>';
+      }).join('');
+      var recs=(last.tuning_recommendations||[]).slice(0,4);
+      var recH='';
+      if(recs.length){
+        recH='<div style="font-size:10px;color:var(--text2);padding:8px 0 2px"><b>tuning recommendations</b></div>';
+        recH+=recs.map(function(r){
+          var param=(r&&(r.parameter||r.name))||'(param)';
+          var dir=(r&&(r.recommendation||r.direction||r.change))||'adjust';
+          return '<div style="font-family:var(--mono);font-size:10px;color:var(--text3);padding:1px 0">'
+            +'<span style="color:var(--blue)">'+esc(param)+'</span> &middot; '+esc(String(dir).slice(0,60))+'</div>';
+        }).join('');
+      }
+      document.getElementById('sec-dreams').innerHTML=head+rows+recH
+        +'<div style="font-size:10px;padding:6px 0 0"><a href="/insight/dreams/recent?h=true" class="link">plain text</a> &middot; <a href="/feedback.html#sec-dreams" class="link">feedback console</a></div>';
+    }).catch(function(){ hideSec('sec-dreams','hdr-dreams'); });
   }
 
   // Expose ledger handlers to global scope so inline onclick="..." works.

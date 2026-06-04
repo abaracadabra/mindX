@@ -17,6 +17,59 @@ operational_philosophy:
 
 ---
 
+## PROMISED TIME (chronos.agent runtime contract)
+
+Every mindX agent that emits a verifiable artefact — dream-cycle
+JSONL, evolution proposal, MEI receipt, training manifest, x402
+payment receipt, ERC-8004 attestation — MUST stamp it with the
+*promised time* returned by `chronos.agent.now()`, not raw
+`time.time()`.
+
+```python
+from agents.chronos_agent import ChronosAgent
+
+chronos = await ChronosAgent.get_instance()
+pt = await chronos.now()
+
+artefact = {
+    "kind": "evolution_proposal",
+    "body": ...,
+    "time_attestation": {
+        "unix_18dp":      pt.unix_18dp,        # cypherpunk2048 18dp Decimal
+        "utc":            pt.utc,              # ns-precision ISO-8601
+        "consensus":      pt.consensus,        # correlated | degraded | drifted
+        "confidence_ms":  pt.confidence_ms,    # ± drift std-dev
+        "promised_by":    "chronos.agent",
+        "anchor_count_24h": pt.anchor_count_24h,
+    },
+}
+```
+
+Why this matters:
+
+- `time.time()` is the LOCAL clock. NTP skew, container clock
+  skew, deliberate adjustment — none of it is visible to the artefact
+  consumer.
+- `chronos.now()` returns a confidence interval *measured from prior
+  evidence*: every confirmed mindX transaction adds an anchor
+  `(chain, block_timestamp, local_observed_ns)` to the database;
+  the standard deviation of recent anchors becomes `confidence_ms`.
+- Consumers can decide whether to act on an artefact based on its
+  attestation: an MEI receipt with `consensus: drifted, confidence_ms:
+  30000` is honest about its limits; the same receipt stamped with
+  `time.time()` is opaque.
+
+The runtime lives at `agents/chronos_agent.py`. HTTP surface:
+`GET /v1/oracle/time` on the mindX backend. chronos.oracle (the text
+spec file) declares the signal classes; chronos.agent (this file)
+declares the *behaviour*: chronos speaks, agents listen.
+
+FORBIDDEN in artefact paths: raw `time.time()`, `datetime.utcnow()`,
+`time.time_ns()`. Allowed: `await chronos.now()`. The contract is
+enforced by code review, not the type checker.
+
+---
+
 ## FOUNDATIONAL PRINCIPLES
 
 ### The Nature of Sequential Time

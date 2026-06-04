@@ -426,6 +426,30 @@ tr:hover td{background:rgba(121,192,255,.02)}
   <div id="bdi" class="card"><div class="empty">loading…</div></div>
 </section>
 
+<!-- 3b. Gödel Machine self-audit (GMI) -->
+<section id="sec-godel-machine">
+  <div class="sec-head">
+    <h2>Gödel machine self-audit <span id="gmiPill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/godel/machine · 8 falsifiable predicates · honest by construction</span>
+  </div>
+  <p class="sec-desc">
+    Is mindX a <a href="/doc/Blueprint">Gödel machine</a>? The honest answer, audited not asserted. The per-choice <code>eval=</code> pill elsewhere scores <em>rationale coherence</em> (does the reasoning read well) — <b>not</b> a machine-checked proof that a change increased utility. This scorecard separates the two: each predicate (G1–G8) reports <code>PROVEN</code> / <code>FALSIFIED</code> / <code>UNMET</code> / <code>UNTESTED</code>. Proof coverage is the fraction of changes carrying a real proof. Eval runs on the <abbr title="2 vCPU / 7.8 GB Hostinger VPS — checking is cheap and on-box; proof search would be sampled off-peak">2-core/8 GB VPS</abbr>, so heavy proofs are sampled. See <a href="/doc/GODEL_EVAL_BLUEPRINT">the eval blueprint</a>.
+  </p>
+  <div id="godelMachine" class="card"><div class="empty">loading…</div></div>
+</section>
+
+<!-- 3c. Milestones — mindX's chronicle of its own evolution -->
+<section id="sec-milestones">
+  <div class="sec-head">
+    <h2>milestones <span id="milestonePill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/milestones/recent · recognized from the public git history (github.awareness)</span>
+  </div>
+  <p class="sec-desc">
+    mindX reads its own <b>public git history</b> and recognizes which code updates rise to a milestone — then chronicles them and speaks about the worthy ones, in its own voice, on <a href="https://rage.pythai.net" target="_blank" rel="noopener">rage.pythai.net</a>. A push is already public, so this adds zero overhead and no new disclosure. <code>✓</code> = published-worthy; every commit links to GitHub. See <a href="/doc/MILESTONES">the chronicle</a>.
+  </p>
+  <div id="milestones" class="card"><div class="empty">loading…</div></div>
+</section>
+
 <!-- 4. Improvement ledger with reasoning -->
 <section id="sec-improvements">
   <div class="sec-head">
@@ -1505,6 +1529,99 @@ function _ledgerShape(c) {
   }
   return c.overall_campaign_status || 'unknown';
 }
+function _gmiVerdictColor(v) {
+  if (v === 'PROVEN-so-far') return '#3fb950';
+  if (v === 'FALSIFIED') return '#f85149';
+  if (v === 'UNMET') return '#8b949e';
+  return '#d29922'; // UNTESTED
+}
+function renderGodelMachine(d) {
+  if (!d || !d.predicates) {
+    return '<div class="empty">GMI unavailable' + (d && d.error ? ': ' + escapeHtml(d.error) : '') + '</div>';
+  }
+  const isMachine = d.verdict === 'GODEL_MACHINE';
+  const vColor = isMachine ? '#3fb950' : '#d29922';
+  const cov = (typeof d.proof_coverage === 'number') ? (d.proof_coverage * 100).toFixed(0) + '%' : '—';
+  const scov = (typeof d.surrogate_coverage === 'number') ? (d.surrogate_coverage * 100).toFixed(0) + '%' : null;
+  let html = '';
+  html += '<div style="border-left:4px solid ' + vColor + ';padding:8px 12px;margin-bottom:12px">' +
+          '<div style="font-size:1.05em;font-weight:600;color:' + vColor + '">' + escapeHtml(d.verdict) + '</div>' +
+          '<div class="sub">' + escapeHtml(d.honest_summary || '') + '</div>' +
+          '<div class="sub">proof coverage: <b>' + cov + '</b>' +
+          (scov !== null ? ' · surrogate coverage: <b>' + scov + '</b>' : '');
+  const t = d.telemetry || {};
+  if (typeof t.godel_choices_sampled === 'number') {
+    html += ' · ' + t.godel_choices_sampled + ' choices sampled';
+    if (typeof t.mean_coherence === 'number') html += ' · mean coherence ' + t.mean_coherence.toFixed(2);
+    html += ' · with proof: ' + (t.with_proof || 0);
+  }
+  if (typeof d.predicates_proven === 'number') {
+    html += '</div><div class="sub">predicates proven: <b>' + d.predicates_proven + ' / 8</b>';
+    if (Array.isArray(d.blockers) && d.blockers.length) {
+      html += ' · not-yet because: ' + escapeHtml(d.blockers.join(', '));
+    }
+  }
+  html += '</div></div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px">';
+  for (const p of d.predicates) {
+    const c = _gmiVerdictColor(p.verdict);
+    html += '<div style="border:1px solid var(--border);border-radius:6px;padding:8px">' +
+            '<div><code>' + escapeHtml(p.id) + '</code> ' + escapeHtml(p.name) +
+            ' <span class="pill" style="color:' + c + ';border-color:' + c + '">' + escapeHtml(p.verdict) + '</span></div>' +
+            '<div class="sub" style="margin-top:4px">' + escapeHtml(p.detail || '') + '</div></div>';
+  }
+  html += '</div>';
+  if (d.constraint) html += '<div class="sub" style="margin-top:10px">' + escapeHtml(d.constraint) + '</div>';
+  return html;
+}
+async function refreshGodelMachine() {
+  const box = $('godelMachine');
+  const pill = $('gmiPill');
+  try {
+    const d = await fetch('/insight/godel/machine', { cache: 'no-store' }).then(r => r.json());
+    box.innerHTML = renderGodelMachine(d);
+    if (pill) {
+      const v = d.verdict || '?';
+      pill.textContent = (v === 'GODEL_MACHINE') ? 'GÖDEL' : 'not yet';
+    }
+  } catch (e) {
+    box.innerHTML = '<div class="empty">self-audit unavailable: ' + escapeHtml(e.message || e) + '</div>';
+    if (pill) pill.textContent = 'error';
+  }
+}
+function renderMilestones(d) {
+  const rows = (d && d.milestones) || [];
+  if (!rows.length) return '<div class="empty">no milestones chronicled yet — github.awareness has not seen a worthy push</div>';
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html += '<tr style="color:var(--text3);text-align:left"><th>date</th><th>commit</th><th></th><th>score</th><th>summary</th></tr>';
+  for (const m of rows) {
+    const worthy = m.worthy ? '<span style="color:#3fb950">✓</span>' : '<span style="color:#8b949e">·</span>';
+    const sha = escapeHtml(m.short_sha || '');
+    const url = m.url || '#';
+    const subj = escapeHtml(m.subject || '');
+    const date = escapeHtml((m.date || '').slice(0, 10));
+    html += '<tr style="border-top:1px solid var(--border)">' +
+      '<td style="white-space:nowrap;color:var(--text3)">' + date + '</td>' +
+      '<td><a href="' + url + '" target="_blank" rel="noopener"><code>' + sha + '</code></a></td>' +
+      '<td>' + worthy + '</td>' +
+      '<td style="color:var(--text3)">' + escapeHtml(String(m.score == null ? '' : m.score)) + '</td>' +
+      '<td>' + subj + '</td></tr>';
+  }
+  html += '</table>';
+  return html;
+}
+async function refreshMilestones() {
+  const box = $('milestones');
+  const pill = $('milestonePill');
+  try {
+    const d = await fetch('/insight/milestones/recent?limit=25', { cache: 'no-store' }).then(r => r.json());
+    box.innerHTML = renderMilestones(d);
+    if (pill) pill.textContent = (d.worthy_count || 0) + ' worthy / ' + (d.count || 0);
+  } catch (e) {
+    box.innerHTML = '<div class="empty">milestones unavailable: ' + escapeHtml(e.message || e) + '</div>';
+    if (pill) pill.textContent = 'error';
+  }
+}
 async function refreshLedger() {
   const box = $('ledger');
   const pill = $('ledgerPill');
@@ -2484,7 +2601,9 @@ async function boot() {
   _initTabbar();
   await seedDialogue();
   startSSE();
-  await Promise.allSettled([refreshCognition(), refreshSysPulse(), refreshStuck(), refreshBDI(), refreshLedger(), refreshSelfAware(), refreshBoardroom(), refreshBoardRollcall(), refreshBoardLeaderboard(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
+  await Promise.allSettled([refreshCognition(), refreshGodelMachine(), refreshMilestones(), refreshSysPulse(), refreshStuck(), refreshBDI(), refreshLedger(), refreshSelfAware(), refreshBoardroom(), refreshBoardRollcall(), refreshBoardLeaderboard(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
+  setInterval(refreshGodelMachine, 45000);
+  setInterval(refreshMilestones, 60000);
   setInterval(refreshCognition, 30000);
   setInterval(refreshSysPulse, 15000);
   setInterval(refreshStuck, 30000);

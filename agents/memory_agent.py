@@ -36,6 +36,77 @@ from utils.logging_config import get_logger, setup_logging
 
 logger = get_logger(__name__)
 
+
+# ── Gödel eval gate (fail-open since 2026-05-19) ──────────────────────────
+#
+# Before 2026-05-19 the gate was fail-closed (off unless MINDX_EVAL_GODEL_ENABLED=1).
+# Result: prod ran 4971 Gödel choices with 0 alignment.score events. We now
+# default ON and only opt out when the operator explicitly disables. Two env
+# escape hatches:
+#   MINDX_EVAL_GODEL_DISABLED=1   — kill switch (preferred)
+#   MINDX_EVAL_GODEL_ENABLED=0    — legacy compat (also disables)
+# The `_EvalHealth` tracker exposes the last-N stats consumed by
+# /insight/eval/health for ops visibility.
+
+def _eval_godel_gate_open() -> bool:
+    """True iff Gödel-choice eval should run for this row."""
+    if os.environ.get("MINDX_EVAL_GODEL_DISABLED", "").strip() in ("1", "true", "yes"):
+        return False
+    legacy = os.environ.get("MINDX_EVAL_GODEL_ENABLED")
+    if legacy is not None and legacy.strip() in ("0", "false", "no", ""):
+        return False
+    return True
+
+
+class _EvalHealth:
+    """In-process counter for Gödel eval gate. Cheap, thread-safe-enough for
+    single-process async backend. Snapshot consumed by /insight/eval/health."""
+
+    def __init__(self, window: int = 200) -> None:
+        self.window = window
+        self.scores: list[float] = []
+        self.misses = 0
+        self.hits = 0
+        self.last_score_ts: Optional[float] = None
+        self.last_miss_ts: Optional[float] = None
+
+    def record_score(self, score: float) -> None:
+        import time as _t
+        try:
+            self.scores.append(float(score))
+            if len(self.scores) > self.window:
+                self.scores = self.scores[-self.window:]
+            self.hits += 1
+            self.last_score_ts = _t.time()
+        except (TypeError, ValueError):
+            pass
+
+    def record_miss(self) -> None:
+        import time as _t
+        self.misses += 1
+        self.last_miss_ts = _t.time()
+
+    def snapshot(self) -> Dict[str, Any]:
+        n = len(self.scores)
+        mean = sum(self.scores) / n if n else None
+        attempts = self.hits + self.misses
+        success_rate = (self.hits / attempts) if attempts else None
+        return {
+            "gate_open": _eval_godel_gate_open(),
+            "window": self.window,
+            "hits": self.hits,
+            "misses": self.misses,
+            "attempts": attempts,
+            "success_rate": success_rate,
+            "scores_in_window": n,
+            "mean_score": mean,
+            "last_score_ts": self.last_score_ts,
+            "last_miss_ts": self.last_miss_ts,
+        }
+
+
+_eval_health = _EvalHealth()
+
 class MemoryType(Enum):
     INTERACTION = "interaction"
     CONTEXT = "context"
@@ -715,11 +786,13 @@ class MemoryAgent:
         Used to audit mindX as a Gödel machine: perception, options, chosen option, rationale, outcome.
         Also stored as memory via log_process so all logs are memories.
 
-        When MINDX_EVAL_GODEL_ENABLED=1, the rationale is scored via agents/eval/GEval
-        before the row is written. The score lands in the row as `eval_score` +
-        `eval_reason` and is also emitted as an alignment.score catalogue event.
-        Eval has a hard 30s timeout; on timeout/error the row is written without
-        eval fields and a warning is logged.
+        Eval gate (fail-open since 2026-05-19): the rationale is scored via
+        agents/eval/GEval by default. The score lands in the row as `eval_score`
+        + `eval_reason` and is also emitted as an alignment.score catalogue
+        event. Eval has a hard 30s timeout; on timeout/error the row is written
+        without eval fields and a warning is logged. Disable with
+        MINDX_EVAL_GODEL_DISABLED=1 (e.g. when the judge LLM is unreachable).
+        Legacy MINDX_EVAL_GODEL_ENABLED=0 also disables for backwards-compat.
         """
         try:
             self.log_path.mkdir(parents=True, exist_ok=True)
@@ -729,12 +802,15 @@ class MemoryAgent:
             if "timestamp_utc" not in record:
                 record["timestamp_utc"] = ts
 
-            if os.environ.get("MINDX_EVAL_GODEL_ENABLED") == "1":
+            if _eval_godel_gate_open():
                 eval_result = await self._score_godel_choice(record)
                 if eval_result is not None:
                     record["eval_score"] = eval_result["score"]
                     record["eval_reason"] = eval_result["reason"]
                     record["eval_model"] = eval_result["model"]
+                    _eval_health.record_score(eval_result["score"])
+                else:
+                    _eval_health.record_miss()
 
             log_line = json_lib.dumps(record, default=str) + "\n"
             async with aiofiles.open(filepath, "a", encoding="utf-8") as f:

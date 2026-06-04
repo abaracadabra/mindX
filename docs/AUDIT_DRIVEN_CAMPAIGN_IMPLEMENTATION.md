@@ -150,6 +150,35 @@ results = await sea_agent.run_audit_driven_campaign(
 }
 ```
 
+## Campaign status semantics (corrected 2026-05-19)
+
+`_conclude_campaign` writes one of five `overall_campaign_status` values to
+`data/sea_campaign_history/strategic_evolution_agent.json`:
+
+| Status | Meaning |
+|--------|---------|
+| `SUCCESS` | Campaign created **≥ 1** coordinator task. The only status that triggers `PublicationOrchestrator`. |
+| `NO_OP` | Enhanced blueprint campaign ran but produced **0** actionable tasks. |
+| `NO_WORK` | Audit ran cleanly but found no actionable findings — blueprint + improvement phases skipped. |
+| `PARTIAL_SUCCESS` | Inner improvement campaign returned a non-`SUCCESS` status. |
+| `FAILURE` | Audit phase or blueprint generation failed outright. |
+
+**Bug history.** Before 2026-05-19 the agent had three stacked defects that
+turned the campaign history into a 54-entry liar's ledger (every run double-
+written as both `SUCCESS` and `PARTIAL_SUCCESS`, all reading "0 tasks created"):
+
+1. `run_enhanced_blueprint_campaign` logged `SUCCESS` even with 0 tasks created
+   → now returns `NO_OP`.
+2. `run_audit_driven_campaign` checked `improvement_results.get("status")` but
+   the inner campaign returns `overall_campaign_status` — the wrong key was
+   always `None`, so every audit-driven run also double-wrote `PARTIAL_SUCCESS`
+   → key corrected.
+3. A clean audit with empty findings still reached the blueprint phase
+   → now short-circuits to `NO_WORK` before any downstream write.
+
+The net effect: vacuous cycles no longer pollute history and no longer feed
+`PublicationOrchestrator` fake "what I learned" triggers.
+
 ## Integration Benefits
 
 ### For StrategicEvolutionAgent

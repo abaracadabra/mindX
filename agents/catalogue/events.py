@@ -53,9 +53,9 @@ EventKind = Literal[
     "marketing.boardroom_routed",    # marketinga.agent — campaign routed through Boardroom; outcome + per-soldier votes
     "marketing.soldier_skill_executed",  # any soldier — per-soldier marketing skill ran post-vote
     "narrative.recap",               # NarratorAgent autonomous summary OR operator-pinned recap (DeltaVerse narrative channel)
-    "publication.attempted",         # PublicationOrchestrator — publish_to_rage invoked
-    "publication.published",         # PublicationOrchestrator — publish_to_rage returned a post_id
-    "publication.coalesced",         # PublicationOrchestrator — trigger fell within MIN_GAP_S, recorded as coalesced
+    "publication.attempted",         # PublicationOrchestrator picked a trigger and started the publish pipeline
+    "publication.published",         # AuthorAgent.publish_to_rage returned post_id + url
+    "publication.coalesced",         # publish suppressed by MIN_GAP_S rate limit
     "bug.crushed",                   # operator/SEA/CI — security alert batch closed (severities + count in payload)
     "dreaming.improved",             # machine_dreaming — code change OR statistical-outlier insight burst
     "milestone.recognized",          # AGInt.milestone_recognition — system-state milestone recognized

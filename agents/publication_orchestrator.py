@@ -49,6 +49,26 @@ from utils.config import PROJECT_ROOT
 logger = logging.getLogger("agents.publication_orchestrator")
 
 
+async def _emit_pub_event(
+    kind: str,
+    payload: Dict[str, Any],
+    *,
+    source_ref: Optional[str] = None,
+) -> None:
+    """Emit one publication.* catalogue event. Never raises."""
+    try:
+        from agents.catalogue import emit_catalogue_event
+        await emit_catalogue_event(
+            kind=kind,
+            actor="publication_orchestrator",
+            payload=payload,
+            source_log="governance/published_triggers.json",
+            source_ref=source_ref,
+        )
+    except Exception:
+        pass
+
+
 # Defaults — overridable via constructor for tests / dev.
 DEFAULT_BASE_DELAY_S    = 1800     # 30 min
 DEFAULT_JITTER_FRACTION = 0.4      # ± 40 % → effective window 18-42 min
@@ -431,7 +451,57 @@ class PublicationOrchestrator:
                 logger.warning(f"watch_dreams: scan failed: {e}")
             await asyncio.sleep(self.poll_interval_s)
 
+    async def watch_github(self) -> None:
+        """Watch mindX's own public git history. New commits are chronicled by
+        AuthorAgent; batches that rise to a milestone are published. Zero
+        network — local `git log`. Runs forever."""
+        logger.info(
+            f"PublicationOrchestrator: watching git history via github.awareness "
+            f"(poll={self.poll_interval_s}s)"
+        )
+        while True:
+            try:
+                await self._scan_github_once()
+            except Exception as e:  # pragma: no cover
+                logger.warning(f"watch_github: scan failed: {e}")
+            await asyncio.sleep(self.poll_interval_s)
+
     # ─── Scanners (per-tick) ─────────────────────────────────────
+
+    async def _scan_github_once(self) -> None:
+        """Read new commits; chronicle them; publish the batch if it is a
+        milestone. Watermark advances only once the batch is handled (published
+        or coalesced), so a wordpress-agent outage never loses a milestone."""
+        gh = self.author._get_github_awareness()
+        if gh is None or not gh.is_repo():
+            return
+        watermark = gh.read_watermark()
+        all_commits = gh.commits_since(watermark)
+        if not all_commits:
+            return
+        head = all_commits[-1].sha  # advance past everything we've seen, incl. backups
+        # Drop routine/backup/merge commits — backup_agent pushes one every
+        # restart; those are not milestone material.
+        commits = [c for c in all_commits if not self.author.is_routine_commit(c.subject)]
+        if not commits:
+            gh.write_watermark(head)
+            return
+        decision = self.author.assess_milestone(commits)
+        self.author.journal_milestone(commits, decision)  # always chronicle (idempotent)
+        trigger_id = "milestone:" + commits[-1].sha[:12]
+
+        handled = True
+        if decision.get("worthy") and not self.ledger.has(trigger_id):
+            payload = {"commits": [c.to_dict() for c in commits], "decision": decision}
+            await self._schedule_publish(
+                trigger_id=trigger_id, kind="milestone", payload=payload,
+            )
+            # Published or coalesced both land in the ledger; a failed publish
+            # does not — in which case we retry on the next tick.
+            handled = self.ledger.has(trigger_id)
+        if handled:
+            gh.write_watermark(head)
+
 
     async def _scan_sea_once(self) -> None:
         """Read SEA history. Any new SUCCESS not already in the ledger
@@ -496,6 +566,12 @@ class PublicationOrchestrator:
         for lunar-cadence kinds (see _EXEMPT_FROM_MIN_GAP)."""
         detected_at = time.time()
         exempt = kind in self._EXEMPT_FROM_MIN_GAP
+
+        await _emit_pub_event(
+            "publication.attempted",
+            {"trigger_id": trigger_id, "kind": kind, "detected_at": detected_at},
+            source_ref=trigger_id,
+        )
 
         # Rate-limit BEFORE we burn jitter. If the last publish was too
         # recent, coalesce this trigger into the ledger and skip.
@@ -607,18 +683,33 @@ class PublicationOrchestrator:
             return
 
         published_at = time.time()
+        post_id_val = int(result.get("post_id")) if result.get("post_id") else None
         self.ledger.append_published(LedgerEntry(
             trigger_id=trigger_id,
             kind=kind,
             detected_at=detected_at,
             published_at=published_at,
-            post_id=int(result.get("post_id")) if result.get("post_id") else None,
+            post_id=post_id_val,
             url=result.get("url"),
             title=title,
         ))
         logger.info(
             f"PublicationOrchestrator: published {trigger_id} (status={publish_status}) → "
             f"post_id={result.get('post_id')} url={result.get('url')}"
+        )
+        await _emit_pub_event(
+            "publication.published",
+            {
+                "trigger_id": trigger_id,
+                "kind": kind,
+                "detected_at": detected_at,
+                "published_at": published_at,
+                "post_id": post_id_val,
+                "url": result.get("url"),
+                "title": title,
+                "status": result.get("status"),
+            },
+            source_ref=trigger_id,
         )
 
         # Emit publication.published AFTER the ledger write so any subscriber
@@ -666,6 +757,10 @@ class PublicationOrchestrator:
             return self._delegate_to_author("compose_book_edition_article", payload)
         if kind == "journal_lunar_digest":
             return self._compose_journal_digest(payload)
+        if kind == "milestone":
+            # github.awareness milestone — composition lives on the canonical
+            # author (mindX's own voice).
+            return self.author._compose_milestone_article(payload)
         return "", "", None, None
 
     def _delegate_to_author(
@@ -865,6 +960,10 @@ class PublicationOrchestrator:
             kw.extend(["strategic evolution", "improvement"])
         elif kind == "dream_book_edition":
             kw.extend(["consolidation", "lunar cycle", "long-term memory"])
+        elif kind == "milestone":
+            dec = (payload or {}).get("decision") or {}
+            kw = ["mindX", "milestone", "self-improvement", "open source",
+                  dec.get("theme", "evolution")]
         return kw
 
 

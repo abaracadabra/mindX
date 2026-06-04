@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mindX agentic — live activity & publishing audit</title>
+<meta name="description" content="mindX agentic activity console: AuthorAgent publish audit (drafts vs ledger), recent publication events, live agent activity feed, Gödel-eval gate health, and stuck-loop detection. Public, read-only, refreshes every 30s.">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#040609">
+<link rel="canonical" href="https://mindx.pythai.net/agentic.html">
+<link rel="icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="alternate" type="text/plain" title="mindX feedback (plain text)" href="https://mindx.pythai.net/feedback.txt">
+<style>
+:root{
+  --bg:#040609;--surface:rgba(10,14,20,.88);--surface2:rgba(16,20,28,.7);
+  --green:#56d364;--blue:#79c0ff;--violet:#d2a8ff;--amber:#e3b341;--red:#f85149;
+  --text:#e6edf3;--text2:#b1bac4;--text3:#6e7681;--border:rgba(88,166,255,.08);
+  --mono:'JetBrains Mono','SF Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.55;overflow-x:hidden}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.hdr{position:sticky;top:0;z-index:50;padding:0 20px;min-height:48px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(8,12,20,.96),rgba(4,6,9,.94));backdrop-filter:blur(24px);border-bottom:1px solid rgba(121,192,255,.1)}
+.hdr-brand{font-family:var(--mono);font-size:18px;font-weight:700;letter-spacing:2px}
+.hdr-brand b{color:var(--blue)}
+.hdr-mid{display:flex;gap:4px;flex-wrap:wrap;margin-left:16px}
+.hdr-mid a{color:#d0d7de;font-size:12px;padding:4px 10px;border-radius:4px;font-family:var(--mono)}
+.hdr-mid a:hover{background:rgba(121,192,255,.1);color:#f0f6fc}
+.hdr-mid a.hl{color:var(--green);font-weight:600}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+.wrap{max-width:1280px;margin:0 auto;padding:20px}
+h1{font-size:22px;margin-bottom:4px;font-family:var(--mono);letter-spacing:1px}
+.sub{color:var(--text2);font-size:13px;margin-bottom:24px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px}
+.card h2{font-size:13px;color:var(--violet);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;font-family:var(--mono);display:flex;justify-content:space-between;align-items:center}
+.card h2 .meta{color:var(--text3);font-size:11px;text-transform:none;letter-spacing:0}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-family:var(--mono);font-size:12px}
+.kv .k{color:var(--text3)}
+.kv .v{color:var(--text)}
+.kv .v.ok{color:var(--green)}
+.kv .v.warn{color:var(--amber)}
+.kv .v.err{color:var(--red)}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px}
+th{text-align:left;color:var(--text3);font-weight:500;padding:4px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.5px;font-size:10px}
+td{padding:4px 8px;border-bottom:1px solid rgba(88,166,255,.04);color:var(--text2)}
+tr:hover td{background:rgba(121,192,255,.04);color:var(--text)}
+.empty{color:var(--text3);font-style:italic;text-align:center;padding:24px;font-size:12px}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-family:var(--mono);letter-spacing:.5px;text-transform:uppercase}
+.pill.ok{background:rgba(86,211,100,.15);color:var(--green)}
+.pill.warn{background:rgba(227,179,65,.15);color:var(--amber)}
+.pill.err{background:rgba(248,81,73,.15);color:var(--red)}
+.pill.dim{background:rgba(110,118,129,.15);color:var(--text2)}
+.bar{height:6px;background:rgba(121,192,255,.08);border-radius:3px;overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--green),var(--blue));transition:width .4s}
+.activity{max-height:380px;overflow-y:auto}
+.activity .row{padding:6px 0;border-bottom:1px solid rgba(88,166,255,.04);font-family:var(--mono);font-size:11px;display:grid;grid-template-columns:60px 1fr;gap:8px}
+.activity .ts{color:var(--text3)}
+.activity .who{color:var(--blue)}
+.activity .msg{color:var(--text2)}
+.foot{color:var(--text3);font-size:11px;margin-top:24px;text-align:center;font-family:var(--mono)}
+.foot a{color:var(--blue)}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="hdr-brand">mind<b>X</b> agentic</div>
+    <div class="hdr-mid">
+      <a href="/">home</a>
+      <a href="/feedback.html">feedback</a>
+      <a href="/agentic.html" class="hl">agentic</a>
+      <a href="/boardroom">boardroom</a>
+      <a href="/journal">journal</a>
+      <a href="/docs">api</a>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="live-dot"></span>
+    <span style="font-family:var(--mono);font-size:11px;color:var(--text2)" id="last-refresh">connecting…</span>
+  </div>
+</div>
+
+<div class="wrap">
+  <h1>agentic activity</h1>
+  <div class="sub">Publish pipeline audit · live agent activity · alignment-eval health · stuck-loop watch. Refreshes every 30s. Plain text at <a href="/feedback.txt">/feedback.txt</a>.</div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Publication audit <span class="meta" id="pub-meta">—</span></h2>
+      <div id="pub-summary" class="kv"></div>
+      <div style="margin-top:12px"><b style="font-family:var(--mono);font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Recent publication events</b></div>
+      <table id="pub-events"><thead><tr><th>ts</th><th>kind</th><th>trigger</th><th>note</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="card">
+      <h2>Draft inventory <span class="meta" id="draft-meta">—</span></h2>
+      <div id="draft-summary" class="kv"></div>
+      <div style="margin-top:12px"><b style="font-family:var(--mono);font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Unpublished drafts (top 10)</b></div>
+      <table id="drafts"><thead><tr><th>name</th><th style="text-align:right">size</th><th style="text-align:right">mtime</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Alignment-eval gate <span class="meta" id="eval-meta">—</span></h2>
+      <div id="eval-summary" class="kv"></div>
+      <div style="margin-top:10px">
+        <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--text3)">
+          <span>hit rate (this process)</span><span id="eval-rate-pct">—</span>
+        </div>
+        <div class="bar"><i id="eval-rate-bar" style="width:0%"></i></div>
+      </div>
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-family:var(--mono);font-size:11px;color:var(--text3)">
+        Gödel Machine Index: <span id="gmi-verdict">checking…</span>
+        <div style="margin-top:6px;font-size:10px;line-height:1.5">This gate scores <b>rationale coherence</b>, not a proof of utility increase. <a href="/feedback.html#sec-godel-machine">full self-audit →</a></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Stuck loops <span class="meta">15-min window</span></h2>
+      <table id="stuck"><thead><tr><th>agent</th><th>step</th><th style="text-align:right">×</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Agent activity <span class="meta" id="activity-meta">—</span></h2>
+    <div id="activity" class="activity"></div>
+  </div>
+
+  <div class="foot">mindX · agentic.html · public, read-only · refresh 30s · <a href="/feedback.txt">plain text</a> · <a href="/insight/publications/audit?h=true">publish audit</a> · <a href="/insight/eval/health?h=true">eval health</a> · <a href="/insight/godel/machine?h=true">gödel index</a></div>
+</div>
+
+<script>
+const f=(p)=>fetch(p,{credentials:'omit'}).then(r=>r.json()).catch(()=>null);
+const escH=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rel=ts=>{
+  if(!ts)return '—';
+  const d=Math.max(0,Date.now()/1000-Number(ts));
+  if(d<60)return Math.floor(d)+'s';
+  if(d<3600)return Math.floor(d/60)+'m';
+  if(d<86400)return Math.floor(d/3600)+'h';
+  return Math.floor(d/86400)+'d';
+};
+const bytes=n=>{
+  n=Number(n||0);
+  if(n<1024)return n+'B';
+  if(n<1024*1024)return (n/1024).toFixed(1)+'K';
+  if(n<1024*1024*1024)return (n/1024/1024).toFixed(1)+'M';
+  return (n/1024/1024/1024).toFixed(1)+'G';
+};
+
+async function loadPubSummary(){
+  const d=await f('/insight/publications/summary');
+  if(!d){return}
+  const meta=document.getElementById('pub-meta');
+  const sum=document.getElementById('pub-summary');
+  const exists=d.ledger_exists;
+  meta.innerHTML=exists?'<span class="pill ok">ledger live</span>':'<span class="pill warn">ledger empty</span>';
+  const last=d.last_entry||{};
+  sum.innerHTML=
+    `<span class="k">total entries</span><span class="v">${d.total_entries||0}</span>`+
+    `<span class="k">published</span><span class="v ok">${d.published_count||0}</span>`+
+    `<span class="k">coalesced</span><span class="v warn">${d.coalesced_count||0}</span>`+
+    `<span class="k">last publish</span><span class="v">${rel(d.last_published_at)} ago</span>`+
+    (last.title?`<span class="k">last title</span><span class="v">${escH(last.title).slice(0,48)}</span>`:'')+
+    (last.url?`<span class="k">last url</span><span class="v"><a href="${escH(last.url)}">${escH(last.url).slice(0,46)}</a></span>`:'');
+}
+
+async function loadPubEvents(){
+  const d=await f('/insight/publications/recent?limit=20');
+  const tbody=document.querySelector('#pub-events tbody');
+  if(!d||!d.events||!d.events.length){tbody.innerHTML='<tr><td colspan="4" class="empty">no publication events yet — orchestrator has not fired</td></tr>';return}
+  tbody.innerHTML=d.events.map(e=>{
+    const p=e.payload||{};
+    const k=(e.kind||'').replace('publication.','');
+    const cls=k==='published'?'ok':(k==='coalesced'?'warn':'dim');
+    const note=p.url?`<a href="${escH(p.url)}">post ${p.post_id||''}</a>`:(p.reason||'');
+    return `<tr><td>${rel(e.ts)} ago</td><td><span class="pill ${cls}">${escH(k)}</span></td><td>${escH(p.trigger_id||'').slice(0,24)}</td><td>${escH(note).slice(0,40)}</td></tr>`;
+  }).join('');
+}
+
+async function loadDrafts(){
+  const d=await f('/insight/publications/audit');
+  if(!d){return}
+  const meta=document.getElementById('draft-meta');
+  const sum=document.getElementById('draft-summary');
+  meta.textContent=`${(d.markdown_drafts||[]).length} md · ${(d.pdf_drafts||[]).length} pdf`;
+  sum.innerHTML=
+    `<span class="k">publications dir</span><span class="v">${escH(d.publications_dir||'')}</span>`+
+    `<span class="k">markdown</span><span class="v">${(d.markdown_drafts||[]).length}</span>`+
+    `<span class="k">pdf</span><span class="v">${(d.pdf_drafts||[]).length}</span>`+
+    `<span class="k">orchestrator published</span><span class="v">${(d.published_via_orchestrator||[]).length}</span>`;
+  const merged=[].concat(
+    (d.markdown_drafts||[]).map(x=>({...x,t:'md'})),
+    (d.pdf_drafts||[]).map(x=>({...x,t:'pdf'}))
+  ).sort((a,b)=>(b.mtime||0)-(a.mtime||0)).slice(0,10);
+  const tbody=document.querySelector('#drafts tbody');
+  if(!merged.length){tbody.innerHTML='<tr><td colspan="3" class="empty">no drafts on disk</td></tr>';return}
+  tbody.innerHTML=merged.map(x=>
+    `<tr><td><span class="pill dim">${x.t}</span> ${escH(x.name).slice(0,40)}</td><td style="text-align:right">${bytes(x.size_bytes)}</td><td style="text-align:right">${rel(x.mtime)} ago</td></tr>`
+  ).join('');
+}
+
+async function loadEval(){
+  const d=await f('/insight/eval/health');
+  if(!d){return}
+  const meta=document.getElementById('eval-meta');
+  const sum=document.getElementById('eval-summary');
+  const ip=d.in_process||{};
+  const od=d.on_disk||{};
+  const gate=ip.gate_open;
+  meta.innerHTML=gate?'<span class="pill ok">OPEN</span>':(gate===false?'<span class="pill err">CLOSED</span>':'<span class="pill dim">?</span>');
+  const mean=ip.mean_score==null?'—':Number(ip.mean_score).toFixed(3);
+  const dmean=od.mean_score_disk==null?'—':Number(od.mean_score_disk).toFixed(3);
+  const sr=ip.success_rate==null?null:Number(ip.success_rate);
+  sum.innerHTML=
+    `<span class="k">gate</span><span class="v ${gate?'ok':'err'}">${gate?'OPEN (fail-open)':'CLOSED'}</span>`+
+    `<span class="k">hits / misses</span><span class="v">${ip.hits||0} / ${ip.misses||0}</span>`+
+    `<span class="k">window n</span><span class="v">${ip.scores_in_window||0}</span>`+
+    `<span class="k">mean (live)</span><span class="v">${mean}</span>`+
+    `<span class="k">mean (disk tail)</span><span class="v">${dmean}</span>`+
+    `<span class="k">last score</span><span class="v">${ip.last_score_ts?(rel(ip.last_score_ts)+' ago'):'—'}</span>`;
+  const pct=sr==null?0:Math.round(sr*100);
+  document.getElementById('eval-rate-pct').textContent=sr==null?'—':(pct+'%');
+  document.getElementById('eval-rate-bar').style.width=pct+'%';
+}
+async function loadGMI(){
+  const g=await f('/insight/godel/machine');
+  const el=document.getElementById('gmi-verdict');if(!el)return;
+  if(!g||!g.verdict){el.textContent='unavailable';return}
+  const yes=g.verdict==='GODEL_MACHINE';
+  const cov=(typeof g.proof_coverage==='number')?(g.proof_coverage*100).toFixed(0)+'%':'—';
+  el.innerHTML=(yes?'<span class="pill ok">GÖDEL MACHINE</span>':'<span class="pill dim">NOT YET</span>')+
+    ' · proof coverage '+cov;
+}
+
+async function loadStuck(){
+  const d=await f('/insight/stuck_loops?window=900&min_repeats=5');
+  const tbody=document.querySelector('#stuck tbody');
+  const loops=(d&&d.loops)||[];
+  if(!loops.length){tbody.innerHTML='<tr><td colspan="3" class="empty">no stuck loops</td></tr>';return}
+  tbody.innerHTML=loops.slice(0,8).map(l=>
+    `<tr><td>${escH(l.agent||'?').slice(0,18)}</td><td>${escH(l.step||'').slice(0,52)}</td><td style="text-align:right">${l.count||l.repeats||0}</td></tr>`
+  ).join('');
+}
+
+async function loadActivity(){
+  // /insight/agentic/activity is the redacted, high-level feed: agent / tier /
+  // type / time / one sanitized headline. Secrets + raw detail are stripped
+  // server-side so this public console can never leak credentials.
+  const d=await f('/insight/agentic/activity?limit=30');
+  const c=document.getElementById('activity');
+  const meta=document.getElementById('activity-meta');
+  const events=(d&&d.events)||[];
+  meta.textContent=`${events.length} recent · redacted`;
+  if(!events.length){c.innerHTML='<div class="empty">no recent activity</div>';return}
+  c.innerHTML=events.map(e=>{
+    const t=rel(e.timestamp);
+    const who=escH(e.agent||'?').slice(0,18);
+    const typ=escH(e.type||'');
+    const msg=escH(e.headline||'');
+    return `<div class="row"><div class="ts">${t}</div><div><span class="who">${who}</span> <span class="msg">${typ?('['+typ+'] '):''}${msg}</span></div></div>`;
+  }).join('');
+}
+
+async function refreshAll(){
+  await Promise.allSettled([loadPubSummary(),loadPubEvents(),loadDrafts(),loadEval(),loadGMI(),loadStuck(),loadActivity()]);
+  const now=new Date();
+  document.getElementById('last-refresh').textContent='last '+now.toLocaleTimeString();
+}
+
+refreshAll();
+setInterval(refreshAll,30000);
+</script>
+</body>
+</html>

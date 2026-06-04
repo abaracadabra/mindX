@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 mindX is an autonomous multi-agent orchestration system implementing a Belief-Desire-Intention (BDI) cognitive architecture. It's a "Godel-machine" - a self-improving AI system with Ethereum-compatible wallet authentication and LLM integration (Mistral, Gemini, Groq, Ollama, OpenAI, Anthropic, Together AI).
 
-**Documentation**: [`docs/NAV.md`](docs/NAV.md) is the master navigation hub — 40+ sections covering all agents, tools, governance, inference, memory, deployment. [`docs/SCHEMA.md`](docs/SCHEMA.md) is the instruction layer — how to maintain, cross-reference, and evolve the docs. Start with NAV.
+**Documentation**: [`docs/NAV.md`](docs/NAV.md) is the master navigation hub — 40+ sections covering all agents, tools, governance, inference, memory, deployment. [`docs/SCHEMA.md`](docs/SCHEMA.md) is the instruction layer — how to maintain, cross-reference, and evolve the docs. [`docs/DOC_INDEX.md`](docs/DOC_INDEX.md) is the exhaustive, always-current catalogue, **auto-maintained by AuthorAgent** (regenerated on each recognized milestone via `github.awareness`). Start with NAV.
+
+**Gödel-machine subsystem** (`mindx/godel/`): the [Schmidhüber Engine](docs/SCHMIDHUBER_ENGINE.md) (Hamiltonian self-improvement oscillator + `mindXtrain` dream→weights bridge); the [Gödel Eval Blueprint](docs/GODEL_EVAL_BLUEPRINT.md) + the Gödel Machine Index self-audit (`/insight/godel/machine`, honest verdict: *not yet*) — Phases 0–3 shipped: the trusted proof `kernel/` (total, fuzz-verified checker + `Checkable(K')` lock), the formal `utility.py` (structural anti-wireheading floor), and `eval/` predicates G1–G8 (5/8 proven; verdict gated on real proof coverage ≥ 50%); and [`github.awareness`](agents/github_awareness.py) → [MILESTONES](docs/MILESTONES.md) recognition/publishing. mindX chronicles its own public git history and keeps its docs current from it.
 
 **VPS Deployment**: [`agents/hostinger_vps_agent.py`](agents/hostinger_vps_agent.py) manages mindx.pythai.net via three MCP channels: SSH, [Hostinger API](https://developers.hostinger.com), and mindX Backend HTTPS. See [`agents/hostinger.vps.agent`](agents/hostinger.vps.agent) for full parameters.
 
@@ -118,9 +120,12 @@ Key routes:
 - `POST /directive/execute` - Execute directives
 - `/mindterm/sessions/{id}/ws` - WebSocket terminal access
 - `GET /health`, `GET /metrics` - System status
-- `GET /` - Public diagnostics dashboard
+- `GET /` - Public diagnostics dashboard. "Logs → Memories" section (every log mindX writes is also a memory — `memory.write` catalogue stream) + "Machine Dreaming" section (lunar consolidation of memories into long-term knowledge)
 - `GET /feedback.html` - Mind-of-mindX page (live agent dialogue, improvement ledger, boardroom, dream cycles, stuck-loop detector, memories on chain)
 - `GET /feedback.txt` - Plain-text snapshot for `watch curl …` (public)
+- `GET /agentic.html` - Agentic activity console: AuthorAgent publish audit (drafts vs ledger), `publication.*` event tail, alignment-eval gate health, stuck-loop watch, 30-event redacted activity feed; refresh 30 s
+
+**Public-surface redaction:** Free-text shown on public dashboards (activity headlines, memory snippets) is run through `text_render.sanitize_text()` — redacts API keys, ETH private keys, JWTs, `key=value` secrets, and absolute `/home/*` paths. ETH wallet *addresses* are kept (public identity). `/agentic.html` consumes `/insight/agentic/activity` (redacted, high-level: agent/tier/type/time/one headline; `detail` dict dropped) — never raw `/activity/recent`.
 
 ### Plain-text mode (`?h=true`)
 
@@ -142,6 +147,10 @@ Implementation: `mindx_backend_service/text_render.py` (per-endpoint renderers +
 - `/insight/boardroom/recent` - Boardroom sessions with per-soldier votes, providers, confidence
 - `/insight/stuck_loops` - Repeating `(agent, step)` tuples (15-min window)
 - `/insight/storage/{status,recent}` - IPFS offload counts + recent CIDs/tx_hashes
+- `/insight/eval/{recent,summary,health}` - `alignment.score` events + gate state (fail-open since 2026-05-19; `MINDX_EVAL_GODEL_DISABLED=1` to disable)
+- `/insight/publications/{recent,summary,audit}` - AuthorAgent publishing — `publication.*` event tail + ledger summary + drafts-vs-published cross-reference
+- `/insight/agentic/activity` - Redacted high-level activity feed (agent/tier/type/time/headline; secrets scrubbed, `detail` dropped) — the surface `/agentic.html` consumes
+- `/insight/memory/recent` - `memory.write` catalogue tail — logs becoming memories (source_log → memory_type/agent/importance; metadata only, no raw `content`/`context`). Feeds the landing page "Logs → Memories" section
 - `/storage/{health,anchor/health,eligible}` - IPFS provider + chain anchor configuration (auth-gated)
 - `POST /storage/offload` - Run offload projector (`dry_run=true` default; admin required for `false`)
 
@@ -151,10 +160,10 @@ API docs at `http://localhost:8000/docs`
 
 Phase 0 instrumentation. Unified append-only event stream that mirrors all writes from disparate JSONL logs into one substrate. Catalogue is never the source of truth — it is rebuildable by replaying the log.
 
-- `agents/catalogue/events.py` — Pydantic `CatalogueEvent` with 16 typed `kind`s (`memory.{write,consolidate,dream,offload,anchor}`, `godel.choice`, `board.{session,vote}`, `tool.{invoke,result}`, `skill.{invoke,result}`, `alignment.score`, `improvement.{proposed,executed}`, `agent.interact`)
+- `agents/catalogue/events.py` — Pydantic `CatalogueEvent` with typed `kind`s including `memory.{write,consolidate,dream,offload,anchor}`, `godel.choice`, `board.{session,vote}`, `tool.{invoke,result}`, `skill.{invoke,result}`, `alignment.score`, `improvement.{proposed,executed}`, `agent.interact`, `publication.{attempted,published,coalesced}`, `marketing.*`, `admin.*`
 - `agents/catalogue/log.py` — append-only JSONL writer with 100MB rotation
 - Sink: `data/logs/catalogue_events.jsonl`
-- Mirror call sites: `agents/memory_agent.py:save_timestamped_memory()` and `log_godel_choice()`, `agents/machine_dreaming.py:run_full_dream()`, `daio/governance/boardroom.py:_log_session()`, `agents/storage/offload_projector.py`
+- Mirror call sites: `agents/memory_agent.py:save_timestamped_memory()` and `log_godel_choice()`, `agents/machine_dreaming.py:run_full_dream()`, `daio/governance/boardroom.py:_log_session()`, `agents/storage/offload_projector.py`, `agents/publication_orchestrator.py:_schedule_publish()`
 - Phase 1+ design contract: `docs/KNOWLEDGE_CATALOGUE.md` (Dataplex six-resource model, hybrid retrieval, federation)
 - `MINDX_CATALOGUE_DISABLE=1` env disables the emitter cold
 

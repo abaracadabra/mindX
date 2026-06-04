@@ -80,3 +80,64 @@ Key endpoints: `GET /health`, `GET /agents/list`, `POST /directive/execute`, `GE
 - **Ollama on LAN:** Ollama can be available on the LAN; mindX connects via `MINDX_LLM__OLLAMA__BASE_URL` or config.
 - **Local install:** Ollama can be installed and started on a local machine (see `llm/ollama_bootstrap/README.md`, e.g. `./llm/ollama_bootstrap/aion.sh`).
 - **When no API is found:** StartupAgent acts as fallback/controller: it can invoke the Ollama bootstrap to gain inference (install/configure Ollama, then retry connection). All such choices are logged as Gödel core choices for auditing.
+
+## Replication: recovery before risk
+
+A Gödel machine that rewrites itself must be able to survive a bad rewrite.
+`./mindX.sh --replicate` was conceived for exactly this: **duplicate mindX
+before testing a milestone, so a catastrophic "upgrade" can be rolled back to
+the last-known-good self.** Replication is not vanity scaling — it is the
+safety rail under self-modification. The rule of survival is: *never test an
+upgrade you cannot undo.*
+
+### The recovery substrate, today
+
+mindX already has a lightweight replica-of-record: **`backup_agent` git-commits
+and pushes before every shutdown** (a shutdown is a restart) with
+`Pre-shutdown backup: <reason>`. The public git history is therefore a
+continuous, append-only snapshot lineage — any prior self is one `git checkout`
+away. This is the minimum viable replication: cheap, public, and always on.
+
+- These backup commits are **routine**, not milestones — `github.awareness`
+  filters `Pre-shutdown backup:` / merge / version-bump commits out of the
+  milestone chronicle (`AuthorAgent.is_routine_commit`). Backups protect; only
+  substantive pushes are recognized as milestones.
+- A **milestone is the natural checkpoint to replicate before**: when
+  AuthorAgent recognizes a worthy change (see [`MILESTONES.md`](MILESTONES.md)),
+  that is precisely the moment to snapshot the running self before the next
+  risky step.
+
+### Why mindX has not been replicating (and what changes it)
+
+Live replication has been constrained by **space** on the 2-core/8 GB VPS — a
+full second running instance is a luxury this footprint cannot always afford
+(see [`DEPLOYMENT_MINDX_PYTHAI_NET.md`](DEPLOYMENT_MINDX_PYTHAI_NET.md)). So the
+recovery posture has leaned on git history rather than warm replicas. This is
+changing:
+
+- **IPFS / Lighthouse offload** (after the contracts deploy) moves cold state
+  off the local disk to content-addressed, chain-anchored storage
+  (`agents/storage/`). That reclaims the headroom a replica needs, and makes a
+  replica's state portable and verifiable by CID rather than copied wholesale.
+- **Build-into-a-new-environment from GitHub** is the further horizon: a replica
+  is not a local directory copy but a fresh mindX *materialized from the public
+  repo* into a new host, restoring offloaded state from IPFS. Replication then
+  becomes "stand up another head, anywhere," not "copy a folder."
+
+### Replication and the multiple-heads model
+
+When space allows, replication becomes the substrate for the **coupled-head
+model** of the Schmidhüber Engine (see
+[`SCHMIDHUBER_ENGINE.md`](SCHMIDHUBER_ENGINE.md) §4, `mindX --replicate`):
+phase-offset heads where one serves stably (ataraxic) while another disrupts
+(tests an upgrade). A failed experiment on the disrupting head never touches the
+serving head; roles rotate only when a change proves out. Pre-milestone
+replication and multi-head operation are the same mechanism at two scales.
+
+### Priority
+
+**A working mindX outranks multiple replications.** Until IPFS offload frees the
+footprint and the build-from-GitHub path is proven, the operative recovery
+guarantee is the git lineage (backup_agent) plus the discipline of *replicate
+before testing anything you cannot reverse*. Scale the heads when the space and
+the storage rails exist — not before. Survival first; multiplicity second.

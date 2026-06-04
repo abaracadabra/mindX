@@ -4224,3 +4224,7 @@
 
 
 
+
+### Milestone — Calibrate Gödel claim + ship Gödel Machine Index (GMI) Phase 0
+- score 1.0; docs, new-capability, public-surface, feature
+- 4 commit(s); see docs/MILESTONES.md
