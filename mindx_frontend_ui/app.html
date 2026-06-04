@@ -11,10 +11,32 @@
     <link rel="stylesheet" href="styles3.css">
     <script src="crossmint-integration.js"></script>
     <script src="window-manager.js"></script>
+    <!-- Origin-aware backend base URL (matches login.html / shadow-overlord.html).
+         Replaces hardcoded http://localhost:8000 which "Failed to fetch" on the
+         HTTPS production origin. Same-origin in prod; :8000 only on localhost. -->
+    <script>
+        function mindxApiBase() {
+            if (typeof API_CONFIG !== 'undefined' && API_CONFIG.baseUrl) return API_CONFIG.baseUrl;
+            if (window.MINDX_API_URL) return window.MINDX_API_URL;
+            var here = window.location;
+            if (here.host.endsWith('pythai.net')) return 'https://mindx.pythai.net';
+            if (here.host.includes('localhost') || here.host.startsWith('127.'))
+                return 'http://localhost:' + (window.MINDX_BACKEND_PORT || '8000');
+            return here.origin;
+        }
+        window.mindxApiBase = mindxApiBase;
+        // Reflect the resolved base URL into the "API access" doc section.
+        document.addEventListener('DOMContentLoaded', function() {
+            var b = mindxApiBase();
+            var u = document.getElementById('mindx-api-base-url'); if (u) u.textContent = b;
+            var d = document.getElementById('mindx-api-docs-link');
+            if (d) { d.href = b + '/docs'; d.textContent = b + '/docs'; }
+        });
+    </script>
     <!-- Authentication Check - Server-authoritative session (vault-backed). Locked until validate succeeds. -->
     <script>
         (function() {
-            var apiBaseUrl = (typeof API_CONFIG !== 'undefined' && API_CONFIG.baseUrl) ? API_CONFIG.baseUrl : (window.MINDX_API_URL || ('http://localhost:' + (window.MINDX_BACKEND_PORT || '8000')));
+            var apiBaseUrl = mindxApiBase();
             var sessionToken = localStorage.getItem('mindx_session_token');
             
             function clearAuthAndRedirect() {
@@ -292,7 +314,7 @@
                 }
 
                 // Get API base URL
-                const apiBaseUrl = window.MINDX_API_URL || `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`;
+                const apiBaseUrl = mindxApiBase();
                 
                 // Create viem wallet client
                 // Handle both namespace and named exports
@@ -716,7 +738,7 @@
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
                     
-                    fetch('http://localhost:8000/simple-coder/update-requests', {
+                    fetch(mindxApiBase() + '/simple-coder/update-requests', {
                         signal: controller.signal
                     })
                         .then(response => response.json())
@@ -881,7 +903,7 @@
                             
                             requestsToDelete.forEach(requestId => {
                                 console.log('Deleting request:', requestId);
-                                fetch(`http://localhost:8000/simple-coder/reject-update/${requestId}`, {
+                                fetch(`${mindxApiBase()}/simple-coder/reject-update/${requestId}`, {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json',
@@ -944,7 +966,7 @@
                                 console.log('Starting bulk approve of', requestsToApprove.length, 'requests');
                                 
                                 requestsToApprove.forEach(requestId => {
-                                    fetch(`http://localhost:8000/simple-coder/approve-update/${requestId}`, {
+                                    fetch(`${mindxApiBase()}/simple-coder/approve-update/${requestId}`, {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',
@@ -1013,7 +1035,7 @@
             // Make functions globally accessible
             window.approveUpdate = function(requestId) {
                 console.log('Approving individual request:', requestId);
-                fetch(`http://localhost:8000/simple-coder/approve-update/${requestId}`, {
+                fetch(`${mindxApiBase()}/simple-coder/approve-update/${requestId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1046,7 +1068,7 @@
                 console.log('Rejecting individual request:', requestId);
                 console.log('Current selected requests before reject:', Array.from(selectedRequests));
                 
-                fetch(`http://localhost:8000/simple-coder/reject-update/${requestId}`, {
+                fetch(`${mindxApiBase()}/simple-coder/reject-update/${requestId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1161,8 +1183,8 @@
                     try {
                         // Check both update requests and status
                         const [requestsResponse, statusResponse] = await Promise.all([
-                            fetch('http://localhost:8000/simple-coder/update-requests'),
-                            fetch('http://localhost:8000/simple-coder/status')
+                            fetch(mindxApiBase() + '/simple-coder/update-requests'),
+                            fetch(mindxApiBase() + '/simple-coder/status')
                         ]);
                         
                         const requestsData = await requestsResponse.json();
@@ -1275,7 +1297,7 @@
                 // Initialize tracking variables
                 setTimeout(async () => {
                     try {
-                        const statusResponse = await fetch('http://localhost:8000/simple-coder/status');
+                        const statusResponse = await fetch(mindxApiBase() + '/simple-coder/status');
                         const statusData = await statusResponse.json();
                         lastCycleCount = statusData?.cycle_count || 0;
                         lastTotalUpdates = statusData?.total_updates || 0;

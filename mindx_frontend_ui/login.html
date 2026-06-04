@@ -250,6 +250,20 @@
 
     <!-- The wallet sign-in path — preserved verbatim from the prior login.html. -->
     <script>
+        // Origin-aware backend base URL (matches shadow-overlord.html). The prior
+        // hardcoded http://localhost:8000 caused "Failed to fetch" on the HTTPS
+        // production origin (mixed-content / wrong host). Same-origin in prod;
+        // explicit :8000 only on localhost; MINDX_API_URL stays an override.
+        function mindxApiBase() {
+            if (window.MINDX_API_URL) return window.MINDX_API_URL;
+            const here = window.location;
+            if (here.host.endsWith('pythai.net')) return 'https://mindx.pythai.net';
+            if (here.host.includes('localhost') || here.host.startsWith('127.'))
+                return `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`;
+            return here.origin;
+        }
+        window.mindxApiBase = mindxApiBase;
+
         window.connectMetaMask = async function() {
             try {
                 if (typeof window.ethereum === 'undefined') {
@@ -263,7 +277,7 @@
                     alert('Wallet connection library failed to load. Please refresh the page.');
                     return;
                 }
-                const apiBaseUrl = window.MINDX_API_URL || `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`;
+                const apiBaseUrl = mindxApiBase();
                 const createWalletClient = viem.createWalletClient || viem.default?.createWalletClient;
                 const custom = viem.custom || viem.default?.custom;
                 if (!createWalletClient || !custom) throw new Error('viem exports not found.');
@@ -358,7 +372,7 @@
                         <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3 4-3 9-3 9 1.34 9 3z"/>
                         <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
                     </svg>
-                    Connect Wallet & Sign-In
+                    CONNECT WALLET
                 </button>
             </div>
 
@@ -394,14 +408,8 @@
     </div>
 
     <script>
-    // ─── Backend URL (matches the shadow-overlord page) ─────────────────
-    const apiBase = (function() {
-        const here = window.location;
-        if (here.host.endsWith('pythai.net')) return 'https://mindx.pythai.net';
-        if (here.host.includes('localhost') || here.host.startsWith('127.'))
-            return `http://localhost:${window.MINDX_BACKEND_PORT || '8000'}`;
-        return here.origin;
-    })();
+    // ─── Backend URL (single origin-aware resolver, defined above) ──────
+    const apiBase = mindxApiBase();
     document.getElementById('docsLink').href = apiBase + '/docs.html';
     document.getElementById('apiLink').href  = apiBase + '/redoc';
 

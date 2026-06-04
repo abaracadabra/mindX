@@ -1343,7 +1343,7 @@
             <div class="wallet-wrap">
                 <button class="wallet-btn" id="walletBtn" onclick="connectWallet()">
                     <span class="dot"></span>
-                    <span id="walletBtnLabel">Connect Wallet</span>
+                    <span id="walletBtnLabel">CONNECT WALLET</span>
                 </button>
                 <div class="wallet-hover-card" id="walletHoverBtn"></div>
             </div>
@@ -1700,7 +1700,7 @@ async function connectWallet() {
         }
     } catch (err) {
         console.error('Wallet connect failed:', err);
-        label.textContent = 'Connect Wallet';
+        label.textContent = 'CONNECT WALLET';
         if (err.code === 4001) { /* User rejected */ }
         else { alert('Failed to connect wallet: ' + err.message); }
     }
@@ -1725,7 +1725,7 @@ async function disconnectWallet() {
 
     const btn = document.getElementById('walletBtn');
     btn.classList.remove('connected');
-    document.getElementById('walletBtnLabel').textContent = 'Connect Wallet';
+    document.getElementById('walletBtnLabel').textContent = 'CONNECT WALLET';
     document.getElementById('walletAddress').textContent = '';
 
     updateStats();
@@ -2293,7 +2293,7 @@ function updateStats() {
         walletLabel.textContent = connectedAddress.slice(0, 6) + '...' + connectedAddress.slice(-4);
         walletCard.style.borderColor = 'rgba(0,204,0,0.4)';
     } else {
-        walletValue.textContent = 'Connect';
+        walletValue.textContent = 'CONNECT WALLET';
         walletValue.style.cssText = 'font-size:1.2rem;';
         walletLabel.textContent = 'Wallet';
         walletCard.style.borderColor = '';
@@ -3135,7 +3135,7 @@ if (window.ethereum) {
             connectedChainId = null;
             connectedAddress = null;
             document.getElementById('walletBtn').classList.remove('connected');
-            document.getElementById('walletBtnLabel').textContent = 'Connect Wallet';
+            document.getElementById('walletBtnLabel').textContent = 'CONNECT WALLET';
             document.getElementById('walletAddress').textContent = '';
             updateStats();
             renderChains();
