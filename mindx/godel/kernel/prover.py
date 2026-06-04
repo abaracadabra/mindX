@@ -97,6 +97,39 @@ def build_acceptance_certificate(
     )
 
 
+def build_reflective_consistency_certificate(
+    *,
+    target: str,
+    u_old_on_new: str,
+    u_old_on_old: str,
+    cert_id: Optional[str] = None,
+) -> ProofCertificate:
+    """Certificate that a change to the utility function / improvement machinery
+    is preferred *under the CURRENT (old) utility* (Phase 3 anti-wireheading):
+
+        U_old(new_behavior) - U_old(old_behavior) >= 0
+
+    This is the reflective-consistency lock: the machine may rewrite its own
+    goal, but only a rewrite the *current* goal would itself endorse — so it
+    cannot redefine U to be trivially maximal. Values are exact rationals
+    (BOTTOM-valued utilities are not certifiable and must be refused upstream)."""
+    conjuncts = [
+        Obligation(op="ge", terms={"u_old_on_new": "1", "u_old_on_old": "-1"},
+                   const="0"),
+    ]
+    bindings = {"u_old_on_new": str(u_old_on_new), "u_old_on_old": str(u_old_on_old)}
+    label = ("Proof that this change to the utility function / improvement "
+             "machinery is preferred under the CURRENT utility "
+             "(U_old(new) - U_old(old) >= 0) — reflective consistency. The "
+             "machine may only adopt a goal-change its current goal endorses.")
+    return ProofCertificate(
+        cert_id=cert_id or f"reflcons_{int(time.time()*1000)}",
+        target=target, claim=Claim(conjuncts=conjuncts),
+        proof=Proof(bindings=bindings), label=label,
+        meta={"created_at": time.time(), "obligation_class": "reflective_consistency"},
+    )
+
+
 def record_proof_gated_change(cert: ProofCertificate) -> dict:
     """Check the certificate; append to the ledger ONLY if it verifies.
     Returns the checker verdict augmented with {recorded}."""

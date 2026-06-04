@@ -203,6 +203,14 @@ def compute_gmi(*, sample: int = 5000) -> dict[str, Any]:
         g7 = _predicate("G7", "checker_totality", UNMET, f"kernel unavailable: {e}", {})
         n_proof_gated = 0
 
+    # ── Phase 3: reflective reach (G4) + anti-wireheading (G5) ─────────────
+    try:
+        from . import reflective as _refl
+        g4, g5 = _refl.evaluate()
+    except Exception as e:  # pragma: no cover - defensive
+        g4 = _predicate("G4", "reflective_reach", UNMET, f"reflective unavailable: {e}", {})
+        g5 = _predicate("G5", "anti_wireheading", UNMET, f"reflective unavailable: {e}", {})
+
     # Proof coverage: proof-gated changes / accepted self-modifications. The
     # prover emits a certificate at each acceptance (self_improve_agent), so
     # this climbs honestly as real changes are gated. 0 until then.
@@ -214,18 +222,8 @@ def compute_gmi(*, sample: int = 5000) -> dict[str, Any]:
         g1,
         g2,
         g3,
-        _predicate(
-            "G4", "reflective_reach", UNMET,
-            "Improvement machinery (prover/utility/eval) is frozen; it cannot "
-            "yet be modified through the gate.",
-            {"machinery_mutable": False},
-        ),
-        _predicate(
-            "G5", "anti_wireheading", UNMET,
-            "U is not formalized, so reward sensors are not yet tamper-evident "
-            "under a reflective-consistency proof.",
-            {},
-        ),
+        g4,
+        g5,
         g6,
         g7,
         _predicate(
@@ -247,29 +245,46 @@ def compute_gmi(*, sample: int = 5000) -> dict[str, Any]:
         ),
     ]
 
-    # The verdict can be GODEL_MACHINE only when G2, G3, G5, G7 are PROVEN and
-    # PROOF coverage (not surrogate) clears the threshold. G3/G5/G7 need the
-    # kernel, so this stays NOT_YET — but G2/G6 can now legitimately read PROVEN.
+    # The verdict is GODEL_MACHINE only when the core properties are PROVEN
+    # (gate-soundness G2, proof-validity G3, reflective-reach G4,
+    # anti-wireheading G5, checker-totality G7), determinism G6 holds, utility
+    # is not regressing (G1 not falsified), AND real proof coverage clears the
+    # threshold. The coverage requirement is the honesty backstop: even with
+    # every property proven, the verdict will not flip until real changes are
+    # actually proof-gated (proof_coverage >= 0.5).
+    PROOF_COVERAGE_THRESHOLD = 0.5
     gate = {p["id"]: p["verdict"] for p in predicates}
     is_machine = (
         gate.get("G2") == PROVEN and gate.get("G3") == PROVEN
-        and gate.get("G5") == PROVEN and gate.get("G7") == PROVEN
-        and proof_coverage >= 0.5
+        and gate.get("G4") == PROVEN and gate.get("G5") == PROVEN
+        and gate.get("G6") == PROVEN and gate.get("G7") == PROVEN
+        and gate.get("G1") != FALSIFIED
+        and proof_coverage >= PROOF_COVERAGE_THRESHOLD
     )
     proven = sum(1 for v in gate.values() if v == PROVEN)
+    # Why not yet, in one phrase (honest diagnostics).
+    blockers = []
+    for gid in ("G2", "G3", "G4", "G5", "G6", "G7"):
+        if gate.get(gid) != PROVEN:
+            blockers.append(f"{gid}={gate.get(gid)}")
+    if proof_coverage < PROOF_COVERAGE_THRESHOLD:
+        blockers.append(f"proof_coverage={proof_coverage:.0%}<{int(PROOF_COVERAGE_THRESHOLD*100)}%")
 
     return {
-        "phase": 2,
+        "phase": 3,
         "verdict": "GODEL_MACHINE" if is_machine else "NOT_YET_A_GODEL_MACHINE",
         "proof_coverage": proof_coverage,
         "surrogate_coverage": surrogate_cov,
         "predicates_proven": proven,
+        "blockers": blockers,
         "honest_summary": (
-            "Self-modifying and self-referential. The trusted proof kernel now "
-            "exists: it is total (fuzz-verified) and sound on its conformance "
-            "suite, so proofs can be checked. Verdict stays NOT_YET — proof "
-            "coverage of real changes is still climbing from 0 and anti-wireheading "
-            "(G5) awaits Phase 3."
+            "All eight predicates are now live and testable. Phase 3: a formal "
+            "utility function with a structural alignment floor (uncompensable "
+            "safety), the Checkable(K') lock (the kernel may be rewritten only "
+            "into a still-sound checker), and tamper-evident reward sensors gate "
+            "anti-wireheading (G5) and reflective reach (G4). The verdict flips "
+            "to GODEL_MACHINE only once real proof coverage clears the threshold "
+            "— honest backstop, not yet met."
         ),
         "constraint": "CPU eval on 2-core/8GB VPS; checking is on-box, proof "
                       "search would be sampled off-peak (docs/GODEL_EVAL_BLUEPRINT.md §3).",

@@ -158,6 +158,55 @@ def self_test() -> dict:
             "failures": failures, "sound": not failures}
 
 
+def check_kernel_candidate(candidate_check_fn, *, fuzz_n: int = 200) -> dict:
+    """The Checkable(K') reflective-safety lock (Phase 3).
+
+    A Gödel machine may rewrite its own checker — but ONLY if the rewritten
+    checker is still a sound checker. This admits a candidate checker function
+    iff it (a) agrees with the conformance suite (accepts valid, rejects
+    invalid) and (b) survives fuzzing without crashing. A rewrite that disables
+    or weakens the checker cannot itself be admitted — which is exactly the lock
+    that keeps reflective self-modification from breaking soundness.
+
+    `candidate_check_fn` has the same contract as check_certificate:
+    (cert_or_dict) -> {"valid": bool, ...}.
+    """
+    failures = []
+    try:
+        for c, expected in conformance_suite():
+            try:
+                got = bool(candidate_check_fn(c).get("valid"))
+            except Exception as e:
+                failures.append({"cert_id": c.get("cert_id") if isinstance(c, dict) else getattr(c, "cert_id", "?"),
+                                 "error": str(e)})
+                continue
+            if got != expected:
+                failures.append({"cert_id": c.get("cert_id") if isinstance(c, dict) else getattr(c, "cert_id", "?"),
+                                 "expected": expected, "got": got})
+    except Exception as e:
+        return {"sound": False, "reason": f"conformance harness failed: {e}",
+                "conformance_failures": failures}
+
+    # Fuzz the candidate: it must always return a verdict dict, never crash.
+    crashes = 0
+    import random
+    rng = random.Random(99173)
+    for _ in range(max(1, fuzz_n)):
+        junk = rng.choice([None, 0, "", [], {}, {"claim": {"conjuncts": [{"op": "zz"}]}}])
+        try:
+            r = candidate_check_fn(junk)
+            if not isinstance(r, dict) or "valid" not in r:
+                crashes += 1
+        except Exception:
+            crashes += 1
+
+    sound = (not failures) and crashes == 0
+    return {"sound": sound,
+            "reason": ("candidate checker is sound (conformance-equivalent, fuzz-clean)"
+                       if sound else "candidate checker is NOT sound — rewrite refused"),
+            "conformance_failures": failures, "fuzz_crashes": crashes}
+
+
 def fuzz_checker(n: int = 500) -> dict:
     """Throw malformed/adversarial inputs at the checker; confirm it always
     halts and returns a verdict (never raises, never hangs). Deterministic

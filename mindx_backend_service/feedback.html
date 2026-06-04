@@ -1555,6 +1555,12 @@ function renderGodelMachine(d) {
     if (typeof t.mean_coherence === 'number') html += ' · mean coherence ' + t.mean_coherence.toFixed(2);
     html += ' · with proof: ' + (t.with_proof || 0);
   }
+  if (typeof d.predicates_proven === 'number') {
+    html += '</div><div class="sub">predicates proven: <b>' + d.predicates_proven + ' / 8</b>';
+    if (Array.isArray(d.blockers) && d.blockers.length) {
+      html += ' · not-yet because: ' + escapeHtml(d.blockers.join(', '));
+    }
+  }
   html += '</div></div>';
   html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px">';
   for (const p of d.predicates) {

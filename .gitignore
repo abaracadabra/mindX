@@ -110,3 +110,5 @@ data/mastermind_work/
 mindx_frontend_ui/node_modules/
 data/godel/source_ledger.jsonl
 data/godel/certificates.jsonl
+data/godel/sensor_chain.jsonl
+data/godel/utility_ledger.jsonl
