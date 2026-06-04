@@ -6511,9 +6511,10 @@ async def startup_event():
             _pub_orchestrator = PublicationOrchestrator(author_agent=author)
             asyncio.create_task(_pub_orchestrator.watch_sea())
             asyncio.create_task(_pub_orchestrator.watch_dreams())
+            asyncio.create_task(_pub_orchestrator.watch_github())
             logger.info(
                 "PublicationOrchestrator started "
-                "(watching SEA campaign history + full-moon dreams)"
+                "(watching SEA campaign history + full-moon dreams + github.awareness)"
             )
         except Exception as pub_err:
             logger.warning(

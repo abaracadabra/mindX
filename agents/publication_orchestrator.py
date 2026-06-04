@@ -216,7 +216,51 @@ class PublicationOrchestrator:
                 logger.warning(f"watch_dreams: scan failed: {e}")
             await asyncio.sleep(self.poll_interval_s)
 
+    async def watch_github(self) -> None:
+        """Watch mindX's own public git history. New commits are chronicled by
+        AuthorAgent; batches that rise to a milestone are published. Zero
+        network — local `git log`. Runs forever."""
+        logger.info(
+            f"PublicationOrchestrator: watching git history via github.awareness "
+            f"(poll={self.poll_interval_s}s)"
+        )
+        while True:
+            try:
+                await self._scan_github_once()
+            except Exception as e:  # pragma: no cover
+                logger.warning(f"watch_github: scan failed: {e}")
+            await asyncio.sleep(self.poll_interval_s)
+
     # ─── Scanners (per-tick) ─────────────────────────────────────
+
+    async def _scan_github_once(self) -> None:
+        """Read new commits; chronicle them; publish the batch if it is a
+        milestone. Watermark advances only once the batch is handled (published
+        or coalesced), so a wordpress-agent outage never loses a milestone."""
+        gh = self.author._get_github_awareness()
+        if gh is None or not gh.is_repo():
+            return
+        watermark = gh.read_watermark()
+        commits = gh.commits_since(watermark)
+        if not commits:
+            return
+        decision = self.author.assess_milestone(commits)
+        self.author.journal_milestone(commits, decision)  # always chronicle (idempotent)
+        head = commits[-1].sha
+        trigger_id = "milestone:" + head[:12]
+
+        handled = True
+        if decision.get("worthy") and not self.ledger.has(trigger_id):
+            payload = {"commits": [c.to_dict() for c in commits], "decision": decision}
+            await self._schedule_publish(
+                trigger_id=trigger_id, kind="milestone", payload=payload,
+            )
+            # Published or coalesced both land in the ledger; a failed publish
+            # does not — in which case we retry on the next tick.
+            handled = self.ledger.has(trigger_id)
+        if handled:
+            gh.write_watermark(head)
+
 
     async def _scan_sea_once(self) -> None:
         """Read SEA history. Any new SUCCESS not already in the ledger
@@ -437,6 +481,9 @@ class PublicationOrchestrator:
             return self._compose_sea_article(payload)
         if kind == "dream_book_edition":
             return self._compose_dream_article(payload)
+        if kind == "milestone":
+            # Composition lives on the canonical author (mindX's own voice).
+            return self.author._compose_milestone_article(payload)
         return "", "", None, None
 
     def _compose_sea_article(
@@ -596,6 +643,10 @@ class PublicationOrchestrator:
             kw.extend(["strategic evolution", "improvement"])
         elif kind == "dream_book_edition":
             kw.extend(["consolidation", "lunar cycle", "long-term memory"])
+        elif kind == "milestone":
+            dec = (payload or {}).get("decision") or {}
+            kw = ["mindX", "milestone", "self-improvement", "open source",
+                  dec.get("theme", "evolution")]
         return kw
 
 

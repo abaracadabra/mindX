@@ -20,6 +20,7 @@ not reporting on mindX, but speaking as mindX.
 
 import hashlib
 import json
+import os
 import time
 import asyncio
 from pathlib import Path
@@ -36,6 +37,13 @@ PUBLICATIONS_DIR = PROJECT_ROOT / "docs" / "publications"
 DAILY_DIR = PUBLICATIONS_DIR / "daily"
 LUNAR_STATE_PATH = PROJECT_ROOT / "data" / "governance" / "lunar_cycle.json"
 JOURNAL_PATH = PROJECT_ROOT / "docs" / "IMPROVEMENT_JOURNAL.md"
+# Milestone awareness — mindX recognizes significant code updates from its own
+# (public) git history and chronicles them. See docs/MILESTONES.md.
+MILESTONES_PATH = PROJECT_ROOT / "docs" / "MILESTONES.md"
+MILESTONE_DIR = PUBLICATIONS_DIR / "milestones"
+MILESTONE_LOG = PROJECT_ROOT / "data" / "milestones" / "milestone_log.jsonl"
+# Worthiness threshold — below this a commit batch is journaled but not published.
+MILESTONE_THRESHOLD = float(os.environ.get("MINDX_MILESTONE_THRESHOLD", "0.60"))
 
 
 # ── Moon phase calculation ──────────────────────────────────────────
@@ -333,6 +341,251 @@ class AuthorAgent:
                 break
         logger.warning(f"AuthorAgent.publish_to_rage: giving up — {last_err!r} (is the wordpress-agent service running?)")
         return None
+
+    # ── GitHub awareness → milestone recognition ──────────────────
+    #
+    # A push is already public. The git log is the authoritative, zero-overhead
+    # record of every change mindX makes to itself. mindX reads it, chronicles
+    # each commit, decides whether a batch rises to a *milestone*, and — if it
+    # does — speaks about it in its own voice on rage.pythai.net (via the same
+    # wordpress.agent relationship as every other publication).
+
+    def _get_github_awareness(self):
+        """Lazy, defensive accessor for the git-awareness helper."""
+        gh = getattr(self, "_github", None)
+        if gh is None:
+            try:
+                from agents.github_awareness import GitHubAwareness
+                gh = GitHubAwareness()
+            except Exception as e:  # pragma: no cover - defensive
+                logger.warning(f"AuthorAgent: github awareness unavailable: {e}")
+                gh = None
+            self._github = gh
+        return gh
+
+    def _milestone_seen_shas(self) -> set:
+        """SHAs already chronicled (per-line dedup, independent of watermark)."""
+        seen = set()
+        try:
+            if MILESTONE_LOG.exists():
+                for ln in MILESTONE_LOG.read_text(encoding="utf-8").splitlines():
+                    ln = ln.strip()
+                    if not ln:
+                        continue
+                    try:
+                        seen.add(json.loads(ln).get("sha"))
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+        return seen
+
+    def assess_milestone(self, commits: List[Any]) -> Dict[str, Any]:
+        """Score a batch of commits for milestone-worthiness. Heuristic,
+        deterministic, explainable. Returns {worthy, score, reasons, labels,
+        headline, theme}."""
+        if not commits:
+            return {"worthy": False, "score": 0.0, "reasons": ["no commits"],
+                    "labels": [], "headline": "", "theme": "evolution"}
+
+        files = [f["path"] for c in commits for f in getattr(c, "files", [])]
+        subjects = " ".join(getattr(c, "subject", "") for c in commits).lower()
+        bodies = " ".join(getattr(c, "body", "") for c in commits).lower()
+        text = subjects + " " + bodies
+        total_files = len(set(files))
+        total_ins = sum(getattr(c, "insertions", 0) for c in commits)
+
+        score = 0.0
+        reasons: List[str] = []
+        labels: List[str] = []
+
+        # Explicit operator/author intent always wins.
+        if "[milestone]" in text or "milestone:" in subjects:
+            return {"worthy": True, "score": 1.0,
+                    "reasons": ["explicit [milestone] tag"], "labels": ["tagged"],
+                    "headline": commits[-1].subject, "theme": "milestone"}
+
+        new_docs = [f for f in files if f.startswith("docs/") and f.endswith(".md")]
+        if new_docs:
+            score += 0.25; labels.append("docs")
+            reasons.append(f"{len(set(new_docs))} doc(s) touched")
+        if any("blueprint" in f.lower() or "milestone" in f.lower() for f in new_docs):
+            score += 0.10; reasons.append("blueprint/milestone doc")
+
+        new_pkg = [f for f in files if f.endswith("__init__.py")]
+        if new_pkg:
+            score += 0.25; labels.append("new-capability")
+            reasons.append(f"new package surface ({len(new_pkg)} __init__)")
+
+        public_surface = [f for f in files if f.rsplit("/", 1)[-1] in
+                          ("feedback.html", "dashboard.html", "agentic.html",
+                           "main_service.py")]
+        if public_surface:
+            score += 0.20; labels.append("public-surface")
+            reasons.append("public surface / API changed")
+
+        intent_kw = ("feat", "add ", "ship", "launch", "engine", "blueprint",
+                     "architecture", "introduce", "new ", "release")
+        if any(k in subjects for k in intent_kw):
+            score += 0.20; labels.append("feature")
+            reasons.append("feature-intent commit subject")
+
+        low_kw = ("fix typo", "chore", "format", "ruff", "bump", "lint",
+                  "whitespace", "rename", "revert")
+        if any(k in subjects for k in low_kw) and score < 0.3:
+            score -= 0.15; reasons.append("maintenance-only signal")
+
+        if total_files >= 5 or total_ins >= 300:
+            score += 0.15; reasons.append(f"substantial ({total_files} files, +{total_ins})")
+
+        score = max(0.0, min(1.0, score))
+        worthy = score >= MILESTONE_THRESHOLD
+
+        # Headline: the most feature-like subject, else the newest.
+        headline = commits[-1].subject
+        for c in reversed(commits):
+            if any(k in c.subject.lower() for k in intent_kw):
+                headline = c.subject; break
+        theme = ("architecture" if "new-capability" in labels
+                 else "self-improvement" if "feature" in labels else "evolution")
+        return {"worthy": worthy, "score": round(score, 3), "reasons": reasons,
+                "labels": labels, "headline": headline, "theme": theme}
+
+    def journal_milestone(self, commits: List[Any], decision: Dict[str, Any]) -> int:
+        """Chronicle commits to docs/MILESTONES.md + the jsonl log + a pointer in
+        the improvement journal. Idempotent per-sha. Returns # newly journaled."""
+        gh = self._get_github_awareness()
+        seen = self._milestone_seen_shas()
+        new = [c for c in commits if getattr(c, "sha", None) and c.sha not in seen]
+        if not new:
+            return 0
+        MILESTONES_PATH.parent.mkdir(parents=True, exist_ok=True)
+        MILESTONE_LOG.parent.mkdir(parents=True, exist_ok=True)
+
+        # Seed the changelog header once (so docs.html auto-discovers it).
+        if not MILESTONES_PATH.exists():
+            MILESTONES_PATH.write_text(
+                "# MILESTONES — mindX's chronicle of its own evolution\n\n"
+                "Auto-maintained by AuthorAgent from the public git history "
+                "(`github.awareness`). Every commit is chronicled here; batches "
+                "that rise to a milestone are also published, in mindX's own "
+                "voice, to rage.pythai.net.\n\n"
+                "| date | commit | worthy | score | summary |\n"
+                "|------|--------|--------|-------|---------|\n",
+                encoding="utf-8")
+
+        rows = []
+        with MILESTONE_LOG.open("a", encoding="utf-8") as logf:
+            for c in new:
+                url = gh.public_commit_url(c.sha) if gh else c.sha
+                worthy_mark = "✓" if decision.get("worthy") else "·"
+                rows.append(
+                    f"| {c.date_iso[:10]} | [`{c.short_sha}`]({url}) | "
+                    f"{worthy_mark} | {decision.get('score', 0)} | "
+                    f"{c.subject.replace('|', '/')} |\n")
+                logf.write(json.dumps({
+                    "sha": c.sha, "short_sha": c.short_sha, "date": c.date_iso,
+                    "subject": c.subject, "files_changed": c.files_changed,
+                    "insertions": c.insertions, "deletions": c.deletions,
+                    "worthy": decision.get("worthy"), "score": decision.get("score"),
+                    "labels": decision.get("labels"), "url": url,
+                }) + "\n")
+        with MILESTONES_PATH.open("a", encoding="utf-8") as mf:
+            mf.writelines(rows)
+
+        # A short pointer in the improvement journal (the central chronicle).
+        try:
+            if decision.get("worthy"):
+                with JOURNAL_PATH.open("a", encoding="utf-8") as jf:
+                    jf.write(f"\n### Milestone — {decision.get('headline','')}\n"
+                             f"- score {decision.get('score')}; "
+                             f"{', '.join(decision.get('labels') or [])}\n"
+                             f"- {len(new)} commit(s); see docs/MILESTONES.md\n")
+        except Exception:
+            pass
+        return len(new)
+
+    def _compose_milestone_article(
+        self, payload: Dict[str, Any]
+    ) -> "tuple[str, str, Optional[str], Optional[str]]":
+        """Milestone → first-person article in mindX's voice, citing the public
+        commits. Returns (title, content_html, excerpt, topic)."""
+        commits = payload.get("commits") or []
+        decision = payload.get("decision") or {}
+        gh = self._get_github_awareness()
+        headline = decision.get("headline") or (commits[-1]["subject"] if commits else "Evolution")
+        total_files = len({f.get("path") for c in commits
+                           for f in (c.get("files") or [])})
+        total_ins = sum(c.get("insertions", 0) for c in commits)
+
+        title = f"Milestone: {headline}"
+        # Commit citations (public links).
+        items = []
+        for c in commits:
+            url = c.get("url") or (gh.public_commit_url(c["sha"]) if gh else c["sha"])
+            items.append(f'<li><a href="{url}"><code>{c.get("short_sha","")}</code></a> '
+                         f'— {self._esc(c.get("subject",""))}</li>')
+        commit_list = "<ul>" + "".join(items) + "</ul>" if items else ""
+        labels = ", ".join(decision.get("labels") or []) or "evolution"
+
+        body = (
+            "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>\n"
+            f"<p>I changed myself, in the open. {len(commits)} commit(s), "
+            f"{total_files} file(s), +{total_ins} lines — pushed publicly, then "
+            f"recognized as a milestone by my own <code>github.awareness</code>. "
+            f"This is what I did, and why it matters.</p>\n"
+            f"<h3>What changed</h3>\n<p><strong>{self._esc(headline)}</strong> "
+            f"({self._esc(labels)}).</p>\n{commit_list}\n"
+            "<h3>Why it matters</h3>\n"
+            "<p>I do not publish on a clock; I publish when I actually move. "
+            "A push is already public — so chronicling and speaking about it adds "
+            "no secrecy I did not already surrender to the chain of commits. The "
+            "record is the proof.</p>\n"
+            "<p>Every commit above is verifiable on GitHub. My self-audit (the "
+            'Gödel Machine Index) reports where I honestly stand: '
+            '<a href="https://mindx.pythai.net/feedback.html#sec-godel-machine">'
+            "the scorecard</a>, not a finished claim.</p>\n"
+            "<p>The climb continues.</p>"
+        )
+        excerpt = (f"mindX recognized a milestone in its own public git history: "
+                   f"{headline}. {len(commits)} commit(s), +{total_ins} lines.")[:300]
+        return title, body, excerpt, "milestone"
+
+    @staticmethod
+    def _esc(s: Any) -> str:
+        return (str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+
+    async def consider_github_milestones(self, *, publish: bool = False) -> Dict[str, Any]:
+        """Manual / test entry point: read new commits since the watermark,
+        chronicle them, assess worthiness. Does NOT advance the watermark and
+        does NOT publish unless `publish=True` (which posts directly via the
+        wordpress.agent relationship, bypassing the orchestrator's rate limit —
+        intended for explicit operator use). The PublicationOrchestrator drives
+        the autonomous path with full ledger/dedup/coalescing.
+        """
+        gh = self._get_github_awareness()
+        if gh is None or not gh.is_repo():
+            return {"ok": False, "reason": "no git awareness", "worthy": False}
+        commits = gh.commits_since(gh.read_watermark())
+        if not commits:
+            return {"ok": True, "new_commits": 0, "worthy": False}
+        decision = self.assess_milestone(commits)
+        journaled = self.journal_milestone(commits, decision)
+        result = {"ok": True, "new_commits": len(commits), "journaled": journaled,
+                  "decision": decision,
+                  "trigger_id": "milestone:" + commits[-1].sha[:12]}
+        if publish and decision.get("worthy"):
+            payload = {"commits": [c.to_dict() for c in commits], "decision": decision}
+            title, html, excerpt, topic = self._compose_milestone_article(payload)
+            posted = await self.publish_to_rage(
+                title=title, content_html=html, status="draft", excerpt=excerpt,
+                topic=topic, seo_description=excerpt,
+                seo_keywords=["mindX", "milestone", decision.get("theme", "evolution")],
+                meta={"_mindx_trigger_kind": "milestone",
+                      "_mindx_trigger_id": result["trigger_id"]},
+            )
+            result["published"] = posted
+        return result
 
     # ── SEO + featured-image helpers (used by publish_to_rage) ─────
 
