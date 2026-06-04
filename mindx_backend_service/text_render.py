@@ -1501,16 +1501,19 @@ def render_catalogue_kinds(d: dict) -> str:
         [("event_kind", "event", None), ("→ entry", "entry", None), ("emitted", "emitted", None)])
 
 
-def _lineage_rows(edges: list, nodes: dict, arrow: str) -> str:
+def _lineage_rows(edges: list, nodes: dict, arrow: str, node_key: str) -> str:
+    # node_key = which endpoint of the edge is the "other" node to show:
+    #   ancestors walk out-edges (root=src) → show dst; descendants walk in-edges
+    #   (root=dst) → show src.
     if not edges:
         return "  (none)\n"
     out = []
     for e in edges:
-        dst = e.get("dst_urn", "")
-        nd = nodes.get(dst) or {}
-        label = (nd.get("title") or dst)[:48]
-        kind = nd.get("kind") or ("?" if dst not in nodes else "")
-        dangling = "" if dst in nodes else "  (dangling)"
+        urn = e.get(node_key, "")
+        nd = nodes.get(urn) or {}
+        label = (nd.get("title") or urn)[:48]
+        kind = nd.get("kind") or ("?" if urn not in nodes else "")
+        dangling = "" if urn in nodes else "  (dangling)"
         out.append(f"  {'  ' * (e.get('depth',1)-1)}{arrow} [{e.get('edge_type','')}] "
                    f"{kind}: {label}{dangling}")
     return "\n".join(out) + "\n"
@@ -1529,10 +1532,10 @@ def render_catalogue_lineage(d: dict) -> str:
     out = head
     if d.get("direction") in ("ancestors", "both"):
         out += "\nancestors (what this derives from / was produced by):\n"
-        out += _lineage_rows(d.get("ancestors") or [], nodes, "↑")
+        out += _lineage_rows(d.get("ancestors") or [], nodes, "↑", "dst_urn")
     if d.get("direction") in ("descendants", "both"):
         out += "\ndescendants (what derived from / was produced by this):\n"
-        out += _lineage_rows(d.get("descendants") or [], nodes, "↓")
+        out += _lineage_rows(d.get("descendants") or [], nodes, "↓", "src_urn")
     return out
 
 
