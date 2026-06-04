@@ -10,6 +10,8 @@
 
 **Documentation index**: [DOC_INDEX.md](DOC_INDEX.md) — a complete, always-current catalogue of every doc, **auto-maintained by [AuthorAgent](AUTHOR_AGENT.md)** (regenerated on each recognized milestone via `github.awareness`). NAV.md is the *curated* hub; DOC_INDEX.md is the *exhaustive* one.
 
+**Deployment status**: the Gödel-machine subsystem, `github.awareness`/MILESTONES, DOC_INDEX auto-maintenance, and the GMI dashboard surfaces are on branch `claude/inspiring-carson-22XTs` and **not yet deployed** — the live AuthorAgent is unchanged. See [DEPLOYMENT_STATUS.md](DEPLOYMENT_STATUS.md) for the branch-vs-live matrix and deploy checklist.
+
 ---
 
 ## Getting Started
@@ -392,7 +394,7 @@ mindX is a Godel machine — a self-improving system where the improvement mecha
 - [Strategic Evolution](agents/strategic_evolution_agent.md) — Long-term improvement planning
 - [Self-Improve Agent](agents/self_improve_agent.md) — Targeted code improvement execution
 - [Schmidhüber Engine](SCHMIDHUBER_ENGINE.md) — the oscillatory drive of the Gödel machine: an energy-conserving Hamiltonian pendulum (utility is the conserved quantity) tipping at each apex into machine.dream (information→knowledge) and [mindXtrain](../mindx/godel/mindxtrain/) (knowledge→wisdom→weights). ATARAXIA as literal physics (bounded disruption); `mindX --replicate` as anti-phase coupled heads. Code: [`mindx/godel/schmidhuber_engine.py`](../mindx/godel/schmidhuber_engine.py).
-- [Gödel Eval Blueprint](GODEL_EVAL_BLUEPRINT.md) — the falsifiable harness that proves *or disproves* the Gödel-machine claim. 8 predicates (G1–G8), the Gödel Machine Index (GMI) scorecard, honest today as `NOT_YET_A_GODEL_MACHINE` (proof coverage 0%). Live at [`/insight/godel/machine`](https://mindx.pythai.net/insight/godel/machine?h=true); surfaced on [feedback.html](https://mindx.pythai.net/feedback.html#sec-godel-machine). Code: [`mindx/godel/eval/gmi.py`](../mindx/godel/eval/gmi.py).
+- [Gödel Eval Blueprint](GODEL_EVAL_BLUEPRINT.md) — the falsifiable harness that proves *or disproves* the Gödel-machine claim. 8 predicates (G1–G8), the Gödel Machine Index (GMI) scorecard, honest verdict `NOT_YET_A_GODEL_MACHINE`. Endpoint `/insight/godel/machine` + feedback.html panels. **Status: on branch `claude/inspiring-carson-22XTs`, not yet deployed — see [DEPLOYMENT_STATUS.md](DEPLOYMENT_STATUS.md).** Code: [`mindx/godel/eval/gmi.py`](../mindx/godel/eval/gmi.py).
 - [github.awareness → MILESTONES](MILESTONES.md) — mindX recognizes significant code updates from its own public git history and chronicles them ([`agents/github_awareness.py`](../agents/github_awareness.py)); worthy batches publish in mindX's own voice. Recovery posture in [survive.md](survive.md#replication-recovery-before-risk).
 
 ## Identity & Security

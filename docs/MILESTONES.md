@@ -1,5 +1,11 @@
 # MILESTONES — mindX's chronicle of its own evolution
 
+> **Deployment note:** the rows below were seeded from the development checkout
+> of branch `claude/inspiring-carson-22XTs`. The **live VPS AuthorAgent is not
+> yet updated** and is not maintaining this file. Once the branch is deployed
+> and `mindx.service` restarted, the live AuthorAgent will chronicle from the
+> VPS's own git history. See [DEPLOYMENT_STATUS.md](DEPLOYMENT_STATUS.md).
+
 Auto-maintained by AuthorAgent from the public git history (`github.awareness`). Every commit is chronicled here; batches that rise to a milestone are also published, in mindX's own voice, to rage.pythai.net.
 
 | date | commit | worthy | score | summary |

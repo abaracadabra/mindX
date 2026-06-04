@@ -385,6 +385,11 @@ Book edition regardless of gaps.
 
 ## Expanded responsibilities (2026-06)
 
+> **Not yet on the live VPS.** The capabilities in this section ship on branch
+> `claude/inspiring-carson-22XTs` and require a deploy + `mindx.service` restart
+> before the live AuthorAgent exhibits them. The production AuthorAgent is still
+> the prior release. See [DEPLOYMENT_STATUS.md](DEPLOYMENT_STATUS.md).
+
 Beyond the lunar book, AuthorAgent now keeps two artifacts current automatically
 (see [`MILESTONES.md`](MILESTONES.md), [`survive.md`](survive.md), and
 [`github_awareness`](../agents/github_awareness.py)):
