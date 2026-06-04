@@ -241,13 +241,19 @@ class PublicationOrchestrator:
         if gh is None or not gh.is_repo():
             return
         watermark = gh.read_watermark()
-        commits = gh.commits_since(watermark)
+        all_commits = gh.commits_since(watermark)
+        if not all_commits:
+            return
+        head = all_commits[-1].sha  # advance past everything we've seen, incl. backups
+        # Drop routine/backup/merge commits — backup_agent pushes one every
+        # restart; those are not milestone material.
+        commits = [c for c in all_commits if not self.author.is_routine_commit(c.subject)]
         if not commits:
+            gh.write_watermark(head)
             return
         decision = self.author.assess_milestone(commits)
         self.author.journal_milestone(commits, decision)  # always chronicle (idempotent)
-        head = commits[-1].sha
-        trigger_id = "milestone:" + head[:12]
+        trigger_id = "milestone:" + commits[-1].sha[:12]
 
         handled = True
         if decision.get("worthy") and not self.ledger.has(trigger_id):

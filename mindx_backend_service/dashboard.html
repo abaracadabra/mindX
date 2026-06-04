@@ -405,7 +405,8 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
   <div class="hero layer" id="L0">
     <h1 class="hero-title">mind<span class="m">X</span></h1>
     <p class="hero-sub"><em>Building a Darwin-Gödel Machine</em> — self-improving autonomous intelligence with sovereign agents, cryptographic identity, and constitutional governance. Live on commodity hardware.</p>
-    <div id="gmi-headline" style="font-family:var(--mono);font-size:12px;color:var(--text2);margin:-12px auto 26px;max-width:600px"><span id="gmi-verdict">Gödel Machine Index: checking…</span></div>
+    <div id="gmi-headline" style="font-family:var(--mono);font-size:12px;color:var(--text2);margin:-12px auto 6px;max-width:600px"><span id="gmi-verdict">Gödel Machine Index: checking…</span></div>
+    <div id="milestone-line" style="font-family:var(--mono);font-size:11px;color:var(--text3);margin:0 auto 24px;max-width:600px"></div>
     <div class="hero-stats" id="hero-stats">
       <div class="hs"><div class="hs-val" id="hs-up">--</div><div class="hs-lbl">operational</div></div>
       <div class="hs"><div class="hs-val" id="hs-session">0:00</div><div class="hs-lbl">session</div></div>
@@ -1422,6 +1423,18 @@ fetch('/insight/godel/machine').then(function(r){return r.json()}).then(function
   var color=yes?'#3fb950':'#d29922';
   el.innerHTML='Gödel Machine Index: <b style="color:'+color+'">'+label+'</b> · proof coverage '+cov+
     ' · <a href="/feedback.html#sec-godel-machine" style="color:var(--blue)">self-audit</a>';
+}).catch(function(){});
+
+// Latest milestone mindX recognized from its own public git history
+fetch('/insight/milestones/recent?limit=10').then(function(r){return r.json()}).then(function(d){
+  var el=document.getElementById('milestone-line');if(!el)return;
+  var rows=(d&&d.milestones)||[];
+  var worthy=rows.filter(function(m){return m.worthy});
+  var latest=worthy[0]||rows[0];if(!latest)return;
+  var url=latest.url||'#';
+  el.innerHTML='latest milestone: <a href="'+url+'" target="_blank" rel="noopener" style="color:var(--blue)">'+
+    (latest.short_sha||'')+'</a> '+(latest.subject||'').replace(/[<>&]/g,'')+
+    ' · <a href="/feedback.html#sec-milestones" style="color:var(--blue)">all</a>';
 }).catch(function(){});
 
 // Layer 1: Thesis evidence loads fast (cached, small payload)

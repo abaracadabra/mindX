@@ -3510,6 +3510,39 @@ async def insight_godel_machine(request: Request):
     return _maybe_h_text(request, gmi, route_path="/insight/godel/machine")
 
 
+@app.get("/insight/milestones/recent", tags=["insight"])
+@_insight_safe
+async def insight_milestones_recent(request: Request, limit: int = 25):
+    """mindX's chronicle of its own evolution — milestones AuthorAgent
+    recognized from the public git history (github.awareness).
+
+    Each entry: short_sha, date, subject, files_changed, insertions, deletions,
+    worthy, score, labels, url (public GitHub commit link). Newest first.
+    Source: data/milestones/milestone_log.jsonl.
+    """
+    log_path = PROJECT_ROOT / "data" / "milestones" / "milestone_log.jsonl"
+    if not log_path.exists():
+        return _maybe_h_text(request, {"milestones": [], "count": 0, "worthy_count": 0},
+                             route_path="/insight/milestones/recent")
+    try:
+        lines = [ln for ln in log_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        rows = []
+        for ln in lines[-max(1, min(limit, 200)):]:
+            try:
+                rows.append(json.loads(ln))
+            except Exception:
+                continue
+        rows.reverse()  # newest first
+        worthy = sum(1 for r in rows if r.get("worthy"))
+        return _maybe_h_text(
+            request,
+            {"milestones": rows, "count": len(rows), "worthy_count": worthy},
+            route_path="/insight/milestones/recent",
+        )
+    except Exception as e:
+        return {"milestones": [], "count": 0, "worthy_count": 0, "error": str(e)}
+
+
 @app.get("/insight/model_selector/recent", tags=["insight"])
 @_insight_safe
 async def insight_model_selector_recent(request: Request, limit: int = 50):

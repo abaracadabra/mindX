@@ -555,6 +555,24 @@ class AuthorAgent:
     def _esc(s: Any) -> str:
         return (str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
+    @staticmethod
+    def is_routine_commit(subject: str) -> bool:
+        """True for commits that are housekeeping, not milestone material.
+
+        backup_agent pushes `Pre-shutdown backup: …` on every restart; those —
+        plus merges and pure version bumps — are noise the chronicle should
+        skip (git already is the full log)."""
+        s = (subject or "").strip().lower()
+        if not s:
+            return True
+        routine_prefixes = ("pre-shutdown backup", "backup:", "merge pull request",
+                            "merge branch", "merge remote", "bump version")
+        if any(s.startswith(p) for p in routine_prefixes):
+            return True
+        if "backup" in s and "shutdown" in s:
+            return True
+        return False
+
     async def consider_github_milestones(self, *, publish: bool = False) -> Dict[str, Any]:
         """Manual / test entry point: read new commits since the watermark,
         chronicle them, assess worthiness. Does NOT advance the watermark and
@@ -567,8 +585,10 @@ class AuthorAgent:
         if gh is None or not gh.is_repo():
             return {"ok": False, "reason": "no git awareness", "worthy": False}
         commits = gh.commits_since(gh.read_watermark())
+        commits = [c for c in commits if not self.is_routine_commit(c.subject)]
         if not commits:
-            return {"ok": True, "new_commits": 0, "worthy": False}
+            return {"ok": True, "new_commits": 0, "worthy": False,
+                    "note": "no non-routine commits"}
         decision = self.assess_milestone(commits)
         journaled = self.journal_milestone(commits, decision)
         result = {"ok": True, "new_commits": len(commits), "journaled": journaled,

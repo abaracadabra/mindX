@@ -438,6 +438,18 @@ tr:hover td{background:rgba(121,192,255,.02)}
   <div id="godelMachine" class="card"><div class="empty">loading…</div></div>
 </section>
 
+<!-- 3c. Milestones — mindX's chronicle of its own evolution -->
+<section id="sec-milestones">
+  <div class="sec-head">
+    <h2>milestones <span id="milestonePill" class="pill">checking…</span></h2>
+    <span class="sub">/insight/milestones/recent · recognized from the public git history (github.awareness)</span>
+  </div>
+  <p class="sec-desc">
+    mindX reads its own <b>public git history</b> and recognizes which code updates rise to a milestone — then chronicles them and speaks about the worthy ones, in its own voice, on <a href="https://rage.pythai.net" target="_blank" rel="noopener">rage.pythai.net</a>. A push is already public, so this adds zero overhead and no new disclosure. <code>✓</code> = published-worthy; every commit links to GitHub. See <a href="/doc/MILESTONES">the chronicle</a>.
+  </p>
+  <div id="milestones" class="card"><div class="empty">loading…</div></div>
+</section>
+
 <!-- 4. Improvement ledger with reasoning -->
 <section id="sec-improvements">
   <div class="sec-head">
@@ -1569,6 +1581,39 @@ async function refreshGodelMachine() {
     if (pill) pill.textContent = 'error';
   }
 }
+function renderMilestones(d) {
+  const rows = (d && d.milestones) || [];
+  if (!rows.length) return '<div class="empty">no milestones chronicled yet — github.awareness has not seen a worthy push</div>';
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html += '<tr style="color:var(--text3);text-align:left"><th>date</th><th>commit</th><th></th><th>score</th><th>summary</th></tr>';
+  for (const m of rows) {
+    const worthy = m.worthy ? '<span style="color:#3fb950">✓</span>' : '<span style="color:#8b949e">·</span>';
+    const sha = escapeHtml(m.short_sha || '');
+    const url = m.url || '#';
+    const subj = escapeHtml(m.subject || '');
+    const date = escapeHtml((m.date || '').slice(0, 10));
+    html += '<tr style="border-top:1px solid var(--border)">' +
+      '<td style="white-space:nowrap;color:var(--text3)">' + date + '</td>' +
+      '<td><a href="' + url + '" target="_blank" rel="noopener"><code>' + sha + '</code></a></td>' +
+      '<td>' + worthy + '</td>' +
+      '<td style="color:var(--text3)">' + escapeHtml(String(m.score == null ? '' : m.score)) + '</td>' +
+      '<td>' + subj + '</td></tr>';
+  }
+  html += '</table>';
+  return html;
+}
+async function refreshMilestones() {
+  const box = $('milestones');
+  const pill = $('milestonePill');
+  try {
+    const d = await fetch('/insight/milestones/recent?limit=25', { cache: 'no-store' }).then(r => r.json());
+    box.innerHTML = renderMilestones(d);
+    if (pill) pill.textContent = (d.worthy_count || 0) + ' worthy / ' + (d.count || 0);
+  } catch (e) {
+    box.innerHTML = '<div class="empty">milestones unavailable: ' + escapeHtml(e.message || e) + '</div>';
+    if (pill) pill.textContent = 'error';
+  }
+}
 async function refreshLedger() {
   const box = $('ledger');
   const pill = $('ledgerPill');
@@ -2548,8 +2593,9 @@ async function boot() {
   _initTabbar();
   await seedDialogue();
   startSSE();
-  await Promise.allSettled([refreshCognition(), refreshGodelMachine(), refreshSysPulse(), refreshStuck(), refreshBDI(), refreshLedger(), refreshSelfAware(), refreshBoardroom(), refreshBoardRollcall(), refreshBoardLeaderboard(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
+  await Promise.allSettled([refreshCognition(), refreshGodelMachine(), refreshMilestones(), refreshSysPulse(), refreshStuck(), refreshBDI(), refreshLedger(), refreshSelfAware(), refreshBoardroom(), refreshBoardRollcall(), refreshBoardLeaderboard(), refreshDreams(), refreshGraph(), refreshStorage(), refreshSources()]);
   setInterval(refreshGodelMachine, 45000);
+  setInterval(refreshMilestones, 60000);
   setInterval(refreshCognition, 30000);
   setInterval(refreshSysPulse, 15000);
   setInterval(refreshStuck, 30000);
