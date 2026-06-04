@@ -1488,15 +1488,16 @@ def render_catalogue_stats(d: dict) -> str:
 
 
 def render_catalogue_kinds(d: dict) -> str:
-    active = d.get("active_event_kinds") or []
+    emitted = set(d.get("emitted_event_kinds") or d.get("active_event_kinds") or [])
     mapping = d.get("mapping") or {}
     out = (f"entry kinds ({len(d.get('entry_kinds',[]))}): "
            f"{', '.join(d.get('entry_kinds', []))}\n\n"
-           f"event kinds ({len(d.get('event_kinds',[]))}, active {len(active)}):\n\n")
+           f"event kinds ({len(d.get('event_kinds',[]))}, "
+           f"{len(emitted)} emitted in stream):\n\n")
     return out + render_table(
         [{"event": k, "entry": mapping.get(k, "?"),
-          "active": "•" if k in active else ""} for k in d.get("event_kinds", [])],
-        [("event_kind", "event", None), ("→ entry", "entry", None), ("active", "active", None)])
+          "emitted": "•" if k in emitted else ""} for k in d.get("event_kinds", [])],
+        [("event_kind", "event", None), ("→ entry", "entry", None), ("emitted", "emitted", None)])
 
 
 RENDERERS: dict[str, Callable[[dict], str]] = {

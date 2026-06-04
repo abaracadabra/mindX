@@ -1123,8 +1123,11 @@ async def init_catalogue_schema() -> bool:
                     last_event_id   TEXT,
                     events_seen     BIGINT NOT NULL DEFAULT 0,
                     entries_written BIGINT NOT NULL DEFAULT 0,
+                    observed_kinds  JSONB NOT NULL DEFAULT '[]'::jsonb,
                     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 );
+                ALTER TABLE catalogue_state
+                    ADD COLUMN IF NOT EXISTS observed_kinds JSONB NOT NULL DEFAULT '[]'::jsonb;
                 """
             )
         logger.info("pgvector: catalogue schema ensured (catalogue_entries + catalogue_state)")
@@ -1164,13 +1167,18 @@ async def get_catalogue_watermark(projector: str = "entries") -> Dict[str, Any]:
         return {}
     try:
         row = await pool.fetchrow(
-            "SELECT projector, version, byte_offset, last_event_id, events_seen, entries_written "
+            "SELECT projector, version, byte_offset, last_event_id, events_seen, "
+            "entries_written, observed_kinds "
             "FROM catalogue_state WHERE projector = $1", projector,
         )
         if not row:
             return {"projector": projector, "version": None, "byte_offset": 0,
-                    "last_event_id": None, "events_seen": 0, "entries_written": 0}
-        return dict(row)
+                    "last_event_id": None, "events_seen": 0, "entries_written": 0,
+                    "observed_kinds": []}
+        d = dict(row)
+        ok = d.get("observed_kinds")
+        d["observed_kinds"] = json.loads(ok) if isinstance(ok, str) else (ok or [])
+        return d
     except Exception as e:
         logger.debug(f"get_catalogue_watermark failed: {e}")
         return {}
@@ -1178,20 +1186,32 @@ async def get_catalogue_watermark(projector: str = "entries") -> Dict[str, Any]:
 
 async def set_catalogue_watermark(projector: str, version: str, byte_offset: int,
                                   last_event_id: Optional[str], events_seen: int,
-                                  entries_written: int) -> bool:
+                                  entries_written: int,
+                                  observed_kinds: Optional[List[str]] = None) -> bool:
+    """Persist the projector resume point. ``observed_kinds`` (the distinct
+    EventKinds seen this run) is UNIONed into the stored set — the drift-free
+    source of truth for which kinds are actually emitted."""
     pool = await get_pool()
     if not pool:
         return False
     try:
         await pool.execute(
             """INSERT INTO catalogue_state
-                   (projector, version, byte_offset, last_event_id, events_seen, entries_written, updated_at)
-               VALUES ($1,$2,$3,$4,$5,$6, NOW())
+                   (projector, version, byte_offset, last_event_id, events_seen,
+                    entries_written, observed_kinds, updated_at)
+               VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb, NOW())
                ON CONFLICT (projector) DO UPDATE SET
                    version=$2, byte_offset=$3, last_event_id=$4,
-                   events_seen=$5, entries_written=$6, updated_at=NOW()""",
+                   events_seen=$5, entries_written=$6,
+                   observed_kinds = (
+                       SELECT COALESCE(jsonb_agg(DISTINCT e), '[]'::jsonb)
+                       FROM jsonb_array_elements_text(
+                           catalogue_state.observed_kinds || EXCLUDED.observed_kinds) AS e
+                   ),
+                   updated_at=NOW()""",
             projector, version, int(byte_offset), last_event_id,
             int(events_seen), int(entries_written),
+            json.dumps(sorted(set(observed_kinds or []))),
         )
         return True
     except Exception as e:

@@ -62,7 +62,7 @@ async def _pg_reachable() -> bool:
 
 
 async def run(max_events: int, apply: bool, embed: bool, include_archives: bool,
-              embed_only: bool) -> int:
+              embed_only: bool, observe_only: bool = False) -> int:
     if not await _pg_reachable():
         print("FATAL: Postgres/pgvector not reachable (DB_DSN). Is the DB up?",
               file=sys.stderr)
@@ -73,6 +73,30 @@ async def run(max_events: int, apply: bool, embed: bool, include_archives: bool,
 
     await pg.init_catalogue_schema()
     proj = CatalogueProjector(name="entries", version="v1")
+
+    # ── observe-only: collect distinct EventKinds, merge into watermark ──
+    # Cheap (no upserts, no embeds): folds the stream in dry-run to gather the
+    # kinds actually present, then UNIONs them into catalogue_state.observed_kinds
+    # WITHOUT disturbing the resume offset. Seeds the /insight/catalogue/kinds
+    # "emitted" marker for already-backfilled data.
+    if observe_only:
+        files = _log_files(include_archives=True)
+        kinds: set = set()
+        for f in files:
+            r = await proj.project_file(f, embed=False, dry_run=True)
+            kinds |= r.observed_kinds
+            print(f"  {f.name}: {len(r.observed_kinds)} kinds")
+        print(f"observed {len(kinds)} distinct EventKinds: {sorted(kinds)}")
+        if apply:
+            wm = await pg.get_catalogue_watermark("entries")
+            await pg.set_catalogue_watermark(
+                "entries", wm.get("version") or "v1", int(wm.get("byte_offset") or 0),
+                wm.get("last_event_id"), int(wm.get("events_seen") or 0),
+                int(wm.get("entries_written") or 0), observed_kinds=sorted(kinds))
+            print("merged into catalogue_state.observed_kinds (offset preserved).")
+        else:
+            print("(dry-run — pass --apply to persist)")
+        return 0
 
     # ── embed-only sweep ────────────────────────────────────────────────
     if embed_only:
@@ -100,6 +124,7 @@ async def run(max_events: int, apply: bool, embed: bool, include_archives: bool,
     started = time.time()
     last = started
     grand_seen = grand_up = grand_emb = grand_bad = 0
+    grand_kinds: set = set()
     remaining = max_events if max_events > 0 else None
 
     got_lock = await pg.try_catalogue_lock() if apply else True
@@ -128,6 +153,7 @@ async def run(max_events: int, apply: bool, embed: bool, include_archives: bool,
             grand_up += run_obj.entries_upserted
             grand_emb += run_obj.embeds_done
             grand_bad += run_obj.bad_lines
+            grand_kinds |= run_obj.observed_kinds
             print(f"  done {f.name}: seen={run_obj.events_seen} "
                   f"{'would-upsert' if not apply else 'upserted'}={run_obj.entries_upserted} "
                   f"emb={run_obj.embeds_done} deferred={run_obj.embeds_deferred} "
@@ -139,8 +165,9 @@ async def run(max_events: int, apply: bool, embed: bool, include_archives: bool,
                 from agents.catalogue.projector import run_last_id
                 await pg.set_catalogue_watermark(
                     "entries", "v1", run_obj.final_offset, run_last_id(run_obj),
-                    grand_seen, grand_up)
-                print(f"  watermark advanced to offset={run_obj.final_offset}")
+                    grand_seen, grand_up, observed_kinds=sorted(grand_kinds))
+                print(f"  watermark advanced to offset={run_obj.final_offset} "
+                      f"({len(grand_kinds)} kinds observed)")
 
             if remaining is not None:
                 remaining -= run_obj.events_seen
@@ -173,6 +200,10 @@ def main(argv: Optional[List[str]] = None) -> int:
                     help="Also replay rotated catalogue_events.*.jsonl archives.")
     ap.add_argument("--embed-only", action="store_true",
                     help="Skip projection; only embed entries that are missing an embedding.")
+    ap.add_argument("--observe-only", action="store_true",
+                    help="Scan the stream for distinct EventKinds and merge them into "
+                         "catalogue_state.observed_kinds, preserving the resume offset. "
+                         "Seeds the /insight/catalogue/kinds 'emitted' marker.")
     args = ap.parse_args(argv)
     if args.max < 0:
         print("FATAL: --max must be >= 0", file=sys.stderr)
@@ -180,7 +211,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         return asyncio.run(run(args.max, args.apply, embed=not args.no_embed,
                                include_archives=args.include_archives,
-                               embed_only=args.embed_only))
+                               embed_only=args.embed_only,
+                               observe_only=args.observe_only))
     except KeyboardInterrupt:
         print("\n(interrupted)")
         return 130

@@ -24,7 +24,7 @@ import asyncio
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, List, Optional, Set
 
 from utils.logging_config import get_logger
 
@@ -57,6 +57,7 @@ class ProjectorRun:
     bad_lines: int = 0
     errors: int = 0
     final_offset: int = 0
+    observed_kinds: Set[str] = field(default_factory=set)
 
     def as_dict(self) -> dict:
         return {
@@ -164,7 +165,8 @@ class CatalogueProjector:
                     if checkpoint and batch >= _CHECKPOINT_EVERY:
                         await pg.set_catalogue_watermark(
                             self.name, self.version, offset, str(evt.get("event_id") or ""),
-                            seen0 + run.events_seen, written0 + run.entries_upserted)
+                            seen0 + run.events_seen, written0 + run.entries_upserted,
+                            observed_kinds=sorted(run.observed_kinds))
                         batch = 0
                         if progress:
                             progress(run)
@@ -176,12 +178,16 @@ class CatalogueProjector:
             if checkpoint:
                 await pg.set_catalogue_watermark(
                     self.name, self.version, offset, run_last_id(run),
-                    seen0 + run.events_seen, written0 + run.entries_upserted)
+                    seen0 + run.events_seen, written0 + run.entries_upserted,
+                    observed_kinds=sorted(run.observed_kinds))
 
     async def _apply(self, evt: dict, *, embed: bool, run: ProjectorRun,
                      dry_run: bool = False) -> None:
         draft = derive_entry(evt)
         run._last_event_id = str(evt.get("event_id") or "")  # type: ignore[attr-defined]
+        ek = evt.get("kind")
+        if ek:
+            run.observed_kinds.add(ek)
         if dry_run:
             run.entries_upserted += 1  # would-upsert count
             return

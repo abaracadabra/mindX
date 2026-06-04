@@ -5680,9 +5680,16 @@ async def insight_catalogue_stats(request: Request):
 async def insight_catalogue_kinds(request: Request):
     from agents.catalogue.model import ENTRY_KINDS, EVENTKIND_TO_ENTRYKIND
     from agents.catalogue.events import EVENT_KINDS
+    from agents import memory_pgvector
+    # "emitted" = the distinct EventKinds the projector has actually observed in
+    # the stream (accumulated in catalogue_state) — the drift-free truth, not the
+    # full mapping. Empty until the first projection.
+    wm = await memory_pgvector.get_catalogue_watermark("entries")
+    emitted = sorted(set(wm.get("observed_kinds") or []) & set(EVENT_KINDS))
     data = {"entry_kinds": list(ENTRY_KINDS), "event_kinds": list(EVENT_KINDS),
             "mapping": dict(EVENTKIND_TO_ENTRYKIND),
-            "active_event_kinds": sorted(set(EVENTKIND_TO_ENTRYKIND) & set(EVENT_KINDS))}
+            "emitted_event_kinds": emitted,
+            "active_event_kinds": emitted}  # back-compat alias
     return _maybe_h_text(request, data, route_path="/insight/catalogue/kinds")
 
 
