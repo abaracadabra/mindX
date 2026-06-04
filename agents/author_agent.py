@@ -536,48 +536,90 @@ class AuthorAgent:
             pass
         return title, desc
 
+    # Category buckets — kept in lockstep with the /docs.html renderer
+    # (mindx_backend_service/main_service.py) so the index and the page agree.
+    _DOC_CATEGORIES = (
+        ("Core Architecture", ("technical", "orchestration", "core", "architect", "hierarchy", "codebase", "godel", "schmidhuber", "blueprint")),
+        ("Agents", ("agent", "agint", "mindx", "automindx", "ceo", "mastermind", "persona", "coordinator", "author")),
+        ("Tools", ("tool", "shell", "registry", "factory", "calculator")),
+        ("Governance & DAIO", ("daio", "governance", "constitution", "boardroom", "dojo", "voting")),
+        ("Memory & Knowledge", ("memory", "belief", "knowledge", "pgvector", "dream")),
+        ("Deployment & Operations", ("deploy", "production", "monitor", "performance", "security", "resource", "survive", "milestone")),
+        ("API & Integration", ("api", "mistral", "gemini", "ollama", "model", "inference", "llm")),
+        ("Philosophy & Vision", ("manifesto", "thesis", "whitepaper", "press", "philosophy", "ataraxia", "civilization", "roadmap", "todo", "eval")),
+        ("Tutorials & Guides", ("guide", "usage", "instruction", "quickref", "tutorial", "hackathon")),
+    )
+
+    @classmethod
+    def _doc_category(cls, name: str) -> str:
+        nl = name.lower()
+        for cat, kws in cls._DOC_CATEGORIES:
+            if any(k in nl for k in kws):
+                return cat
+        return "Other"
+
     def update_docs_index(self) -> int:
-        """Regenerate docs/DOC_INDEX.md from the docs/ tree. Idempotent;
-        AuthorAgent owns this file and refreshes it on every milestone so the
-        documentation catalogue stays current without human upkeep. Returns the
-        number of docs indexed. Defensive — never raises."""
+        """Regenerate docs/DOC_INDEX.md from the docs/ tree, grouped by the same
+        categories the /docs.html renderer uses (so index and page agree).
+        Idempotent; AuthorAgent owns this file and refreshes it on every
+        milestone so the catalogue stays current without human upkeep. Returns
+        the number of docs indexed. Defensive — never raises."""
         try:
             DOCS_DIR.mkdir(parents=True, exist_ok=True)
-            docs = sorted(DOCS_DIR.glob("*.md"),
-                          key=lambda p: p.name.lower())
+            docs = [p for p in sorted(DOCS_DIR.glob("*.md"), key=lambda p: p.name.lower())
+                    if p.name != DOC_INDEX_PATH.name]
             now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+            # Bucket, preserving category order; "Other" last.
+            order = [c for c, _ in self._DOC_CATEGORIES] + ["Other"]
+            buckets: Dict[str, list] = {c: [] for c in order}
+            for p in docs:
+                buckets[self._doc_category(p.name)].append(p)
+
             lines = [
                 "# Documentation Index",
                 "",
                 "> Auto-maintained by [AuthorAgent](AUTHOR_AGENT.md). Regenerated on "
                 "every recognized milestone (`github.awareness`). Do not edit by "
-                "hand — changes are overwritten. The curated hub is [NAV.md](NAV.md).",
+                "hand — changes are overwritten. The curated hub is [NAV.md](NAV.md); "
+                "this is the exhaustive catalogue, grouped as on "
+                "[/docs.html](https://mindx.pythai.net/docs.html).",
                 "",
-                f"_Last regenerated: {now} · {len(docs)} top-level documents._",
-                "",
-                "| document | title | updated |",
-                "|----------|-------|---------|",
+                f"_Last regenerated: {now} · {len(docs)} documents in "
+                f"{sum(1 for c in order if buckets[c])} categories._",
             ]
-            for p in docs:
-                if p.name == DOC_INDEX_PATH.name:
+            # A compact table-of-categories for quick jumps.
+            lines.append("")
+            lines.append(" · ".join(
+                f"[{c}](#{c.lower().replace(' & ', '--').replace(' ', '-')}) ({len(buckets[c])})"
+                for c in order if buckets[c]))
+
+            for cat in order:
+                items = buckets[cat]
+                if not items:
                     continue
-                title, _desc = self._doc_title_and_desc(p)
-                try:
-                    mtime = datetime.fromtimestamp(
-                        p.stat().st_mtime, tz=timezone.utc).strftime("%Y-%m-%d")
-                except Exception:
-                    mtime = "—"
-                safe_title = title.replace("|", "/")[:90]
-                lines.append(f"| [{p.name}]({p.name}) | {safe_title} | {mtime} |")
-            # Note the major subtrees without enumerating their many files.
+                lines += ["", f"## {cat}", "",
+                          "| document | title | updated |",
+                          "|----------|-------|---------|"]
+                for p in items:
+                    title, _desc = self._doc_title_and_desc(p)
+                    try:
+                        mtime = datetime.fromtimestamp(
+                            p.stat().st_mtime, tz=timezone.utc).strftime("%Y-%m-%d")
+                    except Exception:
+                        mtime = "—"
+                    safe_title = title.replace("|", "/")[:90]
+                    lines.append(f"| [{p.name}]({p.name}) | {safe_title} | {mtime} |")
+
             subdirs = [d.name for d in sorted(DOCS_DIR.iterdir())
                        if d.is_dir() and not d.name.startswith(".")]
             if subdirs:
-                lines += ["", "**Subtrees:** " + ", ".join(f"`{s}/`" for s in subdirs)
-                          + " (browse directly; lunar editions & dailies live under "
-                            "`publications/`)."]
+                lines += ["", "## Subtrees", "",
+                          ", ".join(f"`{s}/`" for s in subdirs)
+                          + " — browse directly; lunar editions & dailies live under "
+                            "`publications/`."]
             DOC_INDEX_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
-            return len([p for p in docs if p.name != DOC_INDEX_PATH.name])
+            return len(docs)
         except Exception as e:  # pragma: no cover - defensive
             logger.warning(f"AuthorAgent.update_docs_index failed: {e}")
             return 0

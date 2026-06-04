@@ -305,21 +305,21 @@ async def docs_html_page():
                 pass
             entry = f'<li><a href="/doc/{name}">{name}.md</a> <span class="sz">({size_kb}KB)</span></li>'
             nl = name.lower()
-            if any(k in nl for k in ["technical","orchestration","core","architect","hierarchy","codebase"]):
+            if any(k in nl for k in ["technical","orchestration","core","architect","hierarchy","codebase","godel","schmidhuber","blueprint"]):
                 categories["Core Architecture"].append(entry)
-            elif any(k in nl for k in ["agent","agint","mindx","automindx","ceo","mastermind","persona","coordinator"]):
+            elif any(k in nl for k in ["agent","agint","mindx","automindx","ceo","mastermind","persona","coordinator","author"]):
                 categories["Agents"].append(entry)
             elif any(k in nl for k in ["tool","shell","registry","factory","calculator"]):
                 categories["Tools"].append(entry)
             elif any(k in nl for k in ["daio","governance","constitution","boardroom","dojo","voting"]):
                 categories["Governance & DAIO"].append(entry)
-            elif any(k in nl for k in ["memory","belief","knowledge","pgvector"]):
+            elif any(k in nl for k in ["memory","belief","knowledge","pgvector","dream"]):
                 categories["Memory & Knowledge"].append(entry)
-            elif any(k in nl for k in ["deploy","production","monitor","performance","security","resource"]):
+            elif any(k in nl for k in ["deploy","production","monitor","performance","security","resource","survive","milestone"]):
                 categories["Deployment & Operations"].append(entry)
             elif any(k in nl for k in ["api","mistral","gemini","ollama","model","inference","llm"]):
                 categories["API & Integration"].append(entry)
-            elif any(k in nl for k in ["manifesto","thesis","whitepaper","press","philosophy","ataraxia","civilization","roadmap","todo"]):
+            elif any(k in nl for k in ["manifesto","thesis","whitepaper","press","philosophy","ataraxia","civilization","roadmap","todo","eval"]):
                 categories["Philosophy & Vision"].append(entry)
             elif any(k in nl for k in ["guide","usage","instruction","quickref","tutorial","hackathon"]):
                 categories["Tutorials & Guides"].append(entry)
