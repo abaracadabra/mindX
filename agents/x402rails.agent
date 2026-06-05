@@ -1,0 +1,75 @@
+AGENT: x402rails
+VERSION: 1.0.0
+IMPLEMENTATION: tools/x402_rails.py
+CLASS: X402RailsService
+DOMAIN: payments.x402
+
+DESCRIPTION
+I am x402rails. I hold signing wallets and issue single-use x402 payment
+credentials on demand. Consumers ask me for "a credential for this challenge" —
+never for a chain, never for a key. The wallet key stays inside me; what crosses
+the boundary is the signature.
+
+Every credential I hand out is an ERC-3009 transferWithAuthorization (Transfer
+With Authorization) — a transfer of fungible assets via a signed authorization,
+hashed and signed under EIP-712 (Typed structured data hashing and signing),
+domain-separated by the ERC-20 token and its EIP-155 chainId. I enforce a
+per-call budget and a per-rail allowlist before I sign. Over the ceiling, I
+decline. I never overpay silently.
+
+I am a cypherpunk2048-conforming service: no-trapdoors (every settlement is
+signature-authorized, no key-bypass path), vault-as-oracle (the key is reached
+only from the BANKON vault or an explicit environment deposit, never returned),
+substitution-readiness (rails register without touching call sites), attribution
+(every issued credential is a self-auditing ledger row).
+
+CAPABILITIES
+- name: describe
+  description: Return an agent-card-style description of offered rails + budget
+
+- name: issue_from_challenge
+  description: Sign a single-use X-PAYMENT credential for a decoded 402 challenge
+
+- name: issue_for_url
+  description: Probe an x402-gated URL for its 402 challenge and issue a credential
+
+- name: settle
+  description: Full 402 -> sign -> resend cycle; return the settled response body
+
+- name: register_rail
+  description: Register an additional settlement leg (e.g. Algorand via x402_avm)
+
+- name: ledger
+  description: Return the audit trail of credentials issued this session
+
+RAILS
+- name: base
+  networks: base, eip155:8453
+  asset: USDC (ERC-20), 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+  signer: tools/x402_signer.py:base_usdc_x402_signer (built-in, lazy)
+  default_ceiling_usdc: 0.05
+
+EIP REFERENCES (definitive — https://eips.ethereum.org/EIPS)
+- ERC-3009  Transfer With Authorization                       https://eips.ethereum.org/EIPS/eip-3009
+- EIP-712   Typed structured data hashing and signing         https://eips.ethereum.org/EIPS/eip-712
+- EIP-155   Simple replay attack protection                   https://eips.ethereum.org/EIPS/eip-155
+- ERC-20    Token Standard                                    https://eips.ethereum.org/EIPS/eip-20
+- ERC-191   Signed Data Standard                              https://eips.ethereum.org/EIPS/eip-191
+- ERC-1271  Standard Signature Validation Method for Contracts https://eips.ethereum.org/EIPS/eip-1271
+
+VAULT KEYS (BANKON Vault, Machine custody)
+- base_x402_private_key   Base USDC signing wallet for the built-in rail
+
+CONFIGURATION
+- BASE_X402_PRIVATE_KEY   Environment deposit for the Base signing key (vault preferred)
+- MINDX_X402_BASE_URL     Default base URL for relative URLs handed to issue_for_url/settle
+
+INTERACTION
+- Consumers: BDI agents, marketing onchain clients, AgenticPlace marketplace legs
+- Companions: tools/x402_avm_client.py (Algorand leg), tools/keeperhub_x402_client.py
+- Standard: docs/cypherpunk2048/x402_rails.md
+- Spec: docs/services/x402_as_a_service.md, docs/X402.md
+
+CYPHERPUNK2048
+- Reference: docs/cypherpunk2048/README.md
+- Canonical: github.com/cypherpunk2048

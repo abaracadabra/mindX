@@ -259,6 +259,12 @@ writing it up after the next full moon.
 
 - *github.com/cypherpunk2048* — the canonical public reference for
   the standard.
+- *docs/cypherpunk2048/* — the in-repo reference layer: the four rules
+  tied to concrete mindX code, plus the
+  [definitive EIP table](../cypherpunk2048/EIP_REFERENCES.md) (verbatim
+  titles, absolute `eips.ethereum.org` URLs) and the
+  [x402 payment rails](../cypherpunk2048/x402_rails.md) reference
+  implementation — keyless credential issuance as a service.
 - *github.com/agenticplace* — the public org with three prior open
   versions of mindX. The current production code is private; more
   public releases will follow when ready.
