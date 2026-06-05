@@ -1,0 +1,60 @@
+{
+  "project": "neuralnode",
+  "version": "1.0.0",
+  "required_min_tier": "tier3",
+  "required_approvers": [],
+  "mainnet_two_step": true,
+  "stages": [
+    {
+      "chain": "anvil-local",
+      "chain_id": 1337,
+      "driver": "foundry",
+      "is_mainnet": false,
+      "rpc_env": "ANVIL_RPC_URL",
+      "deployer_entity": "blockchain.deployer.anvil-local",
+      "gas_budget_usd": 0,
+      "foundry": {
+        "contracts_root": "openagents/bankoneth/neuralnode",
+        "script": "script/Deploy.s.sol:Deploy",
+        "profile": "default",
+        "receipt_stage": "neuralnode",
+        "verify": false,
+        "env": {}
+      }
+    },
+    {
+      "chain": "polygon",
+      "chain_id": 137,
+      "driver": "foundry",
+      "is_mainnet": true,
+      "rpc_env": "POLYGON_RPC_URL",
+      "deployer_entity": "blockchain.deployer.polygon",
+      "gas_budget_usd": 5,
+      "foundry": {
+        "contracts_root": "openagents/bankoneth/neuralnode",
+        "script": "script/Deploy.s.sol:Deploy",
+        "profile": "default",
+        "receipt_stage": "neuralnode",
+        "verify": true,
+        "env": {}
+      }
+    },
+    {
+      "chain": "moonbeam",
+      "chain_id": 1284,
+      "driver": "foundry",
+      "is_mainnet": true,
+      "rpc_env": "MOONBEAM_RPC_URL",
+      "deployer_entity": "blockchain.deployer.moonbeam",
+      "gas_budget_usd": 2,
+      "foundry": {
+        "contracts_root": "openagents/bankoneth/neuralnode",
+        "script": "script/Deploy.s.sol:Deploy",
+        "profile": "default",
+        "receipt_stage": "neuralnode",
+        "verify": true,
+        "env": {}
+      }
+    }
+  ]
+}

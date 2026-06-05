@@ -40,6 +40,7 @@ const CONTRACTS = [
   { name: "BankonPaymentRouter",    deploymentKey: "paymentRouter",    category: "payment",   title: "Payment Router",     blurb: "x402 settlement + 5-bucket revenue split." },
   { name: "BankonInftAdapter",      deploymentKey: "inftAdapter",      category: "inft",      title: "iNFT Adapter",       blurb: "ERC-7857 Mode A glue; ENS labelhash → 0G tokenId / TBA." },
   { name: "BankonX402Attestor",     deploymentKey: "x402Attestor",     category: "payment",   title: "x402 Attestor",      blurb: "EIP-712 x402 receipt verification + replay guard." },
+  { name: "X402Receipt",            deploymentKey: "x402Receipt",      category: "payment",   title: "x402 Receipt",       blurb: "On-chain x402 settlement attestation ledger; cascades into the payment router." },
   { name: "BankonAgenticPlaceHook", deploymentKey: "agenticPlaceHook", category: "listing",   title: "AgenticPlace Hook",  blurb: "Emits marketplace listing events for agenticplace.pythai.net." },
   { name: "AgentRegistry",          deploymentKey: "agentRegistry",    category: "identity",  title: "Agent Registry",     blurb: "ERC-8004-aligned agent identity + capability bitmap." },
   { name: "BankonAuthGate",         deploymentKey: "authGate",         category: "identity",  title: "Auth Gate",          blurb: "On-chain SIWE / ENS-gated auth for downstream services." },
@@ -74,8 +75,59 @@ const CONTRACTS = [
 //    and threads each arg from one of: {owner} (resolved bankon.eth / connected),
 //    {ref:<contract>} (a prior step's deployed address), {chain:<key>} (per-chain
 //    param below), or {literal:<value>}. Post-deploy `wire` calls run after.    ──
+const ZERO = "0x0000000000000000000000000000000000000000";
 const TREASURY_OWNER = "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169"; // bankon.eth (verified ENS)
+// namehash("bankon.eth") — chain-independent (same on every ENS deployment).
+const BANKON_ETH_NODE = "0x79c178642317fc2d61d186f3b412440f06590d8314f126362d6a88929a6cbe1a";
+// keccak256("GATEWAY_SIGNER_ROLE") — the role the bankon_vault signer holds to
+// counter-sign EIP-712 registration vouchers (grant-a-subname-from-a-signature).
+const GATEWAY_SIGNER_ROLE = "0x4b6d7bfbdfd4dba4dace8bd7020a81117ab633e3a677498b9e92d1b899379d26";
+// AgenticPlace listing webhook baked into BankonAgenticPlaceHook (chain-independent URL).
+const AGENTICPLACE_WEBHOOK = "https://agenticplace.pythai.net/x402/listing";
+
 const DEPLOY_SEQUENCES = [
+  {
+    // ── Flow A/B/C ENS minter core — the subdomain.bankon.eth registrar stack.
+    //    Ported verbatim from script/DeployEthereum.s.sol (ctor order + 13 role
+    //    grants). bankon.eth is the immutable admin + payment recipient ({owner}).
+    //    ENS-only: pinned to mainnet + Sepolia (NameWrapper-bound, varies per chain
+    //    so NOT CREATE2 same-address). Refs are by contract name.
+    id: "ens", title: "BANKON ENS minter (Flow A/B/C)", category: "ens",
+    chains: [1, 11155111],
+    blurb: "subdomain.bankon.eth registrar + .eth purchase + domain hosting: price/reputation/payment → identity → resolver(+adapter+V2) → registrar/ethRegistrar/domainHosting, then 13 role grants. bankon.eth is admin + fee recipient.",
+    steps: [
+      { contract: "BankonPriceOracle",       args: [{ owner: true }] },
+      { contract: "BankonReputationGate",    args: [{ owner: true }] },
+      { contract: "BankonPaymentRouter",     args: [{ owner: true }] },
+      { contract: "AgentRegistry",           args: [{ literal: "BANKON Agent Registry" }, { literal: "AGENT" }, { owner: true }] },
+      { contract: "X402Receipt",             args: [{ owner: true }, { ref: "BankonPaymentRouter" }] },
+      { contract: "BankonX402Attestor",      args: [{ owner: true }] },
+      { contract: "BankonAgenticPlaceHook",  args: [{ owner: true }, { literal: AGENTICPLACE_WEBHOOK }] },
+      { contract: "BankonSubnameResolver",   args: [{ owner: true }, { literal: ZERO }] },
+      { contract: "BankonInftAdapter",       args: [{ owner: true }, { ref: "BankonSubnameResolver" }] },
+      { contract: "BankonSubnameResolverV2", args: [{ owner: true }, { ref: "BankonInftAdapter" }] },
+      { contract: "BankonSubnameRegistrar",  args: [{ chain: "nameWrapper" }, { ref: "BankonSubnameResolver" }, { chain: "bankonNode" }, { ref: "BankonPaymentRouter" }, { ref: "BankonPriceOracle" }, { ref: "BankonReputationGate" }, { ref: "AgentRegistry" }, { owner: true }] },
+      { contract: "BankonEthRegistrar",      args: [{ owner: true }, { chain: "ensController" }, { ref: "BankonPriceOracle" }, { ref: "BankonPaymentRouter" }, { ref: "BankonX402Attestor" }] },
+      { contract: "BankonDomainHosting",     args: [{ owner: true }, { chain: "nameWrapper" }, { ref: "BankonSubnameResolver" }, { ref: "BankonPaymentRouter" }, { ref: "BankonX402Attestor" }] },
+    ],
+    wire: [
+      { contract: "BankonSubnameResolver",   fn: "setInftAdapter",  args: [{ ref: "BankonInftAdapter" }] },
+      { contract: "BankonSubnameResolver",   fn: "grantRegistrar",  args: [{ ref: "BankonSubnameRegistrar" }] },
+      { contract: "BankonSubnameResolver",   fn: "grantRegistrar",  args: [{ ref: "BankonDomainHosting" }] },
+      { contract: "BankonSubnameResolverV2", fn: "grantRegistrar",  args: [{ ref: "BankonSubnameRegistrar" }] },
+      { contract: "BankonSubnameResolverV2", fn: "grantRegistrar",  args: [{ ref: "BankonDomainHosting" }] },
+      { contract: "BankonInftAdapter",       fn: "grantRegistrar",  args: [{ ref: "BankonSubnameRegistrar" }] },
+      { contract: "BankonAgenticPlaceHook",  fn: "grantLister",     args: [{ ref: "BankonSubnameRegistrar" }] },
+      { contract: "BankonAgenticPlaceHook",  fn: "grantLister",     args: [{ ref: "BankonEthRegistrar" }] },
+      { contract: "BankonAgenticPlaceHook",  fn: "grantLister",     args: [{ ref: "BankonDomainHosting" }] },
+      { contract: "BankonX402Attestor",      fn: "grantConsumer",   args: [{ ref: "BankonSubnameRegistrar" }] },
+      { contract: "BankonX402Attestor",      fn: "grantConsumer",   args: [{ ref: "BankonEthRegistrar" }] },
+      { contract: "BankonX402Attestor",      fn: "grantConsumer",   args: [{ ref: "BankonDomainHosting" }] },
+      // bankon_vault gateway-signer: grant-a-subname-from-a-signature without
+      // revealing the key. Skipped automatically when vaultSigner is address(0).
+      { contract: "BankonSubnameRegistrar",  fn: "grantRole",       args: [{ literal: GATEWAY_SIGNER_ROLE }, { chain: "vaultSigner" }] },
+    ],
+  },
   {
     id: "treasury", title: "Treasury (cp2048)", category: "cp2048",
     blurb: "The golden-ratio economy: pair oracle → SCIENTIFIC token → RAKE → auto-convert + bridge-collect → gas-as-a-service. Rakes home to bankon.eth.",
@@ -92,8 +144,8 @@ const DEPLOY_SEQUENCES = [
     id: "custody", title: "Treasury + remittance", category: "cp2048",
     blurb: "Safe multi-asset vaults (native/ERC20/721/1155, any chain): treasury (long-term hold) + remittance (collect/forward). Founder = bankon.eth immutable; redeem home only; dictator → 2:2/2:3/3:3 multisig → renounce.",
     steps: [
-      { contract: "treasury",   args: [{ owner: true }] },
-      { contract: "remittance", args: [{ owner: true }] },
+      { contract: "treasury",   args: [{ owner: true }], create2: true },
+      { contract: "remittance", args: [{ owner: true }], create2: true },
     ],
   },
   {
@@ -101,8 +153,8 @@ const DEPLOY_SEQUENCES = [
     blurb: "ENS-named, ERC-7857 agent intelligence with an ERC-6551 wallet: oracle → TBA impl + proxy → unified + parallel iNFT → registrar (then setMinter).",
     steps: [
       { contract: "bankon_inft_oracle",        args: [{ owner: true }, { literal: "[]" }, { literal: "1" }], note: "signers[], quorum — set real signers post-deploy." },
-      { contract: "bankon_tba_account",        args: [] },
-      { contract: "bankon_tba_registry_proxy", args: [] },
+      { contract: "bankon_tba_account",        args: [], create2: true },
+      { contract: "bankon_tba_registry_proxy", args: [], create2: true },
       { contract: "bankon_inft_subname",       args: [{ literal: "BANKON Agent" }, { literal: "BANK" }, { literal: "ipfs://bankon-storage" }, { literal: "https://bankon.eth/contract-metadata.json" }, { owner: true }, { literal: "0x0000000000000000000000000000000000000000" }, { chain: "nameWrapper" }, { ref: "bankon_inft_oracle" }, { owner: true }, { literal: "250" }] },
       { contract: "bankon_inft_extension",     args: [{ literal: "BANKON Agent Extension" }, { literal: "BANKX" }, { literal: "ipfs://bankon-ext" }, { owner: true }, { chain: "nameWrapper" }, { ref: "bankon_inft_oracle" }, { owner: true }, { literal: "250" }] },
       { contract: "bankon_inft_registrar",     args: [{ owner: true }, { chain: "nameWrapper" }, { ref: "bankon_inft_subname" }, { ref: "bankon_inft_extension" }, { chain: "erc6551Registry" }, { ref: "bankon_tba_account" }, { owner: true }] },
@@ -113,8 +165,8 @@ const DEPLOY_SEQUENCES = [
     id: "arc", title: "ARC economy", category: "arc",
     blurb: "Agent reputation + escrow + marketspace (USDC economy): reputation registry → escrow → agent market.",
     steps: [
-      { contract: "AgentReputationRegistry",  args: [] },
-      { contract: "AgenticMarketplaceEscrow", args: [{ owner: true }, { literal: "250" }] },
+      { contract: "AgentReputationRegistry",  args: [], create2: true },
+      { contract: "AgenticMarketplaceEscrow", args: [{ owner: true }, { literal: "250" }], create2: true },
       { contract: "bankon_agent_market",      args: [{ literal: "0x0000000000000000000000000000000000000000" }, { ref: "AgentReputationRegistry" }, { ref: "AgenticMarketplaceEscrow" }, { literal: "0x0000000000000000000000000000000000000000" }], note: "inft_ / x402Attestor_ = 0x0; wire to the iNFT set + attestor after." },
     ],
   },
@@ -123,7 +175,10 @@ const DEPLOY_SEQUENCES = [
 // Per-chain deploy parameters. Browser deployer falls back to address(0) when a
 // key is missing on the active chain (and surfaces it for manual entry).
 const CHAIN_PARAMS = {
-  1:        { label: "Ethereum", usdc: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", univ3Router: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", nameWrapper: "0xD4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401", erc6551Registry: "0x000000006551c19487814612e58FE06813775758" },
+  1:        { label: "Ethereum", usdc: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", univ3Router: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", nameWrapper: "0xD4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401", erc6551Registry: "0x000000006551c19487814612e58FE06813775758", ensController: "0x59E16fcCd424Cc24e280Be16E11Bcd56fb0CE547", bankonNode: BANKON_ETH_NODE, vaultSigner: ZERO },
+  11155111: { label: "Sepolia", usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", univ3Router: ZERO, nameWrapper: "0x0635513f179D50A207757E05759CbD106d7dFcE8", erc6551Registry: "0x000000006551c19487814612e58FE06813775758", ensController: "0xfb3cE5D01e0f33f41DbB39035dB9745962F1f968", bankonNode: BANKON_ETH_NODE, vaultSigner: ZERO },
+  84532:    { label: "Base Sepolia", usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", univ3Router: ZERO, nameWrapper: ZERO, erc6551Registry: "0x000000006551c19487814612e58FE06813775758" },
+  16601:    { label: "0G Galileo", usdc: ZERO, univ3Router: ZERO, nameWrapper: ZERO, erc6551Registry: "0x000000006551c19487814612e58FE06813775758" },
   8453:     { label: "Base",     usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", univ3Router: "0x2626664c2603336E57B271c5C0b26F421741e481", nameWrapper: "0x0000000000000000000000000000000000000000", erc6551Registry: "0x000000006551c19487814612e58FE06813775758" },
   42161:    { label: "Arbitrum", usdc: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", univ3Router: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", nameWrapper: "0x0000000000000000000000000000000000000000", erc6551Registry: "0x000000006551c19487814612e58FE06813775758" },
   137:      { label: "Polygon",  usdc: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", univ3Router: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", nameWrapper: "0x0000000000000000000000000000000000000000", erc6551Registry: "0x000000006551c19487814612e58FE06813775758" },
@@ -135,6 +190,28 @@ const CHAIN_PARAMS = {
   81457:    { label: "Blast", usdc: "0x0000000000000000000000000000000000000000", univ3Router: "0x0000000000000000000000000000000000000000", nameWrapper: "0x0000000000000000000000000000000000000000", erc6551Registry: "0x000000006551c19487814612e58FE06813775758" },
   1776:     { label: "Injective EVM", usdc: "0x0000000000000000000000000000000000000000", univ3Router: "0x0000000000000000000000000000000000000000", nameWrapper: "0x0000000000000000000000000000000000000000", erc6551Registry: "0x000000006551c19487814612e58FE06813775758" },
 };
+
+// ── bankon.eth admin console actions. Curated post-deploy admin operations the
+//    bankon.eth holder runs on the DEPLOYED contracts. Selectors + arg types are
+//    resolved from the artifact at generation time → deployer/admin-actions.json.
+//    arg.source: "input" (operator-entered) | "literal" (fixed) | "owner" (bankon.eth).
+const ADMIN_ACTIONS = [
+  { id: "set-vault-signer", label: "Set bankon_vault gateway signer", contract: "BankonSubnameRegistrar", sig: "grantRole(bytes32,address)",
+    blurb: "Grant GATEWAY_SIGNER_ROLE so the vault issues subnames from a signature (key never revealed).",
+    args: [{ name: "role", source: "literal", value: GATEWAY_SIGNER_ROLE }, { name: "signer", source: "input", placeholder: "0x… vault signer address" }] },
+  { id: "revoke-vault-signer", label: "Revoke gateway signer", contract: "BankonSubnameRegistrar", sig: "revokeRole(bytes32,address)",
+    blurb: "Remove a vault gateway signer.", args: [{ name: "role", source: "literal", value: GATEWAY_SIGNER_ROLE }, { name: "signer", source: "input", placeholder: "0x… signer to revoke" }] },
+  { id: "set-price-oracle", label: "Set price oracle", contract: "BankonSubnameRegistrar", sig: "setPriceOracle(address)",
+    blurb: "Point the registrar at a new BankonPriceOracle.", args: [{ name: "oracle", source: "input", placeholder: "0x… oracle" }] },
+  { id: "set-reputation-gate", label: "Set reputation gate", contract: "BankonSubnameRegistrar", sig: "setReputationGate(address)",
+    blurb: "Point the registrar at a new BankonReputationGate.", args: [{ name: "gate", source: "input", placeholder: "0x… gate" }] },
+  { id: "pause", label: "Pause registrar", contract: "BankonSubnameRegistrar", sig: "pause()", blurb: "Halt new registrations.", args: [] },
+  { id: "unpause", label: "Unpause registrar", contract: "BankonSubnameRegistrar", sig: "unpause()", blurb: "Resume registrations.", args: [] },
+  { id: "set-webhook", label: "Set AgenticPlace webhook", contract: "BankonAgenticPlaceHook", sig: "setWebhookURL(string)",
+    blurb: "Update the AgenticPlace listing webhook URL.", args: [{ name: "url", source: "input", placeholder: "https://agenticplace.pythai.net/x402/listing" }] },
+  { id: "set-buyback", label: "Set buyback threshold", contract: "BankonPaymentRouter", sig: "setBuybackThreshold(uint256)",
+    blurb: "Threshold (USD6) before the router triggers a buyback.", args: [{ name: "threshold", source: "input", placeholder: "e.g. 5000000 = $5" }] },
+];
 
 // ── Guided-form preset descriptors. The DOM is rendered per-UI; the call
 //    construction lives in packages/web/bankon-forms.js, keyed by `id`/`flow`.
@@ -219,17 +296,21 @@ function readArtifact(name) {
   const j = JSON.parse(readFileSync(p, "utf8"));
   // creation bytecode (Foundry: .bytecode.object) — what a browser deployer sends.
   const bytecode = (j.bytecode && (j.bytecode.object || j.bytecode)) || "0x";
-  return { abi: j.abi, bytecode };
+  // methodIdentifiers maps "fn(types)" → 4-byte selector — lets the deployer
+  // bundles carry post-deploy wire selectors WITHOUT a client-side keccak.
+  return { abi: j.abi, bytecode, methodIdentifiers: j.methodIdentifiers || {} };
 }
 
 function main() {
   mkdirSync(ABI_DIR, { recursive: true });
   const contracts = [];
   const bytecodes = {};
+  const meta = {};   // name → { abi, methodIdentifiers } for the deployer-bundle emitter
   for (const c of CONTRACTS) {
-    const { abi, bytecode } = readArtifact(c.name);
+    const { abi, bytecode, methodIdentifiers } = readArtifact(c.name);
     writeFileSync(join(ABI_DIR, `${c.name}.json`), JSON.stringify(abi, null, 2) + "\n");
     bytecodes[c.name] = bytecode;
+    meta[c.name] = { abi, methodIdentifiers };
     contracts.push({
       name: c.name,
       deploymentKey: c.deploymentKey,
@@ -262,6 +343,8 @@ function main() {
   console.log(`  bankon.contracts.json  (${contracts.length} contracts, ${PRESETS.length} presets, ${DEPLOY_SEQUENCES.length} deploy sequences)`);
 
   exportDappAbis(contracts);
+  emitDeployerBundles(meta);
+  emitAdminActions(meta);
 
   // Mirror the canonical per-chain address records into public/ so the static
   // dApp can fetch them. deployments/ at the module root stays the source of
@@ -306,6 +389,141 @@ function exportDappAbis(contracts) {
     `export async function loadAbi(name) { return (await import(\`./\${name}.abi.js\`)).ABI; }\n`;
   writeFileSync(join(DAPP_ABI, "index.js"), index);
   console.log(`  dapp/abis/*.abi.js  (${contracts.length} per-contract modules + index.js)`);
+}
+
+// ── deployer/ bundle emitter ────────────────────────────────────────────────
+// Generates deployer/bundles/bankon-<seq>.xml + deployer/chain-params.json from
+// DEPLOY_SEQUENCES — the SAME source of truth the dApp deploy engine uses. The
+// client (deployer/deployer.js) stays keccak-free: CREATE2 salts are the
+// deterministic UTF-8 of the contract name (chain-independent), and post-deploy
+// wire selectors come straight from the artifact's methodIdentifiers.
+const DEPLOYER_DIR = join(ROOT, "deployer");
+const BUNDLES_DIR  = join(DEPLOYER_DIR, "bundles");
+
+function xmlEsc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+// deterministic chain-independent CREATE2 salt: UTF-8 bytes of a namespaced name, right-padded to 32B.
+function saltFor(name) {
+  // bare UTF-8 of the (unique) contract name, right-padded to 32 bytes — deterministic
+  // and chain-independent, so identical salt+initCode ⇒ identical address on every chain.
+  const hex = Buffer.from(name).toString("hex");
+  if (hex.length > 64) throw new Error(`CREATE2 salt seed too long for ${name} (${hex.length / 2}B > 32B)`);
+  return "0x" + hex.padEnd(64, "0");
+}
+function ctorInputs(meta, name) {
+  const abi = (meta[name] && meta[name].abi) || [];
+  const c = abi.find((x) => x.type === "constructor");
+  return (c && c.inputs) || [];
+}
+// "fn(t1,t2)" → ["t1","t2"];  "fn()" → []
+function sigTypes(sig) {
+  const inner = sig.slice(sig.indexOf("(") + 1, sig.lastIndexOf(")"));
+  return inner ? inner.split(",") : [];
+}
+function wireSelector(meta, name, fn, argCount) {
+  const mids = (meta[name] && meta[name].methodIdentifiers) || {};
+  const keys = Object.keys(mids).filter((k) => k.slice(0, k.indexOf("(")) === fn);
+  if (!keys.length) throw new Error(`no selector for ${name}.${fn}() — is ${name} built?`);
+  const key = keys.find((k) => sigTypes(k).length === argCount) || keys[0];
+  return { selector: "0x" + mids[key], types: sigTypes(key) };
+}
+function argAttrs(spec, type, name) {
+  let loc;
+  if (spec.owner) loc = `from="owner"`;
+  else if (spec.ref) loc = `from="deployed:${xmlEsc(spec.ref)}"`;
+  else if (spec.chain) loc = `from="chain:${xmlEsc(spec.chain)}"`;
+  else loc = `value="${xmlEsc(spec.literal)}"`;
+  return `name="${xmlEsc(name)}" type="${xmlEsc(type)}" ${loc}`;
+}
+
+function emitDeployerBundles(meta) {
+  mkdirSync(BUNDLES_DIR, { recursive: true });
+
+  // chain-params for from="chain:<key>" + bankon.eth identity (recipient/controller)
+  // + name→deploymentKey so the client can export deployments/<chainId>.json without
+  // a cross-directory manifest fetch.
+  const deploymentKeys = Object.fromEntries(CONTRACTS.map((c) => [c.name, c.deploymentKey]));
+  writeFileSync(join(DEPLOYER_DIR, "chain-params.json"),
+    JSON.stringify({
+      owner: TREASURY_OWNER,                                       // bankon.eth resolved addr (payment/treasury/admin recipient)
+      controller: "0x54165AdA93FA752cfec95F3f3bAE2676D3752A99",   // bankon.eth NameWrapper owner (mainnet deploy authority)
+      bankonNode: BANKON_ETH_NODE,
+      deploymentKeys,
+      chains: CHAIN_PARAMS,
+    }, null, 2) + "\n");
+  console.log(`  deployer/chain-params.json  (${Object.keys(CHAIN_PARAMS).length} chains)`);
+
+  for (const seq of DEPLOY_SEQUENCES) {
+    const chainIdsAttr = seq.chains ? ` chainIds="${seq.chains.join(",")}"` : "";
+    const L = [];
+    L.push(`<?xml version="1.0" encoding="UTF-8"?>`);
+    L.push(`<!-- GENERATED by script/export-abis.mjs from DEPLOY_SEQUENCES — do not edit by hand. -->`);
+    L.push(`<!-- ${xmlEsc(seq.title)} — ${xmlEsc(seq.blurb || "")} -->`);
+    L.push(`<bundle name="bankon-${seq.id}"${chainIdsAttr}>`);
+
+    seq.steps.forEach((step, i) => {
+      const inputs = ctorInputs(meta, step.contract);
+      const stepChains = step.chains ? ` chainIds="${step.chains.join(",")}"` : "";
+      const c2 = step.create2 ? ` create2="true" salt="${saltFor(step.contract)}"` : "";
+      L.push(``);
+      L.push(`  <contract id="${step.contract}" name="${step.contract}" stage="${i + 1}"${c2}${stepChains}`);
+      L.push(`            summary="${xmlEsc(step.note || "")}">`);
+      L.push(`    <abi src="../out/${step.contract}.sol/${step.contract}.json"/>`);
+      L.push(`    <bytecode src="../out/${step.contract}.sol/${step.contract}.json"/>`);
+      const args = step.args || [];
+      if (args.length) {
+        L.push(`    <constructor>`);
+        args.forEach((spec, k) => {
+          const inp = inputs[k] || { type: "address", name: `arg${k}` };
+          L.push(`      <arg ${argAttrs(spec, inp.type, inp.name || `arg${k}`)}/>`);
+        });
+        L.push(`    </constructor>`);
+      } else {
+        L.push(`    <constructor/>`);
+      }
+      L.push(`    <value kind="signature"/>`);
+      L.push(`  </contract>`);
+    });
+
+    if (seq.wire && seq.wire.length) {
+      L.push(``);
+      L.push(`  <wire>`);
+      for (const w of seq.wire) {
+        const { selector, types } = wireSelector(meta, w.contract, w.fn, (w.args || []).length);
+        L.push(`    <call contract="${w.contract}" fn="${w.fn}" selector="${selector}">`);
+        (w.args || []).forEach((spec, k) => {
+          L.push(`      <arg ${argAttrs(spec, types[k] || "address", `arg${k}`)}/>`);
+        });
+        L.push(`    </call>`);
+      }
+      L.push(`  </wire>`);
+    }
+
+    L.push(``);
+    L.push(`</bundle>`);
+    writeFileSync(join(BUNDLES_DIR, `bankon-${seq.id}.xml`), L.join("\n") + "\n");
+    console.log(`  deployer/bundles/bankon-${seq.id}.xml  (${seq.steps.length} stages${seq.wire ? ", " + seq.wire.length + " wires" : ""}${seq.chains ? ", chains " + seq.chains.join("/") : ""})`);
+  }
+}
+
+// ── bankon.eth admin console actions (deployer/admin-actions.json) ──
+function emitAdminActions(meta) {
+  const keyOf = Object.fromEntries(CONTRACTS.map((c) => [c.name, c.deploymentKey]));
+  const actions = ADMIN_ACTIONS.map((a) => {
+    const mids = (meta[a.contract] && meta[a.contract].methodIdentifiers) || {};
+    const sel = mids[a.sig];
+    if (!sel) throw new Error(`admin action ${a.id}: no selector for ${a.contract}.${a.sig}`);
+    const types = sigTypes(a.sig);
+    return {
+      id: a.id, label: a.label, blurb: a.blurb || "",
+      contract: a.contract, deploymentKey: keyOf[a.contract], fn: a.sig.slice(0, a.sig.indexOf("(")),
+      selector: "0x" + sel,
+      args: (a.args || []).map((arg, i) => ({ ...arg, type: types[i] })),
+    };
+  });
+  writeFileSync(join(DEPLOYER_DIR, "admin-actions.json"), JSON.stringify(actions, null, 2) + "\n");
+  console.log(`  deployer/admin-actions.json  (${actions.length} admin actions)`);
 }
 
 // ── iNFT (ERC-7857) lives on 0G and builds under the zerog profile, so it has

@@ -16,7 +16,7 @@
 // REAL on-chain rails (no kit key, client-side): autoConvert() routes any token →
 // settlement through bankon_autoconvert (Uniswap V3) charging the golden φ fee →
 // RAKE; bridgeCollect() takes any asset on any chain through bridge_collect
-// (LI.FI/GLMR) φ fee → RAKE. Both need the cp2048 treasury addresses (deploy.html).
+// (LI.FI/GLMR) φ fee → RAKE. Both need the cp2048 treasury addresses (deployer/).
 import { CHAINS, SETTLEMENT_CHAIN_ID, usdcFor, ERC20_ABI } from "./chains.js";
 
 // Minimal ABIs for the cp2048 collection rails (match contracts/cp2048/).
@@ -94,7 +94,7 @@ export async function preparePayment({ rail, label, payer, quote, ethers, facili
   if (rail === "autoconvert" || rail === "bridge") {
     throw new Error(
       `${rail} is an on-chain rail — call ${rail === "autoconvert" ? "autoConvert()" : "bridgeCollect()"} ` +
-      "with the deployed cp2048 address (deploy.html), then settle the resulting USDC via x402."
+      "with the deployed cp2048 address (deployer/), then settle the resulting USDC via x402."
     );
   }
   if (rail === "swap") {

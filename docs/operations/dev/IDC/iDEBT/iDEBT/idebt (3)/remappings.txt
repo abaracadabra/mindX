@@ -1,0 +1,10 @@
+@openzeppelin/=lib/openzeppelin-contracts/
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+@openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
+@chainlink/=lib/chainlink/contracts/
+@pyth/=lib/pyth-sdk-solidity/
+@synthetix/=lib/synthetix-v3/
+forge-std/=lib/forge-std/src/
+ds-test/=lib/forge-std/lib/ds-test/src/
+solmate/=lib/solmate/src/
+@idebt/=src/

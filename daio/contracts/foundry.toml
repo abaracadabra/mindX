@@ -80,6 +80,8 @@ skip = [
     "inft/interfaces/**",
     "test/inft/**",
 ]
+# DeployTier1.s.sol writes its receipt to deployments/<chainId>/tier1.json.
+fs_permissions = [{ access = "read-write", path = "./deployments" }]
 
 # AgentRegistry (ERC-8004-aligned) — agnostic identity + capability registry.
 [profile.agentregistry]

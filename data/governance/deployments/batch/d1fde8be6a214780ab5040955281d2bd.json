@@ -1,0 +1,51 @@
+{
+  "deployer_of_record": "0x9F730F6873102ee648E39b4543dEf776cD8eA182",
+  "executed_at": 1780267832.6041803,
+  "intent_id": "d1fde8be6a214780ab5040955281d2bd",
+  "project": "sample",
+  "stages": [
+    {
+      "chain": "anvil-local",
+      "chain_id": 1337,
+      "driver": "foundry",
+      "record": {
+        "block_number": 31,
+        "chain": "anvil-local",
+        "chain_id": 1337,
+        "contracts": [
+          {
+            "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+            "name": "deployer"
+          },
+          {
+            "address": "0xE6E340D132b5f46d1e472DebcD681B2aBc16e57E",
+            "name": "target"
+          }
+        ],
+        "deployed_at": 1780267832.4281003,
+        "deployer_of_record": "0x9F730F6873102ee648E39b4543dEf776cD8eA182",
+        "kind": "evm",
+        "project": "sample",
+        "rpc_url": "http://127.0.0.1:8545",
+        "tx_hash": "0xa24cd8381b0eb139432503d8b15160965e0e487e4c2afc4bf770a01c7706aeb6"
+      },
+      "status": "recorded"
+    },
+    {
+      "chain": "algorand-localnet",
+      "chain_id": 4160,
+      "driver": "algorand",
+      "error": "deploy AgenticMinter failed: TransactionPool.Remember: transaction VWO6ECDINQMZBDX7QCWRMA2ECG6LWPRAFMG6Y5VEC7QTJR3O6DDQ: logic eval error: invalid ApplicationArgs index 0. Details: app=1001, pc=106, opcodes=err; label2:; pushbytes 0xb8447b36 // 0xb8447b36; txna ApplicationArgs 0",
+      "logs": "",
+      "status": "failed"
+    }
+  ],
+  "summary": {
+    "failed": [
+      "algorand-localnet"
+    ],
+    "succeeded": [
+      "anvil-local"
+    ]
+  }
+}

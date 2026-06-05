@@ -122,6 +122,16 @@
       "deployable": true
     },
     {
+      "name": "X402Receipt",
+      "deploymentKey": "x402Receipt",
+      "category": "payment",
+      "title": "x402 Receipt",
+      "blurb": "On-chain x402 settlement attestation ledger; cascades into the payment router.",
+      "abi": "abis/X402Receipt.json",
+      "fnCount": 11,
+      "deployable": true
+    },
+    {
       "name": "BankonAgenticPlaceHook",
       "deploymentKey": "agenticPlaceHook",
       "category": "listing",
@@ -590,6 +600,310 @@
     "treasuryOwner": "0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169",
     "sequences": [
       {
+        "id": "ens",
+        "title": "BANKON ENS minter (Flow A/B/C)",
+        "category": "ens",
+        "chains": [
+          1,
+          11155111
+        ],
+        "blurb": "subdomain.bankon.eth registrar + .eth purchase + domain hosting: price/reputation/payment → identity → resolver(+adapter+V2) → registrar/ethRegistrar/domainHosting, then 13 role grants. bankon.eth is admin + fee recipient.",
+        "steps": [
+          {
+            "contract": "BankonPriceOracle",
+            "args": [
+              {
+                "owner": true
+              }
+            ]
+          },
+          {
+            "contract": "BankonReputationGate",
+            "args": [
+              {
+                "owner": true
+              }
+            ]
+          },
+          {
+            "contract": "BankonPaymentRouter",
+            "args": [
+              {
+                "owner": true
+              }
+            ]
+          },
+          {
+            "contract": "AgentRegistry",
+            "args": [
+              {
+                "literal": "BANKON Agent Registry"
+              },
+              {
+                "literal": "AGENT"
+              },
+              {
+                "owner": true
+              }
+            ]
+          },
+          {
+            "contract": "X402Receipt",
+            "args": [
+              {
+                "owner": true
+              },
+              {
+                "ref": "BankonPaymentRouter"
+              }
+            ]
+          },
+          {
+            "contract": "BankonX402Attestor",
+            "args": [
+              {
+                "owner": true
+              }
+            ]
+          },
+          {
+            "contract": "BankonAgenticPlaceHook",
+            "args": [
+              {
+                "owner": true
+              },
+              {
+                "literal": "https://agenticplace.pythai.net/x402/listing"
+              }
+            ]
+          },
+          {
+            "contract": "BankonSubnameResolver",
+            "args": [
+              {
+                "owner": true
+              },
+              {
+                "literal": "0x0000000000000000000000000000000000000000"
+              }
+            ]
+          },
+          {
+            "contract": "BankonInftAdapter",
+            "args": [
+              {
+                "owner": true
+              },
+              {
+                "ref": "BankonSubnameResolver"
+              }
+            ]
+          },
+          {
+            "contract": "BankonSubnameResolverV2",
+            "args": [
+              {
+                "owner": true
+              },
+              {
+                "ref": "BankonInftAdapter"
+              }
+            ]
+          },
+          {
+            "contract": "BankonSubnameRegistrar",
+            "args": [
+              {
+                "chain": "nameWrapper"
+              },
+              {
+                "ref": "BankonSubnameResolver"
+              },
+              {
+                "chain": "bankonNode"
+              },
+              {
+                "ref": "BankonPaymentRouter"
+              },
+              {
+                "ref": "BankonPriceOracle"
+              },
+              {
+                "ref": "BankonReputationGate"
+              },
+              {
+                "ref": "AgentRegistry"
+              },
+              {
+                "owner": true
+              }
+            ]
+          },
+          {
+            "contract": "BankonEthRegistrar",
+            "args": [
+              {
+                "owner": true
+              },
+              {
+                "chain": "ensController"
+              },
+              {
+                "ref": "BankonPriceOracle"
+              },
+              {
+                "ref": "BankonPaymentRouter"
+              },
+              {
+                "ref": "BankonX402Attestor"
+              }
+            ]
+          },
+          {
+            "contract": "BankonDomainHosting",
+            "args": [
+              {
+                "owner": true
+              },
+              {
+                "chain": "nameWrapper"
+              },
+              {
+                "ref": "BankonSubnameResolver"
+              },
+              {
+                "ref": "BankonPaymentRouter"
+              },
+              {
+                "ref": "BankonX402Attestor"
+              }
+            ]
+          }
+        ],
+        "wire": [
+          {
+            "contract": "BankonSubnameResolver",
+            "fn": "setInftAdapter",
+            "args": [
+              {
+                "ref": "BankonInftAdapter"
+              }
+            ]
+          },
+          {
+            "contract": "BankonSubnameResolver",
+            "fn": "grantRegistrar",
+            "args": [
+              {
+                "ref": "BankonSubnameRegistrar"
+              }
+            ]
+          },
+          {
+            "contract": "BankonSubnameResolver",
+            "fn": "grantRegistrar",
+            "args": [
+              {
+                "ref": "BankonDomainHosting"
+              }
+            ]
+          },
+          {
+            "contract": "BankonSubnameResolverV2",
+            "fn": "grantRegistrar",
+            "args": [
+              {
+                "ref": "BankonSubnameRegistrar"
+              }
+            ]
+          },
+          {
+            "contract": "BankonSubnameResolverV2",
+            "fn": "grantRegistrar",
+            "args": [
+              {
+                "ref": "BankonDomainHosting"
+              }
+            ]
+          },
+          {
+            "contract": "BankonInftAdapter",
+            "fn": "grantRegistrar",
+            "args": [
+              {
+                "ref": "BankonSubnameRegistrar"
+              }
+            ]
+          },
+          {
+            "contract": "BankonAgenticPlaceHook",
+            "fn": "grantLister",
+            "args": [
+              {
+                "ref": "BankonSubnameRegistrar"
+              }
+            ]
+          },
+          {
+            "contract": "BankonAgenticPlaceHook",
+            "fn": "grantLister",
+            "args": [
+              {
+                "ref": "BankonEthRegistrar"
+              }
+            ]
+          },
+          {
+            "contract": "BankonAgenticPlaceHook",
+            "fn": "grantLister",
+            "args": [
+              {
+                "ref": "BankonDomainHosting"
+              }
+            ]
+          },
+          {
+            "contract": "BankonX402Attestor",
+            "fn": "grantConsumer",
+            "args": [
+              {
+                "ref": "BankonSubnameRegistrar"
+              }
+            ]
+          },
+          {
+            "contract": "BankonX402Attestor",
+            "fn": "grantConsumer",
+            "args": [
+              {
+                "ref": "BankonEthRegistrar"
+              }
+            ]
+          },
+          {
+            "contract": "BankonX402Attestor",
+            "fn": "grantConsumer",
+            "args": [
+              {
+                "ref": "BankonDomainHosting"
+              }
+            ]
+          },
+          {
+            "contract": "BankonSubnameRegistrar",
+            "fn": "grantRole",
+            "args": [
+              {
+                "literal": "0x4b6d7bfbdfd4dba4dace8bd7020a81117ab633e3a677498b9e92d1b899379d26"
+              },
+              {
+                "chain": "vaultSigner"
+              }
+            ]
+          }
+        ]
+      },
+      {
         "id": "treasury",
         "title": "Treasury (cp2048)",
         "category": "cp2048",
@@ -704,7 +1018,8 @@
               {
                 "owner": true
               }
-            ]
+            ],
+            "create2": true
           },
           {
             "contract": "remittance",
@@ -712,7 +1027,8 @@
               {
                 "owner": true
               }
-            ]
+            ],
+            "create2": true
           }
         ]
       },
@@ -739,11 +1055,13 @@
           },
           {
             "contract": "bankon_tba_account",
-            "args": []
+            "args": [],
+            "create2": true
           },
           {
             "contract": "bankon_tba_registry_proxy",
-            "args": []
+            "args": [],
+            "create2": true
           },
           {
             "contract": "bankon_inft_subname",
@@ -856,7 +1174,8 @@
         "steps": [
           {
             "contract": "AgentReputationRegistry",
-            "args": []
+            "args": [],
+            "create2": true
           },
           {
             "contract": "AgenticMarketplaceEscrow",
@@ -867,7 +1186,8 @@
               {
                 "literal": "250"
               }
-            ]
+            ],
+            "create2": true
           },
           {
             "contract": "bankon_agent_market",
@@ -896,7 +1216,10 @@
         "usdc": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
         "univ3Router": "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
         "nameWrapper": "0xD4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401",
-        "erc6551Registry": "0x000000006551c19487814612e58FE06813775758"
+        "erc6551Registry": "0x000000006551c19487814612e58FE06813775758",
+        "ensController": "0x59E16fcCd424Cc24e280Be16E11Bcd56fb0CE547",
+        "bankonNode": "0x79c178642317fc2d61d186f3b412440f06590d8314f126362d6a88929a6cbe1a",
+        "vaultSigner": "0x0000000000000000000000000000000000000000"
       },
       "10": {
         "label": "Optimism",
@@ -940,6 +1263,13 @@
         "nameWrapper": "0x0000000000000000000000000000000000000000",
         "erc6551Registry": "0x000000006551c19487814612e58FE06813775758"
       },
+      "16601": {
+        "label": "0G Galileo",
+        "usdc": "0x0000000000000000000000000000000000000000",
+        "univ3Router": "0x0000000000000000000000000000000000000000",
+        "nameWrapper": "0x0000000000000000000000000000000000000000",
+        "erc6551Registry": "0x000000006551c19487814612e58FE06813775758"
+      },
       "42161": {
         "label": "Arbitrum",
         "usdc": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
@@ -961,12 +1291,29 @@
         "nameWrapper": "0x0000000000000000000000000000000000000000",
         "erc6551Registry": "0x000000006551c19487814612e58FE06813775758"
       },
+      "84532": {
+        "label": "Base Sepolia",
+        "usdc": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+        "univ3Router": "0x0000000000000000000000000000000000000000",
+        "nameWrapper": "0x0000000000000000000000000000000000000000",
+        "erc6551Registry": "0x000000006551c19487814612e58FE06813775758"
+      },
       "5042002": {
         "label": "Arc testnet",
         "usdc": "0x3600000000000000000000000000000000000000",
         "univ3Router": "0x0000000000000000000000000000000000000000",
         "nameWrapper": "0x0000000000000000000000000000000000000000",
         "erc6551Registry": "0x000000006551c19487814612e58FE06813775758"
+      },
+      "11155111": {
+        "label": "Sepolia",
+        "usdc": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+        "univ3Router": "0x0000000000000000000000000000000000000000",
+        "nameWrapper": "0x0635513f179D50A207757E05759CbD106d7dFcE8",
+        "erc6551Registry": "0x000000006551c19487814612e58FE06813775758",
+        "ensController": "0xfb3cE5D01e0f33f41DbB39035dB9745962F1f968",
+        "bankonNode": "0x79c178642317fc2d61d186f3b412440f06590d8314f126362d6a88929a6cbe1a",
+        "vaultSigner": "0x0000000000000000000000000000000000000000"
       }
     },
     "bytecodes": "bankon.bytecodes.json"

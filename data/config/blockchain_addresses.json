@@ -1,0 +1,26 @@
+{
+  "_comment": "Contract addresses for the blockchain.agents mint pipeline, keyed by chain id. Populated by scripts/blockchain/bootstrap_anvil.sh from the forge DeployTier1 receipt (daio/contracts/deployments/<chainId>/tier1.json). agenticPlace and bankonVault are optional standalone addresses not in Tier1.",
+  "1337": {
+    "inft7857": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+    "agentRegistry": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "thot": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+    "x402Receipt": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+    "bankonSubnameRegistrar": "0x0000000000000000000000000000000000000000",
+    "agenticPlace": null,
+    "bankonVault": null
+  },
+  "137": {
+    "_chain": "polygon-mainnet",
+    "_comment": "DeltaVerse NeuralNode suite (github.com/deltav-deltaverse/neuralnode). bubbleRoomV4/bubbleRoomSpawn are ZERO until deployed via openBDK (neuralnode/script/Deploy.s.sol) — DeltaVerseGate fails CLOSED until then. genesisNFT/thrustNFT are the pre-existing DeltaVerseThrust ERC-721 collections (live).",
+    "bubbleRoomV4": "0x0000000000000000000000000000000000000000",
+    "bubbleRoomSpawn": "0x0000000000000000000000000000000000000000",
+    "deltaVerseOrchestrator": "0x0000000000000000000000000000000000000000",
+    "deltaGenesisSBT": "0x0000000000000000000000000000000000000000",
+    "emergenceTraits": "0x0000000000000000000000000000000000000000",
+    "seedRegistry": "0x0000000000000000000000000000000000000000",
+    "swarmGovernance": "0x0000000000000000000000000000000000000000",
+    "tombRegistry": "0x0000000000000000000000000000000000000000",
+    "genesisNFT": "0x024b464ec595F20040002237680026bf006e8F90",
+    "thrustNFT": "0x67CF0dD25F023746BFAc6EDcd9D04ea77eB19129"
+  }
+}

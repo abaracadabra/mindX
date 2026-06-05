@@ -1,0 +1,84 @@
+{
+  "timestamp": "2026-06-01T09:27:45.176056",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "shutdown_agent",
+  "content": {
+    "process_name": "system_shutdown_complete",
+    "data": {
+      "timestamp": 1780331265.1723433,
+      "duration": 0.8409180641174316,
+      "steps": [
+        "save_state",
+        "create_backup",
+        "archive_proven",
+        "shutdown_agents",
+        "cleanup"
+      ],
+      "agents_shutdown": [],
+      "before_state": {
+        "resource_snapshot": {
+          "timestamp": 1780331263.9395308,
+          "cpu_percent": 10.3,
+          "memory_percent": 64.5,
+          "memory_used": 3951369912,
+          "memory_total": 6120328396,
+          "disk_usage": {
+            "/": 92.54393515374247
+          },
+          "network_bytes_sent": 71253656,
+          "network_bytes_recv": 107805198,
+          "process_count": 288,
+          "load_average": [
+            3.23193359375,
+            1.65087890625,
+            1.28955078125
+          ]
+        },
+        "performance_snapshot": null
+      },
+      "after_state": {
+        "resource_snapshot": {
+          "timestamp": 1780331264.783036,
+          "cpu_percent": 14.6,
+          "memory_percent": 64.2,
+          "memory_used": 3929895075,
+          "memory_total": 6120328396,
+          "disk_usage": {
+            "/": 92.54394824130554
+          },
+          "network_bytes_sent": 71278409,
+          "network_bytes_recv": 107831651,
+          "process_count": 288,
+          "load_average": [
+            3.23193359375,
+            1.65087890625,
+            1.28955078125
+          ]
+        },
+        "performance_snapshot": null,
+        "agents_registered": [],
+        "agents_active": [],
+        "tools_registered": []
+      },
+      "improvement_count": 0,
+      "rollback_count": 0,
+      "previous_state": {
+        "event_id": "shutdown_1780331263",
+        "timestamp": 1780331263.7305684,
+        "improvement_count": 0,
+        "rollback_count": 0
+      }
+    }
+  },
+  "context": {
+    "agent_id": "shutdown_agent",
+    "event": "shutdown_complete"
+  },
+  "tags": [
+    "system_shutdown_complete",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "187729d9dd88fde8"
+}

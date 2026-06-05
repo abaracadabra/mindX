@@ -4228,3 +4228,7 @@
 ### Milestone — Calibrate Gödel claim + ship Gödel Machine Index (GMI) Phase 0
 - score 1.0; docs, new-capability, public-surface, feature
 - 4 commit(s); see docs/MILESTONES.md
+
+### Milestone — feat(overlord): use @openagents/overlord as full replacement for shadow-overlord at mindX
+- score 0.8; new-capability, public-surface, feature
+- 3 commit(s); see docs/MILESTONES.md

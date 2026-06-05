@@ -1,0 +1,45 @@
+{
+  "event_type": "shutdown",
+  "timestamp": 1780331259.198718,
+  "event_id": "shutdown_1780331259",
+  "resource_snapshot": {
+    "timestamp": 1780331259.4098547,
+    "cpu_percent": 17.5,
+    "memory_percent": 64.9,
+    "memory_used": 3972844748,
+    "memory_total": 6120328396,
+    "disk_usage": {
+      "/": 92.54390734267093
+    },
+    "network_bytes_sent": 71156076,
+    "network_bytes_recv": 107709814,
+    "process_count": 288,
+    "load_average": [
+      2.90380859375,
+      1.560546875,
+      1.25830078125
+    ]
+  },
+  "performance_snapshot": null,
+  "agents_registered": [],
+  "agents_active": [],
+  "tools_registered": [],
+  "system_version": null,
+  "improvement_count": 0,
+  "rollback_count": 0,
+  "last_improvement": null,
+  "last_rollback": null,
+  "errors": [],
+  "warnings": [],
+  "metadata": {
+    "phase": "after_shutdown",
+    "duration_seconds": 0.8098621368408203,
+    "steps_completed": [
+      "save_state",
+      "create_backup",
+      "archive_proven",
+      "shutdown_agents",
+      "cleanup"
+    ]
+  }
+}

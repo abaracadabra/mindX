@@ -64,13 +64,15 @@ forge script script/deploy_bankon_inft.s.sol --rpc-url <fork> --broadcast   # de
 
 ## go-LIVE deployer + golden-ratio treasury (ETHGlobal NY)
 
-A **single-page, client-side, WebGL-skinned deployer** — [`packages/web/deploy.html`](packages/web/deploy.html)
-— takes the whole stack LIVE with a **two-button DEPLOY → LAUNCH → RETURN** flow. **① DEPLOY** arms the
-ordered sequence (reads creation bytecode + ctor ABI from the generated manifest, predicts addresses + gas,
-no broadcast); **② LAUNCH** broadcasts each creation tx straight from the wallet, threading each deployed
-address into the next constructor + post-deploy wiring; **RETURN** is live explorer feedback (tx hashes,
-addresses, confirmations, explorer links, optional verify). **No backend, no API key** — public RPC + your
-wallet. LIVE target **Base at parity with Ethereum**; multi-chain picker.
+A **single-page, client-side deployer** — [`deployer/index.html`](deployer/index.html) — takes the whole
+stack LIVE with a **two-button DEPLOY → LAUNCH → RETURN** flow. The bankon minter system is grouped into
+topic bundles (`bankon-ens`, `bankon-inft`, `bankon-arc`, `bankon-treasury`, `bankon-custody`), generated
+from `script/export-abis.mjs` (single source of truth). **① DEPLOY** arms a contract or bundle; **② LAUNCH**
+broadcasts each creation tx straight from the wallet, threading each deployed address into the next
+constructor + running post-deploy `<wire>` calls; **RETURN** is the tx hash/address the chain returns.
+Pick **ALL** to cycle every chain; singletons deploy via **CREATE2** at the same address on every chain.
+**bankon.eth is the only admin + fee recipient** — LAUNCH is gated to the bankon.eth holder on mainnet.
+**No backend, no API key, no script in the trust path** — public RPC + your wallet.
 
 The **cypherpunk2048 financial primitives** ([`contracts/cp2048/`](contracts/cp2048/)) are the golden-ratio
 treasury: **golden-ratio BANKON fee** (φ in the digits following the cost — normalized **φ/10 = 16.18%**,
@@ -87,8 +89,8 @@ any chain) that redeem **only to the immutable bankon.eth**, with a reconfigurab
 [`ETHGLOBAL_NY`](docs/ETHGLOBAL_NY.md), [`SCIENTIFIC_AND_RAKE`](docs/SCIENTIFIC_AND_RAKE.md). cp2048 + custody **31/31**.
 
 ```bash
-node script/export-abis.mjs                  # emit ABIs + bankon.bytecodes.json + deploy sequences
-python3 -m http.server -d packages/web 6680  # open /deploy.html → connect on Base → ① DEPLOY → ② LAUNCH
+node script/export-abis.mjs        # emit ABIs + bankon.bytecodes.json + deployer/bundles/bankon-*.xml
+python3 -m http.server 8088        # serve from bankoneth/ root; open /deployer/index.html → DEPLOY → LAUNCH
 ```
 
 ## Multichain registry, prices, x402 & MCP
@@ -173,8 +175,12 @@ bankonMCP/         MCP × x402 adaptive-rails proxy (AgenticPlace processor; TS,
 .bankonchains.env  CMC API key — GITIGNORED, outside the web root (loaded by the cmc proxies)
 packages/          pnpm workspace
   web/               self-contained dApp — prototype, no build:
-                       deploy.html (go-LIVE two-button deployer) + deploy.js + deploy-feedback.js
+                       bankon.html (bankon.pythai.net landing/claim) + bankoneth.html + inft.html
                        dapp/ (web3 prototype: index/dapp/admin + per-contract abis/<name>.abi.js)
+deployer/          the one canonical client-side deployer (DEPLOY → PREVIEW → LAUNCH → RETURN):
+                     index.html + deployer.js + index.xml + chains.xml + chain-params.json
+                     admin.html + keccak.js + admin-actions.json (bankon.eth admin console)
+                     bundles/bankon-*.xml (generated from script/export-abis.mjs)
                        bankonchains/ (chain registry + chainid.network extend + CMC price proxy) + bankon.js
                        bankoneth.html + inft.html + iNFTabi.js + name-service/marketspace
   parsec-view/       @bankoneth/parsec-view — native parsec-wallet view (TS, production)

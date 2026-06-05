@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-05-31T15:07:19.275769",
+  "memory_type": "system_state",
+  "importance": 3,
+  "agent_id": "default_identity_manager",
+  "content": {
+    "process_name": "id_manager_address_not_found",
+    "data": {
+      "entity_id": "blockchain.agent.pytest-anvil-agent"
+    }
+  },
+  "context": {
+    "agent_id": "default_identity_manager"
+  },
+  "tags": [
+    "id_manager_address_not_found",
+    "process_log"
+  ],
+  "parent_memory_id": null,
+  "memory_id": "2ff21a4bfc2f62ac"
+}

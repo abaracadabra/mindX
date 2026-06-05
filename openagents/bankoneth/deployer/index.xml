@@ -24,7 +24,7 @@
   <!-- Deploying a bundle is a pay-to-play service: the fee goes to mindX /
        AgenticPlace (the OpenBSD-secured rail), settled native or via x402.
        Set `recipient` to the AgenticPlace treasury before mainnet use. -->
-  <fee recipient="0x0000000000000000000000000000000000000000"
+  <fee recipient="0x10f7Ee226B16bea7f365Dc1eDEF159Fc1957D169"
        asset="0x0000000000000000000000000000000000000000"
        amount="0"
        service="deploy.bundle"
@@ -113,6 +113,18 @@
        Each include is a self-contained bundle manifest. The deployer merges them
        and groups by topic; DEPLOY BUNDLE arms a whole topic in stage order, LAUNCH
        fires it. Build the referenced artifacts (forge build) before launching. -->
+  <!-- ── BANKON minter system (the subdomain.bankon.eth deployment) ─────────
+       Generated from script/export-abis.mjs (DEPLOY_SEQUENCES — single source of
+       truth). bankon.eth is the immutable admin + fee recipient (from="owner");
+       singletons marked create2 land at the same address on every chain. The ENS
+       bundle is pinned to mainnet + Sepolia (NameWrapper-bound). -->
+  <include src="bundles/bankon-ens.xml"/>
+  <include src="bundles/bankon-inft.xml"/>
+  <include src="bundles/bankon-arc.xml"/>
+  <include src="bundles/bankon-treasury.xml"/>
+  <include src="bundles/bankon-custody.xml"/>
+
+  <!-- ── Adjacent topic bundles (daio / deltaverse) ─────────────────────────── -->
   <include src="bundles/daio-inft.xml"/>
   <include src="bundles/deltaverse.xml"/>
 

@@ -87,7 +87,7 @@
     "confidence": 0.95,
     "source": "self_analysis",
     "timestamp": 1776022239.3365555,
-    "last_updated": 1778956872.0041814
+    "last_updated": 1776022239.3365555
   },
   "identity.map.entity_to_address.smoke_test_entity_1": {
     "value": "0x5eCdc30df01030Aee83BF339617f5809bE26C8d9",
@@ -184,5 +184,61 @@
     "source": "self_analysis",
     "timestamp": 1778665500.0558453,
     "last_updated": 1778665500.0558453
+  },
+  "identity.map.entity_to_address.blockchain.agent.pytest-anvil-agent": {
+    "value": "0xBc3AD8073c38372E0Fa5AA8E8B0c9A3EFd3eD7E9",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1780265239.5289278,
+    "last_updated": 1780265239.5289278
+  },
+  "identity.map.address_to_entity.0xBc3AD8073c38372E0Fa5AA8E8B0c9A3EFd3eD7E9": {
+    "value": "blockchain.agent.pytest-anvil-agent",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1780265239.612937,
+    "last_updated": 1780265239.612937
+  },
+  "identity.map.entity_to_address.blockchain.agent.oracle-scout": {
+    "value": "0x108eEb4441701A1d1c1cC89f6a2abCa590Bc006D",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1780265256.9574683,
+    "last_updated": 1780265256.9574683
+  },
+  "identity.map.address_to_entity.0x108eEb4441701A1d1c1cC89f6a2abCa590Bc006D": {
+    "value": "blockchain.agent.oracle-scout",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1780265257.0322325,
+    "last_updated": 1780265257.0322325
+  },
+  "identity.map.entity_to_address.blockchain.agent.sentinel-bravo": {
+    "value": "0x537A0A5DE5FECBC54aAD8c06ad459Ea7D2Af2Baf",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1780265314.801523,
+    "last_updated": 1780265314.801523
+  },
+  "identity.map.address_to_entity.0x537A0A5DE5FECBC54aAD8c06ad459Ea7D2Af2Baf": {
+    "value": "blockchain.agent.sentinel-bravo",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1780265314.9020925,
+    "last_updated": 1780265314.9020925
+  },
+  "identity.map.entity_to_address.blockchain.agent.orion-delta": {
+    "value": "0x2177ad621e9a07044708c99d49B7c4332B9286bA",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1780265353.707655,
+    "last_updated": 1780265353.707655
+  },
+  "identity.map.address_to_entity.0x2177ad621e9a07044708c99d49B7c4332B9286bA": {
+    "value": "blockchain.agent.orion-delta",
+    "confidence": 1.0,
+    "source": "derived",
+    "timestamp": 1780265353.8045104,
+    "last_updated": 1780265353.8045104
   }
 }

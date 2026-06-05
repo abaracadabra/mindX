@@ -4,10 +4,16 @@
   "description": "Advanced 3D face rendering system with voice print analysis, frequency triggers, and inflection detection for mindX autonomous agents",
   "main": "src/FaiceyCore.js",
   "type": "module",
+  "imports": {
+    "#three": "./static/vendor/three.module.js"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "serve": "node server.js",
+    "sync-engine": "node scripts/sync-engine.mjs",
+    "preserve": "node scripts/sync-engine.mjs",
+    "prestart": "node scripts/sync-engine.mjs",
     "test": "node test/test.js",
     "demo": "node examples/jaimla-demo.js",
     "jaimla": "node examples/jaimla-demo.js",

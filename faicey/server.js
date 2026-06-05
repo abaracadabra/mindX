@@ -226,15 +226,22 @@ class FaiceyServer {
                 this.setupFaiceyEventListeners(agent);
             }
 
-            // Initialize agent
+            // Initialize agent. agent.init() drives the browser-side pipeline
+            // (Web Audio, getUserMedia, WebGLRenderer) which has no equivalent under
+            // bare Node. The visible wireframe now renders in the browser via the
+            // canonical engine (static/vendor/faicey-engine.js), so a Node-side init
+            // failure must NOT stop the HTTP/WebSocket server from serving the demo.
             await agent.init();
             this.agents.set(this.demo, agent);
 
             console.log(`✅ Demo agent ${this.demo} ready`);
 
         } catch (error) {
-            console.error(`❌ Failed to initialize demo agent:`, error);
-            throw error;
+            console.warn(
+                `⚠️  Demo agent ${this.demo} could not run its browser pipeline under Node ` +
+                `(${error?.message || error}). Serving the engine-driven demo page anyway; ` +
+                `rendering happens client-side via static/vendor/faicey-engine.js.`
+            );
         }
     }
 
@@ -538,8 +545,20 @@ class FaiceyServer {
 <html>
 <head>
     <title>Jaimla Demo - The Machine Learning Agent</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <!--
+      three.js is served locally (no CDN) from the in-repo vendored source via the
+      canonical Faicey wireframe engine. The import map below resolves any bare
+      `three` specifier to the locally vendored module; the engine bundle itself
+      already inlines three. Both are copied into static/vendor by scripts/sync-engine.mjs.
+    -->
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "/static/vendor/three.module.js",
+        "three/examples/jsm/controls/OrbitControls.js": "/static/vendor/jsm/controls/OrbitControls.js"
+      }
+    }
+    </script>
     <style>
         body { margin: 0; font-family: 'Courier New', monospace; background: #000; color: #fff; }
         .container { display: grid; grid-template-columns: 1fr 400px; height: 100vh; }
@@ -565,41 +584,38 @@ class FaiceyServer {
         </div>
     </div>
 
-    <script>
-        const ws = new WebSocket('ws://localhost:${this.port}');
-        ws.onmessage = (event) => {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'status') {
-                document.getElementById('status').textContent = 'Active';
-                if (msg.data.expression) {
-                    document.getElementById('expression').textContent = msg.data.expression;
-                }
-            }
-        };
-
-        // Basic 3D setup
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('face-canvas') });
+    <script type="module">
+        // Canonical wireframe rendering service — the same engine FaceRig uses,
+        // built from facerig/src/lib/faicey and served locally (no CDN).
+        import { Faicey } from '/static/vendor/faicey-engine.js';
 
         const canvas = document.getElementById('face-canvas');
         const container = canvas.parentElement;
-        renderer.setSize(container.clientWidth, container.clientHeight);
 
-        // Simple face wireframe
-        const geometry = new THREE.RingGeometry(0.5, 1.5, 16);
-        const material = new THREE.LineBasicMaterial({ color: 0xff0080 });
-        const face = new THREE.LineLoop(geometry, material);
-        scene.add(face);
+        const faicey = new Faicey();
+        await faicey.init(canvas, {
+            width: container.clientWidth,
+            height: container.clientHeight,
+            wireframe: true,
+            faceColor: 0xff0080,   // Jaimla pink
+            cameraZ: 5,
+        });
+        document.getElementById('status').textContent = 'Active';
 
-        camera.position.z = 3;
-
-        function animate() {
-            requestAnimationFrame(animate);
-            face.rotation.y += 0.01;
-            renderer.render(scene, camera);
-        }
-        animate();
+        // Drive the real morph-target expression engine from the live voice WebSocket.
+        const ws = new WebSocket('ws://localhost:${this.port}');
+        ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            const expr = msg.data && msg.data.expression;
+            if (expr) {
+                faicey.setExpression(expr, (msg.data && msg.data.intensity) || 1.0);
+                document.getElementById('expression').textContent = expr;
+            }
+            if (msg.type === 'analysis' && msg.data) {
+                document.getElementById('voice-active').textContent =
+                    String((msg.data.rms || 0) > 0.01);
+            }
+        };
     </script>
 </body>
 </html>`;

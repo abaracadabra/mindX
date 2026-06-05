@@ -1,0 +1,21 @@
+{
+  "block_number": 32,
+  "chain": "anvil-local",
+  "chain_id": 1337,
+  "contracts": [
+    {
+      "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "name": "deployer"
+    },
+    {
+      "address": "0xc3e53F4d16Ae77Db1c982e75a937B9f60FE63690",
+      "name": "target"
+    }
+  ],
+  "deployed_at": 1780267846.5547118,
+  "deployer_of_record": "0x9F730F6873102ee648E39b4543dEf776cD8eA182",
+  "kind": "evm",
+  "project": "sample",
+  "rpc_url": "http://127.0.0.1:8545",
+  "tx_hash": "0xaa12d353a8f16ba4cc20e8eca67868ab0bc009e2255f94f0015e13ca8bf26949"
+}

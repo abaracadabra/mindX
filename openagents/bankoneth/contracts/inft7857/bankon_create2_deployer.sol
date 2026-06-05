@@ -10,10 +10,12 @@ contract bankon_create2_deployer {
     event Deployed(address indexed deployed, bytes32 salt);
 
     /// @notice Forwards (salt, initCode) to Nick's Factory → CREATE2, identical addresses on every EVM chain.
+    /// @dev Nick's Factory returns the new address as 20 raw bytes (big-endian). Take the leading
+    ///      20 bytes directly — casting via bytes32→uint160 would truncate the low bits and mangle it.
     function deploy(bytes32 salt, bytes calldata initCode) external returns (address d) {
         (bool ok, bytes memory ret) = NICKS_FACTORY.call(abi.encodePacked(salt, initCode));
         require(ok && ret.length >= 20, "deploy failed");
-        d = address(uint160(uint256(bytes32(ret))));
+        d = address(bytes20(ret));
         emit Deployed(d, salt);
     }
 

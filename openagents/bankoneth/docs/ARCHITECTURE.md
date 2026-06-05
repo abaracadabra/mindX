@@ -171,6 +171,18 @@ The v2 plan drew directly from these canonical sources:
 - [`gskril/ens-offchain-registrar`](https://github.com/gskril/ens-offchain-registrar) — CCIP-Read reference
 - [`mDeisen/ensauth`](https://github.com/mDeisen/ensauth) — ENS-gated auth inspiration
 
+## Off-chain infrastructure — the gate backend + bankon-vault
+
+The contracts are fronted by a **server-enforced gate** (`backend/`, FastAPI): SIWE login → tier-scoped
+session (visitor / member / admin), with `TierGate` true-hiding admin/member surfaces. Admin authority
+(the `bankon.eth` owner) is backed by the **[`bankon-vault/`](../bankon-vault/)** module — encrypted
+credential storage (AES-256-GCM + HKDF-SHA512), the shadow-overlord admin/signing tier, and the cabinet.
+It is **isolated under `bankoneth/bankon-vault/` and used by bankoneth only** (no hard mindX dependency; the
+importable package is `bankon_vault`, mounted at `/vault/credentials/*`, `/vault/sign/*`, `/admin/shadow/*`,
+`/cabinet/*`). Its encrypted store (`.master.key`, `.salt`, `entries.json`) is machine-bound and never
+committed. See [`bankon-vault/README.md`](../bankon-vault/README.md), [`BANKON_VAULT.md`](BANKON_VAULT.md),
+[`TIERED_LOGIN.md`](TIERED_LOGIN.md).
+
 ## v2 doc map
 
 - [`ENSIP_COVERAGE.md`](ENSIP_COVERAGE.md) — exact ENSIP implementation matrix
@@ -182,3 +194,5 @@ The v2 plan drew directly from these canonical sources:
 - [`FUSES.md`](FUSES.md) — `<b-permissions-panel>` flow
 - [`ENSAUTH_GATING.md`](ENSAUTH_GATING.md) — `BankonAuthGate` + SIWE
 - [`specs/CCIP_READ_REGISTRAR.md`](specs/CCIP_READ_REGISTRAR.md) — off-chain mode
+- [`BANKON_VAULT.md`](BANKON_VAULT.md) — encrypted credential vault ([`bankon-vault/`](../bankon-vault/))
+- [`TIERED_LOGIN.md`](TIERED_LOGIN.md) — server-gated visitor/member/admin tiers

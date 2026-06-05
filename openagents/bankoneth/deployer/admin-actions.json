@@ -1,0 +1,136 @@
+[
+  {
+    "id": "set-vault-signer",
+    "label": "Set bankon_vault gateway signer",
+    "blurb": "Grant GATEWAY_SIGNER_ROLE so the vault issues subnames from a signature (key never revealed).",
+    "contract": "BankonSubnameRegistrar",
+    "deploymentKey": "subnameRegistrar",
+    "fn": "grantRole",
+    "selector": "0x2f2ff15d",
+    "args": [
+      {
+        "name": "role",
+        "source": "literal",
+        "value": "0x4b6d7bfbdfd4dba4dace8bd7020a81117ab633e3a677498b9e92d1b899379d26",
+        "type": "bytes32"
+      },
+      {
+        "name": "signer",
+        "source": "input",
+        "placeholder": "0x… vault signer address",
+        "type": "address"
+      }
+    ]
+  },
+  {
+    "id": "revoke-vault-signer",
+    "label": "Revoke gateway signer",
+    "blurb": "Remove a vault gateway signer.",
+    "contract": "BankonSubnameRegistrar",
+    "deploymentKey": "subnameRegistrar",
+    "fn": "revokeRole",
+    "selector": "0xd547741f",
+    "args": [
+      {
+        "name": "role",
+        "source": "literal",
+        "value": "0x4b6d7bfbdfd4dba4dace8bd7020a81117ab633e3a677498b9e92d1b899379d26",
+        "type": "bytes32"
+      },
+      {
+        "name": "signer",
+        "source": "input",
+        "placeholder": "0x… signer to revoke",
+        "type": "address"
+      }
+    ]
+  },
+  {
+    "id": "set-price-oracle",
+    "label": "Set price oracle",
+    "blurb": "Point the registrar at a new BankonPriceOracle.",
+    "contract": "BankonSubnameRegistrar",
+    "deploymentKey": "subnameRegistrar",
+    "fn": "setPriceOracle",
+    "selector": "0x530e784f",
+    "args": [
+      {
+        "name": "oracle",
+        "source": "input",
+        "placeholder": "0x… oracle",
+        "type": "address"
+      }
+    ]
+  },
+  {
+    "id": "set-reputation-gate",
+    "label": "Set reputation gate",
+    "blurb": "Point the registrar at a new BankonReputationGate.",
+    "contract": "BankonSubnameRegistrar",
+    "deploymentKey": "subnameRegistrar",
+    "fn": "setReputationGate",
+    "selector": "0x5f7a15b3",
+    "args": [
+      {
+        "name": "gate",
+        "source": "input",
+        "placeholder": "0x… gate",
+        "type": "address"
+      }
+    ]
+  },
+  {
+    "id": "pause",
+    "label": "Pause registrar",
+    "blurb": "Halt new registrations.",
+    "contract": "BankonSubnameRegistrar",
+    "deploymentKey": "subnameRegistrar",
+    "fn": "pause",
+    "selector": "0x8456cb59",
+    "args": []
+  },
+  {
+    "id": "unpause",
+    "label": "Unpause registrar",
+    "blurb": "Resume registrations.",
+    "contract": "BankonSubnameRegistrar",
+    "deploymentKey": "subnameRegistrar",
+    "fn": "unpause",
+    "selector": "0x3f4ba83a",
+    "args": []
+  },
+  {
+    "id": "set-webhook",
+    "label": "Set AgenticPlace webhook",
+    "blurb": "Update the AgenticPlace listing webhook URL.",
+    "contract": "BankonAgenticPlaceHook",
+    "deploymentKey": "agenticPlaceHook",
+    "fn": "setWebhookURL",
+    "selector": "0xed293f49",
+    "args": [
+      {
+        "name": "url",
+        "source": "input",
+        "placeholder": "https://agenticplace.pythai.net/x402/listing",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "id": "set-buyback",
+    "label": "Set buyback threshold",
+    "blurb": "Threshold (USD6) before the router triggers a buyback.",
+    "contract": "BankonPaymentRouter",
+    "deploymentKey": "paymentRouter",
+    "fn": "setBuybackThreshold",
+    "selector": "0x5a0ce7c1",
+    "args": [
+      {
+        "name": "threshold",
+        "source": "input",
+        "placeholder": "e.g. 5000000 = $5",
+        "type": "uint256"
+      }
+    ]
+  }
+]

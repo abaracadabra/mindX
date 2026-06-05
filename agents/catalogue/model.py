@@ -222,15 +222,31 @@ def _ex_memory_write(evt: Dict[str, Any]) -> EntryDraft:
     text = _stringify(content)
     mtype = p.get("memory_type") or "memory"
     name = _name_for(evt, p, "memory_id")
+    actor = evt.get("actor") or "system"
     tags = [t for t in (p.get("tags") or []) if isinstance(t, str)][:8]
     links: List[EntryLink] = []
     if p.get("parent_memory_id"):
         links.append(EntryLink(type="derivedFrom",
-                               target_urn=mint_urn("memory", evt.get("actor") or "system",
-                                                   str(p["parent_memory_id"]))))
-    d = _base(evt, "memory", name,
-              title=f"{mtype}: {text[:120]}", text=text, tags=tags, links=links)
-    return d
+                               target_urn=mint_urn("memory", actor, str(p["parent_memory_id"]))))
+    # Provenance threading present in ~40% of writes: the BDI run the memory was
+    # produced in. Clusters a run's memories under a shared run hub URN so
+    # lineage can answer "everything that happened in run X" (descendants of the
+    # hub) and "which run produced this memory" (ancestors of the memory).
+    ctx = p.get("context") if isinstance(p.get("context"), dict) else {}
+    data = content.get("data") if isinstance(content, dict) and isinstance(content.get("data"), dict) else {}
+    run_id = ctx.get("run_id") or data.get("run_id")
+    if run_id:
+        links.append(EntryLink(type="producedBy", target_urn=mint_urn("run", actor, str(run_id))))
+    goal_id = data.get("goal_id") or ctx.get("goal_id")
+    if goal_id:
+        links.append(EntryLink(type="wasInformedBy",
+                               target_urn=mint_urn("run", actor, str(goal_id))))
+    iid = ctx.get("interaction_id") or data.get("interaction_id")
+    if iid:
+        links.append(EntryLink(type="wasInformedBy",
+                               target_urn=mint_urn("run", actor, str(iid))))
+    return _base(evt, "memory", name,
+                 title=f"{mtype}: {text[:120]}", text=text, tags=tags, links=links)
 
 
 def _ex_memory_dream(evt: Dict[str, Any]) -> EntryDraft:

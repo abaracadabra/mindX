@@ -21,23 +21,31 @@
          rpc="https://evmrpc-testnet.0g.ai" explorer="https://chainscan-galileo.0g.ai"
          marketRef="0g" note="iNFT (ERC-7857) home · 0G storage + compute"/>
 
-  <chain id="ethereum" name="Ethereum"    chainId="1"     symbol="ETH"  kind="evm"
+  <chain id="ethereum" name="Ethereum"    chainId="1"     symbol="ETH"  kind="evm" mainnet="true"
          rpc="https://eth.llamarpc.com" explorer="https://etherscan.io"
-         marketRef="ethereum" note="L1 settlement · iNFT + DAIO anchor"/>
+         marketRef="ethereum" note="L1 settlement · iNFT + DAIO anchor · bankon.eth claim"/>
 
-  <chain id="base"     name="Base"        chainId="8453"  symbol="ETH"  kind="evm"
+  <chain id="sepolia"  name="Sepolia"     chainId="11155111" symbol="ETH" kind="evm"
+         rpc="https://ethereum-sepolia-rpc.publicnode.com" explorer="https://sepolia.etherscan.io"
+         marketRef="ethereum" note="ENS testnet · subdomain.bankon.eth rehearsal (ALLOW_TESTNET)"/>
+
+  <chain id="base"     name="Base"        chainId="8453"  symbol="ETH"  kind="evm" mainnet="true"
          rpc="https://mainnet.base.org" explorer="https://basescan.org"
-         marketRef="base" note="USDC + x402 · cheap L2"/>
+         marketRef="base" note="USDC + x402 · cheap L2 · gas-as-a-service reservoir"/>
 
-  <chain id="arc"      name="Circle ARC"  chainId="0"     symbol="USDC" kind="evm"
+  <chain id="base-sepolia" name="Base Sepolia" chainId="84532" symbol="ETH" kind="evm"
+         rpc="https://sepolia.base.org" explorer="https://sepolia.basescan.org"
+         marketRef="base" note="Base testnet · cp2048 + x402 rehearsal"/>
+
+  <chain id="arc"      name="Circle ARC (testnet)" chainId="5042002" symbol="USDC" kind="evm"
          rpc="" explorer=""
-         marketRef="usd-coin" note="USDC-native settlement · chainId set when ARC finalises"/>
+         marketRef="usd-coin" note="USDC-native settlement · ARC testnet 5042002 (set RPC in wallet)"/>
 
-  <chain id="moonbeam" name="Moonbeam"    chainId="1284"  symbol="GLMR" kind="evm"
+  <chain id="moonbeam" name="Moonbeam"    chainId="1284"  symbol="GLMR" kind="evm" mainnet="true"
          rpc="https://rpc.api.moonbeam.network" explorer="https://moonscan.io"
          marketRef="moonbeam" note="GLMR — almost free · ideal for cross-chain games (DeltaVerse rooms)"/>
 
-  <chain id="polygon"  name="Polygon"     chainId="137"   symbol="POL"  kind="evm"
+  <chain id="polygon"  name="Polygon"     chainId="137"   symbol="POL"  kind="evm" mainnet="true"
          rpc="https://polygon-rpc.com" explorer="https://polygonscan.com"
          marketRef="polygon-ecosystem-token" note="DeltaVerse NeuralNode suite"/>
 

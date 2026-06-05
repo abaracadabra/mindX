@@ -1,0 +1,52 @@
+{
+  "utc": "2026-06-05T05:24:40.424827+00:00",
+  "unix": 1780637080.4248478,
+  "sources": {
+    "cpu": {
+      "unix": 1780637080.4248478,
+      "unix_ns": 1780637080424843220,
+      "unix_18dp": "1780637080.42484322",
+      "monotonic": 104548.272552946,
+      "utc": "2026-06-05T05:24:40.424857+00:00",
+      "stale": false,
+      "source": "cpu.oracle"
+    },
+    "solar": {
+      "sunrise": "03:03 UTC",
+      "sunset": "19:01 UTC",
+      "solar_noon": "11:02 UTC",
+      "daylight_hours": 15.97,
+      "is_day": true,
+      "declination_deg": 22.54,
+      "day_of_year": 156,
+      "latitude": 50.1,
+      "longitude": 14.4,
+      "stale": false,
+      "source": "solar.oracle"
+    },
+    "lunar": {
+      "day": 19.5,
+      "cycle_pct": 0.6601,
+      "phase": "waning gibbous",
+      "is_full": false,
+      "is_new": false,
+      "days_to_full": 24.8,
+      "source": "lunar.oracle",
+      "verification": "astronomical_calculation",
+      "reference": "https://www.timeanddate.com/moon/phases/",
+      "stale": false
+    },
+    "blocktime": {
+      "stale": true,
+      "source": "blocktime.oracle",
+      "error": "no chains configured",
+      "chains": {}
+    }
+  },
+  "drift_max_ms": null,
+  "stale_sources": [
+    "blocktime.oracle"
+  ],
+  "consensus": "correlated",
+  "oracle": "time.oracle"
+}

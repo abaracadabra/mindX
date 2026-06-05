@@ -63,6 +63,12 @@ export const CONTRACTS = [
     "deploymentKey": "x402Attestor"
   },
   {
+    "name": "X402Receipt",
+    "title": "x402 Receipt",
+    "category": "payment",
+    "deploymentKey": "x402Receipt"
+  },
+  {
     "name": "BankonAgenticPlaceHook",
     "title": "AgenticPlace Hook",
     "category": "listing",

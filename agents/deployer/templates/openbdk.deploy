@@ -1,0 +1,91 @@
+{
+  "project": "openbdk",
+  "version": "1.0.0",
+  "required_min_tier": "tier3",
+  "required_approvers": [],
+  "mainnet_two_step": true,
+  "stages": [
+    {
+      "chain": "anvil-local",
+      "chain_id": 1337,
+      "driver": "foundry",
+      "is_mainnet": false,
+      "rpc_env": "ANVIL_RPC_URL",
+      "deployer_entity": "blockchain.deployer.anvil-local",
+      "gas_budget_usd": 0,
+      "foundry": {
+        "contracts_root": "openagents/bankoneth/openbdk",
+        "script": "script/DeployOpenBDK.s.sol:DeployOpenBDK",
+        "profile": "default",
+        "receipt_stage": "openbdk-governance",
+        "verify": false,
+        "env": {
+          "DEPLOY_LEG": "governance",
+          "TIMELOCK_MIN_DELAY": "172800",
+          "MINIMUM_VALIDATOR_STAKE": "1000000000000000000000",
+          "UNBONDING_PERIOD": "100"
+        }
+      }
+    },
+    {
+      "chain": "ethereum",
+      "chain_id": 1,
+      "driver": "foundry",
+      "is_mainnet": true,
+      "rpc_env": "ETHEREUM_RPC_URL",
+      "deployer_entity": "blockchain.deployer.ethereum",
+      "gas_budget_usd": 200,
+      "foundry": {
+        "contracts_root": "openagents/bankoneth/openbdk",
+        "script": "script/DeployOpenBDK.s.sol:DeployOpenBDK",
+        "profile": "default",
+        "receipt_stage": "openbdk-governance",
+        "verify": true,
+        "env": {
+          "DEPLOY_LEG": "governance",
+          "TIMELOCK_MIN_DELAY": "172800",
+          "MINIMUM_VALIDATOR_STAKE": "1000000000000000000000",
+          "UNBONDING_PERIOD": "100"
+        }
+      }
+    },
+    {
+      "chain": "ethereum-bridge-l1",
+      "chain_id": 1,
+      "driver": "foundry",
+      "is_mainnet": true,
+      "rpc_env": "ETHEREUM_RPC_URL",
+      "deployer_entity": "blockchain.deployer.ethereum",
+      "gas_budget_usd": 200,
+      "foundry": {
+        "contracts_root": "openagents/bankoneth/openbdk",
+        "script": "script/DeployOpenBDK.s.sol:DeployOpenBDK",
+        "profile": "default",
+        "receipt_stage": "openbdk-l1",
+        "verify": true,
+        "env": { "DEPLOY_LEG": "l1" }
+      }
+    },
+    {
+      "chain": "polygon_zkevm",
+      "chain_id": 1101,
+      "driver": "foundry",
+      "is_mainnet": true,
+      "rpc_env": "POLYGON_ZKEVM_RPC_URL",
+      "deployer_entity": "blockchain.deployer.polygon-zkevm",
+      "gas_budget_usd": 50,
+      "foundry": {
+        "contracts_root": "openagents/bankoneth/openbdk",
+        "script": "script/DeployOpenBDK.s.sol:DeployOpenBDK",
+        "profile": "default",
+        "receipt_stage": "openbdk-l2",
+        "verify": true,
+        "env": {
+          "DEPLOY_LEG": "l2",
+          "L1_ESCROW_ADDRESS": "$OPENBDK_L1_ESCROW",
+          "BRIDGE_WRAPPED_TOKEN_ADDRESS": "$OPENBDK_BWTOKEN"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "name": "@deltaverse/subgraph",
+  "version": "1.0.0",
+  "description": "The Graph Protocol subgraph indexing the DELTAVERSE Debt Inheritance Protocol",
+  "license": "MIT",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "test": "graph test",
+    "deploy": "graph deploy --node https://api.studio.thegraph.com/deploy/ deltaverse-debt-inheritance",
+    "create-local": "graph create --node http://localhost:8020/ deltaverse-debt-inheritance",
+    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 deltaverse-debt-inheritance"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-cli": "^0.80.0",
+    "@graphprotocol/graph-ts": "^0.35.0"
+  }
+}

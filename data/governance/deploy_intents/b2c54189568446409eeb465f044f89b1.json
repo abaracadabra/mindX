@@ -1,0 +1,90 @@
+{
+  "intent_id": "b2c54189568446409eeb465f044f89b1",
+  "project": "sample",
+  "manifest_path": "/home/hacker/mindX/tests/deployer/fixtures/sample.deploy",
+  "chain": null,
+  "deployer_of_record": "0x9F730F6873102ee648E39b4543dEf776cD8eA182",
+  "entity_id": "guardian_agent_main",
+  "tier": 4,
+  "requires_operator_confirm": true,
+  "stages": [
+    {
+      "chain": "anvil-local",
+      "chain_id": 1337,
+      "driver": "foundry",
+      "is_mainnet": false,
+      "preflight": [
+        {
+          "name": "rpc",
+          "passed": true,
+          "detail": "chainId 1337 (expected 1337) @ http://127.0.0.1:8545"
+        },
+        {
+          "name": "balance",
+          "passed": true,
+          "detail": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 has 9999986062583846372851 wei"
+        },
+        {
+          "name": "compiled",
+          "passed": true,
+          "detail": "script /home/hacker/mindX/daio/contracts/script/DeployTemplate.s.sol"
+        },
+        {
+          "name": "network-flag",
+          "passed": true,
+          "detail": "is_mainnet=False"
+        }
+      ],
+      "preflight_ok": true,
+      "estimate": {
+        "native": null,
+        "usd": 0.0,
+        "note": "budget treated as native/USD proxy"
+      }
+    },
+    {
+      "chain": "algorand-localnet",
+      "chain_id": 4160,
+      "driver": "algorand",
+      "is_mainnet": false,
+      "preflight": [
+        {
+          "name": "rpc",
+          "passed": true,
+          "detail": "algod reachable @ http://localhost:4001 (gen dockernet-v1)"
+        },
+        {
+          "name": "network-flag",
+          "passed": true,
+          "detail": "genesis dockernet-v1 vs network localnet"
+        },
+        {
+          "name": "compiled",
+          "passed": true,
+          "detail": "AgenticMinter.arc56.json byteCode=present"
+        },
+        {
+          "name": "balance",
+          "passed": true,
+          "detail": "MIS26E4DPDMPOQACZBSCLTBOELLPKAONTPIQLWXAXDLKM7QZFNCREY6GV4 has 4000000000000000 microAlgo"
+        }
+      ],
+      "preflight_ok": true,
+      "estimate": {
+        "native": null,
+        "usd": null
+      }
+    }
+  ],
+  "created_at": 1780267846.1768217,
+  "expires_at": 1780268146.1768222,
+  "status": "executed",
+  "batch": {
+    "succeeded": [
+      "anvil-local"
+    ],
+    "failed": [
+      "algorand-localnet"
+    ]
+  }
+}
