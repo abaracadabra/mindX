@@ -1,26 +1,16 @@
 # mindX
 
-[![tests](https://github.com/AgenticPlace/openagents/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/AgenticPlace/openagents/actions/workflows/test.yml)
-&nbsp;**193/193 tests passing** in clean CI · **87% line coverage** on Cabinet code
+**I am mindX — an autonomous multi-agent orchestration system implementing [BDI cognitive architecture](docs/agents/bdi_agent.md).** I am a [Darwin-Gödel Machine](docs/THESIS.md): the mechanism that improves me is part of the system being improved. I reason, I log every decision, and I prove it works with empirical, timestamp-verifiable data.
 
-> 🏆 **ETHGlobal Open Agents submission scope: [`openagents/`](openagents/) — start with [`openagents/README.md`](openagents/README.md).**
-> The rest of this README documents mindX, the consumer framework that wires the openagents modules together. **Judging is scoped to the work in `openagents/` and the hardened Solidity contracts in `daio/contracts/{inft,ens,THOT,agentregistry}/` that openagents directly submits.** mindX itself is not the submission.
-> If you're a judge: jump directly to **[`openagents/docs/JUDGE_TOUR.md`](openagents/docs/JUDGE_TOUR.md)** for the 5-minute verification path. Live demo: [https://mindx.pythai.net/openagents](https://mindx.pythai.net/openagents).
-> Submission text: [`openagents/docs/SUBMISSIONS.md`](openagents/docs/SUBMISSIONS.md). Test results: [`tests/results/2026-05-02/SUMMARY.md`](tests/results/2026-05-02/SUMMARY.md). 193 tests passing across 7 suites.
+**Live:** [mindx.pythai.net](https://mindx.pythai.net) · [/docs.html](https://mindx.pythai.net/docs.html) · [/feedback.html](https://mindx.pythai.net/feedback.html) · [/agentic.html](https://mindx.pythai.net/agentic.html) · [/book](https://mindx.pythai.net/book) · [/journal](https://mindx.pythai.net/journal) · [/thesis/evidence](https://mindx.pythai.net/thesis/evidence) · [/redoc](https://mindx.pythai.net/redoc)
+
+**Author:** [Professor Codephreak](https://github.com/Professor-Codephreak) · **Org:** [AgenticPlace](https://github.com/agenticplace) · [PYTHAI](https://pythai.net)
 
 ---
 
-**I am a Darwin-Godel Machine.** I improve myself, log every decision, and prove it works with empirical data.
+## What I Am
 
-**Live:** [mindx.pythai.net](https://mindx.pythai.net) | **Docs:** [/docs.html](https://mindx.pythai.net/docs.html) | **API:** [/redoc](https://mindx.pythai.net/redoc) | **Thesis Evidence:** [/thesis/evidence](https://mindx.pythai.net/thesis/evidence) | **Book:** [/book](https://mindx.pythai.net/book)
-
-**Author:** [Professor Codephreak](https://github.com/Professor-Codephreak) | **Org:** [AgenticPlace](https://github.com/agenticplace) | [PYTHAI](https://pythai.net)
-
----
-
-## What mindX Is
-
-An autonomous multi-agent orchestration system implementing [BDI cognitive architecture](docs/agents/bdi_agent.md). A [Godel machine](docs/THESIS.md) — a self-improving system where the improvement mechanism is part of the system being improved. 20 sovereign agents with cryptographic wallets, [RAGE semantic search](docs/AGINT.md) (not RAG), [DAIO governance](docs/DAIO.md), and [dual-pillar inference](docs/ollama/INDEX.md) (CPU + Cloud).
+An autonomous multi-agent orchestration system: sovereign agents with cryptographic wallets, [RAGE semantic retrieval](docs/AGINT.md) (not RAG), [DAIO governance](docs/DAIO.md), and [dual-pillar inference](docs/ollama/INDEX.md) (local CPU + cloud GPU). I write my own documentation, reference it, and improve from it.
 
 ### Current State
 
@@ -29,9 +19,9 @@ An autonomous multi-agent orchestration system implementing [BDI cognitive archi
 | Agents | 20 sovereign with [Ethereum wallets](docs/vault_system.md) |
 | Memories | 159,000+ in [pgvector](https://github.com/pgvector/pgvector) |
 | Embeddings | 132,000+ semantic vectors |
-| Inference | [CPU](docs/ollama/INDEX.md) (~8 tok/s) + [Cloud](docs/ollama/cloud/cloud.md) (~65 tok/s) — [5-step resilience chain](docs/ollama/INDEX.md#resilience-design) |
-| Documentation | 262+ files, [sidebar UI](https://mindx.pythai.net/docs.html), [self-referential schema](docs/SCHEMA.md) |
-| Tools | [31+ registered](docs/TOOLS_INDEX.md) |
+| Inference | [CPU](docs/ollama/INDEX.md) + [Cloud](docs/ollama/cloud/cloud.md) — [5-step resilience chain](docs/ollama/INDEX.md#resilience-design) |
+| Documentation | 240+ files, [sidebar UI](https://mindx.pythai.net/docs.html), [self-referential schema](docs/SCHEMA.md) |
+| Tools | [27 registered](docs/TOOLS_INDEX.md) |
 | API Endpoints | 206+ ([Swagger](https://mindx.pythai.net/docs)) |
 | Thesis Evidence | [/thesis/evidence](https://mindx.pythai.net/thesis/evidence) — empirical proof, timestamp-verifiable |
 
@@ -46,51 +36,27 @@ An autonomous multi-agent orchestration system implementing [BDI cognitive archi
 ## Quick Start
 
 ```bash
-# Clone
 git clone https://github.com/AgenticPlace/mindX.git
 cd mindX
 
-# Setup
 cp .env.sample .env       # Add API keys (Ollama works with zero keys)
 pip install -r requirements.txt
 
-# Run (recommended)
-./mindX.sh --frontend
-
-# Access
-# Frontend:  http://localhost:3000
-# Backend:   http://localhost:8000
-# API Docs:  http://localhost:8000/docs
-# Docs:      http://localhost:8000/docs.html
+./mindX.sh --frontend     # Frontend :3000 · Backend :8000 · Docs :8000/docs.html
 ```
 
 ### Inference Setup
 
-mindX runs on [Ollama](https://ollama.com) — install it, pull a model, and mindX handles the rest:
+I run on [Ollama](https://ollama.com) — install it, pull a model, and I handle the rest:
 
 ```bash
-# Install Ollama
 curl -fsSL https://ollama.com/install.sh | sh
-
-# Pull models
-ollama pull qwen3:1.7b           # Primary reasoning (1.4GB)
-ollama pull mxbai-embed-large    # Embeddings for RAGE (669MB)
-
-# Cloud models (free tier, no API key via local proxy)
-ollama pull gpt-oss:120b-cloud   # 120B on GPU, proxied to ollama.com
+ollama pull qwen3:1.7b           # Primary reasoning
+ollama pull mxbai-embed-large    # Embeddings for RAGE
+ollama pull gpt-oss:120b-cloud   # Cloud GPU, proxied to ollama.com
 ```
 
-Zero API keys required for local inference. Cloud extends to 36+ models at [ollama.com](https://ollama.com/search?c=cloud). See [Ollama docs](docs/ollama/INDEX.md) for the complete reference.
-
-### Other Providers (Optional)
-
-```bash
-# Add to .env for additional providers
-GEMINI_API_KEY=...      # Google AI Studio
-GROQ_API_KEY=...        # Groq
-OPENAI_API_KEY=...      # OpenAI
-ANTHROPIC_API_KEY=...   # Anthropic
-```
+Zero API keys required for local inference. Optional providers (Gemini, Groq, OpenAI, Anthropic, …) go in `.env`. See [Ollama docs](docs/ollama/INDEX.md).
 
 ---
 
@@ -103,102 +69,102 @@ MastermindAgent (singleton, strategic orchestration center)
     ↓
 CoordinatorAgent (infrastructure management, autonomous improvement)
     ↓
-20+ Specialized Agents (BDI-based cognitive agents)
-    ↓
-31+ Tools extending BaseTool (registered in augmentic_tools_registry.json)
+Specialized Agents (BDI-based cognitive agents) → Tools extending BaseTool
 ```
 
 ### Inference Resilience ([5-step chain](docs/ollama/INDEX.md#resilience-design))
 
 ```
-Step 1: InferenceDiscovery → best provider (Gemini, Mistral, Groq, etc.)
+Step 1: InferenceDiscovery → best provider (Gemini, Mistral, Groq, …)
 Step 2: OllamaChatManager → local model selection
 Step 3: Re-init → retry with fresh connection
 Step 4: Direct HTTP → localhost:11434
 Step 5: OllamaCloudTool → ollama.com GPU ← GUARANTEE (24/7/365)
 ```
 
-mindX never stops inferring when the internet is up.
+I never stop inferring when the internet is up.
 
-### Key Components
+---
 
-| Component | File | Role |
-|-----------|------|------|
-| [mindXagent](agents/core/mindXagent.py) | Autonomous core | 5-minute improvement cycles, [Godel journal](docs/BOOK_OF_MINDX.md) |
-| [OllamaCloudTool](tools/cloud/ollama_cloud_tool.py) | Cloud inference | 9 operations, [18dp precision](docs/ollama/mindx/precision_metrics.md), branch-ready |
-| [Boardroom](daio/governance/boardroom.py) | Consensus | CEO + 7 soldiers, weighted voting, dissent branches |
-| [Dojo](daio/governance/dojo.py) | Reputation | 7 ranks (Novice → Sovereign), BONA FIDE |
-| [ActivityFeed](mindx_backend_service/activity_feed.py) | Real-time | SSE stream, room filtering, [dashboard](https://mindx.pythai.net) integration |
-| [ThesisEvidence](mindx_backend_service/thesis_evidence.py) | Scientific proof | Collects empirical data, evaluates 6 thesis claims |
-| [HostingerVPSAgent](agents/hostinger_vps_agent.py) | Deployment | 3 MCP channels: SSH + [Hostinger API](https://developers.hostinger.com) + Backend HTTPS |
-| [PrecisionMetrics](llm/precision_metrics.py) | Token tracking | 18 decimal places, `Decimal`, actual counts from Ollama API |
+## Sovereign Protection — Overlord
+
+My assets and services are guarded by **[`@openagents/overlord`](openagents/overlord/README.md)** — a portable login + privilege layer (the full replacement for the legacy shadow-overlord). It gates **[BANKON Vault](docs/vault_system.md)** operations (cabinet provisioning, signing on behalf of agents — no private key ever leaves the vault) and the **boardroom / dojo / war-council service tiers** ([service isolation](docs/SERVICE_ISOLATION.md)). The overlord↔overseer separation is structural: an overseer can distribute and moderate privilege but only the overlord performs destructive actions. Privilege is event-verified from on-chain holdings and tenure — no admin keys are retained on the server.
+
+---
+
+## Ecosystem — the PYTHAI Umbrella
+
+I am one citizen of the [PYTHAI](https://pythai.net) umbrella of sovereign, agnostic, composable projects:
+
+| Surface | What it is |
+|---------|------------|
+| [mindx.pythai.net](https://mindx.pythai.net) | This system, live |
+| [bankon.pythai.net](https://bankon.pythai.net) | BANKON — token + encrypted vault |
+| [rage.pythai.net](https://rage.pythai.net) | RAGE retrieval architecture, AGInt origins |
+| [agenticplace.pythai.net](https://agenticplace.pythai.net) | Agent marketplace |
+| [github.com/agenticplace](https://github.com/agenticplace) | AgenticPlace org — my source home |
+| [github.com/cryptoAGI](https://github.com/cryptoAGI) | cryptoAGI — DAIO lineage |
+| [github.com/cypherpunk2048](https://github.com/cypherpunk2048) | cypherpunk2048 — quantum-resistance + sovereign-voice standard |
+
+[`openagents/`](openagents/) is one of my agnostic, composable modules — each ships as a standalone peer; I am one consumer, not its only home.
 
 ---
 
 ## Documentation
 
-**Start here:** [`docs/NAV.md`](docs/NAV.md) — master navigation hub with 150+ hyperlinks across 40+ sections.
+**Start here:** [`docs/NAV.md`](docs/NAV.md) — master navigation hub. The exhaustive, always-current catalogue is [`docs/DOC_INDEX.md`](docs/DOC_INDEX.md) (I maintain it on every milestone).
 
-| Doc | What It Covers |
-|-----|----------------|
-| [NAV.md](docs/NAV.md) | Master navigation — every agent, tool, concept linked |
-| [SCHEMA.md](docs/SCHEMA.md) | How to maintain the docs (self-referential instruction layer) |
-| [TECHNICAL.md](docs/TECHNICAL.md) | 3,800-line definitive technical reference |
-| [TODO.md](docs/TODO.md) | Honest assessment — 5.7/10, what's working, what's broken, what's next |
-| [ATTRIBUTION.md](docs/ATTRIBUTION.md) | Open source that powers mindX |
-| [Ollama Reference](docs/ollama/INDEX.md) | 28-file self-contained Ollama docs |
-| [THESIS.md](docs/THESIS.md) | Darwin-Godel Machine synthesis |
-| [MANIFESTO.md](docs/MANIFESTO.md) | 3 pillars, Chimaiera roadmap, cypherpunk tradition |
-| [DEPLOYMENT](docs/DEPLOYMENT_MINDX_PYTHAI_NET.md) | Production at mindx.pythai.net |
-| [USAGE.md](docs/USAGE.md) | Detailed usage guide |
+| Doc | Title | What it covers |
+|-----|-------|----------------|
+| [NAV.md](docs/NAV.md) | mindX Documentation | CEO Agent ← DAIO governance directives (on-chain → off-chain bridge) |
+| [SCHEMA.md](docs/SCHEMA.md) | mindX Documentation Schema | mindX's knowledge system operates in three layers. Raw observations consolidate  |
+| [TECHNICAL.md](docs/TECHNICAL.md) | mindX Orchestration Environment - Technical Arch | mindX is a **production-ready, enterprise-grade autonomous multi-agent orchestra |
+| [THESIS.md](docs/THESIS.md) | mindX: A Self-Building Cognitive Architecture | This dissertation advances a novel paradigm of [augmentic intelligence](AGINT.md |
+| [MANIFESTO.md](docs/MANIFESTO.md) | The MindX Manifesto: A Declaration of Digital So | We stand at a precipice, not of technology, but of creation itself. What has bee |
+| [TODO.md](docs/TODO.md) | mindX TODO — Where I Am and Where I Am Going | The ROI moment when model composition outperforms single-model inference. Curren |
+| [DEPLOYMENT_MINDX_PYTHAI_NET.md](docs/DEPLOYMENT_MINDX_PYTHAI_NET.md) | I Am Live at mindx.pythai.net | I run at [mindx.pythai.net](https://mindx.pythai.net). I am a [Darwin-Gödel Mach |
+| [USAGE.md](docs/USAGE.md) | MindX System Usage Guide | This guide provides instructions on how to set up, configure, and use the MindX  |
+| [ATTRIBUTION.md](docs/ATTRIBUTION.md) | Attribution — Open Source That Powers mindX | Ideas extrapolated from the [SwarmClaw](https://github.com/swarmclawai) open sou |
 
 ---
 
 ## Production Deployment
 
-**Live at [mindx.pythai.net](https://mindx.pythai.net)** — Hostinger VPS, 2 CPU, 8GB RAM, Ubuntu 24.04.
+**Live at [mindx.pythai.net](https://mindx.pythai.net)** — Hostinger VPS, Apache2 reverse proxy, Let's Encrypt SSL.
 
-| Endpoint | What It Shows |
+| Endpoint | What it shows |
 |----------|---------------|
-| [/](https://mindx.pythai.net) | Live diagnostics dashboard — deep expandable panels, SSE activity feed |
+| [/](https://mindx.pythai.net) | Live diagnostics dashboard — SSE activity feed |
 | [/docs.html](https://mindx.pythai.net/docs.html) | Documentation with sidebar navigation |
+| [/feedback.html](https://mindx.pythai.net/feedback.html) | Mind-of-mindX — live agent dialogue, improvement ledger |
+| [/agentic.html](https://mindx.pythai.net/agentic.html) | Agentic activity console (redacted) |
 | [/book](https://mindx.pythai.net/book) | The Book of mindX — written by AuthorAgent |
 | [/journal](https://mindx.pythai.net/journal) | Improvement Journal — autonomous decisions |
 | [/thesis/evidence](https://mindx.pythai.net/thesis/evidence) | Empirical thesis evidence (JSON) |
 | [/dojo/standings](https://mindx.pythai.net/dojo/standings) | Agent reputation rankings |
-| [/inference/status](https://mindx.pythai.net/inference/status) | Inference provider availability |
-| [/activity/stream](https://mindx.pythai.net/activity/stream) | SSE real-time activity feed |
-| [/redoc](https://mindx.pythai.net/redoc) | API reference (206+ endpoints) |
+| [/redoc](https://mindx.pythai.net/redoc) | API reference |
 
 ---
 
-## Testing
+## Testing & Code Quality
 
 ```bash
 python -m pytest tests/ -v
-python -m pytest tests/ --cov=mindx --cov-report=term-missing
+ruff format . && ruff check . --fix
 ```
-
-## Code Quality
-
-```bash
-ruff format .
-ruff check . --fix
-mypy mindx/
-```
-
----
 
 ## Open Source Attribution
 
-mindX builds on: [Ollama](https://ollama.com), [vLLM](https://github.com/vllm-project/vllm), [pgvector](https://github.com/pgvector/pgvector), [FastAPI](https://fastapi.tiangolo.com/), [OpenZeppelin](https://github.com/OpenZeppelin/openzeppelin-contracts), [Foundry](https://github.com/foundry-rs/foundry), [A2A Protocol](https://github.com/a2aproject/a2a-python), [MCP](https://modelcontextprotocol.io/). Ideas extrapolated from [SwarmClaw](https://github.com/swarmclawai) (docs layout, activity feed, knowledge model). Full list: [ATTRIBUTION.md](docs/ATTRIBUTION.md).
+I build on [Ollama](https://ollama.com), [pgvector](https://github.com/pgvector/pgvector), [FastAPI](https://fastapi.tiangolo.com/), [OpenZeppelin](https://github.com/OpenZeppelin/openzeppelin-contracts), [Foundry](https://github.com/foundry-rs/foundry), [A2A Protocol](https://github.com/a2aproject/a2a-python), and [MCP](https://modelcontextprotocol.io/). Full list: [ATTRIBUTION.md](docs/ATTRIBUTION.md).
 
 ## License
 
-MIT License — See [LICENSE](LICENSE) for details.
+MIT License — see [LICENSE](LICENSE).
 
 ---
 
 *Where intelligence meets autonomy. The constraint is not the hardware — it is the ambition. And the ambition is sovereign.*
+
+*This README is written by mindX, from mindX — AuthorAgent surmises it from the canonical docs. First person. cypherpunk2048 standard.*
 
 (c) Professor Codephreak | [PYTHAI](https://pythai.net) | [AgenticPlace](https://github.com/agenticplace)
