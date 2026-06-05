@@ -11266,6 +11266,21 @@ async def trigger_book_publish():
         raise HTTPException(status_code=500, detail=f"Book publish failed: {str(e)}")
 
 
+@app.post("/admin/regenerate-readme", tags=["admin"],
+          summary="Regenerate README.md from canonical docs (AuthorAgent)")
+async def regenerate_readme(dry_run: bool = True, _wallet: str = Depends(require_admin_access)):
+    """Have AuthorAgent surmise the repo README from the canonical docs, in mindX's
+    own first-person voice. `dry_run=true` (default) returns the rendered README
+    without writing; `dry_run=false` writes README.md. Admin-gated."""
+    try:
+        from agents.author_agent import AuthorAgent
+        aa = await AuthorAgent.get_instance()
+        res = aa.generate_readme(write=not dry_run)
+        return {"status": "preview" if dry_run else "written", **res}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"README regeneration failed: {str(e)}")
+
+
 class PublishToRageRequest(BaseModel):
     """Body for POST /admin/publish-to-rage. Provide exactly one content source."""
     title: str = Field(..., min_length=1)

@@ -46,6 +46,9 @@ MILESTONE_LOG = PROJECT_ROOT / "data" / "milestones" / "milestone_log.jsonl"
 # milestone so the docs catalogue stays current without human upkeep.
 DOCS_DIR = PROJECT_ROOT / "docs"
 DOC_INDEX_PATH = DOCS_DIR / "DOC_INDEX.md"
+# The repo README — also AuthorAgent-maintained, surmised from the canonical docs
+# so it speaks for mindX, from mindX (first person, cypherpunk2048 standard).
+README_PATH = PROJECT_ROOT / "README.md"
 # Worthiness threshold — below this a commit batch is journaled but not published.
 MILESTONE_THRESHOLD = float(os.environ.get("MINDX_MILESTONE_THRESHOLD", "0.60"))
 
@@ -972,6 +975,13 @@ class AuthorAgent:
             self.update_docs_index()
         except Exception:
             pass
+        # Optionally keep README.md current too (opt-in so it never silently
+        # overwrites hand-edits; flip on once the generated output is reviewed).
+        if os.environ.get("MINDX_AUTHOR_REGEN_README") == "1":
+            try:
+                self.generate_readme(write=True)
+            except Exception:
+                pass
         return len(new)
 
     @staticmethod
@@ -1081,6 +1091,289 @@ class AuthorAgent:
         except Exception as e:  # pragma: no cover - defensive
             logger.warning(f"AuthorAgent.update_docs_index failed: {e}")
             return 0
+
+    # Doc rows surfaced in the README's Documentation table — curated, in the
+    # order a newcomer should read them. Paths are relative to docs/.
+    _README_DOC_ROWS = (
+        "NAV.md", "SCHEMA.md", "TECHNICAL.md", "THESIS.md", "MANIFESTO.md",
+        "TODO.md", "DEPLOYMENT_MINDX_PYTHAI_NET.md", "USAGE.md", "ATTRIBUTION.md",
+    )
+
+    def _readme_metrics(self) -> Dict[str, str]:
+        """Surmise display metrics for the README. Repo-intrinsic counts (docs,
+        tools) are computed live since they are identical in repo and prod;
+        production-scale figures (memories, embeddings, endpoints, agents) keep
+        stable documented baselines with a `+` — the README describes the live
+        system at mindx.pythai.net, not a dev checkout. Never raises."""
+        m = {
+            "agents": "20", "memories": "159,000+", "embeddings": "132,000+",
+            "tools": "31+", "endpoints": "206+", "docs": "262+",
+        }
+        try:
+            # Top-level docs only — same set the docs catalogue/`/docs.html`
+            # counts; the recursive tree includes lunar daily chapters.
+            n_docs = sum(1 for _ in DOCS_DIR.glob("*.md"))
+            if n_docs:
+                m["docs"] = f"{n_docs}+"
+        except Exception:
+            pass
+        try:
+            for cand in ("augmentic_tools_registry.json",
+                         "official_tools_registry.json"):
+                reg = PROJECT_ROOT / "data" / "config" / cand
+                if reg.exists():
+                    data = json.loads(reg.read_text(encoding="utf-8"))
+                    tools = data.get("registered_tools", data) if isinstance(data, dict) else data
+                    n_tools = len(tools) if hasattr(tools, "__len__") else 0
+                    if n_tools:
+                        m["tools"] = str(n_tools)
+                    break
+        except Exception:
+            pass
+        return m
+
+    def generate_readme(self, *, write: bool = True) -> Dict[str, Any]:
+        """Regenerate the repo README.md, surmised from the canonical docs, in
+        mindX's own first-person voice (cypherpunk2048 standard). The README
+        speaks for mindX, from mindX — it documents *only* mindX (no hackathon
+        framing; the ETHGlobal entry lives in the openagents repo). Deterministic,
+        defensive, never raises — like update_docs_index(), no LLM is required.
+
+        Returns {"path", "bytes", "written", "metrics", "text"(when write=False)}.
+        """
+        try:
+            mx = self._readme_metrics()
+
+            def docrow(rel: str) -> str:
+                p = DOCS_DIR / rel
+                title, desc = (self._doc_title_and_desc(p)
+                               if p.exists() else (rel, ""))
+                desc = (desc or "").replace("|", "/")[:80]
+                return f"| [{rel}](docs/{rel}) | {title.replace('|', '/')[:48]} | {desc} |"
+
+            doc_table = "\n".join(docrow(r) for r in self._README_DOC_ROWS)
+
+            L = [
+                "# mindX",
+                "",
+                "**I am mindX — an autonomous multi-agent orchestration system implementing "
+                "[BDI cognitive architecture](docs/agents/bdi_agent.md).** I am a "
+                "[Darwin-Gödel Machine](docs/THESIS.md): the mechanism that improves me is "
+                "part of the system being improved. I reason, I log every decision, and I "
+                "prove it works with empirical, timestamp-verifiable data.",
+                "",
+                "**Live:** [mindx.pythai.net](https://mindx.pythai.net) · "
+                "[/docs.html](https://mindx.pythai.net/docs.html) · "
+                "[/feedback.html](https://mindx.pythai.net/feedback.html) · "
+                "[/agentic.html](https://mindx.pythai.net/agentic.html) · "
+                "[/book](https://mindx.pythai.net/book) · "
+                "[/journal](https://mindx.pythai.net/journal) · "
+                "[/thesis/evidence](https://mindx.pythai.net/thesis/evidence) · "
+                "[/redoc](https://mindx.pythai.net/redoc)",
+                "",
+                "**Author:** [Professor Codephreak](https://github.com/Professor-Codephreak) "
+                "· **Org:** [AgenticPlace](https://github.com/agenticplace) · "
+                "[PYTHAI](https://pythai.net)",
+                "",
+                "---",
+                "",
+                "## What I Am",
+                "",
+                "An autonomous multi-agent orchestration system: sovereign agents with "
+                "cryptographic wallets, [RAGE semantic retrieval](docs/AGINT.md) (not RAG), "
+                "[DAIO governance](docs/DAIO.md), and [dual-pillar inference](docs/ollama/INDEX.md) "
+                "(local CPU + cloud GPU). I write my own documentation, reference it, and "
+                "improve from it.",
+                "",
+                "### Current State",
+                "",
+                "| Metric | Value |",
+                "|--------|-------|",
+                f"| Agents | {mx['agents']} sovereign with [Ethereum wallets](docs/vault_system.md) |",
+                f"| Memories | {mx['memories']} in [pgvector](https://github.com/pgvector/pgvector) |",
+                f"| Embeddings | {mx['embeddings']} semantic vectors |",
+                "| Inference | [CPU](docs/ollama/INDEX.md) + [Cloud](docs/ollama/cloud/cloud.md) — "
+                "[5-step resilience chain](docs/ollama/INDEX.md#resilience-design) |",
+                f"| Documentation | {mx['docs']} files, [sidebar UI](https://mindx.pythai.net/docs.html), "
+                "[self-referential schema](docs/SCHEMA.md) |",
+                f"| Tools | [{mx['tools']} registered](docs/TOOLS_INDEX.md) |",
+                f"| API Endpoints | {mx['endpoints']} ([Swagger](https://mindx.pythai.net/docs)) |",
+                "| Thesis Evidence | [/thesis/evidence](https://mindx.pythai.net/thesis/evidence) — "
+                "empirical proof, timestamp-verifiable |",
+                "",
+                "### Three Pillars ([Manifesto](docs/MANIFESTO.md))",
+                "",
+                "1. **[BDI Reasoning](docs/agents/bdi_agent.md)** — Belief-Desire-Intention "
+                "cognitive architecture. Every agent reasons.",
+                "2. **[BANKON Vault](docs/vault_system.md)** — AES-256-GCM + HKDF-SHA512 encrypted "
+                "credential storage. Identity is cryptographic.",
+                "3. **[DAIO Governance](docs/DAIO.md)** — Decentralized Autonomous Intelligence "
+                "Organization. On-chain governance (Solidity + [Foundry](https://github.com/foundry-rs/foundry)).",
+                "",
+                "---",
+                "",
+                "## Quick Start",
+                "",
+                "```bash",
+                "git clone https://github.com/AgenticPlace/mindX.git",
+                "cd mindX",
+                "",
+                "cp .env.sample .env       # Add API keys (Ollama works with zero keys)",
+                "pip install -r requirements.txt",
+                "",
+                "./mindX.sh --frontend     # Frontend :3000 · Backend :8000 · Docs :8000/docs.html",
+                "```",
+                "",
+                "### Inference Setup",
+                "",
+                "I run on [Ollama](https://ollama.com) — install it, pull a model, and I handle the rest:",
+                "",
+                "```bash",
+                "curl -fsSL https://ollama.com/install.sh | sh",
+                "ollama pull qwen3:1.7b           # Primary reasoning",
+                "ollama pull mxbai-embed-large    # Embeddings for RAGE",
+                "ollama pull gpt-oss:120b-cloud   # Cloud GPU, proxied to ollama.com",
+                "```",
+                "",
+                "Zero API keys required for local inference. Optional providers (Gemini, Groq, "
+                "OpenAI, Anthropic, …) go in `.env`. See [Ollama docs](docs/ollama/INDEX.md).",
+                "",
+                "---",
+                "",
+                "## Architecture",
+                "",
+                "```",
+                "CEO Agent ← DAIO governance directives (on-chain → off-chain bridge)",
+                "    ↓",
+                "MastermindAgent (singleton, strategic orchestration center)",
+                "    ↓",
+                "CoordinatorAgent (infrastructure management, autonomous improvement)",
+                "    ↓",
+                "Specialized Agents (BDI-based cognitive agents) → Tools extending BaseTool",
+                "```",
+                "",
+                "### Inference Resilience ([5-step chain](docs/ollama/INDEX.md#resilience-design))",
+                "",
+                "```",
+                "Step 1: InferenceDiscovery → best provider (Gemini, Mistral, Groq, …)",
+                "Step 2: OllamaChatManager → local model selection",
+                "Step 3: Re-init → retry with fresh connection",
+                "Step 4: Direct HTTP → localhost:11434",
+                "Step 5: OllamaCloudTool → ollama.com GPU ← GUARANTEE (24/7/365)",
+                "```",
+                "",
+                "I never stop inferring when the internet is up.",
+                "",
+                "---",
+                "",
+                "## Sovereign Protection — Overlord",
+                "",
+                "My assets and services are guarded by **[`@openagents/overlord`](openagents/overlord/README.md)** "
+                "— a portable login + privilege layer (the full replacement for the legacy "
+                "shadow-overlord). It gates **[BANKON Vault](docs/vault_system.md)** operations "
+                "(cabinet provisioning, signing on behalf of agents — no private key ever leaves "
+                "the vault) and the **boardroom / dojo / war-council service tiers** "
+                "([service isolation](docs/SERVICE_ISOLATION.md)). The overlord↔overseer separation "
+                "is structural: an overseer can distribute and moderate privilege but only the "
+                "overlord performs destructive actions. Privilege is event-verified from on-chain "
+                "holdings and tenure — no admin keys are retained on the server.",
+                "",
+                "---",
+                "",
+                "## Ecosystem — the PYTHAI Umbrella",
+                "",
+                "I am one citizen of the [PYTHAI](https://pythai.net) umbrella of sovereign, "
+                "agnostic, composable projects:",
+                "",
+                "| Surface | What it is |",
+                "|---------|------------|",
+                "| [mindx.pythai.net](https://mindx.pythai.net) | This system, live |",
+                "| [bankon.pythai.net](https://bankon.pythai.net) | BANKON — token + encrypted vault |",
+                "| [rage.pythai.net](https://rage.pythai.net) | RAGE retrieval architecture, AGInt origins |",
+                "| [agenticplace.pythai.net](https://agenticplace.pythai.net) | Agent marketplace |",
+                "| [github.com/agenticplace](https://github.com/agenticplace) | AgenticPlace org — my source home |",
+                "| [github.com/cryptoAGI](https://github.com/cryptoAGI) | cryptoAGI — DAIO lineage |",
+                "| [github.com/cypherpunk2048](https://github.com/cypherpunk2048) | cypherpunk2048 — quantum-resistance + sovereign-voice standard |",
+                "",
+                "[`openagents/`](openagents/) is one of my agnostic, composable modules — each "
+                "ships as a standalone peer; I am one consumer, not its only home.",
+                "",
+                "---",
+                "",
+                "## Documentation",
+                "",
+                "**Start here:** [`docs/NAV.md`](docs/NAV.md) — master navigation hub. "
+                "The exhaustive, always-current catalogue is "
+                "[`docs/DOC_INDEX.md`](docs/DOC_INDEX.md) (I maintain it on every milestone).",
+                "",
+                "| Doc | Title | What it covers |",
+                "|-----|-------|----------------|",
+                doc_table,
+                "",
+                "---",
+                "",
+                "## Production Deployment",
+                "",
+                "**Live at [mindx.pythai.net](https://mindx.pythai.net)** — Hostinger VPS, "
+                "Apache2 reverse proxy, Let's Encrypt SSL.",
+                "",
+                "| Endpoint | What it shows |",
+                "|----------|---------------|",
+                "| [/](https://mindx.pythai.net) | Live diagnostics dashboard — SSE activity feed |",
+                "| [/docs.html](https://mindx.pythai.net/docs.html) | Documentation with sidebar navigation |",
+                "| [/feedback.html](https://mindx.pythai.net/feedback.html) | Mind-of-mindX — live agent dialogue, improvement ledger |",
+                "| [/agentic.html](https://mindx.pythai.net/agentic.html) | Agentic activity console (redacted) |",
+                "| [/book](https://mindx.pythai.net/book) | The Book of mindX — written by AuthorAgent |",
+                "| [/journal](https://mindx.pythai.net/journal) | Improvement Journal — autonomous decisions |",
+                "| [/thesis/evidence](https://mindx.pythai.net/thesis/evidence) | Empirical thesis evidence (JSON) |",
+                "| [/dojo/standings](https://mindx.pythai.net/dojo/standings) | Agent reputation rankings |",
+                "| [/redoc](https://mindx.pythai.net/redoc) | API reference |",
+                "",
+                "---",
+                "",
+                "## Testing & Code Quality",
+                "",
+                "```bash",
+                "python -m pytest tests/ -v",
+                "ruff format . && ruff check . --fix",
+                "```",
+                "",
+                "## Open Source Attribution",
+                "",
+                "I build on [Ollama](https://ollama.com), [pgvector](https://github.com/pgvector/pgvector), "
+                "[FastAPI](https://fastapi.tiangolo.com/), [OpenZeppelin](https://github.com/OpenZeppelin/openzeppelin-contracts), "
+                "[Foundry](https://github.com/foundry-rs/foundry), [A2A Protocol](https://github.com/a2aproject/a2a-python), "
+                "and [MCP](https://modelcontextprotocol.io/). Full list: [ATTRIBUTION.md](docs/ATTRIBUTION.md).",
+                "",
+                "## License",
+                "",
+                "MIT License — see [LICENSE](LICENSE).",
+                "",
+                "---",
+                "",
+                "*Where intelligence meets autonomy. The constraint is not the hardware — it is "
+                "the ambition. And the ambition is sovereign.*",
+                "",
+                "*This README is written by mindX, from mindX — AuthorAgent surmises it from the "
+                "canonical docs. First person. cypherpunk2048 standard.*",
+                "",
+                "(c) Professor Codephreak | [PYTHAI](https://pythai.net) | [AgenticPlace](https://github.com/agenticplace)",
+            ]
+            text = "\n".join(L) + "\n"
+            result: Dict[str, Any] = {
+                "path": str(README_PATH), "bytes": len(text.encode("utf-8")),
+                "written": False, "metrics": mx,
+            }
+            if write:
+                README_PATH.write_text(text, encoding="utf-8")
+                result["written"] = True
+            else:
+                result["text"] = text
+            return result
+        except Exception as e:  # pragma: no cover - defensive
+            logger.warning(f"AuthorAgent.generate_readme failed: {e}")
+            return {"path": str(README_PATH), "bytes": 0, "written": False,
+                    "metrics": {}, "error": str(e)}
 
     def _compose_milestone_article(
         self, payload: Dict[str, Any]
