@@ -1,8 +1,28 @@
 {
   "name": "@openagents/overlord",
   "version": "0.1.0",
-  "description": "Overlord/overseer login + privilege hierarchy. Public vs privileged, levels from on-chain holdings whose blockchain tenure is chronos-verified, identity by signature (ECDSA + ERC-1271). Pure viem; no rainbowkit/wagmi.",
+  "description": "Overlord/overseer login + privilege hierarchy. Public vs privileged, levels from on-chain holdings whose blockchain tenure is chronos-verified, identity by signature (ECDSA + ERC-1271). Pure viem; no rainbowkit/wagmi. Agnostic openagents module — consumed by mindX (canonical) and bankoneth; published via mindX.",
   "license": "Apache-2.0",
+  "private": true,
+  "//publish": "Agnostic openagents module. NOT independently published to a registry — it ships when mindX ships (mindX is the canonical consumer); bankoneth consumes it locally. See README 'Homes & publishing'.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AgenticPlace/mindX",
+    "directory": "openagents/overlord"
+  },
+  "homepage": "https://github.com/AgenticPlace/mindX/tree/main/openagents/overlord",
+  "keywords": [
+    "overlord",
+    "overseer",
+    "web3",
+    "viem",
+    "access-control",
+    "siwe",
+    "erc-1271",
+    "holdings-gating",
+    "chronos",
+    "cypherpunk2048"
+  ],
   "type": "module",
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",

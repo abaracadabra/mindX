@@ -63,6 +63,26 @@ Nothing is hardcoded. Set per deployment:
 - `holding` = the qualifying contract (`chainId`, `token`, `standard`), `threshold` (the public/privileged boundary), and `levelBands` (amount × chronos-verified tenure → level).
 - `chronosBaseUrl` = where `GET /v1/oracle/time` lives (empty ⇒ same-origin).
 
+## Homes & publishing
+
+`@openagents/overlord` is an **agnostic openagents module** — framework-agnostic, no
+hardcoded chain/host/address (everything is config-injected), so any agent stack
+can lift it. It has **two homes**:
+
+- **mindX** — the *canonical consumer*. The overlord/overseer addresses
+  (`SHADOW_OVERLORD_ADDRESS`), the chronos time source (`/v1/oracle/time`), and
+  the boardroom/dojo services all live in mindX. **Publishing this module only
+  matters when it is put into mindX** — it is not independently released to a
+  registry (`"private": true`); it ships when mindX ships.
+- **bankoneth** — a *peer consumer*. bankoneth imports the same module locally
+  (`@openagents/overlord`) for its own login/gating, sharing one source of truth
+  for the privilege model rather than forking it.
+
+This follows the openagents Agnostic Modules Principle (`openagents/HANDOFF.md`):
+one module, many homes; mindX is one canonical consumer, not the only home.
+Consume it via a path/workspace reference (`"@openagents/overlord": "file:../overlord"`
+or a pnpm `workspace:*`), never a registry install.
+
 ## Integrating with boardroom-service / dojo-service
 
 These services keep their challenge → verify → JWT → middleware flow; only the
