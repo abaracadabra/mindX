@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Overlord — mindX access</title>
+<style>
+  :root { --gold:#d4af37; --blue:#2563eb; --violet:#7c3aed; --bg:#0b0e13; --fg:#e6edf3; --mut:#9aa4b2; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; background:radial-gradient(1200px 600px at 50% -10%, #131a26, var(--bg)); color:var(--fg);
+         font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; display:flex; align-items:center; justify-content:center; }
+  .card { width:min(460px,92vw); padding:28px; border:1px solid rgba(255,255,255,.08); border-radius:14px; background:rgba(255,255,255,.02); }
+  h1 { font-size:20px; letter-spacing:.04em; margin:0 0 4px; }
+  .sub { color:var(--mut); font-size:13px; margin:0 0 20px; line-height:1.6; }
+  .axis { display:flex; gap:6px; font-size:11px; color:var(--mut); margin:0 0 18px; flex-wrap:wrap; }
+  .axis b { color:var(--fg); }
+  button { width:100%; padding:13px 16px; border-radius:9px; border:1px solid var(--gold); background:var(--bg); color:var(--fg);
+           font-weight:800; letter-spacing:.07em; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:wait; }
+  .err { color:#f87171; font-size:13px; margin-top:10px; min-height:18px; }
+  .res { margin-top:16px; padding:14px 16px; border-radius:10px; font-size:13px; color:var(--mut); display:none; }
+  .res.show { display:block; }
+  .row { display:flex; justify-content:space-between; gap:10px; }
+  .role { text-transform:uppercase; letter-spacing:.06em; font-weight:800; }
+  .pill { font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid currentColor; }
+  .addr { word-break:break-all; margin-top:8px; opacity:.85; }
+  .caps { margin-top:10px; display:flex; gap:6px; flex-wrap:wrap; }
+  .cap { font-size:11px; padding:2px 8px; border-radius:6px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); }
+  .chronos { margin-top:8px; opacity:.7; font-size:12px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Overlord access</h1>
+    <p class="sub">Privilege is the access the public does not have. Your identity is your public wallet key, proven by signature; your level is proven by holdings whose tenure is confirmed by chronos.</p>
+    <div class="axis">
+      <span><b>public</b> → <b>member</b> → <b>overseer</b> → <b>overlord</b></span>
+    </div>
+    <button id="btn" onclick="overlordLogin()">CONNECT WALLET</button>
+    <div class="err" id="err"></div>
+    <div class="res" id="res"></div>
+  </div>
+
+<script type="module">
+import { can } from "./overlord.esm.js";
+
+// Origin-aware backend base (matches login.html / shadow-overlord.html).
+function mindxApiBase() {
+  if (window.MINDX_API_URL) return window.MINDX_API_URL;
+  const h = window.location;
+  if (h.host.endsWith("pythai.net")) return "https://mindx.pythai.net";
+  if (h.host.includes("localhost") || h.host.startsWith("127.")) return `http://localhost:${window.MINDX_BACKEND_PORT||"8000"}`;
+  return h.origin;
+}
+const API = mindxApiBase();
+const ROLE_COLOR = { public:"#9aa4b2", member:"#2563eb", overseer:"#7c3aed", overlord:"#d4af37" };
+
+function getProvider() {
+  if (window.ethereum?.providers?.length) {
+    return window.ethereum.providers.find(p=>p.isMetaMask) || window.ethereum.providers[0];
+  }
+  return window.ethereum || null;
+}
+
+window.overlordLogin = async function () {
+  const btn = document.getElementById("btn"), err = document.getElementById("err"), res = document.getElementById("res");
+  err.textContent = ""; btn.disabled = true; btn.textContent = "SIGNING…";
+  try {
+    const provider = getProvider();
+    if (!provider) throw new Error("No EVM wallet found. Install MetaMask.");
+    const [address] = await provider.request({ method: "eth_requestAccounts" });
+
+    // 1. server-issued, nonce-bound challenge (overlord model is authoritative).
+    const chR = await fetch(`${API}/overlord/challenge`, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ address })
+    });
+    if (chR.status === 404) throw new Error("Overlord model is not enabled on this server.");
+    if (!chR.ok) throw new Error(`challenge ${chR.status}: ${(await chR.text()).slice(0,120)}`);
+    const ch = await chR.json();
+
+    // 2. sign the canonical OVERLORD-LOGIN message.
+    const signature = await provider.request({ method:"personal_sign", params:[ch.message, address] });
+
+    // 3. authoritative resolution → {role, level, privileged, chronos, overlord_token, jwt?}
+    const vR = await fetch(`${API}/overlord/verify`, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ nonce: ch.nonce, signature })
+    });
+    if (!vR.ok) throw new Error(`verify ${vR.status}: ${(await vR.text()).slice(0,160)}`);
+    const p = await vR.json();
+
+    if (p.overlord_token) sessionStorage.setItem("mindx_overlord_token", p.overlord_token);
+    if (p.jwt) sessionStorage.setItem("mindx_shadow_jwt", p.jwt); // overlord role only
+
+    // 4. render role/level + capabilities (gated client-side by the SAME model — overlord.esm.js).
+    const color = ROLE_COLOR[p.role] || "#9aa4b2";
+    const actions = ["read.public","read.member","act.member","distribute.privilege","moderate","clear","release.key"];
+    const caps = actions.filter(a => can(p.role, a));
+    res.style.borderColor = color; res.classList.add("show");
+    res.innerHTML =
+      `<div class="row"><span class="role" style="color:${color}">${p.role} · L${p.level}</span>`+
+      `<span class="pill" style="color:${p.privileged?"#22c55e":"#9aa4b2"}">${p.privileged?"privileged":"public"}</span></div>`+
+      `<div class="addr">${p.address}</div>`+
+      (p.holding ? `<div class="chronos">holding ${p.holding.amount} · ${p.holding.tenure_sec!=null?("held "+Math.floor(p.holding.tenure_sec/86400)+"d"):"tenure unknown"}</div>`:"")+
+      `<div class="caps">${caps.map(c=>`<span class="cap">${c}</span>`).join("")}</div>`+
+      `<div class="chronos">time: ${p.chronos?.promised_by||"?"} · ${p.chronos?.consensus||"?"} · ${p.reason}</div>`;
+    btn.textContent = "RE-VERIFY";
+  } catch (e) {
+    if (e?.code === 4001) { err.textContent = "Wallet connection rejected."; }
+    else err.textContent = (e?.message || String(e)).slice(0, 180);
+    btn.textContent = "CONNECT WALLET";
+  } finally { btn.disabled = false; }
+};
+</script>
+</body>
+</html>

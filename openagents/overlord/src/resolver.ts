@@ -90,7 +90,9 @@ export async function resolvePrivilege(input: ResolveInput): Promise<Privilege> 
       tenureSec: null,
     });
   }
-  const acquiredAt = await acquisitionTimestamp(publicClient, config.holding, addr);
+  const acquiredAt = await acquisitionTimestamp(publicClient, config.holding, addr, {
+    fromBlock: config.holding.fromBlock,
+  });
   const tn = tenureSec(now, acquiredAt);
   const level = memberLevel(config.holding.levelBands, amount, tn);
   return mk("member", level, addr, "qualifying holding (chronos-verified tenure)", now, {

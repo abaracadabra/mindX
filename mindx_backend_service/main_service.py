@@ -2172,6 +2172,7 @@ _PUBLIC_PREFIXES_STRICT = (
     "/static/", "/error-pages/", "/mindterm/static/",
     "/automindx/",                     # automindx subpages
     "/admin/shadow/",                  # shadow-overlord ECDSA + JWT (gated at handler level)
+    "/overlord/",                      # overlord/overseer login (flag + signature gated at handler level)
     "/users/challenge",                # auth handshake — challenge issuance
     "/users/register",                 # auth handshake — register-with-signature
     "/users/session/",                 # auth handshake — session/validate
@@ -7418,6 +7419,17 @@ try:
     logger.info("Shadow-overlord admin tier mounted at /admin/shadow/*, /admin/cabinet/*, /vault/sign/*")
 except Exception as _shadow_import_err:
     logger.warning(f"Shadow-overlord routes not loaded: {_shadow_import_err}")
+
+# Overlord/overseer model (@openagents/overlord mirror) — additive, gated by
+# MINDX_OVERLORD_ENABLED. public/member/overseer/overlord from signature +
+# holdings + chronos tenure. Destructive ops stay on the shadow gate above.
+try:
+    from mindx_backend_service.overlord import overlord_router
+    app.include_router(overlord_router)
+    logger.info("Overlord model mounted at /overlord/* (enabled=%s)",
+                os.environ.get("MINDX_OVERLORD_ENABLED", "0"))
+except Exception as _overlord_import_err:
+    logger.warning(f"Overlord routes not loaded: {_overlord_import_err}")
 
 # Public, wallet-authorized publish to rage.pythai.net (WordPress).
 # /publish/rage/challenge → /publish/rage/authorize — see agents/wordpress_agent/publish_auth.py.

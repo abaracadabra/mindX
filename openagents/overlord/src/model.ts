@@ -75,6 +75,13 @@ export interface HoldingConfig {
   threshold: bigint;
   /** Ascending by level; the highest band the holder qualifies for wins. */
   levelBands: LevelBand[];
+  /**
+   * Block to start the acquisition-timestamp Transfer scan from. Set this to
+   * the token's deploy block: most RPCs reject `getLogs` over a 0→latest range
+   * on a busy token, which would silently null the tenure (every member stuck
+   * at L1). Default 0n.
+   */
+  fromBlock?: bigint;
 }
 
 /** The full overlord-template configuration (per deployment; nothing hardcoded). */
