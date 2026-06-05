@@ -1,5 +1,11 @@
 # Faicey 2.0 - Advanced Voice-Reactive 3D Face System
 
+> **New:** Faicey is now the **FACE of an AI service** — see **[FAICE.md](./FAICE.md)** for the
+> facet-driven FACE API (`/api/faice`, `/faice/:agent`) gated by x402 payment rails (FACE as
+> privilege). The **voice** concerns (spectrometer, frequency, oscilloscope, TTS) have moved to
+> the agnostic peer package **[`voaice`](../voaice)**. The wireframe engine is canonical in
+> **[`facerig/src/lib/faicey`](../facerig/src/lib/faicey)**.
+
 **© Professor Codephreak** - [rage.pythai.net](https://rage.pythai.net)
 **Organizations**: [github.com/agenticplace](https://github.com/agenticplace), [github.com/cryptoagi](https://github.com/cryptoagi), [github.com/Professor-Codephreak](https://github.com/Professor-Codephreak)
 

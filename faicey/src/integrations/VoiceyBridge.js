@@ -8,7 +8,8 @@
  */
 
 import { EventEmitter } from 'events';
-import { VoiceCreationEngine } from '../voice/VoiceCreationEngine.js';
+// Voice concerns now live in the agnostic `voaice` peer package (separated from faicey).
+import { VoiceCreationEngine } from '../../../voaice/src/VoiceCreationEngine.js';
 
 export class VoiceyBridge extends EventEmitter {
     constructor(options = {}) {

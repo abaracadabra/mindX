@@ -1,0 +1,45 @@
+{
+  "name": "voaice",
+  "version": "0.1.0",
+  "description": "voaice — the voice of an AI service. Spectrometer, frequency manipulation, oscilloscope and TTS as an agnostic, in-house Node.js + d3 module. Separated from faicey (the FACE) so voice and face are independent peers.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./analyzer": "./src/VoiceAnalyzer.js",
+    "./oscilloscope": "./src/Oscilloscope.js",
+    "./voice": "./src/VoiceCreationEngine.js",
+    "./fft": "./src/dsp/fft.js"
+  },
+  "scripts": {
+    "serve": "node server.js",
+    "demo": "node examples/spectrometer-demo.js",
+    "test": "node test/test.js"
+  },
+  "keywords": [
+    "voice",
+    "spectrometer",
+    "frequency-analysis",
+    "oscilloscope",
+    "fft",
+    "tts",
+    "d3",
+    "agnostic-module",
+    "mindx",
+    "voaice"
+  ],
+  "//deps": "Core DSP (FFT, spectrometer, frequency manipulation) is IN-HOUSE with zero external deps. d3 powers the oscilloscope. Optional analysers (meyda/audiomotion) and TTS I/O load lazily only when present — isolated builds stay minimal.",
+  "dependencies": {
+    "d3": "^7.9.0"
+  },
+  "optionalDependencies": {
+    "meyda": "^5.6.0",
+    "audiomotion-analyzer": "^4.5.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "Professor Codephreak <rage.pythai.net>",
+  "license": "MIT",
+  "homepage": "https://rage.pythai.net/voaice"
+}

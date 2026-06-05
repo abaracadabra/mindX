@@ -1,0 +1,27 @@
+{
+  "_comment": "Faice (FACE-as-a-service) pricing. Rails + facilitator are inherited from mindX's data/config/x402_pricing.json (single source of truth) when present; this file only sets FACE-specific endpoint prices and the reputation privilege floor. FACE as privilege: an agent whose reputation rank >= privilegeFloor (or BONA FIDE) renders for free; otherwise the FACE is a cost-bearing resource settled over x402 rails.",
+  "privilegeFloor": "expert",
+  "endpoints": {
+    "/api/faice/:agent": {
+      "max_amount_microusd": 1000,
+      "description": "FACE descriptor (facets + computed wireframe config) for one agent"
+    },
+    "/faice/:agent": {
+      "max_amount_microusd": 1000,
+      "description": "Rendered wireframe FACE page for one agent"
+    }
+  },
+  "fallback_rails": {
+    "base": {
+      "scheme": "exact",
+      "network": "base",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "payTo": "0x0000000000000000000000000000000000000000",
+      "extra": { "chainId": 8453, "decimals": 6, "facilitator": "https://mindx.pythai.net:4022" }
+    }
+  },
+  "fallback_facilitator": {
+    "url": "https://mindx.pythai.net:4022",
+    "verify_endpoint": "/verify"
+  }
+}

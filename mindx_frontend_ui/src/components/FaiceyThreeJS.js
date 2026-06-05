@@ -6,6 +6,11 @@
  */
 
 import * as THREE from 'three';
+// OrbitControls comes from the locally vendored three addons (no CDN global).
+// `three` and `three/examples/jsm/*` resolve via an import map pointing at the
+// vendored copies in facerig/vendor/three (build/three.module.js + examples/jsm/*),
+// matching faicey's static/vendor convention. Single source of truth: three 0.182.
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 export class FaiceyThreeJSRenderer {
     constructor(container, config = {}) {
@@ -65,10 +70,10 @@ export class FaiceyThreeJSRenderer {
         
         this.container.appendChild(this.renderer.domElement);
         
-        // Controls setup (if OrbitControls available)
-        if (this.config.controls && typeof window.OrbitControls !== 'undefined') {
+        // Controls setup (OrbitControls imported from vendored three addons)
+        if (this.config.controls) {
             const controlsConfig = this.config.controls;
-            this.controls = new window.OrbitControls(this.camera, this.renderer.domElement);
+            this.controls = new OrbitControls(this.camera, this.renderer.domElement);
             this.controls.enableDamping = controlsConfig.enable_damping !== false;
             this.controls.dampingFactor = controlsConfig.damping_factor || 0.05;
             this.controls.enableZoom = controlsConfig.enable_zoom !== false;
