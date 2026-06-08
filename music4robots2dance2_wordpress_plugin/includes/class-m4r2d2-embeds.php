@@ -170,4 +170,93 @@ class M4R2D2_Embeds {
         ), $opts );
         return self::embed( self::playlist_resource_url( $spec['playlist_id'] ), $opts );
     }
+
+    // The highlights: the rage.pythai.net story this player promotes.
+    const ARTICLE_URL  = 'https://rage.pythai.net/take-it-own-it-codephreak/';
+    const DEFAULT_ALBUM = 'music4robots2dance2';
+
+    /**
+     * Pro player: an enhanced wrapper the m4r2d2-player.js upgrades with a custom
+     * control bar / lazy facade / sticky dock. Progressive enhancement — the raw
+     * SoundCloud iframe renders and plays even with JS off (unless lazy).
+     *
+     * $a accepts: album, url, playlist, track, color, height, visual, theme,
+     * controls, sticky, lazy, story, story_label, title, artist, autoplay.
+     */
+    public static function player_html( $a ) {
+        $albums = self::albums();
+        $key    = isset( $a['album'] ) && $a['album'] !== '' ? strtolower( $a['album'] ) : '';
+        // Resolve the resource + sensible defaults from the album (highlights default).
+        $spec = isset( $albums[ $key ] ) ? $albums[ $key ] : null;
+        if ( empty( $a['url'] ) && empty( $a['playlist'] ) && empty( $a['track'] ) && ! $spec ) {
+            $spec = $albums[ self::DEFAULT_ALBUM ];   // zero-config → the highlights
+        }
+
+        if ( ! empty( $a['url'] ) ) {
+            $resource = $a['url'];
+            $is_set   = ( false !== strpos( $a['url'], '/sets/' ) );
+            $def_h    = $is_set ? self::HEIGHT_PLAYLIST : self::HEIGHT_TRACK;
+        } elseif ( ! empty( $a['track'] ) ) {
+            $resource = self::track_resource_url( $a['track'] );
+            $def_h    = self::HEIGHT_TRACK;
+        } elseif ( ! empty( $a['playlist'] ) ) {
+            $resource = self::playlist_resource_url( $a['playlist'] );
+            $def_h    = self::HEIGHT_PLAYLIST;
+        } else {
+            $resource = self::playlist_resource_url( $spec['playlist_id'] );
+            $def_h    = $spec['height'];
+        }
+
+        $visual  = isset( $a['visual'] ) ? (bool) $a['visual'] : ( $spec ? $spec['visual'] : false );
+        $color   = ! empty( $a['color'] ) ? $a['color'] : ( $spec ? $spec['color'] : self::COLOR_DEFAULT );
+        $height  = ! empty( $a['height'] ) ? (int) $a['height'] : $def_h;
+        $theme   = ( isset( $a['theme'] ) && $a['theme'] === 'light' ) ? 'light' : 'dark';
+        $controls = ! isset( $a['controls'] ) || $a['controls'];   // default ON
+        $sticky  = ! empty( $a['sticky'] );
+        $lazy    = ! empty( $a['lazy'] );
+        $autoplay = ! empty( $a['autoplay'] );
+        $title   = isset( $a['title'] ) && $a['title'] !== '' ? $a['title'] : ( $spec ? $spec['title'] : '' );
+        $artist  = isset( $a['artist'] ) && $a['artist'] !== '' ? $a['artist'] : self::ARTIST_NAME;
+        // story default ON (the highlights link); set story="" to suppress.
+        $story   = array_key_exists( 'story', $a ) ? $a['story'] : self::ARTICLE_URL;
+        $story_label = ! empty( $a['story_label'] ) ? $a['story_label'] : '▶ the story';
+
+        $src = self::build_player_url( $resource, array(
+            'color' => $color, 'visual' => $visual, 'auto_play' => $autoplay,
+        ) );
+
+        $b = function ( $v ) { return $v ? 'true' : 'false'; };
+        $attrs = array(
+            'class'           => 'm4r2d2-embed',
+            'data-enhanced'   => '1',
+            'data-theme'      => $theme,
+            'data-controls'   => $b( $controls ),
+            'data-sticky'     => $b( $sticky ),
+            'data-lazy'       => $b( $lazy ),
+            'data-autoplay'   => $b( $autoplay ),
+            'data-title'      => $title,
+            'data-artist'     => $artist,
+            'data-story'      => $story,
+            'data-story-label'=> $story_label,
+            'data-src'        => $src,
+            'data-height'     => (string) $height,
+        );
+        $open = '<div';
+        foreach ( $attrs as $k => $v ) {
+            $open .= ' ' . $k . '="' . esc_attr( $v ) . '"';
+        }
+        $open .= '>';
+
+        // Progressive enhancement: render the iframe unless lazy (JS builds facade).
+        $inner = '';
+        if ( ! $lazy ) {
+            $inner = sprintf(
+                '<iframe class="m4r2d2__iframe" width="100%%" height="%d" scrolling="no" '
+                . 'frameborder="no" allow="autoplay; encrypted-media" loading="lazy" '
+                . 'title="%s" src="%s"></iframe>',
+                $height, esc_attr( $title . ( $artist ? ' — ' . $artist : '' ) ), esc_url( $src )
+            );
+        }
+        return $open . $inner . '</div>';
+    }
 }

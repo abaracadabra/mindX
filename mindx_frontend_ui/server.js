@@ -36,6 +36,11 @@ app.get('/app', (req, res) => {
   res.sendFile(path.resolve(__dirname, 'app.html'));
 });
 
+// Route /music to music.html — Music 4 Robots 2 Dance 2 in-app player demo
+app.get('/music', (req, res) => {
+  res.sendFile(path.resolve(__dirname, 'music.html'));
+});
+
 // Route root to login page
 app.get('/', (req, res) => {
   res.redirect('/login');

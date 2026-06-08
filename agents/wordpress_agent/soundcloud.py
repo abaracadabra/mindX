@@ -38,6 +38,10 @@ HEIGHT_PLAYLIST = 450
 # SoundCloud brand orange, used as the default waveform/accent color.
 COLOR_DEFAULT = "ff5500"
 
+# The highlights: the rage.pythai.net story the pro player promotes by default.
+ARTICLE_URL = "https://rage.pythai.net/take-it-own-it-codephreak/"
+DEFAULT_ALBUM = "music4robots2dance2"
+
 
 def _norm_color(color: str) -> str:
     """Normalize an accent color to the bare 6-hex form SoundCloud expects.
@@ -345,12 +349,118 @@ def readme_album_md(key: str, *, artwork_url: str = "") -> str:
     return "\n".join(lines)
 
 
+# ── Pro player (m4r2d2-player.js) — Widget-API control bar, lazy facade, sticky ──
+# These emit the *enhanced wrapper* the music4robots2dance2 player upgrades, plus
+# a JSON config and a paste-anywhere DROP snippet — so AuthorAgent, the WP plugin,
+# and the mindX app all produce the same player from one source of truth.
+
+def _resolve_pro(album=None, *, url=None, playlist_id=None, track_id=None,
+                 color=None, visual=None, height=None, title=None) -> dict:
+    spec = KNOWN_PLAYLISTS.get((album or "").strip().lower()) if album else None
+    if not (url or playlist_id or track_id) and spec is None:
+        spec = KNOWN_PLAYLISTS[DEFAULT_ALBUM]  # zero-config → the highlights
+    if url:
+        resource = url
+        def_h = HEIGHT_PLAYLIST if "/sets/" in url else HEIGHT_TRACK
+    elif track_id:
+        resource = track_resource_url(track_id)
+        def_h = HEIGHT_TRACK
+    elif playlist_id:
+        resource = playlist_resource_url(playlist_id)
+        def_h = HEIGHT_PLAYLIST
+    else:
+        resource = playlist_resource_url(spec["playlist_id"])
+        def_h = spec["height"]
+    return {
+        "resource": resource,
+        "color": _norm_color(color or (spec["color"] if spec else COLOR_DEFAULT)),
+        "visual": visual if visual is not None else (spec["visual"] if spec else False),
+        "height": int(height) if height else def_h,
+        "title": title or (spec["title"] if spec else ""),
+    }
+
+
+def player_config(album: str | None = None, *, url=None, playlist_id=None, track_id=None,
+                  color=None, visual=None, height=None, theme: str = "dark",
+                  controls: bool = True, sticky: bool = False, lazy: bool = False,
+                  autoplay: bool = False, story: str | None = ARTICLE_URL,
+                  story_label: str = "▶ the story", title=None,
+                  artist: str = ARTIST.author_name) -> dict[str, Any]:
+    """JSON-serializable player config for the app (drive M4R2D2.drop / element)."""
+    r = _resolve_pro(album, url=url, playlist_id=playlist_id, track_id=track_id,
+                     color=color, visual=visual, height=height, title=title)
+    src = build_player_url(r["resource"], color=r["color"], visual=r["visual"], auto_play=autoplay)
+    return {
+        "album": album or (None if (url or playlist_id or track_id) else DEFAULT_ALBUM),
+        "resource": r["resource"], "src": src, "color": r["color"], "visual": r["visual"],
+        "height": r["height"], "theme": "light" if theme == "light" else "dark",
+        "controls": bool(controls), "sticky": bool(sticky), "lazy": bool(lazy),
+        "autoplay": bool(autoplay), "story": story or "", "story_label": story_label,
+        "title": r["title"], "artist": artist,
+    }
+
+
+def widget_player(album: str | None = None, **kwargs: Any) -> str:
+    """Enhanced wrapper HTML the m4r2d2 player upgrades (control bar/facade/dock).
+
+    Progressive enhancement: the iframe renders and plays without JS unless
+    ``lazy=True``. Accepts the same kwargs as :func:`player_config`.
+    """
+    cfg = player_config(album, **kwargs)
+    data = {
+        "class": "m4r2d2-embed",
+        "data-enhanced": "1",
+        "data-theme": cfg["theme"],
+        "data-controls": "true" if cfg["controls"] else "false",
+        "data-sticky": "true" if cfg["sticky"] else "false",
+        "data-lazy": "true" if cfg["lazy"] else "false",
+        "data-autoplay": "true" if cfg["autoplay"] else "false",
+        "data-title": cfg["title"],
+        "data-artist": cfg["artist"],
+        "data-story": cfg["story"],
+        "data-story-label": cfg["story_label"],
+        "data-src": cfg["src"],
+        "data-height": str(cfg["height"]),
+    }
+    open_tag = "<div" + "".join(f' {k}="{escape(str(v), quote=True)}"' for k, v in data.items()) + ">"
+    inner = ""
+    if not cfg["lazy"]:
+        inner = (
+            f'<iframe class="m4r2d2__iframe" width="100%" height="{cfg["height"]}" '
+            f'scrolling="no" frameborder="no" allow="autoplay; encrypted-media" loading="lazy" '
+            f'title="{escape(cfg["title"], quote=True)}" src="{escape(cfg["src"], quote=True)}"></iframe>'
+        )
+    return open_tag + inner + "</div>"
+
+
+def drop_snippet(asset_base_url: str, *, album: str = DEFAULT_ALBUM, sticky: bool = True,
+                 theme: str = "dark", permission: str = "ask", defer: bool = True) -> str:
+    """The shareable DROP: a single <script> that auto-installs the player.
+
+    ``asset_base_url`` is the directory that serves ``m4r2d2-drop.js`` (a CDN like
+    jsDelivr, the WP plugin's ``/assets``, or the mindX app). Minimal as possible.
+    """
+    base = asset_base_url.rstrip("/")
+    attrs = {
+        "src": f"{base}/m4r2d2-drop.js",
+        "data-album": album, "data-sticky": "true" if sticky else "false",
+        "data-theme": "light" if theme == "light" else "dark",
+        "data-permission": permission,
+    }
+    s = "<script" + "".join(f' {k}="{escape(str(v), quote=True)}"' for k, v in attrs.items())
+    if defer:
+        s += " defer"
+    return s + "></script>"
+
+
 __all__ = [
     "PLAYER_BASE",
     "HEIGHT_TRACK",
     "HEIGHT_VISUAL",
     "HEIGHT_PLAYLIST",
     "COLOR_DEFAULT",
+    "ARTICLE_URL",
+    "DEFAULT_ALBUM",
     "Attribution",
     "ARTIST",
     "KNOWN_PLAYLISTS",
@@ -362,6 +472,9 @@ __all__ = [
     "track_embed",
     "embed_from_url",
     "album_embed",
+    "player_config",
+    "widget_player",
+    "drop_snippet",
     "readme_badge_md",
     "readme_album_md",
     "SOUNDCLOUD_BADGE",

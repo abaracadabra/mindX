@@ -394,6 +394,63 @@ async def soundcloud_embed(req: SoundCloudEmbedRequest) -> str:
     raise HTTPException(status_code=400, detail="supply one of: album, playlist_id, track_id, permalink")
 
 
+class ProPlayerRequest(BaseModel):
+    """Schema for the pro m4r2d2 player (Widget-API control bar / facade / dock)."""
+
+    album: str | None = None
+    url: str | None = None
+    playlist_id: int | str | None = None
+    track_id: int | str | None = None
+    color: str | None = None
+    visual: bool | None = None
+    height: int | None = None
+    theme: str = "dark"
+    controls: bool = True
+    sticky: bool = False
+    lazy: bool = False
+    autoplay: bool = False
+    story: str | None = None  # None → default highlights link
+    title: str | None = None
+    artist: str | None = None
+
+
+def _proplayer_kwargs(req: "ProPlayerRequest") -> dict:
+    from . import soundcloud as sc
+    kw = dict(
+        url=req.url, playlist_id=req.playlist_id, track_id=req.track_id,
+        color=req.color, visual=req.visual, height=req.height, theme=req.theme,
+        controls=req.controls, sticky=req.sticky, lazy=req.lazy, autoplay=req.autoplay,
+        title=req.title, artist=req.artist if req.artist else sc.ARTIST.author_name,
+    )
+    if req.story is not None:
+        kw["story"] = req.story
+    return kw
+
+
+@app.post("/soundcloud/player", response_class=PlainTextResponse)
+async def soundcloud_player(req: ProPlayerRequest) -> str:
+    """Render the enhanced pro-player wrapper HTML (upgraded by m4r2d2-player.js)."""
+    from . import soundcloud as sc
+    return sc.widget_player(req.album, **_proplayer_kwargs(req))
+
+
+@app.post("/soundcloud/player_config")
+async def soundcloud_player_config(req: ProPlayerRequest) -> dict:
+    """Return a JSON player config the mindX app can drive (M4R2D2.drop / element)."""
+    from . import soundcloud as sc
+    return sc.player_config(req.album, **_proplayer_kwargs(req))
+
+
+@app.get("/soundcloud/drop", response_class=PlainTextResponse)
+async def soundcloud_drop(
+    asset_base_url: str, album: str = "music4robots2dance2",
+    sticky: bool = True, theme: str = "dark", permission: str = "ask",
+) -> str:
+    """Return the shareable DROP snippet (one <script> that auto-installs a player)."""
+    from . import soundcloud as sc
+    return sc.drop_snippet(asset_base_url, album=album, sticky=sticky, theme=theme, permission=permission)
+
+
 @app.post("/gate", response_model=GateResponse)
 async def gate(req: GateRequest) -> GateResponse:
     """Open a DeltaVerse gate → mint a NeuralNode room + spawn a bubbleroom.
