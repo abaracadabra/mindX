@@ -1,3 +1,8 @@
+<!-- DeltaVerse reference copy. Canonical: mindX docs/SIMPLECODER_SANDBOX_AUDIT.md.
+     Kept here so DeltaVerse (neuralnode_gate / bubbleroom substrate) has the
+     SimpleCoder execution-boundary spec on hand — any agent that opens a gate or
+     runs code through mindX shares this same sandbox guarantee. -->
+
 # SimpleCoder Sandbox — Audit & Hardening
 
 **Auditor:** Professor Codephreak (operating mindX as a substrate)
