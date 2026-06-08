@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, AsyncIterator
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
 from .agent import (
@@ -236,6 +237,161 @@ async def upload_media(
         url=result.url,
         mime_type=result.mime_type,
     )
+
+
+@app.get("/post/{post_id}")
+async def get_post(post_id: int) -> dict:
+    """Confirm a publication straight from WordPress (authoritative read-back).
+
+    AuthorAgent publishes, then calls this to verify status/link/slug. Returns
+    the live WP record (id, status, link, slug, title, dates, excerpt).
+    """
+    try:
+        settings = _resolve_settings()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"no credentials available: {exc}") from exc
+    async with WordpressAgent(settings) as agent:
+        try:
+            return await agent.get_post(post_id)
+        except AuthenticationError as exc:
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/catalogue")
+async def catalogue(statuses: str | None = None) -> dict:
+    """Complete index catalogue of all publishings on the target (rage.pythai.net).
+
+    ``statuses`` is an optional comma list (default: all indexed statuses incl.
+    drafts/private — requires auth). Returns host, counts-by-status, and a
+    newest-first list of post records.
+    """
+    try:
+        settings = _resolve_settings()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"no credentials available: {exc}") from exc
+    status_tuple = tuple(s.strip() for s in statuses.split(",") if s.strip()) if statuses else None
+    async with WordpressAgent(settings) as agent:
+        try:
+            return await agent.build_catalogue(statuses=status_tuple)
+        except AuthenticationError as exc:
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/llms.txt", response_class=PlainTextResponse)
+async def llms_txt() -> str:
+    """Render an llms.txt ingestion map from the live catalogue (published posts).
+
+    This is the wordpress.tool's *candidate* map (deterministic, byte-stable).
+    The canonical /llms.txt on rage.pythai.net is served by the host plugin;
+    use ``/llms.txt/report`` to diff this candidate against the live file.
+    """
+    try:
+        settings = _resolve_settings()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"no credentials available: {exc}") from exc
+    from .catalogue import Catalogue, PostRecord, render_catalogue_llms_txt
+    async with WordpressAgent(settings) as agent:
+        cat_dict = await agent.build_catalogue()
+    cat = Catalogue(
+        host=cat_dict["host"],
+        generated_gmt=cat_dict["generated_gmt"],
+        posts=[PostRecord(**{k: p[k] for k in (
+            "id", "status", "slug", "title", "link", "date_gmt", "modified_gmt", "excerpt"
+        )}) for p in cat_dict["posts"]],
+    )
+    return render_catalogue_llms_txt(cat)
+
+
+@app.get("/llms.txt/report")
+async def llms_txt_report() -> dict:
+    """Full llms.txt interaction: catalogue + rendered candidate + live fetch + diff."""
+    try:
+        settings = _resolve_settings()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"no credentials available: {exc}") from exc
+    async with WordpressAgent(settings) as agent:
+        try:
+            return await agent.llms_txt_report()
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+class SoundCloudEmbedRequest(BaseModel):
+    """Schema for /soundcloud/embed — mint a player iframe for a track or set.
+
+    Supply exactly one of ``playlist_id``, ``track_id``, ``permalink``, or
+    ``album`` (a known-album key: ``takit`` / ``music4robots2dance2``).
+    """
+
+    album: str | None = Field(default=None, description="Known album key.")
+    playlist_id: int | str | None = None
+    track_id: int | str | None = None
+    permalink: str | None = Field(default=None, description="Public soundcloud.com URL.")
+    color: str = Field(default="ff5500")
+    height: int | None = None
+    visual: bool = False
+    auto_play: bool = False
+    hide_related: bool = False
+    show_comments: bool = True
+    show_user: bool = True
+    show_reposts: bool = False
+    show_teaser: bool = True
+    # Attribution (optional; album key supplies its own).
+    author_name: str | None = None
+    author_url: str | None = None
+    title: str | None = None
+    title_url: str | None = None
+
+
+@app.post("/soundcloud/embed", response_class=PlainTextResponse)
+async def soundcloud_embed(req: SoundCloudEmbedRequest) -> str:
+    """Render SoundCloud embed HTML (iframe + attribution). Pure — no auth/network.
+
+    This is the wordpress.tool's audio-embed surface: AuthorAgent and the
+    music4robots2dance2 plugin call it to mint consistent players. Returns the
+    HTML blob ready to drop into post content.
+    """
+    from . import soundcloud as sc
+
+    flags = dict(
+        color=req.color,
+        auto_play=req.auto_play,
+        visual=req.visual,
+        hide_related=req.hide_related,
+        show_comments=req.show_comments,
+        show_user=req.show_user,
+        show_reposts=req.show_reposts,
+        show_teaser=req.show_teaser,
+    )
+    if req.height is not None:
+        flags["height"] = req.height
+
+    if req.album:
+        try:
+            return sc.album_embed(req.album, **{k: v for k, v in flags.items()
+                                                if k in ("color", "height", "visual", "auto_play")})
+        except KeyError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    attribution = None
+    if req.author_name and req.author_url:
+        attribution = sc.Attribution(
+            author_name=req.author_name, author_url=req.author_url,
+            title=req.title or "", title_url=req.title_url or "",
+        )
+    flags["attribution"] = attribution
+
+    if req.playlist_id is not None:
+        return sc.playlist_embed(req.playlist_id, **flags)
+    if req.track_id is not None:
+        return sc.track_embed(req.track_id, **flags)
+    if req.permalink:
+        return sc.embed_from_url(req.permalink, **flags)
+    raise HTTPException(status_code=400, detail="supply one of: album, playlist_id, track_id, permalink")
 
 
 @app.post("/gate", response_model=GateResponse)
