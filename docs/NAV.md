@@ -183,6 +183,7 @@ Full list: [Agent Docs](agents/) (30 agent docs)
 
 **Cloud & Inference**
 - [OllamaCloudTool](../tools/cloud/ollama_cloud_tool.py) — Cloud inference for any agent ([docs](ollama/INDEX.md))
+- [LLMFitTool](../tools/inference/llmfit_tool.py) — Node-capability oracle ("what can this node run?") wrapping the MIT `llmfit` binary (invoked, never vendored); CLI + loopback REST sidecar; publishes `mindx.node.fit_profile.v1`; powers the fail-open InferenceDiscovery fit-gate (`MINDX_LLMFIT_GATE_ENABLED`). First package adopted via the [adoption pipeline](PACKAGE_ADOPTION.md)
 
 **Core Infrastructure**
 - [Shell Command Tool](shell_command_tool.md) — Secure shell execution with validation
@@ -398,6 +399,7 @@ mindX is a Godel machine — a self-improving system where the improvement mecha
 - [machine.dreaming](BOOK_OF_MINDX.md) — 2-hour LTM consolidation cycles, 8-hour dream shifts (3/day), full moon triggers special editions
 - [Strategic Evolution](agents/strategic_evolution_agent.md) — Long-term improvement planning
 - [Self-Improve Agent](agents/self_improve_agent.md) — Targeted code improvement execution
+- [**Package Adoption — audit → decide → stage**](PACKAGE_ADOPTION.md) — external packages enter through the SimpleCoder sandbox (zip-bomb-safe `inspect_zip`/`extract_zip` + ast-only `audit_package` scan), then SEA renders a Gödel-logged ADOPT/REJECT/DEFER (`evaluate_external_package_adoption`); ADOPT stages files into the live tree + backlog validation entry; failure is safe-by-construction (DEFER, quarantined). Driver: [`scripts/evaluate_package.py`](../scripts/evaluate_package.py). First adoption: [LLMFitTool](../tools/inference/llmfit_tool.py)
 - [Schmidhüber Engine](SCHMIDHUBER_ENGINE.md) — the oscillatory drive of the Gödel machine: an energy-conserving Hamiltonian pendulum (utility is the conserved quantity) tipping at each apex into machine.dream (information→knowledge) and [mindXtrain](../mindx/godel/mindxtrain/) (knowledge→wisdom→weights). ATARAXIA as literal physics (bounded disruption); `mindX --replicate` as anti-phase coupled heads. Code: [`mindx/godel/schmidhuber_engine.py`](../mindx/godel/schmidhuber_engine.py).
 - [Gödel Eval Blueprint](GODEL_EVAL_BLUEPRINT.md) — the falsifiable harness that proves *or disproves* the Gödel-machine claim. 8 predicates (G1–G8), the Gödel Machine Index (GMI) scorecard, honest verdict `NOT_YET_A_GODEL_MACHINE`. Endpoint `/insight/godel/machine` + feedback.html panels. **Status: on branch `claude/inspiring-carson-22XTs`, not yet deployed — see [DEPLOYMENT_STATUS.md](DEPLOYMENT_STATUS.md).** Code: [`mindx/godel/eval/gmi.py`](../mindx/godel/eval/gmi.py).
 - [github.awareness → MILESTONES](MILESTONES.md) — mindX recognizes significant code updates from its own public git history and chronicles them ([`agents/github_awareness.py`](../agents/github_awareness.py)); worthy batches publish in mindX's own voice. Recovery posture in [survive.md](survive.md#replication-recovery-before-risk).

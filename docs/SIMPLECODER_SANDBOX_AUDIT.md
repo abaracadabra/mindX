@@ -1,9 +1,9 @@
 # SimpleCoder Sandbox — Audit & Hardening
 
 **Auditor:** Professor Codephreak (operating mindX as a substrate)
-**Date:** 2026-06-07
+**Date:** 2026-06-07 (archive primitives added 2026-06-10)
 **Scope:** `agents/simple_coder_agent.py` sandbox handling
-**Deliverables:** `agents/simple_coder_tools.py` (new boundary), `tests/test_simple_coder_sandbox.py` (proof-suite, 31 tests), agent wiring.
+**Deliverables:** `agents/simple_coder_tools.py` (new boundary), `tests/test_simple_coder_sandbox.py` (proof-suite, 41 tests), agent wiring.
 
 > Linux philosophy: *do one thing and do it well.* The sandbox is now one thing —
 > a boundary — implemented once in `simplecoder.tools` and proven by tests, rather
@@ -49,6 +49,21 @@ A single class enforces the boundary. Each guarantee maps to tests in
 | **Bounded output** | `_communicate_capped()` caps stdout+stderr, kills runaway producers | 5 |
 | **File-size limits** | `read_text`/`write_text` enforce `max_file_bytes` | 7 |
 
+### Archive primitives (added 2026-06-10)
+
+The original hardening flagged extraction safety as missing. `Sandbox` now owns
+two archive operations, policy-driven via `SandboxPolicy.max_archive_members`
+(2048), `max_archive_decompressed_bytes` (256 MiB), `max_archive_ratio` (200):
+
+| Operation | Guarantees |
+|-----------|------------|
+| `inspect_zip()` | **Non-extracting.** Reports members + flags `path_traversal` (absolute / `..` / drive-rooted names), `too_many_members`, `decompressed_too_large`, `suspicious_ratio` (zip-bomb), `nested_archive`, `corrupt_member`, `not_a_zip`. Only a sandbox-boundary breach raises; hostile archives are *reported*, not crashed on. |
+| `extract_zip()` | **Per-member containment** — never `ZipFile.extractall`; every target is `resolve()`-proven inside the extraction root before any bytes are written. Running decompressed-byte tally + member-count caps; stream-copy with a hard cap so a lying header can't bomb the disk. First breach aborts and removes the partial file. |
+
+These feed the SimpleCoder `audit_package` operation (inspect → extract →
+ast-only static risk scan) used by the external-package adoption pipeline —
+see [PACKAGE_ADOPTION.md](PACKAGE_ADOPTION.md).
+
 ### Proof of absolute — the honest part
 
 In-process checks **cannot** make a general-purpose interpreter *absolutely*
@@ -86,13 +101,20 @@ No public method signatures changed; existing callers are unaffected.
 ## Verification
 
 ```bash
-.mindx_env/bin/python -m pytest tests/test_simple_coder_sandbox.py -q   # 31 passed
+.mindx_env/bin/python -m pytest tests/test_simple_coder_sandbox.py -q   # 41 passed
 ```
 
 Covered: relative/absolute/`..` containment, symlink escape (in & out), allowlist,
 argument-path escape (absolute/`..`/`~`), `find -exec`/`-delete`, `git -c`,
 inline-code default vs strict, env scrubbing, read/write size limits, write-outside,
 run success/failure/timeout-kill/output-cap, and `info()` introspection.
+
+Archive coverage (10 tests, added 2026-06-10): member listing, traversal flagging
+**and** extraction blocking (nothing escapes the sandbox), nested-archive
+flagging, non-zip rejection, outside-sandbox denial for both the source zip and
+the extraction destination, member-count cap, decompressed-size cap, happy path.
+Reusable per-package test templates live in `simple_coder_sandbox/tests/` for
+future external imports.
 
 ## Production deployment — bubblewrap (kernel-enforced isolation) ✅
 
