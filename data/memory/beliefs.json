@@ -267,13 +267,13 @@
     "value": {
       "decision": "DEFER",
       "confidence": 0.3,
-      "cycle_id": "adopt-llmfit-1e01e1be",
+      "cycle_id": "adopt-llmfit-82cc406d",
       "rationale": "LLM reasoning failed or returned malformed output; deferring for human review.",
       "aggregate_risk": "medium"
     },
     "confidence": 0.3,
     "source": "inference",
     "timestamp": 1781152485.4882739,
-    "last_updated": 1781152561.2858505
+    "last_updated": 1781152706.4677515
   }
 }
