@@ -2969,16 +2969,25 @@
       "source_commit": "6903e72f7638454bea7812aff35a5f7d4bc8c5b2",
       "created_at": "2026-06-10T21:36:09.897236",
       "status": "created"
+    },
+    {
+      "branch_name": "backup/shutdown-backup-20260610_213629",
+      "backup_type": "shutdown_backup",
+      "reason": "System shutdown - automatic backup",
+      "source_branch": "feat/obs-phase1",
+      "source_commit": "ee52fa39f580cb87bd40f8f1a56d19fd70261ed2",
+      "created_at": "2026-06-10T21:36:33.869976",
+      "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/shutdown-backup-20260610_213605",
+    "branch_name": "backup/shutdown-backup-20260610_213629",
     "backup_type": "shutdown_backup",
     "reason": "System shutdown - automatic backup",
     "source_branch": "feat/obs-phase1",
-    "source_commit": "6903e72f7638454bea7812aff35a5f7d4bc8c5b2",
-    "created_at": "2026-06-10T21:36:09.897236",
+    "source_commit": "ee52fa39f580cb87bd40f8f1a56d19fd70261ed2",
+    "created_at": "2026-06-10T21:36:33.869976",
     "status": "created"
   },
-  "last_backup_at": "2026-06-10T21:36:09.897262"
+  "last_backup_at": "2026-06-10T21:36:33.870008"
 }
