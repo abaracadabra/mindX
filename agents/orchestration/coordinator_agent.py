@@ -40,6 +40,57 @@ from agents.core.belief_system import BeliefSystem
 
 logger = get_logger(__name__)
 
+
+# --- Backlog hygiene (pure helpers, unit-testable without agent init) ---------
+def backlog_fingerprint(item: Dict[str, Any]) -> str:
+    """Canonical identity of a backlog item: its suggestion text, case-folded.
+
+    Production accumulated 83,318 copies of 6 unique suggestions because the
+    SystemAnalyzer heuristic fallback echoed existing backlog items back as
+    "new" and append had no identity check. The fingerprint is what dedup,
+    cooldowns and loop-detection all key on.
+    """
+    text = (item.get("suggestion") or item.get("description") or "")
+    return text.strip().lower()[:200]
+
+
+def dedupe_backlog(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Collapse a backlog by fingerprint, preserving the most useful metadata:
+    max priority, any non-null status, earliest first_seen, latest last_seen,
+    and an occurrences count. Order of first appearance is kept."""
+    by_fp: Dict[str, Dict[str, Any]] = {}
+    order: List[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        fp = backlog_fingerprint(item)
+        if not fp:
+            continue
+        ts = item.get("last_seen") or item.get("added_at") or item.get("attempted_at")
+        if fp not in by_fp:
+            kept = dict(item)
+            kept["occurrences"] = int(item.get("occurrences") or 1)
+            kept.setdefault("first_seen", ts)
+            kept.setdefault("last_seen", ts)
+            by_fp[fp] = kept
+            order.append(fp)
+            continue
+        kept = by_fp[fp]
+        kept["occurrences"] += int(item.get("occurrences") or 1)
+        if (item.get("priority") or 0) > (kept.get("priority") or 0):
+            kept["priority"] = item["priority"]
+        if item.get("status") and not kept.get("status"):
+            kept["status"] = item["status"]
+            if item.get("attempted_at"):
+                kept["attempted_at"] = item["attempted_at"]
+        if ts:
+            if not kept.get("first_seen") or ts < kept["first_seen"]:
+                kept["first_seen"] = ts
+            if not kept.get("last_seen") or ts > kept["last_seen"]:
+                kept["last_seen"] = ts
+    return [by_fp[fp] for fp in order]
+
+
 # --- Core Data Structures ---
 
 class InteractionType(Enum):
@@ -246,20 +297,80 @@ class CoordinatorAgent:
         self.logger.info("Coordinator internal tool initialization complete (no tools to load).")
 
     def _load_backlog(self) -> List[Dict[str, Any]]:
+        items: List[Dict[str, Any]] = []
         if self.improvement_backlog_file.exists():
             try:
                 with self.improvement_backlog_file.open("r", encoding="utf-8") as f:
-                    return json.load(f)
+                    items = json.load(f)
             except (json.JSONDecodeError, IOError) as e:
                 self.logger.error(f"Failed to load improvement backlog: {e}")
-        return []
+        # Self-healing dedup: production accumulated 83k+ copies of 6 suggestions
+        # (SystemAnalyzer heuristic fallback echoed existing backlog items back as
+        # "new" and this class appended them without a fingerprint check). A
+        # restart now collapses the file in place — no migration window needed.
+        deduped = dedupe_backlog(items)
+        if len(deduped) < len(items):
+            dup_factor = round(len(items) / max(1, len(deduped)), 1)
+            self.logger.warning(
+                f"backlog dedup: {len(items)} -> {len(deduped)} unique (dup_factor {dup_factor}x); rewriting file"
+            )
+            try:
+                with self.improvement_backlog_file.open("w", encoding="utf-8") as f:
+                    json.dump(deduped, f, indent=2)
+            except IOError as e:
+                self.logger.error(f"Failed to persist deduped backlog: {e}")
+        self._backlog_fingerprints = {backlog_fingerprint(i) for i in deduped}
+        return deduped
+
+    BACKLOG_MAX_ITEMS = 500
 
     def _save_backlog(self):
         try:
+            if len(self.improvement_backlog) > self.BACKLOG_MAX_ITEMS:
+                before = len(self.improvement_backlog)
+                self.improvement_backlog.sort(
+                    key=lambda i: (-(i.get("priority") or 0), -(i.get("last_seen") or i.get("added_at") or 0))
+                )
+                self.improvement_backlog = self.improvement_backlog[: self.BACKLOG_MAX_ITEMS]
+                self._backlog_fingerprints = {backlog_fingerprint(i) for i in self.improvement_backlog}
+                self.logger.warning(
+                    f"backlog capped: {before} -> {self.BACKLOG_MAX_ITEMS} (kept by priority desc, recency desc)"
+                )
             with self.improvement_backlog_file.open("w", encoding="utf-8") as f:
                 json.dump(self.improvement_backlog, f, indent=2)
         except IOError as e:
             self.logger.error(f"Failed to save improvement backlog: {e}")
+
+    def add_backlog_item(self, item: Dict[str, Any]) -> bool:
+        """Fingerprint-deduped backlog append. Returns True if the item was new.
+
+        Echo items (the SystemAnalyzer heuristic re-suggesting what is already in
+        the backlog, tagged source=backlog_echo) are never appended — they are,
+        by construction, already present.
+        """
+        if item.get("source") == "backlog_echo":
+            return False
+        fp = backlog_fingerprint(item)
+        if not fp:
+            return False
+        now = time.time()
+        if not hasattr(self, "_backlog_fingerprints"):
+            self._backlog_fingerprints = {backlog_fingerprint(i) for i in self.improvement_backlog}
+        if fp in self._backlog_fingerprints:
+            for existing in self.improvement_backlog:
+                if backlog_fingerprint(existing) == fp:
+                    existing["occurrences"] = int(existing.get("occurrences") or 1) + 1
+                    existing["last_seen"] = now
+                    if (item.get("priority") or 0) > (existing.get("priority") or 0):
+                        existing["priority"] = item["priority"]
+                    break
+            return False
+        item.setdefault("first_seen", now)
+        item.setdefault("last_seen", now)
+        item.setdefault("occurrences", 1)
+        self.improvement_backlog.append(item)
+        self._backlog_fingerprints.add(fp)
+        return True
 
     async def _log_to_memory(self, memory_type: str, category: str, data: Dict[str, Any], metadata: Dict[str, Any] = None) -> Optional[Path]:
         """Log information to memory agent if available."""
@@ -573,11 +684,13 @@ class CoordinatorAgent:
             interaction.status = InteractionStatus.COMPLETED
             return
 
-        # Add suggestions to the backlog
-        for suggestion in suggestions:
-            self.improvement_backlog.append(suggestion)
+        # Add suggestions to the backlog (fingerprint-deduped; echoes never re-append)
+        added = sum(1 for suggestion in suggestions if self.add_backlog_item(suggestion))
         self._save_backlog()
-        self.logger.info(f"Saved {len(suggestions)} new improvement suggestions to the backlog.")
+        self.logger.info(
+            f"Backlog: {added} new of {len(suggestions)} suggestions "
+            f"({len(suggestions) - added} duplicates/echoes coalesced)."
+        )
 
         # --- AUTO-EXECUTE EVOLUTION ---
         # Take the highest priority suggestion and immediately try to implement it.

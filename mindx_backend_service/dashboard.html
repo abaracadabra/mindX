@@ -486,6 +486,36 @@ a.link{color:var(--blue);text-decoration:none;transition:color .2s}a.link:hover{
 
   <div class="layer-sep"></div>
 
+  <!-- LAYER 1b: Self-Diagnostic — live self-diagnosis, mindX reporting on its own pathology.
+       One fetch of /insight/self/diagnostic (60s server cache): real changes with substance,
+       the agent-to-agent interaction flow, and process-health truth (incl. repaired loop bugs). -->
+  <div class="layer" id="L1b">
+    <div class="section-hdr open" id="hdr-selfdiag" onclick="toggleSec(this)">
+      <span>Self-Diagnostic <span class="insight-sub">live self-diagnosis — mindX reporting on its own pathology</span></span>
+      <span class="arrow">&#x25B8;</span>
+    </div>
+    <div class="section-body open" id="sec-selfdiag">
+      <div id="selfdiag-verdict" style="font-family:var(--mono);font-size:12px;line-height:1.6;color:var(--text2);padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:6px;margin-bottom:12px">loading self-diagnostic&hellip;</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
+        <div>
+          <div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">What actually changed</div>
+          <div id="selfdiag-changes" style="font-family:var(--mono);font-size:11px;line-height:1.7;color:var(--text2)">--</div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Self-interaction (who talks to whom)</div>
+          <div id="selfdiag-flow" style="line-height:2">--</div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Process health (truth, not theater)</div>
+          <div id="selfdiag-health" style="font-family:var(--mono);font-size:11px;line-height:1.7;color:var(--text2)">--</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;font-size:10.5px;color:var(--text3)">full detail: <a href="/insight/self/diagnostic?h=true" style="color:var(--text3)">/insight/self/diagnostic?h=true</a> &middot; <a href="/feedback.html" style="color:var(--text3)">feedback.html</a></div>
+    </div>
+  </div>
+
+  <div class="layer-sep"></div>
+
   <!-- LAYER 2: System at a Glance -->
   <div class="layer" id="L2">
     <div class="section-hdr" style="cursor:default;border:none;padding-bottom:8px"><span>System</span></div>
@@ -2749,6 +2779,60 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
   window.onLedgerPillClick = onLedgerPillClick;
   window.scrollToSelfImprovementCard = scrollToSelfImprovementCard;
 
+  // ── Self-Diagnostic layer — one fetch of /insight/self/diagnostic ──
+  // The honest "what is mindX actually improving?" surface: real changes with
+  // substance, the agent→agent interaction flow, process-health truth.
+  function loadSelfDiag(){
+    fetch('/insight/self/diagnostic').then(function(r){return r.ok?r.json():null;}).then(function(d){
+      if(!d || d.fallback){ return; }
+      var rel=function(ts){
+        if(!ts) return '';
+        var s=(typeof ts==='number')?ts:(Date.parse(ts)/1000);
+        if(!isFinite(s)) return '';
+        var diff=(Date.now()/1000)-s;
+        if(diff<3600) return Math.max(1,Math.round(diff/60))+'m ago';
+        if(diff<86400) return Math.round(diff/3600)+'h ago';
+        return Math.round(diff/86400)+'d ago';
+      };
+      // Verdict banner + evidence.
+      var v=d.verdict||{};
+      var vh='<b style="color:var(--text)">'+esc(v.line||'')+'</b>';
+      (v.evidence||[]).forEach(function(e){ vh+='<br><span style="color:var(--text3)">&middot; '+esc(e)+'</span>'; });
+      document.getElementById('selfdiag-verdict').innerHTML=vh;
+      // What actually changed — merged substance feed, newest first.
+      var rc=d.real_changes||{}; var rows=[];
+      (rc.milestones||[]).forEach(function(m){ rows.push({ts:m.ts,h:'<span style="color:var(--green)">[milestone]</span> '+esc((m.sha||'')+' '+(m.subject||''))}); });
+      (rc.publications||[]).forEach(function(p){ rows.push({ts:p.ts,h:'<span style="color:var(--violet,#bc8cff)">[published]</span> '+esc(p.note||'')}); });
+      (rc.adoptions||[]).forEach(function(a){ rows.push({ts:a.ts,h:'<span style="color:var(--amber)">[adopted]</span> '+esc((a.package||'?')+' &rarr; '+(a.decision||'?'))}); });
+      (rc.code_change_events||[]).forEach(function(c){ rows.push({ts:c.ts,h:'<span style="color:var(--green)">['+esc(c.kind||'change')+']</span> '+esc(c.detail||'')}); });
+      rows.sort(function(a,b){ return (Date.parse(b.ts)||b.ts||0)-(Date.parse(a.ts)||a.ts||0); });
+      var ch=rows.slice(0,8).map(function(r){ return '<div>'+r.h+' <span style="color:var(--text3)">'+rel(r.ts)+'</span></div>'; }).join('');
+      var sia=rc.sia_diffs||{};
+      ch+='<div style="margin-top:6px;color:'+(sia.count>0?'var(--green)':'var(--amber)')+'">autonomous code diffs: '+(sia.count||0)+(sia.note?' — '+esc(sia.note):'')+'</div>';
+      document.getElementById('selfdiag-changes').innerHTML=ch||'--';
+      // Interaction flow strip — top edges as weighted chips.
+      var edges=((d.self_interaction||{}).matrix||{}).edges||[];
+      var maxC=edges.length?edges[0].count:1;
+      var fh=edges.slice(0,12).map(function(e){
+        var w=Math.max(.45,Math.min(1,e.count/maxC));
+        return '<span style="display:inline-block;margin:0 6px 6px 0;padding:2px 8px;border:1px solid var(--line);border-radius:10px;font-family:var(--mono);font-size:'+(9.5+w*2.5)+'px;opacity:'+(0.55+w*0.45)+'" title="'+esc(e.type||'')+'">'+esc(e.from||'?')+' &rarr; '+esc(e.to||'?')+' &times;'+e.count+'</span>';
+      }).join('');
+      if(!fh){
+        var hb=(d.self_interaction||{}).heartbeat_sample||[];
+        fh=hb.length?('<div style="font-family:var(--mono);font-size:11px;color:var(--text2);line-height:1.7">'+hb.map(function(h){return '<div title="'+esc(h.model||'')+'">&ldquo;'+esc(h.thought||'')+'&rdquo;</div>';}).join('')+'</div>'):'<span style="color:var(--text3)">interaction matrix unavailable (pgvector offline)</span>';
+      }
+      document.getElementById('selfdiag-flow').innerHTML=fh;
+      // Process-health truth strip.
+      var ph=d.process_health||{}; var c7=ph.campaigns_7d||{}; var bl=ph.backlog||{};
+      var hh='campaigns 7d: <span style="color:'+(c7.succeeded>0?'var(--green)':'var(--red)')+'">'+(c7.succeeded||0)+' ok</span> &middot; '+(c7.failed||0)+' failed &middot; '+(c7.max_cycles_reached||0)+' max-cycle &middot; '+(c7.timed_out||0)+' timed-out &middot; '+(c7.errored||0)+' errored';
+      hh+='<br>backlog: '+(bl.size||0)+' items / '+(bl.unique||0)+' unique'+(bl.dedup_live?' <span style="color:var(--green)">(dedup live)</span>':' <span style="color:var(--amber)">(dup_factor '+(bl.dup_factor||'?')+'&times;)</span>');
+      (ph.top_failure_shapes||[]).slice(0,2).forEach(function(s){ hh+='<br><span style="color:var(--text3)">shape &times;'+s.count+': '+esc(s.shape)+'</span>'; });
+      (ph.looped_directives||[]).slice(0,1).forEach(function(l){ hh+='<br><span style="color:var(--amber)">LOOP &times;'+l.count+': '+esc(l.directive)+'</span><br><span style="color:var(--text3)">diagnosis: '+esc(l.diagnosis)+'</span>'; });
+      hh+='<br>stuck loops: '+((ph.stuck_loops||{}).count||0)+' &middot; eval gate: '+(((ph.eval_gate||{}).gate_open)?'open':'closed');
+      document.getElementById('selfdiag-health').innerHTML=hh;
+    }).catch(function(){ /* leave previous render */ });
+  }
+
   // Kick off — SSE reconnects itself; polled sections refresh on cadence.
   Freshness.cadence('ledger',60000).cadence('fitness',30000).cadence('selection',60000)
            .cadence('logs',30000).cadence('dreams',60000).cadence('think',15000);
@@ -2758,11 +2842,12 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
   loadSelection();    setInterval(loadSelection,   60000);
   loadMemoryStream(); setInterval(loadMemoryStream,30000);
   loadDreams();       setInterval(loadDreams,      60000);
+  loadSelfDiag();     setInterval(loadSelfDiag,    60000);
   // Expose the insight loaders so toggleSec (outside this IIFE) can refresh a
   // loader-backed section the moment its heading is expanded.
   window.loadLedger=loadLedger; window.loadFitness=loadFitness;
   window.loadSelection=loadSelection; window.loadMemoryStream=loadMemoryStream;
-  window.loadDreams=loadDreams;
+  window.loadDreams=loadDreams; window.loadSelfDiag=loadSelfDiag;
 })();
 </script>
 

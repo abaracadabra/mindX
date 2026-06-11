@@ -840,6 +840,7 @@ def render_improvement_summary(d: dict) -> str:
             f"total={human_count(b.get('total', 0))} "
             f"ok={human_count(b.get('succeeded', 0))} "
             f"fail={human_count(b.get('failed', 0))} "
+            f"incomplete={human_count(b.get('incomplete', 0))} "
             f"running={human_count(b.get('running', 0))}"
         )
     out = render_kv(
@@ -1539,7 +1540,82 @@ def render_catalogue_lineage(d: dict) -> str:
     return out
 
 
+def render_self_diagnostic(d: dict) -> str:
+    """Plain-text form of /insight/self/diagnostic — the honest 'what is mindX
+    actually improving?' answer. Verdict first; substance before counters."""
+    v = d.get("verdict") or {}
+    out = "mindX self-diagnostic — what is actually being improved\n"
+    out += "─" * 60 + "\n"
+    out += (v.get("line") or "verdict unavailable") + "\n"
+    for ev in v.get("evidence") or []:
+        out += f"  · {ev}\n"
+
+    rc = d.get("real_changes") or {}
+    out += "\nreal changes (substance)\n"
+    for m in rc.get("milestones") or []:
+        out += f"  [milestone] {m.get('ts','?')}  {m.get('sha','')}  {m.get('subject','')}\n"
+    for p in rc.get("publications") or []:
+        out += f"  [published] {human_rel_ts(p.get('ts'))}  {p.get('note','')}\n"
+    for a in rc.get("adoptions") or []:
+        out += f"  [adopted]   {human_rel_ts(a.get('ts'))}  {a.get('package','?')} -> {a.get('decision','?')}\n"
+    for c in rc.get("code_change_events") or []:
+        out += f"  [{c.get('kind','?')}] {human_rel_ts(c.get('ts'))}  {c.get('detail','')}\n"
+    sia = rc.get("sia_diffs") or {}
+    out += f"  autonomous code diffs: {sia.get('count', 0)}"
+    out += f" — {sia['note']}\n" if sia.get("note") else "\n"
+
+    cons = d.get("consolidation") or {}
+    if cons:
+        out += "\nconsolidation (machine dreaming)\n"
+        out += render_kv({
+            "last_dream":    cons.get("last_dream_ts"),
+            "agents":        cons.get("agents_dreamed"),
+            "insights":      cons.get("insights"),
+            "ltm_promotions": cons.get("ltm_promotions"),
+            "cadence_ok":    cons.get("cadence_ok"),
+        })
+
+    ph = d.get("process_health") or {}
+    c7 = ph.get("campaigns_7d") or {}
+    bl = ph.get("backlog") or {}
+    out += "\nprocess health (truth, not theater)\n"
+    out += render_kv({
+        "campaigns_7d": (
+            f"total={c7.get('total',0)} ok={c7.get('succeeded',0)} fail={c7.get('failed',0)} "
+            f"timed_out={c7.get('timed_out',0)} max_cycles={c7.get('max_cycles_reached',0)} "
+            f"errored={c7.get('errored',0)}"
+        ),
+        "backlog": (
+            f"{human_count(bl.get('size',0))} items / {bl.get('unique',0)} unique "
+            f"(dup_factor {bl.get('dup_factor','?')}x"
+            + (", dedup live)" if bl.get("dedup_live") else ")")
+        ),
+        "stuck_loops": (ph.get("stuck_loops") or {}).get("count", 0),
+        "eval_gate": "open" if (ph.get("eval_gate") or {}).get("gate_open") else "closed/unknown",
+    })
+    for shape in ph.get("top_failure_shapes") or []:
+        out += f"  shape ×{shape.get('count',0)}: {shape.get('shape','')}\n"
+    for loop in ph.get("looped_directives") or []:
+        out += f"  LOOP ×{loop.get('count',0)}: {loop.get('directive','')}\n"
+        out += f"       diagnosis: {loop.get('diagnosis','')}\n"
+
+    si = d.get("self_interaction") or {}
+    edges = (si.get("matrix") or {}).get("edges") or []
+    if edges:
+        out += "\nself-interaction (who talks to whom)\n"
+        for e in edges[:12]:
+            out += f"  {e.get('from','?')} -> {e.get('to','?')}  ×{e.get('count',0)}  ({e.get('type','')})\n"
+    hb = si.get("heartbeat_sample") or []
+    if hb:
+        out += "\nheartbeat introspection (latest thoughts)\n"
+        for h in hb:
+            out += f"  [{h.get('model','?')}] {h.get('thought','')}\n"
+    out += "\nsee also: / (landing diagnostic) · /feedback.html · docs/SYSTEM_REVIEW_2026_06.md\n"
+    return out
+
+
 RENDERERS: dict[str, Callable[[dict], str]] = {
+    "/insight/self/diagnostic":     render_self_diagnostic,
     "/insight/catalogue/recent":    render_catalogue_recent,
     "/insight/catalogue/search":    render_catalogue_search,
     "/insight/catalogue/entry":     render_catalogue_entry,

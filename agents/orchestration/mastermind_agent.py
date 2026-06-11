@@ -15,6 +15,44 @@ from utils.config import Config, PROJECT_ROOT
 from utils.logging_config import get_logger
 logger = get_logger(__name__)
 
+
+# --- Campaign hygiene (pure helpers, unit-testable) --------------------------
+_DIRECTIVE_DECORATION_RE = re.compile(r"\s*\[target: .*$", re.DOTALL)
+
+
+def suggestion_fingerprint(text: str) -> str:
+    """Canonical identity of a directive/suggestion for dedup + cooldown.
+
+    Directives are decorated as "{suggestion} [target: …, priority: …,
+    backlog_idx: N]" — the rotating backlog_idx landed inside the old
+    directive[:120] fingerprint while candidates were fingerprinted on the
+    bare suggestion, so the 24h dedup window NEVER matched and the same
+    directive was re-selected every cycle (100 identical campaigns/7d, 0 ok,
+    observed on prod 2026-06-11). Strip the decoration before fingerprinting
+    so both sides hash the same text.
+    """
+    base = _DIRECTIVE_DECORATION_RE.sub("", text or "")
+    return base.strip().lower()[:120]
+
+
+def campaign_status_from_bdi(final_bdi_message: str) -> str:
+    """Map a BDI run's final message to a terminal campaign status.
+
+    Every record is terminal — the perpetual-"running" ledger rows came from
+    BDI reporting RUNNING at max-cycles exhaustion (fixed in bdi_agent.run)
+    combined with the catch-all FAILURE_OR_INCOMPLETE label here.
+    """
+    msg = final_bdi_message or ""
+    if "COMPLETED_GOAL_ACHIEVED" in msg:
+        return "SUCCESS"
+    if "MAX_CYCLES_REACHED" in msg:
+        return "MAX_CYCLES_REACHED"
+    if "TIMED_OUT" in msg:
+        return "TIMED_OUT"
+    if "FAILED" in msg:
+        return "FAILED"
+    return "FAILURE_OR_INCOMPLETE"
+
 from agents.core.belief_system import BeliefSystem, BeliefSource
 from llm.llm_interface import LLMHandlerInterface
 from llm.llm_factory import create_llm_handler
@@ -608,16 +646,18 @@ class MastermindAgent:
         
         # --- Step 3: Execute the BDI agent to implement the plan ---
         final_bdi_message = await self.bdi_agent.run(max_cycles=max_mastermind_bdi_cycles)
-        
-        is_success = "COMPLETED_GOAL_ACHIEVED" in final_bdi_message
-        overall_status = "SUCCESS" if is_success else "FAILURE_OR_INCOMPLETE"
-        
+
+        overall_status = campaign_status_from_bdi(final_bdi_message)
+
         logger.info(f"{self.log_prefix} Evolution campaign (Run ID: {run_id}) finished. BDI Message: {final_bdi_message}. Overall: {overall_status}")
-        
+
         campaign_outcome = {"overall_campaign_status": overall_status, "final_bdi_message": final_bdi_message}
-        self.strategic_campaigns_history.append({**campaign_outcome, "run_id": run_id, "directive": top_level_directive})
+        # ts at the append site itself — fire-and-forget callers (coordinator
+        # auto-execute) never reach the autonomous loop's ts patch, leaving the
+        # record invisible to the 24h dedup window.
+        self.strategic_campaigns_history.append({**campaign_outcome, "run_id": run_id, "directive": top_level_directive, "ts": time.time()})
         self._save_json_file("mastermind_campaigns_history.json", self.strategic_campaigns_history)
-        
+
         return campaign_outcome
 
     async def manage_agent_deployment(self, top_level_directive: str, max_mastermind_bdi_cycles: int = 25) -> Dict[str, Any]:
@@ -638,15 +678,14 @@ class MastermindAgent:
         )
 
         final_bdi_message = await self.bdi_agent.run(max_cycles=max_mastermind_bdi_cycles)
-        
-        is_success = "COMPLETED_GOAL_ACHIEVED" in final_bdi_message
-        overall_status = "SUCCESS" if is_success else "FAILURE_OR_INCOMPLETE"
-        
+
+        overall_status = campaign_status_from_bdi(final_bdi_message)
+
         logger.info(f"{self.log_prefix} Deployment campaign (Run ID: {run_id}) finished. BDI Message: {final_bdi_message}. Overall: {overall_status}")
-        
+
         campaign_outcome = {"overall_campaign_status": overall_status, "final_bdi_message": final_bdi_message}
         # Maybe save to a different history file? For now, use the same one.
-        self.strategic_campaigns_history.append({**campaign_outcome, "run_id": run_id, "directive": top_level_directive, "type": "deployment"})
+        self.strategic_campaigns_history.append({**campaign_outcome, "run_id": run_id, "directive": top_level_directive, "type": "deployment", "ts": time.time()})
         self._save_json_file("mastermind_campaigns_history.json", self.strategic_campaigns_history)
         
         return campaign_outcome
@@ -931,17 +970,22 @@ class MastermindAgent:
             try:
                 backlog = getattr(self.coordinator_agent, 'improvement_backlog', []) if self.coordinator_agent else []
                 # Default-pending semantics — most items have no status field.
+                # cooldown_until guards against re-selection even if status resets.
+                now_ts = time.time()
                 eligible = [
                     (idx, item) for idx, item in enumerate(backlog)
                     if item.get("status") in (None, "PENDING", "pending")
                     and (item.get("suggestion") or item.get("description"))
+                    and float(item.get("cooldown_until") or 0) <= now_ts
                 ]
-                # Dedup against last-24h campaign history.
-                now_ts = time.time()
+                # Dedup against last-24h campaign history. Fingerprints strip the
+                # "[target: …, backlog_idx: N]" decoration — the rotating idx made
+                # the old directive[:120] hash never match the bare-suggestion
+                # hash, so the same directive looped forever.
                 recent_directives: set[str] = set()
                 for c in self.strategic_campaigns_history[-200:]:
                     if (now_ts - float(c.get("ts", now_ts))) < 86400:
-                        d = (c.get("directive") or "")[:120].lower()
+                        d = suggestion_fingerprint(c.get("directive") or "")
                         if d:
                             recent_directives.add(d)
 
@@ -956,8 +1000,7 @@ class MastermindAgent:
                     suggestion = (item.get("suggestion") or item.get("description") or "").strip()
                     if not suggestion:
                         continue
-                    fingerprint = suggestion[:120].lower()
-                    if fingerprint in recent_directives:
+                    if suggestion_fingerprint(suggestion) in recent_directives:
                         continue
                     chosen = (idx, item)
                     break
@@ -1034,9 +1077,17 @@ class MastermindAgent:
                     except Exception as gerr:
                         logger.debug(f"{self.log_prefix} godel log failed (non-fatal): {gerr}")
 
-                    # Stamp the item as attempted (in-memory; coordinator persists on its cadence).
+                    # Stamp the item as attempted AND persist now — the old
+                    # in-memory-only stamp was lost on restart and never wrote
+                    # through, so the selector saw the item fresh forever.
                     item["status"] = "attempted"
                     item["attempted_at"] = now_ts
+                    item["cooldown_until"] = now_ts + 86400
+                    try:
+                        if self.coordinator_agent and hasattr(self.coordinator_agent, "_save_backlog"):
+                            await asyncio.to_thread(self.coordinator_agent._save_backlog)
+                    except Exception as perr:
+                        logger.debug(f"{self.log_prefix} backlog persist failed (non-fatal): {perr}")
 
                     try:
                         result = await asyncio.wait_for(

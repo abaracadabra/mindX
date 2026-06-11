@@ -2109,8 +2109,30 @@ async def feedback_text(request: Request):
     except Exception as e:
         lines.append(f"  (dialogue unavailable: {e})")
 
+    # Self-diagnostic truth lines — last REAL change + campaign/backlog honesty
+    # (from the 60s-cached /insight/self/diagnostic aggregator).
+    try:
+        from mindx_backend_service.self_diagnostic import get_cached as _sd_cached
+        sd = await _sd_cached()
+        rc = sd.get("real_changes") or {}
+        ms = (rc.get("milestones") or [{}])[0]
+        if ms.get("subject"):
+            lines.append(
+                f"changed  last real change: [milestone] {ms['subject'][:70]} · "
+                f"{text_render.human_rel_ts(ms.get('ts'))}"
+            )
+        c7 = (sd.get("process_health") or {}).get("campaigns_7d") or {}
+        bl = (sd.get("process_health") or {}).get("backlog") or {}
+        lines.append(
+            f"campaigns 7d  {c7.get('succeeded', 0)} ok · {c7.get('failed', 0)} failed · "
+            f"{c7.get('max_cycles_reached', 0)} max_cycles · backlog {bl.get('unique', 0)} unique"
+            + (" (dedup live)" if bl.get("dedup_live") else f" of {bl.get('size', 0)}")
+        )
+    except Exception as e:
+        lines.append(f"changed  (self-diagnostic unavailable: {e})")
+
     lines.append("")
-    lines.append("see also: /feedback.html · /insight/storage/status?h=true")
+    lines.append("see also: /feedback.html · /insight/self/diagnostic?h=true · /insight/storage/status?h=true")
     return PlainTextResponse("\n".join(lines) + "\n", media_type="text/plain; charset=utf-8")
 
 # Add CORS middleware — production origins + development fallback
@@ -4009,7 +4031,9 @@ async def insight_bdi_recent(
                 row["success"] = pd.get("success") if "success" in pd else a.get("success")
                 result = pd.get("result") if "result" in pd else a.get("result")
                 if isinstance(result, str):
-                    row["result"] = result[:280]
+                    # 1000 chars — enough to see WHY an action failed, not just that
+                    # it did (the old 280 cut most tracebacks mid-sentence).
+                    row["result"] = result[:1000]
                 else:
                     row["result"] = result
             elif pn == "bdi_goal_set":
@@ -4085,6 +4109,26 @@ async def insight_godel_machine(request: Request):
         gmi = {"verdict": "UNKNOWN", "error": str(e),
                "honest_summary": "GMI computation unavailable."}
     return _maybe_h_text(request, gmi, route_path="/insight/godel/machine")
+
+
+@app.get("/insight/self/diagnostic", tags=["insight"])
+@_insight_safe
+async def insight_self_diagnostic(request: Request):
+    """The honest answer to "what is mindX actually improving?"
+
+    One aggregator separating REAL changes (milestones, publications,
+    adoptions, recorded autonomous code diffs) from PROCESS churn (campaign
+    terminal-status truth, backlog health, loop pathology), plus the live
+    agent-to-agent interaction matrix and a rule-based verdict.
+
+    Born from the 2026-06 system review (docs/SYSTEM_REVIEW_2026_06.md). Feeds
+    the landing-page self-diagnostic section and feedback.html interaction
+    panel. Cached 60s in mindx_backend_service/self_diagnostic.py; all free
+    text sanitized at build time. `?h=true` for plain text.
+    """
+    from mindx_backend_service.self_diagnostic import get_cached
+    data = await get_cached()
+    return _maybe_h_text(request, data, route_path="/insight/self/diagnostic")
 
 
 @app.get("/insight/milestones/recent", tags=["insight"])

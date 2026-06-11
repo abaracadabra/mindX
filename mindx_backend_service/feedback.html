@@ -515,6 +515,7 @@ tr:hover td{background:rgba(121,192,255,.02)}
   <div id="graphBox">
     <svg id="graph" viewBox="0 0 1200 340" preserveAspectRatio="xMidYMid meet"></svg>
     <div id="graphNote" class="graph-note"></div>
+    <div id="graphMatrix" style="margin-top:10px"></div>
   </div>
 </section>
 
@@ -1479,9 +1480,11 @@ async function refreshBDI() {
             : '()';
           const resultStr = e.result === undefined || e.result === null ? '' :
                             (typeof e.result === 'string' ? e.result : JSON.stringify(e.result));
+          // Inline result up to 400 chars — enough to read WHY an action failed
+          // (the endpoint now carries up to 1000; full payload in the ⋯ drill).
           body = '<b>' + escapeHtml(e.action_type || '?') + '</b>' +
                  '<span class="params"> ' + paramsStr + '</span>' +
-                 (resultStr ? ' → <span class="result">' + escapeHtml(truncate(resultStr, 200)) + '</span>' : '');
+                 (resultStr ? ' → <span class="result">' + escapeHtml(truncate(resultStr, 400)) + '</span>' : '');
         } else {
           kindLbl = pn;
         }
@@ -1505,16 +1508,20 @@ async function refreshBDI() {
 }
 
 // ── 4. Improvement ledger — clustered by failure shape ──
-// 4-state classifier matches insight_aggregator._compute_improvement_summary
+// Classifier matches insight_aggregator._compute_improvement_summary
 // so feedback page math equals what /insight/improvement/summary reports.
-let _ledgerFilter = 'all';   // 'all' | 'succeeded' | 'running' | 'errored' | 'failed' | 'blocked'
+// 'incomplete' = BDI exhausted max_cycles without a terminal state. New
+// records say MAX_CYCLES_REACHED; legacy records said "BDI run RUNNING"
+// (same condition, mislabeled — nothing was actually in flight).
+let _ledgerFilter = 'all';   // 'all' | 'succeeded' | 'running' | 'incomplete' | 'errored' | 'failed' | 'blocked'
 function _ledgerClassify(c) {
   const s = (c.overall_campaign_status || c.status || '').toUpperCase();
   const m = (c.final_bdi_message || '').toUpperCase();
   if (m.includes('COMPLETED_GOAL_ACHIEVED') || s === 'SUCCESS') return 'succeeded';
   if (m.includes('CYCLE EXCEPTION')) return 'errored';
-  if (m.includes('FAILED')) return 'failed';
-  if (m.includes('RUNNING') || s === 'RUNNING' || s === 'IN_PROGRESS') return 'running';
+  if (m.includes('FAILED') || m.includes('TIMED_OUT') || s === 'TIMED_OUT') return 'failed';
+  if (m.includes('MAX_CYCLES_REACHED') || s === 'MAX_CYCLES_REACHED' || m.includes('RUNNING')) return 'incomplete';
+  if (s === 'RUNNING' || s === 'IN_PROGRESS') return 'running';
   if (s.includes('BLOCK')) return 'blocked';
   return 'failed';   // truly unknown
 }
@@ -1640,30 +1647,32 @@ async function refreshLedger() {
       return;
     }
 
-    // ── Status counts (5-state to match aggregator: succeeded/running/errored/failed/blocked) ──
-    const counts = { total: campaigns.length, succeeded: 0, running: 0, errored: 0, failed: 0, blocked: 0 };
+    // ── Status counts (6-state to match aggregator: succeeded/running/incomplete/errored/failed/blocked) ──
+    const counts = { total: campaigns.length, succeeded: 0, running: 0, incomplete: 0, errored: 0, failed: 0, blocked: 0 };
     for (const c of campaigns) counts[_ledgerClassify(c)]++;
     // Sanity check the math — the page must never lie about totals
-    const sumCheck = counts.succeeded + counts.running + counts.errored + counts.failed + counts.blocked;
+    const sumCheck = counts.succeeded + counts.running + counts.incomplete + counts.errored + counts.failed + counts.blocked;
     const mathOK = sumCheck === counts.total;
 
     // Honest pill: show every non-zero bucket so all numbers add up visibly.
     const pillParts = [counts.total + ' total'];
-    if (counts.succeeded) pillParts.push(counts.succeeded + ' ok');
-    if (counts.running)   pillParts.push(counts.running + ' run');
-    if (counts.errored)   pillParts.push(counts.errored + ' err');
-    if (counts.failed)    pillParts.push(counts.failed + ' fail');
-    if (counts.blocked)   pillParts.push(counts.blocked + ' block');
+    if (counts.succeeded)  pillParts.push(counts.succeeded + ' ok');
+    if (counts.running)    pillParts.push(counts.running + ' run');
+    if (counts.incomplete) pillParts.push(counts.incomplete + ' incomplete');
+    if (counts.errored)    pillParts.push(counts.errored + ' err');
+    if (counts.failed)     pillParts.push(counts.failed + ' fail');
+    if (counts.blocked)    pillParts.push(counts.blocked + ' block');
     if (!mathOK) pillParts.push('!math:' + sumCheck);
     pill.textContent = pillParts.join(' · ');
     pill.className = 'pill ' + (counts.succeeded > 0 ? 'ok' : (counts.errored > 0 ? 'warn' : 'amber'));
     _setBadge('improvements', counts.errored + counts.failed, counts.succeeded === 0 ? 'warn' : '');
 
-    // Status histogram + counters (5 cells)
-    let html = '<div class="status-row" style="grid-template-columns:repeat(6,1fr)">';
+    // Status histogram + counters (6 cells)
+    let html = '<div class="status-row" style="grid-template-columns:repeat(7,1fr)">';
     html += '<div class="status-cell"><div class="lbl">total</div><div class="val">' + Human.count(counts.total) + '</div></div>';
     html += '<div class="status-cell ok"><div class="lbl">succeeded</div><div class="val">' + Human.count(counts.succeeded) + '</div></div>';
-    html += '<div class="status-cell run"><div class="lbl">max-cycle</div><div class="val">' + Human.count(counts.running) + '</div></div>';
+    html += '<div class="status-cell run"><div class="lbl">running</div><div class="val">' + Human.count(counts.running) + '</div></div>';
+    html += '<div class="status-cell run"><div class="lbl">max-cycle</div><div class="val">' + Human.count(counts.incomplete) + '</div></div>';
     html += '<div class="status-cell fail" style="border-left-color:#e3b341"><div class="lbl">errored</div><div class="val" style="color:var(--amber)">' + Human.count(counts.errored) + '</div></div>';
     html += '<div class="status-cell fail"><div class="lbl">failed</div><div class="val">' + Human.count(counts.failed) + '</div></div>';
     html += '<div class="status-cell block"><div class="lbl">blocked</div><div class="val">' + Human.count(counts.blocked) + '</div></div>';
@@ -1673,18 +1682,20 @@ async function refreshLedger() {
       const T = counts.total;
       html += '<div class="histogram" title="status distribution — must sum to total">';
       if (counts.succeeded) html += '<span class="h-ok"    style="width:' + (counts.succeeded/T*100) + '%"></span>';
-      if (counts.running)   html += '<span class="h-run"   style="width:' + (counts.running/T*100) + '%"></span>';
-      if (counts.errored)   html += '<span             style="width:' + (counts.errored/T*100) + '%;background:#e3b341"></span>';
-      if (counts.blocked)   html += '<span class="h-block" style="width:' + (counts.blocked/T*100) + '%"></span>';
-      if (counts.failed)    html += '<span class="h-fail"  style="width:' + (counts.failed/T*100) + '%"></span>';
+      if (counts.running)    html += '<span class="h-run"   style="width:' + (counts.running/T*100) + '%"></span>';
+      if (counts.incomplete) html += '<span class="h-run"   style="width:' + (counts.incomplete/T*100) + '%;opacity:.6"></span>';
+      if (counts.errored)    html += '<span             style="width:' + (counts.errored/T*100) + '%;background:#e3b341"></span>';
+      if (counts.blocked)    html += '<span class="h-block" style="width:' + (counts.blocked/T*100) + '%"></span>';
+      if (counts.failed)     html += '<span class="h-fail"  style="width:' + (counts.failed/T*100) + '%"></span>';
       html += '</div>';
       const pct = (n) => Math.round(n/T*100) + '%';
       const legendParts = [];
-      if (counts.succeeded) legendParts.push('<span style="color:var(--green)">'  + pct(counts.succeeded) + ' succeeded</span>');
-      if (counts.running)   legendParts.push('<span style="color:var(--amber)">'  + pct(counts.running)   + ' max-cycle (clean)</span>');
-      if (counts.errored)   legendParts.push('<span style="color:var(--amber)">'  + pct(counts.errored)   + ' errored (cycle exception)</span>');
-      if (counts.blocked)   legendParts.push('<span style="color:var(--violet)">' + pct(counts.blocked)   + ' blocked</span>');
-      if (counts.failed)    legendParts.push('<span style="color:var(--red)">'    + pct(counts.failed)    + ' failed (planning/recovery)</span>');
+      if (counts.succeeded)  legendParts.push('<span style="color:var(--green)">'  + pct(counts.succeeded)  + ' succeeded</span>');
+      if (counts.running)    legendParts.push('<span style="color:var(--amber)">'  + pct(counts.running)    + ' running (in flight)</span>');
+      if (counts.incomplete) legendParts.push('<span style="color:var(--amber)">'  + pct(counts.incomplete) + ' max-cycle (exhausted cleanly)</span>');
+      if (counts.errored)    legendParts.push('<span style="color:var(--amber)">'  + pct(counts.errored)    + ' errored (cycle exception)</span>');
+      if (counts.blocked)    legendParts.push('<span style="color:var(--violet)">' + pct(counts.blocked)    + ' blocked</span>');
+      if (counts.failed)     legendParts.push('<span style="color:var(--red)">'    + pct(counts.failed)     + ' failed (planning/recovery)</span>');
       html += '<div class="histogram-legend">' + legendParts.join(' · ') + '</div>';
     }
 
@@ -1692,10 +1703,11 @@ async function refreshLedger() {
     // Surfaces only when there are zero successes — otherwise hides itself.
     if (counts.succeeded === 0 && counts.total > 0) {
       const partsList = [];
-      if (counts.failed)  partsList.push('<b style="color:var(--red)">'    + counts.failed  + '× failed</b> (planning or execution)');
-      if (counts.running) partsList.push('<b style="color:var(--amber)">'  + counts.running + '× max-cycle</b> (BDI ran out of cycles cleanly — typically NO_OP skeleton)');
-      if (counts.errored) partsList.push('<b style="color:var(--amber)">'  + counts.errored + '× errored</b> (unhandled cycle exception)');
-      if (counts.blocked) partsList.push('<b style="color:var(--violet)">' + counts.blocked + '× blocked</b>');
+      if (counts.failed)     partsList.push('<b style="color:var(--red)">'    + counts.failed     + '× failed</b> (planning or execution)');
+      if (counts.incomplete) partsList.push('<b style="color:var(--amber)">'  + counts.incomplete + '× max-cycle</b> (BDI ran out of cycles cleanly — typically NO_OP skeleton)');
+      if (counts.running)    partsList.push('<b style="color:var(--amber)">'  + counts.running    + '× running</b> (in flight)');
+      if (counts.errored)    partsList.push('<b style="color:var(--amber)">'  + counts.errored    + '× errored</b> (unhandled cycle exception)');
+      if (counts.blocked)    partsList.push('<b style="color:var(--violet)">' + counts.blocked    + '× blocked</b>');
       html += '<div style="margin:14px 0;padding:12px 14px;background:rgba(248,81,73,.05);border:1px solid rgba(248,81,73,.2);border-left:3px solid var(--red);border-radius:6px;font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--text2)">' +
         '<b style="color:var(--text);font-size:12px">no successful campaigns in window of ' + counts.total + '</b><br>' +
         'distribution: ' + partsList.join(' · ') + '<br>' +
@@ -1716,13 +1728,38 @@ async function refreshLedger() {
     };
     html += mkChip('all', 'All', counts.total, false);
     html += mkChip('succeeded', 'Successes', counts.succeeded, counts.succeeded === 0);
-    html += mkChip('running', 'Max-cycle', counts.running, counts.running === 0);
+    html += mkChip('incomplete', 'Max-cycle', counts.incomplete, counts.incomplete === 0);
+    if (counts.running) html += mkChip('running', 'Running', counts.running, false);
     html += mkChip('errored', 'Errored', counts.errored, counts.errored === 0);
     html += mkChip('failed', 'Failures', counts.failed, counts.failed === 0);
     if (counts.blocked) html += mkChip('blocked', 'Blocked', counts.blocked, false);
     html += '</div>';
 
-    // ── Cluster grouping ──
+    // ── Loop detection — fingerprint = directive minus the rotating
+    // "[target: …, backlog_idx: N]" decoration (JS port of
+    // mastermind_agent.suggestion_fingerprint). A fingerprint repeated >3×
+    // means the selector kept re-picking the same suggestion: the exact
+    // pathology that produced 100 identical campaigns/7d on prod (diagnosed +
+    // repaired 2026-06-11, docs/SYSTEM_REVIEW_2026_06.md).
+    const _dirFingerprint = (s) => (s || '').replace(/\s*\[target: [\s\S]*$/, '').trim().toLowerCase().slice(0, 120);
+    {
+      const fpCounts = new Map();
+      for (const c of campaigns) {
+        const fp = _dirFingerprint(c.directive);
+        if (fp) fpCounts.set(fp, (fpCounts.get(fp) || 0) + 1);
+      }
+      const looped = Array.from(fpCounts.entries()).filter(([, n]) => n > 3).sort((a, b) => b[1] - a[1]);
+      if (looped.length) {
+        const [fp, n] = looped[0];
+        html += '<div style="margin:10px 0;padding:10px 14px;background:rgba(227,179,65,.06);border:1px solid rgba(227,179,65,.3);border-left:3px solid var(--amber);border-radius:6px;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--text2)">' +
+          '<b style="color:var(--amber)">directive loop: repeated ' + n + '× in this window</b><br>' +
+          '&ldquo;' + escapeHtml(truncate(fp, 110)) + '&rdquo;<br>' +
+          '<span style="color:var(--text3)">diagnosis: selector fingerprint mismatch (rotating backlog_idx inside the hash) + non-terminal BDI status — repaired 2026-06-11. ' +
+          'If this banner persists on fresh runs, the repair has regressed.</span></div>';
+      }
+    }
+
+    // ── Cluster grouping (by fingerprint, so decorated re-picks group as one) ──
     const filtered = campaigns.filter(c => _ledgerFilter === 'all' || _ledgerClassify(c) === _ledgerFilter);
     if (!filtered.length) {
       html += '<div class="empty" style="padding:14px">no campaigns match filter "' + escapeHtml(_ledgerFilter) + '"</div>';
@@ -1730,7 +1767,7 @@ async function refreshLedger() {
       const clusters = new Map();
       filtered.forEach((c, idx) => {
         const shape = _ledgerShape(c);
-        const directive = (c.directive || '—').slice(0, 100);
+        const directive = _dirFingerprint(c.directive) || '—';
         const key = shape + '|' + directive;
         if (!clusters.has(key)) clusters.set(key, { shape, directive, runs: [] });
         // index = position from end (newest=0); stable across one render
@@ -1765,7 +1802,7 @@ async function refreshLedger() {
           // let the BDI-jump look up by goal/directive (Phase 5 will refine).
           html += '<div class="run-row">';
           html += '<span class="rid" title="' + escapeHtml(rid) + '"><code>' + escapeHtml(ridShort) + '</code></span>';
-          html += '<span class="ts">rank #' + r._idx + '</span>';
+          html += '<span class="ts">rank #' + r._idx + (r.backlog_idx != null ? ' · bl#' + r.backlog_idx : '') + (r.ts ? ' · ' + Human.relTs(r.ts) : '') + '</span>';
           html += '<span class="msg" title="' + escapeHtml(r.final_bdi_message || '') + '">' + escapeHtml(truncate(r.final_bdi_message || '', 110)) + '</span>';
           html += '<a class="jump" href="#sec-bdi" onclick="event.preventDefault();_jumpToBDI(this)" data-run="' + escapeHtml(rid) + '">show BDI →</a>';
           html += '</div>';
@@ -2295,9 +2332,26 @@ function _renderBoardSession(d) {
       '</details>';
   }
   if (dissent.length) {
-    html += '<details class="drill-item kind-dissent" style="margin-top:10px;padding:8px 10px;border-left-color:var(--amber)">' +
-      '<summary style="color:var(--amber);font-family:var(--mono);font-size:11.5px"><b>dissent</b> — ' + dissent.length + ' exploration branch' + (dissent.length === 1 ? '' : 'es') + '</summary>' +
-      '<pre class="drill-content" style="margin-top:8px">' + escapeHtml(JSON.stringify(dissent, null, 2)) + '</pre>' +
+    // Readable dissent cards — champion, full minority position, branch outcome.
+    // (Was a raw JSON.stringify dump; the minority argument is the substance.)
+    let dh = '';
+    for (const b of dissent) {
+      if (typeof b !== 'object' || b === null) { dh += '<div class="drill-content" style="margin-top:8px">' + escapeHtml(String(b)) + '</div>'; continue; }
+      const champion = b.champion || b.soldier || b.dissenter || b.opened_by || '?';
+      const position = b.position || b.reasoning || b.argument || b.text || '';
+      const outcome  = b.outcome || b.status || b.resolution || 'unexplored';
+      const shown = new Set(['champion','soldier','dissenter','opened_by','position','reasoning','argument','text','outcome','status','resolution']);
+      const rest = Object.entries(b).filter(([k, v]) => !shown.has(k) && v != null && typeof v !== 'object');
+      dh += '<div style="margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:6px">' +
+        '<div style="font-family:var(--mono);font-size:11px"><b style="color:var(--amber)">' + escapeHtml(String(champion)) + '</b>' +
+        ' <span style="color:var(--text3)">· branch ' + escapeHtml(String(outcome)) + '</span></div>' +
+        (position ? '<div style="margin-top:4px;font-size:11.5px;line-height:1.6;color:var(--text2);white-space:pre-wrap">' + escapeHtml(String(position)) + '</div>' : '') +
+        (rest.length ? '<div style="margin-top:4px;font-family:var(--mono);font-size:10px;color:var(--text3)">' + rest.map(([k, v]) => escapeHtml(k + '=' + v)).join(' · ') + '</div>' : '') +
+        '</div>';
+    }
+    html += '<details class="drill-item kind-dissent" style="margin-top:10px;padding:8px 10px;border-left-color:var(--amber)" open>' +
+      '<summary style="color:var(--amber);font-family:var(--mono);font-size:11.5px"><b>dissent</b> — ' + dissent.length + ' exploration branch' + (dissent.length === 1 ? '' : 'es') + ' (minority position in full)</summary>' +
+      dh +
       '</details>';
   }
   return html;
@@ -2339,6 +2393,19 @@ async function refreshDreams() {
       box.innerHTML = '<div class="empty">no dream reports in data/memory/dreams/ — has machine_dreaming ever run?</div>';
       return;
     }
+    // Per-agent substance — top insights from the dream, not just the count.
+    // The endpoint already ships per_agent (top_insight + score per agent).
+    const perAgentDrill = (dr) => {
+      const pa = (dr.per_agent || []).filter(a => a && a.top_insight);
+      if (!pa.length) return '';
+      const top = pa.slice().sort((a, b) => parseFloat(b.top_score || 0) - parseFloat(a.top_score || 0)).slice(0, 3);
+      let h = '<details style="margin-top:3px"><summary style="cursor:pointer;color:var(--text3);font-size:10px">top insights ⋯</summary><ul style="margin:4px 0 0 14px;padding:0;font-size:10.5px;line-height:1.55">';
+      for (const a of top) {
+        h += '<li><b>' + escapeHtml(a.agent_id || '?') + '</b> — ' + escapeHtml(truncate(a.top_insight || '', 160)) + '</li>';
+      }
+      h += '</ul></details>';
+      return h;
+    };
     let html = '<table><thead><tr><th>cycle</th><th>agents</th><th>insights</th><th>promoted</th><th>moon</th><th>duration</th><th>tuning recommendations</th></tr></thead><tbody>';
     for (const dr of dreams) {
       const lunar = dr.lunar || {};
@@ -2353,7 +2420,7 @@ async function refreshDreams() {
         relPast(dr.timestamp || (dr._mtime && dr._mtime * 1000)) + '</b><br>' +
         '<span style="color:var(--text3);font-size:10px">' + escapeHtml(dr._filename || '') + '</span></td>' +
         '<td>' + countSpan(dr.agents_dreamed) + '</td>' +
-        '<td>' + countSpan(dr.insights_generated) + '</td>' +
+        '<td>' + countSpan(dr.insights_generated) + perAgentDrill(dr) + '</td>' +
         '<td>' + countSpan(dr.memories_promoted_to_ltm) + '</td>' +
         '<td>' + escapeHtml(lunar.phase_name || '?') + '<br>' +
         '<span style="color:var(--text3);font-size:10px">' + (lunar.days_until_new_moon || '?') + 'd</span></td>' +
@@ -2416,6 +2483,27 @@ async function refreshGraph() {
   } catch (e) {
     note.textContent = 'graph unavailable: ' + e.message;
   }
+  // Substance companion: the persistent agent→agent matrix (pgvector, all-time
+  // grouped counts) from /insight/self/diagnostic — who actually talks to whom,
+  // not just who was active in the last hour.
+  try {
+    const md = await (await fetch('/insight/self/diagnostic')).json();
+    const edges = (((md || {}).self_interaction || {}).matrix || {}).edges || [];
+    const box = $('graphMatrix');
+    if (box) {
+      if (!edges.length) {
+        box.innerHTML = '<div style="color:var(--text3);font-size:10.5px">interaction matrix unavailable (pgvector offline)</div>';
+      } else {
+        let mh = '<table style="font-size:11px"><thead><tr><th>from</th><th>to</th><th>type</th><th>count</th></tr></thead><tbody>';
+        for (const e of edges.slice(0, 12)) {
+          mh += '<tr><td>' + escapeHtml(e.from || '?') + '</td><td>' + escapeHtml(e.to || '?') + '</td><td>' +
+            escapeHtml(e.type || '') + '</td><td>' + Human.count(e.count || 0) + '</td></tr>';
+        }
+        mh += '</tbody></table>';
+        box.innerHTML = '<details open><summary style="cursor:pointer;color:var(--text3);font-size:11px">interaction matrix — persistent who-talks-to-whom (top ' + Math.min(12, edges.length) + ')</summary>' + mh + '</details>';
+      }
+    }
+  } catch (e) { /* matrix is a bonus — never break the graph */ }
 }
 
 // ── 7. Inference sources (compact) ──

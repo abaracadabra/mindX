@@ -1298,6 +1298,16 @@ class BDIAgent:
         
         final_status = self._internal_state.get("status", "UNKNOWN")
         if final_status == "PENDING_GOAL_PROCESSING": final_status = "TIMED_OUT"
+        if final_status == "RUNNING":
+            # The cycle loop exhausted max_cycles without reaching a terminal
+            # state. Reporting "RUNNING" here poisoned every downstream ledger:
+            # campaigns were counted as perpetually in-flight ("BDI run RUNNING.
+            # Reason: None") and never reaped. Name the truth instead.
+            final_status = "MAX_CYCLES_REACHED"
+            if not self._internal_state.get("current_failure_reason"):
+                self._internal_state["current_failure_reason"] = (
+                    f"max_cycles={max_cycles} exhausted without terminal status"
+                )
         self.logger.info(f"Execution finished for run ID '{run_id}'. Final agent status: {final_status}")
         return f"BDI run {final_status}. Reason: {self._internal_state.get('current_failure_reason', 'N/A')}"
 
