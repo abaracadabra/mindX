@@ -2176,6 +2176,13 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/favicon.ico", "/favicon-32.png", "/apple-touch-icon.png",
     "/mindx-wordpress-plugin",         # public distribution page for mindx-publish-auth WP plugin
     "/netstat", "/netstat.html",       # Phase 1.2+ — smartphone-class VPS vitals (public diagnostics)
+    # Mind-of-mindX feedback surfaces — public BY DESIGN (CLAUDE.md): the live
+    # self-diagnostic pages + plain-text snapshot + redacted agentic console.
+    # The strict-gate cutover omitted them and they 401'd publicly until the
+    # 2026-06 system review caught it. Their data endpoints (/insight/*) were
+    # public the whole time; these are just the read-only renderings.
+    "/feedback", "/feedback.html", "/feedback.txt",
+    "/agentic", "/agentic.html",
     "/insight/narrative/recent",       # DeltaVerse narrative recap stream (public read)
     "/deltaverse.js",                  # DeltaVerse fabric engine — public asset for 404/landing/realm
     "/realm",                          # REALM surface — overlord-gated at the handler level
