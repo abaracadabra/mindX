@@ -438,8 +438,8 @@ class StrategicEvolutionAgent:
         import shutil
         extract_path = audit_summary.get("extract_path", "")
         sandbox_root = PROJECT_ROOT / "simple_coder_sandbox"
-        src_dir = (sandbox_root / Path(extract_path).relative_to("projects") ) \
-            if extract_path.startswith("projects/") else (sandbox_root / extract_path)
+        # extract_path is sandbox-relative (e.g. "projects/llmfit_extracted").
+        src_dir = sandbox_root / extract_path
         staged: List[Dict[str, Any]] = []
         for member, dest_rel in proposed_targets.items():
             src = src_dir / member
