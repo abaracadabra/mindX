@@ -297,13 +297,16 @@ class CoordinatorAgent:
         self.logger.info("Coordinator internal tool initialization complete (no tools to load).")
 
     def _load_backlog(self) -> List[Dict[str, Any]]:
+        # NOTE: runs from __init__ BEFORE self.logger is assigned — use the
+        # module-level logger here (the old self.logger.error in the exception
+        # path was a latent AttributeError for the same reason).
         items: List[Dict[str, Any]] = []
         if self.improvement_backlog_file.exists():
             try:
                 with self.improvement_backlog_file.open("r", encoding="utf-8") as f:
                     items = json.load(f)
             except (json.JSONDecodeError, IOError) as e:
-                self.logger.error(f"Failed to load improvement backlog: {e}")
+                logger.error(f"Failed to load improvement backlog: {e}")
         # Self-healing dedup: production accumulated 83k+ copies of 6 suggestions
         # (SystemAnalyzer heuristic fallback echoed existing backlog items back as
         # "new" and this class appended them without a fingerprint check). A
@@ -311,20 +314,22 @@ class CoordinatorAgent:
         deduped = dedupe_backlog(items)
         if len(deduped) < len(items):
             dup_factor = round(len(items) / max(1, len(deduped)), 1)
-            self.logger.warning(
+            logger.warning(
                 f"backlog dedup: {len(items)} -> {len(deduped)} unique (dup_factor {dup_factor}x); rewriting file"
             )
             try:
                 with self.improvement_backlog_file.open("w", encoding="utf-8") as f:
                     json.dump(deduped, f, indent=2)
             except IOError as e:
-                self.logger.error(f"Failed to persist deduped backlog: {e}")
+                logger.error(f"Failed to persist deduped backlog: {e}")
         self._backlog_fingerprints = {backlog_fingerprint(i) for i in deduped}
         return deduped
 
     BACKLOG_MAX_ITEMS = 500
 
     def _save_backlog(self):
+        # Module-level logger — may be called via to_thread from agents that
+        # hold a coordinator reference constructed before logger assignment.
         try:
             if len(self.improvement_backlog) > self.BACKLOG_MAX_ITEMS:
                 before = len(self.improvement_backlog)
@@ -333,13 +338,13 @@ class CoordinatorAgent:
                 )
                 self.improvement_backlog = self.improvement_backlog[: self.BACKLOG_MAX_ITEMS]
                 self._backlog_fingerprints = {backlog_fingerprint(i) for i in self.improvement_backlog}
-                self.logger.warning(
+                logger.warning(
                     f"backlog capped: {before} -> {self.BACKLOG_MAX_ITEMS} (kept by priority desc, recency desc)"
                 )
             with self.improvement_backlog_file.open("w", encoding="utf-8") as f:
                 json.dump(self.improvement_backlog, f, indent=2)
         except IOError as e:
-            self.logger.error(f"Failed to save improvement backlog: {e}")
+            logger.error(f"Failed to save improvement backlog: {e}")
 
     def add_backlog_item(self, item: Dict[str, Any]) -> bool:
         """Fingerprint-deduped backlog append. Returns True if the item was new.
