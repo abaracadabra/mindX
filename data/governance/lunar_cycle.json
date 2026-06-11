@@ -49,8 +49,15 @@
       "title": "Full Moon",
       "phase": "new moon",
       "timestamp": "2026-05-16T04:38:49.438711+00:00"
+    },
+    {
+      "date": "2026-06-05",
+      "day": 19,
+      "title": "Agents",
+      "phase": "waning gibbous",
+      "timestamp": "2026-06-05T10:20:27.459593+00:00"
     }
   ],
-  "current_day": 28,
+  "current_day": 19,
   "full_moons": []
 }

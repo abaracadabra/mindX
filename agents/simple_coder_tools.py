@@ -48,6 +48,7 @@ import os
 import shlex
 import shutil
 import signal
+import zipfile
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
@@ -100,6 +101,10 @@ class SandboxPolicy:
     command_timeout: int = 60
     max_file_bytes: int = 10 * 1024 * 1024          # 10 MiB read/write cap
     max_output_bytes: int = 4 * 1024 * 1024         # 4 MiB stdout+stderr cap
+    # archive extraction caps (zip-bomb / quota containment for inspect_zip/extract_zip)
+    max_archive_members: int = 2048                 # reject archives with absurd member counts
+    max_archive_decompressed_bytes: int = 256 * 1024 * 1024  # 256 MiB total uncompressed
+    max_archive_ratio: int = 200                    # decompressed/compressed ratio flagged as a bomb
     cpu_seconds: int = 30                           # RLIMIT_CPU
     address_space_bytes: int = 2 * 1024 * 1024 * 1024  # RLIMIT_AS (2 GiB)
     max_processes: int = 64                         # RLIMIT_NPROC
@@ -446,6 +451,163 @@ class Sandbox:
         p.write_bytes(data)
         return p
 
+    # ── archive inspection / extraction (zip-bomb safe) ──────────────────────
+    @staticmethod
+    def _member_is_traversal(name: str) -> bool:
+        """True if a zip member name would write outside its extraction root."""
+        if not name or name in (".", ".."):
+            return name == ".."
+        # normalise separators; reject absolute, drive-rooted, or ``..`` components.
+        norm = name.replace("\\", "/")
+        if norm.startswith("/") or (len(norm) > 1 and norm[1] == ":"):
+            return True
+        return any(part == ".." for part in norm.split("/"))
+
+    def inspect_zip(self, zip_path_str: str, *, cwd: Optional[Path] = None) -> Dict[str, Any]:
+        """Inspect a ZIP **without extracting**. Never raises on a malformed/hostile
+        archive — it reports ``potential_issues`` so a caller can decide. Only a
+        sandbox-boundary breach (path escaping the root) raises ``SandboxViolation``.
+        """
+        p = self.resolve(zip_path_str, cwd=cwd, must_exist=True)
+        if not p.is_file():
+            raise SandboxViolation(f"not a file: {zip_path_str!r}")
+        size_bytes = p.stat().st_size
+        issues: List[str] = []
+        members: List[Dict[str, Any]] = []
+        if not zipfile.is_zipfile(p):
+            return {
+                "status": "ERROR", "path": str(p), "size_bytes": size_bytes,
+                "is_valid": False, "member_count": 0, "members": [],
+                "potential_issues": ["not_a_zip"],
+            }
+        total_uncompressed = 0
+        total_compressed = 0
+        try:
+            with zipfile.ZipFile(p) as zf:
+                bad = zf.testzip()
+                if bad is not None:
+                    issues.append(f"corrupt_member:{bad}")
+                for zi in zf.infolist():
+                    total_uncompressed += zi.file_size
+                    total_compressed += zi.compress_size
+                    members.append({
+                        "name": zi.filename,
+                        "size": zi.file_size,
+                        "compressed_size": zi.compress_size,
+                        "is_dir": zi.is_dir(),
+                    })
+                    if self._member_is_traversal(zi.filename):
+                        issues.append(f"path_traversal:{zi.filename}")
+                    if zi.filename.lower().endswith((".zip", ".tar", ".gz", ".tgz", ".bz2", ".xz", ".7z", ".rar")):
+                        issues.append(f"nested_archive:{zi.filename}")
+        except Exception as exc:  # malformed central directory etc.
+            return {
+                "status": "ERROR", "path": str(p), "size_bytes": size_bytes,
+                "is_valid": False, "member_count": len(members), "members": members,
+                "potential_issues": issues + [f"read_error:{type(exc).__name__}"],
+            }
+
+        if len(members) > self.policy.max_archive_members:
+            issues.append(f"too_many_members:{len(members)}>{self.policy.max_archive_members}")
+        if total_uncompressed > self.policy.max_archive_decompressed_bytes:
+            issues.append(
+                f"decompressed_too_large:{total_uncompressed}>{self.policy.max_archive_decompressed_bytes}"
+            )
+        ratio = (total_uncompressed / total_compressed) if total_compressed else 0.0
+        if ratio > self.policy.max_archive_ratio:
+            issues.append(f"suspicious_ratio:{ratio:.0f}>{self.policy.max_archive_ratio}")
+
+        return {
+            "status": "SUCCESS",
+            "path": str(p),
+            "size_bytes": size_bytes,
+            "is_valid": True,
+            "member_count": len(members),
+            "members": members,
+            "total_uncompressed_bytes": total_uncompressed,
+            "total_compressed_bytes": total_compressed,
+            "compression_ratio": round(ratio, 2),
+            "potential_issues": issues or ["none"],
+        }
+
+    async def extract_zip(
+        self, zip_path_str: str, extract_to_str: str, *, cwd: Optional[Path] = None,
+        max_decompressed_mb: Optional[int] = None, max_members: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Extract a ZIP with full containment + zip-bomb guards. Extraction is
+        per-member (never ``ZipFile.extractall``) so each target is proven to stay
+        inside ``extract_to`` before any bytes are written. Decompressed size and
+        member count are enforced with a running tally; the first breach aborts.
+        """
+        return await asyncio.to_thread(
+            self._extract_zip_sync, zip_path_str, extract_to_str, cwd, max_decompressed_mb, max_members
+        )
+
+    def _extract_zip_sync(
+        self, zip_path_str: str, extract_to_str: str, cwd: Optional[Path],
+        max_decompressed_mb: Optional[int], max_members: Optional[int],
+    ) -> Dict[str, Any]:
+        max_bytes = (max_decompressed_mb * 1024 * 1024) if max_decompressed_mb is not None \
+            else self.policy.max_archive_decompressed_bytes
+        max_count = max_members if max_members is not None else self.policy.max_archive_members
+
+        src = self.resolve(zip_path_str, cwd=cwd, must_exist=True)
+        dest_root = self.resolve(extract_to_str, cwd=cwd)
+        if not zipfile.is_zipfile(src):
+            return {"status": "FAILURE", "messages": ["not_a_zip"], "members_extracted": 0}
+
+        dest_root.mkdir(parents=True, exist_ok=True)
+        messages: List[str] = []
+        extracted: List[str] = []
+        total = 0
+        with zipfile.ZipFile(src) as zf:
+            infos = zf.infolist()
+            if len(infos) > max_count:
+                return {"status": "FAILURE", "members_extracted": 0,
+                        "messages": [f"too_many_members:{len(infos)}>{max_count}"]}
+            for zi in infos:
+                if self._member_is_traversal(zi.filename):
+                    return {"status": "FAILURE", "members_extracted": len(extracted),
+                            "messages": messages + [f"path_traversal_blocked:{zi.filename}"]}
+                # prove the resolved target stays inside the extraction root.
+                target = self.resolve(zi.filename, cwd=dest_root)
+                if not self._within(target) or not target.is_relative_to(dest_root):
+                    return {"status": "FAILURE", "members_extracted": len(extracted),
+                            "messages": messages + [f"escape_blocked:{zi.filename}"]}
+                if zi.is_dir():
+                    target.mkdir(parents=True, exist_ok=True)
+                    continue
+                total += zi.file_size
+                if total > max_bytes:
+                    return {"status": "FAILURE", "members_extracted": len(extracted),
+                            "messages": messages + [f"decompressed_limit_exceeded:{total}>{max_bytes}"]}
+                target.parent.mkdir(parents=True, exist_ok=True)
+                # stream-copy with a hard cap so a lying header can't bomb us.
+                written = 0
+                with zf.open(zi) as srcf, open(target, "wb") as outf:
+                    while True:
+                        chunk = srcf.read(65536)
+                        if not chunk:
+                            break
+                        written += len(chunk)
+                        if written > zi.file_size + 1 or (total - zi.file_size + written) > max_bytes:
+                            outf.close()
+                            target.unlink(missing_ok=True)
+                            return {"status": "FAILURE", "members_extracted": len(extracted),
+                                    "messages": messages + [f"decompressed_limit_exceeded:{zi.filename}"]}
+                        outf.write(chunk)
+                extracted.append(zi.filename)
+
+        messages.append(f"extracted {len(extracted)} files to {dest_root}")
+        return {
+            "status": "SUCCESS",
+            "extracted_to": str(dest_root),
+            "members_extracted": len(extracted),
+            "extracted_names": extracted,
+            "total_size_bytes": total,
+            "messages": messages,
+        }
+
     def info(self) -> Dict[str, Any]:
         """Inspectable summary — what this boundary is actually enforcing."""
         return {
@@ -462,6 +624,9 @@ class Sandbox:
                 "address_space_bytes": self.policy.address_space_bytes,
                 "max_processes": self.policy.max_processes,
                 "max_open_files": self.policy.max_open_files,
+                "max_archive_members": self.policy.max_archive_members,
+                "max_archive_decompressed_bytes": self.policy.max_archive_decompressed_bytes,
+                "max_archive_ratio": self.policy.max_archive_ratio,
             },
             "rlimits_available": _resource is not None,
         }

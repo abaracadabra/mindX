@@ -248,3 +248,106 @@ def test_info_is_inspectable(tmp_path):
     assert info["root"] == str(sb.root)
     assert "limits" in info and info["limits"]["cpu_seconds"] == 30
     assert "rlimits_available" in info
+
+
+# ── archive inspection / extraction (zip-bomb safe) ────────────────────────────
+def _make_zip(path: Path, members: dict) -> None:
+    """Write a zip with {arcname: bytes|str}. arcname may be hostile (e.g. ``..``)."""
+    import zipfile
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for arcname, data in members.items():
+            if isinstance(data, str):
+                data = data.encode()
+            zf.writestr(arcname, data)
+
+
+def test_inspect_zip_reports_members(tmp_path):
+    sb = mk(tmp_path)
+    z = sb.root / "pkg.zip"
+    _make_zip(z, {"a.py": "x = 1\n", "b/c.txt": "hello"})
+    info = sb.inspect_zip("pkg.zip")
+    assert info["status"] == "SUCCESS"
+    assert info["member_count"] == 2
+    assert info["potential_issues"] == ["none"]
+    names = {m["name"] for m in info["members"]}
+    assert names == {"a.py", "b/c.txt"}
+
+
+def test_inspect_zip_flags_traversal(tmp_path):
+    sb = mk(tmp_path)
+    z = sb.root / "evil.zip"
+    _make_zip(z, {"../escape.txt": "pwned"})
+    info = sb.inspect_zip("evil.zip")
+    assert info["status"] == "SUCCESS"
+    assert any(i.startswith("path_traversal") for i in info["potential_issues"])
+
+
+def test_inspect_zip_flags_nested_archive(tmp_path):
+    sb = mk(tmp_path)
+    z = sb.root / "nest.zip"
+    _make_zip(z, {"inner.zip": b"PK\x03\x04stub"})
+    info = sb.inspect_zip("nest.zip")
+    assert any(i.startswith("nested_archive") for i in info["potential_issues"])
+
+
+def test_inspect_non_zip(tmp_path):
+    sb = mk(tmp_path)
+    (sb.root / "plain.zip").write_text("not a zip at all")
+    info = sb.inspect_zip("plain.zip")
+    assert info["status"] == "ERROR"
+    assert "not_a_zip" in info["potential_issues"]
+
+
+def test_inspect_zip_outside_sandbox_denied(tmp_path):
+    sb = mk(tmp_path)
+    with pytest.raises(SandboxViolation):
+        sb.inspect_zip("../../etc/secret.zip")
+
+
+def test_extract_zip_happy_path(tmp_path):
+    sb = mk(tmp_path)
+    z = sb.root / "good.zip"
+    _make_zip(z, {"mod.py": "y = 2\n", "sub/data.txt": "ok"})
+    res = asyncio.run(sb.extract_zip("good.zip", "out"))
+    assert res["status"] == "SUCCESS"
+    assert res["members_extracted"] == 2
+    assert (sb.root / "out" / "mod.py").read_text() == "y = 2\n"
+    assert (sb.root / "out" / "sub" / "data.txt").read_text() == "ok"
+
+
+def test_extract_zip_blocks_traversal(tmp_path):
+    sb = mk(tmp_path)
+    z = sb.root / "evil.zip"
+    _make_zip(z, {"../escape.txt": "pwned"})
+    res = asyncio.run(sb.extract_zip("evil.zip", "out"))
+    assert res["status"] == "FAILURE"
+    assert any("path_traversal_blocked" in m or "escape_blocked" in m for m in res["messages"])
+    # nothing escaped the sandbox
+    assert not (tmp_path / "escape.txt").exists()
+
+
+def test_extract_zip_member_cap(tmp_path):
+    sb = mk(tmp_path, max_archive_members=2)
+    z = sb.root / "many.zip"
+    _make_zip(z, {f"f{i}.txt": "x" for i in range(5)})
+    res = asyncio.run(sb.extract_zip("many.zip", "out"))
+    assert res["status"] == "FAILURE"
+    assert any("too_many_members" in m for m in res["messages"])
+
+
+def test_extract_zip_decompressed_cap(tmp_path):
+    sb = mk(tmp_path)
+    z = sb.root / "big.zip"
+    # one ~1MiB highly-compressible member; cap extraction at well under that.
+    _make_zip(z, {"big.txt": "A" * (1024 * 1024)})
+    res = asyncio.run(sb.extract_zip("big.zip", "out", max_decompressed_mb=0))
+    assert res["status"] == "FAILURE"
+    assert any("decompressed" in m for m in res["messages"])
+
+
+def test_extract_zip_dest_outside_denied(tmp_path):
+    sb = mk(tmp_path)
+    z = sb.root / "ok.zip"
+    _make_zip(z, {"a.txt": "hi"})
+    with pytest.raises(SandboxViolation):
+        asyncio.run(sb.extract_zip("ok.zip", "../outside"))

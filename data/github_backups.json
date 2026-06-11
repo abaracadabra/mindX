@@ -2942,16 +2942,25 @@
       "source_commit": "f377b7ed17b85bb08bb7e354deb028256e4e5344",
       "created_at": "2026-05-16T11:44:04.336140",
       "status": "created"
+    },
+    {
+      "branch_name": "backup/shutdown-backup-20260605_031703",
+      "backup_type": "shutdown_backup",
+      "reason": "System shutdown - automatic backup",
+      "source_branch": "feat/obs-phase1",
+      "source_commit": "fcc28977891a40302a711ad08f9a7d14a7a852e0",
+      "created_at": "2026-06-05T03:18:09.469504",
+      "status": "created"
     }
   ],
   "last_backup": {
-    "branch_name": "backup/pre-architectural-up-20260516_114346",
-    "backup_type": "pre_architectural_upgrade",
-    "reason": "Pre-upgrade backup: SEA Audit-Driven Campaign: system",
+    "branch_name": "backup/shutdown-backup-20260605_031703",
+    "backup_type": "shutdown_backup",
+    "reason": "System shutdown - automatic backup",
     "source_branch": "feat/obs-phase1",
-    "source_commit": "f377b7ed17b85bb08bb7e354deb028256e4e5344",
-    "created_at": "2026-05-16T11:44:04.336140",
+    "source_commit": "fcc28977891a40302a711ad08f9a7d14a7a852e0",
+    "created_at": "2026-06-05T03:18:09.469504",
     "status": "created"
   },
-  "last_backup_at": "2026-05-16T11:44:04.336174"
+  "last_backup_at": "2026-06-05T03:18:09.469547"
 }

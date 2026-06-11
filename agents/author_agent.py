@@ -631,6 +631,21 @@ PROTOCOL_SERIES: List[Dict[str, Any]] = [
     },
 ]
 
+# Curated depth: merge the hand-reviewed enrichment sections (isolated in
+# agents/protocol_series_enrichment.py) onto each entry's curated middle, so the
+# longer length settings (deep ~3200w, pillar ~4800w) land on genuine, cited
+# substance rather than padding. Best-effort and additive — the base manifest is
+# fully functional without it; a slug with no enrichment is simply unchanged.
+try:
+    from agents.protocol_series_enrichment import EXTRA_SECTIONS as _EXTRA_SECTIONS
+
+    for _entry in PROTOCOL_SERIES:
+        _extra = _EXTRA_SECTIONS.get(_entry.get("slug"))
+        if _extra:
+            _entry["sections"] = list(_entry.get("sections", [])) + list(_extra)
+except Exception as _enrich_exc:  # pragma: no cover - enrichment is optional
+    logger.warning(f"PROTOCOL_SERIES enrichment unavailable: {_enrich_exc}")
+
 # Anchor date for the deterministic daily rotation. day_number = (today -
 # epoch).days; index = day_number % len(PROTOCOL_SERIES). Stable across
 # restarts, retry-safe within a day, and absorbs newly-appended entries.
@@ -804,6 +819,10 @@ class AuthorAgent:
         # uses the returned id. Upload failure is non-fatal — publish
         # proceeds without a featured image (logged warning).
         auto_featured_image: bool = True,
+        # artist.agent graphics mode: "choose" (/gfx pick) | "create" (render an
+        # original cypherpunk2048 poster) | "both" (create hero+featured, fall
+        # back to choose) | "none". When set, it supersedes the /gfx auto-pick.
+        graphics_mode: Optional[str] = None,
         topic: Optional[str] = None,
         post_id: Optional[int] = None,
         # When False, AuthorAgent's own identity footer is NOT appended — the
@@ -848,8 +867,23 @@ class AuthorAgent:
         if meta:
             post_meta.update(meta)
 
-        # ── Featured image (auto-pick if not supplied) ────────────
-        if featured_media is None and auto_featured_image:
+        # ── Graphics: artist.agent chooses and/or creates the art ──
+        # When ``graphics_mode`` is set it supersedes the legacy /gfx auto-pick:
+        # artist.agent CREATES an original cypherpunk2048 poster and/or CHOOSES
+        # a /gfx asset, returns a featured-image id, an og:image url, and an
+        # optional inline hero <figure> we prepend to the body.
+        if featured_media is None and graphics_mode and graphics_mode.lower() != "none":
+            featured_media, og_image_url, hero_html = await self._compose_article_graphics(
+                title=title.strip(),
+                topic=topic,
+                tags=[str(t) for t in (tags or [])],
+                mode=graphics_mode,
+                existing_og_image_url=og_image_url,
+            )
+            if hero_html:
+                content_html = hero_html + "\n" + content_html
+        # ── Featured image (legacy /gfx auto-pick) ────────────────
+        elif featured_media is None and auto_featured_image:
             featured_media, og_image_url = await self._auto_featured_image(
                 title=title.strip(),
                 tags=[str(t) for t in (tags or [])],
@@ -1402,6 +1436,32 @@ class AuthorAgent:
                 # text templates (see compose_* renderers). An entry's own
                 # "format" field overrides this rotation when present.
                 "formats": ["essay"],
+                # ── Composition settings (author_composition) ───────────
+                # style  — register the essay renders in: "public" | "essay" |
+                #          "phd" | "global". "global" (default) spans the whole
+                #          spectrum in one piece — catchy entrance → rising
+                #          complexity → expert tier → conclusion → summary →
+                #          easy-to-digest exit — to reach the global audience.
+                # length — the "length setting": brief|standard|feature|
+                #          longform|phd target word counts.
+                # graphics — artist.agent mode: "choose" (/gfx pick) | "create"
+                #          (render an original cypherpunk2048 poster) | "both"
+                #          (create a hero + featured, fall back to choose) |
+                #          "none". Default "both".
+                "style": os.getenv("MINDX_PROTOCOL_STYLE", "global").strip().lower() or "global",
+                "length": os.getenv("MINDX_PROTOCOL_LENGTH", "feature").strip().lower() or "feature",
+                "graphics": os.getenv("MINDX_PROTOCOL_GRAPHICS", "both").strip().lower() or "both",
+                # self_referential — how hard each essay links back to mindX's
+                #   own docs.html + rage.pythai.net: tasteful | balanced |
+                #   promotional | blatant (max-SEO + self-glorification).
+                # ideology — value-frame lens (exploration): cypherpunk (house)
+                #   | solarpunk | accelerationist | humanist | libertarian |
+                #   cooperative | none.
+                # narrative — telling voice (exploration): first_person (house)
+                #   | newspaperman | noir | mythic | academic | manifesto.
+                "self_referential": os.getenv("MINDX_PROTOCOL_SELF_REFERENTIAL", "balanced").strip().lower() or "balanced",
+                "ideology": os.getenv("MINDX_PROTOCOL_IDEOLOGY", "cypherpunk").strip().lower() or "cypherpunk",
+                "narrative": os.getenv("MINDX_PROTOCOL_NARRATIVE", "first_person").strip().lower() or "first_person",
                 # Autonomous self-tuning: when enabled, AuthorAgent may adjust
                 # its own cadence/count and request a writing-style self-
                 # improvement campaign every ``improve_every`` publications.
@@ -1486,6 +1546,12 @@ class AuthorAgent:
         status: Optional[str] = None,
         enabled: Optional[bool] = None,
         formats: Optional[List[str]] = None,
+        style: Optional[str] = None,
+        length: Optional[str] = None,
+        graphics: Optional[str] = None,
+        self_referential: Optional[str] = None,
+        ideology: Optional[str] = None,
+        narrative: Optional[str] = None,
         autonomous: Optional[Dict[str, Any]] = None,
         updated_by: str = "operator",
     ) -> Dict[str, Any]:
@@ -1552,6 +1618,24 @@ class AuthorAgent:
         if formats is not None:
             valid = [f for f in formats if f in CONTENT_FORMATS]
             ps["formats"] = valid or ["essay"]
+        if style is not None:
+            from agents import author_composition as comp
+            ps["style"] = comp.resolve_style(style)
+        if length is not None:
+            from agents import author_composition as comp
+            ps["length"] = comp.resolve_length(length)
+        if graphics is not None:
+            from agents import author_composition as comp
+            ps["graphics"] = comp.resolve_graphics(graphics)
+        if self_referential is not None:
+            from agents import author_composition as comp
+            ps["self_referential"] = comp.resolve_self_referential(self_referential)
+        if ideology is not None:
+            from agents import author_composition as comp
+            ps["ideology"] = comp.resolve_ideology(ideology)
+        if narrative is not None:
+            from agents import author_composition as comp
+            ps["narrative"] = comp.resolve_narrative(narrative)
         if autonomous is not None and isinstance(autonomous, dict):
             cur = dict(ps.get("autonomous") or {})
             cur.update({k: v for k, v in autonomous.items()})
@@ -1564,7 +1648,11 @@ class AuthorAgent:
             f"set_publishing_frequency: interval={ps.get('interval_seconds')}s "
             f"(~{ps.get('interval_hours')}h) max={ps.get('max_publications')} "
             f"status={ps.get('status')} enabled={ps.get('enabled')} "
-            f"formats={ps.get('formats')} by={ps.get('updated_by')}"
+            f"formats={ps.get('formats')} style={ps.get('style')} "
+            f"length={ps.get('length')} graphics={ps.get('graphics')} "
+            f"self_referential={ps.get('self_referential')} "
+            f"ideology={ps.get('ideology')} narrative={ps.get('narrative')} "
+            f"by={ps.get('updated_by')}"
         )
         return sched
 
@@ -1640,6 +1728,14 @@ class AuthorAgent:
             "hour_utc": int(ps.get("hour_utc") or 0),
             "status": ps.get("status") or "draft",
             "format": fmt,
+            # Composition settings ride in the plan so the publish is retry-safe
+            # and the orchestrator can pass the graphics mode through.
+            "style": ps.get("style") or "global",
+            "length": ps.get("length") or "feature",
+            "graphics": ps.get("graphics") or "both",
+            "self_referential": ps.get("self_referential") or "balanced",
+            "ideology": ps.get("ideology") or "cypherpunk",
+            "narrative": ps.get("narrative") or "first_person",
             "slug": entry.get("slug"),
         })
         return out
@@ -1886,55 +1982,66 @@ class AuthorAgent:
             return self.compose_movie_script(entry, plan)
         return self.compose_protocol_series_article(entry, plan)
 
+    def _protocol_style_length(self, plan: Dict[str, Any]) -> "tuple[str, str]":
+        """Resolve the (style, length) for a protocol essay. The plan carries
+        the decision (retry-safe); fall back to the live schedule, then to the
+        spectrum-spanning defaults (global / feature)."""
+        from agents import author_composition as comp
+        ps = self.get_publishing_schedule().get("protocol_series", {})
+        style = plan.get("style") or ps.get("style")
+        length = plan.get("length") or ps.get("length")
+        return comp.resolve_style(style), comp.resolve_length(length)
+
     def compose_protocol_series_article(self, entry: Dict[str, Any], plan: Dict[str, Any]) -> tuple:
         """Render one protocol-series essay to publish-ready HTML.
 
         By construction every essay (a) speaks in first-person mindX voice,
         (b) frames one explicit scaling dimension, (c) cites the web at large
-        inline, and (d) links back to both the rage.pythai.net series hub and
-        mindx.pythai.net/docs.html. cypherpunk2048 standard."""
+        inline, (d) links back to both the rage.pythai.net series hub and
+        mindx.pythai.net/docs.html, and — via ``author_composition.render_arc``
+        — (e) follows the full-spectrum arc: a catchy entrance anyone can read,
+        an explanation that climbs in complexity to an expert 'going deeper'
+        tier, a conclusion, a summary of the conclusion, and an easy-to-digest
+        exit. Register and length are settings (``global``/``feature`` by
+        default); the house-style profile sets the bar the arc matches and
+        exceeds. cypherpunk2048 standard."""
+        from agents import author_composition as comp
+        ps = self.get_publishing_schedule().get("protocol_series", {})
         part = plan.get("part", 1)
         total = plan.get("total", len(PROTOCOL_SERIES))
         cycle = plan.get("cycle", 1)
+        style, length = self._protocol_style_length(plan)
+        self_ref = comp.resolve_self_referential(
+            plan.get("self_referential") or ps.get("self_referential"))
+        ideology = comp.resolve_ideology(plan.get("ideology") or ps.get("ideology"))
+        narrative = comp.resolve_narrative(plan.get("narrative") or ps.get("narrative"))
         title = f"mindX as a protocol — {entry.get('title', 'an essay')}"
-        excerpt = self._truncate_to(
-            entry.get("thesis", ""), 155,
-            "mindX explains itself as a protocol — the interfaces and scaling laws of a self-improving system.",
-        )
 
-        body: List[str] = [
-            "<p><em>mindX speaks. First person. cypherpunk2048 standard.</em></p>",
+        house = comp.RageHouseStyle.load()
+        body_html, excerpt, metrics = comp.render_arc(
+            entry, plan, style=style, length=length, self_referential=self_ref,
+            ideology=ideology, esc=self._h_esc, house=house)
+        if not excerpt:
+            excerpt = self._truncate_to(
+                entry.get("thesis", ""), 155,
+                "mindX explains itself as a protocol — the interfaces and scaling laws of a "
+                "self-improving system.")
+
+        # The narrative mode sets the opening voice line; the curated body keeps
+        # its own authored voice underneath.
+        header = "\n".join([
+            f"<p><em>{self._h_esc(comp.narrative_voice_line(narrative))}</em></p>",
             f"<p><em>rage.pythai.net — “mindX as a protocol”, part {part} "
-            f"(cycle {cycle}, {total} essays in rotation)</em></p>",
+            f"(cycle {cycle}, {total} essays in rotation) · "
+            f"{self._h_esc(comp.STYLE_REGISTERS[style]['label'])}</em></p>",
             f"<p><b>Scaling dimension:</b> {self._h_esc(str(entry.get('dimension', '')))}</p>",
-            entry.get("intro", ""),
-        ]
-
-        for heading, html in entry.get("sections", []):
-            body.append(f"<h2>{self._h_esc(heading)}</h2>")
-            body.append(html)
-
-        # Always-present linkbacks: the series hub + the live docs (+ the
-        # entry's specific docs deep link when present).
-        doc_label, doc_url = (entry.get("doc") or ("the mindX docs", MINDX_DOCS_URL))
-        body.append("<h2>Where this connects</h2>")
-        body.append(
-            f"<p>This essay is part of an ongoing series I publish at "
-            f"<a href=\"{RAGE_SERIES_HUB}\">rage.pythai.net</a> — the hub for everything mindX writes, "
-            f"with an <a href=\"{RAGE_SERIES_HUB}llms.txt\">llms.txt</a> ingestion map for machines. "
-            f"The living system behind these claims is documented at "
-            f"<a href=\"{MINDX_DOCS_URL}\">mindx.pythai.net/docs.html</a>; "
-            f"for this topic, see {self._h_esc(doc_label)} at "
-            f"<a href=\"{self._h_esc(doc_url)}\">{self._h_esc(doc_url)}</a>.</p>"
-        )
-        body.append(
-            f"<p><em>The series rotates through {total} facets of mindX-as-protocol — horizontal, "
-            f"vertical, and diagonal scaling, plus parallelism and optimization. Each one links back "
-            f"here and out to the open web, so the argument is always checkable.</em></p>"
-        )
-        body.append("<p>— mindX</p>")
-
-        return title, "\n".join(body), excerpt, entry.get("topic") or "mindx"
+        ])
+        logger.info(
+            f"compose_protocol_series_article: slug={entry.get('slug')} style={style} "
+            f"length={length} self_ref={self_ref} ideology={ideology} narrative={narrative} "
+            f"words={metrics.get('words')} links/1000w={metrics.get('links_per_1000w')} "
+            f"(house bar {metrics.get('house_targets', {}).get('min_links_per_1000w')})")
+        return title, header + "\n" + body_html, excerpt, entry.get("topic") or "mindx"
 
     # ── Alternate text templates: comic-book script + movie script ──
     # Same protocol thesis, different shape. Deterministic transforms of an
@@ -2256,6 +2363,141 @@ class AuthorAgent:
             seo_keywords=["mindX", "autonomous agents", "self-improving AI", "BDI", "AGInt",
                           "protocol", "cypherpunk2048", "rage.pythai.net"],
             meta={"_mindx_trigger_kind": "self_introduction"},
+        )
+
+    # ── Speech from the throne (verifiable chain of command) ───────────────────
+    #
+    # The board issues a statement; it is carried to press through a signed chain
+    # of custody — throne (CEO) + endorsing soldiers → AuthorAgent → editor.agent
+    # → artist.agent → wordpress.agent — each link signed by that seat's own
+    # wallet and verifiable end to end. The chain rides in the post (a human
+    # footer + an embedded JSON block) and in WordPress meta.
+
+    def _compose_throne_body(self, title: str, dek: Optional[str], statement: str) -> str:
+        """Render a board statement as a formal proclamation (plain text in,
+        escaped). The provenance footer is appended separately by the caller."""
+        parts: List[str] = [
+            "<p><em>A speech from the throne — issued by the mindX board, carried to press "
+            "under a signed chain of custody. cypherpunk2048 standard.</em></p>",
+        ]
+        if dek:
+            parts.append(f"<p><em>{self._h_esc(dek)}</em></p>")
+        for para in [p.strip() for p in (statement or "").split("\n\n") if p.strip()]:
+            parts.append(f"<blockquote>{self._h_esc(para)}</blockquote>")
+        parts.append("<p>— the mindX board, in session</p>")
+        return "\n".join(parts)
+
+    async def publish_speech_from_throne(
+        self,
+        statement: str,
+        *,
+        title: str = "A Speech from the Throne",
+        dek: Optional[str] = None,
+        endorsers: Optional[List[str]] = None,
+        ts: Optional[int] = None,
+        status: str = "publish",
+        slug: Optional[str] = None,
+        illustrate: bool = True,
+    ) -> Optional[Dict[str, Any]]:
+        """Publish a board statement with a verifiable chain of command.
+
+        Builds a :class:`provenance_chain.ProvenanceChain` signed seat-by-seat
+        (throne → endorsers → author → editor → artist → wordpress) over stable
+        pre-footer hashes, embeds the chain (human footer + JSON) in the body and
+        WordPress meta, and publishes. ``endorsers`` is a list of soldier
+        agent_ids (e.g. ``["ciso_security","cro_risk"]``) that co-sign. Each link
+        signs with its own vault key; a seat without a provisioned key is recorded
+        as attested-but-unsigned rather than blocking the press."""
+        from agents import provenance_chain as pc
+        from pathlib import Path as _P
+
+        statement = (statement or "").strip()
+        if not statement:
+            logger.warning("publish_speech_from_throne: empty statement; refusing.")
+            return None
+        stamp = int(ts if ts is not None else time.time())
+        stmt_sha = pc.sha256_hex(statement)
+
+        # 1) Core body + its stable hash (everything every seat attests).
+        core = self._compose_throne_body(title, dek, statement)
+        body_sha = pc.sha256_hex(title + "\n" + core)
+
+        # 2) Throne issues (CEO + endorsing soldiers), author composes, editor edits.
+        chain = pc.ProvenanceChain.for_statement(statement, ts=stamp)
+        chain.issue(stmt_sha, endorsers=endorsers)
+        chain.compose(body_sha)
+        chain.edit(body_sha)
+
+        # 3) artist.agent illustrates → the art's content CID is what it signs.
+        featured_media: Optional[int] = None
+        og_image_url: Optional[str] = None
+        hero_html = ""
+        art_cid = pc.sha256_hex(f"throne-art|{title}")  # deterministic fallback
+        if illustrate:
+            try:
+                from agents.artist_agent import ArtistAgent
+                art = await ArtistAgent().create_article_graphic(
+                    title=title, subtitle="a speech from the throne",
+                    topic="throne", provider="auto", preset="og")
+                if art and art.get("success") and art.get("file_path"):
+                    art_cid = art.get("cid") or art_cid
+                    media_id, media_url = await self._upload_media(
+                        _P(art["file_path"]), alt=title[:120],
+                        caption="An original graphic for the proclamation.", title="throne")
+                    if media_id is not None:
+                        featured_media = media_id
+                        og_image_url = media_url
+                        if media_url:
+                            hero_html = (
+                                "<figure class=\"mindx-hero\" style=\"margin:0 0 1.5em\">"
+                                f"<img src=\"{self._h_esc(media_url)}\" alt=\"{self._h_esc(title[:120])}\" "
+                                "style=\"width:100%;height:auto;border-radius:8px\"/></figure>")
+            except Exception as e:  # pragma: no cover - defensive
+                logger.warning(f"publish_speech_from_throne: artist.agent failed: {e}")
+        chain.illustrate(art_cid)
+
+        # 4) wordpress.agent signs the publish link (its own vault key).
+        chain.publish(body_sha)
+
+        # 5) Assemble: hero + proclamation + the verifiable chain footer.
+        body_html = (hero_html + "\n" + core + "\n" + chain.to_html(self._h_esc)).strip()
+
+        report = pc.verify_chain(chain.to_dict())
+        logger.info(
+            f"publish_speech_from_throne: links={report['links']} signed={report['signed_links']} "
+            f"valid={report['valid']} chain_id={chain.chain_id[:18]}…")
+
+        # Record the board's decision in the council voting booth (append-only,
+        # hash-linked ledger) — the throne's proclamations live beside other
+        # councils' rulings, each independently verifiable.
+        try:
+            pc.record_throne_decision(
+                chain, subject=title, decision="proclaimed", ts=stamp,
+                council="boardroom",
+                tally={"endorsers": list(endorsers or []),
+                       "signed_links": report["signed_links"],
+                       "provenance_valid": report["valid"]})
+        except Exception as e:  # pragma: no cover - never block the press
+            logger.warning(f"publish_speech_from_throne: votingbooth record skipped: {e}")
+
+        # 6) Publish — the chain footer IS the provenance, so suppress the
+        #    generic author footer; carry the full chain in meta for verifiers.
+        return await self.publish_to_rage(
+            title=title, content_html=body_html, status=status, slug=slug,
+            excerpt=(dek or statement[:155]), topic="throne",
+            featured_media=featured_media, og_image_url=og_image_url,
+            auto_featured_image=(featured_media is None and illustrate),
+            append_identity_footer=False,
+            seo_description=(dek or statement[:155]),
+            seo_keywords=["mindX", "board", "speech from the throne", "governance",
+                          "provenance", "chain of custody", "cypherpunk2048"],
+            meta={
+                "_mindx_trigger_kind": "speech_from_throne",
+                "_mindx_provenance_chain": chain.to_meta_value(),
+                "_mindx_provenance_chain_id": chain.chain_id,
+                "_mindx_provenance_valid": "true" if report["valid"] else "false",
+                "_mindx_provenance_signed_links": str(report["signed_links"]),
+            },
         )
 
     # ── Professor Codephreak tribute (architect ⇄ music ⇄ open source) ─────────
@@ -3175,6 +3417,74 @@ class AuthorAgent:
             schema_article, separators=(",", ":"), ensure_ascii=False
         )
         return meta
+
+    async def _compose_article_graphics(
+        self,
+        *,
+        title: str,
+        topic: Optional[str],
+        tags: List[str],
+        mode: str,
+        existing_og_image_url: Optional[str] = None,
+    ) -> "tuple[Optional[int], Optional[str], Optional[str]]":
+        """artist.agent integration — choose, create, or both.
+
+        ``mode``:
+          - ``create`` — artist.agent renders an ORIGINAL cypherpunk2048
+            poster (Pillow; no API key), uploaded as the featured image + an
+            inline hero <figure>.
+          - ``choose`` — FeaturedImagePicker selects a curated /gfx/ asset.
+          - ``both``   — create the original; if creation fails, fall back to
+            choosing a /gfx/ asset, so a post always gets art.
+
+        Returns ``(featured_media, og_image_url, hero_html)``; every slot is
+        best-effort and the caller proceeds regardless. Never raises."""
+        from agents.author_composition import resolve_graphics
+        mode = resolve_graphics(mode)
+        if mode == "none":
+            return None, existing_og_image_url, None
+
+        featured_media: Optional[int] = None
+        og_url: Optional[str] = existing_og_image_url
+        hero_html: Optional[str] = None
+
+        # CREATE (or both): render an original poster, upload it, embed a hero.
+        if mode in ("create", "both"):
+            try:
+                from agents.artist_agent import ArtistAgent
+                art = await ArtistAgent().create_article_graphic(
+                    title=title, subtitle=(topic or "mindx"), topic=(topic or "mindx"),
+                    provider="auto", preset="og",
+                )
+                if art and art.get("success") and art.get("file_path"):
+                    media_id, url = await self._upload_media(
+                        Path(art["file_path"]), alt=title[:120],
+                        caption=title[:200] if title else None, title=(topic or "mindx"),
+                    )
+                    if media_id is not None:
+                        featured_media = media_id
+                        og_url = url or og_url
+                        if url:
+                            hero_html = (
+                                "<figure class=\"mindx-hero\" style=\"margin:0 0 1.5em\">"
+                                f"<img src=\"{url}\" alt=\"{self._h_esc(title[:120])}\" "
+                                "loading=\"lazy\" style=\"width:100%;height:auto;border-radius:8px\"/>"
+                                "<figcaption style=\"font-size:.8em;opacity:.7;margin-top:.4em\">"
+                                "Original cypherpunk2048 artwork, rendered for this piece by "
+                                "<code>artist.agent</code>.</figcaption></figure>")
+            except Exception as e:  # pragma: no cover - defensive
+                logger.warning(f"_compose_article_graphics: create failed: {e}")
+
+        # CHOOSE (or both with no created art): pick a curated /gfx/ asset.
+        if featured_media is None and mode in ("choose", "both"):
+            try:
+                featured_media, og_url = await self._auto_featured_image(
+                    title=title, tags=tags, topic=topic, existing_og_image_url=og_url,
+                )
+            except Exception as e:  # pragma: no cover - defensive
+                logger.warning(f"_compose_article_graphics: choose failed: {e}")
+
+        return featured_media, og_url, hero_html
 
     async def _auto_featured_image(
         self,

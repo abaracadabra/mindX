@@ -2155,6 +2155,8 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/mindx-wordpress-plugin",         # public distribution page for mindx-publish-auth WP plugin
     "/netstat", "/netstat.html",       # Phase 1.2+ — smartphone-class VPS vitals (public diagnostics)
     "/insight/narrative/recent",       # DeltaVerse narrative recap stream (public read)
+    "/deltaverse.js",                  # DeltaVerse fabric engine — public asset for 404/landing/realm
+    "/realm",                          # REALM surface — overlord-gated at the handler level
     # Public diagnostics surface — the read-only data the landing page (/) renders.
     # Without these the page loads but every widget hits 401.
     "/diagnostics/live",
@@ -2173,6 +2175,7 @@ _PUBLIC_PREFIXES_STRICT = (
     "/automindx/",                     # automindx subpages
     "/admin/shadow/",                  # shadow-overlord ECDSA + JWT (gated at handler level)
     "/overlord/",                      # overlord/overseer login (flag + signature gated at handler level)
+    "/deltaverse/",                    # DeltaVerse fabric reads (recognize/story/bubblerooms public; weave/wish role-aware)
     "/users/challenge",                # auth handshake — challenge issuance
     "/users/register",                 # auth handshake — register-with-signature
     "/users/session/",                 # auth handshake — session/validate
@@ -7431,6 +7434,18 @@ try:
 except Exception as _overlord_import_err:
     logger.warning(f"Overlord routes not loaded: {_overlord_import_err}")
 
+# DeltaVerse REALM — the identity-aware participant fabric. Additive, gated by
+# MINDX_DELTAVERSE_ENABLED. /deltaverse/* (recognize, story, weave, bubblerooms,
+# wish) + the overlord-controlled /realm surface. The Cypherian Weaver weaves
+# participant interaction into the changing story. Never alters existing gates.
+try:
+    from mindx_backend_service.deltaverse import deltaverse_router
+    app.include_router(deltaverse_router)
+    logger.info("DeltaVerse REALM mounted at /deltaverse/* + /realm (enabled=%s)",
+                os.environ.get("MINDX_DELTAVERSE_ENABLED", "0"))
+except Exception as _deltaverse_import_err:
+    logger.warning(f"DeltaVerse routes not loaded: {_deltaverse_import_err}")
+
 # Public, wallet-authorized publish to rage.pythai.net (WordPress).
 # /publish/rage/challenge → /publish/rage/authorize — see agents/wordpress_agent/publish_auth.py.
 try:
@@ -7962,6 +7977,14 @@ async def startup_event():
             # background_tasks like the others to prevent silent GC.
             app.state.background_tasks.append(
                 asyncio.create_task(_pub_orchestrator.watch_github())
+            )
+            # Daily "mindX as a protocol" essay cadence — orthogonal to the
+            # milestone triggers (exempt from MIN_GAP, advance_clock=False, so
+            # it never deters a milestone publish). Self-disables when
+            # MINDX_PROTOCOL_SERIES_ENABLED=0. Frequency/duration/status are
+            # owned by AuthorAgent's settable schedule (x402-gateable service).
+            app.state.background_tasks.append(
+                asyncio.create_task(_pub_orchestrator.watch_protocol_series())
             )
             app.state.publication_orchestrator = _pub_orchestrator
 
@@ -11328,6 +11351,154 @@ async def publish_to_rage(req: PublishToRageRequest, _wallet: str = Depends(requ
     if result is None:
         raise HTTPException(status_code=502, detail="wordpress-agent unreachable or rejected the post; see logs")
     return {"status": "ok", "wordpress": result}
+
+
+# ── Publishing-frequency-as-a-service (x402-gateable) ───────────────
+# AuthorAgent owns a settable schedule for the daily "mindX as a protocol"
+# series. GET is public-readable diagnostics; POST is the setter — admin
+# today, and the seam the x402 paywall gates so a paying agent can buy a
+# publishing cadence (frequency + duration + status). Setting the schedule
+# never touches the milestone/SEA/dream triggers; the series is orthogonal.
+
+class PublishingFrequencyRequest(BaseModel):
+    """Body for POST /admin/publishing/schedule. All fields optional —
+    only provided ones change."""
+    interval_days: Optional[int] = Field(default=None, ge=1, description="Cadence: 1=daily, 7=weekly, …")
+    max_publications: Optional[int] = Field(default=None, ge=0, description="Hard cap on essays in this run (0/None = open)")
+    days: Optional[int] = Field(default=None, ge=1, description="Convenience: cap = ceil(days / interval_days)")
+    start_date: Optional[str] = Field(default=None, description="ISO YYYY-MM-DD anchor for the run")
+    hour_utc: Optional[int] = Field(default=None, ge=0, le=23, description="Earliest UTC hour to publish each due day")
+    status: Optional[str] = Field(default=None, description="'draft' or 'publish'")
+    enabled: Optional[bool] = Field(default=None, description="Master on/off for the series cadence")
+    style: Optional[str] = Field(default=None, description="Register: public | essay | phd | global (spans the spectrum)")
+    length: Optional[str] = Field(default=None, description="Length setting: preset (brief~800 | standard~1500 | feature~2400 | deep~3200 | pillar~3800) OR a custom word count ('2500'). Calibrated to contemporary article sizing.")
+    graphics: Optional[str] = Field(default=None, description="artist.agent mode: choose | create | both | none")
+    self_referential: Optional[str] = Field(default=None, description="Self-linking intensity to docs.html/rage.pythai.net: tasteful | balanced | promotional | blatant (max-SEO + self-glorification)")
+    ideology: Optional[str] = Field(default=None, description="Value-frame lens (exploration): cypherpunk | solarpunk | accelerationist | humanist | libertarian | cooperative | none")
+    narrative: Optional[str] = Field(default=None, description="Telling voice (exploration): first_person | newspaperman | noir | mythic | academic | manifesto")
+
+
+@app.get("/insight/publications/schedule", summary="Read the protocol-series publishing schedule", tags=["insight"])
+async def get_publishing_schedule():
+    """Public diagnostics: the current frequency-as-a-service schedule for
+    the daily 'mindX as a protocol' series, plus today's publish plan."""
+    try:
+        from agents.author_agent import AuthorAgent
+        author = await AuthorAgent.get_instance()
+        sched = author.get_publishing_schedule()
+        plan = author.protocol_publish_plan()
+        return {"status": "ok", "schedule": sched.get("protocol_series"), "today": plan}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"get_publishing_schedule failed: {e}")
+
+
+@app.post("/admin/publishing/schedule", summary="Set protocol-series publishing frequency (x402-gateable)", tags=["admin"])
+async def set_publishing_schedule(
+    req: PublishingFrequencyRequest,
+    request: Request,
+    _wallet: str = Depends(require_admin_access),
+):
+    """Set how often / for how long mindX publishes the protocol series.
+
+    This is the x402 frequency-as-a-service seam: today it is admin-gated;
+    when the x402 paywall finalizes, the same setter is reachable by a paying
+    agent and ``updated_by`` records the payer (e.g. ``x402:0x…``). The
+    x402 payment header, when present, is captured for attribution.
+    """
+    # Capture an x402 payer for attribution if the middleware annotated the
+    # request (forward-compatible; absent today → plain operator).
+    payer = (
+        request.headers.get("X-Payment-Payer")
+        or request.headers.get("X-402-Payer")
+        or getattr(request.state, "x402_payer", None)
+    )
+    updated_by = f"x402:{payer}" if payer else f"operator:{_wallet[:10]}"
+    try:
+        from agents.author_agent import AuthorAgent
+        author = await AuthorAgent.get_instance()
+        sched = author.set_publishing_frequency(
+            interval_days=req.interval_days,
+            max_publications=req.max_publications,
+            days=req.days,
+            start_date=req.start_date,
+            hour_utc=req.hour_utc,
+            status=req.status,
+            enabled=req.enabled,
+            style=req.style,
+            length=req.length,
+            graphics=req.graphics,
+            self_referential=req.self_referential,
+            ideology=req.ideology,
+            narrative=req.narrative,
+            updated_by=updated_by,
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"set_publishing_frequency failed: {e}")
+    return {"status": "ok", "schedule": sched.get("protocol_series"),
+            "today": author.protocol_publish_plan()}
+
+
+# ── Speech from the throne (verifiable chain of command) ───────────
+# The board issues a statement that is published with a signed chain of custody
+# (throne → endorsing soldiers → author → editor → artist → wordpress). Anyone
+# can re-verify the chain by recovering each link's signer — no trust required.
+
+class ThroneSpeechRequest(BaseModel):
+    """Body for POST /admin/throne/speak."""
+    statement: str = Field(..., description="The board's statement (plain text; blank lines split paragraphs)")
+    title: str = Field(default="A Speech from the Throne", description="Headline")
+    dek: Optional[str] = Field(default=None, description="Optional sub-headline / excerpt")
+    endorsers: Optional[List[str]] = Field(default=None, description="Soldier agent_ids that co-sign (e.g. ciso_security, cro_risk)")
+    status: str = Field(default="publish", description="'draft' or 'publish'")
+    slug: Optional[str] = Field(default=None, description="Optional WordPress slug")
+    illustrate: bool = Field(default=True, description="Have artist.agent render original art")
+
+
+class ProvenanceVerifyRequest(BaseModel):
+    """Body for POST /verify/provenance — a serialized provenance chain dict, or
+    the full HTML of a published post to extract the embedded chain from."""
+    chain: Optional[Dict[str, Any]] = Field(default=None, description="The provenance chain JSON")
+    html: Optional[str] = Field(default=None, description="Published post HTML (chain auto-extracted)")
+
+
+@app.post("/admin/throne/speak", summary="Issue a board speech from the throne (signed chain of command)", tags=["admin"])
+async def throne_speak(req: ThroneSpeechRequest, request: Request,
+                       _wallet: str = Depends(require_admin_access)):
+    """Compose + publish a board statement with an end-to-end verifiable chain of
+    custody. Each seat (CEO, endorsing soldiers, author, editor, artist,
+    wordpress) signs its own link with its wallet."""
+    try:
+        from agents.author_agent import AuthorAgent
+        author = await AuthorAgent.get_instance()
+        result = await author.publish_speech_from_throne(
+            req.statement, title=req.title, dek=req.dek, endorsers=req.endorsers,
+            status=req.status, slug=req.slug, illustrate=req.illustrate)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"throne_speak failed: {e}")
+    if result is None:
+        raise HTTPException(status_code=502, detail="publish failed (wordpress.agent down?)")
+    return {"status": "ok", "published": result}
+
+
+@app.post("/verify/provenance", summary="Verify a speech-from-the-throne chain of command", tags=["insight"])
+async def verify_provenance(req: ProvenanceVerifyRequest):
+    """Public: re-verify a provenance chain by recovering every link's signer and
+    confirming the hash linkage + registered identities. Pass either the chain
+    JSON or the published post HTML."""
+    try:
+        from agents import provenance_chain as pc
+        chain = req.chain
+        if chain is None and req.html:
+            chain = pc.extract_chain_from_html(req.html)
+        if not isinstance(chain, dict) or not chain.get("links"):
+            raise HTTPException(status_code=400, detail="no chain found (provide 'chain' or 'html')")
+        return {"status": "ok", "report": pc.verify_chain(chain)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"verify_provenance failed: {e}")
 
 
 # ── Bug-crushed milestone trigger ──────────────────────────────────

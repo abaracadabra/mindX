@@ -484,5 +484,65 @@
     "event_type": "shutdown",
     "timestamp": 1780331264.5717885,
     "state_file": "states/shutdown_1780331264.json"
+  },
+  {
+    "event_id": "startup_1780654697",
+    "event_type": "startup",
+    "timestamp": 1780654697.1444073,
+    "state_file": "states/startup_1780654697.json"
+  },
+  {
+    "event_id": "startup_1780654760",
+    "event_type": "startup",
+    "timestamp": 1780654760.7490077,
+    "state_file": "states/startup_1780654760.json"
+  },
+  {
+    "event_id": "startup_1780659905",
+    "event_type": "startup",
+    "timestamp": 1780659905.6505089,
+    "state_file": "states/startup_1780659905.json"
+  },
+  {
+    "event_id": "startup_1780659967",
+    "event_type": "startup",
+    "timestamp": 1780659967.6529381,
+    "state_file": "states/startup_1780659967.json"
+  },
+  {
+    "event_id": "startup_1780660019",
+    "event_type": "startup",
+    "timestamp": 1780660019.8346026,
+    "state_file": "states/startup_1780660019.json"
+  },
+  {
+    "event_id": "startup_1780660082",
+    "event_type": "startup",
+    "timestamp": 1780660082.8426826,
+    "state_file": "states/startup_1780660082.json"
+  },
+  {
+    "event_id": "startup_1780661934",
+    "event_type": "startup",
+    "timestamp": 1780661934.1100683,
+    "state_file": "states/startup_1780661934.json"
+  },
+  {
+    "event_id": "startup_1780661992",
+    "event_type": "startup",
+    "timestamp": 1780661992.9957516,
+    "state_file": "states/startup_1780661992.json"
+  },
+  {
+    "event_id": "startup_1780662175",
+    "event_type": "startup",
+    "timestamp": 1780662175.1104321,
+    "state_file": "states/startup_1780662175.json"
+  },
+  {
+    "event_id": "startup_1780662223",
+    "event_type": "startup",
+    "timestamp": 1780662223.4608603,
+    "state_file": "states/startup_1780662223.json"
   }
 ]

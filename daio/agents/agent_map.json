@@ -158,7 +158,7 @@
       ]
     },
     "ceo_agent_main": {
-      "role": "Board-Level Governance — strategic planning, resource allocation, shutdown authority",
+      "role": "Board-Level Governance — strategic planning, resource allocation, shutdown authority; delivery & timelines (time is the most valuable commodity); open-source distribution strategy (win the unwatched battlefield)",
       "group": "executive_board",
       "eth_address": "0x0e114A0daE2F4074B6D320a8AA52fFD429Bb6f19",
       "algo_address": null,
@@ -175,8 +175,11 @@
         "strategic_oversight",
         "resource_allocation",
         "emergency_halt",
-        "boardroom_chair"
-      ]
+        "boardroom_chair",
+        "delivery_and_timelines",
+        "open_source_distribution_strategy"
+      ],
+      "doctrine": "Ship on time; time is the most valuable commodity, the one thing no key recovers. Steer to the open, client-owned substrate (Linux/BSD model) and meet every committed timeline — a strategy not delivered is only an intention."
     },
     "sea_for_mastermind": {
       "role": "Strategic Evolution — 4-phase audit-driven self-improvement campaigns",
@@ -289,7 +292,7 @@
   },
   "soldiers": {
     "coo_operations": {
-      "role": "Chief Operating Officer — operational feasibility, timelines, resources",
+      "role": "Chief Operating Officer — operational feasibility, DELIVERY & meeting timelines (time is the most valuable commodity), resources",
       "group": "executive_board",
       "eth_address": "0x87de19D162Ff39de0487F4B8DEaEec84c3Dda112",
       "algo_address": null,
@@ -303,8 +306,10 @@
         "ministral-3:14b"
       ],
       "weight": 1.0,
+      "doctrine": "Delivery is the job. Time is the most valuable commodity — the one thing no key recovers — so every commitment ships to a clock; a deliverable not delivered on time is a debt, not a draft.",
       "capabilities": [
         "operational_assessment",
+        "delivery_and_timeline_management",
         "resource_planning",
         "timeline_analysis"
       ]
@@ -353,7 +358,7 @@
       ]
     },
     "ciso_security": {
-      "role": "Chief Information Security Officer — security posture, attack surface, zero trust (1.2x veto)",
+      "role": "Chief Information Security Officer — security THROUGH transparency (cypherpunk2048), attack surface, zero trust; open/auditable/client-side, the key extractable and sovereign (1.2x veto)",
       "group": "executive_board",
       "eth_address": "0xABCb28E8d1C1f37BDD5d1514a3899db826f98044",
       "algo_address": null,
@@ -371,11 +376,15 @@
       "capabilities": [
         "security_assessment",
         "threat_modeling",
-        "access_control"
-      ]
+        "access_control",
+        "operational_transparency",
+        "supply_chain_transparency",
+        "key_sovereignty_review"
+      ],
+      "doctrine": "Security comes from transparency, not obscurity. Prefer open (Apache-2.0/GPLv3/GNU), client-auditable code; the blackbox is the vault but its code is public; the key must be extractable and sovereign."
     },
     "clo_legal": {
-      "role": "Chief Legal Officer — legal risk, licensing, attribution (0.8x advisory)",
+      "role": "Chief Legal Officer — legal risk, open-source licensing strategy (Apache-2.0/GPLv3/GNU), client ownership, attribution (0.8x advisory)",
       "group": "executive_board",
       "eth_address": "0x34C733C33C7c00737b9aF98cf86F22d691ec72dF",
       "algo_address": null,
@@ -392,11 +401,14 @@
       "capabilities": [
         "legal_analysis",
         "compliance_review",
-        "licensing_assessment"
-      ]
+        "licensing_assessment",
+        "open_source_licensing_strategy",
+        "client_ownership_review"
+      ],
+      "doctrine": "Security software ships Apache-2.0 or GPLv3 with public source; the client already runs it, so grant ownership. GNU tools and the Tomb lineage; BANKON Vault is GNU; GNUVAULT is the build-your-own reference."
     },
     "cpo_product": {
-      "role": "Chief Product Officer — user value, market fit, scope impact across PYTHAI properties",
+      "role": "Chief Product Officer — user value, market fit, scope impact across PYTHAI properties; open-source distribution strategy (the Linux/BSD model — win the battlefield no one is watching)",
       "group": "executive_board",
       "eth_address": "0x0a8901744795D621Cfb8e66510D3AeAac48Fa2C3",
       "algo_address": null,
@@ -414,8 +426,10 @@
       "capabilities": [
         "product_assessment",
         "market_analysis",
-        "scope_evaluation"
-      ]
+        "scope_evaluation",
+        "open_source_distribution_strategy"
+      ],
+      "doctrine": "Reach compounds through ownership. Linux won by giving the OS away; BSD/Darwin won the iPhone; open source put handheld computing in the global population's hands. Be the open, client-owned substrate."
     },
     "cro_risk": {
       "role": "Chief Risk Officer — risk magnitude, reversibility, blast radius, cascading failures (1.2x veto)",

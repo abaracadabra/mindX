@@ -1,0 +1,40 @@
+# GNUVAULT — standalone, deployable on its own. Destined for github.com/gnugui.
+# SPDX-License-Identifier: GPL-3.0-or-later
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gnuvault"
+version = "1.0.0"
+description = "GNUVAULT — a transparent, client-side vault suite (gnuvault + mausoleum + GNUGUI). The build-your-own example for the cypherpunk2048 Operational Transparency standard."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "GPL-3.0-or-later" }
+authors = [{ name = "cypherpunk2048 / BANKON" }]
+keywords = ["vault", "cypherpunk2048", "operational-transparency", "tomb", "gnugui", "sovereign-key", "gpl", "encryption", "scrypt", "aes-gcm"]
+dependencies = ["cryptography>=41"]   # stdlib + one audited primitive set
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Security :: Cryptography",
+]
+
+[project.urls]
+Homepage = "https://github.com/gnugui/GNUVAULT"
+Standard = "https://github.com/cypherpunk2048"
+Repository = "https://github.com/gnugui/GNUVAULT"
+Changelog = "https://github.com/gnugui/GNUVAULT/blob/main/CHANGELOG.md"
+Issues = "https://github.com/gnugui/GNUVAULT/issues"
+
+[project.scripts]
+gnuvault = "cli:main"
+gnugui = "gnugui:main"
+
+[tool.setuptools]
+py-modules = ["gnuvault", "overseer", "airgap", "mausoleum", "gnugui", "cli", "test_gnuvault"]

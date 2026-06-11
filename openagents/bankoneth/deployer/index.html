@@ -23,7 +23,14 @@
       radial-gradient(circle at 30% 10%,rgba(139,92,246,.16),transparent 45%),
       radial-gradient(circle at 80% 90%,rgba(86,204,242,.08),transparent 50%),var(--bg);
       color:var(--text);min-height:100vh;line-height:1.5}
-  .wrap{max-width:1040px;margin:0 auto;padding:28px 20px 60px}
+  .wrap{max-width:1040px;margin:0 auto;padding:28px 20px 60px;position:relative;z-index:1}
+  /* DeltaVerse fabric — the changing story, woven behind the deployer */
+  #dv-fabric{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+  .id .dvrole{font-weight:700;text-transform:lowercase}
+  .id .dvrole.overlord{color:var(--gold)} .id .dvrole.member{color:#2dd4bf}
+  .id .dvrole.public{color:var(--dim)}
+  .flow .step.handoff b{color:#3fb950}
+  #dv-ticker{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:2;font-family:var(--mono);font-size:10px;font-style:italic;color:var(--dim);max-width:80vw;text-align:center;transition:opacity .5s}
   header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:22px}
   .brand{font-family:var(--mono);font-weight:700;font-size:20px;letter-spacing:2px}
   .brand b{color:var(--accent)}
@@ -84,6 +91,8 @@
 </style>
 </head>
 <body>
+<canvas id="dv-fabric"></canvas>
+<div id="dv-ticker"></div>
 <div class="wrap">
   <header>
     <span class="brand">BANKON <b>Deployer</b></span>
@@ -100,6 +109,7 @@
   <div class="flow">
     <span class="step"><b>DEPLOY</b> arm</span> →
     <span class="step"><b>LAUNCH</b> fire from value (token / signature)</span> →
+    <span class="step handoff"><b>HANDOFF</b> → bankon.eth</span> →
     <span class="step"><b>RETURN</b> blockchain tx</span>
   </div>
 
@@ -140,6 +150,8 @@
     .exportrow { margin-top:1em; text-align:right; }
   </style>
 </div>
+<script src="deltaverse.js"></script>
 <script src="deployer.js"></script>
+<script src="deltaverse-deployer.js"></script>
 </body>
 </html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SoundWave · SND / WAV — voiceprint dApp</title>
+  <link rel="stylesheet" href="styled.css" />
+</head>
+<body>
+  <!-- DeltaVerse participant field: each registered voiceprint is a star -->
+  <canvas id="deltaverse"></canvas>
+
+  <header class="topbar">
+    <div class="brand">◢◤ <b>SoundWave</b> <span class="ticker">SND / WAV</span></div>
+    <div class="conn">
+      <select id="contract-select" title="contract (swap abi.js)"></select>
+      <span id="chain" class="chip">no chain</span>
+      <button id="connect">Connect wallet</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>The voice, on chain.</h1>
+      <p>
+        SoundWave (<b>SND</b> / <b>WAV</b>) is a capped ERC-20 — one quadrillion tokens, never
+        infinite — carrying <b>forensic voiceprints measured to 18 decimals</b> by the
+        <a href="../../voaice">voaice</a> SCIENTIFIC tool. Register a voiceprint, mint WAV.
+      </p>
+      <div id="supply" class="supply"></div>
+    </section>
+
+    <!-- Voiceprint registration (the headline action) -->
+    <section class="card" id="voiceprint-card">
+      <h2>⊙ Register a forensic voiceprint</h2>
+      <p class="hint">Six acoustic measures, each <code>value × 1e18</code>, + a sha256 of the
+        canonical payload. Paste a measurement from voaice/Scientific, or use the sample.</p>
+      <div id="voiceprint-form"></div>
+    </section>
+
+    <!-- Generic ABI-driven interaction: every function from abi.js, rendered automatically -->
+    <section class="card">
+      <h2>⌗ Contract surface <span class="hint" id="surface-meta"></span></h2>
+      <div class="cols">
+        <div><h3>reads</h3><div id="reads"></div></div>
+        <div><h3>writes</h3><div id="writes"></div></div>
+      </div>
+    </section>
+
+    <div id="log" class="log"></div>
+  </main>
+
+  <footer>
+    <span>◢◤ AgenticPlace · rage.pythai.net</span>
+    <span class="cp2048">cypherpunk2048 standard — crypto-agile, PQ-ready (Tier-A)</span>
+  </footer>
+
+  <script type="module" src="dapp.js"></script>
+</body>
+</html>

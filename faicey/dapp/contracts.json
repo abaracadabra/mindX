@@ -1,0 +1,15 @@
+{
+  "generatedFrom": "forge out/",
+  "contracts": [
+    {
+      "name": "SoundWaveToken",
+      "abiModule": "abis/SoundWaveToken.abi.js",
+      "deploymentKey": "SoundWaveToken"
+    },
+    {
+      "name": "JaimlaVoiceNFT",
+      "abiModule": "abis/JaimlaVoiceNFT.abi.js",
+      "deploymentKey": "JaimlaVoiceNFT"
+    }
+  ]
+}

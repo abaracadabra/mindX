@@ -132,5 +132,28 @@
         "type": "uint256"
       }
     ]
+  },
+  {
+    "id": "renounce-overlord-to-daio",
+    "label": "Renounce overlord → DAIO (devolution)",
+    "blurb": "DEVOLUTION. The bankon.eth overlord renounces DEFAULT_ADMIN_ROLE here. Full handover = also renounce on the PaymentRouter AND transfer the bankon.eth name (NameWrapper safeTransferFrom) to the DAIO Governor — after which the DeltaVerse recognizes DAIO as overlord. One-way. Confirm with the overlord wallet.",
+    "contract": "BankonSubnameRegistrar",
+    "deploymentKey": "subnameRegistrar",
+    "fn": "renounceRole",
+    "selector": "0x36568abe",
+    "args": [
+      {
+        "name": "role",
+        "source": "literal",
+        "value": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "type": "bytes32"
+      },
+      {
+        "name": "callerConfirmation",
+        "source": "wallet",
+        "placeholder": "the overlord wallet (auto)",
+        "type": "address"
+      }
+    ]
   }
 ]

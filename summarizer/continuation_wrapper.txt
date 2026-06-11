@@ -1,0 +1,13 @@
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+[ + when a transcript path is known: ]
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: <PATH_TO_TRANSCRIPT>
+
+[ + when recent messages are kept un-summarized: ]
+Recent messages are preserved verbatim.
+
+[ + when the conversation had a live REPL/VM (cold compaction): ]
+Your REPL VM state has been cleared as part of this compaction. Variables defined in REPL calls before this point are no longer accessible — redefine any you still need.
+
+[ + when the compaction is automatic (not user-invoked /compact), this resume directive is appended: ]
+Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.

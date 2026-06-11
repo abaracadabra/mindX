@@ -16,6 +16,7 @@ Sandbox Configuration:
 This ensures integration with the update request system and pattern learning
 from simple_coder.py operations.
 """
+import ast
 import asyncio
 import json
 import shlex
@@ -116,6 +117,7 @@ class SimpleCoderAgent(BaseTool):
             "analyze_project": self._analyze_project,
             "suggest_improvements": self._suggest_improvements,
             "create_documentation": self._create_documentation,
+            "audit_package": self._audit_package,
             
             # Learning and adaptation
             "learn_from_execution": self._learn_from_execution,
@@ -343,6 +345,134 @@ class SimpleCoderAgent(BaseTool):
             return {"status": "SUCCESS", "message": "File deleted successfully."}
         except Exception as e:
             return {"status": "ERROR", "message": f"Error deleting file: {e}"}
+
+    # ── package audit (inspect → extract → static risk scan) ─────────────────
+    # Risk taxonomy: a static, no-exec read of every extracted *.py via ``ast``,
+    # plus a text read of declarative members (.agent / .container / manifests).
+    # This is the evidence SEA weighs in evaluate_external_package_adoption().
+    _RISK_IMPORTS: Dict[str, str] = {
+        "subprocess": "process_exec", "socket": "network", "urllib": "network",
+        "requests": "network", "http": "network", "ftplib": "network",
+        "ctypes": "native_code", "pickle": "deserialization", "marshal": "deserialization",
+    }
+    _RISK_CALLS: Dict[str, str] = {
+        "eval": "dynamic_exec", "exec": "dynamic_exec", "compile": "dynamic_exec",
+        "__import__": "dynamic_import",
+    }
+
+    def _scan_python_source(self, name: str, source: str) -> Tuple[List[str], List[Dict[str, Any]]]:
+        """AST static scan of one module. Returns (imports, risk_findings)."""
+        imports: List[str] = []
+        findings: List[Dict[str, Any]] = []
+        try:
+            tree = ast.parse(source, filename=name)
+        except SyntaxError as exc:
+            findings.append({"severity": "high", "file": name, "kind": "syntax_error", "detail": str(exc)})
+            return imports, findings
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    top = alias.name.split(".")[0]
+                    imports.append(alias.name)
+                    if top in self._RISK_IMPORTS:
+                        findings.append({"severity": "medium", "file": name,
+                                         "kind": self._RISK_IMPORTS[top], "detail": f"import {alias.name}"})
+            elif isinstance(node, ast.ImportFrom):
+                top = (node.module or "").split(".")[0]
+                imports.append(node.module or "")
+                if top in self._RISK_IMPORTS:
+                    findings.append({"severity": "medium", "file": name,
+                                     "kind": self._RISK_IMPORTS[top], "detail": f"from {node.module} import ..."})
+            elif isinstance(node, ast.Call):
+                fn = node.func
+                fname = fn.id if isinstance(fn, ast.Name) else (fn.attr if isinstance(fn, ast.Attribute) else None)
+                if fname in self._RISK_CALLS:
+                    findings.append({"severity": "high", "file": name,
+                                     "kind": self._RISK_CALLS[fname], "detail": f"{fname}() call"})
+                if isinstance(fn, ast.Attribute) and fn.attr == "system" and isinstance(fn.value, ast.Name) and fn.value.id == "os":
+                    findings.append({"severity": "high", "file": name,
+                                     "kind": "process_exec", "detail": "os.system() call"})
+        return sorted(set(i for i in imports if i)), findings
+
+    async def _audit_package(self, archive: str = "projects/LLMFIT.zip",
+                             extract_to: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+        """Safely inspect → extract → statically audit a sandboxed package.
+
+        Produces the ``audit_summary`` that SEA consumes to decide adopt/reject.
+        Never executes any extracted code; the .py scan is ast-only.
+        """
+        sb = self._sandbox
+        stem = Path(archive).stem
+        dest = extract_to or f"projects/{stem}_extracted"
+
+        inspect = sb.inspect_zip(archive)
+        if inspect.get("status") != "SUCCESS":
+            return {"status": "ERROR", "stage": "inspect", "message": "archive not a valid zip",
+                    "inspect": inspect}
+        blocking = [i for i in inspect.get("potential_issues", [])
+                    if i != "none" and i.split(":")[0] in
+                    ("path_traversal", "too_many_members", "decompressed_too_large", "suspicious_ratio", "corrupt_member")]
+        if blocking:
+            return {"status": "ERROR", "stage": "inspect", "message": "archive rejected by safety checks",
+                    "blocking_issues": blocking, "inspect": inspect}
+
+        extract = await sb.extract_zip(archive, dest)
+        if extract.get("status") != "SUCCESS":
+            return {"status": "ERROR", "stage": "extract", "message": "extraction failed", "extract": extract}
+
+        files: List[Dict[str, Any]] = []
+        all_imports: List[str] = []
+        risk_findings: List[Dict[str, Any]] = []
+        licenses: set = set()
+        dependency_hints: set = set()
+        boundary_notes: List[str] = []
+
+        for member in extract.get("extracted_names", []):
+            rel = f"{dest}/{member}"
+            try:
+                text = sb.read_text(rel)
+            except SandboxViolation as exc:
+                files.append({"name": member, "error": str(exc)})
+                continue
+            entry: Dict[str, Any] = {"name": member, "bytes": len(text.encode("utf-8", "replace"))}
+            if member.endswith(".py"):
+                imps, finds = self._scan_python_source(member, text)
+                entry["imports"] = imps
+                entry["risk_findings"] = finds
+                all_imports.extend(imps)
+                risk_findings.extend(finds)
+            # license + dependency + boundary signals from any text member
+            for line in text.splitlines():
+                low = line.lower()
+                if "spdx-license-identifier" in low or "\"license\"" in low or "license:" in low:
+                    licenses.add(line.strip().lstrip("#").strip())
+                if any(tok in low for tok in ("pip install", "uv tool install", "requirements", "image=", '"repo"')):
+                    dependency_hints.add(line.strip().lstrip("#").strip())
+                if any(tok in low for tok in ("never vendored", "invoked, never", "fail-open", "fail_open", "loopback", "127.0.0.1")):
+                    boundary_notes.append(line.strip().lstrip("#").strip())
+            files.append(entry)
+
+        sev_counts = {"high": 0, "medium": 0, "low": 0}
+        for f in risk_findings:
+            sev_counts[f.get("severity", "low")] = sev_counts.get(f.get("severity", "low"), 0) + 1
+        aggregate = "high" if sev_counts["high"] else ("medium" if sev_counts["medium"] else "low")
+
+        audit_summary = {
+            "package_name": stem.lower(),
+            "archive": archive,
+            "extract_path": dest,
+            "member_count": inspect.get("member_count"),
+            "files": files,
+            "imports": sorted(set(all_imports)),
+            "risk_findings": risk_findings,
+            "severity_counts": sev_counts,
+            "aggregate_risk": aggregate,
+            "declared_license": sorted(licenses) or ["undeclared"],
+            "declared_dependencies": sorted(dependency_hints) or ["none_detected"],
+            "external_boundary_notes": sorted(set(boundary_notes)),
+            "inspect": inspect,
+        }
+        return {"status": "SUCCESS", "audit_summary": audit_summary}
 
     async def execute(self, operation: str = None, **kwargs) -> Dict[str, Any]:
         """Enhanced execute method with intelligent routing."""

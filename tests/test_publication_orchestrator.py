@@ -588,7 +588,8 @@ def test_get_health_reports_orchestrator_state(tmp_path):
     assert h["milestone_status_default"] == "publish"
     assert h["book_status_default"]      == "draft"
     assert h["journal_status_default"]   == "publish"
-    assert set(h["exempt_from_min_gap"]) == {"sea_milestone", "book_edition", "journal_lunar_digest"}
+    assert set(h["exempt_from_min_gap"]) == {
+        "sea_milestone", "book_edition", "journal_lunar_digest", "protocol_series"}
     assert h["last_publish_at"]    is None
 
 

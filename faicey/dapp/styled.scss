@@ -1,0 +1,74 @@
+// styled.scss — source for styled.css. Compile: sass styled.scss styled.css
+// cypherpunk2048 palette: WAV cyan + SND magenta on deep space.
+
+$bg:   #05060a;
+$ink:  #cdd6e6;
+$wav:  #19d3ff;
+$snd:  #f0387a;
+$line: #1b2740;
+$card: rgba(12, 18, 32, 0.72);
+
+@mixin field { position: fixed; inset: 0; z-index: 0; }
+
+:root {
+  --bg: #{$bg}; --ink: #{$ink}; --wav: #{$wav}; --snd: #{$snd}; --line: #{$line};
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  color: $ink; background: $bg; overflow-x: hidden;
+}
+
+#deltaverse { @include field; display: block; }
+header, main, footer { position: relative; z-index: 1; }
+
+.topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 20px; border-bottom: 1px solid $line;
+  background: linear-gradient(180deg, rgba(5,6,10,.9), rgba(5,6,10,.3));
+  backdrop-filter: blur(4px);
+
+  .brand { font-size: 18px; .ticker { color: $wav; margin-left: 6px; font-size: 12px; } }
+  .conn { display: flex; gap: 8px; align-items: center; }
+}
+
+button, select, input {
+  font-family: inherit; font-size: 12px; color: $ink;
+  background: #0a1120; border: 1px solid $line; border-radius: 6px; padding: 6px 10px;
+}
+button { cursor: pointer; border-color: #2a3c5e; &:hover { border-color: $wav; color: #fff; } }
+
+.hero {
+  h1 {
+    font-size: 2.4em; margin: .3em 0 .1em;
+    background: linear-gradient(90deg, $snd, $wav);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  p { color: #9fb0c8; max-width: 70ch; line-height: 1.5; a { color: $wav; } }
+}
+
+.card {
+  margin-top: 22px; padding: 18px; border: 1px solid $line; border-radius: 12px; background: $card;
+  h2 { margin: 0 0 6px; color: $wav; font-size: 1.15em; }
+  .hint { color: #6f86a8; font-size: 11px; margin: 0 0 12px; }
+}
+
+.vp-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+
+.fn {
+  border: 1px solid $line; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px;
+  .fn-name { font-weight: bold; color: #dfe7f4; .sig { color: #5d7398; font-weight: normal; font-size: 11px; } }
+  input { display: block; width: 100%; margin: 4px 0; }
+  .out { font-size: 11px; color: #8fd; white-space: pre-wrap; word-break: break-all; }
+}
+
+footer {
+  display: flex; justify-content: space-between; padding: 14px 20px;
+  border-top: 1px solid $line; font-size: 11px; color: #6b7d9c; background: rgba(5,6,10,.8);
+  .cp2048 { color: $snd; }
+}
+
+@media (max-width: 720px) { .cols, .vp-grid { grid-template-columns: 1fr; } }

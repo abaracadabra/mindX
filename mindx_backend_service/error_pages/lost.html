@@ -47,6 +47,17 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;cursor:cross
 .dv-msg{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:3;font-size:9px;color:#8b949e;font-family:'SF Mono',monospace;font-style:italic;opacity:.6;text-align:center;max-width:80vw;transition:opacity .5s,color .5s}
 .dv-perc{position:fixed;bottom:8px;right:8px;font-size:8px;color:#3d424d;z-index:3;font-family:'SF Mono',monospace}
 .found-count{position:fixed;bottom:8px;left:8px;font-size:8px;color:#3d424d;z-index:3;font-family:'SF Mono',monospace}
+.homewish{margin:14px 0 4px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.wishline{font-size:11px;color:#9aa4b2;font-style:italic;max-width:460px;line-height:1.5}
+.homerow{display:flex;gap:10px}
+.home-btn{padding:8px 18px;border-radius:999px;background:linear-gradient(135deg,#3fb950,#2ea043);color:#04140a;font-weight:700;font-size:11px;text-decoration:none}
+.home-btn:hover{box-shadow:0 0 16px rgba(63,185,80,.3)}
+.wish-btn{padding:8px 18px;border-radius:999px;border:1px solid rgba(210,168,255,.4);background:rgba(210,168,255,.08);color:#d2a8ff;font-weight:700;font-size:11px;cursor:pointer}
+.wish-btn:hover{border-color:#d2a8ff;box-shadow:0 0 16px rgba(210,168,255,.2)}
+.matches{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;font-size:9px;color:#6e7681;align-items:center}
+.matches a{padding:3px 9px;border:1px solid rgba(88,166,255,.2);border-radius:3px;color:#58a6ff;text-decoration:none}
+.matches a:hover{border-color:#58a6ff}
+.matches a.locked{opacity:.45}
 </style>
 </head>
 <body>
@@ -55,7 +66,16 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;cursor:cross
   <div class="code">404</div>
   <div class="logo">mind<b>X</b></div>
   <div class="path-display" id="epPath"></div>
-  <div class="thought">this node doesn't exist in the knowledge graph. the path was searched but no match was found. explore the graph — or read the thesis that explains how this system builds itself.</div>
+  <div class="thought">this node doesn't exist in the knowledge graph — yet. a lost participant is not an error; it is an opportunity. the field will guide you home, or grant your wish if your privilege allows.</div>
+
+  <div class="homewish" id="homewish">
+    <span class="wishline" id="wishline">the path you sought is being matched against the field…</span>
+    <div class="homerow">
+      <a class="home-btn" href="/">⌂ take me home</a>
+      <button class="wish-btn" id="wishBtn">✦ grant my wish</button>
+    </div>
+    <div class="matches" id="matches"></div>
+  </div>
 
   <div class="nav-links">
     <a href="/">dashboard</a>
@@ -237,6 +257,58 @@ function draw(t){
   requestAnimationFrame(draw);
 }
 requestAnimationFrame(draw);
+
+// ── Lost participant → home / grant wish (privilege-constrained) ──
+// The star field above IS the DeltaVerse fabric (now generalized into the
+// engine as DeltaVerse.Fabric). Here the lost participant is brought home or
+// has their wish granted — constrained only by privilege; payment is one path.
+(function(){
+  var path = location.pathname, rooms = [];
+  function score(req, route){
+    if(!route) return 0;
+    if(req===route) return 100;
+    if(req.indexOf(route)===0 || route.indexOf(req)===0) return 60;
+    var ra=req.split('/').filter(Boolean), rb=route.split('/').filter(Boolean);
+    var common=ra.filter(function(x){return rb.indexOf(x)>=0;}).length;
+    return common*20;
+  }
+  fetch('/deltaverse/bubblerooms').then(function(r){return r.json();}).then(function(d){
+    rooms = d.rooms||[];
+    var scored = rooms.map(function(rm){return {rm:rm,s:score(path,rm.route)};})
+                      .sort(function(a,b){return b.s-a.s;}).slice(0,4);
+    var mc=document.getElementById('matches'); if(!mc) return;
+    mc.innerHTML='nearest nodes: ';
+    scored.forEach(function(o){
+      var a=document.createElement('a'); a.textContent=o.rm.name;
+      a.className=o.rm.open?'':'locked';
+      if(o.rm.open) a.href=o.rm.route; else a.title='requires '+o.rm.min_role+' privilege';
+      mc.appendChild(a);
+    });
+    document.getElementById('wishline').textContent='your wish: reach “'+path+'”. ask the field to grant it.';
+  }).catch(function(){
+    document.getElementById('wishline').textContent='a lost participant is an opportunity. take me home, or read the thesis.';
+  });
+  document.getElementById('wishBtn').addEventListener('click', function(){
+    var best=null, bs=-1;
+    rooms.forEach(function(rm){ var s=score(path,rm.route); if(s>bs){bs=s;best=rm;} });
+    var needed = best ? best.min_role : 'public';
+    fetch('/deltaverse/wish',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({wish:path,needed:needed,action:'navigate'})})
+      .then(function(r){return r.json();}).then(function(w){
+        var wl=document.getElementById('wishline');
+        if(w.granted){
+          wl.innerHTML='✦ wish granted — '+(best
+            ? '<a style="color:#3fb950" href="'+best.route+'">enter '+best.name+' →</a>'
+            : '<a style="color:#3fb950" href="/">go home →</a>');
+        } else {
+          wl.innerHTML='this path needs <b style="color:#d2a8ff">'+w.needed+'</b> privilege. '
+            +(w.paths||[]).join(' · ')+'. <a style="color:#58a6ff" href="/login?from='+encodeURIComponent(path)+'">connect →</a>';
+        }
+      }).catch(function(){
+        document.getElementById('wishline').innerHTML='the field is quiet — <a style="color:#3fb950" href="/">take me home</a> instead.';
+      });
+  });
+})();
 </script>
 </body>
 </html>

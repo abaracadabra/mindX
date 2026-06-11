@@ -12,6 +12,7 @@
  */
 
 export { VoiceAnalyzer } from './VoiceAnalyzer.js';
+export { Scientific, toFixed18, fromFixed18 } from './Scientific.js';
 export {
   Oscilloscope,
   waveformPath,

@@ -1,15 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url=/login">
-    <title>mindX - Redirecting...</title>
-    <script>
-        // Immediate redirect to login page
-        window.location.href = '/login';
-    </script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mindX — home</title>
+<meta name="description" content="mindX — an autonomous Darwin-Gödel Machine. A fabric for a changing story, woven from participant interaction. Enter the field.">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden}
+  body{font-family:'Inter','SF Pro Text',system-ui,sans-serif;background:#050810;color:#cdd5e0}
+  canvas#fabric{position:fixed;inset:0;width:100%;height:100%;z-index:0;cursor:crosshair}
+  .home{position:relative;z-index:1;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;pointer-events:none}
+  .home *{pointer-events:auto}
+  .word{font-size:13px;letter-spacing:8px;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:8px}
+  h1{font-family:'SF Mono','Fira Code',monospace;font-size:72px;line-height:1;background:linear-gradient(135deg,#58a6ff,#d2a8ff 50%,#3fb950);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px;user-select:none}
+  .tag{font-size:15px;color:#9aa4b2;max-width:560px;line-height:1.6;margin-bottom:8px}
+  .tag em{color:#56CCF2;font-style:normal}
+  .who{font-size:11px;color:#6e7681;font-family:'SF Mono',monospace;margin-bottom:22px;min-height:14px}
+  .doors{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:680px;margin-bottom:22px}
+  .doors a{padding:7px 14px;border:1px solid rgba(88,166,255,.18);border-radius:999px;color:#9ecbff;font-size:12px;text-decoration:none;background:rgba(88,166,255,.05);transition:all .25s}
+  .doors a:hover{border-color:#58a6ff;box-shadow:0 0 16px rgba(88,166,255,.15);transform:translateY(-2px)}
+  .doors a.locked{opacity:.4;cursor:not-allowed}
+  .doors a.realm{color:#ffd166;border-color:rgba(255,209,102,.3);background:rgba(255,209,102,.05)}
+  .enter{display:inline-flex;gap:10px;align-items:center;padding:13px 30px;border-radius:999px;border:none;background:linear-gradient(135deg,#8b5cf6,#5c2dc4);color:#fff;font-size:15px;font-weight:600;text-decoration:none;letter-spacing:.5px;box-shadow:0 8px 28px rgba(139,92,246,.35)}
+  .enter:hover{box-shadow:0 12px 36px rgba(139,92,246,.5)}
+  .ticker{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:3;font-size:11px;color:#8b949e;font-family:'SF Mono',monospace;font-style:italic;max-width:80vw;text-align:center;transition:opacity .5s}
+</style>
 </head>
 <body>
-    <p>Redirecting to login page... <a href="/login">Click here if not redirected</a></p>
+<canvas id="fabric"></canvas>
+<div class="home">
+  <div class="word">an autonomous Darwin-Gödel machine</div>
+  <h1>mind<span style="color:#58a6ff">X</span></h1>
+  <div class="tag">A fabric for a changing story, woven from participant interaction. <em>You arrived. Become a participant.</em></div>
+  <div class="who" id="who"></div>
+  <div class="doors" id="doors"></div>
+  <a class="enter" href="/login">Enter the field →</a>
+</div>
+<div class="ticker" id="ticker"></div>
+
+<script src="/deltaverse.js"></script>
+<script>
+(function(){
+  var fabric=null;
+  if (window.DeltaVerse && DeltaVerse.Fabric) {
+    fabric = new DeltaVerse.Fabric({ canvas:'#fabric',
+      onQuote:function(text,label){ var t=document.getElementById('ticker'); if(t){ t.style.opacity=0; setTimeout(function(){ t.textContent='“'+text+'” — '+label; t.style.opacity=.85; },300);} } });
+    var addr = sessionStorage.getItem('mindx_address');
+    if (addr) {
+      fetch('/deltaverse/recognize?id='+encodeURIComponent(addr)).then(function(r){return r.json();}).then(function(d){
+        var role=(d&&d.role)||'public';
+        fabric.recognize(addr, { role: role });
+        var w=document.getElementById('who'); if(w) w.textContent='the field recognizes you · '+((d.identity&&d.identity.label)||addr)+' · '+role;
+      }).catch(function(){ fabric.recognize(addr, {role:'public'}); });
+    }
+    fabric.start();
+  }
+  // Doorways — annotated by what the viewer may enter (privilege-aware).
+  var token = sessionStorage.getItem('mindx_overlord_token')||'';
+  fetch('/deltaverse/bubblerooms', { headers: token?{Authorization:'Bearer '+token}:{} })
+    .then(function(r){return r.json();}).then(function(d){
+      var box=document.getElementById('doors'); if(!box) return; box.innerHTML='';
+      (d.rooms||[]).forEach(function(r){
+        var a=document.createElement('a'); a.textContent=r.name;
+        a.className=(r.id==='sanctum'?'realm ':'')+(r.open?'':'locked');
+        if(r.open) a.href=r.route; else a.title='requires '+r.min_role+' privilege';
+        box.appendChild(a);
+      });
+    }).catch(function(){
+      var box=document.getElementById('doors');
+      if(box) box.innerHTML='<a href="/docs.html">Documentation</a><a href="/journal">Journal</a><a href="/dojo/standings">Dojo</a>';
+    });
+})();
+</script>
 </body>
 </html>
