@@ -47,6 +47,12 @@ DEFAULT_TEMPLATE = "qwen3_8b_sft_lora"  # mindXtrain quickstart LoRA template (G
 CPU_BASE_MODEL = "Qwen/Qwen2.5-0.5B"   # ~0.5B — fits the 6GB recipe / 8GB VPS
 CPU_BASE_OLLAMA_TAG = "qwen3:0.6b"     # FROM line for the promoted Modelfile
 CPU_MAX_MINUTES = 20                    # default CPU train budget (bounded)
+# mindXtrain ships purpose-built mindX CPU recipes (`mindxtrain init --list`).
+# The smoke recipe (SmolLM2-135M, ~1.2GB RSS, 10-30min) closes the full
+# dream-corpus->SFT->checkpoint->imprint loop on a CPU box; _cpu_real is the
+# qwen3-1.5B production run. Its mindx_dreams adapter reads data/memory directly.
+CPU_RECIPE_SMOKE = "mindx_fallback_qwen3_1_5b_cpu_smoke"
+CPU_RECIPE_REAL = "mindx_fallback_qwen3_1_5b_cpu_real"
 
 # --------------------------------------------------------------------------- #
 # Isolation contract (operator decision, 2026-06-04)                          #
@@ -104,7 +110,10 @@ __all__ = [
     "curate",
     "forge",
     "ascend",
+    "ascend_recipe",
     "bridge",
-    "dcoach",
+    "imprint",
     "promote",
+    "CPU_RECIPE_SMOKE",
+    "CPU_RECIPE_REAL",
 ]

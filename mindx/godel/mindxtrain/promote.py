@@ -51,25 +51,41 @@ async def promote_to_ollama(
     *,
     served_name: Optional[str] = None,
     base_ollama_tag: str = CPU_BASE_OLLAMA_TAG,
+    config_name: str = "run.yaml",
+    work_dir: Optional[str] = None,
+    register_fallback: bool = False,
 ) -> dict:
-    """Create an Ollama model from the trained LoRA. Returns {ok, model_name, ...}."""
-    model_name = served_name or f"mindx-gen{generation}"
+    """Create an Ollama model from the trained LoRA. Returns {ok, model_name, ...}.
 
-    # 1. Preferred: mindXtrain's own pipeline, if a verb exposes a modelfile/
-    #    ollama emit. Probe flags rather than guess.
-    for verb in ("quantize", "serve", "deploy"):
-        if verb in (cap.verbs or ()):
-            flags = _bridge.discover_verb_flags(verb, cap)
-            if any(f in flags for f in ("--ollama", "--modelfile", "--gguf")):
-                args = [verb]
-                if "--ollama" in flags:
-                    args += ["--ollama", model_name]
-                res = _bridge.run_cli(args, cap=cap, cwd=Path(weights_path).parent, timeout=1800)
-                if res.get("ok"):
-                    return {"ok": True, "model_name": model_name, "via": f"mindxtrain {verb}",
-                            "stdout": (res.get("stdout") or "")[:400]}
-                logger.info("mindXtrain %s ollama path failed, falling back: %s", verb, res.get("stderr", "")[:200])
-                break
+    Preferred path is mindXtrain v1.0.0's first-class `serve --to ollama` (it
+    builds the Modelfile, runs `ollama create`, and optionally registers the
+    model with the mindX API as a fallback). Confirmed flags (2026-06-13):
+    `serve <config> -c <adapter> --to ollama --tag <tag> [--register-as-fallback]`.
+    Falls back to a hand-built Modelfile + `ollama create` only if serve is
+    absent.
+    """
+    model_name = served_name or f"mindx-gen{generation}"
+    cwd = Path(work_dir) if work_dir else Path(weights_path).parent
+
+    # 1. Preferred: mindXtrain serve --to ollama (does Modelfile + ollama create
+    #    + optional mindX registration in one step).
+    if "serve" in (cap.verbs or ()):
+        flags = _bridge.discover_verb_flags("serve", cap)
+        if "--to" in flags:
+            args = ["serve", config_name, "--to", "ollama"]
+            if "--checkpoint" in flags or "-c" in flags:
+                args += ["-c", weights_path]
+            if "--tag" in flags:
+                args += ["--tag", model_name]
+            if register_fallback and "--register-as-fallback" in flags:
+                args += ["--register-as-fallback"]
+            res = _bridge.run_cli(args, cap=cap, cwd=cwd, timeout=1800)
+            if res.get("ok"):
+                return {"ok": True, "model_name": model_name, "via": "mindxtrain serve --to ollama",
+                        "registered_fallback": register_fallback,
+                        "stdout": (res.get("stdout") or "")[:400]}
+            logger.info("mindXtrain serve --to ollama failed, falling back: %s",
+                        (res.get("stderr") or "")[:200])
 
     # 2. Fallback: build a Modelfile + `ollama create`.
     if not shutil.which("ollama"):

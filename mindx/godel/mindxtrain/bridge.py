@@ -91,6 +91,20 @@ def _detect_rocm() -> bool:
     return Path("/opt/rocm").exists()
 
 
+def _find_uv() -> Optional[str]:
+    """Locate `uv` even when it's not on the service PATH (it installs to
+    ~/.local/bin, which systemd units rarely inherit)."""
+    found = shutil.which("uv")
+    if found:
+        return found
+    for cand in (Path.home() / ".local/bin/uv",
+                 Path.home() / ".cargo/bin/uv",
+                 Path("/usr/local/bin/uv")):
+        if cand.exists():
+            return str(cand)
+    return None
+
+
 def discover(home: Optional[Path] = None) -> Capability:
     home = Path(home) if home else None
     if home is None:
@@ -107,7 +121,8 @@ def discover(home: Optional[Path] = None) -> Capability:
     installed = False
     if home and (home / "pyproject.toml").exists():
         installed = True
-        cli = "uv run mindxtrain" if shutil.which("uv") else None
+        uv = _find_uv()
+        cli = f"{uv} run mindxtrain" if uv else None
     if cli is None and shutil.which("mindxtrain"):
         installed = True
         cli = "mindxtrain"

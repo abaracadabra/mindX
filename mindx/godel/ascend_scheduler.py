@@ -29,9 +29,9 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 from .mindxtrain import (autonomous_train_enabled, is_enabled,
-                         ASCEND_COOLDOWN_S, CPU_BASE_MODEL, CPU_MAX_MINUTES)
+                         ASCEND_COOLDOWN_S, CPU_RECIPE_REAL)
 from .mindxtrain import bridge as _bridge
-from .mindxtrain.ascend import ascend, read_watermark, write_watermark
+from .mindxtrain.ascend import ascend_recipe, read_watermark, write_watermark
 
 try:
     from utils.config import PROJECT_ROOT
@@ -40,7 +40,7 @@ except Exception:  # pragma: no cover
 
 logger = logging.getLogger(__name__)
 
-DREAMS_ROOT = PROJECT_ROOT / "data" / "memory" / "ltm"
+DATA_MEMORY = PROJECT_ROOT / "data" / "memory"   # mindx_dreams adapter reads here
 ASCEND_WORK = PROJECT_ROOT / "data" / "godel" / "ascend"
 ASCEND_LOG = PROJECT_ROOT / "data" / "logs" / "ascend_log.jsonl"
 
@@ -93,20 +93,17 @@ async def run_ascent_if_due(self_eval: Optional[dict] = None, *, sea=None) -> Op
         return None
 
     generation = _next_generation()
-    since_ts = read_watermark(ASCEND_WORK)
-    logger.info("ascend_scheduler: autonomous ascent generation %d (since=%s)",
-                generation, since_ts)
+    logger.info("ascend_scheduler: autonomous ascent generation %d", generation)
     try:
-        result = await ascend(
-            dreams_dir=DREAMS_ROOT,
+        result = await ascend_recipe(
             work_dir=ASCEND_WORK / f"gen{generation}",
             generation=generation,
-            since_ts=since_ts,
-            base_model=CPU_BASE_MODEL,
-            cpu_train=True,
-            max_minutes=CPU_MAX_MINUTES,
-            use_dcoach=True,
+            data_memory_dir=DATA_MEMORY,
+            recipe=CPU_RECIPE_REAL,
+            cpu_percent=20, cpu_nice=19,
+            use_imprint=True,
             promote=True,
+            register_fallback=False,   # served but not auto-routed to production
         )
     except Exception as e:  # pragma: no cover - defensive
         logger.warning("ascend_scheduler: ascent failed: %s", e)

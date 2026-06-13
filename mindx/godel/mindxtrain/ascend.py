@@ -161,15 +161,15 @@ async def ascend(
         result.stage = "trained"
         result.weights_path = str(fr.config_path.parent / f"runs/mindx-gen{generation}")
 
-    # 5b. dcoach proof-of-recall verdict (v1.0.0): if asked and we trained, the
+    # 5b. imprint proof-of-recall verdict (v1.0.0): if asked and we trained, the
     #     objective gate is whether the model now recalls its training. This
     #     becomes the verdict when no explicit verdict callback was supplied.
     if did_train and use_dcoach and verdict is None:
         try:
-            from .dcoach import dcoach_verdict_factory
-            verdict = dcoach_verdict_factory(cap, fr.config_path.parent)
+            from .imprint import imprint_verdict_factory
+            verdict = imprint_verdict_factory(cap, fr.config_path.parent, fr.config_path.name)
         except Exception as e:  # pragma: no cover - defensive
-            notes.append(f"dcoach verdict unavailable: {e}")
+            notes.append(f"imprint verdict unavailable: {e}")
 
     # 6. proof-gated promotion. No verdict callback => shadow mode, promote
     #    nothing (matches the kernel-absent posture of the engine).
@@ -204,6 +204,121 @@ async def ascend(
         notes.append("no verdict callback — shadow mode, no promotion")
 
     return result
+
+
+async def ascend_recipe(
+    *,
+    work_dir: Path,
+    generation: int,
+    data_memory_dir: Path,
+    recipe: str,
+    cpu_percent: int = 20,
+    cpu_nice: int = 19,
+    use_imprint: bool = True,
+    promote: bool = False,
+    register_fallback: bool = False,
+) -> AscentResult:
+    """The PROVEN v1.0.0 ascent flow, driving mindXtrain's own recipe CLI
+    (validated on the VPS 2026-06-13):
+
+        init -t <recipe> -o run.yaml         # known-good config
+        (point data.path at this deploy's data/memory)
+        train run.yaml --out out/runs --cpu-percent N --cpu-nice M
+        imprint run.yaml --out out/runs --n 5   # proof-of-recall verdict
+        [if imprinted] serve run.yaml -c <adapter> --to ollama --tag mindx-gen{N}
+
+    Unlike forge-based ascend(), this consumes mindXtrain's `mindx_dreams`
+    adapter, which reads the dream training files under data/memory directly —
+    so no hand-forged config/corpus is needed. DORMANT unless the bridge is
+    armed.
+    """
+    work_dir = Path(work_dir)
+    work_dir.mkdir(parents=True, exist_ok=True)
+    notes: list[str] = []
+    cap = _bridge.discover()
+    result = AscentResult(stage="dormant", generation=generation,
+                          capability=cap.as_dict(), notes=notes)
+    if not is_enabled():
+        notes.append("mindXtrain bridge dormant; set MINDX_ENABLE_MINDXTRAIN=1")
+        return result
+    if not cap.cpu_train_active:
+        notes.append(f"mindXtrain not CPU-train-active (version {cap.version})")
+        return result
+
+    cfg = "run.yaml"
+    # 1. init a known-good recipe config
+    init = _bridge.run_cli(["init", "-t", recipe, "-o", cfg], cap=cap, cwd=work_dir, timeout=300)
+    if not init.get("ok"):
+        notes.append(f"init failed: {(init.get('stderr') or init.get('reason') or '')[:200]}")
+        return result
+    # 2. point the mindx_dreams adapter at THIS deploy's dream memory
+    try:
+        p = work_dir / cfg
+        text = p.read_text(encoding="utf-8")
+        text = _re_sub_data_path(text, str(data_memory_dir))
+        p.write_text(text, encoding="utf-8")
+    except Exception as e:
+        notes.append(f"could not set data.path: {e}")
+        return result
+
+    # 3. train (positional config + built-in CPU throttle)
+    train = _bridge.run_cli(
+        ["train", cfg, "--out", "out/runs", "--cpu-percent", str(cpu_percent),
+         "--cpu-nice", str(cpu_nice)],
+        cap=cap, cwd=work_dir, timeout=CPU_MAX_MINUTES * 60 + 600,
+    )
+    result.train = {"ok": train.get("ok"), "tail": (train.get("stdout") or "")[-600:]}
+    if not train.get("ok"):
+        result.stage = "train_failed"
+        notes.append(f"train failed: {(train.get('stderr') or '')[-300:]}")
+        return result
+    result.stage = "trained"
+    # locate the adapter dir under out/runs/<run>/checkpoint
+    adapter = _find_adapter(work_dir / "out" / "runs")
+    result.weights_path = str(adapter) if adapter else str(work_dir / "out" / "runs")
+
+    # 4. imprint proof-of-recall verdict
+    if use_imprint:
+        from .imprint import imprint_verdict_factory
+        verdict = imprint_verdict_factory(cap, work_dir, cfg)
+        v = await verdict(None)
+        result.recall = {k: v.get(k) for k in ("recall_before", "recall_after", "delta", "imprinted")
+                         if v.get(k) is not None}
+        if not v.get("accepted"):
+            result.stage = "proof_rejected"
+            notes.append(f"imprint verdict: {v.get('reason')}")
+            return result
+        notes.append(f"imprint accepted: {v.get('reason')}")
+        result.stage = "accepted"
+
+    # 5. promote: serve --to ollama
+    if promote and result.weights_path:
+        from .promote import promote_to_ollama
+        pr = await promote_to_ollama(cap, None, result.weights_path, generation,
+                                     config_name=cfg, work_dir=str(work_dir),
+                                     register_fallback=register_fallback)
+        if pr.get("ok"):
+            result.promoted = True
+            result.stage = "promoted"
+            result.ollama_model = pr.get("model_name")
+            notes.append(f"promoted to Ollama model {result.ollama_model}")
+        else:
+            notes.append(f"promotion failed: {pr.get('reason') or pr.get('stderr','')[:200]}")
+    return result
+
+
+def _re_sub_data_path(text: str, new_path: str) -> str:
+    import re
+    # replace `path: <anything>` under the data: block (recipe default is the
+    # dev box path); also handle when it's already correct (no-op).
+    return re.sub(r"(?m)^(\s*path:\s*).*/data/memory\s*$", rf"\1{new_path}", text)
+
+
+def _find_adapter(runs_dir: Path):
+    runs_dir = Path(runs_dir)
+    for p in runs_dir.rglob("adapter_config.json"):
+        return p.parent
+    return None
 
 
 def watermark_path(work_dir: Path) -> Path:

@@ -12,7 +12,7 @@ import types
 import pytest
 
 from mindx.godel.mindxtrain import bridge as B
-from mindx.godel.mindxtrain import dcoach as D
+from mindx.godel.mindxtrain import imprint as D
 
 
 # ── capability / version ────────────────────────────────────────────────
@@ -67,40 +67,43 @@ def test_discover_verb_flags(monkeypatch):
     assert "--config" in flags and "--max-minutes" in flags
 
 
-# ── dcoach verdict ──────────────────────────────────────────────────────
+# ── imprint verdict (the real v1.0.0 proof gate) ────────────────────────
 
 
-def test_dcoach_parse_recall():
-    assert D._parse_recall("recall 0.07 -> 0.28")[:2] == (0.07, 0.28)
-    assert D._parse_recall("0.10 → 0.40")[:2] == (0.10, 0.40)
-    b, a, v = D._parse_recall("recall_before: 0.05 recall_after: 0.30 PASSED")
-    assert (b, a, v) == (0.05, 0.30, True)
-    assert D._parse_recall("garbage")[:2] == (None, None)
+def test_imprint_parse_json():
+    blob = ('noise\n{"before_voice": 0.04, "after_voice": 0.28, '
+            '"imprint_delta": 0.24, "imprinted": true, "method": "lexical"}\nmore')
+    p = D._parse_imprint(blob)
+    assert p["imprinted"] is True and p["imprint_delta"] == 0.24
+    # the real smoke-run rejection shape
+    rej = D._parse_imprint('{"imprint_delta": -0.0415, "imprinted": false}')
+    assert rej["imprinted"] is False
+    assert D._parse_imprint("garbage") == {}
 
 
 def _run(coro):
     return asyncio.get_event_loop().run_until_complete(coro)
 
 
-def test_dcoach_verdict_accept_reject(monkeypatch):
+def test_imprint_verdict_accept_reject(monkeypatch):
     cap = B.Capability(installed=True, home=None, cli="mindxtrain", has_gpu=False,
-                       level="cpu", verbs=("dcoach",))
-    monkeypatch.setattr(B, "discover_verb_flags", lambda *a, **k: {"--config", "--json"})
-    fr = types.SimpleNamespace(config_path=types.SimpleNamespace(name="mindx-gen1.yaml"))
+                       level="cpu", verbs=("imprint",))
 
     # positive imprint → accept
-    monkeypatch.setattr(B, "run_cli", lambda *a, **k: {"ok": True, "stdout": "recall 0.07 -> 0.28 success"})
-    v = _run(D.dcoach_verdict_factory(cap, "/tmp")(fr))
-    assert v["accepted"] is True and v["delta"] == pytest.approx(0.21, abs=1e-6)
+    monkeypatch.setattr(B, "run_cli", lambda *a, **k: {"ok": True,
+        "stdout": '{"before_voice":0.04,"after_voice":0.28,"imprint_delta":0.24,"imprinted":true}'})
+    v = _run(D.imprint_verdict_factory(cap, "/tmp", "run.yaml")(None))
+    assert v["accepted"] is True and v["delta"] == 0.24
 
-    # sub-threshold → reject
-    monkeypatch.setattr(B, "run_cli", lambda *a, **k: {"ok": True, "stdout": "recall 0.20 -> 0.25"})
-    v = _run(D.dcoach_verdict_factory(cap, "/tmp")(fr))
-    assert v["accepted"] is False
+    # imprinted false (the real smoke rejection) → reject even if rc nonzero
+    monkeypatch.setattr(B, "run_cli", lambda *a, **k: {"ok": False,
+        "stdout": '{"imprint_delta":-0.0415,"imprinted":false}'})
+    v = _run(D.imprint_verdict_factory(cap, "/tmp", "run.yaml")(None))
+    assert v["accepted"] is False and v["imprinted"] is False
 
     # unparseable → reject with reason
     monkeypatch.setattr(B, "run_cli", lambda *a, **k: {"ok": True, "stdout": "nonsense"})
-    v = _run(D.dcoach_verdict_factory(cap, "/tmp")(fr))
+    v = _run(D.imprint_verdict_factory(cap, "/tmp", "run.yaml")(None))
     assert v["accepted"] is False and "unparseable" in v["reason"]
 
 
