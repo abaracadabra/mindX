@@ -4386,25 +4386,38 @@ async def _ascend_cpu_telemetry(driver_pid) -> Dict[str, Any]:
             "temp_c": core_temps.get(i),
             "cycles_cumulative": cyc,
         })
-    # training process tree CPU cycles (the work the ascent itself consumed)
+    # training process tree CPU cycles + RAM (the work the ascent consumed)
     train_cpu_seconds = None
     train_cycles = None
+    train_ram_mb = None
     if driver_pid:
         try:
             proc = _ps.Process(int(driver_pid))
             procs = [proc] + proc.children(recursive=True)
             tot = 0.0
+            rss = 0
             for p in procs:
                 try:
                     ct = p.cpu_times()
                     tot += ct.user + ct.system
+                    rss += p.memory_info().rss
                 except Exception:
                     continue
             train_cpu_seconds = round(tot, 2)
+            train_ram_mb = round(rss / (1024 ** 2), 1)
             if agg_freq:
                 train_cycles = int(tot * agg_freq * 1_000_000)
         except Exception:
             pass
+    # system RAM (the other half of the measured CPU+RAM combination)
+    ram = {}
+    try:
+        vm = _ps.virtual_memory()
+        ram = {"used_gb": round(vm.used / (1024 ** 3), 2),
+               "total_gb": round(vm.total / (1024 ** 3), 2),
+               "percent": vm.percent}
+    except Exception:
+        pass
     return {
         "cores": cores,
         "n_cores": len(cores),
@@ -4412,6 +4425,8 @@ async def _ascend_cpu_telemetry(driver_pid) -> Dict[str, Any]:
         "temps_note": None if temps_available else "no CPU temp sensors (virtualized host)",
         "train_cpu_seconds": train_cpu_seconds,
         "train_cycles_est": train_cycles,
+        "train_ram_mb": train_ram_mb,
+        "ram": ram,
         "clk_tck": CLK,
     }
 
@@ -4433,6 +4448,13 @@ async def insight_godel_ascend(request: Request, limit: int = 20):
         cap = _mxt_bridge.discover().as_dict()
     except Exception as e:
         cap = {"error": f"bridge discover failed: {e}"}
+    # the single CPU+RAM combination + regimen training is measured against
+    regimen_settings: Dict[str, Any] = {}
+    try:
+        from mindx.godel.mindxtrain.settings import load_settings
+        regimen_settings = load_settings()
+    except Exception:
+        pass
     # Live training indicator: status file (running/elapsed) + a tail of the
     # streamed train log, so the page can show a "TRAINING" light + timer.
     training: Dict[str, Any] = {"state": "idle"}
@@ -4496,8 +4518,9 @@ async def insight_godel_ascend(request: Request, limit: int = 20):
                     continue
         except Exception:
             pass
-    return _maybe_h_text(request, {"capability": cap, "training": training,
-                                   "events": events, "count": len(events)},
+    return _maybe_h_text(request, {"capability": cap, "settings": regimen_settings,
+                                   "training": training, "events": events,
+                                   "count": len(events)},
                          route_path="/insight/godel/ascend")
 
 

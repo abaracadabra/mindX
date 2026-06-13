@@ -44,7 +44,8 @@ class AscentResult:
     promoted: bool = False
     weights_path: Optional[str] = None
     ollama_model: Optional[str] = None
-    recall: dict = field(default_factory=dict)   # dcoach proof-of-recall result
+    recall: dict = field(default_factory=dict)   # imprint proof-of-recall result
+    wall_seconds: float = 0.0                    # train wall time (cost basis)
     notes: list[str] = field(default_factory=list)
 
     def as_dict(self) -> dict:
@@ -55,6 +56,7 @@ class AscentResult:
             "weights_path": self.weights_path,
             "ollama_model": self.ollama_model,
             "recall": self.recall,
+            "wall_seconds": self.wall_seconds,
             "forge": self.forge_result.as_dict() if self.forge_result else None,
             "curation": self.curation,
             "capability": self.capability,
@@ -294,6 +296,7 @@ async def ascend_recipe(
         notes.append(f"train failed: {(train.get('tail') or train.get('error') or '')[-300:]}")
         return result
     result.stage = "trained"
+    result.wall_seconds = round(_t.time() - started, 1)
     write_status("running", recipe=recipe, generation=generation,
                  started_ts=started, ended_ts=None, log_path=str(train_log),
                  stage="imprint")

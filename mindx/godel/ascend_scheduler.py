@@ -93,17 +93,23 @@ async def run_ascent_if_due(self_eval: Optional[dict] = None, *, sea=None) -> Op
         return None
 
     generation = _next_generation()
-    logger.info("ascend_scheduler: autonomous ascent generation %d", generation)
+    # CPU training regimen from settings: smallest model, 33% of the processor,
+    # 24h wall window (≈8h effective), measured on the single CPU+RAM profile.
+    from .mindxtrain.settings import regimen, measure_efficiency
+    _reg = regimen()
+    logger.info("ascend_scheduler: autonomous ascent generation %d (regimen %s%% / %sh)",
+                generation, _reg.get("cpu_percent"), _reg.get("wall_hours"))
     try:
         result = await ascend_recipe(
             work_dir=ASCEND_WORK / f"gen{generation}",
             generation=generation,
             data_memory_dir=DATA_MEMORY,
             recipe=CPU_RECIPE_REAL,
-            cpu_percent=20, cpu_nice=19,
+            cpu_percent=int(_reg.get("cpu_percent", 33)), cpu_nice=19,
             use_imprint=True,
             promote=True,
             register_fallback=False,   # served but not auto-routed to production
+            train_timeout=int(_reg.get("wall_hours", 24)) * 3600,
         )
     except Exception as e:  # pragma: no cover - defensive
         logger.warning("ascend_scheduler: ascent failed: %s", e)
@@ -114,6 +120,9 @@ async def run_ascent_if_due(self_eval: Optional[dict] = None, *, sea=None) -> Op
     rec = result.as_dict()
     rec["ts"] = time.time()
     rec["trigger"] = "autonomous_self_eval"
+    delta = (result.recall or {}).get("delta")
+    cost = round(result.wall_seconds * int(_reg.get("cpu_percent", 33)) / 100.0, 1) or None
+    rec["measurement"] = measure_efficiency(delta, cost)
     _append_log(rec)
     _emit(result)
     return rec

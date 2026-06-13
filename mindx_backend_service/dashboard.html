@@ -3039,8 +3039,11 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_popOpen)dockPopup(
         chronosEl.innerHTML = ch.elapsed_18dp ? ('⏱ chronos.agent <b style="color:#d2a8ff">'+esc(ch.elapsed_18dp)+'</b> s <span style="color:#6e7681">('+esc(ch.consensus||'?')+')</span>') : '';
         var cpu=tr.cpu||{};
         var html='';
-        if(cpu.train_cycles_est!=null) html+='⚙ training <b style="color:#79c0ff">'+fmtCyc(cpu.train_cycles_est)+'</b> ('+cpu.train_cpu_seconds+'s CPU) · ';
+        if(cpu.train_cycles_est!=null) html+='⚙ training <b style="color:#79c0ff">'+fmtCyc(cpu.train_cycles_est)+'</b> ('+cpu.train_cpu_seconds+'s CPU'+(cpu.train_ram_mb!=null?', '+cpu.train_ram_mb+'MB RAM':'')+') · ';
         if(cpu.cores) html+=cpu.cores.map(function(c){return 'c'+c.core+' '+c.usage_pct+'% '+(c.freq_mhz||'')+'MHz '+fmtCyc(c.cycles_cumulative)+' '+(c.temp_c!=null?c.temp_c+'°C':'temp n/a');}).join(' · ');
+        if(cpu.ram&&cpu.ram.used_gb!=null) html+=' · host RAM '+cpu.ram.used_gb+'/'+cpu.ram.total_gb+'GB';
+        var rg=(d&&d.settings&&d.settings.regimen)||{};
+        if(rg.cpu_percent) html+=' · regimen '+rg.cpu_percent+'%/'+rg.wall_hours+'h≈'+rg.effective_hours+'h';
         coresEl.innerHTML=html;
         box.style.display='block';
       } else { T=null; box.style.display='none'; }

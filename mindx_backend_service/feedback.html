@@ -1708,8 +1708,22 @@ async function refreshAscend() {
             + '<span style="color:'+(co.temp_c!=null?'var(--amber)':'var(--text3)')+'">· '+(co.temp_c!=null?co.temp_c+'°C':'temp n/a')+'</span>'
             + '</div>';
         }
+        if (cpu.train_ram_mb!=null || cpu.ram) {
+          html += '<div style="margin-top:3px;color:var(--text2)">⛁ RAM '
+            + (cpu.train_ram_mb!=null?'training <b style="color:var(--blue)">'+cpu.train_ram_mb+' MB</b>':'')
+            + (cpu.ram&&cpu.ram.used_gb!=null?' · host '+cpu.ram.used_gb+'/'+cpu.ram.total_gb+' GB ('+cpu.ram.percent+'%)':'') + '</div>';
+        }
         if (cpu.temps_note) html += '<div style="color:var(--text3);font-size:9px;margin-top:2px">'+escapeHtml(cpu.temps_note)+'</div>';
         html += '</div>';
+      }
+      // regimen / single CPU+RAM profile training is measured on
+      var st = d.settings||{}; var rg = st.regimen||{}; var hw = st.hardware||{};
+      if (rg.cpu_percent) {
+        html += '<div style="margin-top:6px;font-size:9.5px;color:var(--text3);border-top:1px solid var(--border);padding-top:4px">'
+          + 'measured on <b>'+escapeHtml(st.profile_name||'profile')+'</b>: '
+          + (hw.cpu_model?escapeHtml(hw.cpu_model)+' · ':'') + (hw.cpu_cores||'?')+' cores · '+(hw.ram_gb||'?')+' GB · '
+          + 'regimen <b style="color:var(--amber)">'+rg.cpu_percent+'% / '+rg.wall_hours+'h ≈ '+rg.effective_hours+'h compute</b> · '
+          + escapeHtml(rg.model||'') + '</div>';
       }
       html += '</div>';
       if (tr.log_tail) html += '<pre style="background:rgba(5,8,16,.5);border:1px solid var(--border);border-radius:4px;padding:8px;font-size:10px;line-height:1.4;max-height:160px;overflow:auto;color:var(--text2);margin-bottom:8px">' + escapeHtml(tr.log_tail) + '</pre>';

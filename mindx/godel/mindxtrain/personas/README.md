@@ -10,7 +10,8 @@ ignores the rest; no mindX bytes are copied).
 | persona | who | source |
 |---|---|---|
 | `professor_codephreak.json` | Gregory L. Magnusson — PhD computer scientist, platform architect of the PYTHAI agent economy, cypherpunk2048 | github.com/Professor-Codephreak |
-| `mindx.json` | mindX — the first-person Augmentic / Darwin-Gödel machine | mindx.pythai.net/automindx |
+| `automindx.json` | AUTOMINDx — the origin of mindX; the AGLM deployment-as-utterance precursor | mindx.pythai.net/doc/AUTOMINDX_ORIGIN |
+| `mindx.json` | mindX — the first-person Augmentic / Darwin-Gödel machine (AUTOMINDx realized) | mindx.pythai.net/automindx |
 | `jaimla.json` | Jaimla — "the machine learning agent", multimodal, local-first, Luvai | github.com/jaimla |
 
 ## Schema

@@ -44,9 +44,21 @@ DEFAULT_TEMPLATE = "qwen3_8b_sft_lora"  # mindXtrain quickstart LoRA template (G
 # v1.0.0 (2026-06-12) made CPU training active. On the 8GB/2-core VPS the
 # right-apex ascent uses a small CPU-trainable base, bounded budget. The HF id
 # is what mindXtrain trains; the Ollama tag is what mindX serves the result as.
-CPU_BASE_MODEL = "Qwen/Qwen2.5-0.5B"   # ~0.5B — fits the 6GB recipe / 8GB VPS
+# Smallest model we have — what CPU training trains by policy. mindXtrain's
+# mindX CPU recipes already use it; the forge path matches.
+CPU_SMALLEST_MODEL = "HuggingFaceTB/SmolLM2-135M"   # 135M — the smallest base
+CPU_BASE_MODEL = CPU_SMALLEST_MODEL
 CPU_BASE_OLLAMA_TAG = "qwen3:0.6b"     # FROM line for the promoted Modelfile
-CPU_MAX_MINUTES = 20                    # default CPU train budget (bounded)
+
+# ── CPU training regimen (operator policy 2026-06-13) ──────────────────────
+# Slow-cook on the shared smartphone-class VPS: throttle to 33% of the
+# processor (leaving ~67% for the live service) over a 24-hour wall window,
+# which yields ≈8 hours of effective training compute (0.33 × 24 ≈ 8). The
+# smallest model only, so the footprint stays tiny.
+CPU_TRAIN_PERCENT = 33                  # processor throttle for any CPU ascent
+CPU_TRAIN_WALL_HOURS = 24               # max wall-clock window
+CPU_TRAIN_EFFECTIVE_HOURS = 8           # ≈ CPU_TRAIN_PERCENT/100 × wall hours
+CPU_MAX_MINUTES = CPU_TRAIN_WALL_HOURS * 60   # bounded budget (24h)
 # mindXtrain ships purpose-built mindX CPU recipes (`mindxtrain init --list`).
 # The smoke recipe (SmolLM2-135M, ~1.2GB RSS, 10-30min) closes the full
 # dream-corpus->SFT->checkpoint->imprint loop on a CPU box; _cpu_real is the
