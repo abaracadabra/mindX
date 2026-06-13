@@ -85,25 +85,34 @@ def _run(coro):
     return asyncio.get_event_loop().run_until_complete(coro)
 
 
-def test_imprint_verdict_accept_reject(monkeypatch):
+def test_imprint_verdict_accept_reject(monkeypatch, tmp_path):
     cap = B.Capability(installed=True, home=None, cli="mindxtrain", has_gpu=False,
                        level="cpu", verbs=("imprint",))
+    # imprint_verdict streams to <work_dir>/imprint_out.txt and parses that;
+    # mock run_cli_streamed to write the file (the real big-output path).
+    def mk(content):
+        def _streamed(args, *, cap=None, cwd=None, log_path=None, timeout=None):
+            if log_path:
+                from pathlib import Path
+                Path(log_path).write_text(content, encoding="utf-8")
+            return {"ok": True, "tail": content}
+        return _streamed
 
-    # positive imprint → accept
-    monkeypatch.setattr(B, "run_cli", lambda *a, **k: {"ok": True,
-        "stdout": '{"before_voice":0.04,"after_voice":0.28,"imprint_delta":0.24,"imprinted":true}'})
-    v = _run(D.imprint_verdict_factory(cap, "/tmp", "run.yaml")(None))
+    # positive imprint (big arrays + verdict at the end) → accept
+    big = ('{"inquiries":["a","b"],"before":["x","y"],"after":["sovereign self-improving","z"],'
+           '"before_voice":0.04,"after_voice":0.28,"imprint_delta":0.24,"imprinted":true}')
+    monkeypatch.setattr(B, "run_cli_streamed", mk(big))
+    v = _run(D.imprint_verdict_factory(cap, tmp_path, "run.yaml")(None))
     assert v["accepted"] is True and v["delta"] == 0.24
 
-    # imprinted false (the real smoke rejection) → reject even if rc nonzero
-    monkeypatch.setattr(B, "run_cli", lambda *a, **k: {"ok": False,
-        "stdout": '{"imprint_delta":-0.0415,"imprinted":false}'})
-    v = _run(D.imprint_verdict_factory(cap, "/tmp", "run.yaml")(None))
+    # imprinted false → reject
+    monkeypatch.setattr(B, "run_cli_streamed", mk('{"imprint_delta":-0.0415,"imprinted":false}'))
+    v = _run(D.imprint_verdict_factory(cap, tmp_path, "run.yaml")(None))
     assert v["accepted"] is False and v["imprinted"] is False
 
     # unparseable → reject with reason
-    monkeypatch.setattr(B, "run_cli", lambda *a, **k: {"ok": True, "stdout": "nonsense"})
-    v = _run(D.imprint_verdict_factory(cap, "/tmp", "run.yaml")(None))
+    monkeypatch.setattr(B, "run_cli_streamed", mk("nonsense"))
+    v = _run(D.imprint_verdict_factory(cap, tmp_path, "run.yaml")(None))
     assert v["accepted"] is False and "unparseable" in v["reason"]
 
 
