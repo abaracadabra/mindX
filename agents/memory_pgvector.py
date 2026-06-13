@@ -751,8 +751,13 @@ async def generate_embedding(
 # produced 600-900 tokens and triggered HTTP 500 from Ollama on every chunk —
 # the entire failure was logged only at DEBUG, leaving 105/210 docs unembedded
 # with no operator-visible signal. See: 2026-04-29 backfill diagnosis.
-async def embed_and_store_doc(doc_name: str, text_content: str, chunk_size: int = 200) -> int:
-    """Chunk a document and store embeddings in doc_embeddings table."""
+async def embed_and_store_doc(doc_name: str, text_content: str, chunk_size: int = 200,
+                              interactive: bool = False) -> int:
+    """Chunk a document and store embeddings in doc_embeddings table.
+
+    interactive=True bypasses the ResourceGovernor CPU-throttle/semaphore —
+    only for operator-supervised backfills (e.g. scripts/ingest_reference_docs
+    --aggressive); unattended callers must stay governor-respecting."""
     pool = await get_pool()
     if not pool:
         return 0
@@ -772,7 +777,7 @@ async def embed_and_store_doc(doc_name: str, text_content: str, chunk_size: int 
     embed_failures = 0
     insert_failures = 0
     for idx, chunk in enumerate(chunks):
-        emb = await generate_embedding(chunk)
+        emb = await generate_embedding(chunk, interactive=interactive)
         if emb is None:
             embed_failures += 1
             continue
@@ -815,8 +820,15 @@ async def embed_memory(memory_id: str, text: str) -> bool:
         return False
 
 
-async def semantic_search_docs(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
-    """Semantic search over doc_embeddings using cosine similarity."""
+async def semantic_search_docs(query: str, top_k: int = 5,
+                               exclude_doc_prefixes: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    """Semantic search over doc_embeddings using cosine similarity.
+
+    exclude_doc_prefixes: doc_name prefixes excluded in SQL (case-insensitive).
+    Public surfaces pass the reference-corpus prefixes so gated docs never
+    surface — the filter must run in SQL, not post-hoc, or private chunks
+    would displace public ones inside top_k.
+    """
     pool = await get_pool()
     if not pool:
         return []
@@ -824,14 +836,19 @@ async def semantic_search_docs(query: str, top_k: int = 5) -> List[Dict[str, Any
     if not emb:
         return []
     try:
+        exclude_sql = ""
+        params: List[Any] = [str(emb), top_k]
+        for prefix in (exclude_doc_prefixes or []):
+            params.append(prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%")
+            exclude_sql += f" AND doc_name NOT ILIKE ${len(params)}"
         rows = await pool.fetch(
-            """SELECT doc_name, chunk_idx, text_content,
+            f"""SELECT doc_name, chunk_idx, text_content,
                       1 - (embedding <=> $1::vector) as similarity
                FROM doc_embeddings
-               WHERE embedding IS NOT NULL
+               WHERE embedding IS NOT NULL{exclude_sql}
                ORDER BY embedding <=> $1::vector
                LIMIT $2""",
-            str(emb), top_k,
+            *params,
         )
         return [
             {"doc": r["doc_name"], "chunk": r["chunk_idx"],

@@ -162,7 +162,6 @@ def test_public_permissions_endpoint_is_accessible(client):
 
 
 GATED_HTML_PATHS: Iterable[str] = (
-    "/feedback.html",
     "/journal",
     "/boardroom",
     "/dojo",
@@ -185,7 +184,7 @@ def test_gated_html_redirects_to_login(client, path):
 
 
 def test_gated_html_redirect_preserves_query_string(client):
-    r = client.get("/feedback.html?h=true&kind=auth", headers={"accept": "text/html"})
+    r = client.get("/journal?h=true&kind=auth", headers={"accept": "text/html"})
     assert r.status_code == 302
     loc = r.headers.get("location", "")
     assert "h%3Dtrue" in loc or "h=true" in loc, f"query lost in redirect: {loc}"
@@ -210,10 +209,11 @@ GATED_API_PATHS: Iterable[str] = (
     "/coordinator/query",
     "/coordinator/improve",
     "/agents/foo/evolve",
-    "/boardroom/convene",
+    "/agents/create",
+    "/directive/execute",
     "/llm/chat",
-    "/insight/improvement/summary",
-    "/registry/agents",
+    "/coordinator/backlog",
+    "/storage/offload",
 )
 
 
@@ -231,7 +231,7 @@ def test_gated_api_returns_401_json(client, path):
 # ----------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("path", ["/feedback.html", "/insight/improvement/summary", "/coordinator/query"])
+@pytest.mark.parametrize("path", ["/journal", "/llm/chat", "/coordinator/query"])
 def test_valid_session_unlocks(client, path):
     r = client.post(path, json={}, headers={"X-Session-Token": "valid"})
     assert r.status_code in (200, 405), f"{path} with session got {r.status_code}"
@@ -287,14 +287,16 @@ def test_strict_public_exact_excludes_gated_paths(gate_module):
     """Paths that the runbook says should be gated must NOT be in the strict
     public-exact set."""
     exact = gate_module._PUBLIC_EXACT_STRICT
+    # NOTE (2026-06): the feedback surfaces (/feedback*, /agentic*), /insight/
+    # reads, /registry/agents, /godel/choices and /inference/preference were
+    # restored to the public surface BY DESIGN (commit fa6bd13dd + CLAUDE.md
+    # "Mind-of-mindX" contract) — they are intentionally absent from this set.
     must_be_gated = {
-        "/feedback", "/feedback.html", "/feedback.txt",
         "/journal", "/boardroom", "/dojo", "/book",
         "/cabinet", "/cabinet.html",
         "/thot", "/THOT", "/thot.html",
         "/agentregistry", "/openagents", "/inft7857",
-        "/godel/choices", "/inference/preference",
-        "/registry/agents", "/coordinator/backlog",
+        "/coordinator/backlog",
     }
     leaked = must_be_gated & exact
     assert not leaked, f"strict public-exact set leaks gated paths: {leaked}"
@@ -316,10 +318,40 @@ def test_strict_public_prefixes_includes_shadow_admin(gate_module):
     assert "/admin/shadow/" in prefixes
 
 
-def test_strict_public_prefixes_excludes_insight_and_marketing(gate_module):
-    """The insight/marketing/dojo prefixes were public in legacy mode but
-    must be gated in strict mode."""
+def test_strict_public_prefixes_excludes_marketing_and_registry(gate_module):
+    """Prefixes public in legacy mode that must stay gated in strict mode.
+    (/insight/, /dojo/ and /boardroom/ reads were restored as public BY
+    DESIGN with the Mind-of-mindX feedback surfaces — see fa6bd13dd.)"""
     prefixes = gate_module._PUBLIC_PREFIXES_STRICT
-    must_be_gated = {"/insight/", "/marketing/", "/dojo/", "/registry/", "/cabinet/"}
+    must_be_gated = {"/marketing/", "/registry/", "/cabinet/"}
     leaked = must_be_gated & set(prefixes)
     assert not leaked, f"strict prefix set leaks gated paths: {leaked}"
+
+
+# ----------------------------------------------------------------------
+# 7. Reference corpus surfaces
+# ----------------------------------------------------------------------
+
+
+def test_reference_shell_is_public_exact(gate_module):
+    """/reference + /reference.html are public shell pages (no data inline)
+    in BOTH modes — data flows only through the handler-gated /reference/*."""
+    for path in ("/reference", "/reference.html"):
+        assert path in gate_module._PUBLIC_EXACT_STRICT
+        assert path in gate_module._PUBLIC_EXACT_LEGACY
+
+
+def test_reference_prefix_is_public_in_both_modes(gate_module):
+    """/reference/ must pass the arrival gate in strict AND legacy mode —
+    the routes under it gate themselves via _require_reference_access (the
+    localStorage token can't ride a browser navigation, and legacy mode must
+    not silently un-gate the corpus)."""
+    assert "/reference/" in gate_module._PUBLIC_PREFIXES_STRICT
+    assert "/reference/" in gate_module._PUBLIC_PREFIXES_LEGACY
+
+
+def test_reference_data_routes_pass_middleware(client):
+    """The arrival gate lets /reference/* through to the handler — the
+    handler-level 401 is exercised in tests/test_reference_routes.py."""
+    r = client.get("/reference/catalog")
+    assert r.status_code == 200  # imitator catchall — middleware let it pass

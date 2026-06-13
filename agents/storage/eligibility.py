@@ -15,6 +15,13 @@ from typing import NamedTuple, Optional
 
 DATE_RE = re.compile(r"^(\d{8})$")  # YYYYMMDD directory name
 
+# Agent memory trees that must NEVER leave the local substrate. IPFS pinning
+# is public — offloading these would replicate gated content across the
+# global substrate, which is expressly disabled (operator directive 2026-06,
+# repo private pending security audits). reference_corpus holds the ingested
+# private docs/ subtrees (see utils/reference_corpus.py).
+OFFLOAD_EXCLUDED_AGENT_IDS = frozenset({"reference_corpus"})
+
 
 class OffloadCandidate(NamedTuple):
     path: Path
@@ -62,6 +69,8 @@ def list_eligible(
         for agent_dir in root.iterdir():
             if not agent_dir.is_dir():
                 continue
+            if agent_dir.name in OFFLOAD_EXCLUDED_AGENT_IDS:
+                continue  # never replicated off-box, even when explicitly requested
             if agent_id and agent_dir.name != agent_id:
                 continue
             try:

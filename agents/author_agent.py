@@ -2945,6 +2945,12 @@ class AuthorAgent:
 
             subdirs = [d.name for d in sorted(DOCS_DIR.iterdir())
                        if d.is_dir() and not d.name.startswith(".")]
+            try:
+                from utils.reference_corpus import is_private_doc as _is_private_doc
+                # Gated reference subtrees stay off the public catalogue.
+                subdirs = [s for s in subdirs if not _is_private_doc(s + "/")]
+            except ImportError:
+                pass
             if subdirs:
                 lines += ["", "## Subtrees", "",
                           ", ".join(f"`{s}/`" for s in subdirs)

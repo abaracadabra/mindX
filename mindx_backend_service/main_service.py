@@ -267,7 +267,12 @@ async def docs_html_page():
     db_doc_count = 0
     try:
         from agents import memory_pgvector as _mpg_docs
+        from utils.reference_corpus import is_private_doc as _is_private_doc
         indexed_docs = await _safe_await(_mpg_docs.get_indexed_docs(), timeout_s=3.0, default=[])
+        # Reference-corpus docs are embedded for mindX's own retrieval but are
+        # gated — never linked from this public page.
+        private_doc_count = sum(1 for d in indexed_docs if _is_private_doc(d["doc_name"]))
+        indexed_docs = [d for d in indexed_docs if not _is_private_doc(d["doc_name"])]
         db_doc_count = len(indexed_docs)
         if indexed_docs:
             db_items = []
@@ -281,6 +286,10 @@ async def docs_html_page():
                     f'<span style="color:#4a5060">({size}KB, {chunks} chunks)</span> '
                     f'<span class="tag tag-ref">EMBEDDED</span></li>')
             db_docs_html = '<ul style="list-style:none;padding:0">' + "".join(db_items) + "</ul>"
+            if private_doc_count:
+                db_docs_html += (f'<div style="color:#4a5060;font-size:10px;margin-top:4px">'
+                                 f'+{private_doc_count} private reference docs &mdash; '
+                                 f'<a href="/reference" style="color:#6e7681">/reference</a> (gated)</div>')
     except Exception:
         pass
 
@@ -396,6 +405,18 @@ async def docs_html_page():
                 nav_content_html += f'<blockquote>{m_blockquote.group(1)}</blockquote>\n'
             elif m_code:
                 pass  # Skip code fences in nav
+    # De-link gated reference-corpus targets that NAV.md references (e.g.
+    # operations/ runbooks): the label stays for context, the link goes —
+    # this page must never link into the private subtrees.
+    try:
+        from utils.reference_corpus import is_private_doc as _ipd_nav
+        from urllib.parse import unquote as _unq_nav
+        def _strip_private_link(m):
+            return m.group(2) if _ipd_nav(_unq_nav(m.group(1))) else m.group(0)
+        nav_content_html = _re.sub(r'<a href="/doc/([^"]+)"[^>]*>(.*?)</a>',
+                                   _strip_private_link, nav_content_html)
+    except Exception:
+        pass
     sidebar_html = "\n".join(sidebar_items)
 
     return _DashResponse(content=f"""<!DOCTYPE html><html lang="en"><head>
@@ -890,7 +911,7 @@ try{const fs=localStorage.getItem('mindx_fs');if(fs)document.addEventListener('D
 <style>{_DOC_STYLE}</style></head><body><div class="page">{nav}{meta_html}{body_html}</div>{font_ctrl}</body></html>'''
 
 @app.get("/doc/{name:path}", response_class=_DashResponse, tags=["documentation"], include_in_schema=False)
-async def read_doc(name: str):
+async def read_doc(name: str, request: Request):
     """Render any markdown doc from docs/ directory (supports subdirectories)."""
     import re as _re2
     # Sanitize: allow alphanumeric, underscore, hyphen, dot, forward slash (for subdirs)
@@ -931,6 +952,19 @@ async def read_doc(name: str):
                     break
     if not doc_path.exists() or not doc_path.is_file():
         return _DashResponse(content=_doc_page("Not Found", f"<h1>Document not found</h1><p><code>{safe}</code> does not exist in docs/</p><p>Browse all documents at <a href='/docs.html'>docs</a> or read <a href='/book'>The Book of mindX</a>.</p>"), status_code=404)
+    # Reference-corpus gate: /doc/ is a public prefix, but the private
+    # subtrees (utils.reference_corpus) require a session. Checked against the
+    # *resolved* file so case-insensitive and fallback lookups can't bypass it.
+    try:
+        from utils.reference_corpus import is_private_doc as _is_private_doc
+        _rel = doc_path.resolve().relative_to((PROJECT_ROOT / "docs").resolve())
+        _private = _is_private_doc(_rel.as_posix())
+    except ValueError:
+        _private = False  # resolved outside docs/ (project-root fallback like CLAUDE.md) — public
+    if _private:
+        _gate_redirect = await _reference_gate(request, f"/doc/{safe}")
+        if _gate_redirect:
+            return _gate_redirect
     md = doc_path.read_text(encoding="utf-8", errors="replace")
     size_kb = round(doc_path.stat().st_size / 1024, 1)
     # Extract first heading for SEO description
@@ -952,6 +986,100 @@ async def read_doc(name: str):
     # Add back-links footer
     back_links = f'{related_html}<hr style="margin:16px 0 12px;border-color:rgba(88,166,255,.12)"><div style="font-size:12px;color:#4a5060;display:flex;gap:16px;flex-wrap:wrap"><a href="/docs.html" style="color:#58a6ff">All Documents</a><a href="/doc/INDEX" style="color:#79c0ff">Document Index</a><a href="/book" style="color:#d2a8ff">The Book of mindX</a><a href="/journal" style="color:#3fb950">Improvement Journal</a><a href="/redoc" style="color:#d29922">API Reference</a></div>'
     return _DashResponse(content=_doc_page(safe, body + back_links, f"{safe} &middot; {size_kb} KB", description=_first_heading or f"mindX documentation: {safe}", canonical_path=f"/doc/{name}"))
+
+
+# ── Reference corpus: gated catalogue of everything /docs.html does not link ──
+# /reference/ is a public *prefix* (the middleware can't carry localStorage
+# tokens on navigation), so every data route below gates itself via
+# _require_reference_access — same pattern as /admin/shadow/ and /realm.
+
+def _md_title(path) -> str:
+    """First '# ' heading from the head of a markdown file (cheap read)."""
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as fh:
+            for line in fh.read(2048).split("\n"):
+                if line.startswith("# "):
+                    return line[2:].strip()[:160]
+    except Exception:
+        pass
+    return ""
+
+
+@app.get("/reference/catalog", tags=["documentation"], include_in_schema=False)
+async def reference_catalog(request: Request):
+    """Catalogue of every docs/ file the public /docs.html does not link
+    (all subdirectory files + top-level non-markdown), grouped by folder.
+    Gated: session token, API key, or shadow-overlord JWT."""
+    await _require_reference_access(request)
+    from datetime import timezone as _tz_ref
+    from utils.reference_corpus import iter_unlinked_docs, is_private_doc, PRIVATE_DOC_PREFIXES
+    docs_dir = PROJECT_ROOT / "docs"
+    embedded: set = set()
+    try:
+        from agents import memory_pgvector as _mpg_ref
+        embedded = {d["doc_name"] for d in await _safe_await(_mpg_ref.get_indexed_docs(), timeout_s=3.0, default=[])}
+    except Exception:
+        pass
+    groups: dict = {}
+    total = 0
+    for relpath, path in iter_unlinked_docs(docs_dir):
+        top = relpath.split("/", 1)[0] if "/" in relpath else "(top-level)"
+        try:
+            st = path.stat()
+        except OSError:
+            continue
+        stem_rel = relpath.rsplit(".", 1)[0]
+        groups.setdefault(top, []).append({
+            "relpath": relpath,
+            "name": path.name,
+            "ext": path.suffix.lower().lstrip("."),
+            "size_kb": round(st.st_size / 1024, 1),
+            "mtime": datetime.fromtimestamp(st.st_mtime, tz=_tz_ref.utc).strftime("%Y-%m-%d"),
+            "private": is_private_doc(relpath),
+            "title": _md_title(path) if path.suffix.lower() == ".md" else "",
+            "embedded": stem_rel in embedded,
+            "href": "/reference/file/" + relpath,
+        })
+        total += 1
+    return {
+        "total": total,
+        "groups": {k: groups[k] for k in sorted(groups)},
+        "private_prefixes": list(PRIVATE_DOC_PREFIXES),
+        "embedded_count": sum(1 for items in groups.values() for it in items if it["embedded"]),
+    }
+
+
+@app.get("/reference/file/{relpath:path}", include_in_schema=False)
+async def reference_file(relpath: str, request: Request):
+    """Serve any docs/ file to an authenticated caller — handles the
+    space/apostrophe-named reference files /doc/'s sanitizer cannot."""
+    _gate_redirect = await _reference_gate(request, "/reference")
+    if _gate_redirect:
+        return _gate_redirect
+    docs_dir = (PROJECT_ROOT / "docs").resolve()
+    try:
+        target = (docs_dir / relpath).resolve()
+        rel = target.relative_to(docs_dir)
+    except (ValueError, OSError):
+        raise HTTPException(status_code=404, detail="Not found")
+    if any(part.startswith(".") or part == "__pycache__" for part in rel.parts):
+        raise HTTPException(status_code=404, detail="Not found")
+    if not target.is_file():
+        raise HTTPException(status_code=404, detail="Not found")
+    suffix = target.suffix.lower()
+    if suffix == ".md":
+        md = target.read_text(encoding="utf-8", errors="replace")
+        size_kb = round(target.stat().st_size / 1024, 1)
+        body = _render_md(md)
+        footer = '<hr style="margin:16px 0 12px;border-color:rgba(88,166,255,.12)"><div style="font-size:12px;color:#4a5060"><a href="/reference" style="color:#58a6ff">Reference Corpus</a> &middot; <a href="/docs.html" style="color:#79c0ff">Public Docs</a></div>'
+        return _DashResponse(content=_doc_page(rel.as_posix(), body + footer, f"{rel.as_posix()} &middot; {size_kb} KB &middot; reference corpus (gated)"))
+    from starlette.responses import FileResponse
+    import mimetypes
+    mt = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
+    disposition = "inline" if suffix in (".pdf", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".txt", ".html") else "attachment"
+    return FileResponse(str(target), media_type=mt, filename=target.name,
+                        content_disposition_type=disposition)
+
 
 _BOOK_STYLE = """<style>
 /* ── Book of mindX — typography overlay (scoped to /book only) ──────── */
@@ -1190,6 +1318,7 @@ _DASH_HTML_PATH = Path(__file__).parent / "dashboard.html"
 _FEEDBACK_HTML_PATH = Path(__file__).parent / "feedback.html"
 _NETSTAT_HTML_PATH = Path(__file__).parent / "netstat.html"
 _AGENTIC_HTML_PATH = Path(__file__).parent / "agentic.html"
+_REFERENCE_HTML_PATH = Path(__file__).parent / "reference.html"
 _THOT_HTML_PATH = Path(__file__).parent / "THOT.html"
 _BOARDROOM_HTML_PATH = Path(__file__).parent / "boardroom.html"
 _CABINET_HTML_PATH = Path(__file__).parent / "cabinet.html"
@@ -1984,6 +2113,17 @@ async def agentic_page():
     return _DashResponse(content="<h1>mindX agentic</h1><p>Page not deployed.</p>")
 
 
+@app.get("/reference", response_class=_DashResponse, include_in_schema=False)
+@app.get("/reference.html", response_class=_DashResponse, include_in_schema=False)
+async def reference_page():
+    """Reference-corpus shell — public page, but every byte of catalogue data
+    comes from the handler-gated /reference/catalog. Sibling to /agentic.html.
+    """
+    if _REFERENCE_HTML_PATH.exists():
+        return _DashResponse(content=_REFERENCE_HTML_PATH.read_text(encoding="utf-8"))
+    return _DashResponse(content="<h1>mindX reference</h1><p>Page not deployed.</p>")
+
+
 @app.get("/thot", response_class=_DashResponse, include_in_schema=False)
 @app.get("/THOT", response_class=_DashResponse, include_in_schema=False)
 @app.get("/thot.html", response_class=_DashResponse, include_in_schema=False)
@@ -2170,6 +2310,7 @@ _PUBLIC_EXACT_STRICT = frozenset({
     "/", "/health",
     "/login", "/login.html",
     "/docs.html",
+    "/reference", "/reference.html",   # reference-corpus shell page (data endpoints under /reference/ are handler-gated)
     "/automindx", "/automindx.html",
     "/shadow-overlord", "/shadow-overlord.html",
     "/openapi.json", "/docs", "/redoc",
@@ -2204,6 +2345,7 @@ _PUBLIC_PREFIXES_STRICT = (
     "/automindx/",                     # automindx subpages
     "/admin/shadow/",                  # shadow-overlord ECDSA + JWT (gated at handler level)
     "/overlord/",                      # overlord/overseer login (flag + signature gated at handler level)
+    "/reference/",                     # reference corpus — gated at handler level (_require_reference_access)
     "/deltaverse/",                    # DeltaVerse fabric reads (recognize/story/bubblerooms public; weave/wish role-aware)
     "/users/challenge",                # auth handshake — challenge issuance
     "/users/register",                 # auth handshake — register-with-signature
@@ -2222,6 +2364,7 @@ _PUBLIC_PREFIXES_STRICT = (
 )
 
 _PUBLIC_EXACT_LEGACY = frozenset({
+    "/reference", "/reference.html",
     "/", "/health", "/docs.html", "/book", "/journal", "/boardroom", "/dojo", "/feedback", "/feedback.html", "/feedback.txt", "/netstat", "/netstat.html", "/insight/narrative/recent", "/agentic", "/agentic.html", "/thot", "/THOT", "/thot.html", "/THOT.html", "/allchainz", "/allchain", "/automindx", "/automindx.html", "/inft", "/inft.html", "/dreams", "/dreams.html", "/openagents", "/openagents.html", "/inft7857", "/inft7857.html", "/cabinet", "/cabinet.html", "/mindx-wordpress-plugin",
     "/keeperhub", "/keeperhub.html", "/uniswap", "/uniswap.html", "/bankon-ens", "/bankon-ens.html", "/bankonminter", "/bankonminter.html", "/zerog", "/zerog.html", "/conclave", "/conclave.html", "/agentregistry", "/agentregistry.html",
     "/api/uniswap/quote", "/api/uniswap/check_approval", "/api/uniswap/decisions", "/api/uniswap/skills",
@@ -2238,6 +2381,7 @@ _PUBLIC_EXACT_LEGACY = frozenset({
     "/governance/status",
 })
 _PUBLIC_PREFIXES_LEGACY = (
+    "/reference/",                     # reference corpus — gated at handler level (_require_reference_access)
     "/doc/", "/docs", "/redoc", "/thesis/", "/mindterm/static/", "/boardroom/", "/dojo/",
     "/dojo/agent/", "/bankon", "/agenticplace/", "/chat/docs",
     "/actions/export", "/diagnostics/export", "/api/rage/embed",
@@ -2254,6 +2398,76 @@ _PUBLIC_PREFIXES_LEGACY = (
     "/publish/rage/",
     "/mindx-wordpress-plugin/",
 )
+
+
+async def _require_reference_access(request: Request) -> str:
+    """Handler-level gate for the reference corpus (/reference/* and private
+    docs/ subtrees served via /doc/).
+
+    Tier: logged_in — accepts, in order:
+      1. a valid session token (X-Session-Token header OR ?session_token=
+         query param — the query form lets reference.html emit plain
+         browser-navigable file links),
+      2. an operator API key (Authorization: Bearer, MINDX_SECURITY_API_KEYS),
+      3. a shadow-overlord JWT (Authorization: Bearer, SCOPE_AUTH).
+
+    Lives at the handler so it holds regardless of MINDX_HARD_GATE_ENABLED —
+    /reference/ is a *public prefix* in both gate modes by design (same
+    pattern as /admin/shadow/ and /realm). NOTE: the repo is private pending
+    security audits, so this gate is a real boundary — but /users/register is
+    open, making logged_in a soft tier. Tighten by delegating to
+    security_middleware.require_admin_access if stricter access is needed.
+    The corpus is also excluded from IPFS offload (storage/eligibility.py) —
+    mindX is not replicating across the global substrate at this time.
+    """
+    token = request.headers.get("X-Session-Token") or request.query_params.get("session_token")
+    if token:
+        try:
+            session = get_vault_manager().get_user_session(token)
+            if session:
+                return str(session.get("wallet_address", "session"))
+        except Exception:
+            pass
+    auth_header = request.headers.get("Authorization", "")
+    bearer = auth_header[7:].strip() if auth_header.startswith("Bearer ") else None
+    if bearer:
+        valid_keys = set(os.getenv("MINDX_SECURITY_API_KEYS", "").split(","))
+        valid_keys.discard("")
+        if bearer in valid_keys:
+            return "api_key"
+        try:
+            from mindx_backend_service.bankon_vault.shadow_overlord import verify_jwt, SCOPE_AUTH
+            claims = verify_jwt(bearer, required_scope=SCOPE_AUTH)
+            return str(claims.get("sub", "shadow"))
+        except Exception:
+            pass
+    raise HTTPException(status_code=401, detail="Reference corpus requires a session token (X-Session-Token or ?session_token=), API key, or shadow-overlord JWT")
+
+
+async def _reference_access_ok(request: Request) -> bool:
+    """Non-raising twin of _require_reference_access."""
+    try:
+        await _require_reference_access(request)
+        return True
+    except HTTPException:
+        return False
+
+
+async def _reference_gate(request: Request, html_from: str):
+    """Gate a document-serving route: returns None when access is granted, a
+    302 /login redirect for unauthenticated browser GETs (mirrors the arrival
+    gate's behavior), and re-raises the 401 for API clients."""
+    try:
+        await _require_reference_access(request)
+        return None
+    except HTTPException:
+        accept = request.headers.get("accept", "")
+        if "text/html" in accept and getattr(request, "method", "GET") == "GET":
+            from urllib.parse import quote as _q
+            from starlette.responses import RedirectResponse as _RefRedir
+            safe_from = html_from if html_from.startswith("/") and not html_from.startswith("//") else "/"
+            return _RefRedir(url=f"/login?from={_q(safe_from, safe='/')}", status_code=302)
+        raise
 
 
 def _arrival_gate_mode() -> str:
@@ -7856,6 +8070,25 @@ async def startup_event():
                                 stored = await _mpge.embed_and_store_doc(f.stem, text)
                                 if stored:
                                     logger.info(f"Auto-embedded new doc: {f.stem} ({stored} chunks)")
+                        # Reference corpus (gated subtrees): keep embeddings
+                        # current so new research drops become retrievable by
+                        # mindX without an operator run. doc_name = relative
+                        # path so public surfaces can filter on prefix.
+                        # (scripts/ingest_reference_docs.py additionally
+                        # writes the memory records + handles PDFs.)
+                        try:
+                            from utils.reference_corpus import iter_reference_docs as _iter_ref
+                            for _rel, _rf in _iter_ref(_PR / "docs"):
+                                if not _rel.endswith(".md"):
+                                    continue
+                                _dn = _rel[:-3]
+                                if _dn in existing:
+                                    continue
+                                stored = await _mpge.embed_and_store_doc(_dn, _rf.read_text(encoding="utf-8", errors="replace"))
+                                if stored:
+                                    logger.info(f"Auto-embedded reference doc: {_dn} ({stored} chunks)")
+                        except Exception as _ref_e:
+                            logger.debug(f"reference-corpus auto-embed skipped: {_ref_e}")
                         # Embed memories without embeddings (batch of 20)
                         rows = await pool.fetch("SELECT memory_id, content FROM memories WHERE embedding IS NULL LIMIT 20")
                         for row in rows:
@@ -9186,10 +9419,12 @@ async def diagnostics_export():
 
 # RAGE Embed — pgvector-backed semantic search (branded as RAGE)
 @app.get("/api/rage/embed", tags=["rage-embed"], summary="RAGE embed: semantic search over docs via pgvector")
-async def rage_embed_search(query: str, top_k: int = 5):
+async def rage_embed_search(query: str, request: Request, top_k: int = 5):
     try:
         from agents import memory_pgvector as _mpx
-        docs = await _mpx.semantic_search_docs(query, top_k=top_k)
+        from utils.reference_corpus import PRIVATE_DOC_PREFIXES as _ref_prefixes
+        _exclude = None if await _reference_access_ok(request) else list(_ref_prefixes)
+        docs = await _mpx.semantic_search_docs(query, top_k=top_k, exclude_doc_prefixes=_exclude)
         mems = await _mpx.semantic_search_memories(query, top_k=top_k)
         return {"query": query, "docs": docs, "memories": mems}
     except Exception as e:
@@ -9206,14 +9441,17 @@ async def rage_embed_stats():
         return {"error": str(e)}
 
 @app.post("/chat/docs", tags=["chat"], summary="Ask a question about mindX documentation (RAG)")
-async def chat_with_docs(question: str):
-    """Semantic search over embedded docs, then answer with local model."""
+async def chat_with_docs(question: str, request: Request):
+    """Semantic search over embedded docs, then answer with local model.
+    Gated reference-corpus docs are excluded for unauthenticated callers."""
     try:
         from agents import memory_pgvector as _mpg
+        from utils.reference_corpus import PRIVATE_DOC_PREFIXES as _ref_prefixes
         import aiohttp as _cha
 
-        # 1. Retrieve relevant doc chunks
-        chunks = await _mpg.semantic_search_docs(question, top_k=5)
+        # 1. Retrieve relevant doc chunks (private corpus only with a session)
+        _exclude = None if await _reference_access_ok(request) else list(_ref_prefixes)
+        chunks = await _mpg.semantic_search_docs(question, top_k=5, exclude_doc_prefixes=_exclude)
         if not chunks:
             return {"answer": "No relevant documentation found. Docs may not be embedded yet.", "sources": []}
 
